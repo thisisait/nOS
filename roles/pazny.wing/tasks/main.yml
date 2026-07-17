@@ -112,15 +112,28 @@
   register: _wing_frankenphp_install
   when: ansible_os_family == 'Darwin'
 
-# frankenphp dynamically links libsybdb.5.dylib from freetds (a transitive dep).
-# `brew autoremove` has been observed to prune freetds as an "unused" leaf,
-# leaving frankenphp with a DANGLING dylib → dyld abort → `--version` returns
-# rc=-6 empty and the preflight below refuses. Installing freetds EXPLICITLY
-# makes it a leaf brew won't autoremove; `state: present` is a no-op once there,
-# so this also self-heals a host where it was already pruned.
-- name: "[pazny.wing] Ensure frankenphp runtime dep freetds (autoremove-proof)"
+# frankenphp + its libphp (php-zts, dunglas tap) dynamically link a set of
+# libs the tap formulae DO NOT declare as runtime deps, so `brew autoremove`
+# prunes them as "unused" leaves → dangling dylib → dyld abort → `version`
+# returns rc=-6 empty and the preflight below refuses. Observed pruned on this
+# host: freetds (2026-07-15), then gd/libpq/argon2/watcher (frankenphp binary)
+# and tidy-html5/net-snmp/openldap (libphp.dylib) on the 2026-07-17 blank run.
+# Installing them EXPLICITLY makes each a leaf brew won't autoremove;
+# `state: present` is a no-op once there, so this also self-heals a host where
+# they were already pruned. Audit after a frankenphp bump:
+#   otool -L $(brew --prefix)/bin/frankenphp
+#   otool -L $(brew --prefix)/Cellar/php-zts/*/lib/libphp.dylib
+- name: "[pazny.wing] Ensure frankenphp runtime deps (autoremove-proof)"
   community.general.homebrew:
-    name: freetds
+    name:
+      - freetds
+      - gd
+      - libpq
+      - argon2
+      - watcher
+      - tidy-html5
+      - net-snmp
+      - openldap
     state: present
   when: ansible_os_family == 'Darwin'
 
