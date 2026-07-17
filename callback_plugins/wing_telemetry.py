@@ -925,12 +925,21 @@ class CallbackModule(CallbackBase):
             play_vars = play.get_vars() if hasattr(play, "get_vars") else {}
         except Exception:  # noqa: BLE001
             play_vars = {}
-        # get_vars() returns RAW templates — render the values the callback
-        # consumes so it never uses a literal "{{ … }}" URL or secret.
+        # get_vars() returns RAW templates — render wing_events_url (it references
+        # bone_port, so it renders cleanly to http://127.0.0.1:8099/…).
+        #
+        # Do NOT render wing_events_hmac_secret: its play-scope default is the
+        # SELF-REFERENTIAL "{{ wing_events_hmac_secret | default(bone_secret) }}",
+        # and templating that against play_vars (where the var IS its own raw
+        # template) resolves to the WRONG value (bone_secret, not the persisted
+        # 64-hex secret) — which then silently overrode the correct secrets.yml
+        # value load_hmac_secret_fallback() already loaded, so every event 401'd
+        # (live 2026-07-17: events.db stayed 0 while secrets.yml == Bone's env).
+        # Leaving it as a raw "{{ … }}" makes _finalize_activation's guard reject
+        # it, so the __init__ secrets.yml value (== Bone's plist secret) is used.
         try:
             play_vars = self._render_playvars(
-                play, play_vars,
-                ("wing_events_url", "wing_events_hmac_secret"))
+                play, play_vars, ("wing_events_url",))
         except Exception:  # noqa: BLE001 — never let rendering break the run
             pass
         if not self._active:
