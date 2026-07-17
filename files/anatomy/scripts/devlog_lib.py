@@ -17,6 +17,7 @@ import base64
 import hashlib
 import hmac
 import json
+import ssl
 import time
 import urllib.error
 import urllib.parse
@@ -38,18 +39,42 @@ class WPClient:
         token = base64.b64encode(f"{user}:{app_password}".encode()).decode()
         self._auth = f"Basic {token}"
         self.timeout = timeout
+        # WP_BASE_URL is loopback (http://127.0.0.1:<port>), but WordPress redirects
+        # http→https on the SAME host (siteurl is the public https domain), so the
+        # loopback leg presents a cert for the DOMAIN, not the IP → urllib's default
+        # verify raises "certificate is not valid for '127.0.0.1'" (blank died here at
+        # ok=1496, 2026-07-17). This is a LOCAL, app-password-authed call to loopback;
+        # verifying a public-domain cert against 127.0.0.1 is meaningless. Skip verify
+        # for LOOPBACK ONLY — a non-loopback base_url still verifies normally.
+        self._ssl_ctx = None
+        host = (urllib.parse.urlparse(base_url).hostname or "").lower()
+        if host in ("127.0.0.1", "localhost", "::1"):
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            self._ssl_ctx = ctx
 
     def _request(self, method: str, path: str, params: dict | None = None, body: dict | None = None):
-        url = f"{self.base}/wp-json/wp/v2{path}"
+        # Use the "unpretty" ?rest_route= endpoint, NOT the pretty /wp-json/
+        # permalink. WP_BASE_URL is loopback http, but the permalink form triggers
+        # WordPress's canonical redirect (trailing-slash + http→https to the PUBLIC
+        # domain https://wordpress.<tld>) — and the host can't resolve that domain,
+        # so the call dies (blank ok=1496, 2026-07-17: "certificate is not valid for
+        # 127.0.0.1" then a cross-host 301). ?rest_route= bypasses the permalink/
+        # redirect layer entirely → 200 on plain loopback http, no headers needed.
+        route = urllib.parse.quote(f"/wp/v2{path}", safe="/")
+        url = f"{self.base}/?rest_route={route}"
         if params:
-            url += "?" + urllib.parse.urlencode(params)
+            url += "&" + urllib.parse.urlencode(params)
         data = json.dumps(body).encode("utf-8") if body is not None else None
         req = urllib.request.Request(url, data=data, method=method)
         req.add_header("Authorization", self._auth)
         if data is not None:
             req.add_header("Content-Type", "application/json")
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            with urllib.request.urlopen(
+                req, timeout=self.timeout, context=self._ssl_ctx
+            ) as resp:
                 payload = json.loads(resp.read().decode("utf-8") or "null")
                 return payload, dict(resp.headers)
         except urllib.error.HTTPError as exc:
