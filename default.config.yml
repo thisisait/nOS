@@ -1195,7 +1195,7 @@ wordpress_db_user: "wordpress"
 wordpress_db_password: "{{ global_password_prefix }}_pw_wordpress"
 wordpress_db_host: "127.0.0.1"          # ignored if install_mariadb=true (uses 'mariadb' from iiab_net)
 wordpress_table_prefix: "wp_"
-wordpress_version: "6.9.4"              # Docker image tag
+wordpress_version: "6.9.5"              # Docker image tag — 6.9.5 patches CVE-2026-63030 (wp2shell, unauth RCE via REST batch; affects 6.9.0-6.9.4). Disclosed 2026-07-17.
 wordpress_port: 8084                    # Local container port (nginx proxy)
 wordpress_admin_user: "admin"
 wordpress_admin_password: "{{ global_password_prefix }}_pw_wordpress_admin"
