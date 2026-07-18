@@ -23,6 +23,7 @@
 #
 # Linux has no VM/mount-propagation layer (bind mounts hit the host FS
 # directly), so the whole file is a no-op off Docker Desktop.
+# VFS-DOCTRINE: external-disk bind over VirtioFS — stale /host_mnt after remount.
 # ============================================================================
 
 - name: "[Preflight] Resolve whether nos_data_root is on an external /Volumes disk"

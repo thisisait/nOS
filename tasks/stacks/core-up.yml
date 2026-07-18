@@ -286,6 +286,7 @@
 # and the container then crashes in the config phase. Rendering these files here
 # guarantees tempo/prometheus/loki/grafana start with a valid config.
 
+# VFS-DOCTRINE: loki mmap index scratch off the VirtioFS bind — stale-handle after remount.
 - name: "[Core] [Loki] Clean stale scratch dir (macOS VirtioFS workaround)"
   ansible.builtin.file:
     path: "{{ loki_storage_path | default(stacks_dir + '/observability/loki/data') }}/tsdb-shipper-active/scratch"

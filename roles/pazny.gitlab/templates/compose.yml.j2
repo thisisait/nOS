@@ -22,6 +22,7 @@ services:
     # Errno::ENOTSUP → puma crash-loops → 502 (recurs on every macOS update). Put
     # the rails sockets dir on a tmpfs (off VirtioFS) so realpath works; sockets are
     # ephemeral, so tmpfs is the correct home anyway (also clears stale sockets).
+    # VFS-DOCTRINE: unix sockets off the VirtioFS bind — puma realdirpath ENOTSUP.
     tmpfs:
       - /var/opt/gitlab/gitlab-rails/sockets:mode=0755
     environment:
