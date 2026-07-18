@@ -9,6 +9,7 @@
 		toggleMax
 	} from '$lib/stores/desktop';
 	import type { Snippet } from 'svelte';
+	import { beginWindowDrag, updateWindowDrag, endWindowDrag } from '$lib/wm/drag'; // G3
 
 	let { win, children }: { win: WindowModel; children?: Snippet } = $props();
 
@@ -29,6 +30,7 @@
 		ox = win.x;
 		oy = win.y;
 		focusWindow(win.id);
+		beginWindowDrag(win.id, e.clientX, e.clientY); // G3: feed the snap overlay
 		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 	}
 	function onGripPointerDown(e: PointerEvent) {
@@ -42,8 +44,10 @@
 		e.stopPropagation();
 	}
 	function onPointerMove(e: PointerEvent) {
-		if (dragging) moveWindow(win.id, ox + (e.clientX - sx), Math.max(28, oy + (e.clientY - sy)));
-		else if (resizing)
+		if (dragging) {
+			moveWindow(win.id, ox + (e.clientX - sx), Math.max(28, oy + (e.clientY - sy)));
+			updateWindowDrag(e.clientX, e.clientY); // G3: drive the snap overlay
+		} else if (resizing)
 			resizeWindow(
 				win.id,
 				Math.max(240, ow + (e.clientX - sx)),
@@ -51,6 +55,7 @@
 			);
 	}
 	function onPointerUp() {
+		if (dragging) endWindowDrag(); // G3: resolve drop → maybe snap
 		dragging = false;
 		resizing = false;
 	}

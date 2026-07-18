@@ -6,25 +6,59 @@
 	import type { HubApp } from '$lib/contracts';
 	import type { PageData } from './$types';
 
+	// Wave-1 features wired at the desktop root.
+	import { initWindowManager } from '$lib/wm/init'; // G3
+	import SnapOverlay from '$lib/wm/SnapOverlay.svelte'; // G3
+	import { initWindowCache } from '$lib/state/window-cache'; // G4
+	import { initWallpaper, activeWallpaper, safeBackground } from '$lib/state/wallpaper'; // G4
+	import { openControlPanel } from '$lib/apps/control-panel/ControlPanel.svelte'; // G4
+	import ControlPanelSurface from '$lib/apps/control-panel/ControlPanelSurface.svelte'; // G4
+	import { isControlPanelWindow } from '$lib/apps/control-panel/surfaces'; // G4
+	import {
+		registerBuiltinNativeApps,
+		nativeApps,
+		launchNative,
+		isNativeApp,
+		resolveNativeComponent,
+		initFilePickerBridge
+	} from '$lib/apps/native'; // G5
+	import FilePicker from '$lib/apps/native/file-picker/FilePicker.svelte'; // G5
+
 	let { data }: { data: PageData } = $props();
 	let apps = $state<HubApp[]>([]);
+	registerBuiltinNativeApps();
+	const natives = nativeApps();
 
-	onMount(async () => {
-		try {
-			apps = await hubApps();
-		} catch {
-			apps = [];
-		}
+	// Reactive desktop background from the active wallpaper (validated).
+	const bg = $derived(safeBackground($activeWallpaper));
+
+	onMount(() => {
+		initWindowManager(); // G3: register SnapEngine + load face.layouts
+		initWallpaper(); // G4: restore saved wallpaper
+		initWindowCache(); // G4: usePersistence + restore geometry for this viewport
+		// G5: postMessage file-picker bridge (origin allowlist hardened in G6/G7).
+		const stopBridge = initFilePickerBridge({ allowedOrigins: [] });
+
+		void (async () => {
+			try {
+				apps = await hubApps();
+			} catch {
+				apps = [];
+			}
+		})();
+
+		return () => stopBridge?.();
 	});
 
-	function launch(app: HubApp) {
+	function launchHub(app: HubApp) {
 		openWindow({ app: app.slug, title: app.title, w: 720, h: 480 });
 	}
 </script>
 
-<div class="desktop">
+<div class="desktop" style={bg ? `background:${bg}` : ''}>
 	<header class="menubar glass">
 		<strong>nOS</strong>
+		<button class="menu-item" onclick={() => openControlPanel()}>Control Panel</button>
 		<span class="spacer"></span>
 		{#if data.identity.authenticated}
 			<span class="user">{data.identity.username}</span>
@@ -35,23 +69,45 @@
 
 	{#each $windows as win (win.id)}
 		<Window {win}>
-			<div class="placeholder">
-				<p>{win.title}</p>
-				<p class="muted">nos-native app surface — Wave 1 (G5) mounts real API-calling apps here.</p>
-			</div>
+			{#if isControlPanelWindow(win.app)}
+				<ControlPanelSurface {win} />
+			{:else if isNativeApp(win.app)}
+				{#await resolveNativeComponent(win.app) then Comp}
+					{#if Comp}<Comp />{/if}
+				{/await}
+			{:else}
+				<div class="placeholder">
+					<p>{win.title}</p>
+					<p class="muted">
+						This service opens as a native window. iframe embedding is used only for services that
+						support it.
+					</p>
+				</div>
+			{/if}
 		</Window>
 	{/each}
 
+	<!-- G3: snap/tiling overlay (renders only while a window is dragged) -->
+	<SnapOverlay />
+	<!-- G5: file-picker host (invisible until openFilePicker / the bridge fires) -->
+	<FilePicker />
+
 	<nav class="dock glass" aria-label="Dock">
-		{#if apps.length === 0}
-			<span class="muted">no apps in catalog</span>
-		{/if}
-		{#each apps as app (app.slug)}
-			<button class="tile" title={app.description} onclick={() => launch(app)}>
+		{#each natives as app (app.slug)}
+			<button class="tile" title={app.title} onclick={() => launchNative(app.slug)}>
 				<span class="ico">{app.icon.slice(0, 2)}</span>
 				<span class="lbl">{app.title}</span>
 			</button>
 		{/each}
+		{#each apps as app (app.slug)}
+			<button class="tile" title={app.description} onclick={() => launchHub(app)}>
+				<span class="ico">{app.icon.slice(0, 2)}</span>
+				<span class="lbl">{app.title}</span>
+			</button>
+		{/each}
+		{#if natives.length === 0 && apps.length === 0}
+			<span class="muted">no apps in catalog</span>
+		{/if}
 	</nav>
 </div>
 
@@ -73,6 +129,19 @@
 		padding: 0 14px;
 		border-radius: 0;
 		font-size: 13px;
+		z-index: 100000;
+	}
+	.menu-item {
+		background: none;
+		border: none;
+		color: var(--muted);
+		padding: 2px 6px;
+		border-radius: 6px;
+		font-size: 13px;
+	}
+	.menu-item:hover {
+		color: var(--fg);
+		background: rgba(255, 255, 255, 0.08);
 	}
 	.spacer {
 		flex: 1;
@@ -94,6 +163,7 @@
 		align-items: flex-end;
 		max-width: 90vw;
 		overflow-x: auto;
+		z-index: 100000;
 	}
 	.tile {
 		display: flex;

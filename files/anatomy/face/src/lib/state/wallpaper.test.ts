@@ -76,7 +76,7 @@ describe('safeBackground', () => {
 			vfsPath: 'wp/a.png',
 			system: false
 		};
-		expect(safeBackground(spec)).toContain('/bff/vfs?path=');
+		expect(safeBackground(spec)).toContain('/bff/vfs?op=download&path=');
 		expect(safeBackground(spec)).toContain('url(');
 	});
 	it('returns null for an invalid gradient', () => {

@@ -119,7 +119,9 @@ export function safeBackground(spec: WallpaperSpec | null | undefined): string |
 	}
 	if (spec.kind === 'image') {
 		if (!isSafeVfsPath(spec.vfsPath)) return null;
-		const url = `/bff/vfs?path=${encodeURIComponent(spec.vfsPath)}`;
+		// Stream the image through the BFF's download op (G5): a bare path returns
+		// a JSON dir listing, not the bytes.
+		const url = `/bff/vfs?op=download&path=${encodeURIComponent(spec.vfsPath)}`;
 		return `center / cover no-repeat url("${url}")`;
 	}
 	return null;
