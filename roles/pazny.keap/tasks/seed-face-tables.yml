@@ -1,0 +1,75 @@
+---
+# =============================================================================
+# pazny.keap/tasks/seed-face-tables.yml — seed the nOS-face config DataTables
+#
+# Creates the three shell config DataTables in KEAP and upserts their built-in
+# `system` rows, idempotently. This is the SoC → runtime-DataTable half of the
+# nOS-face pattern (docs/plans/nos-face-shell-v2.md): the table DEFINITIONS are
+# the source of truth in state/keap-tables/{layouts,wallpapers,controls}.table.yml
+# (parsed here, never hand-duplicated), and the built-in system rows mirror the
+# vendored SoC defaults the face BFF also serves as its KEAP-down fallback
+# (files/anatomy/face/src/lib/server/defaults.ts — keep the two in lockstep).
+#
+# Idempotent + WHERE-guarded (re-run = changed=0), modelled on the role's other
+# post-start seeders (post.yml fixtures/ingest) and bin/ingest-registry.php: each
+# table is created only when the loopback API reports it absent, and each system
+# row is POSTed only when its slug is not already present. Gated on install_keap;
+# tolerant of the /api/tables route not being live yet (an open item in
+# docs/plans/keap-datatables-apps-systems.md) — a 404 leaves the converge green
+# and the face BFF falls back to the vendored defaults.
+#
+# Talks to the loopback KEAP API (127.0.0.1:keap_port) with the RW agent token,
+# same surface post.yml's keap-embed-sync kick uses.
+# =============================================================================
+
+- name: "[pazny.keap] Assemble face DataTable defs + built-in system rows (SoT)"
+  ansible.builtin.set_fact:
+    _face_tables:
+      - slug: "face.layouts"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/layouts.table.yml') | from_yaml }}"
+        rows: "{{ _face_layout_rows }}"
+      - slug: "face.wallpapers"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/wallpapers.table.yml') | from_yaml }}"
+        rows: "{{ _face_wallpaper_rows }}"
+      - slug: "face.controls"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/controls.table.yml') | from_yaml }}"
+        rows: "{{ _face_control_rows }}"
+  vars:
+    # Mirror of files/anatomy/face/src/lib/server/defaults.ts (the shell-side SoC
+    # layer). Every built-in carries system: true; users add their own rows.
+    _third: 0.3333333333333333
+    _face_layout_rows:
+      - { slug: "single", name: "Single", icon: "square", system: true, status: "enabled", sort: 0,
+          cells: [{ id: "full", x: 0, y: 0, w: 1, h: 1 }] }
+      - { slug: "half-v", name: "Halves", icon: "columns-2", system: true, status: "enabled", sort: 1,
+          cells: [{ id: "left", x: 0, y: 0, w: 0.5, h: 1 }, { id: "right", x: 0.5, y: 0, w: 0.5, h: 1 }] }
+      - { slug: "half-h", name: "Stack", icon: "rows-2", system: true, status: "enabled", sort: 2,
+          cells: [{ id: "top", x: 0, y: 0, w: 1, h: 0.5 }, { id: "bottom", x: 0, y: 0.5, w: 1, h: 0.5 }] }
+      - { slug: "thirds", name: "Thirds", icon: "columns-3", system: true, status: "enabled", sort: 3,
+          cells: [{ id: "left", x: 0, y: 0, w: "{{ _third }}", h: 1 },
+                  { id: "center", x: "{{ _third }}", y: 0, w: "{{ _third }}", h: 1 },
+                  { id: "right", x: "{{ 2 * _third }}", y: 0, w: "{{ _third }}", h: 1 }] }
+      - { slug: "2x2", name: "Grid", icon: "grid-2x2", system: true, status: "enabled", sort: 4,
+          cells: [{ id: "tl", x: 0, y: 0, w: 0.5, h: 0.5 }, { id: "tr", x: 0.5, y: 0, w: 0.5, h: 0.5 },
+                  { id: "bl", x: 0, y: 0.5, w: 0.5, h: 0.5 }, { id: "br", x: 0.5, y: 0.5, w: 0.5, h: 0.5 }] }
+    _face_wallpaper_rows:
+      - { slug: "aurora", name: "Aurora", kind: "gradient", system: true, status: "enabled", sort: 0,
+          gradient: "linear-gradient(135deg, #1e3a8a 0%, #0f766e 50%, #4c1d95 100%)" }
+      - { slug: "graphite", name: "Graphite", kind: "gradient", system: true, status: "enabled", sort: 1,
+          gradient: "linear-gradient(135deg, #1f2937 0%, #374151 50%, #111827 100%)" }
+      - { slug: "sunset", name: "Sunset", kind: "gradient", system: true, status: "enabled", sort: 2,
+          gradient: "linear-gradient(135deg, #7c2d12 0%, #b45309 45%, #be185d 100%)" }
+      - { slug: "forest", name: "Forest", kind: "gradient", system: true, status: "enabled", sort: 3,
+          gradient: "linear-gradient(135deg, #14532d 0%, #166534 50%, #052e16 100%)" }
+    _face_control_rows:
+      - { slug: "wallpaper", name: "Wallpaper", icon: "image", surface: "wallpaper", system: true, status: "enabled", sort: 0 }
+      - { slug: "layouts", name: "Layouts", icon: "layout-dashboard", surface: "layouts", system: true, status: "enabled", sort: 1 }
+      - { slug: "identity", name: "Identity", icon: "user", surface: "identity", system: true, status: "enabled", sort: 2 }
+      - { slug: "storage", name: "Storage", icon: "hard-drive", surface: "storage", system: true, status: "enabled", sort: 3 }
+
+- name: "[pazny.keap] Seed each face config DataTable (create + upsert system rows)"
+  ansible.builtin.include_tasks: seed-face-table.yml
+  loop: "{{ _face_tables }}"
+  loop_control:
+    loop_var: _face_tbl
+    label: "{{ _face_tbl.slug }}"

@@ -123,3 +123,12 @@
   when:
     - install_keap | default(false) | bool
     - _keap_ingest_changed | default(false) | bool
+
+# ── nOS-face config DataTables (SoC → runtime DataTable) ─────────────────────
+# Create face.layouts/face.wallpapers/face.controls in KEAP and upsert their
+# built-in system rows from state/keap-tables/*.table.yml. Idempotent + WHERE-
+# guarded (re-run = changed=0); tolerant of the DataTable agent route not being
+# live yet. Design: docs/plans/nos-face-shell-v2.md + keap-datatables-apps-systems.md.
+- name: "[pazny.keap] Seed nOS-face config DataTables (layouts/wallpapers/controls)"
+  ansible.builtin.include_tasks: seed-face-tables.yml
+  when: install_keap | default(false) | bool

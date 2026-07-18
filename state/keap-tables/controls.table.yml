@@ -1,0 +1,51 @@
+# =============================================================================
+# KEAP DataTable definition — "Face Controls" (the nOS-face control-panel grid)
+#
+# The runtime catalog for the nOS-face Control Panel — the first DataTable
+# rendered NOT as a grid/gallery but as a control-panel ICON GRID (docs/plans/
+# nos-face-shell-v2.md §2). Each row is a config surface (Wallpaper, Layouts,
+# Identity, Storage, …); clicking a row OPENS A WINDOW (not a modal) hosting the
+# surface — a rawDataTable initially, a bespoke editor later. Same SoC →
+# DataTable → per-user-state pattern: the nOS-face repo seeds the built-in
+# `system` rows (vendored in src/lib/server/defaults.ts); users/operators can add
+# rows pointing a rawDataTable window at any DataTable slug. A seeder creates this
+# table in KEAP and upserts the system rows idempotently; the face BFF reads it
+# via GET /api/tables/face.controls/rows with the vendored defaults fallback.
+#
+# Contract: nos-keap shared/contracts/table.ts; shell mirror = ControlEntry in
+# src/lib/contracts/index.ts. Driver: libsql (SQLite).
+# =============================================================================
+
+title: "Face Controls"
+description: >-
+  Control-panel surfaces for the nOS-face shell, rendered as an icon grid. Each
+  row opens a window hosting a config surface (wallpaper/layouts/identity/storage
+  editor, or a raw DataTable). Repo seeds the built-ins; operators add rows.
+driver: libsql
+visibility: tier-users            # every authenticated user sees the control panel
+anchors: ["nos.face"]
+
+schema:
+  columns:
+    # ── identity ─────────────────────────────────────────────────────────────
+    - { key: name,        label: "Name",        kind: text,    role: dimension, required: true }
+    - { key: slug,        label: "Slug",        kind: text,    role: dimension, required: true }
+    - { key: icon,        label: "Icon",        kind: text,    role: attribute }
+    - { key: description, label: "Description",  kind: text,    role: attribute }
+
+    # ── surface routing ───────────────────────────────────────────────────────
+    # Which surface the opened window hosts: a known editor key, or a raw table.
+    - { key: surface,     label: "Surface",     kind: select,  role: dimension,
+        options: ["wallpaper", "layouts", "identity", "storage", "rawDataTable"] }
+    # For surface=rawDataTable: the DataTable slug the window renders.
+    - { key: table,       label: "Table",       kind: text,    role: attribute }
+
+    # ── lifecycle & provenance (consistent with apps/systems) ────────────────
+    - { key: system,      label: "System",      kind: boolean, role: dimension }
+    - { key: status,      label: "Status",      kind: select,  role: dimension,
+        options: ["enabled", "disabled"] }
+    - { key: sort,        label: "Sort",        kind: number,  role: measure }
+    - { key: owner,       label: "Owner",       kind: user,    role: attribute }
+
+    # ── universe anchor ───────────────────────────────────────────────────────
+    - { key: taxonomy_ref, label: "Anchor",     kind: taxonomyRef, role: attribute }

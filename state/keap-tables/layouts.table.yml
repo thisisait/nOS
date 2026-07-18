@@ -1,0 +1,51 @@
+# =============================================================================
+# KEAP DataTable definition — "Face Layouts" (the nOS-face tiling catalog)
+#
+# The runtime catalog for the nOS-face window-manager snap/tiling layouts. Same
+# SoC → DataTable → per-user-state pattern as the rest of the shell (docs/plans/
+# nos-face-shell-v2.md): the nOS-face repo seeds the built-in `system` rows
+# (single/half-v/half-h/thirds/2x2, vendored in src/lib/server/defaults.ts);
+# users ADD rows (a custom layout) via the rawDataTable control-panel form. A
+# seeder (roles/pazny.keap/tasks/seed-face-tables.yml) creates this table in KEAP
+# and upserts the system rows idempotently; the face BFF reads it via
+# GET /api/tables/face.layouts/rows and falls back to the vendored defaults when
+# KEAP is down so the desktop stays usable.
+#
+# Contract: nos-keap shared/contracts/table.ts (createTableRequestSchema); the
+# shell-side mirror is LayoutSpec/LayoutCellSpec in src/lib/contracts/index.ts.
+# Driver: libsql (SQLite). Rows anchor into the KEAP universe under "nOS / Face".
+# =============================================================================
+
+title: "Face Layouts"
+description: >-
+  Named window-manager tiling layouts for the nOS-face desktop. Each row is a
+  cell grid ({id,x,y,w,h} in fractions of the work area) the snap engine drops
+  windows into. Repo seeds the built-ins; users add their own layouts.
+driver: libsql
+visibility: tier-users            # every authenticated user sees + adds layouts
+# Taxonomy anchor — the star this table's card orbits. Resolved by the seeder to
+# the real node id under the nOS self-model constellation ("nOS / Face").
+anchors: ["nos.face"]
+
+schema:
+  columns:
+    # ── identity ─────────────────────────────────────────────────────────────
+    - { key: name,        label: "Name",        kind: text,    role: dimension, required: true }
+    - { key: slug,        label: "Slug",        kind: text,    role: dimension, required: true }
+    - { key: icon,        label: "Icon",        kind: text,    role: attribute }
+    - { key: description, label: "Description",  kind: text,    role: attribute }
+
+    # ── layout spec ──────────────────────────────────────────────────────────
+    # Array of tiling cells: [{id, x, y, w, h}] — fractions of the work area,
+    # each in [0,1]. Mirrors LayoutCellSpec[] on the shell side.
+    - { key: cells,       label: "Cells",       kind: json,    role: attribute }
+
+    # ── lifecycle & provenance (consistent with apps/systems) ────────────────
+    - { key: system,      label: "System",      kind: boolean, role: dimension }
+    - { key: status,      label: "Status",      kind: select,  role: dimension,
+        options: ["enabled", "disabled"] }
+    - { key: sort,        label: "Sort",        kind: number,  role: measure }
+    - { key: owner,       label: "Owner",       kind: user,    role: attribute }
+
+    # ── universe anchor ───────────────────────────────────────────────────────
+    - { key: taxonomy_ref, label: "Anchor",     kind: taxonomyRef, role: attribute }
