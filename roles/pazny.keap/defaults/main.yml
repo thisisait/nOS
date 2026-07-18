@@ -23,9 +23,11 @@ keap_src_dir: "{{ keap_home }}/src"
 keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # Immutable release tag (R10: branches make `--tags keap` builds non-
 # reproducible; a force-pushed branch silently changes what gets built under
-# the same image tag). v1.7.0 == files core (explore 3D jádro + reorder modes),
-# doctrine fs-sync (KEAP_USER_FILES_DIR mirror, inert until wired), app CI gate.
-keap_repo_ref: "v1.7.0"
+# the same image tag). v1.8.1 == v1.7.0 (files core + fs-sync) + mapped folders
+# (admin fs_mappings over KEAP_FS_ROOTS), Option C shared uids
+# (KEAP_FS_SHARED_UIDS — self-model visible to every tenant user), folder-hub
+# detail panel + near-hop camera guard in /explore.
+keap_repo_ref: "v1.8.1"
 
 keap_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 keap_cpus: "{{ docker_cpus_light | default(1) }}"

@@ -78,6 +78,12 @@ services:
       KEAP_USER_FILES_DIR: /user-files
       KEAP_FS_SYNC_DIRS: "{{ keap_fs_sync_dirs | default('documents,library,inbox') }}"
       KEAP_FS_SYNC_INTERVAL_S: "{{ keap_fs_sync_interval_s | default(300) }}"
+{% if keap_selfmodel | default(true) %}
+      # Option C (KEAP v1.8.0): files of these reserved uids mirror with
+      # visibility 'shared' — the self-model renders for EVERY tenant user,
+      # not just admins. Unset ⇒ users pass behaves exactly like v1.7.0.
+      KEAP_FS_SHARED_UIDS: "{{ keap_selfmodel_uid | default('nos-docs') }}"
+{% endif %}
 {% endif %}
 {% if keap_ollama_url | default('') %}
       # Optional live embedder for free-text semantic search. Stored vectors
