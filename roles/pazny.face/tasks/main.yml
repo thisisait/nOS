@@ -25,19 +25,21 @@
     - "{{ face_home }}"
     - "{{ face_src_dir }}"
 
-- name: "[pazny.face] Resolve source (GitHub pinned ref vs local bootstrap)"
-  ansible.builtin.set_fact:
-    _face_repo: "{{ face_local_repo if (face_source_local | default(false) | bool) else face_repo_url }}"
-    _face_ref: "{{ face_local_ref if (face_source_local | default(false) | bool) else face_repo_ref }}"
-
-- name: "[pazny.face] Clone nos-face repository ({{ _face_ref }})"
-  ansible.builtin.git:
-    repo: "{{ _face_repo }}"
-    dest: "{{ face_src_dir }}"
-    version: "{{ _face_ref }}"
-    force: false
-    depth: 1
-  register: _face_clone
+- name: "[pazny.face] Sync vendored nos-face source into the build dir"
+  # The shell source is vendored in-repo (files/anatomy/face); copy it into the
+  # build dir so `docker compose build` has a stable context. Excludes the local
+  # dev artifacts (node_modules/.svelte-kit/build) — the image rebuilds them.
+  ansible.builtin.synchronize:
+    src: "{{ face_vendored_src }}/"
+    dest: "{{ face_src_dir }}/"
+    delete: true
+    recursive: true
+    rsync_opts:
+      - "--exclude=node_modules"
+      - "--exclude=.svelte-kit"
+      - "--exclude=build"
+  delegate_to: "{{ inventory_hostname }}"
+  register: _face_sync
   notify: Restart face
 
 - name: "[pazny.face] Render compose override fragment"
@@ -55,7 +57,7 @@
       ══════════════════════════════════════════════════════
        URL:      https://{{ face_domain | default('face' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
        Port:     {{ face_internal_port }} (container; loopback debug on {{ face_port | default(5090) }})
-       Source:   {{ face_src_dir }} @ {{ _face_ref }}{{ ' (local bootstrap)' if (face_source_local | default(false) | bool) else '' }}
+       Source:   {{ face_src_dir }} (vendored from files/anatomy/face)
        SSO:      forward_auth (X-Authentik-* via gated_net) + X-Face-Edge-Token trust
        Catalog:  Wing /api/v1/hub/systems   Files: Bone VFS (users/<uid>/)
       ══════════════════════════════════════════════════════

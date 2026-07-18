@@ -2075,17 +2075,20 @@ puter_admin_password: "{{ global_password_prefix }}_pw_puter"
 
 # ==============================================================================
 # nOS face – the unified web-desktop shell (the FACE of the nOS anatomy).
-# Built from source by roles/pazny.face (git clone thisisait/nos-face at
-# face_repo_ref, keap/puter-style compose build). forward_auth SSO; the shell
-# composes the Wing catalog + Bone VFS. install_face ON by default (2026-07-18);
-# builds from the pinned thisisait/nos-face tag like nos-keap.
-# Design doc: docs/plans/nos-face.md.
+# Source is VENDORED in-repo at files/anatomy/face (2026-07-18, v0.2); the role
+# syncs it into the build dir and `docker compose` builds nos/face from there
+# (keap/puter build-from-source precedent). forward_auth SSO; the shell composes
+# the Wing catalog + Bone VFS + KEAP config DataTables. install_face ON by
+# default. Design doc: docs/plans/nos-face.md, docs/plans/nos-face-shell-v2.md.
 # ==============================================================================
 
 face_domain: "face{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 face_port: 5090                                # loopback debug publish (container binds 5090)
-face_version: "latest"                         # nos/face local image tag (source pinned by face_repo_ref)
-face_repo_ref: "v0.1.0"                         # immutable tag of thisisait/nos-face (R10 reproducibility) — M0–M2b
+face_version: "latest"                         # nos/face local image tag (source = vendored tree)
+# Config-DataTable source of truth: KEAP /api/tables (with repo/user-state
+# fallback). Empty by default → the shell uses the repo defaults + user-state
+# until KEAP wiring lands (G2). Set to the KEAP tables API URL to go live.
+face_keap_tables_url: ""
 
 # ==============================================================================
 # KEAP – Knowledge Explorer and Preserver (the CORTEX of the nOS anatomy)

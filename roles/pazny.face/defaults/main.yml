@@ -19,21 +19,14 @@
 face_home: "{{ ansible_facts['env']['HOME'] }}/face"
 face_src_dir: "{{ face_home }}/src"
 
-# Upstream repo — the standalone nOS-face shell. R10 reproducibility: pin an
-# immutable tag, never a branch. The GitHub repo must carry the pinned tag before
-# a reproducible build; for the FIRST live test (before any push) use the
-# bootstrap-from-local mode below.
-face_repo_url: "https://github.com/thisisait/nos-face.git"
-face_repo_ref: "v0.1.0"
-
-# ── Bootstrap-from-local (pre-push live test) ────────────────────────────────
-# Before thisisait/nos-face is pushed, the role can build from the operator's
-# local working copy. Flip face_source_local=true (e.g. in config.yml) for the
-# first os.<tld> live test, then push+tag and drop it → reproducible GitHub build.
-# The git module clones fine from a local repo path; `master` checks out its tip.
-face_source_local: false
-face_local_repo: "{{ ansible_facts['env']['HOME'] }}/projects/nos-face"
-face_local_ref: "master"
+# ── Vendored source (2026-07-18: nos-face moved IN-REPO) ─────────────────────
+# The shell source now lives inside the monorepo at files/anatomy/face/ (joining
+# wing/bone/pulse as an in-tree anatomy organ) — the separate-repo pinned-tag
+# clone model is retired. Reproducibility is now the repo commit itself (the
+# VERSION marker in the vendored tree tracks the shell version). The role SYNCS
+# the vendored tree into face_src_dir and `docker compose` builds nos/face from
+# there (keap/puter build-from-source precedent).
+face_vendored_src: "{{ playbook_dir }}/files/anatomy/face"
 
 face_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 face_cpus: "{{ docker_cpus_light | default(1) }}"

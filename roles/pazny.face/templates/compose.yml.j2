@@ -3,8 +3,9 @@
 # Merged into `docker compose -p iiab up` in tasks/stacks/stack-up.yml via
 # ansible.builtin.find over {{ stacks_dir }}/iiab/overrides/*.yml.
 #
-# Built from source: the role clones nos-face at {{ face_repo_ref }} and
-# `docker compose up` builds nos/face from the clone (keap/puter precedent).
+# Built from source: the role syncs the vendored tree (files/anatomy/face) into
+# the build dir and `docker compose up` builds nos/face from it (keap/puter
+# build-from-source precedent).
 # The image bakes a HEALTHCHECK on /health, so the STRICT in-stream health-wait
 # (A19) sees a real health state.
 #
@@ -43,6 +44,10 @@ services:
       NOS_VFS_API_URL: "http://host.docker.internal:{{ bone_port | default(8099) }}/api/v1/vfs"
       NOS_VFS_API_TOKEN: "{{ face_vfs_token | default('') }}"
       NOS_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
+      # KEAP config-DataTable source of truth (SoT + repo/user-state fallback).
+      # Empty → the shell serves repo defaults + user-state (G2 wires KEAP live).
+      NOS_KEAP_TABLES_URL: "{{ face_keap_tables_url | default('') }}"
+      NOS_KEAP_API_TOKEN: "{{ keap_agent_token | default('') }}"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
