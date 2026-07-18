@@ -1791,6 +1791,14 @@ docker_mount_probe_image: "alpine:3"
 # ansible.log shows liveness; tail ~/.nos/tofu-reconcile.progress for detail.
 tofu_reconcile_async_timeout: 600
 
+# nos_smoke_max_fail_ratio: the post-run web-UI smoke check (tasks/post-smoke.yml)
+# is a SYSTEMIC-failure gate — it FAILS the run when this fraction or more of the
+# probes are DEAD (a broadly-unreachable platform, e.g. local DNS down → ~every
+# service DEAD, which once shipped behind a health-blind failed=0 blank), while
+# tolerating a few flaky probes below the threshold. 0.5 = fail on majority-dead.
+# Set nos_smoke_strict=true to drop the threshold to 0.0 (fail on ANY probe fail).
+nos_smoke_max_fail_ratio: 0.5
+
 # coexistence_secondary_ttl_days: cooling window applied to the PRIOR primary
 # when a coexistence track is promoted (it becomes a read-only secondary). This
 # is the one-click-rollback window — re-promote the demoted track within it to

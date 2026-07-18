@@ -572,6 +572,12 @@ def main() -> int:
                    help="override tester password (mirrors nos_tester_password)")
     p.add_argument("--authentik-domain", dest="authentik_domain", default=None,
                    help="override authentik_domain — needed only when auth flow runs")
+    p.add_argument("--fail-ratio", dest="fail_ratio", type=float, default=None,
+                   help="systemic-failure gate: exit 1 iff (failed/total) >= this "
+                        "ratio, else 0 — used as a release gate that fails a run "
+                        "when the platform is broadly unreachable (e.g. local DNS "
+                        "down = ~all DEAD) while tolerating a few flaky probes. "
+                        "When unset, exit code is the raw failed count (min 127).")
     args = p.parse_args()
 
     # ── Load Ansible-style variables ───────────────────────────────────────
@@ -719,6 +725,16 @@ def main() -> int:
             sys.stderr.write("WARN: JSONL append to %s failed: %s\n" % (path, exc))
 
     failed = sum(1 for r in results if not r.ok)
+    # Systemic-failure gate: when --fail-ratio is set, exit non-zero ONLY when a
+    # large PROPORTION of probes fail (the "green != working" class — e.g. local
+    # DNS down makes ~every service DEAD) while a couple of flaky probes stay
+    # tolerated. Otherwise the exit code is the raw failed count.
+    if args.fail_ratio is not None:
+        total = len(results)
+        ratio = (failed / total) if total else 0.0
+        # failed>0 guard so a clean run is always 0 even at ratio 0.0 (which
+        # otherwise means "fail on ANY probe failure" = strict mode).
+        return 1 if (failed > 0 and ratio >= args.fail_ratio) else 0
     return min(failed, 127)  # exit code capped at 127
 
 

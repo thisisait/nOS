@@ -8,9 +8,14 @@
 #   - JSONL:  ~/.nos/events/smoke.jsonl (cross-tool consumable, like
 #             the playbook lifecycle hooks)
 #
-# Failures are NON-FATAL by default — the smoke check is informational
-# (the operator decides whether to act on a 404 from a single endpoint).
-# Set `nos_smoke_strict: true` to fail the playbook when any probe fails.
+# SYSTEMIC-FAILURE GATE (closes the "green != working" class, 2026-07-18): a run
+# where a broad PROPORTION of probes are DEAD is systemically broken (e.g. local
+# DNS down → ~every service unreachable by name, which once shipped behind a
+# `failed=0` health-blind blank). That FAILS the run — via nos-smoke's
+# --fail-ratio (exit 1 iff failed/total >= ratio) — while a couple of flaky
+# probes stay tolerated. `nos_smoke_max_fail_ratio` (default 0.5 = majority-dead)
+# tunes the threshold; `nos_smoke_strict: true` drops it to 0.0 (fail on ANY
+# probe failure). A clean run is always rc 0.
 # ==============================================================================
 
 - name: "[smoke] Run nos-smoke.py"
@@ -22,11 +27,10 @@
     --tenant-domain {{ tenant_domain | default('dev.local') | quote }}
     --host-alias {{ host_alias | default('') | quote }}
     --apps-subdomain {{ apps_subdomain | default('apps') | quote }}
+    --fail-ratio {{ 0.0 if (nos_smoke_strict | default(false) | bool) else (nos_smoke_max_fail_ratio | default(0.5)) }}
   register: _nos_smoke
   changed_when: false
-  failed_when:
-    - nos_smoke_strict | default(false) | bool
-    - _nos_smoke.rc != 0
+  failed_when: _nos_smoke.rc | default(0) != 0
   tags: ['always', 'smoke']
 
 - name: "[smoke] Show smoke results"
@@ -35,13 +39,15 @@
   when: _nos_smoke.stdout_lines is defined
   tags: ['always', 'smoke']
 
-- name: "[smoke] Warn on failures (non-strict mode)"
+- name: "[smoke] Note sub-threshold smoke failures (non-fatal)"
   ansible.builtin.debug:
     msg: |
-      ⚠ {{ _nos_smoke.rc }} smoke probe(s) failed. Run individually:
+      ⚠ Some smoke probes failed but stayed below the systemic gate
+      (nos_smoke_max_fail_ratio={{ nos_smoke_max_fail_ratio | default(0.5) }}),
+      so the run is not failed. See the table above; investigate with:
         python3 tools/nos-smoke.py --failed-only
-      Or fail the playbook on smoke errors with: -e nos_smoke_strict=true
+      Fail on ANY probe failure with: -e nos_smoke_strict=true
   when:
-    - _nos_smoke.rc | default(0) | int > 0
-    - not (nos_smoke_strict | default(false) | bool)
+    - _nos_smoke.rc | default(0) | int == 0
+    - "'❌' in (_nos_smoke.stdout | default(''))"
   tags: ['always', 'smoke']
