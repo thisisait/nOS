@@ -45,6 +45,15 @@ services:
       # WITHOUT ever writing them. Docs land here from Puter/euro-office (class-3);
       # fs-sync attributes per user (server/graph.ts keeps users' trees separate).
       - {{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/users:/user-files:ro
+{% if keap_selfmodel | default(true) %}
+      # nOS architecture self-model (class-2 SHARED, docs/plans/keap-selfmodel.md).
+      # The generated tree lives OUTSIDE the per-user tree (host path is class-2
+      # shared/nos-docs, not users/<uid>/), and is presented to fs-sync as a
+      # reserved uid via this nested bind-mount so it becomes a standalone "nOS"
+      # constellation. Its top-class dir ("{{ keap_selfmodel_top }}") is in
+      # KEAP_FS_SYNC_DIRS below. RO — nOS writes host-side, KEAP only reads.
+      - {{ keap_selfmodel_root }}:/user-files/{{ keap_selfmodel_uid }}:ro
+{% endif %}
 {% endif %}
     environment:
       PORT: "8080"

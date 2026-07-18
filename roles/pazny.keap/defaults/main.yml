@@ -29,3 +29,29 @@ keap_repo_ref: "v1.7.0"
 
 keap_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 keap_cpus: "{{ docker_cpus_light | default(1) }}"
+
+# ── nOS architecture self-model (KEAP fs-sync tree) ──────────────────────────
+# The playbook writes a deterministic knowledge tree describing nOS's OWN
+# architecture (platform → stack → service) into a doctrine class-2 SHARED dir
+# (docs/doctrine/filesystem.md: "app-managed multi-user content →
+# tenants/<t>/shared/<svc>/"), then bind-mounts it into KEAP as a reserved
+# fs-sync uid so server/fs-sync.ts (v1.7.0) mirrors it into a standalone "nOS"
+# constellation in /explore and embeds each card into vector space. Generator +
+# KEAP-contract analysis: docs/plans/keap-selfmodel.md.
+keap_selfmodel: true
+# Class-2 shared root (NOT a per-user tree). Kept as a role default (not global)
+# because it is referenced only by this role's own tasks, never by the plugin
+# loader / core-up before the role runs — so the eager-resolve trap doesn't apply.
+keap_selfmodel_root: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/nos-docs"
+# The reserved fs-sync owner uid the tree mounts as, and its top-class dir. The
+# top dir MUST appear in keap_fs_sync_dirs (below) or fs-sync ignores it.
+keap_selfmodel_uid: "nos-docs"
+keap_selfmodel_top: "nOS"
+# Extra dependency edges {service: [dep, ...]} beyond the auto-derived SSO→authentik.
+keap_selfmodel_deps: {}
+# Per-service taxonomy anchor overrides {service: "NN.NN"} (real KEAP node-ids).
+keap_selfmodel_anchors: {}
+
+# fs-sync top-class allowlist. Adds "nOS" so the self-model tree is scanned; the
+# compose env reads `{{ keap_fs_sync_dirs | default('documents,library,inbox') }}`.
+keap_fs_sync_dirs: "documents,library,inbox,nOS"

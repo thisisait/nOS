@@ -25,6 +25,10 @@
     # RO. Ensure it exists so Docker doesn't create a root-owned mount point.
     - "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/users"
 
+- name: "[pazny.keap] Generate nOS architecture self-model (KEAP fs-sync tree)"
+  ansible.builtin.include_tasks: selfmodel.yml
+  when: keap_selfmodel | default(true)
+
 - name: "[pazny.keap] Clone nos-keap repository (pinned ref)"
   ansible.builtin.git:
     repo: "{{ keap_repo_url }}"

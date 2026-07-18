@@ -1,0 +1,82 @@
+---
+# =============================================================================
+# pazny.keap/tasks/selfmodel.yml — nOS architecture self-model
+#
+# Writes a deterministic knowledge tree describing nOS's own architecture
+# (platform → stack → service) into the class-2 SHARED dir keap_selfmodel_root,
+# which compose.yml.j2 bind-mounts into KEAP as the reserved fs-sync uid
+# keap_selfmodel_uid. KEAP's server/fs-sync.ts then mirrors every file into a
+# knowledge object (a standalone "nOS" constellation) and the host keap-embed-
+# sync job positions it in vector space. Idempotent: the generator only rewrites
+# a card whose bytes changed, so fs-sync's size+mtime skip holds (no re-embed
+# storm). Design + KEAP-contract analysis: docs/plans/keap-selfmodel.md.
+# =============================================================================
+
+- name: "[pazny.keap] Ensure class-2 self-model shared dir"
+  ansible.builtin.file:
+    path: "{{ keap_selfmodel_root }}"
+    state: directory
+    mode: '0755'
+
+# ── REAL per-service state (operator refinement 2026-07-18) ──────────────────
+# The digest cards must carry each service's ACTUAL deployed facts (version,
+# image, port, domain, data path, mem/cpu limits), not generic prose. Those are
+# Jinja-only resolvable — so resolve them HERE, in Ansible, against the live var
+# hierarchy, keyed off the manifest's OWN var-name declarations (version_var /
+# port_var / domain_var / data_path_var — role-adjacent, no naming guesswork).
+# lookup('vars', <name>, default='') yields '' for a var not in scope on this
+# host's config, so an unset fact is simply omitted from the card. The generator
+# gets the whole map as --facts-json.
+- name: "[pazny.keap] Load manifest services for self-model facts"
+  ansible.builtin.set_fact:
+    _keap_sm_services: "{{ (lookup('file', playbook_dir + '/state/manifest.yml') | from_yaml).services | default([]) }}"
+
+- name: "[pazny.keap] Resolve REAL per-service deployment facts (Jinja)"
+  ansible.builtin.set_fact:
+    _keap_sm_facts: "{{ _keap_sm_facts | default({}) | combine({item.id: _one}) }}"
+  loop: "{{ _keap_sm_services }}"
+  loop_control:
+    label: "{{ item.id }}"
+  vars:
+    _vp: "{{ item.id | replace('-', '_') }}"
+    _one:
+      image: "{{ item.image | default('') }}"
+      version: "{{ lookup('vars', item.version_var, default='') if (item.version_var | default('')) | length > 0 else '' }}"
+      port: "{{ lookup('vars', item.port_var, default='') if (item.port_var | default('')) | length > 0 else '' }}"
+      domain: "{{ lookup('vars', item.domain_var, default='') if (item.domain_var | default('')) | length > 0 else '' }}"
+      data_path: "{{ lookup('vars', item.data_path_var, default='') if (item.data_path_var | default('')) | length > 0 else '' }}"
+      mem_limit: "{{ lookup('vars', _vp ~ '_mem_limit', default='') }}"
+      cpus: "{{ lookup('vars', _vp ~ '_cpus', default='') }}"
+
+- name: "[pazny.keap] Generate nOS architecture self-model tree"
+  ansible.builtin.command:
+    argv:
+      - "{{ ansible_python_interpreter | default('python3') }}"
+      - "{{ playbook_dir }}/files/anatomy/scripts/keap_selfmodel_gen.py"
+      - "--manifest"
+      - "{{ playbook_dir }}/state/manifest.yml"
+      - "--plugins-dir"
+      - "{{ playbook_dir }}/files/anatomy/plugins"
+      - "--out-root"
+      - "{{ keap_selfmodel_root }}"
+      - "--uid"
+      - "{{ keap_selfmodel_uid }}"
+      - "--top"
+      - "{{ keap_selfmodel_top }}"
+      - "--deps-json"
+      - "{{ keap_selfmodel_deps | to_json }}"
+      - "--anchors-json"
+      - "{{ keap_selfmodel_anchors | to_json }}"
+      - "--facts-json"
+      - "{{ _keap_sm_facts | default({}) | to_json }}"
+  register: _keap_selfmodel
+  changed_when: >-
+    ((_keap_selfmodel.stdout | default('{}') | from_json).created
+     + (_keap_selfmodel.stdout | default('{}') | from_json).updated
+     + (_keap_selfmodel.stdout | default('{}') | from_json).removed) | int > 0
+
+- name: "[pazny.keap] Self-model summary"
+  ansible.builtin.debug:
+    msg: >-
+      nOS self-model → {{ keap_selfmodel_root }}/{{ keap_selfmodel_top }}/
+      ({{ _keap_selfmodel.stdout | default('{}') | from_json }})
