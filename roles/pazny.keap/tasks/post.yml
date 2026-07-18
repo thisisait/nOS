@@ -1,4 +1,34 @@
 ---
+# ── Embed model (host Ollama) — KEAP's brain-embedding dependency ─────────────
+# The keap-embed-sync Pulse job embeds node/table descriptions into 768-dim
+# vectors via host-loopback Ollama. The model KEAP dictates (keap_embed_model)
+# must exist on the host Ollama or every embed call 404s and semantic search +
+# table vector columns stay empty. `ollama pull` is idempotent (no-op if present).
+# Gated on install_openclaw (which installs + runs the host Ollama); tolerant of
+# a transient Ollama outage so it never blocks the converge.
+- name: "[pazny.keap] Ensure embed model on host Ollama ({{ keap_embed_model }})"
+  ansible.builtin.command: "ollama pull {{ keap_embed_model }}"
+  environment:
+    PATH: "{{ homebrew_prefix | default('/opt/homebrew') }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+    OLLAMA_MODELS: "{{ ollama_models_dir | default(ansible_facts['env']['HOME'] + '/.ollama/models') }}"
+    OLLAMA_HOST: "http://127.0.0.1:11434"
+  register: _keap_embed_pull
+  changed_when: false
+  failed_when: false
+  timeout: 600
+  when: keap_embed_pull | default(false) | bool
+
+- name: "[pazny.keap] Warn if the embed model pull failed (semantic search will be empty)"
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: `ollama pull {{ keap_embed_model }}` did not succeed (rc={{ _keap_embed_pull.rc | default('?') }}).
+      KEAP embeddings + vector search will be empty until the model is available on the host Ollama.
+      Fix: ensure Ollama is running, then `ollama pull {{ keap_embed_model }}`.
+  when:
+    - keap_embed_pull | default(false) | bool
+    - _keap_embed_pull.rc is defined
+    - _keap_embed_pull.rc != 0
+
 # Post-start: optionally seed illustrative demo data tables so a fresh install
 # shows the TableStore with real, OLAP-shaped content instead of an empty grid.
 # Opt-in (keap_seed_fixtures) + once-only (the `creates` marker), matching

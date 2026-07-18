@@ -57,3 +57,15 @@ keap_selfmodel_anchors: {}
 # fs-sync top-class allowlist. Adds "nOS" so the self-model tree is scanned; the
 # compose env reads `{{ keap_fs_sync_dirs | default('documents,library,inbox') }}`.
 keap_fs_sync_dirs: "documents,library,inbox,nOS"
+
+# ── Brain-embedding model (host Ollama) ──────────────────────────────────────
+# KEAP dictates the embedding model + dim via /agent/v1/embeddings/pending; the
+# host-side keap-embed-sync Pulse job calls host-loopback Ollama with it (the
+# gated_net container can't reach Ollama). If this model isn't on the host Ollama
+# every embed call 404s and semantic search + table vector columns stay empty —
+# so post.yml `ollama pull`s it (idempotent). 768-dim.
+keap_embed_model: "nomic-embed-text"
+# Pull the embed model on the host during provisioning. Needs a host Ollama
+# (installed + run by the openclaw role) — gated on install_openclaw so a run
+# without Ollama doesn't spuriously fail. Set false to manage the model yourself.
+keap_embed_pull: "{{ install_openclaw | default(false) }}"
