@@ -58,6 +58,37 @@ def test_circuit_breaker_disables_after_threshold(monkeypatch, tmp_path):
     assert plugin._sqlite.count() <= 5
 
 
+def test_breaker_half_opens_after_reprobe(monkeypatch, tmp_path):
+    """A TRANSIENT outage (Bone starting) must not disable telemetry for the
+    whole run: once _reprobe_after_sec elapses the breaker half-opens, and a now-
+    healthy sink re-enables it."""
+    gt, plugin = _make_plugin(monkeypatch, tmp_path, threshold=3)
+
+    class DownThenUp:
+        def __init__(self):
+            self.up = False
+
+        def send_batch(self, events):
+            if not self.up:
+                raise gt.TransportError("Connection reset by peer")
+
+    tr = DownThenUp()
+    plugin._http = tr
+    plugin._reprobe_after_sec = 60.0
+
+    for i in range(10):                       # trip the breaker while "down"
+        plugin._emit("task_ok", task="t%d" % i)
+    assert plugin._telemetry_disabled is True
+
+    # Bone comes up; pretend the re-probe window elapsed.
+    tr.up = True
+    plugin._disabled_at = plugin._disabled_at - 120  # 2 min ago
+
+    plugin._emit("task_ok", task="after")     # → half-open, succeeds, closes
+    assert plugin._telemetry_disabled is False
+    assert plugin._consecutive_failures == 0
+
+
 def test_success_resets_the_breaker(monkeypatch, tmp_path):
     gt, plugin = _make_plugin(monkeypatch, tmp_path, threshold=5)
 

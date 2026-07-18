@@ -470,12 +470,23 @@ class CallbackModule(CallbackBase):
         # secret desync between the callback and Bone) can never crawl the run.
         self._consecutive_failures = 0
         self._telemetry_disabled = False
+        self._disabled_at = 0.0
         try:
             self._failure_threshold = int(os.environ.get(
                 "WING_EVENTS_FAILURE_THRESHOLD",
                 self.DEFAULT_FAILURE_THRESHOLD))
         except (TypeError, ValueError):
             self._failure_threshold = self.DEFAULT_FAILURE_THRESHOLD
+        # Half-open re-probe: after the breaker trips, retry the sink this many
+        # seconds later. A TRANSIENT outage (Bone still starting early in the run
+        # → connection reset) must not disable telemetry for the WHOLE run; once
+        # Bone is up the breaker half-opens and telemetry resumes. 0 = never
+        # re-probe (stay disabled once tripped).
+        try:
+            self._reprobe_after_sec = float(os.environ.get(
+                "WING_EVENTS_REPROBE_SEC", "60"))
+        except (TypeError, ValueError):
+            self._reprobe_after_sec = 60.0
 
         self._playbook_name = None
         self._play_name = None
@@ -771,13 +782,22 @@ class CallbackModule(CallbackBase):
         if not self._buffer:
             self._last_flush = time.time()
             return
-        # Circuit open — drop buffered events on the floor (no POST, no fallback
-        # write). Observability degraded, run unharmed. This is the guarantee
-        # that a broken telemetry pipeline can never slow or wedge the playbook.
+        # Circuit open — normally drop buffered events on the floor (no POST, no
+        # fallback write). Observability degraded, run unharmed. This is the
+        # guarantee that a broken telemetry pipeline can never slow the playbook.
+        # HALF-OPEN: once _reprobe_after_sec has elapsed since the trip, give the
+        # sink one more chance — a transient outage (Bone still starting) must not
+        # kill telemetry for the whole run; if the sink is back this flush lands
+        # and the breaker closes, else it re-trips and waits another interval.
         if self._telemetry_disabled:
-            self._buffer = []
-            self._last_flush = time.time()
-            return
+            if (self._reprobe_after_sec > 0
+                    and (time.time() - self._disabled_at) >= self._reprobe_after_sec):
+                self._telemetry_disabled = False
+                self._consecutive_failures = 0
+            else:
+                self._buffer = []
+                self._last_flush = time.time()
+                return
         batch = self._buffer
         self._buffer = []
         self._last_flush = time.time()
@@ -813,12 +833,15 @@ class CallbackModule(CallbackBase):
                 # desync, Bone down) would otherwise spill every remaining event
                 # to disk and thrash it. One warning, then silence.
                 self._telemetry_disabled = True
+                self._disabled_at = time.time()
                 sys.stderr.write(
                     "[wing_telemetry] transport failed %d times consecutively "
-                    "(%s) — DISABLING telemetry for this run so it cannot slow "
-                    "the playbook. Fix the pipeline (commonly an HMAC secret "
-                    "desync: callback vs Bone WING_EVENTS_HMAC_SECRET) and "
-                    "re-run.\n" % (self._consecutive_failures, exc))
+                    "(%s) — DISABLING telemetry%s so it cannot slow the "
+                    "playbook. Common causes: an HMAC secret desync (callback vs "
+                    "Bone WING_EVENTS_HMAC_SECRET), or Bone not up yet.\n"
+                    % (self._consecutive_failures, exc,
+                       (" for %ds (half-open retry)" % int(self._reprobe_after_sec))
+                       if self._reprobe_after_sec > 0 else " for this run"))
                 sys.stderr.flush()
                 return
             if self._sqlite is not None:
