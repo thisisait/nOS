@@ -1575,7 +1575,7 @@ docker_socket_proxy_version: "v0.4.2"  # registry tag IS v-prefixed (0.4.2 was o
 
 spacetimedb_domain: "spacetime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 spacetimedb_port: 3030                  # host → container 3000 (HTTP + WebSocket)
-spacetimedb_version: "latest"           # pin to a specific tag (e.g. "1.5") for production
+spacetimedb_version: "v2.6.1"           # pinned from floating latest for blank reproducibility (v2.6.1 = newest, verified on Docker Hub). Excluded from all-on profile.
 spacetimedb_keys_dir: "{{ nos_data_root }}/platform/services/spacetimedb/keys"
 spacetimedb_install_host_cli: true      # install `spacetime` binary on host so the operator can publish modules
 spacetimedb_dev_db: "dev"               # logical dev DB name printed in onboarding hint
@@ -1632,7 +1632,7 @@ calibreweb_timezone: "Europe/Prague"
 
 snappymail_domain: "webmail{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 snappymail_port: 3008
-snappymail_image: "djmaze/snappymail:latest"
+snappymail_image: "djmaze/snappymail:v2.38.2"
 
 # ==============================================================================
 # TAILSCALE – WireGuard mesh VPN

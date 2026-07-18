@@ -21,7 +21,7 @@ install_snappymail: false
 
 # Docker image. djmaze/snappymail:latest is the official image (Alpine,
 # nginx + PHP-FPM 8.2). Pin a digest or tag for reproducibility.
-snappymail_image: "djmaze/snappymail:latest"
+snappymail_image: "djmaze/snappymail:v2.38.2"
 
 # Domain — separate from mail.<tld> (which is the SMTP/IMAP server).
 # webmail.<tld> is the webmail UI frontend.
