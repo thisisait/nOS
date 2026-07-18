@@ -28,6 +28,23 @@ from pathlib import Path
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 
+# Sibling module: the pure leaf-name sanitizer (defense in depth on top of the
+# load-bearing realpath-∈-scope check below). vfs.py is imported both as a
+# top-level module (`import vfs` in main.py, bone dir on sys.path) AND via
+# spec_from_file_location in the test harness (dir NOT on sys.path), so fall
+# back to a by-path load when the plain import can't find the sibling.
+try:  # noqa: SIM105
+    from fsnames import LeafNameError, sanitize_leaf
+except ImportError:  # pragma: no cover — exercised only under the test loader
+    import importlib.util as _ilu
+
+    _spec = _ilu.spec_from_file_location("bone_fsnames", str(Path(__file__).with_name("fsnames.py")))
+    _fsnames = _ilu.module_from_spec(_spec)
+    assert _spec is not None and _spec.loader is not None
+    _spec.loader.exec_module(_fsnames)
+    LeafNameError = _fsnames.LeafNameError
+    sanitize_leaf = _fsnames.sanitize_leaf
+
 router = APIRouter(prefix="/api/v1/vfs", tags=["vfs"])
 
 # Caps — keep responses bounded (the browser is not a bulk-transfer tool).
@@ -81,6 +98,27 @@ def _resolve(uid: str, relpath: str, *, must_exist: bool = False) -> Path:
     if must_exist and not target.exists():
         raise HTTPException(status_code=404, detail="not found")
     return target
+
+
+def _checked_leaf(name: str) -> str:
+    """Shape-validate a single leaf name; raise HTTP 400 (not 500) on rejection.
+
+    Turns `fsnames.LeafNameError` into a 400 whose detail names the reason, so
+    the face browser can tell the user why a filename was refused."""
+    try:
+        return sanitize_leaf(name)
+    except LeafNameError as exc:
+        raise HTTPException(status_code=400, detail=f"invalid filename: {exc.reason}")
+
+
+def _checked_relpath(path: str) -> str:
+    """Return `path` with ONLY its leaf NFC-normalized + shape-validated.
+
+    Parent segments are left for `_resolve` (realpath containment) — this gate
+    is about the NEW leaf a write/mkdir/move/copy/upload is about to create."""
+    parent, leaf = os.path.split((path or "").rstrip("/"))
+    leaf = _checked_leaf(leaf)
+    return f"{parent}/{leaf}" if parent else leaf
 
 
 def _rel(uid: str, p: Path) -> str:
@@ -163,7 +201,7 @@ def vfs_write(body: dict = Body(...), _=Depends(require_vfs_token)) -> dict:
     uid, path = body.get("uid", ""), body.get("path", "")
     if not path:
         raise HTTPException(status_code=400, detail="path is required")
-    target = _resolve(uid, path)
+    target = _resolve(uid, _checked_relpath(path))
     if target.is_dir():
         raise HTTPException(status_code=400, detail="path is a directory")
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -176,7 +214,7 @@ def vfs_mkdir(body: dict = Body(...), _=Depends(require_vfs_token)) -> dict:
     uid, path = body.get("uid", ""), body.get("path", "")
     if not path:
         raise HTTPException(status_code=400, detail="path is required")
-    target = _resolve(uid, path)
+    target = _resolve(uid, _checked_relpath(path))
     target.mkdir(parents=True, exist_ok=True)
     return {"ok": True, **_entry(uid, target)}
 
@@ -188,7 +226,7 @@ def vfs_move(body: dict = Body(...), _=Depends(require_vfs_token)) -> dict:
     if not src or not dst:
         raise HTTPException(status_code=400, detail="src and dst are required")
     source = _resolve(uid, src, must_exist=True)
-    dest = _resolve(uid, dst)
+    dest = _resolve(uid, _checked_relpath(dst))
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(source), str(dest))
     return {"ok": True, **_entry(uid, dest)}
@@ -201,7 +239,7 @@ def vfs_copy(body: dict = Body(...), _=Depends(require_vfs_token)) -> dict:
     if not src or not dst:
         raise HTTPException(status_code=400, detail="src and dst are required")
     source = _resolve(uid, src, must_exist=True)
-    dest = _resolve(uid, dst)
+    dest = _resolve(uid, _checked_relpath(dst))
     if dest.exists():
         raise HTTPException(status_code=409, detail="destination exists")
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -237,7 +275,7 @@ async def vfs_upload(
 ) -> dict:
     # Raw-body upload (streamed, capped) → <path>/<filename>. Streaming avoids
     # buffering the whole file and the python-multipart dependency.
-    fname = os.path.basename(filename or "upload.bin")
+    fname = _checked_leaf(os.path.basename(filename or "upload.bin"))
     target = _resolve(uid, f"{path.rstrip('/')}/{fname}" if path else fname)
     if target.is_dir():
         raise HTTPException(status_code=400, detail="path is a directory")
