@@ -1,0 +1,58 @@
+# =============================================================================
+# pazny.face — compose override fragment (nOS FACE / web-desktop shell)
+# Merged into `docker compose -p iiab up` in tasks/stacks/stack-up.yml via
+# ansible.builtin.find over {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# Built from source: the role clones nos-face at {{ face_repo_ref }} and
+# `docker compose up` builds nos/face from the clone (keap/puter precedent).
+# The image bakes a HEALTHCHECK on /health, so the STRICT in-stream health-wait
+# (A19) sees a real health state.
+#
+# SEC-02: face joins ONLY the Traefik-only gated_net — its identity comes from
+# X-Authentik-* headers (forward-auth), so peers must not reach :5090 to forge
+# them. Defense-in-depth: the BFF believes those headers ONLY when the request
+# also carries X-Face-Edge-Token (FACE_EDGE_TOKEN), injected by the face-edge
+# Traefik middleware — a peer on gated_net has no way to present it. Host egress
+# (Wing catalog + Bone VFS on the host's loopback) rides host.docker.internal.
+# =============================================================================
+
+services:
+  face:
+    build:
+      context: {{ face_src_dir | default(ansible_facts['env']['HOME'] + '/face/src') }}
+      dockerfile: Dockerfile
+    image: nos/face:{{ face_version | default('latest') }}
+    restart: unless-stopped
+    ports:
+      # Loopback debug publish only (NOT for Traefik — Traefik reaches the
+      # container directly on gated_net). Lets the operator curl the shell.
+      - "127.0.0.1:{{ face_port | default(5090) }}:{{ face_internal_port | default(5090) }}"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "{{ face_internal_port | default(5090) }}"
+      NODE_ENV: "production"
+      # Edge-trust: believe X-Authentik-* ONLY with this token (anti-spoof).
+      FACE_EDGE_TOKEN: "{{ face_edge_token }}"
+      FACE_EDGE_TOKEN_HEADER: "x-face-edge-token"
+      # Wing app catalog (host daemon on loopback). GET is public; pass the wing
+      # edge token too in case the API path enforces it.
+      NOS_HUB_API_URL: "http://host.docker.internal:{{ wing_port | default(9000) }}/api/v1/hub/systems"
+      WING_EDGE_TOKEN: "{{ wing_edge_token | default('') }}"
+      # Bone VFS (host daemon) — the real per-user tree. Endpoint lands in M2;
+      # until then the file browser degrades gracefully (shows "unreachable").
+      NOS_VFS_API_URL: "http://host.docker.internal:{{ bone_port | default(8099) }}/api/v1/vfs"
+      NOS_VFS_API_TOKEN: "{{ face_vfs_token | default('') }}"
+      NOS_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      # SEC-02: Traefik-only gated_net. Traefik (also on gated_net) routes it via
+      # traefik_container_upstreams (face: {svc: face, port: {{ face_internal_port | default(5090) }}}).
+      - gated_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ face_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ face_cpus | default(docker_cpus_light) }}

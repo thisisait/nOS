@@ -58,6 +58,16 @@
         <key>WING_DB_PATH</key>
         <string>{{ bone_wing_db_dir }}/wing.db</string>
 
+        <!-- nOS face VFS (vfs.py): the class-3 per-user tree lives under the
+             doctrine data root; Bone reaches it host-natively. BONE_VFS_TOKEN
+             is the static bearer the face BFF presents (empty ⇒ VFS 503s). -->
+        <key>NOS_DATA_ROOT</key>
+        <string>{{ nos_data_root }}</string>
+        <key>NOS_TENANT_SLUG</key>
+        <string>{{ nos_tenant_slug | default('pazny') }}</string>
+        <key>BONE_VFS_TOKEN</key>
+        <string>{{ face_vfs_token | default('') }}</string>
+
         {% if install_authentik | default(false) %}
         <!-- Track B JWT auth: Bone validates incoming tokens against Authentik. -->
         <!-- In host mode, Bone reaches Authentik via the public Traefik path -->

@@ -56,6 +56,7 @@ HEALTH_BLIND = {
     "vaultwarden": "BAKED: image bakes HEALTHCHECK `/healthcheck.sh`",
     "uptime-kuma": "BAKED: image bakes HEALTHCHECK `extra/healthcheck`",
     "keap": "BAKED: image bakes HEALTHCHECK `wget /api/health` (built from source; see compose header)",
+    "face": "BAKED: image bakes HEALTHCHECK on /health (SvelteKit adapter-node; built from source; see compose header)",
     "tileserver": "BAKED: image bakes HEALTHCHECK `node .../healthcheck.js`",
     "watchtower": "BAKED: image bakes HEALTHCHECK `/watchtower --health-check`",
     # ── BLIND: no safe probe (a guaranteed-failing probe would break the wait) ─

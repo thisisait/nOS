@@ -460,6 +460,7 @@ install_iiab_terminal: false      # TUI access via SSH for anyone on LAN [requir
 
 # ── Web desktop ───────────────────────────────────────────────────────────────
 install_puter: true              # Puter – cloud OS web desktop (multi-user, AI, iframe apps) [Docker]
+install_face: true               # nOS face – unified web-desktop shell (SvelteKit; composes hub catalog + header-SSO + Bone VFS) [Docker]
 
 # ── Knowledge / cortex ────────────────────────────────────────────────────────
 install_keap: true               # KEAP – knowledge explorer & preserver (taxonomy, content links, agent API) [Docker]
@@ -2073,6 +2074,20 @@ puter_admin_email: "{{ default_admin_email }}"
 puter_admin_password: "{{ global_password_prefix }}_pw_puter"
 
 # ==============================================================================
+# nOS face – the unified web-desktop shell (the FACE of the nOS anatomy).
+# Built from source by roles/pazny.face (git clone thisisait/nos-face at
+# face_repo_ref, keap/puter-style compose build). forward_auth SSO; the shell
+# composes the Wing catalog + Bone VFS. install_face ON by default (2026-07-18);
+# builds from the pinned thisisait/nos-face tag like nos-keap.
+# Design doc: docs/plans/nos-face.md.
+# ==============================================================================
+
+face_domain: "face{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+face_port: 5090                                # loopback debug publish (container binds 5090)
+face_version: "latest"                         # nos/face local image tag (source pinned by face_repo_ref)
+face_repo_ref: "v0.1.0"                         # immutable tag of thisisait/nos-face (R10 reproducibility) — M0–M2b
+
+# ==============================================================================
 # KEAP – Knowledge Explorer and Preserver (the CORTEX of the nOS anatomy)
 # Built from source by roles/pazny.keap (git clone at keap_repo_ref, puter-
 # style compose build). Human surface behind header_oidc SSO; agent surface
@@ -2081,7 +2096,7 @@ puter_admin_password: "{{ global_password_prefix }}_pw_puter"
 
 keap_domain: "keap{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 keap_port: 8091                                # loopback publish; also the AgentKit surface
-keap_version: "1.8.1"                          # nos/keap image tag — MUST match keap_repo_ref (v1.8.1) so the label is honest
+keap_version: "1.9.0"                          # nos/keap image tag — MUST match keap_repo_ref (v1.9.0) so the label is honest
 # Seed a few illustrative demo data tables (Reading Log / Field Log / Home
 # Inventory, one per share scope) on a fresh install so the TableStore shows
 # real OLAP-shaped content, not an empty grid. Opt-in + once-only (a marker

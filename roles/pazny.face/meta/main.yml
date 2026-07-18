@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  role_name: face
+  namespace: pazny
+  author: This is AIT
+  description: >-
+    nOS face — the unified web-desktop shell (SvelteKit). Composes Authentik
+    header-SSO, the Wing app catalog, iframe-embedded services, and the Bone VFS
+    into a liquid-glass macOS-style desktop. Built from source (thisisait/nos-face).
+  license: MIT
+  min_ansible_version: "2.20"
+  platforms:
+    - name: MacOSX
+    - name: Ubuntu
+dependencies: []

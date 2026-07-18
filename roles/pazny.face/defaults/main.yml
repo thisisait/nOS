@@ -1,0 +1,43 @@
+---
+# ==============================================================================
+# pazny.face — role defaults
+#
+# nOS face — the unified web-desktop shell (SvelteKit). The FACE of the nOS
+# anatomy: a liquid-glass macOS-style desktop that composes the EXISTING nOS
+# surfaces — Authentik header-SSO (zero forced accounts), the Wing app catalog
+# (/api/v1/hub/systems), iframe-embedded services, and the Bone VFS over the
+# real per-user tree (tenants/<slug>/users/<uid>/).
+#
+# Built from source (KEAP/Puter precedent): the role git-clones thisisait/nos-face
+# at a pinned ref and `docker compose up` builds nos/face from the clone.
+#
+# Operator-facing pins (domain/port/version/repo) live in default.config.yml —
+# these are fallbacks only (version-pin shadow rule: bump default.config.yml,
+# not here). Design doc: docs/plans/nos-face.md.
+# ==============================================================================
+
+face_home: "{{ ansible_facts['env']['HOME'] }}/face"
+face_src_dir: "{{ face_home }}/src"
+
+# Upstream repo — the standalone nOS-face shell. R10 reproducibility: pin an
+# immutable tag, never a branch. The GitHub repo must carry the pinned tag before
+# a reproducible build; for the FIRST live test (before any push) use the
+# bootstrap-from-local mode below.
+face_repo_url: "https://github.com/thisisait/nos-face.git"
+face_repo_ref: "v0.1.0"
+
+# ── Bootstrap-from-local (pre-push live test) ────────────────────────────────
+# Before thisisait/nos-face is pushed, the role can build from the operator's
+# local working copy. Flip face_source_local=true (e.g. in config.yml) for the
+# first os.<tld> live test, then push+tag and drop it → reproducible GitHub build.
+# The git module clones fine from a local repo path; `master` checks out its tip.
+face_source_local: false
+face_local_repo: "{{ ansible_facts['env']['HOME'] }}/projects/nos-face"
+face_local_ref: "master"
+
+face_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+face_cpus: "{{ docker_cpus_light | default(1) }}"
+
+# Internal container port the SvelteKit node server binds (adapter-node PORT).
+# NOT operator-facing — Traefik reaches the container on this port via Docker DNS.
+face_internal_port: 5090

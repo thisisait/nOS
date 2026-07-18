@@ -266,6 +266,32 @@ real robustness gap, not a one-off; fixes are structural.
    section ✅ done this session; remaining: plan-header lags, archive the resolved
    `v07-*` dumps.
 
+## nOS face — the unified web-desktop (ACTIVE, NEW 2026-07-18)
+
+The **primary interaction surface** for nOS: a liquid-glass web-desktop that composes the
+surfaces nOS already owns (Authentik header-SSO = zero forced accounts, Wing `/hub` catalog,
+apps_runner, the real per-user FS tree). Replaces **Puter as the face** (Puter's DB+blob VFS
+can't be a real file browser or the KEAP bridge). Build-fresh SvelteKit in its own repo
+`thisisait/nos-face` + `roles/pazny.face` (KEAP clone-build pattern). Authoritative:
+`docs/plans/nos-face.md`; app-build doctrine: `docs/doctrine/face-app-tiers.md`.
+
+- **Shipped (M0–M2b):** liquid-glass shell (WM/dock/menubar), zero-login identity + edge-trust,
+  `/hub`-driven dock, iframe app windows, **Bone VFS** (real files, realpath-contained, 22 tests),
+  file browser + upload + two-mode file-picker service, **Bone user-state** (per-user KV organ —
+  the Tier-F1 recipe), Sticky Notes + desktop personalization. `install_face` default **off**.
+- **Next:** M3 app-host + "install system app" + grafana-face (Grafana API kiosk); consolidate
+  control planes (Authentik/Wing/KEAP/Infisical/Nextcloud) into face tiles.
+- **M4 — agent app-builder (the payoff):** an AgentKit `AppScaffoldTool` that, given a
+  **tier classification** (F1..F4/H, `face-app-tiers.md`), scaffolds a user-app **private
+  submodule** (docs + code + migrations + idempotent commands, default RBAC tier-3, promotable) +
+  a companion app. The tier selects the agent's system-prompt profile. The agent draws nOS
+  understanding + tenant business/domain from **KEAP** (free local deterministic semantic search).
+  Target: a near-one-shot hotel ordering system for a tenant.
+- **M5:** evolve the IIAB Textual TUI onto the same catalog + VFS APIs (TUI nOS face); retire
+  Puter as the face (keep only as an installable app). Harden AgentKit.
+- **Follow-ups:** user-state at-rest encryption (per-user Infisical key → SQLCipher/libSQL);
+  postMessage picker bridge for iframe apps; Nextcloud as the class-3 document producer for KEAP.
+
 ## Backlog
 
 ### P0 — FS doctrine epic (NEW 2026-07-16, foundational — blocks release-green + euro-office)

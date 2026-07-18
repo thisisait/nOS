@@ -79,6 +79,18 @@ http:
         customRequestHeaders:
           X-Wing-Edge-Token: "{{ wing_edge_token | default('') }}"
 
+    # ── nOS face edge-trust signature (SEC-6 analog) ──────────────────────
+    # face's BFF (src/hooks.server.ts) believes the Authentik X-Authentik-*
+    # identity headers ONLY when the request carries X-Face-Edge-Token
+    # matching its FACE_EDGE_TOKEN env. customRequestHeaders REPLACES any
+    # client-sent value, so a peer on gated_net cannot pre-poison it — only
+    # Traefik (which holds the token) can present it. Applied on the face
+    # router in services.yml.j2.
+    face-edge:
+      headers:
+        customRequestHeaders:
+          X-Face-Edge-Token: "{{ face_edge_token | default('') }}"
+
 {% if (sso_autologin_miniflux | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool %}
     # ── SSO autologin force-OIDC: Miniflux /login → OIDC ──────────────────
     # sso-autologin-plan.md Batch 3 (partial). DISABLE_LOCAL_AUTH=1 (set in

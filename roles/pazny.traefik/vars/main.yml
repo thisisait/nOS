@@ -101,6 +101,8 @@ traefik_auth_modes:
   firefly: proxy
   keap: proxy               # header_oidc — outpost must stay in path to inject
                             # X-Authentik-* identity headers (firefly pattern)
+  face: proxy               # forward_auth — outpost injects X-Authentik-* which
+                            # the face BFF reads (behind X-Face-Edge-Token trust)
   influxdb: proxy           # admin UI gated; token-based API still works
   mailpit: proxy            # admin tier
   mcp_gateway: proxy
@@ -196,6 +198,7 @@ traefik_container_upstreams:
   ntfy:          { port: 80 }
   puter:         { port: 4100 }
   keap:          { port: 8080 }
+  face:          { port: 5090 }
   kiwix:         { port: 8080 }
   nodered:       { port: 1880 }
   n8n:           { port: 5678 }

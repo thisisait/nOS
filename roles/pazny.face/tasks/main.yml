@@ -1,0 +1,61 @@
+---
+# ==============================================================================
+# pazny.face/tasks/main.yml — nOS face (web-desktop shell)
+#
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
+# clones thisisait/nos-face at the pinned ref (git-clone build precedent:
+# pazny.keap / pazny.hermes), then renders the compose override fragment to
+# {{ stacks_dir }}/iiab/overrides/face.yml which stack-up.yml collects via
+# `find` and passes as an additional -f flag. The image is built from the clone
+# by `docker compose up` (build-from-source precedent: pazny.keap / pazny.puter).
+#
+# Routing: face is auto-routed by the Traefik file-provider from its
+# state/manifest.yml row (domain_var: face_domain, port_var: face_port) with
+# forward-auth (traefik_auth_modes.face = proxy) + the face-edge middleware
+# (SEC-6 analog) that injects X-Face-Edge-Token. Reached container-directly on
+# gated_net via traefik_container_upstreams.face = {svc: face, port: 5090}.
+# ==============================================================================
+
+- name: "[pazny.face] Ensure home and src directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ face_home }}"
+    - "{{ face_src_dir }}"
+
+- name: "[pazny.face] Resolve source (GitHub pinned ref vs local bootstrap)"
+  ansible.builtin.set_fact:
+    _face_repo: "{{ face_local_repo if (face_source_local | default(false) | bool) else face_repo_url }}"
+    _face_ref: "{{ face_local_ref if (face_source_local | default(false) | bool) else face_repo_ref }}"
+
+- name: "[pazny.face] Clone nos-face repository ({{ _face_ref }})"
+  ansible.builtin.git:
+    repo: "{{ _face_repo }}"
+    dest: "{{ face_src_dir }}"
+    version: "{{ _face_ref }}"
+    force: false
+    depth: 1
+  register: _face_clone
+  notify: Restart face
+
+- name: "[pazny.face] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/face.yml"
+    mode: '0600'
+  notify: Restart face
+
+- name: "[pazny.face] Print info"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════
+       nOS face ready (starts via the IIAB stack)
+      ══════════════════════════════════════════════════════
+       URL:      https://{{ face_domain | default('face' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
+       Port:     {{ face_internal_port }} (container; loopback debug on {{ face_port | default(5090) }})
+       Source:   {{ face_src_dir }} @ {{ _face_ref }}{{ ' (local bootstrap)' if (face_source_local | default(false) | bool) else '' }}
+       SSO:      forward_auth (X-Authentik-* via gated_net) + X-Face-Edge-Token trust
+       Catalog:  Wing /api/v1/hub/systems   Files: Bone VFS (users/<uid>/)
+      ══════════════════════════════════════════════════════

@@ -1,0 +1,136 @@
+# =============================================================================
+# face-base — service plugin (nOS FACE / web-desktop shell, 2026-07-18)
+#
+# Status: live manifest. nOS face is the FACE of the anatomy — the unified
+# liquid-glass web-desktop that becomes the primary place to interact with nOS.
+# It does NOT reimplement an OS: it composes the surfaces nOS already owns —
+# Authentik header-SSO (zero forced accounts), the Wing app catalog
+# (/api/v1/hub/systems), iframe-embedded services, and the Bone VFS over the
+# real per-user tree (tenants/<slug>/users/<uid>/).
+#
+# Source lives OUTSIDE nOS (thisisait/nos-face) — roles/pazny.face git-clones
+# the pinned ref and builds nos/face from source (keap clone + puter build
+# precedents).
+#
+# SSO: forward_auth — the Authentik proxy outpost gates face.<tld> and injects
+# X-Authentik-uid/-username/-email/-groups. The BFF (src/hooks.server.ts) builds
+# a per-user identity from those headers, but trusts them ONLY when the request
+# also carries X-Face-Edge-Token (the face-edge Traefik middleware) — so a peer
+# on gated_net cannot forge identity. SEC-02: the container joins ONLY the
+# Traefik-only gated_net.
+# =============================================================================
+
+name: face-base
+version: 0.1.0
+description: |
+  nOS face — the unified web-desktop shell.
+
+  Wiring layer for forward-auth gated access via the Authentik proxy outpost.
+  The role `pazny.face` keeps install-only responsibilities (clone, build,
+  ports, env); this plugin owns the Authentik provider + tier binding, the
+  GDPR Article 30 row, and the Wing /hub self-card.
+upstream: https://github.com/thisisait/nos-face
+license: MIT
+
+type:
+  - service
+  - ui-extension
+
+# Defensive sentinel — pin the plugin slug for any tool that introspects
+# manifests via the loader (P0.12 doctrine).
+_NOS_PLUGIN: "face-base"
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  role: pazny.face
+  feature_flag: install_face
+  variables:
+    - face_domain
+    - face_port
+    - tenant_domain
+    - host_alias
+
+# =============================================================================
+# AUTHENTIK — forward_auth (Authentik outpost → X-Authentik-* headers)
+# =============================================================================
+# face consumes the headers the outpost injects to build a per-user identity,
+# but it holds NO per-app OIDC client and no per-user state of its own — the
+# β1.A trichotomy label is forward_auth (pure gate that also injects headers).
+# The same ProxyProvider object backs it as header_oidc would.
+
+authentik:
+  mode: forward_auth
+  provider_type: forward_auth
+  client_id: nos-face
+  client_secret: "{{ global_password_prefix }}_pw_oidc_face"
+  slug: face
+  name: 'nOS'
+  enabled: "{{ install_face | default(false) }}"
+  launch_url: "https://{{ face_domain | default('face' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  tier: 3
+
+# =============================================================================
+# LIFECYCLE HOOKS
+# =============================================================================
+
+lifecycle:
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ face_port | default(5090) }}/health"
+        timeout: 60
+
+# =============================================================================
+# OBSERVABILITY — Loki labels
+# =============================================================================
+
+observability:
+  loki:
+    labels:
+      app: face
+      stack: iiab
+      tier: "3"
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+
+gdpr:
+  purpose: |
+    Renders a per-user web desktop: which apps the signed-in user can launch
+    (from the Wing catalog, filtered by their Authentik tier) and a browser of
+    their own files in the class-3 per-user tree. Identity comes from the
+    Authentik forward-auth headers; the shell stores no independent account.
+  legal_basis: legitimate_interests
+  data_categories:
+    - username            # X-Authentik-uid/-username/-groups (identity + RBAC)
+    - email
+  data_subjects:
+    - end_users
+  retention_days: 365
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+
+ui-extension:
+  hub_card:
+    title: "nOS face"
+    icon: monitor
+    url: "https://{{ face_domain | default('face' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+    tier: 3
+    description: "The unified web-desktop — apps, files & control in one place"
+    health_check: "http://127.0.0.1:{{ face_port | default(5090) }}/health"
+
+# ── Notification routing (A9 severity → channel) ─────────────────────────────
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []

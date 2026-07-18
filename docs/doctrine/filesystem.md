@@ -18,6 +18,7 @@ sets that one var, not 47 per-service paths.
 │   ├── shared/<svc>/                    # class 2 — app-managed multi-user content         0770
 │   └── users/<uid>/                     # class 3 — FS-native per-user (uid=X-Authentik-uid) 0700
 │       ├── documents/  library/  inbox/  agents/<agent>/
+│       └── .face/state.db               # per-user structured KV (nOS-face user-state)
 └── shared/                             # cross-tenant, explicit, rare
 ```
 
@@ -27,8 +28,13 @@ sets that one var, not 47 per-service paths.
    → `platform/services/<svc>/`. Unified + structured, not FS-isolated per user.
 2. **Tenant-shared content** — app-managed shared stores (Nextcloud, media, ZIM, repos).
    The **app** owns per-user ACLs. → `tenants/<t>/shared/<svc>/`.
-3. **FS-native per-user** — Puter files, euro-office docs, **calibre library (personal)**,
-   KEAP inbox, agent scratch. The filesystem **is** the boundary. → `tenants/<t>/users/<uid>/`.
+3. **FS-native per-user** — euro-office docs, **calibre library (personal)**, KEAP inbox,
+   agent scratch, and **nOS-face user-state** (`.face/state.db` — personalization + app KV,
+   outside the fs-sync classes so KEAP never ingests it). The filesystem **is** the boundary.
+   → `tenants/<t>/users/<uid>/`. **Puter is NOT class-3** — its VFS is DB metadata + opaque
+   UUID blobs, not real files, so it is class-1 (`platform/services/puter/`); the class-3
+   document producer feeding KEAP is a real-file service (Nextcloud). See
+   `docs/plans/puter-and-document-flow.md` + `docs/plans/nos-face.md`.
 
 **Isolation is real only on Linux.** Per-user 0700 needs distinct UIDs. macOS runs every
 container as one user → macOS gets *structure*, not per-user isolation; macOS multi-tenant =

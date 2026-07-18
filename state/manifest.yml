@@ -420,6 +420,18 @@ services:
     oidc: proxy
     rbac_tier: 3
 
+  - id: face
+    category: desktop
+    stack: iiab
+    install_flag: install_face
+    version_var: face_version
+    version_source: docker_image
+    image: nos/face
+    domain_var: face_domain
+    port_var: face_port
+    oidc: proxy
+    rbac_tier: 3
+
   - id: keap
     category: knowledge
     stack: iiab

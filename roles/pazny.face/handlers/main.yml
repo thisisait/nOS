@@ -1,0 +1,7 @@
+---
+- name: Restart face
+  ansible.builtin.debug:
+    msg: >-
+      face override changed — the container is (re)created by the stack-up
+      compose-up that follows (tags: stacks). No direct restart here (compose
+      owns the lifecycle).

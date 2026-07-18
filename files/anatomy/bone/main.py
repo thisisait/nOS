@@ -265,6 +265,32 @@ except Exception as _framework_err:  # noqa: BLE001
     _FRAMEWORK_IMPORT_ERROR = str(_framework_err)
 
 
+# ---- VFS (nOS face file backend) — isolated deferred import ----------------
+# Independent of the state framework: the file browser for nOS face reaches the
+# class-3 per-user tree via /api/v1/vfs/* (static-bearer auth, realpath-contained).
+try:  # noqa: SIM105
+    import vfs as _nos_vfs  # type: ignore
+
+    app.include_router(_nos_vfs.router)
+    _VFS_READY = True
+except Exception as _vfs_err:  # noqa: BLE001
+    _VFS_READY = False
+    _VFS_IMPORT_ERROR = str(_vfs_err)
+
+
+# ---- User-state (nOS face per-user KV store) — isolated deferred import ----
+# The organ for smaller structured data: personalization, app config, sticky
+# notes, desktop layout — one embedded DB per user at users/<uid>/.face/state.db.
+try:  # noqa: SIM105
+    import userstate as _nos_userstate  # type: ignore
+
+    app.include_router(_nos_userstate.router)
+    _USERSTATE_READY = True
+except Exception as _userstate_err:  # noqa: BLE001
+    _USERSTATE_READY = False
+    _USERSTATE_IMPORT_ERROR = str(_userstate_err)
+
+
 def _require_framework() -> None:
     if not _FRAMEWORK_READY:
         raise HTTPException(

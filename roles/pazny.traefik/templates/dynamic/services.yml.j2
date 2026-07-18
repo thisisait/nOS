@@ -62,6 +62,9 @@ http:
    that injects X-Wing-Edge-Token. Wing's BasePresenter rejects requests
    without it (closing the direct-loopback bypass class). #}
 {% set _extra_mw = ['wing-edge@file'] if s.id == 'wing' else [] %}
+{# nOS face: same edge-trust pattern — inject X-Face-Edge-Token so the BFF
+   trusts the Authentik identity headers only for edge-transited requests. #}
+{% if s.id == 'face' %}{% set _extra_mw = _extra_mw + ['face-edge@file'] %}{% endif %}
 {# SSO autologin (sso-autologin-plan.md Batch 3): Miniflux has no upstream
    auto-redirect, so when its autologin gate is on we attach the
    miniflux-autologin@file redirect middleware (defined in middlewares.yml.j2
