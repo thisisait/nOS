@@ -61,6 +61,12 @@ export const vfs = {
 		u.searchParams.set('path', path);
 		return asJson(await fetch(u, { headers: boneHeaders() }));
 	},
+	async stat(uid: string, path: string): Promise<unknown> {
+		const u = new URL(VFS_BASE() + '/stat');
+		u.searchParams.set('uid', uid);
+		u.searchParams.set('path', path);
+		return asJson(await fetch(u, { headers: boneHeaders() }));
+	},
 	async write(uid: string, path: string, content: string): Promise<unknown> {
 		return asJson(
 			await fetch(VFS_BASE() + '/write', {
@@ -69,6 +75,67 @@ export const vfs = {
 				body: JSON.stringify({ uid, path, content })
 			})
 		);
+	},
+	async mkdir(uid: string, path: string): Promise<unknown> {
+		return asJson(
+			await fetch(VFS_BASE() + '/mkdir', {
+				method: 'POST',
+				headers: boneHeaders(true),
+				body: JSON.stringify({ uid, path })
+			})
+		);
+	},
+	async move(uid: string, src: string, dst: string): Promise<unknown> {
+		return asJson(
+			await fetch(VFS_BASE() + '/move', {
+				method: 'POST',
+				headers: boneHeaders(true),
+				body: JSON.stringify({ uid, src, dst })
+			})
+		);
+	},
+	async copy(uid: string, src: string, dst: string): Promise<unknown> {
+		return asJson(
+			await fetch(VFS_BASE() + '/copy', {
+				method: 'POST',
+				headers: boneHeaders(true),
+				body: JSON.stringify({ uid, src, dst })
+			})
+		);
+	},
+	async del(uid: string, path: string): Promise<unknown> {
+		return asJson(
+			await fetch(VFS_BASE() + '/delete', {
+				method: 'POST',
+				headers: boneHeaders(true),
+				body: JSON.stringify({ uid, path })
+			})
+		);
+	},
+	/** Streamed upload → Bone POST /upload (raw body, capped upstream). Returns
+	 *  the raw upstream Response so the caller can surface Bone's status/body. */
+	async upload(uid: string, path: string, filename: string, body: BodyInit): Promise<Response> {
+		const u = new URL(VFS_BASE() + '/upload');
+		u.searchParams.set('uid', uid);
+		u.searchParams.set('path', path);
+		u.searchParams.set('filename', filename);
+		return fetch(u, {
+			method: 'POST',
+			headers: { authorization: `Bearer ${VFS_TOKEN()}` },
+			body,
+			// Node fetch requires duplex when the body is a stream.
+			...(typeof body === 'object' && body !== null && 'getReader' in body
+				? { duplex: 'half' }
+				: {})
+		} as RequestInit);
+	},
+	/** Streamed download ← Bone GET /download. Returns the raw upstream Response
+	 *  so the BFF can pipe the body + filename straight to the browser. */
+	async download(uid: string, path: string): Promise<Response> {
+		const u = new URL(VFS_BASE() + '/download');
+		u.searchParams.set('uid', uid);
+		u.searchParams.set('path', path);
+		return fetch(u, { headers: boneHeaders() });
 	}
 };
 
