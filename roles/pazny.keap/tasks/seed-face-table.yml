@@ -1,0 +1,89 @@
+---
+# =============================================================================
+# pazny.keap/tasks/seed-face-table.yml — seed ONE face config DataTable.
+#
+# Included per-table by seed-face-tables.yml with `_face_tbl` = { slug, def, rows }.
+# Create-if-missing (WHERE-guarded by a slug probe) + upsert only the system rows
+# whose slug is not already present → re-run is changed=0. Tolerant of the
+# /api/tables route being absent (404) so the converge never blocks on a KEAP
+# build that predates the DataTable agent route.
+# =============================================================================
+
+- name: "[pazny.keap] Probe DataTable {{ _face_tbl.slug }} (exists?)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ keap_port | default(8091) }}/api/tables/{{ _face_tbl.slug }}"
+    method: GET
+    headers:
+      authorization: "Bearer {{ keap_agent_token_rw }}"
+    status_code: [200, 401, 404]
+  register: _face_tbl_probe
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.keap] Create DataTable {{ _face_tbl.slug }} (only when missing)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ keap_port | default(8091) }}/api/tables"
+    method: POST
+    headers:
+      authorization: "Bearer {{ keap_agent_token_rw }}"
+      content-type: "application/json"
+    body_format: json
+    body:
+      slug: "{{ _face_tbl.slug }}"
+      title: "{{ _face_tbl.def.title }}"
+      description: "{{ _face_tbl.def.description | default('') }}"
+      driver: "{{ _face_tbl.def.driver | default('libsql') }}"
+      visibility: "{{ _face_tbl.def.visibility | default('tier-users') }}"
+      anchors: "{{ _face_tbl.def.anchors | default([]) }}"
+      columns: "{{ _face_tbl.def.schema.columns }}"
+    status_code: [200, 201, 404]
+  register: _face_tbl_create
+  changed_when: _face_tbl_create.status | default(0) in [200, 201]
+  when: _face_tbl_probe.status | default(0) == 404
+
+- name: "[pazny.keap] Warn if the KEAP DataTable route is not live yet ({{ _face_tbl.slug }})"
+  ansible.builtin.debug:
+    msg: >-
+      KEAP /api/tables did not accept the create for {{ _face_tbl.slug }}
+      (status={{ _face_tbl_create.status | default('n/a') }}). The face BFF will
+      serve the vendored repo defaults until the DataTable agent route lands.
+  when:
+    - _face_tbl_create is not skipped
+    - _face_tbl_create.status | default(0) not in [200, 201]
+
+- name: "[pazny.keap] Fetch existing rows of {{ _face_tbl.slug }} (idempotency WHERE-guard)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ keap_port | default(8091) }}/api/tables/{{ _face_tbl.slug }}/rows"
+    method: GET
+    headers:
+      authorization: "Bearer {{ keap_agent_token_rw }}"
+    status_code: [200, 401, 404]
+  register: _face_rows_probe
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.keap] Compute already-seeded row slugs for {{ _face_tbl.slug }}"
+  ansible.builtin.set_fact:
+    _face_existing_row_slugs: >-
+      {{ ((_face_rows_probe.json | default({})).rows | default([])) | map(attribute='slug') | list }}
+
+- name: "[pazny.keap] Upsert MISSING system rows into {{ _face_tbl.slug }}"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ keap_port | default(8091) }}/api/tables/{{ _face_tbl.slug }}/rows"
+    method: POST
+    headers:
+      authorization: "Bearer {{ keap_agent_token_rw }}"
+      content-type: "application/json"
+    body_format: json
+    body: "{{ item }}"
+    status_code: [200, 201, 404]
+  loop: "{{ _face_tbl.rows }}"
+  loop_control:
+    label: "{{ _face_tbl.slug }}/{{ item.slug }}"
+  register: _face_row_upsert
+  changed_when: _face_row_upsert.status | default(0) in [200, 201]
+  # Only attempt rows once the table is reachable (probe 200 = pre-existing, or
+  # we just created it). Skip the missing-route case entirely.
+  when:
+    - item.slug not in _face_existing_row_slugs
+    - (_face_tbl_probe.status | default(0) == 200) or (_face_tbl_create.status | default(0) in [200, 201])

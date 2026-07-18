@@ -1,0 +1,50 @@
+# =============================================================================
+# KEAP DataTable definition — "Face Wallpapers" (the nOS-face wallpaper catalog)
+#
+# The runtime catalog for nOS-face desktop wallpapers. Same SoC → DataTable →
+# per-user-state pattern (docs/plans/nos-face-shell-v2.md): the nOS-face repo
+# seeds the built-in `system` rows (aurora/graphite/sunset/forest gradients,
+# vendored in src/lib/server/defaults.ts); users ADD rows — a gradient spec or
+# an uploaded image referenced by a VFS-relative path under their own tree. The
+# active choice is NOT stored here; it persists in Bone user-state
+# (ns face.desktop, key prefs) so it survives restart. A seeder creates this
+# table in KEAP and upserts the system rows idempotently; the face BFF reads it
+# via GET /api/tables/face.wallpapers/rows with the vendored defaults fallback.
+#
+# Contract: nos-keap shared/contracts/table.ts; shell mirror = WallpaperSpec in
+# src/lib/contracts/index.ts. Driver: libsql (SQLite).
+# =============================================================================
+
+title: "Face Wallpapers"
+description: >-
+  Desktop wallpapers for the nOS-face shell — CSS gradient specs or VFS-relative
+  image paths. Repo seeds aurora/graphite/sunset/forest; users add their own.
+  The active selection persists per-user in Bone user-state, not in this table.
+driver: libsql
+visibility: tier-users            # every authenticated user sees + adds wallpapers
+anchors: ["nos.face"]
+
+schema:
+  columns:
+    # ── identity ─────────────────────────────────────────────────────────────
+    - { key: name,        label: "Name",        kind: text,    role: dimension, required: true }
+    - { key: slug,        label: "Slug",        kind: text,    role: dimension, required: true }
+    - { key: description, label: "Description",  kind: text,    role: attribute }
+
+    # ── wallpaper spec ────────────────────────────────────────────────────────
+    - { key: kind,        label: "Kind",        kind: select,  role: dimension,
+        options: ["gradient", "image"] }
+    # For kind=gradient: a safe CSS gradient string (validated server-side).
+    - { key: gradient,    label: "Gradient",    kind: text,    role: attribute }
+    # For kind=image: a VFS-relative path under the user's tree the BFF streams.
+    - { key: vfs_path,    label: "VFS path",    kind: text,    role: attribute }
+
+    # ── lifecycle & provenance (consistent with apps/systems) ────────────────
+    - { key: system,      label: "System",      kind: boolean, role: dimension }
+    - { key: status,      label: "Status",      kind: select,  role: dimension,
+        options: ["enabled", "disabled"] }
+    - { key: sort,        label: "Sort",        kind: number,  role: measure }
+    - { key: owner,       label: "Owner",       kind: user,    role: attribute }
+
+    # ── universe anchor ───────────────────────────────────────────────────────
+    - { key: taxonomy_ref, label: "Anchor",     kind: taxonomyRef, role: attribute }
