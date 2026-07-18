@@ -52,13 +52,12 @@ smoke_defaults:
 smoke_endpoints:
 
   # ── Framework health ──────────────────────────────────────────────────────
-  - id: bone-health
-    url: "http://127.0.0.1:{{ bone_port | default(8099) }}/api/health"
-    expect: [200]
-    when: "install_bone | default(true)"
-    note: "Bone /api/health — local API agent"
-    tier: 3
-
+  # NOTE: Bone /api/health is probed by the `bone` service entry below (it
+  # overrides the auto-derived Traefik probe since Bone is a loopback LAN agent,
+  # not behind Traefik). A second identical `bone-health` probe here was removed
+  # 2026-07-18 — it duplicated the same URL and, under the smoke's parallel load,
+  # one of the two would occasionally read as DEAD (single-worker uvicorn reset)
+  # while the other passed, which was pure confusing noise.
   - id: traefik-ping
     url: "http://127.0.0.1:{{ traefik_dashboard_port | default(8082) }}/ping"
     expect: [200]
