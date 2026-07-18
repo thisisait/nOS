@@ -5,7 +5,7 @@
 	import NativeHost from '$lib/components/NativeHost.svelte';
 	import Taskbar from '$lib/components/Taskbar.svelte';
 	import TileDivider from '$lib/wm/TileDivider.svelte';
-	import { applyHalfSplit, clearSplit, splitPair } from '$lib/wm/split';
+	import { applyTiling, clearTiling, tilingActive } from '$lib/wm/tiling';
 	import CommandPalette, { type PaletteAction } from '$lib/palette/CommandPalette.svelte';
 	import { hubApps } from '$lib/api/hub';
 	import type { HubApp } from '$lib/contracts';
@@ -96,12 +96,26 @@
 		},
 		{
 			id: 'act:split',
-			title: 'Split windows side by side',
+			title: 'Tile: split side by side',
 			hint: 'window',
 			icon: '◨',
-			run: () => applyHalfSplit()
+			run: () => applyTiling('half-v')
 		},
-		{ id: 'act:unsplit', title: 'Leave split', hint: 'window', icon: '◫', run: () => clearSplit() }
+		{
+			id: 'act:thirds',
+			title: 'Tile: three columns',
+			hint: 'window',
+			icon: '▦',
+			run: () => applyTiling('thirds')
+		},
+		{
+			id: 'act:grid',
+			title: 'Tile: 2×2 grid',
+			hint: 'window',
+			icon: '⊞',
+			run: () => applyTiling('2x2')
+		},
+		{ id: 'act:untile', title: 'Leave tiling', hint: 'window', icon: '◫', run: () => clearTiling() }
 	]);
 </script>
 
@@ -109,14 +123,21 @@
 	<header class="menubar glass">
 		<strong>nOS</strong>
 		<button class="menu-item" onclick={() => openControlPanel()}>Control Panel</button>
-		{#if $splitPair}
-			<button class="menu-item" onclick={() => clearSplit()} title="Leave split">◫ Unsplit</button>
+		{#if $tilingActive}
+			<button class="menu-item" onclick={() => clearTiling()} title="Leave tiling">◫ Untile</button>
 		{:else}
 			<button
 				class="menu-item"
-				onclick={() => applyHalfSplit()}
-				title="Tile the two front windows side by side (drag the middle gutter to change the ratio)"
-				>◨ Split</button
+				onclick={() => applyTiling('half-v')}
+				title="Two windows side by side">◨ Split</button
+			>
+			<button class="menu-item" onclick={() => applyTiling('thirds')} title="Three columns"
+				>▦ Thirds</button
+			>
+			<button
+				class="menu-item"
+				onclick={() => applyTiling('2x2')}
+				title="Four windows in a 2×2 grid">⊞ Grid</button
 			>
 		{/if}
 		<span class="spacer"></span>
