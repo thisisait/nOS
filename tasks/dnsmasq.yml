@@ -108,18 +108,53 @@
     - install_bluesky_pds | default(false)
     - not ansible_check_mode
 
-# dnsmasq restart is now notify-driven: the "Deploy dnsmasq configuration"
-# task above carries `notify: Restart dnsmasq`, so the play-level handler
-# only fires when the config block actually changed. A steady-state re-run
-# leaves the config untouched → no restart → changed=0. (The old unconditional
-# `restart dnsmasq` task here forced changed=true every run.)
+# ── Ensure the dnsmasq LaunchDaemon is INSTALLED and RUNNING ─────────────────
+# CRITICAL (root-caused 2026-07-18): the "Restart dnsmasq" handler only
+# launchctl-unload/loads an EXISTING plist at
+# /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist — but that plist is created
+# only by `brew services start`, which nothing else ran. On a fresh blank the
+# plist never existed, the handler hit its `[ ! -f "$plist" ]` guard, WARNed to
+# stderr, and exited — so dnsmasq NEVER started. *.<tenant_domain> then didn't
+# resolve and the ENTIRE platform was unreachable by name despite failed=0
+# (every service DEAD in nos-smoke with "nodename nor servname"). `brew services
+# start` installs the system LaunchDaemon (port 53 needs root → become) AND
+# starts it; it is idempotent ("already started" when up). This is the missing
+# ensure-running step the notify-only handler could never provide on first run.
+- name: "[dnsmasq] Ensure dnsmasq service is installed + running (brew services start)"
+  ansible.builtin.command: "{{ homebrew_prefix }}/bin/brew services start dnsmasq"
+  become: true
+  register: _dnsmasq_svc
+  changed_when: "'successfully started' in (_dnsmasq_svc.stdout | default('') | lower)"
+  failed_when:
+    - _dnsmasq_svc.rc | default(0) != 0
+    - "'already started' not in (_dnsmasq_svc.stdout | default('') | lower)"
+  when: ansible_os_family == 'Darwin'
+
+# dnsmasq restart stays notify-driven (config-change reloads); the ensure-running
+# task above is the first-boot guarantee the handler could not provide.
 
 - name: "Verify dnsmasq resolves {{ dnsmasq_dev_domain | default('dev.local') }} correctly"
   ansible.builtin.command: "dig +short grafana{{ _host_alias_seg | default('') }}.{{ dnsmasq_dev_domain | default('dev.local') }} @127.0.0.1"
   register: dns_check
+  until: (dns_check.stdout | default('') | trim | length) > 0
+  retries: 6
+  delay: 2
   changed_when: false
   failed_when: false
+  when: ansible_os_family == 'Darwin'
 
-- name: Show DNS verification result
-  ansible.builtin.debug:
-    msg: "DNS check grafana.dev.local -> {{ dns_check.stdout | default('(empty - dnsmasq is starting)') }}"
+# LOUD gate: a down/misresolving dnsmasq means the whole platform is unreachable
+# by name — that must FAIL the run, not ship green + silently broken (the
+# DNS-layer health-blindness that hid this for so long).
+- name: "[dnsmasq] FAIL LOUD if local DNS is still down"
+  ansible.builtin.assert:
+    that: (dns_check.stdout | default('') | trim | length) > 0
+    fail_msg: >-
+      dnsmasq is NOT resolving *.{{ dnsmasq_dev_domain | default('dev.local') }}
+      on 127.0.0.1 — the whole platform would be UNREACHABLE BY NAME. Recover:
+      `sudo {{ homebrew_prefix }}/bin/brew services start dnsmasq` then
+      `sudo launchctl list | grep dnsmasq`.
+    success_msg: >-
+      dnsmasq resolves *.{{ dnsmasq_dev_domain | default('dev.local') }} →
+      {{ dns_check.stdout | default('') | trim }}
+  when: ansible_os_family == 'Darwin'
