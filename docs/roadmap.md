@@ -289,6 +289,18 @@ can't be a real file browser or the KEAP bridge). Build-fresh SvelteKit in its o
   Target: a near-one-shot hotel ordering system for a tenant.
 - **M5:** evolve the IIAB Textual TUI onto the same catalog + VFS APIs (TUI nOS face); retire
   Puter as the face (keep only as an installable app). Harden AgentKit.
+- **KEAP catalog DataTables (NEW 2026-07-18):** "Apps" (agent-generated) + "Systems" (from
+  `manifest.yml` SoT) as LeanIX-style KEAP DataTables (libsql), anchored into the self-model
+  universe + brain-embedded. Defs `state/keap-tables/*.table.yml`; design
+  `docs/plans/keap-datatables-apps-systems.md`. nOS-face "Apps" icon (enable/disable, on-desktop,
+  edit-description) + "Systems" folder. Seeders: Systems = install-gated playbook task
+  (`keap_nos_full_catalog` toggle); Apps = `McpKeapTool` upsert (the AgentKit harness). Needs an
+  `/agent/v1/tables` route in nos-keap. **First real test of the app-gen agent.**
+- **Agent identity epic (NEW 2026-07-18):** agents act **on-behalf-of** the triggering human —
+  Authentik `nos-agents` + delegation (`act` claim / RFC 8693 token-exchange), effective perms =
+  intersection(agent, principal), one ephemeral per-session credential (no token sprawl), and an
+  `on_behalf_of` audit field so observability shows agent actions as a subordinate of the human
+  (separable, role-respecting). Extends `docs/sso-and-attribution.md`; gates the table-write surface.
 - **Follow-ups:** user-state at-rest encryption (per-user Infisical key → SQLCipher/libSQL);
   postMessage picker bridge for iframe apps; Nextcloud as the class-3 document producer for KEAP.
 

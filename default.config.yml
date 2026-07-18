@@ -2102,6 +2102,12 @@ keap_version: "1.9.0"                          # nos/keap image tag — MUST mat
 # real OLAP-shaped content, not an empty grid. Opt-in + once-only (a marker
 # file); the seed is idempotent. Set false to keep a pristine empty install.
 keap_seed_fixtures: true
+# nOS catalog DataTables ("Apps" + "Systems", LeanIX-style — state/keap-tables/,
+# docs/plans/keap-datatables-apps-systems.md). The Systems seeder is idempotent
+# and by default writes ONLY installed systems (install_* true) into KEAP. Flip
+# keap_nos_full_catalog=true to always mirror the ENTIRE nOS self-model (every
+# system regardless of install state) — profiles/all-on.yml sets it true.
+keap_nos_full_catalog: false
 # Optional live embedder for free-text semantic search (stored vectors come
 # from the keap-embed-sync Pulse job regardless). Docker Desktop (Mac):
 # "http://host.docker.internal:11434". Default off — Linux host-gateway

@@ -1,0 +1,64 @@
+# =============================================================================
+# KEAP DataTable definition — "Systems" (the nOS infrastructure catalog)
+#
+# LeanIX-style IT-Component fact sheet for the HIGH-LEVEL platform systems that
+# run under nOS (Grafana, Uptime Kuma, Nextcloud, KEAP, Authentik, Infisical …).
+# Source-of-truth is nOS CODE — `state/manifest.yml` + the plugin `hub_card` /
+# `authentik` blocks + version pins. A seeder task derives one row per enabled
+# system and upserts it; rows anchor into the KEAP universe ("nOS / Systems").
+#
+# Same DataTable contract as Apps (libsql / SQLite), DIFFERENT UI: the nOS-face
+# "Systems" folder renders this table read-mostly (health, SSO mode, version,
+# dependencies) — an operator inventory, not an install surface.
+# =============================================================================
+
+title: "Systems"
+description: >-
+  Inventory of the platform systems nOS runs — derived from state/manifest.yml
+  and plugin metadata. LeanIX IT-Component view: stack, SSO posture, lifecycle,
+  version, criticality, and dependency edges, queryable and rendered in /explore.
+driver: libsql
+visibility: tier-managers          # operator/manager inventory
+anchors: ["nos.systems"]
+
+schema:
+  columns:
+    # ── identity ─────────────────────────────────────────────────────────────
+    - { key: name,        label: "Name",              kind: text,   role: dimension, required: true }
+    - { key: slug,        label: "Slug",              kind: text,   role: dimension, required: true }
+    - { key: description, label: "Description",       kind: text,   role: attribute }
+    - { key: embedding,   label: "Embedding",         kind: vector, role: attribute, dim: 768 }
+
+    # ── classification (LeanIX dimensions) ────────────────────────────────────
+    - { key: category,    label: "Category",          kind: text,   role: dimension }
+    - { key: stack,       label: "Stack",             kind: select, role: dimension,
+        options: ["infra", "observability", "iiab", "apps", "devops", "b2b", "voip", "engineering", "data"] }
+    - { key: kind,        label: "Kind",              kind: select, role: dimension,
+        options: ["service", "backend", "host_daemon"] }
+    - { key: rbac_tier,   label: "RBAC tier",         kind: select, role: dimension,
+        options: ["tier-1", "tier-2", "tier-3", "tier-4"] }
+    # β1.A SSO trichotomy (docs/sso-and-attribution.md).
+    - { key: sso_mode,    label: "SSO mode",          kind: select, role: dimension,
+        options: ["native_oidc", "header_oidc", "forward_auth", "none"] }
+
+    # ── lifecycle & health ────────────────────────────────────────────────────
+    - { key: status,      label: "Status",            kind: select, role: dimension,
+        options: ["active", "degraded", "down", "planned", "retired"] }
+    - { key: lifecycle,   label: "Lifecycle",         kind: select, role: dimension,
+        options: ["plan", "phase_in", "active", "phase_out", "end_of_life"] }
+    - { key: business_criticality, label: "Criticality", kind: select, role: dimension,
+        options: ["low", "medium", "high", "mission_critical"] }
+
+    # ── runtime coordinates ───────────────────────────────────────────────────
+    - { key: domain,      label: "Domain",            kind: text,   role: attribute }
+    - { key: port,        label: "Port",              kind: number, role: attribute }
+    - { key: version,     label: "Version",           kind: text,   role: attribute }
+    - { key: image,       label: "Image",             kind: text,   role: attribute }
+    - { key: icon,        label: "Icon",              kind: text,   role: attribute }
+    - { key: owner,       label: "Owner",             kind: user,   role: attribute }
+
+    # ── relationships (LeanIX graph) ──────────────────────────────────────────
+    - { key: depends_on,  label: "Depends on",        kind: json,   role: attribute }
+
+    # ── universe anchor ───────────────────────────────────────────────────────
+    - { key: taxonomy_ref, label: "Anchor",           kind: taxonomyRef, role: attribute }
