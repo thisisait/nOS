@@ -34,6 +34,15 @@ services:
       SMTP_PASSWORD: ""
       SMTP_FROM: "miniflux@{{ tenant_domain | default('dev.local') }}"
 {% endif %}
+    healthcheck:
+      # miniflux ships no curl; its own binary carries a built-in probe that
+      # reads LISTEN_ADDR (":8080") to locate the health endpoint (canonical
+      # upstream compose recipe).
+      test: ["CMD", "/usr/bin/miniflux", "-healthcheck", "auto"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - iiab_net
       - {{ stacks_shared_network }}

@@ -28,6 +28,15 @@ services:
       PGID: "{{ ansible_facts['user_gid'] }}"
       TZ: "{{ calibreweb_timezone | default('Europe/Prague') }}"
       DOCKER_MODS: linuxserver/mods:universal-calibre
+    healthcheck:
+      # LSIO image ships curl. Root 302→/login is <400 so `curl -f` passes once
+      # the server is up. Long start_period: the universal-calibre DOCKER_MOD
+      # downloads + installs the calibre binaries on first boot.
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://localhost:8083/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
     networks:
       # SEC-02: Traefik-only gated_net (was iiab_net + shared_net). No DB deps, so
       # nothing else needs to reach calibre-web — only Traefik (also on gated_net).

@@ -38,6 +38,13 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 {% endif %}
+    healthcheck:
+      # Infisical image ships curl. /api/status returns 200 once the API is up.
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://localhost:8080/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - infra_net
       - {{ stacks_shared_network }}

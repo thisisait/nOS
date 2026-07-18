@@ -40,6 +40,14 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASSWORD: "{{ redis_password | default(global_password_prefix + '_pw_redis') }}"
+    healthcheck:
+      # Superset image ships curl. /health returns 200 "OK" once gunicorn serves.
+      # Long start_period — cold boot runs superset init (db upgrade + roles).
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://localhost:8088/health || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 10
+      start_period: 180s
     networks:
       - data_net
       - {{ stacks_shared_network }}

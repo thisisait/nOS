@@ -51,6 +51,15 @@ services:
       - {{ stalwart_tls_cert_path }}:/certs/cert.pem:ro
       - {{ stalwart_tls_cert_key }}:/certs/key.pem:ro
 {% endif %}
+    healthcheck:
+      # Stalwart image ships curl+bash but the webadmin root can 401/redirect;
+      # a TCP liveness on the management HTTP port (:8080) is protocol-agnostic
+      # and comes up alongside the SMTP/IMAP listeners.
+      test: ["CMD", "bash", "-c", ":>/dev/tcp/127.0.0.1/8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - infra_net
       - {{ stacks_shared_network }}

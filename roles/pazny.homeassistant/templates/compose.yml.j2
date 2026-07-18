@@ -30,6 +30,14 @@ services:
       - /tmp
     environment:
       TZ: "{{ homeassistant_timezone | default('Europe/Prague') }}"
+    healthcheck:
+      # HA image ships curl + wget. `/` serves the onboarding/frontend (200).
+      # Works in both bridge and network_mode:host (localhost:8123 is in-container).
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://localhost:8123/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     logging:
       driver: "json-file"
       options:

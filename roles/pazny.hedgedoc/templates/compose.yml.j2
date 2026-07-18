@@ -51,6 +51,14 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 {% endif %}
+    healthcheck:
+      # HedgeDoc image has no curl/wget; bash is present. TCP liveness on the
+      # internal app port (CMD_PORT 3000).
+      test: ["CMD", "bash", "-c", ":>/dev/tcp/127.0.0.1/3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - b2b_net
       - {{ stacks_shared_network }}

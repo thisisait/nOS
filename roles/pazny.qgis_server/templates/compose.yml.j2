@@ -37,6 +37,15 @@ services:
       QGIS_SERVER_LOG_LEVEL: "2"
       QGIS_SERVER_MAX_THREADS: "4"
       QGIS_SERVER_PARALLEL_RENDERING: "true"
+    healthcheck:
+      # kartoza image ships no curl/wget; bash is present. A bare HTTP GET to a
+      # WMS needs query params (returns a ServiceException otherwise), so probe
+      # apache liveness at the TCP layer on the internal :80.
+      test: ["CMD", "bash", "-c", ":>/dev/tcp/127.0.0.1/80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       - engineering_net
       - {{ stacks_shared_network }}

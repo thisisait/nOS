@@ -50,6 +50,14 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 {% endif %}
+    healthcheck:
+      # nfrastack image ships curl. Root 302→/login is <400 so `curl -f` passes.
+      # Long start_period — first-boot composer + DB migrations are slow.
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://localhost:80/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
     networks:
       - b2b_net
       - {{ stacks_shared_network }}

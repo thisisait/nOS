@@ -39,6 +39,17 @@ services:
       GRAFANA_URL: "{{ mcp_grafana_url }}"
       GRAFANA_SERVICE_ACCOUNT_TOKEN: "{{ mcp_grafana_sa_token | default('') }}"
 {% endif %}
+    healthcheck:
+      # mcpo gates its OpenAPI tool routes behind --api-key, so an HTTP probe
+      # would need the bearer token. A TCP-level liveness on the listen port is
+      # auth-independent; bash ships in the image (/dev/tcp is a bash builtin,
+      # so invoke bash explicitly — the CMD-SHELL /bin/sh may be dash).
+      # The mcp-grafana sidecar stays health-blind (see the gate allowlist).
+      test: ["CMD", "bash", "-c", ":>/dev/tcp/127.0.0.1/8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - iiab_net
       - {{ stacks_shared_network }}

@@ -42,6 +42,15 @@ services:
       MAIL_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
       MAIL_FROM_ADDRESS: "nextcloud"
 {% endif %}
+    healthcheck:
+      # NC image ships curl. /status.php returns 200 + {"installed":true,...}
+      # once serving. Generous start_period — first-boot install + DB migration
+      # on a cold blank can run 60-120s.
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://localhost:80/status.php || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
     networks:
       - iiab_net
       - {{ stacks_shared_network }}

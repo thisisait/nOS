@@ -28,6 +28,14 @@ services:
       WORDPRESS_DB_PASSWORD: "{{ wordpress_db_password }}"
       WORDPRESS_DB_NAME: "{{ wordpress_db_name }}"
       WORDPRESS_TABLE_PREFIX: "{{ wordpress_table_prefix | default('wp_') }}"
+    healthcheck:
+      # WP image ships curl (wp-cli is NOT in this image — that's wordpress:cli).
+      # Fresh WP `/` 302→install is <400 so `curl -f` passes once Apache serves.
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://localhost:80/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - iiab_net
       - {{ stacks_shared_network }}
