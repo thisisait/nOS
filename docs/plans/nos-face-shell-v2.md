@@ -6,6 +6,41 @@
 > and per-user state persists (survives restart). Companion: `docs/plans/nos-face.md`,
 > `docs/plans/keap-datatables-apps-systems.md` (the DataTable substrate).
 
+## Status — shell v0.3 (2026-07-18, live)
+
+Second operator round on the deployed v0.2 surfaced four real bugs + two feature
+gaps. Fixed/shipped (vendored `files/anatomy/face`, `VERSION` 0.3.0):
+
+- **Window controls fixed** — the traffic-light clicks were stolen by the titlebar
+  `setPointerCapture` (the drag). `stopPropagation` on the lights + a button-origin
+  guard on the titlebar drag. (v0.1 regression that returned in the rebuild.)
+- **File explorer fixed (root cause: native-app remount)** — rendering the native
+  component inline as `{#await resolveNativeComponent(win.app)}` created a fresh
+  promise on every store update (focus on pointerdown), so `{#await}` tore down and
+  remounted the app on every interaction — the click was lost and the app reset to
+  its root. New `NativeHost.svelte` resolves the component **once** into stable state.
+- **No more infinite windows** — dock/palette launches are **singleton** (`focusApp`
+  focuses an open window instead of spawning a duplicate).
+- **Taskbar** — bottom-left strip: open-window **count** + a chip per window →
+  click focuses/restores, ✕ closes. (Live thumbnails = follow-up.)
+- **Live split + ratio gutter** — `◨ Split` tiles the two front windows left|right;
+  a draggable middle **divider** re-allocates the ratio live (`lib/wm/split.ts` +
+  `TileDivider.svelte`). The fixed drag-to-top snap layouts (single/halves/thirds/2×2)
+  stay; this adds the adjustable two-up the operator asked for.
+- **Command palette (Ctrl+Space, hold 2s)** — Raycast-style launcher + WM actions
+  (Control Panel / Split) **and** a local-LLM "ask" (`/bff/ask` → host Ollama MLX,
+  loopback; model auto-picked from the installed set, honest "not configured" when
+  none). **Running arbitrary host commands is deliberately NOT wired** — that needs
+  a gated, allowlisted, audited Bone endpoint (destructive-op safety doctrine).
+
+### Still open (next)
+- **Live window thumbnails** in the taskbar (canvas snapshots).
+- **Divider for thirds/2×2** (only the two-up half split has a live gutter today).
+- **Palette command-exec** behind a gated/audited Bone allowlist surface.
+- **KEAP config DataTables** live-wiring — blocked on a KEAP `/agent/v1/tables`
+  bearer write route (the seeder no-ops until then; shell runs on repo defaults +
+  user-state). See `docs/plans/keap-datatables-apps-systems.md`.
+
 ## The SoC → dataTable → user-state pattern (load-bearing)
 
 Every configurable surface follows the same three layers:

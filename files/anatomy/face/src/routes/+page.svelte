@@ -4,6 +4,9 @@
 	import Window from '$lib/components/Window.svelte';
 	import NativeHost from '$lib/components/NativeHost.svelte';
 	import Taskbar from '$lib/components/Taskbar.svelte';
+	import TileDivider from '$lib/wm/TileDivider.svelte';
+	import { applyHalfSplit, clearSplit, splitPair } from '$lib/wm/split';
+	import CommandPalette, { type PaletteAction } from '$lib/palette/CommandPalette.svelte';
 	import { hubApps } from '$lib/api/hub';
 	import type { HubApp } from '$lib/contracts';
 	import type { PageData } from './$types';
@@ -66,12 +69,56 @@
 	function iconFor(slug: string): string {
 		return getNativeApp(slug)?.icon ?? apps.find((a) => a.slug === slug)?.icon ?? slug.slice(0, 1);
 	}
+
+	// Command-palette actions: launch every app + the built-in WM actions. Rebuilt
+	// reactively as the hub catalog resolves.
+	const paletteActions = $derived<PaletteAction[]>([
+		...natives.map((a) => ({
+			id: `native:${a.slug}`,
+			title: a.title,
+			hint: 'app',
+			icon: a.icon,
+			run: () => launchNativeApp(a.slug)
+		})),
+		...apps.map((a) => ({
+			id: `hub:${a.slug}`,
+			title: a.title,
+			hint: 'service',
+			icon: a.icon,
+			run: () => launchHub(a)
+		})),
+		{
+			id: 'act:control-panel',
+			title: 'Control Panel',
+			hint: 'system',
+			icon: '⚙',
+			run: () => openControlPanel()
+		},
+		{
+			id: 'act:split',
+			title: 'Split windows side by side',
+			hint: 'window',
+			icon: '◨',
+			run: () => applyHalfSplit()
+		},
+		{ id: 'act:unsplit', title: 'Leave split', hint: 'window', icon: '◫', run: () => clearSplit() }
+	]);
 </script>
 
 <div class="desktop" style={bg ? `background:${bg}` : ''}>
 	<header class="menubar glass">
 		<strong>nOS</strong>
 		<button class="menu-item" onclick={() => openControlPanel()}>Control Panel</button>
+		{#if $splitPair}
+			<button class="menu-item" onclick={() => clearSplit()} title="Leave split">◫ Unsplit</button>
+		{:else}
+			<button
+				class="menu-item"
+				onclick={() => applyHalfSplit()}
+				title="Tile the two front windows side by side (drag the middle gutter to change the ratio)"
+				>◨ Split</button
+			>
+		{/if}
 		<span class="spacer"></span>
 		{#if data.identity.authenticated}
 			<span class="user">{data.identity.username}</span>
@@ -100,11 +147,16 @@
 
 	<!-- G3: snap/tiling overlay (renders only while a window is dragged) -->
 	<SnapOverlay />
+	<!-- Live split gutter (renders only while a split pair is active) -->
+	<TileDivider />
 	<!-- G5: file-picker host (invisible until openFilePicker / the bridge fires) -->
 	<FilePicker />
 
 	<!-- Open-window strip: count + navigation back to any window (Wave-2). -->
 	<Taskbar icon={iconFor} />
+
+	<!-- Ctrl+Space (hold 2s): launcher + actions + local-LLM ask. -->
+	<CommandPalette actions={paletteActions} />
 
 	<nav class="dock glass" aria-label="Dock">
 		{#each natives as app (app.slug)}

@@ -196,3 +196,64 @@ export async function keapTableRows(slug: string, uid: string): Promise<unknown>
 export function keapConfigured(): boolean {
 	return Boolean(env.NOS_KEAP_TABLES_URL);
 }
+
+// ── Local LLM (command-palette "ask") ────────────────────────────────────────
+// Talks to the host Ollama on loopback (MLX backend). No token: loopback-only,
+// reached via host.docker.internal. The model is either pinned by env or
+// auto-picked from the installed set (first non-embedding model) so the palette
+// works with whatever chat model the host has pulled — never a hardcoded tag,
+// never a mock answer. If nothing chat-capable is installed, `configured:false`.
+
+const OLLAMA_URL = () => env.NOS_OLLAMA_URL ?? 'http://host.docker.internal:11434';
+
+async function pickModel(): Promise<string | null> {
+	const pinned = (env.NOS_ASK_MODEL ?? '').trim();
+	if (pinned) return pinned;
+	try {
+		const r = await fetch(OLLAMA_URL() + '/api/tags');
+		if (!r.ok) return null;
+		const data = (await r.json()) as { models?: Array<{ name?: string }> };
+		const names = (data.models ?? []).map((m) => m.name ?? '').filter(Boolean);
+		// Exclude embedding models — they can't answer a chat prompt.
+		return names.find((n) => !/embed|nomic|bge|minilm/i.test(n)) ?? null;
+	} catch {
+		return null;
+	}
+}
+
+export interface AskResult {
+	configured: boolean;
+	model?: string;
+	answer?: string;
+	note?: string;
+}
+
+/** One-shot prompt → local LLM completion. Bounded (num_predict) so the palette
+ *  stays snappy; non-streaming for a simple request/response. */
+export async function ask(prompt: string): Promise<AskResult> {
+	const model = await pickModel();
+	if (!model) {
+		return {
+			configured: false,
+			note: 'No local chat model is installed on the host Ollama. Pull one (e.g. `ollama pull qwen2.5`) or set NOS_ASK_MODEL.'
+		};
+	}
+	try {
+		const r = await fetch(OLLAMA_URL() + '/api/generate', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({
+				model,
+				prompt,
+				stream: false,
+				options: { num_predict: 512 }
+			})
+		});
+		if (!r.ok) throw new UpstreamError(r.status, (await r.text()) || r.statusText);
+		const data = (await r.json()) as { response?: string };
+		return { configured: true, model, answer: (data.response ?? '').trim() };
+	} catch (e) {
+		if (e instanceof UpstreamError) throw e;
+		throw new UpstreamError(502, 'local LLM unreachable');
+	}
+}

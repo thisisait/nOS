@@ -48,6 +48,11 @@ services:
       # Empty → the shell serves repo defaults + user-state (G2 wires KEAP live).
       NOS_KEAP_TABLES_URL: "{{ face_keap_tables_url | default('') }}"
       NOS_KEAP_API_TOKEN: "{{ keap_agent_token | default('') }}"
+      # Command-palette LLM ("ask") → host Ollama (MLX) on loopback. The model is
+      # auto-picked from the installed set unless face_ask_model pins one; empty
+      # model + none installed → the palette says so (no mock answer).
+      NOS_OLLAMA_URL: "http://host.docker.internal:{{ ollama_port | default(11434) }}"
+      NOS_ASK_MODEL: "{{ face_ask_model | default('') }}"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
