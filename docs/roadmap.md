@@ -399,6 +399,15 @@ real robustness gap, not a one-off; fixes are structural.
   Ollama (currently `state:latest`) + llama-server preflight, modernize the `launchctl`
   load path. Forward-horizon: py3.14 workaround consolidation, VirtioFS doctrine (above),
   the 2.24 jump (tech-debt), Homebrew tap/pmset/softwareupdate/TCC-sandbox guards.
+- **[M] PHP 8.5 modernization sweep** (NEXT release, deferred 2026-07-18) — bump the
+  PHP runtime across the PHP-based services (WordPress `-php8.5-apache`, plus any
+  FrankenPHP/Wing + other PHP image variants) once PHP 8.5 + the app cores are
+  compatibility-verified. Motivated by the 2026-07-18 CVE churn (`6.9.4-php8.5-apache`
+  exists today) but explicitly NOT a security fix — the WordPress CVE-2026-63030 hole is
+  core-level, not PHP-level, so this is a modernization initiative, not a mitigation.
+  Gate each service on its own PHP-8.5 compat (WP 6.9 officially tops out lower; 8.5 is
+  bleeding-edge) — test before flipping the pin. Do NOT bundle with the release that pins
+  WP 6.9.4; land it after the patched WP image (≥6.9.5) is in.
 - **[M] native_oidc runtime-verify + regression gate** — one epic folding the 7 `v07-sso-*`
   notes: file/API-driven native_oidc services (Home Assistant `auth_oidc`, Jellyfin
   `SSO-Auth.xml`, Nextcloud/Gitea) render config but have **no loud runtime-load verify**,
