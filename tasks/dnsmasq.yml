@@ -116,22 +116,43 @@
 # plist never existed, the handler hit its `[ ! -f "$plist" ]` guard, WARNed to
 # stderr, and exited — so dnsmasq NEVER started. *.<tenant_domain> then didn't
 # resolve and the ENTIRE platform was unreachable by name despite failed=0
-# (every service DEAD in nos-smoke with "nodename nor servname"). `brew services
-# start` installs the system LaunchDaemon (port 53 needs root → become) AND
-# starts it; it is idempotent ("already started" when up). This is the missing
-# ensure-running step the notify-only handler could never provide on first run.
-- name: "[dnsmasq] Ensure dnsmasq service is installed + running (brew services start)"
-  ansible.builtin.command: "{{ homebrew_prefix }}/bin/brew services start dnsmasq"
+# (every service DEAD in nos-smoke with "nodename nor servname").
+#
+# We do NOT use `brew services start`: as root (needed for the system port-53
+# LaunchDaemon) Homebrew refuses — "Need to download …packages.…jws.json but
+# cannot as root" (the API-cache-as-root guard). Instead we install Homebrew's
+# OWN generated plist (correct ProgramArguments incl. the dnsmasq.d conf dir)
+# straight to /Library/LaunchDaemons and bootstrap it with launchctl — no brew
+# under sudo. This also makes the existing "Restart dnsmasq" handler work, since
+# the plist it reloads now exists.
+- name: "[dnsmasq] Install the dnsmasq system LaunchDaemon plist"
+  ansible.builtin.copy:
+    src: "{{ homebrew_prefix }}/opt/dnsmasq/homebrew.mxcl.dnsmasq.plist"
+    dest: /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist
+    remote_src: true
+    owner: root
+    group: wheel
+    mode: '0644'
   become: true
-  register: _dnsmasq_svc
-  changed_when: "'successfully started' in (_dnsmasq_svc.stdout | default('') | lower)"
+  when: ansible_os_family == 'Darwin'
+  notify: Restart dnsmasq
+
+- name: "[dnsmasq] Bootstrap (start) the dnsmasq LaunchDaemon"
+  ansible.builtin.command: launchctl bootstrap system /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist
+  become: true
+  register: _dnsmasq_boot
+  # bootstrap of an already-loaded service returns rc 5 ("already bootstrapped"
+  # / "Input/output error") — that's success for us (it's running).
+  changed_when: _dnsmasq_boot.rc | default(0) == 0
   failed_when:
-    - _dnsmasq_svc.rc | default(0) != 0
-    - "'already started' not in (_dnsmasq_svc.stdout | default('') | lower)"
+    - _dnsmasq_boot.rc | default(0) != 0
+    - "'already' not in ((_dnsmasq_boot.stderr | default('')) | lower)"
+    - "'5:' not in (_dnsmasq_boot.stderr | default(''))"
   when: ansible_os_family == 'Darwin'
 
-# dnsmasq restart stays notify-driven (config-change reloads); the ensure-running
-# task above is the first-boot guarantee the handler could not provide.
+# dnsmasq restart stays notify-driven (config-change reloads); the install+boot
+# tasks above are the first-boot guarantee the notify-only handler could not
+# provide.
 
 - name: "Verify dnsmasq resolves {{ dnsmasq_dev_domain | default('dev.local') }} correctly"
   ansible.builtin.command: "dig +short grafana{{ _host_alias_seg | default('') }}.{{ dnsmasq_dev_domain | default('dev.local') }} @127.0.0.1"
