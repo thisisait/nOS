@@ -1195,7 +1195,12 @@ wordpress_db_user: "wordpress"
 wordpress_db_password: "{{ global_password_prefix }}_pw_wordpress"
 wordpress_db_host: "127.0.0.1"          # ignored if install_mariadb=true (uses 'mariadb' from iiab_net)
 wordpress_table_prefix: "wp_"
-wordpress_version: "6.9.4"              # CVE-2026-63030 fix is 6.9.5, but its Docker official image is not published yet (image lag). Reverted to pullable 6.9.4 + proxy mitigation of the /wp-json/batch endpoint; bump to 6.9.5 the moment its image lands.
+wordpress_version: "6.9.4"              # CVE-2026-63030 fix is 6.9.5, but its Docker official image is not published yet (image lag). Reverted to pullable 6.9.4 + the mu-plugin mitigation below; bump to 6.9.5 the moment its image lands, then set wordpress_cve_63030_mitigate=false + delete the mu-plugin.
+# CVE-2026-63030 (wp2shell, unauth RCE via /wp-json/batch/v1/): while pinned to
+# the vulnerable core 6.9.4, a mu-plugin unregisters the batch endpoint. Set false
+# (and remove roles/pazny.wordpress/files/cve-2026-63030-batch-block.php) once
+# wordpress_version reaches a patched, dockerized release.
+wordpress_cve_63030_mitigate: true
 wordpress_port: 8084                    # Local container port (nginx proxy)
 wordpress_admin_user: "admin"
 wordpress_admin_password: "{{ global_password_prefix }}_pw_wordpress_admin"

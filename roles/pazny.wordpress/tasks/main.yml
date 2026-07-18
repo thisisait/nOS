@@ -55,6 +55,18 @@
   notify: Restart wordpress
   when: install_authentik | default(false)
 
+# TEMPORARY (remove when wordpress_version reaches a patched, dockerized release
+# ≥6.9.5/7.0.2): mitigate CVE-2026-63030 (unauth RCE via /wp-json/batch/v1/) by
+# unregistering the batch endpoint. nOS pins core 6.9.4 because the 6.9.5 fix
+# image is not on Docker Hub yet; this neutralises the attack vector meanwhile.
+- name: "[pazny.wordpress] Stage CVE-2026-63030 batch-block mu-plugin (temporary)"
+  ansible.builtin.copy:
+    src: cve-2026-63030-batch-block.php
+    dest: "{{ stacks_dir }}/iiab/wordpress/mu-plugins/cve-2026-63030-batch-block.php"
+    mode: '0644'
+  notify: Restart wordpress
+  when: wordpress_cve_63030_mitigate | default(true)
+
 - name: "[pazny.wordpress] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2
