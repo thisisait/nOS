@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { windows, openWindow } from '$lib/stores/desktop';
+	import { windows, openWindow, focusApp } from '$lib/stores/desktop';
 	import Window from '$lib/components/Window.svelte';
+	import NativeHost from '$lib/components/NativeHost.svelte';
+	import Taskbar from '$lib/components/Taskbar.svelte';
 	import { hubApps } from '$lib/api/hub';
 	import type { HubApp } from '$lib/contracts';
 	import type { PageData } from './$types';
@@ -19,7 +21,7 @@
 		nativeApps,
 		launchNative,
 		isNativeApp,
-		resolveNativeComponent,
+		getNativeApp,
 		initFilePickerBridge
 	} from '$lib/apps/native'; // G5
 	import FilePicker from '$lib/apps/native/file-picker/FilePicker.svelte'; // G5
@@ -50,8 +52,19 @@
 		return () => stopBridge?.();
 	});
 
+	// Singleton launch: focus an already-open window for this app instead of
+	// spawning an unbounded stack of duplicates (the "every link = new window" bug).
 	function launchHub(app: HubApp) {
-		openWindow({ app: app.slug, title: app.title, w: 720, h: 480 });
+		if (!focusApp(app.slug)) openWindow({ app: app.slug, title: app.title, w: 720, h: 480 });
+	}
+	function launchNativeApp(slug: string) {
+		if (!focusApp(slug)) launchNative(slug);
+	}
+
+	// Icon for a window's app slug (taskbar chips): native descriptor icon, else
+	// the hub catalog icon, else the app's first letter.
+	function iconFor(slug: string): string {
+		return getNativeApp(slug)?.icon ?? apps.find((a) => a.slug === slug)?.icon ?? slug.slice(0, 1);
 	}
 </script>
 
@@ -72,9 +85,7 @@
 			{#if isControlPanelWindow(win.app)}
 				<ControlPanelSurface {win} />
 			{:else if isNativeApp(win.app)}
-				{#await resolveNativeComponent(win.app) then Comp}
-					{#if Comp}<Comp />{/if}
-				{/await}
+				<NativeHost app={win.app} />
 			{:else}
 				<div class="placeholder">
 					<p>{win.title}</p>
@@ -92,9 +103,12 @@
 	<!-- G5: file-picker host (invisible until openFilePicker / the bridge fires) -->
 	<FilePicker />
 
+	<!-- Open-window strip: count + navigation back to any window (Wave-2). -->
+	<Taskbar icon={iconFor} />
+
 	<nav class="dock glass" aria-label="Dock">
 		{#each natives as app (app.slug)}
-			<button class="tile" title={app.title} onclick={() => launchNative(app.slug)}>
+			<button class="tile" title={app.title} onclick={() => launchNativeApp(app.slug)}>
 				<span class="ico">{app.icon.slice(0, 2)}</span>
 				<span class="lbl">{app.title}</span>
 			</button>

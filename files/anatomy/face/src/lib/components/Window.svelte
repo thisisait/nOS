@@ -23,6 +23,10 @@
 	let oh = 0;
 
 	function onTitlePointerDown(e: PointerEvent) {
+		// Ignore presses that originate on a control (the traffic lights) — those
+		// are `click` targets; starting a drag here would setPointerCapture on the
+		// titlebar and steal the click. Belt-and-braces with stopPropagation below.
+		if ((e.target as HTMLElement).closest('button')) return;
 		if (win.max) return;
 		dragging = true;
 		sx = e.clientX;
@@ -78,9 +82,24 @@
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<header class="titlebar" onpointerdown={onTitlePointerDown}>
 			<div class="lights">
-				<button class="light close" aria-label="Close" onclick={() => closeWindow(win.id)}></button>
-				<button class="light min" aria-label="Minimize" onclick={() => toggleMin(win.id)}></button>
-				<button class="light max" aria-label="Maximize" onclick={() => toggleMax(win.id)}></button>
+				<button
+					class="light close"
+					aria-label="Close"
+					onpointerdown={(e) => e.stopPropagation()}
+					onclick={() => closeWindow(win.id)}
+				></button>
+				<button
+					class="light min"
+					aria-label="Minimize"
+					onpointerdown={(e) => e.stopPropagation()}
+					onclick={() => toggleMin(win.id)}
+				></button>
+				<button
+					class="light max"
+					aria-label="Maximize"
+					onpointerdown={(e) => e.stopPropagation()}
+					onclick={() => toggleMax(win.id)}
+				></button>
 			</div>
 			<span class="title">{win.title}</span>
 		</header>

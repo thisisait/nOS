@@ -99,6 +99,16 @@ export function closeWindow(id: string): void {
 	notify();
 }
 
+/** Singleton launch: if a window for `app` is already open, focus + un-minimize
+ *  it and return true; otherwise return false so the caller opens a fresh one.
+ *  Stops dock/desktop clicks from spawning an unbounded stack of duplicates. */
+export function focusApp(app: string): boolean {
+	const existing = get(windows).find((w) => w.app === app);
+	if (!existing) return false;
+	focusWindow(existing.id);
+	return true;
+}
+
 export function focusWindow(id: string): void {
 	zTop += 1;
 	windows.update((list) => list.map((w) => (w.id === id ? { ...w, z: zTop, min: false } : w)));
