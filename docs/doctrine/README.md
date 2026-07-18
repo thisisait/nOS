@@ -18,6 +18,7 @@ the doctrine file.
 | [filesystem.md](filesystem.md) | storage layout, `nos_data_root`, data classes, isolation | ✅ v1 |
 | [observability.md](observability.md) | telemetry/callbacks are best-effort, never gate a run; circuit-breaker, sidecar, secret single-source | ✅ v1 |
 | [secrets.md](secrets.md) | shared-secret single resolved source (`~/.nos/secrets.yml`); no self-ref template to raw consumers; daemon self-heal | ✅ v1 |
+| [virtiofs.md](virtiofs.md) | Docker Desktop VirtioFS bind risk; sockets/locks/mmap-DBs off the bind (tmpfs/named volume); `# VFS-DOCTRINE:` markers; macOS-27 tightening detectable | ✅ v1 |
 | table-naming.md | DB table / column naming conventions | planned |
 | taxonomy.md | taxonomy / ontology term definitions (L0–L4, node/pillar/block, relations) | planned |
 | agentkit.md | agent tool-mediation, scopes, FS/RBAC gating | planned |

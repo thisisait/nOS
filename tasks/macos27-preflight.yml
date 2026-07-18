@@ -1,0 +1,148 @@
+---
+# ============================================================================
+# macOS 27 readiness preflight  (macOS / Docker Desktop)
+#
+# WHY: a major macOS jump (e.g. 26 → 27) can silently change three things nOS
+# leans on hard:
+#   • Docker Desktop's Linux VM + VirtioFS bind-mount semantics (sockets,
+#     lock-files, memory-mapped DBs on a bind — see docs/doctrine/virtiofs.md),
+#   • launchctl / launchd unit loading for the host daemons (wing/bone/pulse),
+#   • the Docker Desktop app itself needing a rebuild for the new OS.
+# History: the gitlab puma `realdirpath ENOTSUP` loop, the loki scratch-dir
+# stale-handle workaround, and the external-SSD stale /host_mnt remount were all
+# VirtioFS-class regressions that a new OS can re-open. This preflight makes an
+# untested OS jump and a stale Docker Desktop LOUD-but-non-fatal, so an operator
+# on macOS 27 is warned to watch those surfaces — it never blocks the run.
+#
+# Both checks are read-only + idempotent. Off Docker Desktop / off macOS the
+# whole file is gated out (see `when:` on the import site).
+#
+# Self-contained: the two tuning vars default AT THE TOP via set_fact so this
+# file needs no default.config.yml edit; override on the CLI with
+#   -e nos_macos_tested_ceiling=27  -e docker_desktop_min_version=4.50.0
+# STOCK Jinja only (this file may be reached early, before filter plugins load
+# on the plugin-loader path — see CLAUDE.md "STOCK Jinja2 filters only" gotcha).
+# ============================================================================
+
+# ── Self-contained, overridable defaults ────────────────────────────────────
+- name: "[macOS27] Resolve preflight tuning defaults (overridable via -e)"
+  ansible.builtin.set_fact:
+    # Highest macOS MAJOR version nOS has been validated on. A running major
+    # ABOVE this warns (untested), at/below passes quietly. String major only.
+    nos_macos_tested_ceiling: "{{ nos_macos_tested_ceiling | default('26') }}"
+    # Minimum Docker Desktop server (engine) version nOS expects. Below this
+    # warns with the upgrade remedy. A sane recent floor; bump as nOS validates.
+    docker_desktop_min_version: "{{ docker_desktop_min_version | default('4.34.0') }}"
+  tags: ['preflight', 'macos', 'always']
+
+# ── (a) macOS version-gate ──────────────────────────────────────────────
+- name: "[macOS27] Read the running macOS product version"
+  ansible.builtin.command: sw_vers -productVersion
+  register: _macos_ver
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  tags: ['preflight', 'macos', 'always']
+
+- name: "[macOS27] Derive the running macOS MAJOR (fall back to Ansible facts)"
+  ansible.builtin.set_fact:
+    # Prefer the live sw_vers read; fall back to gathered facts. Split on '.'
+    # and take the leading major — stock Jinja only (.split, index, int).
+    _macos_running_major: >-
+      {{ ((_macos_ver.stdout | default('')) | trim | default(ansible_facts['distribution_version'] | default(''), true)).split('.')[0] }}
+  tags: ['preflight', 'macos', 'always']
+
+- name: "[macOS27] LOUD warn — running macOS is ABOVE the tested ceiling (untested)"
+  ansible.builtin.debug:
+    msg: |
+      ============================================================
+      ⚠️  macOS {{ _macos_running_major }} is ABOVE the nOS tested ceiling ({{ nos_macos_tested_ceiling }}).
+      ============================================================
+      This macOS major has NOT been validated with nOS. A major OS jump can
+      silently change the surfaces nOS leans on — WATCH FOR:
+        • VirtioFS bind-mount semantics (Docker Desktop) — sockets / lock-files /
+          mmap'd DBs on a bind can start failing (gitlab puma realdirpath ENOTSUP,
+          loki scratch stale handle, external-SSD stale /host_mnt). See
+          docs/doctrine/virtiofs.md — grep the repo for  # VFS-DOCTRINE:  markers.
+        • launchctl / launchd unit loading for host daemons (wing / bone / pulse).
+        • Docker Desktop may need an upgrade built for macOS {{ _macos_running_major }}.
+      This is a WARNING, not a failure — the run continues. When macOS
+      {{ _macos_running_major }} is validated, bump nos_macos_tested_ceiling.
+      ============================================================
+  when:
+    - (_macos_running_major | default('')) != ''
+    - (_macos_running_major | int) > (nos_macos_tested_ceiling | int)
+  tags: ['preflight', 'macos', 'always']
+
+- name: "[macOS27] macOS version at/below tested ceiling — pass quietly"
+  ansible.builtin.debug:
+    msg: "macOS {{ _macos_running_major | default('?') }} is at/below the nOS tested ceiling ({{ nos_macos_tested_ceiling }}) — OK."
+    verbosity: 1
+  when:
+    - (_macos_running_major | default('')) != ''
+    - (_macos_running_major | int) <= (nos_macos_tested_ceiling | int)
+  tags: ['preflight', 'macos', 'always']
+
+# ── (b) Docker Desktop version-floor preflight ───────────────────────────────
+# Best-effort: only when the Docker daemon is reachable. A probe failure must
+# NOT block the run (failed_when: false everywhere).
+- name: "[macOS27] Docker Desktop version-floor (only when the daemon is ready)"
+  when: nos_docker_ready | default(true)
+  tags: ['preflight', 'macos', 'always']
+  block:
+    - name: "[macOS27] Read the Docker Engine (server) version"
+      ansible.builtin.command: "{{ docker_bin | default('docker') }} version --format {{ '{{' }}.Server.Version{{ '}}' }}"
+      register: _docker_srv_ver
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: "[macOS27] Fallback — read the Docker.app bundle version from Info.plist"
+      ansible.builtin.command: >-
+        defaults read /Applications/Docker.app/Contents/Info.plist CFBundleShortVersionString
+      register: _docker_app_ver
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      when: (_docker_srv_ver.rc | default(1)) != 0
+
+    - name: "[macOS27] Resolve the observed Docker version string"
+      ansible.builtin.set_fact:
+        _docker_observed_ver: >-
+          {{ (_docker_srv_ver.stdout | default('') | trim)
+             if (_docker_srv_ver.rc | default(1)) == 0
+             else (_docker_app_ver.stdout | default('') | trim) }}
+
+    - name: "[macOS27] LOUD warn — Docker Desktop is BELOW the version floor"
+      ansible.builtin.debug:
+        msg: |
+          ============================================================
+          ⚠️  Docker {{ _docker_observed_ver }} is BELOW the nOS floor ({{ docker_desktop_min_version }}).
+          ============================================================
+          An older Docker Desktop can carry stale VirtioFS bind-mount behaviour
+          and known container-runtime bugs — especially risky right after a macOS
+          major update. REMEDY: upgrade Docker Desktop (Docker menu → Check for
+          Updates, or https://www.docker.com/products/docker-desktop/), then
+          re-run. This is a WARNING, not a failure — the run continues.
+          ============================================================
+      when:
+        - (_docker_observed_ver | default('')) != ''
+        # version_compare is a stock Ansible test; guard with a plain string
+        # compare fallback is unnecessary — this task only runs post-daemon.
+        - _docker_observed_ver is version(docker_desktop_min_version, '<')
+      tags: ['preflight', 'macos', 'always']
+
+    - name: "[macOS27] Docker version at/above floor — pass quietly"
+      ansible.builtin.debug:
+        msg: "Docker {{ _docker_observed_ver | default('?') }} is at/above the nOS floor ({{ docker_desktop_min_version }}) — OK."
+        verbosity: 1
+      when:
+        - (_docker_observed_ver | default('')) != ''
+        - _docker_observed_ver is version(docker_desktop_min_version, '>=')
+      tags: ['preflight', 'macos', 'always']
+
+    - name: "[macOS27] Could not determine Docker version — note and continue"
+      ansible.builtin.debug:
+        msg: "[macOS27] Docker version probe returned nothing (daemon slow / app path moved) — skipping floor check, run continues."
+      when: (_docker_observed_ver | default('')) == ''
+      tags: ['preflight', 'macos', 'always']

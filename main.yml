@@ -93,6 +93,14 @@
     - import_tasks: tasks/_platform.yml
       tags: ['always', 'platform']
 
+    # ── macOS 27 forward-compat preflight (loud, non-fatal) ───────────────
+    # Flags an above-ceiling macOS (VirtioFS/launchctl/Docker regression watch)
+    # and an under-floor Docker Desktop, so a big OS bump can't silently break
+    # the substrate. Darwin-only; a no-op on Linux.
+    - import_tasks: tasks/macos27-preflight.yml
+      when: ansible_os_family == 'Darwin'
+      tags: ['always', 'preflight', 'macos']
+
     # ── Preflight: ensure host Python interpreter has plugin loader deps ───
     # Anatomy P0.13 (2026-05-04): the plugin loader (nos_plugin_loader
     # Ansible module) is pure Python and lazily imports jinja2 + pyyaml
