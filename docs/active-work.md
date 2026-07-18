@@ -11,6 +11,16 @@
 
 ## Now (current track)
 
+**nOS-face v0.2 — built on `feat/nos-face`, gates green.** The web-desktop shell is
+**vendored in-repo** (`files/anatomy/face`, SvelteKit) and got the dataTable-driven v0.2:
+snap/tiling WM, control-panel icon-grid, wallpapers, per-viewport window caching, and
+nos-native (API-calling) apps + a file-picker. Built by a 5-agent worktree fleet off a
+frozen substrate, merged coherent. Hard doctrine (`docs/doctrine/face.md` +
+`tools/face-wiring-report.py --strict` + `tests/anatomy/test_face_*.py`); Bone filename/UTF-8
+hardening + 170-test fuzz corpus; edge-token spoof-refusal verified live. Frontend gate
+(svelte-check + eslint + 76 vitest) + python gates green; 5 pre-existing branch failures
+(version-pin/archive/woodpecker) are unrelated. **NEXT (operator):** review + `feat → dev`.
+
 **v0.7-beta — ready to tag, pending operator validation converge.** Two arcs on
 `dev` (`5bd11c8c`), CI green on all jobs:
 - **Arc 1 (2026-06-15):** tofu self-reconcile preflight (idempotent non-blank
