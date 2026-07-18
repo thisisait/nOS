@@ -14,7 +14,7 @@
 # post-start seeders (post.yml fixtures/ingest) and bin/ingest-registry.php: each
 # table is created only when the loopback API reports it absent, and each system
 # row is POSTed only when its slug is not already present. Gated on install_keap;
-# tolerant of the /api/tables route not being live yet (an open item in
+# tolerant of the /agent/v1/tables route not being live yet (an open item in
 # docs/plans/keap-datatables-apps-systems.md) — a 404 leaves the converge green
 # and the face BFF falls back to the vendored defaults.
 #

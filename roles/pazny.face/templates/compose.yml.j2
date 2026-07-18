@@ -45,9 +45,15 @@ services:
       NOS_VFS_API_TOKEN: "{{ face_vfs_token | default('') }}"
       NOS_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
       # KEAP config-DataTable source of truth (SoT + repo/user-state fallback).
-      # Empty → the shell serves repo defaults + user-state (G2 wires KEAP live).
+      # Points at the agent-bearer /agent/v1/tables surface (keap ≥ v1.9.3) with
+      # the RO agent token; empty when KEAP is off → shell serves repo defaults.
+{% if install_keap | default(false) | bool %}
+      NOS_KEAP_TABLES_URL: "{{ face_keap_tables_url | default('http://host.docker.internal:' ~ (keap_port | default(8091)) ~ '/agent/v1/tables') }}"
+      NOS_KEAP_API_TOKEN: "{{ keap_agent_token_ro | default('') }}"
+{% else %}
       NOS_KEAP_TABLES_URL: "{{ face_keap_tables_url | default('') }}"
-      NOS_KEAP_API_TOKEN: "{{ keap_agent_token | default('') }}"
+      NOS_KEAP_API_TOKEN: ""
+{% endif %}
       # Command-palette LLM ("ask") → host Ollama (MLX) on loopback. The model is
       # auto-picked from the installed set unless face_ask_model pins one; empty
       # model + none installed → the palette says so (no mock answer).
