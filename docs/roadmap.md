@@ -393,7 +393,15 @@ real robustness gap, not a one-off; fixes are structural.
   (below). Remaining: **add a machine-checkable active-work freshness gate** (the 150-line
   ceiling is pinned but nothing pins freshness — which is why it drifted 3+ weeks).
 - **[M] macOS 27 forward-compat hardening** — one epic folding the 14 `v07-darwin27-*`
-  notes. **6 useful now regardless of macOS 27:** Docker-Desktop version-floor preflight,
+  notes. **Readiness research (2026-07-18): `docs/plans/macos27-golden-gate-readiness.md`**
+  — macOS 27 "Golden Gate" (GA ~Sep 2026, ASi-only); TOP risk is Docker Desktop (no
+  Golden-Gate support declared yet → the VirtioFS bind-mount regression class); TLS
+  clampdown targets Apple/MDM procs not Docker/curl (mkcert likely fine); **launchctl
+  legacy verbs NOT removed in 27 → the bootstrap/bootout rewrite stays deferred**;
+  Homebrew has preliminary GG support, `/opt/homebrew` unchanged. Shipped this session:
+  `tasks/macos27-preflight.yml` (loud version-gate + Docker floor) + `docs/doctrine/
+  virtiofs.md` + `# VFS-DOCTRINE:` markers. **6 useful now regardless of macOS 27:**
+  Docker-Desktop version-floor preflight,
   mkcert CAROOT single-source + CA-present assert, macOS/arch version-gate preflight,
   hard-pin `interpreter_python` (defeat auto-discovery custom-module crash), version-pin
   Ollama (currently `state:latest`) + llama-server preflight, modernize the `launchctl`
