@@ -194,6 +194,39 @@ def vfs_move(body: dict = Body(...), _=Depends(require_vfs_token)) -> dict:
     return {"ok": True, **_entry(uid, dest)}
 
 
+@router.post("/copy")
+def vfs_copy(body: dict = Body(...), _=Depends(require_vfs_token)) -> dict:
+    uid = body.get("uid", "")
+    src, dst = body.get("src", ""), body.get("dst", "")
+    if not src or not dst:
+        raise HTTPException(status_code=400, detail="src and dst are required")
+    source = _resolve(uid, src, must_exist=True)
+    dest = _resolve(uid, dst)
+    if dest.exists():
+        raise HTTPException(status_code=409, detail="destination exists")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if source.is_dir():
+        shutil.copytree(source, dest)
+    else:
+        shutil.copy2(source, dest)
+    return {"ok": True, **_entry(uid, dest)}
+
+
+@router.post("/delete")
+def vfs_delete(body: dict = Body(...), _=Depends(require_vfs_token)) -> dict:
+    uid, path = body.get("uid", ""), body.get("path", "")
+    if not path:
+        raise HTTPException(status_code=400, detail="path is required")
+    target = _resolve(uid, path, must_exist=True)
+    if target == _user_root(uid):
+        raise HTTPException(status_code=400, detail="refusing to delete the user root")
+    if target.is_dir():
+        shutil.rmtree(target)
+    else:
+        target.unlink()
+    return {"ok": True, "deleted": _rel(uid, target)}
+
+
 @router.post("/upload")
 async def vfs_upload(
     request: Request,

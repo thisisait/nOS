@@ -40,6 +40,36 @@ def test_mkdir_and_move(client, auth):
     assert client.get("/api/v1/vfs/list", params={"uid": "alice", "path": "projects"}, headers=auth).json()["entries"]
 
 
+def test_copy_file(client, auth):
+    r = client.post("/api/v1/vfs/copy", json={"uid": "alice", "src": "documents/hello.txt", "dst": "documents/hello-copy.txt"}, headers=auth)
+    assert r.status_code == 200
+    names = {e["name"] for e in client.get("/api/v1/vfs/list", params={"uid": "alice", "path": "documents"}, headers=auth).json()["entries"]}
+    assert {"hello.txt", "hello-copy.txt"} <= names
+
+
+def test_copy_conflict_409(client, auth):
+    r = client.post("/api/v1/vfs/copy", json={"uid": "alice", "src": "documents/hello.txt", "dst": "documents/hello.txt"}, headers=auth)
+    assert r.status_code == 409
+
+
+def test_delete_file(client, auth):
+    assert client.post("/api/v1/vfs/delete", json={"uid": "alice", "path": "documents/hello.txt"}, headers=auth).status_code == 200
+    assert client.get("/api/v1/vfs/stat", params={"uid": "alice", "path": "documents/hello.txt"}, headers=auth).status_code == 404
+
+
+def test_copy_escape_refused(client, auth):
+    assert client.post("/api/v1/vfs/copy", json={"uid": "alice", "src": "../bob/secret.txt", "dst": "documents/x"}, headers=auth).status_code == 403
+    assert client.post("/api/v1/vfs/copy", json={"uid": "alice", "src": "documents/hello.txt", "dst": "../bob/pwned"}, headers=auth).status_code == 403
+
+
+def test_delete_escape_refused(client, auth):
+    assert client.post("/api/v1/vfs/delete", json={"uid": "alice", "path": "../bob/secret.txt"}, headers=auth).status_code == 403
+
+
+def test_delete_user_root_refused(client, auth):
+    assert client.post("/api/v1/vfs/delete", json={"uid": "alice", "path": ""}, headers=auth).status_code == 400
+
+
 # ── Containment: the security core ───────────────────────────────────────────
 
 def test_dotdot_escape_refused(client, auth):
