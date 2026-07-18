@@ -141,6 +141,56 @@
   changed_when: "'bootstrapped' in _bone_bootstrap.stdout"
   when: (nos_service_manager | default('launchd')) == 'launchd'
 
+# ── Self-heal canary (handler-independent) ───────────────────────────────────
+# Handlers flush only at end-of-play. A run that CHANGED the plist/source but
+# FAILED before flush (e.g. the tofu destroy-guard) leaves Bone on stale code or
+# a stale cached env; the next idempotent run sees no change → never re-notifies
+# → Bone keeps running old code (live 2026-07-18: VFS routes 404 / BONE_VFS_TOKEN
+# unset after a green run). The bootstrap task above only loads-if-absent, so it
+# doesn't help a loaded-but-stale job. This canary probes a route only the CURRENT
+# Bone serves and forces a full reload (bootout+bootstrap re-reads the plist env)
+# on ANY non-200 — 404 (route missing), 503 (env unloaded), 403 (token rotated),
+# or unreachable. Gated on install_face (the VFS surface it checks).
+- name: "[pazny.bone] Canary — is the running Bone current (VFS route + env live)?"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ bone_port | default(8099) }}/api/v1/vfs/list?uid=_canary&path=documents"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ face_vfs_token }}"
+    status_code: [200]
+  register: _bone_canary
+  failed_when: false
+  changed_when: false
+  when:
+    - (nos_service_manager | default('launchd')) == 'launchd'
+    - install_face | default(false) | bool
+
+- name: "[pazny.bone] Reload Bone when the canary shows stale code/env"
+  ansible.builtin.shell: |
+    LABEL="{{ bone_launchd_label }}"; UID_NUM=$(id -u)
+    launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
+    sleep 1
+    launchctl bootstrap "gui/${UID_NUM}" "$HOME/Library/LaunchAgents/${LABEL}.plist"
+  register: _bone_stale_reload
+  changed_when: true
+  when:
+    - (nos_service_manager | default('launchd')) == 'launchd'
+    - install_face | default(false) | bool
+    - (_bone_canary.status | default(0)) != 200
+
+- name: "[pazny.bone] Wait for Bone to recover after a stale-reload"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ bone_port | default(8099) }}/api/health"
+    status_code: [200]
+  register: _bone_recover
+  retries: 15
+  delay: 2
+  until: _bone_recover.status == 200
+  changed_when: false
+  when:
+    - _bone_stale_reload is defined
+    - _bone_stale_reload is changed
+
 # ---- Linux: systemd --user (env mirrors bone.plist.j2 EnvironmentVariables) ----
 - name: "[pazny.bone] (Linux) Build systemd --user environment"
   ansible.builtin.set_fact:
