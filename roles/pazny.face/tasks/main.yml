@@ -3,11 +3,11 @@
 # pazny.face/tasks/main.yml — nOS face (web-desktop shell)
 #
 # Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
-# clones thisisait/nos-face at the pinned ref (git-clone build precedent:
-# pazny.keap / pazny.hermes), then renders the compose override fragment to
+# syncs the vendored shell source (files/anatomy/face) into face_src_dir, then
+# renders the compose override fragment to
 # {{ stacks_dir }}/iiab/overrides/face.yml which stack-up.yml collects via
-# `find` and passes as an additional -f flag. The image is built from the clone
-# by `docker compose up` (build-from-source precedent: pazny.keap / pazny.puter).
+# `find` and passes as an additional -f flag. The image is built from the synced
+# tree by `docker compose up` (build-from-source precedent: pazny.keap / pazny.puter).
 #
 # Routing: face is auto-routed by the Traefik file-provider from its
 # state/manifest.yml row (domain_var: face_domain, port_var: face_port) with
