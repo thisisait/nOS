@@ -21,14 +21,17 @@
 # =============================================================================
 
 name: face-base
-version: 0.1.0
+version: 0.2.0
 description: |
-  nOS face — the unified web-desktop shell.
+  nOS face — the unified web-desktop shell (v0.2, source vendored in-repo at
+  files/anatomy/face).
 
   Wiring layer for forward-auth gated access via the Authentik proxy outpost.
-  The role `pazny.face` keeps install-only responsibilities (clone, build,
-  ports, env); this plugin owns the Authentik provider + tier binding, the
-  GDPR Article 30 row, and the Wing /hub self-card.
+  The role `pazny.face` keeps install-only responsibilities (sync vendored tree,
+  build, ports, env); this plugin owns the Authentik provider + tier binding, the
+  GDPR Article 30 row, and the Wing /hub self-card. v0.2 adds the dataTable-driven
+  shell (snap/tiling WM, control-panel icon-grid, wallpapers, per-viewport window
+  caching) over KEAP config DataTables + Bone user-state.
 upstream: https://github.com/thisisait/nos-face
 license: MIT
 

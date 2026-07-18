@@ -141,8 +141,10 @@ jobs:
           tools: composer:v2
           coverage: none
 
+      # fastapi: tests/bone_vfs mounts the Bone VFS router on a throwaway app to
+      # exercise the containment + filename-hardening gates (nOS-face v0.2).
       - name: Install test dependencies.
-        run: pip3 install pytest pyyaml jsonschema httpx jinja2 requests markdown==3.10.2
+        run: pip3 install pytest pyyaml jsonschema httpx jinja2 requests markdown==3.10.2 fastapi
 
       - name: Run pytest suite.
         run: >
@@ -176,6 +178,41 @@ jobs:
 
       - name: Run apps + importer tests.
         run: python3 -m pytest tests/apps/ -v
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # FACE – nOS-face shell (vendored SvelteKit, files/anatomy/face). The repo's
+  # first JS toolchain (v0.2, 2026-07-18): type-check + lint + vitest. The
+  # python doctrine/security gates (test_face_*.py) ride the pytest job.
+  # ──────────────────────────────────────────────────────────────────────────
+  face:
+    name: Face (nOS-face shell)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v6
+
+      - name: Set up Node.
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: files/anatomy/face/package-lock.json
+
+      - name: Install shell dependencies.
+        working-directory: files/anatomy/face
+        run: npm ci
+
+      - name: Type-check (svelte-check).
+        working-directory: files/anatomy/face
+        run: npm run check
+
+      - name: Lint (prettier + eslint).
+        working-directory: files/anatomy/face
+        run: npm run lint
+
+      - name: Unit tests (vitest).
+        working-directory: files/anatomy/face
+        run: npm test
 
   # ──────────────────────────────────────────────────────────────────────────
   # CONTRACTS DRIFT – regenerate Bone OpenAPI + Wing OpenAPI + Wing DDL
