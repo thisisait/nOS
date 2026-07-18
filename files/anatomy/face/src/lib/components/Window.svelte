@@ -78,6 +78,7 @@
 		role="dialog"
 		aria-label={win.title}
 		tabindex="-1"
+		data-win-id={win.id}
 	>
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<header class="titlebar" onpointerdown={onTitlePointerDown}>
