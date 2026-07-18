@@ -135,6 +135,12 @@ def test_role_wiring():
     # compose mounts the class-2 tree as the reserved fs-sync uid.
     compose = (ROOT / "roles/pazny.keap/templates/compose.yml.j2").read_text()
     assert "keap_selfmodel_root" in compose and "keap_selfmodel_uid" in compose
+    # The self-model is a NESTED mount under the RO /user-files — runc cannot
+    # mkdir its mountpoint inside a read-only parent (iiab up rc=1, 2026-07-18).
+    # The keap role MUST pre-create the users/<uid> mountpoint dir on the host.
+    tasks_main = (ROOT / "roles/pazny.keap/tasks/main.yml").read_text()
+    assert "users/{{ keap_selfmodel_uid" in tasks_main, \
+        "keap must pre-create the users/<uid> nested-mount mountpoint dir"
     # defaults define the toggle + class-2 root + the fs-sync top-class allowlist.
     defaults = (ROOT / "roles/pazny.keap/defaults/main.yml").read_text()
     assert re.search(r"^keap_selfmodel:\s*true", defaults, re.M)

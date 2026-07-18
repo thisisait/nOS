@@ -24,6 +24,14 @@
     # FS-sync mount parent (KEAP v1.7.0): the doctrine per-user tree KEAP mounts
     # RO. Ensure it exists so Docker doesn't create a root-owned mount point.
     - "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/users"
+    # Self-model mountpoint: the class-2 shared nos-docs tree is bind-mounted at
+    # /user-files/<uid> — a NESTED mount inside the RO /user-files. runc cannot
+    # mkdir that mountpoint inside a read-only parent ("make mountpoint … :
+    # read-only file system" → the container never starts, iiab up rc=1, live
+    # 2026-07-18). Pre-create the empty mountpoint dir in the users tree source so
+    # runc only has to overlay-mount onto it. Harmless (empty, hidden by the
+    # overlay) when keap_selfmodel is off.
+    - "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/users/{{ keap_selfmodel_uid | default('nos-docs') }}"
 
 - name: "[pazny.keap] Generate nOS architecture self-model (KEAP fs-sync tree)"
   ansible.builtin.include_tasks: selfmodel.yml
