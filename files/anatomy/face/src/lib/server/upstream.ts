@@ -246,6 +246,21 @@ export async function keapCreateTable(body: Record<string, unknown>): Promise<un
 	);
 }
 
+/** List all tables — GET /agent/v1/tables (RO). Returns the enveloped
+ *  `TableInfo[]` for the Tables app's sidebar. */
+export async function keapListTables(): Promise<unknown> {
+	const h: Record<string, string> = {};
+	if (KEAP_TOKEN()) h['authorization'] = `Bearer ${KEAP_TOKEN()}`;
+	return asJson(await fetch(KEAP_TABLES(), { headers: h }));
+}
+
+/** Public KEAP URL the browser iframes for the "Explore" app. A URL, not a
+ *  secret (Authentik-gated, same cookie-domain session). process.env fallback
+ *  mirrors the RW-token note above — robust against SvelteKit's build-time set. */
+export function keapExploreUrl(): string {
+	return env.NOS_KEAP_EXPLORE_URL || process.env.NOS_KEAP_EXPLORE_URL || '';
+}
+
 // ── Local LLM (command-palette "ask") ────────────────────────────────────────
 // Talks to the host Ollama on loopback (MLX backend). No token: loopback-only,
 // reached via host.docker.internal. The model is either pinned by env or

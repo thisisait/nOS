@@ -11,6 +11,7 @@ import type { RequestHandler } from './$types';
 import {
 	keapTableRows,
 	keapTableDef,
+	keapListTables,
 	keapUpsertRow,
 	keapCreateTable,
 	keapConfigured,
@@ -18,10 +19,13 @@ import {
 	UpstreamError
 } from '$lib/server/upstream';
 import { canWriteTables } from '$lib/security/tier';
+import { toTableSummaries } from '$lib/tables/summary';
 import type { DataTable, DataTableRow, ColumnSpec } from '$lib/contracts';
 import { FACE_LAYOUTS, FACE_WALLPAPERS, FACE_CONTROLS } from '$lib/server/defaults';
 
-const ALLOWED = new Set(['face-layouts', 'face-wallpapers', 'face-controls']);
+// Config tables with vendored repo-default rows (the SoC fallback when KEAP is
+// unreachable) live in `repoDefaults`/`FALLBACK_COLUMNS` below; any other valid
+// slug is served live-from-KEAP-only (empty on failure).
 const SLUG_RE = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 
 /** Repo-default column specs per config table — the editor's fallback shape when
@@ -93,8 +97,22 @@ function mapColumns(def: unknown): ColumnSpec[] {
 }
 
 export const GET: RequestHandler = async ({ url, locals }) => {
+	// op=list → the Tables app's sidebar (all tables in KEAP).
+	if (url.searchParams.get('op') === 'list') {
+		if (!keapConfigured()) return json({ tables: [], source: 'fallback' });
+		try {
+			return json({ tables: toTableSummaries(await keapListTables()), source: 'keap' });
+		} catch (e) {
+			if (e instanceof UpstreamError) return json({ tables: [], source: 'fallback' });
+			throw e;
+		}
+	}
+
 	const slug = url.searchParams.get('slug') ?? '';
-	if (!ALLOWED.has(slug)) return json({ error: 'unknown table' }, { status: 404 });
+	// Reads are open to any authenticated user for any well-formed slug — KEAP's
+	// RO token is the real authority on what's readable. Repo-fallback rows exist
+	// only for the vendored config tables.
+	if (!SLUG_RE.test(slug)) return json({ error: 'unknown table' }, { status: 404 });
 
 	const canWrite = canWriteTables(locals.identity.groups) && keapWriteConfigured();
 	const table: DataTable = {

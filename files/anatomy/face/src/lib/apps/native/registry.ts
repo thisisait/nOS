@@ -113,6 +113,23 @@ export function registerBuiltinNativeApps(): void {
 		apiScopes: ['vfs'],
 		stateNamespace: 'app.files'
 	});
+	registerNativeApp({
+		slug: 'tables',
+		title: 'Tables',
+		icon: '🧮',
+		component: () => import('./TablesApp.svelte'),
+		defaultSize: { w: 920, h: 600 },
+		apiScopes: ['tables'],
+		stateNamespace: 'app.tables'
+	});
+	registerNativeApp({
+		slug: 'keap-explore',
+		title: 'Explore',
+		icon: '🕸',
+		component: () => import('./KeapExploreApp.svelte'),
+		defaultSize: { w: 1040, h: 700 },
+		apiScopes: ['config']
+	});
 }
 
 /** Test hook — clear the registry between unit tests. */

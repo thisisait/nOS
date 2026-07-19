@@ -3,6 +3,13 @@
  *  the RW token (a non-manager caller gets a 403 with a clear message). */
 import { bffGet, bffPost } from './client';
 import type { DataTable } from '$lib/contracts';
+import type { TableSummary } from '$lib/tables/summary';
+
+/** List every table in KEAP (the Tables app's sidebar). */
+export async function listTables(): Promise<TableSummary[]> {
+	const r = await bffGet<{ tables: TableSummary[] }>('/bff/tables', { op: 'list' });
+	return r.tables ?? [];
+}
 
 /** Fetch a config table (face-layouts / face-wallpapers / face-controls). The
  *  BFF returns `source: 'keap'` when live, `source: 'fallback'` (repo defaults +
