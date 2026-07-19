@@ -95,6 +95,10 @@ ansible-playbook main.yml -e blank=true
 
 # Run a single stack
 ansible-playbook main.yml --tags "stacks,observability"
+
+# Everything-on robust test — enable every known-good service (incl. face + KEAP),
+# sequential bring-up + 1200s health budget. Add -e blank=true for a from-scratch run.
+ansible-playbook main.yml -e @profiles/all-on.yml -e blank=true
 ```
 
 A full first run takes **~20 minutes** on an M4 Pro with fast internet.
