@@ -3,7 +3,7 @@
  *
  * Layer 1 of the SoC → runtime DataTable → per-user-state pattern
  * (docs/plans/nos-face-shell-v2.md): these are the version-controlled defaults
- * the KEAP config DataTables (face.layouts / face.wallpapers / face.controls)
+ * the KEAP config DataTables (face-layouts / face-wallpapers / face-controls)
  * are seeded from (roles/pazny.keap/tasks/seed-face-tables.yml), AND the
  * fallback the BFF serves when KEAP is unconfigured/unreachable so the desktop
  * stays usable. Every row carries `system: true` — users add their own rows on

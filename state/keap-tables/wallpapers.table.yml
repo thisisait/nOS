@@ -9,7 +9,7 @@
 # active choice is NOT stored here; it persists in Bone user-state
 # (ns face.desktop, key prefs) so it survives restart. A seeder creates this
 # table in KEAP and upserts the system rows idempotently; the face BFF reads it
-# via GET /api/tables/face.wallpapers/rows with the vendored defaults fallback.
+# via GET /api/tables/face-wallpapers/rows with the vendored defaults fallback.
 #
 # Contract: nos-keap shared/contracts/table.ts; shell mirror = WallpaperSpec in
 # src/lib/contracts/index.ts. Driver: libsql (SQLite).

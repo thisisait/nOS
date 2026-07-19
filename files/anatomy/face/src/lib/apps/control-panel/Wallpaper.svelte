@@ -2,7 +2,7 @@
 	/**
 	 * Wallpaper picker (control-panel surface).
 	 *
-	 * Reads the `face.wallpapers` DataTable (repo seed + user rows), falling back
+	 * Reads the `face-wallpapers` DataTable (repo seed + user rows), falling back
 	 * to the built-in aurora/graphite/sunset/forest gradients if the table is
 	 * empty or KEAP is down. Clicking a swatch sets + persists the active
 	 * wallpaper via the wallpaper store. Backgrounds are applied through
@@ -23,7 +23,7 @@
 
 	onMount(async () => {
 		try {
-			const table = await loadTable('face.wallpapers');
+			const table = await loadTable('face-wallpapers');
 			choices = wallpapersFromTable(table);
 		} catch {
 			choices = FALLBACK_WALLPAPERS;

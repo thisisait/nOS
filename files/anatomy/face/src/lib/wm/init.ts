@@ -2,7 +2,7 @@
  * WM v2 · bootstrap (Wave-1 G3).
  *
  * `initWindowManager()` registers the SnapEngine with the frozen desktop store
- * (via `useSnapEngine`) and loads the tiling layouts from `face.layouts` (falling
+ * (via `useSnapEngine`) and loads the tiling layouts from `face-layouts` (falling
  * back to the built-in set). The integrator calls this ONCE at desktop mount
  * (see +page.svelte INTEGRATION NOTE), before/around mounting <SnapOverlay />.
  */

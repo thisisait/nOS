@@ -16,9 +16,9 @@ describe('surface app-slug round-trip', () => {
 		expect(parseSurfaceApp(app)).toEqual({ surface: 'wallpaper', table: undefined });
 	});
 	it('encodes + decodes rawDataTable with a table slug (incl. dotted names)', () => {
-		const app = surfaceApp({ surface: 'rawDataTable', table: 'face.wallpapers' });
-		expect(app).toBe('cp:rawDataTable:face.wallpapers');
-		expect(parseSurfaceApp(app)).toEqual({ surface: 'rawDataTable', table: 'face.wallpapers' });
+		const app = surfaceApp({ surface: 'rawDataTable', table: 'face-wallpapers' });
+		expect(app).toBe('cp:rawDataTable:face-wallpapers');
+		expect(parseSurfaceApp(app)).toEqual({ surface: 'rawDataTable', table: 'face-wallpapers' });
 	});
 	it('returns null for a non-CP app', () => {
 		expect(parseSurfaceApp('files')).toBeNull();
@@ -30,7 +30,7 @@ describe('isControlPanelWindow', () => {
 	it('matches the grid and any surface', () => {
 		expect(isControlPanelWindow(CP_GRID_APP)).toBe(true);
 		expect(isControlPanelWindow('cp:wallpaper')).toBe(true);
-		expect(isControlPanelWindow('cp:rawDataTable:face.controls')).toBe(true);
+		expect(isControlPanelWindow('cp:rawDataTable:face-controls')).toBe(true);
 	});
 	it('rejects other apps', () => {
 		expect(isControlPanelWindow('files')).toBe(false);
@@ -44,7 +44,7 @@ describe('controlsFromTable', () => {
 	});
 	it('projects valid rows and drops unknown surfaces', () => {
 		const table: DataTable = {
-			slug: 'face.controls',
+			slug: 'face-controls',
 			title: 'Controls',
 			source: 'keap',
 			columns: [],

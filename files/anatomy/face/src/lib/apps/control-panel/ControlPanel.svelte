@@ -38,7 +38,7 @@
 
 	onMount(async () => {
 		try {
-			entries = controlsFromTable(await loadTable('face.controls'));
+			entries = controlsFromTable(await loadTable('face-controls'));
 		} catch {
 			entries = FALLBACK_CONTROLS;
 		}

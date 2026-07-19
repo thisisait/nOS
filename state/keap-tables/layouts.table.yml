@@ -8,7 +8,7 @@
 # users ADD rows (a custom layout) via the rawDataTable control-panel form. A
 # seeder (roles/pazny.keap/tasks/seed-face-tables.yml) creates this table in KEAP
 # and upserts the system rows idempotently; the face BFF reads it via
-# GET /api/tables/face.layouts/rows and falls back to the vendored defaults when
+# GET /api/tables/face-layouts/rows and falls back to the vendored defaults when
 # KEAP is down so the desktop stays usable.
 #
 # Contract: nos-keap shared/contracts/table.ts (createTableRequestSchema); the

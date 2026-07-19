@@ -12,7 +12,7 @@ import type { ControlEntry, DataTable, DataTableRow } from '$lib/contracts';
 export const CP_GRID_APP = 'control-panel';
 const CP_PREFIX = 'cp:';
 
-/** Repo-seeded control entries (used when `face.controls` is empty / KEAP down). */
+/** Repo-seeded control entries (used when `face-controls` is empty / KEAP down). */
 export const FALLBACK_CONTROLS: ControlEntry[] = [
 	{ slug: 'wallpaper', name: 'Wallpaper', icon: '🖼️', surface: 'wallpaper', system: true },
 	{ slug: 'layouts', name: 'Layouts', icon: '🧩', surface: 'layouts', system: true },
@@ -23,7 +23,7 @@ export const FALLBACK_CONTROLS: ControlEntry[] = [
 		name: 'Wallpapers (raw)',
 		icon: '📄',
 		surface: 'rawDataTable',
-		table: 'face.wallpapers',
+		table: 'face-wallpapers',
 		system: true
 	}
 ];
@@ -64,7 +64,7 @@ const KNOWN_SURFACES = new Set<ControlEntry['surface']>([
 	'rawDataTable'
 ]);
 
-/** Project a `face.controls` DataTable into typed entries, with repo fallback. */
+/** Project a `face-controls` DataTable into typed entries, with repo fallback. */
 export function controlsFromTable(table: DataTable | null): ControlEntry[] {
 	const rows: DataTableRow[] = table?.rows ?? [];
 	const entries: ControlEntry[] = [];

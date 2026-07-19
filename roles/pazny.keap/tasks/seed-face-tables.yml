@@ -25,13 +25,13 @@
 - name: "[pazny.keap] Assemble face DataTable defs + built-in system rows (SoT)"
   ansible.builtin.set_fact:
     _face_tables:
-      - slug: "face.layouts"
+      - slug: "face-layouts"
         def: "{{ lookup('file', playbook_dir + '/state/keap-tables/layouts.table.yml') | from_yaml }}"
         rows: "{{ _face_layout_rows }}"
-      - slug: "face.wallpapers"
+      - slug: "face-wallpapers"
         def: "{{ lookup('file', playbook_dir + '/state/keap-tables/wallpapers.table.yml') | from_yaml }}"
         rows: "{{ _face_wallpaper_rows }}"
-      - slug: "face.controls"
+      - slug: "face-controls"
         def: "{{ lookup('file', playbook_dir + '/state/keap-tables/controls.table.yml') | from_yaml }}"
         rows: "{{ _face_control_rows }}"
   vars:

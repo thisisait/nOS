@@ -66,7 +66,7 @@ export interface WindowGeometry {
 	snappedCell?: string;
 }
 
-// ── Layouts (face.layouts DataTable → snap cells) ─────────────────────────────
+// ── Layouts (face-layouts DataTable → snap cells) ─────────────────────────────
 
 /** One tiling cell, in fractions of the desktop work area [0..1]. */
 export interface LayoutCellSpec {
@@ -87,7 +87,7 @@ export interface LayoutSpec {
 	system: boolean;
 }
 
-// ── Wallpapers (face.wallpapers DataTable) ────────────────────────────────────
+// ── Wallpapers (face-wallpapers DataTable) ────────────────────────────────────
 
 export type WallpaperKind = 'gradient' | 'image';
 
@@ -104,7 +104,7 @@ export interface WallpaperSpec {
 	system: boolean;
 }
 
-// ── Control panel (face.controls DataTable → icon grid) ───────────────────────
+// ── Control panel (face-controls DataTable → icon grid) ───────────────────────
 
 /** One control-panel surface. Clicking a row OPENS A WINDOW (not a modal) that
  *  hosts the surface — a rawDataTable initially, a bespoke editor later. */

@@ -105,7 +105,7 @@ describe('wallpapersFromTable', () => {
 	it('falls back to the built-ins for an empty/null table', () => {
 		expect(wallpapersFromTable(null)).toEqual(FALLBACK_WALLPAPERS);
 		const empty: DataTable = {
-			slug: 'face.wallpapers',
+			slug: 'face-wallpapers',
 			title: 'W',
 			columns: [],
 			rows: [],
@@ -115,7 +115,7 @@ describe('wallpapersFromTable', () => {
 	});
 	it('projects valid rows and drops unsafe ones', () => {
 		const table: DataTable = {
-			slug: 'face.wallpapers',
+			slug: 'face-wallpapers',
 			title: 'W',
 			source: 'keap',
 			columns: [],

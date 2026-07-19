@@ -7,7 +7,7 @@ import { keapTableRows, keapConfigured, UpstreamError } from '$lib/server/upstre
 import type { DataTable, DataTableRow } from '$lib/contracts';
 import { FACE_LAYOUTS, FACE_WALLPAPERS, FACE_CONTROLS } from '$lib/server/defaults';
 
-const ALLOWED = new Set(['face.layouts', 'face.wallpapers', 'face.controls']);
+const ALLOWED = new Set(['face-layouts', 'face-wallpapers', 'face-controls']);
 
 /** Map a built-in spec to a DataTableRow: id = its stable slug, plus the spec's
  *  own fields as the flat cell bag. */
@@ -18,9 +18,9 @@ const toRows = (specs: { slug: string }[]): DataTableRow[] =>
  *  system rows the KEAP seeder also upserts (roles/pazny.keap/tasks/
  *  seed-face-tables.yml), so the fallback and the live table agree. */
 const repoDefaults: Record<string, DataTableRow[]> = {
-	'face.layouts': toRows(FACE_LAYOUTS),
-	'face.wallpapers': toRows(FACE_WALLPAPERS),
-	'face.controls': toRows(FACE_CONTROLS)
+	'face-layouts': toRows(FACE_LAYOUTS),
+	'face-wallpapers': toRows(FACE_WALLPAPERS),
+	'face-controls': toRows(FACE_CONTROLS)
 };
 
 export const GET: RequestHandler = async ({ url, locals }) => {

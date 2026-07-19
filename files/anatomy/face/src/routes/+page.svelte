@@ -38,7 +38,7 @@
 	const bg = $derived(safeBackground($activeWallpaper));
 
 	onMount(() => {
-		initWindowManager(); // G3: register SnapEngine + load face.layouts
+		initWindowManager(); // G3: register SnapEngine + load face-layouts
 		initWallpaper(); // G4: restore saved wallpaper
 		initWindowCache(); // G4: usePersistence + restore geometry for this viewport
 		// G5: postMessage file-picker bridge (origin allowlist hardened in G6/G7).

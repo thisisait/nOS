@@ -10,7 +10,7 @@
 # `system` rows (vendored in src/lib/server/defaults.ts); users/operators can add
 # rows pointing a rawDataTable window at any DataTable slug. A seeder creates this
 # table in KEAP and upserts the system rows idempotently; the face BFF reads it
-# via GET /api/tables/face.controls/rows with the vendored defaults fallback.
+# via GET /api/tables/face-controls/rows with the vendored defaults fallback.
 #
 # Contract: nos-keap shared/contracts/table.ts; shell mirror = ControlEntry in
 # src/lib/contracts/index.ts. Driver: libsql (SQLite).

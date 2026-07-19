@@ -3,7 +3,7 @@
 import { bffGet } from './client';
 import type { DataTable } from '$lib/contracts';
 
-/** Fetch a config table (face.layouts / face.wallpapers / face.controls). The
+/** Fetch a config table (face-layouts / face-wallpapers / face-controls). The
  *  BFF returns `source: 'keap'` when live, `source: 'fallback'` (repo defaults +
  *  user-state) when KEAP is unreachable — the UI can surface a soft banner. */
 export async function loadTable(slug: string): Promise<DataTable> {

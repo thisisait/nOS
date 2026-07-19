@@ -3,7 +3,7 @@
  *
  * Holds the desktop's active wallpaper and persists the *selection* (not the
  * catalog) to user-state ns `face.desktop` key `wallpaper`. The catalog itself
- * lives in the `face.wallpapers` DataTable (repo seed + user rows); this module
+ * lives in the `face-wallpapers` DataTable (repo seed + user rows); this module
  * only tracks which one is active.
  *
  * Security: gradient specs are treated as untrusted (a user may add rows). We
@@ -19,7 +19,7 @@ import type { WallpaperSpec, DataTable } from '$lib/contracts';
 export const DESKTOP_NS = 'face.desktop';
 export const WALLPAPER_KEY = 'wallpaper';
 
-/** Repo-seeded fallbacks (used when `face.wallpapers` is empty / KEAP down). */
+/** Repo-seeded fallbacks (used when `face-wallpapers` is empty / KEAP down). */
 export const FALLBACK_WALLPAPERS: WallpaperSpec[] = [
 	{
 		slug: 'aurora',
@@ -55,7 +55,7 @@ export const FALLBACK_WALLPAPERS: WallpaperSpec[] = [
 export const activeWallpaper = writable<WallpaperSpec>(FALLBACK_WALLPAPERS[0]);
 
 /**
- * Project a `face.wallpapers` DataTable into typed specs, keeping only rows that
+ * Project a `face-wallpapers` DataTable into typed specs, keeping only rows that
  * pass validation. Falls back to the repo built-ins when the table is empty /
  * unreachable so the picker always has something to show.
  */

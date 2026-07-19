@@ -1,7 +1,7 @@
 /**
  * WM v2 · layouts (Wave-1 G3).
  *
- * Loads the tiling layouts from the `face.layouts` config DataTable (KEAP SoT via
+ * Loads the tiling layouts from the `face-layouts` config DataTable (KEAP SoT via
  * the BFF) and maps rows → `LayoutSpec[]`. If the table is empty (KEAP down / not
  * yet seeded by G2), we fall back to a built-in default set so snapping ALWAYS
  * works. Exposes the layout list + the active layout as Svelte stores.
@@ -143,13 +143,13 @@ export function getLayout(slug: string): LayoutSpec | undefined {
 }
 
 /**
- * Load layouts from `face.layouts`. Maps rows → LayoutSpec; if the table is empty
+ * Load layouts from `face-layouts`. Maps rows → LayoutSpec; if the table is empty
  * or the fetch fails, keeps the built-in fallback set. Returns the resolved list.
  */
 export async function loadLayouts(): Promise<LayoutSpec[]> {
 	let resolved: LayoutSpec[] = BUILTIN_LAYOUTS;
 	try {
-		const table = await loadTable('face.layouts');
+		const table = await loadTable('face-layouts');
 		const mapped = (table.rows ?? []).map(rowToLayout).filter((l): l is LayoutSpec => l !== null);
 		if (mapped.length > 0) resolved = mapped;
 	} catch {
