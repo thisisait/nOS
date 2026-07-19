@@ -162,7 +162,13 @@ created** and remove exactly that.
   - `uninstall` path: walk the manifest, remove all incl. user-files; pre-existing paths
     untouched. Dry-run default + explicit confirm (destructive-op safety model).
   - Reconciliation everywhere (seeders declare canonical sets, prune orphans).
-  - uid consistency: one canonical uid per user; a uid→tree reconcile that prunes
-    orphan uid-trees; decide whether KEAP should mirror only live-uid trees.
+  - uid consistency: **nOS-side SHIPPED** (2026-07-19, commit `7236b513`) —
+    `canonicalUid()` in the face BFF keys the user tree on the stable username
+    (then email), not Authentik's churning uid; live-verified (`username=verifyuser`
+    + random uid → `users/verifyuser/`). **KEAP-side pending:** KEAP keys its
+    per-user ROWS on the raw `X-Authentik-uid` (header_oidc) — align it to username
+    so file-mirror owner (path = username) and row owner agree. Still open: a
+    uid→tree reconcile that prunes trees mapping to no live user; decide whether
+    KEAP should mirror only live-uid trees.
   - Idempotence acceptance test (install→uninstall leaves nothing; →install bit-identical)
     + post-uninstall KEAP `/agent/v1/fs/status` "0 objects" check.
