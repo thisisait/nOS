@@ -39,6 +39,11 @@ KEAP DataTables) + a fixed `each_key_duplicate` crash on live KEAP rows. Gates g
 
 ## Open follow-ups
 
+- **Devlog screenshots (requested 2026-07-19):** repo-hosted images in nos-core
+  posts — `docs/devlog/nos-core/media/`, referenced in post bodies, synced to the
+  WP media library keyed by filename; overwrite content (same name) + re-run
+  playbook → live post updates (last-run-wins). Plan:
+  [`docs/plans/devlog-screenshots.md`](plans/devlog-screenshots.md).
 - **Infisical MTI render fix (S-track):** the aggregator still emits an oauth2
   identity for infisical, so the orphan OAuth2Provider sharing the Provider
   base row with the ProxyProvider reappears on apply; deleting it cascades the
