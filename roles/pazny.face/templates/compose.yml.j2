@@ -54,6 +54,10 @@ services:
       # server-side and only writes after an Authentik-tier (RBAC) check — a
       # browser never sees it. Empty → the editor is read-only (503 on write).
       NOS_KEAP_API_TOKEN_RW: "{{ keap_agent_token_rw | default('') }}"
+      # Public KEAP URL the browser iframes for the "Explore" face app (the
+      # explore graph). It's a URL, not a secret — Authentik-gated + same
+      # cookie-domain session, so it loads as the signed-in user.
+      NOS_KEAP_EXPLORE_URL: "{{ face_keap_explore_url | default('https://' ~ keap_domain ~ '/explore', true) }}"
 {% else %}
       NOS_KEAP_TABLES_URL: "{{ face_keap_tables_url | default('') }}"
       NOS_KEAP_API_TOKEN: ""

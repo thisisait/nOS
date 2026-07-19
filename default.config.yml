@@ -2089,6 +2089,7 @@ face_version: "latest"                         # nos/face local image tag (sourc
 # fallback). Empty by default → the shell uses the repo defaults + user-state
 # until KEAP wiring lands (G2). Set to the KEAP tables API URL to go live.
 face_keap_tables_url: ""
+face_keap_explore_url: ""                       # override KEAP explore-graph iframe URL (default: https://<keap_domain>/explore)
 # Command-palette LLM model (host Ollama). Empty → auto-pick the first installed
 # non-embedding model, so "ask" works with whatever chat model the host pulled.
 face_ask_model: ""
