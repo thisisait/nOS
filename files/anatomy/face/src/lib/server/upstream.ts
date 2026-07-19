@@ -202,7 +202,12 @@ export function keapConfigured(): boolean {
 // so the shell holds least privilege for the read path. The BFF is the RBAC gate
 // (manager+ tier only) — these helpers just carry the RW bearer to KEAP.
 
-const KEAP_TOKEN_RW = () => env.NOS_KEAP_API_TOKEN_RW ?? '';
+// `$env/dynamic/private` dropped this var at runtime in adapter-node when it was
+// added to the compose env after the image was built (the RO token, present at
+// build, reads fine; the newly-added RW one came back empty). Fall back to
+// `process.env` — a purely-runtime server secret — so the write token is read
+// regardless of SvelteKit's build-time key set. Server-only module, so safe.
+const KEAP_TOKEN_RW = () => env.NOS_KEAP_API_TOKEN_RW || process.env.NOS_KEAP_API_TOKEN_RW || '';
 
 /** True when a write token is present (and KEAP is configured). */
 export function keapWriteConfigured(): boolean {
