@@ -14,15 +14,26 @@
  * server imports so it runs in node/vitest.
  */
 
-/** Slugify to a filesystem- and KEAP-safe segment: lowercase `[a-z0-9_-]`, no
- *  leading/trailing dash, no dots/slashes (so it satisfies Bone's `_user_root`
- *  guard: never `/`, `.`, `..`, or a leading dot). Capped at 64 chars. */
+/**
+ * Slugify to a filesystem- and KEAP-safe segment. THE CANONICAL CONTRACT (KEAP's
+ * `canonicalUid` must reproduce this byte-for-byte so the file-mirror owner
+ * [= directory name] equals the per-user-row owner):
+ *   1. NFKD normalize, then STRIP combining diacritical marks (U+0300–U+036F) —
+ *      so `Pázny`→`pazny`, `Šárka`→`sarka` (Czech folds to ASCII). The accents are
+ *      DROPPED, never turned into a separator.
+ *   2. lowercase.
+ *   3. every run of non-`[a-z0-9]` (spaces, dots, `_`, `@`, leftover non-ASCII…)
+ *      → a single `-`.
+ *   4. trim leading/trailing `-`; cap at 64; re-trim.
+ * Result is `[a-z0-9-]` with no leading/trailing/double dash → satisfies Bone's
+ * `_user_root` guard (never `/`, `.`, `..`, or a leading dot).
+ */
 export function slugifyUid(s: string): string {
 	return s
 		.normalize('NFKD')
+		.replace(/[̀-ͯ]/g, '') // strip combining diacritics (Pázny→Pazny)
 		.toLowerCase()
-		.replace(/[^a-z0-9_-]+/g, '-')
-		.replace(/-{2,}/g, '-')
+		.replace(/[^a-z0-9]+/g, '-') // everything else → single dash
 		.replace(/^-+|-+$/g, '')
 		.slice(0, 64)
 		.replace(/-+$/g, '');
