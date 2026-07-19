@@ -146,6 +146,12 @@
       - "com.nginx.nginx-prometheus-exporter.plist"
       - "com.hipages.php-fpm-exporter.plist"
       - "com.openclaw.agent.plist"
+      # The OpenClaw CLI's own gateway service (`openclaw gateway install` →
+      # ai.openclaw.gateway.plist + ~/.openclaw/service-env/). nOS provisions
+      # OpenClaw (npm install -g openclaw), so this daemon is ours — without it
+      # in the list a blank/uninstall leaves it running, and it RE-CREATES
+      # ~/.openclaw right after the data-dir wipe (found 2026-07-19 uninstall).
+      - "ai.openclaw.gateway.plist"
       - "com.hermes.agent.plist"
       - "com.ollama.agent.plist"
       - "com.ollama.agent.plist.disabled"

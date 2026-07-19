@@ -40,6 +40,15 @@ LEGACY_CLEANUP_PATTERNS = {
     "com.hermes.agent.plist",
 }
 
+# Provisioned at RUNTIME by a CLI (not a role `.plist.j2`), but legitimately
+# nOS-managed so a blank/uninstall MUST remove them. `ai.openclaw.gateway.plist`
+# is created by `openclaw gateway install`; nOS provisions OpenClaw via
+# `npm install -g openclaw` (roles/pazny.openclaw). Left running, it re-creates
+# ~/.openclaw right after a wipe (found during the 2026-07-19 uninstall).
+RUNTIME_PROVISIONED_PATTERNS = {
+    "ai.openclaw.gateway.plist",
+}
+
 # Repo-managed plists that the OWNING role already removes itself on every run,
 # so blank-reset need not (and does not) list them. Excluded from the
 # completeness gate to avoid demanding a redundant pattern.
@@ -368,6 +377,9 @@ def test_blank_reset_patterns_all_exist_in_some_role():
             continue
         # Documented legacy labels (pre-migration cleanup) are intentional.
         if pattern in LEGACY_CLEANUP_PATTERNS:
+            continue
+        # Runtime-provisioned (CLI-created) daemons nOS still owns + must remove.
+        if pattern in RUNTIME_PROVISIONED_PATTERNS:
             continue
         if pattern not in expected_filenames:
             problematic.append(pattern)

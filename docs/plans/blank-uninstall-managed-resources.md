@@ -170,6 +170,22 @@ created** and remove exactly that.
   - **Managed-resource manifest (P1.5, next):** record everything nOS creates on
     install; uninstall walks the manifest so pre-existing paths are provably untouched
     and disabled-service dirs are still removed.
+
+- **First live uninstall (2026-07-19) — `failed=0`, 57 data dirs + source + anatomy
+  removed.** Two self-recreation findings (things reappearing AFTER the wipe):
+  - **openclaw gateway daemon — FIXED.** `ai.openclaw.gateway.plist` (created by
+    `openclaw gateway install`; nOS provisions openclaw via `npm install -g openclaw`)
+    was NOT in the blank plist-removal list, so it kept running and re-created
+    `~/.openclaw` right after the data-dir wipe. Added to `blank-reset.yml` (unloaded
+    + removed like the eu.thisisait.nos.* plists); exempted in
+    `test_blank_reset_plist_discovery` as a runtime-provisioned (non-template) plist.
+  - **callback self-recreation of `~/.nos` — cosmetic, P1.5.** The `wing_telemetry`
+    Ansible callback fires on every task event; with Bone down it writes an
+    `events-fallback.db` under `~/.nos`, RE-CREATING the dir the source-removal task
+    just deleted (the tool logs into what it deletes). Harmless (empty telemetry
+    fallback, overwritten next run) but means uninstall can't leave `~/.nos` absent.
+    Fix (P1.5): a `NOS_UNINSTALL` env the callback checks to skip fallback writes, or
+    treat `~/.nos` as pure derived state that the next run always owns.
   - Reconciliation everywhere (seeders declare canonical sets, prune orphans).
   - uid consistency: **nOS-side SHIPPED** (2026-07-19, commit `7236b513`) —
     `canonicalUid()` in the face BFF keys the user tree on the stable username
