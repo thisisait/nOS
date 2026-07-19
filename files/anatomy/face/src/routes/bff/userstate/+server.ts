@@ -12,7 +12,13 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		const out = key ? await userstate.get(uid, ns, key) : await userstate.list(uid, ns);
 		return json(out);
 	} catch (e) {
-		if (e instanceof UpstreamError) throw error(e.status, e.message);
+		if (e instanceof UpstreamError) {
+			// A missing key is the common case (wallpaper/window-cache/prefs not set
+			// yet). Bone 404s it; the browser logs that as a failed resource. Return
+			// 200 + null so it's silent — the client already reads value as "unset".
+			if (key && e.status === 404) return json({ value: null, found: false });
+			throw error(e.status, e.message);
+		}
 		throw e;
 	}
 };

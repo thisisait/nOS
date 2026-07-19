@@ -19,7 +19,7 @@ import {
 	UpstreamError
 } from '$lib/server/upstream';
 import { canWriteTables } from '$lib/security/tier';
-import { toTableSummaries } from '$lib/tables/summary';
+import { toTableSummaries, type TableSummary } from '$lib/tables/summary';
 import type { DataTable, DataTableRow, ColumnSpec } from '$lib/contracts';
 import { FACE_LAYOUTS, FACE_WALLPAPERS, FACE_CONTROLS } from '$lib/server/defaults';
 
@@ -96,6 +96,31 @@ function mapColumns(def: unknown): ColumnSpec[] {
 		.filter((c): c is ColumnSpec => c !== null);
 }
 
+// TODO remove when KEAP GET /agent/v1/tables accepts the agent bearer: the
+// list-all endpoint currently requires forward-auth identity (401 on the bearer)
+// even though GET /agent/v1/tables/:slug accepts it. Until then, probe the known
+// config-table slugs via the working per-slug route so the Tables sidebar fills.
+const KNOWN_CONFIG_TABLES = ['face-layouts', 'face-wallpapers', 'face-controls'];
+
+async function knownTableSummaries(): Promise<TableSummary[]> {
+	const out: TableSummary[] = [];
+	for (const slug of KNOWN_CONFIG_TABLES) {
+		try {
+			const def = unwrap<{ id?: string; slug?: string; title?: string; rowCount?: number }>(
+				await keapTableDef(slug)
+			);
+			out.push({
+				slug: (typeof def.id === 'string' && def.id) || slug,
+				title: typeof def.title === 'string' && def.title ? def.title : slug,
+				rowCount: typeof def.rowCount === 'number' ? def.rowCount : 0
+			});
+		} catch {
+			/* table absent — skip it */
+		}
+	}
+	return out;
+}
+
 export const GET: RequestHandler = async ({ url, locals }) => {
 	// op=list → the Tables app's sidebar (all tables in KEAP).
 	if (url.searchParams.get('op') === 'list') {
@@ -103,7 +128,10 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		try {
 			return json({ tables: toTableSummaries(await keapListTables()), source: 'keap' });
 		} catch (e) {
-			if (e instanceof UpstreamError) return json({ tables: [], source: 'fallback' });
+			if (e instanceof UpstreamError) {
+				// KEAP list-all needs forward-auth (a KEAP gap) — probe known slugs.
+				return json({ tables: await knownTableSummaries(), source: 'known-slugs' });
+			}
 			throw e;
 		}
 	}
