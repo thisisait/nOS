@@ -27,7 +27,7 @@ keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # (admin fs_mappings over KEAP_FS_ROOTS), Option C shared uids
 # (KEAP_FS_SHARED_UIDS — self-model visible to every tenant user), folder-hub
 # detail panel + near-hop camera guard in /explore.
-keap_repo_ref: "v1.14.1"
+keap_repo_ref: "v1.15.0"
 
 keap_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 keap_cpus: "{{ docker_cpus_light | default(1) }}"
