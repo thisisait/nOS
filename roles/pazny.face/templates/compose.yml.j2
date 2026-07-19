@@ -50,9 +50,14 @@ services:
 {% if install_keap | default(false) | bool %}
       NOS_KEAP_TABLES_URL: "{{ face_keap_tables_url | default('http://host.docker.internal:' ~ (keap_port | default(8091)) ~ '/agent/v1/tables') }}"
       NOS_KEAP_API_TOKEN: "{{ keap_agent_token_ro | default('') }}"
+      # RW token for the DataTable editor's WRITE path. The BFF holds it
+      # server-side and only writes after an Authentik-tier (RBAC) check — a
+      # browser never sees it. Empty → the editor is read-only (503 on write).
+      NOS_KEAP_API_TOKEN_RW: "{{ keap_agent_token_rw | default('') }}"
 {% else %}
       NOS_KEAP_TABLES_URL: "{{ face_keap_tables_url | default('') }}"
       NOS_KEAP_API_TOKEN: ""
+      NOS_KEAP_API_TOKEN_RW: ""
 {% endif %}
       # Command-palette LLM ("ask") → host Ollama (MLX) on loopback. The model is
       # auto-picked from the installed set unless face_ask_model pins one; empty
