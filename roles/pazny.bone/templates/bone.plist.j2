@@ -99,6 +99,23 @@
     <key>KeepAlive</key>
     <true/>
 
+    <!-- Raise the file-descriptor ceiling: the default launchd soft limit
+         (~256) is too low for a FastAPI daemon that holds sqlite-WAL handles
+         (each user-state connection = db + -wal + -shm) plus VFS streaming +
+         keep-alive sockets. Under the face desktop's polling this creeps to the
+         cap and every request then fails with OSError [Errno 24] Too many open
+         files (surfaced as a 500 in the Files app). 8192 is generous headroom. -->
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>8192</integer>
+    </dict>
+    <key>HardResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>8192</integer>
+    </dict>
+
     <key>ThrottleInterval</key>
     <integer>30</integer>
 
