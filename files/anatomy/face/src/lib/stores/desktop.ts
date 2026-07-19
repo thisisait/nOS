@@ -87,7 +87,9 @@ export function openWindow(w: Partial<WindowModel> & { app: string; title: strin
 		z: zTop,
 		min: w.min ?? false,
 		max: w.max ?? false,
-		snappedCell: w.snappedCell
+		snappedCell: w.snappedCell,
+		url: w.url,
+		embed: w.embed
 	};
 	windows.update((list) => [...list, model]);
 	notify();

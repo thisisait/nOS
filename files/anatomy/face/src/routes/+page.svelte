@@ -3,6 +3,7 @@
 	import { windows, openWindow, focusApp } from '$lib/stores/desktop';
 	import Window from '$lib/components/Window.svelte';
 	import NativeHost from '$lib/components/NativeHost.svelte';
+	import ServiceFrame from '$lib/components/ServiceFrame.svelte';
 	import Dock, { type DockApp } from '$lib/components/Dock.svelte';
 	import TileDivider from '$lib/wm/TileDivider.svelte';
 	import { applyTiling, clearTiling } from '$lib/wm/tiling';
@@ -57,7 +58,15 @@
 	// Singleton launch: focus an already-open window for this app instead of
 	// spawning an unbounded stack of duplicates (the "every link = new window" bug).
 	function launchHub(app: HubApp) {
-		if (!focusApp(app.slug)) openWindow({ app: app.slug, title: app.title, w: 720, h: 480 });
+		if (!focusApp(app.slug))
+			openWindow({
+				app: app.slug,
+				title: app.title,
+				w: 720,
+				h: 480,
+				url: app.url,
+				embed: app.embed
+			});
 	}
 	function launchNativeApp(slug: string) {
 		if (!focusApp(slug)) launchNative(slug);
@@ -151,12 +160,13 @@
 				<ControlPanelSurface {win} />
 			{:else if isNativeApp(win.app)}
 				<NativeHost app={win.app} />
+			{:else if win.url}
+				<ServiceFrame url={win.url} title={win.title} embed={win.embed} />
 			{:else}
 				<div class="placeholder">
 					<p>{win.title}</p>
 					<p class="muted">
-						This service opens as a native window. iframe embedding is used only for services that
-						support it.
+						This service has no launch URL yet. It will open here once its catalog entry is wired.
 					</p>
 				</div>
 			{/if}

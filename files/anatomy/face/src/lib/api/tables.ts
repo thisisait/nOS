@@ -4,6 +4,7 @@
 import { bffGet, bffPost } from './client';
 import type { DataTable } from '$lib/contracts';
 import type { TableSummary } from '$lib/tables/summary';
+import type { CreateTableBody } from '$lib/tables/createtable';
 
 /** List every table in KEAP (the Tables app's sidebar). */
 export async function listTables(): Promise<TableSummary[]> {
@@ -27,12 +28,8 @@ export async function tablesUpsertRow(
 	return bffPost('/bff/tables', { op: 'upsertRow', slug, row });
 }
 
-/** Create-or-return a table by slug. */
-export async function tablesCreateTable(body: {
-	slug: string;
-	title?: string;
-	columns?: unknown[];
-	[k: string]: unknown;
-}): Promise<unknown> {
+/** Create-or-return a table by slug (KEAP `{slug,title,description?,anchors?,
+ *  schema:{columns}}` shape; assembled by `$lib/tables/createtable`). */
+export async function tablesCreateTable(body: CreateTableBody): Promise<unknown> {
 	return bffPost('/bff/tables', { op: 'createTable', ...body });
 }

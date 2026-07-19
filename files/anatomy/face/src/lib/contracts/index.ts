@@ -51,6 +51,11 @@ export interface WindowModel {
 	max: boolean;
 	/** Set when the window is snapped into a layout cell (tiled mode). */
 	snappedCell?: string;
+	/** For a service window: the URL rendered via ServiceFrame (iframe or open-↗). */
+	url?: string;
+	/** Operator's embeddability declaration (from the hub_card). undefined =
+	 *  attempt inline; false = X-Frame-Options-blocked → open-↗ card. */
+	embed?: boolean;
 }
 
 /** The subset persisted to user-state, keyed by viewport bucket "<w>x<h>". */
@@ -64,6 +69,8 @@ export interface WindowGeometry {
 	z: number;
 	min: boolean;
 	snappedCell?: string;
+	url?: string;
+	embed?: boolean;
 }
 
 // ── Layouts (face-layouts DataTable → snap cells) ─────────────────────────────
@@ -177,4 +184,7 @@ export interface HubApp {
 	tier: number;
 	/** true once the app is a nos-native (API-calling) app rather than an iframe. */
 	native?: boolean;
+	/** Operator-declared embeddability (hub_card). undefined = attempt inline;
+	 *  false = the service sets X-Frame-Options → render an open-↗ card instead. */
+	embed?: boolean;
 }

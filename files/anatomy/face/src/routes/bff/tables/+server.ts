@@ -60,6 +60,22 @@ const FALLBACK_COLUMNS: Record<string, ColumnSpec[]> = {
 const toRows = (specs: { slug: string }[]): DataTableRow[] =>
 	specs.map((spec) => ({ id: spec.slug, ...spec }));
 
+/** Guarantee every row carries a stable, UNIQUE `id`. KEAP's agent surface
+ *  returns flat rows keyed by a business column (slug/name) with NO `id` field,
+ *  so a naive `{#each rows (row.id)}` sees N `undefined` keys and Svelte throws
+ *  `each_key_duplicate`, unmounting the table. Derive id from the natural key,
+ *  falling back to the row index and de-duping on collision. */
+function withStableIds(rows: DataTableRow[]): DataTableRow[] {
+	const seen = new Set<string>();
+	return rows.map((r, i) => {
+		const natural = r.id ?? r.slug ?? r.name;
+		let id = natural != null && String(natural).trim() ? String(natural) : `row-${i}`;
+		if (seen.has(id)) id = `${id}-${i}`;
+		seen.add(id);
+		return { ...r, id };
+	});
+}
+
 const repoDefaults: Record<string, DataTableRow[]> = {
 	'face-layouts': toRows(FACE_LAYOUTS),
 	'face-wallpapers': toRows(FACE_WALLPAPERS),
@@ -157,7 +173,9 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			const rowsData = unwrap<{ rows?: DataTableRow[] }>(
 				await keapTableRows(slug, locals.identity.uid)
 			);
-			table.rows = rowsData.rows ?? (Array.isArray(rowsData) ? (rowsData as DataTableRow[]) : []);
+			const liveRows =
+				rowsData.rows ?? (Array.isArray(rowsData) ? (rowsData as DataTableRow[]) : []);
+			table.rows = withStableIds(liveRows);
 			table.source = 'keap';
 			// Best-effort column enrichment from the table def (non-fatal on failure).
 			try {

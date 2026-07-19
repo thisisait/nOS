@@ -54,6 +54,10 @@ schema:
     - { key: port,        label: "Port",              kind: number, role: attribute }
     - { key: version,     label: "Version",           kind: text,   role: attribute }
     - { key: image,       label: "Image",             kind: text,   role: attribute }
+    # Operator-declared iframe embeddability — the nOS-face "Systems" launcher
+    # renders embed=true inline; embed=false opens the service in a new tab
+    # (X-Frame-Options / frame-ancestors 'self' refuses cross-subdomain framing).
+    - { key: embed,       label: "Embeddable",        kind: boolean, role: attribute }
     - { key: icon,        label: "Icon",              kind: text,   role: attribute }
     - { key: owner,       label: "Owner",             kind: user,   role: attribute }
 

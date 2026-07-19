@@ -13,6 +13,7 @@
 	import type { TableSummary } from '$lib/tables/summary';
 	import type { DataTable } from '$lib/contracts';
 	import DataTableApp from '$lib/components/DataTableApp.svelte';
+	import CreateTableModal from '$lib/components/CreateTableModal.svelte';
 
 	let tables = $state<TableSummary[]>([]);
 	let loadingList = $state(true);
@@ -21,8 +22,17 @@
 	let table = $state<DataTable | null>(null);
 	let loadingTable = $state(false);
 	let tableErr = $state('');
+	let canCreate = $state(false);
+	let creating = $state(false);
 
 	onMount(async () => {
+		// Non-blocking: whether the New-table button shows (BFF re-enforces the tier).
+		void fetch('/bff/config', { headers: { accept: 'application/json' } })
+			.then((r) => (r.ok ? r.json() : null))
+			.then((b: { canWriteTables?: boolean } | null) => {
+				canCreate = b?.canWriteTables === true;
+			})
+			.catch(() => {});
 		try {
 			tables = await listTables();
 			if (tables.length > 0) void select(tables[0].slug);
@@ -32,6 +42,16 @@
 			loadingList = false;
 		}
 	});
+
+	async function onCreated(slug: string) {
+		creating = false;
+		try {
+			tables = await listTables();
+		} catch {
+			/* keep current list */
+		}
+		void select(slug);
+	}
 
 	async function select(slug: string) {
 		selected = slug;
@@ -50,7 +70,12 @@
 
 <div class="tables">
 	<aside class="side">
-		<div class="side-head">Tables</div>
+		<div class="side-head">
+			<span>Tables</span>
+			{#if canCreate}
+				<button class="new" onclick={() => (creating = true)}>＋ New</button>
+			{/if}
+		</div>
 		{#if loadingList}
 			<p class="muted">loading…</p>
 		{:else if listErr}
@@ -86,6 +111,10 @@
 	</section>
 </div>
 
+{#if creating}
+	<CreateTableModal oncreated={onCreated} oncancel={() => (creating = false)} />
+{/if}
+
 <style>
 	.tables {
 		display: flex;
@@ -106,6 +135,21 @@
 		letter-spacing: 0.05em;
 		color: var(--muted, #9aa4b2);
 		margin: 2px 4px 8px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 6px;
+	}
+	.new {
+		background: rgba(90, 150, 255, 0.85);
+		color: #fff;
+		border: none;
+		border-radius: 6px;
+		padding: 2px 8px;
+		font-size: 10px;
+		letter-spacing: 0;
+		text-transform: none;
+		cursor: pointer;
 	}
 	.side ul {
 		list-style: none;
