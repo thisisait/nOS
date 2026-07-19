@@ -337,7 +337,5 @@
     - _nc_container.stdout | default('') | length > 0
     - install_onlyoffice | default(false)
     - _nc_current_dbpass.stdout | default('') | trim != '__NC_NOT_INSTALLED__'
-  changed_when: false
-  failed_when: false
   check_mode: false
   no_log: true   # jwt_secret in the second item
