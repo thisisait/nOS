@@ -1,6 +1,6 @@
 {
 	"name": "nos-face",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"private": true,
 	"type": "module",
 	"description": "nOS face — the unified web-desktop shell (vendored into the nOS monorepo).",

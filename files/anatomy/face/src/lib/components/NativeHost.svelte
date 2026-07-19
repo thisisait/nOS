@@ -20,10 +20,11 @@
 
 	// Resolve once per app slug. `app` is stable for a window's lifetime, so this
 	// effect runs a single time; it never re-imports on unrelated store updates.
+	// We intentionally do NOT reset `Comp = null` on (re-)run: were the effect ever
+	// re-evaluated, nulling Comp would unmount + remount the child app (losing its
+	// state + the in-flight click). Resolving to the same cached module is a no-op.
 	$effect(() => {
 		let cancelled = false;
-		Comp = null;
-		failed = false;
 		const p = resolveNativeComponent(app);
 		if (!p) {
 			failed = true;

@@ -110,9 +110,20 @@ export function focusApp(app: string): boolean {
 }
 
 export function focusWindow(id: string): void {
-	zTop += 1;
-	windows.update((list) => list.map((w) => (w.id === id ? { ...w, z: zTop, min: false } : w)));
-	// focus is not geometry — no persist needed, but z-order restore is nice-to-have
+	// Idempotent: if the window is ALREADY top-most and not minimized, do nothing.
+	// The desktop fires focusWindow on every pointerdown inside a window (chrome
+	// AND body), so a redundant store write here churns the render on every click
+	// in the focused window — which cancelled in-flight clicks (e.g. the Files
+	// "New folder" prompt never ran) and re-triggered its app. A no-op when
+	// already-focused stops that churn.
+	const list = get(windows);
+	const w = list.find((x) => x.id === id);
+	if (!w) return;
+	const maxZ = list.reduce((m, x) => (x.z > m ? x.z : m), 0);
+	if (w.z === maxZ && !w.min) return;
+	zTop = Math.max(zTop, maxZ) + 1;
+	const nz = zTop;
+	windows.update((l) => l.map((x) => (x.id === id ? { ...x, z: nz, min: false } : x)));
 	notify();
 }
 

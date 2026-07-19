@@ -21,7 +21,7 @@
 	import { dragState } from '$lib/wm/drag';
 	import { BUILTIN_LAYOUTS } from '$lib/wm/layouts';
 	import { snapEngine, cellAt } from '$lib/wm/snap-engine';
-	import { snapWindow } from '$lib/stores/desktop';
+	import { snapWindow, setGeometry } from '$lib/stores/desktop';
 	import type { LayoutSpec } from '$lib/contracts';
 
 	/** Height of the desktop menubar; the work area starts below it. */
@@ -31,6 +31,15 @@
 	const PICK: LayoutSpec[] = ['single', 'half-v', 'half-h', 'thirds', '2x2']
 		.map((s) => BUILTIN_LAYOUTS.find((l) => l.slug === s))
 		.filter((l): l is LayoutSpec => l !== undefined);
+
+	// Picker items = a leading FLOAT escape hatch + the tiling layouts. Arming
+	// Float and releasing un-snaps the window (keeps it floating at its current
+	// dragged position) instead of tiling it — the way OUT of tiling.
+	type PickItem = { slug: string; name: string; float: boolean; layout: LayoutSpec | null };
+	const PICK_ITEMS: PickItem[] = [
+		{ slug: 'float', name: 'Float', float: true, layout: null },
+		...PICK.map((l) => ({ slug: l.slug, name: l.name, float: false, layout: l }))
+	];
 
 	// Picker option geometry (relative to the work-area top-left; x == viewport x
 	// because the overlay spans the full width at left:0).
@@ -47,10 +56,10 @@
 
 	/** Picker option rects (viewport x, work-area-relative y). */
 	const optRects = $derived.by(() => {
-		const total = PICK.length * OPT_W + (PICK.length - 1) * GAP;
+		const total = PICK_ITEMS.length * OPT_W + (PICK_ITEMS.length - 1) * GAP;
 		const startX = Math.max(8, (vw - total) / 2);
-		return PICK.map((layout, i) => ({
-			layout,
+		return PICK_ITEMS.map((item, i) => ({
+			item,
 			x: startX + i * (OPT_W + GAP),
 			y: PICK_TOP,
 			w: OPT_W,
@@ -72,8 +81,11 @@
 		return PICK.find((l) => l.slug === slug) ?? PICK[0] ?? BUILTIN_LAYOUTS[0];
 	}
 
-	/** Cells of the currently-armed layout, for rendering the drop targets. */
-	const armedCells = $derived(snapEngine.cells(layoutFor(armedSlug), area));
+	/** Cells of the currently-armed layout, for rendering the drop targets. Float
+	 *  arms no cells (it un-snaps rather than tiles). */
+	const armedCells = $derived(
+		armedSlug === 'float' ? [] : snapEngine.cells(layoutFor(armedSlug), area)
+	);
 
 	$effect(() => {
 		const s = $dragState;
@@ -88,11 +100,12 @@
 			let hov: string | null = null;
 			if (stickyRevealed) {
 				if (relY >= PICK_TOP && relY <= PICK_TOP + OPT_H) {
-					// In the picker strip → arm the layout under the pointer.
+					// In the picker strip → arm the item under the pointer.
 					const hit = rects.find((r) => s.x >= r.x && s.x <= r.x + r.w);
-					if (hit) armed = hit.layout.slug;
-				} else if (relY >= PICK_BAND) {
+					if (hit) armed = hit.item.slug;
+				} else if (relY >= PICK_BAND && armed !== 'float') {
 					// Below the strip → highlight the target cell of the armed layout.
+					// Float shows no cells (it un-snaps rather than tiles).
 					hov = cellAt(snapEngine.cells(layoutFor(armed), a), { x: s.x, y: relY });
 				}
 			}
@@ -102,12 +115,20 @@
 		} else {
 			if (wasActive) {
 				wasActive = false;
-				// Falling edge: commit the snap if released over a cell (recomputed
-				// from the last pointer, never read from the reactive `hovered`).
-				if (stickyRevealed && s.windowId && relY >= PICK_BAND) {
-					const layout = layoutFor(armed);
-					const cid = cellAt(snapEngine.cells(layout, a), { x: s.x, y: relY });
-					if (cid) snapWindow(s.windowId, layout, cid, a);
+				// Falling edge (recomputed from the last pointer, never the reactive
+				// `hovered`). Float armed → un-snap: keep the window floating at its
+				// current dragged position (drag already cleared snappedCell; this
+				// makes the intent explicit + covers the barely-moved edge case).
+				// A layout armed + released over one of its cells → tile there.
+				// Anything else (no arm, dropped low) → leave it floating, no snap.
+				if (stickyRevealed && s.windowId) {
+					if (armed === 'float') {
+						setGeometry(s.windowId, { snappedCell: undefined });
+					} else if (relY >= PICK_BAND) {
+						const layout = layoutFor(armed);
+						const cid = cellAt(snapEngine.cells(layout, a), { x: s.x, y: relY });
+						if (cid) snapWindow(s.windowId, layout, cid, a);
+					}
 				}
 			}
 			stickyRevealed = false;
@@ -135,23 +156,30 @@
 				{/each}
 			</div>
 
-			<!-- Layout picker row: drag over a preview to arm it. -->
+			<!-- Picker row: Float (un-tile) + the tiling layouts. Drag over one to arm. -->
 			<div class="picker">
-				{#each optRects as r (r.layout.slug)}
+				{#each optRects as r (r.item.slug)}
 					<div
 						class="opt"
-						class:armed={armedSlug === r.layout.slug}
+						class:armed={armedSlug === r.item.slug}
+						class:float={r.item.float}
 						style="left:{r.x}px; top:{r.y}px; width:{r.w}px; height:{r.h}px;"
 					>
 						<div class="mini">
-							{#each r.layout.cells as cell (cell.id)}
-								<span
-									style="left:{cell.x * 100}%; top:{cell.y * 100}%; width:{cell.w *
-										100}%; height:{cell.h * 100}%;"
-								></span>
-							{/each}
+							{#if r.item.float}
+								<!-- Two offset windows = "floating / free" (distinct from tiled). -->
+								<span class="fw fw-a"></span>
+								<span class="fw fw-b"></span>
+							{:else if r.item.layout}
+								{#each r.item.layout.cells as cell (cell.id)}
+									<span
+										style="left:{cell.x * 100}%; top:{cell.y * 100}%; width:{cell.w *
+											100}%; height:{cell.h * 100}%;"
+									></span>
+								{/each}
+							{/if}
 						</div>
-						<span class="opt-lbl">{r.layout.name}</span>
+						<span class="opt-lbl">{r.item.name}</span>
 					</div>
 				{/each}
 			</div>
@@ -242,6 +270,23 @@
 	}
 	.opt.armed .mini span {
 		background: rgba(120, 180, 255, 0.9);
+	}
+	/* Float option: two offset "windows" = free/floating, distinct from tiled. */
+	.mini .fw {
+		border-radius: 3px;
+	}
+	.mini .fw-a {
+		left: 8%;
+		top: 12%;
+		width: 58%;
+		height: 54%;
+	}
+	.mini .fw-b {
+		left: 36%;
+		top: 34%;
+		width: 58%;
+		height: 54%;
+		opacity: 0.8;
 	}
 	.opt-lbl {
 		font-size: 10px;

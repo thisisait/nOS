@@ -8,6 +8,16 @@
   XSS-safe: all file names + text content render as escaped text ({…} / <pre>{…}),
   never {@html}. This is the hard Wave-2 gate.
 -->
+<script module lang="ts">
+	import type { VfsEntry as _VfsEntry } from '$lib/api/vfs';
+	// Auto-refresh cap: a module-scoped last-listing shared across FilesApp
+	// (re)mounts. An AUTOMATIC reload (onMount) of the same path within 10s reuses
+	// this instead of re-hitting the VFS — so we never spam Bone/FS. User actions
+	// (Refresh / navigate / mkdir / delete / upload) always refetch.
+	const LOAD_THROTTLE_MS = 10_000;
+	let _last: { path: string; entries: _VfsEntry[]; at: number } | null = null;
+</script>
+
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import {
@@ -30,7 +40,14 @@
 	let previewErr = $state('');
 	let busy = $state(false);
 
-	async function load(path: string) {
+	async function load(path: string, opts: { auto?: boolean } = {}) {
+		// Throttle only AUTOMATIC reloads (onMount / remount): reuse a fresh cached
+		// listing of the same path rather than re-fetching. Manual calls skip this.
+		if (opts.auto && _last && _last.path === path && Date.now() - _last.at < LOAD_THROTTLE_MS) {
+			entries = _last.entries;
+			cwd = path;
+			return;
+		}
 		loading = true;
 		err = '';
 		selected = null;
@@ -39,6 +56,7 @@
 		try {
 			entries = await vfsList(path);
 			cwd = path;
+			_last = { path, entries, at: Date.now() };
 		} catch (e) {
 			err = e instanceof Error ? e.message : 'failed to list folder';
 			entries = [];
@@ -47,7 +65,7 @@
 		}
 	}
 
-	onMount(() => void load('documents'));
+	onMount(() => void load('documents', { auto: true }));
 
 	async function openEntry(entry: VfsEntry) {
 		if (entry.kind === 'dir') {

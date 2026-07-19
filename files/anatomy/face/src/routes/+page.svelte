@@ -133,10 +133,12 @@
 </script>
 
 <div class="desktop" style={bg ? `background:${bg}` : ''}>
-	<header class="menubar glass">
-		<strong>nOS</strong>
+	<!-- macOS-style menubar: transparent + all content right-aligned + click-through
+	     (pointer-events:none) so a maximized/top-snapped window's titlebar + its
+	     top-LEFT controls stay visible AND draggable underneath the bar. -->
+	<header class="menubar">
 		<span class="hint">drag a window to the top to tile · ⌘Space for actions</span>
-		<span class="spacer"></span>
+		<strong>nOS</strong>
 		{#if data.identity.authenticated}
 			<span class="user">{data.identity.username}</span>
 		{:else}
@@ -190,11 +192,13 @@
 		height: 28px;
 		display: flex;
 		align-items: center;
-		gap: 10px;
+		justify-content: flex-end;
+		gap: 12px;
 		padding: 0 14px;
-		border-radius: 0;
 		font-size: 13px;
 		z-index: 100000;
+		background: transparent; /* macOS-style: no fill */
+		pointer-events: none; /* click-through — window titlebars underneath stay live */
 	}
 	.hint {
 		color: var(--muted);
@@ -202,9 +206,6 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-	}
-	.spacer {
-		flex: 1;
 	}
 	.user {
 		color: var(--fg);
