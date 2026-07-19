@@ -121,7 +121,18 @@ export interface ControlEntry {
 
 // ── Generic DataTable (mirrors the KEAP contract, minimally) ──────────────────
 
-export type ColumnKind = 'text' | 'number' | 'boolean' | 'date' | 'select' | 'json' | 'user';
+export type ColumnKind =
+	| 'text'
+	| 'number'
+	| 'boolean'
+	| 'date'
+	| 'select'
+	| 'json'
+	| 'user'
+	| 'taxonomyRef'
+	| 'objectRef'
+	| 'file'
+	| 'vector';
 
 export interface ColumnSpec {
 	key: string;
@@ -129,6 +140,11 @@ export interface ColumnSpec {
 	kind: ColumnKind;
 	options?: string[];
 	required?: boolean;
+	/** OLAP role (dimension/measure/attribute) — metadata, not enforced here. */
+	role?: string;
+	/** vector column dimensionality (Pulse-generated brain-embedding). */
+	dim?: number;
+	unit?: string;
 }
 
 /** A DataTable row as the shell sees it: an id + a flat bag of cell values. */
@@ -144,6 +160,10 @@ export interface DataTable {
 	rows: DataTableRow[];
 	/** Where the rows came from — drives the "KEAP down" fallback banner. */
 	source: 'keap' | 'fallback';
+	/** Server-derived: may the current caller write rows (manager+ tier AND a RW
+	 *  token is configured)? Drives whether the editor shows Add/Edit. Never trust
+	 *  a client-set value — this is set by the BFF from the edge-trusted identity. */
+	canWrite?: boolean;
 }
 
 // ── Catalog (Wing /hub/systems) ───────────────────────────────────────────────

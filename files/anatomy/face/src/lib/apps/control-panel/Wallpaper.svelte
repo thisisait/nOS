@@ -9,7 +9,9 @@
 	 * `safeBackground()` only — no raw string ever reaches the DOM.
 	 */
 	import { onMount } from 'svelte';
-	import { loadTable } from '$lib/api/tables';
+	import { loadTable, tablesUpsertRow } from '$lib/api/tables';
+	import { ApiError } from '$lib/api/client';
+	import RowEditor from '$lib/components/RowEditor.svelte';
 	import {
 		activeWallpaper,
 		setWallpaper,
@@ -17,22 +19,52 @@
 		safeBackground,
 		FALLBACK_WALLPAPERS
 	} from '$lib/state/wallpaper';
-	import type { WallpaperSpec } from '$lib/contracts';
+	import type { WallpaperSpec, DataTable } from '$lib/contracts';
 
 	let choices = $state<WallpaperSpec[]>(FALLBACK_WALLPAPERS);
+	let table = $state<DataTable | null>(null);
+	let editing = $state(false);
+	let submitting = $state(false);
+	let saveErr = $state('');
 
-	onMount(async () => {
+	async function reload() {
 		try {
-			const table = await loadTable('face-wallpapers');
+			table = await loadTable('face-wallpapers');
 			choices = wallpapersFromTable(table);
 		} catch {
 			choices = FALLBACK_WALLPAPERS;
 		}
-	});
+	}
+	onMount(reload);
+
+	async function save(row: Record<string, unknown>) {
+		submitting = true;
+		saveErr = '';
+		try {
+			await tablesUpsertRow('face-wallpapers', row);
+			await reload();
+			editing = false;
+		} catch (e) {
+			saveErr = e instanceof ApiError ? e.message : 'save failed';
+		} finally {
+			submitting = false;
+		}
+	}
 </script>
 
 <div class="picker">
-	<p class="muted">Choose a desktop wallpaper.</p>
+	<div class="head">
+		<p class="muted">Choose a desktop wallpaper.</p>
+		{#if table?.canWrite}
+			<button
+				class="add"
+				onclick={() => {
+					saveErr = '';
+					editing = true;
+				}}>＋ Add wallpaper</button
+			>
+		{/if}
+	</div>
 	<div class="grid">
 		{#each choices as wp (wp.slug)}
 			{@const bg = safeBackground(wp)}
@@ -51,12 +83,53 @@
 	</div>
 </div>
 
+{#if editing && table}
+	<div class="scrim" role="presentation" onclick={() => (editing = false)}></div>
+	<div class="modal">
+		<RowEditor
+			{table}
+			{submitting}
+			error={saveErr}
+			onsubmit={save}
+			oncancel={() => (editing = false)}
+		/>
+	</div>
+{/if}
+
 <style>
 	.picker {
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
 		font-size: 13px;
+	}
+	.head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+	}
+	.add {
+		background: rgba(90, 150, 255, 0.85);
+		color: #fff;
+		border: none;
+		border-radius: 8px;
+		padding: 6px 12px;
+		font-size: 12px;
+		cursor: pointer;
+	}
+	.scrim {
+		position: fixed;
+		inset: 0;
+		z-index: 200000;
+		background: rgba(0, 0, 0, 0.4);
+	}
+	.modal {
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 200001;
 	}
 	.grid {
 		display: grid;

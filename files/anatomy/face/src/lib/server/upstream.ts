@@ -197,6 +197,50 @@ export function keapConfigured(): boolean {
 	return Boolean(env.NOS_KEAP_TABLES_URL);
 }
 
+// ── KEAP DataTables — WRITE path (agent RW token; gated in the BFF) ───────────
+// Reads use NOS_KEAP_API_TOKEN (RO); writes use a SEPARATE NOS_KEAP_API_TOKEN_RW
+// so the shell holds least privilege for the read path. The BFF is the RBAC gate
+// (manager+ tier only) — these helpers just carry the RW bearer to KEAP.
+
+const KEAP_TOKEN_RW = () => env.NOS_KEAP_API_TOKEN_RW ?? '';
+
+/** True when a write token is present (and KEAP is configured). */
+export function keapWriteConfigured(): boolean {
+	return keapConfigured() && Boolean(KEAP_TOKEN_RW());
+}
+
+function keapRwHeaders(): Record<string, string> {
+	return { authorization: `Bearer ${KEAP_TOKEN_RW()}`, 'content-type': 'application/json' };
+}
+
+/** Table definition (columns/schema) — GET /agent/v1/tables/:slug (RO). */
+export async function keapTableDef(slug: string): Promise<unknown> {
+	const u = new URL(`${KEAP_TABLES()}/${encodeURIComponent(slug)}`);
+	const h: Record<string, string> = {};
+	if (KEAP_TOKEN()) h['authorization'] = `Bearer ${KEAP_TOKEN()}`;
+	return asJson(await fetch(u, { headers: h }));
+}
+
+/** Upsert a row — POST /agent/v1/tables/:slug/rows (RW). `row` is the flat cell
+ *  bag keyed by column (the KEAP agent surface un-wraps it). */
+export async function keapUpsertRow(slug: string, row: Record<string, unknown>): Promise<unknown> {
+	const u = new URL(`${KEAP_TABLES()}/${encodeURIComponent(slug)}/rows`);
+	return asJson(
+		await fetch(u, { method: 'POST', headers: keapRwHeaders(), body: JSON.stringify(row) })
+	);
+}
+
+/** Create-or-return a table — POST /agent/v1/tables (RW). */
+export async function keapCreateTable(body: Record<string, unknown>): Promise<unknown> {
+	return asJson(
+		await fetch(KEAP_TABLES(), {
+			method: 'POST',
+			headers: keapRwHeaders(),
+			body: JSON.stringify(body)
+		})
+	);
+}
+
 // ── Local LLM (command-palette "ask") ────────────────────────────────────────
 // Talks to the host Ollama on loopback (MLX backend). No token: loopback-only,
 // reached via host.docker.internal. The model is either pinned by env or

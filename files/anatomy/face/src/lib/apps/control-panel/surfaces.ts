@@ -25,6 +25,14 @@ export const FALLBACK_CONTROLS: ControlEntry[] = [
 		surface: 'rawDataTable',
 		table: 'face-wallpapers',
 		system: true
+	},
+	{
+		slug: 'layouts-table',
+		name: 'Layouts (raw)',
+		icon: '📄',
+		surface: 'rawDataTable',
+		table: 'face-layouts',
+		system: true
 	}
 ];
 
