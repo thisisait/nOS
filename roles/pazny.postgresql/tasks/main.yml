@@ -25,6 +25,36 @@
     mode: '0700'
   when: postgresql_ssl_enabled | default(false) | bool
 
+# Heal INVALID cert paths before the `creates:` guard below can lock us out.
+# If `docker compose up infra` ever mounts server.crt/.key BEFORE this role's
+# openssl task writes them (a crashed/partial run, or a converge re-entry),
+# Docker auto-creates the host paths as DIRECTORIES — and an interrupted openssl
+# leaves them empty. Either way `creates: server.key` then sees "it exists" and
+# SKIPS regeneration forever → postgres FATAL `could not load server certificate
+# file: no start line` → restart-loop (root-caused live 2026-07-19). A clean
+# blank never hits this (openssl runs before the mount); a converge-after-crash
+# does. So: purge any dir/empty cert path, and if we purged, drop the container
+# that dir-mounted it so core-up recreates it against the fresh FILE mount (a
+# restart can't switch a bind-mount's type — it errors "not a directory").
+- name: "[pazny.postgresql] Heal invalid cert paths (dir-mount / empty from a crashed run)"
+  ansible.builtin.shell: |
+    set -e
+    dir="{{ postgresql_certs_dir | default(ansible_facts['env']['HOME'] + '/postgresql/certs') }}"
+    purged=0
+    for f in server.crt server.key; do
+      p="$dir/$f"
+      if [ -d "$p" ] || { [ -e "$p" ] && [ ! -s "$p" ]; }; then rm -rf "$p"; purged=1; fi
+    done
+    if [ "$purged" = 1 ]; then
+      {{ docker_bin | default('docker') }} rm -f infra-postgresql-1 >/dev/null 2>&1 || true
+      echo "purged-invalid-certs"
+    fi
+  args:
+    executable: /bin/bash
+  register: _pg_cert_heal
+  changed_when: "'purged-invalid-certs' in _pg_cert_heal.stdout"
+  when: postgresql_ssl_enabled | default(false) | bool
+
 # Self-signed, 10y, SAN postgresql + loopback. Idempotent: only generated
 # when the key is absent — rotation = delete the pair + re-run. sslmode=
 # require does not verify the CA, so self-signed serves the in-transit
