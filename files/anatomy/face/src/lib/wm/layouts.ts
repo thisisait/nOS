@@ -29,7 +29,7 @@ export const BUILTIN_LAYOUTS: LayoutSpec[] = [
 	},
 	{
 		slug: 'half-v',
-		name: 'Halves (vertical split)',
+		name: 'Split',
 		icon: '▯▯',
 		system: true,
 		cells: [
@@ -39,7 +39,7 @@ export const BUILTIN_LAYOUTS: LayoutSpec[] = [
 	},
 	{
 		slug: 'half-h',
-		name: 'Halves (horizontal split)',
+		name: 'Stacked',
 		icon: '⊟',
 		system: true,
 		cells: [
