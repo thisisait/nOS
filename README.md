@@ -99,6 +99,10 @@ ansible-playbook main.yml --tags "stacks,observability"
 # Everything-on robust test — enable every known-good service (incl. face + KEAP),
 # sequential bring-up + 1200s health budget. Add -e blank=true for a from-scratch run.
 ansible-playbook main.yml -e @profiles/all-on.yml -e blank=true
+
+# WIP: Maximal compliance - gov. ready
+# (enforced MFA, at-rest FileVault/LUKS gate, backup-crypto, tamper-evident audit hash-chain, breach-notification)
+ansible-playbook main.yml -e @profiles/all-on.yml -e @profiles/gov-local.yml -e blank=true
 ```
 
 A full first run takes **~20 minutes** on an M4 Pro with fast internet.
