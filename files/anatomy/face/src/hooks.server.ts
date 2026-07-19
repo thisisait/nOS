@@ -15,6 +15,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { env } from '$env/dynamic/private';
 import type { Handle } from '@sveltejs/kit';
 import { ANON, type Identity } from '$lib/contracts';
+import { canonicalUid } from '$lib/security/uid';
 
 /** Timing-safe string compare that never short-circuits on length. */
 function safeEqual(a: string, b: string): boolean {
@@ -41,16 +42,22 @@ function edgeTrusted(request: Request): boolean {
 function readIdentity(request: Request, trusted: boolean): Identity {
 	if (!trusted) return { ...ANON };
 	const h = request.headers;
-	const uid = (h.get('x-authentik-uid') ?? '').trim();
-	if (!uid) return { ...ANON };
+	const rawUid = (h.get('x-authentik-uid') ?? '').trim();
+	if (!rawUid) return { ...ANON };
+	const username = (h.get('x-authentik-username') ?? rawUid).trim();
+	const email = (h.get('x-authentik-email') ?? '').trim();
 	const groups = (h.get('x-authentik-groups') ?? '')
 		.split(/[|,]/)
 		.map((g) => g.trim())
 		.filter(Boolean);
+	// BLANK-STABLE partition key: derive uid from the username (Authentik's raw
+	// uid churns on every re-provision → orphaned file trees). username/email stay
+	// the raw display values. Fall back to rawUid if no stable claim slugs.
+	const uid = canonicalUid(username, email, rawUid) || rawUid;
 	return {
 		uid,
-		username: (h.get('x-authentik-username') ?? uid).trim(),
-		email: (h.get('x-authentik-email') ?? '').trim(),
+		username,
+		email,
 		groups,
 		authenticated: true
 	};
