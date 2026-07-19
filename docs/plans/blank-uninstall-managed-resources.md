@@ -158,9 +158,18 @@ created** and remove exactly that.
     `face.controls` KEAP table (human `/api/tables/:id` DELETE) + prune the orphan
     hash-uid trees under `tenants/pazny/users/` after confirming they map to no live user.
 - **P1 architectural:**
-  - Managed-resource manifest (record everything nOS creates on install).
-  - `uninstall` path: walk the manifest, remove all incl. user-files; pre-existing paths
-    untouched. Dry-run default + explicit confirm (destructive-op safety model).
+  - **`uninstall` path — MVP SHIPPED (2026-07-19).** `tasks/uninstall.yml` +
+    `main.yml` wiring (`-e uninstall=true` → dry-run report; `+ -e confirm_uninstall=true`
+    → execute, then `meta: end_play` — no reinstall). Removes the DERIVED state (reuses
+    the blank teardown, DRY) + the SOURCE (`nos_data_root` in full + `~/.nos` + registry).
+    Dry-run default + two confirm gates (destructive-op safety). Live-verified dry-run
+    (`changed=0`, source intact); pinned by `tests/anatomy/test_uninstall_scope.py`.
+    KNOWN MVP gap: a DISABLED service's stale `$HOME/<svc>` dir isn't in `_blank_dirs`
+    so it's not removed (its `nos_data_root/platform` half is) — the record-at-install
+    manifest (below) closes it.
+  - **Managed-resource manifest (P1.5, next):** record everything nOS creates on
+    install; uninstall walks the manifest so pre-existing paths are provably untouched
+    and disabled-service dirs are still removed.
   - Reconciliation everywhere (seeders declare canonical sets, prune orphans).
   - uid consistency: **nOS-side SHIPPED** (2026-07-19, commit `7236b513`) —
     `canonicalUid()` in the face BFF keys the user tree on the stable username

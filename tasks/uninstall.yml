@@ -1,0 +1,120 @@
+---
+# ==============================================================================
+# UNINSTALL — remove EVERYTHING nOS created, incl. user SOURCE files.
+#
+#   ansible-playbook main.yml -e uninstall=true                      # DRY RUN
+#   ansible-playbook main.yml -e uninstall=true -e confirm_uninstall=true  # execute
+#
+# The opposite of `blank`. Where `blank` = "reset DERIVED state, PRESERVE SOURCE"
+# (user files under nos_data_root/tenants survive) and then reinstalls, `uninstall`
+# tears down the derived state AND removes the SOURCE (the whole nos_data_root tree
+# + the ~/.nos side-car) and STOPS — no reinstall (main.yml end_play).
+#
+# Destructive-op safety (memory: feedback-destructive-op-safety):
+#   - DRY RUN by default: prints the exact removal set + sizes, removes NOTHING.
+#   - Executes only with an explicit `confirm_uninstall=true` AND an interactive
+#     pause. Two gates, matching the operator's dry-run-default doctrine.
+#
+# What it removes (when confirmed):
+#   1. The full `blank` teardown (imported): Docker stacks + volumes, LaunchAgents,
+#      nginx/dnsmasq/cert config, OpenTofu state, and every ENABLED service's data
+#      dir (the `_blank_dirs` set).
+#   2. The SOURCE: `nos_data_root` in full (platform/services/* data + tenants/**
+#      user files) + the `~/.nos` runtime side-car + the service registry.
+#
+# What it does NOT touch (manifest doctrine — only remove what nOS created):
+#   - ~/media, ~/calibre, ~/.ollama (bulk user media/models) — pass the matching
+#     blank flags (flush_ollama, etc.) or delete by hand if you truly want them gone.
+#   - Homebrew packages, shell config, anything outside the nOS footprint.
+#
+# KNOWN MVP LIMITATION: a service currently DISABLED (install_<svc>=false) is not in
+# `_blank_dirs`, so a stale `$HOME/<svc>` dir from a past enablement is not removed
+# (its nos_data_root/platform half IS, via the full-tree removal). The record-at-
+# install managed-resource manifest (P1.5) closes this. See
+# docs/plans/blank-uninstall-managed-resources.md.
+# ==============================================================================
+
+# ── 0. External storage overrides (so external-mounted dirs resolve, like blank) ─
+- name: "[UNINSTALL] Apply external storage path overrides"
+  ansible.builtin.include_tasks: "tasks/stacks/external-paths.yml"
+  when:
+    - external_storage_root is defined
+    - external_storage_root | default('') | length > 0
+
+# ── 1. Compute the SOURCE removal set + report (always — this is the dry run) ────
+- name: "[UNINSTALL] Resolve source paths"
+  ansible.builtin.set_fact:
+    _uninstall_source:
+      - "{{ nos_data_root }}"
+      - "{{ bone_state_dir | default(ansible_facts['env']['HOME'] + '/.nos') }}"
+      - "{{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json"
+
+- name: "[UNINSTALL] Stat source paths (size/existence for the report)"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ _uninstall_source }}"
+  loop_control:
+    label: "{{ item }}"
+  register: _uninstall_stat
+
+- name: "[UNINSTALL] Removal plan (DRY RUN unless confirm_uninstall=true)"
+  ansible.builtin.debug:
+    msg: |-
+      ══════════════════════════════════════════════════════════════════════
+       UNINSTALL — {{ 'EXECUTE' if (confirm_uninstall | default(false) | bool) else 'DRY RUN (nothing will be removed)' }}
+      ══════════════════════════════════════════════════════════════════════
+       DERIVED (via the blank teardown): all Docker stacks + volumes, LaunchAgents,
+       nginx/dnsmasq/certs, OpenTofu state, and every enabled service's data dir.
+
+       SOURCE (removed only by uninstall):
+      {% for r in _uninstall_stat.results %}
+         - {{ r.item }}{{ '  [exists]' if r.stat.exists else '  [absent]' }}
+      {% endfor %}
+
+       KEPT: ~/media, ~/calibre, ~/.ollama, Homebrew, shell config, and anything
+             outside the nOS footprint (pre-existing paths stay untouched).
+      {% if not (confirm_uninstall | default(false) | bool) %}
+       ──────────────────────────────────────────────────────────────────────
+       This was a DRY RUN. To actually remove everything above, re-run with:
+         ansible-playbook main.yml -e uninstall=true -e confirm_uninstall=true
+      {% endif %}
+      ══════════════════════════════════════════════════════════════════════
+
+# ── 2. Execute (gated on confirm_uninstall) ──────────────────────────────────────
+- name: "[UNINSTALL] Execute full removal"
+  when: confirm_uninstall | default(false) | bool
+  block:
+    - name: "[UNINSTALL] Final interactive confirmation"
+      ansible.builtin.pause:
+        prompt: |-
+
+          ╔══════════════════════════════════════════════════════════════════════╗
+          ║  UNINSTALL — this REMOVES ALL nOS DATA INCLUDING USER FILES.          ║
+          ║  {{ nos_data_root }}/tenants/** (documents, uploads) will be DELETED. ║
+          ║  There is NO reinstall after this. Back up first if unsure.           ║
+          ╚══════════════════════════════════════════════════════════════════════╝
+
+           Press ENTER to PERMANENTLY DELETE, or Ctrl+C -> A to cancel
+
+    # 2a. Derived teardown — reuse the blank path in full (Docker, plists, configs,
+    #     _blank_dirs). blank-reset.yml has its own confirmation pause (a 2nd gate).
+    - name: "[UNINSTALL] Derived teardown (blank path)"
+      ansible.builtin.import_tasks: tasks/blank-reset.yml
+
+    # 2b. SOURCE removal — the part blank never does.
+    - name: "[UNINSTALL] Remove the SOURCE tree + side-car + registry"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ _uninstall_source }}"
+      loop_control:
+        label: "{{ item }}"
+      become: true
+
+    - name: "[UNINSTALL] Done"
+      ansible.builtin.debug:
+        msg: |
+          ══════════════════════════════════════════════════════════════════════
+           UNINSTALL COMPLETE — nOS footprint removed (derived + source).
+           Re-run `ansible-playbook main.yml -e blank=true` for a clean install.
+          ══════════════════════════════════════════════════════════════════════

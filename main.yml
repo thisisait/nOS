@@ -1035,6 +1035,22 @@
       tags: ['coexist-copy-data', 'never']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Uninstall — remove EVERYTHING nOS created (derived + user SOURCE) then STOP.
+    # The opposite of blank (blank preserves source + reinstalls). DRY RUN by
+    # default; add -e confirm_uninstall=true to execute. See tasks/uninstall.yml +
+    # docs/plans/blank-uninstall-managed-resources.md.
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "[Uninstall] Full removal (source + derived) — dry-run unless confirmed"
+      ansible.builtin.import_tasks: tasks/uninstall.yml
+      when: uninstall | default(false) | bool
+      tags: ['uninstall', 'reset']
+
+    - name: "[Uninstall] End the play — no reinstall after teardown"
+      ansible.builtin.meta: end_play
+      when: uninstall | default(false) | bool
+      tags: ['uninstall', 'reset']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # flush normalisation — flush=true and flush=deep both promote to blank=true.
     # flush=deep additionally sets _flush_deep=true for the extra cleanup phase.
     #
