@@ -11,28 +11,24 @@
 
 ## Now (current track)
 
-**nOS-face v0.2 — built on `feat/nos-face`, gates green.** The web-desktop shell is
-**vendored in-repo** (`files/anatomy/face`, SvelteKit) and got the dataTable-driven v0.2:
-snap/tiling WM, control-panel icon-grid, wallpapers, per-viewport window caching, and
-nos-native (API-calling) apps + a file-picker. Built by a 5-agent worktree fleet off a
-frozen substrate, merged coherent. Hard doctrine (`docs/doctrine/face.md` +
-`tools/face-wiring-report.py --strict` + `tests/anatomy/test_face_*.py`); Bone filename/UTF-8
-hardening + 170-test fuzz corpus; edge-token spoof-refusal verified live. Frontend gate
-(svelte-check + eslint + 76 vitest) + python gates green; 5 pre-existing branch failures
-(version-pin/archive/woodpecker) are unrelated. **NEXT (operator):** review + `feat → dev`.
+**Blank/uninstall drift → manifest of managed resources (OPEN, 2026-07-19).** Operator
+caught a blank-run drift: a 2026-04-20 screenshot + a duplicate `face-controls` KEAP
+table survived `blank=true`. Root cause: `tasks/blank-reset.yml` `_blank_dirs` is a
+hand-maintained allowlist that NEVER wipes `nos_data_root/tenants` (Bone class-3
+user-files) and misses services (no `install_keap`), and is create-only not
+reconciliation. Fix direction (KEAP agent's guidance): a manifest of managed resources
++ user-files managed + reconciling seeders + idempotence acceptance test; KEAP two-layer
+(derived `/data` vs source `/user-files`; FS cleanup first, KEAP self-reconciles).
+Plan + open decisions: [`docs/plans/blank-uninstall-managed-resources.md`](plans/blank-uninstall-managed-resources.md).
+**NEXT (operator):** scope P0-tactical-vs-P1-architectural + blank/uninstall split.
 
-**v0.7-beta — ready to tag, pending operator validation converge.** Two arcs on
-`dev` (`5bd11c8c`), CI green on all jobs:
-- **Arc 1 (2026-06-15):** tofu self-reconcile preflight (idempotent non-blank
-  converge) + Portainer SSO verify-via-public. Validated live (3-converge arc).
-- **Arc 2 (2026-07-09):** security cluster closed (REM-118 FreeScout CVSS-9.4,
-  REM-110 Bone scope-gate, REM-107 Alloy loopback); stacks converge-green (qgis/
-  gitlab/puter; 61 containers, 0 unhealthy); **first agent-authored upgrade recipe**
-  Gitea 1.25→1.26.4 (REM-099) via upgrade-architect + migration-author; CI red→green
-  (module-shadow + contracts drift).
-- **NEXT (operator):** run `ansible-playbook main.yml` (or blank) to live-apply +
-  validate the Gitea 1.26.4 upgrade under STRICT health-wait → if `failed=0`,
-  `dev→master` PR + tag `v0.7-beta` (admin bypass, see memory `nos-release-flow`).
+**nOS-face companion v0.8 — PAUSED, live-verified, UNCOMMITTED (2026-07-19).** F2 iframe
+windows (`ServiceFrame` → hub services open as real windows; fixed the always-empty dock
+= Wing `id`-vs-`slug` bug → 37 services) + F1a create-table UI (`CreateTableModal` for
+KEAP DataTables) + a fixed `each_key_duplicate` crash on live KEAP rows. Gates green
+(svelte-check 0/0, 113 vitest, lint). Handoff:
+[`docs/plans/nos-face-companion-wip.md`](plans/nos-face-companion-wip.md).
+**NEXT:** commit the 13 face files; KEAP-side list-all (≥v1.14.1) + `/explore` framing.
 
 ## Open follow-ups
 
