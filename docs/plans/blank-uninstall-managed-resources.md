@@ -35,6 +35,24 @@ reconciliation, so orphans persist.
 - Any service added without also editing the 150-line `_blank_dirs` set-fact is
   silently un-wiped. The allowlist is the wrong mechanism.
 
+### 2b. KEAP mirrors the WHOLE tree; Files is uid-scoped (the visible symptom)
+The operator saw the screenshot **in KEAP `/explore` but NOT in nOS-face Files**. That
+is not "blank didn't delete" — it's a two-view inconsistency:
+- Bone VFS scopes to ONE `uid` from the Authentik header (`vfs.py:81` `_user_root(uid)`),
+  so Files shows only `users/akadmin/…`.
+- KEAP mounts the ENTIRE users dir read-only
+  (`roles/pazny.keap/templates/compose.yml.j2:47` — `…/users:/user-files:ro`) → it
+  mirrors EVERY uid subtree.
+- On disk, `tenants/pazny/users/` holds `akadmin`, `nos-docs`, **and two orphan
+  64-hex (SHA256) uid trees** (`82b255…`, `fceffd43…`) — from a DIFFERENT/OLDER uid
+  scheme (hash vs plaintext username). The screenshot lives in an orphan hash-uid tree
+  → hidden in Files (wrong uid), surfaced by KEAP (whole-tree mirror).
+
+So the drift compounds: (a) blank never wipes the tenants tree, and (b) a uid-scheme
+change orphaned old trees that nothing reconciles. **Open question:** why do hash-uid
+trees coexist with plaintext-username trees? (uid derivation changed at some point — a
+canonical uid + orphan-tree prune is needed.)
+
 ### 3. Not reconciliation → orphans persist
 - The duplicate KEAP table is `face.controls` (dot) **and** `face-controls` (dash),
   both HTTP 200 on the per-slug bearer route. The dot slug is an **orphan** from the
@@ -98,22 +116,39 @@ created** and remove exactly that.
      install.
    - Post-uninstall: KEAP `/agent/v1/fs/status` reports 0 objects.
 
-## Phased plan (proposed — needs operator scoping before build)
+## Operator decisions (2026-07-19) — LOCKED
 
-- **P0 tactical (unblocks today, low-risk):**
-  - Add `nos_data_root/tenants` + `nos_data_root/platform/services` to the blank wipe
-    scope **gated behind an explicit opt-in** (`wipe_user_files=true`), since deleting
-    user source is destructive — dry-run/confirm per the destructive-op safety model.
-  - Add the missing `install_keap` entry to `_blank_dirs` (mechanical).
-  - Delete the orphan `face.controls` KEAP table (human DELETE; operator-confirmed).
-  - Face seeder: pin one canonical explicit slug per `face-*` table.
-- **P1 architectural:** the managed-resource manifest + reconciling uninstall +
-  idempotence acceptance test + KEAP fs/status post-check.
+1. **Split semantics (chosen).** `blank` = **reset DERIVED state, PRESERVE SOURCE**
+   (user-files stay). `uninstall` = walk the manifest, **remove everything nOS created,
+   incl. user-files**. Two clean paths.
+   - Corollary: the screenshot surviving `blank` is now *intended* — the real defects
+     are the ORPHAN uid-trees (junk) + KEAP surfacing files the current user can't see +
+     KEAP `/data` NOT being wiped by blank (it's derived, so blank SHOULD wipe it and let
+     KEAP re-sync from the preserved source).
+2. **Approach (chosen): both in parallel** — ship P0 tactical now + design P1 manifest
+   concurrently.
+3. Manifest home — TBD in P1 design (lean toward extending `state_manager` /
+   `~/.nos/state.yml`).
 
-## Open decisions for the operator
-1. **Blank vs uninstall split** — keep `--blank` as "preserve source" and add a
-   separate `uninstall`? Or one path with a `wipe_user_files` flag?
-2. **Manifest home** — extend `state_manager`/`~/.nos/state.yml`, or a dedicated
-   install manifest?
-3. **Scope now** — ship P0 tactical first (stop the bleeding), then design P1? Or
-   design the manifest first and do it once, properly?
+## Phased plan (under the split model)
+
+- **P0 tactical (blank = preserve source; low-risk):**
+  - **Wipe KEAP `/data` on blank** — add an `install_keap` → `keap_data_dir` entry to
+    `_blank_dirs` (mechanical; `/data` is derived, KEAP re-syncs from the preserved
+    source). This alone fixes the "KEAP shows stale mirror" half.
+  - **Reconciling face seeder** — declare one canonical EXPLICIT slug per `face-*` table
+    (not name-derived, so the regex fallback can't mutate it) so it never re-duplicates.
+  - **Document `blank` = preserve-source** in `blank-reset.yml` header + `--blank` help
+    (tenants/users surviving is intended, not a bug).
+  - **Operator-confirmed cleanup (destructive — do NOT auto-run):** delete the orphan
+    `face.controls` KEAP table (human `/api/tables/:id` DELETE) + prune the orphan
+    hash-uid trees under `tenants/pazny/users/` after confirming they map to no live user.
+- **P1 architectural:**
+  - Managed-resource manifest (record everything nOS creates on install).
+  - `uninstall` path: walk the manifest, remove all incl. user-files; pre-existing paths
+    untouched. Dry-run default + explicit confirm (destructive-op safety model).
+  - Reconciliation everywhere (seeders declare canonical sets, prune orphans).
+  - uid consistency: one canonical uid per user; a uid→tree reconcile that prunes
+    orphan uid-trees; decide whether KEAP should mirror only live-uid trees.
+  - Idempotence acceptance test (install→uninstall leaves nothing; →install bit-identical)
+    + post-uninstall KEAP `/agent/v1/fs/status` "0 objects" check.

@@ -83,6 +83,11 @@ REQUIRED_BIND_MOUNT_FLAGS = {
     "install_mcp_gateway",
     "install_snappymail",
     "install_spacetimedb",
+    # KEAP /data is DERIVED (libsql mirror) — blank wipes it so KEAP re-syncs
+    # from the PRESERVED user-file source (blank=preserve-source split, 2026-07-19).
+    # Was an unguarded gap: keap had a data_dir but no _blank_dirs clause, so a
+    # blank left KEAP re-mirroring stale data. See blank-uninstall-managed-resources.md.
+    "install_keap",
 }
 
 

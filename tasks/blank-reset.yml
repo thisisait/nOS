@@ -11,6 +11,11 @@
 #   - LaunchAgents (exporters, openclaw)
 #
 # What is KEPT:
+#   - USER SOURCE FILES — ~/nos/tenants/<slug>/users/** (the class-3 Bone VFS
+#     tree). blank = "reset DERIVED state, PRESERVE SOURCE" (operator decision
+#     2026-07-19). Removing user files is `uninstall`, a separate manifest-driven
+#     path — NOT blank. See docs/plans/blank-uninstall-managed-resources.md.
+#     (Derived KEAP /data IS wiped above so KEAP re-syncs from the kept source.)
 #   - ~/media/ (movies, series, music) - user data
 #   - ~/calibre/ (library) - user data
 #   - ~/.ollama/ (models, tens of GB) - manual delete: rm -rf ~/.ollama
@@ -386,6 +391,9 @@
         +
         (install_puter | default(false)) | ternary(
           [puter_data_dir | default(ansible_facts['env']['HOME'] + '/puter')], [])
+        +
+        (install_keap | default(false)) | ternary(
+          [keap_data_dir | default(nos_data_root + '/platform/services/keap/data')], [])
         +
         (install_authentik | default(false)) | ternary(
           [authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik')], [])
