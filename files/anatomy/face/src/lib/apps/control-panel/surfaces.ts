@@ -64,6 +64,42 @@ const KNOWN_SURFACES = new Set<ControlEntry['surface']>([
 	'rawDataTable'
 ]);
 
+/** The shell has no icon font, so KEAP rows that carry a lucide icon NAME
+ *  (e.g. "layout-dashboard") would render as raw text. Map the known names to an
+ *  emoji glyph (dock convention); pass through anything that's already an emoji;
+ *  fall back to 🔧 for the unknown/empty. Rendered as escaped text, never HTML. */
+const LUCIDE_EMOJI: Record<string, string> = {
+	image: '🖼️',
+	wallpaper: '🖼️',
+	palette: '🎨',
+	'layout-dashboard': '🪟',
+	layout: '🪟',
+	layers: '🧩',
+	grid: '🧩',
+	user: '👤',
+	users: '👥',
+	identity: '🪪',
+	'id-card': '🪪',
+	'hard-drive': '💾',
+	database: '🗄️',
+	folder: '📁',
+	file: '📄',
+	settings: '⚙️',
+	gear: '⚙️',
+	cog: '⚙️',
+	bell: '🔔',
+	shield: '🛡️',
+	monitor: '🖥️'
+};
+
+export function iconGlyph(icon: string): string {
+	const key = icon.trim().toLowerCase();
+	if (!key) return '🔧';
+	if (LUCIDE_EMOJI[key]) return LUCIDE_EMOJI[key];
+	// Already a glyph/emoji (no ascii-name shape) → keep it; else fall back.
+	return /^[a-z0-9-]+$/.test(key) ? '🔧' : icon;
+}
+
 /** Project a `face-controls` DataTable into typed entries, with repo fallback. */
 export function controlsFromTable(table: DataTable | null): ControlEntry[] {
 	const rows: DataTableRow[] = table?.rows ?? [];
@@ -76,7 +112,7 @@ export function controlsFromTable(table: DataTable | null): ControlEntry[] {
 		entries.push({
 			slug,
 			name: String(r.name ?? slug),
-			icon: typeof r.icon === 'string' ? r.icon : '⚙️',
+			icon: iconGlyph(typeof r.icon === 'string' ? r.icon : ''),
 			surface,
 			table: typeof r.table === 'string' ? r.table : undefined,
 			system: r.system === true || r.system === 'true'

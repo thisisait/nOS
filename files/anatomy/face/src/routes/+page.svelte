@@ -137,7 +137,6 @@
 	     (pointer-events:none) so a maximized/top-snapped window's titlebar + its
 	     top-LEFT controls stay visible AND draggable underneath the bar. -->
 	<header class="menubar">
-		<span class="hint">drag a window to the top to tile · ⌘Space for actions</span>
 		<strong>nOS</strong>
 		{#if data.identity.authenticated}
 			<span class="user">{data.identity.username}</span>
@@ -199,13 +198,6 @@
 		z-index: 100000;
 		background: transparent; /* macOS-style: no fill */
 		pointer-events: none; /* click-through — window titlebars underneath stay live */
-	}
-	.hint {
-		color: var(--muted);
-		font-size: 12px;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
 	}
 	.user {
 		color: var(--fg);

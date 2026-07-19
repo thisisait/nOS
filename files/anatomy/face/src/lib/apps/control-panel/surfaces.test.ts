@@ -4,6 +4,7 @@ import {
 	parseSurfaceApp,
 	isControlPanelWindow,
 	controlsFromTable,
+	iconGlyph,
 	CP_GRID_APP,
 	FALLBACK_CONTROLS
 } from './surfaces';
@@ -66,5 +67,21 @@ describe('controlsFromTable', () => {
 			slug: 'wallpaper',
 			surface: 'wallpaper'
 		});
+	});
+});
+
+describe('iconGlyph', () => {
+	it('maps known lucide names → emoji', () => {
+		expect(iconGlyph('layout-dashboard')).toBe('🪟');
+		expect(iconGlyph('hard-drive')).toBe('💾');
+		expect(iconGlyph('User')).toBe('👤'); // case-insensitive
+		expect(iconGlyph('image')).toBe('🖼️');
+	});
+	it('passes an existing emoji through', () => {
+		expect(iconGlyph('🎨')).toBe('🎨');
+	});
+	it('falls back to 🔧 for unknown ascii names and empty', () => {
+		expect(iconGlyph('some-unknown-icon')).toBe('🔧');
+		expect(iconGlyph('')).toBe('🔧');
 	});
 });

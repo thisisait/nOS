@@ -115,15 +115,22 @@
 
 	async function onUpload(e: Event) {
 		const input = e.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+		const files = Array.from(input.files ?? []);
+		if (files.length === 0) return;
 		busy = true;
 		err = '';
+		const failed: string[] = [];
 		try {
-			await vfsUpload(cwd, file);
-			await load(cwd);
-		} catch (ex) {
-			err = ex instanceof Error ? ex.message : 'upload failed';
+			// Sequential — one file at a time keeps memory + the Bone stream sane.
+			for (const file of files) {
+				try {
+					await vfsUpload(cwd, file);
+				} catch (ex) {
+					failed.push(`${file.name}: ${ex instanceof Error ? ex.message : 'upload failed'}`);
+				}
+			}
+			if (failed.length) err = failed.join('; ');
+			await load(cwd); // refresh ONCE after all uploads settle
 		} finally {
 			busy = false;
 			input.value = '';
@@ -137,7 +144,7 @@
 		<button class="btn" onclick={newFolder} disabled={busy}>New folder</button>
 		<label class="btn upload">
 			Upload
-			<input type="file" onchange={onUpload} disabled={busy} hidden />
+			<input type="file" multiple onchange={onUpload} disabled={busy} hidden />
 		</label>
 		<button class="btn" onclick={removeSelected} disabled={busy || !selected}>Delete</button>
 	</header>
