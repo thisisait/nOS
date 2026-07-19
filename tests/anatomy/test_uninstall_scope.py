@@ -43,6 +43,18 @@ def test_uninstall_removes_the_source_tree():
     ), "blank must PRESERVE nos_data_root (source) — only uninstall removes it"
 
 
+def test_uninstall_removes_anatomy_runtime_dirs():
+    """The host-daemon runtime dirs live under $HOME, outside nos_data_root AND the
+    blank `_blank_dirs` set, so uninstall must target them explicitly (ungated) or
+    they survive a 'total' removal."""
+    txt = _text(UNINSTALL)
+    for var in ("bone_runtime_dir", "pulse_home", "wing_home", "hermes_home", ".openclaw"):
+        assert var in txt, f"uninstall must remove the anatomy runtime dir ({var})"
+    blank = _text(ROOT / "tasks" / "blank-reset.yml")
+    # Sanity: bone/pulse runtime dirs are indeed NOT covered by blank (the gap this closes).
+    assert "bone_runtime_dir" not in blank, "if blank now covers bone, update this rationale"
+
+
 def test_uninstall_is_dry_run_by_default():
     """The removal (file: state=absent + the blank import) must be gated on
     confirm_uninstall, so a bare `-e uninstall=true` only reports."""

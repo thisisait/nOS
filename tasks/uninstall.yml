@@ -27,10 +27,17 @@
 #     blank flags (flush_ollama, etc.) or delete by hand if you truly want them gone.
 #   - Homebrew packages, shell config, anything outside the nOS footprint.
 #
-# KNOWN MVP LIMITATION: a service currently DISABLED (install_<svc>=false) is not in
-# `_blank_dirs`, so a stale `$HOME/<svc>` dir from a past enablement is not removed
-# (its nos_data_root/platform half IS, via the full-tree removal). The record-at-
-# install managed-resource manifest (P1.5) closes this. See
+# COVERAGE: nos_data_root (full tree) removes every `platform/services/*` service
+# data dir EVEN WHEN DISABLED, plus all tenants/** user files. The blank teardown
+# removes every ENABLED service's legacy `$HOME/<svc>` dir. The anatomy host-daemon
+# runtime dirs are removed ungated (below). Remaining narrow gap → the record-at-
+# install manifest (P1.5): a service on a LEGACY `$HOME/<svc>` dir that is CURRENTLY
+# DISABLED leaves that stale dir (it's neither in nos_data_root nor _blank_dirs).
+# For the operator's own current config every enabled service is covered.
+#
+# GOV NOTE: uninstall removes wing.db (the tamper-evident audit chain). Unlike blank
+# (which preserves audit rows), a total uninstall wipes them — under a gov/compliance
+# profile, EXPORT the audit chain first (verify-audit-chain.php + archive). See
 # docs/plans/blank-uninstall-managed-resources.md.
 # ==============================================================================
 
@@ -41,13 +48,28 @@
     - external_storage_root is defined
     - external_storage_root | default('') | length > 0
 
-# ── 1. Compute the SOURCE removal set + report (always — this is the dry run) ────
+# ── 1. Compute the SOURCE + anatomy removal set + report (always = the dry run) ──
+# nos_data_root covers every service on `platform/services/*` (even DISABLED ones)
+# + the tenants user tree. The anatomy HOST-DAEMON runtime dirs (bone/pulse/wing/
+# hermes/openclaw) live directly under $HOME and are NOT in nos_data_root NOR in
+# the blank `_blank_dirs` set — so a blank/uninstall left them behind. Listed
+# UNGATED here (they exist iff the daemon ran) so uninstall is complete regardless
+# of the current install_* flags. `~/agents` + `~/projects` are NOT wiped wholesale
+# (they hold user content) — only the anatomy-owned children.
 - name: "[UNINSTALL] Resolve source paths"
   ansible.builtin.set_fact:
     _uninstall_source:
+      # ── user SOURCE + runtime side-car ──
       - "{{ nos_data_root }}"
       - "{{ bone_state_dir | default(ansible_facts['env']['HOME'] + '/.nos') }}"
       - "{{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json"
+      # ── anatomy host-daemon runtime dirs (ungated — not covered by blank) ──
+      - "{{ bone_runtime_dir | default(ansible_facts['env']['HOME'] + '/bone') }}"
+      - "{{ pulse_home | default(ansible_facts['env']['HOME'] + '/pulse') }}"
+      - "{{ wing_home | default(ansible_facts['env']['HOME'] + '/wing') }}"
+      - "{{ hermes_home | default(ansible_facts['env']['HOME'] + '/agents/hermes') }}"
+      - "{{ hermes_config_dir | default(ansible_facts['env']['HOME'] + '/.hermes') }}"
+      - "{{ ansible_facts['env']['HOME'] }}/.openclaw"
 
 - name: "[UNINSTALL] Stat source paths (size/existence for the report)"
   ansible.builtin.stat:
@@ -66,7 +88,7 @@
        DERIVED (via the blank teardown): all Docker stacks + volumes, LaunchAgents,
        nginx/dnsmasq/certs, OpenTofu state, and every enabled service's data dir.
 
-       SOURCE (removed only by uninstall):
+       SOURCE + anatomy runtime (removed only by uninstall):
       {% for r in _uninstall_stat.results %}
          - {{ r.item }}{{ '  [exists]' if r.stat.exists else '  [absent]' }}
       {% endfor %}
