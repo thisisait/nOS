@@ -19,8 +19,15 @@ user-files) and misses services (no `install_keap`), and is create-only not
 reconciliation. Fix direction (KEAP agent's guidance): a manifest of managed resources
 + user-files managed + reconciling seeders + idempotence acceptance test; KEAP two-layer
 (derived `/data` vs source `/user-files`; FS cleanup first, KEAP self-reconciles).
-Plan + open decisions: [`docs/plans/blank-uninstall-managed-resources.md`](plans/blank-uninstall-managed-resources.md).
-**NEXT (operator):** scope P0-tactical-vs-P1-architectural + blank/uninstall split.
+Plan: [`docs/plans/blank-uninstall-managed-resources.md`](plans/blank-uninstall-managed-resources.md).
+**SHIPPED (2026-07-19):** uid stability (username-keyed trees, Czech-safe slug,
+KEAP contract locked byte-for-byte) · blank wipes derived KEAP /data · **P1
+`uninstall`** (`-e uninstall=true` dry-run → `+ confirm_uninstall=true` execute; removes
+source + anatomy runtime dirs; live dry-run verified) · KEAP pin → v1.14.1 (list-all +
+framing). **NEXT (operator, supervised WITH agent):** run `-e uninstall=true
+-e confirm_uninstall=true` then a fresh `-e blank=true` install to validate end-to-end
+(uid stability + clean tree). Remaining: P1.5 managed-resource manifest (disabled-legacy-dir
+gap); KEAP uid-alignment lands ≥v1.15.0.
 
 **nOS-face companion v0.8 — PAUSED, live-verified, UNCOMMITTED (2026-07-19).** F2 iframe
 windows (`ServiceFrame` → hub services open as real windows; fixed the always-empty dock
