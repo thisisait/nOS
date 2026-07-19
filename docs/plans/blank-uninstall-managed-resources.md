@@ -48,10 +48,24 @@ is not "blank didn't delete" — it's a two-view inconsistency:
   scheme (hash vs plaintext username). The screenshot lives in an orphan hash-uid tree
   → hidden in Files (wrong uid), surfaced by KEAP (whole-tree mirror).
 
-So the drift compounds: (a) blank never wipes the tenants tree, and (b) a uid-scheme
-change orphaned old trees that nothing reconciles. **Open question:** why do hash-uid
-trees coexist with plaintext-username trees? (uid derivation changed at some point — a
-canonical uid + orphan-tree prune is needed.)
+So the drift compounds: (a) blank never wipes the tenants tree, and (b) old uid trees
+orphan with nothing to reconcile them.
+
+### 2c. ROOT of the uid orphans: Authentik uid is not stable across blanks
+nOS never hashes uid — Bone/face use `X-Authentik-uid` verbatim (`grep sha256` in
+face BFF + bone = none). `nos-docs` is the legit self-model tree
+(`keap_selfmodel_uid`). The two 64-hex trees are **real Authentik uids**; the `akadmin`
+tree is the anomaly (my Playwright harness sends the username as uid, not the real hash).
+
+The mechanism: **`blank` wipes Authentik's DB → every user is re-provisioned with a NEW
+uid hash → a NEW `users/<newhash>/` tree, ORPHANING the old one.** The old tree (with
+the screenshot) survives (tenants not wiped), the user's new uid sees an empty tree in
+Files, but KEAP mirrors ALL trees incl. the orphan → the screenshot reappears in
+`/explore`. **This is the true root of the uid-orphan half** — and it means
+"preserve source" is only coherent if uid is STABLE across blanks. **P1 design driver:**
+either issue stable Authentik uids (seed the user pk / key the tree on username/email),
+or migrate/re-key user trees when the uid changes, or prune trees whose uid maps to no
+live Authentik user. Until then, even a correct preserve-source blank orphans user files.
 
 ### 3. Not reconciliation → orphans persist
 - The duplicate KEAP table is `face.controls` (dot) **and** `face-controls` (dash),
