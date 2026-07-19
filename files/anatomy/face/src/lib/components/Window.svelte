@@ -88,19 +88,25 @@
 					aria-label="Close"
 					onpointerdown={(e) => e.stopPropagation()}
 					onclick={() => closeWindow(win.id)}
-				></button>
+				>
+					<span class="dot"></span>
+				</button>
 				<button
 					class="light min"
 					aria-label="Minimize"
 					onpointerdown={(e) => e.stopPropagation()}
 					onclick={() => toggleMin(win.id)}
-				></button>
+				>
+					<span class="dot"></span>
+				</button>
 				<button
 					class="light max"
 					aria-label="Maximize"
 					onpointerdown={(e) => e.stopPropagation()}
 					onclick={() => toggleMax(win.id)}
-				></button>
+				>
+					<span class="dot"></span>
+				</button>
 			</div>
 			<span class="title">{win.title}</span>
 		</header>
@@ -135,22 +141,38 @@
 	}
 	.lights {
 		display: flex;
-		gap: 7px;
+		gap: 0;
+		margin-left: -4px; /* keep the dots visually where they were despite the wider hit box */
 	}
+	/* The button is a generous ~22px hit target; the coloured 12px .dot inside is
+	 * the macOS-style pip. Enlarging the clickable area (not the pip) fixes the
+	 * "pixel hunt" without changing the look. */
 	.light {
+		width: 22px;
+		height: 22px;
+		border: none;
+		padding: 0;
+		background: none;
+		display: grid;
+		place-items: center;
+		cursor: pointer;
+	}
+	.light .dot {
 		width: 12px;
 		height: 12px;
 		border-radius: 50%;
-		border: none;
-		padding: 0;
+		display: block;
 	}
-	.close {
+	.light:hover .dot {
+		filter: brightness(1.15);
+	}
+	.close .dot {
 		background: #ff5f57;
 	}
-	.min {
+	.min .dot {
 		background: #febc2e;
 	}
-	.max {
+	.max .dot {
 		background: #28c840;
 	}
 	.title {
