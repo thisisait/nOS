@@ -48,7 +48,7 @@ services:
       # Points at the agent-bearer /agent/v1/tables surface (keap ≥ v1.12.0) with
       # the RO agent token; empty when KEAP is off → shell serves repo defaults.
 {% if install_keap | default(false) | bool %}
-      NOS_KEAP_TABLES_URL: "{{ face_keap_tables_url | default('http://host.docker.internal:' ~ (keap_port | default(8091)) ~ '/agent/v1/tables') }}"
+      NOS_KEAP_TABLES_URL: "{{ face_keap_tables_url | default('http://host.docker.internal:' ~ (keap_port | default(8091)) ~ '/agent/v1/tables', true) }}"
       NOS_KEAP_API_TOKEN: "{{ keap_agent_token_ro | default('') }}"
       # RW token for the DataTable editor's WRITE path. The BFF holds it
       # server-side and only writes after an Authentik-tier (RBAC) check — a
