@@ -80,3 +80,8 @@ keap_embed_model: "nomic-embed-text"
 # (installed + run by the openclaw role) — gated on install_openclaw so a run
 # without Ollama doesn't spuriously fail. Set false to manage the model yourself.
 keap_embed_pull: "{{ install_openclaw | default(false) }}"
+
+# Extra origins permitted to iframe KEAP, beyond the nOS face. Comma-joined into
+# KEAP_EMBED_ORIGINS. Real (empty) default, not a bare `| default([])` reference
+# — an undefined var referenced only through default() aborts a live converge.
+keap_embed_origins: []

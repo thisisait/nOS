@@ -56,3 +56,4 @@ One file per fee, `NN-short-slug.md`, with these headings:
 | [02](02-db-blind-healthchecks.md) | Healthchecks that answer without touching their database | a DB is reinitialised under a running container | partly closed |
 | [03](03-leading-digit-slugs.md) | A service name starting with a digit cannot be a KEAP node id | someone adds a service whose name starts with a number | latent |
 | [04](04-systems-docs-drift.md) | `docs/systems/` covers a third of the estate and targets dead paths | the skill router embeds them and starts routing | open |
+| [05](05-keap-face-host-deprecation.md) | `KEAP_FACE_HOST` shim emitted for a pin we will leave behind | `keap_repo_ref` moves past v1.20.0 | dated |
