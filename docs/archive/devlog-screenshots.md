@@ -1,5 +1,16 @@
 # Devlog screenshots — repo-hosted images in nos-core blog posts
 
+> **SHIPPED 2026-07-20.** Implemented as designed, with the open decisions
+> resolved as: flat `media/` folder (favours the stable-filename contract);
+> no dedicated featured-image field (first inline image is enough today);
+> orphan media GC included, under the same author+prefix guards the post
+> collector uses. Media hashes fold into the entry content hash — without that
+> a replaced image uploads but no post ever points at it. Verified by a live
+> dry-run (created 2 / media_created 2) and pinned by
+> `tests/anatomy/test_devlog_media.py`. First post using it:
+> `2026-07-20-face-and-cortex-tour`.
+
+
 **Status:** OPEN (requested 2026-07-19). Extends the devlog `nos-core` pipeline
 (`docs/devlog/README.md`): repo is SoT → `state/devlog-bundle.jsonl` → playbook
 syncs to WordPress (WP side disposable, last-run-wins). Today the sync handles

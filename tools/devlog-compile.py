@@ -30,7 +30,18 @@ import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 ENTRIES_DIR = REPO / "docs" / "devlog" / "nos-core"
+MEDIA_DIR = ENTRIES_DIR / "media"
 BUNDLE_PATH = REPO / "state" / "devlog-bundle.jsonl"
+
+# Repo-hosted screenshots. An entry references them repo-relative from its year
+# directory — ![alt](../media/<name>.png) — which is what makes the image render
+# both on GitHub and in the compiled bundle. The FILENAME is the stable key: the
+# operator overwrites an image's bytes, keeps the name, re-runs the playbook, and
+# the live post shows the new picture (devlog-sync.py does the WP side).
+MEDIA_RE = re.compile(r"!\[([^\]]*)\]\(\.\./media/([^)\s]+)\)")
+CODE_FENCE_RE = re.compile(r"^```.*?^```", re.S | re.M)
+CODE_SPAN_RE = re.compile(r"`[^`\n]*`")
+MEDIA_EXT = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
 
 # Single source of the renderer pin. Bump together with the ci.yml pytest
 # pip-install line and re-run this tool (the bundle bytes may change).
@@ -74,6 +85,50 @@ def _norm_date(value) -> str:
     return value.isoformat() if hasattr(value, "isoformat") else str(value)
 
 
+def _collect_media(body: str, path: pathlib.Path, media_dir: pathlib.Path) -> tuple[list[dict], list[str]]:
+    """Resolve ../media/<name> references → [{filename, sha256, alt}] + errors.
+
+    The sha256 is what makes "same filename, new bytes" detectable downstream, so
+    a replaced screenshot re-uploads without the entry's markdown changing at all.
+    """
+    # Scan PROSE only. A post is allowed to document the media syntax itself —
+    # writing ![](../media/x.png) inside backticks must not be read as a real
+    # reference (it isn't rendered as an image either), so code spans and fenced
+    # blocks are blanked before matching.
+    prose = CODE_FENCE_RE.sub("", body)
+    prose = CODE_SPAN_RE.sub("", prose)
+    media, errors, seen = [], [], set()
+    for alt, name in MEDIA_RE.findall(prose):
+        if name in seen:
+            continue
+        seen.add(name)
+        target = media_dir / name
+        if pathlib.Path(name).suffix.lower() not in MEDIA_EXT:
+            errors.append(f"{path}: media '{name}' has an unsupported extension")
+            continue
+        if "/" in name or "\\" in name:
+            errors.append(f"{path}: media '{name}' must sit flat in {media_dir.name}/")
+            continue
+        if not target.is_file():
+            # relative_to() raises for a tree outside the repo (tests, or a
+            # compile run from elsewhere) — the path is cosmetic, never let it
+            # replace the real diagnosis.
+            try:
+                shown = target.relative_to(REPO)
+            except ValueError:
+                shown = target
+            errors.append(f"{path}: media '{name}' not found at {shown}")
+            continue
+        media.append(
+            {
+                "filename": name,
+                "alt": alt.strip(),
+                "sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
+            }
+        )
+    return sorted(media, key=lambda m: m["filename"]), errors
+
+
 def load_entries(entries_dir: pathlib.Path = ENTRIES_DIR) -> list[dict]:
     """Validate and load every nos-core entry. Raises ValueError on violation."""
     errors: list[str] = []
@@ -111,21 +166,27 @@ def load_entries(entries_dir: pathlib.Path = ENTRIES_DIR) -> list[dict]:
             not isinstance(t, str) or not TAG_RE.match(t) for t in tags
         ):
             errors.append(f"{path}: tags must be a list of lowercase-dash strings")
-        entries.append(
-            {
-                "id": eid,
-                "slug": eid,
-                "namespace": "nos-core",
-                "title": str(meta.get("title", "")),
-                "date": date,
-                "updated": _norm_date(meta["updated"]) if meta.get("updated") else date,
-                "status": status,
-                "summary": str(meta.get("summary", "")).strip(),
-                "tags": tags,
-                "release": str(meta["release"]) if meta.get("release") else None,
-                "body_md": body,
-            }
-        )
+        media, media_errors = _collect_media(body, path, entries_dir / "media")
+        errors.extend(media_errors)
+        entry = {
+            "id": eid,
+            "slug": eid,
+            "namespace": "nos-core",
+            "title": str(meta.get("title", "")),
+            "date": date,
+            "updated": _norm_date(meta["updated"]) if meta.get("updated") else date,
+            "status": status,
+            "summary": str(meta.get("summary", "")).strip(),
+            "tags": tags,
+            "release": str(meta["release"]) if meta.get("release") else None,
+            "body_md": body,
+        }
+        # Only present when the entry actually carries images — an unconditional
+        # key would rewrite every existing entry's bytes (and the freshness gate
+        # compares bytes).
+        if media:
+            entry["media"] = media
+        entries.append(entry)
     if errors:
         raise ValueError("devlog validation failed:\n  " + "\n  ".join(errors))
     return entries
@@ -140,12 +201,14 @@ def compile_bundle(entries_dir: pathlib.Path = ENTRIES_DIR) -> str:
             continue
         md.reset()
         entry["body_html"] = md.convert(entry["body_md"])
+        hash_input = {k: entry[k] for k in ("title", "summary", "body_html", "tags", "status", "date")}
+        # Media hashes join the content hash so that replacing a screenshot's
+        # bytes (markdown untouched) still marks the post dirty — the sync
+        # re-uploads the image, which mints a new URL that must land in the body.
+        if entry.get("media"):
+            hash_input["media"] = entry["media"]
         entry["content_hash"] = hashlib.sha256(
-            json.dumps(
-                {k: entry[k] for k in ("title", "summary", "body_html", "tags", "status", "date")},
-                sort_keys=True,
-                ensure_ascii=False,
-            ).encode("utf-8")
+            json.dumps(hash_input, sort_keys=True, ensure_ascii=False).encode("utf-8")
         ).hexdigest()
         lines.append(json.dumps(entry, sort_keys=True, ensure_ascii=False))
     return "".join(line + "\n" for line in lines)

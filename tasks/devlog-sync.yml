@@ -51,7 +51,10 @@
   changed_when: >-
     (_devlog_sync.stdout | default('{}') | from_json).created | default(0)
     + (_devlog_sync.stdout | default('{}') | from_json).updated | default(0)
-    + (_devlog_sync.stdout | default('{}') | from_json).deleted | default(0) > 0
+    + (_devlog_sync.stdout | default('{}') | from_json).deleted | default(0)
+    + (_devlog_sync.stdout | default('{}') | from_json).media_created | default(0)
+    + (_devlog_sync.stdout | default('{}') | from_json).media_replaced | default(0)
+    + (_devlog_sync.stdout | default('{}') | from_json).media_deleted | default(0) > 0
   failed_when: _devlog_sync.rc | default(0) != 0
   no_log: false
 

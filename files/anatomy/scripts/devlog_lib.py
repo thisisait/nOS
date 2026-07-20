@@ -17,6 +17,7 @@ import base64
 import hashlib
 import hmac
 import json
+import re
 import ssl
 import time
 import urllib.error
@@ -137,6 +138,69 @@ class WPClient:
     def delete_post(self, post_id: int) -> dict:
         data, _ = self._request("DELETE", f"/posts/{post_id}", params={"force": "true"})
         return data
+
+    # ── Media (repo-hosted devlog screenshots) ────────────────────────────────
+    # Same doctrine as posts: the repo is SoT, the WP media library is disposable
+    # presentation. An image is identified by its repo FILENAME (the operator's
+    # stable key — "overwrite the bytes, keep the name"), carried into WP as the
+    # attachment slug `devlog-<stem>`, with its sha256 stored in the attachment
+    # description so a content change is detectable without re-uploading.
+    #
+    # There is no WP REST endpoint that swaps an attachment's bytes in place, so
+    # a changed image is delete + re-upload. That is safe here ONLY because the
+    # sync rewrites every post's image URLs from the bundle on the same run — the
+    # new URL lands in the post body before anything can reference the old one.
+
+    def list_media(self, *, author: int) -> list[dict]:
+        """Every attachment uploaded by the devlog bot (raw description)."""
+        items, page = [], 1
+        while True:
+            data, headers = self._request(
+                "GET",
+                "/media",
+                params={"author": author, "context": "edit", "per_page": 100, "page": page},
+            )
+            items.extend(data)
+            if page >= int(headers.get("X-WP-TotalPages", "1") or "1"):
+                return items
+            page += 1
+
+    def upload_media(self, filename: str, payload: bytes, mime: str, *, sha256: str) -> dict:
+        """Upload bytes as a new attachment; stash the repo sha256 in description."""
+        route = urllib.parse.quote("/wp/v2/media", safe="/")
+        req = urllib.request.Request(f"{self.base}/?rest_route={route}", data=payload, method="POST")
+        req.add_header("Authorization", self._auth)
+        req.add_header("Content-Type", mime)
+        req.add_header("Content-Disposition", f'attachment; filename="{filename}"')
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout, context=self._ssl_ctx) as resp:
+                created = json.loads(resp.read().decode("utf-8") or "null")
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")[:300]
+            raise WPError(f"POST /media ({filename}) -> {exc.code}: {detail}") from None
+        # Second call: slug + hash marker. WP derives the slug from the filename on
+        # upload, which collides as "<stem>-1" when a stale attachment lingers, so
+        # the slug is pinned explicitly rather than trusted.
+        data, _ = self._request(
+            "POST",
+            f"/media/{created['id']}",
+            body={
+                "slug": media_slug(filename),
+                "description": f"<!-- {HASH_MARKER} {sha256} -->",
+                "title": filename,
+            },
+        )
+        return data
+
+    def delete_media(self, media_id: int) -> dict:
+        data, _ = self._request("DELETE", f"/media/{media_id}", params={"force": "true"})
+        return data
+
+
+def media_slug(filename: str) -> str:
+    """Repo filename → deterministic WP attachment slug (the stable key)."""
+    stem = filename.rsplit(".", 1)[0].lower()
+    return "devlog-" + re.sub(r"[^a-z0-9]+", "-", stem).strip("-")
 
 
 def content_with_hash(body_html: str, content_hash: str) -> str:
