@@ -2159,6 +2159,22 @@
       "confidence": "medium",
       "found_at": "2026-07-19T04:11:26+02:00",
       "scan_cycle": 16
+    },
+    {
+      "id": "REM-129",
+      "finding_ref": "CVE-2026-60137",
+      "component": "wordpress",
+      "severity": "HIGH",
+      "current_version": "6.9.4-php8.3-apache",
+      "fix_version": "6.8.6 / 6.9.5 / 7.0.2 (none dockerized as of 2026-07-20)",
+      "remediation_type": "version_bump",
+      "remediation_detail": "The SECOND half of wp2shell, untracked until now — nOS recorded only CVE-2026-63030. wp2shell is a CHAIN: CVE-2026-63030 (REST batch-route confusion) + CVE-2026-60137 (core SQL injection); chained they give unauthenticated RCE, and public exploits exist with in-the-wild exploitation reported. nOS's mu-plugin (roles/pazny.wordpress/files/cve-2026-63030-batch-block.php) unregisters /batch/v1, which breaks the chain at its entry point and is why the RCE is mitigated — but it does NOT patch the SQLi, which remains present in the pinned core 6.9.4. Residual risk is the SQLi standing alone (upstream indicates 6.8.0-6.8.5 carried the SQLi WITHOUT full chain exposure, so alone it is not RCE). BLOCKED ON THE SAME IMAGE LAG: fixed cores are 6.8.6/6.9.5/7.0.2 and the Docker official image publishes none of them; 7.0.0/7.0.1 ARE published but are in the CVE range, so they are not an escape. Resolve together with the 63030 mitigation removal the moment a fixed tag is dockerized. Compensating controls today: WordPress is native_oidc at the edge (anonymous reach to /wp-json is by design for a CMS), 127.0.0.1 loopback host bind, install_wordpress off by default.",
+      "status": "pending",
+      "auto_fixable": null,
+      "source": null,
+      "confidence": null,
+      "found_at": null,
+      "scan_cycle": null
     }
   ],
   "summary": {
