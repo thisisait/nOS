@@ -9,7 +9,7 @@
 # knowledge object (a standalone "nOS" constellation) and the host keap-embed-
 # sync job positions it in vector space. Idempotent: the generator only rewrites
 # a card whose bytes changed, so fs-sync's size+mtime skip holds (no re-embed
-# storm). Design + KEAP-contract analysis: docs/plans/keap-selfmodel.md.
+# storm). Design + KEAP-contract analysis: docs/archive/keap-selfmodel.md.
 # =============================================================================
 
 - name: "[pazny.keap] Ensure class-2 self-model shared dir"

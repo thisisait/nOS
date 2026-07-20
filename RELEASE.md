@@ -2,7 +2,109 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.6-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.8-beta`.
+
+---
+
+## v0.9-beta (2026-07-20)
+
+> **nOS grows a face, and the cortex learns itself.** The seven days after the
+> cortex GA produced 175 commits, two of which change what nOS *is*: the
+> web-desktop (**nOS face**) becomes a real window manager with native apps over
+> Bone's VFS, and **KEAP gains a self-model** — a knowledge tree describing nOS's
+> own deployed architecture, generated from live state and mirrored into the
+> star-map as its own constellation. Around them the **lifecycle closes** (`blank`
+> gained a matching `uninstall`), the **constitution layer** lands
+> (`docs/doctrine/` + a single-source path resolver), a run stops being wedgeable
+> by its own telemetry, and the security queue reaches **zero CRITICAL pending**.
+> Narrative: devlog `2026-07-20-release-v0-9-beta`.
+
+### nOS face — a desktop, not a dashboard
+
+- **Window manager v2–v4** — snap + tiling (thirds, 2×2, live gutters),
+  dock unified with the app list, drag-to-top layout picker, live taskbar
+  thumbnails, `Ctrl+Space` command palette, control panel + wallpapers.
+- **Native app framework over Bone's VFS**, with three apps: **Files**
+  (file-picker on root-guarded, fuzz-corpus-tested VFS copy/delete endpoints),
+  **Tables** (DataTable editor with a gated write layer — RowEditor + KEAP RW
+  token + `CreateTableModal`), **Explore** (the KEAP star-map, embedded).
+- **`ServiceFrame` iframe windows** — every other service opens as a real window
+  instead of a new tab. This also fixed the always-empty dock: Wing was keyed on
+  `id` where the hub emits `slug`, so 0 of 37 services rendered.
+- Vendored in-repo (`files/anatomy/face`, synced + built by `roles/pazny.face`),
+  with a node CI job, a wiring linter, and security/datatable gates.
+
+### KEAP cortex v1.6.2 → v1.17.2
+
+- **Self-model** (`keap_selfmodel`) — a deterministic platform → stack → service
+  knowledge tree generated **from real deployed state** (auto-derived
+  SSO→authentik dependency edges), written to a doctrine class-2 shared dir and
+  bind-mounted as a reserved fs-sync uid, so KEAP mirrors it into a standalone
+  "nOS" constellation in `/explore` and embeds every card into vector space.
+- **Git-SoT knowledge ingest** — `knowledge/canonical/` is the source of truth;
+  `ingest.mjs` is a single idempotent import (per-file sha256 markers), with
+  round-trip identity CI-gated. Data changes ride the git ref, no image rebuild.
+- **Semantic lens** — exemplar axes + centrality + clusters computed by a Pulse
+  job into a derived `node_features` layer.
+- **Linked data** — Wikidata QID + entity typing + QRank scope onto the taxonomy,
+  behind three disambiguation guards (search-description allow/deny, P31
+  publication reject, embedding cosine veto); the naive top-hit baseline measured
+  ~40% and was homonym-trapped.
+- **Curator agent** (propose-only taxonomy reconciler) and **Track R3** typed
+  cross-domain relations.
+
+### Lifecycle — install ↔ uninstall
+
+- **`uninstall`** — `-e uninstall=true` dry-runs by default,
+  `+ confirm_uninstall=true` executes; removes source trees + anatomy runtime dirs.
+- **Blank drift fixes**, from an operator catching a 2026-04-20 screenshot and a
+  duplicate KEAP table surviving `blank=true`: blank now wipes KEAP's derived
+  `/data` and removes the OpenClaw gateway daemon.
+- **uid stability** — uids are keyed on username with a Czech-safe
+  diacritic-folding slug; an unstable uid across blanks orphans the tree it owns.
+
+### Resilience — a run you can't wedge
+
+- **Telemetry circuit-breaker (now half-open)** + capped ring buffer on the
+  fallback path + 4xx-no-retry. Root cause fixed: the callback signed with an
+  un-rendered `{{ … }}` URL and a self-referential secret template; Bone
+  self-heals a stale env secret inline.
+- **External-volume mount preflight + self-heal** — a remounted SSD leaves
+  Docker's VM a stale `/host_mnt` ref → every bind-mount fails and the STRICT
+  health-wait hangs ~20 min with no clue. Probed before the first `compose up`;
+  on blank, Docker Desktop is restarted and re-probed.
+- **dnsmasq is actually started** (a blank had been shipping with DNS down) and a
+  **systemic-failure smoke gate** fails a run when the platform is broadly dead.
+
+### Doctrine + hardening
+
+- **`docs/doctrine/` constitution layer** — doctrine is law, not a proposal;
+  opens with `filesystem.md` (storage classes) and `observability.md`. Code-side
+  counterpart: **`nos_data_root`**, a single-source path resolver replacing
+  scattered per-role path guessing, with the service-engine path surface on top.
+- **Healthcheck coverage** — `HEALTHCHECK` added to 12 health-blind services plus
+  a coverage gate, so a booted-but-broken container stops passing as ready.
+- **macOS 27 "Golden Gate"** forward-compat preflight + greppable
+  `# VFS-DOCTRINE` markers on the three VirtioFS workarounds.
+- **Security → 0 CRITICAL pending** (104 resolved / 14 pending / 4 vendor-blocked
+  / 1 wontfix). REM-127 Traefik ForwardAuth underscore-header strip bypass
+  (`X_authentik_groups` survives `Header.Del` → identity forgery on the SSO gate)
+  closed at v3.6.23; REM-002 Woodpecker resolved; pin-wave batches 1–3;
+  `wing.db` "database is locked" fixed via `busy_timeout` on all 13 writers;
+  WordPress CVE-2026-63030 mitigated by blocking the REST batch endpoint (the
+  fixed upstream is not dockerized yet).
+- Named fixes: Nextcloud's OIDC provider registered **with literal quotes** (SSO
+  silently dead), Gitea OIDC discovery failing for a missing `auth.<tld>` host
+  mapping, PostgreSQL healing dir-mounted/empty SSL cert paths, Bone's launchd fd
+  limit 256→8192.
+
+### Not in this tag
+
+The roadmap had pencilled v0.9 in as "epic acceptance" — PG 16→17 cut over
+end-to-end, the first real migration authored *and* applied, blank reproducibility
+re-proven. Those are operator-gated live converges and move to the **RC**; holding
+a 175-commit arc for them would reproduce the release-debt pattern that left
+`master` six weeks stale earlier this month.
 
 ---
 

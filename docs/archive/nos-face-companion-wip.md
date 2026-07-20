@@ -1,5 +1,11 @@
 # nOS-face companion — WIP handoff (paused 2026-07-19)
 
+> **ARCHIVED 2026-07-20 — the work landed.** Everything this handoff describes as
+> "UNCOMMITTED" was committed (`8de00130` iframe windows + create-table UI,
+> `e5c3734f` Czech-safe slug contract) and shipped in `v0.9-beta`. Kept for
+> archaeology; the "UNCOMMITTED" wording below is preserved as written and is no
+> longer true.
+
 Paused mid-flight to pivot to the blank/uninstall drift epic
 ([`blank-uninstall-managed-resources.md`](blank-uninstall-managed-resources.md)).
 This captures exactly what shipped so the thread resumes cleanly.

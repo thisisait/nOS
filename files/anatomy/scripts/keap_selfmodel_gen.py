@@ -14,7 +14,7 @@ where <out-root> is the doctrine class-2 dir
 into knowledge objects once it is bind-mounted under KEAP_USER_FILES_DIR and its top
 class dir ("nOS") is listed in KEAP_FS_SYNC_DIRS.
 
-Design + KEAP-contract analysis: docs/plans/keap-selfmodel.md.
+Design + KEAP-contract analysis: docs/archive/keap-selfmodel.md.
 
 Why a generator (not a pure Jinja template): the file bodies carry real taxonomy
 node-ids (server/objects.ts classifyRef → anchor rays) sourced from a category map,

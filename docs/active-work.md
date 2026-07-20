@@ -6,36 +6,33 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-07-09 • v0.7-beta ready to tag (arc 1 idempotency +
-> arc 2 security/converge-green/first-agent-recipe; CI green, e2e 10/10).
+> Last updated: 2026-07-20 • v0.9-beta docs staged (RELEASE + devlog + roadmap);
+> tag pending operator gate.
 
 ## Now (current track)
 
-**Blank/uninstall drift → manifest of managed resources (OPEN, 2026-07-19).** Operator
-caught a blank-run drift: a 2026-04-20 screenshot + a duplicate `face-controls` KEAP
-table survived `blank=true`. Root cause: `tasks/blank-reset.yml` `_blank_dirs` is a
-hand-maintained allowlist that NEVER wipes `nos_data_root/tenants` (Bone class-3
-user-files) and misses services (no `install_keap`), and is create-only not
-reconciliation. Fix direction (KEAP agent's guidance): a manifest of managed resources
-+ user-files managed + reconciling seeders + idempotence acceptance test; KEAP two-layer
-(derived `/data` vs source `/user-files`; FS cleanup first, KEAP self-reconciles).
-Plan: [`docs/plans/blank-uninstall-managed-resources.md`](plans/blank-uninstall-managed-resources.md).
-**SHIPPED (2026-07-19):** uid stability (username-keyed trees, Czech-safe slug,
-KEAP contract locked byte-for-byte) · blank wipes derived KEAP /data · **P1
-`uninstall`** (`-e uninstall=true` dry-run → `+ confirm_uninstall=true` execute; removes
-source + anatomy runtime dirs; live dry-run verified) · KEAP pin → v1.14.1 (list-all +
-framing). **NEXT (operator, supervised WITH agent):** run `-e uninstall=true
--e confirm_uninstall=true` then a fresh `-e blank=true` install to validate end-to-end
-(uid stability + clean tree). Remaining: P1.5 managed-resource manifest (disabled-legacy-dir
-gap); KEAP uid-alignment lands ≥v1.15.0.
+**v0.9-beta release cut — DOCS STAGED, operator gate next (2026-07-20).** 175 commits
+since `v0.8-beta`: nOS face as a real WM + native apps over Bone's VFS · KEAP self-model
++ git-SoT ingest + semantic lens + linked data (v1.6.2→v1.17.2) · `uninstall` closes the
+lifecycle · `docs/doctrine/` constitution + `nos_data_root` resolver · telemetry/mount/DNS
+wedge-proofing · healthcheck coverage gate · **security 0 CRITICAL pending**. Written up in
+RELEASE.md `## v0.9-beta` + devlog `2026-07-20-release-v0-9-beta` (bundle recompiled).
+**Release-debt note:** NOW #0 in the roadmap (master 480 behind, beta tags dev-only) was
+**stale** — `origin/master` is at 2026-07-13 with both beta tags reachable; only the local
+`master` branch lagged. **NEXT (operator):** commit the staged docs + security rescan →
+push `dev` (7 unpushed) → `tools/ci-local.sh` → `dev→master` PR (`gh pr merge --rebase
+--admin`) → tag `v0.9-beta` → `gh release create` (`nos-release-flow`).
 
-**nOS-face companion v0.8 — PAUSED, live-verified, UNCOMMITTED (2026-07-19).** F2 iframe
-windows (`ServiceFrame` → hub services open as real windows; fixed the always-empty dock
-= Wing `id`-vs-`slug` bug → 37 services) + F1a create-table UI (`CreateTableModal` for
-KEAP DataTables) + a fixed `each_key_duplicate` crash on live KEAP rows. Gates green
-(svelte-check 0/0, 113 vitest, lint). Handoff:
-[`docs/plans/nos-face-companion-wip.md`](plans/nos-face-companion-wip.md).
-**NEXT:** commit the 13 face files; KEAP-side list-all (≥v1.14.1) + `/explore` framing.
+**Blank/uninstall drift → managed-resource manifest (PARTIALLY SHIPPED, 2026-07-19).**
+Operator caught blank drift: a 2026-04-20 screenshot + a duplicate `face-controls` KEAP
+table survived `blank=true`. Root cause: `tasks/blank-reset.yml` `_blank_dirs` is a
+hand-maintained allowlist that never wipes `nos_data_root/tenants` (Bone class-3
+user-files), misses services, and is create-only rather than reconciling. Plan:
+[`docs/plans/blank-uninstall-managed-resources.md`](plans/blank-uninstall-managed-resources.md).
+**Shipped:** uid stability (username-keyed, Czech-safe slug) · blank wipes derived KEAP
+`/data` · P1 `uninstall` (dry-run default). **Remaining:** P1.5 managed-resource manifest
+(disabled-legacy-dir gap) + the supervised end-to-end validation run
+(`-e uninstall=true -e confirm_uninstall=true` → fresh `-e blank=true`).
 
 ## Open follow-ups
 

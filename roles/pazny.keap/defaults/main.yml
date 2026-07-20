@@ -39,7 +39,7 @@ keap_cpus: "{{ docker_cpus_light | default(1) }}"
 # tenants/<t>/shared/<svc>/"), then bind-mounts it into KEAP as a reserved
 # fs-sync uid so server/fs-sync.ts (v1.7.0) mirrors it into a standalone "nOS"
 # constellation in /explore and embeds each card into vector space. Generator +
-# KEAP-contract analysis: docs/plans/keap-selfmodel.md.
+# KEAP-contract analysis: docs/archive/keap-selfmodel.md.
 keap_selfmodel: true
 # Class-2 shared root (NOT a per-user tree). Kept as a role default (not global)
 # because it is referenced only by this role's own tasks, never by the plugin

@@ -1,7 +1,7 @@
 """KEAP self-model generator — contract gate (offline, fast).
 
 Pins the nOS→stack→service knowledge-tree generator that feeds KEAP's fs-sync
-mirror (docs/plans/keap-selfmodel.md). Asserts: the generator renders the
+mirror (docs/archive/keap-selfmodel.md). Asserts: the generator renders the
 expected folder shape + per-card fields, real taxonomy node-id anchors, cross-
 link object-ids that match KEAP v1.7.0's `fs:<uid>:sha1(relPath)[:16]` scheme,
 byte-determinism (so fs-sync's size+mtime skip holds), and that the role wiring

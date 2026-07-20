@@ -48,14 +48,18 @@ timeline
         Knowledge : git-SoT ingest pipeline (dump↔ingest round-trip, role-wired)
         Cortex : KEAP wired as anatomy organ (role+plugin, header_oidc, gated_net) · v1.6.2 pinned
         Sec-127 : REM-127 traefik CVE-2026-54763 closed live · scout+remediator run
+        Face : nOS face becomes a real WM · native apps over Bone VFS · iframe service windows
+        Self-model : KEAP describes nOS's own deployed architecture as a constellation
+        Lifecycle : uninstall closes the install↔leave loop · uid stability · blank drift fixes
+        Doctrine : docs/doctrine constitution layer · nos_data_root single-source resolver
     section Now
-        State : converge green · cortex live+coherent · GitLab forge reconciled (0 fake-leads)
+        State : v0.9-beta docs staged (RELEASE + devlog + roadmap) · trunk reconciled · 0 CRITICAL pending
     section Next
-        Release : reconcile master (480 behind · beta tags dev-only) → promote → cut next tag
-        v0.8 : version-pin wave to 0 CRITICAL/HIGH · Gitea 1.26.4 live-apply · wing.db WAL fix
+        Release : push dev → ci-local → dev→master PR (admin rebase) → tag v0.9-beta
         Epic : PG 16→17 cutover · first real migration authored+applied
         Docs : reconciliation + machine-checkable freshness gate
-        v1.0 : blank reproducibility re-proven · feature freeze
+        RC : blank reproducibility re-proven on a clean host
+        v1.0 : all exit criteria met · feature freeze
         KEAP+ : L0 enrichment · physics-core dataTable · custom/community taxonomy view
 ```
 
@@ -86,17 +90,22 @@ parity (OpenClaw/Hermes/fleet are post-1.0). Exit criteria (definition of done):
 **Milestone sequence** (tags cut from `master`, operator-validated per
 `nos-release-flow`):
 
-- **Release-state reality (2026-07-15):** `v0.6-beta` (06-12) and `v0.8-beta` (07-13)
-  tags exist **on dev only**; `v0.7-beta` was never cut; master is stuck at 2026-05-30.
-  The tags-on-dev, trunk-stale split must be reconciled (NOW #0) before the next cut —
-  otherwise "released" versions never reach the protected trunk.
-- **v0.8-beta — "burn-down"** (tag exists on dev; promote to master) — version-pin wave
-  → zero CRITICAL/HIGH; Gitea 1.26.4 live-applied; `fix/sso-mfa-posture` (8 live-bug
-  fixes) + sso-autologin epic merged; healthcheck coverage for the health-blind
-  containers; Bone dep-lockfile; wing.db WAL fix.
-- **v0.9-beta / RC — "epic acceptance"** — PG 16→17 cutover done end-to-end; first
-  real migration authored + applied; doc reconciliation complete + freshness gate;
-  Integration wet-test green on both OS; **blank reproducibility re-proven**.
+- **Release-state reality (revised 2026-07-20):** reconciled. `origin/master` is at
+  2026-07-13 with `v0.6-beta` + `v0.8-beta` both reachable; the "tags-on-dev only"
+  reading came from a stale *local* `master` branch. Trunk and tags are converged.
+- **v0.8-beta — "the cortex reaches 1.0"** (tagged 2026-07-13, on master) — KEAP GA:
+  Track K knowledge filling, MV3 capture extension, data-table RBAC, backup/restore.
+  Absorbs the never-cut v0.7-beta line.
+- **v0.9-beta — "face + self-model"** (2026-07-20, 175 commits) — nOS face becomes a
+  real WM with native apps over Bone's VFS; KEAP self-model + git-SoT ingest + semantic
+  lens + linked data (v1.6.2→v1.17.2); `uninstall` closes the lifecycle; `docs/doctrine/`
+  constitution + `nos_data_root` resolver; telemetry/mount/DNS wedge-proofing;
+  healthcheck coverage gate; **security queue at 0 CRITICAL pending**.
+- **v0.10-beta / RC — "epic acceptance"** (was pencilled as v0.9) — PG 16→17 cutover done
+  end-to-end; first real migration authored + applied; doc reconciliation complete +
+  freshness gate; Integration wet-test green on both OS; **blank reproducibility
+  re-proven**. Deferred off v0.9 deliberately: these are operator-gated live converges,
+  and holding a 175-commit arc for them recreates the release-debt pattern above.
 - **v1.0.0 (stable)** — all exit criteria met; feature freeze; gov + Linux parity
   explicitly scoped as post-1.0 tracks (v1.x / a gov edition).
 
@@ -242,13 +251,12 @@ real robustness gap, not a one-off; fixes are structural.
 
 ## NOW — the immediate queue
 
-0. **[operator] Master release reconciliation — release debt is 6 weeks deep.** master
-   tip is **2026-05-30** (480 commits behind dev); `v0.6-beta` + `v0.8-beta` were tagged
-   on **dev only**, never promoted to the protected trunk, and `v0.7-beta` was never cut
-   despite the milestone note. master is a **strict ancestor of dev → clean fast-forward**.
-   Reconcile: push dev, then `dev→master` (`gh pr merge --rebase --admin`, `nos-release-flow`),
-   which makes the beta tags master-reachable; then cut the next tag *from master* so the
-   trunk and the tags stop diverging.
+0. **Master release reconciliation — CLOSED 2026-07-20.** The 6-week release debt is
+   paid: `origin/master` is at `e76e0965` (2026-07-13) and **both `v0.6-beta` and
+   `v0.8-beta` are master-reachable**. (`v0.7-beta` was never cut — the `v0.8-beta`
+   tag absorbs that line by design.) Only the *local* `master` branch was stale, which
+   is what made this item read as open. Next cut — **`v0.9-beta`** — goes trunk-first
+   per `nos-release-flow`, so tags and trunk stay converged.
 
 
 1. **[operator] Validate + apply on-host** — run `ansible-playbook main.yml` (or blank)
