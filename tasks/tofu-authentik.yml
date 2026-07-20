@@ -231,8 +231,14 @@
           authored in HCL (un-authored providers plan as destroys) — author/
           import the full tenant (tools/tofu-authentik-adopt.sh) until the plan
           is no-op; (b) a service flipped enabled→false (install_* off) and
-          dropped out of the registry filter — review the plan and run
-          `tofu apply tfplan` supervised (or let the next blank converge it).
+          dropped out of the registry filter — review the plan, then run the
+          supervised apply below (or let the next blank converge it).
+          RECOVER: `cd {{ _tf_dir }} && tofu apply -parallelism=1 tfplan`
+          — run it from {{ _tf_dir }} (elsewhere tofu answers "No configuration
+          files"), pass `tfplan` so you apply the plan you just reviewed rather
+          than a fresh one, and keep `-parallelism=1`: the outpost attachment is
+          a read-modify-write over one provider list, and concurrent writes have
+          orphaned 9 forward_auth services into 404s before.
       when:
         - (authentik_engine | default('blueprint')) == 'tofu'
         - _tofu_destroys | int > 0
@@ -247,7 +253,12 @@
           env / OIDC discovery; an in-place flip breaks SSO silently. Usual cause
           is a registry slug change or a stray client_id/external_host override
           in a plugin block — revert the registry edit, or migrate the reference
-          deliberately (recreate the provider) and re-run.
+          deliberately and re-run. IF THE CHANGE IS INTENDED (e.g. a service
+          moving domain — face.<tld> → os.<tld>, 2026-07-20): review the plan and
+          apply it supervised, exactly as for the destroy guard:
+          `cd {{ _tf_dir }} && tofu apply -parallelism=1 tfplan`. Then re-run the
+          playbook — consumers reading the old value (OIDC discovery, forward-auth
+          redirect URIs) only pick the new one up on the next converge.
       when:
         - (authentik_engine | default('blueprint')) == 'tofu'
         - _tofu_bad_updates | length > 0
