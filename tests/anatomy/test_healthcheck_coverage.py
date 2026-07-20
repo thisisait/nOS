@@ -156,3 +156,25 @@ def test_allowlist_entries_are_actually_health_blind():
 def test_fixed_and_allowlist_disjoint():
     overlap = sorted(set(FIXED) & set(HEALTH_BLIND))
     assert not overlap, f"Services in both FIXED and HEALTH_BLIND: {overlap}"
+
+
+def test_miniflux_healthcheck_is_db_aware():
+    """miniflux's probe must hit a DB-dependent route, not /healthcheck.
+
+    2026-07-20: Postgres was reinitialised at 05:25 while this container had
+    been up since 22:08 the previous day, so miniflux alone missed the
+    re-migration that every restarted service got — its schema was gone. The
+    canonical upstream probe (`miniflux -healthcheck auto` → /healthcheck)
+    answers from the HTTP layer and never touches Postgres, so the container
+    reported `healthy` for 19 hours while every real request 500'd, and the
+    STRICT health-wait passed it. "Green != working" — the probe must be able
+    to see an empty schema.
+    """
+    tpl = (ROOT / "roles/pazny.miniflux/templates/compose.yml.j2").read_text()
+    probe = next((ln for ln in tpl.splitlines() if ln.strip().startswith("test:")), "")
+    assert probe, "miniflux must declare a healthcheck"
+    assert "-healthcheck" not in probe, (
+        "miniflux is back on the DB-blind upstream probe (`miniflux -healthcheck "
+        "auto` → /healthcheck answers without touching Postgres)"
+    )
+    assert "8080/" in probe, "miniflux probe must request a DB-rendering route (/)"

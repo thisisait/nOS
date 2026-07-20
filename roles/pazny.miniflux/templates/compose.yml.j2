@@ -35,10 +35,16 @@ services:
       SMTP_FROM: "miniflux@{{ tenant_domain | default('dev.local') }}"
 {% endif %}
     healthcheck:
-      # miniflux ships no curl; its own binary carries a built-in probe that
-      # reads LISTEN_ADDR (":8080") to locate the health endpoint (canonical
-      # upstream compose recipe).
-      test: ["CMD", "/usr/bin/miniflux", "-healthcheck", "auto"]
+      # DB-AWARE ON PURPOSE. The canonical upstream probe
+      # (`miniflux -healthcheck auto` → /healthcheck) answers 200 from the HTTP
+      # layer alone and NEVER touches Postgres. On 2026-07-20 that let a
+      # miniflux whose schema had vanished (Postgres was reinitialised at 05:25
+      # while this container had been up since 22:08 the previous day, so it
+      # alone missed the re-migration every restarted service got) report
+      # `healthy` for 19 hours while every real request 500'd — and the STRICT
+      # health-wait passed it. `/` renders a session, so it fails when the DB
+      # is empty; wget exits non-zero on 5xx and is present in the image.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
       interval: 30s
       timeout: 10s
       retries: 3
