@@ -1,0 +1,48 @@
+# 01 — A disabled service's compose override lingers on the host
+
+## The fee
+
+The role render path is **create-only**. Each role writes
+`{{ stacks_dir }}/<stack>/overrides/<svc>.yml`, and the orchestrators merge
+whatever `ansible.builtin.find` turns up — but nothing ever removes a fragment.
+
+Two cases, and only one is closed:
+
+- **Retired** (the service is gone from nOS) — closed 2026-07-20 by
+  `nos_retired_services` + `tasks/stacks/prune-retired.yml`.
+- **Disabled** (`install_<svc>: false`, the service still ships) — **open.** The
+  fragment stays on disk and keeps being merged into `docker compose up`, so a
+  service the operator switched off can keep its config alive, and in some shapes
+  keep running, until something else recreates the stack.
+
+The asymmetry is the fee: we fixed the case that failed loudly and left the case
+that does not fail at all.
+
+## When the bill comes due
+
+Whenever a service is toggled off on a host that has already converged with it
+on. The failure is not an error — it is a container or a config that is still
+there after the operator believes they removed it, discovered later by someone
+wondering why a disabled service is answering.
+
+It also compounds with the blank allowlist gap: a disabled service's *data* is
+not wiped either, so the next enable resurrects a half-old state.
+
+## How it was found
+
+Sideways. Puter's removal left `puter.yml` + `puter-base.yml` behind and failed
+the whole `iiab` stack (`unable to prepare context: path .../files/puter not
+found`). Fixing the retired case made the disabled case visible by contrast — it
+was never reported by anything.
+
+## What closes it
+
+The managed-resource manifest in
+[`docs/plans/blank-uninstall-managed-resources.md`](../plans/blank-uninstall-managed-resources.md)
+(P1.5): a declared inventory of what a service owns — override fragments, data
+dirs, routes, Authentik objects — so disable and remove both become
+*reconciliation* rather than "stop writing new files".
+
+Deliberately **not** solved by "prune any override without a matching role": that
+heuristic eats legitimate fragments with no 1:1 role, e.g. the apps_runner's
+merged `auto.yml`.

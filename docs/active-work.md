@@ -83,16 +83,15 @@ user-files), misses services, and is create-only rather than reconciling. Plan:
 
 ## Operator to-dos
 
-- **miniflux is 500ing live (found 2026-07-20).** Its Postgres DB has **0 tables** —
-  every other PG database is intact (authentik 215, infisical 747, metabase 160…), so
-  nothing was wiped wholesale. Startup logs show migrations DID run (0→125, admin
-  created) and postgres DNS dropped afterwards, so the schema went away under a running
-  container. Config is correct (`RUN_MIGRATIONS=1` + `CREATE_ADMIN=1` live in the
-  container), so a re-provision re-migrates: `tools/nos-stacks.sh miniflux`. Nothing to
-  lose (0 tables; feeds re-sync). **Class-risk:** the container reports `healthy` while
-  every request 500s — its healthcheck doesn't touch the DB, which is exactly the gap
-  the healthcheck-coverage work targets. Worth a DB-aware probe for the PG-backed
-  services that migrate only at startup.
+- **Hidden fees backlog** — [`docs/hidden_fees/`](hidden_fees/) now holds the
+  deferred-cost items that fail silently rather than loudly (disabled-service
+  overrides, DB-blind healthchecks, leading-digit slugs, `docs/systems` drift).
+  Not urgent by construction; revisit when touching the surface each names.
+- **miniflux — FIXED 2026-07-20, verified live** (14 tables, healthy). Its schema
+  had vanished when Postgres was reinitialised under a container that was never
+  restarted, and a DB-blind healthcheck certified it healthy for 19h while every
+  request 500'd. The probe is DB-aware now; the *class* is
+  [`hidden_fees/02`](hidden_fees/02-db-blind-healthchecks.md).
 - **TCC grant for /Volumes/SSD1TB** — restic off-site leg fails `operation not
   permitted`; blocks the backup DR round-trip verify (S4 leftover).
 - Optional: fire the uptime-kuma 2.2.1 upgrade recipe (D3; breaking schema,
