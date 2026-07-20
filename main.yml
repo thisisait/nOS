@@ -1045,9 +1045,12 @@
       when: uninstall | default(false) | bool
       tags: ['uninstall', 'reset']
 
+    # No `| bool` on the end_play `when:` below — a `meta:` task's condition is
+    # compiled in a filter-less context, where any ansible filter throws "No
+    # filter named". `default()` is stock Jinja and a real boolean is truthy.
     - name: "[Uninstall] End the play — no reinstall after teardown"
       ansible.builtin.meta: end_play
-      when: uninstall | default(false) | bool
+      when: uninstall | default(false)
       tags: ['uninstall', 'reset']
 
     # ──────────────────────────────────────────────────────────────────────────
