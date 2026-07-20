@@ -25,7 +25,6 @@ EXCEPTIONS = {
     ("pazny.mcp_gateway", "mcpo_version"): "ghcr.io/open-webui/mcpo publishes only main/latest — no semver tag exists",
     ("pazny.paperclip", "paperclip_version"): "ghcr.io/paperclipai/paperclip publishes only latest — no fixed tag exists",
     ("pazny.freepbx", "freepbx_version"): "excluded service (abandoned image, unfixable CVEs)",
-    ("pazny.spacetimedb", "spacetimedb_version"): "excluded service (BSL license)",
     ("pazny.dotfiles", "dotfiles_repo_version"): "git repo branch ref (dotfiles), not a Docker image tag",
 }
 

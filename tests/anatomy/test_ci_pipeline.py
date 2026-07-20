@@ -128,8 +128,11 @@ def test_woodpecker_post_repo_task_present():
 	# The refresh task MUST come BEFORE the activate POST so the order
 	# is correct on fresh installs. Match on the real URL line (not the
 	# explanation comment, which mentions /api/repos?forge_remote_id too).
+	# The host is matched loosely: 84649c17 moved both calls off the public
+	# domain onto `_woodpecker_api` (loopback) because public-domain DNS is
+	# fatal here — the ordering is the invariant, the host is not.
 	refresh_pos = src.find("flush=true")
-	activate_pos = src.find('url: "https://{{ woodpecker_domain }}/api/repos?forge_remote_id')
+	activate_pos = src.find('url: "{{ _woodpecker_api }}/api/repos?forge_remote_id')
 	assert 0 < refresh_pos < activate_pos, (
 		"refresh task must precede activate task — order matters on "
 		"fresh installs (Woodpecker repo cache is empty)"

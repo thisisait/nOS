@@ -3,8 +3,8 @@
 **Run:** overnight agent-driven build (watcher `bd2d6b80`, authorized 2026-06-15).
 **Branch:** `feat/agentic-upgrade-coexistence` (off the spec-carrying HEAD on `dev`).
 **Scope built:** B1→B6 from §6 of the design doc. **B7 (live pg16→17 acceptance) is EXCLUDED** — it stays operator-supervised, by safety-rail.
-**Design doc:** [`docs/plans/agentic-upgrade-migration-coexistence-design.md`](agentic-upgrade-migration-coexistence-design.md) (§6 build order, §7 open questions, §8 pg16→17 walkthrough, §9 overnight-run charter).
-**Epic plan:** [`docs/plans/agentic-upgrade-migration-coexistence.md`](agentic-upgrade-migration-coexistence.md).
+**Design doc:** [`docs/plans/agentic-upgrade-migration-coexistence-design.md`](../plans/agentic-upgrade-migration-coexistence-design.md) (§6 build order, §7 open questions, §8 pg16→17 walkthrough, §9 overnight-run charter).
+**Epic plan:** [`docs/plans/agentic-upgrade-migration-coexistence.md`](../plans/agentic-upgrade-migration-coexistence.md).
 
 Nothing in this run touched the live host, ran a live apply/cutover, wrote `wing.db`, ran any Postgres cutover, merged, or pushed to GitHub/master. The only ansible run was `--syntax-check`.
 
