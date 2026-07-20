@@ -88,6 +88,16 @@ user-files), misses services, and is create-only rather than reconciling. Plan:
 
 ## Operator to-dos
 
+- **miniflux is 500ing live (found 2026-07-20).** Its Postgres DB has **0 tables** —
+  every other PG database is intact (authentik 215, infisical 747, metabase 160…), so
+  nothing was wiped wholesale. Startup logs show migrations DID run (0→125, admin
+  created) and postgres DNS dropped afterwards, so the schema went away under a running
+  container. Config is correct (`RUN_MIGRATIONS=1` + `CREATE_ADMIN=1` live in the
+  container), so a re-provision re-migrates: `tools/nos-stacks.sh miniflux`. Nothing to
+  lose (0 tables; feeds re-sync). **Class-risk:** the container reports `healthy` while
+  every request 500s — its healthcheck doesn't touch the DB, which is exactly the gap
+  the healthcheck-coverage work targets. Worth a DB-aware probe for the PG-backed
+  services that migrate only at startup.
 - **TCC grant for /Volumes/SSD1TB** — restic off-site leg fails `operation not
   permitted`; blocks the backup DR round-trip verify (S4 leftover).
 - Optional: fire the uptime-kuma 2.2.1 upgrade recipe (D3; breaking schema,
@@ -109,10 +119,10 @@ user-files), misses services, and is create-only rather than reconciling. Plan:
 
 | Surface | State |
 |---|---|
-| Release | `v0.7-beta` ready to tag on `dev` (`5bd11c8c`); pending operator validation converge |
+| Release | `v0.9-beta` docs staged on `dev` (`bab25cd3`); 10 unpushed; tag pending operator |
 | Last verified | converge `ok=1321 failed=0`, 61 containers / 0 unhealthy; e2e 10/10 live |
-| Suites | anatomy 1753 passed; CI-exact 2301 passed / 0 errors; syntax + yamllint clean |
-| CI | **all jobs green** on dev HEAD (pytest + contracts drift were red 3 commits, now fixed) |
+| Suites | anatomy **1840 passed / 1 failed** — the 1 is `test_hub_url_audit` (live-host only, skips in CI): miniflux 500 |
+| CI | green after clearing **6 pre-existing reds** on dev (the prior "all jobs green" snapshot was wrong): woodpecker gate matched a pre-`84649c17` URL · vaultwarden dead pin · tileserver/spacetimedb allowlist rot · archive link rot · `meta: end_play` `\| bool` filter trap |
 | Authentik | engine=tofu; self-reconcile preflight = idempotent non-blank converge |
 | Upgrades | Gitea 1.26.4 armed (agent-authored recipe+migration); PG17 coexistence queued |
 | Remediation queue | ~13 pending / 104 resolved / 4 vendor-blocked / 1 wontfix (pin wave dominant) |
