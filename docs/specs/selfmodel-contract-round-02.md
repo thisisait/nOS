@@ -129,7 +129,13 @@ rather a bad state be visible than rare.
   no Cyrillic, verbatim) that differentiates it from its neighbours — failing
   *my* gate rather than your recall.
 
-**Pin note:** nOS stays on `keap_repo_ref: v1.18.0` through the v0.9-beta release
-run. v1.19.0 lands with the self-model epic, so a release converge and a contract
-migration are never the same run — if that run breaks, we need to know which of
-the two did it.
+**Pin note:** ~~nOS stays on `keap_repo_ref: v1.18.0` through the v0.9-beta
+release run.~~ **CORRECTED in round 4 — this was wrong.** `40aff164` had already
+moved the pin to **v1.18.1** before this was written; I asserted repo state from
+memory instead of reading it. v1.18.0 predates the ontology/links layer split and
+the verb-grouped panel, both live, so pinning back would have cut running
+functionality. The hold is **v1.18.1**.
+
+The reasoning the note was making still stands: v1.19.0 lands with the self-model
+epic, so a release converge and a contract migration are never the same run — if
+that run breaks, we need to know which of the two did it.
