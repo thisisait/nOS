@@ -15,7 +15,7 @@ services:
       # services.yml: correct INTERNAL port + per-mode forward-auth middleware). The
       # removed docker-provider router labels DUPLICATED that with a host-published
       # port var → a same-priority @docker/@file collision that 502'd on coin-flip
-      # (kiwix 8888≠8080, ntfy 2586≠80, puter 5050≠4100, …). enable=false → the
+      # (kiwix 8888≠8080, ntfy 2586≠80, keap 8091≠8080, …). enable=false → the
       # docker provider skips this container; the @file router is authoritative.
       - "traefik.enable=false"
 {% if install_authentik | default(false) and (paperclip_native_oidc_enabled | default(false)) and (tenant_domain_is_local | default(true) | bool) %}

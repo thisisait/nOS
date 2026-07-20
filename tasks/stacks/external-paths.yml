@@ -42,8 +42,6 @@
     uptime_kuma_data_dir: "{{ external_storage_root }}/uptime-kuma"
     homeassistant_config_dir: "{{ external_storage_root }}/homeassistant"
     rustfs_data_dir: "{{ external_storage_root }}/rustfs/data"
-    puter_data_dir: "{{ external_storage_root }}/puter"
-    puter_config_dir: "{{ external_storage_root }}/puter/config"
     jellyfin_config_dir: "{{ external_storage_root }}/jellyfin/config"
     jellyfin_cache_dir: "{{ external_storage_root }}/jellyfin/cache"
     jellyfin_movies_dir: "{{ external_storage_root }}/media/movies"

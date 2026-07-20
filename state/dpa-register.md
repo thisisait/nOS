@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 73 (69 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (67)
+- **Processing activities:** 72 (68 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (66)
 - **Transfers outside the EU:** 0 activities
 - **Activities engaging a third-party processor:** 0
 
@@ -478,18 +478,6 @@ session data.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
-- **Storage:** 'iiab' compose stack on host (Docker volumes)
-- **Security measures:** platform baseline (see above)
-
-#### Puter — `svc_puter`
-- **Purpose:** Operator-hosted cloud-OS web desktop (multi-user, AI, iframe apps). Forward-auth gate ensures only
-Authentik-authenticated principals reach the service.
-- **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `user_files`, `app_state`, `oauth_session_data`
-- **Recipients / processors:** —
-- **Transfers outside EU:** No
-- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** 'iiab' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 

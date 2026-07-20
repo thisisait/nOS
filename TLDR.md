@@ -17,7 +17,7 @@ One `ansible-playbook` run, ~20 minutes on an M4 Pro:
 | **Runtimes** | PHP 8.3 + Composer, Node.js (NVM) + npm/pnpm/yarn, Bun, Python 3.13 (pyenv), Go, .NET |
 | **Core stack** (always on) | MariaDB, PostgreSQL, Redis, Traefik, Portainer, Authentik (server + worker), Infisical, Bluesky PDS |
 | **Observability** (always on) | Grafana, Prometheus, Loki, Tempo, Alloy (unified collector) |
-| **IIAB / productivity** | WordPress, Nextcloud, n8n, Node-RED, Kiwix, offline maps, Jellyfin, Open WebUI, Uptime Kuma, Calibre-Web, Home Assistant, RustFS, Puter, Vaultwarden, ntfy, Miniflux |
+| **IIAB / productivity** | WordPress, Nextcloud, n8n, Node-RED, Kiwix, offline maps, Jellyfin, Open WebUI, Uptime Kuma, Calibre-Web, Home Assistant, RustFS, Vaultwarden, ntfy, Miniflux |
 | **DevOps** | Gitea, GitLab CE, Woodpecker CI, Paperclip, code-server |
 | **B2B** | ERPNext, FreeScout, Outline, HedgeDoc, BookStack, Firefly III, OnlyOffice |
 | **Data** | Metabase, Apache Superset, InfluxDB |
@@ -233,7 +233,6 @@ ansible-playbook main.yml --tags "kiwix"
 | Offline maps | 8080 | `maps.dev.local` |
 | Calibre-Web | 8083 | `books.dev.local` |
 | Home Assistant | 8123 | `home.dev.local` |
-| Puter | 4100 | `desktop.dev.local` |
 | Prometheus / Loki / Tempo / Alloy | 9090 / 3100 / 3200 / 12345 | localhost only |
 | OTLP gRPC / HTTP | 4317 / 4318 | localhost only |
 | Redis / MariaDB / PostgreSQL | 6379 / 3306 / 5432 | localhost only |

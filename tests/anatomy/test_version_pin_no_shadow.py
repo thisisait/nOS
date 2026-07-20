@@ -34,7 +34,6 @@ _VER_RE = re.compile(r'^([a-z0-9_]+_version):\s*["\']?([^"\'#\s]+)')
 INTENTIONAL_SHADOW = {
     "calibreweb_version":     ("config pins the bare version; role keeps the LSIO -lsNNN build tag"),
     "paperclip_version":      ("config pins an exact image SHA; role default is 'latest'"),
-    "puter_version":          ("config pins an exact tag; role default is 'latest'"),
     "qgis_version":           ("config pins 'latest'; role default is the 'LTR' channel"),
     "uptime_kuma_version":    ("config pins an exact patch; role default is the major-track tag"),
     "wordpress_version":      ("config pins the bare version; role keeps the -phpX-apache variant"),

@@ -81,8 +81,6 @@ outline_data_dir: "{{ nos_data_root }}/platform/services/outline/data"
 paperclip_data_dir: "{{ nos_data_root }}/platform/services/paperclip/data"
 portainer_data_dir: "{{ nos_data_root }}/platform/services/portainer/data"
 postgresql_data_dir: "{{ nos_data_root }}/platform/services/postgresql/data"
-puter_config_dir: "{{ nos_data_root }}/platform/services/puter/config"
-puter_data_dir: "{{ nos_data_root }}/platform/services/puter/data"
 qgis_data_dir: "{{ nos_data_root }}/platform/services/qgis/data"
 redis_data_dir: "{{ nos_data_root }}/platform/services/redis/data"
 rustfs_data_dir: "{{ nos_data_root }}/platform/services/rustfs/data"
@@ -459,7 +457,6 @@ install_superset: true           # Apache Superset – data visualization       
 install_iiab_terminal: false      # TUI access via SSH for anyone on LAN [requires: SSH]
 
 # ── Web desktop ───────────────────────────────────────────────────────────────
-install_puter: true              # Puter – cloud OS web desktop (multi-user, AI, iframe apps) [Docker]
 install_face: true               # nOS face – unified web-desktop shell (SvelteKit; composes hub catalog + header-SSO + Bone VFS) [Docker]
 
 # ── Knowledge / cortex ────────────────────────────────────────────────────────
@@ -2061,28 +2058,17 @@ bluesky_pds_email_smtp_url: ""         # SMTP URL for PDS notifications (empty =
 bluesky_pds_email_from: ""             # Email sender (default: noreply@<bluesky_pds_hostname>)
 
 # ==============================================================================
-# PUTER – cloud OS web desktop (multi-user, AI gateway, iframe apps)
-# Docker single container, Ollama auto-detect, per-user isolated storage
-# ==============================================================================
-
-puter_domain: "os{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-puter_api_domain: "api.os{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-puter_port: 5050                               # "05" as in "OS"
-puter_version: "v2.5.1"                        # ghcr.io/heyputer/puter (local build tag; Dockerfile FROM pinned separately)
-puter_file_cache_mb: 512                       # File cache for multi-user (MB)
-puter_admin_email: "{{ default_admin_email }}"
-puter_admin_password: "{{ global_password_prefix }}_pw_puter"
-
-# ==============================================================================
 # nOS face – the unified web-desktop shell (the FACE of the nOS anatomy).
 # Source is VENDORED in-repo at files/anatomy/face (2026-07-18, v0.2); the role
 # syncs it into the build dir and `docker compose` builds nos/face from there
-# (keap/puter build-from-source precedent). forward_auth SSO; the shell composes
+# (keap build-from-source precedent). forward_auth SSO; the shell composes
 # the Wing catalog + Bone VFS + KEAP config DataTables. install_face ON by
 # default. Design doc: docs/plans/nos-face.md, docs/plans/nos-face-shell-v2.md.
 # ==============================================================================
 
-face_domain: "face{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+# os.<tld> — inherited from Puter, which owned it until its removal (2026-07-20).
+# The face IS the operating surface, so it gets the operating-system host.
+face_domain: "os{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 face_port: 5090                                # loopback debug publish (container binds 5090)
 face_version: "latest"                         # nos/face local image tag (source = vendored tree)
 # Config-DataTable source of truth: KEAP /api/tables (with repo/user-state
@@ -2096,7 +2082,7 @@ face_ask_model: ""
 
 # ==============================================================================
 # KEAP – Knowledge Explorer and Preserver (the CORTEX of the nOS anatomy)
-# Built from source by roles/pazny.keap (git clone at keap_repo_ref, puter-
+# Built from source by roles/pazny.keap (git clone at keap_repo_ref, face-
 # style compose build). Human surface behind header_oidc SSO; agent surface
 # /agent/v1 on the loopback port for AgentKit (scope-split bearer tokens).
 # ==============================================================================
@@ -2132,7 +2118,7 @@ keap_public_ingest: true
 # the rest Bearer-credential). Set false to disable the extension entirely.
 keap_extension_surface: true
 # FS-doctrine mirror (KEAP v1.7.0 fs-sync): RO-mount the per-user doctrine tree
-# ({{ nos_data_root }}/tenants/<slug>/users) so per-user files (Puter/euro-office
+# ({{ nos_data_root }}/tenants/<slug>/users) so per-user files (Nextcloud/euro-office
 # documents, library, inbox — class 3) become knowledge objects, per-user attributed.
 # "nOS" = the self-model tree (keap_selfmodel, reserved uid nos-docs) — without
 # it here fs-sync skips the whole digest (this value OVERRIDES the role default).
@@ -2292,7 +2278,6 @@ authentik_app_tiers:
   nextcloud: 3
   outline: 3
   open-webui: 3
-  puter: 3
   vaultwarden: 3
   uptime-kuma: 3
   calibre-web: 3

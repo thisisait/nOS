@@ -7,7 +7,7 @@
 # roles/pazny.hermes), then renders the compose override fragment to
 # {{ stacks_dir }}/iiab/overrides/keap.yml which stack-up.yml collects via
 # `find` and passes as an additional -f flag. The image is built from the
-# clone by `docker compose up` (build-from-source precedent: pazny.puter).
+# clone by `docker compose up` (build-from-source precedent: pazny.face).
 # ==============================================================================
 
 - name: "[pazny.keap] Ensure home and data directories"

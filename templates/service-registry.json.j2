@@ -345,21 +345,6 @@
   "description": "Bitwarden-compatible password vault"
 }) %}
 {% endif %}
-{% if install_puter | default(false) %}
-{% set _ = _services.append({
-  "name": "Puter",
-  "category": "desktop",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_puter",
-  "domain": puter_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
-  "port": puter_port | default(5050),
-  "url": "https://" ~ (puter_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
-  "type": "docker",
-  "stack": "iiab",
-  "description": "Cloud OS web desktop (multi-user, AI)"
-}) %}
-{% endif %}
 {% if install_paperclip | default(false) %}
 {% set _ = _services.append({
   "name": "Paperclip",

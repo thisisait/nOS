@@ -71,7 +71,6 @@ install_paperclip: false         # Requires PostgreSQL Docker
 install_authentik: false         # Requires PostgreSQL + Redis Docker
 install_infisical: false         # Requires PostgreSQL + Redis Docker
 install_vaultwarden: false       # Docker
-install_puter: false             # Docker
 install_keap: false              # Docker; builds nos/keap from a git clone (thisisait/nos-keap, public) — off to skip the heavy image build, like every other Docker stack in the wet-test
 
 configure_dotfiles: false   # Geerlingguy dotfiles - unneeded in CI

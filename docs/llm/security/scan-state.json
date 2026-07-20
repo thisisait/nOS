@@ -286,15 +286,6 @@
       "status": "scanned",
       "notes": "Cycle-16 batch-28 RE-SCAN (2026-07-15, ~10-day re-check): re-verified CLEAN, pin unchanged at kiwix_version 3.8.2. Still NO HIGH/CRITICAL (or any) CVE in the 12-mo window for ghcr.io/kiwix/kiwix-serve -- kiwix/kiwix-tools + kiwix/overview + kiwix/kiwix-desktop GitHub Security Advisories are empty and cvedetails lists no 2025/2026 advisory (only the historic pre-0.9.1 /search?pattern reflected XSS, long fixed). The surfaced 'CVE-2026-58402' carries no product detail on cve.org and does NOT map to Kiwix (cvedetails vendor page shows no 2026 entry). PROBE (unauthenticated_endpoint_scan): forward_auth (traefik_auth_modes.kiwix=proxy -> authentik@file gates ALL endpoints) + 127.0.0.1:8888 loopback (services_lan_access=false) + Tier 4 -> nothing anonymously reachable. Kiwix reads no X-authentik-* identity header, so the Traefik REM-127 underscore-spoof is inert here. No actionable."
     },
-    "puter": {
-      "last_checked": "2026-07-15T04:08:29+02:00",
-      "last_cve_scan": "2026-07-15T04:08:29+02:00",
-      "last_misconfig_scan": null,
-      "last_attack_probe": "2026-07-15T04:08:29+02:00",
-      "findings_count": 1,
-      "status": "scanned",
-      "notes": "Cycle-16 batch-28 RE-SCAN (2026-07-15, ~10-day re-check): REM-108 (LOW) stays PENDING, re-verified, no new CVE. Still CVE-clean -- HeyPuter/puter has NO published security advisories (github.com/HeyPuter/puter/security/advisories empty) and no OSV/NVD hit in the 12-mo window (the 2026 search near-hits -- CVE-2026-2026, CVE-2026-45585, CVE-2026-31431 -- are all unrelated products). Unchanged: files/puter/Dockerfile does `FROM ghcr.io/heyputer/puter:latest` (floating upstream base tag); puter_version v2.5.1 only labels the LOCAL build (nos/puter), so upstream code is unpinned/non-reproducible (the default.config.yml 'FROM pinned separately' comment is inaccurate). Same floating-tag class as woodpecker 'v3' (REM-105) / paperclip sha (REM-097) / tileserver 'latest' (REM-117). Fix: pin FROM to an immutable tag@sha256 digest. PROBE (unauthenticated_endpoint_scan): forward_auth (traefik_auth_modes.puter=proxy -> authentik@file) + 127.0.0.1:5050 loopback (services_lan_access=false) + Tier 3; /healthcheck is intentionally public but only reachable on loopback / behind the Authentik wall. Puter reads no X-authentik-* identity header -> the Traefik REM-127 underscore-spoof is inert here. Mitigated at perimeter."
-    },
     "paperclip": {
       "last_checked": "2026-07-13T04:15:05+02:00",
       "last_cve_scan": "2026-07-13T04:15:05+02:00",

@@ -9,7 +9,7 @@
 # real per-user tree (tenants/<slug>/users/<uid>/).
 #
 # Source lives OUTSIDE nOS (thisisait/nos-face) — roles/pazny.face git-clones
-# the pinned ref and builds nos/face from source (keap clone + puter build
+# the pinned ref and builds nos/face from source (keap clone + build
 # precedents).
 #
 # SSO: forward_auth — the Authentik proxy outpost gates face.<tld> and injects
@@ -72,7 +72,7 @@ authentik:
   slug: face
   name: 'nOS'
   enabled: "{{ install_face | default(false) }}"
-  launch_url: "https://{{ face_domain | default('face' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  launch_url: "https://{{ face_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
   tier: 3
 
 # =============================================================================
@@ -125,7 +125,7 @@ ui-extension:
   hub_card:
     title: "nOS face"
     icon: monitor
-    url: "https://{{ face_domain | default('face' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+    url: "https://{{ face_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
     tier: 3
     description: "The unified web-desktop — apps, files & control in one place"
     health_check: "http://127.0.0.1:{{ face_port | default(5090) }}/health"

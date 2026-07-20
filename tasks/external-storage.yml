@@ -63,8 +63,6 @@
     - "{{ uptime_kuma_data_dir }}"
     - "{{ homeassistant_config_dir }}"
     - "{{ rustfs_data_dir }}"
-    - "{{ puter_data_dir }}"
-    - "{{ puter_config_dir }}"
     - "{{ jellyfin_config_dir }}"
     - "{{ jellyfin_cache_dir }}"
     - "{{ jellyfin_movies_dir }}"

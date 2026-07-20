@@ -966,11 +966,27 @@
       "port": 9003,
       "domain": "auth.dev.local",
       "onboarding": "auto",
-      "auto_enables": ["install_postgresql", "redis_docker"],
-      "dependencies": ["install_postgresql", "redis_docker"],
+      "auto_enables": [
+        "install_postgresql",
+        "redis_docker"
+      ],
+      "dependencies": [
+        "install_postgresql",
+        "redis_docker"
+      ],
       "credential_vars": [
-        {"var": "authentik_secret_key", "label": "Authentik secret key", "type": "secret", "default_pattern": "changeme_pw_authentik_secret"},
-        {"var": "authentik_bootstrap_password", "label": "Authentik admin password", "type": "password", "default_pattern": "changeme_pw_authentik_admin"}
+        {
+          "var": "authentik_secret_key",
+          "label": "Authentik secret key",
+          "type": "secret",
+          "default_pattern": "changeme_pw_authentik_secret"
+        },
+        {
+          "var": "authentik_bootstrap_password",
+          "label": "Authentik admin password",
+          "type": "password",
+          "default_pattern": "changeme_pw_authentik_admin"
+        }
       ],
       "notes": "Login: akadmin / <bootstrap_password>. OIDC providers created automatically via authentik_oidc_apps registry."
     },
@@ -986,11 +1002,27 @@
       "port": 8075,
       "domain": "vault.dev.local",
       "onboarding": "wizard",
-      "auto_enables": ["install_postgresql", "redis_docker"],
-      "dependencies": ["install_postgresql", "redis_docker"],
+      "auto_enables": [
+        "install_postgresql",
+        "redis_docker"
+      ],
+      "dependencies": [
+        "install_postgresql",
+        "redis_docker"
+      ],
       "credential_vars": [
-        {"var": "infisical_encryption_key", "label": "Infisical encryption key", "type": "secret", "default_pattern": "changeme_pw_infisical_enc"},
-        {"var": "infisical_auth_secret", "label": "Infisical auth secret", "type": "secret", "default_pattern": "changeme_pw_infisical_auth"}
+        {
+          "var": "infisical_encryption_key",
+          "label": "Infisical encryption key",
+          "type": "secret",
+          "default_pattern": "changeme_pw_infisical_enc"
+        },
+        {
+          "var": "infisical_auth_secret",
+          "label": "Infisical auth secret",
+          "type": "secret",
+          "default_pattern": "changeme_pw_infisical_auth"
+        }
       ],
       "notes": "First user = admin. Organization: nos. Encryption key is crown jewel — back up offline."
     },
@@ -1009,26 +1041,14 @@
       "auto_enables": [],
       "dependencies": [],
       "credential_vars": [
-        {"var": "vaultwarden_admin_token", "label": "Vaultwarden admin token", "type": "secret", "default_pattern": "changeme_pw_vaultwarden_admin"}
+        {
+          "var": "vaultwarden_admin_token",
+          "label": "Vaultwarden admin token",
+          "type": "secret",
+          "default_pattern": "changeme_pw_vaultwarden_admin"
+        }
       ],
       "notes": "Admin panel: https://pass.dev.local/admin. Signups disabled by default."
-    },
-    {
-      "id": "puter",
-      "name": "Puter",
-      "description": "Cloud OS web desktop — multi-user, AI gateway, iframe apps",
-      "stack": "iiab",
-      "type": "docker",
-      "toggle_var": "install_puter",
-      "default_enabled": false,
-      "tier": 1,
-      "port": 5050,
-      "domain": "os.dev.local",
-      "onboarding": "wizard",
-      "auto_enables": [],
-      "dependencies": [],
-      "credential_vars": [],
-      "notes": "First user = admin (password in docker logs). Ollama auto-detected at localhost:11434."
     },
     {
       "id": "paperclip",
@@ -1042,11 +1062,25 @@
       "port": 3006,
       "domain": "paperclip.dev.local",
       "onboarding": "wizard",
-      "auto_enables": ["install_postgresql"],
-      "dependencies": ["install_postgresql"],
+      "auto_enables": [
+        "install_postgresql"
+      ],
+      "dependencies": [
+        "install_postgresql"
+      ],
       "credential_vars": [
-        {"var": "paperclip_db_password", "label": "Paperclip DB password", "type": "password", "default_pattern": "changeme_pw_paperclip"},
-        {"var": "paperclip_auth_secret", "label": "Paperclip auth secret", "type": "secret", "default_pattern": "changeme_pw_paperclip_auth"}
+        {
+          "var": "paperclip_db_password",
+          "label": "Paperclip DB password",
+          "type": "password",
+          "default_pattern": "changeme_pw_paperclip"
+        },
+        {
+          "var": "paperclip_auth_secret",
+          "label": "Paperclip auth secret",
+          "type": "secret",
+          "default_pattern": "changeme_pw_paperclip_auth"
+        }
       ],
       "notes": "Authenticated mode (0.0.0.0 bind). PostgreSQL + Redis from infra stack."
     },
@@ -1063,7 +1097,9 @@
       "domain": null,
       "onboarding": "auto",
       "auto_enables": [],
-      "dependencies": ["enable_ssh"],
+      "dependencies": [
+        "enable_ssh"
+      ],
       "credential_vars": [],
       "notes": "SSH access: ssh home@<ip>. ForceCommand TUI, no shell escape. Python Textual framework."
     }
@@ -1176,97 +1212,364 @@
     }
   ],
   "homebrew_packages": [
-    { "name": "autoconf", "category": "basic" },
-    { "name": "bash-completion", "category": "basic" },
-    { "name": "git", "category": "basic" },
-    { "name": "gh", "category": "basic" },
-    { "name": "gpg", "category": "basic" },
-    { "name": "wget", "category": "basic" },
-    { "name": "curl", "category": "basic" },
-    { "name": "jq", "category": "basic" },
-    { "name": "yq", "category": "basic" },
-    { "name": "htop", "category": "basic" },
-    { "name": "tmux", "category": "basic" },
-    { "name": "tree", "category": "basic" },
-    { "name": "pv", "category": "basic" },
-    { "name": "watch", "category": "basic" },
-    { "name": "readline", "category": "basic" },
-    { "name": "openssl", "category": "basic" },
-    { "name": "libevent", "category": "basic" },
-    { "name": "sqlite", "category": "basic" },
-    { "name": "gettext", "category": "basic" },
-    { "name": "ssh-copy-id", "category": "basic" },
-    { "name": "zsh-history-substring-search", "category": "basic" },
-    { "name": "nmap", "category": "network" },
-    { "name": "httpie", "category": "network" },
-    { "name": "iperf", "category": "network" },
-    { "name": "wrk", "category": "network" },
-    { "name": "mkcert", "category": "ssl" },
-    { "name": "nss", "category": "ssl" },
-    { "name": "gifsicle", "category": "media" },
-    { "name": "pngpaste", "category": "media" },
-    { "name": "ffmpeg", "category": "media" },
-    { "name": "imagemagick", "category": "media" },
-    { "name": "yt-dlp", "category": "media" },
-    { "name": "exiftool", "category": "media" },
-    { "name": "git-lfs", "category": "dev-tools" },
-    { "name": "pre-commit", "category": "dev-tools" },
-    { "name": "act", "category": "dev-tools" },
-    { "name": "ripgrep", "category": "modern-cli" },
-    { "name": "fd", "category": "modern-cli" },
-    { "name": "bat", "category": "modern-cli" },
-    { "name": "eza", "category": "modern-cli" },
-    { "name": "fzf", "category": "modern-cli" },
-    { "name": "zoxide", "category": "modern-cli" },
-    { "name": "starship", "category": "modern-cli" },
-    { "name": "lazygit", "category": "modern-cli" },
-    { "name": "ncdu", "category": "modern-cli" },
-    { "name": "duf", "category": "modern-cli" },
-    { "name": "tldr", "category": "modern-cli" },
-    { "name": "hyperfine", "category": "modern-cli" },
-    { "name": "redis", "category": "database" },
-    { "name": "restic", "category": "backup" },
-    { "name": "mac-cleanup-go", "category": "backup" },
-    { "name": "cmake", "category": "build-tools" },
-    { "name": "ninja", "category": "build-tools" },
-    { "name": "llvm", "category": "build-tools" },
-    { "name": "ccache", "category": "build-tools" },
-    { "name": "pkg-config", "category": "build-tools" },
-    { "name": "libomp", "category": "build-tools" },
-    { "name": "openblas", "category": "build-tools" },
-    { "name": "protobuf", "category": "build-tools" },
-    { "name": "meson", "category": "build-tools" },
-    { "name": "doxygen", "category": "build-tools" }
+    {
+      "name": "autoconf",
+      "category": "basic"
+    },
+    {
+      "name": "bash-completion",
+      "category": "basic"
+    },
+    {
+      "name": "git",
+      "category": "basic"
+    },
+    {
+      "name": "gh",
+      "category": "basic"
+    },
+    {
+      "name": "gpg",
+      "category": "basic"
+    },
+    {
+      "name": "wget",
+      "category": "basic"
+    },
+    {
+      "name": "curl",
+      "category": "basic"
+    },
+    {
+      "name": "jq",
+      "category": "basic"
+    },
+    {
+      "name": "yq",
+      "category": "basic"
+    },
+    {
+      "name": "htop",
+      "category": "basic"
+    },
+    {
+      "name": "tmux",
+      "category": "basic"
+    },
+    {
+      "name": "tree",
+      "category": "basic"
+    },
+    {
+      "name": "pv",
+      "category": "basic"
+    },
+    {
+      "name": "watch",
+      "category": "basic"
+    },
+    {
+      "name": "readline",
+      "category": "basic"
+    },
+    {
+      "name": "openssl",
+      "category": "basic"
+    },
+    {
+      "name": "libevent",
+      "category": "basic"
+    },
+    {
+      "name": "sqlite",
+      "category": "basic"
+    },
+    {
+      "name": "gettext",
+      "category": "basic"
+    },
+    {
+      "name": "ssh-copy-id",
+      "category": "basic"
+    },
+    {
+      "name": "zsh-history-substring-search",
+      "category": "basic"
+    },
+    {
+      "name": "nmap",
+      "category": "network"
+    },
+    {
+      "name": "httpie",
+      "category": "network"
+    },
+    {
+      "name": "iperf",
+      "category": "network"
+    },
+    {
+      "name": "wrk",
+      "category": "network"
+    },
+    {
+      "name": "mkcert",
+      "category": "ssl"
+    },
+    {
+      "name": "nss",
+      "category": "ssl"
+    },
+    {
+      "name": "gifsicle",
+      "category": "media"
+    },
+    {
+      "name": "pngpaste",
+      "category": "media"
+    },
+    {
+      "name": "ffmpeg",
+      "category": "media"
+    },
+    {
+      "name": "imagemagick",
+      "category": "media"
+    },
+    {
+      "name": "yt-dlp",
+      "category": "media"
+    },
+    {
+      "name": "exiftool",
+      "category": "media"
+    },
+    {
+      "name": "git-lfs",
+      "category": "dev-tools"
+    },
+    {
+      "name": "pre-commit",
+      "category": "dev-tools"
+    },
+    {
+      "name": "act",
+      "category": "dev-tools"
+    },
+    {
+      "name": "ripgrep",
+      "category": "modern-cli"
+    },
+    {
+      "name": "fd",
+      "category": "modern-cli"
+    },
+    {
+      "name": "bat",
+      "category": "modern-cli"
+    },
+    {
+      "name": "eza",
+      "category": "modern-cli"
+    },
+    {
+      "name": "fzf",
+      "category": "modern-cli"
+    },
+    {
+      "name": "zoxide",
+      "category": "modern-cli"
+    },
+    {
+      "name": "starship",
+      "category": "modern-cli"
+    },
+    {
+      "name": "lazygit",
+      "category": "modern-cli"
+    },
+    {
+      "name": "ncdu",
+      "category": "modern-cli"
+    },
+    {
+      "name": "duf",
+      "category": "modern-cli"
+    },
+    {
+      "name": "tldr",
+      "category": "modern-cli"
+    },
+    {
+      "name": "hyperfine",
+      "category": "modern-cli"
+    },
+    {
+      "name": "redis",
+      "category": "database"
+    },
+    {
+      "name": "restic",
+      "category": "backup"
+    },
+    {
+      "name": "mac-cleanup-go",
+      "category": "backup"
+    },
+    {
+      "name": "cmake",
+      "category": "build-tools"
+    },
+    {
+      "name": "ninja",
+      "category": "build-tools"
+    },
+    {
+      "name": "llvm",
+      "category": "build-tools"
+    },
+    {
+      "name": "ccache",
+      "category": "build-tools"
+    },
+    {
+      "name": "pkg-config",
+      "category": "build-tools"
+    },
+    {
+      "name": "libomp",
+      "category": "build-tools"
+    },
+    {
+      "name": "openblas",
+      "category": "build-tools"
+    },
+    {
+      "name": "protobuf",
+      "category": "build-tools"
+    },
+    {
+      "name": "meson",
+      "category": "build-tools"
+    },
+    {
+      "name": "doxygen",
+      "category": "build-tools"
+    }
   ],
   "cask_apps": [
-    { "name": "docker", "category": "infra" },
-    { "name": "visual-studio-code", "category": "editors" },
-    { "name": "windsurf", "category": "editors" },
-    { "name": "sublime-text", "category": "editors" },
-    { "name": "ghostty", "category": "terminals" },
-    { "name": "iterm2", "category": "terminals" },
-    { "name": "brave-browser", "category": "browsers" },
-    { "name": "google-chrome", "category": "browsers" },
-    { "name": "firefox", "category": "browsers" },
-    { "name": "raycast", "category": "productivity" },
-    { "name": "slack", "category": "communication" },
-    { "name": "discord", "category": "communication" },
-    { "name": "transmit", "category": "db-tools" },
-    { "name": "sequel-ace", "category": "db-tools" },
-    { "name": "tableplus", "category": "db-tools" },
-    { "name": "insomnia", "category": "dev-tools" },
-    { "name": "balenaetcher", "category": "dev-tools" },
-    { "name": "licecap", "category": "dev-tools" },
-    { "name": "lastpass", "category": "security" },
-    { "name": "openvpn-connect", "category": "security" },
-    { "name": "vlc", "category": "media" },
-    { "name": "spotify", "category": "media" },
-    { "name": "handbrake", "category": "media" },
-    { "name": "blender", "category": "creative" },
-    { "name": "obsidian", "category": "knowledge" },
-    { "name": "tailscale", "category": "network" },
-    { "name": "jordanbaird-ice", "category": "system" },
-    { "name": "stats", "category": "system" }
+    {
+      "name": "docker",
+      "category": "infra"
+    },
+    {
+      "name": "visual-studio-code",
+      "category": "editors"
+    },
+    {
+      "name": "windsurf",
+      "category": "editors"
+    },
+    {
+      "name": "sublime-text",
+      "category": "editors"
+    },
+    {
+      "name": "ghostty",
+      "category": "terminals"
+    },
+    {
+      "name": "iterm2",
+      "category": "terminals"
+    },
+    {
+      "name": "brave-browser",
+      "category": "browsers"
+    },
+    {
+      "name": "google-chrome",
+      "category": "browsers"
+    },
+    {
+      "name": "firefox",
+      "category": "browsers"
+    },
+    {
+      "name": "raycast",
+      "category": "productivity"
+    },
+    {
+      "name": "slack",
+      "category": "communication"
+    },
+    {
+      "name": "discord",
+      "category": "communication"
+    },
+    {
+      "name": "transmit",
+      "category": "db-tools"
+    },
+    {
+      "name": "sequel-ace",
+      "category": "db-tools"
+    },
+    {
+      "name": "tableplus",
+      "category": "db-tools"
+    },
+    {
+      "name": "insomnia",
+      "category": "dev-tools"
+    },
+    {
+      "name": "balenaetcher",
+      "category": "dev-tools"
+    },
+    {
+      "name": "licecap",
+      "category": "dev-tools"
+    },
+    {
+      "name": "lastpass",
+      "category": "security"
+    },
+    {
+      "name": "openvpn-connect",
+      "category": "security"
+    },
+    {
+      "name": "vlc",
+      "category": "media"
+    },
+    {
+      "name": "spotify",
+      "category": "media"
+    },
+    {
+      "name": "handbrake",
+      "category": "media"
+    },
+    {
+      "name": "blender",
+      "category": "creative"
+    },
+    {
+      "name": "obsidian",
+      "category": "knowledge"
+    },
+    {
+      "name": "tailscale",
+      "category": "network"
+    },
+    {
+      "name": "jordanbaird-ice",
+      "category": "system"
+    },
+    {
+      "name": "stats",
+      "category": "system"
+    }
   ],
   "macos_settings": [
     {

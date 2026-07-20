@@ -68,7 +68,6 @@ REQUIRED_BIND_MOUNT_FLAGS = {
     "install_superset",
     "install_bluesky_pds",
     "install_paperclip",
-    "install_puter",
     "install_authentik",
     "install_infisical",
     "install_vaultwarden",

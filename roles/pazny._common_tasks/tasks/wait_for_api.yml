@@ -22,7 +22,7 @@
 #   wait_hard_fail     (opt)  default false. false => `failed_when: false`
 #                             (best-effort; never aborts the play). true => the
 #                             loop must FAIL the play if the API never comes up
-#                             (the 2026-05-08 behaviour for ha/jellyfin/owui/puter).
+#                             (the 2026-05-08 behaviour for ha/jellyfin/owui).
 # ==============================================================================
 
 - name: "{{ wait_name | default('[wait_for_api]') }} Wait for API"

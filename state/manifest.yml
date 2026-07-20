@@ -407,19 +407,6 @@ services:
       timeout_sec: 10
     upgrade_recipe: upgrades/rustfs.yml
 
-  - id: puter
-    category: desktop
-    stack: iiab
-    install_flag: install_puter
-    version_var: puter_version
-    version_source: docker_image
-    image: nos/puter
-    domain_var: puter_domain
-    port_var: puter_port
-    data_path_var: puter_data_dir
-    oidc: proxy
-    rbac_tier: 3
-
   - id: face
     category: desktop
     stack: iiab

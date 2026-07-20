@@ -50,7 +50,7 @@ tofu_authentik_services:
   mode: forward_auth
   tier: 3
   enabled: '{{ install_face | default(false) }}'
-  external_host: https://{{ face_domain | default('face' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
+  external_host: https://{{ face_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-face
 - slug: firefly
   name: Firefly III
@@ -277,13 +277,6 @@ tofu_authentik_services:
   client_secret: '{{ global_password_prefix }}_pw_oidc_portainer'
   redirect_uris:
   - https://{{ portainer_domain }}
-- slug: puter
-  name: Puter
-  mode: forward_auth
-  tier: 3
-  enabled: '{{ install_puter | default(false) }}'
-  external_host: https://{{ puter_domain }}
-  client_id: nos-puter
 - slug: qdrant
   name: Qdrant
   mode: forward_auth

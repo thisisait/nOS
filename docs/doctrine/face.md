@@ -7,7 +7,7 @@
 joining wing/bone/pulse as an in-tree anatomy organ. The separate-repo (`thisisait/nos-face`) pinned-tag
 clone model is **retired** — reproducibility is now the repo commit itself (the `VERSION` marker tracks
 the shell version). `roles/pazny.face` **syncs** the vendored tree into the build dir; `docker compose`
-builds `nos/face` from it (keap/puter build-from-source precedent).
+builds `nos/face` from it (keap build-from-source precedent).
 
 **A shell over an OS that already exists.** face composes surfaces nOS already owns — it does NOT
 reimplement an OS. Identity = Authentik forward-auth; catalog = Wing `/api/v1/hub/systems`; files = Bone

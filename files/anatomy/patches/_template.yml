@@ -21,15 +21,15 @@
 # every apply/verify/rollback step.
 
 id: PATCH-000                          # REQUIRED. Format: PATCH-NNN or PATCH-NNNN.
-component: example                     # REQUIRED. Matches systems.id (e.g. puter, superset).
+component: example                     # REQUIRED. Matches systems.id (e.g. keap, superset).
 severity: MEDIUM                       # REQUIRED. CRITICAL | HIGH | MEDIUM | LOW.
 status: draft                          # REQUIRED. draft | ready | applied | superseded.
 title: "One-line summary of the fix"   # REQUIRED. Rendered as the card heading in Wing.
 
 # Optional cross-refs — surfaced in the UI if present.
 finding_ref: null                      # e.g. "PENTEST-017" (FK to pentest_findings.id).
-upstream_repo: null                    # e.g. "https://github.com/HeyPuter/puter".
-upstream_pr: null                      # e.g. "https://github.com/HeyPuter/puter/pull/123".
+upstream_repo: null                    # e.g. "https://github.com/getgrav/grav".
+upstream_pr: null                      # e.g. "https://github.com/getgrav/grav/pull/123".
 maintainers: ["pazny"]
 
 notes: |

@@ -102,7 +102,6 @@ gate-watched `autologin` key):
 | **woodpecker** | Gitea OAuth2 consent (transitively Authentik) | needs-upstream | already Authentik-rooted via Gitea native-OIDC; no `WOODPECKER_OIDC_*` / trusted-proxy env exists upstream to drop the intermediate consent click |
 | **paperclip** | better-auth session | header-provision-patch | better-auth trusted-header / genericOAuth adapter (fork/upstream app code) |
 | **openclaw** | gateway token | header-provision-patch | teach the nOS-owned gateway to trust forward-auth headers (own code) |
-| **puter** | Puter user dir | needs-upstream | Authentik OIDC plugin against Puter's TS plugin architecture |
 | **calibre-web** | username/password | header-provision-patch | (owned by separate work) |
 | **influxdb (OSS)** | local user DB | needs-upstream | OIDC is Enterprise-gated |
 | **metabase (OSS)** | Metabase user dir | needs-upstream | OIDC is Pro/Enterprise-gated |
@@ -110,7 +109,7 @@ gate-watched `autologin` key):
 | **snappymail** | IMAP/SMTP (Stalwart) | no (by-design) | webmail identity is IMAP-determined; SSO for IMAP does not exist |
 
 None of the five quick-win candidates (code-server, woodpecker, paperclip,
-openclaw, puter) turned out to be cleanly config-doable today without faking — so
+openclaw) turned out to be cleanly config-doable today without faking — so
 none ship a config change; each is documented honestly via its sentinel +
 `docs/upstream-pr-opportunities.md`. The upstream-blocked trio (influxdb,
 metabase, uptime-kuma) and the by-design snappymail are tracked the same way.

@@ -442,7 +442,6 @@ bone_event "security.cycle_complete" \
 | 3 | `n8n` | 7+ CVEs/year, recurring sandbox escape pattern |
 | 4 | `openwebui` | Prompt injection → tool execution, ZDI CVEs vendor-blocked |
 | 5 | `rustfs` | Alpha software, auth logic bugs, S3-compat attack surface |
-| 6 | `puter` | We maintain custom patches — CORS/cookie/filesystem exposure |
 | 7 | `bone` / `wing` | Anatomy core — event stream + SQLite + admin state |
 | 8 | `infisical` | Secrets vault — auth bypass = full credential exfil |
 | 9 | `vaultwarden` | Password vault |
@@ -460,7 +459,6 @@ bone_event "security.cycle_complete" \
 | n8n | `n8n-io/n8n` |
 | openwebui | `open-webui/open-webui` |
 | rustfs | `rustfs/rustfs` |
-| puter | `HeyPuter/puter` |
 | infisical | `Infisical/infisical` |
 | vaultwarden | `dani-garcia/vaultwarden` |
 | gitea | `go-gitea/gitea` |

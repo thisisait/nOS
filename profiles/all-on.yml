@@ -69,7 +69,6 @@ install_uptime_kuma: true
 install_calibreweb: true
 install_homeassistant: true
 install_rustfs: true
-install_puter: true
 install_keap: true               # KEAP cortex — knowledge system (built from nos-keap source)
 install_ntfy: true
 install_miniflux: true

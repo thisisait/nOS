@@ -84,10 +84,10 @@ The provider (thisisait.eu) has remote access to all client boxes:
 - Client Authentik delegates authentication to the provider
 - Single sign-on across all client boxes
 
-### 5. Puter as Management UI
-- Provider uses Puter on its BoxNOS as a management dashboard
-- Puter iframe apps: fleet overview, box detail, remote terminal
-- Future: custom Puter "Fleet Manager" app
+### 5. nOS face as Management UI
+- Provider uses nOS face on its BoxNOS as a management dashboard
+- face windows: fleet overview, box detail, remote terminal
+- Future: a native "Fleet Manager" face app
 
 ## Instance Configuration
 
@@ -122,7 +122,7 @@ provider_tailscale_tag: "tag:provider"
 │  │              │     │              │                  │
 │  │ Fleet Mgmt   │     │ Authentik    │◀─── SSO ────┐   │
 │  │ Heartbeat RX │     │ (master IdP) │              │   │
-│  │ Puter UI     │     └──────┬───────┘              │   │
+│  │ face UI      │     └──────┬───────┘              │   │
 │  └──────────────┘            │                      │   │
 │         │                    │ Tailscale             │   │
 │         │              ┌─────┴─────┐                │   │
@@ -148,9 +148,11 @@ provider_tailscale_tag: "tag:provider"
 6. **Backup**: Restic -> local/S3 storage
 7. **Migration**: Export state -> new HW -> import state
 
-## Puter as Management UI
+## nOS face as Management UI
 
-Puter on the provider BoxNOS serves as the visual interface for fleet management:
+nOS face on the provider BoxNOS serves as the visual interface for fleet management.
+(This section named Puter until 2026-07-20; face replaced it as the desktop and Puter
+was removed. The fleet layer itself is still deferred — see `docs/active-work.md`.)
 
 ### Iframe Apps (planned)
 - **Fleet Dashboard** (`fleet.czechbot.eu`) - overview of all boxes, health, alerts
@@ -159,8 +161,8 @@ Puter on the provider BoxNOS serves as the visual interface for fleet management
 - **Config Editor** (`config.czechbot.eu`) - edit config.yml of a client box
 
 ### API Integration
-- Puter calls the Box API (`/api/health`, `/api/status`) of each client
-- Shows data in custom Puter apps (HTML/JS iframe)
+- face calls the Box API (`/api/health`, `/api/status`) of each client
+- Shows data in native face apps (or `ServiceFrame` windows)
 - Authentication via Tailscale + API key
 
 ## Security model

@@ -395,9 +395,6 @@
         (install_paperclip | default(false)) | ternary(
           [paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip')], [])
         +
-        (install_puter | default(false)) | ternary(
-          [puter_data_dir | default(ansible_facts['env']['HOME'] + '/puter')], [])
-        +
         (install_keap | default(false)) | ternary(
           [keap_data_dir | default(nos_data_root + '/platform/services/keap/data')], [])
         +

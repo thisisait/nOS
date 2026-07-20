@@ -284,7 +284,7 @@
       "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "pluginVersion": "11.0.0",
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "expr": "count(time() - container_last_seen{name=~\"wordpress|nextcloud|n8n|node-red|kiwix|jellyfin|openwebui|uptime-kuma|calibre.*|homeassistant|rustfs|puter|vaultwarden|ntfy|miniflux|maps\"} < 60)", "legendFormat": "iiab", "refId": "A"}
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "editorMode": "code", "expr": "count(time() - container_last_seen{name=~\"wordpress|nextcloud|n8n|node-red|kiwix|jellyfin|openwebui|uptime-kuma|calibre.*|homeassistant|rustfs|face|vaultwarden|ntfy|miniflux|maps\"} < 60)", "legendFormat": "iiab", "refId": "A"}
       ],
       "title": "iiab",
       "type": "stat"

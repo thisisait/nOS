@@ -395,23 +395,6 @@
       "last_checked": null
     },
     {
-      "id": "puter",
-      "name": "Puter",
-      "category": "docker",
-      "stack": "iiab",
-      "image": "nos/puter",
-      "version_var": "puter_version",
-      "default_version": "latest",
-      "pinned": false,
-      "network_exposed": true,
-      "has_web_ui": true,
-      "priority": "medium",
-      "upstream_repo": "HeyPuter/puter",
-      "port": 5050,
-      "domain": "os.dev.local",
-      "last_checked": null
-    },
-    {
       "id": "vaultwarden",
       "name": "Vaultwarden",
       "category": "docker",

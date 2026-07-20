@@ -1,5 +1,12 @@
 # Puter + the KEAP document-flow bridge — investigation & incremental plan
 
+> **ARCHIVED 2026-07-20 — Puter was removed.** This investigation is *why*: it
+> established that Puter's VFS is DB metadata + opaque UUID blobs rather than real
+> files (class-1, not class-3), so it could never be the document producer feeding
+> KEAP — and nOS face had already replaced it as the desktop. The class-1-vs-class-3
+> rule it produced survives in `docs/doctrine/filesystem.md`.
+
+
 > Deep investigation 2026-07-18 (upstream Puter + nOS impl). Supersedes the
 > `fs-doctrine.md` phrasing "Puter mounts the user's `documents/`; euro-office
 > edits the same files" — that is **infeasible** against upstream Puter (see §Verdict).

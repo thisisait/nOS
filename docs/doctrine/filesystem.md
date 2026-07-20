@@ -31,10 +31,12 @@ sets that one var, not 47 per-service paths.
 3. **FS-native per-user** — euro-office docs, **calibre library (personal)**, KEAP inbox,
    agent scratch, and **nOS-face user-state** (`.face/state.db` — personalization + app KV,
    outside the fs-sync classes so KEAP never ingests it). The filesystem **is** the boundary.
-   → `tenants/<t>/users/<uid>/`. **Puter is NOT class-3** — its VFS is DB metadata + opaque
-   UUID blobs, not real files, so it is class-1 (`platform/services/puter/`); the class-3
-   document producer feeding KEAP is a real-file service (Nextcloud). See
-   `docs/plans/puter-and-document-flow.md` + `docs/plans/nos-face.md`.
+   → `tenants/<t>/users/<uid>/`. **A service is class-3 only if it stores REAL FILES.** A
+   web-desktop whose "filesystem" is DB metadata + opaque UUID blobs is class-1 no matter
+   how much it looks like a file manager — the class-3 document producer feeding KEAP must
+   be a real-file service (Nextcloud). This rule was established by the 2026-07-18 Puter
+   investigation and outlived the service: Puter was removed 2026-07-20. See
+   `docs/archive/puter-and-document-flow.md` + `docs/plans/nos-face.md`.
 
 **Isolation is real only on Linux.** Per-user 0700 needs distinct UIDs. macOS runs every
 container as one user → macOS gets *structure*, not per-user isolation; macOS multi-tenant =

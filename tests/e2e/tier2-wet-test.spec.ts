@@ -102,7 +102,6 @@ const FORWARD_AUTH: ServiceEntry[] = [
   { slug: 'uptime',       url: `https://uptime.${NOS_HOST}/` },
   { slug: 'calibre',      url: `https://books.${NOS_HOST}/` },
   { slug: 'kiwix',        url: `https://kiwix.${NOS_HOST}/` },
-  { slug: 'puter',        url: `https://os.${NOS_HOST}/` },
   { slug: 'wing',         url: `https://wing.${NOS_HOST}/` },
   { slug: 'metabase',     url: `https://bi.${NOS_HOST}/` },
   { slug: 'mailpit',      url: `https://mail.${NOS_HOST}/` },

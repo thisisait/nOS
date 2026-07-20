@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~50 Docker services organized into 73 Ansible roles under the `pazny.*` namespace, 69 anatomy plugins for cross-service wiring, SSO (Authentik), secrets vault (Infisical), a unified web-desktop (nOS face) + Puter, AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `blank=true` wipes everything and reinstalls from scratch.
+**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~50 Docker services organized into 72 Ansible roles under the `pazny.*` namespace, 68 anatomy plugins for cross-service wiring, SSO (Authentik), secrets vault (Infisical), a unified web-desktop (nOS face), AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `blank=true` wipes everything and reinstalls from scratch.
 
 `nOS` is the open-source reference implementation behind [**This is AIT — Agentic IT**](https://thisisait.eu). Forked from geerlingguy/mac-dev-playbook → roles renamed under the `pazny.*` namespace.
 
@@ -159,7 +159,7 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 |-------|------|
 | **infra** | MariaDB, PostgreSQL, Redis, Portainer, Traefik, Bluesky PDS, Authentik (server + worker), Infisical |
 | **observability** | Grafana, Prometheus, Loki, Tempo, InfluxDB |
-| **iiab** | WordPress, Nextcloud, n8n, Node-RED, Kiwix, offline maps, Jellyfin, Open WebUI, MCP Gateway (mcpo), Uptime Kuma, Calibre-Web, Home Assistant, RustFS, Puter, KEAP (cortex), Vaultwarden, ntfy, Miniflux |
+| **iiab** | WordPress, Nextcloud, n8n, Node-RED, Kiwix, offline maps, Jellyfin, Open WebUI, MCP Gateway (mcpo), Uptime Kuma, Calibre-Web, Home Assistant, RustFS, KEAP (cortex), Vaultwarden, ntfy, Miniflux |
 | **apps** | Tier-2 manifest-driven apps (apps_runner — Documenso, 2FAuth, Qdrant, Roundcube) |
 | **devops** | Gitea, Woodpecker CI, GitLab, Paperclip, code-server |
 | **b2b** | ERPNext, FreeScout, Outline, HedgeDoc, BookStack, Firefly III, OnlyOffice |
@@ -198,7 +198,7 @@ Central SSO via Authentik at `auth.<tld>` (default `auth.dev.local`). OIDC provi
   - Firefly III (β1.A 2026-05-05), KEAP/cortex (`X-Authentik-uid`-keyed per-user rows, 2026-07-10)
 
 - **`forward_auth`** — pure access gate. Authentik session = "you're in"; service has no per-user state. Same Authentik provider object as header_oidc.
-  - Uptime Kuma, Calibre-Web, Kiwix, Paperclip, Puter, Wing, code-server, ntfy, InfluxDB (OSS), ONLYOFFICE, Mailpit, Metabase, SpacetimeDB, OpenClaw, Hermes, Qdrant, SnappyMail, Woodpecker (route gate on top of Gitea-OAuth app-auth)
+  - Uptime Kuma, Calibre-Web, Kiwix, Paperclip, Wing, code-server, ntfy, InfluxDB (OSS), ONLYOFFICE, Mailpit, Metabase, SpacetimeDB, OpenClaw, Hermes, Qdrant, SnappyMail, Woodpecker (route gate on top of Gitea-OAuth app-auth)
 
 - **No SSO:** FreePBX, QGIS
 - **AT Protocol identity:** Bluesky PDS (the Authentik→PDS bridge auto-provisions `@user.bsky.<tld>` accounts)
@@ -212,7 +212,7 @@ Cookie domain `.<tld>` enables cross-subdomain session sharing. Embedded outpost
 Four access tiers bound to Authentik groups via expression policies (`authentik_rbac_tiers` + `authentik_app_tiers` in `default.config.yml`). The per-tier service lists below are **representative, not exhaustive** — the authoritative per-service tier is each plugin's `authentik.tier` (with `authentik_app_tiers` as the legacy Tier-2 fallback):
 - **Tier 1 (admin):** Portainer, Infisical, Grafana — `nos-providers`, `nos-admins`
 - **Tier 2 (manager):** Gitea, GitLab, n8n, Superset, Metabase, Paperclip, ERPNext, FreeScout — + `nos-managers`
-- **Tier 3 (user):** Nextcloud, Outline, Open WebUI, Puter, Vaultwarden, Uptime Kuma, Calibre-Web, Home Assistant — + `nos-users`
+- **Tier 3 (user):** Nextcloud, Outline, Open WebUI, nOS face, Vaultwarden, Uptime Kuma, Calibre-Web, Home Assistant — + `nos-users`
 - **Tier 4 (guest):** Kiwix, Jellyfin, WordPress — + `nos-guests`
 
 Group names are configurable via `authentik_rbac_tiers`. Legacy installs provisioned before 2026-04-22 carry the old `devboxnos-*` prefix — migrate by updating group names in Authentik, or run `blank=true` to regenerate.

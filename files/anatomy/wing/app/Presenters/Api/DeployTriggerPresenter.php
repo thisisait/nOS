@@ -79,7 +79,7 @@ final class DeployTriggerPresenter extends BaseApiPresenter
 		'wordpress', 'nextcloud', 'jellyfin', 'open_webui', 'openwebui',
 		'home_assistant', 'homeassistant', 'calibre_web', 'calibreweb',
 		'kiwix', 'mcp_gateway', 'mcpgateway', 'n8n', 'nodered',
-		'puter', 'vaultwarden', 'ntfy', 'miniflux',
+		'face', 'vaultwarden', 'ntfy', 'miniflux',
 		'rustfs', 'uptime_kuma', 'uptimekuma', 'documenso', 'twofauth',
 		'qdrant', 'roundcube',
 		// Tier-2 apps runner

@@ -4,7 +4,7 @@
 # ansible.builtin.find over {{ stacks_dir }}/iiab/overrides/*.yml.
 #
 # Built from source: the role clones nos-keap at {{ keap_repo_ref }} and
-# `docker compose up` builds nos/keap from the clone (puter precedent). The
+# `docker compose up` builds nos/keap from the clone (face precedent). The
 # image's Dockerfile bakes a HEALTHCHECK on /api/health, so the STRICT
 # in-stream health-wait (A19) sees a real health state.
 #
@@ -42,7 +42,7 @@ services:
       # FS-doctrine mirror (KEAP v1.7.0 server/fs-sync.ts): the per-user tree
       # {{ nos_data_root }}/tenants/<slug>/users/<uid>/{documents,library,inbox}
       # mounted READ-ONLY so KEAP turns per-user files into knowledge objects
-      # WITHOUT ever writing them. Docs land here from Puter/euro-office (class-3);
+      # WITHOUT ever writing them. Docs land here from Nextcloud/euro-office (class-3);
       # fs-sync attributes per user (server/graph.ts keeps users' trees separate).
       - {{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/users:/user-files:ro
 {% if keap_selfmodel | default(true) %}
@@ -62,6 +62,10 @@ services:
       # legitimate identity headers via Traefik's authentik@file on gated_net.
       KEAP_TRUSTED_PROXY: "1"
       KEAP_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
+      # CSP frame-ancestors allowlist for the face shell's Explore window. KEAP
+      # used to hardcode `face.<tld>`, so moving the shell to os.<tld> silently
+      # broke embedding; it now reads this host explicitly (KEAP ≥ v1.18.0).
+      KEAP_FACE_HOST: "{{ face_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       # Canonical public origin — server/routes.ts CSRF same-origin guard +
       # /ext/v1 pairing canonicalOrigin. Without it a non-browser client (no
       # Sec-Fetch-Site) 403s under KEAP_TRUSTED_PROXY, and the extension can't

@@ -118,9 +118,6 @@
 {% if install_vaultwarden | default(false) %}
 {% set _ = _cards.append(card("Vaultwarden", vaultwarden_domain | default('pass' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), vaultwarden_port | default(8062), "Password vault", "iiab")) %}
 {% endif %}
-{% if install_puter | default(false) %}
-{% set _ = _cards.append(card("Puter", puter_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), puter_port | default(5050), "Cloud OS desktop", "iiab")) %}
-{% endif %}
 {% if install_paperclip | default(false) %}
 {% set _ = _cards.append(card("Paperclip", paperclip_domain | default('paperclip' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), paperclip_port | default(3006), "AI agent orchestration", "devops")) %}
 {% endif %}

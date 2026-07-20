@@ -1,7 +1,7 @@
 # nOS face — the unified web-desktop shell
 
 > Living design doc. Promoted from the approved plan 2026-07-18. Companion to the Puter
-> investigation (`docs/plans/puter-and-document-flow.md`) that motivated it. The frontend
+> investigation (`docs/archive/puter-and-document-flow.md`) that motivated it. The frontend
 > lives in its own repo (`thisisait/nos-face`), deployed by `roles/pazny.face` (KEAP pattern).
 
 ## Context

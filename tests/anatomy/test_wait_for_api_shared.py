@@ -41,7 +41,6 @@ ROLE_CONTRACT = {
 	"pazny.homeassistant": {"register": "_ha_ready", "codes": [200, 302], "hard_fail": True},
 	"pazny.jellyfin": {"register": "_jf_ready", "codes": [200], "hard_fail": True},
 	"pazny.open_webui": {"register": "_owui_ready", "codes": [200], "hard_fail": True},
-	"pazny.puter": {"register": "_puter_ready", "codes": [200], "hard_fail": True},
 	"pazny.portainer": {"register": "_portainer_ready", "codes": [200, 303], "hard_fail": False},
 }
 

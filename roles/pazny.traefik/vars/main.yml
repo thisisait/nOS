@@ -94,7 +94,6 @@ traefik_auth_modes:
   calibre_web: proxy
   kiwix: proxy
   paperclip: proxy
-  puter: proxy
   wing: proxy
   code_server: proxy
   ntfy: proxy               # has its own user DB but admin UI is gated
@@ -196,7 +195,6 @@ traefik_container_upstreams:
   firefly:       { port: 8080 }
   onlyoffice:    { port: 80 }
   ntfy:          { port: 80 }
-  puter:         { port: 4100 }
   keap:          { port: 8080 }
   face:          { port: 5090 }
   kiwix:         { port: 8080 }

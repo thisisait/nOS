@@ -12,7 +12,7 @@
 # `Wait for API (N retries left)` loops. docker compose up --wait already gates
 # stack health (see stack-up.yml fail-fast); if we STILL can't reach the port
 # from the host that's a genuine split-brain to surface, not paper over. This is
-# the reference comment the ha/jellyfin/puter waits point back to.
+# the reference comment the ha/jellyfin waits point back to.
 - name: "[pazny.open_webui Post] Wait for API"
   ansible.builtin.include_role:
     name: pazny._common_tasks

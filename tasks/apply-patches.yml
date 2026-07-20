@@ -29,7 +29,7 @@
 #   into Wing's patches_applied table. The record shape:
 #
 #     - patch_id:      "PATCH-001"
-#       component_id:  "puter"
+#       component_id:  "keap"
 #       applied_at:    "2026-04-23T20:12:00Z"
 #       success:       true
 #       rolled_back:   false

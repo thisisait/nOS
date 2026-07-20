@@ -7,7 +7,7 @@ native_oidc/JWT backend like OnlyOffice). When a plugin compose-extension ALSO
 emits docker-provider router labels (`traefik.http.routers.*`), Traefik builds a
 SECOND router for the same Host at the SAME priority — a tie that resolves
 non-deterministically per reload. The label-derived router used a host-published
-port var (kiwix 8888≠8080, ntfy 2586≠80, puter 5050≠4100, …), so when it won the
+port var (kiwix 8888≠8080, ntfy 2586≠80, keap 8091≠8080, …), so when it won the
 coin-flip the proxy 502'd (live root-cause of the Jellyfin/Calibre/Kiwix 502s,
 2026-06-02). It could also silently add/drop forward-auth vs the file router.
 

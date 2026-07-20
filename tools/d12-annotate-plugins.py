@@ -44,7 +44,6 @@ META: dict[str, tuple[str, str]] = {
     "spacetimedb":   ("SpacetimeDB",     "install_spacetimedb"),
     "paperclip":     ("Paperclip",       "install_paperclip"),
     "superset":      ("Superset",        "install_superset"),
-    "puter":         ("Puter",           "install_puter"),
     "wing":          ("Wing",            "install_wing"),
     "miniflux":      ("Miniflux",        "install_miniflux"),
     "hedgedoc":      ("HedgeDoc",        "install_hedgedoc"),

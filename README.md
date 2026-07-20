@@ -3,7 +3,7 @@
 > **One stack. Forty services. Zero SaaS bills.**
 >
 > `nOS` is the open-source integration engine behind [**This is AIT — Agentic IT**](https://thisisait.eu).
-> An Ansible playbook that orchestrates 73 roles, wires 40+ FOSS services together through one SSO,
+> An Ansible playbook that orchestrates 72 roles, wires 40+ FOSS services together through one SSO,
 > and turns an Apple Silicon Mac — or an Ubuntu 24.04 LTS host — into a reproducible, self-hosted, self-managing cloud.
 
 <p align="center">
@@ -169,7 +169,7 @@ grouped into **8 Docker Compose stacks** that boot in dependency order.
 |---|---|---|
 | **infra** (always on, always first) | 9 | MariaDB, PostgreSQL, Redis, Portainer, Traefik, Authentik (server + worker), Infisical, Bluesky PDS |
 | **observability** (always on, always second) | 4 | Grafana, Prometheus, Loki, Tempo (+ Alloy as unified collector on the host) |
-| **iiab** — Internet-in-a-Box & productivity | 12 | WordPress, Nextcloud, n8n, Kiwix, Jellyfin, Open WebUI, Uptime Kuma, Calibre-Web, Home Assistant, RustFS, Puter, Vaultwarden |
+| **iiab** — Internet-in-a-Box & productivity | 12 | WordPress, Nextcloud, n8n, Kiwix, Jellyfin, Open WebUI, Uptime Kuma, Calibre-Web, Home Assistant, RustFS, Vaultwarden |
 | **devops** | 5 | Gitea, Woodpecker CI, GitLab CE, Paperclip, code-server |
 | **b2b** | 7 | ERPNext, FreeScout, Outline, HedgeDoc, BookStack, Firefly III, OnlyOffice |
 | **voip** | 1 | FreePBX (Asterisk) |
@@ -287,7 +287,7 @@ tasks auto-provision OIDC providers and applications for every enabled service.
 |---|---|---|
 | **Native OIDC (env)** | Grafana, Outline, Open WebUI, n8n, GitLab, Vaultwarden | OIDC env vars in the compose override |
 | **Native OIDC (API/CLI)** | Gitea, Nextcloud, Portainer | Admin API / `occ` / PUT `/api/settings` |
-| **Proxy auth** (forward-auth) | Uptime Kuma, Calibre-Web, Home Assistant, Jellyfin, Kiwix, WordPress, ERPNext, FreeScout, Infisical, Paperclip, Superset, Puter, Metabase | Nginx `auth_request` + Authentik embedded outpost |
+| **Proxy auth** (forward-auth) | Uptime Kuma, Calibre-Web, Home Assistant, Jellyfin, Kiwix, WordPress, ERPNext, FreeScout, Infisical, Paperclip, Superset, nOS face, Metabase | Nginx `auth_request` + Authentik embedded outpost |
 | **Identity bridge** | Bluesky PDS | Authentik → PDS auto-provisions `@user.bsky.<tld>` accounts |
 | **No SSO** | FreePBX, QGIS | Service owns its own auth |
 
@@ -304,7 +304,7 @@ declared in `authentik_app_tiers`; users are added to the corresponding `nos-*` 
 |---|---|---|---|
 | 1 | **admin** | Infra, secrets, monitoring | Portainer, Infisical, Grafana, Wing, InfluxDB |
 | 2 | **manager** | Dev tools, analytics, automation | Gitea, GitLab, n8n, Superset, Metabase, Paperclip, ERPNext, FreeScout |
-| 3 | **user** | Employee productivity | Nextcloud, Outline, Open WebUI, Puter, Vaultwarden, Uptime Kuma, Home Assistant, Calibre-Web |
+| 3 | **user** | Employee productivity | Nextcloud, Outline, Open WebUI, nOS face, Vaultwarden, Uptime Kuma, Home Assistant, Calibre-Web |
 | 4 | **guest** | Public/content | Kiwix, Jellyfin, WordPress |
 
 ---

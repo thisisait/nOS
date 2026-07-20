@@ -99,7 +99,6 @@
         _ssl_san_required:
           - "*{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
           - "*{{ _host_alias_seg | default('') }}.{{ apps_subdomain | default('apps') }}.{{ tenant_domain | default('dev.local') }}"
-          - "{{ '*' + (_host_alias_seg | default('')) + '.os.' + (tenant_domain | default('dev.local')) if (install_puter | default(false)) else '' }}"
           - "{{ '*.dev.lan' if (install_bluesky_pds | default(false)) else '' }}"
           - "{{ '*.' ~ (bluesky_pds_hostname | default('bsky.dev.lan')) if (install_bluesky_pds | default(false)) else '' }}"
 
@@ -132,7 +131,6 @@
         "localhost" "127.0.0.1" "::1" "*.localhost"
         "*{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
         "*{{ _host_alias_seg | default('') }}.{{ apps_subdomain | default('apps') }}.{{ tenant_domain | default('dev.local') }}"
-        {{ '"*' + (_host_alias_seg | default('')) + '.os.' + (tenant_domain | default('dev.local')) + '"' if (install_puter | default(false)) else '' }}
         {{ '"*.dev.lan"' if (install_bluesky_pds | default(false)) else '' }}
         {{ '"*.' ~ (bluesky_pds_hostname | default('bsky.dev.lan')) ~ '"' if (install_bluesky_pds | default(false)) else '' }}
       args:
