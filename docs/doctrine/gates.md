@@ -42,6 +42,45 @@ nOS has been bitten by both:
   suite ran the old bundle. A test asserting it catches a regression, catching
   nothing (KEAP, 2026-07-20).
 
+## The shape underneath all of them
+
+The three cases above look unrelated — a playbook engine, a container probe, a
+bundler. They are one defect:
+
+> **the check measured a different layer than the one that fails.**
+
+- the dry-run measured the *plan* layer; the *apply* layer was what had never run
+- the healthcheck measured the *HTTP* layer; the *database* layer was what was
+  broken
+- and a unit test of `buildVersion()` would have measured the *function* layer,
+  while the *bundler* was what broke it — the function is correct, `__dirname`
+  does not exist in the ESM bundle, and the resulting `ReferenceError` took down
+  the whole `/api/health` endpoint. Caught only because the test called the
+  **endpoint**, not the function. (KEAP, 2026-07-20 — adding a field to a probe
+  nearly deleted the probe.)
+
+So the operational rule: **test where the caller calls, not where it is
+convenient to call.** A test one layer below the failure is not a weaker test; it
+is a test of something else, reported under the name of the thing you care about.
+
+## Where to spend the attention
+
+The instinct is to prioritise the false greens that are easiest to hit. That is
+backwards:
+
+> **the more systematic the cause, the less likely anyone notices it without
+> going looking.**
+
+An accidental false green (a stale artifact) shows up on the next clean run. An
+architectural one looks exactly like normal operation, indefinitely — nOS's
+dry-run and DB-blind-healthcheck cases sat quietly for weeks and were both found
+sideways, while investigating something else.
+
+This is the same test that admits an entry to
+[`hidden_fees/`](../hidden_fees/README.md) — *nothing is failing and nobody is
+looking* — and the two documents are describing one phenomenon from different
+ends: a hidden fee is what a false green lets you keep believing.
+
 ## Rules
 
 - **Fail closed.** No result, no evidence, no artifact ⇒ fail. Never skip-as-pass.
@@ -55,6 +94,10 @@ nOS has been bitten by both:
   artifact cannot masquerade as a fresh pass.
 - **A gate must not be able to damage what it guards.** Run against a throwaway
   copy, not the live thing.
+- **A skip must not outlive its reason.** When a check cannot run yet (a field
+  that ships in a later version, a probe not deployed), record the trigger that
+  makes it mandatory and gate on *that* — otherwise "temporarily skipped" is just
+  "missing evidence read as success" with a comment attached.
 
 ## The silence trap, concretely
 
