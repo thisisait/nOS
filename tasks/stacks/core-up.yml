@@ -359,6 +359,9 @@
 # the running container is never recreated. Operators can skip with
 # `--skip-tags core`.
 
+- name: "[Core] Prune overrides of retired services"
+  ansible.builtin.import_tasks: prune-retired.yml
+
 - name: "[Core] Enumerate infra compose overrides"
   tags: ['core', 'always']
   ansible.builtin.find:

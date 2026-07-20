@@ -147,6 +147,11 @@
 # as additional -f flags. Empty directory = fallback to base compose only
 # (backward compatible with pre-Wave2 state).
 
+# Retired services first: a fragment left behind by a removed role would be
+# merged by the enumeration below and fail the whole stack (Puter, 2026-07-20).
+- name: "[Stacks] Prune overrides of retired services"
+  ansible.builtin.import_tasks: prune-retired.yml
+
 - name: "[Stacks] Enumerate compose overrides per remaining stack"
   tags: ['stacks', 'always']
   ansible.builtin.find:

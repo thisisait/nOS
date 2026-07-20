@@ -1,0 +1,50 @@
+---
+# ==============================================================================
+# tasks/stacks/prune-retired.yml — remove compose overrides of RETIRED services
+#
+# Removing a service from nOS deletes its role, plugin and templates — but NOT
+# the override fragment it already rendered onto a live host. The orchestrators
+# discover overrides with `ansible.builtin.find` over
+# {{ stacks_dir }}/<stack>/overrides/*.yml, so a leftover fragment keeps being
+# merged into `docker compose up` long after its source is gone.
+#
+# 2026-07-20, Puter: the role, plugin, Dockerfile and `files/puter/` were
+# removed, but `iiab/overrides/{puter,puter-base}.yml` stayed on disk. The next
+# converge merged them, compose tried to build `nos/puter:v2.5.1` from the
+# deleted build context, and the whole iiab stack failed to start:
+#
+#     unable to prepare context: path ".../files/puter" not found
+#
+# The render path is create-only; nothing ever reconciles a removal. This is the
+# narrow, explicit reconciler: an operator-visible list of services that nOS no
+# longer ships, and their fragments are deleted before any stack comes up.
+#
+# DELIBERATELY NOT "prune anything without a matching role" — that heuristic
+# would delete legitimate fragments with no 1:1 role (the apps_runner's merged
+# `auto.yml`, for one). An explicit list cannot have false positives.
+#
+# A service that is merely DISABLED (install_* false) is NOT retired and is not
+# handled here — that is the wider managed-resource manifest still owed by
+# docs/plans/blank-uninstall-managed-resources.md.
+# ==============================================================================
+
+- name: "[Stacks] Find compose overrides of retired services"
+  ansible.builtin.find:
+    paths: "{{ stacks_dir }}"
+    patterns: "{{ nos_retired_services | default([]) | product(['.yml', '-base.yml']) | map('join') | list }}"
+    recurse: true
+  register: _retired_overrides
+  when: (nos_retired_services | default([]) | length) > 0
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Remove compose overrides of retired services"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ _retired_overrides.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  # The container itself needs no separate teardown: every orchestrator runs
+  # `up -d --remove-orphans`, so once the fragment is gone the service drops out
+  # of the project config and compose removes the container on the next up.
+  tags: ['stacks', 'core', 'always']

@@ -1777,6 +1777,20 @@ stack_up_wait_timeout: 540
 # the log. 15s is a good balance of heartbeat freshness vs task-count noise.
 stack_wait_tick_interval: 15
 
+# nos_retired_services: services nOS no longer ships. The render path is
+# CREATE-ONLY — deleting a role/plugin leaves its already-rendered
+# `<stack>/overrides/<svc>.yml` on every live host, and the orchestrators merge
+# whatever `find` turns up. Puter (removed 2026-07-20) left exactly that behind
+# and the whole iiab stack then failed to start: compose tried to build
+# `nos/puter:v2.5.1` from a build context that no longer existed.
+# tasks/stacks/prune-retired.yml deletes these fragments before any bring-up;
+# `up -d --remove-orphans` then drops the container on the same run.
+# Append when a service is removed; entries are cheap and never expire. A merely
+# DISABLED service (install_* false) does NOT belong here — that is the wider
+# managed-resource manifest (docs/plans/blank-uninstall-managed-resources.md).
+nos_retired_services:
+  - puter
+
 # ── External-volume mount preflight (macOS / Docker Desktop) ─────────────────
 # When nos_data_root is redirected onto an external disk (/Volumes/<disk>), an
 # external mount that was (re)mounted AFTER Docker Desktop started leaves the VM
