@@ -27,6 +27,17 @@ keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # (admin fs_mappings over KEAP_FS_ROOTS), Option C shared uids
 # (KEAP_FS_SHARED_UIDS — self-model visible to every tenant user), folder-hub
 # detail panel + near-hop camera guard in /explore.
+#
+# ⚠️ NEVER PIN v1.19.0 — it is a real, immutable, released tag carrying the
+# CANCELLED numeric user-root scheme (`USER_ROOT_MIN` is set in it and zero in
+# every tag after it). Under v1.19.0 `registerExtNode` accepts two-digit roots
+# ONLY, so the slug root `nos` is rejected with a bare `null`: the root is never
+# created, every self-model card under it is invisible, and NOTHING IS LOGGED.
+# The tag is deliberately not retracted — rewriting a published tag to mean
+# something else is worse than a documented trap — so the trap is made loud here
+# instead, and pinned by tests/anatomy/test_keap_pin_not_cancelled.py.
+# Anything self-model related needs v1.20.0 or newer (slug ids + atomic
+# applyDomain + per-uid prune guard).
 keap_repo_ref: "v1.18.1"
 
 keap_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"

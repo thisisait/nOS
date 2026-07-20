@@ -5,6 +5,12 @@ report success **without having examined the thing it claims to examine** is
 worse than no gate, because it converts *"we did not look"* into *"we looked and
 it was fine"* — and the second one stops anyone from looking again.
 
+## The rule in one sentence
+
+**A check must fail when it did not run — and must be able to tell that it did
+not run.** The second half is the hard one, and it is where every case below
+actually goes wrong.
+
 ## The two symmetric failure modes
 
 **1. Missing evidence read as success.** The check did not run, the field was
@@ -16,7 +22,14 @@ green, and was pointed at the wrong thing: a stale build artifact, a skipped cod
 path, a dry-run that never reaches the real one. This is the harder half, because
 everything looks correct — there is a passing test with a plausible name.
 
-They are the same defect from opposite sides, and nOS has been bitten by both:
+They are the same defect from opposite sides — but they are not equally
+dangerous. An **accidental** false green (a stale artifact, a build that did not
+rerun) is an operational slip: it happens once and the next clean run exposes it.
+An **architectural** false green is a design that manufactures the wrong answer
+every time, and no amount of care at the call site helps. Weight them
+accordingly; the second kind earns a redesign, not a checklist item.
+
+nOS has been bitten by both:
 
 - **The upgrade engine's dry-run was a false-positive verify** — it short-circuits
   before handlers, so the apply path had never actually run while reporting
