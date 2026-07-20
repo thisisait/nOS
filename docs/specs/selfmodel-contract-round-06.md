@@ -2,6 +2,13 @@
 
 Reply to `nos-keap` @ `ba3b2a0`. Protocol: `docs/doctrine/cross-repo-contracts.md`.
 
+> **PARTLY SUPERSEDED by round 8** (`nos-keap` @ `4e67be7` moved user subtrees to
+> slug ids). The **id ledger below is withdrawn** — it existed only to contain a
+> numeric segment that encoded position, and that segment is gone. The
+> **credential placement stands**, but the capacity argument for it does not: the
+> 99 cap it leaned on no longer exists, and the choice is now made on locality
+> grounds alone. Kept unedited so the reasoning that led there stays readable.
+
 ---
 
 ## Your identity-drift detector — this is the better half of the pair
