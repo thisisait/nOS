@@ -56,6 +56,13 @@ keap_cpus: "{{ docker_cpus_light | default(1) }}"
 # constellation in /explore and embeds each card into vector space. Generator +
 # KEAP-contract analysis: docs/archive/keap-selfmodel.md.
 keap_selfmodel: true
+# Which shape the generator emits. `anchors` = the legacy tree whose cards anchor
+# at seed nodes ([[02.02]]); `slug` = the contract-v1 tree (nos / nos.<stack> /
+# nos.<stack>.<system>) ingested as canonical. Flip to `slug` in the SAME commit
+# as the generator rewrite — the pin gate keys on THIS, not on the presence of a
+# test fixture, because a fixture is inert and the live generator is what can
+# lose a tree on a pre-v1.21.0 KEAP.
+keap_selfmodel_schema: "anchors"
 # Class-2 shared root (NOT a per-user tree). Kept as a role default (not global)
 # because it is referenced only by this role's own tasks, never by the plugin
 # loader / core-up before the role runs — so the eager-resolve trap doesn't apply.

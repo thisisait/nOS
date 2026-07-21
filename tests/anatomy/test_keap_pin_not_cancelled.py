@@ -100,7 +100,6 @@ def test_pins_agree_with_each_other():
 # the gate keys on that tree existing rather than on a flag someone must
 # remember to flip. Dormant until the epic lands, mandatory from that moment —
 # docs/doctrine/gates.md: "a skip must not outlive its reason".
-SELFMODEL_CANONICAL = ROOT / "tests/fixtures/selfmodel"
 SELFMODEL_MIN = (1, 21, 0)
 
 
@@ -109,13 +108,21 @@ def _tuple(tag: str) -> tuple:
     return tuple(int(p) for p in parts[:3]) if all(p.isdigit() for p in parts[:3]) else (0, 0, 0)
 
 
-def test_selfmodel_tree_requires_a_boot_fixpoint_keap():
-    if not SELFMODEL_CANONICAL.exists():
-        return  # epic has not landed; nothing emits slug nodes yet
+def test_slug_schema_requires_a_boot_fixpoint_keap():
+    """Keyed on what the GENERATOR emits, not on a test fixture existing.
+
+    The first cut of this gate triggered on `tests/fixtures/selfmodel/` — which
+    would have blocked authoring the very fixture the contract asks for, while
+    a live estate emitting slug nodes under an old pin stayed green. A fixture
+    is inert; the generator is what can lose a tree.
+    """
+    schema = yaml.safe_load(ROLE_DEFAULTS.read_text()).get("keap_selfmodel_schema", "anchors")
+    if schema != "slug":
+        return  # generator still emits the legacy anchored tree
     pin = _tuple(_role_pin())
     assert pin >= SELFMODEL_MIN, (
-        f"a slug canonical tree exists at {SELFMODEL_CANONICAL.relative_to(ROOT)} but "
-        f"keap_repo_ref is v{_role_pin()} — below v1.21.0 the boot registration is "
-        "single-pass, so directory order (nos.infra.json before nos.json) makes the "
-        "children older than their root and the WHOLE TREE is dropped silently"
+        f"keap_selfmodel_schema is 'slug' but keap_repo_ref is v{_role_pin()} — below "
+        "v1.21.0 boot registration is single-pass, so directory order (nos.infra.json "
+        "before nos.json) makes children older than their root and the WHOLE TREE is "
+        "dropped silently"
     )
