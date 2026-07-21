@@ -94,6 +94,15 @@ ends: a hidden fee is what a false green lets you keep believing.
   artifact cannot masquerade as a fresh pass.
 - **A gate must not be able to damage what it guards.** Run against a throwaway
   copy, not the live thing.
+- **The first hard run of a gate tests the gate, not the subject.** Budget for
+  it. Both halves of the 2026-07-21 self-model contract failed on their own
+  scaffolding before they were ever allowed to fail on data: nOS's producer gate
+  never passed `--schema`, so the path it guarded was inert and every check was
+  green over nothing; KEAP's consumer gate passed `KEAP_DATA_DIR` to every
+  command except the one that creates the schema. Two independent
+  implementations, same failure, same week. A gate's debut is an experiment
+  about the gate — treat its first green as unproven until you have watched it
+  go red on purpose.
 - **A skip must not outlive its reason.** When a check cannot run yet (a field
   that ships in a later version, a probe not deployed), record the trigger that
   makes it mandatory and gate on *that* — otherwise "temporarily skipped" is just
