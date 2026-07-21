@@ -1,0 +1,66 @@
+{
+ "domain": "nos.data",
+ "nodes": [
+  {
+   "id": "nos.data",
+   "level": 1,
+   "kind": "ext",
+   "parentId": "nos",
+   "name": "data",
+   "zone": "free",
+   "ordinal": 5,
+   "en": "The data compose stack: analytics over data that already exists elsewhere — dashboard and query tools, plus a time-series store for measurements written by the estate's own instrumentation."
+  },
+  {
+   "id": "nos.data.influxdb",
+   "level": 2,
+   "kind": "ext",
+   "parentId": "nos.data",
+   "name": "influxdb",
+   "zone": "free",
+   "ordinal": 0,
+   "en": "InfluxDB, the time-series database for high-frequency measurements pushed by the estate's own instrumentation. It is a write target, distinct from the scrape-driven metrics store in observability."
+  },
+  {
+   "id": "nos.data.metabase",
+   "level": 2,
+   "kind": "ext",
+   "parentId": "nos.data",
+   "name": "metabase",
+   "zone": "free",
+   "ordinal": 1,
+   "en": "Metabase, the question-first analytics tool. Non-technical people build charts by clicking through a schema, with SQL kept as an escape hatch rather than the entry point."
+  },
+  {
+   "id": "nos.data.metabase.credential",
+   "level": 3,
+   "kind": "ext",
+   "parentId": "nos.data.metabase",
+   "name": "metabase-credential",
+   "zone": "free",
+   "ordinal": 0,
+   "en": "The Metabase session token. A time-limited secret obtained by exchanging a username and password, carried in a dedicated session header rather than as a bearer token."
+  },
+  {
+   "id": "nos.data.superset",
+   "level": 2,
+   "kind": "ext",
+   "parentId": "nos.data",
+   "name": "superset",
+   "zone": "free",
+   "ordinal": 2,
+   "en": "Superset, the analyst's exploration and dashboard platform. It assumes SQL fluency and offers deeper chart composition than the click-first tool beside it."
+  },
+  {
+   "id": "nos.data.superset.credential",
+   "level": 3,
+   "kind": "ext",
+   "parentId": "nos.data.superset",
+   "name": "superset-credential",
+   "zone": "free",
+   "ordinal": 0,
+   "en": "The Superset bearer token. An issued token from a login exchange, refreshed on expiry, and separate from the CSRF token that write calls additionally demand."
+  }
+ ],
+ "relations": []
+}

@@ -1,0 +1,15 @@
+{
+ "domain": "nos",
+ "nodes": [
+  {
+   "id": "nos",
+   "level": 0,
+   "kind": "ext",
+   "name": "nOS",
+   "zone": "free",
+   "ordinal": 0,
+   "en": "The nOS platform's model of its own architecture: a navigable tree of compose stacks and the systems inside them. This root only organises — the substance lives on the deeper nodes. A node's presence means nOS can run it, not that this estate has it enabled."
+  }
+ ],
+ "relations": []
+}

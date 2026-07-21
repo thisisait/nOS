@@ -1,0 +1,146 @@
+{
+ "domain": "nos.infra",
+ "nodes": [
+  {
+   "id": "nos.infra",
+   "level": 1,
+   "kind": "ext",
+   "parentId": "nos",
+   "name": "infra",
+   "zone": "free",
+   "ordinal": 0,
+   "en": "The infra compose stack: the substrate every other stack leans on — the edge proxy, the identity provider, the secret vault, and the shared relational and key-value stores. Nothing here is a destination in its own right; the things here are what make the rest possible."
+  },
+  {
+   "id": "nos.infra.authentik",
+   "level": 2,
+   "kind": "ext",
+   "parentId": "nos.infra",
+   "name": "authentik",
+   "zone": "free",
+   "ordinal": 0,
+   "en": "Authentik, the identity provider that decides who a request belongs to. It issues OIDC tokens and proxy headers for every other system, holds the group memberships that drive access tiers, and is the only place a person actually types a password."
+  },
+  {
+   "id": "nos.infra.authentik.credential",
+   "level": 3,
+   "kind": "ext",
+   "parentId": "nos.infra.authentik",
+   "name": "authentik-credential",
+   "zone": "free",
+   "ordinal": 0,
+   "en": "The Authentik API token. An issued administrative secret scoped to the identity provider itself: it authorises reads and writes of users, groups, providers and flows, and rotating it changes nothing about who can log in."
+  },
+  {
+   "id": "nos.infra.bluesky-pds",
+   "level": 2,
+   "kind": "ext",
+   "parentId": "nos.infra",
+   "name": "bluesky-pds",
+   "zone": "free",
+   "ordinal": 1,
+   "en": "The Bluesky Personal Data Server, an AT Protocol repository host. It owns social handles and their signed record repositories, which is a different kind of account from the OIDC login used everywhere else on the estate."
+  },
+  {
+   "id": "nos.infra.bluesky-pds.credential",
+   "level": 3,
+   "kind": "ext",
+   "parentId": "nos.infra.bluesky-pds",
+   "name": "bluesky-pds-credential",
+   "zone": "free",
+   "ordinal": 0,
+   "en": "The AT Protocol session token held for a repository account. A short-lived bearer credential minted by a handle-and-password exchange, unlike the long-lived API tokens issued elsewhere on the estate."
+  },
+  {
+   "id": "nos.infra.infisical",
+   "level": 2,
+   "kind": "ext",
+   "parentId": "nos.infra",
+   "name": "infisical",
+   "zone": "free",
+   "ordinal": 2,
+   "en": "Infisical, the machine-facing secret vault. Infrastructure credentials are stored, versioned and fetched here by the playbook and by agents over an API — distinct from the personal password manager, which is for humans."
+  },
+  {
+   "id": "nos.infra.infisical.credential",
+   "level": 3,
+   "kind": "ext",
+   "parentId": "nos.infra.infisical",
+   "name": "infisical-credential",
+   "zone": "free",
+   "ordinal": 0,
+   "en": "The Infisical service token. An issued secret whose only purpose is to fetch other secrets, scoped to one project path; it sits at the root of the estate's secret chain."
+  },
+  {
+   "id": "nos.infra.mariadb",
+   "level": 2,
+   "kind": "ext",
+   "parentId": "nos.infra",
+   "name": "mariadb",
+   "zone": "free",
+   "ordinal": 3,
+   "en": "MariaDB, the second relational engine, kept because several PHP applications ship MySQL-dialect schemas and migrations that PostgreSQL will not accept. It is a compatibility store, not the preferred one."
+  },
+  {
+   "id": "nos.infra.portainer",
+   "level": 2,
+   "kind": "ext",
+   "parentId": "nos.infra",
+   "name": "portainer",
+   "zone": "free",
+   "ordinal": 4,
+   "en": "Portainer, the browser console over the Docker daemon. It inspects containers, images, volumes and logs across every compose stack without an SSH session."
+  },
+  {
+   "id": "nos.infra.portainer.credential",
+   "level": 3,
+   "kind": "ext",
+   "parentId": "nos.infra.portainer",
+   "name": "portainer-credential",
+   "zone": "free",
+   "ordinal": 0,
+   "en": "The Portainer bearer token. A short-lived secret minted by an authentication call, granting whatever the container console itself can do — which is broad, because that console reaches the Docker daemon."
+  },
+  {
+   "id": "nos.infra.postgresql",
+   "level": 2,
+   "kind": "ext",
+   "parentId": "nos.infra",
+   "name": "postgresql",
+   "zone": "free",
+   "ordinal": 5,
+   "en": "PostgreSQL, the estate's shared relational OLTP store. Services that need transactions, joins and a SQL schema keep their durable rows here — as opposed to the in-memory cache beside it, which keeps nothing."
+  },
+  {
+   "id": "nos.infra.redis",
+   "level": 2,
+   "kind": "ext",
+   "parentId": "nos.infra",
+   "name": "redis",
+   "zone": "free",
+   "ordinal": 6,
+   "en": "Redis, the shared in-memory key-value store. It holds sessions, locks, hot lookups and worker queues; everything in it is expendable and nothing is expected to survive a restart."
+  },
+  {
+   "id": "nos.infra.smtp-stalwart",
+   "level": 2,
+   "kind": "ext",
+   "parentId": "nos.infra",
+   "name": "smtp-stalwart",
+   "zone": "free",
+   "ordinal": 7,
+   "en": "Stalwart, the estate's real mail server: SMTP submission and delivery plus IMAP and JMAP mailboxes. Outbound notifications and per-user mailboxes both terminate here, unlike the capture-only development trap."
+  },
+  {
+   "id": "nos.infra.traefik",
+   "level": 2,
+   "kind": "ext",
+   "parentId": "nos.infra",
+   "name": "traefik",
+   "zone": "free",
+   "ordinal": 8,
+   "en": "Traefik, the edge proxy. It terminates TLS and maps each hostname to a container; every request from outside the estate enters here first, and this is where the forward-auth identity check is attached."
+  }
+ ],
+ "relations": []
+}

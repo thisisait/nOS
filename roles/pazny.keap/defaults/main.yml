@@ -62,7 +62,7 @@ keap_selfmodel: true
 # as the generator rewrite — the pin gate keys on THIS, not on the presence of a
 # test fixture, because a fixture is inert and the live generator is what can
 # lose a tree on a pre-v1.21.0 KEAP.
-keap_selfmodel_schema: "anchors"
+keap_selfmodel_schema: "slug"
 # Class-2 shared root (NOT a per-user tree). Kept as a role default (not global)
 # because it is referenced only by this role's own tasks, never by the plugin
 # loader / core-up before the role runs — so the eager-resolve trap doesn't apply.
