@@ -1,32 +1,73 @@
 ---
 # =============================================================================
-# pazny.keap/tasks/selfmodel.yml — nOS architecture self-model
+# pazny.keap/tasks/selfmodel.yml — nOS architecture self-model (POST phase)
 #
 # Writes a deterministic knowledge tree describing nOS's own architecture
-# (platform → stack → service) into the class-2 SHARED dir keap_selfmodel_root,
-# which compose.yml.j2 bind-mounts into KEAP as the reserved fs-sync uid
-# keap_selfmodel_uid. KEAP's server/fs-sync.ts then mirrors every file into a
-# knowledge object (a standalone "nOS" constellation) and the host keap-embed-
-# sync job positions it in vector space. Idempotent: the generator only rewrites
-# a card whose bytes changed, so fs-sync's size+mtime skip holds (no re-embed
-# storm). Design + KEAP-contract analysis: docs/archive/keap-selfmodel.md.
+# (nos → nos.<stack> → nos.<stack>.<system>) and publishes it into the class-2
+# SHARED dir keap_selfmodel_root, which compose.yml.j2 bind-mounts into KEAP as
+# the reserved fs-sync uid keap_selfmodel_uid.
+#
+# ── WHY THIS RUNS IN post.yml, NOT main.yml ─────────────────────────────────
+# It used to run in the RENDER phase, so the cards were on disk a whole stack
+# bring-up before the taxonomy nodes they anchor at were ingested. fs-sync mirrors
+# a card whose [[node]] anchor does not resolve WITHOUT failing — the card simply
+# renders nowhere in the constellation. The tree looked provisioned and was
+# invisible. Content generation therefore happens here, after the ingest, and the
+# publish order below makes "nodes before cards" a structural guarantee rather
+# than a timing accident.
+#
+# ── WHY A STAGING DIR ───────────────────────────────────────────────────────
+# fs-watch is enabled by default (KEAP_FS_WATCH != '0'), so a card written into
+# the MOUNTED tree is mirrored within seconds — before we could ingest its node.
+# Worse, the resulting dangling anchor is then invisible to our own gate: fs-sync
+# counts danglingAnchors only for cards written in THAT pass, and our later pass
+# skips them on the size+mtime key and reports a vacuous zero. So the generator
+# writes to a staging dir OUTSIDE the mount, and the publish is split:
+#
+#   generate (stage) → lint → publish canonical → ingest + restart  [nodes live]
+#                                              → publish cards → fs/sync  [gate]
+#
+# Card bytes reach the watched tree only after the nodes exist, so a non-zero
+# danglingAnchors is a real defect and the gate's zero is a real measurement.
+# rsync -a preserves mtime, so fs-sync's unchanged-skip still holds across runs
+# and a steady converge does not re-embed the corpus.
+#
+# Design + KEAP-contract analysis: docs/archive/keap-selfmodel.md.
 # =============================================================================
 
-- name: "[pazny.keap] Ensure class-2 self-model shared dir"
+- name: "[pazny.keap] Resolve self-model paths"
+  ansible.builtin.set_fact:
+    # Staging root — outside keap_selfmodel_root so nothing here is mounted,
+    # watched or mirrored. Persistent across runs so the generator's own
+    # byte-compare idempotence (created/updated/removed counts) still works.
+    _keap_sm_stage: "{{ keap_selfmodel_stage | default(keap_home ~ '/selfmodel-stage') }}"
+    _keap_sm_slug: "{{ (keap_selfmodel_schema | default('anchors')) == 'slug' }}"
+    # Where the generator leaves the card tree. The two schemas disagree:
+    # slug writes <stage>/cards/<top>/…, anchors writes <stage>/<top>/… .
+    # Publishing from the wrong one silently syncs an empty/absent dir.
+    _keap_sm_cards_src: >-
+      {{ _keap_sm_stage ~ ('/cards/' if ((keap_selfmodel_schema | default('anchors')) == 'slug') else '/') ~ keap_selfmodel_top }}
+
+- name: "[pazny.keap] Ensure self-model staging + published dirs"
   ansible.builtin.file:
-    path: "{{ keap_selfmodel_root }}"
+    path: "{{ item }}"
     state: directory
     mode: '0755'
+  loop:
+    - "{{ _keap_sm_stage }}"
+    - "{{ _keap_sm_stage }}/canonical"
+    - "{{ keap_selfmodel_root }}"
+    - "{{ keap_selfmodel_root }}/canonical"
 
 # ── REAL per-service state (operator refinement 2026-07-18) ──────────────────
-# The digest cards must carry each service's ACTUAL deployed facts (version,
-# image, port, domain, data path, mem/cpu limits), not generic prose. Those are
+# The nodes must carry each service's ACTUAL deployed facts (version, image,
+# port, domain, data path, mem/cpu limits), not generic prose. Those are
 # Jinja-only resolvable — so resolve them HERE, in Ansible, against the live var
 # hierarchy, keyed off the manifest's OWN var-name declarations (version_var /
 # port_var / domain_var / data_path_var — role-adjacent, no naming guesswork).
 # lookup('vars', <name>, default='') yields '' for a var not in scope on this
-# host's config, so an unset fact is simply omitted from the card. The generator
-# gets the whole map as --facts-json.
+# host's config, so an unset fact is simply omitted. The generator gets the whole
+# map as --facts-json.
 - name: "[pazny.keap] Load manifest services for self-model facts"
   ansible.builtin.set_fact:
     _keap_sm_services: "{{ (lookup('file', playbook_dir + '/state/manifest.yml') | from_yaml).services | default([]) }}"
@@ -48,7 +89,8 @@
       mem_limit: "{{ lookup('vars', _vp ~ '_mem_limit', default='') }}"
       cpus: "{{ lookup('vars', _vp ~ '_cpus', default='') }}"
 
-- name: "[pazny.keap] Generate nOS architecture self-model tree"
+# ── 1) GENERATE into the staging tree ────────────────────────────────────────
+- name: "[pazny.keap] Generate nOS architecture self-model (staging)"
   ansible.builtin.command:
     argv:
       - "{{ ansible_python_interpreter | default('python3') }}"
@@ -57,8 +99,16 @@
       - "{{ playbook_dir }}/state/manifest.yml"
       - "--plugins-dir"
       - "{{ playbook_dir }}/files/anatomy/plugins"
-      - "--out-root"
-      - "{{ keap_selfmodel_root }}"
+      # THE flag. Without it the generator defaults to `anchors` and the whole
+      # slug pipeline below is dead code: canonical/ is never written, lint
+      # passes on zero files, ingest applies nothing, and the dangling gate
+      # measures a corpus whose nodes were never created. Every check stays
+      # green while nothing is checked.
+      - "--schema"
+      - "{{ keap_selfmodel_schema | default('anchors') }}"
+      # slug writes <out>/canonical + <out>/cards; anchors writes <out-root>/<top>.
+      - "{{ '--out' if _keap_sm_slug | bool else '--out-root' }}"
+      - "{{ _keap_sm_stage }}"
       - "--uid"
       - "{{ keap_selfmodel_uid }}"
       - "--top"
@@ -75,8 +125,235 @@
      + (_keap_selfmodel.stdout | default('{}') | from_json).updated
      + (_keap_selfmodel.stdout | default('{}') | from_json).removed) | int > 0
 
+# ── 2) WET GATE (a): KEAP's OWN linter, against the pinned clone ─────────────
+# We run knowledge/lint.mjs from keap_src_dir rather than reimplementing its
+# rules in a nOS test, so the two can never drift: whatever the pinned KEAP
+# accepts is exactly what we gate on. Runs on the HOST (the script is
+# dependency-free, node: builtins only) against the STAGED canonical, so a
+# malformed tree never reaches the live mount at all.
+#   exit 0 = clean, 1 = violations (printed), 2 = usage/read error.
+- name: "[pazny.keap] WET GATE — lint staged canonical with KEAP's own linter"
+  ansible.builtin.command:
+    argv:
+      - node
+      - "{{ keap_src_dir }}/knowledge/lint.mjs"
+      - "--canonical"
+      - "{{ _keap_sm_stage }}/canonical"
+  environment:
+    PATH: "{{ homebrew_prefix | default('/opt/homebrew') }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+  register: _keap_sm_lint
+  changed_when: false
+  when: _keap_sm_slug | bool
+
+# ── 3) PUBLISH the canonical taxonomy (safe at any time: not a fs-sync class) ─
+- name: "[pazny.keap] Publish self-model canonical taxonomy"
+  ansible.builtin.command:
+    argv:
+      - rsync
+      - "-ai"
+      - "--delete"
+      - "{{ _keap_sm_stage }}/canonical/"
+      - "{{ keap_selfmodel_root }}/canonical/"
+  register: _keap_sm_pub_canon
+  changed_when: "(_keap_sm_pub_canon.stdout | default('') | trim) | length > 0"
+  when: _keap_sm_slug | bool
+
+# ── 4) INGEST the nOS taxonomy — this is what makes the NODES exist ──────────
+# A separate ingest pass from post.yml's: that one applies the clone's own
+# canonical (RO-mounted seed domains), this one applies OUR domains from the
+# self-model mount. Same idempotence (per-domain sha256 in knowledge_imports),
+# so a steady converge is a no-op.
+- name: "[pazny.keap] Ingest nOS self-model taxonomy (nodes before cards)"
+  ansible.builtin.command:
+    cmd: >-
+      {{ docker_bin }} exec iiab-keap-1 node knowledge/ingest.mjs
+      --canonical /user-files/{{ keap_selfmodel_uid }}/canonical
+  register: _keap_sm_ingest
+  changed_when: false
+  failed_when:
+    - _keap_sm_ingest.rc is defined
+    - _keap_sm_ingest.rc != 0
+  when: _keap_sm_slug | bool
+
+- name: "[pazny.keap] Parse self-model ingest result (did anything apply?)"
+  ansible.builtin.set_fact:
+    _keap_sm_ingest_changed: >-
+      {{ ((_keap_sm_ingest.stdout_lines | default([]) | select('match', '^INGEST_RESULT ') | first
+          | default('INGEST_RESULT {}')) | regex_replace('^INGEST_RESULT ', '') | from_json).get('changed', false) }}
+  when:
+    - _keap_sm_slug | bool
+    - _keap_sm_ingest is not skipped
+
+# Applied rows only become live nodes on a restart (boot materialises
+# registerExtNode → applyDescriptionOverride → rebuildFts → ensureLayout APPEND).
+# Until this restart completes, a card published in step 5 would still dangle.
+- name: "[pazny.keap] Restart keap to materialise the self-model taxonomy"
+  ansible.builtin.command:
+    cmd: "{{ docker_bin }} restart iiab-keap-1"
+  changed_when: true
+  when: _keap_sm_ingest_changed | default(false) | bool
+
+- name: "[pazny.keap] Wait for keap healthy after self-model materialisation"
+  ansible.builtin.command:
+    cmd: "{{ docker_bin }} inspect -f '{{ '{{' }}.State.Health.Status{{ '}}' }}' iiab-keap-1"
+  register: _keap_sm_health
+  until: _keap_sm_health.stdout == 'healthy'
+  retries: 30
+  delay: 5
+  changed_when: false
+  when: _keap_sm_ingest_changed | default(false) | bool
+
+# ── 5) PUBLISH the cards — FIRST moment card bytes enter the watched tree ─────
+- name: "[pazny.keap] Publish self-model cards into the fs-sync tree"
+  # Ungated in the first cut: on a legacy `anchors` host it POSTed to the agent
+  # surface with retries and hard-failed after 60s for no benefit.
+  ansible.builtin.command:
+    argv:
+      - rsync
+      - "-ai"
+      - "--delete"
+      - "{{ _keap_sm_cards_src }}/"
+      - "{{ keap_selfmodel_root }}/{{ keap_selfmodel_top }}/"
+  register: _keap_sm_pub_cards
+  changed_when: "(_keap_sm_pub_cards.stdout | default('') | trim) | length > 0"
+
+# ── 6) WET GATE (b): fs-sync must land ZERO dangling anchors ─────────────────
+# The acceptance criterion for the whole render/post split. fs-sync counts
+# danglingAnchors for cards written in THIS pass, so with the publish order above
+# a non-zero count means a card anchors at a node id the taxonomy does not have —
+# i.e. the generator and the taxonomy disagree. 409 = a sync already in flight
+# (the fs-watch debounce beat us); retry rather than fail.
+- name: "[pazny.keap] WET GATE — fs-sync the self-model tree"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ keap_port | default(8091) }}/agent/v1/fs/sync?wait=1"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ keap_agent_token_rw }}"
+    body_format: json
+    body: {}
+    status_code: 200
+    timeout: 120
+  register: _keap_sm_sync
+  until: (_keap_sm_sync.status | default(0)) == 200
+  retries: 6
+  delay: 10
+  # Never fatal on its own. On a legacy `anchors` host a stale RW token would
+  # otherwise spend 60s retrying and then refuse a converge that gets no benefit
+  # from this gate at all. Under `slug` a failed sync is still fatal — see the
+  # NOT-MEASURED gate below, because unmeasured is not the same as clean.
+  failed_when: false
+  changed_when: >-
+    ((_keap_sm_sync.json.data.upserted | default(0)) | int
+     + (_keap_sm_sync.json.data.removed | default(0)) | int) > 0
+
+- name: "[pazny.keap] WET GATE — refuse an UNMEASURED sync (absence is not zero)"
+  ansible.builtin.fail:
+    msg: >-
+      KEAP fs-sync did not answer 200 (status
+      {{ _keap_sm_sync.status | default('none') }}) — so the dangling-anchor count
+      was never taken. fs-sync only EMITS danglingAnchors when it is non-zero, which
+      makes "field absent" and "never counted" look identical; treating that as a
+      pass is exactly the false green docs/doctrine/gates.md exists to refuse.
+      Check the agent surface: `curl -sS -XPOST -H "Authorization: Bearer <rw>"
+      http://127.0.0.1:{{ keap_port | default(8091) }}/agent/v1/fs/sync?wait=1`.
+  when:
+    - _keap_sm_slug | bool
+    - (_keap_sm_sync.status | default(0)) | int != 200
+
+- name: "[pazny.keap] WET GATE — refuse dangling anchors (a converge must end at zero)"
+  ansible.builtin.fail:
+    msg: >-
+      KEAP fs-sync reported {{ _keap_sm_sync.json.data.danglingAnchors }} dangling anchor(s):
+      self-model cards were mirrored whose [[nos.*]] anchor resolves to no taxonomy node,
+      so they render NOWHERE in the constellation. The generator and the ingested taxonomy
+      disagree — a card references a node id that {{ _keap_sm_stage }}/canonical does not
+      define (or the node was dropped on ingest). Inspect:
+      `{{ docker_bin }} logs iiab-keap-1 | grep fs-sync` and
+      `node {{ keap_src_dir }}/knowledge/lint.mjs --canonical {{ _keap_sm_stage }}/canonical`.
+  when:
+    - _keap_sm_slug | bool
+    - (_keap_sm_sync.json.data.danglingAnchors | default(0)) | int > 0
+
+# Legacy `anchors` schema: the cards anchor at SEED nodes ([[02.02]]), which are
+# ingested by post.yml's clone-canonical pass, not by us. Report rather than fail
+# — an install whose seed spine has not been ingested yet would otherwise have
+# the converge refused for a condition this role does not own.
+- name: "[pazny.keap] WARN — dangling anchors on the legacy anchors schema"
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: fs-sync reported {{ _keap_sm_sync.json.data.danglingAnchors }} dangling anchor(s)
+      under keap_selfmodel_schema=anchors. Those cards are invisible in /explore until the seed
+      taxonomy is ingested. Not fatal on the legacy shape; it IS fatal once the schema is `slug`.
+  when:
+    - not (_keap_sm_slug | bool)
+    - (_keap_sm_sync.json.data.danglingAnchors | default(0)) | int > 0
+
+# ── 7) RECALL GATE (opt-in) — the only check that measures MEANING ───────────
+# Everything above gates FORM (schema, ids, anchors resolve). None of it can see
+# the failure this whole rewrite exists to fix: sixty templated descriptions that
+# lint clean at 20+ chars and wreck recall identically to the nine _stack.md
+# cards. recall-gate.mjs boots a throwaway KEAP from our corpus, embeds it with
+# the real model, and asserts the named target WINS its query.
+#
+# Opt-in (needs a built clone + a reachable embedder) and needs an nOS-authored
+# query set — the KEAP fixture's queries describe KEAP's OWN 7-node fixture tree.
+#
+# EXIT CODES ARE NOT A PASS/FAIL PAIR — three states, deliberately distinct:
+#   0 = every case passed
+#   1 = a real recall regression → the play FAILS (named in the output)
+#   4 = SKIPPED, no embedder reachable → NOTHING WAS MEASURED. Never green.
+# rc 4 is tolerated by failed_when but reported loudly below: a gate that cannot
+# run must not be readable as a gate that passed (doctrine: gates.md).
+- name: "[pazny.keap] RECALL GATE — measure meaning, not length (opt-in)"
+  ansible.builtin.command:
+    argv:
+      - node
+      - "scripts/recall-gate.mjs"
+      - "--fixture"
+      - "{{ _keap_sm_stage }}/canonical"
+      - "--skills"
+      - "{{ _keap_sm_stage }}/{{ keap_selfmodel_top }}"
+      - "--queries"
+      - "{{ keap_selfmodel_recall_queries | default('') }}"
+    chdir: "{{ keap_src_dir }}"
+  environment:
+    PATH: "{{ homebrew_prefix | default('/opt/homebrew') }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+    KEAP_OLLAMA_URL: "http://127.0.0.1:11434"
+    KEAP_EMBED_MODEL: "{{ keap_embed_model | default('nomic-embed-text') }}"
+  register: _keap_sm_recall
+  changed_when: false
+  # rc 1 (regression), 2/3 (harness error) all fail. Only 0 and 4 pass through.
+  failed_when:
+    - _keap_sm_recall.rc is defined
+    - _keap_sm_recall.rc not in [0, 4]
+  timeout: 900
+  when:
+    - _keap_sm_slug | bool
+    - keap_selfmodel_recall_gate | default(false) | bool
+    - (keap_selfmodel_recall_queries | default('')) | length > 0
+
+- name: "[pazny.keap] RECALL GATE — NOT MEASURED (no embedder reachable)"
+  ansible.builtin.debug:
+    msg: >-
+      ⚠ RECALL GATE SKIPPED — rc=4: no embedder reachable, so NOTHING WAS MEASURED.
+      This is NOT a pass. The self-model corpus was published without any check that its
+      descriptions are discriminable; generic prose regressions (the _stack.md failure
+      class) would land undetected. Fix: ensure host Ollama is up and
+      `ollama pull {{ keap_embed_model | default('nomic-embed-text') }}`, then re-run
+      `--tags keap`.
+  when:
+    - _keap_sm_recall is defined
+    - _keap_sm_recall is not skipped
+    - (_keap_sm_recall.rc | default(0)) == 4
+
 - name: "[pazny.keap] Self-model summary"
   ansible.builtin.debug:
     msg: >-
       nOS self-model → {{ keap_selfmodel_root }}/{{ keap_selfmodel_top }}/
-      ({{ _keap_selfmodel.stdout | default('{}') | from_json }})
+      (schema={{ keap_selfmodel_schema | default('anchors') }},
+      gen={{ _keap_selfmodel.stdout | default('{}') | from_json }},
+      fs-sync upserted={{ _keap_sm_sync.json.data.upserted | default(0) }}
+      unchanged={{ _keap_sm_sync.json.data.unchanged | default(0) }}
+      dangling={{ _keap_sm_sync.json.data.danglingAnchors | default(0) }},
+      recall={{ 'pass' if (_keap_sm_recall.rc | default(-1)) == 0
+                else ('NOT MEASURED' if (_keap_sm_recall.rc | default(-1)) == 4 else 'not run') }})

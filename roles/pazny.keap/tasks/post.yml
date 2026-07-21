@@ -105,6 +105,21 @@
     - install_keap | default(false) | bool
     - _keap_ingest_changed | default(false) | bool
 
+# ── nOS architecture self-model (CONTENT — generation + publish + wet gate) ──
+# Deliberately AFTER the knowledge ingest above, not in the render phase where it
+# used to live: cards were written a whole stack bring-up before the taxonomy
+# nodes they anchor at existed, and fs-sync mirrors a card with an unresolved
+# anchor silently — it just renders nowhere. main.yml now creates only the
+# mountpoints; everything with bytes in it happens here, and selfmodel.yml's own
+# publish order keeps "nodes before cards" structural. Ends on the wet gate:
+# KEAP's own linter over the staged canonical, then a real fs/sync that must
+# report zero dangling anchors.
+- name: "[pazny.keap] Generate + publish the nOS architecture self-model"
+  ansible.builtin.include_tasks: selfmodel.yml
+  when:
+    - install_keap | default(false) | bool
+    - keap_selfmodel | default(true) | bool
+
 # Best-effort: kick embeddings for the freshly-materialised nodes now instead of
 # waiting for the nightly Pulse job. Never fails the play (Ollama may be busy/off;
 # the scheduled keap-embed-sync is the guarantee).
@@ -122,7 +137,10 @@
   failed_when: false
   when:
     - install_keap | default(false) | bool
-    - _keap_ingest_changed | default(false) | bool
+    # Either ingest pass can have added nodes: the clone's canonical above, or
+    # the self-model's own canonical in selfmodel.yml. Keying only on the first
+    # left a freshly-ingested self-model tree unembedded until the nightly job.
+    - (_keap_ingest_changed | default(false) | bool) or (_keap_sm_ingest_changed | default(false) | bool)
 
 # ── nOS-face config DataTables (SoC → runtime DataTable) ─────────────────────
 # Create face-layouts/face-wallpapers/face-controls in KEAP and upsert their

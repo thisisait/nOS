@@ -33,8 +33,30 @@
     # overlay) when keap_selfmodel is off.
     - "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/users/{{ keap_selfmodel_uid | default('nos-docs') }}"
 
-- name: "[pazny.keap] Generate nOS architecture self-model (KEAP fs-sync tree)"
-  ansible.builtin.include_tasks: selfmodel.yml
+# ── Self-model: MOUNTPOINTS ONLY in the render phase ─────────────────────────
+# The CONTENT of the self-model tree is written in post.yml (tasks/selfmodel.yml),
+# after the knowledge ingest — cards must never reach the mounted tree before the
+# taxonomy nodes they anchor at exist, or fs-sync mirrors them with a dangling
+# anchor and they are INVISIBLE in the constellation view.
+#
+# The DIRECTORIES still have to exist here, before `docker compose -p iiab up`:
+# compose.yml.j2 bind-mounts keap_selfmodel_root, and a missing bind source is
+# created root-owned by runc (or fails the whole iiab stack, live 2026-07-18).
+# Empty dirs are inert — fs-sync mirrors nothing and ingest walks nothing.
+- name: "[pazny.keap] Ensure self-model mount sources (content is written in post)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    # Bind-mount source for /user-files/<uid>.
+    - "{{ keap_selfmodel_root }}"
+    # Card tree — the fs-sync top-class dir (must be in keap_fs_sync_dirs).
+    - "{{ keap_selfmodel_root }}/{{ keap_selfmodel_top }}"
+    # Canonical taxonomy JSON (slug schema). Deliberately NOT a fs-sync class
+    # dir: KEAP_FS_SYNC_DIRS gates the walk, so these .json files are never
+    # mirrored as objects — they are read by `ingest.mjs --canonical` instead.
+    - "{{ keap_selfmodel_root }}/canonical"
   when: keap_selfmodel | default(true)
 
 - name: "[pazny.keap] Clone nos-keap repository (pinned ref)"
