@@ -24,7 +24,7 @@ Not with a failure — that is the point. It is charged as **interface debt**: t
 next person reading KEAP's env contract sees a variable named after nOS's UI and
 reasonably concludes KEAP is coupled to nOS. The false conclusion is the cost.
 
-Concretely due when `keap_repo_ref` moves past `v1.20.0`.
+Concretely due when `keap_repo_ref` moves past `v1.21.0`.
 
 ## How it was found
 
@@ -36,7 +36,7 @@ apologetic comment.
 ## What closes it
 
 Delete the `KEAP_FACE_HOST` line from the compose template once `keap_repo_ref`
-is past `v1.20.0`. One line, no migration, no coordination — the newer KEAP
+is past `v1.21.0`. One line, no migration, no coordination — the newer KEAP
 already prefers `KEAP_EMBED_ORIGINS` and ignores the old variable.
 
 Worth pairing with a quick grep for the same shape elsewhere: a variable kept

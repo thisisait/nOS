@@ -36,8 +36,12 @@ keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # The tag is deliberately not retracted — rewriting a published tag to mean
 # something else is worse than a documented trap — so the trap is made loud here
 # instead, and pinned by tests/anatomy/test_keap_pin_not_cancelled.py.
-# Anything self-model related needs v1.20.0 or newer (slug ids + atomic
-# applyDomain + per-uid prune guard).
+# Anything self-model related needs v1.21.0 or newer. NOT v1.20.0 — it carries
+# slug ids but NOT boot-fixpoint registration, and ingest applies domain files in
+# DIRECTORY order: `nos.infra.json` sorts before `nos.json`, so children get an
+# earlier created_at than their root and single-pass boot registration drops the
+# WHOLE TREE without a word. v1.21.0 fixes the point and tests both iteration
+# directions. Pinned by tests/anatomy/test_keap_pin_not_cancelled.py.
 keap_repo_ref: "v1.18.1"
 
 keap_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"

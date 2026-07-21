@@ -87,3 +87,35 @@ def test_pins_agree_with_each_other():
             f"keap_version ({cfg['keap_version']}) != keap_repo_ref ({_role_pin()}) "
             "— the image tag and the built source would disagree"
         )
+
+
+# ── Minimum version for the self-model epic ──────────────────────────────────
+# v1.20.0 is NOT cancelled — it is simply insufficient, and insufficient in the
+# silent way. It carries slug ids but not boot-fixpoint registration, and ingest
+# applies domain files in DIRECTORY order: `nos.infra.json` sorts before
+# `nos.json`, so children land with an earlier created_at than their root and a
+# single-pass boot registration drops the whole subtree without logging.
+#
+# The requirement only bites once nOS actually emits a slug canonical tree, so
+# the gate keys on that tree existing rather than on a flag someone must
+# remember to flip. Dormant until the epic lands, mandatory from that moment —
+# docs/doctrine/gates.md: "a skip must not outlive its reason".
+SELFMODEL_CANONICAL = ROOT / "tests/fixtures/selfmodel"
+SELFMODEL_MIN = (1, 21, 0)
+
+
+def _tuple(tag: str) -> tuple:
+    parts = _norm(tag).split("-")[0].split(".")
+    return tuple(int(p) for p in parts[:3]) if all(p.isdigit() for p in parts[:3]) else (0, 0, 0)
+
+
+def test_selfmodel_tree_requires_a_boot_fixpoint_keap():
+    if not SELFMODEL_CANONICAL.exists():
+        return  # epic has not landed; nothing emits slug nodes yet
+    pin = _tuple(_role_pin())
+    assert pin >= SELFMODEL_MIN, (
+        f"a slug canonical tree exists at {SELFMODEL_CANONICAL.relative_to(ROOT)} but "
+        f"keap_repo_ref is v{_role_pin()} — below v1.21.0 the boot registration is "
+        "single-pass, so directory order (nos.infra.json before nos.json) makes the "
+        "children older than their root and the WHOLE TREE is dropped silently"
+    )
