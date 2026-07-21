@@ -1045,12 +1045,17 @@
       when: uninstall | default(false) | bool
       tags: ['uninstall', 'reset']
 
-    # No `| bool` on the end_play `when:` below — a `meta:` task's condition is
-    # compiled in a filter-less context, where any ansible filter throws "No
-    # filter named". `default()` is stock Jinja and a real boolean is truthy.
+    # This condition has TWO ways to break and only one shape survives both.
+    #   `| bool`  — a `meta:` task's when: compiles in a FILTER-LESS context, so
+    #               any ansible filter throws "No filter named".
+    #   bare      — `-e uninstall=true` arrives as the STRING "true", and
+    #               ansible-core refuses a non-boolean conditional result
+    #               ("Conditional result (True) was derived from value of type
+    #               'str'"). Live failure, 2026-07-21, right after the teardown.
+    # Stock-Jinja membership returns a real bool and needs no filter at all.
     - name: "[Uninstall] End the play — no reinstall after teardown"
       ansible.builtin.meta: end_play
-      when: uninstall | default(false)
+      when: uninstall | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
       tags: ['uninstall', 'reset']
 
     # ──────────────────────────────────────────────────────────────────────────
