@@ -1,5 +1,12 @@
 # 05 — `KEAP_FACE_HOST` is emitted for a pin we will leave behind
 
+> **CLOSED 2026-07-21 — paid on the date it said it would be.** The pin moved
+> v1.18.1 → v1.22.0 and the `KEAP_FACE_HOST` line was deleted from the compose
+> template in the same commit. Kept as the folder's one worked example: a
+> deferred cost with a *written trigger* got settled the moment the trigger
+> fired, instead of surviving as a shim nobody dared touch.
+
+
 ## The fee
 
 `roles/pazny.keap/templates/compose.yml.j2` emits **two** CSP variables:

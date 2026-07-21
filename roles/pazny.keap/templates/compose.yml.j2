@@ -62,21 +62,12 @@ services:
       # legitimate identity headers via Traefik's authentik@file on gated_net.
       KEAP_TRUSTED_PROXY: "1"
       KEAP_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
-      # CSP frame-ancestors allowlist. BOTH are emitted on purpose — this is a
-      # deprecation window, not indecision:
-      #   KEAP_EMBED_ORIGINS  a LIST of origins, scheme explicit (KEAP > v1.20.0).
-      #                       The old shape took one bare host and assumed https,
-      #                       which quietly ruled out a second embedder and any
-      #                       local http instance — and was named after nOS's UI
-      #                       in a product that has to run without nOS.
-      #   KEAP_FACE_HOST      deprecated; still read by the pinned v1.18.1, which
-      #                       predates the new var and would otherwise fall back
-      #                       to `face.<tld>` — a host that no longer exists.
-      # Newer KEAP prefers EMBED_ORIGINS and ignores FACE_HOST, so emitting both
-      # is correct on either side of the pin bump. DROP KEAP_FACE_HOST once
-      # keap_repo_ref is past v1.20.0 (see docs/hidden_fees/05-*).
+      # CSP frame-ancestors allowlist — a LIST of origins, scheme explicit, 1:1
+      # with the directive it renders. (It replaced KEAP_FACE_HOST, which took a
+      # single bare host and assumed https: no second embedder, no local http
+      # instance, and named after nOS's UI in a product that must run without
+      # nOS. That shim was dropped when the pin passed v1.21.0 — hidden_fees/05.)
       KEAP_EMBED_ORIGINS: "https://{{ face_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}{% for o in keap_embed_origins | default([]) %},{{ o }}{% endfor %}"
-      KEAP_FACE_HOST: "{{ face_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       # Canonical public origin — server/routes.ts CSRF same-origin guard +
       # /ext/v1 pairing canonicalOrigin. Without it a non-browser client (no
       # Sec-Fetch-Site) 403s under KEAP_TRUSTED_PROXY, and the extension can't
