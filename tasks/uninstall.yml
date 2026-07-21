@@ -67,6 +67,14 @@
       - "{{ bone_runtime_dir | default(ansible_facts['env']['HOME'] + '/bone') }}"
       - "{{ pulse_home | default(ansible_facts['env']['HOME'] + '/pulse') }}"
       - "{{ wing_home | default(ansible_facts['env']['HOME'] + '/wing') }}"
+      # keap_home was MISSED until 2026-07-21: an uninstall reported "footprint
+      # removed (derived + source)" while 2.1 GB survived — the cortex clone,
+      # its 517 MB knowledge DB and 414 MB of backups. The list is
+      # hand-maintained, so a service added later is simply absent from it
+      # (docs/hidden_fees/01). The taxonomy itself is git-SoT and re-ingests
+      # from knowledge/canonical, but captures, the review queue and the
+      # embeddings do NOT survive this — which is the point of an uninstall.
+      - "{{ keap_home | default(ansible_facts['env']['HOME'] + '/keap') }}"
       - "{{ hermes_home | default(ansible_facts['env']['HOME'] + '/agents/hermes') }}"
       - "{{ hermes_config_dir | default(ansible_facts['env']['HOME'] + '/.hermes') }}"
       - "{{ ansible_facts['env']['HOME'] }}/.openclaw"
