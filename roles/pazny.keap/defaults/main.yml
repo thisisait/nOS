@@ -42,7 +42,7 @@ keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # earlier created_at than their root and single-pass boot registration drops the
 # WHOLE TREE without a word. v1.21.0 fixes the point and tests both iteration
 # directions. Pinned by tests/anatomy/test_keap_pin_not_cancelled.py.
-keap_repo_ref: "v1.24.0"
+keap_repo_ref: "v1.25.0"
 
 keap_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 keap_cpus: "{{ docker_cpus_light | default(1) }}"
