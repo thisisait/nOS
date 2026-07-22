@@ -1151,3 +1151,546 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Notifications Ingest
+  /api/v1/userstate/delete:
+    post:
+      operationId: us_delete_api_v1_userstate_delete_post
+      parameters:
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              title: Body
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Us Delete Api V1 Userstate Delete Post
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Us Delete
+      tags:
+      - userstate
+  /api/v1/userstate/get:
+    get:
+      operationId: us_get_api_v1_userstate_get_get
+      parameters:
+      - in: query
+        name: uid
+        required: true
+        schema:
+          title: Uid
+          type: string
+      - in: query
+        name: ns
+        required: true
+        schema:
+          title: Ns
+          type: string
+      - in: query
+        name: key
+        required: true
+        schema:
+          title: Key
+          type: string
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Us Get Api V1 Userstate Get Get
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Us Get
+      tags:
+      - userstate
+  /api/v1/userstate/list:
+    get:
+      operationId: us_list_api_v1_userstate_list_get
+      parameters:
+      - in: query
+        name: uid
+        required: true
+        schema:
+          title: Uid
+          type: string
+      - in: query
+        name: ns
+        required: true
+        schema:
+          title: Ns
+          type: string
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Us List Api V1 Userstate List Get
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Us List
+      tags:
+      - userstate
+  /api/v1/userstate/set:
+    post:
+      operationId: us_set_api_v1_userstate_set_post
+      parameters:
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              title: Body
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Us Set Api V1 Userstate Set Post
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Us Set
+      tags:
+      - userstate
+  /api/v1/vfs/copy:
+    post:
+      operationId: vfs_copy_api_v1_vfs_copy_post
+      parameters:
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              title: Body
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Vfs Copy Api V1 Vfs Copy Post
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Vfs Copy
+      tags:
+      - vfs
+  /api/v1/vfs/delete:
+    post:
+      operationId: vfs_delete_api_v1_vfs_delete_post
+      parameters:
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              title: Body
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Vfs Delete Api V1 Vfs Delete Post
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Vfs Delete
+      tags:
+      - vfs
+  /api/v1/vfs/download:
+    get:
+      operationId: vfs_download_api_v1_vfs_download_get
+      parameters:
+      - in: query
+        name: uid
+        required: true
+        schema:
+          title: Uid
+          type: string
+      - in: query
+        name: path
+        required: true
+        schema:
+          title: Path
+          type: string
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Vfs Download
+      tags:
+      - vfs
+  /api/v1/vfs/list:
+    get:
+      operationId: vfs_list_api_v1_vfs_list_get
+      parameters:
+      - in: query
+        name: uid
+        required: true
+        schema:
+          title: Uid
+          type: string
+      - in: query
+        name: path
+        required: false
+        schema:
+          default: documents
+          title: Path
+          type: string
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Vfs List Api V1 Vfs List Get
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Vfs List
+      tags:
+      - vfs
+  /api/v1/vfs/mkdir:
+    post:
+      operationId: vfs_mkdir_api_v1_vfs_mkdir_post
+      parameters:
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              title: Body
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Vfs Mkdir Api V1 Vfs Mkdir Post
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Vfs Mkdir
+      tags:
+      - vfs
+  /api/v1/vfs/move:
+    post:
+      operationId: vfs_move_api_v1_vfs_move_post
+      parameters:
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              title: Body
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Vfs Move Api V1 Vfs Move Post
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Vfs Move
+      tags:
+      - vfs
+  /api/v1/vfs/read:
+    get:
+      operationId: vfs_read_api_v1_vfs_read_get
+      parameters:
+      - in: query
+        name: uid
+        required: true
+        schema:
+          title: Uid
+          type: string
+      - in: query
+        name: path
+        required: true
+        schema:
+          title: Path
+          type: string
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Vfs Read Api V1 Vfs Read Get
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Vfs Read
+      tags:
+      - vfs
+  /api/v1/vfs/stat:
+    get:
+      operationId: vfs_stat_api_v1_vfs_stat_get
+      parameters:
+      - in: query
+        name: uid
+        required: true
+        schema:
+          title: Uid
+          type: string
+      - in: query
+        name: path
+        required: true
+        schema:
+          title: Path
+          type: string
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Vfs Stat Api V1 Vfs Stat Get
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Vfs Stat
+      tags:
+      - vfs
+  /api/v1/vfs/upload:
+    post:
+      operationId: vfs_upload_api_v1_vfs_upload_post
+      parameters:
+      - in: query
+        name: uid
+        required: true
+        schema:
+          title: Uid
+          type: string
+      - in: query
+        name: path
+        required: false
+        schema:
+          default: documents
+          title: Path
+          type: string
+      - in: query
+        name: filename
+        required: true
+        schema:
+          title: Filename
+          type: string
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Vfs Upload Api V1 Vfs Upload Post
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Vfs Upload
+      tags:
+      - vfs
+  /api/v1/vfs/write:
+    post:
+      operationId: vfs_write_api_v1_vfs_write_post
+      parameters:
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              title: Body
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Vfs Write Api V1 Vfs Write Post
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Vfs Write
+      tags:
+      - vfs
