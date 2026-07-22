@@ -125,17 +125,47 @@
           ansible.builtin.command: >
             {{ docker_bin }} run --rm --entrypoint true
             -v {{ nos_data_root }}:/probe {{ docker_mount_probe_image | default('alpine:3') }}
-          register: _ext_probe
+          register: _ext_reprobe
           changed_when: false
           failed_when: false
           check_mode: false
+
+    # A SKIPPED task still registers. The re-probe above lives inside the
+    # self-heal block, so on every run where self-heal does NOT fire it used to
+    # register `_ext_probe` as {skipped: true} — with no `rc` — clobbering the
+    # real probe's result. `rc | default(1)` then read 1 and the preflight
+    # FAILED ON A HEALTHY MOUNT, always. It went unnoticed because the probe
+    # only arms when nos_data_root is under /Volumes, which first happened on
+    # 2026-07-22; the older external-storage path redirects per-service vars,
+    # not the root. Reconcile explicitly instead of relying on register order.
+    - name: "[Preflight] Reconcile the effective probe result"
+      ansible.builtin.set_fact:
+        _ext_probe_rc: >-
+          {{ (_ext_reprobe.rc | default(1))
+             if (_ext_reprobe is defined and not (_ext_reprobe.skipped | default(false)))
+             else (_ext_probe.rc | default(1)) }}
+        _ext_probe_out: >-
+          {{ (_ext_reprobe.stdout | default(''))
+             if (_ext_reprobe is defined and not (_ext_reprobe.skipped | default(false)))
+             else (_ext_probe.stdout | default('')) }}
+        _ext_probe_err: >-
+          {{ (_ext_reprobe.stderr | default(''))
+             if (_ext_reprobe is defined and not (_ext_reprobe.skipped | default(false)))
+             else (_ext_probe.stderr | default('')) }}
+
+    - name: "[Preflight] Re-classify from the effective result"
+      ansible.builtin.set_fact:
+        _ext_probe_stale: >-
+          {{ (_ext_probe_rc | int) != 0
+             and (('file exists' in _ext_probe_err)
+                  or ('mount source path' in _ext_probe_err)) }}
 
     - name: "[Preflight] Fail fast if the external mount is still not propagated"
       ansible.builtin.fail:
         msg: |
           Docker Desktop's Linux VM cannot bind-mount the external data volume:
               {{ nos_data_root }}
-          stderr: {{ _ext_probe.stderr | default('') | trim }}
+          stderr: {{ _ext_probe_err | trim }}
 
           The external disk was (re)mounted AFTER Docker Desktop started, so the
           VM holds a stale /host_mnt reference. Recover with either:
@@ -145,7 +175,7 @@
           Verify by hand:
               {{ docker_bin }} run --rm -v {{ nos_data_root }}:/mnt alpine ls /mnt
       when:
-        - (_ext_probe.rc | default(1)) != 0
+        - (_ext_probe_rc | int) != 0
         - _ext_probe_stale | bool
 
     - name: "[Preflight] Fail without a diagnosis we have not earned"
@@ -155,11 +185,11 @@
           signature ('mount source path' / 'file exists'). The cause is
           something else — restarting Docker Desktop is unlikely to help.
               data root: {{ nos_data_root }}
-              rc:        {{ _ext_probe.rc | default('?') }}
-              stdout:    {{ (_ext_probe.stdout | default('') | trim)[:400] }}
-              stderr:    {{ (_ext_probe.stderr | default('') | trim)[:400] }}
+              rc:        {{ _ext_probe_rc }}
+              stdout:    {{ (_ext_probe_out | trim)[:400] }}
+              stderr:    {{ (_ext_probe_err | trim)[:400] }}
           Reproduce by hand:
               {{ docker_bin }} run --rm -v {{ nos_data_root }}:/mnt {{ docker_mount_probe_image | default('alpine:3') }} ls /mnt
       when:
-        - (_ext_probe.rc | default(1)) != 0
+        - (_ext_probe_rc | int) != 0
         - not (_ext_probe_stale | bool)

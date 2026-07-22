@@ -114,3 +114,54 @@ def test_probe_image_is_pulled_before_it_is_used_as_the_test():
     assert min(pull_idx) < min(probe_idx), (
         "the probe image is pulled after the probe that depends on it"
     )
+
+
+# ── The skipped-task-still-registers trap ────────────────────────────────────
+# Live 2026-07-22: the self-heal block's re-probe registered the SAME var as the
+# first probe. Ansible registers skipped tasks too — as {skipped: true}, with no
+# `rc` — so on every run where self-heal did not fire, the healthy probe's
+# result was replaced by a skip, `rc | default(1)` read 1, and the preflight
+# failed on a working mount. Every time. Nobody noticed because the probe only
+# arms when nos_data_root is under /Volumes, which had never been true.
+
+
+def test_no_register_name_is_written_by_two_tasks():
+    """Two tasks sharing a register name silently overwrite each other.
+
+    Harmless when both always run; a trap the moment one is conditional — the
+    skip result wins and carries none of the fields the readers expect.
+    """
+    seen = {}
+    for t in _tasks():
+        reg = t.get("register")
+        if not reg:
+            continue
+        seen.setdefault(reg, []).append(str(t.get("name", "<unnamed>")))
+    dupes = {k: v for k, v in seen.items() if len(v) > 1}
+    assert not dupes, (
+        "these register names are written by more than one task; if either is "
+        "conditional, a skip result (no rc/stdout/stderr) overwrites the real "
+        "one:\n"
+        + "\n".join(f"  {k}: {v}" for k, v in dupes.items())
+    )
+
+
+def test_readers_use_the_reconciled_result_not_a_raw_probe():
+    """Failure conditions must read the reconciled fact, not a raw register.
+
+    Scoped to CONSUMERS (fail conditions and their messages), not to the file
+    text: the reconciling set_fact legitimately reads both raw registers — that
+    is its entire job. A gate that forbade the string everywhere would forbid
+    the fix.
+    """
+    offenders = []
+    for t in _fail_tasks():
+        for where, text in (("when", _when(t)), ("msg", _msg(t))):
+            if "_ext_probe.rc" in text or "_ext_probe.stderr" in text:
+                offenders.append(f"{t.get('name')!r} ({where})")
+    assert not offenders, (
+        "these failure consumers read the raw probe register instead of the "
+        "reconciled _ext_probe_rc/_ext_probe_err — they will read the wrong "
+        "probe when the self-heal branch runs, or a skip result when it does "
+        "not:\n  " + "\n  ".join(offenders)
+    )
