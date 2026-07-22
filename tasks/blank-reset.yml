@@ -59,7 +59,7 @@
       ║      that deletes them — a separate pause guards it)               ║
       ║  {{ "- Homebrew packages kept (remove=deep also clears the cache)" if _flush_deep | default(false) | bool else "- Homebrew packages and cache (services just restart)" }}
       ║                                                                    ║
-      ║  After reset the playbook reinstalls everything with clean data.   ║
+      ║  {{ "After removal the play ENDS (leave=true) — no reinstall." if nos_leaving | default(false) | bool else "After reset the playbook reinstalls everything with clean data." }}
       ╚══════════════════════════════════════════════════════════════════════╝
 
        Press ENTER to continue or Ctrl+C -> A to cancel
@@ -292,12 +292,29 @@
     state: absent
   failed_when: false
 
-- name: "[BLANK] Reset complete"
+# The banner must describe THIS run, not the run this file was written for.
+# It used to hardcode the old level name and "Playbook now continues with clean
+# installation" — a lie in two directions under the ladder: it named blank for
+# remove=deep|all (more removal phases follow this one) and it promised a
+# reinstall that `--leave` explicitly cancels. It also left the quiet phases
+# unannounced, so the silent minutes of `docker image prune -af` read as a hang
+# (live 2026-07-22). Pinned by test_blank_reset_confirmation_accuracy.py.
+- name: "[BLANK] Data removal complete"
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════════════════════
-       BLANK RESET COMPLETE
-       Removed: {{ _blank_dirs | length }} data directories, 4 Docker stacks,
+       REMOVE={{ remove | default('data') | upper }} — DATA PHASE COMPLETE
+       Removed: {{ _blank_dirs | length }} data directories, Docker stacks,
        nginx configuration, SSL certificates, dnsmasq, LaunchAgents.
-       Playbook now continues with clean installation...
+      {% if _flush_deep | default(false) | bool %}
+       Next: images + build cache + Homebrew cache — the pruning runs QUIET
+       for several minutes with no output. Not a hang.
+      {% endif %}
+      {% if nos_remove_source | default(false) | bool %}
+       Next: user SOURCE removal (~/nos/tenants, anatomy runtime).
+      {% endif %}
+       Then: post-removal verification.
+       {{ 'Play ENDS after verification (leave=true) — no reinstall.'
+          if nos_leaving | default(false) | bool
+          else 'Playbook then continues with clean installation...' }}
       ══════════════════════════════════════════════════════════════════════

@@ -124,8 +124,17 @@ def test_down_loop_has_no_phantom_stacks():
 
 # ── 2. Docker-image modifier must match where image-prune actually runs ──
 def test_blank_does_not_prune_docker_images():
-    """The 'Docker images kept' blank claim must be true: no image prune here."""
-    src = _blank_src()
+    """The 'Docker images kept' blank claim must be true: no image prune here.
+
+    Comment lines are skipped, matching test_preserved_user_data_is_never_deleted
+    below: this file's prose legitimately NAMES the prune command when
+    documenting which phase owns it. A gate that cannot tell a task from a
+    sentence about a task fails on its own documentation — and the fix an
+    author reaches for then is to delete the sentence, which is backwards.
+    """
+    src = "\n".join(
+        ln for ln in _blank_src().splitlines() if not ln.lstrip().startswith("#")
+    )
     assert "image prune" not in src, (
         "blank-reset.yml prunes Docker images, but the confirmation prompt's "
         "blank-path modifier claims 'Docker images kept'. Either stop pruning "
@@ -217,3 +226,79 @@ def test_preserved_user_data_is_never_deleted():
             f"prompt promises '{preserved}' remains, but blank-reset.yml has a "
             f"deletion task targeting it:\n  " + "\n  ".join(offenders)
         )
+
+
+# ── The COMPLETION banner, not just the ENTER box ────────────────────────────
+# 2026-07-22, first live `nos --remove=all --leave --confirm`: the ENTER box had
+# been reworded to the ladder (C5.1) but the closing banner still read "BLANK
+# RESET COMPLETE … Playbook now continues with clean installation" — wrong level
+# AND a promise `--leave` cancels. The gate above pinned the box the rewording
+# touched; the banner it did not touch was unpinned, so the drift shipped green.
+# Rule: pin BOTH ends of a ceremony — an accurate opening and a lying closing
+# are the same defect.
+
+
+def _completion_banner() -> str:
+    """The text of the closing banner task, or fail loudly if it is gone."""
+    src = _blank_src()
+    marker = "[BLANK] Data removal complete"
+    assert marker in src, (
+        "blank-reset.yml has no completion-banner task named "
+        f"'{marker}' — renamed or deleted. If the banner moved, move this "
+        "gate with it; do not delete the pin."
+    )
+    start = src.index(marker)
+    return src[start : start + 1400]
+
+
+def test_completion_banner_names_the_level_not_blank():
+    banner = _completion_banner()
+    assert "remove" in banner and "upper" in banner, (
+        "completion banner does not render the actual remove level — a "
+        "remove=deep|all run would announce itself under the wrong name"
+    )
+    # Assert on the RENDERED banner, not on the file: the task's own comment
+    # quotes the legacy wording to record why it was replaced, and a gate that
+    # cannot tell prose from live template text fails on its own documentation.
+    rendered = "\n".join(
+        ln for ln in banner.splitlines() if not ln.lstrip().startswith("#")
+    )
+    assert "BLANK RESET COMPLETE" not in rendered, (
+        "the legacy 'BLANK RESET COMPLETE' wording is back in the banner "
+        "itself; it names one ladder level for every level"
+    )
+
+
+def test_completion_banner_honours_leave():
+    """`--leave` ends the play — the banner must not promise a reinstall."""
+    banner = _completion_banner()
+    assert "nos_leaving" in banner, (
+        "completion banner ignores nos_leaving: under --remove=all --leave it "
+        "tells the operator the playbook 'continues with clean installation' "
+        "while main.yml end_plays right after verification (live 2026-07-22)"
+    )
+    # The unconditional promise must be gone; only the leave=false arm may say it.
+    unconditional = [
+        ln
+        for ln in banner.splitlines()
+        if "continues with clean installation" in ln and "nos_leaving" not in banner
+    ]
+    assert not unconditional, "reinstall promise is not conditioned on leave"
+
+
+def test_completion_banner_announces_the_quiet_phases():
+    """flush-deep prints nothing for minutes; the banner must say so.
+
+    The live run read as a hang: the banner said 'continues with clean
+    installation' and then `docker image prune -af` + `brew cleanup` ran silent.
+    Silence that the operator was told to expect is progress; unannounced
+    silence is indistinguishable from a stuck run.
+    """
+    banner = _completion_banner()
+    assert "_flush_deep" in banner, (
+        "banner does not announce the images/caches phase — an operator "
+        "reads the following silent minutes as a hang"
+    )
+    assert "nos_remove_source" in banner, (
+        "banner does not announce the source-removal phase"
+    )
