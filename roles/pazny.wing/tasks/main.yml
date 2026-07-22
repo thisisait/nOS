@@ -156,9 +156,16 @@
   become: true
   when: ansible_os_family != 'Darwin'
 
+# The URL must carry the PIN, not `latest`. It fetched
+# releases/latest/download/… while the preflight below asserted the binary
+# equals `frankenphp_version` — two facts nobody could keep in agreement, so
+# Linux worked only until upstream cut a release. It broke the moment 1.12.6
+# landed (CI 2026-07-22) while macOS, whose version comes from the brew
+# formula, stayed on the pinned 1.12.4. A pin that does not govern the fetch
+# pins nothing. Pinned by tests/anatomy/test_pinned_artifacts_fetch_the_pin.py.
 - name: "[pazny.wing] (Linux) Download FrankenPHP static binary"
   ansible.builtin.get_url:
-    url: "https://github.com/dunglas/frankenphp/releases/latest/download/frankenphp-linux-{{ 'aarch64' if ansible_architecture in ['aarch64', 'arm64'] else 'x86_64' }}"
+    url: "https://github.com/dunglas/frankenphp/releases/download/v{{ frankenphp_version }}/frankenphp-linux-{{ 'aarch64' if ansible_architecture in ['aarch64', 'arm64'] else 'x86_64' }}"
     dest: "{{ _wing_frankenphp_bin }}"
     mode: '0755'
     timeout: 60   # default 10s times out on a slow github.com release CDN
