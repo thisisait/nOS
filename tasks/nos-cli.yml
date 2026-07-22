@@ -1,0 +1,31 @@
+---
+# Install the nos CLI (atomic copy — a running nos keeps its old inode) and
+# record the checkout path for its cd target. Platform-resolved destination:
+# macOS {{ homebrew_prefix }}/bin, Linux ~/.local/bin (the Wing precedent).
+- name: "[nos-cli] Ensure install dir exists"
+  ansible.builtin.file:
+    path: "{{ nos_cli_install_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "[nos-cli] Install nos (atomic copy)"
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/tools/nos"
+    dest: "{{ nos_cli_install_dir }}/nos"
+    mode: '0755'
+
+- name: "[nos-cli] Ensure ~/.nos exists"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.nos"
+    state: directory
+    mode: '0700'
+
+- name: "[nos-cli] Record checkout path for the CLI"
+  ansible.builtin.copy:
+    content: "NOS_SRC={{ playbook_dir }}\n"
+    dest: "{{ ansible_facts['env']['HOME'] }}/.nos/nos-cli.env"
+    mode: '0600'
+
+- name: "[nos-cli] Installed"
+  ansible.builtin.debug:
+    msg: "nos installed at {{ nos_cli_install_dir }}/nos (ensure it is on PATH)"

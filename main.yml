@@ -1555,6 +1555,13 @@
       tags: ['always', 'external-storage', 'storage']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # nos CLI - operator entry point (tools/nos → platform bin dir)
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "[nos-cli] Install the operator CLI"
+      ansible.builtin.import_tasks: tasks/nos-cli.yml
+      tags: ['nos-cli']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Docker stacks - shared network and prerequisites
     # ──────────────────────────────────────────────────────────────────────────
 

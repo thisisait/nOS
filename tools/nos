@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# =============================================================================
+# nos — operator entry point for the nOS playbook.
+#
+#   nos [-y] [--remove=none|data|deep|all] [--confirm] [--leave]
+#       [--print-cmd] [-h|--help] [--version] [ansible-args...]
+#
+# No second vocabulary: the first unrecognised token and everything after it
+# is passed to ansible-playbook VERBATIM (`--` also ends parsing).
+# Exit codes: 0 ok/print/help; N = ansible's rc verbatim; 64 usage; 65 refused
+# (--remove with --tags/--skip-tags — tag filtering silently drops removal
+# tasks; the playbook's R4 assert is the backstop).
+#
+# -y maps to: -e confirm=true -e assume_yes=true plus stdin redirection from
+# /dev/null; an EMPTY -e nos_sudo_password is emitted only when the operator
+# did not pass their own (removals escalate — an explicit real password must
+# never be clobbered by a trailing empty one; the playbook's run-mode sudo
+# preflight refuses -y removals with no sudo path). `yes` is a YAML-1.1
+# truthy literal, hence the var is named assume_yes (the one documented
+# naming exception; see default.config.yml).
+#
+# Checkout resolution: ~/.nos/nos-cli.env (NOS_SRC=..., written by
+# tasks/nos-cli.yml at install) -> $NOS_SRC env -> $HOME/projects/nOS.
+# =============================================================================
+set -euo pipefail
+
+NOS_CLI_VERSION=1
+
+# shellcheck disable=SC1091
+[ -f "$HOME/.nos/nos-cli.env" ] && . "$HOME/.nos/nos-cli.env"
+NOS_SRC="${NOS_SRC:-$HOME/projects/nOS}"
+
+usage() {
+  sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+REMOVE=""
+CONFIRM=0
+YES=0
+LEAVE=0
+PRINT_CMD=0
+PASSTHRU=()
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --remove=*)
+      REMOVE="${1#--remove=}"
+      case "$REMOVE" in
+        none|data|deep|all) ;;
+        *) echo "nos: unknown --remove level '$REMOVE' (none|data|deep|all, case-sensitive)" >&2; exit 64 ;;
+      esac
+      shift ;;
+    --remove)   echo "nos: use --remove=LEVEL" >&2; exit 64 ;;
+    --confirm)  CONFIRM=1; shift ;;
+    -y|--yes)   YES=1; shift ;;
+    --leave)    LEAVE=1; shift ;;
+    --print-cmd) PRINT_CMD=1; shift ;;
+    -h|--help)  usage; exit 0 ;;
+    --version)  echo "nos cli v${NOS_CLI_VERSION}"; exit 0 ;;
+    --)         shift; PASSTHRU+=("$@"); break ;;
+    *)          PASSTHRU+=("$@"); break ;;
+  esac
+done
+
+# ── refusals ────────────────────────────────────────────────────────────────
+if [ "$CONFIRM" -eq 1 ] && [ "$YES" -eq 1 ]; then
+  echo "nos: --confirm together with -y is ambiguous (interactive vs non-interactive) — pick one" >&2
+  exit 64
+fi
+if [ "$LEAVE" -eq 1 ] && { [ -z "$REMOVE" ] || [ "$REMOVE" = "none" ]; }; then
+  echo "nos: --leave without --remove would do nothing — refusing" >&2
+  exit 64
+fi
+# Ordering guard (O2): the parser stops at the first unrecognised token, so
+# `nos --tags iiab --remove=data` would leave --remove INSIDE the passthrough
+# — unparsed, no exit-65. Scan the passthrough and refuse rather than let
+# ansible die on an unknown flag.
+for a in ${PASSTHRU[@]+"${PASSTHRU[@]}"}; do
+  case "$a" in
+    --remove=*|--remove)
+      echo "nos: '--remove' found after the first passthrough token — put" >&2
+      echo "  --remove (and every nos flag) BEFORE ansible passthrough args." >&2
+      exit 64 ;;
+  esac
+done
+if [ -n "$REMOVE" ] && [ "$REMOVE" != "none" ]; then
+  for a in ${PASSTHRU[@]+"${PASSTHRU[@]}"}; do
+    case "$a" in
+      --tags|--tags=*|-t|--skip-tags|--skip-tags=*)
+        echo "nos: refusing --remove=$REMOVE with --tags/--skip-tags — tag" >&2
+        echo "  filtering silently drops the removal tasks (they carry" >&2
+        echo "  filterable tags). Run the removal without tag restriction." >&2
+        exit 65 ;;
+    esac
+  done
+fi
+
+# ── argv: operator passthrough FIRST, CLI emissions LAST (last -e wins) ─────
+ARGS=(ansible-playbook main.yml)
+ARGS+=(${PASSTHRU[@]+"${PASSTHRU[@]}"})
+if [ -n "$REMOVE" ] && [ "$REMOVE" != "none" ]; then
+  ARGS+=(-e "remove=${REMOVE}")          # NEVER -e remove=none (would outrank
+fi                                       # the shim and neuter -e blank=true)
+[ "$CONFIRM" -eq 1 ] && ARGS+=(-e confirm=true)
+if [ "$YES" -eq 1 ]; then
+  ARGS+=(-e confirm=true -e assume_yes=true)
+  # Empty sudo password (vars_prompt neutraliser) ONLY when the operator did
+  # not pass their own — last -e wins, and clobbering an explicit
+  # -e nos_sudo_password=REAL with '' would make every -y removal die
+  # mid-wipe on become (trace M1).
+  _has_sudo_pw=0
+  for a in ${PASSTHRU[@]+"${PASSTHRU[@]}"}; do
+    case "$a" in *nos_sudo_password=*) _has_sudo_pw=1 ;; esac
+  done
+  if [ "$_has_sudo_pw" -eq 0 ]; then
+    ARGS+=(-e nos_sudo_password='')
+  fi
+fi
+[ "$LEAVE" -eq 1 ] && ARGS+=(-e leave=true)
+ARGS+=(-e "nos_cli_version=${NOS_CLI_VERSION}")
+
+if [ "$PRINT_CMD" -eq 1 ]; then
+  printf '%s\n' "${ARGS[*]}"
+  exit 0
+fi
+
+cd "$NOS_SRC"
+if [ "$YES" -eq 1 ]; then
+  exec "${ARGS[@]}" </dev/null
+else
+  exec "${ARGS[@]}"
+fi
