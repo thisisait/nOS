@@ -42,11 +42,17 @@
     # byte-compare idempotence (created/updated/removed counts) still works.
     _keap_sm_stage: "{{ keap_selfmodel_stage | default(keap_home ~ '/selfmodel-stage') }}"
     _keap_sm_slug: "{{ (keap_selfmodel_schema | default('anchors')) == 'slug' }}"
-    # Where the generator leaves the card tree. The two schemas disagree:
-    # slug writes <stage>/cards/<top>/…, anchors writes <stage>/<top>/… .
-    # Publishing from the wrong one silently syncs an empty/absent dir.
+
+# Where the generator leaves the card tree. The two schemas disagree:
+# slug writes <stage>/cards/<top>/…, anchors writes <stage>/<top>/… .
+# Publishing from the wrong one silently syncs an empty/absent dir.
+# SEPARATE task: set_fact templates every value against pre-task state, so a
+# key cannot reference a sibling key from the same block (_keap_sm_stage was
+# undefined here on the first live run of the slug path, 2026-07-22).
+- name: "[pazny.keap] Resolve self-model card source"
+  ansible.builtin.set_fact:
     _keap_sm_cards_src: >-
-      {{ _keap_sm_stage ~ ('/cards/' if ((keap_selfmodel_schema | default('anchors')) == 'slug') else '/') ~ keap_selfmodel_top }}
+      {{ _keap_sm_stage ~ ('/cards/' if _keap_sm_slug | bool else '/') ~ keap_selfmodel_top }}
 
 - name: "[pazny.keap] Ensure self-model staging + published dirs"
   ansible.builtin.file:
