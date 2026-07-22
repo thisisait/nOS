@@ -156,7 +156,7 @@ acceptance + the first real migration) → healthcheck coverage → RC blank re-
   named core-physics branches (`01.01.03`-`.10`), EN + flawless CS. Live in the corpus.
 - **Curator agent** live (propose-only taxonomy reconciler; full L≥3 sweep, convergence
   proven) — see memory `keap-curator-agent-build`.
-- **Git-SoT knowledge pipeline** (`docs/plans/keap-knowledge-ingest-pipeline.md`) — the
+- **Git-SoT knowledge pipeline** (`docs/archive/keap-knowledge-ingest-pipeline.md`) — the
   live DB is now populated *from git*, idempotently, by the `pazny.keap` role:
   - `knowledge/canonical/<L0>/<L1>.json` = the SoT (95 files / **1565 curated records**
     / 2231 relations), captured by `knowledge/dump.mjs` — including **770 seed-override
@@ -478,7 +478,7 @@ can't be a real file browser or the KEAP bridge). Build-fresh SvelteKit in its o
   Tier-2 apps_runner update-semantics gate; blank-reset external-storage + nginx-dir
   contract gates; WP RBAC last-admin floor; advisor/architect name-contract pin.
 - **[L/XL] KEAP custom taxonomy view + community cloud push** — the git-SoT knowledge
-  pipeline (`docs/plans/keap-knowledge-ingest-pipeline.md`) ships the **community** view
+  pipeline (`docs/archive/keap-knowledge-ingest-pipeline.md`) ships the **community** view
   (curated, git-tracked, hardcoded today). Deferred: a per-user **custom** view that
   applies the user's *local taxonomy proposals* on top of community (edits are proposals,
   never direct mutations), and a **community-cloud push** that promotes accepted proposals

@@ -7,7 +7,7 @@ summary: "blank, flush=deep and uninstall become one ladder behind a nos CLI: re
 tags: [cli, lifecycle, removal, doctrine, gates, hidden-fees, keap, contracts]
 release: v0.9-beta
 actors: [pazny, claude, fable]
-related: [docs/nos-cli.md, docs/doctrine/gates.md, docs/hidden_fees/README.md, docs/specs/nos-selfmodel-keap-contract.md]
+related: [docs/nos-cli.md, docs/doctrine/gates.md, docs/doctrine/cross-repo-contracts.md, docs/hidden_fees/README.md]
 ---
 
 The operator's question was small: *"shouldn't we get rid of `--blank`? It is
