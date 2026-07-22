@@ -40,9 +40,10 @@ shift || true
 
 for arg in "$@"; do
   case "$arg" in
-    *blank=true*|*destroy_state=true*)
-      echo "nos-stacks.sh: refusing — '$arg' needs sudo + a human. Use:" >&2
-      echo "  ansible-playbook main.yml -e blank=true" >&2
+    *blank=true*|*destroy_state=true*|*remove=data*|*remove=deep*|*remove=all*|*flush=true*|*flush=deep*|*uninstall=true*|confirm=true*|*[!_a-zA-Z0-9]confirm=true*)
+      echo "nos-stacks.sh: refusing — '$arg' is a removal/destructive token; needs a human. Use:" >&2
+      echo "  nos --remove=<level> --confirm    (once the nos CLI lands; until then:" >&2
+      echo "  ansible-playbook main.yml -e remove=<level> -e confirm=true)" >&2
       exit 2
       ;;
   esac

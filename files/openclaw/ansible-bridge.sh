@@ -15,8 +15,10 @@ mkdir -p "$LOG_DIR"
 
 # Allowed tags (whitelist — prevent destructive operations)
 ALLOWED_TAGS="nginx,stacks,verify,observability,iiab,service-registry,backup,export"
-# Blocked tags (never allow)
-BLOCKED_TAGS="blank"
+# Blocked tags (never allow). The removal phase carries tags blank/reset/flush;
+# uninstall is the legacy tag (dies with tasks/uninstall.yml). Belt on top of
+# the whitelist: none of these may EVER appear in ALLOWED_TAGS (gate G-3).
+BLOCKED_TAGS="blank,reset,flush,uninstall"
 
 log() {
     local timestamp

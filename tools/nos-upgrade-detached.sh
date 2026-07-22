@@ -80,9 +80,9 @@ fi
 # must never smuggle in a blank/destroy request.
 for arg in "$SERVICE" "$RECIPE_ID"; do
   case "$arg" in
-    *blank=true*|*destroy_state=true*)
-      echo "nos-upgrade-detached.sh: refusing — '$arg' needs sudo + a human." >&2
-      echo "  Use: ansible-playbook main.yml -e blank=true" >&2
+    *blank=true*|*destroy_state=true*|*remove=data*|*remove=deep*|*remove=all*|*flush=true*|*flush=deep*|*uninstall=true*|confirm=true*|*[!_a-zA-Z0-9]confirm=true*)
+      echo "nos-upgrade-detached.sh: refusing — '$arg' is a removal/destructive token; needs a human." >&2
+      echo "  Use: nos --remove=<level> --confirm  (or ansible-playbook main.yml -e remove=<level> -e confirm=true)" >&2
       exit 2
       ;;
   esac

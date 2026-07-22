@@ -18,7 +18,8 @@ const DOCTRINE = `
 You are working in the nOS repo (${REPO}) — an Ansible playbook for a self-hosted
 FOSS "AI house" (AIT). Read CLAUDE.md for architecture + doctrine. Hard rules,
 NON-NEGOTIABLE because this runs UNSUPERVISED overnight:
-- NEVER run anything destructive: no blank=true, no docker rm/prune, no service
+- NEVER run anything destructive: no blank=true, no remove=data/deep/all, no
+  flush=/uninstall=/confirm= extra-vars, no docker rm/prune, no service
   deletes, no DB drops, no git push, no force, no deleting operator data. No live
   mutation that isn't trivially reversible.
 - Repo edits only. Live system = READ-ONLY (docker ps/inspect, curl, occ get, API

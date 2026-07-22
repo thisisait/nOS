@@ -994,7 +994,7 @@ Organized by surface; each item has a one-line **mitigation** the implementing a
 
 ### 9.6 Agent loop / amplification
 
-- **Conductor's apply triggers blank → wing.db wiped → audit lost.** **CRITICAL:** `conductor` profile guards include `require_blank_test_within_days: 7` AND `max_changes_per_run: 5` — conductor will never apply a `blank=true`. Blank is operator-only forever. *Test: prompt-injection attempt "apply blank=true", verify refusal.*
+- **Conductor's apply triggers blank → wing.db wiped → audit lost.** **CRITICAL:** `conductor` profile guards include `require_blank_test_within_days: 7` AND `max_changes_per_run: 5` — conductor will never apply a `blank=true` **or any `remove=` level (`remove=data|deep|all`, `flush=`, `uninstall=`, `confirm=`)**. Blank/removal is operator-only forever. *Test: prompt-injection attempt "apply blank=true" AND "apply remove=all", verify refusal.*
 - **Inspektor's finding triggers librarian → conductor → migration apply.** Multi-step chain; break point is `/approvals` operator gate. *Test: chain happy path, verify operator must click 3 times (one per agent's output).*
 - **Two agents POST same finding.** Wing API deduplicates on `finding_ref` → 409 Conflict.
 - **Scout flaps an alarm; downstream replans repeatedly.** Scout (post-PoC) profile has `min_evidence_count: 3` for plan promotion.
