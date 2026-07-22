@@ -21,9 +21,9 @@ dry-run unless confirmed, single-source removal set, post-removal absence assert
 pins v1.19→v1.24) · `docs/hidden_fees/` ledger. RELEASE.md `## v0.9-beta` + devlogs
 `2026-07-20-release-v0-9-beta` and `2026-07-22-nos-cli-and-removal-ladder`.
 `tools/devlog-release.sh v0.9-beta` and `tools/ci-local.sh` both GREEN.
-**NEXT (operator):** converge `--tags keap` (v1.24.0 pin needs an image rebuild) → push
-`dev` → `dev→master` PR → `gh pr merge --rebase --admin` → tag → `gh release create`
-(memory `nos-release-flow`).
+KEAP converged and verified live at **v1.25.0** (pin == running image).
+**NEXT (operator):** `dev→master` PR → `gh pr merge --rebase --admin` → tag →
+`gh release create` (memory `nos-release-flow`).
 
 **Blank/uninstall drift → managed-resource manifest (VALIDATED, P1.5 remains).**
 `_blank_dirs` is a hand-maintained allowlist rather than a reconciliation. Plan:
@@ -54,6 +54,15 @@ review had missed (`hidden_fees/06`, `07`). **Remaining: P1.5 managed-resource m
   wet-test lane. Hard-breaks on ansible-core 2.24.
 - **Advisor/architect actor-id naming inconsistency** (scout side-find,
   2026-06-11) — normalize agent actor_id naming across the two upgrade agents.
+- **KEAP contract v2 proposal — typed skill→service relations (2026-07-22, undecided).**
+  KEAP asks why skills carry no typed edges to their services (today: tree +
+  `[[anchor]]` rays only). Proposed shape: a `relations:` list in card frontmatter
+  (`relations: [{type: provided-by, to: nos.iiab.rustfs}]`), emitted by our
+  self-model generator, ingested as confirmed edges with pack provenance. **They
+  are waiting on us for the verb set** (`provided-by` / `documents` / `depends-on`?)
+  before either side builds; KEAP side needs an FM_VERSION bump. Decide the verbs
+  against what the generator can derive from real state — a verb we cannot populate
+  from the manifest is a verb that ships empty.
 - **Removal vocabulary: `blank`/`reset` TAG rename + shim deletion.** The vars moved
   to `remove=none|data|deep|all`, but every removal task still carries
   `tags: ['blank','reset']` / `['flush','reset']` (`main.yml`, `tasks/blank-reset.yml`)
