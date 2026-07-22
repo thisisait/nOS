@@ -128,3 +128,13 @@ re-proven. None of that is in this tag. Those criteria move to the RC, and the
 honest reason is that they are operator-gated live converges, and holding a
 175-commit arc hostage to them reproduces exactly the release-debt pattern that
 left master six weeks stale earlier this month.
+
+---
+
+**Postscript (2026-07-22).** This entry was written on the 20th and the tag was
+not cut. Two days of work followed — the `nos` CLI and removal ladder, the KEAP
+self-model contract at v1, `docs/hidden_fees/` — so `v0.9-beta` ships both arcs
+and the release notes cover 228 commits, not 175. The second half has its own
+entry: `2026-07-22-nos-cli-and-removal-ladder`. Nothing above was rewritten;
+a release post that quietly grew new claims after the fact would be its own
+kind of hidden fee.

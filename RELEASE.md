@@ -6,7 +6,55 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.8-
 
 ---
 
-## v0.9-beta (2026-07-20)
+## v0.9-beta (2026-07-22)
+
+> **nOS grows a face, the cortex learns itself, and the lifecycle becomes one
+> command.** Two arcs, 228 commits since `v0.8-beta`. The first is below; the
+> second (2026-07-20 → 22) replaces `blank`/`flush`/`uninstall` with a single
+> `nos` CLI and an ordered removal ladder, negotiates the KEAP self-model
+> contract to v1 as symmetric cross-repo gates, and opens `docs/hidden_fees/`
+> as a standing ledger of deferred costs. Narrative: devlog
+> `2026-07-22-nos-cli-and-removal-ladder`.
+
+### The `nos` CLI and the removal ladder
+
+- **One ladder, four levels.** `nos --remove=none|data|deep|all` replaces the
+  overlapping `blank=true` / `flush=deep` / `uninstall=true` switches; `--leave`
+  ends the play after removal instead of reconverging (machine handoff). Old
+  switches still work through an unconditional compat shim.
+- **Dry run unless confirmed.** Any level without `--confirm`/`-y` prints the
+  resolved inventory — every path with `[exists]`/`[absent]` against the live
+  filesystem — and stops. An off-allowlist value is a hard failure, never a
+  silent no-op.
+- **One source of truth + a verifier.** `tasks/removal-set.yml` is the only
+  place each level's path set is built; the printer, the wipe, the source
+  removal and a **post-removal absence assertion** all read it, so they cannot
+  drift. The assertion exists because a 2026-07-21 uninstall reported success
+  while leaving `~/keap` (2.1 GB) and a Nextcloud tree behind, and the surviving
+  config then broke the next install.
+- Built only after an independent review **rejected** the first plan for
+  specifying a safety contract that appeared in no commit — then four more
+  defects surfaced in the first live run, including a Docker mount preflight
+  that had **never once succeeded** (a skipped task's registration overwrote the
+  healthy probe's result) and a removal whose path overrides keyed on a
+  different condition than the deploy's.
+
+### Cross-repo contracts, and a ledger of what we owe
+
+- **Self-model contract v1 with KEAP** — slug taxonomy ids, canonical knowledge
+  format, producer-owned golden fixture, and **symmetric** gates: each repo pins
+  the other's half. Protocol in `docs/doctrine/cross-repo-contracts.md`.
+- **`docs/doctrine/gates.md`** — *a check that cannot fail is not a check*.
+  Earned repeatedly this arc: a confirmation gate that pinned a literal level
+  name had been certifying the very lie it existed to catch.
+- **`docs/hidden_fees/`** — deferred costs, entry test *"nothing is failing and
+  nobody is looking."* Seven entries, honestly unpaid; fee 07 records a
+  mechanism nobody has explained yet, deliberately without a guessed remedy.
+- **`nos_data_root` on external storage** — one lever moves the whole estate;
+  validated by a full teardown plus a clean all-on install (**1531 tasks,
+  `failed=0`, 63 containers, none unhealthy**).
+
+### The face and the cortex (2026-07-13 → 20)
 
 > **nOS grows a face, and the cortex learns itself.** The seven days after the
 > cortex GA produced 175 commits, two of which change what nOS *is*: the
