@@ -286,6 +286,50 @@ def _try_authentik_login(opener, authentik_domain: str, tester_user: str,
     return True, None
 
 
+# ── loopback fallback ────────────────────────────────────────────────────────
+# A probe must fail when the SERVICE is broken, not when the host lacks a DNS
+# entry the platform is not supposed to have. See the call site for the full
+# reasoning; keep these three helpers together.
+
+def _is_name_resolution_error(exc) -> bool:
+    reason = getattr(exc, "reason", exc)
+    text = str(reason)
+    return (
+        getattr(reason, "errno", None) in (-2, -3, -5)
+        or "Name or service not known" in text
+        or "nodename nor servname" in text
+        or "Temporary failure in name resolution" in text
+    )
+
+
+def _loopback_ok(url: str) -> bool:
+    """Only for names we expect the local edge to serve — never public hosts."""
+    host = urllib.parse.urlsplit(url).hostname or ""
+    return host.endswith(".local") or host.endswith(".test") or host.endswith(".lan")
+
+
+def _probe_via_loopback(url, ctx, timeout, method):
+    """Same request, sent to 127.0.0.1 with the original Host header."""
+    parts = urllib.parse.urlsplit(url)
+    port = parts.port or (443 if parts.scheme == "https" else 80)
+    direct = urllib.parse.urlunsplit(
+        (parts.scheme, "127.0.0.1:%d" % port, parts.path or "/", parts.query, ""))
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    req = urllib.request.Request(direct, method=method)
+    req.add_header("Host", parts.hostname or "")
+    req.add_header("User-Agent", "nos-smoke/1.0 (loopback)")
+    opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx))
+    try:
+        with opener.open(req, timeout=timeout) as resp:
+            return resp.status, None
+    except urllib.error.HTTPError as exc:
+        return exc.code, None
+    except Exception as exc:  # noqa: BLE001
+        return None, type(exc).__name__ + ": " + str(exc)
+
+
 def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
           tester_password: str | None = None,
           authentik_domain: str | None = None) -> ProbeResult:
@@ -389,6 +433,20 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
         except urllib.error.HTTPError as exc:
             return exc.code, None
         except urllib.error.URLError as exc:
+            # No resolver for the tenant domain (Linux has no /etc/resolver —
+            # that mechanism is macOS-only, tasks/dnsmasq.yml), so a DNS-based
+            # probe measures a layer the platform never provides and reports a
+            # healthy estate as dead. Retry against the loopback edge with the
+            # Host header the router keys on: that tests the thing we actually
+            # care about (does the reverse proxy route this service?) instead
+            # of name resolution. Labelled distinctly so a run that never
+            # exercised DNS cannot be mistaken for one that did.
+            if _is_name_resolution_error(exc) and _loopback_ok(url):
+                status, direct_err = _probe_via_loopback(url, ctx, timeout, method)
+                if status is not None:
+                    return status, None
+                return None, "URLError: %s (loopback retry: %s)" % (
+                    exc.reason, direct_err)
             return None, "URLError: %s" % exc.reason
         except Exception as exc:  # noqa: BLE001
             return None, type(exc).__name__ + ": " + str(exc)
