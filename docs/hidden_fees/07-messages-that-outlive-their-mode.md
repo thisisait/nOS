@@ -79,4 +79,15 @@ to fix and, more importantly, a datapoint on what the deny-list must cover.
 | `blank-reset.yml` completion banner | `BLANK RESET COMPLETE … continues with clean installation` | `remove=data` **and** `leave=false` — **PAID** `d8c7e63c` |
 | `blank-reset.yml` ENTER box | `After reset the playbook reinstalls everything` | `leave=false` — **PAID** `d8c7e63c` |
 | `blank-reset.yml` completion banner | `4 Docker stacks` (hardcoded; the down-loop covers 9) | never — **PAID** `d8c7e63c` |
+| `blank-reset.yml` ENTER box | `Docker images + build cache (remove=deep)` while running `remove=all` | `remove=deep` — **PAID** `f230a946` |
+| `blank-reset.yml` ENTER box | `remove=deep also clears the cache` | `remove=deep` — **PAID** `f230a946` |
+| `blank-reset.yml` ENTER box | `~/nos/tenants/** user files` under **"Will remain"** during `remove=all` — the one level that deletes them | `remove != all` — **PAID** `f230a946` |
+| `main.yml` sudo `vars_prompt` | `Press Enter to skip (those tasks will fall back to manual mode)` — `become` tasks hard-fail, they do not skip | never; cost a live all-on install at the first Homebrew task — **PAID** `f230a946` |
+
+The fourth row is the expensive kind: the other three misname a level, but that
+one told the operator an action was **safe** when it aborts the run. A gate
+pinning the *literal* `remove=deep` (G-7, pre-`f230a946`) had certified two of
+these — **a gate written around a fix certifies the fix, and can encode the very
+lie it exists to catch.** It now asserts the line renders the running level.
+
 | _(operator-reported, pending)_ | | |
