@@ -2,6 +2,26 @@
 # Install the nos CLI (atomic copy — a running nos keeps its old inode) and
 # record the checkout path for its cd target. Platform-resolved destination:
 # macOS {{ homebrew_prefix }}/bin, Linux ~/.local/bin (the Wing precedent).
+# The Wing precedent is not just the PATH — it is the CHOWN. `~/.local` is
+# routinely left root-owned by an earlier become/pip step or baked that way into
+# a CI runner image, and then an operator-context mkdir of `~/.local/bin` dies
+# with EACCES on a directory inside the user's own HOME. This file cited the
+# precedent in a comment while copying only half of it; the Linux integration
+# job caught it (2026-07-22, `Permission denied: '/home/runner/.local/bin'`).
+# Mirrors roles/pazny.wing/tasks/main.yml — keep the two in step.
+# Pinned by tests/anatomy/test_local_bin_installs_chown.py.
+- name: "[nos-cli] (Linux) Ensure ~/.local + bin exist (operator-owned)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ansible_facts['user_id'] }}"
+    mode: '0755'
+  loop:
+    - "{{ ansible_facts['env']['HOME'] }}/.local"
+    - "{{ ansible_facts['env']['HOME'] }}/.local/bin"
+  become: true
+  when: ansible_os_family != 'Darwin'
+
 - name: "[nos-cli] Ensure install dir exists"
   ansible.builtin.file:
     path: "{{ nos_cli_install_dir }}"
