@@ -147,8 +147,9 @@ def test_prompt_image_modifier_is_flush_deep_gated():
     assert "Docker images kept" in prompt, (
         "prompt lost the blank-path 'Docker images kept' modifier"
     )
-    assert "flush=deep" in prompt and "_flush_deep" in prompt, (
-        "the Docker-image prompt line must branch on _flush_deep"
+    assert "remove=deep" in prompt and "_flush_deep" in prompt, (
+        "the Docker-image prompt line must branch on _flush_deep and name the "
+        "remove= level vocabulary (C5 rewording)"
     )
 
 
@@ -185,8 +186,8 @@ def test_prompt_homebrew_modifier_is_flush_deep_gated():
         "blank-path Homebrew line must state packages AND cache are kept"
     )
     # flush=deep branch must own the cache-clear claim.
-    assert "flush=deep also clears the cache" in prompt, (
-        "flush=deep Homebrew line must own the cache-clear claim"
+    assert "remove=deep also clears the cache" in prompt, (
+        "remove=deep Homebrew line must own the cache-clear claim"
     )
 
 

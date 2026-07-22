@@ -235,27 +235,104 @@ _NONSTOCK_FILTER = re.compile(
     r"hash|password_hash|to_uuid|combine|json_query|ipaddr|to_json|from_json|"
     r"to_nice_yaml|from_yaml|map|select|reject|difference|union|intersect)\b"
 )
+# -e-reachable run-mode/legacy switch vars: any read of these inside a `meta:`
+# task's `when:` must use the membership idiom (`var | default(x) in [...]`)
+# — bare reads choke on the STRING "true" from -e, and `| bool` throws in the
+# filter-less meta compile context (both 2026-07-21 failure shapes).
+_META_EVAR = re.compile(r"(?<![\w.'\"])(remove|leave|confirm|assume_yes|uninstall|blank|flush)\b")
+_MEMBERSHIP_AFTER = re.compile(r"\s*\|\s*default\([^)]*\)\s*(not\s+)?in\s*\[")
+
+
+def _meta_when_clauses(path):
+    """Yield (lineno, clause) for every `when:` clause of every `meta:` task.
+
+    Walks the WHOLE task block (from the task's `- ` dash line to the next
+    sibling dash at the same indent) instead of a fixed ±line window, and
+    expands multi-line `when:` lists — the old window scan missed a when:
+    list item placed more than a few lines from the meta: line (G-6 hole).
+    """
+    lines = path.read_text().splitlines()
+    for i, line in enumerate(lines):
+        if not _META_TASK.search(line) or line.lstrip().startswith("#"):
+            continue
+        key_indent = len(line) - len(line.lstrip())
+        if line.lstrip().startswith("- "):
+            key_indent += 2
+        # task start: nearest preceding dash line shallower than the key indent
+        start = dash_indent = None
+        for j in range(i, -1, -1):
+            m = re.match(r"^(\s*)- ", lines[j])
+            if m and len(m.group(1)) < key_indent:
+                start, dash_indent = j, len(m.group(1))
+                break
+        if start is None:
+            continue
+        # block end: next sibling dash (same indent) or a dedent past the task
+        end = len(lines)
+        for j in range(start + 1, len(lines)):
+            m = re.match(r"^(\s*)- ", lines[j])
+            if m and len(m.group(1)) == dash_indent:
+                end = j
+                break
+            if lines[j].strip() and not lines[j].lstrip().startswith("#") \
+                    and (len(lines[j]) - len(lines[j].lstrip())) < dash_indent:
+                end = j
+                break
+        for j in range(start, end):
+            wm = re.match(r"^(\s*)when:\s*(.*)$", lines[j])
+            if not wm:
+                continue
+            w_indent = len(wm.group(1))
+            rest = wm.group(2).strip()
+            if rest and rest not in (">", ">-", "|", "|-"):
+                yield j + 1, rest
+            for k in range(j + 1, end):
+                nxt = lines[k]
+                if not nxt.strip():
+                    break
+                if (len(nxt) - len(nxt.lstrip())) <= w_indent:
+                    break
+                yield k + 1, nxt.strip().lstrip("- ").strip()
+
+
+def _meta_when_files():
+    roots = [p for d in (REPO / "roles").glob("*/tasks") for p in d.rglob("*.yml")]
+    roots += list((REPO / "tasks").rglob("*.yml"))
+    roots.append(REPO / "main.yml")
+    return roots
 
 
 def test_no_nonstock_filter_in_meta_task_when():
     offenders: list[str] = []
-    roots = [p for d in (REPO / "roles").glob("*/tasks") for p in d.rglob("*.yml")]
-    roots += list((REPO / "tasks").rglob("*.yml"))
-    roots.append(REPO / "main.yml")
-    for p in roots:
-        lines = p.read_text().splitlines()
-        for i, line in enumerate(lines):
-            if not _META_TASK.search(line):
-                continue
-            # a meta task's when: sits within a couple of lines of the directive
-            for j in range(max(0, i - 3), min(i + 5, len(lines))):
-                wl = lines[j]
-                if re.match(r"\s*when:", wl) and _NONSTOCK_FILTER.search(wl):
-                    offenders.append(f"{p.relative_to(REPO)}:{j + 1}: {wl.strip()[:70]}")
-                    break
+    for p in _meta_when_files():
+        for ln, clause in _meta_when_clauses(p):
+            if _NONSTOCK_FILTER.search(clause):
+                offenders.append(f"{p.relative_to(REPO)}:{ln}: {clause[:70]}")
     assert not offenders, (
         "A `meta:` task's `when:` uses a non-stock (ansible) filter. On ansible-core "
         "2.20.6 that condition is compiled in a filter-less context and throws 'No "
         "filter named'. Drop `| bool` (a real boolean is already truthy) / use stock "
         "Jinja. Offenders:\n  " + "\n  ".join(sorted(set(offenders)))
+    )
+
+
+def test_meta_when_evar_reads_use_membership_idiom():
+    """Any -e-reachable run-mode/legacy var in a `meta:` `when:` must be read
+    via the membership idiom: `var | default(<x>) in [...]`. Bare reads break
+    on the extra-var STRING "true"; `| bool` breaks in the filter-less meta
+    compile context (both live 2026-07-21 failure shapes)."""
+    offenders: list[str] = []
+    for p in _meta_when_files():
+        for ln, clause in _meta_when_clauses(p):
+            for m in _META_EVAR.finditer(clause):
+                if not _MEMBERSHIP_AFTER.match(clause[m.end():]):
+                    offenders.append(
+                        f"{p.relative_to(REPO)}:{ln}: `{m.group(1)}` read without "
+                        f"membership idiom: {clause[:60]}"
+                    )
+    assert not offenders, (
+        "A `meta:` task's `when:` reads an -e-reachable switch var without the "
+        "membership idiom (`var | default(<x>) in [...]`). Bare reads die on the "
+        "-e STRING 'true'; `| bool` dies filter-less. Offenders:\n  "
+        + "\n  ".join(sorted(set(offenders)))
     )

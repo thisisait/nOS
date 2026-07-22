@@ -1,0 +1,39 @@
+---
+# ==============================================================================
+# REMOVE: SOURCE — the `remove=all` tail: user SOURCE + anatomy runtime dirs.
+# Was tasks/uninstall.yml step 2b. Reached only when nos_remove_source
+# (remove=all) AND confirmed (the run-mode dry-run gate ends the play otherwise).
+# GOV NOTE: removes wing.db (tamper-evident audit chain) — export first under a
+# gov/compliance profile. See docs/plans/blank-uninstall-managed-resources.md.
+# ==============================================================================
+
+- name: "[Remove:source] Final interactive confirmation"
+  ansible.builtin.pause:
+    prompt: |-
+
+      ╔══════════════════════════════════════════════════════════════════════╗
+      ║  REMOVE=ALL — this REMOVES ALL nOS DATA INCLUDING USER FILES.         ║
+      ║  {{ nos_data_root }}/tenants/** (documents, uploads) will be DELETED. ║
+      ║  leave={{ nos_leaving }} — {{ 'the play STOPS after removal' if nos_leaving else 'the estate REINSTALLS from zero afterwards' }}.
+      ║  Back up first if unsure.                                             ║
+      ╚══════════════════════════════════════════════════════════════════════╝
+
+       Press ENTER to PERMANENTLY DELETE, or Ctrl+C -> A to cancel
+  when: not nos_assume_yes
+
+- name: "[Remove:source] Remove the SOURCE tree + side-car + registry"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ _uninstall_source }}"
+  loop_control:
+    label: "{{ item }}"
+  become: true
+
+- name: "[Remove:source] Done"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════════════════════
+       REMOVE=ALL SOURCE PHASE COMPLETE — user source + anatomy runtime gone.
+       {{ 'Play ends here (leave=true). Reinstall later: nos --remove=none' if nos_leaving else 'Reinstalling from zero…' }}
+      ══════════════════════════════════════════════════════════════════════

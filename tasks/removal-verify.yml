@@ -1,0 +1,63 @@
+---
+# ==============================================================================
+# REMOVAL VERIFY (R5) — after the removal phases, assert ABSENCE of every path
+# in the executed level's set. Closes the 2026-07-21 silent-survival class
+# (~/projects/nextcloud lived through a removal whose file:state=absent task
+# should have removed it or failed loudly — it did neither, upstream skip).
+# ==============================================================================
+
+- name: "[Verify] Build the level-scoped expected-absent set"
+  ansible.builtin.set_fact:
+    _removal_expected_absent: >-
+      {{ _blank_dirs
+         + [ansible_facts['env']['HOME'] + '/projects/default/service-registry.json']
+         + [ansible_facts['env']['HOME'] + '/.nos/secrets.yml']
+         + ((nos_remove_deep and (flush_ollama | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]))
+            | ternary([ansible_facts['env']['HOME'] + '/.ollama'], []))
+         + (nos_remove_source | ternary(_uninstall_source, [])) }}
+
+- name: "[Verify] Stat every path in the executed removal set"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ _removal_expected_absent | unique }}"
+  loop_control:
+    label: "{{ item }}"
+  register: _removal_verify_stat
+
+- name: "[Verify] Collect survivors"
+  ansible.builtin.set_fact:
+    _removal_survivors: >-
+      {{ _removal_verify_stat.results
+         | selectattr('stat.exists') | map(attribute='item') | list }}
+
+# Docker must be REACHABLE during a data+ removal — the volume prune in
+# blank-reset.yml is failed_when:false best-effort, so an unreachable
+# daemon silently preserves mariadb_data/erpnext_sites while secrets.yml is
+# already gone (the key/ciphertext split). Probe rc!=0 = FAILURE, not skip.
+- name: "[Verify] Docker named-volume probe (compensates the best-effort prune)"
+  ansible.builtin.command: "{{ docker_bin }} volume ls -q"
+  register: _removal_verify_volumes
+  changed_when: false
+  failed_when: _removal_verify_volumes.rc != 0
+
+- name: "[Verify] FAIL loudly on any survivor"
+  ansible.builtin.fail:
+    msg: |-
+      REMOVAL INCOMPLETE (remove={{ remove }}) — the following paths/volumes
+      SURVIVED the removal phase. This run is stopping so the survival is loud
+      (2026-07-21 class). Diagnose before re-running:
+      {% for p in _removal_survivors %}
+        - {{ p }}
+      {% endfor %}
+      {% for v in ['mariadb_data', 'erpnext_sites'] %}{% if v in (_removal_verify_volumes.stdout_lines | default([])) %}
+        - docker volume: {{ v }} (invisible to `compose down -v` — base file has
+          no top-level volumes:; the prune is best-effort)
+      {% endif %}{% endfor %}
+  when: >-
+    (_removal_survivors | length > 0)
+    or ('mariadb_data' in (_removal_verify_volumes.stdout_lines | default([])))
+    or ('erpnext_sites' in (_removal_verify_volumes.stdout_lines | default([])))
+
+- name: "[Verify] Removal verified — every path absent"
+  ansible.builtin.debug:
+    msg: "remove={{ remove }}: {{ _removal_expected_absent | unique | length }} paths verified absent; no orphan named volumes."

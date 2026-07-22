@@ -23,16 +23,18 @@
 #   - Shell configuration (.zshrc blocks) - overwritten during reinstall
 # ==============================================================================
 
-# ── 0. External storage path overrides ──────────────────────────────────
-# CRITICAL: Must run BEFORE _blank_dirs is built. external-storage.yml
-# normally runs later in main.yml tasks (after blank-reset), so without this
-# include blank would delete non-existent ~/service directories and the real data
-# on /Volumes/SSD1TB/{jellyfin,openwebui,portainer,...} would survive.
-- name: "[BLANK] Apply external storage path overrides (if external_storage_root set)"
-  ansible.builtin.include_tasks: "tasks/stacks/external-paths.yml"
-  when:
-    - external_storage_root is defined
-    - external_storage_root | default('') | length > 0
+# ── 0. The removal inventory (external paths, auto-deps, _blank_dirs) is
+# resolved by tasks/removal-set.yml, imported from the run-mode phase BEFORE
+# this file. The assert below proves it ran (this file is only reachable via
+# the run-mode phase — main.yml imports it after the confirm gate).
+- name: "[BLANK] Assert the removal set was resolved (tasks/removal-set.yml)"
+  ansible.builtin.assert:
+    that:
+      - _blank_dirs is defined
+    fail_msg: >-
+      _blank_dirs is undefined — tasks/removal-set.yml did not run. blank-reset
+      must only be reached through the run-mode phase (main.yml), never
+      imported directly.
 
 # ── 1. Confirmation ─────────────────────────────────────────────────────
 - name: "[BLANK/FLUSH] Confirm destructive operation"
@@ -40,7 +42,7 @@
     prompt: |-
 
       ╔══════════════════════════════════════════════════════════════════════╗
-      ║  {{ "FLUSH" + (" DEEP" if _flush_deep | default(false) | bool else "") if (flush is defined) else "BLANK" }} RESET — DELETE ALL DATA AND CONFIGURATIONS      ║
+      ║  REMOVE={{ remove | default('data') | upper }} — DELETE ALL DATA AND CONFIGURATIONS       ║
       ║                                                                    ║
       ║  Will be deleted:                                                  ║
       ║    - All Docker containers and volumes                             ║
@@ -48,17 +50,20 @@
       ║    - Nginx configuration and SSL certificates                      ║
       ║    - Observability data (Grafana, Prometheus, Loki, Tempo)         ║
       ║    - Uptime Kuma monitors, Portainer settings                      ║
-      ║  {{ "- Docker images + build cache (flush=deep)" if _flush_deep | default(false) | bool else "(blank/flush=true: Docker images kept)" }}
+      ║  {{ "- Docker images + build cache (remove=deep)" if _flush_deep | default(false) | bool else "(remove=data: Docker images kept)" }}
       ║                                                                    ║
       ║  Will remain:                                                      ║
       ║    - ~/media/ (movies, music), ~/calibre/ (books)                  ║
       ║    - ~/.ollama/ (models — add flush_ollama=true to wipe)           ║
-      ║  {{ "- Homebrew packages kept (flush=deep also clears the cache)" if _flush_deep | default(false) | bool else "- Homebrew packages and cache (services just restart)" }}
+      ║    - ~/nos/tenants/** user files (remove=all is the ONLY level     ║
+      ║      that deletes them — a separate pause guards it)               ║
+      ║  {{ "- Homebrew packages kept (remove=deep also clears the cache)" if _flush_deep | default(false) | bool else "- Homebrew packages and cache (services just restart)" }}
       ║                                                                    ║
       ║  After reset the playbook reinstalls everything with clean data.   ║
       ╚══════════════════════════════════════════════════════════════════════╝
 
        Press ENTER to continue or Ctrl+C -> A to cancel
+  when: not nos_assume_yes
 
 # ── Plugin loader — post_blank hook (A6, 2026-05-03) ──────────────────
 # Runs BEFORE the data-dir wipe so plugins can do orderly cleanup of
@@ -262,201 +267,8 @@
   become: true
   failed_when: false
 
-# ── 7. Auto-dependency resolution (duplicated from main.yml) ───────────
-# Services like ERPNext auto-enable MariaDB/Redis, but main.yml
-# auto-deps have not run yet. We must resolve them here too, otherwise DB data won't be removed.
-- name: "[BLANK] Resolve auto-dependencies for cleanup"
-  ansible.builtin.set_fact:
-    install_mariadb: >-
-      {{ install_mariadb | default(false) or
-         install_wordpress | default(false) or
-         install_nextcloud | default(false) or
-         install_erpnext | default(false) or
-         install_freescout | default(false) or
-         install_freepbx | default(false) or
-         install_bookstack | default(false) or
-         install_firefly | default(false) }}
-    install_postgresql: >-
-      {{ install_postgresql | default(false) or
-         install_authentik | default(false) or
-         install_infisical | default(false) or
-         install_paperclip | default(false) or
-         install_outline | default(false) or
-         install_metabase | default(false) or
-         install_superset | default(false) or
-         install_miniflux | default(false) or
-         install_hedgedoc | default(false) }}
-    redis_docker: >-
-      {{ redis_docker | default(false) or
-         install_authentik | default(false) or
-         install_infisical | default(false) or
-         install_erpnext | default(false) or
-         install_outline | default(false) or
-         install_superset | default(false) or
-         install_bookstack | default(false) or
-         install_firefly | default(false) or
-         install_onlyoffice | default(false) }}
-
-# ── 8. Data directories - remove (only for enabled services) ───────────
-- name: "[BLANK] Build list of data directories to remove"
-  ansible.builtin.set_fact:
-    _blank_dirs: >-
-      {{
-        [stacks_dir]
-        +
-        [mariadb_data_dir | default(ansible_facts['env']['HOME'] + '/mariadb/data')]
-        +
-        [postgresql_data_dir | default(ansible_facts['env']['HOME'] + '/postgresql/data')]
-        +
-        [redis_data_dir | default(ansible_facts['env']['HOME'] + '/redis/data')]
-        +
-        (install_wordpress | default(false)) | ternary(
-          [wordpress_dir | default(ansible_facts['env']['HOME'] + '/projects/wordpress')], [])
-        +
-        (install_nextcloud | default(false)) | ternary(
-          [nextcloud_dir | default(ansible_facts['env']['HOME'] + '/projects/nextcloud'),
-           nextcloud_data_dir | default(ansible_facts['env']['HOME'] + '/nextcloud-data')], [])
-        +
-        (install_n8n | default(false)) | ternary(
-          [n8n_data_dir | default(ansible_facts['env']['HOME'] + '/n8n')], [])
-        +
-        (install_kiwix | default(false)) | ternary(
-          [kiwix_data_dir | default(ansible_facts['env']['HOME'] + '/kiwix')], [])
-        +
-        (install_offline_maps | default(false)) | ternary(
-          [maps_data_dir | default(ansible_facts['env']['HOME'] + '/maps')], [])
-        +
-        (install_traefik | default(false)) | ternary(
-          [traefik_config_dir | default(ansible_facts['env']['HOME'] + '/iiab/traefik')], [])
-        +
-        (install_pi_agents | default(false)) | ternary(
-          [pi_config_dir | default(ansible_facts['env']['HOME'] + '/.pi/agent')], [])
-        +
-        (install_gitea | default(false)) | ternary(
-          [gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea')], [])
-        +
-        (install_gitlab | default(false)) | ternary(
-          [gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab'),
-           gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config')], [])
-        +
-        (install_jellyfin | default(false)) | ternary(
-          [jellyfin_config_dir | default(ansible_facts['env']['HOME'] + '/jellyfin/config'),
-           jellyfin_cache_dir | default(ansible_facts['env']['HOME'] + '/jellyfin/cache')], [])
-        +
-        (install_openwebui | default(false)) | ternary(
-          [openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui')], [])
-        +
-        (install_uptime_kuma | default(false)) | ternary(
-          [uptime_kuma_data_dir | default(ansible_facts['env']['HOME'] + '/uptime-kuma')], [])
-        +
-        (install_portainer | default(false)) | ternary(
-          [portainer_data_dir | default(ansible_facts['env']['HOME'] + '/portainer')], [])
-        +
-        (install_woodpecker | default(false)) | ternary(
-          [woodpecker_data_dir | default(ansible_facts['env']['HOME'] + '/woodpecker')], [])
-        +
-        (install_calibreweb | default(false)) | ternary(
-          [ansible_facts['env']['HOME'] + '/calibre-web/config'], [])
-        +
-        (install_homeassistant | default(false)) | ternary(
-          [homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant')], [])
-        +
-        (install_rustfs | default(false)) | ternary(
-          [rustfs_data_dir | default(ansible_facts['env']['HOME'] + '/rustfs/data')], [])
-        +
-        (install_observability | default(true)) | ternary(
-          [ansible_facts['env']['HOME'] + '/observability',
-           grafana_data_dir | default(stacks_dir + '/observability/grafana/data')], [])
-        +
-        (install_openclaw | default(false)) | ternary(
-          [ansible_facts['env']['HOME'] + '/.openclaw'], [])
-        +
-        (install_freescout | default(false)) | ternary(
-          [freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout/data')], [])
-        +
-        (install_outline | default(false)) | ternary(
-          [outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline/data')], [])
-        +
-        (install_freepbx | default(false)) | ternary(
-          [freepbx_data_dir | default(ansible_facts['env']['HOME'] + '/freepbx')], [])
-        +
-        (install_qgis_server | default(false)) | ternary(
-          [qgis_data_dir | default(ansible_facts['env']['HOME'] + '/qgis')], [])
-        +
-        (install_metabase | default(false)) | ternary(
-          [metabase_data_dir | default(ansible_facts['env']['HOME'] + '/metabase')], [])
-        +
-        (install_superset | default(false)) | ternary(
-          [superset_data_dir | default(ansible_facts['env']['HOME'] + '/superset')], [])
-        +
-        (install_bluesky_pds | default(false)) | ternary(
-          [bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds')], [])
-        +
-        (install_paperclip | default(false)) | ternary(
-          [paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip')], [])
-        +
-        (install_keap | default(false)) | ternary(
-          [keap_data_dir | default(nos_data_root + '/platform/services/keap/data')], [])
-        +
-        (install_authentik | default(false)) | ternary(
-          [authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik')], [])
-        +
-        (install_infisical | default(false)) | ternary(
-          [infisical_data_dir | default(ansible_facts['env']['HOME'] + '/infisical')], [])
-        +
-        (install_vaultwarden | default(false)) | ternary(
-          [vaultwarden_data_dir | default(ansible_facts['env']['HOME'] + '/vaultwarden')], [])
-        +
-        (install_ntfy | default(false)) | ternary(
-          [ntfy_data_dir | default(ansible_facts['env']['HOME'] + '/ntfy/data')], [])
-        +
-        (install_nodered | default(false)) | ternary(
-          [nodered_data_dir | default(ansible_facts['env']['HOME'] + '/nodered/data')], [])
-        +
-        (install_influxdb | default(false)) | ternary(
-          [influxdb_data_dir | default(ansible_facts['env']['HOME'] + '/influxdb/data'),
-           influxdb_config_dir | default(ansible_facts['env']['HOME'] + '/influxdb/config')], [])
-        +
-        (install_code_server | default(false)) | ternary(
-          [code_server_data_dir | default(ansible_facts['env']['HOME'] + '/code-server/config'),
-           code_server_workspace_dir | default(ansible_facts['env']['HOME'] + '/code-server/workspace')], [])
-        +
-        (install_bookstack | default(false)) | ternary(
-          [bookstack_data_dir | default(ansible_facts['env']['HOME'] + '/bookstack/config')], [])
-        +
-        (install_firefly | default(false)) | ternary(
-          [firefly_upload_dir | default(ansible_facts['env']['HOME'] + '/firefly/upload'),
-           firefly_export_dir | default(ansible_facts['env']['HOME'] + '/firefly/export')], [])
-        +
-        (install_hedgedoc | default(false)) | ternary(
-          [hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads')], [])
-        +
-        (install_onlyoffice | default(false)) | ternary(
-          [onlyoffice_data_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/data'),
-           onlyoffice_logs_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/logs'),
-           onlyoffice_lib_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/lib'),
-           onlyoffice_db_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/db')], [])
-        +
-        (install_miniflux | default(false)) | ternary(
-          [], [])
-        +
-        (install_snappymail | default(false)) | ternary(
-          [snappymail_data_dir | default(ansible_facts['env']['HOME'] + '/snappymail')], [])
-        +
-        (install_spacetimedb | default(false)) | ternary(
-          [spacetimedb_data_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/data'),
-           spacetimedb_keys_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/keys')], [])
-        +
-        (install_mcp_gateway | default(false)) | ternary(
-          [mcpo_data_dir | default(ansible_facts['env']['HOME'] + '/mcpo')], [])
-        +
-        (install_hermes | default(false)) | ternary(
-          [hermes_home | default(ansible_facts['env']['HOME'] + '/agents/hermes'),
-           hermes_config_dir | default(ansible_facts['env']['HOME'] + '/.hermes')], [])
-        +
-        (install_wing | default(true)) | ternary(
-          [wing_app_dir | default(ansible_facts['env']['HOME'] + '/wing/app')], [])
-      }}
+# ── 7/8. Auto-deps + _blank_dirs: MOVED to tasks/removal-set.yml (single
+# removal inventory — one list, consumed by dry-run, execution, and verify).
 
 - name: "[BLANK] Remove data directories (sudo - Docker creates files as www-data)"
   ansible.builtin.file:

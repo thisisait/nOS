@@ -1671,6 +1671,31 @@ service_extra_hosts: []
 
 configure_power_management: true       # Configure pmset
 blank_stop_timeout: 30                # Seconds to wait after docker compose down (blank reset)
+
+# ── Run-mode: how much state to discard before converging ─────────────────────
+# remove: none | data | deep | all       (docs/nos-cli.md; ladder is D1)
+#   none — converge only (default; every ordinary run)
+#   data — today's blank scope: derived state (docker, dbs, service data,
+#          configs). SOURCE (~/nos/tenants/** user files) and images KEPT.
+#   deep — data + docker images/build cache + brew/npm/pip caches
+#          (today's flush=deep scope; ~/.ollama still opt-in via flush_ollama)
+#   all  — deep + user SOURCE: the full uninstall source set (nos_data_root,
+#          ~/.nos, ~/bone, ~/pulse, ~/wing, ~/keap, hermes dirs, ~/.openclaw,
+#          service registry). With leave=false this then REINSTALLS from zero.
+# leave:   true = end the play after removal — no reconverge (machine handoff).
+# confirm: true = execute. false = DRY RUN: print the resolved removal
+#          inventory and end the play (exit 0). CLI: --confirm / -y.
+# assume_yes: true = non-interactive (skip every pause; never rotates the
+#          prefix). Set by the CLI's -y. (`yes` is a YAML truthy literal —
+#          the one naming exception.)
+remove: "none"
+leave: false
+confirm: false
+assume_yes: false
+nos_cli_version_floor: 1
+nos_cli_install_dir: >-
+  {{ (homebrew_prefix + '/bin') if ansible_os_family == 'Darwin'
+     else (ansible_facts['env']['HOME'] + '/.local/bin') }}
 pmset_sleep: 0                         # Computer never sleeps (0 = disabled)
 pmset_displaysleep: 20                 # Display sleeps after 20 min
 pmset_disksleep: 0                     # Disk never sleeps

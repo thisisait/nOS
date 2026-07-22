@@ -1035,62 +1035,35 @@
       tags: ['coexist-copy-data', 'never']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Uninstall — remove EVERYTHING nOS created (derived + user SOURCE) then STOP.
-    # The opposite of blank (blank preserves source + reinstalls). DRY RUN by
-    # default; add -e confirm_uninstall=true to execute. See tasks/uninstall.yml +
-    # docs/plans/blank-uninstall-managed-resources.md.
+    # RUN-MODE — remove=none|data|deep|all ladder + confirm dry-run gate +
+    # compat shim (blank/flush/uninstall → remove/leave/confirm; delete the
+    # shim after v0.10). Fail-closed: off-allowlist remove, tag-restricted
+    # removal, bare leave, stale CLI, non-interactive changeme — all HARD FAIL.
+    # See docs/nos-cli.md + tasks/run-mode.yml.
     # ──────────────────────────────────────────────────────────────────────────
-    - name: "[Uninstall] Full removal (source + derived) — dry-run unless confirmed"
-      ansible.builtin.import_tasks: tasks/uninstall.yml
-      when: uninstall | default(false) | bool
-      tags: ['uninstall', 'reset']
-
-    # This condition has TWO ways to break and only one shape survives both.
-    #   `| bool`  — a `meta:` task's when: compiles in a FILTER-LESS context, so
-    #               any ansible filter throws "No filter named".
-    #   bare      — `-e uninstall=true` arrives as the STRING "true", and
-    #               ansible-core refuses a non-boolean conditional result
-    #               ("Conditional result (True) was derived from value of type
-    #               'str'"). Live failure, 2026-07-21, right after the teardown.
-    # Stock-Jinja membership returns a real bool and needs no filter at all.
-    - name: "[Uninstall] End the play — no reinstall after teardown"
-      ansible.builtin.meta: end_play
-      when: uninstall | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
-      tags: ['uninstall', 'reset']
+    - name: "[Run-mode] Shim + derivation + asserts + dry-run gate"
+      ansible.builtin.import_tasks: tasks/run-mode.yml
+      tags: ['always']
 
     # ──────────────────────────────────────────────────────────────────────────
-    # flush normalisation — flush=true and flush=deep both promote to blank=true.
-    # flush=deep additionally sets _flush_deep=true for the extra cleanup phase.
-    #
-    # Usage:
-    #   ansible-playbook main.yml -e flush=true    # clean reinstall (= blank=true)
-    #   ansible-playbook main.yml -e flush=deep    # blank + Docker images + caches
-    #   ansible-playbook main.yml -e flush=deep -e flush_ollama=true  # + Ollama wipe
+    # Prefix rotation (D3): every INTERACTIVE confirmed removal offers a new
+    # prefix (ENTER = keep current). -y (assume_yes) never reaches the prompt
+    # and never changes the prefix. Dry runs ended the play before this point.
     # ──────────────────────────────────────────────────────────────────────────
-    - name: "[Flush] Normalise flush → blank (flush=true or flush=deep)"
-      ansible.builtin.set_fact:
-        blank: true
-        _flush_deep: "{{ flush | string | lower == 'deep' }}"
-      when: flush is defined and flush | string | lower in ['true', 'deep']
-      tags: ['always', 'flush', 'blank', 'reset']
-
-    # ──────────────────────────────────────────────────────────────────────────
-    # Blank / flush reset - clean reinstall
-    # ──────────────────────────────────────────────────────────────────────────
-    - name: "[Blank] Prompt for password prefix"
+    - name: "[Prefix] Prompt for password prefix (interactive confirmed removal)"
       ansible.builtin.pause:
         prompt: "Prefix for all passwords (format: PREFIX_pw_SERVICE, Enter = {{ global_password_prefix }})"
       register: _prefix_prompt
-      when: blank | default(false) | bool
+      when: nos_removing and nos_confirmed and not nos_assume_yes
       tags: ['blank', 'reset']
 
-    - name: "[Blank] Set password prefix from prompt"
+    - name: "[Prefix] Set password prefix from prompt"
       ansible.builtin.set_fact:
         global_password_prefix: "{{ _prefix_prompt.user_input if (_prefix_prompt.user_input | default('') | length > 0) else global_password_prefix }}"
-      when: blank | default(false) | bool
+      when: nos_removing and nos_confirmed and not nos_assume_yes
       tags: ['blank', 'reset']
 
-    - name: "[Blank] Persist prompted prefix to credentials.yml"
+    - name: "[Prefix] Persist prompted prefix to credentials.yml"
       ansible.builtin.lineinfile:
         path: "{{ playbook_dir }}/credentials.yml"
         regexp: '^global_password_prefix:'
@@ -1098,7 +1071,7 @@
         create: true
         mode: '0600'
       when:
-        - blank | default(false) | bool
+        - nos_removing and nos_confirmed and not nos_assume_yes
         - _prefix_prompt.user_input | default('') | length > 0
       tags: ['blank', 'reset']
 
@@ -1169,6 +1142,26 @@
     - import_tasks: tasks/flush-deep.yml
       when: _flush_deep | default(false) | bool
       tags: ['flush', 'reset']
+
+    # remove=all — user SOURCE + anatomy runtime removal (was uninstall.yml
+    # step 2b). Only reachable confirmed (the dry-run gate ended the play
+    # otherwise). Legacy uninstall=true reaches this via the shim.
+    - import_tasks: tasks/remove-source.yml
+      when: nos_remove_source
+      tags: ['blank', 'reset']
+
+    # R5 — post-removal absence assertion. always-tagged + before the leave
+    # end_play so --leave never skips verification.
+    - import_tasks: tasks/removal-verify.yml
+      when: nos_removing
+      tags: ['always']
+
+    # Membership idiom on the RAW var — meta: filter-less rule (see the
+    # comment in tasks/run-mode.yml's dry-run stop).
+    - name: "[Run-mode] Leave — end the play after removal (no reconverge)"
+      ansible.builtin.meta: end_play
+      when: leave | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
+      tags: ['always']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Restore — pull a dated backup from RustFS and replay it live.

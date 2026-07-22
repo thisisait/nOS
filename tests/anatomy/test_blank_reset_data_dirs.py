@@ -1,6 +1,6 @@
 """Anatomy CI gate — blank-reset must wipe every Docker bind-mount data dir.
 
-tasks/blank-reset.yml builds `_blank_dirs` (a set_fact) from ~50 conditional
+tasks/removal-set.yml builds `_blank_dirs` (a set_fact) from ~50 conditional
 ternary clauses, each `(install_<svc> | default(false)) | ternary([<dir>...], [])`.
 Each clause maps an `install_*` feature flag to the host directories that the
 matching service bind-mounts into its container.
@@ -34,6 +34,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+REMOVAL_SET_PATH = REPO_ROOT / "tasks" / "removal-set.yml"
 BLANK_RESET_PATH = REPO_ROOT / "tasks" / "blank-reset.yml"
 
 # ── REQUIRED contract ────────────────────────────────────────────────────
@@ -96,7 +97,7 @@ def _extract_blank_dirs_expr() -> str:
     Matches `_blank_dirs: >-` and captures the indented multi-line block that
     follows, up to the next less-indented YAML key.
     """
-    src = BLANK_RESET_PATH.read_text()
+    src = REMOVAL_SET_PATH.read_text()
     match = re.search(
         r"\n    _blank_dirs:\s*>-\n(?P<body>(?:(?: {6,}.*)?\n)+)",
         src,
@@ -106,10 +107,12 @@ def _extract_blank_dirs_expr() -> str:
 
 
 def test_blank_dirs_set_fact_exists():
-    """The _blank_dirs set_fact must be present and own the wipe loop."""
-    src = BLANK_RESET_PATH.read_text()
-    assert "_blank_dirs:" in src, "_blank_dirs set_fact missing from blank-reset.yml"
-    assert 'loop: "{{ _blank_dirs }}"' in src, (
+    """The _blank_dirs set_fact must live in removal-set.yml (the single removal
+    inventory) and blank-reset.yml must still own the wipe loop over it."""
+    assert "_blank_dirs:" in REMOVAL_SET_PATH.read_text(), (
+        "_blank_dirs set_fact missing from removal-set.yml"
+    )
+    assert 'loop: "{{ _blank_dirs }}"' in BLANK_RESET_PATH.read_text(), (
         "the data-dir removal task must loop over _blank_dirs"
     )
 
@@ -140,7 +143,7 @@ def test_every_bind_mount_service_is_wiped():
     missing = sorted(REQUIRED_BIND_MOUNT_FLAGS - referenced)
     if missing:
         pytest.fail(
-            "tasks/blank-reset.yml `_blank_dirs` is missing a wipe clause for "
+            "tasks/removal-set.yml `_blank_dirs` is missing a wipe clause for "
             "these bind-mount services (their host data dir orphans on blank=true):"
             "\n  - " + "\n  - ".join(missing)
             + "\n\nAdd a `(<flag> | default(false)) | ternary([<dir>...], [])` "
@@ -155,10 +158,10 @@ def test_external_paths_included_before_blank_dirs():
     after the set_fact, blank would wipe the empty ~/service fallbacks and leave
     the real external data behind.
     """
-    src = BLANK_RESET_PATH.read_text()
-    ext_idx = src.find("tasks/stacks/external-paths.yml")
+    src = REMOVAL_SET_PATH.read_text()
+    ext_idx = src.find("stacks/external-paths.yml")
     blank_idx = src.find("_blank_dirs:")
-    assert ext_idx != -1, "external-paths.yml include missing from blank-reset.yml"
+    assert ext_idx != -1, "external-paths.yml include missing from removal-set.yml"
     assert blank_idx != -1, "_blank_dirs set_fact missing"
     assert ext_idx < blank_idx, (
         "external-paths.yml must be included BEFORE _blank_dirs is built so "

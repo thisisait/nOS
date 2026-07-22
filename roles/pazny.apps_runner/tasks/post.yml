@@ -136,12 +136,15 @@
     # events / Kuma / smoke run downstream. Without this flush, handlers
     # only fire at end-of-play — too late for the inline smoke at the
     # bottom of apps-up.yml to see the new providers.
+    # meta: when: compiles FILTER-LESS on ansible-core 2.20.6 — membership
+    # idiom on the -e-reachable vars, bare read on the native-bool set_fact
+    # (same shape as the run-mode dry-run stop; gate: G-6 meta-when scanner).
     - name: "[Apps Post] Flush handlers — apply blueprints to Authentik now"
       ansible.builtin.meta: flush_handlers
       when:
-        - apps_runner_reconverge_blueprints | default(true) | bool
-        - install_authentik | default(false) | bool
-        - _apps_has_authentik_consumers | bool
+        - apps_runner_reconverge_blueprints | default(true) in [true, 'true', 'True', 'yes', 'y', '1', 1]
+        - install_authentik | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
+        - _apps_has_authentik_consumers
       tags: ['authentik', 'iam', 'apps']
 
     # ── Hook 4: Bone HMAC-signed app.deployed events ────────────────────────

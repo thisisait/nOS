@@ -1,0 +1,302 @@
+---
+# ==============================================================================
+# RUN-MODE — remove/leave/confirm ladder (D1), compat shim (old→new),
+# fail-closed asserts (D2/R4), prefix D3 preflight, dry-run gate (D2).
+# Imported from main.yml with tags: ['always'] at the position of the former
+# uninstall import + flush normalisation (both deleted).
+# ==============================================================================
+
+# ── 1. Compat shim (DEPRECATED vocabulary — delete after v0.10) ──────────────
+# Value-gated per switch, NEVER presence-gated: `-e blank=false` /
+# `-e flush=false` / `-e uninstall=false` match no `when:` and map to NOTHING
+# (R7 — pinned by G-2's false-valued rows).
+# Membership idiom, NOT `== 'true'`: today's read gate is `blank | bool`
+# (truthy: yes/y/1/True). A stricter shim would flip `-e blank=yes` from a
+# working blank into an unmapped var that still reaches X1's `blank | bool`
+# read and dies on the _blank_dirs assert. Same truthy set = parity.
+- name: "[Compat] blank=true → remove=data (DEPRECATED, remove after v0.10)"
+  ansible.builtin.set_fact:
+    remove: "data"
+    confirm: true
+    _nos_legacy_switch: "blank={{ blank }}"
+  when: blank | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
+  tags: ['always']
+
+- name: "[Compat] flush=true|deep → remove=data|deep (DEPRECATED)"
+  ansible.builtin.set_fact:
+    remove: "{{ 'deep' if flush | string | lower == 'deep' else 'data' }}"
+    confirm: true
+    _nos_legacy_switch: "flush={{ flush }}"
+  when: flush is defined and flush | string | lower in ['true', 'deep']
+  tags: ['always']
+
+# Legacy uninstall=true maps to the full ladder with leave, but with the R3
+# carve-out: today its end_play (was main.yml:1057) fired BEFORE the flush
+# import (:1169), so legacy uninstall never pruned images. _compat_uninstall
+# suppresses the deep phase for the legacy form only. confirm_uninstall passes
+# through harmlessly (nothing reads it — the mapping already sets confirm).
+# LOCKED DELTA (D2): bare uninstall=true was print-only; it now executes behind
+# the interactive gates. Old dry run: -e uninstall=true -e confirm=false
+# (an explicit extra-var outranks this set_fact).
+- name: "[Compat] uninstall=true → remove=all leave=true (no NEW image prune — R3)"
+  ansible.builtin.set_fact:
+    remove: "all"
+    leave: true
+    confirm: true
+    _compat_uninstall: true
+    _nos_legacy_switch: "uninstall=true"
+  when: uninstall | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
+  tags: ['always']
+
+# Extra-vars outrank set_fact. If an explicit -e remove= ALSO arrived and won,
+# the mapping above silently lost — "you asked to wipe and we didn't". FAIL.
+# (Agreeing mixes — e.g. -e blank=true -e remove=data — pass: the disjunct
+# holds either way.)
+- name: "[Compat] Refuse mixed old+new vocabulary that disagrees"
+  ansible.builtin.assert:
+    that:
+      - (_nos_legacy_switch is not defined)
+        or (remove | default('none') in ['data', 'deep', 'all'])
+    fail_msg: >-
+      Legacy switch {{ _nos_legacy_switch | default('?') }} was overridden by an
+      explicit -e remove= extra-var. Use ONE vocabulary per invocation.
+  tags: ['always']
+
+# FALSE direction (trace M4): `-e blank=false -e remove=data -e confirm=true`
+# — the extra-var blank=false outranks the DERIVED blank fact, X1's
+# `blank | bool` gate reads False, and a CONFIRMED removal completes green
+# having removed nothing (the R5 verify would catch it — but fail here, earlier
+# and clearer). Only `blank` collides (legacy input AND derived fact name);
+# flush/uninstall extra-vars shadow no execution gate. ansible-bridge.sh's
+# hardcoded `-e blank=false` cannot trip this: the bridge always
+# tag-restricts and never passes remove=, so remove=none (or R4) applies.
+- name: "[Compat] Refuse explicit falsy blank mixed with a removal level"
+  ansible.builtin.assert:
+    that:
+      - (remove | default('none') not in ['data', 'deep', 'all'])
+        or (blank is not defined)
+        or (blank | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1])
+    fail_msg: >-
+      -e blank={{ blank | default('?') }} together with remove={{ remove }}
+      would shadow the derived execution gate (X1 reads `blank`) and skip the
+      wipe. Drop the legacy -e blank= var.
+  tags: ['always']
+
+- name: "[Compat] Deprecation notice (once per play)"
+  ansible.builtin.debug:
+    msg: >-
+      {{ _nos_legacy_switch }} is deprecated — use
+      `nos --remove=... [--confirm|-y] [--leave]`.
+      Mapping applied: remove={{ remove }} leave={{ leave | default(false) }}.
+  when: _nos_legacy_switch is defined
+  tags: ['always']
+
+# ── 2. UNCONDITIONAL derivation (R2) — never gated on old-switch presence ────
+- name: "[Run-mode] Derive level booleans + legacy vars (UNCONDITIONAL — R2)"
+  ansible.builtin.set_fact:
+    nos_removing:      "{{ remove | default('none') in ['data', 'deep', 'all'] }}"
+    nos_remove_data:   "{{ remove | default('none') in ['data', 'deep', 'all'] }}"
+    nos_remove_deep:   "{{ remove | default('none') in ['deep', 'all'] }}"
+    nos_remove_source: "{{ remove | default('none') in ['all'] }}"
+    nos_confirmed:     "{{ confirm | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1] }}"
+    nos_assume_yes:    "{{ assume_yes | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1] }}"
+    nos_leaving:       "{{ leave | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1] }}"
+    # ── legacy derivation (R2): the transition-window reads of `blank` /
+    # `_flush_deep` (main.yml secrets regen + banner; blank-reset.yml box;
+    # roles/pazny.postgresql/tasks/post.yml;
+    # tasks/stacks/docker-external-mount-preflight.yml) keep working
+    # without per-site rewrites. NEVER gate this task on old-switch presence.
+    blank:       "{{ remove | default('none') in ['data', 'deep', 'all'] }}"
+    _flush_deep: "{{ (remove | default('none') in ['deep', 'all'])
+                     and not (_compat_uninstall | default(false)) }}"
+  tags: ['always']
+
+# ── 3. Fail-closed asserts (D2 / R4) ─────────────────────────────────────────
+- name: "[Run-mode] Refuse off-allowlist remove level (fail closed — D2)"
+  ansible.builtin.assert:
+    that:
+      - remove | default('none') in ['none', 'data', 'deep', 'all']
+    fail_msg: >-
+      remove='{{ remove | default('none') }}' is not one of none|data|deep|all
+      (case-sensitive, no empty string). Refusing to guess. A removal request
+      must never silently become an ordinary converge.
+  tags: ['always']
+
+- name: "[Run-mode] Refuse tag-restricted removal (R4)"
+  ansible.builtin.assert:
+    that:
+      # ansible_run_tags is a TUPLE on ansible-core 2.20 — normalise via | list
+      - (remove | default('none') == 'none')
+        or (ansible_run_tags | list == ['all'] and (ansible_skip_tags | default([]) | length) == 0)
+    fail_msg: >-
+      remove={{ remove }} was combined with --tags/--skip-tags. Tag filtering
+      silently drops removal tasks (they carry tags ['blank','reset'] /
+      ['flush','reset'] without 'always'). Run the removal without tag
+      restriction.
+  tags: ['always']
+
+- name: "[Run-mode] Refuse bare leave=true (no silent green no-op)"
+  ansible.builtin.fail:
+    msg: "leave=true without remove!=none would end the play having done nothing. Refusing."
+  when:
+    - leave | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
+    - remove | default('none') not in ['data', 'deep', 'all']
+  tags: ['always']
+
+- name: "[Run-mode] Refuse stale nos CLI (version floor)"
+  ansible.builtin.assert:
+    that:
+      - (nos_cli_version is not defined)
+        or (nos_cli_version | int >= nos_cli_version_floor | int)
+    fail_msg: >-
+      Installed `nos` is older than this playbook understands. Re-run
+      `ansible-playbook main.yml --tags nos-cli` to refresh it.
+  tags: ['always']
+
+# ── 4. Prefix preflight (D3) — fresh-machine non-interactive refusal ─────────
+- name: "[Run-mode] Stat prefix state (fresh-machine detection)"
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/.ansible-prefix-state"
+  register: _nos_prefix_state
+  tags: ['always']
+
+- name: "[Run-mode] Refuse non-interactive changeme fallback (D3)"
+  ansible.builtin.assert:
+    that:
+      - (not nos_assume_yes)
+        or _nos_prefix_state.stat.exists
+        or (global_password_prefix | default('changeme') != 'changeme')
+    fail_msg: >-
+      Non-interactive run (-y) on a machine with no .ansible-prefix-state and
+      no configured password prefix. Pass -e global_password_prefix=... or run
+      interactively. The 'changeme' fallback is never used non-interactively.
+  tags: ['always']
+
+# Fresh machine + explicit -e prefix (trace INV-3/G1): persist it, or the NEXT
+# bare run falls back to changeme, trips _prefix_changed → auto-destroy_state
+# → surprise 7-key regen on an ordinary converge. Same lineinfile shape as the
+# prompt-path persist; idempotent (no-op when credentials.yml already carries
+# the same prefix).
+- name: "[Run-mode] Persist explicit prefix on a fresh machine (D3)"
+  ansible.builtin.lineinfile:
+    path: "{{ playbook_dir }}/credentials.yml"
+    regexp: '^global_password_prefix:'
+    line: 'global_password_prefix: "{{ global_password_prefix }}"'
+    create: true
+    mode: '0600'
+  when:
+    - not _nos_prefix_state.stat.exists
+    - global_password_prefix | default('changeme') != 'changeme'
+  tags: ['always']
+
+# ── 4b. Non-interactive sudo preflight (D4 — trace M1) ───────────────────────
+# -y's empty become password (main.yml vars) is only safe on become-free paths
+# (the nos-stacks invariant). The removal path escalates: blank-reset's
+# data-dir rm (become, no failed_when) + the remove-source loop. Without this
+# preflight every -y removal died MID-WIPE on "Incorrect sudo password" —
+# after compose-down/prune, before secrets removal and verify. Fail closed,
+# BEFORE the removal-set import.
+- name: "[Run-mode] Probe passwordless sudo (non-interactive removal preflight)"
+  ansible.builtin.command: sudo -n true
+  register: _nos_sudo_probe
+  changed_when: false
+  failed_when: false
+  when: nos_assume_yes and nos_removing
+  tags: ['always']
+
+- name: "[Run-mode] Refuse non-interactive removal without a sudo path (D4)"
+  ansible.builtin.assert:
+    that:
+      - (not nos_assume_yes)
+        or (not nos_removing)
+        or (nos_sudo_password | default('') | length > 0)
+        or ((_nos_sudo_probe.rc | default(1)) == 0)
+    fail_msg: >-
+      Non-interactive removal (-y) has no sudo path: the become password is
+      empty and `sudo -n true` failed (no NOPASSWD rule, no cached ticket).
+      The removal phase escalates and would die mid-wipe. Provide one of:
+      a NOPASSWD sudoers rule, a live sudo ticket (`sudo -v` first), or
+      -e nos_sudo_password=<real> (nos -y never clobbers an explicit one).
+  tags: ['always']
+
+# ── 5. Removal inventory + dry-run gate (D2) ─────────────────────────────────
+# SIBLING path (not `tasks/removal-set.yml`): resolves next to this file in
+# BOTH production (main.yml imports tasks/run-mode.yml) and the G-1/G-2 test
+# harnesses (which import run-mode.yml by absolute path from tmp_path — a
+# `tasks/`-prefixed nested path would resolve against the harness playbook dir
+# and parse-fail every gate row; gate-audit defect).
+- name: "[Removal-set] Resolve the removal inventory"
+  ansible.builtin.import_tasks: removal-set.yml
+  when: nos_removing
+  tags: ['always']
+
+# Fires for EVERY removal — dry AND confirmed (trace MM-2a: today's confirmed
+# uninstall printed its plan; a confirmed run must see the full inventory
+# BEFORE the first pause and before any teardown). Header names the mode;
+# survivorship text is leave-conditional (trace M3: under leave=true nothing
+# re-persists — the play ends before the main.yml re-persist step).
+- name: "[Run-mode] Removal inventory ({{ 'EXECUTE' if nos_confirmed | default(false) else 'DRY RUN' }})"
+  ansible.builtin.debug:
+    msg: |-
+      ══════════════════════════════════════════════════════════════════════
+       REMOVE = {{ remove }}   leave = {{ nos_leaving }}
+       {{ '── EXECUTE — the following WILL BE REMOVED ──' if nos_confirmed else '── DRY RUN — NOTHING WILL BE REMOVED ──' }}
+      ══════════════════════════════════════════════════════════════════════
+       LEVEL data — derived state:
+      {% for r in _removal_stat_data.results %}
+         - {{ r.item }}{{ '  [exists]' if r.stat.exists else '  [absent]' }}
+      {% endfor %}
+         - docker: compose down -v per stack (iiab observability infra apps
+           devops b2b voip engineering data) + volume/network prune
+         - regenerates exactly 7 keys: infisical_encryption_key,
+           infisical_auth_secret, outline_secret_key, firefly_app_key,
+           bookstack_app_key, onlyoffice_jwt_secret, influxdb_admin_token.
+      {% if not nos_leaving %}
+           bluesky_pds_rotation_key + authentik_secret_key (and the whole
+           persist-and-reuse group) SURVIVE — loaded before deletion,
+           re-persisted after (main.yml).
+      {% else %}
+           leave=true: the persist-and-reuse group is NOT re-persisted (the
+           play stops before the re-persist step) — a later fresh run
+           regenerates everything: FULL IDENTITY RESET incl. the bluesky
+           PLC rotation key.
+      {% endif %}
+      {% if nos_remove_deep %}
+       LEVEL deep — images/caches:
+         - docker image prune -af + builder prune -af
+         - brew cleanup -s + ~/Library/Caches/Homebrew, npm/pip caches
+         - ~/.ollama: {{ 'REMOVED (flush_ollama=true)' if flush_ollama | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1] else 'preserved (pass -e flush_ollama=true to include)' }}
+      {% endif %}
+      {% if nos_remove_source %}
+       LEVEL all — user SOURCE + anatomy runtime (INCLUDES ~/nos/tenants/**
+       USER FILES). GOV WARNING: wipes wing.db (tamper-evident audit chain) —
+       export first under a gov profile (verify-audit-chain.php).
+      {% for r in _removal_stat_source.results %}
+         - {{ r.item }}{{ '  [exists]' if r.stat.exists else '  [absent]' }}
+      {% endfor %}
+      {% endif %}
+       PRESERVED at this level: ~/media, ~/calibre, Homebrew packages,
+         Docker Desktop, shell config, the checkout{{ ', ~/.ollama' if not (flush_ollama | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]) else '' }}{{ ', docker images, ~/nos/tenants/** user files, ~/keap ~/wing ~/bone ~/pulse ~/.nos' if remove == 'data' else '' }}{{ ', ~/nos/tenants/** user files, ~/keap ~/wing ~/bone ~/pulse ~/.nos' if remove == 'deep' else '' }}
+      ──────────────────────────────────────────────────────────────────────
+      {% if not nos_confirmed %}
+       Execute:      nos --remove={{ remove }} --confirm     (interactive)
+                     nos --remove={{ remove }} -y            (non-interactive)
+       Raw ansible:  ansible-playbook main.yml -e remove={{ remove }} -e confirm=true
+      {% else %}
+       Proceeding — the interactive pauses (if any) follow.
+      {% endif %}
+      ══════════════════════════════════════════════════════════════════════
+  when: nos_removing
+  tags: ['always']
+
+# This condition has TWO ways to break and only one shape survives both.
+#   `| bool`  — a `meta:` task's when: compiles in a FILTER-LESS context.
+#   bare      — `-e confirm=true` arrives as the STRING "true".
+# Stock-Jinja membership on the RAW vars returns a real bool. (Moved with the
+# original comment from the former main.yml uninstall end_play.)
+- name: "[Run-mode] DRY RUN — stop (exit 0; confirm=true executes)"
+  ansible.builtin.meta: end_play
+  when:
+    - remove | default('none') in ['data', 'deep', 'all']
+    - not (confirm | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1])
+  tags: ['always']

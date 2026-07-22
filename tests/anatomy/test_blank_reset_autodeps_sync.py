@@ -1,6 +1,6 @@
 """Anatomy CI gate — blank-reset auto-deps must mirror main.yml's auto-deps.
 
-tasks/blank-reset.yml line ~244 carries a `[BLANK] Resolve auto-dependencies
+tasks/removal-set.yml carries a `[Removal-set] Resolve auto-dependencies
 for cleanup` set_fact that DUPLICATES main.yml's auto-enable logic (the three
 `Auto-enable {MariaDB,PostgreSQL,Redis Docker} for services that require it`
 set_facts around main.yml:1125-1164). The duplication is load-bearing AND
@@ -39,7 +39,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MAIN_PATH = REPO_ROOT / "main.yml"
-BLANK_RESET_PATH = REPO_ROOT / "tasks" / "blank-reset.yml"
+BLANK_RESET_PATH = REPO_ROOT / "tasks" / "removal-set.yml"
 
 # The three database facts whose auto-enable logic is duplicated. Keyed by the
 # fact main.yml/blank-reset.yml SET; the value is the human label for diffs.
@@ -85,11 +85,11 @@ def _blank_reset_autodeps() -> dict[str, set[str]]:
     """Parse blank-reset's single resolve set_fact → {fact: {drivers}}."""
     src = BLANK_RESET_PATH.read_text()
     block = re.search(
-        r"\[BLANK\] Resolve auto-dependencies for cleanup\"\n"
+        r"\[Removal-set\] Resolve auto-dependencies for cleanup\"\n"
         r"\s*ansible\.builtin\.set_fact:\n(?P<body>(?:\s+.*\n)+?)\n",
         src,
     )
-    assert block, "could not locate blank-reset.yml auto-dependency resolve set_fact"
+    assert block, "could not locate removal-set.yml auto-dependency resolve set_fact"
     body = block.group("body")
     out: dict[str, set[str]] = {}
     for fact in DB_FACTS:
