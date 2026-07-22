@@ -17,12 +17,21 @@
 - name: "[Removal-set] Apply external storage path overrides (if set)"
   # SIBLING-RELATIVE path (resolves from tasks/, the dir of THIS file) — the
   # playbook-relative form "tasks/stacks/…" breaks in the G-1/G-2 harnesses
-  # (tmp_path playbook), and external_storage_root is non-empty by DEFAULT
-  # (default.config.yml) so the guard is always-on. Must run BEFORE _blank_dirs
-  # is built, otherwise blank would delete non-existent ~/service directories
-  # and the real data on /Volumes/SSD1TB/{jellyfin,openwebui,...} would survive.
+  # (tmp_path playbook). Must run BEFORE _blank_dirs is built so a genuinely
+  # SSD-deployed estate removes /Volumes/SSD1TB/* instead of empty ~ fallbacks.
+  #
+  # GUARD MUST EQUAL THE DEPLOY GATE (main.yml `import_tasks:
+  # tasks/external-storage.yml` — configure_external_storage), NOT merely
+  # "root is non-empty": external_storage_root has a non-empty DEFAULT, so the
+  # old root-only guard applied SSD overrides to removal even on estates
+  # deployed WITHOUT them. First live remove=data (2026-07-22) then deleted
+  # absent /Volumes/SSD1TB paths while the real ~/nos/platform data survived —
+  # and the R5 verify, measuring the same wrong list, stayed green over the
+  # survivors (Infisical crashlooped on a rotated key vs its old DB).
+  # Pinned by tests/anatomy/test_removal_external_guard_parity.py.
   ansible.builtin.include_tasks: "stacks/external-paths.yml"
   when:
+    - configure_external_storage | default(false)
     - external_storage_root is defined
     - external_storage_root | default('') | length > 0
 
