@@ -5,7 +5,7 @@ Scope: repo edits only. No live mutation. No blank. Ships with a pytest anatomy 
 
 ## 1. Problem / why
 
-A blank reset (`ansible-playbook main.yml -e blank=true`) must wipe a service's
+A blank reset (`nos --remove=data --confirm`) must wipe a service's
 data **wherever that data actually lives**. On an external-storage install
 (`configure_external_storage: true`, `external_storage_root: /Volumes/SSD1TB`)
 the real data is on the SSD, not under `$HOME`. Two task files cooperate to make
@@ -227,7 +227,7 @@ ansible-playbook main.yml --syntax-check
 
 # 4. (manual, operator-gated, NOT part of this change) On a real external-storage
 #    box: ls /Volumes/SSD1TB/observability/{prometheus,loki,tempo} before a blank,
-#    run `ansible-playbook main.yml -e blank=true`, confirm the three dirs are gone.
+#    run `nos --remove=data --confirm`, confirm the three dirs are gone.
 ```
 
 Acceptance: step 1 GREEN after the §4.1 edit, step 0 prints an EMPTY

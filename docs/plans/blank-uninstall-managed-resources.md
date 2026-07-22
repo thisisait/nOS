@@ -159,8 +159,10 @@ created** and remove exactly that.
     hash-uid trees under `tenants/pazny/users/` after confirming they map to no live user.
 - **P1 architectural:**
   - **`uninstall` path — MVP SHIPPED (2026-07-19).** `tasks/uninstall.yml` +
-    `main.yml` wiring (`-e uninstall=true` → dry-run report; `+ -e confirm_uninstall=true`
-    → execute, then `meta: end_play` — no reinstall). Removes the DERIVED state (reuses
+    `main.yml` wiring (now the `remove` ladder: `nos --remove=all` → dry-run report;
+    `nos --remove=all --confirm --leave` → execute, then `meta: end_play` — no
+    reinstall; the legacy `-e uninstall=…` form is shimmed, deprecated —
+    `docs/nos-cli.md`). Removes the DERIVED state (reuses
     the blank teardown, DRY) + the SOURCE (`nos_data_root` in full + `~/.nos` + registry).
     Dry-run default + two confirm gates (destructive-op safety). Live-verified dry-run
     (`changed=0`, source intact); pinned by `tests/anatomy/test_uninstall_scope.py`.

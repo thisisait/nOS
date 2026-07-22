@@ -26,7 +26,7 @@ open-source infrastructure that collapses the SaaS stack back onto a single mach
 - **One SSO** (Authentik) fronts every app — OIDC where possible, forward-auth where not.
 - **One vault** (Infisical) owns every secret. Per-tenant personal vaults via Vaultwarden.
 - **One agent** (OpenClaw + Ollama MLX) runs DevOps tasks locally, no API key required.
-- **One command** again brings everything back on a fresh box — `blank=true`, ~20 minutes.
+- **One command** again brings everything back on a fresh box — `nos --remove=data --confirm`, ~20 minutes.
 
 This is not a homelab hobby. It's what replaces Notion + GitHub + 1Password + Vercel +
 Grafana Cloud + Auth0 + Slack + Zoom for a developer or a small team.
@@ -88,24 +88,32 @@ about in `credentials.yml`; the rest are derived. Generator: `openssl rand -hex 
 
 ```bash
 # Full install (sudo prompt via vars_prompt — no -K needed)
+# (installs the `nos` CLI — subsequent runs are just `nos`)
 ansible-playbook main.yml
 
 # Clean reinstall — wipes ALL data and secrets, prompts for a new prefix, rebuilds from scratch
-ansible-playbook main.yml -e blank=true
+# (without --confirm this is a DRY RUN: prints the removal inventory and stops)
+nos --remove=data --confirm
 
 # Run a single stack
-ansible-playbook main.yml --tags "stacks,observability"
+nos --tags "stacks,observability"
 
 # Everything-on robust test — enable every known-good service (incl. face + KEAP),
-# sequential bring-up + 1200s health budget. Add -e blank=true for a from-scratch run.
-ansible-playbook main.yml -e @profiles/all-on.yml -e blank=true
+# sequential bring-up + 1200s health budget. Add --remove=data --confirm for a from-scratch run.
+nos --remove=data --confirm -e @profiles/all-on.yml
 
 # WIP: Maximal compliance - gov. ready
 # (enforced MFA, at-rest FileVault/LUKS gate, backup-crypto, tamper-evident audit hash-chain, breach-notification)
-ansible-playbook main.yml -e @profiles/all-on.yml -e @profiles/gov-local.yml -e blank=true
+nos --remove=data --confirm -e @profiles/all-on.yml -e @profiles/gov-local.yml
 ```
 
 A full first run takes **~20 minutes** on an M4 Pro with fast internet.
+
+`nos` is the operator entry point (installed by the playbook into your PATH). The
+removal ladder is `--remove=none|data|deep|all`; without `--confirm`/`-y` a removal
+is a **dry run** that prints the resolved inventory and stops. Legacy
+`-e blank=true`/`-e flush=deep`/`-e uninstall=true` still work via a compatibility
+shim (deprecated). Full reference: [docs/nos-cli.md](docs/nos-cli.md).
 
 ### Stack bring-up tuning
 
@@ -131,8 +139,8 @@ service (excludes `erpnext` / `freepbx` / `spacetimedb`), forces sequential
 bring-up, and sets a 1200s per-stack timeout:
 
 ```bash
-ansible-playbook main.yml -e @profiles/all-on.yml                 # everything on
-ansible-playbook main.yml -e @profiles/all-on.yml -e blank=true   # full wipe + reinstall
+nos -e @profiles/all-on.yml                            # everything on
+nos --remove=data --confirm -e @profiles/all-on.yml    # full wipe + reinstall
 ```
 
 `-e @profiles/all-on.yml` layers on top of your gitignored `config.yml` /
@@ -151,7 +159,8 @@ tools/nos-stacks.sh woodpecker      # render + recreate one service (A17)
 tools/nos-stacks.sh observability   # one stack
 ```
 
-It refuses `blank=true` (that path needs sudo + a human).
+It refuses every removal token (`remove=…`/`confirm=true`, legacy
+`blank=true`/`flush=`/`uninstall=` — that path needs sudo + a human).
 
 ### Known first-run notes
 
@@ -217,7 +226,7 @@ service by creating a role — no hand-edits to the base stack template.
 
 ### Boot order
 
-1. **Password prefix prompt** (on `blank=true`)
+1. **Password prefix prompt** (on a confirmed removal — `nos --remove=… --confirm`)
 2. **Blank reset** — wipes Docker, data dirs, external SSD paths
 3. **Auto-enable dependencies** — flips on MariaDB/PostgreSQL/Redis based on which services are on
 4. **Auto-generate secrets** — Outline, Bluesky, Authentik bootstrap token, Infisical, Vaultwarden, Paperclip
@@ -298,7 +307,7 @@ you a real "Sign in with Authentik" button.
 
 Four access tiers, bound to Authentik groups via expression policies. Every app's tier is
 declared in `authentik_app_tiers`; users are added to the corresponding `nos-*` group
-(installs provisioned before 2026-04-22 use the legacy `devboxnos-*` prefix — rename the groups in Authentik or run `blank=true` to regenerate).
+(installs provisioned before 2026-04-22 use the legacy `devboxnos-*` prefix — rename the groups in Authentik or run `nos --remove=data --confirm` to regenerate).
 
 | Tier | Role | Scope | Example services |
 |---|---|---|---|
@@ -386,7 +395,7 @@ ansible-playbook main.yml --tags "TAG[,TAG…]"
 | `macos-defaults`, `osx` | Finder / Dock / keyboard / screenshot prefs |
 | `backup` | Restic backup config |
 | `heartbeat`, `fleet` | Fleet reporting daemon |
-| `blank`, `reset` | Blank-wipe tasks (requires `-e blank=true`) |
+| `blank`, `reset` | Blank-wipe tasks (fire only on a confirmed removal — `nos --remove=… --confirm`; legacy `-e blank=true` still works, deprecated) |
 
 Dry run: `--check`. Syntax only: `ansible-playbook main.yml --syntax-check`.
 
@@ -412,8 +421,8 @@ language caches:
 └── n8n/  openwebui/  portainer/  uptime-kuma/
 ```
 
-`blank=true` honors these paths — it wipes the real data, not just empty `~/service`
-fallback directories.
+A removal run (`nos --remove=… --confirm`, legacy `blank=true`) honors these paths —
+it wipes the real data, not just empty `~/service` fallback directories.
 
 ---
 

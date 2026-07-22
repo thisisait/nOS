@@ -1,6 +1,6 @@
 # Post-blank verification — operator entry point
 
-> **TL;DR** — when `ansible-playbook main.yml -K -e blank=true` finishes:
+> **TL;DR** — when `nos --remove=data --confirm` finishes:
 > ```bash
 > bash tools/post-blank.sh
 > ```

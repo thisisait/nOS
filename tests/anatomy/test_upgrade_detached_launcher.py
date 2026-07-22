@@ -130,6 +130,8 @@ def test_refuses_blank_and_no_sudo():
 	body = _body()
 	assert "blank=true" in body, "launcher does not guard against blank=true"
 	assert re.search(r"refusing", body, re.IGNORECASE), "no refusal path for blank=true"
+	for tok in ("remove=data", "remove=deep", "remove=all", "uninstall=true"):
+		assert tok in body, f"launcher glob lost the '{tok}' refusal token"
 	# The launcher must never escalate. Match `sudo` only at a COMMAND position
 	# (statement start, or after a shell separator) so a diagnostic echo that
 	# merely mentions the word — e.g. "needs sudo + a human" — is not a false hit.

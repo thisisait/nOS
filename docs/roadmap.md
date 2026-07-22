@@ -73,7 +73,7 @@ parity (OpenClaw/Hermes/fleet are post-1.0). Exit criteria (definition of done):
 1. **Security floor** — zero CRITICAL/HIGH in the remediation queue on a fresh
    full scan. Vendor-blocked FreePBX = documented accept-risk (`install_freepbx:false`
    default). The pin wave is burned to zero.
-2. **Reproducible blank** — `blank=true` installs the known-good profile
+2. **Reproducible blank** — `nos --remove=data --confirm` installs the known-good profile
    end-to-end `failed=0`, every container healthy, on a genuinely clean host.
    This is the core nOS invariant and must be re-proven at the RC.
 3. **Epic acceptance exercised on real workloads** — (a) a same-org upgrade

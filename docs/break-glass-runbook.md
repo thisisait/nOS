@@ -313,7 +313,7 @@ docker exec infra-postgresql-1 psql -U postgres -c \
 ansible-playbook main.yml --tags ssh,authentik   # or a full run
 ```
 
-If even PostgreSQL is unrecoverable, a full `ansible-playbook main.yml -e blank=true`
+If even PostgreSQL is unrecoverable, a full `nos --remove=data --confirm`
 wipes and reinstalls everything from scratch (the documented clean-reinstall
 path) — losing all service data, so this is the genuine last resort.
 

@@ -16,7 +16,7 @@ Those are the gaps this runbook closes.
 1. **Plain full run** — `ansible-playbook main.yml`. Every config change / weekly
    drift check. Steady-state idempotent validation (a second run should be
    `changed=0`).
-2. **Blank cold-start** — `ansible-playbook main.yml -e blank=true`. ~Monthly.
+2. **Blank cold-start** — `nos --remove=data --confirm` (legacy `-e blank=true`). ~Monthly.
    Catches state-accumulation + cold-init bugs the idempotent run hides
    (Jellyfin/Open WebUI/GitLab first-init loops, first-admin seed, single-run
    autowiring). The canonical "fresh machine" baseline — run it immediately

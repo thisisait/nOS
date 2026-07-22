@@ -32,7 +32,7 @@ user-files), misses services, and is create-only rather than reconciling. Plan:
 **Shipped:** uid stability (username-keyed, Czech-safe slug) · blank wipes derived KEAP
 `/data` · P1 `uninstall` (dry-run default). **Remaining:** P1.5 managed-resource manifest
 (disabled-legacy-dir gap) + the supervised end-to-end validation run
-(`-e uninstall=true -e confirm_uninstall=true` → fresh `-e blank=true`).
+(`nos --remove=all --confirm --leave` → fresh `nos --remove=data --confirm`).
 
 ## Open follow-ups
 

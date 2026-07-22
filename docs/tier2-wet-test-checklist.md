@@ -53,7 +53,7 @@ If any line fails, stop and fix BEFORE running the blank.
 ## 1 · Blank run (operator-only)
 
 ```bash
-ansible-playbook main.yml -K -e blank=true
+nos --remove=data --confirm
 ```
 
 **Expected PLAY RECAP** (target row):

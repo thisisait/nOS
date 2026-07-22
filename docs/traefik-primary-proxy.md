@@ -180,7 +180,7 @@ removes:
 Existing instances on host nginx need a single blank run to flip:
 
 ```bash
-ansible-playbook main.yml -K -e blank=true
+nos --remove=data --confirm
 ```
 
 `tasks/nginx.yml` is gated behind `install_nginx | default(false)` —

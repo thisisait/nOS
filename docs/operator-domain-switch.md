@@ -240,7 +240,7 @@ acme_cloudflare_api_token: "cf-…paste-from-step-1.2…"
 ```bash
 # This is the migration blank. Backs up current data, wipes it, redeploys
 # under the new TLD. Allow ~30 min.
-ansible-playbook main.yml -K -e blank=true
+nos --remove=data --confirm
 ```
 
 Expected progression:
@@ -297,7 +297,7 @@ If you need to revert to dev:
 tenant_domain: "dev.local"
 ```
 
-Run `ansible-playbook main.yml -K -e blank=true` again. mkcert takes over
+Run `nos --remove=data --confirm` again. mkcert takes over
 the TLS layer; ACME goes dormant; the LE cert in `acme/` stays on disk
 (it'll expire in 90 days but doesn't bother anything).
 

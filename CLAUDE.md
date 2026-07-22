@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~50 Docker services organized into 72 Ansible roles under the `pazny.*` namespace, 68 anatomy plugins for cross-service wiring, SSO (Authentik), secrets vault (Infisical), a unified web-desktop (nOS face), AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `blank=true` wipes everything and reinstalls from scratch.
+**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~50 Docker services organized into 72 Ansible roles under the `pazny.*` namespace, 68 anatomy plugins for cross-service wiring, SSO (Authentik), secrets vault (Infisical), a unified web-desktop (nOS face), AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `nos --remove=data --confirm` (legacy `blank=true`) wipes everything and reinstalls from scratch.
 
 `nOS` is the open-source reference implementation behind [**This is AIT — Agentic IT**](https://thisisait.eu). Forked from geerlingguy/mac-dev-playbook → roles renamed under the `pazny.*` namespace.
 
@@ -52,7 +52,16 @@ An OS-agnostic "all-in-one PC" under the brand **This is AIT** (working engine n
 ansible-playbook main.yml
 
 # Clean reinstall (wipes data, resets all services, prompts for a new prefix)
-ansible-playbook main.yml -e blank=true
+ansible-playbook main.yml -e blank=true   # = nos --remove=data --confirm
+
+# Removal ladder via the nos CLI (installed by the playbook; docs/nos-cli.md).
+# remove=none|data|deep|all — data = today's blank scope (source + images kept);
+# deep = data + docker images/build cache + brew/npm/pip caches (= flush=deep);
+# all = deep + user SOURCE (~/nos tenants, ~/.nos, ~/wing, …) (= uninstall).
+# WITHOUT --confirm/-y a removal is a DRY RUN: prints the inventory, exits 0.
+nos --remove=data              # dry run — inventory only, nothing removed
+nos --remove=data --confirm    # execute interactively (ENTER + prefix gates)
+nos --remove=all -y --leave    # non-interactive full teardown, then stop (handoff)
 
 # Run a specific component by tag
 ansible-playbook main.yml --tags "stacks,nginx"
@@ -63,7 +72,7 @@ ansible-playbook main.yml --tags "ssh,iiab-terminal"
 ansible-playbook main.yml --syntax-check
 
 # Enable every known-good service (test profile; excludes erpnext/freepbx/spacetimedb)
-ansible-playbook main.yml -e @profiles/all-on.yml [-e blank=true]
+nos [--remove=data --confirm] -e @profiles/all-on.yml
 
 # Run the Docker stack layer autonomously — no sudo, no vars_prompt (agent/CI dev)
 tools/nos-stacks.sh [tag]        # e.g. tools/nos-stacks.sh woodpecker
@@ -130,7 +139,7 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 
 ### Playbook execution flow (`main.yml`)
 
-1. **Password-prefix prompt** (when `blank=true`)
+1. **Password-prefix prompt** (on a confirmed removal — `remove=data|deep|all` + `confirm=true`, legacy `blank=true`)
 2. **Blank reset** — wipes Docker state, data dirs, and configs. Honors external-storage overrides via `tasks/stacks/external-paths.yml`, so data on `/Volumes/SSD1TB/` gets wiped rather than the empty `~/service` fallbacks.
 3. **Auto-enable dependencies** — flips on PostgreSQL, Redis, MariaDB based on which `install_*` flags are set.
 4. **Auto-generate secrets** — Outline, Bluesky, Authentik, Infisical, Vaultwarden, Paperclip.
@@ -169,7 +178,7 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 
 > **OnlyOffice (euro-office) vs Documenso — independent, non-competing services.** The table lists OnlyOffice under `b2b` and Documenso under `apps`; they serve orthogonal purposes and do NOT overlap. **OnlyOffice / euro-office** is an embedded **collaborative editing engine** (iframe-embedded in Nextcloud, BookStack, Outline) — it edits *live, mutable* documents. **Documenso** is a standalone Tier-2 **e-signature platform** (`apps/documenso.yml`) — e-signing requires *immutability*, the opposite invariant. The euro-office pilot (`ghcr.io/euro-office/documentserver`, a JWT-compatible OnlyOffice fork) only ever swaps the editing backend; it has no e-signing surface, so **Documenso stays regardless**. See `roles/pazny.onlyoffice/defaults/main.yml` ("Documenso is NOT covered by euro-office (no e-signing) and stays") and the pilot devlog `docs/devlog/nos-core/2026/2026-06-13-euro-office-pilot.md` for the historical context.
 
-**Bring-up tuning vars** (`default.config.yml`): `stack_up_parallel` (default `true`; `false` = one-at-a-time, contention-free cold blank), `stack_up_wait_timeout` (default 540s; per-stack STRICT health budget), `stack_wait_tick_interval` (default 15s; heartbeat cadence). **`profiles/all-on.yml`** is a committed test profile that enables every known-good service (excludes erpnext/freepbx/spacetimedb), forces sequential bring-up + 1200s timeout — run with `ansible-playbook main.yml -e @profiles/all-on.yml [-e blank=true]`. **`tools/nos-stacks.sh [tag]`** runs the stack layer with no sudo and no vars_prompt (compose-up tasks carry zero `become:`; `-e nos_sudo_password=''` skips the prompt) — for agent/CI dev; refuses `blank=true`.
+**Bring-up tuning vars** (`default.config.yml`): `stack_up_parallel` (default `true`; `false` = one-at-a-time, contention-free cold blank), `stack_up_wait_timeout` (default 540s; per-stack STRICT health budget), `stack_wait_tick_interval` (default 15s; heartbeat cadence). **`profiles/all-on.yml`** is a committed test profile that enables every known-good service (excludes erpnext/freepbx/spacetimedb), forces sequential bring-up + 1200s timeout — run with `nos [--remove=data --confirm] -e @profiles/all-on.yml`. **`tools/nos-stacks.sh [tag]`** runs the stack layer with no sudo and no vars_prompt (compose-up tasks carry zero `become:`; `-e nos_sudo_password=''` skips the prompt) — for agent/CI dev; refuses every removal token (`remove=`/`confirm=true`, legacy `blank=`/`flush=`/`uninstall=`).
 
 ### Non-Docker applications
 
@@ -215,7 +224,7 @@ Four access tiers bound to Authentik groups via expression policies (`authentik_
 - **Tier 3 (user):** Nextcloud, Outline, Open WebUI, nOS face, Vaultwarden, Uptime Kuma, Calibre-Web, Home Assistant — + `nos-users`
 - **Tier 4 (guest):** Kiwix, Jellyfin, WordPress — + `nos-guests`
 
-Group names are configurable via `authentik_rbac_tiers`. Legacy installs provisioned before 2026-04-22 carry the old `devboxnos-*` prefix — migrate by updating group names in Authentik, or run `blank=true` to regenerate.
+Group names are configurable via `authentik_rbac_tiers`. Legacy installs provisioned before 2026-04-22 carry the old `devboxnos-*` prefix — migrate by updating group names in Authentik, or run `nos --remove=data --confirm` to regenerate.
 
 ### Secrets management
 
@@ -361,7 +370,7 @@ These aren't backlog — they're surprises a future operator can hit when extend
 - **LSIO code-server image is HTTP-only on 8443:** `lscr.io/linuxserver/code-server` defaults to plain HTTP unless `--cert` is passed (which nOS doesn't). Treat as HTTP upstream — do NOT add it to `traefik_https_upstream_ids` in `roles/pazny.traefik/vars/main.yml`. The list is `[]` by default; add a service explicitly only if it actually binds HTTPS internally.
 - **Forward-auth ≠ native-OIDC double-protection:** services with `200 OK` on a Traefik route (e.g. Gitea, Portainer, HedgeDoc) are not bypassing SSO — they have native OIDC with a "Sign in with Authentik" button on their own login page. Don't stack `authentik@file` forward-auth middleware on top of native-OIDC services — operator gets a double-login UX for no security benefit.
 - **Vars-files must use STOCK Jinja2 filters only (`{{ vars }}` eager-resolve trap):** the plugin loader is invoked with `template_vars: "{{ vars }}"` (`tasks/stacks/core-up.yml` et al.). ansible-core's post-2.19 engine eagerly resolves the *entire* play-var namespace during module-arg finalization, in a context where **ansible filter plugins are not loaded** — so any value in `default.config.yml` / `default.credentials.yml` using a non-stock filter (`regex_replace`, `regex_search`, `| bool`, `b64encode`, `hash`, …) throws `No filter named '<x>'` and aborts the run. It only bites a host that *reaches* the loader (ubuntu CI; macOS skips stacks when Docker is absent), so it surfaced as a slow-wet-test-only failure that a patch-level core bump (2.20.6) flipped red with zero repo change. Use Jinja2 core builtins (`default`, `trim`, `length`, `replace`, `.endswith()`, operators) for any var that lands in that namespace. **Same trap, second variant (2026-06-06):** a var referenced *only* via `{{ foo | default(<x>) }}` with no definition that loads **before** the core-up loader also aborts the eager resolution — the undefined var slips past `default()` (even `default({})`) under the full-namespace core-up state; it does NOT reproduce in an isolated `{{ vars }}` finalize, only the live run does. "Before core-up" means a key in `default.config.yml`/`default.credentials.yml`/`tests/config.yml` or a `main.yml` set_fact — a **role default does NOT count** (its role is invoked during stack-up, after core-up: that's how `app_secrets`, whose only def was `roles/pazny.apps_runner/defaults`, bit us). It also bit `mysqld_exporter_password` + the `akadmin_password`/8×`authentik_oidc_*_client_secret` seed twins (secrets with only a `| default(prefix + '_pw_x')`) and `tester_password_prefix` (defined nowhere). Fix: give every such var a real default in `default.config.yml`/`default.credentials.yml`. Both variants pinned by `tests/anatomy/test_config_stock_jinja_only.py` (offline, fast: filter gate + every-ref-resolves-before-core-up gate). **Follow-up (tie to the 2.24 jump):** the strategic fix is to stop passing `{{ vars }}` wholesale (the `template_vars`/`role_vars` sites) — `{{ vars }}` is itself deprecated, removed in ansible-core 2.24.
-- **Run `blank=true` from a terminal OUTSIDE the IDE (Terminal.app / tmux), not Windsurf's integrated terminal:** a blank brings up ~50 containers whose RAM pressure alone can make macOS terminate a heavy GUI app like Windsurf — which kills its integrated terminal and the controlling playbook session mid-run, leaving a half-applied run. The only host-session-disruptive ops the playbook itself does are the GUI killalls (`killall Dock`/`killall Finder` in `tasks/macos-defaults.yml`) and an `sshd` `launchctl kickstart` handler (`main.yml`) — **there is no `reboot`/`shutdown` and no Docker-daemon restart in nOS's own tasks** (the vendored `osx-command-line-tools` role's `softwareupdate -i` can trigger an OS update, but it is not reached under `--tags upgrade`). The killalls now defer by default (`defer_gui_restarts: true`, default.config.yml) so a normal/blank run no longer flickers the GUI mid-run; `--tags upgrade` is provably free of all of them (gate `tests/anatomy/test_upgrade_tag_host_quiet.py`). See `docs/plans/upgrade-reset-scope-and-session-safety.md` §Run-hardening.
+- **Run removals (`nos --remove=… --confirm`, legacy `blank=true`) from a terminal OUTSIDE the IDE (Terminal.app / tmux), not Windsurf's integrated terminal:** a blank brings up ~50 containers whose RAM pressure alone can make macOS terminate a heavy GUI app like Windsurf — which kills its integrated terminal and the controlling playbook session mid-run, leaving a half-applied run. The only host-session-disruptive ops the playbook itself does are the GUI killalls (`killall Dock`/`killall Finder` in `tasks/macos-defaults.yml`) and an `sshd` `launchctl kickstart` handler (`main.yml`) — **there is no `reboot`/`shutdown` and no Docker-daemon restart in nOS's own tasks** (the vendored `osx-command-line-tools` role's `softwareupdate -i` can trigger an OS update, but it is not reached under `--tags upgrade`). The killalls now defer by default (`defer_gui_restarts: true`, default.config.yml) so a normal/blank run no longer flickers the GUI mid-run; `--tags upgrade` is provably free of all of them (gate `tests/anatomy/test_upgrade_tag_host_quiet.py`). See `docs/plans/upgrade-reset-scope-and-session-safety.md` §Run-hardening.
 
 ## Recently shipped doctrine (one-line pointers)
 

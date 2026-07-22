@@ -9,8 +9,8 @@
 # committed defaults leave off.
 #
 # Usage:
-#   ansible-playbook main.yml -e @profiles/all-on.yml
-#   ansible-playbook main.yml -e @profiles/all-on.yml -e blank=true   # full wipe + reinstall
+#   nos -e @profiles/all-on.yml
+#   nos --remove=data --confirm -e @profiles/all-on.yml   # full wipe + reinstall
 #
 # This file is self-contained: it lists every known-good service toggle as
 # `true` (even ones already on by default) so it stays an unambiguous

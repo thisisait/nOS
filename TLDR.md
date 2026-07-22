@@ -80,7 +80,8 @@ Mandatory external-SSD format: **APFS Case-Sensitive** (or HFS+ Journaled Case-S
 ansible-playbook main.yml
 
 # Clean reinstall — wipes ALL data and secrets, prompts for a new prefix
-ansible-playbook main.yml -e blank=true
+# (without --confirm this is a DRY RUN; legacy -e blank=true still works, deprecated)
+nos --remove=data --confirm
 
 # Syntax only
 ansible-playbook main.yml --syntax-check
@@ -107,7 +108,7 @@ Full tag list: see README.md § *Tags & selective runs*.
 ### Test the whole catalogue / run stacks without sudo
 
 ```bash
-ansible-playbook main.yml -e @profiles/all-on.yml [-e blank=true]   # enable every known-good service (sequential, 1200s timeout)
+nos [--remove=data --confirm] -e @profiles/all-on.yml               # enable every known-good service (sequential, 1200s timeout)
 tools/nos-stacks.sh [tag]                                           # stack layer only, no sudo, no prompt (agent/CI dev)
 ```
 
@@ -167,7 +168,7 @@ docker compose -f ~/stacks/iiab/docker-compose.yml ps
 └── rustfs/
 ```
 
-`blank=true` honors these paths — wipes the real data, not just empty `~/service` fallbacks.
+A removal run (`nos --remove=… --confirm`, legacy `blank=true`) honors these paths — wipes the real data, not just empty `~/service` fallbacks.
 
 ---
 

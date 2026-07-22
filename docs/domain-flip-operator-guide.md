@@ -204,7 +204,7 @@ acme_cloudflare_api_token: "vYxx…"
 Then:
 
 ```bash
-ansible-playbook main.yml -K -e blank=true
+nos --remove=data --confirm
 ```
 
 What happens automatically:
@@ -328,7 +328,7 @@ If anything breaks during the flip and you want to go back to dev:
 
 1. Comment out `instance_tld: pazny.eu` in `config.yml` (falls back to
    default `dev.local`).
-2. `ansible-playbook main.yml -K -e blank=true` — full reset.
+2. `nos --remove=data --confirm` — full reset.
 3. Cloudflare DNS records can stay; Wedos delegation can stay (they're
    inert without a running server).
 
@@ -349,7 +349,7 @@ debugging.
 - [ ] (If dynamic IP) `cloudflare-ddns` launchd agent
 - [ ] `config.yml`: `instance_tld: pazny.eu`
 - [ ] `credentials.yml`: `acme_cloudflare_api_token: "..."`
-- [ ] `ansible-playbook main.yml -K -e blank=true`
+- [ ] `nos --remove=data --confirm`
 - [ ] Smoke: `curl -I https://wing.pazny.eu/`
 - [ ] (Phase 2) ISP rDNS request
 - [ ] (Phase 2) MX + SPF + DKIM + DMARC at CF
