@@ -22,6 +22,12 @@ rules:
   # warning, not a hard fail).
   colons:
     max-spaces-after: -1
+  # Same deliberate alignment, comma edition: the KEAP DataTable seeds
+  # (state/keap-tables/*.table.yml) are column-aligned inline maps
+  # (`{ key: name,        label: "Name", ... }`). Keep the files fully
+  # linted otherwise — only the spacing-after-comma freedom is granted.
+  commas:
+    max-spaces-after: -1
 
 ignore: |
   .github/workflows/stale.yml
