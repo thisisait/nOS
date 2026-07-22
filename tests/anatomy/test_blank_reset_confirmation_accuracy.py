@@ -156,9 +156,18 @@ def test_prompt_image_modifier_is_flush_deep_gated():
     assert "Docker images kept" in prompt, (
         "prompt lost the blank-path 'Docker images kept' modifier"
     )
-    assert "remove=deep" in prompt and "_flush_deep" in prompt, (
-        "the Docker-image prompt line must branch on _flush_deep and name the "
-        "remove= level vocabulary (C5 rewording)"
+    # Assert the PROPERTY, not the literal. This used to require the string
+    # "remove=deep" — which a remove=all run printed verbatim while wiping at
+    # level all (live 2026-07-22). A gate that pins a hardcoded level name
+    # certifies the very lie it exists to prevent; the line must RENDER the
+    # level it is running at.
+    assert "_flush_deep" in prompt, (
+        "the Docker-image prompt line must branch on _flush_deep"
+    )
+    assert "remove=\" ~ (remove" in prompt or "{{ remove" in prompt, (
+        "the Docker-image prompt line names a hardcoded level instead of "
+        "rendering the actual `remove` value — remove=all would announce "
+        "itself as remove=deep"
     )
 
 
@@ -194,9 +203,16 @@ def test_prompt_homebrew_modifier_is_flush_deep_gated():
     assert "Homebrew packages and cache" in prompt, (
         "blank-path Homebrew line must state packages AND cache are kept"
     )
-    # flush=deep branch must own the cache-clear claim.
-    assert "remove=deep also clears the cache" in prompt, (
-        "remove=deep Homebrew line must own the cache-clear claim"
+    # The deep branch must own the cache-clear claim. Phrased without a
+    # hardcoded level for the same reason as the image line above: remove=all
+    # also clears the cache, so naming "remove=deep" here was false at level
+    # all (live 2026-07-22).
+    assert "also clears the cache" in prompt, (
+        "the deep-path Homebrew line must own the cache-clear claim"
+    )
+    assert "remove=deep also clears" not in prompt, (
+        "the Homebrew line hardcodes remove=deep; remove=all clears the cache "
+        "too and would be announced under the wrong level"
     )
 
 

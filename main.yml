@@ -43,7 +43,12 @@
         ──────────────────────────────────────────────────────────────────
          macOS sudo password (one-stop — replaces -K).
          Used for system tasks AND Homebrew cask pkg-installer cleanup.
-         Press Enter to skip (those tasks will fall back to manual mode).
+
+         Enter alone = NO sudo. Tasks that need root then FAIL, they do not
+         skip: a fresh/repaired install dies at the first Homebrew
+         permission task. Leave it empty only for a run you know needs no
+         root (e.g. --tags stacks). Live proof: 2026-07-22 all-on install,
+         "Premature end of stream waiting for become success".
         ──────────────────────────────────────────────────────────────────
       private: true
       confirm: false

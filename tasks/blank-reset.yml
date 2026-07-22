@@ -50,14 +50,13 @@
       ║    - Nginx configuration and SSL certificates                      ║
       ║    - Observability data (Grafana, Prometheus, Loki, Tempo)         ║
       ║    - Uptime Kuma monitors, Portainer settings                      ║
-      ║  {{ "- Docker images + build cache (remove=deep)" if _flush_deep | default(false) | bool else "(remove=data: Docker images kept)" }}
+      ║  {{ "- Docker images + build cache (remove=" ~ (remove | default('data')) ~ ")" if _flush_deep | default(false) | bool else "(remove=data: Docker images kept)" }}
       ║                                                                    ║
       ║  Will remain:                                                      ║
       ║    - ~/media/ (movies, music), ~/calibre/ (books)                  ║
       ║    - ~/.ollama/ (models — add flush_ollama=true to wipe)           ║
-      ║    - ~/nos/tenants/** user files (remove=all is the ONLY level     ║
-      ║      that deletes them — a separate pause guards it)               ║
-      ║  {{ "- Homebrew packages kept (remove=deep also clears the cache)" if _flush_deep | default(false) | bool else "- Homebrew packages and cache (services just restart)" }}
+      ║  {{ "*** NOT tenants: remove=all DELETES ~/nos/tenants/** user files ***" if nos_remove_source | default(false) | bool else "  - ~/nos/tenants/** user files (only remove=all deletes them)" }}
+      ║  {{ "- Homebrew packages kept (this level also clears the cache)" if _flush_deep | default(false) | bool else "- Homebrew packages and cache (services just restart)" }}
       ║                                                                    ║
       ║  {{ "After removal the play ENDS (leave=true) — no reinstall." if nos_leaving | default(false) | bool else "After reset the playbook reinstalls everything with clean data." }}
       ╚══════════════════════════════════════════════════════════════════════╝
