@@ -67,6 +67,11 @@ instance. The class closes with a **sweep plus a gate**:
    `reinstalls everything`, a bare level name, hardcoded counts) that must
    appear only inside a conditional expression. Break-test it by planting one
    flat sentence.
+4. The *present-tense* half (occurrences A and B below): every task that can
+   run longer than a tick of operator patience announces its expected duration
+   **before** it starts, and no progress line may describe work it is not
+   doing. Candidates found so far: the `flush-deep` prune, the first
+   full-corpus KEAP embed, GitLab cold init.
 
 Scoped into the hidden-fees payoff workflow. **Operator is feeding live
 occurrences as they surface across runs** — each one that arrives is a string
@@ -89,5 +94,43 @@ one told the operator an action was **safe** when it aborts the run. A gate
 pinning the *literal* `remove=deep` (G-7, pre-`f230a946`) had certified two of
 these — **a gate written around a fix certifies the fix, and can encode the very
 lie it exists to catch.** It now asserts the line renders the running level.
+
+### Occurrences of the sibling kind: text about *what is happening now*
+
+The four above are sentences that were true of an older mode. These two are
+different and, for an operator watching a live run, worse — the log describes
+the wrong *present*. Both surfaced on the 2026-07-22 all-on install
+(`failed=0`, 63 containers), both while nothing was actually wrong.
+
+**A. Post-ready no-op ticks print as polling.** `wait-stacks-healthy.yml` loops
+the full time budget by construction — a `when:` on a *looped* `include_tasks`
+cannot short-circuit, so the early exit lives inside `health-tick.yml`, where
+every task is gated on `not _wait_done`. Correct. But `loop_control.label`
+still renders `tick N/36 — <stacks>` for each no-op iteration, so ~80 ticks
+scroll past in two seconds and read as a spin. Verified not a spin: real
+waiting ticks sit 16–18 s apart (20:22:16 → 20:22:34). The label should say
+what the iteration *is* — `already ready, no-op` — instead of repeating the
+stack list it is no longer polling.
+
+**B. A long task's banner arrives minutes late, so the log names the wrong
+current task.** `keap-embed-sync.py` demonstrably started at 20:52:44 (its
+AnsiballZ tmp dir timestamp; the process was live and Ollama busy at 20:55),
+but the `Kick keap-embed-sync` TASK banner reached `~/.nos/ansible.log` only at
+20:58:05. For those ~5 minutes the last logged line was the *previous* task's
+one-shot debug summary — so the log said we were parked on a `debug:` while a
+full-corpus embed ran. The operator read it, reasonably, as a hang on what
+should be "a fast sed/awk action".
+
+**Mechanism for B: NOT DETERMINED.** Ansible normally writes the banner at task
+start, and every other task in this run logged promptly. Rather than guess, the
+evidence is recorded here: task start 20:52:44 (tmp dir + live process), banner
+20:58:05, same play, same pid `p=23662`. Investigate before fixing — and do not
+ship a remedy that would *appear* to cure it, per the preflight lesson in
+[`tests/anatomy/test_mount_preflight_diagnosis.py`](../../tests/anatomy/test_mount_preflight_diagnosis.py).
+
+Independent of the cause, the run had **no way to say "this will take
+minutes"** — the same defect as the unannounced `flush-deep` prune. A first
+full-corpus embed after `remove=all` (every vector deleted) took ~10 minutes and
+announced nothing at all.
 
 | _(operator-reported, pending)_ | | |
