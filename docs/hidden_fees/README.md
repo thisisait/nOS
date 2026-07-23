@@ -57,3 +57,6 @@ One file per fee, `NN-short-slug.md`, with these headings:
 | [03](03-leading-digit-slugs.md) | A service name starting with a digit cannot be a KEAP node id | someone adds a service whose name starts with a number | latent |
 | [04](04-systems-docs-drift.md) | `docs/systems/` covers a third of the estate and targets dead paths | the skill router embeds them and starts routing | open |
 | [05](05-keap-face-host-deprecation.md) | `KEAP_FACE_HOST` shim emitted for a pin we will leave behind | ~~`keap_repo_ref` moves past v1.21.0~~ | **closed 2026-07-21** |
+| [06](06-removal-guard-drifts-from-deploy-gate.md) | Removal answered a question the deploy had stopped asking | ~~the write-gate and the remove-gate diverge~~ | **closed 2026-07-22** |
+| [07](07-messages-that-outlive-their-mode.md) | Operator-facing text that outlived the mode it was written for | a flag changes and the sentence does not | open (4 paid) |
+| [08](08-empty-stack-reads-as-success.md) | "No containers" read as "nothing to wait for" | a `compose up` fails and the health gate passes the emptiness | open |

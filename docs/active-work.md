@@ -44,16 +44,21 @@ review had missed (`hidden_fees/06`, `07`). **Remaining: P1.5 managed-resource m
   for `provider_type: forward_auth`, or make the main.yml MTI reconcile skip
   `o.delete()` when the base row has a proxy child. See memory
   `autologin-coverage-ceilings`.
-- **Euro-office: full role swap after first stable** (summer 2026) — pilot
-  runs via `onlyoffice_image` flip (operator config.yml); rename
-  `pazny.onlyoffice` → eurooffice + plugin + manifest row once stable lands.
-  Documenso stays (euro-office has no e-signing). See devlog
-  `2026-06-13-euro-office-pilot`.
+- **Euro-office: full role swap after first stable** (summer 2026) — pilot via
+  `onlyoffice_image` flip; rename role+plugin+manifest once stable lands.
+  Documenso stays (no e-signing). Devlog `2026-06-13-euro-office-pilot`.
 - **D1 `{{ vars }}` retirement flip** — design LOCKED (O25, generated-namespace
   plan + `tools/loader-vars-report.py`); the flip needs a dedicated pre-2.24
   wet-test lane. Hard-breaks on ansible-core 2.24.
-- **Advisor/architect actor-id naming inconsistency** (scout side-find,
-  2026-06-11) — normalize agent actor_id naming across the two upgrade agents.
+- **Linux wet-test proves nothing yet — `hidden_fees/08` (HIGH, found in the
+  v0.9-beta PR).** `stacks/infra/docker-compose.yml` is not rendered on Linux →
+  `compose up infra` rc=1 → the STRICT probe passes `0/0 ready (stack empty)` →
+  the run provisions for 8 more minutes on an estate with no MariaDB/PG/
+  Authentik/Traefik. It had been GREEN this way for weeks; only the smoke
+  noticed, and its 0.5 tolerance hid that until the probe count grew. Three
+  pieces: render the infra compose on Linux (cause undiagnosed — do not guess),
+  make the probe read the bring-up rc, give the smoke a manifest-enabled floor.
+  CLAUDE.md's "it proves the playbook" claim is corrected until then.
 - **KEAP contract v2 proposal — typed skill→service relations (2026-07-22, undecided).**
   KEAP asks why skills carry no typed edges to their services (today: tree +
   `[[anchor]]` rays only). Proposed shape: a `relations:` list in card frontmatter
@@ -80,14 +85,8 @@ review had missed (`hidden_fees/06`, `07`). **Remaining: P1.5 managed-resource m
 - **Version-pin drift wave (post-Gitea):** ~13 pending, 0 CRITICAL (REM-002
   Woodpecker resolved). Gitea (REM-099) closed first via the agentic recipe path — the
   template for the rest (GitLab REM-016 → 18.11.7, etc.). Mechanical same-org bumps.
-- **Architect at-target refresh drafts (2026-07-09 sweep, uncommitted):** the
-  upgrade-architect also drafted `freescout-2.1-current`, `gitlab-18-to-current`
-  → 18.10.8, `grafana-12-current` → 12.4.4 (installed ahead of the recipe `to:`).
-  Low priority — commit when touching those services. Report: event 105 in wing.db.
-- **Migration engine severity-enum drift:** `nos_migrate_engine.validate_record`
-  accepts only `patch|minor|breaking`, but `migration.schema.json` (+ recipes)
-  allow `security` — the Gitea migration was recorded as `minor` as a workaround.
-  Add `security` to `_SEVERITY_VALUES` so security migrations keep the signal.
+- **Migration severity-enum drift:** `validate_record` lacks `security` (schema
+  has it); Gitea was filed as `minor` as a workaround. Add it to `_SEVERITY_VALUES`.
 - **PG 16→17 cutover** — pg17 verified live beside pg16 on the coexistence
   track; queued by upgrade-advisor this session (`coexistence_planned`); the actual
   cutover (logical dump/restore + atomic switch) is still operator-gated.
@@ -125,6 +124,9 @@ review had missed (`hidden_fees/06`, `07`). **Remaining: P1.5 managed-resource m
 - Inspektor + Librarian agent runners (contract-only; need trivy/grype substrate
   resp. Qdrant corpus pipeline) — `docs/sso-and-attribution.md` agent matrix.
 - ansible-core 2.24 jump (~4h once upstream ships stable) — CLAUDE.md tech debt.
+- Agent actor_id naming normalization across the two upgrade agents.
+- Architect at-target recipe drafts (freescout/gitlab/grafana, wing.db event 105)
+  — commit when next touching those services.
 
 ## Snapshot
 
