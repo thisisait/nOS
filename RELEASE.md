@@ -54,6 +54,25 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.8-
   validated by a full teardown plus a clean all-on install (**1531 tasks,
   `failed=0`, 63 containers, none unhealthy**).
 
+### Known red at cut time — the Linux wet-test
+
+`Integration (ubuntu-24.04)` is RED on this tag, and the tag ships anyway. The
+honest reason: the defect is not new, it was *found* here. `stacks/infra/docker-compose.yml`
+is not rendered on Linux, so `docker compose up infra` returns rc=1 and the STRICT
+health probe passes the resulting empty stack as `0/0 ready` — the job had been
+**green for weeks with no infra stack at all**, and only the post-run smoke ever
+noticed (its 0.5 failure tolerance hid that until the probe count grew).
+`docs/hidden_fees/08` carries the analysis; `CLAUDE.md`'s claim that this job
+"proves the playbook" is corrected until the three pieces are closed.
+
+What DOES back this tag is the macOS estate, live: a full teardown at
+`--remove=all --leave` followed by a clean all-on install — **1531 tasks,
+`failed=0`, 63 containers, 0 unhealthy, 48/48 smoke probes green** — plus
+`tools/ci-local.sh` on the frozen 2.21.0 toolchain and 1901 passing anatomy
+tests. Three real Linux defects were fixed on the way to finding the fourth
+(`~/.local` chown, a FrankenPHP pin that did not govern its own fetch, and a
+smoke probe that tested DNS instead of the service).
+
 ### The face and the cortex (2026-07-13 → 20)
 
 > **nOS grows a face, and the cortex learns itself.** The seven days after the
