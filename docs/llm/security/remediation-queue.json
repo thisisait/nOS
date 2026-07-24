@@ -653,12 +653,14 @@
       "fix_version": "latest",
       "remediation_type": "version_bump",
       "remediation_detail": "Uptime Kuma SSTI in notification templates (GHSA-vffh-c9pq-4crh) + cloud metadata exposure (HIGH). Ensure uptime_kuma_version resolves to latest 1.x stable. Behind proxy auth so lower risk.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": true,
       "source": "https://github.com/louislam/uptime-kuma/security/advisories",
       "confidence": "high",
       "found_at": "2026-04-09T06:00:00Z",
-      "scan_cycle": 2
+      "scan_cycle": 2,
+      "resolved_at": "2026-07-24",
+      "resolved_detail": "uptime-kuma 1.23.13 → 2.2.1 applied LIVE via upgrade engine (recipe uptime-kuma-1-to-2, first breaking-recipe apply): backup→bump→one-way schema migration→verify, container healthy on 2.2.1, http 200. SSTI CVE-2026-33130 fixed. Verified 2026-07-24."
     },
     {
       "id": "REM-038",
@@ -1278,12 +1280,14 @@
       "fix_version": "2.2.1",
       "remediation_type": "version_bump",
       "remediation_detail": "Uptime Kuma SSTI bypass in notification templates (CVE-2026-33130, GHSA-v832-4r73-wx5j). Incomplete fix for GHSA-vffh-c9pq-4crh — unquoted absolute paths bypass Liquid template engine mitigations, allowing arbitrary file read. Affects 1.23.0 through 2.2.0, fixed in 2.2.1. Our pinned version '1' (latest 1.x) is VULNERABLE. Fix requires upgrade to 2.2.1+ (major version bump from 1.x to 2.x). Risk mitigated by Authentik proxy auth (attacker needs SSO session first). Still HIGH because authenticated user can read /etc/shadow, Docker secrets, etc.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": false,
       "source": "https://github.com/louislam/uptime-kuma/security/advisories/GHSA-v832-4r73-wx5j",
       "confidence": "high",
       "found_at": "2026-04-10T22:00:00Z",
-      "scan_cycle": 12
+      "scan_cycle": 12,
+      "resolved_at": "2026-07-24",
+      "resolved_detail": "uptime-kuma 1.23.13 → 2.2.1 applied LIVE via upgrade engine (recipe uptime-kuma-1-to-2, first breaking-recipe apply): backup→bump→one-way schema migration→verify, container healthy on 2.2.1, http 200. SSTI CVE-2026-33130 fixed. Verified 2026-07-24."
     },
     {
       "id": "REM-074",
@@ -2290,9 +2294,11 @@
       "LOW": 6
     },
     "by_status": {
-      "pending": 16,
-      "resolved": 107,
-      "vendor-blocked": 5
+      "pending": 14,
+      "resolved": 109,
+      "vendor-blocked": 5,
+      "wontfix": 1,
+      "obsolete": 1
     },
     "auto_fixable": 105,
     "manual_review_required": 25,
