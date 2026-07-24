@@ -16,7 +16,8 @@
 
 backrest_version: "v1.14.1"
 backrest_port: 9898
-backrest_bind_addr: "127.0.0.1"                       # loopback only; Traefik/forward-auth is the edge (follow-up)
+backrest_bind_addr: "127.0.0.1"                       # loopback only; Traefik forward-auth (authentik@file) is the edge
+backrest_domain: "backrest{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 
 backrest_home: "{{ ansible_facts['env']['HOME'] }}/backrest"
 backrest_bin_dir: "{{ ansible_facts['env']['HOME'] }}/.local/bin"

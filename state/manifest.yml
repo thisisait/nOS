@@ -833,6 +833,20 @@ services:
       url_template: "http://localhost:{{ bone_port }}/api/health"
       expect_status: 200
 
+  - id: backrest
+    category: ops
+    stack: null
+    install_flag: install_backrest
+    version_source: launchd
+    launchd_label: "eu.thisisait.nos.backrest"
+    domain_var: backrest_domain
+    port_var: backrest_port
+    data_path_var: backrest_data_dir
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ backrest_port }}/"
+      expect_status: 200
+
   - id: iiab_terminal
     category: iiab
     stack: null

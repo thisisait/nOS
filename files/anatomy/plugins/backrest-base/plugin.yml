@@ -1,0 +1,102 @@
+# =============================================================================
+# backrest-base — service plugin for the pazny.backrest HOST launchd daemon.
+#
+# backrest (restic UI + scheduler) runs as a native host daemon on loopback
+# :9898 (NOT a container — restic-in-container can't read macOS VirtioFS bind
+# mounts; Phase-0 spike 2026-07-24). The Traefik file provider auto-derives
+# backrest.<tld> → host-gateway:9898 from the state/manifest.yml row; this
+# plugin owns the Authentik forward-auth (Tier-1 admin) binding + GDPR row +
+# A9 notification routing + Wing /hub card. No compose_extension (host daemon).
+# =============================================================================
+
+name: backrest-base
+version: 0.1.0
+description: |
+  backrest — restic backup UI + scheduler, run as a host launchd daemon.
+  Wiring layer for proxy-authenticated access via Authentik forward-auth
+  (Traefik middleware authentik@file). Off-site (copy #2) restic orchestrator
+  + restore UI; complements pazny.backup's app-consistent logical dumps.
+upstream: https://github.com/garethgeorge/backrest
+license: GPL-3.0  # plugin manifest is repo-licensed
+
+type:
+  - service
+  - ui-extension
+
+_NOS_PLUGIN: "backrest-base"
+
+requires:
+  role: pazny.backrest
+  feature_flag: install_backrest
+  variables:
+    - backrest_domain
+    - backrest_port
+    - tenant_domain
+
+# =============================================================================
+# AUTHENTIK — forward-auth gate (Tier 1 = admin). backrest can read every
+# backup + trigger restores → admin-only. backrest's own login is disabled
+# (config auth.disabled) so Authentik is the SOLE gate (no double-login).
+# =============================================================================
+authentik:
+  mode: forward_auth
+  provider_type: forward_auth
+  client_id: nos-backrest
+  client_secret: "{{ global_password_prefix }}_pw_oidc_backrest"
+  slug: backrest
+  name: 'Backrest'
+  enabled: "{{ install_backrest | default(false) }}"
+  launch_url: "https://{{ backrest_domain }}"
+  tier: 1   # admin — nos-providers / nos-admins
+
+# =============================================================================
+# NOTIFICATION — A9 canonical severity routing (backup failures → operator)
+# =============================================================================
+notification:
+  on_critical: [wing-inbox, ntfy, mail]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+# =============================================================================
+# OBSERVABILITY — Loki labels
+# =============================================================================
+observability:
+  loki:
+    labels:
+      app: backrest
+      stack: host
+      tier: "1"
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+gdpr:
+  purpose: |
+    backrest orchestrates restic backups (off-site copy #2) + provides the
+    restore UI. It reads and snapshots whatever host paths the operator adds as
+    backup sources — which may include per-user data trees — and stores restic
+    snapshots in the configured repositories. It is an operator-facing admin
+    tool; it holds no data-subject records of its own beyond the contents of
+    the backups it manages and its own operation logs.
+  legal_basis: legitimate_interests
+  data_categories:
+    - backup_snapshots           # restic snapshots of operator-selected sources
+    - backup_operation_metadata  # plans, schedules, run logs
+  data_subjects:
+    - operators
+  retention_days: 0              # governed by each restic repo's forget/keep policy
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false    # local + operator-controlled off-site repo (e.g. external SSD)
+
+# =============================================================================
+# UI-EXTENSION — Wing /hub deep-link card
+# =============================================================================
+hub_card:
+  title: "Backrest"
+  slug: backrest
+  url: "https://{{ backrest_domain }}"
+  category: ops
+  description: "restic backup UI — snapshots, restore, DR-verify"
