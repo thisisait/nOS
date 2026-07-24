@@ -1,4 +1,7 @@
 fastapi>=0.115
+# REM-128: pin the fastapi-transitive Starlette up to the fixed floor
+# (>=1.0.1 closes the multipart/form DoS + related advisories).
+starlette>=1.0.1
 uvicorn[standard]>=0.32
 httpx>=0.27
 PyYAML>=6.0
