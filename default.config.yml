@@ -1979,7 +1979,7 @@ rustfs_secret_key: "{{ global_password_prefix }}_pw_rustfs_secret"
 
 erpnext_domain: "erp{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 erpnext_port: 8087                     # 8082 = Traefik dashboard, 8083-8086 taken
-erpnext_version: "v15.98.1"              # CVE-2026-27471 (CVSS 9.3 unauth doc access)
+erpnext_version: "v15.111.0"              # CVE-2026-27471 (CVSS 9.3 unauth doc access)
 # erpnext_data_dir: DEPRECATED since P0.1 migration to a named volume. Sites data
 # lives in Docker named volume `b2b_erpnext_sites` (managed for blank-reset
 # via `compose down -v` + `volume prune -f -a`). External storage can be

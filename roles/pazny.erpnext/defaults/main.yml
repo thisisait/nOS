@@ -13,7 +13,7 @@
 # `docker volume prune -f -a` v blank-reset.yml.
 # ==============================================================================
 
-erpnext_version: "v15.98.1"                  # CVE-2026-27471 (CVSS 9.3 unauth doc access); aligned with default.config.yml (source of truth — bump there too)
+erpnext_version: "v15.111.0"                  # CVE-2026-27471 (CVSS 9.3 unauth doc access); aligned with default.config.yml (source of truth — bump there too)
 erpnext_domain: "erp{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 erpnext_port: 8082                           # 8080 obsazen Traefik dashboardem
 # ERPNext bench requires the site name to match the FQDN it serves — derive
