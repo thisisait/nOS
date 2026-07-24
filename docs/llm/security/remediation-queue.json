@@ -134,12 +134,14 @@
       "fix_version": null,
       "remediation_type": "config_change",
       "remediation_detail": "Create dedicated MariaDB user for ERPNext runtime containers with limited privileges (SELECT, INSERT, UPDATE, DELETE on erpnext DB only). Keep root access only in configurator init container. | DEFERRED (S3 2026-06-10): install_erpnext=false, role marked EXPERIMENTAL/NON-WORKING + hard-blocked at role-load — zero live exposure. Dedicated-DB-user lands as an acceptance criterion of the ERPNext rework.",
-      "status": "pending",
+      "status": "wontfix",
       "auto_fixable": true,
       "source": "static_analysis",
       "confidence": "high",
       "found_at": "2026-04-08T12:00:00Z",
-      "scan_cycle": 0
+      "scan_cycle": 0,
+      "reclassified_at": "2026-07-24",
+      "resolved_detail": "DEFERRED-accepted → ERPNext rework epic. install_erpnext=false + role hard-blocked at load (erpnext_experimental_override) + excluded from all-on = ZERO live exposure. The dedicated limited-privilege MariaDB runtime user (vs root) is a documented acceptance criterion of the rework; implementing it on the non-working role now = untestable churn the rework redoes. 2026-07-24."
     },
     {
       "id": "REM-009",
@@ -2304,10 +2306,10 @@
       "LOW": 6
     },
     "by_status": {
-      "pending": 9,
+      "pending": 8,
       "resolved": 113,
       "vendor-blocked": 5,
-      "wontfix": 2,
+      "wontfix": 3,
       "obsolete": 1
     },
     "auto_fixable": 105,
