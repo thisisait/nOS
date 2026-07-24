@@ -110,6 +110,7 @@ install_pulse: true
 install_wing: true
 install_openclaw: true
 install_backup: true
+install_backrest: true           # restic UI/scheduler host daemon (off-site copy-#2 orchestrator)
 install_mailpit: true            # dev SMTP sink (notification mail target)
 install_watchtower: true
 

@@ -834,7 +834,7 @@ services:
       expect_status: 200
 
   - id: backrest
-    category: ops
+    category: storage
     stack: null
     install_flag: install_backrest
     version_source: launchd
