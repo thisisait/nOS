@@ -195,5 +195,16 @@ ENOTSUP`). A native binary reads host trees with operator perms — which also
 **side-steps the TCC blocker above** (the off-site *target* still needs the
 external volume readable, but the source read is no longer gated). Restore replay
 of logical dumps still goes through `tasks/restore.yml`; backrest gets the object
-back, nOS replays it. Remaining Phase-2: backrest→A9 notification hook + a
-scheduled restore-test to close the DR-round-trip-unverified gap with a monitored proof.
+back, nOS replays it.
+
+**Phase-2 (2026-07-24) — monitored proof:**
+- **A9 notification hook** — a repo `CONDITION_ANY_ERROR` hook runs `backrest-notify.sh`,
+  an HMAC-signed POST to Bone `/api/v1/notifications` (`origin_plugin=backrest` → routed
+  by the backrest-base plugin's A9 severity block to wing-inbox/ntfy/mail). Live-verified
+  (Bone HTTP 200). So a failed off-site backup/prune/check now alerts, not silently rots.
+- **Scheduled integrity verification** — the seeded `offsite` repo carries a `checkPolicy`
+  (`readDataSubsetPercent: 5`, monthly): restic cryptographically reads + verifies 5% of
+  the actual snapshot data (not just metadata) on a schedule; failures trip the A9 hook
+  above = a *monitored* proof the copy-#2 data reads back intact. A full restore-replay-to-temp
+  test is outside backrest's native model (it schedules check/prune, not restore) and is
+  partially redundant with read-data verification — left as an optional deeper add.
