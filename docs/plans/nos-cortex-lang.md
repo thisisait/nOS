@@ -1,288 +1,289 @@
 # nOS Cortex Language (nos-cortex-lang) — design plan
 
-> **Status:** design / vision (P0). Not implemented.
-> **Revised** after a live-system review (2026-07-24) corrected three structural
-> errors (opcode source, Resolver placement, missing authz) and one sequencing
-> mistake (training). The vision is unchanged; two columns moved.
-> **One-liner:** an **ontology-typed**, pipeline-shaped Intermediate Representation
-> (IR) that a large API LLM (Claude, taught "nos-lang") emits to drive local
-> nOS/KEAP systems with minimal tokens and **zero parse ambiguity** — where the
-> *operands* are typed by the live KEAP ontology, the *opcodes* are a code-owned
-> registry, and the validated-expression corpus feeds a **case-based local runtime**
-> that executes recurring patterns without the API LLM.
+> **Status:** P0 spec, **freeze-ready** after two rounds of KEAP-side review
+> (2026-07-24, against KEAP v1.26.0). Round 1 fixed opcode source, Resolver
+> placement, authz, and the training sequence. Round 2 added two-phase validation,
+> the validate-as-enumeration-oracle fix, native dotted ids, late-binding operands,
+> the corpus-privacy boundary, and precedent-drift. All folded in below.
+> **One-liner:** an **ontology-typed**, pipeline-shaped IR that a large API LLM
+> emits to drive local nOS/KEAP systems with **zero parse ambiguity** — *operands*
+> typed by the live KEAP ontology, *opcodes* a code-owned registry, execution split
+> from meaning, and a case-based local runtime that replays recurring patterns.
 
 ## 1. Why
 
-Two problems, one language:
+1. **LLM → local execution, reliably.** The LLM emits the smallest deterministic
+   instruction; a local **Executor** expands it into real calls (Infisical secrets,
+   PHP endpoints, DB writes). The LLM never sees credentials or transport.
+2. **A path off the API LLM.** Every validated `(input, pipeline, outcome, correction)`
+   is a precedent. A **case base** over those precedents replays recurring work
+   locally; the API LLM becomes teacher + novelty fallback.
 
-1. **LLM → local execution, reliably.** Verbose JSON tool-calls waste tokens and
-   still hallucinate keys. The LLM should emit the *smallest deterministic*
-   instruction that a local **Executor** expands into real system calls (Infisical
-   secrets, PHP endpoints, DB writes) — the LLM never sees credentials or transport.
-2. **A path off the API LLM.** Every validated instruction + its outcome is a
-   precedent. Because the *operand* vocabulary is closed (the ontology) and the
-   *opcode* set is closed (code), that corpus is exactly what a **local model** needs
-   to replay recurring work — the API LLM degrades from "the brain" to "the teacher +
-   the novelty fallback." That local runtime is the deterministic, offline
-   business-logic layer of nOS — like a kernel's syscall dispatch, but precedent-driven.
+Goals, in priority: **(1) zero parse ambiguity, (2) low LLM error rate, (3)
+trainable/inspectable, (4) human-readable.** "Minimal tokens" is *not* top — the cost
+is the primer + operand selection, not the syntax (§8). Hence the **pipeline
+(functional)** surface over symbolic/tag-block alternatives.
 
-Design goals, in priority order: **(1) zero parse ambiguity, (2) low LLM error
-rate, (3) trainable/inspectable, (4) human-readable.** (Note: "minimal tokens" is
-*not* a top goal — see §8; the token cost is the primer + node-selection, not the
-syntax.) (2) beats compression: a named-verb syntax the LLM *never* fumbles beats a
-dense symbolic one it does. Hence the **pipeline (functional, code-like)** surface
-over the symbolic "caveman" and verbose tag-block alternatives.
+## 2. Operands are ontology-typed; opcodes are code-owned
 
-## 2. The core: operands are ontology-typed; opcodes are code-owned
-
-The tempting thesis "the language IS the ontology" is **false as stated** — verified
-live. `/agent/v1/health.ontology.verbs` is an **integer count**, not a vocabulary,
-and the real relation vocabulary at `/agent/v1/relations.types[]` is 16 **relational
-predicates** — *descriptions of how two concepts relate*, not imperative actions:
+Verified against KEAP v1.26.0: `/agent/v1/health.ontology.verbs` is an **integer
+count**, not a vocabulary. The real relation vocabulary is `GET /agent/v1/relations
+→ types[]` — **16 relational predicates**, *descriptions of how two concepts relate*,
+not imperative actions:
 
 ```
-analogous-to  causes  contradicts  defines  depends-on  derived-from
-duality  exemplifies  generalizes  prerequisite-for  refutes
-related-concept  requires  specializes  supersedes  supports
+analogous-to  causes  contradicts  defines  depends-on  derived-from  duality
+exemplifies  generalizes  prerequisite-for  refutes  related-concept  requires
+specializes  supersedes  supports
 ```
 
-Their overlap with imperative opcodes (`get map insert …`) is the **empty set**.
-So the true — and stronger — statement is:
+Their overlap with imperative opcodes (`get map insert …`) is **∅**. So:
 
-> **Operands** (the ~1840 taxonomy nodes, entities, and the 16 relation predicates)
-> **come from the ontology. Opcodes come from code.**
+> **Operands** (~1840 taxonomy nodes, entities, the 16 relation predicates) come
+> from the ontology. **Opcodes** come from code (the Executor's handler map).
 
-This is the better split because the combinatorial + hallucination risk lives in the
-**operands** — "pick the right node out of 1840" is the actual hard problem (§8), and
-that is exactly what the ontology types. Opcodes are a small fixed set; they need no
-data.
+The combinatorial + hallucination risk lives in the **operands** — "pick the right
+node out of 1840" (§8) — which is exactly what the ontology types.
 
-**Why opcodes must NOT live in `relation_types` (even later):** that registry grows
-*under moderation*, and the classifier may propose new entries (`status='proposed'`).
-If opcodes lived there, an LLM typing run could *propose a new system capability* —
-inverting the trust model. The v1.16 vocab-gate was designed for a **descriptive**
-vocabulary, not an **imperative** one. And structurally it can't work anyway: an
-opcode with no Executor handler does nothing, so a capability cannot be added by data.
-**The opcode registry is code (the Executor's handler map); the operand vocabulary is
-data (the ontology).**
+**Opcodes must not live in `relation_types`** (even later): that registry grows
+*under moderation* and the classifier may propose entries (`status='proposed'`) — an
+LLM typing-run must never be able to propose a *new system capability*. The v1.16
+vocab-gate is for a **descriptive** vocabulary, not an **imperative** one. And it
+can't work anyway: an opcode with no handler does nothing, so a capability cannot be
+added by data.
 
-## 3. Surface syntax — pipeline data-flow
+## 3. Surface syntax
 
 ```
-@input | map(ent:product) | classify(tax:catalog) | insert(db:products, hidden=true)
+@input | map(ent:product[červené tričko L]) | classify(tax:nos.services) | insert(db:products, ?hidden=true, dry_run=true)
 ```
 
-Left-to-right; each stage consumes the previous stage's output (or the `@source`).
-`map/classify/insert` are **code-owned opcodes**; `ent:product`, `tax:catalog`,
-`db:products` are **ontology-typed operands**; `hidden=true` is a modifier.
-
-### Lexicon
-
-- **Opcodes** — `⟨id ∈ Executor.handlers⟩`. A closed, code-owned set. Prefer **many
-  specific typed verbs** over few polymorphic ones (§10). e.g. `get map filter rank
+- **Opcodes** `⟨id ∈ Executor.handlers⟩` — a closed, code-owned set. Prefer **many
+  specific typed verbs** over few polymorphic (§10). e.g. `get map filter rank
   classify link resolve embed insert update delete route branch preserve review`.
-- **Operand namespaces** — `tax:` (taxonomy node), `ent:` (entity type), `kg:`
-  (knowledge-graph node), `rel:` (one of the 16 relation predicates), `db:` (store),
-  `svc:` (nOS service), `doc:` (content). Path segments join with `/`.
-- **Sources** — `@input @user @ctx @sel @prev` (`@prev` implicit across a pipe).
-- **Modifiers** — `key=value`; `?key=value` = default applied only when absent.
-- **Operators** — `|` flow · `=` bind · `:` namespace · `/` path · `,` sep · `()`
-  call · `[]` set · `.` field · `#` comment · `?` default.
+- **Operand namespaces** — `tax:` `ent:` `kg:` `rel:` (ontology-backed, KEAP-validated)
+  · `db:` `svc:` `doc:` (infrastructure, **Wing-validated** — §4).
+- **Native dotted ids.** KEAP ids are dotted (`nos.services.bookstack`, `01.01.03`),
+  **not** slash-pathed. The validator does an exact lookup — no translation layer,
+  no `tax:nos/services`-vs-`nos.services` ambiguity.
+- **Late-binding operand form** `ns:type[human term]` — the LLM writes a human term;
+  KEAP resolves it to the canonical id *during validation* (§6.1). Keeps the 1840 ids
+  out of the model's head; the AST carries **both** the surface term and the resolved id.
+- **Modifiers** `key=value`; `?key=value` = default when absent; `dry_run=true` on
+  mutating verbs (§5).
+- **Sources** `@input @user @ctx @sel @prev`. **Operators** `| = : . / , () [] # ?`.
 
 ### Grammar (EBNF)
 
 ```ebnf
 program   ::= pipeline
 pipeline  ::= source? stage ("|" stage)*
-source    ::= "@" ident
 stage     ::= opcode "(" arglist? ")"
-opcode    ::= EXECUTOR_HANDLER              (* validated against the code registry *)
-arglist   ::= arg ("," arg)*
+opcode    ::= EXECUTOR_HANDLER                   (* code registry *)
 arg       ::= entity | kv | ref | literal
-entity    ::= ns ":" path                   (* validated against the LIVE ontology *)
+entity    ::= ns ":" dotted_id ("[" term "]")?   (* dotted_id | late-bound term *)
 ns        ::= "tax"|"ent"|"kg"|"rel"|"db"|"svc"|"doc"
-path      ::= ident ("/" ident)*
+dotted_id ::= ident ("." ident)*
 kv        ::= "?"? key "=" value
-value     ::= literal | entity | ref
-ref       ::= "@" ident ("." ident)*
-literal   ::= STRING | NUMBER | BOOL | "null"
 ```
 
-LL(1), regex-friendly, no backtracking.
+> Examples in this spec **must typecheck** — they become the primer's P2 training
+> material. `rel:` operands are exactly one of the 16 predicates (no `is-a`, no
+> `curated/` prefix); e.g. `link(rel:specializes)`, not `link(rel:is-a)`.
 
-## 4. Two authorities: KEAP validates, Wing executes
+## 4. Two authorities, two-phase validation
 
-The single biggest structural fix. The Resolver is **not one component in KEAP** —
-putting an executor with injected secrets inside KEAP would break its standing
-invariants (KEAP never calls the LLM in-container; it is deliberately read-mostly).
-Split it:
+The Resolver is **not one component in KEAP** (that would break KEAP's read-mostly,
+no-LLM-in-container invariants). Split it — and note validation itself is **two-phase**,
+because only some namespaces are ontology-backed:
 
-| | **KEAP** — meaning authority | **Wing / AgentKit** — executor |
-|---|---|---|
-| role | vocabulary + typechecker | dispatch + credentials + audit |
-| endpoint | `POST /agent/v1/validate` | handler dispatch |
-| does | tokenize → parse → typecheck against the live ontology → return **AST or typed error** | resolve creds (Infisical), call PHP/DB/svc, log to `events` |
-| side effects | **none** | all |
+| phase | authority | validates | against |
+|---|---|---|---|
+| 1 | **KEAP** `POST /agent/v1/validate` | `tax:` `ent:` `kg:` `rel:` | the live ontology (`ent:` → `object_type_definitions`) |
+| 2 | **Wing executor** | `db:` `svc:` `doc:` | the handler / resource registry |
 
-Flow:
+KEAP owns *meaning*; Wing owns *dispatch + credentials (Infisical) + audit* (`events`,
+`actor_action_id`). **Write this down** — left implicit, the first implementer will
+"consolidate" validation by handing KEAP a list of databases, reinstating exactly the
+coupling the split removed. `db:`/`svc:`/`doc:` **do not exist in KEAP** and must not.
 
-```
-Intent (NL) ─► Claude (nos-lang) ─► pipeline
-                                       │
-             ┌── KEAP /agent/v1/validate ──┐        ┌── Wing executor ──┐
-   pipeline ►│ parse → typecheck (ontology)│─ AST ─►│ authz gate        │
-             │ → AST | TypedError          │        │ per-handler creds │
-             └─────────────────────────────┘        │ dispatch + audit  │
-                     (no side effects)               │ log corpus row    │
-                                                      └───────────────────┘
-```
+`/agent/v1/validate` doubles as the constrained-decode + repair surface without any
+executor in the path.
 
-KEAP stays the authority on *meaning*; execution goes where credential resolution +
-agent-run **audit lineage** already live (`events`, `actor_action_id`). Bonus:
-`/agent/v1/validate` is reusable for constrained decoding and the repair loop without
-any executor in the path.
+## 5. Validity ≠ security
 
-Layer separation (*what* vs *how*): Intent (user) → nos-cortex (LLM sees verbs +
-entities only) → validate (KEAP) → authz + dispatch (Wing) → creds (Infisical, never
-leaves host) → execution.
+Parse-validity is not authorization. Three requirements, none optional once
+write-verbs exist:
 
-## 5. Validity ≠ security (the authz model)
-
-**Parse-validity is not authorization**, and the plan's earlier "the type system is
-the live knowledge graph, so validation is strong" is the weakest claim in it. That
-an entity *exists* in the ontology says nothing about whether the caller may *touch*
-it. Three requirements, none optional once write-verbs exist:
-
-1. **Ontological membership ≠ authorization.** KEAP has a real authz model since
-   v1.17 — the RBAC tier ladder in `getVisibleObjects` / `canReadObject`. Every
-   operand access in an executed pipeline must pass it *for the calling identity*,
-   not the system identity.
+1. **`validate` is an enumeration oracle — gate it.** Answering "does this operand
+   exist?" lets any caller enumerate the taxonomy + object corpus, *including entries
+   they may not read*. KEAP had this exact bug until v1.17 (`GET /api/objects/:id`
+   leaked tier-scoped cards); the fix returned **404 for not-found and not-readable
+   alike**. `validate` needs the same: resolve operands against the **calling
+   identity** (never the system identity), and return a **uniform `unknown operand`**
+   for both "doesn't exist" and "not yours" — distinguishable errors *are* the
+   disclosure. Authz therefore cannot live only in the executor; validation already
+   answers questions.
 2. **Capability-scoped executor tokens, not the brain token.** `/agent/v1/*` is a
-   single **system-scope** token with no per-viewer visibility — a documented,
-   deliberate property *of a read surface*. The moment an executor sits behind that
-   token, anyone holding the bearer can **write as the system**. The executor must
-   use per-capability, per-identity tokens (which verbs, which namespaces, which
-   tenant), issued and audited separately.
-3. **Destructive verbs are guarded, not just grammatical.** `delete(db:products)` is
-   perfectly valid grammar. Guaranteeing the LLM won't emit a nonexistent opcode does
-   **not** guarantee it won't emit a harmful *valid* one. Required: `dry_run` default
-   on mutating verbs (plan first, `?commit=true` to execute), a **confirm-gate** on
-   `delete`/`update` (the destructive-op safety model nOS already uses elsewhere), and
-   **idempotence keys** on writes so a retried pipeline can't double-insert.
+   single system-scope token with no per-viewer visibility — deliberate for a *read*
+   surface. Behind an executor it means anyone with the bearer writes as the system.
+   The executor uses per-capability, per-identity tokens (which verbs, namespaces,
+   tenant), issued + audited separately.
+3. **Destructive verbs are guarded.** `delete(db:products)` is perfectly valid
+   grammar. Required: `dry_run` default on mutating verbs (`?commit=true` to execute),
+   a confirm-gate on `delete`/`update` (nOS's destructive-op safety model), and
+   **idempotence keys** on writes.
 
-## 6. Case-based execution (the local runtime — corrected)
+## 6. The local runtime (case-based) + its data
 
-The vision — a local, exact, inspectable decision runtime — is right and is real
-differentiation. The *mechanism* in the first draft ("word2vec over the compression
-language → decision trees") had a sequencing error:
+### 6.1 kNN over the existing nomic space — not word2vec
 
-- The closed token space makes the **output** side learnable from far fewer samples —
-  true and essential. But the **input** side is still natural language; a closed
-  vocabulary helps the *decoder*, not the *encoder*, and NL→features is the hard half.
-- A word2vec over a short, template-y pipeline corpus whose co-occurrence is nearly
-  determined by the grammar would mostly relearn the EBNF. And KEAP **already has a
-  768-d nomic space** over the ontology, trained on real linguistic semantics — a
-  home-grown word2vec over ~2000 tokens + a few hundred pipelines would be *measurably
-  worse*.
-- Decision-tree induction (input → pipeline) needs ~thousands of examples per pattern.
-  nOS is personal / small-tenant — dozens of runs a week. That P4 would wait years.
-- The draft conflated two different "trees": a pipeline **dataflow graph** (mostly a
-  straight line; a tree only where `route`/`branch` appears) and a **learned
-  classifier**. Different artifacts; conflating them bites in implementation.
+A closed token space makes the *output* side learnable from few samples, but the
+*input* is still NL — the hard half is NL→features, and a home-grown word2vec over a
+short, grammar-determined pipeline corpus would mostly relearn the EBNF, *worse* than
+the 768-d **nomic** space KEAP already runs. So: embed the input (nomic, deployed) →
+retrieve *k* nearest previously-executed inputs → if their pipelines agree and
+similarity clears a threshold, replay; else escalate to the API LLM. Inspectable
+("resembles what you approved before"), works at **n=1**, and *is* the P5 confidence
+gate with nothing to train. A custom embedding is "not first, not no."
 
-**Instead — and it works from the first example: case-based reasoning over the
-existing nomic embedding.** Embed the input (nomic, already deployed) → retrieve the
-*k* nearest previously-executed inputs → if their pipelines agree and similarity
-exceeds a threshold, replay with slot substitution; otherwise escalate to the API
-LLM. This is:
+**Late-binding + mandatory ambiguity rejection.** The LLM writes `ent:product[tričko]`;
+KEAP resolves it during validation — one API round-trip, not two, which **demotes
+`/agent/v1/context` from hard prerequisite to the ambiguity fallback**. Guard: fuzzy
+resolution **never silently takes the nearest match**. On comparable-score multimatch
+the validator returns a typed **`ambiguous operand` with candidates** — it does not
+choose. (`ingest.mjs`'s identity-drift detector exists precisely because a
+valid-but-wrong id is indistinguishable from a correct one after the fact.)
 
-- **inspectable** — "I did this because it resembles this thing you approved before,"
-- **operational at n=1**, not n=1000,
-- **exactly the P5 confidence-gated loop**, with nothing to train yet.
+**Two replay rules (they subsume the kNN-negation problem):**
+- **kNN replay NEVER bypasses the dry-run gate** — at any confidence. A mis-replayed
+  precedent (`"…hide it"` vs `"…DO NOT hide it"` both embed >0.9) yields a *plan*, not
+  an effect; the operator sees `hidden=true` before commit.
+- **Modifiers are NEVER inherited** — retrieval supplies the pipeline *shape* (opcode
+  sequence); values + boolean flags do not ride along.
+- Earn the threshold with a **replay gate** of adversarial minimal pairs (negation
+  on/off), on the model of `scripts/recall-gate.mjs` — a number without demonstrated
+  discrimination is not a guarantee.
 
-A *custom* embedding space is worth training only once the corpus is large enough to
-have something to improve over nomic. It's **"not first," not "no."**
+### 6.2 The corpus is instance-level data — P0 decision, not P3
 
-**Protect the corpus from write one.** `(input, pipeline, outcome, operator-correction)`
-is human work-product — operator corrections are training substrate you cannot
-recompute. It must have a **source outside the container from the first write**, or a
-single data-dir swap wipes the training set — precisely the 2026-07-22 KEAP data-dir
-replacement that silently dropped moderated relations (15 edges then; here it would be
-all of P4). This is today's managed-resources lesson applied to the most valuable data
-in the system.
+**The most serious item.** `docs/specs/ontology-anchoring.md` §6 declares *no
+instance-level data in the concept graph — the product's privacy line, not a
+limitation*. But `(input, pipeline, outcome, correction)` is instances **by
+construction**. Hazard: kNN over the *existing* nomic space means, if corpus inputs
+land in the shared `embeddings` table, knowledge retrieval (`/api/search`, hybrid
+recall, `/agent/v1/graph`) returns them — one user's knowledge question surfacing
+another's operational input (there is precedent: legacy `note:` embeddings linger as
+known debt). **Requirement:** the corpus gets its **own store and its own index**
+(not a different `kind` in the shared table), excluded from knowledge recall, with its
+own retention + visibility. Decide this **before P3** — after P3 the data already exists.
 
-## 7. Token economy is elsewhere than "short syntax"
+### 6.3 Precedents rot; store provenance + a TTL
 
-Optimizing syntax length is the wrong target. A pipeline is ~20 tokens; the **primer**
-(closed opcode list + namespace table + grammar + ~20 examples) rides in *every* call
-at ~2000 tokens. So the levers are:
+- **Operand drift.** The ontology grows under moderation; a precedent whose operand
+  was renamed/retired resolves on replay to *something else* rather than failing.
+  Store the resolved id **and** the name it had at capture; **invalidate on drift**
+  (the `applyDomain()` `priorNames` check across the delete/insert boundary).
+- **Corpus source outside the container from write one.** Operator corrections are
+  unrecomputable human work-product. The 2026-07-22 KEAP data-dir swap silently
+  dropped the derived R3 relations *because they had no source outside the container*
+  and the sourced layers rebuilt and masked it. The corpus is that category — persist
+  it off-container from the first write, or one swap erases all of P4.
+- **Pin `ontology.version` AND `database.id`** (health) into every corpus row — a
+  model trained over a corpus from a different database speaks a different language
+  even when versions agree.
+- **Validate-time ≠ execute-time.** KEAP typechecks at T; Wing dispatches at T+n; a
+  converge/ingest between them changes the vocabulary under the AST. Either the AST
+  carries a short **TTL**, or the executor **revalidates at dispatch**.
 
-1. **Cache the primer** — it's static; it should be a cached system prefix, not re-sent.
-2. **Don't send 1840 nodes into context.** The plan never said how the LLM knows the
-   right operand is `tax:knowledge` and not one of the other 1839 — the *hardest* part
-   of the whole thing. KEAP already has the answer: **`/agent/v1/context`**
-   (budget-bounded, citable retrieval). nos-cortex must **build on it, not re-solve
-   it** — which makes the context injector a **P2 prerequisite**, not a parallel branch.
+## 7. Emission protocol — structured output, not a normalizer
 
-## 8. Portability — honest version
+The Anthropic API exposes no logit-bias / grammar-mask, but it **does** offer
+constrained decoding: a **tool schema**. Emit the **AST as a structured tool call**
+(types + required fields enforced by the API), and render the pipeline surface *from*
+the AST for humans + the corpus. This buys goal (1) at the protocol level rather than
+by prompt discipline; the only objection was verbosity, and §8 says token count is not
+the constraint — so evaluate this **before** writing any repairer.
 
-§ "Cortex off nOS" must not promise *automatic* bootstrap of taxonomy/ontology at a
-customer. Track D is explicit: a domain pack = **slug root + canonical files + golden
-fixture + a recall-gate pass** — a *curated delivery*, not an auto-crawl. The honest
-statement: **"Cortex at a company needs a domain pack, and building that pack is
-work."** Portability is real (ontology + Executor + case-base are self-contained), but
-the substrate is curated, not free.
+A normalizer that rewrites `@input.map(...)` → `@input | map(...)` is **guessing
+intent** and reintroduces ambiguity into the one layer built to remove it. If one
+exists it must be **total and provably meaning-preserving** (whitespace, trailing
+commas, quotes) with everything else → the repair loop as a typed error — and **every
+normalization logged beside the raw emission**, or the corpus records a pipeline the
+model never produced.
 
-## 9. Worked examples
+## 8. Token economy + operand selection
 
-```text
-@input | map(ent:product) | insert(db:products, ?hidden=true, dry_run=true)
-@input | embed() | classify(tax:knowledge) | route(?to=review, when=low_conf) | preserve(doc:inbox)
-@user  | context() | resolve(kg:node) | link(rel:is-a) | rank(?by=relevance, top=5)
-@sel   | link(tax:physics/cosmology, rel:curated/depends-on) | review(?queue=curator)
-```
+Syntax length is the wrong target: a pipeline is ~20 tokens, the **primer** (~2000)
+rides every call. Levers: **cache the primer** (static), and **don't send 1840 nodes**
+— operand selection is the hard part, solved by **late-binding** (§6.1) resolving human
+terms server-side, with `/agent/v1/context` (budget-bounded, citable; Track D,
+`ontology-anchoring.md` §4) as the ambiguity fallback.
 
-Note `context()` (node selection, §7), `rel:` operands drawn from the 16 predicates,
-and `dry_run=true` on the mutating example (§5).
+## 9. Portability — honest version
+
+"Cortex off nOS" must not promise *automatic* bootstrap. Track D is explicit: a domain
+pack = slug root + canonical files + golden fixture + a **recall-gate pass** — a
+*curated delivery*. Honest statement: **"Cortex at a company needs a domain pack, and
+building it is work."** The substrate is portable; it is not free.
 
 ## 10. Answers to the open questions
 
 - **Verb granularity → many specific, not few polymorphic.** Few polymorphic verbs
-  push ambiguity into the Executor, where it becomes uninspectable magic and — worse —
-  *untrainable*. The endgame is replacing the LLM with a local model, so optimize for
-  it: specific typed verbs are smaller, more consistent classes with fixed slots. And
-  since every opcode needs a handler regardless, "few verbs" doesn't cut implementation
-  work — it hides it in handler branching.
-- **Lexicon versioning → pin `ontology.version` AND `database.id`** (from health) into
-  every corpus row. A model trained over a corpus from a *different database* speaks a
-  different language even when version numbers match.
-- **Confidence metric →** falls out of §6: similarity to the nearest precedent + the
-  agreement among the *k* neighbors, calibrated against the operator corrections you
-  already log.
-- **Extraction boundary →** LLM proposes fields, Executor validates against the entity
-  schema and fills defaults.
-- **Transactions / partial failure →** per-stage idempotence keys + a pipeline-level
-  compensation log; destructive stages gated (§5).
+  push ambiguity into the Executor (uninspectable, untrainable); the endgame is a
+  local model, so optimize for it — specific typed verbs are smaller, fixed-slot
+  classes. Every opcode needs a handler anyway, so "few verbs" only hides the work.
+- **Lexicon versioning → pin `ontology.version` + `database.id`** per corpus row (§6.3).
+- **Confidence metric →** similarity to nearest precedent + agreement among *k*,
+  calibrated against logged operator corrections.
+- **Extraction boundary →** LLM proposes fields; Executor validates against the entity
+  schema + fills defaults.
+- **Control flow (deferred).** `source? stage ("|" stage)*` can't say "if exists update
+  else create." Admitting branches trades against goals (1)+(3) — *every grammar branch
+  is one the local model must learn*. Keep the IR **flat through P3**; decide on real
+  cases, not a hypothetical. `upsert()` keeps inspectability (dry_run returns a plan
+  showing the branch taken).
 
-## 11. Roadmap (re-sequenced)
+## 11. Roadmap (re-sequenced by round 2)
 
 | Phase | Deliverable |
 |---|---|
-| **P0** | This spec. Opcodes = code-owned registry; operands = ontology; **authz model defined** (§5). Coordinate with KEAP `feat/ontology-sot` (don't move the pin — untagged). |
-| **P1** | **`/agent/v1/validate` in KEAP** (tokenize → typecheck → AST\|error, **zero side effects**). Executor stub in Wing, **read verbs only**, capability-scoped token. |
-| **P2** | **`/agent/v1/context` injector first** (else the LLM misses the entity), *then* teach Claude nos-lang (primer + AgentKit agent). Measure validity rate. |
-| **P3** | Write verbs behind the authz + dry-run/confirm gates; **corpus with versioned rows, stored outside the container**. |
-| **P4** | **kNN case-based execution over the nomic space** (works from n=1) + pipeline→tree visualization in KEAP. Custom embedding only once the corpus warrants it. |
-| **P5** | Confidence-gated local execution; escalate + teach-back on novelty. |
-| **P6** | Standalone Cortex (with a curated domain pack, §8). |
+| **P0** | This spec (freeze after the §12 checklist). Opcodes = code registry; operands = ontology; two-phase validation + authz defined; **corpus-store decision made** (§6.2). |
+| **P1** | **`POST /agent/v1/validate` in KEAP** (tokenize → typecheck → AST\|typed error, **zero side effects, authz-aware**). Wing executor stub, **read verbs only**, capability-scoped token. |
+| **P2** | Teach Claude nos-lang via **structured tool-schema AST emission** (§7); late-binding resolves operands (so `context` is *not* a hard prereq). Measure validity rate. |
+| **P3** | Write verbs behind authz + dry-run/confirm gates; corpus in its **own off-container store** with versioned + provenance rows (§6.2–6.3). |
+| **P4** | **kNN case-based replay over nomic** (n=1) + a replay gate of adversarial minimal pairs; pipeline→tree visualization in KEAP. |
+| **P5** | Confidence-gated local execution. **Alternative to carry:** a small model **fine-tuned on the P3 corpus** to emit the grammar — beats a large general model at this narrow task, removes the API LLM from the hot path, demotes kNN to the gate. |
+| **P6** | Standalone Cortex (curated domain pack, §9). |
 
-## 12. Relation to existing nOS pieces
+## 12. P0-freeze checklist (from the round-2 review)
 
-- **KEAP (Cortex)** — owns the ontology, `/agent/v1/validate`, `/agent/v1/context`,
-  the case-base corpus, and (later) the local model. Read-mostly, no LLM in-container.
-- **Wing / AgentKit** — the **executor** (dispatch, authz, Infisical, audit lineage in
-  `events`), and host of the NL→pipeline agent.
-- **Bone / Infisical** — credential resolution inside the executor's handlers.
-- **The point:** today the ontology is knowledge you *read*; nos-cortex adds a
-  **code-owned opcode layer over ontology-typed operands** — the knowledge layer gains
-  an instruction set, with meaning and execution kept in separate authorities.
+1. ✅ Two-phase validation written down; `ent:` → `object_type_definitions` (§4).
+2. ✅ `validate` authz-aware, uniform `unknown operand` (§5.1).
+3. ✅ Native dotted ids; examples typecheck (§3).
+4. ✅ Late-binding operands with mandatory ambiguity rejection (§6.1).
+5. ✅ kNN never bypasses dry-run, never inherits modifiers (§6.1).
+6. ✅ Structured tool-schema AST emission evaluated before any normalizer (§7).
+7. ✅ Corpus own store, excluded from knowledge recall — a P0 decision (§6.2).
+8. ✅ Precedent invalidation on drift (§6.3) + AST TTL (§6.3).
+- Deferred to end-of-P3 by measurement: grammar control flow (§10), fine-tuned local
+  emitter (P5 alternative, §11).
+
+## 13. What KEAP owes next (v1.26.0 → P1)
+
+Neither exists yet; both are plan dependencies. Recommendation (KEAP-side): build
+**`/agent/v1/validate` first** — late-binding makes it the entity-resolution path,
+which demotes `/agent/v1/context` to the ambiguity fallback.
+- `POST /agent/v1/validate` — parse + typecheck (live ontology), AST\|typed error,
+  zero side effects, authz-aware (§4–5).
+- `POST /agent/v1/context` — budget-bounded citable injector (Track D).
+
+## 14. Relation to existing nOS pieces
+
+- **KEAP (Cortex)** — ontology, `validate`, `context`, the case-base corpus's *meaning*
+  side. Read-mostly, no LLM in-container.
+- **Wing / AgentKit** — the **executor** (phase-2 validation, authz, Infisical, `events`
+  audit) + the NL→pipeline agent.
+- **Bone / Infisical** — credential resolution in the executor's handlers.
+- **The point:** the knowledge layer gains a **code-owned opcode set over
+  ontology-typed operands** — meaning and execution in separate authorities.
