@@ -29,8 +29,10 @@ backrest_config_path: "{{ backrest_config_dir }}/config.json"
 
 backrest_launchd_label: "eu.thisisait.nos.backrest"
 
-# Release asset (darwin/arm64). ISA-bound like homebrew_prefix; Intel/Linux = follow-up.
-backrest_asset: "backrest_Darwin_arm64.tar.gz"
+# Release asset — OS/arch-aware (backrest_{Darwin|Linux}_{arm64|x86_64}.tar.gz).
+backrest_os: "{{ 'Darwin' if ansible_facts['system'] == 'Darwin' else 'Linux' }}"
+backrest_arch: "{{ 'arm64' if ansible_facts['architecture'] in ['arm64', 'aarch64'] else 'x86_64' }}"
+backrest_asset: "backrest_{{ backrest_os }}_{{ backrest_arch }}.tar.gz"
 backrest_download_url: "https://github.com/garethgeorge/backrest/releases/download/{{ backrest_version }}/{{ backrest_asset }}"
 
 # Seed-once config: the daemon REWRITES config.json (ids, modno, bcrypt hash),

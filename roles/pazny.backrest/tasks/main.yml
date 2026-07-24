@@ -24,8 +24,7 @@
 
 - name: "[pazny.backrest] Download + install binary {{ backrest_version }}"
   when: >-
-    ansible_facts['os_family'] == 'Darwin'
-    and (_backrest_installed.rc != 0 or backrest_version not in (_backrest_installed.stdout | default('')))
+    _backrest_installed.rc != 0 or backrest_version not in (_backrest_installed.stdout | default(''))
   block:
     - name: "[pazny.backrest] Fetch release tarball"
       ansible.builtin.get_url:
@@ -37,7 +36,9 @@
     # module falls back to unzip when it can't find gtar in the module PATH, so
     # extract directly. Only the `backrest` member is needed.
     - name: "[pazny.backrest] Extract + install binary into ~/.local/bin"
-      ansible.builtin.command:
+      ansible.builtin.command:  # noqa: command-instead-of-module
+        # unarchive falls back to unzip when it can't find gtar in the module
+        # PATH (macOS ships bsdtar) → fails on .tar.gz; direct tar is reliable.
         cmd: "tar -xzf {{ backrest_cache_dir }}/{{ backrest_asset }} -C {{ backrest_bin_dir }} backrest"
       changed_when: true
 
@@ -46,10 +47,11 @@
         path: "{{ backrest_bin }}"
         mode: "0755"
 
-    - name: "[pazny.backrest] Strip Gatekeeper quarantine (downloaded binary)"
+    - name: "[pazny.backrest] Strip Gatekeeper quarantine (macOS downloaded binary)"
       ansible.builtin.command: "xattr -dr com.apple.quarantine {{ backrest_bin }}"
       changed_when: false
       failed_when: false
+      when: ansible_facts['os_family'] == 'Darwin'
 
 - name: "[pazny.backrest] Seed config.json ONCE (daemon owns it thereafter)"
   ansible.builtin.template:
@@ -80,7 +82,25 @@
   register: _backrest_bootstrap
   changed_when: "'bootstrapped' in _backrest_bootstrap.stdout"
   failed_when: false
-  when: ansible_facts['os_family'] == 'Darwin'
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+# ── Linux: systemd --user simple service (counterpart of the launchd plist) ──
+- name: "[pazny.backrest] (Linux) systemd --user service"
+  ansible.builtin.include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_unit_name: "{{ backrest_launchd_label }}.service"
+    su_description: "nOS backrest — restic UI + scheduler"
+    su_service_type: simple
+    su_exec_start: "{{ backrest_bin }}"
+    su_restart: always
+    su_environment:
+      BACKREST_PORT: "{{ backrest_bind_addr }}:{{ backrest_port }}"
+      BACKREST_CONFIG: "{{ backrest_config_path }}"
+      BACKREST_DATA: "{{ backrest_data_dir }}"
+      XDG_CACHE_HOME: "{{ backrest_cache_dir }}"
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'
 
 - name: "[pazny.backrest] Wait for daemon to bind {{ backrest_port }}"
   ansible.builtin.uri:
@@ -91,7 +111,6 @@
   delay: 1
   until: _backrest_health.status == 200
   failed_when: false
-  when: ansible_facts['os_family'] == 'Darwin'
 
 - name: "[pazny.backrest] Ready"
   ansible.builtin.debug:
