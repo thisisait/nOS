@@ -38,5 +38,5 @@
 
        S3 endpoint pro klienty (aws-cli, rclone, restic…):
          endpoint-url: http://localhost:{{ rustfs_api_port }}
-         access-key:   {{ rustfs_access_key }}
+         access-key:   (in ~/.nos/secrets.yml)
       ══════════════════════════════════════════════════════

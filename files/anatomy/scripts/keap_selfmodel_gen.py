@@ -131,7 +131,8 @@ SYSTEM_NAME = {
     "freepbx": "FreePBX", "qgis-server": "QGIS Server",
     "alloy": "Grafana Alloy", "openclaw": "OpenClaw", "hermes": "Hermes",
     "opencode": "OpenCode", "wing": "Wing", "bone": "Bone",
-    "iiab-terminal": "IIAB Terminal", "backup": "Backup", "tailscale": "Tailscale",
+    "iiab-terminal": "IIAB Terminal", "backup": "Backup", "backrest": "Backrest",
+    "tailscale": "Tailscale",
 }
 
 ROOT_EN = (
@@ -491,6 +492,13 @@ SYSTEM_EN = {
         "The nightly backup job on the host. It snapshots data directories and databases, "
         "encrypts them and ships them to the object store; it is the recovery path, not a "
         "synchronisation service."
+    ),
+    "backrest": (
+        "A restic backup UI and scheduler, run as a host daemon. Where the backup job (its "
+        "stack-mate) takes app-consistent logical dumps to the object store as the on-host "
+        "copy, backrest orchestrates the off-site restic repository — the second copy — and "
+        "adds a browse-and-restore web UI plus scheduled integrity checks. It complements the "
+        "backup job, it does not replace it, and it does not itself dump databases."
     ),
     "tailscale": (
         "Tailscale, the mesh VPN. It gives the host a stable private address reachable from "

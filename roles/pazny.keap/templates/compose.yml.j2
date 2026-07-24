@@ -33,11 +33,19 @@ services:
       - "127.0.0.1:{{ keap_port | default(8091) }}:8080"
     volumes:
       - {{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}:/data
-      # Knowledge SoT (git-tracked canonical) mounted READ-ONLY from the clone —
+      # Knowledge SoT (git-tracked) mounted READ-ONLY from the clone —
       # knowledge/ingest.mjs (post.yml) reads it and applies idempotently. A RO
       # bind-mount is not a docker volume (no volume spam); data changes ride the
       # git ref, never an image rebuild.
-      - {{ keap_src_dir | default(ansible_facts['env']['HOME'] + '/keap/src') }}/knowledge/canonical:/app/knowledge/canonical:ro
+      #
+      # Mount ALL of knowledge/ (not just canonical): v1.26.0's ingest.mjs imports
+      # ./_ontology.mjs and applies knowledge/ontology/, and the nos/keap image can
+      # lag the git ref on those files (the 1.26.0 image shipped ingest.mjs without
+      # _ontology.mjs → ERR_MODULE_NOT_FOUND on a blank all-on 2026-07-24). Mounting
+      # the whole dir from the v-pinned checkout keeps canonical + ontology + the
+      # ingest modules on ONE consistent version. (KEAP handoff 2026-07-24: "mount
+      # all of knowledge/ or none".)
+      - {{ keap_src_dir | default(ansible_facts['env']['HOME'] + '/keap/src') }}/knowledge:/app/knowledge:ro
 {% if keap_fs_sync | default(true) %}
       # FS-doctrine mirror (KEAP v1.7.0 server/fs-sync.ts): the per-user tree
       # {{ nos_data_root }}/tenants/<slug>/users/<uid>/{documents,library,inbox}
