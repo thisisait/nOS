@@ -172,6 +172,7 @@
       - "eu.thisisait.nos.backup.rustfs.plist"
       - "eu.thisisait.nos.backup.exporter.plist"
       - "eu.thisisait.nos.backup.offsite.plist"
+      - "eu.thisisait.nos.backrest.plist"
       - "eu.thisisait.nos.acme-renew.plist"
   register: _blank_plists
 

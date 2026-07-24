@@ -258,6 +258,11 @@
       - "{{ hermes_home | default(ansible_facts['env']['HOME'] + '/agents/hermes') }}"
       - "{{ hermes_config_dir | default(ansible_facts['env']['HOME'] + '/.hermes') }}"
       - "{{ ansible_facts['env']['HOME'] }}/.openclaw"
+      # backrest host daemon: runtime dir (config.json holds restic_password +
+      # repo URI) + the installed binary. Matches bone/wing/pulse: plist is in
+      # the blank allowlist, the dir/binary are uninstall-only.
+      - "{{ backrest_home | default(ansible_facts['env']['HOME'] + '/backrest') }}"
+      - "{{ backrest_bin | default(ansible_facts['env']['HOME'] + '/.local/bin/backrest') }}"
 
 - name: "[Removal-set] Stat data-level paths (existence for the report)"
   ansible.builtin.stat:

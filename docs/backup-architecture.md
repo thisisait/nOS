@@ -187,6 +187,11 @@ the **off-site (copy #2)** restic leg + a browse-and-restore UI + scheduled
 `restic check`; it seeds an `offsite` repo (`autoInitialize`) + `nos-offsite` plan
 from `restic_repo` when set. It **complements, does not replace** `backup.sh`'s
 app-consistent logical dumps (copy #1) — restic snapshots bytes, not quiesced DBs.
+When `install_backrest=true` it **supersedes** the legacy `tasks/backup.yml`
+off-site restic leg (gated off so two schedulers don't prune the same repo).
+**Seed-once caveat:** the daemon owns `config.json` after first render, so a later
+`restic_repo`/`restic_password` change must be made in the backrest UI — a playbook
+re-run will NOT re-seed it (`force: false`).
 
 **Why HOST daemon, not container:** restic-in-container **cannot read macOS
 VirtioFS bind mounts** (backup processes 0 files, "could not be read"; `stat`/`cat`

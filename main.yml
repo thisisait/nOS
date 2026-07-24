@@ -1815,8 +1815,13 @@
     # ──────────────────────────────────────────────────────────────────────────
     # Backup – Restic automated backups
     # ──────────────────────────────────────────────────────────────────────────
+    # backrest supersedes this legacy off-site (copy #2) restic leg when enabled
+    # — both hitting the same restic_repo at 04:00 = lock contention + divergent
+    # retention pruning each other. install_backrest owns copy #2 (roles/pazny.backrest).
     - import_tasks: tasks/backup.yml
-      when: configure_backup | default(false)
+      when:
+        - configure_backup | default(false)
+        - not (install_backrest | default(false))
       tags: ['backup']
 
     # ──────────────────────────────────────────────────────────────────────────

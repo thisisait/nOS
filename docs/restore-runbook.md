@@ -19,6 +19,15 @@ and replays it into the running infra stack.
 | Single user deleted a file in Nextcloud | **No** — use the app's trash / versioning. |
 | You want to migrate to a new box | Use `tasks/export-state.yml` + `import-state.yml`, not `restore`. |
 
+> **Two-stage restore when `install_backrest=true`.** With backrest owning the
+> off-site (copy #2) restic leg, a disaster recovery from the off-site repo is
+> **two stages**: (1) use backrest's UI (`backrest.<tld>`, snapshot browse →
+> restore) OR `restic restore` to pull the RustFS object set back to
+> `rustfs_data_dir`; then (2) run the nOS logical-dump replay below
+> (`--tags restore`) — restic gives you the *bytes*, but the app-consistent DB
+> dumps must still be replayed into the live containers by `tasks/restore.yml`.
+> backrest does NOT replace this runbook; it feeds it.
+
 ---
 
 ## 2. Prerequisites

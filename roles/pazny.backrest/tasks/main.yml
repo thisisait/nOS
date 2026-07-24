@@ -65,6 +65,7 @@
     dest: "{{ backrest_config_path }}"
     mode: "0600"
     force: false
+  no_log: true   # embeds restic_password + repo URI
   when: backrest_seed_config | default(true)
 
 - name: "[pazny.backrest] Render launchd plist"

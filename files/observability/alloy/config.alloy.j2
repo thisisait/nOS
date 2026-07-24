@@ -357,6 +357,23 @@ loki.source.file "homebrew_services" {
   forward_to = [loki.write.default.receiver]
 }
 
+{% if install_backrest | default(false) %}
+// backrest host daemon — off-site (copy #2) restic orchestrator. Its only
+// failure signal was the A9 hook; tail its log so Loki/Grafana see it too.
+local.file_match "backrest" {
+  path_targets = [{
+    __path__ = "{{ backrest_home | default(ansible_facts['env']['HOME'] + '/backrest') }}/backrest.log",
+    app      = "backrest",
+    job      = "backrest",
+  }]
+}
+
+loki.source.file "backrest" {
+  targets    = local.file_match.backrest.targets
+  forward_to = [loki.write.default.receiver]
+}
+{% endif %}
+
 {% if alloy_tail_docker_logs | default(true) %}
 // ── All Docker container stdout/stderr → Loki ────────────────────────────────
 // Sprint 1 Wave 1: ship every container's logs with discovery labels
