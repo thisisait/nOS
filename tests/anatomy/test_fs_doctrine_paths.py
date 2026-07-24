@@ -24,6 +24,7 @@ EXEMPT_VARS = {
     "wing_data_dir", "openclaw_config_dir", "pi_config_dir",
     "traefik_config_dir", "iiab_terminal_config_dir",
     "opencode_config_dir", "hermes_config_dir",  # host-tool config, like openclaw
+    "backrest_data_dir", "backrest_config_dir",  # backrest host daemon (~/backrest, like wing/hermes)
 }
 # Tenant-shared content (class 2) — everything else doctrine'd is platform (class 1).
 CLASS2 = {"nextcloud", "kiwix", "maps", "jellyfin", "calibreweb"}

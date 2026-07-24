@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 72 (68 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (66)
+- **Processing activities:** 73 (69 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (67)
 - **Transfers outside the EU:** 0 activities
 - **Activities engaging a third-party processor:** 0
 
@@ -867,6 +867,22 @@ metadata, dashboard definitions, query history, and user sessions.
 - **Security measures:** platform baseline (see above)
 
 ### host stack
+
+#### Backrest — `svc_backrest`
+- **Purpose:** backrest orchestrates restic backups (off-site copy #2) + provides the
+restore UI. It reads and snapshots whatever host paths the operator adds as
+backup sources — which may include per-user data trees — and stores restic
+snapshots in the configured repositories. It is an operator-facing admin
+tool; it holds no data-subject records of its own beyond the contents of
+the backups it manages and its own operation logs.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `backup_snapshots`, `backup_operation_metadata`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
+- **Storage:** 'host' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
 
 #### Wing — `svc_wing`
 - **Purpose:** Operator-hosted security-research dashboard (FrankenPHP host daemon). Forward-auth gate ensures only
