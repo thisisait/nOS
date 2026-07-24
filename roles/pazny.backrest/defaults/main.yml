@@ -1,0 +1,39 @@
+---
+# ==============================================================================
+# pazny.backrest — backrest as a HOST launchd daemon (not a Docker service).
+#
+# WHY host-daemon, not container: restic-in-container CANNOT read macOS VirtioFS
+# bind mounts (backup processes 0 files, "could not be read" — even though
+# stat/cat/dd work; same class as the gitlab puma realdirpath ENOTSUP). A native
+# host binary reads the per-user trees + host dirs directly with operator perms.
+# Validated by the 2026-07-24 Phase-0 spike. See memory backrest-spike-virtiofs-blocker.
+#
+# Role scope: install the binary, run it under launchd on loopback, seed a
+# config once. It orchestrates restic for the OFF-SITE (copy #2) leg + restore
+# UI + DR-verify — it does NOT replace roles/pazny.backup/backup.sh's
+# app-consistent logical dumps (copy #1). See docs/backup-architecture.md.
+# ==============================================================================
+
+backrest_version: "v1.14.1"
+backrest_port: 9898
+backrest_bind_addr: "127.0.0.1"                       # loopback only; Traefik/forward-auth is the edge (follow-up)
+
+backrest_home: "{{ ansible_facts['env']['HOME'] }}/backrest"
+backrest_bin_dir: "{{ ansible_facts['env']['HOME'] }}/.local/bin"
+backrest_bin: "{{ backrest_bin_dir }}/backrest"
+backrest_config_dir: "{{ backrest_home }}/config"
+backrest_data_dir: "{{ backrest_home }}/data"
+backrest_cache_dir: "{{ backrest_home }}/cache"
+backrest_config_path: "{{ backrest_config_dir }}/config.json"
+
+backrest_launchd_label: "eu.thisisait.nos.backrest"
+
+# Release asset (darwin/arm64). ISA-bound like homebrew_prefix; Intel/Linux = follow-up.
+backrest_asset: "backrest_Darwin_arm64.tar.gz"
+backrest_download_url: "https://github.com/garethgeorge/backrest/releases/download/{{ backrest_version }}/{{ backrest_asset }}"
+
+# Seed-once config: the daemon REWRITES config.json (ids, modno, bcrypt hash),
+# so we render it only when absent (force:false). Post-seed drift is UI-managed.
+backrest_seed_config: true
+# Instance id shown in the UI.
+backrest_instance: "nos-{{ tenant_slug | default('pazny') }}"

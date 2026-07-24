@@ -1,0 +1,8 @@
+{
+  "version": 6,
+  "instance": "{{ backrest_instance }}",
+  "_comment": "SEED-ONCE (roles/pazny.backrest, force:false). The backrest daemon OWNS this file and rewrites it (ids, modno, bcrypt). Repos/plans are added via the UI (or the Phase-1 restic_repo templating follow-up). auth.disabled is safe here because backrest binds loopback only and the intended edge gate is Authentik forward-auth.",
+  "auth": {
+    "disabled": true
+  }
+}

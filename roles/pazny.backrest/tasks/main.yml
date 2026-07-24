@@ -1,0 +1,102 @@
+---
+# ==============================================================================
+# pazny.backrest — install the native binary + run under launchd (host daemon).
+# macOS-first (launchd). Linux systemd-user + non-arm64 assets are a follow-up.
+# ==============================================================================
+
+- name: "[pazny.backrest] Ensure dirs exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0700"
+  loop:
+    - "{{ backrest_bin_dir }}"
+    - "{{ backrest_home }}"
+    - "{{ backrest_config_dir }}"
+    - "{{ backrest_data_dir }}"
+    - "{{ backrest_cache_dir }}"
+
+- name: "[pazny.backrest] Current installed version (if any)"
+  ansible.builtin.command: "{{ backrest_bin }} --version"
+  register: _backrest_installed
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.backrest] Download + install binary {{ backrest_version }}"
+  when: >-
+    ansible_facts['os_family'] == 'Darwin'
+    and (_backrest_installed.rc != 0 or backrest_version not in (_backrest_installed.stdout | default('')))
+  block:
+    - name: "[pazny.backrest] Fetch release tarball"
+      ansible.builtin.get_url:
+        url: "{{ backrest_download_url }}"
+        dest: "{{ backrest_cache_dir }}/{{ backrest_asset }}"
+        mode: "0644"
+
+    # bsdtar (macOS /usr/bin/tar) handles .tar.gz fine; the ansible unarchive
+    # module falls back to unzip when it can't find gtar in the module PATH, so
+    # extract directly. Only the `backrest` member is needed.
+    - name: "[pazny.backrest] Extract + install binary into ~/.local/bin"
+      ansible.builtin.command:
+        cmd: "tar -xzf {{ backrest_cache_dir }}/{{ backrest_asset }} -C {{ backrest_bin_dir }} backrest"
+      changed_when: true
+
+    - name: "[pazny.backrest] Ensure binary is executable"
+      ansible.builtin.file:
+        path: "{{ backrest_bin }}"
+        mode: "0755"
+
+    - name: "[pazny.backrest] Strip Gatekeeper quarantine (downloaded binary)"
+      ansible.builtin.command: "xattr -dr com.apple.quarantine {{ backrest_bin }}"
+      changed_when: false
+      failed_when: false
+
+- name: "[pazny.backrest] Seed config.json ONCE (daemon owns it thereafter)"
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "{{ backrest_config_path }}"
+    mode: "0600"
+    force: false
+  when: backrest_seed_config | default(true)
+
+- name: "[pazny.backrest] Render launchd plist"
+  ansible.builtin.template:
+    src: backrest.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ backrest_launchd_label }}.plist"
+    mode: "0644"
+  when: ansible_facts['os_family'] == 'Darwin'
+
+- name: "[pazny.backrest] Bootstrap launchd job (idempotent)"
+  ansible.builtin.shell: |
+    PLIST=~/Library/LaunchAgents/{{ backrest_launchd_label }}.plist
+    UID_NUM=$(id -u)
+    if launchctl print "gui/${UID_NUM}/{{ backrest_launchd_label }}" >/dev/null 2>&1; then
+      launchctl kickstart -k "gui/${UID_NUM}/{{ backrest_launchd_label }}"
+      echo "already-loaded"
+    else
+      launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
+      echo "bootstrapped"
+    fi
+  register: _backrest_bootstrap
+  changed_when: "'bootstrapped' in _backrest_bootstrap.stdout"
+  failed_when: false
+  when: ansible_facts['os_family'] == 'Darwin'
+
+- name: "[pazny.backrest] Wait for daemon to bind {{ backrest_port }}"
+  ansible.builtin.uri:
+    url: "http://{{ backrest_bind_addr }}:{{ backrest_port }}/"
+    status_code: [200]
+  register: _backrest_health
+  retries: 20
+  delay: 1
+  until: _backrest_health.status == 200
+  failed_when: false
+  when: ansible_facts['os_family'] == 'Darwin'
+
+- name: "[pazny.backrest] Ready"
+  ansible.builtin.debug:
+    msg: >-
+      backrest {{ backrest_version }} host daemon on
+      http://{{ backrest_bind_addr }}:{{ backrest_port }}/
+      (health={{ _backrest_health.status | default('n/a') }}).
+      Off-site restic orchestrator + restore UI; complements backup.sh logical dumps.

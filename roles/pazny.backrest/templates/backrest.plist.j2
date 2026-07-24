@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ backrest_launchd_label }}</string>
+
+    <!-- backrest single Go binary. Host daemon (NOT a container) so restic can
+         read macOS host paths natively — VirtioFS bind mounts are unreadable by
+         restic-in-container (Phase-0 spike, 2026-07-24). Loopback bind; the
+         Traefik forward-auth edge route is a follow-up. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ backrest_bin }}</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>{{ backrest_home }}</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>{{ ansible_facts['env']['HOME'] }}</string>
+        <key>PATH</key>
+        <string>{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>BACKREST_PORT</key>
+        <string>{{ backrest_bind_addr }}:{{ backrest_port }}</string>
+        <key>BACKREST_CONFIG</key>
+        <string>{{ backrest_config_path }}</string>
+        <key>BACKREST_DATA</key>
+        <string>{{ backrest_data_dir }}</string>
+        <key>XDG_CACHE_HOME</key>
+        <string>{{ backrest_cache_dir }}</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>{{ backrest_home }}/backrest.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{ backrest_home }}/backrest.log</string>
+</dict>
+</plist>

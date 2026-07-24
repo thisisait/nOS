@@ -1,0 +1,7 @@
+---
+dependencies: []
+galaxy_info:
+  role_name: backrest
+  author: pazny
+  description: backrest (restic UI + scheduler) as a host launchd daemon — off-site backup orchestrator + restore UI.
+  min_ansible_version: "2.20"

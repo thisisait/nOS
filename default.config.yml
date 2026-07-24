@@ -379,6 +379,7 @@ install_hermes: false             # Hermes Agent (Nous) – Python daemon, MCP c
 install_opencode: false           # OpenCode AI coding TUI (sst.dev) with local Ollama provider
 install_pi_agents: false          # PI agent framework + pi-autoresearch extension (pi.dev)
 install_backup: true             # pazny.backup — nightly DB + volumes + blueprints → RustFS (launchd agent)
+install_backrest: false          # pazny.backrest — restic UI + scheduler as a host launchd daemon (off-site orchestrator + restore UI); opt-in
 install_wing: true           # Wing Security Dashboard + Hub (Nette PHP + SQLite) [requires: php, nginx]
 install_playwright_tests: false   # Playwright e2e tests under files/anatomy/wing/tests (smoke + first-admin provisioning)
 

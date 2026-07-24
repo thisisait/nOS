@@ -1723,6 +1723,18 @@
       when: install_backup | default(false)
       tags: ['backup', 'ops']
 
+    # ──────────────────────────────────────────────────────────────────────────
+    # backrest — restic UI + scheduler as a HOST launchd daemon (not a container:
+    # restic-in-container can't read macOS VirtioFS bind mounts). Off-site (copy
+    # #2) orchestrator + restore UI + DR-verify; complements pazny.backup's
+    # app-consistent logical dumps. See roles/pazny.backrest + docs/backup-architecture.md.
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "backrest — restic UI/scheduler host daemon (pazny.backrest role)"
+      ansible.builtin.import_role:
+        name: pazny.backrest
+      when: install_backrest | default(false)
+      tags: ['backrest', 'backup', 'ops']
+
     - import_tasks: tasks/pi-agents.yml
       when: install_pi_agents | default(false)
       tags: ['pi', 'pi-agents', 'ai', 'agent']
