@@ -97,9 +97,29 @@ stop being a cross-team contract, so three of the executor's §8 questions disso
   directive as *"nOS owns execution, credentials and the corpus; KEAP keeps the cortex
   backend."* Coherent, zero migration, but the reasoning backend stays in KEAP.
 
-The directive as stated points at **D**. Confirm the commitment before we start —
-the first concrete move (§4.1, spine → `knowledge/canonical/`) is KEAP-side and
-independently worth doing, so it can begin immediately once D is chosen.
+The directive as stated points at **D**. **DECIDED: Option D** (operator, 2026-07-25).
+
+## 6a. Kickoff — sequenced work
+
+**Critical path runs through KEAP's two prerequisites; nOS scopes in parallel.**
+
+| # | phase | owner | can start |
+|---|---|---|---|
+| P-1 | promote the 790-node spine `src/game/data/taxonomy.ts` → `knowledge/canonical/`; `server/taxonomy.ts` reads it as data; bring it under the lint + round-trip gate | **KEAP** | **now** (independently worth doing; unblocks everything) |
+| P-2 | draft the `onto1:` **composition contract** (registration order / boot fixpoint / zone-depth finalize / K1 override) + a **conformance fixture** (canonical input tree → the exact `onto1:` it must produce) | **KEAP** drafts (has the ground truth), **nOS** conforms | after/with P-1 |
+| P-3 | scope the **nOS cortex organ**: language + host (port `validate` is TS/Node + a 215-test suite → a Node anatomy service is the low-friction target vs a PHP/Python rewrite), the runtime store (libsql/SQLite), ANN params (tuned), where it sits (new organ vs Bone/Wing sidecar), how the recall gate + host-Ollama embedder wire in | **nOS** | **now** (design, parallel to P-1/P-2) |
+| P-4 | port `validate` + its test suite into the nOS cortex organ against the P-2 fixture | **nOS** | after P-1..P-3 |
+| P-5 | KEAP UI re-points at the nOS cortex API; KEAP keeps its product backend | **KEAP** | after P-4 |
+
+**nOS starts P-3 now** (a design pass on the cortex organ's shape — likely a Node
+service reusing KEAP's `validate`/store code, so the 215 tests port intact). The
+executor PR-1 stays held until the organ's shape is known (it decides in-anatomy vs
+cross-container dispatch).
+
+**Handoff to the KEAP agent:** Option D is chosen. Please start **P-1** (spine → data)
+and **P-2** (composition contract + conformance fixture) — both are yours and both gate
+the port. Ship them however suits `feat/cortex-validate` / a follow-on branch; the
+`onto1:` fixture is the single artifact nOS's port will be graded against.
 
 ## 7. Already settled
 The `ent:` correction (reply §7) is already in `nos-cortex-lang.md` (§4 note + §12
