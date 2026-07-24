@@ -97,33 +97,52 @@ The Resolver is **not one component in KEAP** (that would break KEAP's read-most
 no-LLM-in-container invariants). Split it — and note validation itself is **two-phase**,
 because only some namespaces are ontology-backed:
 
-| phase | authority | validates | against |
+| phase | authority | namespace | as-built P1 behaviour (KEAP feat/cortex-validate) |
 |---|---|---|---|
-| 1 | **KEAP** `POST /agent/v1/validate` | `tax:` `ent:` `kg:` `rel:` | the live ontology (`ent:` → `object_type_definitions`) |
-| 2 | **Wing executor** | `db:` `svc:` `doc:` | the handler / resource registry |
+| 1 | **KEAP** `POST /agent/v1/validate` | `tax:` `rel:` | **resolve** on system scope (see §5.1) |
+| 1 | **KEAP** | `kg:` `ent:` | **constant rejection**, computed from the namespace — zero DB query |
+| 2 | **Wing executor** | `db:` `svc:` `doc:` | validate against the handler / resource registry |
 
 KEAP owns *meaning*; Wing owns *dispatch + credentials (Infisical) + audit* (`events`,
 `actor_action_id`). **Write this down** — left implicit, the first implementer will
 "consolidate" validation by handing KEAP a list of databases, reinstating exactly the
 coupling the split removed. `db:`/`svc:`/`doc:` **do not exist in KEAP** and must not.
 
+> **`ent:` correction (supersedes round 2's checklist item 1).** The review anchored
+> `ent:` to `object_type_definitions` as "plausible backing"; the KEAP design agent
+> proved that schema is **dead — zero readers, zero writers**. Validating against it
+> would produce a route that *appears* to typecheck `ent:` and rejects everything. So
+> P1 **explicitly rejects `ent:`** (constant rejection, same as `kg:`); **populating an
+> entity registry is a P3 prerequisite** before `ent:` resolves. nOS's P2 emitter must
+> not emit `ent:` operands until then.
+
 `/agent/v1/validate` doubles as the constrained-decode + repair surface without any
-executor in the path.
+executor in the path. **P1 is built + live-verified** (KEAP branch `feat/cortex-validate`,
+not merged): late-binding resolves `tax:node[Mathematics] → 02.01` with the AST carrying
+both `surface` and `resolvedName`; ambiguity (`tax:node[Logic]`) returns **both**
+candidates without choosing; stamps carry `databaseId` + `opcodeRegistryHash`; zero side
+effects verified by row-census.
 
 ## 5. Validity ≠ security
 
 Parse-validity is not authorization. Three requirements, none optional once
 write-verbs exist:
 
-1. **`validate` is an enumeration oracle — gate it.** Answering "does this operand
-   exist?" lets any caller enumerate the taxonomy + object corpus, *including entries
-   they may not read*. KEAP had this exact bug until v1.17 (`GET /api/objects/:id`
-   leaked tier-scoped cards); the fix returned **404 for not-found and not-readable
-   alike**. `validate` needs the same: resolve operands against the **calling
-   identity** (never the system identity), and return a **uniform `unknown operand`**
-   for both "doesn't exist" and "not yours" — distinguishable errors *are* the
-   disclosure. Authz therefore cannot live only in the executor; validation already
-   answers questions.
+1. **`validate` is an enumeration oracle — how P1 defuses it.** Answering "does this
+   operand exist?" could let any caller enumerate the corpus, *including entries they
+   may not read* (KEAP's pre-v1.17 `GET /api/objects/:id` leaked tier-scoped cards; the
+   fix returned **404 for not-found and not-readable alike**). The as-built D1 identity
+   model handles each namespace so no *new* disclosure is created:
+   - **`tax:` / `rel:`** resolve on **system scope** — both are ownerless with no
+     visibility, and the *same bearer already reads them* via `/agent/v1/taxonomy/search`,
+     so `validate` discloses nothing that surface didn't. `scope.authorizes` is `false`.
+   - **`kg:` / `ent:`** get a **constant rejection computed from the namespace alone —
+     no DB query at all**, so there is not even a timing oracle to distinguish
+     exists-but-hidden from absent.
+   When per-owner objects enter validation (P3), the `unknown operand` discipline
+   (uniform error for "doesn't exist" and "not yours", resolved against the **calling
+   identity**) applies — authz cannot live only in the executor, because validation
+   already answers questions.
 2. **Capability-scoped executor tokens, not the brain token.** `/agent/v1/*` is a
    single system-scope token with no per-viewer visibility — deliberate for a *read*
    surface. Behind an executor it means anyone with the bearer writes as the system.
@@ -249,7 +268,7 @@ building it is work."** The substrate is portable; it is not free.
 | Phase | Deliverable |
 |---|---|
 | **P0** | This spec (freeze after the §12 checklist). Opcodes = code registry; operands = ontology; two-phase validation + authz defined; **corpus-store decision made** (§6.2). |
-| **P1** | **`POST /agent/v1/validate` in KEAP** (tokenize → typecheck → AST\|typed error, **zero side effects, authz-aware**). Wing executor stub, **read verbs only**, capability-scoped token. |
+| **P1** ✅ | **`POST /agent/v1/validate` in KEAP — DONE** (feat/cortex-validate, live-verified; not merged).< (tokenize → typecheck → AST\|typed error, **zero side effects, authz-aware**). Wing executor stub, **read verbs only**, capability-scoped token. |
 | **P2** | Teach Claude nos-lang via **structured tool-schema AST emission** (§7); late-binding resolves operands (so `context` is *not* a hard prereq). Measure validity rate. |
 | **P3** | Write verbs behind authz + dry-run/confirm gates; corpus in its **own off-container store** with versioned + provenance rows (§6.2–6.3). |
 | **P4** | **kNN case-based replay over nomic** (n=1) + a replay gate of adversarial minimal pairs; pipeline→tree visualization in KEAP. |
@@ -258,7 +277,9 @@ building it is work."** The substrate is portable; it is not free.
 
 ## 12. P0-freeze checklist (from the round-2 review)
 
-1. ✅ Two-phase validation written down; `ent:` → `object_type_definitions` (§4).
+1. ✅ Two-phase validation written down. **Correction:** `ent:` is **rejected** in P1
+   (`object_type_definitions` is a dead schema); an entity registry is a **P3
+   prerequisite** before `ent:` resolves (§4).
 2. ✅ `validate` authz-aware, uniform `unknown operand` (§5.1).
 3. ✅ Native dotted ids; examples typecheck (§3).
 4. ✅ Late-binding operands with mandatory ambiguity rejection (§6.1).
