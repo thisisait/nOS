@@ -28,10 +28,12 @@
     nginx_log_dir: "{{ nos_nginx_log_dir }}"
     nginx_enabled: "{{ nginx_sites_enabled | default([]) }}"
 
-- name: Install nginx via Homebrew
+- name: Install/upgrade nginx via Homebrew
   community.general.homebrew:
     name: nginx
-    state: present
+    state: latest   # REM-134: keep host nginx ≥1.31.3 (CVE-2026-42533 map-regex
+                    # buffer overflow). Only reached when install_nginx=true (opt-in;
+                    # the default Traefik-edge install has no host nginx = zero exposure).
   # On Linux nginx is installed by the pazny.linux.nginx role (apt).
   when: nos_pkg_manager == 'homebrew'
 

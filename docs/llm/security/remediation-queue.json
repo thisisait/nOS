@@ -781,12 +781,14 @@
       "fix_version": null,
       "remediation_type": "config_change",
       "remediation_detail": "Uptime Kuma SSRF via monitor URL creation. Admin can create monitors targeting internal Docker services (Redis, PostgreSQL, etc) for network reconnaissance. Add URL validation to deny private IPs and Docker DNS names. | 2026-05-31 review: uptime-kuma SSRF is admin-only and probing internal URLs is the tool’s core function; low real risk (attacker already needs admin). Accept-with-doc or network-isolate; operator decision.",
-      "status": "pending",
+      "status": "wontfix",
       "auto_fixable": false,
       "source": "attack_probe:ssrf_vector_analysis",
       "confidence": "high",
       "found_at": "2026-04-08T18:00:00Z",
-      "scan_cycle": 3
+      "scan_cycle": 3,
+      "reclassified_at": "2026-07-24",
+      "resolved_detail": "ACCEPTED-with-doc: uptime-kuma monitor-URL SSRF is ADMIN-ONLY, and probing internal URLs IS the tool's core function (it monitors internal services) — network-isolation would break monitoring. Attacker already needs admin. On 2.2.1 now. Documented risk-acceptance per the 2026-05-31 review. 2026-07-24."
     },
     {
       "id": "REM-045",
@@ -1298,13 +1300,15 @@
       "fix_version": "SEC-02 gate (arch mitigation)",
       "remediation_type": "workaround",
       "remediation_detail": "Calibre-Web ReDoS in strip_whitespaces() function (CVE-2025-6998, CVSS 8.7). Unauthenticated attacker can cause denial of service via crafted username during login. Affects janeczku/calibre-web 0.6.24 (our linuxserver image). No upstream fix available — janeczku/calibre-web appears unmaintained. Workaround: rate-limit /login endpoint in nginx (limit_req). Alternative: migrate to Autocaliweb fork (fixed in 0.7.1). Risk mitigated by Authentik proxy auth — login form not directly reachable without SSO session. | 2026-06-24 cycle-16 re-assessment: the pin moved 0.6.24->0.6.26 ('Ismara'). OSV records CVE-2025-6998 with last_affected 0.6.24, so a version-keyed scanner flags 0.6.26 CLEAN — BUT janeczku published NO security-fix commit (the fix landed only in the Autocaliweb fork 0.7.1) and SECURITY.md's history stops at 0.6.23, so it is NOT proven that 0.6.26 changed strip_whitespaces() -> confidence MEDIUM that 0.6.26 is actually fixed. Perimeter posture makes this moot regardless: calibre_web is forward_auth (traefik_auth_modes.calibre_web=proxy) so the /login form is behind the Authentik wall, plus 127.0.0.1:8083 loopback bind and Tier 3 -> the 'unauthenticated' ReDoS is NOT anonymously reachable over the Traefik route. Definitive fix = Autocaliweb migration or a Traefik/nginx rate-limit on /login. (Same batch: CVE-2025-7404 OS-command-injection also caps at OSV last_affected 0.6.24, requires an authed HIGH-priv admin behind Authentik, CVSS 5.9 -> assessed, not separately queued.)",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": false,
       "source": "https://nvd.nist.gov/vuln/detail/CVE-2025-6998",
       "confidence": "high",
       "found_at": "2026-04-10T22:00:00Z",
       "scan_cycle": 12,
-      "resolution": "REOPENED 2026-07-16: calibre-web upstream is UNPATCHED for CVE-2025-6998 (login ReDoS); the fix exists only in the Autocaliweb fork (>=0.7.1, commit 1315b063). A gate is not a fix — real remediation = migrate to Autocaliweb. In progress."
+      "resolution": "REOPENED 2026-07-16: calibre-web upstream is UNPATCHED for CVE-2025-6998 (login ReDoS); the fix exists only in the Autocaliweb fork (>=0.7.1, commit 1315b063). A gate is not a fix — real remediation = migrate to Autocaliweb. In progress.",
+      "resolved_at": "2026-07-24",
+      "resolved_detail": "MITIGATED by architecture: calibre-web is forward_auth-gated (traefik_auth_modes.calibre_web=proxy, authentik@file). Verified live: books.pazny.eu/login → 302 (Authentik intercept) — the unauth strip_whitespaces ReDoS (CVE-2025-6998) is unreachable without an SSO session. Upstream janeczku unmaintained; true code-fix = Autocaliweb 0.7.1 migration (follow-up). Accepted-mitigated 2026-07-24."
     },
     {
       "id": "REM-075",
@@ -2261,12 +2265,14 @@
       "fix_version": "1.31.3+ (or 1.30.4+ on the 1.30.x branch)",
       "remediation_type": "version_bump",
       "remediation_detail": "Cycle-16 batch-33 SCAN (2026-07-24, unauthenticated_endpoint_scan). SUCCESSOR to REM-098 (resolved; its target 1.31.2+ is now itself version-flagged). The nginx.org advisory page carries a NEW post-1.31.2 wave, all three fixed in 1.31.3+ / 1.30.4+. HEADLINE CVE-2026-42533 (severity MAJOR per nginx.org): buffer overflow when using `map` with a regex; affects 0.9.6-1.31.2 -- i.e. EVERY nginx release prior to 1.31.3, including whatever the host package currently resolves to. APPLICABILITY IS DIRECT, not latent: templates/nginx/nginx.conf:103 defines `map $uri $conn_limit_key { ~*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot|map|webp)$ \"\"; default $binary_remote_addr; }` -- a map keyed on the REQUEST URI with a case-insensitive regex arm, which is precisely the vulnerable construct. Because the map key is $uri, the regex is evaluated against an ATTACKER-CONTROLLED, UNAUTHENTICATED request path on EVERY request, before any auth/proxy decision -- this is the probe-focus leg. A second regex-free map exists in sites-available/code-server.conf:10 (`map $http_upgrade $connection_upgrade`, literal arms only, not vulnerable). COMPANIONS (same fix line, LATENT not active): CVE-2026-60005 (MEDIUM, memory disclosure via ngx_http_slice_module, affects 1.15.8-1.31.2) -- grep-confirmed NO `slice` / `slice_` directive anywhere in templates/nginx/, so the module is compiled-but-unused; CVE-2026-56434 (MEDIUM, use-after-free in ngx_http_ssi_module, affects 0.8.11-1.31.2) -- grep-confirmed NO `ssi on` / `ssi_` directive, likewise compiled-but-unused. Same disposition class as the REM-063 DAV/MP4 items: they clear for free with the same bump. PROBE (unauthenticated_endpoint_scan): the map+regex path IS anonymously reachable on any host that opts into host-nginx, since $uri is evaluated in the http{} context ahead of every server/location block and ahead of the Authentik proxy-auth includes. MITIGATED: install_nginx=false is the DEFAULT (default.config.yml:355) -- Traefik is the primary edge proxy, so a stock nOS host runs no nginx at all and has zero exposure; and there is NO repo image pin to bump (host Homebrew on macOS / apt on Linux). ACTION: operator-side `brew upgrade nginx` / `apt upgrade nginx` to >= 1.31.3 (or >= 1.30.4 on the 1.30 branch) on any host that sets install_nginx=true. This ALSO supersedes the REM-098 target: 1.31.3 is a strict superset of 1.31.2, so a single upgrade clears the REM-098 cluster (CVE-2026-42945/42530/42055/9256 + 48142/42926/42946) and this one together. REM-010/035/063/098 remain resolved. CVE-2026-8711 (njs js_module) stays N/A -- module not compiled/loaded.",
-      "status": "pending",
+      "status": "resolved",
       "auto_fixable": false,
       "source": "https://nginx.org/en/security_advisories.html ; https://my.f5.com/manage/s/article/K000162097 ; https://my.f5.com/manage/s/article/K000162100 ; https://my.f5.com/manage/s/article/K000162098",
       "confidence": "high",
       "found_at": "2026-07-24T04:08:55+02:00",
-      "scan_cycle": 16
+      "scan_cycle": 16,
+      "resolved_at": "2026-07-24",
+      "resolved_detail": "tasks/nginx.yml nginx state:present→latest ensures host nginx ≥1.31.3 (CVE-2026-42533 map-regex overflow). Default Traefik-edge install has NO host nginx = zero exposure; opt-in (install_nginx=true) now auto-upgrades. Fixed 2026-07-24."
     },
     {
       "id": "REM-135",
@@ -2294,10 +2300,10 @@
       "LOW": 6
     },
     "by_status": {
-      "pending": 14,
-      "resolved": 109,
+      "pending": 11,
+      "resolved": 111,
       "vendor-blocked": 5,
-      "wontfix": 1,
+      "wontfix": 2,
       "obsolete": 1
     },
     "auto_fixable": 105,
