@@ -59,7 +59,7 @@
       ══════════════════════════════════════════════════════════════════
        URL:       https://{{ mcpo_domain }}
        Endpoint:  http://127.0.0.1:{{ mcpo_port }}
-       API Key:   {{ mcpo_api_key }}
+       API Key:   (in mcpo config.json)
        Config:    {{ mcpo_data_dir }}/config.json
        Data:      {{ mcpo_data_dir }}/data
 
@@ -75,5 +75,5 @@
        Registruj v OpenWebUI:
          Admin → Settings → Tools → Add Connection:
            URL: http://mcpo:8000
-           Auth: Bearer {{ mcpo_api_key }}
+           Auth: Bearer (in mcpo config.json)
       ══════════════════════════════════════════════════════════════════

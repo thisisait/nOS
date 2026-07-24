@@ -40,7 +40,7 @@
 
        Nebo rucni reset hesla:
          docker compose -p infra exec -T mariadb mariadbd-safe --skip-grant-tables &
-         docker compose -p infra exec -T mariadb mariadb -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ mariadb_root_password }}';"
+         docker compose -p infra exec -T mariadb mariadb -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '<root pw from ~/.nos/secrets.yml>';"
       ══════════════════════════════════════════════════════════════════════
   when:
     - mariadb_conn is failed

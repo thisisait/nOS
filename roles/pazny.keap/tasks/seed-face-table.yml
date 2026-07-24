@@ -17,6 +17,7 @@
       authorization: "Bearer {{ keap_agent_token_rw }}"
     status_code: [200, 401, 404]
   register: _face_tbl_probe
+  no_log: true   # Bearer keap_agent_token_rw in header
   changed_when: false
   failed_when: false
 
@@ -38,6 +39,7 @@
       columns: "{{ _face_tbl.def.schema.columns }}"
     status_code: [200, 201, 404]
   register: _face_tbl_create
+  no_log: true   # Bearer keap_agent_token_rw in header
   changed_when: _face_tbl_create.status | default(0) in [200, 201]
   when: _face_tbl_probe.status | default(0) == 404
 
@@ -59,6 +61,7 @@
       authorization: "Bearer {{ keap_agent_token_rw }}"
     status_code: [200, 401, 404]
   register: _face_rows_probe
+  no_log: true   # Bearer keap_agent_token_rw in header
   changed_when: false
   failed_when: false
 
@@ -81,6 +84,7 @@
   loop_control:
     label: "{{ _face_tbl.slug }}/{{ item.slug }}"
   register: _face_row_upsert
+  no_log: true   # Bearer keap_agent_token_rw in header
   changed_when: _face_row_upsert.status | default(0) in [200, 201]
   # Only attempt rows once the table is reachable (probe 200 = pre-existing, or
   # we just created it). Skip the missing-route case entirely.

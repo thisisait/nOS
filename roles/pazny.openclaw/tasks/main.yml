@@ -277,6 +277,8 @@
       export WING_API_URL="http://127.0.0.1:9000"
       export WING_API_TOKEN="{{ openclaw_wing_api_token }}"
     create: true
+    mode: '0600'   # .zshrc holds a live WING_API_TOKEN — not world-readable
+  no_log: true     # block embeds openclaw_wing_api_token
 
 - name: "[OpenClaw] Secure openclaw config directory permissions"
   ansible.builtin.file:

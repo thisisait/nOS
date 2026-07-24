@@ -889,6 +889,12 @@ class CallbackModule(CallbackBase):
                 os.makedirs(d, exist_ok=True)
             with open(self._jsonl_path, "a", encoding="utf-8") as fh:
                 fh.write(json.dumps(payload, ensure_ascii=False) + "\n")
+            # events.jsonl may carry scrubbed-but-sensitive task context — keep
+            # it operator-only (0600), never world-readable.
+            try:
+                os.chmod(self._jsonl_path, 0o600)
+            except OSError:
+                pass
         except Exception as exc:  # noqa: BLE001
             sys.stderr.write(
                 "[wing_telemetry] JSONL append failed (%s): %s\n"

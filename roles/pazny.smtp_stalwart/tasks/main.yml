@@ -34,7 +34,7 @@
   ansible.builtin.template:
     src: compose.yml.j2
     dest: "{{ stacks_dir }}/infra/overrides/smtp_stalwart.yml"
-    mode: '0644'
+    mode: '0600'
   notify: Restart smtp_stalwart
 
 - name: "[pazny.smtp_stalwart] Print operator info banner"

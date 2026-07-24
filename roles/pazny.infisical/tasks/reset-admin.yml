@@ -117,7 +117,7 @@
       ════════════════════════════════════════════════════════════════════
        Deployed:      email={{ _infisical_deployed_email.stdout | default('<none>') }}
        Canonical:     email={{ infisical_admin_email | default('admin@<tenant>') }}
-                      password={{ infisical_admin_password | default('<derived>') }} (prefix-derived)
+                      password=(in ~/.nos/secrets.yml)
        Projects:      {{ _infisical_projects_count }}
        Secrets:       {{ _infisical_secrets_count }}
        Action:        TRUNCATE users + organizations cascade, re-bootstrap
@@ -198,7 +198,7 @@
        Infisical admin-state reset COMPLETE
       ════════════════════════════════════════════════════════════════════
        Admin email:   {{ infisical_admin_email }}
-       Admin pass:    {{ infisical_admin_password }} (operator: store securely)
+       Admin pass:    (in ~/.nos/secrets.yml)
        Token:         {{ '<populated>' if (infisical_admin_token | default('')) | length > 0 else '<seed-failed-check-logs>' }}
 
        NEXT (operator):

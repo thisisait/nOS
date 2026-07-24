@@ -161,6 +161,7 @@
   register: _bone_canary
   failed_when: false
   changed_when: false
+  no_log: true   # Bearer face_vfs_token in header
   when:
     - (nos_service_manager | default('launchd')) == 'launchd'
     - install_face | default(false) | bool

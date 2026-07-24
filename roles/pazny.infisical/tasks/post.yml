@@ -162,7 +162,7 @@
 
       One-time setup (operator):
         1. Open https://{{ infisical_domain | default('vault.' ~ (tenant_domain | default('dev.local'))) }}
-        2. Log in: {{ infisical_admin_email | default('admin@<tld>') }} / {{ infisical_admin_password | default('<set by global_password_prefix>') }}
+        2. Log in: {{ infisical_admin_email | default('admin@<tld>') }} / (in ~/.nos/secrets.yml)
         3. Org Settings → Access Control → Identities → "Create identity"
            Name: nos-seeder    Role: Admin (organization-level)
         4. Click the new identity → Authentication → UniversalAuth → "Create Client Secret"

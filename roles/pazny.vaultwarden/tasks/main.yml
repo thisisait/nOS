@@ -31,6 +31,6 @@
       ══════════════════════════════════════════════════════
        URL:     https://{{ vaultwarden_domain }}
        Admin:   https://{{ vaultwarden_domain }}/admin
-       Token:   {{ vaultwarden_admin_token }}
+       Token:   (in ~/.nos/secrets.yml)
        Data:    {{ vaultwarden_data_dir }}
       ══════════════════════════════════════════════════════
