@@ -61,8 +61,8 @@ added by data.
 - **Opcodes** `⟨id ∈ Executor.handlers⟩` — a closed, code-owned set. Prefer **many
   specific typed verbs** over few polymorphic (§10). e.g. `get map filter rank
   classify link resolve embed insert update delete route branch preserve review`.
-- **Operand namespaces** — `tax:` `ent:` `kg:` `rel:` (ontology-backed, KEAP-validated)
-  · `db:` `svc:` `doc:` (infrastructure, **Wing-validated** — §4).
+- **Operand namespaces** — `tax:` `rel:` (KEAP-resolved) · `kg:` `ent:` (KEAP-rejected
+  in P1; `ent:` awaits a P3 registry — §4) · `db:` `svc:` `doc:` (**Wing-validated**).
 - **Native dotted ids.** KEAP ids are dotted (`nos.services.bookstack`, `01.01.03`),
   **not** slash-pathed. The validator does an exact lookup — no translation layer,
   no `tax:nos/services`-vs-`nos.services` ambiguity.
@@ -268,7 +268,7 @@ building it is work."** The substrate is portable; it is not free.
 | Phase | Deliverable |
 |---|---|
 | **P0** | This spec (freeze after the §12 checklist). Opcodes = code registry; operands = ontology; two-phase validation + authz defined; **corpus-store decision made** (§6.2). |
-| **P1** ✅ | **`POST /agent/v1/validate` in KEAP — DONE** (feat/cortex-validate, live-verified; not merged).< (tokenize → typecheck → AST\|typed error, **zero side effects, authz-aware**). Wing executor stub, **read verbs only**, capability-scoped token. |
+| **P1** ✅ | **`POST /agent/v1/validate` in KEAP — DONE** (feat/cortex-validate, live-verified, not merged): tokenize → typecheck → AST\|typed error, zero side effects, D1 identity model (§5.1). **nOS owes:** the Wing executor stub, **read verbs only**, capability-scoped token. |
 | **P2** | Teach Claude nos-lang via **structured tool-schema AST emission** (§7); late-binding resolves operands (so `context` is *not* a hard prereq). Measure validity rate. |
 | **P3** | Write verbs behind authz + dry-run/confirm gates; corpus in its **own off-container store** with versioned + provenance rows (§6.2–6.3). |
 | **P4** | **kNN case-based replay over nomic** (n=1) + a replay gate of adversarial minimal pairs; pipeline→tree visualization in KEAP. |
