@@ -1585,7 +1585,7 @@ docker_socket_proxy_version: "v0.4.2"  # registry tag IS v-prefixed (0.4.2 was o
 
 spacetimedb_domain: "spacetime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 spacetimedb_port: 3030                  # host → container 3000 (HTTP + WebSocket)
-spacetimedb_version: "v2.6.1"           # pinned from floating latest for blank reproducibility (v2.6.1 = newest, verified on Docker Hub). Excluded from all-on profile.
+spacetimedb_version: "v2.7.0-hotfix3"           # REM-135: v2.7.0-hotfix3 (was v2.6.1). Pinned for blank reproducibility; excluded from all-on profile.
 spacetimedb_keys_dir: "{{ nos_data_root }}/platform/services/spacetimedb/keys"
 spacetimedb_install_host_cli: true      # install `spacetime` binary on host so the operator can publish modules
 spacetimedb_dev_db: "dev"               # logical dev DB name printed in onboarding hint
@@ -2021,7 +2021,7 @@ authentik_oidc_freescout_client_secret: "{{ global_password_prefix }}_pw_oidc_fr
 
 outline_domain: "wiki{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 outline_port: 3005
-outline_version: "1.8.0-1"      # synced to role default; boots + runs DB migrations (1.6->1.8)
+outline_version: "1.8.1"      # synced to role default; boots + runs DB migrations (1.6->1.8)
 outline_db_name: "outline"
 outline_db_user: "outline"
 outline_db_password: "{{ global_password_prefix }}_pw_outline"
