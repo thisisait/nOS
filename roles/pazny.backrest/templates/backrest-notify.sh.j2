@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# =============================================================================
+# backrest-notify.sh — HMAC-signed POST of a backrest hook event to Bone /A9.
+# Rendered by roles/pazny.backrest. Called by backrest's repo command hook.
+# Usage: backrest-notify.sh <severity> <title...>
+#   severity ∈ critical|high|medium|low|info  (routed by the backrest-base
+#   plugin's A9 notification block: on_high → wing-inbox+ntfy, etc.)
+# Non-fatal by design — a Bone outage must never fail the backup run.
+# =============================================================================
+set -uo pipefail
+
+BONE_NOTIFY_URL="{{ backup_notify_url | default('http://127.0.0.1:8099/api/v1/notifications') }}"
+NOTIFY_HMAC_SECRET="{{ wing_events_hmac_secret | default('') }}"
+
+SEVERITY="${1:-high}"
+shift || true
+TITLE="${*:-backrest event}"
+
+[[ -z "${NOTIFY_HMAC_SECRET}" ]] && { echo "backrest-notify: HMAC secret empty — skipping"; exit 0; }
+
+SEVERITY="${SEVERITY}" TITLE="${TITLE}" \
+BONE_NOTIFY_URL="${BONE_NOTIFY_URL}" NOTIFY_HMAC_SECRET="${NOTIFY_HMAC_SECRET}" \
+python3 - <<'PY' || echo "backrest-notify: POST failed (non-fatal)"
+import hashlib, hmac, json, os, time, urllib.request
+
+payload = {
+    "severity": os.environ["SEVERITY"],
+    "title": os.environ["TITLE"],
+    "actor_id": "agent:backrest",
+    "origin_plugin": "backrest",
+}
+raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+ts = str(int(time.time()))
+sig = hmac.new(os.environ["NOTIFY_HMAC_SECRET"].encode("utf-8"),
+               (ts + "." + raw.decode("utf-8")).encode("utf-8"),
+               hashlib.sha256).hexdigest()
+req = urllib.request.Request(
+    os.environ["BONE_NOTIFY_URL"], data=raw, method="POST",
+    headers={"Content-Type": "application/json",
+             "X-Wing-Timestamp": ts,
+             "X-Wing-Signature": sig})
+with urllib.request.urlopen(req, timeout=5) as resp:
+    print("backrest-notify: HTTP %s" % resp.status)
+PY

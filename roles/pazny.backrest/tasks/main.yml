@@ -53,6 +53,12 @@
       failed_when: false
       when: ansible_facts['os_family'] == 'Darwin'
 
+- name: "[pazny.backrest] Render A9 notify helper (Bone HMAC POST)"
+  ansible.builtin.template:
+    src: backrest-notify.sh.j2
+    dest: "{{ backrest_home }}/backrest-notify.sh"
+    mode: "0700"
+
 - name: "[pazny.backrest] Seed config.json ONCE (daemon owns it thereafter)"
   ansible.builtin.template:
     src: config.json.j2

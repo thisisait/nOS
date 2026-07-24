@@ -12,7 +12,13 @@
       "password": "{{ restic_password }}",
       "autoInitialize": true,
       "prunePolicy": { "schedule": { "maxFrequencyDays": 7 }, "maxUnusedPercent": 10 },
-      "checkPolicy": { "schedule": { "maxFrequencyDays": 30 }, "readDataSubsetPercent": 5 }
+      "checkPolicy": { "schedule": { "maxFrequencyDays": 30 }, "readDataSubsetPercent": 5 },
+      "hooks": [
+        {
+          "conditions": ["CONDITION_ANY_ERROR"],
+          "actionCommand": { "command": "{{ backrest_home }}/backrest-notify.sh high 'backrest: backup/check/prune error on {{ backrest_instance }}'" }
+        }
+      ]
     }
   ],
   "plans": [
