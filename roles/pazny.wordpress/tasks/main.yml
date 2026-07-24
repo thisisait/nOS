@@ -67,6 +67,14 @@
   notify: Restart wordpress
   when: wordpress_cve_63030_mitigate | default(true)
 
+- name: "[pazny.wordpress] Stage unauth-surface hardening mu-plugin (REM-114)"
+  ansible.builtin.copy:
+    src: hardening-mu-plugin.php
+    dest: "{{ stacks_dir }}/iiab/wordpress/mu-plugins/nos-hardening.php"
+    mode: '0644'
+  notify: Restart wordpress
+  when: wordpress_harden_unauth_surface | default(true)
+
 - name: "[pazny.wordpress] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

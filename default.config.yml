@@ -1212,6 +1212,7 @@ wordpress_version: "6.9.4"              # PINNED BY AN IMAGE LAG, NOT BY CHOICE 
 # (and remove roles/pazny.wordpress/files/cve-2026-63030-batch-block.php) once
 # wordpress_version reaches a patched, dockerized release.
 wordpress_cve_63030_mitigate: true
+wordpress_harden_unauth_surface: true   # REM-114: mu-plugin disables XML-RPC + blocks REST user enum + author enumeration (defense-in-depth; 6.9.4 core is CVE-clean)
 wordpress_port: 8084                    # Local container port (nginx proxy)
 wordpress_admin_user: "admin"
 wordpress_admin_password: "{{ global_password_prefix }}_pw_wordpress_admin"
