@@ -177,3 +177,23 @@ bound what a DR currently covers:
 - **`restore-verify` floors cover the core sources** (MariaDB/PG/Authentik hard
   floors; Wing/dirs informational). A full wet DR-in-CI leg (blank → backup →
   restore → verify, both OSes) is the remaining #8 follow-up.
+
+## Backrest — copy-#2 orchestrator + restore UI (2026-07-24)
+
+`roles/pazny.backrest` (opt-in `install_backrest: false`) adds **backrest** — a
+restic web UI + scheduler — as a **host launchd/systemd-user daemon** on loopback
+:9898, SSO-gated (Authentik forward-auth Tier-1, `backrest.<tld>`). It orchestrates
+the **off-site (copy #2)** restic leg + a browse-and-restore UI + scheduled
+`restic check`; it seeds an `offsite` repo (`autoInitialize`) + `nos-offsite` plan
+from `restic_repo` when set. It **complements, does not replace** `backup.sh`'s
+app-consistent logical dumps (copy #1) — restic snapshots bytes, not quiesced DBs.
+
+**Why HOST daemon, not container:** restic-in-container **cannot read macOS
+VirtioFS bind mounts** (backup processes 0 files, "could not be read"; `stat`/`cat`
+work — Phase-0 spike 2026-07-24, same class as the gitlab puma `realdirpath
+ENOTSUP`). A native binary reads host trees with operator perms — which also
+**side-steps the TCC blocker above** (the off-site *target* still needs the
+external volume readable, but the source read is no longer gated). Restore replay
+of logical dumps still goes through `tasks/restore.yml`; backrest gets the object
+back, nOS replays it. Remaining Phase-2: backrest→A9 notification hook + a
+scheduled restore-test to close the DR-round-trip-unverified gap with a monitored proof.
