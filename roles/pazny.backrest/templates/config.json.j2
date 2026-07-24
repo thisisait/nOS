@@ -1,8 +1,28 @@
 {
   "version": 6,
   "instance": "{{ backrest_instance }}",
-  "_comment": "SEED-ONCE (roles/pazny.backrest, force:false). The backrest daemon OWNS this file and rewrites it (ids, modno, bcrypt). Repos/plans are added via the UI (or the Phase-1 restic_repo templating follow-up). auth.disabled is safe here because backrest binds loopback only and the intended edge gate is Authentik forward-auth.",
+  "_comment": "SEED-ONCE (roles/pazny.backrest, force:false). The backrest daemon OWNS this file and rewrites it (adds sync.identity, ids, modno). auth.disabled is safe: backrest binds loopback only and the edge gate is Authentik forward-auth (backrest-base plugin, Tier-1). Repos/plans below are seeded from the existing restic_repo when set; edit further in the UI.",
   "auth": {
     "disabled": true
-  }
+  }{% if (restic_repo | default('')) | length > 0 %},
+  "repos": [
+    {
+      "id": "offsite",
+      "uri": "{{ restic_repo }}",
+      "password": "{{ restic_password }}",
+      "autoInitialize": true,
+      "prunePolicy": { "schedule": { "maxFrequencyDays": 7 }, "maxUnusedPercent": 10 },
+      "checkPolicy": { "schedule": { "maxFrequencyDays": 30 }, "readDataSubsetPercent": 5 }
+    }
+  ],
+  "plans": [
+    {
+      "id": "nos-offsite",
+      "repo": "offsite",
+      "paths": ["{{ rustfs_data_dir | default(ansible_facts['env']['HOME'] + '/rustfs') }}"],
+      "schedule": { "cron": "0 4 * * *", "clock": "CLOCK_LOCAL" },
+      "retention": { "policyTimeBucketed": { "daily": {{ backup_retention_daily | default(7) }}, "weekly": {{ backup_retention_weekly | default(4) }}, "monthly": {{ backup_retention_monthly | default(12) }} } }
+    }
+  ]
+{% endif %}
 }
