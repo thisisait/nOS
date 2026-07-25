@@ -1,6 +1,12 @@
 node_modules/
 /dist-server
 /data
+# e2e throwaway stores — recreated per run by playwright.config.ts and by
+# e2e/organ-boot.spec.ts's tokenless second daemon.
+/e2e/.data
+/e2e/.data-notoken
+/test-results
+/playwright-report
 .env
 .env.*
 !.env.example

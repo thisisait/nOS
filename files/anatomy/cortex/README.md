@@ -1,9 +1,10 @@
 # files/anatomy/cortex/ — the Cortex organ (vendored port)
 
-**Status:** P-4 build-sequence steps 1–6 landed. The store is wired and
-materialises itself from git, the ANN index is at its measured tuning, and the
-onto1 digest gate is **green and pinned**. Daemon NOT stood up (step 7), no
-Ansible role yet (step 9), nothing deployed.
+**Status:** P-4 build-sequence steps 1–8 landed. The store is wired and
+materialises itself from git, the ANN index is at its measured tuning, the onto1
+digest gate is **green and pinned**, and the **daemon serves the validate surface
+on `127.0.0.1:8098`** with 15 Playwright tests green against the built bundle. No
+Ansible role yet (step 9), **nothing deployed**.
 
 Cortex is the nOS reasoning organ — the fourth brain beside Bone (signals), Wing
 (observes) and Pulse (keeps time). It is a **verbatim port** of KEAP v1.27.0's
@@ -50,6 +51,8 @@ Therefore:
 | `server/db.ts` | KEAP `server/…` | verbatim (whole file) |
 | `server/migrations.ts` | KEAP `server/…` | verbatim (whole file) |
 | `server/rbac.ts` | KEAP `server/…` | verbatim — required by `db.ts`, omitted from design §4 |
+| `server/tokens.ts` | KEAP `server/…` | verbatim — the bearer tiers; sha256 → `timingSafeEqual`, never `===` |
+| `server/build-version.ts` | KEAP `server/…` | verbatim — `/health`'s `version` |
 | `server/taxonomy.ts` | KEAP `server/…` | verbatim (whole file) |
 | `src/game/{data,types}/taxonomy.ts` | KEAP `src/game/…` | verbatim — the 790-node spine |
 | `server/*.test.ts` | KEAP `server/…` | verbatim — 83 + 54 + 4 = 141 tests |
@@ -59,10 +62,13 @@ Therefore:
 | `scripts/ann-recall.mjs` | KEAP `scripts/…` | verbatim |
 | `docs/specs/*.md` | KEAP `docs/specs/…` | verbatim — the normative specs the modules cite by § |
 
-Locally authored (the only non-ported files): `server/cortex-{config,ann,store,store-cli}.ts`,
-`server/cortex-store.test.ts`, `server/onto1-digest.test.ts`, `scripts/ann-corpus.mjs`, `package.json`,
-`tsconfig.json`, `tsconfig.server.json`, `vitest.config.ts`, `.gitignore`,
-`VERSION`, this README. `tsconfig.server.json`'s `compilerOptions` are
+Locally authored (the only non-ported files): `server/index.ts`,
+`server/cortex-{config,ann,store,store-cli}.ts`, `server/cortex-store.test.ts`,
+`server/onto1-digest.test.ts`, `server/tokens.test.ts`, `e2e/organ-boot.spec.ts`,
+`scripts/ann-corpus.mjs`, `package.json`, `tsconfig.json`, `tsconfig.server.json`,
+`vitest.config.ts`, `playwright.config.ts`, `.gitignore`, `VERSION`, this README.
+`e2e/validate.spec.ts` is a port with **four documented deviations**, listed in
+its own header and summarised under "The daemon" below. `tsconfig.server.json`'s `compilerOptions` are
 byte-identical to KEAP's — a divergence there means the two repos typecheck the
 same source differently.
 
@@ -88,10 +94,12 @@ stage. Re-syncing is the usual plain `cp` of those two files.
 nvm use 22                 # Node 22 + npm 10. NOT npm 11 — it writes a lock npm 10 rejects.
 npm ci
 npm run typecheck          # strict, clean
-npm test                   # 186 tests (141 ported + 26 store/ANN + 19 digest gate)
+npm test                   # 193 tests (141 ported + 26 store/ANN + 19 digest gate + 7 tokens)
                            #   — includes the 6 onto1 fixtures, run as a child process
 npm run conformance        # the same 6 fixtures, standalone
 npm run spine:check        # knowledge/spine/*.json ≡ the generated src/game/data/taxonomy.ts
+npm run build              # tsc -p tsconfig.server.json && esbuild → dist-server/index.js
+npm run test:e2e           # 15 Playwright tests against the BUILT bundle (build first)
 ```
 
 ### The digest gate (build sequence step 5 — THE HARD GATE)
@@ -224,21 +232,140 @@ still holds (8× smaller, 5× faster, and `float1bit` is decisively disqualified
 `float8` alone scores 99.95% at 224.5 MB. If ~94% recall@10 is ever judged too
 expensive, that is the fallback, and it is still 2.3× smaller than today.
 
+## The daemon (build sequence steps 7 and 8)
+
+`server/index.ts` → `dist-server/index.js`. It boots by calling `openStore()` —
+steps 4 + 6 unchanged — then serves **four routes and no others**, bound to
+`127.0.0.1:8098` (`CORTEX_BIND_HOST` / `PORT` | `CORTEX_PORT` override).
+
+```sh
+npm run build && npm start        # or: PORT=8098 CORTEX_STORE_PATH=~/cortex/data node dist-server/index.js
+```
+
+### What is mounted
+
+| route | auth | source |
+|---|---|---|
+| `GET /health` | none | local — the organ's probe name (design step 12) |
+| `GET /agent/v1/health` | none | the same handler at KEAP's path |
+| `POST /agent/v1/validate` | `agentAuth('ro')` | lifted from KEAP `server/agent.ts:1197-1206` |
+| `GET /agent/v1/validate/opcodes` | `agentAuth('ro')` | lifted from KEAP `server/agent.ts:1213-1219` |
+
+Everything else is a **404 in the `{success:false, error}` envelope**, including
+every other `/agent/v1/*` path KEAP serves (taxonomy, search, objects, relations,
+tables, fs, lint, captures, curator, topics, embeddings, `openapi.json`), the
+whole `/api` + SPA surface, and the `/ingest/v1` device tier. An express default
+HTML 404 would read like a server fault to a caller that simply came to the wrong
+organ.
+
+**Explicitly NOT built here**, though design §7 step 7 names them: the new
+`/agent/v1/context` recall endpoint, and the **Bone audit emit** per
+validate/recall call. Both are additions rather than ports — `context` has no
+KEAP counterpart to lift, and the audit path needs Bone's middleware, which is
+step 9 territory. Neither is stubbed: there is no dead route and no silent
+no-op emitter to mistake for a working one later.
+
+### Auth: fail closed, and never `===`
+
+`agentAuth` is KEAP `server/agent.ts:63-81`, behaviour for behaviour:
+
+1. **Neither token configured ⇒ 503 for the whole surface**, checked *before* the
+   bearer is even read. An unconfigured agent surface is a DISABLED surface, not
+   an open one, and a caller cannot distinguish "wrong token" from "surface off".
+2. `tokenEquals` (`server/tokens.ts`, verbatim) hashes both operands to sha256
+   and compares with **`crypto.timingSafeEqual`**. The hashing is not decoration:
+   `timingSafeEqual` *throws* on a length mismatch, so comparing raw tokens would
+   turn a wrong-length token into a 500 where a right-length one is a 401 — an
+   oracle for the secret's length, delivered through the error channel.
+   `server/tokens.test.ts` pins this **structurally**, because `return a === b`
+   passes every behavioural assertion there is. That is the whole reason the port
+   instruction singles this file out.
+3. RW satisfies an `ro` requirement; `ro` does not satisfy `rw`.
+
+`/health` deliberately still answers when the surface is disabled, reporting
+`surface: "disabled"`. A liveness probe that 503s for want of a token would make a
+correctly fail-closed organ indistinguishable from a dead one.
+
+`CORTEX_TOKEN_RO` / `CORTEX_TOKEN_RW` are aliased onto the `KEAP_AGENT_TOKEN_*`
+names `tokens.ts` reads (`aliasTokenEnv`, `server/index.ts`). That alias exists
+**only** so `tokens.ts` stays byte-identical while the Ansible role gets to use
+the organ's own vocabulary (`cortex_ro_token` / `cortex_rw_token`, design §2).
+
+### `/health` and the three drift axes
+
+Beside KEAP's nested `ontology.version` and `database`, the body carries a
+`binding` block — `{ontologyVersion, databaseId, opcodeRegistryHash}`, the same
+three axes stamped into every `ast.binding`, published where an operator, the
+step-12 verify and Wing can read them without POSTing a program.
+`e2e/validate.spec.ts` asserts the block equals the AST's, so it cannot become a
+second, drifting copy of the same three facts.
+
+`contracts` declares `cortex` **only**. KEAP's health also declares
+`selfmodel: 1`; this organ serves no slug-tree surface, and declaring a contract
+you do not implement is worse than declaring nothing.
+
+### The one hazard worth knowing about
+
+`server/db.ts:29-30` resolves its data directory **at module load**, and
+`openStore()` is what sets `KEAP_DATA_DIR`. ESM evaluates every static import
+before any top-level statement, so a static `import … from './cortex-validate'`
+in `index.ts` would drag in `./db` and bind the wrong directory before `main()`
+ran. **Every cortex module is therefore imported dynamically, after
+`openStore()`.** esbuild preserves that laziness in the bundle (each becomes an
+`__esm(...)` thunk).
+
+The failure mode is silent: the daemon would boot, mint an identity in
+`$PWD/data/keap.db`, answer every request plausibly, and report the configured
+path it never opened. So `e2e/organ-boot.spec.ts` asserts against the
+**filesystem** — the store file exists where it was configured, and
+`.cortex-store.json`'s identity equals the one `/health` serves. Verified by
+mutation: adding a static `import './db'` fails that test **and passes all
+twelve ported ones**.
+
+### e2e (step 8) — 15 tests, against the built bundle
+
+`npm run test:e2e` builds nothing; run `npm run build` first. The suite boots
+`node dist-server/index.js` (never `tsx`) against a throwaway `e2e/.data`, so the
+artifact under test is the artifact a host would run.
+
+The store is **not materialised**, on purpose. That gives 790 spine nodes and 0
+ext rows — the same input state KEAP's own e2e runs against, so the ported
+late-binding assertions (`tax:node[Kinematics]` → `01.01.01.01`,
+`tax:node[motion]` → ambiguous with 4 candidates) are claims about the *same*
+tree on both sides. It is also the state the pinned digest is defined for, so
+every `ast.binding` in the suite carries **`onto1:76d1f3ad728b382b`**.
+
+| file | tests | lift |
+|---|---|---|
+| `e2e/validate.spec.ts` | 12 | ported from KEAP, **four documented deviations** |
+| `e2e/organ-boot.spec.ts` | 3 | local — boot order, fail-closed, nothing-else-mounted |
+
+The four deviations, all in that file's header: the `contracts.selfmodel === 1`
+assertion becomes an assertion of its *absence* (with its census note dropped);
+`ast.binding` is additionally compared against `/health`'s `binding` block; and
+the ontology digest is additionally checked against the pinned literal, not only
+against `/^onto1:[0-9a-f]{16}$/`. Nothing else was reworded — an assertion
+rewritten in transit stops being evidence that both implementations answer the
+same.
+
 ## Not done yet
 
 - **Step 11 (CI)** — the digest and conformance gates are now both inside
   `npm test`, so the step-11 `cortex` job inherits them; what remains is the job
   itself, the `tests/anatomy/` pytest shim, and adding the shared conformance
   gate to the retained KEAP repo's CI (KEAP-side, a separate PR).
-- **Steps 7–8** — `server/index.ts` daemon, e2e. `package.json`'s `build` and
-  `start` scripts already name `server/index.ts` / `dist-server/index.js`; that
-  entrypoint does not exist yet, so `npm run build` does not run. The daemon
-  should boot by calling `openStore()` — that is the whole of steps 4+6.
+- **`/agent/v1/context`** and the **Bone audit emit** — the two parts of design
+  §7 step 7 that are additions rather than ports. See "What is mounted" above.
 - **Steps 9–13** — Ansible role, plugin, CI jobs, blank verify, KEAP cutover.
   For the role: `cortex_store_path` defaults to `~/cortex/data`, the build step
   needs `npm run store:materialise` after `npm ci`, and `~/cortex/data/` must be
   added to the host-daemon restic set (design §7.6). The ANN and FTS indexes are
-  regenerable and can be excluded from the snapshot.
+  regenerable and can be excluded from the snapshot. Two daemon-specific notes
+  for that role: **set the launchd/systemd working directory to the organ root**,
+  because `server/build-version.ts` (verbatim) reads `process.cwd()/package.json`
+  and otherwise reports `unknown`; and the unit boots with
+  `CORTEX_MATERIALISE_ON_BOOT` **unset**, so materialisation stays a build step
+  and a restart never re-walks 107 canonical files before answering a probe.
 - **Embeddings.** The store's `embeddings` table is empty and will stay so until
   the Pulse job `keap-embed-sync` runs (step 10) — the embedder is deliberately
   outside the organ. Until then `npm run ann:recall` must be fed a synthetic
