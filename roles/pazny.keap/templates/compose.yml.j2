@@ -86,6 +86,13 @@ services:
       KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
       KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
       KEAP_AGENT_TOKEN_CAPTURE: "{{ keap_agent_token_capture }}"
+{% if install_cortex | default(false) %}
+      # The host cortex organ's validate surface (P-4, loopback 8098). RENDER
+      # ONLY today: KEAP's code does not read this var yet — the client flip is
+      # P-5 (build seq. step 13, a separate supervised KEAP PR). Present now so
+      # the cutover is a code change, not an infra change.
+      CORTEX_BACKEND_URL: "http://host.docker.internal:{{ cortex_port | default(8098) }}"
+{% endif %}
 {% if keap_fs_sync | default(true) %}
       # FS-sync (v1.7.0): mirror per-user files → knowledge objects. Root is the
       # RO-mounted doctrine per-user tree; sync the class-3 content subdirs.

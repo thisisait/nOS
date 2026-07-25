@@ -1,0 +1,91 @@
+# =============================================================================
+# cortex-base — service plugin for the pazny.cortex HOST daemon (P-4 step 10).
+#
+# Cortex (the reasoning organ) is a native host Node daemon on loopback :8098 —
+# NOT a container, and unlike backrest it has NO route and NO Authentik
+# provider AT ALL: design §5 (docs/plans/nos-cortex-organ-design.md) makes pure
+# loopback the default, and the id sits in traefik_skip_ids. Its callers are
+# Wing's executor, host AgentKit and (later) Pulse — all on the host, all
+# presenting the scope-split bearer tokens the role provisions. A public
+# /agent route stays UNBUILT until a caller outside that set appears
+# (design §7 Q5).
+#
+# NO pulse job here either, deliberately: the design sketched keap-embed-sync
+# under cortex-base, but embeddings/recall are C2 scope
+# (docs/specs/cortex-full-scope-decision.md) and the C1 daemon exposes no embed
+# surface to sync against. keap-base already runs keap-embed-sync against
+# KEAP's own corpus; moving or duplicating it before C2 would point a writer at
+# an endpoint that does not exist.
+# =============================================================================
+
+name: cortex-base
+version: 0.1.0
+description: |
+  Cortex — the nOS reasoning organ (loopback Node daemon, vendored KEAP
+  v1.27.0 cortex port). Serves POST /agent/v1/validate + the opcode registry +
+  a drift-stamped /health on 127.0.0.1:8098, over its own libsql store
+  materialised from git + the estate self-model. This plugin owns the GDPR row
+  and A9 notification routing; the role pazny.cortex owns the install
+  primitives (npm build, store materialisation, launchd/systemd unit).
+upstream: https://github.com/thisisait/nos-keap
+license: AGPL-3.0
+
+type:
+  - service
+
+_NOS_PLUGIN: "cortex-base"
+
+requires:
+  role: pazny.cortex
+  feature_flag: install_cortex
+  variables:
+    - cortex_port
+    - cortex_store_path
+
+# NO authentik: block — the organ has no human surface and no route to gate.
+# Access control is the daemon's own fail-closed bearer check (tokenless ⇒ 503,
+# timingSafeEqual over sha256; server/tokens.ts ported verbatim).
+
+# =============================================================================
+# NOTIFICATION — A9 canonical severity routing
+# =============================================================================
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+# =============================================================================
+# OBSERVABILITY — Loki labels (host daemon, launchd logs)
+# =============================================================================
+observability:
+  loki:
+    labels:
+      app: cortex
+      stack: host
+      tier: "1"
+
+# =============================================================================
+# GDPR — Article 30 register row
+# =============================================================================
+gdpr:
+  purpose: |
+    Cortex is the estate's reasoning organ: it typechecks agent-authored
+    cortex-lang programs against the curated taxonomy and the controlled verb
+    vocabulary, and reports the ontology/opcode/database drift axes on
+    /health. Its store is materialised from the repository (spine + canonical
+    tree + the generated nOS self-model) and holds NO per-user content and NO
+    knowledge_objects corpus (that is C2 scope and stays with KEAP today).
+    Callers are host-side system agents bearing service tokens; requests carry
+    no human identity and nothing is written by the validate surface.
+  legal_basis: legitimate_interests
+  data_categories:
+    - taxonomy_tree              # curated knowledge taxonomy + estate self-model
+    - validate_requests          # agent-submitted programs, processed in-memory only
+  data_subjects:
+    - operators
+  retention_days: 0              # validate has zero side effects; the store holds no subject data
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false    # loopback-only host daemon; nothing leaves the box
