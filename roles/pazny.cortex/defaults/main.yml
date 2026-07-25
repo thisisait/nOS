@@ -1,0 +1,50 @@
+---
+# ==============================================================================
+# pazny.cortex — the reasoning organ (host Node daemon, P-4 build seq. step 9).
+#
+# The fourth host organ beside Bone (signals), Wing (observes) and Pulse (keeps
+# time): Cortex remembers and reasons. A loopback-only Node 22 daemon serving
+# POST /agent/v1/validate + GET /agent/v1/validate/opcodes + /health, built from
+# the vendored KEAP v1.27.0 port at files/anatomy/cortex/.
+#
+# ── Why the daemon runs IN-PLACE from the playbook tree (no ~/cortex/app) ────
+# The organ's self-model half (cortex-config.ts NOS_ROOT) resolves
+# state/manifest.yml, files/anatomy/plugins/ and docs/systems/ RELATIVE TO ITS
+# OWN MODULE PATH — the self-model describes the estate, so the code must live
+# where the estate's descriptors live. An rsynced runtime copy would point
+# NOS_ROOT at ~/../.. and the coverage assertion would refuse the store. The
+# STORE is what must survive `git clean`, and it lives outside the tree.
+#
+# Store: ~/cortex/data/keap.db — the basename is fixed by the vendored port
+# (server/db.ts:30); the DIRECTORY is the isolation boundary. This is NOT a
+# shared keap.db (docs/specs/cortex-full-scope-decision.md "Two corrections"):
+# different directory, own db_identity, and cortex-store.ts refuses to open a
+# store file the organ did not create.
+# ==============================================================================
+
+cortex_port: 8098          # loopback-only, beside Bone's 8099
+cortex_domain: "cortex{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+
+cortex_launchd_label: "eu.thisisait.nos.cortex"
+
+# Vendored organ source — the daemon's WorkingDirectory. Deliberately the
+# playbook tree, see the header.
+cortex_src_dir: "{{ playbook_dir }}/files/anatomy/cortex"
+
+# The organ's store DIRECTORY (env CORTEX_STORE_PATH). Outside the playbook
+# tree so neither `git clean` nor a repo re-clone can wipe reasoning history.
+cortex_store_path: "{{ ansible_facts['env']['HOME'] }}/cortex/data"
+cortex_log_dir: "{{ ansible_facts['env']['HOME'] }}/cortex/log"
+
+# Host Ollama (MLX) — NOT consumed by the C1 daemon (validate reads no
+# embedder); recorded here because the C2 embed-sync Pulse job and the recall
+# gate are specified against it (design §3). Kept so the variable has one home.
+cortex_ollama_url: "http://127.0.0.1:11434"
+
+# Generate + ingest the nOS self-model at materialise time (env CORTEX_SELFMODEL).
+# Off only for a deliberately spine-only store (the onto1 digest state).
+cortex_selfmodel_enabled: true
+
+# Node binary override. Empty ⇒ auto-detect the nvm default (tasks/node.yml
+# installs it); the organ needs Node >= 22 (package.json engines).
+cortex_node_bin: ""

@@ -1713,6 +1713,19 @@
       tags: ['opencode', 'ai']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Cortex — the reasoning organ (P-4, 2026-07-25). Loopback Node 22 daemon
+    # built in-place from files/anatomy/cortex/ (vendored KEAP v1.27.0 cortex
+    # port): /agent/v1/validate + opcodes + /health on 127.0.0.1:8098, own
+    # libsql store at ~/cortex/data materialised from git + the self-model
+    # generator. After Bone (core-up), before Wing/Pulse (design §2).
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "Cortex — reasoning organ daemon (pazny.cortex role)"
+      ansible.builtin.import_role:
+        name: pazny.cortex
+      when: install_cortex | default(false)
+      tags: ['cortex', 'anatomy']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Pulse — local launchd Python daemon for scheduled jobs (A4, 2026-05-03).
     # Polls Wing API for due pulse_jobs and fires them as subprocess (A4 PoC) or
     # claude SDK invocations (A8). First host-launchd organ in the bones-and-wings

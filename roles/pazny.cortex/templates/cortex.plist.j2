@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ cortex_launchd_label }}</string>
+
+    <!--
+        The organ runs the BUILT bundle (dist-server/index.js, esbuild output) —
+        tsx stays dev-only. It binds loopback; there is no route in front of it
+        unless the operator provisions one explicitly (design §5: pure loopback
+        default).
+    -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ _cortex_node_bin }}</string>
+        <string>dist-server/index.js</string>
+    </array>
+
+    <!-- In-place from the playbook tree: NOS_ROOT (self-model manifest/plugins/
+         docs paths) resolves relative to the organ's own module path. -->
+    <key>WorkingDirectory</key>
+    <string>{{ cortex_src_dir }}</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>{{ ansible_facts['env']['HOME'] }}</string>
+        <key>PATH</key>
+        <string>{{ _cortex_node_bin | dirname }}:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+
+        <key>CORTEX_PORT</key>
+        <string>{{ cortex_port }}</string>
+        <key>CORTEX_STORE_PATH</key>
+        <string>{{ cortex_store_path }}</string>
+
+        <!-- Scope-split bearer tokens (server/tokens.ts, timingSafeEqual over
+             sha256). BOTH empty ⇒ the daemon fail-closes the /agent surface
+             with 503 — never an implicit identity. The role always provisions
+             both via default.credentials.yml. -->
+        <key>CORTEX_TOKEN_RO</key>
+        <string>{{ cortex_ro_token | default('') }}</string>
+        <key>CORTEX_TOKEN_RW</key>
+        <string>{{ cortex_rw_token | default('') }}</string>
+
+        <!-- Materialisation is a CONVERGE-time act (role task); a restart just
+             opens the store. CORTEX_MATERIALISE_ON_BOOT deliberately unset. -->
+        <key>CORTEX_SELFMODEL</key>
+        <string>{{ '1' if (cortex_selfmodel_enabled | default(true) | bool) else '0' }}</string>
+    </dict>
+
+    <!-- launchd respawns on crash; ThrottleInterval prevents tight loops. -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- libsql WAL holds db + -wal + -shm per connection; raise the default
+         launchd soft limit (~256) the same way the Bone plist does. -->
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>8192</integer>
+    </dict>
+    <key>HardResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>8192</integer>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>{{ cortex_log_dir }}/launchd.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{ cortex_log_dir }}/launchd.err.log</string>
+</dict>
+</plist>

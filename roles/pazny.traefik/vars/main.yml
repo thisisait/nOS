@@ -118,6 +118,7 @@ traefik_auth_modes:
 # make sure their auth_mode above is set sensibly first.
 traefik_skip_ids:
   - bone             # Bone is on host; published only on 127.0.0.1; reach via Wing UI
+  - cortex           # Reasoning organ: pure loopback by design (no route unless explicitly opted in)
 
 # Service ids whose host-loopback bind is HTTPS (not HTTP). Traefik upstream
 # URL gets the https:// prefix and `serversTransport: noverify` so the

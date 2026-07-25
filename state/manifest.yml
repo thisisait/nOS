@@ -833,6 +833,22 @@ services:
       url_template: "http://localhost:{{ bone_port }}/api/health"
       expect_status: 200
 
+  - id: cortex
+    # The reasoning organ — loopback-only host daemon (design §5: pure loopback
+    # default, NO Traefik route; the id is in traefik_skip_ids). domain_var
+    # exists for the day a route becomes an explicit opt-in, not for today.
+    category: knowledge
+    stack: null
+    install_flag: install_cortex
+    version_source: launchd
+    launchd_label: "eu.thisisait.nos.cortex"
+    domain_var: cortex_domain
+    port_var: cortex_port
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ cortex_port }}/health"
+      expect_status: 200
+
   - id: backrest
     category: storage
     stack: null

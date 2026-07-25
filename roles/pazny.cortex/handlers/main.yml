@@ -1,0 +1,10 @@
+---
+# Full bootout…bootstrap cycle — a plain kickstart does not re-read the plist
+# env, and the tokens/store path live there (same lesson as the Bone handler).
+- name: Restart cortex
+  ansible.builtin.shell: |
+    LABEL="{{ cortex_launchd_label }}"; UID_NUM=$(id -u)
+    launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
+    sleep 1
+    launchctl bootstrap "gui/${UID_NUM}" "$HOME/Library/LaunchAgents/${LABEL}.plist"
+  when: (nos_service_manager | default('launchd')) == 'launchd'

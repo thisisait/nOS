@@ -1,0 +1,205 @@
+---
+# ==============================================================================
+# pazny.cortex — build, materialise and run the reasoning organ.
+#
+# Sequence: dirs → Node probe → npm ci (lock-sha guarded) → build (staleness
+# guarded) → store:materialise (git + self-model, restart on change) → plist /
+# systemd unit → health wait. The daemon opens the store WITHOUT materialising
+# (CORTEX_MATERIALISE_ON_BOOT stays unset) — a restart must not re-walk 107
+# canonical files before it can answer a health probe; the converge is what
+# materialises.
+#
+# Gating happens at the import site in main.yml (import_role propagates its
+# `when: install_cortex` to every task here) — no end_play guard, because this
+# role is imported into the main host play and end_play would kill it.
+# ==============================================================================
+
+# ── Runtime directories ──────────────────────────────────────────────────────
+
+- name: "[pazny.cortex] Ensure store + log directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ cortex_store_path }}"
+    - "{{ cortex_log_dir }}"
+
+# ── Node 22 resolution (nvm default, tasks/node.yml) ─────────────────────────
+
+- name: "[pazny.cortex] Detect the Node binary (nvm default)"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix | default('/opt/homebrew') }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix | default('/opt/homebrew') }}/opt/nvm/nvm.sh"
+    [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+    nvm use default >/dev/null 2>&1 || true
+    command -v node || true
+  args:
+    executable: /bin/bash
+  register: _cortex_node_probe
+  changed_when: false
+  check_mode: false
+  when: cortex_node_bin | length == 0
+
+- name: "[pazny.cortex] Resolve the Node binary"
+  ansible.builtin.set_fact:
+    _cortex_node_bin: "{{ cortex_node_bin if cortex_node_bin | length > 0 else (_cortex_node_probe.stdout_lines | last | default('')) }}"
+
+- name: "[pazny.cortex] Assert Node >= 22 (package.json engines)"
+  ansible.builtin.command:
+    argv: ["{{ _cortex_node_bin }}", "-v"]
+  register: _cortex_node_version
+  changed_when: false
+  check_mode: false
+  failed_when: >-
+    _cortex_node_version.rc != 0 or
+    (_cortex_node_version.stdout | trim | regex_replace('^v', '') | split('.') | first | int) < 22
+
+# ── npm ci — guarded by a package-lock sha stamp, not `creates:` ─────────────
+# `creates: node_modules` never reinstalls after a lockfile bump; a bare
+# `npm ci` reinstalls on every converge. The stamp reruns exactly when the
+# lock changed (or node_modules is gone) and is idempotent otherwise.
+
+- name: "[pazny.cortex] npm ci (when package-lock.json changed)"
+  ansible.builtin.shell: |
+    set -e
+    cd "{{ cortex_src_dir }}"
+    LOCK_SHA=$(shasum -a 256 package-lock.json | cut -d' ' -f1)
+    STAMP=node_modules/.nos-lock-sha
+    if [ ! -d node_modules ] || [ "$(cat "$STAMP" 2>/dev/null)" != "$LOCK_SHA" ]; then
+      "{{ _cortex_node_bin | dirname }}/npm" ci --no-audit --no-fund
+      echo "$LOCK_SHA" > "$STAMP"
+      echo NOS_CHANGED
+    fi
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ _cortex_node_bin | dirname }}:/usr/local/bin:/usr/bin:/bin"
+  register: _cortex_npm_ci
+  changed_when: "'NOS_CHANGED' in _cortex_npm_ci.stdout"
+
+# ── Build — tsc typecheck + esbuild bundle, only when sources are newer ──────
+
+- name: "[pazny.cortex] Build dist-server/index.js (when sources changed)"
+  ansible.builtin.shell: |
+    set -e
+    cd "{{ cortex_src_dir }}"
+    if [ ! -f dist-server/index.js ] || [ -n "$(find server shared src knowledge package.json tsconfig.json tsconfig.server.json -type f -newer dist-server/index.js -print -quit 2>/dev/null)" ]; then
+      "{{ _cortex_node_bin | dirname }}/npm" run -s build
+      echo NOS_CHANGED
+    fi
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ _cortex_node_bin | dirname }}:/usr/local/bin:/usr/bin:/bin"
+  register: _cortex_build
+  changed_when: "'NOS_CHANGED' in _cortex_build.stdout"
+  notify: Restart cortex
+
+# ── Materialise the store from git + the self-model generator ────────────────
+# Runs at converge time (build seq. step 9) so a daemon restart never re-walks
+# the tree. The daemon holds the composed tree IN MEMORY, so a materialise that
+# changed rows must restart it — changed_when reads the ingest trailer and the
+# self-model applied count off the CLI output.
+# python3 (self-model generator) resolves via PATH: the pyenv shim first, the
+# way the operator's ansible itself runs.
+
+- name: "[pazny.cortex] Materialise the store (git tree + self-model)"
+  ansible.builtin.command:
+    argv: ["{{ _cortex_node_bin | dirname }}/npm", "run", "-s", "store:materialise"]
+    chdir: "{{ cortex_src_dir }}"
+  environment:
+    PATH: "{{ _cortex_node_bin | dirname }}:{{ ansible_facts['env']['HOME'] }}/.pyenv/shims:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin"
+    CORTEX_STORE_PATH: "{{ cortex_store_path }}"
+    CORTEX_SELFMODEL: "{{ '1' if (cortex_selfmodel_enabled | default(true) | bool) else '0' }}"
+  register: _cortex_materialise
+  changed_when: >-
+    ('"changed":true' in _cortex_materialise.stdout) or
+    (_cortex_materialise.stdout is search('self-model: [1-9][0-9]* domain'))
+  notify: Restart cortex
+
+# ── Service manager: launchd (macOS) | systemd --user (Linux) ────────────────
+
+# ---- macOS: launchd ----
+- name: "[pazny.cortex] Render launchd plist"
+  ansible.builtin.template:
+    src: cortex.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ cortex_launchd_label }}.plist"
+    # 0600: the plist embeds CORTEX_TOKEN_RO/RW — the whole agent surface.
+    # Same threat model as the Bone plist.
+    mode: '0600'
+  notify: Restart cortex
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+- name: "[pazny.cortex] Bootstrap launchd job (idempotent)"
+  ansible.builtin.shell: |
+    set -e
+    PLIST=~/Library/LaunchAgents/{{ cortex_launchd_label }}.plist
+    UID_NUM=$(id -u)
+    if launchctl print "gui/${UID_NUM}/{{ cortex_launchd_label }}" >/dev/null 2>&1; then
+      echo "already-loaded"
+    else
+      launchctl bootstrap gui/${UID_NUM} "$PLIST"
+      echo "bootstrapped"
+    fi
+  register: _cortex_bootstrap
+  changed_when: "'bootstrapped' in _cortex_bootstrap.stdout"
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+# ---- Linux: systemd --user (env mirrors cortex.plist.j2 EnvironmentVariables) ----
+- name: "[pazny.cortex] (Linux) Build systemd --user environment"
+  ansible.builtin.set_fact:
+    _cortex_systemd_env:
+      HOME: "{{ ansible_facts['env']['HOME'] }}"
+      PATH: "{{ _cortex_node_bin | dirname }}:/usr/local/bin:/usr/bin:/bin"
+      CORTEX_PORT: "{{ cortex_port | string }}"
+      CORTEX_STORE_PATH: "{{ cortex_store_path }}"
+      CORTEX_TOKEN_RO: "{{ cortex_ro_token | default('') }}"
+      CORTEX_TOKEN_RW: "{{ cortex_rw_token | default('') }}"
+      CORTEX_SELFMODEL: "{{ '1' if (cortex_selfmodel_enabled | default(true) | bool) else '0' }}"
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'
+
+- name: "[pazny.cortex] (Linux) Install systemd --user service"
+  ansible.builtin.include_role:
+    name: pazny.linux.systemd_user
+    tasks_from: ensure_unit
+  vars:
+    su_name: "{{ cortex_launchd_label }}"
+    su_description: "nOS Cortex — reasoning organ (validate surface)"
+    su_exec_start: "{{ _cortex_node_bin }} dist-server/index.js"
+    su_working_dir: "{{ cortex_src_dir }}"
+    su_environment: "{{ _cortex_systemd_env }}"
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'
+
+# ── Health — flush the restart first, then require the daemon to answer ──────
+
+- name: "[pazny.cortex] Flush handlers (apply a pending restart now)"
+  ansible.builtin.meta: flush_handlers
+
+- name: "[pazny.cortex] Wait for /health"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ cortex_port }}/health"
+    status_code: 200
+    return_content: false
+  register: _cortex_health
+  retries: 12
+  delay: 5
+  until: _cortex_health.status | default(0) == 200
+
+- name: "[pazny.cortex] Setup summary"
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════════════════
+       Cortex — the reasoning organ (host {{ nos_service_manager | default('launchd') }}) ready
+      ══════════════════════════════════════════════════════════════════
+       Label:        {{ cortex_launchd_label }}
+       Source:       {{ cortex_src_dir }}/  (runs in-place, see defaults)
+       Store:        {{ cortex_store_path }}/keap.db  (own db_identity)
+       Logs:         {{ cortex_log_dir }}/launchd.{out,err}.log
+       Listening:    127.0.0.1:{{ cortex_port }}  (loopback only, NO route)
+       Health:       http://127.0.0.1:{{ cortex_port }}/health
+       Surface:      POST /agent/v1/validate · GET /agent/v1/validate/opcodes
+
+       Status:       launchctl print gui/$(id -u)/{{ cortex_launchd_label }}
+       Reload:       launchctl kickstart -k gui/$(id -u)/{{ cortex_launchd_label }}
+      ══════════════════════════════════════════════════════════════════

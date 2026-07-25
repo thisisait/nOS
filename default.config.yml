@@ -462,6 +462,7 @@ install_face: true               # nOS face – unified web-desktop shell (Svelt
 
 # ── Knowledge / cortex ────────────────────────────────────────────────────────
 install_keap: true               # KEAP – knowledge explorer & preserver (taxonomy, content links, agent API) [Docker]
+install_cortex: true             # Cortex – reasoning organ (validate surface; host Node daemon, loopback-only) [requires: node]
 
 # ── AI orchestration ──────────────────────────────────────────────────────────
 install_paperclip: true          # Paperclip – multi-agent orchestration platform [requires: PostgreSQL]

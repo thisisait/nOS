@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: cortex
+  namespace: pazny
+  author: Pázny
+  description: Cortex — the nOS reasoning organ (loopback Node daemon; KEAP v1.27.0 cortex port, validate surface).
+  license: AGPL-3.0
+  min_ansible_version: "2.20"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# No role dependencies — Node (nvm) is installed by tasks/node.yml outside the
+# role. Source files/anatomy/cortex/ and templates/cortex.plist.j2 stay in the
+# playbook repo; the daemon runs in-place from the tree (see defaults header).
+dependencies: []
