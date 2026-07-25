@@ -50,6 +50,7 @@ interface CliResult {
     extNodesRegistered: number;
     descriptionOverrides: number;
     ftsRows: number;
+    slugRoots: string[];
   };
   facts: {
     dbPath: string;
@@ -155,8 +156,16 @@ describe('git materialisation (canonical ingest)', () => {
   });
 
   it('grows the tree by the ext-node delta and re-projects the FTS index', () => {
-    expect(first.materialise.extNodesRegistered).toBe(960);
-    expect(first.facts.taxonomyNodes).toBe(SPINE_NODES + 960);
+    // NOT a hardcoded count. The ext delta is git's curated domains PLUS the
+    // generated self-model, and the self-model's size is a function of the
+    // ESTATE — it changes whenever a service is added or removed. A literal here
+    // would fail on the next plugin, which teaches people to bump the number
+    // rather than read it. Assert the relationship and the coverage instead.
+    expect(first.materialise.extNodesRegistered).toBeGreaterThan(900);
+    expect(first.facts.taxonomyNodes).toBe(SPINE_NODES + first.materialise.extNodesRegistered);
+    // The coverage the 91-node gap was missing: a slug root must exist, or every
+    // `nos.*` operand answers unknown_operand and the refusal looks well-formed.
+    expect(first.materialise.slugRoots).toContain('nos');
     expect(first.facts.ftsRows).toBe(first.facts.taxonomyNodes);
   });
 
@@ -240,7 +249,8 @@ describe('degradation when the vector layer is unavailable', () => {
     expect(r.facts.ann.indexed).toBe(false);
     // Everything that does not need vectors still works: the tree materialised
     // from git, the FTS projection is complete, the vocabulary is live.
-    expect(r.facts.taxonomyNodes).toBe(SPINE_NODES + 960);
+    expect(r.facts.taxonomyNodes).toBe(SPINE_NODES + r.materialise.extNodesRegistered);
+    expect(r.materialise.extNodesRegistered).toBeGreaterThan(900);
     expect(r.facts.ftsRows).toBe(r.facts.taxonomyNodes);
     expect(r.facts.liveVerbs).toBe(16);
     expect(r.facts.ontologyVersion).toMatch(/^onto1:[0-9a-f]{16}$/);

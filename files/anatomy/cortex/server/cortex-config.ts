@@ -71,6 +71,11 @@ export const STORE_MARKER_FILENAME = '.cortex-store.json';
  *  module's own location so a CLI invoked from any cwd finds `knowledge/`. */
 export const ORGAN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+/** The nOS repo root — `files/anatomy/cortex` is four levels down. The
+ *  self-model generator, the estate manifest and the plugin descriptors all live
+ *  outside the organ because they describe the ESTATE, not the cortex. */
+export const NOS_ROOT = path.resolve(ORGAN_ROOT, '..', '..', '..');
+
 /**
  * The `libsql_vector_idx` parameters. Defaults are the MEASURED optimum from
  * `docs/specs/durability-and-integrity.md` §4 — 65.6 MB shadow / 6.2 s build for
@@ -102,6 +107,34 @@ export interface CortexStoreConfig {
   markerPath: string;
   /** Canonical knowledge tree the ingest path materialises from. */
   canonicalDir: string;
+  /**
+   * The nOS SELF-MODEL, and the reason it needs its own path.
+   *
+   * `canonicalDir` is git: the seed spine plus the curated domains. The
+   * self-model — the `nos.*` tree describing which services this estate
+   * actually runs — is NOT in git. `roles/pazny.keap` generates it at converge
+   * time with files/anatomy/scripts/keap_selfmodel_gen.py and writes it into the
+   * KEAP container's mounted canonical directory.
+   *
+   * An organ that materialises "from git" therefore composes a tree missing 91
+   * nodes, every one of them under `nos` — measured 2026-07-25 against the live
+   * container (organ 960 ext rows / 1750 descriptions, live 1051 / 1841). That
+   * is most of what anyone validates against: every operand in nOS's 261-case
+   * recall set is a `nos.*` node, so all 261 answered `unknown_operand` — a
+   * well-formed-looking refusal, not a visible missing corpus.
+   *
+   * The generator is a standalone script in this repo, so the organ runs it
+   * itself rather than reaching into the KEAP container's mount: one source, no
+   * shared directory, no dependency on KEAP being deployed.
+   */
+  selfmodelGen: string;
+  selfmodelManifest: string;
+  selfmodelPluginsDir: string;
+  selfmodelDocsRoot: string;
+  /** Where the generator writes; ingested as a second canonical tree. */
+  selfmodelStageDir: string;
+  /** Opt out only for a deliberately spine-only store (the onto1 digest state). */
+  selfmodelEnabled: boolean;
   /** Spine SoT the generated `src/game/data/taxonomy.ts` is rendered from. */
   spineDir: string;
   /** `knowledge/ingest.mjs`, run as a child process (it opens its own handle). */
@@ -169,6 +202,14 @@ export function resolveStoreConfig(env: NodeJS.ProcessEnv = process.env): Cortex
       ? path.resolve(env.CORTEX_CANONICAL_DIR.trim())
       : path.join(knowledge, 'canonical'),
     spineDir: path.join(knowledge, 'spine'),
+    selfmodelGen: env.CORTEX_SELFMODEL_GEN?.trim()
+      ? path.resolve(env.CORTEX_SELFMODEL_GEN.trim())
+      : path.join(NOS_ROOT, 'files', 'anatomy', 'scripts', 'keap_selfmodel_gen.py'),
+    selfmodelManifest: path.join(NOS_ROOT, 'state', 'manifest.yml'),
+    selfmodelPluginsDir: path.join(NOS_ROOT, 'files', 'anatomy', 'plugins'),
+    selfmodelDocsRoot: path.join(NOS_ROOT, 'docs', 'systems'),
+    selfmodelStageDir: path.join(storeDir, 'selfmodel-stage'),
+    selfmodelEnabled: (env.CORTEX_SELFMODEL ?? '1').trim() !== '0',
     ingestScript: path.join(knowledge, 'ingest.mjs'),
     spineRenderScript: path.join(knowledge, 'spine-render.mjs'),
     ann: envAnn(env),

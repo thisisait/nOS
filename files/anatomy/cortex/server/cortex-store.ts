@@ -101,6 +101,11 @@ export interface MaterialiseReport {
   extNodesRegistered: number;
   descriptionOverrides: number;
   ftsRows: number;
+  /** Slug roots present after materialisation — the COVERAGE claim, reported as
+   *  data rather than only logged. The 91-node self-model gap survived a fully
+   *  green P-4 because every gate measured composition and none measured
+   *  coverage; a fact nobody can read is a fact nobody checks. */
+  slugRoots: string[];
 }
 
 export interface StoreFacts {
@@ -327,6 +332,53 @@ export function checkSpineInSync(cfg: CortexStoreConfig): { ok: boolean; output:
  * to exist (its `CREATE TABLE IF NOT EXISTS` guards cover only the marker and
  * relation tables). Against a never-booted file it would die on the first insert.
  */
+/**
+ * Generate the estate's self-model and ingest it as a second canonical tree.
+ *
+ * The generator is `files/anatomy/scripts/keap_selfmodel_gen.py` — the same
+ * script `roles/pazny.keap` runs at converge time, invoked with the same
+ * `--schema slug` contract. Running it here rather than reading the KEAP
+ * container's mounted output keeps ONE source and leaves the organ independent
+ * of whether KEAP is deployed at all.
+ */
+export function runSelfmodel(
+  cfg: CortexStoreConfig,
+  opts: { force?: boolean; log?: (l: string) => void } = {},
+): { generated: boolean; canonicalDir: string; ingest: IngestResult | null } {
+  const log = opts.log ?? ((l: string) => console.log(l));
+  if (!fs.existsSync(cfg.selfmodelGen)) {
+    throw new Error(
+      `self-model generator not found at ${cfg.selfmodelGen}. Set CORTEX_SELFMODEL_GEN, ` +
+        'or CORTEX_SELFMODEL=0 to build a deliberately spine-only store.',
+    );
+  }
+  fs.rmSync(cfg.selfmodelStageDir, { recursive: true, force: true });
+  fs.mkdirSync(cfg.selfmodelStageDir, { recursive: true });
+
+  const gen = spawnSync('python3', [
+    cfg.selfmodelGen,
+    '--schema', 'slug',
+    '--manifest', cfg.selfmodelManifest,
+    '--plugins-dir', cfg.selfmodelPluginsDir,
+    '--docs-root', cfg.selfmodelDocsRoot,
+    '--out', cfg.selfmodelStageDir,
+  ], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+  if (gen.status !== 0) {
+    throw new Error(`self-model generator exited ${gen.status}:\n${(gen.stderr || gen.stdout || '').slice(-4000)}`);
+  }
+
+  const canonicalDir = path.join(cfg.selfmodelStageDir, 'canonical');
+  if (!fs.existsSync(canonicalDir)) {
+    throw new Error(
+      `self-model generator wrote no canonical/ under ${cfg.selfmodelStageDir}. ` +
+        'With --schema slug that directory IS the output; its absence means the run produced nothing.',
+    );
+  }
+  const ingest = runIngest({ ...cfg, canonicalDir }, { force: opts.force, log });
+  log(`[store] self-model: ${ingest.applied.length} domain(s) applied from the generated tree`);
+  return { generated: true, canonicalDir, ingest };
+}
+
 export function runIngest(
   cfg: CortexStoreConfig,
   opts: { force?: boolean; dryRun?: boolean; log?: (l: string) => void } = {},
@@ -397,6 +449,16 @@ export async function openStore(opts: OpenStoreOptions = {}): Promise<StoreHandl
   // ── git materialisation, ingest half (child process, before we read the tree)
   const ingest = opts.materialise ? runIngest(cfg, { force: opts.force, log }) : null;
 
+  // ── the SELF-MODEL half: generated, not git ────────────────────────────────
+  // See cortex-config.ts `selfmodelGen` for why this exists. Two ingests compose
+  // safely: ingest.mjs's stale-domain sweep prunes a slug root only when THAT
+  // root is in the run's own file set, and numeric seed domains are exempt from
+  // it entirely — so the self-model pass cannot prune the git pass's domains,
+  // and vice versa.
+  const selfmodel = opts.materialise && cfg.selfmodelEnabled
+    ? runSelfmodel(cfg, { force: opts.force, log })
+    : null;
+
   // ── git materialisation, boot half ──────────────────────────────────────────
   // Mirrors KEAP's server/index.ts:41-56 exactly, minus the surfaces that did not
   // move: ensureLayout() (U1 star positions, a UI concern) and the corpus FTS
@@ -409,6 +471,29 @@ export async function openStore(opts: OpenStoreOptions = {}): Promise<StoreHandl
   db.rebuildTaxonomyFts(taxonomy.allNodes());
   db.seedRelationTypes();
   db.syncToeRelations();
+
+  // ── coverage assertion ─────────────────────────────────────────────────────
+  // A tree that silently lacks the domain everything references is the "corpus
+  // exhausted" class of lie: every query still answers, and every answer is
+  // `unknown_operand`. That is how the 91 missing self-model nodes went
+  // unnoticed through a full green P-4 — the gates measured composition, not
+  // coverage. So the store states what it covers, and refuses to come up
+  // pretending otherwise.
+  let slugRootIds: string[] = [];
+  if (opts.materialise && cfg.selfmodelEnabled) {
+    const slugRoots = taxonomy
+      .allNodes()
+      .filter((n) => n.parentId === null && /^[a-z][a-z0-9-]*$/.test(n.id));
+    slugRootIds = slugRoots.map((n) => n.id);
+    if (!slugRoots.length) {
+      throw new Error(
+        'materialisation produced NO slug root — the self-model tree is absent. Every `nos.*` operand ' +
+          'would resolve to unknown_operand, which reads as a well-formed refusal rather than a missing ' +
+          'corpus. Set CORTEX_SELFMODEL=0 only if a spine-only store is what you meant.',
+      );
+    }
+    log(`[store] coverage: slug root(s) ${slugRoots.map((n) => n.id).join(', ')}`);
+  }
 
   const ftsRows = db.countRows('taxonomy_fts');
   log(
@@ -438,6 +523,7 @@ export async function openStore(opts: OpenStoreOptions = {}): Promise<StoreHandl
       extNodesRegistered: extRows.length,
       descriptionOverrides: descRows.length,
       ftsRows,
+      slugRoots: slugRootIds,
     },
     facts: storeFacts(cfg, db, taxonomy, ontologyVersion, ann),
   };
