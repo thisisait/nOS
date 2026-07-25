@@ -251,6 +251,18 @@
          - regenerates exactly 7 keys: infisical_encryption_key,
            infisical_auth_secret, outline_secret_key, firefly_app_key,
            bookstack_app_key, onlyoffice_jwt_secret, influxdb_admin_token.
+      {% if install_keap | default(false) %}
+         - KEAP captures — UNVERSIONED user data (keap.db rows) at
+           {{ keap_data_dir | default(nos_data_root + '/platform/services/keap/data') }} — WILL be wiped.
+      {% if (restic_repo | default('')) | length > 0 %}
+             a FRESH off-site restic snapshot is taken BEFORE the wipe (the
+             survivor); restore after reinstall via --tags restore.
+      {% else %}
+             ⚠ restic_repo is UNSET — NO off-site survivor. These captures are
+             PERMANENTLY LOST on this removal (copy #1 in RustFS is wiped too).
+             Set restic_repo + configure_backup first, or use remove=none.
+      {% endif %}
+      {% endif %}
       {% if not nos_leaving %}
            bluesky_pds_rotation_key + authentik_secret_key (and the whole
            persist-and-reuse group) SURVIVE — loaded before deletion,

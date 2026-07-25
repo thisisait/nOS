@@ -1,0 +1,110 @@
+---
+# ==============================================================================
+# PRE-WIPE OFF-SITE SNAPSHOT — Part B: survive-the-wipe (survivor of a removal).
+# ------------------------------------------------------------------------------
+# Imported from main.yml on a CONFIRMED removal, AFTER run-mode's dry-run
+# end_play (so it is confirmed-only by construction) and BEFORE blank-reset's
+# delete loop. KEAP captures are keap.db ROWS — no on-disk blobs (verified
+# 2026-07-25 against the live store: /data holds only keap.db + WAL). The daily
+# keap.db dump lands in copy #1 (the RustFS bucket), which remove=data ALSO
+# wipes — so the ONLY survivor is the off-site restic repo. This refreshes
+# copy #1 and takes an IMMEDIATE SYNCHRONOUS off-site snapshot so the repo holds
+# the captures as of the wipe moment, not last night's 04:00 cron.
+#
+# Gated (main.yml) on install_keap + restic_repo set — operator choice
+# 2026-07-25: add-when-repo-set + loud-warn-only, NEVER block a confirmed wipe.
+# FAIL-SOFT throughout: a backup hiccup never aborts the removal; the loud
+# summary + blank-reset's interactive pause are the abort backstop. restic is
+# invoked SYNCHRONOUSLY (not backrest's async plan API) so the snapshot cannot
+# race the wipe deleting copy #1. Password rides RESTIC_PASSWORD (env, no_log),
+# never argv.
+# ==============================================================================
+
+- name: "[Pre-wipe] Stat backup.sh (rendered by a prior converge)"
+  ansible.builtin.stat:
+    path: "{{ ansible_facts['env']['HOME'] }}/.nos/backup.sh"
+  register: _prewipe_backup_sh
+  tags: ['blank', 'reset']
+
+- name: "[Pre-wipe] Refresh copy #1 (full backup → RustFS bucket) before the wipe"
+  ansible.builtin.command: "{{ ansible_facts['env']['HOME'] }}/.nos/backup.sh"
+  register: _prewipe_copy1
+  changed_when: false
+  failed_when: false
+  when: _prewipe_backup_sh.stat.exists
+  tags: ['blank', 'reset']
+
+- name: "[Pre-wipe] Probe restic (synchronous off-site — no async race with the wipe)"
+  ansible.builtin.command: restic version
+  register: _prewipe_restic
+  changed_when: false
+  failed_when: false
+  tags: ['blank', 'reset']
+
+- name: "[Pre-wipe] Ensure the off-site repo exists (probe config)"
+  ansible.builtin.command: "restic -r {{ restic_repo }} cat config"
+  register: _prewipe_repo_ok
+  changed_when: false
+  failed_when: false
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+  when: (_prewipe_restic.rc | default(1)) == 0
+  no_log: true
+  tags: ['blank', 'reset']
+
+- name: "[Pre-wipe] Initialize the off-site repo (first pre-wipe snapshot only)"
+  ansible.builtin.command: "restic -r {{ restic_repo }} init"
+  register: _prewipe_init
+  changed_when: true
+  failed_when: false
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+  when:
+    - (_prewipe_restic.rc | default(1)) == 0
+    - (_prewipe_repo_ok.rc | default(1)) != 0
+  no_log: true
+  tags: ['blank', 'reset']
+
+- name: "[Pre-wipe] SYNCHRONOUS off-site snapshot of copy #1 (survives the wipe)"
+  ansible.builtin.command: >-
+    restic -r {{ restic_repo }} backup
+    {{ rustfs_data_dir | default(ansible_facts['env']['HOME'] + '/rustfs') }}
+    --tag pre-wipe --tag remove-{{ remove }}
+  register: _prewipe_snapshot
+  changed_when: "'snapshot' in (_prewipe_snapshot.stdout | default(''))"
+  failed_when: false
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+  when: (_prewipe_restic.rc | default(1)) == 0
+  no_log: true
+  tags: ['blank', 'reset']
+
+# LOUD summary — this snapshot IS the survivor of the wipe. rc-only refs (no
+# secret content); the blank-reset interactive pause after this is the Ctrl-C
+# backstop if the snapshot failed.
+- name: "[Pre-wipe] Off-site snapshot outcome (the survivor of this removal)"
+  ansible.builtin.debug:
+    msg: |-
+      ── PRE-WIPE OFF-SITE SNAPSHOT ─────────────────────────────────────────
+      KEAP captures are keap.db rows; the dump lands in copy #1 (RustFS), which
+      remove={{ remove }} WIPES. The off-site restic repo is the survivor.
+      {% if not _prewipe_backup_sh.stat.exists %}
+      ⚠ backup.sh not yet rendered (first run) — copy #1 NOT refreshed.
+      {% elif (_prewipe_copy1.rc | default(1)) != 0 %}
+      ⚠ backup.sh returned non-zero — copy #1 may be stale (see ~/.nos/backup.log).
+      {% else %}
+      ✓ copy #1 refreshed (full backup → RustFS bucket).
+      {% endif %}
+      {% if (_prewipe_restic.rc | default(1)) != 0 %}
+      ⚠ restic NOT on PATH — NO synchronous off-site snapshot taken. The captures
+        survive ONLY if backrest's scheduled off-site run already carried them.
+      {% elif (_prewipe_snapshot.rc | default(1)) == 0 %}
+      ✓ off-site snapshot committed to the restic repo (tag pre-wipe). Restore
+        after reinstall: ansible-playbook main.yml --tags restore -e restore_date=<date>
+      {% else %}
+      ⚠ off-site snapshot FAILED (rc={{ _prewipe_snapshot.rc | default('?') }}).
+        Captures may exist ONLY in the about-to-be-wiped copy #1. If you need
+        them, ABORT at the next interactive pause (Ctrl-C).
+      {% endif %}
+      ───────────────────────────────────────────────────────────────────────
+  tags: ['blank', 'reset']

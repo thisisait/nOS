@@ -1140,6 +1140,18 @@
       when: _prefix_changed | bool
       tags: ['always']
 
+    # Part B (survive-the-wipe): a CONFIRMED keap-inclusive removal takes a
+    # FRESH synchronous off-site restic snapshot BEFORE blank-reset deletes
+    # copy #1. Confirmed-only by construction (run-mode's dry-run end_play
+    # already fired). Off-site only (restic_repo set); fail-soft, never blocks.
+    # Operator choice 2026-07-25 (loud-warn-only + add-when-repo-set).
+    - import_tasks: tasks/pre-wipe-backup.yml
+      when:
+        - nos_removing | default(false) | bool
+        - install_keap | default(false) | bool
+        - (restic_repo | default('')) | length > 0
+      tags: ['blank', 'reset']
+
     - import_tasks: tasks/blank-reset.yml
       when: blank | default(false) | bool
       tags: ['blank', 'reset']
