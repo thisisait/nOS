@@ -1,0 +1,6 @@
+node_modules/
+/dist-server
+/data
+.env
+.env.*
+!.env.example

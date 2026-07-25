@@ -1,0 +1,19 @@
+{
+	"//": "Lifted from KEAP v1.27.0 tsconfig.server.json. Typechecks the vendored cortex port (server/ + shared/ + the taxonomy dataset it compiles in). Emit is done by esbuild (npm run build) into dist-server/index.js; this config is noEmit on purpose. Keep the compilerOptions byte-identical to KEAP's — a divergence here (e.g. relaxing `strict`) means the two repos typecheck the SAME source differently, which is the drift class the port exists to prevent.",
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"noEmit": true,
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"types": ["node"]
+	},
+	"include": [
+		"server/**/*.ts",
+		"shared/**/*.ts",
+		"src/game/data/taxonomy.ts",
+		"src/game/types/taxonomy.ts"
+	]
+}

@@ -1,0 +1,72 @@
+{
+ "key": "10_cultural_preservation",
+ "category": {
+  "name": "Cultural Preservation",
+  "id": "10",
+  "description": "Human culture and heritage",
+  "subcategories": {
+   "01_languages": {
+    "name": "Languages",
+    "id": "10.01",
+    "subcategories": {
+     "01_dictionaries": {
+      "name": "Language Dictionaries",
+      "id": "10.01.01"
+     },
+     "02_grammars": {
+      "name": "Grammars",
+      "id": "10.01.02"
+     },
+     "03_endangered_languages": {
+      "name": "Endangered Languages",
+      "id": "10.01.03"
+     },
+     "04_sign_languages": {
+      "name": "Sign Languages",
+      "id": "10.01.04"
+     },
+     "05_translation_resources": {
+      "name": "Translation Resources",
+      "id": "10.01.05"
+     }
+    }
+   },
+   "02_folklore": {
+    "name": "Folklore & Mythology",
+    "id": "10.02"
+   },
+   "03_traditions": {
+    "name": "Traditions & Customs",
+    "id": "10.03"
+   },
+   "04_recipes": {
+    "name": "Traditional Recipes",
+    "id": "10.04"
+   },
+   "05_music_notation": {
+    "name": "Music & Songs",
+    "id": "10.05"
+   },
+   "06_stories": {
+    "name": "Stories & Narratives",
+    "id": "10.06"
+   },
+   "07_games": {
+    "name": "Games & Recreation",
+    "id": "10.07"
+   },
+   "08_rituals": {
+    "name": "Rituals & Ceremonies",
+    "id": "10.08"
+   },
+   "09_art_techniques": {
+    "name": "Traditional Art Techniques",
+    "id": "10.09"
+   },
+   "10_oral_histories": {
+    "name": "Oral Histories",
+    "id": "10.10"
+   }
+  }
+ }
+}

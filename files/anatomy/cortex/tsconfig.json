@@ -1,0 +1,5 @@
+{
+	"//": "Root tsconfig — the organ has exactly one program (the server). KEAP's root tsconfig is a solution file referencing app/node/extension projects that do not exist here, so this one just points at the server project.",
+	"files": [],
+	"references": [{ "path": "./tsconfig.server.json" }]
+}

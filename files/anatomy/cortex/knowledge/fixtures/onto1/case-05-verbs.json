@@ -1,0 +1,96 @@
+{
+ "why": "Vocabulary half: 'proposed' is excluded (any RW bearer can plant one), 'seed' and 'confirmed' are included, and both the status and the LABEL are recorded — a label edit is resolution-affecting because resolveVerb matches the bracket term against it.",
+ "spine": [
+  {
+   "key": "01_alpha",
+   "category": {
+    "name": "Alpha",
+    "id": "01",
+    "description": "d",
+    "subcategories": {
+     "a": {
+      "name": "Ay",
+      "id": "01.01",
+      "items": [
+       {
+        "id": "01.01.01",
+        "name": "One"
+       },
+       {
+        "id": "01.01.10",
+        "name": "Ten"
+       }
+      ]
+     },
+     "b": {
+      "name": "Bee",
+      "id": "01.02",
+      "subcategories": {
+       "c": {
+        "name": "Cee",
+        "id": "01.02.01",
+        "items": []
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "key": "02_beta",
+   "category": {
+    "name": "Beta",
+    "id": "02",
+    "description": "d",
+    "subcategories": {
+     "a": {
+      "name": "Zed",
+      "id": "02.01",
+      "items": []
+     }
+    }
+   }
+  }
+ ],
+ "ext": [],
+ "relationTypes": [
+  {
+   "type": "zeta",
+   "status": "seed",
+   "label": "zeta"
+  },
+  {
+   "type": "Alpha",
+   "status": "confirmed",
+   "label": "Alpha cap"
+  },
+  {
+   "type": "alpha",
+   "status": "seed",
+   "label": "alpha low"
+  },
+  {
+   "type": "ghost",
+   "status": "proposed",
+   "label": "ghost"
+  }
+ ],
+ "expected": {
+  "nodeCount": 8,
+  "dropped": [],
+  "onto1": "onto1:b5d1cc147e8cbf0e",
+  "canonical": [
+   "t\t01\t-\tAlpha",
+   "t\t01.01\t01\tAy",
+   "t\t01.01.01\t01.01\tOne",
+   "t\t01.01.10\t01.01\tTen",
+   "t\t01.02\t01\tBee",
+   "t\t01.02.01\t01.02\tCee",
+   "t\t02\t-\tBeta",
+   "t\t02.01\t02\tZed",
+   "r\tAlpha\tconfirmed\tAlpha cap",
+   "r\talpha\tseed\talpha low",
+   "r\tzeta\tseed\tzeta"
+  ]
+ }
+}

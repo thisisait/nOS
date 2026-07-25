@@ -1,0 +1,250 @@
+{
+ "key": "06_arts",
+ "category": {
+  "name": "Arts & Creative Expression",
+  "id": "06",
+  "description": "Creative and performing arts",
+  "subcategories": {
+   "01_visual_arts": {
+    "name": "Visual Arts",
+    "id": "06.01",
+    "subcategories": {
+     "01_painting": {
+      "name": "Painting",
+      "id": "06.01.01",
+      "subcategories": {
+       "01_techniques": {
+        "name": "Painting Techniques",
+        "id": "06.01.01.01",
+        "items": [
+         {
+          "id": "06.01.01.01.01",
+          "name": "Oil painting"
+         },
+         {
+          "id": "06.01.01.01.02",
+          "name": "Watercolor"
+         },
+         {
+          "id": "06.01.01.01.03",
+          "name": "Acrylic"
+         },
+         {
+          "id": "06.01.01.01.04",
+          "name": "Fresco"
+         },
+         {
+          "id": "06.01.01.01.05",
+          "name": "Tempera"
+         }
+        ]
+       },
+       "02_styles": {
+        "name": "Art Movements",
+        "id": "06.01.01.02"
+       },
+       "03_color_theory": {
+        "name": "Color Theory",
+        "id": "06.01.01.03"
+       },
+       "04_composition": {
+        "name": "Composition",
+        "id": "06.01.01.04"
+       },
+       "05_restoration": {
+        "name": "Art Restoration",
+        "id": "06.01.01.05"
+       }
+      }
+     },
+     "02_sculpture": {
+      "name": "Sculpture",
+      "id": "06.01.02",
+      "subcategories": {
+       "01_materials": {
+        "name": "Sculpting Materials",
+        "id": "06.01.02.01"
+       },
+       "02_techniques": {
+        "name": "Sculpting Techniques",
+        "id": "06.01.02.02"
+       },
+       "03_casting": {
+        "name": "Casting Methods",
+        "id": "06.01.02.03"
+       },
+       "04_carving": {
+        "name": "Carving",
+        "id": "06.01.02.04"
+       },
+       "05_installation": {
+        "name": "Installation Art",
+        "id": "06.01.02.05"
+       }
+      }
+     },
+     "03_photography": {
+      "name": "Photography",
+      "id": "06.01.03",
+      "subcategories": {
+       "01_camera_basics": {
+        "name": "Camera Fundamentals",
+        "id": "06.01.03.01"
+       },
+       "02_composition": {
+        "name": "Photographic Composition",
+        "id": "06.01.03.02"
+       },
+       "03_lighting": {
+        "name": "Lighting Techniques",
+        "id": "06.01.03.03"
+       },
+       "04_darkroom": {
+        "name": "Darkroom Processes",
+        "id": "06.01.03.04"
+       },
+       "05_digital_processing": {
+        "name": "Digital Processing",
+        "id": "06.01.03.05"
+       }
+      }
+     },
+     "04_digital_art": {
+      "name": "Digital Art",
+      "id": "06.01.04"
+     },
+     "05_printmaking": {
+      "name": "Printmaking",
+      "id": "06.01.05"
+     }
+    }
+   },
+   "02_performing_arts": {
+    "name": "Performing Arts",
+    "id": "06.02",
+    "subcategories": {
+     "01_music": {
+      "name": "Music",
+      "id": "06.02.01",
+      "subcategories": {
+       "01_theory": {
+        "name": "Music Theory",
+        "id": "06.02.01.01",
+        "items": [
+         {
+          "id": "06.02.01.01.01",
+          "name": "Notation"
+         },
+         {
+          "id": "06.02.01.01.02",
+          "name": "Harmony"
+         },
+         {
+          "id": "06.02.01.01.03",
+          "name": "Rhythm"
+         },
+         {
+          "id": "06.02.01.01.04",
+          "name": "Scales and modes"
+         },
+         {
+          "id": "06.02.01.01.05",
+          "name": "Counterpoint"
+         }
+        ]
+       },
+       "02_instruments": {
+        "name": "Musical Instruments",
+        "id": "06.02.01.02"
+       },
+       "03_composition": {
+        "name": "Composition",
+        "id": "06.02.01.03"
+       },
+       "04_performance": {
+        "name": "Performance",
+        "id": "06.02.01.04"
+       },
+       "05_recording": {
+        "name": "Recording Technology",
+        "id": "06.02.01.05"
+       }
+      }
+     },
+     "02_dance": {
+      "name": "Dance",
+      "id": "06.02.02"
+     },
+     "03_theater": {
+      "name": "Theater",
+      "id": "06.02.03"
+     },
+     "04_film": {
+      "name": "Film",
+      "id": "06.02.04"
+     },
+     "05_opera": {
+      "name": "Opera",
+      "id": "06.02.05"
+     }
+    }
+   },
+   "03_design": {
+    "name": "Design",
+    "id": "06.03",
+    "subcategories": {
+     "01_graphic_design": {
+      "name": "Graphic Design",
+      "id": "06.03.01"
+     },
+     "02_industrial_design": {
+      "name": "Industrial Design",
+      "id": "06.03.02"
+     },
+     "03_fashion_design": {
+      "name": "Fashion Design",
+      "id": "06.03.03"
+     },
+     "04_interior_design": {
+      "name": "Interior Design",
+      "id": "06.03.04"
+     },
+     "05_ux_design": {
+      "name": "UX/UI Design",
+      "id": "06.03.05"
+     }
+    }
+   },
+   "04_crafts": {
+    "name": "Crafts",
+    "id": "06.04",
+    "subcategories": {
+     "01_pottery": {
+      "name": "Pottery & Ceramics",
+      "id": "06.04.01"
+     },
+     "02_weaving": {
+      "name": "Weaving & Textiles",
+      "id": "06.04.02"
+     },
+     "03_jewelry": {
+      "name": "Jewelry Making",
+      "id": "06.04.03"
+     },
+     "04_glasswork": {
+      "name": "Glassworking",
+      "id": "06.04.04"
+     },
+     "05_bookbinding": {
+      "name": "Bookbinding",
+      "id": "06.04.05"
+     }
+    }
+   },
+   "05_culinary_arts": {
+    "name": "Culinary Arts",
+    "id": "06.05"
+   }
+  }
+ }
+}

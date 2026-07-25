@@ -1,0 +1,122 @@
+{
+ "why": "Three rows that must NOT register: a missing parent, a parentless row outside the slug shape, and a parentless row whose id is a seed-style numeral. One valid slug root must.",
+ "spine": [
+  {
+   "key": "01_alpha",
+   "category": {
+    "name": "Alpha",
+    "id": "01",
+    "description": "d",
+    "subcategories": {
+     "a": {
+      "name": "Ay",
+      "id": "01.01",
+      "items": [
+       {
+        "id": "01.01.01",
+        "name": "One"
+       },
+       {
+        "id": "01.01.10",
+        "name": "Ten"
+       }
+      ]
+     },
+     "b": {
+      "name": "Bee",
+      "id": "01.02",
+      "subcategories": {
+       "c": {
+        "name": "Cee",
+        "id": "01.02.01",
+        "items": []
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "key": "02_beta",
+   "category": {
+    "name": "Beta",
+    "id": "02",
+    "description": "d",
+    "subcategories": {
+     "a": {
+      "name": "Zed",
+      "id": "02.01",
+      "items": []
+     }
+    }
+   }
+  }
+ ],
+ "ext": [
+  {
+   "id": "01.09.09",
+   "parentId": "01.09",
+   "name": "Parent never resolves"
+  },
+  {
+   "id": "Not_A_Slug",
+   "parentId": "",
+   "name": "Bad root shape"
+  },
+  {
+   "id": "03",
+   "parentId": "",
+   "name": "Numeric pseudo-root"
+  },
+  {
+   "id": "law-cz",
+   "parentId": "",
+   "name": "Czech law"
+  }
+ ],
+ "relationTypes": [
+  {
+   "type": "exemplifies",
+   "status": "seed",
+   "label": "exemplifies"
+  },
+  {
+   "type": "requires",
+   "status": "seed",
+   "label": "requires"
+  },
+  {
+   "type": "interprets",
+   "status": "confirmed",
+   "label": "interprets"
+  },
+  {
+   "type": "invented",
+   "status": "proposed",
+   "label": "invented"
+  }
+ ],
+ "expected": {
+  "nodeCount": 9,
+  "dropped": [
+   "01.09.09",
+   "Not_A_Slug",
+   "03"
+  ],
+  "onto1": "onto1:595e1cf3657bbcba",
+  "canonical": [
+   "t\t01\t-\tAlpha",
+   "t\t01.01\t01\tAy",
+   "t\t01.01.01\t01.01\tOne",
+   "t\t01.01.10\t01.01\tTen",
+   "t\t01.02\t01\tBee",
+   "t\t01.02.01\t01.02\tCee",
+   "t\t02\t-\tBeta",
+   "t\t02.01\t02\tZed",
+   "t\tlaw-cz\t-\tCzech law",
+   "r\texemplifies\tseed\texemplifies",
+   "r\tinterprets\tconfirmed\tinterprets",
+   "r\trequires\tseed\trequires"
+  ]
+ }
+}

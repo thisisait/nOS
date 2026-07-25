@@ -1,0 +1,920 @@
+{
+ "key": "03_applied_sciences",
+ "category": {
+  "name": "Applied Sciences & Technology",
+  "id": "03",
+  "description": "Practical applications of knowledge",
+  "subcategories": {
+   "01_engineering": {
+    "name": "Engineering",
+    "id": "03.01",
+    "subcategories": {
+     "01_civil_engineering": {
+      "name": "Civil Engineering",
+      "id": "03.01.01",
+      "subcategories": {
+       "01_structural": {
+        "name": "Structural Engineering",
+        "id": "03.01.01.01",
+        "subcategories": {
+         "01_load_analysis": {
+          "name": "Load Analysis",
+          "id": "03.01.01.01.01",
+          "items": [
+           {
+            "id": "03.01.01.01.01.01",
+            "name": "Dead loads"
+           },
+           {
+            "id": "03.01.01.01.01.02",
+            "name": "Live loads"
+           },
+           {
+            "id": "03.01.01.01.01.03",
+            "name": "Wind loads"
+           },
+           {
+            "id": "03.01.01.01.01.04",
+            "name": "Seismic loads"
+           },
+           {
+            "id": "03.01.01.01.01.05",
+            "name": "Load combinations"
+           }
+          ]
+         },
+         "02_materials": {
+          "name": "Construction Materials",
+          "id": "03.01.01.01.02"
+         },
+         "03_foundations": {
+          "name": "Foundation Design",
+          "id": "03.01.01.01.03"
+         },
+         "04_bridges": {
+          "name": "Bridge Engineering",
+          "id": "03.01.01.01.04"
+         },
+         "05_tall_buildings": {
+          "name": "High-rise Design",
+          "id": "03.01.01.01.05"
+         }
+        }
+       },
+       "02_transportation": {
+        "name": "Transportation Engineering",
+        "id": "03.01.01.02",
+        "subcategories": {
+         "01_roads": {
+          "name": "Road Design",
+          "id": "03.01.01.02.01"
+         },
+         "02_railways": {
+          "name": "Railway Engineering",
+          "id": "03.01.01.02.02"
+         },
+         "03_airports": {
+          "name": "Airport Design",
+          "id": "03.01.01.02.03"
+         },
+         "04_traffic": {
+          "name": "Traffic Engineering",
+          "id": "03.01.01.02.04"
+         },
+         "05_pavements": {
+          "name": "Pavement Design",
+          "id": "03.01.01.02.05"
+         }
+        }
+       },
+       "03_water_resources": {
+        "name": "Water Resources",
+        "id": "03.01.01.03"
+       },
+       "04_geotechnical": {
+        "name": "Geotechnical Engineering",
+        "id": "03.01.01.04"
+       },
+       "05_environmental": {
+        "name": "Environmental Engineering",
+        "id": "03.01.01.05"
+       }
+      }
+     },
+     "02_mechanical_engineering": {
+      "name": "Mechanical Engineering",
+      "id": "03.01.02",
+      "subcategories": {
+       "01_thermodynamics": {
+        "name": "Applied Thermodynamics",
+        "id": "03.01.02.01"
+       },
+       "02_fluid_mechanics": {
+        "name": "Fluid Mechanics",
+        "id": "03.01.02.02"
+       },
+       "03_machine_design": {
+        "name": "Machine Design",
+        "id": "03.01.02.03"
+       },
+       "04_manufacturing": {
+        "name": "Manufacturing Processes",
+        "id": "03.01.02.04"
+       },
+       "05_robotics": {
+        "name": "Robotics",
+        "id": "03.01.02.05"
+       }
+      }
+     },
+     "03_electrical_engineering": {
+      "name": "Electrical Engineering",
+      "id": "03.01.03",
+      "subcategories": {
+       "01_power_systems": {
+        "name": "Power Systems",
+        "id": "03.01.03.01",
+        "subcategories": {
+         "01_generation": {
+          "name": "Power Generation",
+          "id": "03.01.03.01.01"
+         },
+         "02_transmission": {
+          "name": "Power Transmission",
+          "id": "03.01.03.01.02"
+         },
+         "03_distribution": {
+          "name": "Power Distribution",
+          "id": "03.01.03.01.03"
+         },
+         "04_protection": {
+          "name": "System Protection",
+          "id": "03.01.03.01.04"
+         },
+         "05_smart_grids": {
+          "name": "Smart Grids",
+          "id": "03.01.03.01.05"
+         }
+        }
+       },
+       "02_electronics": {
+        "name": "Electronics Engineering",
+        "id": "03.01.03.02"
+       },
+       "03_control_systems": {
+        "name": "Control Systems",
+        "id": "03.01.03.03"
+       },
+       "04_telecommunications": {
+        "name": "Telecommunications",
+        "id": "03.01.03.04"
+       },
+       "05_signal_processing": {
+        "name": "Signal Processing",
+        "id": "03.01.03.05"
+       }
+      }
+     },
+     "04_chemical_engineering": {
+      "name": "Chemical Engineering",
+      "id": "03.01.04",
+      "subcategories": {
+       "01_process_design": {
+        "name": "Process Design",
+        "id": "03.01.04.01"
+       },
+       "02_reaction_engineering": {
+        "name": "Reaction Engineering",
+        "id": "03.01.04.02"
+       },
+       "03_separation_processes": {
+        "name": "Separation Processes",
+        "id": "03.01.04.03"
+       },
+       "04_process_control": {
+        "name": "Process Control",
+        "id": "03.01.04.04"
+       },
+       "05_safety": {
+        "name": "Process Safety",
+        "id": "03.01.04.05"
+       }
+      }
+     },
+     "05_aerospace_engineering": {
+      "name": "Aerospace Engineering",
+      "id": "03.01.05"
+     },
+     "06_biomedical_engineering": {
+      "name": "Biomedical Engineering",
+      "id": "03.01.06"
+     },
+     "07_environmental_engineering": {
+      "name": "Environmental Engineering",
+      "id": "03.01.07"
+     },
+     "08_materials_engineering": {
+      "name": "Materials Engineering",
+      "id": "03.01.08"
+     },
+     "09_nuclear_engineering": {
+      "name": "Nuclear Engineering",
+      "id": "03.01.09"
+     },
+     "10_software_engineering": {
+      "name": "Software Engineering",
+      "id": "03.01.10"
+     }
+    }
+   },
+   "02_medicine": {
+    "name": "Medicine",
+    "id": "03.02",
+    "subcategories": {
+     "01_anatomy": {
+      "name": "Anatomy",
+      "id": "03.02.01",
+      "subcategories": {
+       "01_skeletal_system": {
+        "name": "Skeletal System",
+        "id": "03.02.01.01"
+       },
+       "02_muscular_system": {
+        "name": "Muscular System",
+        "id": "03.02.01.02"
+       },
+       "03_nervous_system": {
+        "name": "Nervous System",
+        "id": "03.02.01.03"
+       },
+       "04_cardiovascular": {
+        "name": "Cardiovascular System",
+        "id": "03.02.01.04"
+       },
+       "05_respiratory": {
+        "name": "Respiratory System",
+        "id": "03.02.01.05"
+       }
+      }
+     },
+     "02_physiology": {
+      "name": "Physiology",
+      "id": "03.02.02",
+      "subcategories": {
+       "01_cellular": {
+        "name": "Cellular Physiology",
+        "id": "03.02.02.01"
+       },
+       "02_organ_systems": {
+        "name": "Organ Systems",
+        "id": "03.02.02.02"
+       },
+       "03_homeostasis": {
+        "name": "Homeostasis",
+        "id": "03.02.02.03"
+       },
+       "04_metabolism": {
+        "name": "Metabolism",
+        "id": "03.02.02.04"
+       },
+       "05_endocrinology": {
+        "name": "Endocrinology",
+        "id": "03.02.02.05"
+       }
+      }
+     },
+     "03_pathology": {
+      "name": "Pathology",
+      "id": "03.02.03",
+      "subcategories": {
+       "01_infectious_diseases": {
+        "name": "Infectious Diseases",
+        "id": "03.02.03.01"
+       },
+       "02_genetic_disorders": {
+        "name": "Genetic Disorders",
+        "id": "03.02.03.02"
+       },
+       "03_cancer": {
+        "name": "Oncology",
+        "id": "03.02.03.03"
+       },
+       "04_autoimmune": {
+        "name": "Autoimmune Diseases",
+        "id": "03.02.03.04"
+       },
+       "05_degenerative": {
+        "name": "Degenerative Diseases",
+        "id": "03.02.03.05"
+       }
+      }
+     },
+     "04_pharmacology": {
+      "name": "Pharmacology",
+      "id": "03.02.04",
+      "subcategories": {
+       "01_antibiotics": {
+        "name": "Antibiotics",
+        "id": "03.02.04.01"
+       },
+       "02_analgesics": {
+        "name": "Pain Management",
+        "id": "03.02.04.02"
+       },
+       "03_cardiovascular_drugs": {
+        "name": "Cardiovascular Drugs",
+        "id": "03.02.04.03"
+       },
+       "04_psychotropics": {
+        "name": "Psychotropic Medications",
+        "id": "03.02.04.04"
+       },
+       "05_drug_production": {
+        "name": "Pharmaceutical Production",
+        "id": "03.02.04.05"
+       }
+      }
+     },
+     "05_clinical_medicine": {
+      "name": "Clinical Medicine",
+      "id": "03.02.05",
+      "subcategories": {
+       "01_diagnosis": {
+        "name": "Diagnostic Methods",
+        "id": "03.02.05.01"
+       },
+       "02_treatment_protocols": {
+        "name": "Treatment Protocols",
+        "id": "03.02.05.02"
+       },
+       "03_patient_care": {
+        "name": "Patient Care",
+        "id": "03.02.05.03"
+       },
+       "04_medical_procedures": {
+        "name": "Medical Procedures",
+        "id": "03.02.05.04"
+       },
+       "05_documentation": {
+        "name": "Medical Documentation",
+        "id": "03.02.05.05"
+       }
+      }
+     },
+     "06_surgery": {
+      "name": "Surgery",
+      "id": "03.02.06",
+      "subcategories": {
+       "01_general_surgery": {
+        "name": "General Surgery",
+        "id": "03.02.06.01"
+       },
+       "02_emergency_surgery": {
+        "name": "Emergency Surgery",
+        "id": "03.02.06.02"
+       },
+       "03_anesthesia": {
+        "name": "Anesthesia",
+        "id": "03.02.06.03"
+       },
+       "04_surgical_techniques": {
+        "name": "Surgical Techniques",
+        "id": "03.02.06.04"
+       },
+       "05_post_operative": {
+        "name": "Post-operative Care",
+        "id": "03.02.06.05"
+       }
+      }
+     },
+     "07_psychiatry": {
+      "name": "Psychiatry",
+      "id": "03.02.07"
+     },
+     "08_pediatrics": {
+      "name": "Pediatrics",
+      "id": "03.02.08"
+     },
+     "09_emergency_medicine": {
+      "name": "Emergency Medicine",
+      "id": "03.02.09"
+     },
+     "10_preventive_medicine": {
+      "name": "Preventive Medicine",
+      "id": "03.02.10"
+     }
+    }
+   },
+   "03_agriculture": {
+    "name": "Agriculture",
+    "id": "03.03",
+    "subcategories": {
+     "01_crop_science": {
+      "name": "Crop Science",
+      "id": "03.03.01",
+      "subcategories": {
+       "01_grains": {
+        "name": "Grain Crops",
+        "id": "03.03.01.01",
+        "items": [
+         {
+          "id": "03.03.01.01.01",
+          "name": "Wheat cultivation"
+         },
+         {
+          "id": "03.03.01.01.02",
+          "name": "Rice farming"
+         },
+         {
+          "id": "03.03.01.01.03",
+          "name": "Corn/Maize"
+         },
+         {
+          "id": "03.03.01.01.04",
+          "name": "Barley"
+         },
+         {
+          "id": "03.03.01.01.05",
+          "name": "Oats"
+         }
+        ]
+       },
+       "02_vegetables": {
+        "name": "Vegetable Farming",
+        "id": "03.03.01.02"
+       },
+       "03_fruits": {
+        "name": "Fruit Cultivation",
+        "id": "03.03.01.03"
+       },
+       "04_legumes": {
+        "name": "Legumes",
+        "id": "03.03.01.04"
+       },
+       "05_herbs_spices": {
+        "name": "Herbs & Spices",
+        "id": "03.03.01.05"
+       }
+      }
+     },
+     "02_animal_husbandry": {
+      "name": "Animal Husbandry",
+      "id": "03.03.02",
+      "subcategories": {
+       "01_cattle": {
+        "name": "Cattle Farming",
+        "id": "03.03.02.01"
+       },
+       "02_poultry": {
+        "name": "Poultry Farming",
+        "id": "03.03.02.02"
+       },
+       "03_sheep_goats": {
+        "name": "Sheep & Goats",
+        "id": "03.03.02.03"
+       },
+       "04_pigs": {
+        "name": "Pig Farming",
+        "id": "03.03.02.04"
+       },
+       "05_beekeeping": {
+        "name": "Beekeeping",
+        "id": "03.03.02.05"
+       }
+      }
+     },
+     "03_soil_science": {
+      "name": "Soil Science",
+      "id": "03.03.03",
+      "subcategories": {
+       "01_soil_types": {
+        "name": "Soil Types",
+        "id": "03.03.03.01"
+       },
+       "02_fertilizers": {
+        "name": "Fertilizers",
+        "id": "03.03.03.02"
+       },
+       "03_composting": {
+        "name": "Composting",
+        "id": "03.03.03.03"
+       },
+       "04_erosion_control": {
+        "name": "Erosion Control",
+        "id": "03.03.03.04"
+       },
+       "05_ph_management": {
+        "name": "pH Management",
+        "id": "03.03.03.05"
+       }
+      }
+     },
+     "04_horticulture": {
+      "name": "Horticulture",
+      "id": "03.03.04"
+     },
+     "05_aquaculture": {
+      "name": "Aquaculture",
+      "id": "03.03.05"
+     },
+     "06_forestry": {
+      "name": "Forestry",
+      "id": "03.03.06"
+     },
+     "07_agricultural_engineering": {
+      "name": "Agricultural Engineering",
+      "id": "03.03.07"
+     },
+     "08_permaculture": {
+      "name": "Permaculture",
+      "id": "03.03.08"
+     },
+     "09_hydroponics": {
+      "name": "Hydroponics",
+      "id": "03.03.09"
+     },
+     "10_organic_farming": {
+      "name": "Organic Farming",
+      "id": "03.03.10"
+     }
+    }
+   },
+   "04_architecture": {
+    "name": "Architecture",
+    "id": "03.04"
+   },
+   "05_manufacturing": {
+    "name": "Manufacturing",
+    "id": "03.05",
+    "subcategories": {
+     "01_metalworking": {
+      "name": "Metalworking",
+      "id": "03.05.01",
+      "subcategories": {
+       "01_casting": {
+        "name": "Metal Casting",
+        "id": "03.05.01.01",
+        "items": [
+         {
+          "id": "03.05.01.01.01",
+          "name": "Sand casting"
+         },
+         {
+          "id": "03.05.01.01.02",
+          "name": "Die casting"
+         },
+         {
+          "id": "03.05.01.01.03",
+          "name": "Investment casting"
+         },
+         {
+          "id": "03.05.01.01.04",
+          "name": "Continuous casting"
+         },
+         {
+          "id": "03.05.01.01.05",
+          "name": "Centrifugal casting"
+         }
+        ]
+       },
+       "02_forging": {
+        "name": "Forging",
+        "id": "03.05.01.02"
+       },
+       "03_machining": {
+        "name": "Machining",
+        "id": "03.05.01.03"
+       },
+       "04_sheet_metal": {
+        "name": "Sheet Metal Working",
+        "id": "03.05.01.04"
+       },
+       "05_heat_treatment": {
+        "name": "Heat Treatment",
+        "id": "03.05.01.05"
+       }
+      }
+     },
+     "02_plastics": {
+      "name": "Plastics Manufacturing",
+      "id": "03.05.02",
+      "subcategories": {
+       "01_injection_molding": {
+        "name": "Injection Molding",
+        "id": "03.05.02.01"
+       },
+       "02_extrusion": {
+        "name": "Extrusion",
+        "id": "03.05.02.02"
+       },
+       "03_blow_molding": {
+        "name": "Blow Molding",
+        "id": "03.05.02.03"
+       },
+       "04_thermoforming": {
+        "name": "Thermoforming",
+        "id": "03.05.02.04"
+       },
+       "05_3d_printing": {
+        "name": "3D Printing",
+        "id": "03.05.02.05"
+       }
+      }
+     },
+     "03_textiles": {
+      "name": "Textile Manufacturing",
+      "id": "03.05.03"
+     },
+     "04_electronics_manufacturing": {
+      "name": "Electronics Manufacturing",
+      "id": "03.05.04"
+     },
+     "05_assembly": {
+      "name": "Assembly Systems",
+      "id": "03.05.05"
+     },
+     "06_quality_control": {
+      "name": "Quality Control",
+      "id": "03.05.06"
+     },
+     "07_automation": {
+      "name": "Manufacturing Automation",
+      "id": "03.05.07"
+     },
+     "08_lean_manufacturing": {
+      "name": "Lean Manufacturing",
+      "id": "03.05.08"
+     },
+     "09_supply_chain": {
+      "name": "Supply Chain Management",
+      "id": "03.05.09"
+     },
+     "10_safety": {
+      "name": "Manufacturing Safety",
+      "id": "03.05.10"
+     }
+    }
+   },
+   "06_transportation": {
+    "name": "Transportation",
+    "id": "03.06",
+    "subcategories": {
+     "01_automotive": {
+      "name": "Automotive Technology",
+      "id": "03.06.01",
+      "subcategories": {
+       "01_engine_technology": {
+        "name": "Engine Technology",
+        "id": "03.06.01.01"
+       },
+       "02_electric_vehicles": {
+        "name": "Electric Vehicles",
+        "id": "03.06.01.02"
+       },
+       "03_autonomous_vehicles": {
+        "name": "Autonomous Vehicles",
+        "id": "03.06.01.03"
+       },
+       "04_vehicle_safety": {
+        "name": "Vehicle Safety",
+        "id": "03.06.01.04"
+       },
+       "05_maintenance": {
+        "name": "Vehicle Maintenance",
+        "id": "03.06.01.05"
+       }
+      }
+     },
+     "02_aviation": {
+      "name": "Aviation",
+      "id": "03.06.02",
+      "subcategories": {
+       "01_aircraft_design": {
+        "name": "Aircraft Design",
+        "id": "03.06.02.01"
+       },
+       "02_flight_systems": {
+        "name": "Flight Systems",
+        "id": "03.06.02.02"
+       },
+       "03_air_traffic": {
+        "name": "Air Traffic Control",
+        "id": "03.06.02.03"
+       },
+       "04_maintenance": {
+        "name": "Aircraft Maintenance",
+        "id": "03.06.02.04"
+       },
+       "05_pilot_training": {
+        "name": "Pilot Training",
+        "id": "03.06.02.05"
+       }
+      }
+     },
+     "03_maritime": {
+      "name": "Maritime",
+      "id": "03.06.03"
+     },
+     "04_rail": {
+      "name": "Rail Transport",
+      "id": "03.06.04"
+     },
+     "05_public_transit": {
+      "name": "Public Transit",
+      "id": "03.06.05"
+     },
+     "06_logistics": {
+      "name": "Logistics",
+      "id": "03.06.06"
+     },
+     "07_infrastructure": {
+      "name": "Transport Infrastructure",
+      "id": "03.06.07"
+     },
+     "08_traffic_management": {
+      "name": "Traffic Management",
+      "id": "03.06.08"
+     },
+     "09_alternative_transport": {
+      "name": "Alternative Transport",
+      "id": "03.06.09"
+     },
+     "10_space_transport": {
+      "name": "Space Transportation",
+      "id": "03.06.10"
+     }
+    }
+   },
+   "07_energy": {
+    "name": "Energy",
+    "id": "03.07",
+    "subcategories": {
+     "01_renewable_energy": {
+      "name": "Renewable Energy",
+      "id": "03.07.01",
+      "subcategories": {
+       "01_solar": {
+        "name": "Solar Energy",
+        "id": "03.07.01.01",
+        "items": [
+         {
+          "id": "03.07.01.01.01",
+          "name": "Photovoltaic systems"
+         },
+         {
+          "id": "03.07.01.01.02",
+          "name": "Solar thermal"
+         },
+         {
+          "id": "03.07.01.01.03",
+          "name": "Concentrated solar power"
+         },
+         {
+          "id": "03.07.01.01.04",
+          "name": "Solar panel manufacturing"
+         },
+         {
+          "id": "03.07.01.01.05",
+          "name": "Off-grid solar setup"
+         }
+        ]
+       },
+       "02_wind": {
+        "name": "Wind Energy",
+        "id": "03.07.01.02",
+        "items": [
+         {
+          "id": "03.07.01.02.01",
+          "name": "Wind turbine design"
+         },
+         {
+          "id": "03.07.01.02.02",
+          "name": "Small-scale wind"
+         },
+         {
+          "id": "03.07.01.02.03",
+          "name": "Wind farm planning"
+         },
+         {
+          "id": "03.07.01.02.04",
+          "name": "Vertical axis turbines"
+         },
+         {
+          "id": "03.07.01.02.05",
+          "name": "Wind resource assessment"
+         }
+        ]
+       },
+       "03_hydro": {
+        "name": "Hydroelectric",
+        "id": "03.07.01.03"
+       },
+       "04_geothermal": {
+        "name": "Geothermal",
+        "id": "03.07.01.04"
+       },
+       "05_biomass": {
+        "name": "Biomass Energy",
+        "id": "03.07.01.05"
+       }
+      }
+     },
+     "02_fossil_fuels": {
+      "name": "Fossil Fuels",
+      "id": "03.07.02",
+      "subcategories": {
+       "01_oil_extraction": {
+        "name": "Oil Extraction",
+        "id": "03.07.02.01"
+       },
+       "02_refining": {
+        "name": "Refining Processes",
+        "id": "03.07.02.02"
+       },
+       "03_coal": {
+        "name": "Coal Technology",
+        "id": "03.07.02.03"
+       },
+       "04_natural_gas": {
+        "name": "Natural Gas",
+        "id": "03.07.02.04"
+       },
+       "05_carbon_capture": {
+        "name": "Carbon Capture",
+        "id": "03.07.02.05"
+       }
+      }
+     },
+     "03_nuclear": {
+      "name": "Nuclear Energy",
+      "id": "03.07.03",
+      "subcategories": {
+       "01_fission": {
+        "name": "Nuclear Fission",
+        "id": "03.07.03.01"
+       },
+       "02_fusion": {
+        "name": "Nuclear Fusion",
+        "id": "03.07.03.02"
+       },
+       "03_reactor_design": {
+        "name": "Reactor Design",
+        "id": "03.07.03.03"
+       },
+       "04_waste_management": {
+        "name": "Nuclear Waste",
+        "id": "03.07.03.04"
+       },
+       "05_safety_protocols": {
+        "name": "Safety Protocols",
+        "id": "03.07.03.05"
+       }
+      }
+     },
+     "04_energy_storage": {
+      "name": "Energy Storage",
+      "id": "03.07.04",
+      "subcategories": {
+       "01_batteries": {
+        "name": "Battery Technology",
+        "id": "03.07.04.01"
+       },
+       "02_mechanical": {
+        "name": "Mechanical Storage",
+        "id": "03.07.04.02"
+       },
+       "03_chemical": {
+        "name": "Chemical Storage",
+        "id": "03.07.04.03"
+       },
+       "04_thermal": {
+        "name": "Thermal Storage",
+        "id": "03.07.04.04"
+       },
+       "05_hydrogen": {
+        "name": "Hydrogen Storage",
+        "id": "03.07.04.05"
+       }
+      }
+     },
+     "05_power_distribution": {
+      "name": "Power Distribution",
+      "id": "03.07.05"
+     }
+    }
+   },
+   "08_telecommunications": {
+    "name": "Telecommunications",
+    "id": "03.08"
+   },
+   "09_biotechnology": {
+    "name": "Biotechnology",
+    "id": "03.09"
+   },
+   "10_nanotechnology": {
+    "name": "Nanotechnology",
+    "id": "03.10"
+   }
+  }
+ }
+}

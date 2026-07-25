@@ -1,0 +1,312 @@
+{
+ "key": "05_humanities",
+ "category": {
+  "name": "Humanities",
+  "id": "05",
+  "description": "Study of human culture",
+  "subcategories": {
+   "01_history": {
+    "name": "History",
+    "id": "05.01",
+    "subcategories": {
+     "01_ancient_history": {
+      "name": "Ancient History",
+      "id": "05.01.01",
+      "subcategories": {
+       "01_mesopotamia": {
+        "name": "Mesopotamian Civilizations",
+        "id": "05.01.01.01",
+        "items": [
+         {
+          "id": "05.01.01.01.01",
+          "name": "Sumerian civilization"
+         },
+         {
+          "id": "05.01.01.01.02",
+          "name": "Babylonian empire"
+         },
+         {
+          "id": "05.01.01.01.03",
+          "name": "Assyrian empire"
+         },
+         {
+          "id": "05.01.01.01.04",
+          "name": "Akkadian empire"
+         },
+         {
+          "id": "05.01.01.01.05",
+          "name": "Cuneiform writing"
+         }
+        ]
+       },
+       "02_egypt": {
+        "name": "Ancient Egypt",
+        "id": "05.01.01.02"
+       },
+       "03_greece": {
+        "name": "Ancient Greece",
+        "id": "05.01.01.03"
+       },
+       "04_rome": {
+        "name": "Roman Empire",
+        "id": "05.01.01.04"
+       },
+       "05_china": {
+        "name": "Ancient China",
+        "id": "05.01.01.05"
+       },
+       "06_india": {
+        "name": "Ancient India",
+        "id": "05.01.01.06"
+       },
+       "07_americas": {
+        "name": "Pre-Columbian Americas",
+        "id": "05.01.01.07"
+       },
+       "08_africa": {
+        "name": "Ancient Africa",
+        "id": "05.01.01.08"
+       },
+       "09_near_east": {
+        "name": "Ancient Near East",
+        "id": "05.01.01.09"
+       },
+       "10_archaeology": {
+        "name": "Archaeological Methods",
+        "id": "05.01.01.10"
+       }
+      }
+     },
+     "02_medieval_history": {
+      "name": "Medieval History",
+      "id": "05.01.02",
+      "subcategories": {
+       "01_early_medieval": {
+        "name": "Early Medieval (500-1000)",
+        "id": "05.01.02.01"
+       },
+       "02_high_medieval": {
+        "name": "High Medieval (1000-1300)",
+        "id": "05.01.02.02"
+       },
+       "03_late_medieval": {
+        "name": "Late Medieval (1300-1500)",
+        "id": "05.01.02.03"
+       },
+       "04_crusades": {
+        "name": "The Crusades",
+        "id": "05.01.02.04"
+       },
+       "05_black_death": {
+        "name": "The Black Death",
+        "id": "05.01.02.05"
+       }
+      }
+     },
+     "03_modern_history": {
+      "name": "Modern History",
+      "id": "05.01.03",
+      "subcategories": {
+       "01_renaissance": {
+        "name": "Renaissance",
+        "id": "05.01.03.01"
+       },
+       "02_age_of_exploration": {
+        "name": "Age of Exploration",
+        "id": "05.01.03.02"
+       },
+       "03_enlightenment": {
+        "name": "Enlightenment",
+        "id": "05.01.03.03"
+       },
+       "04_industrial_revolution": {
+        "name": "Industrial Revolution",
+        "id": "05.01.03.04"
+       },
+       "05_colonialism": {
+        "name": "Colonialism",
+        "id": "05.01.03.05"
+       }
+      }
+     },
+     "04_contemporary_history": {
+      "name": "Contemporary History",
+      "id": "05.01.04",
+      "subcategories": {
+       "01_world_wars": {
+        "name": "World Wars",
+        "id": "05.01.04.01"
+       },
+       "02_cold_war": {
+        "name": "Cold War",
+        "id": "05.01.04.02"
+       },
+       "03_decolonization": {
+        "name": "Decolonization",
+        "id": "05.01.04.03"
+       },
+       "04_globalization": {
+        "name": "Globalization",
+        "id": "05.01.04.04"
+       },
+       "05_digital_age": {
+        "name": "Digital Age",
+        "id": "05.01.04.05"
+       }
+      }
+     },
+     "05_military_history": {
+      "name": "Military History",
+      "id": "05.01.05"
+     }
+    }
+   },
+   "02_philosophy": {
+    "name": "Philosophy",
+    "id": "05.02",
+    "subcategories": {
+     "01_metaphysics": {
+      "name": "Metaphysics",
+      "id": "05.02.01",
+      "subcategories": {
+       "01_ontology": {
+        "name": "Ontology",
+        "id": "05.02.01.01",
+        "items": [
+         {
+          "id": "05.02.01.01.01",
+          "name": "Being and existence"
+         },
+         {
+          "id": "05.02.01.01.02",
+          "name": "Categories of being"
+         },
+         {
+          "id": "05.02.01.01.03",
+          "name": "Universals problem"
+         },
+         {
+          "id": "05.02.01.01.04",
+          "name": "Identity and change"
+         },
+         {
+          "id": "05.02.01.01.05",
+          "name": "Possible worlds"
+         }
+        ]
+       },
+       "02_cosmology": {
+        "name": "Philosophical Cosmology",
+        "id": "05.02.01.02"
+       },
+       "03_mind": {
+        "name": "Philosophy of Mind",
+        "id": "05.02.01.03"
+       },
+       "04_free_will": {
+        "name": "Free Will",
+        "id": "05.02.01.04"
+       },
+       "05_time_space": {
+        "name": "Time and Space",
+        "id": "05.02.01.05"
+       }
+      }
+     },
+     "02_epistemology": {
+      "name": "Epistemology",
+      "id": "05.02.02",
+      "subcategories": {
+       "01_knowledge": {
+        "name": "Theory of Knowledge",
+        "id": "05.02.02.01"
+       },
+       "02_skepticism": {
+        "name": "Skepticism",
+        "id": "05.02.02.02"
+       },
+       "03_justification": {
+        "name": "Justification",
+        "id": "05.02.02.03"
+       },
+       "04_truth": {
+        "name": "Theories of Truth",
+        "id": "05.02.02.04"
+       },
+       "05_perception": {
+        "name": "Perception",
+        "id": "05.02.02.05"
+       }
+      }
+     },
+     "03_ethics": {
+      "name": "Ethics",
+      "id": "05.02.03",
+      "subcategories": {
+       "01_normative": {
+        "name": "Normative Ethics",
+        "id": "05.02.03.01"
+       },
+       "02_applied": {
+        "name": "Applied Ethics",
+        "id": "05.02.03.02"
+       },
+       "03_meta_ethics": {
+        "name": "Meta-ethics",
+        "id": "05.02.03.03"
+       },
+       "04_virtue_ethics": {
+        "name": "Virtue Ethics",
+        "id": "05.02.03.04"
+       },
+       "05_consequentialism": {
+        "name": "Consequentialism",
+        "id": "05.02.03.05"
+       }
+      }
+     },
+     "04_aesthetics": {
+      "name": "Aesthetics",
+      "id": "05.02.04"
+     },
+     "05_logic": {
+      "name": "Logic",
+      "id": "05.02.05"
+     }
+    }
+   },
+   "03_linguistics": {
+    "name": "Linguistics",
+    "id": "05.03"
+   },
+   "04_literature": {
+    "name": "Literature",
+    "id": "05.04"
+   },
+   "05_religious_studies": {
+    "name": "Religious Studies",
+    "id": "05.05"
+   },
+   "06_cultural_studies": {
+    "name": "Cultural Studies",
+    "id": "05.06"
+   },
+   "07_classics": {
+    "name": "Classics",
+    "id": "05.07"
+   },
+   "08_media_studies": {
+    "name": "Media Studies",
+    "id": "05.08"
+   },
+   "09_gender_studies": {
+    "name": "Gender Studies",
+    "id": "05.09"
+   },
+   "10_ethnic_studies": {
+    "name": "Ethnic Studies",
+    "id": "05.10"
+   }
+  }
+ }
+}

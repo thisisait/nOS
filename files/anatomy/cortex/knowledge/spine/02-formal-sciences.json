@@ -1,0 +1,598 @@
+{
+ "key": "02_formal_sciences",
+ "category": {
+  "name": "Formal Sciences",
+  "id": "02",
+  "description": "Abstract structures and logic",
+  "subcategories": {
+   "01_mathematics": {
+    "name": "Mathematics",
+    "id": "02.01",
+    "subcategories": {
+     "01_pure_mathematics": {
+      "name": "Pure Mathematics",
+      "id": "02.01.01",
+      "subcategories": {
+       "01_algebra": {
+        "name": "Algebra",
+        "id": "02.01.01.01",
+        "subcategories": {
+         "01_elementary": {
+          "name": "Elementary Algebra",
+          "id": "02.01.01.01.01",
+          "items": [
+           {
+            "id": "02.01.01.01.01.01",
+            "name": "Linear equations"
+           },
+           {
+            "id": "02.01.01.01.01.02",
+            "name": "Quadratic equations"
+           },
+           {
+            "id": "02.01.01.01.01.03",
+            "name": "Polynomials"
+           },
+           {
+            "id": "02.01.01.01.01.04",
+            "name": "Factorization"
+           },
+           {
+            "id": "02.01.01.01.01.05",
+            "name": "Systems of equations"
+           }
+          ]
+         },
+         "02_linear": {
+          "name": "Linear Algebra",
+          "id": "02.01.01.01.02",
+          "items": [
+           {
+            "id": "02.01.01.01.02.01",
+            "name": "Matrices"
+           },
+           {
+            "id": "02.01.01.01.02.02",
+            "name": "Vector spaces"
+           },
+           {
+            "id": "02.01.01.01.02.03",
+            "name": "Eigenvalues"
+           },
+           {
+            "id": "02.01.01.01.02.04",
+            "name": "Linear transformations"
+           },
+           {
+            "id": "02.01.01.01.02.05",
+            "name": "Determinants"
+           }
+          ]
+         },
+         "03_abstract": {
+          "name": "Abstract Algebra",
+          "id": "02.01.01.01.03"
+         },
+         "04_commutative": {
+          "name": "Commutative Algebra",
+          "id": "02.01.01.01.04"
+         },
+         "05_homological": {
+          "name": "Homological Algebra",
+          "id": "02.01.01.01.05"
+         }
+        }
+       },
+       "02_analysis": {
+        "name": "Analysis",
+        "id": "02.01.01.02",
+        "subcategories": {
+         "01_real": {
+          "name": "Real Analysis",
+          "id": "02.01.01.02.01"
+         },
+         "02_complex": {
+          "name": "Complex Analysis",
+          "id": "02.01.01.02.02"
+         },
+         "03_functional": {
+          "name": "Functional Analysis",
+          "id": "02.01.01.02.03"
+         },
+         "04_harmonic": {
+          "name": "Harmonic Analysis",
+          "id": "02.01.01.02.04"
+         },
+         "05_measure": {
+          "name": "Measure Theory",
+          "id": "02.01.01.02.05"
+         }
+        }
+       },
+       "03_geometry": {
+        "name": "Geometry",
+        "id": "02.01.01.03",
+        "subcategories": {
+         "01_euclidean": {
+          "name": "Euclidean Geometry",
+          "id": "02.01.01.03.01"
+         },
+         "02_differential": {
+          "name": "Differential Geometry",
+          "id": "02.01.01.03.02"
+         },
+         "03_algebraic": {
+          "name": "Algebraic Geometry",
+          "id": "02.01.01.03.03"
+         },
+         "04_riemannian": {
+          "name": "Riemannian Geometry",
+          "id": "02.01.01.03.04"
+         },
+         "05_symplectic": {
+          "name": "Symplectic Geometry",
+          "id": "02.01.01.03.05"
+         }
+        }
+       },
+       "04_topology": {
+        "name": "Topology",
+        "id": "02.01.01.04"
+       },
+       "05_number_theory": {
+        "name": "Number Theory",
+        "id": "02.01.01.05"
+       }
+      }
+     },
+     "02_applied_mathematics": {
+      "name": "Applied Mathematics",
+      "id": "02.01.02",
+      "subcategories": {
+       "01_statistics": {
+        "name": "Statistics",
+        "id": "02.01.02.01",
+        "subcategories": {
+         "01_descriptive": {
+          "name": "Descriptive Statistics",
+          "id": "02.01.02.01.01"
+         },
+         "02_inferential": {
+          "name": "Inferential Statistics",
+          "id": "02.01.02.01.02"
+         },
+         "03_bayesian": {
+          "name": "Bayesian Statistics",
+          "id": "02.01.02.01.03"
+         },
+         "04_time_series": {
+          "name": "Time Series Analysis",
+          "id": "02.01.02.01.04"
+         },
+         "05_multivariate": {
+          "name": "Multivariate Analysis",
+          "id": "02.01.02.01.05"
+         }
+        }
+       },
+       "02_probability": {
+        "name": "Probability",
+        "id": "02.01.02.02"
+       },
+       "03_numerical_analysis": {
+        "name": "Numerical Analysis",
+        "id": "02.01.02.03"
+       },
+       "04_optimization": {
+        "name": "Optimization",
+        "id": "02.01.02.04"
+       },
+       "05_game_theory": {
+        "name": "Game Theory",
+        "id": "02.01.02.05"
+       }
+      }
+     },
+     "03_computational_mathematics": {
+      "name": "Computational Mathematics",
+      "id": "02.01.03"
+     }
+    }
+   },
+   "02_computer_science": {
+    "name": "Computer Science",
+    "id": "02.02",
+    "subcategories": {
+     "01_theoretical_cs": {
+      "name": "Theoretical Computer Science",
+      "id": "02.02.01",
+      "subcategories": {
+       "01_automata_theory": {
+        "name": "Automata Theory",
+        "id": "02.02.01.01",
+        "items": [
+         {
+          "id": "02.02.01.01.01",
+          "name": "Finite automata"
+         },
+         {
+          "id": "02.02.01.01.02",
+          "name": "Pushdown automata"
+         },
+         {
+          "id": "02.02.01.01.03",
+          "name": "Turing machines"
+         },
+         {
+          "id": "02.02.01.01.04",
+          "name": "Regular expressions"
+         },
+         {
+          "id": "02.02.01.01.05",
+          "name": "Context-free grammars"
+         }
+        ]
+       },
+       "02_complexity_theory": {
+        "name": "Complexity Theory",
+        "id": "02.02.01.02",
+        "items": [
+         {
+          "id": "02.02.01.02.01",
+          "name": "P vs NP"
+         },
+         {
+          "id": "02.02.01.02.02",
+          "name": "Complexity classes"
+         },
+         {
+          "id": "02.02.01.02.03",
+          "name": "Reduction techniques"
+         }
+        ]
+       },
+       "03_formal_methods": {
+        "name": "Formal Methods",
+        "id": "02.02.01.03"
+       },
+       "04_type_theory": {
+        "name": "Type Theory",
+        "id": "02.02.01.04"
+       },
+       "05_lambda_calculus": {
+        "name": "Lambda Calculus",
+        "id": "02.02.01.05"
+       }
+      }
+     },
+     "02_algorithms_data_structures": {
+      "name": "Algorithms & Data Structures",
+      "id": "02.02.02",
+      "subcategories": {
+       "01_sorting_algorithms": {
+        "name": "Sorting Algorithms",
+        "id": "02.02.02.01",
+        "items": [
+         {
+          "id": "02.02.02.01.01",
+          "name": "Quicksort"
+         },
+         {
+          "id": "02.02.02.01.02",
+          "name": "Mergesort"
+         },
+         {
+          "id": "02.02.02.01.03",
+          "name": "Heapsort"
+         },
+         {
+          "id": "02.02.02.01.04",
+          "name": "Radix sort"
+         },
+         {
+          "id": "02.02.02.01.05",
+          "name": "Timsort"
+         }
+        ]
+       },
+       "02_search_algorithms": {
+        "name": "Search Algorithms",
+        "id": "02.02.02.02"
+       },
+       "03_graph_algorithms": {
+        "name": "Graph Algorithms",
+        "id": "02.02.02.03"
+       },
+       "04_dynamic_programming": {
+        "name": "Dynamic Programming",
+        "id": "02.02.02.04"
+       },
+       "05_data_structures": {
+        "name": "Data Structures",
+        "id": "02.02.02.05",
+        "items": [
+         {
+          "id": "02.02.02.05.01",
+          "name": "Trees (BST, AVL, B-trees)"
+         },
+         {
+          "id": "02.02.02.05.02",
+          "name": "Hash tables"
+         },
+         {
+          "id": "02.02.02.05.03",
+          "name": "Heaps"
+         },
+         {
+          "id": "02.02.02.05.04",
+          "name": "Graphs"
+         },
+         {
+          "id": "02.02.02.05.05",
+          "name": "Tries"
+         }
+        ]
+       }
+      }
+     },
+     "03_programming_languages": {
+      "name": "Programming Languages",
+      "id": "02.02.03",
+      "subcategories": {
+       "01_system_languages": {
+        "name": "System Languages",
+        "id": "02.02.03.01",
+        "items": [
+         {
+          "id": "02.02.03.01.01",
+          "name": "C"
+         },
+         {
+          "id": "02.02.03.01.02",
+          "name": "C++"
+         },
+         {
+          "id": "02.02.03.01.03",
+          "name": "Rust"
+         },
+         {
+          "id": "02.02.03.01.04",
+          "name": "Go"
+         },
+         {
+          "id": "02.02.03.01.05",
+          "name": "Assembly"
+         }
+        ]
+       },
+       "02_scripting_languages": {
+        "name": "Scripting Languages",
+        "id": "02.02.03.02",
+        "items": [
+         {
+          "id": "02.02.03.02.01",
+          "name": "Python"
+         },
+         {
+          "id": "02.02.03.02.02",
+          "name": "JavaScript"
+         },
+         {
+          "id": "02.02.03.02.03",
+          "name": "Ruby"
+         },
+         {
+          "id": "02.02.03.02.04",
+          "name": "Perl"
+         },
+         {
+          "id": "02.02.03.02.05",
+          "name": "PHP"
+         }
+        ]
+       },
+       "03_functional_languages": {
+        "name": "Functional Languages",
+        "id": "02.02.03.03"
+       },
+       "04_jvm_languages": {
+        "name": "JVM Languages",
+        "id": "02.02.03.04"
+       },
+       "05_domain_specific": {
+        "name": "Domain Specific Languages",
+        "id": "02.02.03.05"
+       }
+      }
+     },
+     "04_software_engineering": {
+      "name": "Software Engineering",
+      "id": "02.02.04",
+      "subcategories": {
+       "01_design_patterns": {
+        "name": "Design Patterns",
+        "id": "02.02.04.01"
+       },
+       "02_architecture": {
+        "name": "Software Architecture",
+        "id": "02.02.04.02"
+       },
+       "03_testing": {
+        "name": "Testing",
+        "id": "02.02.04.03"
+       },
+       "04_devops": {
+        "name": "DevOps",
+        "id": "02.02.04.04"
+       },
+       "05_agile_methods": {
+        "name": "Agile Methodologies",
+        "id": "02.02.04.05"
+       }
+      }
+     },
+     "05_databases": {
+      "name": "Databases",
+      "id": "02.02.05",
+      "subcategories": {
+       "01_relational": {
+        "name": "Relational Databases",
+        "id": "02.02.05.01"
+       },
+       "02_nosql": {
+        "name": "NoSQL Databases",
+        "id": "02.02.05.02"
+       },
+       "03_database_theory": {
+        "name": "Database Theory",
+        "id": "02.02.05.03"
+       },
+       "04_sql": {
+        "name": "SQL",
+        "id": "02.02.05.04"
+       },
+       "05_data_warehousing": {
+        "name": "Data Warehousing",
+        "id": "02.02.05.05"
+       }
+      }
+     },
+     "06_operating_systems": {
+      "name": "Operating Systems",
+      "id": "02.02.06",
+      "subcategories": {
+       "01_kernel_design": {
+        "name": "Kernel Design",
+        "id": "02.02.06.01"
+       },
+       "02_process_management": {
+        "name": "Process Management",
+        "id": "02.02.06.02"
+       },
+       "03_memory_management": {
+        "name": "Memory Management",
+        "id": "02.02.06.03"
+       },
+       "04_file_systems": {
+        "name": "File Systems",
+        "id": "02.02.06.04"
+       },
+       "05_device_drivers": {
+        "name": "Device Drivers",
+        "id": "02.02.06.05"
+       }
+      }
+     },
+     "07_networks": {
+      "name": "Computer Networks",
+      "id": "02.02.07",
+      "subcategories": {
+       "01_protocols": {
+        "name": "Network Protocols",
+        "id": "02.02.07.01"
+       },
+       "02_network_security": {
+        "name": "Network Security",
+        "id": "02.02.07.02"
+       },
+       "03_distributed_systems": {
+        "name": "Distributed Systems",
+        "id": "02.02.07.03"
+       },
+       "04_web_technologies": {
+        "name": "Web Technologies",
+        "id": "02.02.07.04"
+       },
+       "05_wireless_networks": {
+        "name": "Wireless Networks",
+        "id": "02.02.07.05"
+       }
+      }
+     },
+     "08_security": {
+      "name": "Computer Security",
+      "id": "02.02.08",
+      "subcategories": {
+       "01_cryptography": {
+        "name": "Cryptography",
+        "id": "02.02.08.01"
+       },
+       "02_network_security": {
+        "name": "Network Security",
+        "id": "02.02.08.02"
+       },
+       "03_application_security": {
+        "name": "Application Security",
+        "id": "02.02.08.03"
+       },
+       "04_malware_analysis": {
+        "name": "Malware Analysis",
+        "id": "02.02.08.04"
+       },
+       "05_forensics": {
+        "name": "Digital Forensics",
+        "id": "02.02.08.05"
+       }
+      }
+     },
+     "09_artificial_intelligence": {
+      "name": "Artificial Intelligence",
+      "id": "02.02.09",
+      "subcategories": {
+       "01_machine_learning": {
+        "name": "Machine Learning",
+        "id": "02.02.09.01"
+       },
+       "02_deep_learning": {
+        "name": "Deep Learning",
+        "id": "02.02.09.02"
+       },
+       "03_nlp": {
+        "name": "Natural Language Processing",
+        "id": "02.02.09.03"
+       },
+       "04_computer_vision": {
+        "name": "Computer Vision",
+        "id": "02.02.09.04"
+       },
+       "05_reinforcement_learning": {
+        "name": "Reinforcement Learning",
+        "id": "02.02.09.05"
+       }
+      }
+     },
+     "10_computer_graphics": {
+      "name": "Computer Graphics",
+      "id": "02.02.10"
+     }
+    }
+   },
+   "03_logic": {
+    "name": "Logic",
+    "id": "02.03",
+    "subcategories": {
+     "01_mathematical_logic": {
+      "name": "Mathematical Logic",
+      "id": "02.03.01"
+     },
+     "02_philosophical_logic": {
+      "name": "Philosophical Logic",
+      "id": "02.03.02"
+     },
+     "03_computational_logic": {
+      "name": "Computational Logic",
+      "id": "02.03.03"
+     }
+    }
+   },
+   "04_information_theory": {
+    "name": "Information Theory",
+    "id": "02.04"
+   },
+   "05_systems_theory": {
+    "name": "Systems Theory",
+    "id": "02.05"
+   }
+  }
+ }
+}

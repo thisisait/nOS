@@ -1,0 +1,358 @@
+{
+ "key": "07_practical_skills",
+ "category": {
+  "name": "Practical Skills & Trades",
+  "id": "07",
+  "description": "Hands-on skills and craftsmanship",
+  "subcategories": {
+   "01_construction": {
+    "name": "Construction",
+    "id": "07.01",
+    "subcategories": {
+     "01_foundations": {
+      "name": "Foundations",
+      "id": "07.01.01",
+      "subcategories": {
+       "01_concrete": {
+        "name": "Concrete Work",
+        "id": "07.01.01.01",
+        "items": [
+         {
+          "id": "07.01.01.01.01",
+          "name": "Mixing ratios"
+         },
+         {
+          "id": "07.01.01.01.02",
+          "name": "Pouring techniques"
+         },
+         {
+          "id": "07.01.01.01.03",
+          "name": "Reinforcement"
+         },
+         {
+          "id": "07.01.01.01.04",
+          "name": "Curing process"
+         },
+         {
+          "id": "07.01.01.01.05",
+          "name": "Foundation types"
+         }
+        ]
+       },
+       "02_excavation": {
+        "name": "Excavation",
+        "id": "07.01.01.02"
+       },
+       "03_drainage": {
+        "name": "Drainage Systems",
+        "id": "07.01.01.03"
+       },
+       "04_waterproofing": {
+        "name": "Waterproofing",
+        "id": "07.01.01.04"
+       },
+       "05_load_calculations": {
+        "name": "Load Calculations",
+        "id": "07.01.01.05"
+       }
+      }
+     },
+     "02_framing": {
+      "name": "Framing",
+      "id": "07.01.02",
+      "subcategories": {
+       "01_wood_framing": {
+        "name": "Wood Framing",
+        "id": "07.01.02.01"
+       },
+       "02_steel_framing": {
+        "name": "Steel Framing",
+        "id": "07.01.02.02"
+       },
+       "03_roof_framing": {
+        "name": "Roof Framing",
+        "id": "07.01.02.03"
+       },
+       "04_floor_systems": {
+        "name": "Floor Systems",
+        "id": "07.01.02.04"
+       },
+       "05_load_bearing": {
+        "name": "Load Bearing Walls",
+        "id": "07.01.02.05"
+       }
+      }
+     },
+     "03_masonry": {
+      "name": "Masonry",
+      "id": "07.01.03"
+     },
+     "04_roofing": {
+      "name": "Roofing",
+      "id": "07.01.04"
+     },
+     "05_insulation": {
+      "name": "Insulation",
+      "id": "07.01.05"
+     }
+    }
+   },
+   "02_mechanics": {
+    "name": "Mechanics",
+    "id": "07.02",
+    "subcategories": {
+     "01_engine_repair": {
+      "name": "Engine Repair",
+      "id": "07.02.01",
+      "subcategories": {
+       "01_diagnostics": {
+        "name": "Engine Diagnostics",
+        "id": "07.02.01.01"
+       },
+       "02_combustion_engines": {
+        "name": "Combustion Engines",
+        "id": "07.02.01.02"
+       },
+       "03_diesel_engines": {
+        "name": "Diesel Engines",
+        "id": "07.02.01.03"
+       },
+       "04_small_engines": {
+        "name": "Small Engines",
+        "id": "07.02.01.04"
+       },
+       "05_rebuild_procedures": {
+        "name": "Rebuild Procedures",
+        "id": "07.02.01.05"
+       }
+      }
+     },
+     "02_transmission": {
+      "name": "Transmission Systems",
+      "id": "07.02.02"
+     },
+     "03_suspension": {
+      "name": "Suspension & Steering",
+      "id": "07.02.03"
+     },
+     "04_brakes": {
+      "name": "Brake Systems",
+      "id": "07.02.04"
+     },
+     "05_hydraulics": {
+      "name": "Hydraulic Systems",
+      "id": "07.02.05"
+     }
+    }
+   },
+   "03_electronics": {
+    "name": "Electronics",
+    "id": "07.03",
+    "subcategories": {
+     "01_basic_circuits": {
+      "name": "Basic Circuits",
+      "id": "07.03.01",
+      "subcategories": {
+       "01_components": {
+        "name": "Electronic Components",
+        "id": "07.03.01.01",
+        "items": [
+         {
+          "id": "07.03.01.01.01",
+          "name": "Resistors"
+         },
+         {
+          "id": "07.03.01.01.02",
+          "name": "Capacitors"
+         },
+         {
+          "id": "07.03.01.01.03",
+          "name": "Transistors"
+         },
+         {
+          "id": "07.03.01.01.04",
+          "name": "Diodes"
+         },
+         {
+          "id": "07.03.01.01.05",
+          "name": "Integrated circuits"
+         }
+        ]
+       },
+       "02_circuit_design": {
+        "name": "Circuit Design",
+        "id": "07.03.01.02"
+       },
+       "03_soldering": {
+        "name": "Soldering Techniques",
+        "id": "07.03.01.03"
+       },
+       "04_testing": {
+        "name": "Testing & Measurement",
+        "id": "07.03.01.04"
+       },
+       "05_troubleshooting": {
+        "name": "Troubleshooting",
+        "id": "07.03.01.05"
+       }
+      }
+     },
+     "02_microcontrollers": {
+      "name": "Microcontrollers",
+      "id": "07.03.02"
+     },
+     "03_power_supplies": {
+      "name": "Power Supplies",
+      "id": "07.03.03"
+     },
+     "04_radio_electronics": {
+      "name": "Radio Electronics",
+      "id": "07.03.04"
+     },
+     "05_repair": {
+      "name": "Electronics Repair",
+      "id": "07.03.05"
+     }
+    }
+   },
+   "04_plumbing": {
+    "name": "Plumbing",
+    "id": "07.04",
+    "subcategories": {
+     "01_pipe_systems": {
+      "name": "Pipe Systems",
+      "id": "07.04.01"
+     },
+     "02_fixtures": {
+      "name": "Fixtures Installation",
+      "id": "07.04.02"
+     },
+     "03_water_heating": {
+      "name": "Water Heating",
+      "id": "07.04.03"
+     },
+     "04_drainage": {
+      "name": "Drainage Systems",
+      "id": "07.04.04"
+     },
+     "05_repair": {
+      "name": "Plumbing Repair",
+      "id": "07.04.05"
+     }
+    }
+   },
+   "05_carpentry": {
+    "name": "Carpentry",
+    "id": "07.05",
+    "subcategories": {
+     "01_joinery": {
+      "name": "Joinery",
+      "id": "07.05.01"
+     },
+     "02_furniture": {
+      "name": "Furniture Making",
+      "id": "07.05.02"
+     },
+     "03_cabinetry": {
+      "name": "Cabinetry",
+      "id": "07.05.03"
+     },
+     "04_finishing": {
+      "name": "Wood Finishing",
+      "id": "07.05.04"
+     },
+     "05_restoration": {
+      "name": "Wood Restoration",
+      "id": "07.05.05"
+     }
+    }
+   },
+   "06_welding": {
+    "name": "Welding",
+    "id": "07.06",
+    "subcategories": {
+     "01_arc_welding": {
+      "name": "Arc Welding",
+      "id": "07.06.01"
+     },
+     "02_mig_welding": {
+      "name": "MIG Welding",
+      "id": "07.06.02"
+     },
+     "03_tig_welding": {
+      "name": "TIG Welding",
+      "id": "07.06.03"
+     },
+     "04_gas_welding": {
+      "name": "Gas Welding",
+      "id": "07.06.04"
+     },
+     "05_welding_safety": {
+      "name": "Welding Safety",
+      "id": "07.06.05"
+     }
+    }
+   },
+   "07_gardening": {
+    "name": "Gardening",
+    "id": "07.07",
+    "subcategories": {
+     "01_soil_prep": {
+      "name": "Soil Preparation",
+      "id": "07.07.01"
+     },
+     "02_planting": {
+      "name": "Planting Techniques",
+      "id": "07.07.02"
+     },
+     "03_pruning": {
+      "name": "Pruning",
+      "id": "07.07.03"
+     },
+     "04_pest_control": {
+      "name": "Pest Control",
+      "id": "07.07.04"
+     },
+     "05_composting": {
+      "name": "Composting",
+      "id": "07.07.05"
+     }
+    }
+   },
+   "08_cooking": {
+    "name": "Cooking",
+    "id": "07.08",
+    "subcategories": {
+     "01_basic_techniques": {
+      "name": "Basic Techniques",
+      "id": "07.08.01"
+     },
+     "02_baking": {
+      "name": "Baking",
+      "id": "07.08.02"
+     },
+     "03_preservation": {
+      "name": "Food Preservation",
+      "id": "07.08.03"
+     },
+     "04_nutrition": {
+      "name": "Nutrition",
+      "id": "07.08.04"
+     },
+     "05_special_diets": {
+      "name": "Special Diets",
+      "id": "07.08.05"
+     }
+    }
+   },
+   "09_sewing": {
+    "name": "Sewing",
+    "id": "07.09"
+   },
+   "10_automotive": {
+    "name": "Automotive",
+    "id": "07.10"
+   }
+  }
+ }
+}

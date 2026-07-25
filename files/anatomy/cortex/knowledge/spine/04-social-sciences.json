@@ -1,0 +1,180 @@
+{
+ "key": "04_social_sciences",
+ "category": {
+  "name": "Social Sciences",
+  "id": "04",
+  "description": "Study of human society",
+  "subcategories": {
+   "01_psychology": {
+    "name": "Psychology",
+    "id": "04.01",
+    "subcategories": {
+     "01_cognitive_psychology": {
+      "name": "Cognitive Psychology",
+      "id": "04.01.01"
+     },
+     "02_developmental_psychology": {
+      "name": "Developmental Psychology",
+      "id": "04.01.02"
+     },
+     "03_social_psychology": {
+      "name": "Social Psychology",
+      "id": "04.01.03"
+     },
+     "04_clinical_psychology": {
+      "name": "Clinical Psychology",
+      "id": "04.01.04"
+     },
+     "05_neuropsychology": {
+      "name": "Neuropsychology",
+      "id": "04.01.05"
+     }
+    }
+   },
+   "02_sociology": {
+    "name": "Sociology",
+    "id": "04.02"
+   },
+   "03_anthropology": {
+    "name": "Anthropology",
+    "id": "04.03"
+   },
+   "04_economics": {
+    "name": "Economics",
+    "id": "04.04",
+    "subcategories": {
+     "01_microeconomics": {
+      "name": "Microeconomics",
+      "id": "04.04.01",
+      "subcategories": {
+       "01_supply_demand": {
+        "name": "Supply and Demand",
+        "id": "04.04.01.01",
+        "items": [
+         {
+          "id": "04.04.01.01.01",
+          "name": "Market equilibrium"
+         },
+         {
+          "id": "04.04.01.01.02",
+          "name": "Price elasticity"
+         },
+         {
+          "id": "04.04.01.01.03",
+          "name": "Consumer surplus"
+         },
+         {
+          "id": "04.04.01.01.04",
+          "name": "Producer surplus"
+         },
+         {
+          "id": "04.04.01.01.05",
+          "name": "Market failures"
+         }
+        ]
+       },
+       "02_consumer_theory": {
+        "name": "Consumer Theory",
+        "id": "04.04.01.02"
+       },
+       "03_production_theory": {
+        "name": "Production Theory",
+        "id": "04.04.01.03"
+       },
+       "04_market_structures": {
+        "name": "Market Structures",
+        "id": "04.04.01.04"
+       },
+       "05_game_theory": {
+        "name": "Game Theory Applications",
+        "id": "04.04.01.05"
+       }
+      }
+     },
+     "02_macroeconomics": {
+      "name": "Macroeconomics",
+      "id": "04.04.02",
+      "subcategories": {
+       "01_gdp": {
+        "name": "GDP and Growth",
+        "id": "04.04.02.01"
+       },
+       "02_inflation": {
+        "name": "Inflation",
+        "id": "04.04.02.02"
+       },
+       "03_unemployment": {
+        "name": "Unemployment",
+        "id": "04.04.02.03"
+       },
+       "04_monetary_policy": {
+        "name": "Monetary Policy",
+        "id": "04.04.02.04"
+       },
+       "05_fiscal_policy": {
+        "name": "Fiscal Policy",
+        "id": "04.04.02.05"
+       }
+      }
+     },
+     "03_econometrics": {
+      "name": "Econometrics",
+      "id": "04.04.03"
+     },
+     "04_behavioral_economics": {
+      "name": "Behavioral Economics",
+      "id": "04.04.04"
+     },
+     "05_international_economics": {
+      "name": "International Economics",
+      "id": "04.04.05"
+     },
+     "06_development_economics": {
+      "name": "Development Economics",
+      "id": "04.04.06"
+     },
+     "07_environmental_economics": {
+      "name": "Environmental Economics",
+      "id": "04.04.07"
+     },
+     "08_financial_economics": {
+      "name": "Financial Economics",
+      "id": "04.04.08"
+     },
+     "09_labor_economics": {
+      "name": "Labor Economics",
+      "id": "04.04.09"
+     },
+     "10_economic_history": {
+      "name": "Economic History",
+      "id": "04.04.10"
+     }
+    }
+   },
+   "05_political_science": {
+    "name": "Political Science",
+    "id": "04.05"
+   },
+   "06_law": {
+    "name": "Law",
+    "id": "04.06"
+   },
+   "07_education": {
+    "name": "Education",
+    "id": "04.07"
+   },
+   "08_geography": {
+    "name": "Geography",
+    "id": "04.08"
+   },
+   "09_demography": {
+    "name": "Demography",
+    "id": "04.09"
+   },
+   "10_archaeology": {
+    "name": "Archaeology",
+    "id": "04.10"
+   }
+  }
+ }
+}

@@ -1,0 +1,304 @@
+{
+ "key": "01_natural_sciences",
+ "category": {
+  "name": "Natural Sciences",
+  "id": "01",
+  "description": "Study of natural phenomena",
+  "subcategories": {
+   "01_physics": {
+    "name": "Physics",
+    "id": "01.01",
+    "subcategories": {
+     "01_classical_mechanics": {
+      "name": "Classical Mechanics",
+      "id": "01.01.01",
+      "subcategories": {
+       "01_kinematics": {
+        "name": "Kinematics",
+        "id": "01.01.01.01",
+        "items": [
+         {
+          "id": "01.01.01.01.01",
+          "name": "Motion equations"
+         },
+         {
+          "id": "01.01.01.01.02",
+          "name": "Projectile motion"
+         },
+         {
+          "id": "01.01.01.01.03",
+          "name": "Circular motion"
+         },
+         {
+          "id": "01.01.01.01.04",
+          "name": "Relative motion"
+         },
+         {
+          "id": "01.01.01.01.05",
+          "name": "Reference frames"
+         }
+        ]
+       },
+       "02_dynamics": {
+        "name": "Dynamics",
+        "id": "01.01.01.02",
+        "items": [
+         {
+          "id": "01.01.01.02.01",
+          "name": "Newton's laws"
+         },
+         {
+          "id": "01.01.01.02.02",
+          "name": "Forces and interactions"
+         },
+         {
+          "id": "01.01.01.02.03",
+          "name": "Work and energy"
+         },
+         {
+          "id": "01.01.01.02.04",
+          "name": "Momentum"
+         },
+         {
+          "id": "01.01.01.02.05",
+          "name": "Collisions"
+         }
+        ]
+       },
+       "03_statics": {
+        "name": "Statics",
+        "id": "01.01.01.03"
+       },
+       "04_fluid_mechanics": {
+        "name": "Fluid Mechanics",
+        "id": "01.01.01.04"
+       },
+       "05_oscillations_waves": {
+        "name": "Oscillations & Waves",
+        "id": "01.01.01.05"
+       }
+      }
+     },
+     "02_quantum_mechanics": {
+      "name": "Quantum Mechanics",
+      "id": "01.01.02",
+      "subcategories": {
+       "01_foundations": {
+        "name": "Quantum Foundations",
+        "id": "01.01.02.01"
+       },
+       "02_quantum_field_theory": {
+        "name": "Quantum Field Theory",
+        "id": "01.01.02.02"
+       },
+       "03_quantum_computing": {
+        "name": "Quantum Computing",
+        "id": "01.01.02.03"
+       },
+       "04_quantum_optics": {
+        "name": "Quantum Optics",
+        "id": "01.01.02.04"
+       }
+      }
+     },
+     "03_thermodynamics": {
+      "name": "Thermodynamics",
+      "id": "01.01.03"
+     },
+     "04_electromagnetism": {
+      "name": "Electromagnetism",
+      "id": "01.01.04"
+     },
+     "05_relativity": {
+      "name": "Relativity",
+      "id": "01.01.05"
+     },
+     "06_nuclear_physics": {
+      "name": "Nuclear Physics",
+      "id": "01.01.06"
+     },
+     "07_particle_physics": {
+      "name": "Particle Physics",
+      "id": "01.01.07"
+     },
+     "08_astrophysics": {
+      "name": "Astrophysics",
+      "id": "01.01.08"
+     },
+     "09_geophysics": {
+      "name": "Geophysics",
+      "id": "01.01.09"
+     },
+     "10_biophysics": {
+      "name": "Biophysics",
+      "id": "01.01.10"
+     }
+    }
+   },
+   "02_chemistry": {
+    "name": "Chemistry",
+    "id": "01.02",
+    "subcategories": {
+     "01_general_chemistry": {
+      "name": "General Chemistry",
+      "id": "01.02.01"
+     },
+     "02_organic_chemistry": {
+      "name": "Organic Chemistry",
+      "id": "01.02.02"
+     },
+     "03_inorganic_chemistry": {
+      "name": "Inorganic Chemistry",
+      "id": "01.02.03"
+     },
+     "04_physical_chemistry": {
+      "name": "Physical Chemistry",
+      "id": "01.02.04"
+     },
+     "05_analytical_chemistry": {
+      "name": "Analytical Chemistry",
+      "id": "01.02.05"
+     },
+     "06_biochemistry": {
+      "name": "Biochemistry",
+      "id": "01.02.06"
+     },
+     "07_environmental_chemistry": {
+      "name": "Environmental Chemistry",
+      "id": "01.02.07"
+     },
+     "08_medicinal_chemistry": {
+      "name": "Medicinal Chemistry",
+      "id": "01.02.08"
+     },
+     "09_materials_chemistry": {
+      "name": "Materials Chemistry",
+      "id": "01.02.09"
+     },
+     "10_computational_chemistry": {
+      "name": "Computational Chemistry",
+      "id": "01.02.10"
+     }
+    }
+   },
+   "03_biology": {
+    "name": "Biology",
+    "id": "01.03",
+    "subcategories": {
+     "01_molecular_biology": {
+      "name": "Molecular Biology",
+      "id": "01.03.01"
+     },
+     "02_cell_biology": {
+      "name": "Cell Biology",
+      "id": "01.03.02"
+     },
+     "03_genetics": {
+      "name": "Genetics",
+      "id": "01.03.03"
+     },
+     "04_evolutionary_biology": {
+      "name": "Evolutionary Biology",
+      "id": "01.03.04"
+     },
+     "05_ecology": {
+      "name": "Ecology",
+      "id": "01.03.05"
+     },
+     "06_zoology": {
+      "name": "Zoology",
+      "id": "01.03.06"
+     },
+     "07_botany": {
+      "name": "Botany",
+      "id": "01.03.07"
+     },
+     "08_microbiology": {
+      "name": "Microbiology",
+      "id": "01.03.08"
+     },
+     "09_marine_biology": {
+      "name": "Marine Biology",
+      "id": "01.03.09"
+     },
+     "10_neurobiology": {
+      "name": "Neurobiology",
+      "id": "01.03.10"
+     }
+    }
+   },
+   "04_earth_sciences": {
+    "name": "Earth Sciences",
+    "id": "01.04",
+    "subcategories": {
+     "01_geology": {
+      "name": "Geology",
+      "id": "01.04.01"
+     },
+     "02_meteorology": {
+      "name": "Meteorology",
+      "id": "01.04.02"
+     },
+     "03_oceanography": {
+      "name": "Oceanography",
+      "id": "01.04.03"
+     },
+     "04_climatology": {
+      "name": "Climatology",
+      "id": "01.04.04"
+     },
+     "05_paleontology": {
+      "name": "Paleontology",
+      "id": "01.04.05"
+     },
+     "06_mineralogy": {
+      "name": "Mineralogy",
+      "id": "01.04.06"
+     },
+     "07_volcanology": {
+      "name": "Volcanology",
+      "id": "01.04.07"
+     },
+     "08_seismology": {
+      "name": "Seismology",
+      "id": "01.04.08"
+     },
+     "09_hydrology": {
+      "name": "Hydrology",
+      "id": "01.04.09"
+     },
+     "10_glaciology": {
+      "name": "Glaciology",
+      "id": "01.04.10"
+     }
+    }
+   },
+   "05_astronomy": {
+    "name": "Astronomy",
+    "id": "01.05",
+    "subcategories": {
+     "01_planetary_science": {
+      "name": "Planetary Science",
+      "id": "01.05.01"
+     },
+     "02_stellar_astronomy": {
+      "name": "Stellar Astronomy",
+      "id": "01.05.02"
+     },
+     "03_galactic_astronomy": {
+      "name": "Galactic Astronomy",
+      "id": "01.05.03"
+     },
+     "04_cosmology": {
+      "name": "Cosmology",
+      "id": "01.05.04"
+     },
+     "05_astrobiology": {
+      "name": "Astrobiology",
+      "id": "01.05.05"
+     }
+    }
+   }
+  }
+ }
+}

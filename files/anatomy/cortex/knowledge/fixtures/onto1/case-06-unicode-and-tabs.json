@@ -1,0 +1,61 @@
+{
+ "why": "Names carrying non-ASCII and a leading/trailing space. The serialization is tab-joined, so it assumes names contain no tab; this pins the encoding (UTF-8 into the digest) and that names are recorded verbatim, not trimmed or normalised.",
+ "spine": [
+  {
+   "key": "01_alpha",
+   "category": {
+    "name": "Alfa Život",
+    "id": "01",
+    "description": "d",
+    "subcategories": {
+     "a": {
+      "name": " padded ",
+      "id": "01.01",
+      "items": [
+       {
+        "id": "01.01.01",
+        "name": "éèê"
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "ext": [],
+ "relationTypes": [
+  {
+   "type": "exemplifies",
+   "status": "seed",
+   "label": "exemplifies"
+  },
+  {
+   "type": "requires",
+   "status": "seed",
+   "label": "requires"
+  },
+  {
+   "type": "interprets",
+   "status": "confirmed",
+   "label": "interprets"
+  },
+  {
+   "type": "invented",
+   "status": "proposed",
+   "label": "invented"
+  }
+ ],
+ "expected": {
+  "nodeCount": 3,
+  "dropped": [],
+  "onto1": "onto1:eb6667e26a89bdec",
+  "canonical": [
+   "t\t01\t-\tAlfa Život",
+   "t\t01.01\t01\t padded ",
+   "t\t01.01.01\t01.01\téèê",
+   "r\texemplifies\tseed\texemplifies",
+   "r\tinterprets\tconfirmed\tinterprets",
+   "r\trequires\tseed\trequires"
+  ]
+ }
+}

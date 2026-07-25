@@ -1,0 +1,50 @@
+{
+ "key": "09_reference_documentation",
+ "category": {
+  "name": "Reference & Documentation",
+  "id": "09",
+  "description": "Essential reference materials",
+  "subcategories": {
+   "01_encyclopedias": {
+    "name": "Encyclopedias",
+    "id": "09.01"
+   },
+   "02_dictionaries": {
+    "name": "Dictionaries",
+    "id": "09.02"
+   },
+   "03_manuals": {
+    "name": "Technical Manuals",
+    "id": "09.03"
+   },
+   "04_maps": {
+    "name": "Maps & Atlases",
+    "id": "09.04"
+   },
+   "05_standards": {
+    "name": "Standards & Specifications",
+    "id": "09.05"
+   },
+   "06_formulas": {
+    "name": "Formulas & Tables",
+    "id": "09.06"
+   },
+   "07_protocols": {
+    "name": "Protocols & Procedures",
+    "id": "09.07"
+   },
+   "08_blueprints": {
+    "name": "Blueprints & Schematics",
+    "id": "09.08"
+   },
+   "09_patents": {
+    "name": "Patents",
+    "id": "09.09"
+   },
+   "10_archives": {
+    "name": "Historical Archives",
+    "id": "09.10"
+   }
+  }
+ }
+}

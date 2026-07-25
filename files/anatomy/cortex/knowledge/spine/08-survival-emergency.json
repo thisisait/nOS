@@ -1,0 +1,336 @@
+{
+ "key": "08_survival_emergency",
+ "category": {
+  "name": "Survival & Emergency Preparedness",
+  "id": "08",
+  "description": "Critical knowledge for emergencies",
+  "subcategories": {
+   "01_first_aid": {
+    "name": "First Aid & Medical",
+    "id": "08.01",
+    "subcategories": {
+     "01_basic_first_aid": {
+      "name": "Basic First Aid",
+      "id": "08.01.01",
+      "subcategories": {
+       "01_cpr": {
+        "name": "CPR & Resuscitation",
+        "id": "08.01.01.01",
+        "items": [
+         {
+          "id": "08.01.01.01.01",
+          "name": "Adult CPR"
+         },
+         {
+          "id": "08.01.01.01.02",
+          "name": "Child CPR"
+         },
+         {
+          "id": "08.01.01.01.03",
+          "name": "AED usage"
+         },
+         {
+          "id": "08.01.01.01.04",
+          "name": "Heimlich maneuver"
+         },
+         {
+          "id": "08.01.01.01.05",
+          "name": "Recovery position"
+         }
+        ]
+       },
+       "02_wound_care": {
+        "name": "Wound Care",
+        "id": "08.01.01.02"
+       },
+       "03_burns": {
+        "name": "Burn Treatment",
+        "id": "08.01.01.03"
+       },
+       "04_fractures": {
+        "name": "Fracture Management",
+        "id": "08.01.01.04"
+       },
+       "05_shock": {
+        "name": "Shock Treatment",
+        "id": "08.01.01.05"
+       }
+      }
+     },
+     "02_trauma_care": {
+      "name": "Trauma Care",
+      "id": "08.01.02",
+      "subcategories": {
+       "01_bleeding_control": {
+        "name": "Bleeding Control",
+        "id": "08.01.02.01"
+       },
+       "02_tourniquets": {
+        "name": "Tourniquet Application",
+        "id": "08.01.02.02"
+       },
+       "03_chest_wounds": {
+        "name": "Chest Wound Management",
+        "id": "08.01.02.03"
+       },
+       "04_head_injuries": {
+        "name": "Head Injury Care",
+        "id": "08.01.02.04"
+       },
+       "05_spinal_injuries": {
+        "name": "Spinal Injury Management",
+        "id": "08.01.02.05"
+       }
+      }
+     },
+     "03_wilderness_medicine": {
+      "name": "Wilderness Medicine",
+      "id": "08.01.03"
+     },
+     "04_emergency_childbirth": {
+      "name": "Emergency Childbirth",
+      "id": "08.01.04"
+     },
+     "05_medication_knowledge": {
+      "name": "Medication Knowledge",
+      "id": "08.01.05",
+      "subcategories": {
+       "01_antibiotics": {
+        "name": "Antibiotics",
+        "id": "08.01.05.01"
+       },
+       "02_pain_management": {
+        "name": "Pain Management",
+        "id": "08.01.05.02"
+       },
+       "03_herbal_medicine": {
+        "name": "Herbal Medicine",
+        "id": "08.01.05.03"
+       },
+       "04_medication_production": {
+        "name": "Basic Medication Production",
+        "id": "08.01.05.04"
+       },
+       "05_dosages": {
+        "name": "Dosage Calculations",
+        "id": "08.01.05.05"
+       }
+      }
+     }
+    }
+   },
+   "02_water_procurement": {
+    "name": "Water Procurement & Purification",
+    "id": "08.02",
+    "subcategories": {
+     "01_water_sources": {
+      "name": "Finding Water Sources",
+      "id": "08.02.01",
+      "items": [
+       {
+        "id": "08.02.01.01",
+        "name": "Groundwater location"
+       },
+       {
+        "id": "08.02.01.02",
+        "name": "Rainwater collection"
+       },
+       {
+        "id": "08.02.01.03",
+        "name": "Dew collection"
+       },
+       {
+        "id": "08.02.01.04",
+        "name": "Solar stills"
+       },
+       {
+        "id": "08.02.01.05",
+        "name": "Plant moisture extraction"
+       }
+      ]
+     },
+     "02_purification_methods": {
+      "name": "Purification Methods",
+      "id": "08.02.02",
+      "items": [
+       {
+        "id": "08.02.02.01",
+        "name": "Boiling"
+       },
+       {
+        "id": "08.02.02.02",
+        "name": "Chemical treatment"
+       },
+       {
+        "id": "08.02.02.03",
+        "name": "UV sterilization"
+       },
+       {
+        "id": "08.02.02.04",
+        "name": "Filtration systems"
+       },
+       {
+        "id": "08.02.02.05",
+        "name": "Distillation"
+       }
+      ]
+     },
+     "03_storage": {
+      "name": "Water Storage",
+      "id": "08.02.03"
+     },
+     "04_testing": {
+      "name": "Water Testing",
+      "id": "08.02.04"
+     },
+     "05_conservation": {
+      "name": "Water Conservation",
+      "id": "08.02.05"
+     }
+    }
+   },
+   "03_food_preservation": {
+    "name": "Food Preservation & Storage",
+    "id": "08.03",
+    "subcategories": {
+     "01_canning": {
+      "name": "Canning & Jarring",
+      "id": "08.03.01"
+     },
+     "02_drying": {
+      "name": "Drying & Dehydration",
+      "id": "08.03.02"
+     },
+     "03_smoking": {
+      "name": "Smoking Meats",
+      "id": "08.03.03"
+     },
+     "04_salting": {
+      "name": "Salting & Curing",
+      "id": "08.03.04"
+     },
+     "05_fermentation": {
+      "name": "Fermentation",
+      "id": "08.03.05"
+     }
+    }
+   },
+   "04_shelter_construction": {
+    "name": "Shelter Construction",
+    "id": "08.04",
+    "subcategories": {
+     "01_temporary_shelters": {
+      "name": "Temporary Shelters",
+      "id": "08.04.01"
+     },
+     "02_permanent_structures": {
+      "name": "Permanent Structures",
+      "id": "08.04.02"
+     },
+     "03_insulation": {
+      "name": "Insulation Techniques",
+      "id": "08.04.03"
+     },
+     "04_underground": {
+      "name": "Underground Shelters",
+      "id": "08.04.04"
+     },
+     "05_materials": {
+      "name": "Building Materials",
+      "id": "08.04.05"
+     }
+    }
+   },
+   "05_fire_making": {
+    "name": "Fire Making",
+    "id": "08.05",
+    "subcategories": {
+     "01_friction_methods": {
+      "name": "Friction Methods",
+      "id": "08.05.01"
+     },
+     "02_spark_methods": {
+      "name": "Spark Methods",
+      "id": "08.05.02"
+     },
+     "03_fire_maintenance": {
+      "name": "Fire Maintenance",
+      "id": "08.05.03"
+     },
+     "04_fuel_types": {
+      "name": "Fuel Types",
+      "id": "08.05.04"
+     },
+     "05_fire_safety": {
+      "name": "Fire Safety",
+      "id": "08.05.05"
+     }
+    }
+   },
+   "06_navigation": {
+    "name": "Navigation",
+    "id": "08.06",
+    "subcategories": {
+     "01_celestial": {
+      "name": "Celestial Navigation",
+      "id": "08.06.01"
+     },
+     "02_compass": {
+      "name": "Compass Usage",
+      "id": "08.06.02"
+     },
+     "03_natural_signs": {
+      "name": "Natural Navigation",
+      "id": "08.06.03"
+     },
+     "04_map_reading": {
+      "name": "Map Reading",
+      "id": "08.06.04"
+     },
+     "05_gps_alternatives": {
+      "name": "GPS Alternatives",
+      "id": "08.06.05"
+     }
+    }
+   },
+   "07_communication": {
+    "name": "Emergency Communication",
+    "id": "08.07",
+    "subcategories": {
+     "01_radio": {
+      "name": "Radio Communication",
+      "id": "08.07.01"
+     },
+     "02_signaling": {
+      "name": "Visual Signaling",
+      "id": "08.07.02"
+     },
+     "03_morse_code": {
+      "name": "Morse Code",
+      "id": "08.07.03"
+     },
+     "04_emergency_codes": {
+      "name": "Emergency Codes",
+      "id": "08.07.04"
+     },
+     "05_mesh_networks": {
+      "name": "Mesh Networks",
+      "id": "08.07.05"
+     }
+    }
+   },
+   "08_defense": {
+    "name": "Defense & Security",
+    "id": "08.08"
+   },
+   "09_disaster_response": {
+    "name": "Disaster Response",
+    "id": "08.09"
+   },
+   "10_psychological_resilience": {
+    "name": "Psychological Resilience",
+    "id": "08.10"
+   }
+  }
+ }
+}

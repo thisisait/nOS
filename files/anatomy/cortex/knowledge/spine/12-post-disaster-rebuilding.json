@@ -1,0 +1,52 @@
+{
+ "key": "12_post_disaster_rebuilding",
+ "category": {
+  "name": "Post-Disaster Rebuilding",
+  "id": "12",
+  "description": "Knowledge for rebuilding civilization",
+  "subcategories": {
+   "01_basic_infrastructure": {
+    "name": "Basic Infrastructure",
+    "id": "12.01",
+    "subcategories": {
+     "01_power_generation": {
+      "name": "Basic Power Generation",
+      "id": "12.01.01"
+     },
+     "02_water_systems": {
+      "name": "Water Systems",
+      "id": "12.01.02"
+     },
+     "03_sanitation": {
+      "name": "Sanitation",
+      "id": "12.01.03"
+     },
+     "04_communication": {
+      "name": "Communication Networks",
+      "id": "12.01.04"
+     },
+     "05_transportation": {
+      "name": "Basic Transportation",
+      "id": "12.01.05"
+     }
+    }
+   },
+   "02_tool_making": {
+    "name": "Tool Making",
+    "id": "12.02"
+   },
+   "03_basic_chemistry": {
+    "name": "Essential Chemistry",
+    "id": "12.03"
+   },
+   "04_basic_medicine": {
+    "name": "Basic Medicine Production",
+    "id": "12.04"
+   },
+   "05_community_building": {
+    "name": "Community Organization",
+    "id": "12.05"
+   }
+  }
+ }
+}

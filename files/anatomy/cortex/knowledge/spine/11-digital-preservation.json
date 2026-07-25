@@ -1,0 +1,52 @@
+{
+ "key": "11_digital_preservation",
+ "category": {
+  "name": "Digital Preservation",
+  "id": "11",
+  "description": "Digital formats and preservation",
+  "subcategories": {
+   "01_file_formats": {
+    "name": "File Formats",
+    "id": "11.01",
+    "subcategories": {
+     "01_documents": {
+      "name": "Document Formats",
+      "id": "11.01.01"
+     },
+     "02_images": {
+      "name": "Image Formats",
+      "id": "11.01.02"
+     },
+     "03_audio": {
+      "name": "Audio Formats",
+      "id": "11.01.03"
+     },
+     "04_video": {
+      "name": "Video Formats",
+      "id": "11.01.04"
+     },
+     "05_archives": {
+      "name": "Archive Formats",
+      "id": "11.01.05"
+     }
+    }
+   },
+   "02_compression": {
+    "name": "Compression Methods",
+    "id": "11.02"
+   },
+   "03_encryption": {
+    "name": "Encryption & Security",
+    "id": "11.03"
+   },
+   "04_backup_strategies": {
+    "name": "Backup Strategies",
+    "id": "11.04"
+   },
+   "05_data_recovery": {
+    "name": "Data Recovery",
+    "id": "11.05"
+   }
+  }
+ }
+}

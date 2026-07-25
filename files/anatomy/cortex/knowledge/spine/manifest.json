@@ -1,0 +1,78 @@
+{
+ "version": 1,
+ "domains": [
+  {
+   "domain": "01",
+   "key": "01_natural_sciences",
+   "file": "01-natural-sciences.json",
+   "nodes": 70
+  },
+  {
+   "domain": "02",
+   "key": "02_formal_sciences",
+   "file": "02-formal-sciences.json",
+   "nodes": 135
+  },
+  {
+   "domain": "03",
+   "key": "03_applied_sciences",
+   "file": "03-applied-sciences.json",
+   "nodes": 211
+  },
+  {
+   "domain": "04",
+   "key": "04_social_sciences",
+   "file": "04-social-sciences.json",
+   "nodes": 41
+  },
+  {
+   "domain": "05",
+   "key": "05_humanities",
+   "file": "05-humanities.json",
+   "nodes": 71
+  },
+  {
+   "domain": "06",
+   "key": "06_arts",
+   "file": "06-arts.json",
+   "nodes": 56
+  },
+  {
+   "domain": "07",
+   "key": "07_practical_skills",
+   "file": "07-practical-skills.json",
+   "nodes": 81
+  },
+  {
+   "domain": "08",
+   "key": "08_survival_emergency",
+   "file": "08-survival-emergency.json",
+   "nodes": 76
+  },
+  {
+   "domain": "09",
+   "key": "09_reference_documentation",
+   "file": "09-reference-documentation.json",
+   "nodes": 11
+  },
+  {
+   "domain": "10",
+   "key": "10_cultural_preservation",
+   "file": "10-cultural-preservation.json",
+   "nodes": 16
+  },
+  {
+   "domain": "11",
+   "key": "11_digital_preservation",
+   "file": "11-digital-preservation.json",
+   "nodes": 11
+  },
+  {
+   "domain": "12",
+   "key": "12_post_disaster_rebuilding",
+   "file": "12-post-disaster-rebuilding.json",
+   "nodes": 11
+  }
+ ],
+ "totalNodes": 790
+}

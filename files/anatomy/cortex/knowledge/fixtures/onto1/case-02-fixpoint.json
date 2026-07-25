@@ -1,0 +1,121 @@
+{
+ "why": "Grown rows arrive CHILDREN-FIRST. A single-pass implementation registers nothing below 'nos' and silently loses the subtree; the fixpoint must land all four.",
+ "spine": [
+  {
+   "key": "01_alpha",
+   "category": {
+    "name": "Alpha",
+    "id": "01",
+    "description": "d",
+    "subcategories": {
+     "a": {
+      "name": "Ay",
+      "id": "01.01",
+      "items": [
+       {
+        "id": "01.01.01",
+        "name": "One"
+       },
+       {
+        "id": "01.01.10",
+        "name": "Ten"
+       }
+      ]
+     },
+     "b": {
+      "name": "Bee",
+      "id": "01.02",
+      "subcategories": {
+       "c": {
+        "name": "Cee",
+        "id": "01.02.01",
+        "items": []
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "key": "02_beta",
+   "category": {
+    "name": "Beta",
+    "id": "02",
+    "description": "d",
+    "subcategories": {
+     "a": {
+      "name": "Zed",
+      "id": "02.01",
+      "items": []
+     }
+    }
+   }
+  }
+ ],
+ "ext": [
+  {
+   "id": "nos.services.bookstack",
+   "parentId": "nos.services",
+   "name": "BookStack"
+  },
+  {
+   "id": "nos.services",
+   "parentId": "nos",
+   "name": "Services"
+  },
+  {
+   "id": "nos",
+   "parentId": "",
+   "name": "nOS"
+  },
+  {
+   "id": "01.01.02",
+   "parentId": "01.01",
+   "name": "Grown leaf"
+  }
+ ],
+ "relationTypes": [
+  {
+   "type": "exemplifies",
+   "status": "seed",
+   "label": "exemplifies"
+  },
+  {
+   "type": "requires",
+   "status": "seed",
+   "label": "requires"
+  },
+  {
+   "type": "interprets",
+   "status": "confirmed",
+   "label": "interprets"
+  },
+  {
+   "type": "invented",
+   "status": "proposed",
+   "label": "invented"
+  }
+ ],
+ "expected": {
+  "nodeCount": 12,
+  "dropped": [],
+  "onto1": "onto1:3d1c6f476e6fcaec",
+  "canonical": [
+   "t\t01\t-\tAlpha",
+   "t\t01.01\t01\tAy",
+   "t\t01.01.01\t01.01\tOne",
+   "t\t01.01.02\t01.01\tGrown leaf",
+   "t\t01.01.10\t01.01\tTen",
+   "t\t01.02\t01\tBee",
+   "t\t01.02.01\t01.02\tCee",
+   "t\t02\t-\tBeta",
+   "t\t02.01\t02\tZed",
+   "t\tnos\t-\tnOS",
+   "t\tnos.services\tnos\tServices",
+   "t\tnos.services.bookstack\tnos.services\tBookStack",
+   "r\texemplifies\tseed\texemplifies",
+   "r\tinterprets\tconfirmed\tinterprets",
+   "r\trequires\tseed\trequires"
+  ]
+ }
+}
