@@ -1,0 +1,391 @@
+{
+ "domain": "05.02",
+ "nodes": [
+  {
+   "id": "05.02",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Philosophy is the systematic inquiry into fundamental questions about reality, knowledge, values, and reasoning. It encompasses Metaphysics (what exists), Epistemology (how we know), Ethics (how to act), Aesthetics (nature of beauty), and Logic (principles of valid argument), producing frameworks and arguments that inform all other humanistic and scientific disciplines. Distinct from empirical disciplines by its reliance on conceptual analysis and rational argumentation; it intersects Religious Studies (theology), Cultural Studies (values), and Linguistics (meaning).",
+   "cs": "Filozofie je systematické zkoumání základních otázek o realitě, poznání, hodnotách a uvažování. Zahrnuje Metafyziku (co existuje), Teorii poznání (jak víme), Etiku (jak jednat), Estetiku (podstatu krásy) a Logiku (principy platného závěru), čímž vytváří rámce a argumenty informující všechny ostatní humanitní a vědecké disciplíny. Na rozdíl od empirických disciplín se spoléhá na koncepční analýzu a racionální argumentaci; protíná Religiologické studie (teologii), Kulturní studia (hodnoty) a Jazykovědu (vývoj).",
+   "brief": "Philosophy is the systematic inquiry into fundamental questions about reality, knowledge, values, and reasoning, pursued through conceptual analysis and rational argument rather than empirical measurement. Its core branches — [[05.02.01]] Metaphysics (what exists), [[05.02.02]] Epistemology (how we know), Ethics (how to act), Aesthetics (the nature of beauty), and Logic (principles of valid inference) — supply the conceptual toolkit that the rest of the humanities and the sciences draw on.\n\nWithin [[05]] Humanities, Philosophy sits closest to [[05.03]] Linguistics, sharing Epistemology's interest in how meaning and knowledge relate to language, and to Religious Studies, which examines theological claims that philosophy of religion analyzes argumentatively rather than doctrinally. Its reliance on argument rather than data distinguishes it from [[04]] Social Sciences, though both fields interrogate human values and institutions from complementary angles.\n\nPhilosophy's habit of making assumptions explicit and testing them against counterexamples underlies rigorous thought in every other discipline, from scientific method to legal reasoning. For a continuously updated, peer-reviewed reference maintained by working philosophers, see the [Stanford Encyclopedia of Philosophy](https://plato.stanford.edu/); for open-access philosophical texts and discussion, the [Internet Encyclopedia of Philosophy](https://iep.utm.edu/)."
+  },
+  {
+   "id": "05.02.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Metaphysics is the branch of philosophy investigating the nature of reality itself—what exists, how entities relate, and whether change or permanence is fundamental. Its subfields—Ontology (being and existence), Philosophical Cosmology (the universe's structure), Philosophy of Mind (consciousness and personhood), Free Will (determinism), and Time and Space (dimensionality)—address questions prior to empirical investigation. Distinguished from Epistemology's focus on knowledge and Ethics' focus on conduct; it provides the conceptual scaffolding for both.",
+   "cs": "Metafyzika je odvětví filozofie zkoumající podstatu reality samotné—co existuje, jak se entity vzájemně vztahují a zda je změna nebo neměnnost fundamentální. Její podobory—Ontologie (bytí a existence), Filozofická kosmologie (struktura vesmíru), Filozofie mysli (vědomí a osobnost), Svobodná vůle (determinismus) a Čas a prostor (rozměrnost)—řeší otázky předchází empirickému zkoumání. Na rozdíl od zaměření Teorie poznání na poznání a zaměření Etiky na jednání; poskytuje koncepční strukturu pro obojí.",
+   "brief": "Metaphysics investigates the nature of reality itself: what exists, how entities relate to one another, and whether change or permanence is the more fundamental condition of being. It asks questions that precede empirical investigation, since any experiment already presupposes some answer to what counts as a thing, a cause, or a moment in time.\n\nIts subfields divide the question by object: [[05.02.01.01]] (Ontology) asks what exists in the most general sense, while [[05.02.01.03]] (Philosophy of Mind) narrows the same inquiry to consciousness and personhood, and companion subfields cover cosmology and the structure of time and space. Each treats a different slice of \"what there is\" with the same conceptual toolkit.\n\nMetaphysics supplies the conceptual scaffolding that [[05.02.02]] (Epistemology) and [[05.02.03]] (Ethics) build on — one cannot ask how we know something, or how we ought to act, without prior commitments about what kinds of things and facts exist — and it shares its formal apparatus with [[05.02.05]] (Logic), which supplies the inference rules metaphysical arguments rely on.\n\nThe [Stanford Encyclopedia of Philosophy's metaphysics entries](https://plato.stanford.edu/entries/metaphysics/) and the [Internet Encyclopedia of Philosophy](https://iep.utm.edu/) provide peer-reviewed overviews of its major debates and historical positions."
+  },
+  {
+   "id": "05.02.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Ontology is the metaphysical study of what kinds of entities exist and how they relate. Its core problems -- Being and existence, Categories of being (substance, properties, relations), the Universals problem, Identity and change, and Possible worlds -- shape every other philosophical discipline. It is foundational to Metaphysics, posing the most basic question of what it is to be.",
+   "cs": "Ontologie je metafyzické zkoumání toho, jaké druhy entit existují a jak se vzájemně vztahují. Její základní problémy -- Bytí a existence, Kategorie bytí (substance, vlastnosti, vztahy), Problém univerzálií, Identita a změna a Možné světy -- formují každou další filozofickou disciplínu. Je základem Metafyziky, neboť klade nejzákladnější otázku, totiž co znamená být."
+  },
+  {
+   "id": "05.02.01.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Being and existence inquires into what it fundamentally means for something to exist -- whether existence is a property, a mode of presence, or something that defies definition. It distinguishes appearance from reality and necessity from contingency, and asks whether non-existence is even conceivable. As Ontology's most elementary question, it grounds every other ontological inquiry.",
+   "cs": "Bytí a existence zkoumají, co zásadně znamená, aby něco existovalo -- zda je existence vlastností, módem přítomnosti, nebo něčím, co se vymyká definici. Rozlišují zdání od reality a nutnost od kontingence a ptají se, zda je neexistence vůbec myslitelná. Jako nejzákladnější otázka Ontologie tvoří základ pro všechna ostatní ontologická zkoumání."
+  },
+  {
+   "id": "05.02.01.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Categories of being investigates the fundamental types or classes into which all entities fall -- traditionally substance (independent particulars), properties (qualities that inhere in substances), relations (connections between entities), events, and abstracta (numbers, propositions). Aristotle's ten categories remain the classical framework, though modern debate disputes whether these are real divisions in nature or artifacts of language. This is Ontology's foundational taxonomy.",
+   "cs": "Kategorie bytí zkoumají základní typy nebo třídy, do kterých spadají všechny entity -- tradičně substance (nezávislé jednotliviny), vlastnosti (kvality náležející substancím), vztahy (spojení mezi entitami), události a abstrakta (čísla, propozice). Aristotelových deset kategorií zůstává klasickým rámcem, ačkoli moderní debaty zpochybňují, zda jde o reálná dělení v přírodě, nebo o artefakty jazyka. Představuje základní taxonomii Ontologie."
+  },
+  {
+   "id": "05.02.01.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The Universals problem asks whether abstract general terms (redness, humanity, justice) refer to real entities -- universals -- or are merely human conventions. Realism holds that universals exist, nominalism that only particulars exist, conceptualism that universals are mental constructs, and trope theory that they are abstract particulars. It is central to Ontology because it concerns the nature of properties, kinds, and identity across instances.",
+   "cs": "Problém univerzálií se ptá, zda se abstraktní obecné termíny (červenost, lidskost, spravedlnost) vztahují k reálným entitám -- univerzáliím -- nebo jsou pouze lidskými konvencemi. Realismus tvrdí, že univerzálie existují, nominalismus, že existují jen jednotliviny, konceptualismus, že univerzálie jsou mentální konstrukty, a teorie trópů, že jde o abstraktní jednotliviny. Je zásadní pro Ontologii, protože se týká povahy vlastností, druhů a identity napříč instancemi."
+  },
+  {
+   "id": "05.02.01.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Identity and change examines how entities remain 'the same' through alteration over time -- the Ship of Theseus paradox, in which every plank of a ship is gradually replaced yet its identity seems to persist, exemplifies the puzzle. It asks whether persistence requires material continuity, spatiotemporal continuity, psychological continuity for persons, or essential properties, and shapes debates in the metaphysics of persons, ordinary objects, and the nature of time.",
+   "cs": "Identita a změna zkoumají, jak entity zůstávají 'stejné' navzdory změně v průběhu času -- příkladem této hádanky je Théseova loď, jejíž prkna jsou postupně vyměněna, zatímco její identita zdánlivě přetrvává. Ptají se, zda perzistence vyžaduje hmotnou kontinuitu, prostoročasovou kontinuitu, psychickou kontinuitu (u osob), nebo esenciální vlastnosti, a formují debaty v metafyzice osob, běžných objektů a povahy času."
+  },
+  {
+   "id": "05.02.01.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Possible worlds are complete and consistent hypothetical scenarios used to ground modal logic and semantics—what must be true (in all possible worlds), what might be true (in some), and what is contingent. Whether possible worlds are concrete (actually existing alternate realities), abstract (logical constructs), or notional (pragmatic tools) divides metaphysicians. Essential framework for analyzing necessity, possibility, counterfactuals, and properties.",
+   "cs": "Možné světy jsou úplné a konzistentní hypotetické scénáře používané k ukotvení modální logiky a sémantiky—co musí být pravda (ve všech možných světech), co může být pravda (v některých) a co je kontingentní. Zda jsou možné světy konkrétní (skutečně existující alternativní reality), abstraktní (logické konstrukty) nebo nominální (pragmatické nástroje) rozděluje metafyziky. Základní rámec pro analýzu nutnosti, možnosti, kontrafaktuálů a vlastností."
+  },
+  {
+   "id": "05.02.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Philosophical Cosmology investigates the structure and origin of the universe as a whole—whether it is eternal or created, infinite or finite, deterministic or indeterminate, and what place (if any) consciousness, value, or purpose occupy within it. Distinct from empirical Cosmology (astrophysics) by its conceptual and speculative scope; it interrogates assumptions (causation, time, infinity) that underlie scientific theories. Bridges Metaphysics and Physics.",
+   "cs": "Filozofická kosmologie zkoumá strukturu a původ vesmíru jako celku—zda je věčný nebo vytvořený, nekonečný nebo konečný, deterministický nebo neurčitý, a jaké místo (pokud vůbec) zabírají vědomí, hodnota nebo účel v něm. Na rozdíl od empirické kosmologie (astrofyziky) svým koncepčním a spekulativním rozsahem; zpochybňuje předpoklady (kauzalitu, čas, nekonečnost), které jsou základem vědeckých teorií. Propojuje Metafyziku a Fyziku."
+  },
+  {
+   "id": "05.02.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Philosophy of Mind investigates consciousness, intentionality, and the relation between mental states and physical processes -- the mind-body problem. Competing positions (dualism, physicalism, functionalism, panpsychism) diverge on whether consciousness is non-physical, reducible to brain states, constituted by causal role, or fundamental. It intersects with cognitive science and neuroscience and raises ethical questions about artificial intelligence and animal minds.",
+   "cs": "Filozofie mysli zkoumá vědomí, intencionalitu a vztah mezi mentálními stavy a fyzickými procesy -- takzvaný problém mysli a těla. Soupeřící pozice (dualismus, fyzikalismus, funkcionalismus, panpsychismus) se liší v tom, zda je vědomí nefyzické, redukovatelné na stavy mozku, konstituované kauzálními rolemi, nebo fundamentální. Prolíná se s kognitivní vědou a neurovědou a vyvolává etické otázky ohledně umělé inteligence a mysli zvířat."
+  },
+  {
+   "id": "05.02.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Free Will examines whether human agents can act freely or whether all actions are determined by prior causes—the incompatibilist view that freedom and determinism cannot coexist, compatibilism's attempt to reconcile them, and hard determinism's rejection of free will altogether. Consequential for ethics (responsibility, punishment), religion (divine omniscience vs. human agency), and law. Foundational puzzle of Metaphysics.",
+   "cs": "Svobodná vůle zkoumá, zda mohou lidští agenti jednat svobodně nebo zda jsou všechny akce určeny předchozími příčinami—inkompatibilistický pohled, že svoboda a determinismus nemohou koexistovat, kompatibilismus pokus je sladit a tvrdý determinismus zamítnutí svobodné vůle vůbec. Důležitý pro etiku (odpovědnost, trest), náboženství (božská vševedoucnost vs. lidská svoboda) a právo. Základní hádanka Metafyziky."
+  },
+  {
+   "id": "05.02.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Time and Space investigates whether time and space are fundamental features of reality, mental constructs, or emergent from more basic physics—eternalism (all moments equally real), presentism (only the present exists), and growing-block theories compete. Similarly, space may be substantival (a container), relational (constituted by objects' spatial relations), or curved by mass-energy (Einsteinian). Central to Metaphysics and Philosophy of Physics.",
+   "cs": "Čas a prostor zkoumají, zda jsou čas a prostor základními rysy reality, mentálními konstrukty nebo vzniklými z základnější fyziky—eternalismus (všechny momenty stejně reálné), prezentismus (existuje jen přítomnost) a rostoucí-blok teorie soutěží. Podobně prostor může být substantivní (nádoba), relační (utvořený prostorovými vztahy objektů) nebo zakřivený hmotou-energií (einsteinský). Ústředně pro Metafyziku a Filozofii fyziky."
+  },
+  {
+   "id": "05.02.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Epistemology is the philosophical study of knowledge—what it is, how it is acquired, and what justifies belief. Its central question, 'What can we know and why?' encompasses Theory of Knowledge (definition and conditions of knowledge), Skepticism (challenges to certainty), Justification (grounds for belief), Theories of Truth (what makes beliefs correct), and Perception (how sensory experience generates knowledge). Foundational to all sciences and philosophy itself.",
+   "cs": "Teorie poznání je filozofickým studiem vědomí—co to je, jak se získává a co ospravedlňuje přesvědčení. Její ústřední otázka 'Co můžeme vědět a proč?' zahrnuje Teorii vědění (definici a podmínky vědomí), Skepticismus (výzvy k jistotě), Zdůvodnění (základy přesvědčení), Teorie pravdy (co činí přesvědčení správnými) a Vnímání (jak sensory zkušenost vytváří vědomí). Základní pro všechny vědy a filosofii samotnou.",
+   "brief": "Epistemology is the philosophical study of knowledge — what it is, how it is acquired, and what justifies a belief in counting as knowledge rather than mere opinion. Its central question, what can we know and why, underlies every other field that claims to produce reliable knowledge, from the natural sciences to history.\n\n[[05.02.02.02]] (Skepticism) tests the limits of the enterprise by asking whether certainty is achievable at all, while [[05.02.02.04]] (Theories of Truth) asks what makes a belief correct in the first place — the two subfields bracket the discipline from opposite ends, doubt on one side and the standard of correctness on the other.\n\nEpistemology depends on [[05.02.01]] (Metaphysics) for its background commitments about what kinds of facts exist to be known, and on [[05.02.05]] (Logic) for the inference rules that separate a justified belief from an unjustified one; it also underwrites [[05.02.03]] (Ethics), since moral reasoning presupposes that moral knowledge — or at least moral justification — is possible.\n\nThe [Stanford Encyclopedia of Philosophy's epistemology entries](https://plato.stanford.edu/entries/epistemology/) and the [Internet Encyclopedia of Philosophy](https://iep.utm.edu/) survey the field's major positions and historical debates."
+  },
+  {
+   "id": "05.02.02.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Theory of Knowledge analyzes knowledge itself—the classical definition (justified true belief), its counterexamples and revisions (Gettier problems), and alternative accounts (reliabilism, virtue epistemology). Asks what distinguishes knowledge from mere true opinion and whether knowledge requires certainty or is consistent with residual doubt. The core framework for Epistemology.",
+   "cs": "Teorie poznání analyzuje poznání samotné—klasické vymezení (zdůvodněné pravdivé přesvědčení), jeho protipříklady a revize (Gettierovy problémy) a alternativní účty (reliabilismus, epistemologie ctnosti). Ptá se, co rozlišuje poznání od pouhého pravdivého názoru a zda poznání vyžaduje jistotu nebo je konzistentní se zbývajícími pochybnostmi. Základní rámec pro Teorii poznání."
+  },
+  {
+   "id": "05.02.02.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Skepticism in epistemology challenges the possibility or extent of human knowledge, arguing that certainty is unattainable (Cartesian doubt), perceptions deceive (brain-in-vat scenarios), or induction cannot justify universal claims. Methodological skepticism (doubting everything systematically to find bedrock beliefs) contrasts with radical skepticism (denying knowledge's possibility). Skepticism's challenges motivate responses within epistemology; it does not commit philosophers to denying knowledge.",
+   "cs": "Skepticismus v teorii poznání zpochybňuje možnost nebo rozsah lidského poznání a tvrdí, že jistota je nedosažitelná (Descartova pochybnost), vnímání klame (scénáře mozku v nádobě) nebo indukce nemůže ospravedlňovat univerzální tvrzení. Metodologický skepticismus (systematické pochybování o všem k nalezení základních přesvědčení) kontrastuje s radikálním skepticismem (popírání možnosti poznání). Výzvy skepticismu motivují odpovědi v teorii poznání; nezavazuje filozofy popírat poznání."
+  },
+  {
+   "id": "05.02.02.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Justification examines the grounds or reasons that make a belief rational or warranted—foundationalism (beliefs rest on basic self-evident truths), coherentism (beliefs justify each other through consistency), infinitism (justification requires an infinite chain), or externalism (justification depends on reliable causal processes, not the believer's conscious reasons). Central to Theory of Knowledge — it asks why true belief constitutes knowledge.",
+   "cs": "Zdůvodnění zkoumá základy nebo důvody, které činí přesvědčení racionálním nebo oprávněným—fundacionalismus (přesvědčení spočívá na základních samozřejmých pravdách), koherentismus (přesvědčení se vzájemně ospravedlňují konzistentností), infinitismus (zdůvodnění vyžaduje nekonečný řetězec) nebo externalismus (zdůvodnění závisí na spolehlivých kauzálních procesech, ne na vědomých důvodech věřícího). Je ústřední pro Teorii poznání; ptá se, proč pravdivé přesvědčení představuje poznání."
+  },
+  {
+   "id": "05.02.02.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Theories of Truth investigate what makes a proposition true—correspondence theories (truth mirrors reality), coherence theories (truth is internal consistency), pragmatic theories (truth is what works), deflationary theories (truth is a trivial property), and pluralist theories (truth varies by context). Each carries implications for epistemology, metaphysics, and language. Foundational question for both Epistemology and Logic.",
+   "cs": "Teorie pravdy zkoumají, co činí tvrzení pravdivým—korespondující teorie (pravda zrcadlí realitu), koherenční teorie (pravda je vnitřní konzistentnost), pragmatické teorie (pravda je to, co funguje), deflační teorie (pravda je triviální vlastnost) a pluralistické teorie (pravda se liší podle kontextu). Každý nese důsledky pro teorii poznání, metafyziku a jazyk. Základní otázka pro Teorii poznání i Logiku."
+  },
+  {
+   "id": "05.02.02.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Perception examines how sensory experience generates knowledge or justified belief about the external world—whether perception directly accesses reality, perception is inferential (constructing reality from sensory data), or perception is fundamentally conceptual (shaped by language and expectation). Addresses skeptical challenges (hallucinations, illusions) and the relationship between sensation, attention, and cognition. It bridges Epistemology and Philosophy of Mind.",
+   "cs": "Vnímání zkoumá, jak smyslová zkušenost vytváří poznání nebo zdůvodněné přesvědčení o vnějším světě—zda vnímání přímo přistupuje k realitě, vnímání je inferenční (konstruování reality ze smyslových údajů) nebo vnímání je fundamentálně koncepční (formované jazykem a očekáváním). Zabývá se skeptickými výzvami (halucinace, klamy) a vztahem mezi smyslem, pozorností a poznáváním. Propojuje Teorii poznání a Filozofii mysli."
+  },
+  {
+   "id": "05.02.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Ethics is the philosophical study of how to live and act—what is right, good, virtuous, and just. Its subfields—Normative Ethics (principles for right action), Applied Ethics (moral reasoning in concrete situations), Meta-ethics (the status of moral truths), Virtue Ethics (character and flourishing), and Consequentialism (outcomes and results)—provide frameworks for individual and collective decision-making. Intersects Political Philosophy, Aesthetics (beauty as a value), and Metaphysics (free will's prerequisites).",
+   "cs": "Etika je filozofickým studiem toho, jak žít a jednat—co je správné, dobré, cnostné a spravedlivé. Její podobory—Normativní etika (principy správného jednání), Aplikovaná etika (morální uvažování v konkrétních situacích), Metaetika (stav morální pravdy), Etika cnosti (charakter a rozvoj) a Konzekvencialismus (výsledky a důsledky)—poskytují rámce pro individuální a kolektivní rozhodování. Protíná Politickou filozofii, Estetiku (krásu jako hodnotu) a Metafyziku (předpoklady svobodné vůle).",
+   "brief": "Ethics is the philosophical study of how to live and act: what is right, good, virtuous, and just, and what grounds those judgments. It ranges from abstract questions about the status of moral claims to concrete guidance for particular decisions, and every other field that makes normative recommendations ultimately borrows its vocabulary from here.\n\n[[05.02.03.01]] (Normative Ethics) supplies the general principles — consequences, duties, character — that [[05.02.03.02]] (Applied Ethics) then brings to bear on concrete situations such as medical or business dilemmas, while [[05.02.03.03]] (Meta-ethics) steps back to ask whether moral claims are objective facts, mere expressions of preference, or something in between.\n\nEthics presupposes [[05.02.01]] (Metaphysics)'s account of free will — moral responsibility requires that agents could genuinely have acted otherwise — and it borders [[05.02.04]] (Aesthetics) wherever beauty and moral value are treated as related kinds of worth, as in debates over whether an artwork's ethical content bears on its aesthetic merit.\n\nThe [Stanford Encyclopedia of Philosophy's ethics entries](https://plato.stanford.edu/entries/ethics-normative/) and the [Internet Encyclopedia of Philosophy](https://iep.utm.edu/) survey the field's major theories and controversies."
+  },
+  {
+   "id": "05.02.03.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Normative Ethics formulates and defends principles for right action—utilitarianism (maximize happiness), deontological ethics (respect duties and rights), virtue ethics (cultivate excellent character), care ethics (prioritize relationships and interdependence), and others. Distinct from Meta-ethics (which asks whether moral facts exist) and Applied Ethics (which applies principles to cases), Normative Ethics proposes systematic answers to 'How should I act?'",
+   "cs": "Normativní etika formuluje a obhajuje principy správného jednání—utilitarianismus (maximalizace štěstí), deontologická etika (respektování povinností a práv), etika cnosti (kultivace vynikajícího charakteru), etika péče (upřednostňování vztahů a vzájemné závislosti) a další. Na rozdíl od Metaetiky (která se ptá, zda existují morální fakta) a Aplikované etiky (která použije principy na případy), Normativní etika navrhuje systematické odpovědi na 'Jak bych měl jednat?'"
+  },
+  {
+   "id": "05.02.03.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Applied Ethics engages specific moral problems in professional and personal life—bioethics (end-of-life decisions, genetic engineering), environmental ethics (duties to nature), business ethics (corporate responsibility), technology ethics (AI alignment, privacy), and criminal justice (sentencing, rehabilitation). Draws on Normative Ethics' principles while attending to context, institutional constraints, and lived values. Distinct from abstract principle-formulation; it tests and refines theory.",
+   "cs": "Aplikovaná etika se zabývá specifickými morálními problémy v profesním a osobním životě—bioetika (rozhodnutí na konci života, genetické inženýrství), environmentální etika (povinnosti k přírodě), obchodní etika (korporativní odpovědnost), technologická etika (zarovnání AI, soukromí) a trestní právo (trestání, rehabilitace). Čerpá z principů Normativní etiky při pozornosti kontextu, institucionálních omezení a prožitých hodnot. Na rozdíl od abstraktní formulace principů; testuje a zdokonaluje teorii."
+  },
+  {
+   "id": "05.02.03.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Meta-ethics investigates the foundations of morality itself—whether moral facts exist objectively, whether moral truths are universal or culturally constructed, and what moral language means (e.g., does 'murder is wrong' describe a fact or express an attitude?). Positions include moral realism (moral facts exist), error theory (moral utterances are systematically false), expressivism (moral language expresses attitudes), and relativism (moral truth depends on community or individual). Philosophical prerequisite for Normative Ethics.",
+   "cs": "Metaetika zkoumá základy morálnosti samotné—zda existují morální fakta objektivně, zda jsou morální pravdy univerzální nebo kulturně konstruované, a co znamená morální jazyk (např. znamená 'vražda je špatná' popis faktu nebo vyjádření postoje?). Pozice zahrnují morální realismus (existují morální fakta), teorii chyby (morální výroky jsou systematicky falešné), expresivismus (morální jazyk vyjadřuje postoje) a relativismus (morální pravda závisí na komunitě nebo jednotlivci). Filozofický předpoklad pro Normativní etiku."
+  },
+  {
+   "id": "05.02.03.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Virtue Ethics grounds morality in character and human flourishing rather than rules or consequences—virtues (courage, honesty, compassion) are cultivated excellences that enable eudaimonia (living well). Rooted in Aristotle and developed by contemporary neo-Aristotelians, Virtue Ethics asks 'What kind of person should I become?' rather than 'What action should I perform?' It is distinguished from Consequentialism and deontological Normative Ethics by its focus on character development and the agent's integral flourishing.",
+   "cs": "Etika ctnosti zakořeňuje moralitu v charakteru a lidské prosperitě spíše než v pravidlech nebo důsledcích—ctnosti (odvaha, poctivost, soucit) jsou kultivované dovednosti, které umožňují eudaimonii (dobré žití). Zakořeněna v Aristotelovi a rozvinuta současnými neo-aristoteliány, Etika ctnosti se ptá 'Jakou osobou bych se měl stát?' spíše než 'Jakou akci bych měl provést?' Rozlišuje se od Konzekvencialismu a deontologické Normativní etiky svým zaměřením na rozvoj charakteru a integrální prosperitu agenta."
+  },
+  {
+   "id": "05.02.03.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Consequentialism holds that the rightness of an action is determined entirely by its consequences—utilitarianism (maximize overall happiness), effective altruism (maximize well-being cost-effectively), and other outcome-focused theories exemplify this approach. Contrasts with deontological Normative Ethics (which respects rights and duties regardless of consequences) and Virtue Ethics (which prioritizes character over results). It is central to normative frameworks in economics and policy.",
+   "cs": "Konzekvencialismus tvrdí, že správnost akce je určena výhradně jejími důsledky—utilitarismus (maximalizace celkového štěstí), efektivní altruismus (maximalizace pohody nákladově efektivně) a další teorie zaměřené na výsledky exemplifikují tento přístup. Kontrastuje s deontologickou Normativní etikou (která respektuje práva a povinnosti bez ohledu na důsledky) a Etikou ctnosti (která upřednostňuje charakter před výsledky). Je ústřední pro normativní rámce v ekonomice a politice."
+  },
+  {
+   "id": "05.02.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Aesthetics investigates beauty, art, taste, and aesthetic experience—what makes something beautiful, whether aesthetic judgments are objective or subjective, and what distinguishes art from non-art. Core topics include formalist aesthetics (focus on intrinsic properties), expression theory (art conveys emotion), institutional theory (context and art-world status determine arthood), and the ontology of art (what are artworks?). Bridges Metaphysics (the nature of aesthetic properties), Ethics (aesthetic value), and Epistemology (aesthetic knowledge).",
+   "cs": "Estetika zkoumá krásu, umění, vkus a estetickou zkušenost—co něco činí krásným, zda jsou estetické úsudky objektivní nebo subjektivní a co rozlišuje umění od ne-umění. Ústředními tématy jsou formalistická estetika (zaměření na vnitřní vlastnosti), teorie vyjádření (umění vyjadřuje emoci), instituční teorie (kontext a status uměleckého světa určují uměleckost) a ontologie umění (co jsou umělecká díla?). Propojuje Metafyziku (povahu estetických vlastností), Etiku (estetickou hodnotu) a Teorii poznání (estetické vědomí).",
+   "brief": "Aesthetics investigates beauty, art, taste, and aesthetic experience: what makes something beautiful, whether aesthetic judgments are objective or merely subjective, and what distinguishes art from everything that is not art. It treats these as questions in their own right rather than as footnotes to the study of art history or criticism.\n\nIts core debates recur across formalist positions, which locate aesthetic value in a work's intrinsic properties, expression theories, which locate it in the emotion an artwork conveys, and institutional theories, which locate it in the work's status within an art world — three competing answers to what makes an object count as art at all.\n\nAesthetics draws on [[05.02.01]] (Metaphysics) for its account of what kind of thing an artwork or an aesthetic property is, on [[05.02.02]] (Epistemology) for how aesthetic judgments could be justified rather than merely asserted, and it intersects [[05.02.03]] (Ethics) wherever a work's moral content is weighed against its aesthetic merit.\n\nThe [Stanford Encyclopedia of Philosophy's aesthetics entries](https://plato.stanford.edu/entries/aesthetic-concept/) and the [Internet Encyclopedia of Philosophy](https://iep.utm.edu/) survey the field's major theories and historical positions."
+  },
+  {
+   "id": "05.02.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Logic is the study of valid reasoning and the principles that govern correct inference—formal logic (truth-functional validity, quantifiers, modal operators) and informal logic (reasoning in natural language, fallacies, argumentation) constitute the field. Symbolic logic translates arguments into formal notation to test validity; logical systems (classical, intuitionistic, paraconsistent) offer competing frameworks. Foundational to all philosophy, mathematics, and computer science; it ensures that Epistemology, Metaphysics, and Ethics rest on sound reasoning.",
+   "cs": "Logika je výzkumem platného uvažování a principů, které řídí správný závěr—formální logika (pravdivostně-funkční platnost, kvantifikátory, modální operátory) a neformální logika (uvažování v přirozeném jazyce, sofismata, argumentace) tvoří obor. Symbolická logika překládá argumenty do formální notace pro testování platnosti; logické systémy (klasické, intuicionistické, parakonsistentní) nabízejí konkurenční rámce. Základní pro všechnu filozofii, matematiku a informatiku; zajišťuje, aby Teorie poznání, Metafyzika a Etika spočívaly na zdravém uvažování.",
+   "brief": "Logic is the study of what makes an argument valid — the formal and informal principles that separate correct inference from mere assertion, independent of whether any particular premise happens to be true. Formal logic translates arguments into symbolic notation and tests validity by structure alone (truth-functional connectives, quantifiers, modal operators), while informal logic examines reasoning as it actually occurs in natural language, cataloguing the fallacies that make invalid arguments feel persuasive. Competing formal systems — classical, intuitionistic, paraconsistent — differ in which inference rules they accept, each suited to different foundational commitments about truth and contradiction.\n\nWithin [[05.02]] Philosophy, Logic supplies the inferential backbone the other branches build arguments with: [[05.02.02]] Epistemology relies on it to distinguish justified belief from mere true opinion, while [[05.02.03]] Ethics and [[05.02.04]] Aesthetics use it to test whether a normative or evaluative claim actually follows from its premises. It is nonetheless distinct from [[05.02.01]] Metaphysics, which asks what exists rather than what validly follows — a metaphysical claim can be perfectly coherent and still false, where a logical argument can be perfectly valid and still lead from false premises to a false conclusion.\n\nLogic's reach extends well beyond Philosophy: mathematical proof, computer science's type systems, and legal argumentation all borrow its validity criteria directly. For a rigorously maintained overview of formal and philosophical logic, see the [Stanford Encyclopedia of Philosophy](https://plato.stanford.edu/entries/logic-classical/); for the historical development of formal systems, the [Internet Encyclopedia of Philosophy](https://iep.utm.edu/logsuppl/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "05.02.01",
+   "to": "05.02.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.01",
+   "to": "05.02.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.01",
+   "to": "05.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.01",
+   "to": "05.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.01",
+   "to": "05.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.02",
+   "to": "05.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.02",
+   "to": "05.02.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.02",
+   "to": "05.02.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.02",
+   "to": "05.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.02",
+   "to": "05.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.03",
+   "to": "05.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.03",
+   "to": "05.02.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.03",
+   "to": "05.02.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.03",
+   "to": "05.02.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.03",
+   "to": "05.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.04",
+   "to": "05.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.04",
+   "to": "05.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.04",
+   "to": "05.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.05",
+   "to": "05.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.05",
+   "to": "05.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.05",
+   "to": "05.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.05",
+   "to": "05.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02.05",
+   "to": "05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02",
+   "to": "04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02",
+   "to": "05.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02",
+   "to": "05.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02",
+   "to": "05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.02",
+   "to": "05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

@@ -1,0 +1,286 @@
+{
+ "domain": "06.02",
+ "nodes": [
+  {
+   "id": "06.02",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Performing Arts encompasses artistic disciplines involving live performance before an audience—music, dance, theater, and opera. Distinguished from visual arts by their temporal and embodied nature, performing arts unfold in real time through the performer's physical presence, voice, and interpretive choices, creating ephemeral experiences that exist only in the moment of performance.",
+   "cs": "Performativní umění zahrnuje umělecké disciplíny zahrnující živý výkon před publikem—hudbu, tanec, divadlo a operu. Odlišují se od výtvarného umění svou časovou a ztělesněnou povahou, performativní umění se rozvíjí v reálném čase skrze fyzickou přítomnost performera, hlas a interpretativní volby, vytvářejíc efemérní zážitky, které existují jen v okamžiku představení.",
+   "brief": "Performing Arts encompasses artistic disciplines that exist only through live or recorded performance before an audience. Music, dance, theater, and opera unfold in real time through the performer's body, voice, and interpretive choices, so the work is inseparable from the act of presenting it — unlike a painting or a sculpture, a performance cannot be handed to a viewer as a finished object.\n\nThe field anchors [[06.02.01]] as organized sound shaped by rhythm, pitch, and harmony, [[06.02.03]] as staged dramatic action built on text and blocking, and [[06.02.05]] as their historical fusion — sung drama with orchestral accompaniment. Film sits at the edge of the category, since it is performed once but consumed as a fixed recording. Performing Arts shares its parent with [[06.01]], separated by that same static-versus-temporal line, and with [[06.04]], where the maker's hand produces a durable object rather than an ephemeral event.\n\nThe archives of the [Library of Congress Performing Arts Encyclopedia](https://www.loc.gov/collections/performing-arts-encyclopedia/) and the [Victoria and Albert Museum's theatre collections](https://www.vam.ac.uk/) preserve documentation and staging history across these disciplines."
+  },
+  {
+   "id": "06.02.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Music is the art of organizing sound and silence across time to create meaning, emotion, and aesthetic experience. It functions simultaneously as abstract formal system (melody, harmony, rhythm), cultural expression, social practice, and immediate sensory phenomenon, engaging both intellectual and emotional dimensions of human perception.",
+   "cs": "Hudba je umění organizování zvuku a ticha v čase k vytvoření smyslu, emocí a estetického zážitku. Funguje zároveň jako abstraktní formální systém (melodie, harmonie, rytmus), kulturní vyjádření, společenská praxe a bezprostřední senzorický fenomén, zapojujíc intelektuální i emoční dimenze lidského vnímání.",
+   "brief": "Music is the art of organizing sound and silence across time to create meaning, emotion, and aesthetic experience. [[06.02.01.01]] Music Theory formalizes the abstract structure behind that organization — melody, harmony, rhythm — while [[06.02.01.02]] Musical Instruments supply the physical means of producing the sounds theory describes, from the acoustic mechanics of strings and air columns to electronic synthesis.\n\n[[06.02.01.03]] Composition applies theory to create a fixed or guided musical work, and [[06.02.01.04]] Performance realizes that work — or improvises one directly — in front of a listener, the two together spanning music's dual identity as abstract design and immediate, embodied event. Recording technology sits outside that live moment, capturing performance as a repeatable artifact and, in the process, becoming a compositional tool in its own right.\n\nMusic shares its parent, Performing Arts, with [[06.02.02]] Dance, which organizes bodily movement to the same rhythmic structures music formalizes, and with opera, which fuses music with staged drama into a single work. The [Grove Music Online](https://www.oxfordmusiconline.com/grovemusic) and the [Smithsonian Folkways](https://folkways.si.edu/) archive document the field's theoretical and traditional range."
+  },
+  {
+   "id": "06.02.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Music Theory is the systematic study of music's structural principles — scale, interval, harmony, melody, rhythm, and form. It supplies analytical frameworks for understanding how musical elements combine to create coherence, structure, and meaning, serving both as a tool for analyzing existing music and as a creative resource for composers.",
+   "cs": "Hudební teorie je systematické studium strukturálních principů hudby — stupnice, intervalu, harmonie, melodie, rytmu a formy. Poskytuje analytické rámce pro pochopení toho, jak se hudební prvky kombinují a vytvářejí soudržnost, strukturu a smysl, a slouží jak jako nástroj k analýze existující hudby, tak jako tvůrčí zdroj pro skladatele."
+  },
+  {
+   "id": "06.02.01.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Musical Notation is the symbolic system for representing pitch, rhythm, dynamics, and performance instruction in written form. Standard notation lets composers fix complex musical ideas in a durable, portable form, letting performers separated from a composer by time, distance, or culture reconstruct the intended work.",
+   "cs": "Hudební notace je symbolický systém pro zápis výšky tónu, rytmu, dynamiky a pokynů k provedení v písemné podobě. Standardní notace umožňuje skladatelům zaznamenat složité hudební myšlenky trvalým a přenosným způsobem, takže je mohou interpretovat hudebníci oddělení od skladatele časem, vzdáleností nebo kulturou."
+  },
+  {
+   "id": "06.02.01.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Harmony is the simultaneous sounding of different pitches to form chords that support and enrich a melodic line. It organizes musical progression and establishes tonal centers, and expressively conveys tension and resolution through chord relationships and voice leading.",
+   "cs": "Harmonie je současné znění různých tónů, které vytváří akordy podporující a obohacující melodickou linku. Organizuje hudební postup a ustanovuje tonální centra a výrazově vyjadřuje napětí a rozřešení prostřednictvím akordových vztahů a vedení hlasů."
+  },
+  {
+   "id": "06.02.01.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Rhythm is the organization of sound and silence through time into patterns of pulse, accent, and duration. It operates at multiple levels — from an underlying pulse (tempo) through metrical organization to syncopation and expressive variation — driving forward motion, creating coherence, and inviting physical response.",
+   "cs": "Rytmus je organizace zvuku a ticha v čase do vzorů pulzu, přízvuku a trvání. Funguje na více úrovních — od podkladového pulzu (tempa) přes metrickou organizaci až po synkopaci a výrazovou variaci — a udává hudbě spád, vytváří soudržnost a vyvolává fyzickou odezvu."
+  },
+  {
+   "id": "06.02.01.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Scales and Modes are systems that organize pitches hierarchically into repeating patterns across an octave, defining the intervallic relationships between pitches and establishing a tonal framework. Scales (major, minor, pentatonic) and modes (Dorian, Phrygian, Lydian) shape melodic possibilities, color harmonic content, and mark musical identity across cultures and traditions.",
+   "cs": "Stupnice a mody jsou systémy, které hierarchicky organizují tóny do opakujících se vzorů v rámci oktávy, definují intervalové vztahy mezi tóny a ustanovují tonální rámec. Stupnice (durová, mollová, pentatonická) a mody (dórský, frygický, lydický) formují melodické možnosti, barví harmonický obsah a spoluurčují hudební identitu napříč kulturami a tradicemi."
+  },
+  {
+   "id": "06.02.01.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Counterpoint is a compositional technique in which two or more independent melodic lines sound simultaneously, each retaining its own identity while forming harmony with the others. It extends melody-writing beyond a single line, requiring careful voice leading to balance independence and coherence, and is central to Renaissance and Baroque musical practice.",
+   "cs": "Kontrapunkt je kompoziční technika, při níž zní současně dvě nebo více nezávislých melodických linek, z nichž každá si zachovává vlastní identitu a zároveň vytváří harmonii s ostatními. Rozšiřuje psaní melodie nad rámec jedné linky a vyžaduje pečlivé vedení hlasů k vyvážení nezávislosti a soudržnosti; je ústřední pro renesanční a barokní hudební praxi."
+  },
+  {
+   "id": "06.02.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Musical Instruments are physical devices designed to produce musical sound through vibration, striking, plucking or bowing, or air motion. They divide into families — strings, woodwinds, brass, percussion, keyboard — each with a distinct timbre and playing technique that shapes musical practice and ensemble possibilities.",
+   "cs": "Hudební nástroje jsou fyzická zařízení navržená k produkci hudebního zvuku prostřednictvím vibrace, úderu, drnkání nebo smyku, nebo pohybu vzduchu. Dělí se na rodiny — strunné, dechové dřevěné, žesťové, bicí, klávesové — z nichž každá má odlišnou barvu zvuku a specifickou hráčskou techniku, které formují hudební praxi a možnosti souborů."
+  },
+  {
+   "id": "06.02.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Musical Composition is the creative process of originating musical works through the organization and development of musical ideas—melody, harmony, rhythm—into coherent aesthetic wholes. Composers employ formal structures, thematic development, and orchestration to communicate musical ideas, balancing technical craft with expressive intention across genres and styles.",
+   "cs": "Hudební kompozice je tvůrčí proces originálního vytváření hudebních děl prostřednictvím organizace a rozvoje hudebních myšlenek—melodie, harmonie, rytmus—do soudržných estetických celků. Skladatelé používají formální struktury, tematický rozvoj a orchestraci ke komunikaci hudebních myšlenek, vyvažujíc technickou zručnost s vyjadřovacím záměrem v různých žánrech a stylech."
+  },
+  {
+   "id": "06.02.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Musical Performance is the live realization of composed or improvised music through a musician's physical execution, interpretive choices, and interaction with instrument and audience. It transforms notation or memory into embodied sound, adding layers of interpretation, expression, and immediacy that define music's lived experience, distinct from its abstract compositional form.",
+   "cs": "Hudební provedení je živá realizace skládané nebo improvizované hudby prostřednictvím fyzického výkonu hudebníka, interpretačních voleb a interakce s nástrojem a publikem. Přetváří notaci nebo paměť ve ztělesněný zvuk a přidává vrstvy interpretace, vyjádření a bezprostřednosti, které definují prožitou zkušenost hudby, odlišnou od její abstraktní kompoziční podoby."
+  },
+  {
+   "id": "06.02.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Recording Technology comprises the systems and techniques for capturing, storing, and reproducing sound, from analog tape through digital systems. It preserves performances across time, layers multiple musical elements through multitrack recording, and enables studio-built compositions impossible in a live setting, fundamentally reshaping how music is created, distributed, and experienced.",
+   "cs": "Nahrávací technologie zahrnuje systémy a techniky pro zachycení, uložení a reprodukci zvuku, od analogové pásky až po digitální systémy. Uchovává hudební vystoupení v čase, vrství více hudebních prvků prostřednictvím vícestopého nahrávání a umožňuje studiové kompozice nedosažitelné při živém vystoupení, čímž zásadně proměňuje způsob, jakým hudba vzniká, šíří se a je prožívána."
+  },
+  {
+   "id": "06.02.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Dance is the kinetic art of coordinated human movement performed to music or rhythm, emphasizing bodily expression and spatial composition.",
+   "cs": "Tanec je kinetické umění usklađených lidských pohybů provádívaných ke hudbě nebo rytmu, zdůrazňující tělesné vyjádření a prostorové komponování.",
+   "brief": "Dance is the kinetic art of coordinated human movement performed to music or rhythm, emphasizing bodily expression and spatial composition. Unlike a script or a score, dance's primary text is the body itself — gesture, weight, timing, and the use of stage space — so its notation systems and oral, embodied transmission through direct teaching remain as important as any written record.\n\nDance shares its parent, Performing Arts, with [[06.02.01]] Music, whose rhythmic structure it most often moves to and depends on for timing, and with [[06.02.03]] Theater, from which it borrows staging and narrative device while replacing spoken text with movement as the primary expressive channel. It converges most fully with [[06.02.05]] Opera and ballet-integrated productions, where choreographed movement and vocal or orchestral music are composed together as a single work rather than one accompanying the other.\n\nHistorical and contemporary practice is documented by the [Jerome Robbins Dance Division at the New York Public Library](https://www.nypl.org/about/divisions/jerome-robbins-dance-division) and the [Dance Heritage Coalition](https://www.danceheritage.org/)."
+  },
+  {
+   "id": "06.02.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Theater is the live dramatic form in which actors perform narrative and emotion through dialogue, movement, and stage design for an immediate audience.",
+   "cs": "Divadlo je živá dramatická forma, v níž herci předvádějí vyprávění a emoce prostřednictvím dialogu, pohybu a scenografického návrhu.",
+   "brief": "Theater is the live dramatic form in which actors perform narrative and emotion through dialogue, movement, and stage design for an immediate audience. Its defining feature is liveness: the same script yields a different performance every night, shaped by the actors' choices and the audience's presence, which is why theatrical scholarship treats a production and its printed script as related but distinct objects.\n\nTheater shares its parent, Performing Arts, with [[06.02.02]] Dance, which it draws on for staged movement and blocking, and with [[06.02.01]] Music, which underscores or structures many productions. Its closest relative is [[06.02.04]] Film, which inherited theater's dramatic vocabulary — character, dialogue, scene structure — but traded live presence for a fixed, edited recording watched at a remove, the same static-versus-temporal distinction that separates the wider Performing Arts from Visual Arts.\n\nThe [Internet Broadway Database](https://www.ibdb.com/) and the [V&A theatre and performance collections](https://www.vam.ac.uk/collections/theatre-performance) document staging history and production records."
+  },
+  {
+   "id": "06.02.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Film is the time-based art of edited moving images projected on a screen, narrating stories through cinematography, montage, and sound design.",
+   "cs": "Film je časově vázané umění střihnutých pohyblivých obrazů promítaných na obrazovce, vyprávějící příběhy skrze kinematografii, montáž a zvukový design.",
+   "brief": "Film is the time-based art of edited moving images projected on a screen, narrating stories through cinematography, montage, and sound design. Unlike a live performance, a film is fixed at the moment of editing — every viewing shows the identical sequence of shots — which makes montage, the ordering and juxtaposition of individual shots, the medium's defining formal tool rather than an accompaniment to live presence.\n\nFilm shares its parent, Performing Arts, with [[06.02.03]] Theater, from which it inherited dramatic structure, character, and dialogue, and with [[06.02.01]] Music, whose scoring shapes pacing and emotional register throughout a finished cut. It sits at the category's edge for the same reason it resembles [[06.01.03]] Photography in Visual Arts: a film is performed and shot once but consumed afterward as a fixed recording, the ephemeral liveness that defines the rest of Performing Arts already resolved before an audience ever sees it.\n\nThe [British Film Institute](https://www.bfi.org.uk/) and the [American Film Institute catalog](https://catalog.afi.com/) document film history and production records across national cinemas."
+  },
+  {
+   "id": "06.02.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Opera is the dramatic form combining sung vocal performance, orchestral music, narrative, and spectacle into a unified theatrical experience.",
+   "cs": "Opera je dramatická forma kombinující zpívané vokální výkony, orchestrální hudbu, vyprávění a nádhernost v jednotné divadelní zkušenosti.",
+   "brief": "Opera is the dramatic form that sets a libretto to music, fusing sung vocal performance, orchestral accompaniment, staging, and spectacle into a single continuous work in which the story is carried by voice and orchestra rather than by spoken dialogue. A singer projects over a full orchestra without amplification, and the score paces the drama in a way spoken theater does not, giving the form its characteristic scale and emotional register.\n\nOpera shares its parent [[06.02]] with [[06.02.01]], whose vocal and instrumental techniques it draws on directly, and with [[06.02.03]], whose staging, blocking, and dramatic construction it inherits and subordinates to the score — opera is, historically, the fusion of these two forms. It is set apart from [[06.02.04]] by liveness: each performance is a singular, unrepeatable event shaped by the specific singers and conductor on stage that night, not a fixed recording watched the same way twice.\n\nReference recordings, librettos, and staging history are documented by the [Metropolitan Opera](https://www.metopera.org/) and surveyed in [Encyclopædia Britannica's opera entry](https://www.britannica.com/art/opera-music)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "06.02.01",
+   "to": "06.02.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.01",
+   "to": "06.02.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.01",
+   "to": "06.02.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.01",
+   "to": "06.02.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.01",
+   "to": "06.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.02",
+   "to": "06.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.02",
+   "to": "06.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.02",
+   "to": "06.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.03",
+   "to": "06.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.03",
+   "to": "06.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.03",
+   "to": "06.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.04",
+   "to": "06.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.04",
+   "to": "06.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.04",
+   "to": "06.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.05",
+   "to": "06.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.05",
+   "to": "06.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.05",
+   "to": "06.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02.05",
+   "to": "06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02",
+   "to": "06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02",
+   "to": "06.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02",
+   "to": "06.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02",
+   "to": "06.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.02",
+   "to": "06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

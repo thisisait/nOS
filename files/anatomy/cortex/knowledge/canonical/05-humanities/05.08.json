@@ -1,0 +1,43 @@
+{
+ "domain": "05.08",
+ "nodes": [
+  {
+   "id": "05.08",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Media Studies investigates how societies create, distribute, and interpret texts through technological systems—newspapers, radio, television, film, the Internet, and social media. It examines media's economic structures (ownership, monopoly, advertising), representational practices (stereotypes, framing, narrative), audience reception and interpretation, and media's roles in politics, culture, and identity formation. Interdisciplinary; it bridges Communication, Cultural Studies, Literary Analysis, and Technology Studies.",
+   "cs": "Mediální studia zkoumají, jak společnosti vytvářejí, distribuují a interpretují texty skrze technologické systémy—noviny, rádio, televizi, film, Internet a sociální média. Zkoumají ekonomické struktury médií (vlastnictví, monopol, reklama), reprezentační praktiky (stereotypy, rámování, narativ), příjem a interpretaci publika a role médií v politice, kultuře a tvorbě identity. Interdisciplinární; propojují Komunikaci, Kulturní studia, Literární analýzu a Technologická studia.",
+   "brief": "Media Studies investigates how societies create, distribute, and interpret texts through technological systems — newspapers, radio, television, film, the Internet, and social media. It examines media's economic structures (ownership, advertising), representational practices (framing, stereotypes), audience reception, and media's roles in politics and identity formation.\n\nWithin [[05]] Humanities, Media Studies applies [[05.06]] Cultural Studies' concern with ideology and representation to specifically technological systems of distribution, and shares [[05.04]] Literature's tools of textual analysis when reading film and broadcast narrative. Its study of media economics and audience behavior connects it to [[04]] Social Sciences, particularly communication research and sociology.\n\nAs the technological systems for distributing texts have multiplied, Media Studies has become indispensable for understanding how power and representation operate at scale. For current research on communication technologies and their social effects, see the [International Communication Association](https://www.icahdq.org/); for data on media consumption and its societal impact, the [Pew Research Center](https://www.pewresearch.org/topic/news-habits-media/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "05.08",
+   "to": "04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.08",
+   "to": "05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.08",
+   "to": "05.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.08",
+   "to": "05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

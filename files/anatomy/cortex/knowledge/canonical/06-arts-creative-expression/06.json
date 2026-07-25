@@ -1,0 +1,71 @@
+{
+ "domain": "06",
+ "nodes": [
+  {
+   "id": "06",
+   "level": 0,
+   "kind": "seed-override",
+   "en": "The creation of works valued for aesthetic, expressive, and communicative power — image, performance, designed object, crafted artifact, and cuisine. Spans the visual and performing arts, design, crafts, and the culinary arts; distinguished from the humanities, which study and interpret such works, by its focus on the practice of making them.",
+   "cs": "Tvorba děl ceněných pro estetickou, výrazovou a sdělnou sílu — obraz, představení, navržený předmět, řemeslný artefakt i pokrm. Zahrnuje výtvarná umění, scénická umění, design, umělecká řemesla a kulinářské umění; od humanitních věd, jež taková díla studují a vykládají, se liší zaměřením na samotnou praxi tvorby.",
+   "brief": "Arts and creative expression comprise the making of works valued for their aesthetic, expressive, and communicative power — images, performances, designed objects, crafted artifacts, and food raised to an art. The domain is defined by practice: its knowledge lives in technique, composition, and judgment exercised in the act of creation, and its works answer to standards of beauty, originality, and effect rather than of truth or utility alone.\n\n[[06.01]] Visual Arts encompass painting, sculpture, drawing, photography, and their kin — works made primarily to be seen; [[06.02]] Performing Arts — music, theatre, dance, and performed film — unfold in time before an audience; [[06.03]] Design applies aesthetic judgment to functional objects, environments, and communication; [[06.04]] Crafts carry the traditions of skilled handwork in ceramics, textiles, glass, wood, and metal; and [[06.05]] Culinary Arts treat the preparation of food as a compositional practice.\n\nThe domain's works are studied and interpreted by the [[05]] Humanities, its functional side shades into the trades of [[07]] Practical Skills & Trades, and its inherited techniques and repertoires are safeguarded by [[10]] Cultural Preservation. See [Encyclopaedia Britannica: the arts](https://www.britannica.com/topic/the-arts)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "06",
+   "to": "05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06",
+   "to": "06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06",
+   "to": "06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06",
+   "to": "06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06",
+   "to": "06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06",
+   "to": "06.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06",
+   "to": "10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

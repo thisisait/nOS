@@ -1,0 +1,739 @@
+{
+ "domain": "03.01",
+ "nodes": [
+  {
+   "id": "03.01",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Engineering applies scientific and mathematical principles to design and build structures, machines, systems, and processes solving practical problems. Its disciplines span fundamental infrastructure to specialized applications and the digital systems underpinning modern computing.",
+   "cs": "Inženýrství uplatňuje vědecké a matematické principy na návrh a stavbu staveb, strojů, systémů a procesů řešících praktické problémy. Jeho disciplíny se rozprostírají od základní infrastruktury přes specializované aplikace až k digitálním systémům podpírajícím moderní výpočetní techniku.",
+   "brief": "Engineering applies scientific and mathematical principles to design, build, and maintain structures, machines, systems, and processes that solve practical problems. Its disciplines divide by the material or system each one shapes: [[03.01.01]] Civil Engineering builds infrastructure and structures, [[03.01.02]] Mechanical Engineering designs machines and mechanical systems, [[03.01.03]] Electrical Engineering works with power and signal circuits, and [[03.01.10]] Software Engineering designs the code and architectures behind digital systems — a span that runs from fundamental physical infrastructure to the specialized computing layer that now underlies most other engineering work.\n\nEngineering sits inside [[03]] Applied Sciences & Technology alongside disciplines that consume its output: [[03.05]] Manufacturing turns engineering designs into mass-produced goods on a production line, while [[03.04]] Architecture shares its concern for the built environment but is judged by spatial and aesthetic response to human needs rather than by structural or mechanical performance alone. Aerospace, biomedical, environmental, materials, and nuclear engineering extend the same design discipline into flight, the human body, ecological systems, novel materials, and fission respectively.\n\nBecause engineering failures carry direct consequences for public safety, the field is organized around codes, licensure, and standards bodies specific to each subdiscipline. For a working reference on engineering standards and practice, see the [Encyclopaedia Britannica](https://www.britannica.com/technology/engineering) entry on engineering, and for professional and technical standards across subfields, the [Institute of Electrical and Electronics Engineers](https://www.ieee.org/)."
+  },
+  {
+   "id": "03.01.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Civil engineering designs, constructs, and maintains infrastructure systems including buildings, bridges, roads, water systems, and underground utilities. It encompasses structural analysis, geotechnical foundations, and environmental impact assessment, connecting engineering theory to the built environment.",
+   "cs": "Stavební inženýrství navrhuje, staví a udržuje infrastrukturní systémy včetně budov, mostů, silnic, vodních systémů a podzemních sítí. Zahrnuje analýzu konstrukcí, geotechnické základy a posouzení environmentálních dopadů, propojuje inženýrskou teorii s vytvořeným prostředím.",
+   "brief": "Civil engineering designs, builds, and maintains the physical infrastructure that societies run on: buildings, bridges, roads, dams, water-supply and drainage networks, and the underground utilities beneath them. It combines structural analysis, geotechnical assessment of the ground a structure sits on, and environmental-impact evaluation to turn engineering theory into structures that must stand for decades under real loads and weather.\n\nIts subfields divide by which part of that infrastructure problem they own: [[03.01.01.01]] Structural Engineering analyzes and designs the load-bearing frame of buildings and bridges, while [[03.01.01.04]] Geotechnical Engineering characterizes the soil and rock those structures found on. Civil engineering is a subfield within [[03.01]] Engineering, alongside siblings such as [[03.01.02]] Mechanical Engineering, whose machine-design methods it borrows for construction equipment and building services. It also shares its concern for the built environment with [[03.04]] Architecture, though civil engineering is judged by structural and functional performance rather than by architecture's spatial and aesthetic response to human needs.\n\nBecause civil-engineering failures put public safety directly at risk, the field is organized around building codes, professional licensure, and design standards. For a working reference on the discipline and its standards bodies, see the [American Society of Civil Engineers](https://www.asce.org/)."
+  },
+  {
+   "id": "03.01.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Structural engineering analyzes and designs load-bearing systems for buildings, bridges, and infrastructure. It combines theoretical mechanics with practical material science and construction methods to ensure safety, stability, and efficiency under static and dynamic forces.",
+   "cs": "Konstrukční inženýrství analyzuje a navrhuje nosné systémy pro budovy, mosty a infrastrukturu. Kombinuje teoretickou mechaniku s praktickou vědeckou teorií materiálů a stavebními metodami pro zajištění bezpečnosti, stability a účinnosti při statickém a dynamickém zatížení."
+  },
+  {
+   "id": "03.01.01.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Load analysis determines and evaluates forces acting on structures through dead loads (permanent weight), live loads (variable occupancy), environmental loads (wind, seismic), and combined scenarios. It provides the foundation for structural design by quantifying design forces and safety margins.",
+   "cs": "Analýza zatížení určuje a hodnotí síly působící na stavby prostřednictvím stálého zatížení (trvalá váha), užitného zatížení (proměnné obsazení), environmentálního zatížení (vítr, zemětřesení) a kombinovaných scénářů. Poskytuje základ pro konstrukční návrh kvantifikováním návrhových sil a bezpečnostních rezerv."
+  },
+  {
+   "id": "03.01.01.01.01.01",
+   "level": 5,
+   "kind": "seed-override",
+   "en": "Dead loads are permanent, unchanging forces from the weight of structures, materials, and fixed equipment. They form the baseline for load calculation and remain constant throughout the structure's service life.",
+   "cs": "Stálé zatížení jsou trvalé, neměnné síly z váhy struktur, materiálů a pevného vybavení. Tvoří základnu pro výpočet zatížení a zůstávají po celou dobu životnosti konstrukce konstantní."
+  },
+  {
+   "id": "03.01.01.01.01.02",
+   "level": 5,
+   "kind": "seed-override",
+   "en": "Live loads are temporary, variable forces from occupancy, use, and maintenance of structures. They vary with time and intensity, requiring probabilistic methods for design to account for different occupancy patterns and usage scenarios.",
+   "cs": "Užitné zatížení jsou dočasné, proměnné síly z obsazení, používání a údržby struktur. Mění se v čase a intenzitě, vyžadují pravděpodobnostní metody pro návrh, aby se zohlednily různé vzorce obsazení a scénáře použití."
+  },
+  {
+   "id": "03.01.01.01.01.03",
+   "level": 5,
+   "kind": "seed-override",
+   "en": "Wind loads are dynamic forces from air movement acting perpendicular and parallel to structural surfaces. They vary with wind speed, exposure height, terrain roughness, and structure shape, requiring aerodynamic analysis and dynamic response assessment.",
+   "cs": "Větrné zatížení jsou dynamické síly z pohybu vzduchu působící kolmo a rovnoběžně s povrchem struktur. Mění se podle rychlosti větru, výšky expozice, drsnosti terénu a tvaru struktur, vyžadují aerodynamickou analýzu a posouzení dynamické odezvy."
+  },
+  {
+   "id": "03.01.01.01.01.04",
+   "level": 5,
+   "kind": "seed-override",
+   "en": "Seismic loads are dynamic forces from ground motion during earthquakes transmitted through the foundation to the structure. They require specialized analysis accounting for ground acceleration, structure period, damping, and soil-structure interaction.",
+   "cs": "Seismické zatížení jsou dynamické síly ze zemního pohybu během zemětřesení přenášené přes základ do struktury. Vyžadují specializovanou analýzu zohledňující zrychlení půdy, periodu struktur, tlumení a interakci struktur se zeminou."
+  },
+  {
+   "id": "03.01.01.01.01.05",
+   "level": 5,
+   "kind": "seed-override",
+   "en": "Load combinations are simultaneous applications of multiple load types in design scenarios to represent realistic conditions. Design codes define weighted combinations of dead, live, environmental, and special loads to establish governing design forces and safety factors.",
+   "cs": "Kombinace zatížení jsou současné aplikace více typů zatížení v návrhových scénářích reprezentujících realistické podmínky. Normy definují vážené kombinace stálého, užitného, environmentálního a zvláštního zatížení pro stanovení rozhodujících návrhových sil a bezpečnostních faktorů."
+  },
+  {
+   "id": "03.01.01.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Construction materials encompass concrete, steel, masonry, timber, and composites used in structural systems. Each material offers distinct properties—strength, durability, cost, workability—requiring selection based on project requirements and environmental conditions.",
+   "cs": "Stavební materiály zahrnují beton, ocel, zdivo, dřevo a kompozitní materiály používané v konstrukčních systémech. Každý materiál nabízí odlišné vlastnosti—pevnost, trvanlivost, cena, pracovnost—vyžadující výběr na základě požadavků projektu a environmentálních podmínek."
+  },
+  {
+   "id": "03.01.01.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Foundation design transfers structural loads safely into soil or rock through shallow footings, piles, or caissons. It depends on geotechnical investigation, soil-bearing capacity, settlement analysis, and slope stability.",
+   "cs": "Návrh základů bezpečně přenáší strukturální zatížení do půdy nebo horniny prostřednictvím mělkých patek, pilot nebo kesónů. Závisí na geotechnickém průzkumu, únosnosti půdy, analýze poklesů a stabilitě svahu."
+  },
+  {
+   "id": "03.01.01.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Bridge engineering designs structures that span obstacles while carrying vehicle, pedestrian, or utility loads across water, valleys, or other barriers. It integrates structural analysis, material selection, foundation design, and traffic requirements.",
+   "cs": "Stavba mostů navrhuje konstrukce přemosťující překážky během přenosu zátěží vozidel, chodců nebo sítí přes vodu, údolí a ostatní bariéry. Integruje strukturální analýzu, výběr materiálů, návrh základů a požadavky dopravy."
+  },
+  {
+   "id": "03.01.01.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "High-rise design addresses unique challenges of tall buildings including lateral wind and seismic forces, foundation systems for tall loads, and vertical transportation. It requires sophisticated structural systems and specialized safety strategies.",
+   "cs": "Návrh vysokých budov se zabývá jedinečnými výzvami vysokých staveb včetně laterálních větrných a seismických sil, systémů základů pro vysoké zatížení a vertikální dopravy. Vyžaduje sofistikované konstrukční systémy a specializované bezpečnostní strategie."
+  },
+  {
+   "id": "03.01.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Transportation engineering designs and operates systems moving people and goods by road, rail, air, or water. It integrates geometric design, traffic analysis, infrastructure construction, and safety systems to create efficient movement networks.",
+   "cs": "Dopravní inženýrství navrhuje a provozuje systémy pohybující lidi a zboží po silnicích, kolejích, vzduchem nebo vodou. Integruje geometrický návrh, analýzu dopravy, stavbu infrastruktury a bezpečnostní systémy pro vytvoření účinných sítí pohybu."
+  },
+  {
+   "id": "03.01.01.02.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Road design plans alignment, cross-section, and geometric standards for vehicle movement. It balances design speed, capacity, safety, and cost through horizontal curves, vertical grades, lane widths, and drainage.",
+   "cs": "Návrh silnic plánuje trasu, příčný řez a geometrické normy pro pohyb vozidel. Vyvažuje návrhovou rychlost, kapacitu, bezpečnost a náklady prostřednictvím horizontálních zatáček, svislých spádů, šíří pruhů a odvodnění."
+  },
+  {
+   "id": "03.01.01.02.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Railway engineering designs track systems, stations, and right-of-way for rail transport. It addresses geometric standards, grade limitations, curve radii, safety systems, and signaling for efficient train movement.",
+   "cs": "Železniční inženýrství navrhuje tratě, stanice a koridor pro železniční dopravu. Zabývá se geometrickými normami, omezením spádu, poloměry zatáček, bezpečnostními systémy a signalizací pro účinný pohyb vlaků."
+  },
+  {
+   "id": "03.01.01.02.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Airport design plans runways, taxiways, terminals, and supporting facilities for aircraft operations. It integrates geometric standards for aircraft performance, ground support infrastructure, and passenger processing.",
+   "cs": "Návrh letiště plánuje vzletové a přistávací dráhy, pojezdové dráhy, terminály a doprovodná zařízení pro provoz letadel. Integruje geometrické normy pro výkonnostní parametry letadel, infrastrukturu pozemní podpory a odbavení cestujících."
+  },
+  {
+   "id": "03.01.01.02.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Traffic engineering analyzes vehicle flow, designs traffic-control systems, and optimizes network operations for safety and efficiency. It uses data collection, modeling, and control strategies to manage congestion and improve mobility.",
+   "cs": "Řízení dopravního provozu analyzuje tok vozidel, navrhuje systémy dopravní signalizace a optimalizuje provoz sítě z hlediska bezpečnosti a efektivity. Využívá sběr dat, modelování a řídicí strategie k omezení kongescí a zlepšení mobility."
+  },
+  {
+   "id": "03.01.01.02.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Pavement design determines layer composition and thickness for roadways to distribute vehicle loads to subgrade. It selects asphalt or concrete, specifies base and subbase layers, and accounts for traffic volume and environmental conditions.",
+   "cs": "Návrh vozovky určuje složení vrstev a tloušťku vozovky pro distribuci zatížení vozidel do podkladu. Vybírá asfaltové nebo betonové materiály, specifikuje spodní a podkladní vrstvy a zohledňuje objem dopravy a environmentální podmínky."
+  },
+  {
+   "id": "03.01.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Water resources engineering builds systems for water supply, treatment, distribution, and wastewater management. It addresses hydrology, hydraulics, water quality, and flood control through integrated planning and infrastructure design.",
+   "cs": "Inženýrství vodních zdrojů vyvíjí systémy pro zásobování vodou, její úpravu, distribuci a nakládání s odpadními vodami. Zabývá se hydrologií, hydraulikou, kvalitou vody a protipovodňovou ochranou prostřednictvím integrovaného plánování a návrhu infrastruktury."
+  },
+  {
+   "id": "03.01.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Geotechnical engineering studies soil and rock properties and applies them to foundation design, excavation, slope stability, and underground construction. It evaluates bearing capacity, settlement, permeability, and shear strength.",
+   "cs": "Geotechnické inženýrství studuje vlastnosti půdy a horniny a aplikuje je na návrh základů, výkopy, stabilitu svahů a podzemní stavby. Hodnotí únosnost, pokles, propustnost a smykovou pevnost."
+  },
+  {
+   "id": "03.01.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Environmental engineering applies scientific principles to protect and improve environmental quality through pollution control, waste management, and natural resource conservation. It covers air quality, water treatment, solid waste, and remediation.",
+   "cs": "Environmentální inženýrství uplatňuje vědecké poznatky na ochranu a zlepšení kvality životního prostředí prostřednictvím kontroly znečištění, nakládání s odpady a ochrany přírodních zdrojů. Zabývá se kvalitou vzduchu, úpravou vody, tuhými odpady a sanací."
+  },
+  {
+   "id": "03.01.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Mechanical engineering designs and analyzes machines, engines, and mechanical systems using principles of mechanics, materials, and thermodynamics. It addresses motion, forces, energy conversion, and manufacturing for power, propulsion, and automation.",
+   "cs": "Strojírenství navrhuje a analyzuje stroje, motory a mechanické systémy pomocí principů mechaniky, materiálů a termodynamiky. Zabývá se pohybem, silami, přeměnou energie a výrobou pro energii, pohon a automatizaci.",
+   "brief": "Mechanical engineering designs and analyzes machines, engines, and mechanical systems by applying the principles of mechanics, materials science, and thermodynamics. It covers how forces and motion combine to convert, transmit, and use energy — the shared basis behind engines, turbines, machine tools, and robots.\n\nWithin [[03.01]] Engineering it divides into subfields such as [[03.01.02.01]] Applied Thermodynamics, which governs energy-conversion devices like engines and heat exchangers, and [[03.01.02.05]] Robotics, which applies mechanical design to autonomous and programmable machines. It shares boundaries with sibling disciplines: [[03.01.03]] Electrical Engineering supplies the sensors, actuators, and control electronics that turn a mechanical design into a mechatronic system, and [[03.01.08]] Materials Engineering supplies the alloys, polymers, and composites a mechanical design is built from.\n\nMechanical engineering is one of the oldest and broadest engineering disciplines precisely because energy conversion and motion underlie nearly every other field. For professional standards and technical references, see the [American Society of Mechanical Engineers](https://www.asme.org/)."
+  },
+  {
+   "id": "03.01.02.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Applied thermodynamics analyzes energy conversion in mechanical systems through heat engines, refrigeration, and power generation. It applies thermodynamic laws to design efficient heating, cooling, and work-production systems.",
+   "cs": "Aplikovaná termodynamika analyzuje přeměnu energie v mechanických systémech prostřednictvím tepelných motorů, chlazení a výroby elektřiny. Uplatňuje zákony termodynamiky na návrh účinných systémů pro vytápění, chlazení a výrobu práce."
+  },
+  {
+   "id": "03.01.02.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Fluid mechanics analyzes behavior of liquids and gases in motion and at rest, including flow through pipes, around objects, and turbulent phenomena. It applies to pumps, turbines, aerodynamics, and hydraulic systems.",
+   "cs": "Mechanika tekutin analyzuje chování kapalin a plynů v pohybu a v klidu, včetně toku potrubím, kolem objektů a turbulentních jevů. Aplikuje se na čerpadla, turbíny, aerodynamiku a hydraulické systémy."
+  },
+  {
+   "id": "03.01.02.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Machine design synthesizes mechanical components—shafts, bearings, gears, fasteners—into functional systems meeting performance requirements. It balances strength, durability, cost, and manufacturability through stress analysis and failure prediction.",
+   "cs": "Návrh strojů syntetizuje mechanické komponenty—hřídele, ložiska, ozubená kola, spojovací prvky—do funkčních systémů splňujících požadavky na výkon. Vyvažuje pevnost, trvanlivost, cenu a vyrobitelnost prostřednictvím analýzy napětí a předpovědi poruch."
+  },
+  {
+   "id": "03.01.02.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Manufacturing processes transform raw materials into finished products through casting, forming, machining, welding, and assembly. They optimize cost, quality, and efficiency through process selection, tool design, and production planning.",
+   "cs": "Výrobní procesy přeměňují suroviny na hotové výrobky prostřednictvím odlévání, tváření, obrábění, svařování a montáže. Optimalizují náklady, kvalitu a účinnost prostřednictvím výběru procesu, návrhu nástrojů a plánování výroby."
+  },
+  {
+   "id": "03.01.02.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Robotics designs and programs automated mechanical systems that perform tasks with precision and repeatability, integrating mechanics, control systems, and artificial intelligence for manufacturing, assembly, hazardous environments, and service applications.",
+   "cs": "Robotika navrhuje a programuje automatizované mechanické systémy provádějící úkoly s přesností a opakovatelností a integruje mechaniku, řídicí systémy a umělou inteligenci pro výrobu, montáž, nebezpečná prostředí a servisní aplikace."
+  },
+  {
+   "id": "03.01.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Electrical engineering designs and operates systems generating, transmitting, controlling, and using electrical power and signals. It addresses power systems, electronics, communications, and control across infrastructure, industry, and consumer applications.",
+   "cs": "Elektrotechnika navrhuje a provozuje systémy generující, přenášející, řídící a používající elektrickou energii a signály. Zabývá se energetickými systémy, elektronikou, komunikacemi a řízením v infrastruktuře, průmyslu a spotřebitelských aplikacích.",
+   "brief": "Electrical engineering designs and operates the systems that generate, transmit, control, and use electrical power and signals. It spans from large power grids down to microelectronic circuits, addressing power, electronics, communications, and control across infrastructure, industry, and consumer devices.\n\nWithin [[03.01]] Engineering it divides into subfields such as [[03.01.03.02]] Electronics Engineering, which designs the circuits and semiconductor devices power and signal systems are built from, and [[03.01.03.04]] Telecommunications, which applies those circuits to transmit information over distance. It shares its control-systems boundary with sibling [[03.01.02]] Mechanical Engineering in mechatronic and robotic design, and its industry-scale telecommunications concern connects to [[03.08]] Telecommunications, the broader applied-technology sector its own subfield feeds into.\n\nElectrical engineering's breadth — from kilovolt transmission lines to nanometer transistors — is held together by common circuit-theory and signal-theory foundations. For professional and technical standards across the field, see the [Institute of Electrical and Electronics Engineers](https://www.ieee.org/)."
+  },
+  {
+   "id": "03.01.03.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Power systems generate, transmit, distribute, and control electrical energy from sources to consumers. They integrate generation facilities, high-voltage transmission, distribution networks, and protection to ensure reliable, efficient supply.",
+   "cs": "Energetické systémy generují, přenášejí, distribuují a řídí elektrickou energii ze zdrojů ke spotřebitelům. Integrují generační zařízení, vysokonapěťový přenos, distribuční sítě a ochranu pro zajištění spolehlivé, účinné dodávky."
+  },
+  {
+   "id": "03.01.03.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Power generation converts energy from fossil fuels, nuclear, hydroelectric, wind, or solar sources into electricity through turbines, alternators, and power electronics. It includes plant design and thermal efficiency optimization across diverse fuels.",
+   "cs": "Výroba elektřiny přeměňuje energii z fosilních paliv, jaderné, hydroelektrické, větrné nebo solární energie na elektřinu prostřednictvím turbín, alternátorů a výkonové elektroniky. Zahrnuje návrh elektráren a optimalizaci tepelné účinnosti v různých palivech."
+  },
+  {
+   "id": "03.01.03.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Power transmission moves electricity across long distances using high-voltage lines and substations from generation to distribution networks. It minimizes losses through voltage conversion and manages stability across interconnected systems.",
+   "cs": "Přenos elektřiny přenáší elektřinu na dlouhé vzdálenosti pomocí vysokonapěťových vedení a transformoven z generace do distribučních sítí. Minimalizuje ztráty prostřednictvím transformace napětí a spravuje stabilitu v propojených systémech."
+  },
+  {
+   "id": "03.01.03.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Power distribution delivers electricity from transmission networks to individual consumers through medium and low-voltage lines and local substations. It manages voltage regulation and load balancing for urban, rural, and industrial customers.",
+   "cs": "Distribuce elektřiny dodává elektřinu z přenosových sítí jednotlivým spotřebitelům prostřednictvím středního a nízkého napětí a lokálních transformoven. Řídí regulaci napětí a vyrovnávání zátěže pro městské, venkovské a průmyslové zákazníky."
+  },
+  {
+   "id": "03.01.03.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "System protection detects and isolates electrical faults using relays, circuit breakers, and coordination logic to prevent equipment damage and cascade failures. It monitors voltage, current, and frequency for millisecond response to abnormal conditions.",
+   "cs": "Ochrana systému detekuje a izoluje elektrické poruchy pomocí relé, výkonových jističů a koordinační logiky k zabránění poškození vybavení a kaskádovitým selháním. Monitoruje napětí, proud a frekvenci pro reagování v milisekundách na abnormální podmínky."
+  },
+  {
+   "id": "03.01.03.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Smart grids integrate digital communication and automation into power systems, enabling real-time monitoring, control, and demand response. They improve efficiency, reliability, and renewable-energy integration through distributed sensors and two-way consumer communication.",
+   "cs": "Chytré sítě integrují digitální komunikaci a automatizaci do energetických systémů a umožňují monitorování v reálném čase, řízení a reakci na poptávku. Zlepšují účinnost, spolehlivost a integraci obnovitelných zdrojů prostřednictvím distribuovaných senzorů a obousměrné komunikace se spotřebiteli."
+  },
+  {
+   "id": "03.01.03.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Electronics engineering designs and implements circuits and devices built from semiconductor components for signal processing, amplification, and control, spanning discrete transistors and integrated circuits through to microcontrollers in consumer, industrial, and communications applications.",
+   "cs": "Elektronické inženýrství navrhuje a implementuje obvody a zařízení postavená na polovodičových komponentách pro zpracování signálů, zesílení a řízení. Zahrnuje rozsah od jednotlivých tranzistorů a integrovaných obvodů po mikrokontroléry v spotřebitelských, průmyslových a komunikačních aplikacích."
+  },
+  {
+   "id": "03.01.03.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Control systems use feedback mechanisms and algorithms to regulate processes and maintain desired outputs automatically. They apply to manufacturing, power, heating, flight, and robotics using proportional-integral-derivative and advanced strategies for stability and precision.",
+   "cs": "Řídicí systémy používají zpětné vazby a algoritmy k automatické regulaci procesů a udržování požadovaných výstupů. Aplikují se na výrobu, energetiku, vytápění, řízení letu a robotiku pomocí proporcionálně-integrálně-derivačního a pokročilých strategií pro stabilitu a přesnost."
+  },
+  {
+   "id": "03.01.03.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The technology for transmitting information over distance using electrical signals and electromagnetic waves, including modulation, transmission media, and signal reception. Forms the infrastructure enabling global communication networks.",
+   "cs": "Technologie pro přenos informací na dálku pomocí elektrických signálů a elektromagnetických vln, včetně modulace, přenosových médií a příjmu signálů. Tvoří infrastrukturu umožňující globální komunikační sítě."
+  },
+  {
+   "id": "03.01.03.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Signal processing manipulates electrical signals through filtering, amplification, encoding, and transformation to extract information, suppress noise, or prepare signals for transmission or storage.",
+   "cs": "Zpracování signálu manipuluje elektrickými signály filtráží, zesílením, kódováním a transformací za účelem extrakce informací, potlačení šumu nebo přípravy signálů pro přenos či skladování."
+  },
+  {
+   "id": "03.01.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Chemical engineering applies chemistry and physics to design and operate industrial processes for transforming raw materials into valuable products through reactions, separations, and purification.",
+   "cs": "Chemické inženýrství aplikuje chemii a fyziku na navrhování a provoz průmyslových procesů transformujících surové materiály na cenné produkty prostřednictvím reakcí, separací a čištění.",
+   "brief": "Chemical engineering applies chemistry and physics to design and operate the industrial processes that transform raw materials into valuable products through chemical reactions, separations, and purification. It scales laboratory chemistry up to plant-level production, where reaction rates, mass transfer, and energy balances must hold across pipes, reactors, and columns handling tonnes of material.\n\nWithin [[03.01]] Engineering it divides into subfields such as [[03.01.04.02]] Reaction Engineering, which designs the reactors where those transformations happen, and [[03.01.04.05]] Process Safety, which manages the hazards of running reactive chemicals at industrial scale. It shares its materials-selection boundary with sibling [[03.01.08]] Materials Engineering, since a process's reactors and piping must resist the chemicals they carry, and its concern for effluent and emissions connects it to [[03.01.07]] Environmental Engineering, which treats what a chemical process discharges.\n\nBecause a chemical plant fails expensively and sometimes catastrophically when reaction or separation assumptions break down, the field is organized around rigorous process-safety and process-control standards. For professional references and technical standards, see the [American Institute of Chemical Engineers](https://www.aiche.org/)."
+  },
+  {
+   "id": "03.01.04.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Process design establishes the overall layout, flow paths, equipment selection, and energy balance of chemical systems to achieve desired throughput and separation at acceptable cost and scale.",
+   "cs": "Návrh procesu stanovuje celkové uspořádání, průtoky, výběr zařízení a energetickou bilanci chemických systémů pro dosažení požadované kapacity a separace s přijatelnou cenou a měřítkem."
+  },
+  {
+   "id": "03.01.04.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Reaction engineering optimizes chemical reactor design and operation by analyzing kinetics, conversion rates, residence time, and mixing to maximize product yield and selectivity at industrial scale.",
+   "cs": "Inženýrství chemických reaktorů optimalizuje jejich návrh a provoz analýzou kinetiky, konverzních poměrů, času zdržení a míchání k maximalizaci výtěžku a selektivity v průmyslovém měřítku."
+  },
+  {
+   "id": "03.01.04.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Separation processes isolate and purify components from mixtures using distillation, crystallization, adsorption, membrane filtration, and other stage-wise methods based on physical or chemical differences.",
+   "cs": "Separační procesy izolují a čistí složky ze směsí pomocí destilace, krystalizace, adsorpce, membránové filtrace a dalších stupňovitých metod založených na fyzických nebo chemických rozdílech."
+  },
+  {
+   "id": "03.01.04.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Process control maintains chemical processes at optimal operating conditions through feedback mechanisms, sensor data, and automatic adjustments to temperature, pressure, flow, and composition.",
+   "cs": "Řízení procesů udržuje chemické procesy v optimálních provozních podmínkách prostřednictvím zpětnovazebních mechanismů, dat ze senzorů a automatických úprav teploty, tlaku, průtoku a složení."
+  },
+  {
+   "id": "03.01.04.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Process safety identifies, evaluates, and mitigates hazards in chemical operations including fire, explosion, toxic release, and equipment failure through design, procedures, and protective systems.",
+   "cs": "Bezpečnost procesů identifikuje, vyhodnocuje a snižuje nebezpečí v chemických operacích včetně požárů, výbuchů, toxických úniků a poruch zařízení prostřednictvím návrhu, postupů a ochranných systémů."
+  },
+  {
+   "id": "03.01.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Aerospace engineering designs and develops aircraft, spacecraft, and propulsion systems combining aerodynamics, structural mechanics, control systems, and materials to achieve flight and space operations.",
+   "cs": "Letecké inženýrství navrhuje a vyvíjí letadla, kosmické lodě a pohonné systémy kombinující aerodynamiku, konstrukci, řídicí systémy a materiály pro dosažení letů a vesmírných operací.",
+   "brief": "Aerospace engineering designs and develops aircraft, spacecraft, and their propulsion systems, combining aerodynamics, structural mechanics, control systems, and materials science to achieve controlled flight and space operations. It treats flight as a systems problem where weight, strength, and propulsion trade off against each other under extreme performance margins.\n\nIt draws on several siblings within [[03.01]] Engineering rather than owning a self-contained subfield: [[03.01.02]] Mechanical Engineering supplies the mechanics, thermodynamics, and propulsion-system design an airframe and engine share with any other machine; [[03.01.03]] Electrical Engineering supplies the avionics, navigation, and flight-control electronics that fly the vehicle; and [[03.01.08]] Materials Engineering supplies the lightweight, high-temperature alloys and composites that keep an airframe strong without adding weight it cannot afford to carry.\n\nBecause a failure mid-flight or mid-launch is rarely recoverable, aerospace engineering is one of the most standards- and testing-intensive engineering disciplines. For professional and technical references, see the [American Institute of Aeronautics and Astronautics](https://www.aiaa.org/)."
+  },
+  {
+   "id": "03.01.06",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Biomedical engineering designs medical devices, diagnostic instruments, and therapeutic systems integrating biology, physiology, and engineering to restore or enhance human health and function.",
+   "cs": "Biomedicínské inženýrství navrhuje zdravotnické prostředky, diagnostické přístroje a terapeutické systémy integrující biologii, fyziologii a inženýrství k obnovení nebo zlepšení zdraví a funkce člověka.",
+   "brief": "Biomedical engineering designs medical devices, diagnostic instruments, and therapeutic systems by integrating biology, physiology, and engineering methods to restore or enhance human health and function. It translates engineering design discipline into a domain where the system being engineered is, or interacts directly with, a living human body.\n\nWithin [[03.01]] Engineering it draws on sibling disciplines for its tools: [[03.01.03]] Electrical Engineering supplies the signal-processing and instrumentation behind imaging systems, pacemakers, and diagnostic monitors, and [[03.01.08]] Materials Engineering supplies the biocompatible materials used in implants and prosthetics. Its application domain connects it directly to [[03.02]] Medicine, which supplies the clinical knowledge of anatomy, physiology, and disease that a biomedical design must serve.\n\nBecause biomedical devices operate inside or on the human body, the field carries some of engineering's strictest regulatory and safety requirements. For professional standards and technical references, see the [Biomedical Engineering Society](https://www.bmes.org/)."
+  },
+  {
+   "id": "03.01.07",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Environmental engineering addresses water treatment, air pollution control, waste management, and remediation of contaminated sites using physical, chemical, and biological processes to protect ecosystems.",
+   "cs": "Environmentální inženýrství se zabývá čištěním vody, kontrolou znečištění vzduchu, nakládáním s odpadem a sanací kontaminovaných lokalit pomocí fyzických, chemických a biologických procesů na ochranu ekosystémů.",
+   "brief": "Environmental engineering addresses water treatment, air-pollution control, waste management, and remediation of contaminated sites using physical, chemical, and biological processes to protect ecosystems and public health. It applies engineering design discipline to pollution and resource-recovery problems rather than to a single class of built structures.\n\nWithin [[03.01]] Engineering it shares its infrastructure concern with sibling [[03.01.01]] Civil Engineering, whose water-supply and drainage systems its treatment processes plug into, and its process-chemistry methods with sibling [[03.01.04]] Chemical Engineering, whose reaction and separation techniques it applies to contaminants rather than to industrial products. It also connects to [[03.01.09]] Nuclear Engineering where radioactive waste and site remediation are involved, since both fields manage hazardous material containment on a multi-decade timescale.\n\nEnvironmental engineering's standards are set less by a single failure mode than by long-run exposure limits and regulatory thresholds for water, air, and soil quality. For professional standards and technical references, see the [American Academy of Environmental Engineers and Scientists](https://www.aaees.org/)."
+  },
+  {
+   "id": "03.01.08",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Materials engineering designs and develops materials with specific properties by controlling composition, structure, and processing to enable new applications in electronics, aerospace, energy, and other fields.",
+   "cs": "Inženýrství materiálů navrhuje a vyvíjí materiály se specifickými vlastnostmi kontrolou složení, struktury a zpracování k umožnění nových aplikací v elektronice, letectví, energetice a dalších oborech.",
+   "brief": "Materials engineering designs and develops materials with specific properties by controlling their composition, structure, and processing, enabling new applications in electronics, aerospace, energy, and other fields. Rather than designing a finished structure or machine, it designs the substance those things are made of — engineering matter itself down to its microstructure.\n\nWithin [[03.01]] Engineering it supplies sibling disciplines with the substances their designs depend on: [[03.01.02]] Mechanical Engineering relies on it for the alloys and composites machine components are built from, and [[03.01.04]] Chemical Engineering relies on it for materials that must resist corrosive or reactive process streams. Its work at the microstructural and atomic scale also borders [[03.10]] Nanotechnology, which extends materials control down to the nanometer regime.\n\nMaterials engineering's advances often precede and enable progress elsewhere in engineering, since a new alloy or composite can unlock designs no earlier material could support. For professional standards and technical references, see [ASM International](https://www.asminternational.org/)."
+  },
+  {
+   "id": "03.01.09",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Nuclear engineering designs and operates nuclear reactors, manages radioactive materials, and develops radiation applications for power generation, medicine, and research through control of nuclear processes.",
+   "cs": "Jaderné inženýrství navrhuje a provozuje jaderné reaktory, spravuje radioaktivní materiály a vyvíjí aplikace záření pro výrobu energie, medicínu a výzkum prostřednictvím řízení jaderných procesů.",
+   "brief": "Nuclear engineering designs and operates nuclear reactors, manages radioactive materials, and develops radiation applications for power generation, medicine, and research through control of nuclear processes. It applies engineering discipline to a domain where the design constraint is not just structural or thermal performance but containment of radioactive material over decades to millennia.\n\nWithin [[03.01]] Engineering it shares its thermal and structural design methods with sibling [[03.01.02]] Mechanical Engineering, whose reactor vessels, cooling systems, and turbines follow the same mechanics and thermodynamics as any other power-generation machinery. Its output connects it to [[03.07]] Energy, the broader applied-technology sector nuclear power feeds into, and its medical applications connect it to [[03.02]] Medicine, which uses nuclear engineering's radiation sources and techniques in diagnostic imaging and radiotherapy.\n\nBecause a containment failure has consequences that outlast any single engineering project, nuclear engineering operates under some of the strictest regulatory oversight of any engineering discipline. For professional standards and technical references, see the [American Nuclear Society](https://www.ans.org/)."
+  },
+  {
+   "id": "03.01.10",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Software engineering develops computer programs and systems through design, implementation, testing, and maintenance using systematic methods to ensure reliability, efficiency, and usability at scale.",
+   "cs": "Softwarové inženýrství vyvíjí počítačové programy a systémy prostřednictvím návrhu, implementace, testování a údržby pomocí systematických metod pro zajištění spolehlivosti, efektivity a použitelnosti ve velkém měřítku.",
+   "brief": "Software Engineering applies systematic design, implementation, testing, and maintenance methods to build computer programs and systems that stay reliable, efficient, and usable as they grow in scale and complexity. It spans requirements analysis, architecture and design, coding practice, verification and testing, deployment, and the maintenance work of fixing defects and extending a system after release — treating a program not as a one-off artifact but as a product with a lifecycle that must be planned, tested, and kept working under changing demands.\n\nWithin [[03.01]] Engineering, Software Engineering is the only sibling discipline whose product is not physical: where [[03.01.01]] Civil Engineering builds structures and [[03.01.02]] Mechanical Engineering designs machines, software engineering designs code and the architectures that organize it. It nonetheless underlies much of its siblings' modern practice — [[03.01.06]] Biomedical Engineering's diagnostic devices and [[03.01.05]] Aerospace Engineering's flight-control systems both depend on software components held to the same reliability discipline as the physical systems they operate within.\n\nBecause software failures can propagate silently through large interconnected systems, the field relies on formal specification, automated testing, and version-control discipline rather than physical inspection to catch defects before release. For the discipline's research foundations, see the [ACM Digital Library](https://dl.acm.org/), and for current professional standards on software life-cycle processes, the [IEEE Computer Society](https://www.computer.org/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "03.01.01",
+   "to": "03.01.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.01",
+   "to": "03.01.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.01",
+   "to": "03.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.01",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.01",
+   "to": "03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.02",
+   "to": "03.01.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.02",
+   "to": "03.01.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.02",
+   "to": "03.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.02",
+   "to": "03.01.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.02",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.03",
+   "to": "03.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.03",
+   "to": "03.01.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.03",
+   "to": "03.01.03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.03",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.03",
+   "to": "03.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.04",
+   "to": "03.01.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.04",
+   "to": "03.01.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.04",
+   "to": "03.01.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.04",
+   "to": "03.01.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.04",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.05",
+   "to": "03.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.05",
+   "to": "03.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.05",
+   "to": "03.01.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.05",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.06",
+   "to": "03.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.06",
+   "to": "03.01.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.06",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.06",
+   "to": "03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.07",
+   "to": "03.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.07",
+   "to": "03.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.07",
+   "to": "03.01.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.07",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.08",
+   "to": "03.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.08",
+   "to": "03.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.08",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.08",
+   "to": "03.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.09",
+   "to": "03.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.09",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.09",
+   "to": "03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.09",
+   "to": "03.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.10",
+   "to": "03.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.10",
+   "to": "03.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.10",
+   "to": "03.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.10",
+   "to": "03.01.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01.10",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01",
+   "to": "03.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01",
+   "to": "03.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01",
+   "to": "03.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01",
+   "to": "03.01.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01",
+   "to": "03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01",
+   "to": "03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.01",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

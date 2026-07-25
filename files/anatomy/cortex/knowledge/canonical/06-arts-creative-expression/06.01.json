@@ -1,0 +1,377 @@
+{
+ "domain": "06.01",
+ "nodes": [
+  {
+   "id": "06.01",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Visual Arts encompasses artistic practices that communicate through visual perception—painting, sculpture, photography, and related media. These forms express meaning through color, form, composition, and spatial relationships, distinguishing themselves from performing arts through their static or delayed temporal engagement.",
+   "cs": "Výtvarné umění zahrnuje umělecké praktiky, které komunikují skrze vizuální vnímání—malbu, sochařství, fotografii a související média. Tyto formy vyjadřují smysl skrze barvu, formu, kompozici a prostorové vztahy, čímž se odlišují od performativních umění svým statickým nebo zpožděným časovým zapojením.",
+   "brief": "Visual Arts encompasses artistic practices that communicate through visual perception rather than through time-based performance. Painters, sculptors, photographers, and printmakers work with color, form, composition, and spatial relationships to fix meaning into an object or image that an observer takes in at their own pace, rather than one that unfolds moment to moment for an audience.\n\nThe field anchors distinct subfields: [[06.01.01]] renders images through pigment and surface, while sculpture and digital art extend the same visual grammar into three dimensions and onto screens; [[06.01.03]] captures and composes light through the camera. Visual Arts shares its parent category with [[06.02]], separated by exactly that static-versus-temporal boundary — a painting is finished the moment it is hung, a play is finished only when the curtain falls — and with [[06.03]], which applies visual thinking to functional problems rather than to standalone expression.\n\nMuseums and open collections such as the [Metropolitan Museum of Art](https://www.metmuseum.org/) and [Tate](https://www.tate.org.uk/) document the historical range of these practices and are a practical starting point for further study."
+  },
+  {
+   "id": "06.01.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Painting is the art of creating images by applying pigments to a prepared surface such as canvas or panel. Through brushwork, layering, and color interaction, painters construct visual narratives, explore formal relationships, and express ideas across historical periods and aesthetic movements.",
+   "cs": "Malba je umění tvorby obrazů nanášením pigmentů na připravenou plochu jako plátno nebo desku. Pomocí štětcování, vrstvení a interakce barev malíři konstruují vizuální vyprávění, zkoumají formální vztahy a vyjadřují ideje v různých historických období a estetických hnutích.",
+   "brief": "Painting is the art of creating images by applying pigment to a prepared surface such as canvas, panel, or wall. Working within a vocabulary of brushwork, layering, and color interaction, painters construct visual narratives and explore formal relationships — a vocabulary formalized in the field's own subfields: [[06.01.01.03]] Color Theory governs how hues interact, [[06.01.01.04]] Composition governs how elements are arranged within the frame, and [[06.01.01.01]] Painting Techniques covers the physical handling of pigment and medium, from glazing to impasto.\n\nPainting's historical development runs through successive schools — Renaissance, Impressionism, Cubism, Abstract Expressionism — each redefining what that vocabulary is used to say, while its physical afterlife as an object falls to conservators once the work is finished. Painting shares its parent, Visual Arts, with [[06.01.02]] Sculpture and [[06.01.03]] Photography: Sculpture trades the flat surface for volume and mass, and Photography replaces pigment with captured light, but both inherit the same compositional grammar Painting formalizes first.\n\nMuseum collections remain the primary reference for studying painting across periods and traditions; see the [National Gallery](https://www.nationalgallery.org.uk/) and the [Metropolitan Museum of Art's painting collection](https://www.metmuseum.org/art/collection)."
+  },
+  {
+   "id": "06.01.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Painting Techniques refers to the methods and approaches artists employ to apply pigments, control texture, and achieve visual effects. Techniques are distinguished by medium—oil, watercolor, acrylic, fresco, tempera—each offering distinct working properties, drying times, and aesthetic possibilities.",
+   "cs": "Malebné techniky označují metody a přístupy, které umělci používají k nanášení pigmentů, kontrole textury a dosažení vizuálních efektů. Techniky se rozlišují podle média—olej, akvarely, akryl, fresky, temperové—přičemž každé nabízí odlišné pracovní vlastnosti, doby schnutí a estetické možnosti."
+  },
+  {
+   "id": "06.01.01.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Oil painting employs pigments suspended in drying oils—typically linseed oil—applied to canvas, panel, or other prepared surfaces. Its slow drying time permits extended working periods, rich color mixing, layering of glazes, and blending, making it historically dominant in European art traditions.",
+   "cs": "Olejová malba používá pigmenty rozpuštěné v sušících olejích—obvykle lněném oleji—nanášené na plátno, desku nebo jinou připravenou plochu. Jeho pomalé schnutí umožňuje prodloužené pracovní doby, bohaté míchání barev, vrstvení lazur a míchání, čímž se stala historicky dominantní v evropských uměleckých tradicích."
+  },
+  {
+   "id": "06.01.01.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Watercolor painting uses pigments suspended in water-soluble binders, applied to absorbent paper or prepared surfaces. The transparent washes and luminous quality characteristic of watercolor distinguish it from oil and acrylic; its quick-drying nature and portability make it favored for sketching and plein-air practice.",
+   "cs": "Akvarelová malba používá pigmenty rozpuštěné ve vodě rozpustných pojivech, nanášené na savou papír nebo připravené plochy. Transparentní míchání a svítivá kvalita charakteristická pro akvarely ji odlišují od oleje a akrylu; její rychlé schnutí a přenositelnost ji činí oblíbenou pro skicování a plein-air praxi."
+  },
+  {
+   "id": "06.01.01.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Acrylic painting employs pigments bound in synthetic polymer emulsion, typically acrylic resin, which dries rapidly by water evaporation. Its versatility—compatibility with water and other media, capacity for thick impasto or transparent glazes—bridges properties of oil and watercolor while remaining quick-drying.",
+   "cs": "Akrylová malba používá pigmenty vázané v syntetické polymerní emulzi, obvykle akrylovému pryskyřici, která schne rychle odpařováním vody. Její všestrannost—kompatibilita s vodou a dalšími médii, schopnost tlusté impasta nebo transparentních lazur—propojuje vlastnosti oleje a akvarelu při zachování rychlého schnutí."
+  },
+  {
+   "id": "06.01.01.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Fresco is the technique of painting with pigments applied directly into freshly laid, wet plaster (intonaco). The pigments bond chemically with the drying plaster, creating highly durable works suited to wall and ceiling decoration. Its permanence and monumental scale made it dominant in Renaissance and Classical traditions.",
+   "cs": "Freska je technika malby s pigmenty nanášenými přímo na čerstvě položenou mokrou omítku (intonaco). Pigmenty se chemicky vážou s schnutí omítky a vytvářejí vysoce odolná díla vhodná pro dekoraci stěn a stropů. Její trvanlivost a monumentální měřítko ji činily dominantní v renesanční a klasické tradici."
+  },
+  {
+   "id": "06.01.01.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Tempera painting uses pigments suspended in egg-based or other quick-drying binders, applied to wood panel or canvas. Its rapid drying and precise handling distinguish tempera from oils; it was the predominant painting medium in medieval and early Renaissance European art before oil's widespread adoption.",
+   "cs": "Temperová malba používá pigmenty rozpuštěné v vejcích nebo jiných rychle schnutících pojivech, nanášené na dřevěnou desku nebo plátno. Jeho rychlé schnutí a přesná manipulace rozlišují temperou od olejů; byla dominantním malebným médiem v medieválním a raném renesančním evropském umění před masivním přijetím oleje."
+  },
+  {
+   "id": "06.01.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Art Movements are historical groupings of artists, spanning years or decades, who share common aesthetic principles, techniques, ideologies, or responses to their historical moment. Movements—from Romanticism through Impressionism to Modernism—provide interpretive frameworks for understanding how artistic practice evolves and relates to broader cultural change.",
+   "cs": "Umělecké směry jsou historické skupiny umělců, trvající roky nebo desetiletí, které sdílejí společné estetické principy, techniky, ideologie nebo odpovědi na svůj historický moment. Směry—od romantismu přes impresionismus k modernismu—poskytují interpretační rámce pro porozumění tomu, jak se umělecká praxe vyvíjí a souvisí se širší kulturní změnou."
+  },
+  {
+   "id": "06.01.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Color Theory is the systematic study of how colors interact, combine, and evoke psychological and emotional responses. It encompasses principles of hue, saturation, value, color harmony, and contrast that artists apply to create visual cohesion, mood, and meaning in painting and related visual media.",
+   "cs": "Teorie barvy je systematické studium toho, jak si barvy konkurují, kombinují se a vyvolávají psychologické a emoční reakce. Zahrnuje principy odstínu, sytosti, hodnoty, barevné harmonie a kontrastu, které umělci aplikují k vytvoření vizuální soudržnosti, nálady a smyslu v malbě a související vizuální médii."
+  },
+  {
+   "id": "06.01.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Composition is the deliberate arrangement of visual elements—figures, objects, colors, and lines—within the painting surface. Through compositional principles such as balance, rhythm, emphasis, and spatial depth, artists guide the viewer's eye and structure meaning, organizing two-dimensional space into coherent visual narratives.",
+   "cs": "Kompozice je vědomé uspořádání vizuálních prvků—postav, předmětů, barev a čar—v rámci malebné plochy. Prostřednictvím kompozičních principů, jako je rovnováha, rytmus, zdůraznění a prostorová hloubka, umělci vedou oko diváka a strukturují smysl, organizujíc dvourozměrný prostor do soudržných vizuálních vyprávění."
+  },
+  {
+   "id": "06.01.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Art Restoration encompasses the techniques and practices for conserving, stabilizing, and repairing historic and contemporary paintings. Restorers assess damage—aging materials, dirt accumulation, previous interventions—and intervene carefully to preserve the artwork's material and conceptual integrity while making it accessible to present and future audiences.",
+   "cs": "Restaurování umění zahrnuje techniky a praktiky pro konzervaci, stabilizaci a opravu historických a současných obrazů. Restaurátoři posuzují poškození—stárnutí materiálů, hromadění nečistot, předchozí intervence—a interveniují opatrně, aby si zachovali materiální a koncepční integritu uměleckého díla, přičemž jej zpřístupňují současným a budoucím divákům."
+  },
+  {
+   "id": "06.01.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Sculpture is the art of creating three-dimensional works by carving, modeling, casting, or assembling materials such as stone, wood, clay, metal, or found objects. Through volume, surface, and spatial relationships, sculpture engages viewers physically, creating works that occupy, transform, and interact with architectural and landscape environments.",
+   "cs": "Sochařství je umění tvorby trojrozměrných děl tesáním, modelováním, odléváním nebo sestupováním materiálů, jako je kámen, dřevo, hlína, kov nebo nacházené předměty. Prostřednictvím objemu, povrchu a prostorových vztahů vytváří sochařství diváky fyzicky, vytvářející díla, která obsazují, transformují a interagují s architektonickým a krajinným prostředím.",
+   "brief": "Sculpture is the art of creating three-dimensional works by carving, modeling, casting, or assembling materials such as stone, wood, clay, metal, or found objects. Because the work occupies real space rather than a flat surface, sculpture engages viewers physically — walking around a piece changes what it shows, and the same material behaves differently depending on process: [[06.01.02.04]] Carving removes material from a solid block, while [[06.01.02.03]] Casting Methods reproduce a form by pouring molten or liquid material into a mold; between those two poles sits the broader repertoire of modeling, assembling, and welding.\n\nThe choice of [[06.01.02.01]] Sculpting Materials shapes what a technique can achieve: stone rewards carving, clay rewards modeling, bronze rewards casting, and installation practice abandons the discrete object altogether to transform an entire room or site into the work. Sculpture shares its parent, Visual Arts, with [[06.01.01]] Painting and [[06.01.03]] Photography — both confined to a surface, where sculpture alone works in volume and mass that a viewer's body must move through to fully perceive.\n\nSurvey collections and conservation records document sculptural practice across cultures and materials; see the [Victoria and Albert Museum's sculpture collection](https://www.vam.ac.uk/collections/sculpture) and the [Metropolitan Museum of Art's sculpture holdings](https://www.metmuseum.org/art/collection/search?department=12)."
+  },
+  {
+   "id": "06.01.02.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Sculpting Materials refers to the substances from which sculptors fashion three-dimensional works—stone, wood, clay, metal, plaster, and modern synthetics. Each material possesses distinct physical properties, working methods, permanence, and aesthetic character, fundamentally shaping the sculptor's formal choices and the final artwork's expressive potential.",
+   "cs": "Sochařské materiály označují látky, ze kterých sochaři tvoří trojrozměrná díla—kámen, dřevo, hlína, kov, sádrovina a moderní syntetické materiály. Každý materiál má odlišné fyzikální vlastnosti, pracovní metody, trvanlivost a estetický charakter, které zásadně utvářejí formální volby sochaře a vyjadřovací potenciál hotového díla."
+  },
+  {
+   "id": "06.01.02.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Sculpting Techniques comprises the general shaping methods of sculpture that fall outside carving and casting — modeling in clay or wax, assembling and welding components, surface finishing, and mixed-method construction. Modeling and assembly build form additively by hand or heat-joining, in contrast to carving's subtractive removal and casting's mold-based reproduction.",
+   "cs": "Sochařské techniky zahrnují obecné tvarovací metody sochařství mimo tesání a odlévání — modelování v hlíně nebo vosku, sestavování a svařování komponent, povrchové dokončování a smíšené konstrukční postupy. Modelování a sestavování budují tvar aditivně ručně nebo tepelným spojováním, na rozdíl od subtraktivního odebírání materiálu při tesání a reprodukce pomocí formy při odlévání."
+  },
+  {
+   "id": "06.01.02.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Casting Methods refers to sculptural techniques in which liquid material—molten metal, plaster, resin, or concrete—is poured into a mold, allowed to set, and removed to create the final form. Casting enables sculptors to reproduce complex shapes, work with durable materials, and produce multiple editions from a single mold.",
+   "cs": "Metody odlévání označují sochařské techniky, ve kterých se tekutý materiál—rozvedený kov, sádrovina, pryskyřice nebo beton—nalije do formy, nechá se vztyčit a odstraní se, aby se vytvořila konečná forma. Odlévání umožňuje sochařům reprodukovat složité tvary, pracovat s trvanlivými materiály a vyrobit více vydání z jedné formy."
+  },
+  {
+   "id": "06.01.02.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Carving is the subtractive sculptural technique of removing material—through cutting, chiseling, or grinding—to reveal the final form within stone, wood, or other solid material. The irreversibility of carving creates a direct dialogue between artist intention and material constraint, producing works characterized by solidity and permanence.",
+   "cs": "Tesání je subtraktivní sochařská technika odstraňování materiálu—řezáním, dlátem nebo broušením—aby se odhalila konečná forma v kmeni, dřevě nebo jiném pevném materiálu. Nezvratnost tesání vytváří přímý dialog mezi záměrem umělce a omezením materiálu, produkující díla charakterizovaná pevností a trvanlivostí."
+  },
+  {
+   "id": "06.01.02.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Installation Art is an artistic practice in which artists conceptualize and construct immersive environments—often combining multiple media, objects, and spatial interventions—that transform how viewers experience an architectural or landscape space. Installations prioritize viewers' physical and psychological engagement with the work over portable aesthetic objects.",
+   "cs": "Instalační umění je umělecká praxe, ve které umělci koncipují a konstruují ponořující prostředí—často kombinující více médií, předmětů a prostorových intervencí—která transformují, jak si diváci vyzkoušejí architektonický nebo krajinný prostor. Instalace upřednostňují fyzickou a psychologickou angažovanost diváků s dílem před přenosnými estetickými objekty."
+  },
+  {
+   "id": "06.01.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Photography is the art and practice of creating images by capturing light through a camera's optical system onto a photosensitive surface—film or digital sensor. Photography functions simultaneously as documentation, artistic expression, and visual language, blending technical mastery with aesthetic choice and interpretive vision.",
+   "cs": "Fotografie je umění a praxe vytváření obrazů chycením světla skrze optický systém fotoaparátu na fotocitlivou plochu—film nebo digitální senzor. Fotografie funguje zároveň jako dokumentace, umělecké vyjádření a vizuální jazyk, kombinujíc technickou zdatnost s estetickou volbou a interpretativním viděním.",
+   "brief": "Photography is the art and practice of creating images by capturing light through a camera's optical system onto a photosensitive surface — film or digital sensor. Every photograph begins with [[06.01.03.01]] Camera Fundamentals — aperture, shutter speed, and sensor or film response to light — and is shaped by [[06.01.03.03]] Lighting Techniques, which determine how that light falls on the subject before the shutter ever opens.\n\nWhat happens after capture splits along a historical line: [[06.01.03.04]] Darkroom Processes govern the chemical development of film and prints, while digital workflows perform the equivalent work — exposure, color, contrast — in software; both serve the same end as photographic composition, arranging what the frame includes. Photography shares its parent, Visual Arts, with [[06.01.01]] Painting and [[06.01.04]] Digital Art — where painting builds an image from nothing and digital art often generates one algorithmically, photography's image always begins as an optical record of something that was actually in front of the lens.\n\nInstitutional archives document the medium's technical and artistic history; see the [George Eastman Museum](https://www.eastman.org/) and the [International Center of Photography](https://www.icp.org/)."
+  },
+  {
+   "id": "06.01.03.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Camera Fundamentals encompasses the optical and mechanical principles governing how cameras capture light and form images—lens optics, aperture, shutter speed, focal length, and focus mechanisms. Understanding these fundamentals enables photographers to control exposure, depth of field, and motion representation, translating creative intention into visual results.",
+   "cs": "Základy fotoaparátu zahrnují optické a mechanické principy řídící, jak fotoaparáty zachycují světlo a tvoří obrazy—optiku objektivu, clon, rychlost závěrky, ohniskovou vzdálenost a mechanismy zaostřování. Porozumění těmto základům umožňuje fotografům kontrolovat expozici, hloubku ostrosti a reprezentaci pohybu, překládajíc tvůrčí záměr do vizuálních výsledků."
+  },
+  {
+   "id": "06.01.03.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Photographic Composition refers to the deliberate arrangement and selection of visual elements—subject placement, framing, perspective, and spatial relationships—within the camera's frame. Composition principles guide the viewer's attention, create visual hierarchy, and express the photographer's interpretation of the scene, distinguishing intentional image-making from casual documentation.",
+   "cs": "Fotografická kompozice odkazuje na vědomé uspořádání a výběr vizuálních prvků—umístění motivu, rámování, perspektivu a prostorové vztahy—v rámci fotoaparátu. Kompoziční principy vedou pozornost diváka, vytvářejí vizuální hierarchii a vyjadřují fotografovu interpretaci scény, odlišujíc záměrné vytváření obrazu od náhodné dokumentace."
+  },
+  {
+   "id": "06.01.03.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Lighting Techniques encompasses the methods photographers employ to control, shape, and direct light—through natural light manipulation, studio lighting systems, reflectors, diffusers, and post-processing. Lighting profoundly affects mood, dimensionality, texture, and visual impact, functioning as a fundamental creative tool equal in importance to subject selection.",
+   "cs": "Osvětlovací techniky zahrnují metody, které fotografové používají ke kontrole, formování a řízení světla—manipulací přirozeného světla, studiových osvětlovacích systémů, reflektorů, difuzorů a postprodukce. Osvětlení hluboce ovlivňuje náladu, rozměrnost, texturu a vizuální dopad, fungujíc jako základní tvůrčí nástroj rovný výběru motivu."
+  },
+  {
+   "id": "06.01.03.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Darkroom Processes comprise the chemical and manual techniques for developing exposed film and printing photographs — timed exposure under an enlarger, sequential chemical baths (developer, stop bath, fixer), temperature control, and enlargement. Performed in darkness or under safelight, these operations form the traditional bridge between a captured negative and a finished analog photograph, distinct from the software-based Digital Processing pipeline.",
+   "cs": "Procesy temné komory zahrnují chemické a ruční techniky pro vyvolávání exponovaného filmu a tisk fotografií — časovanou expozici pod zvětšovacím přístrojem, postupné chemické lázně (vývojka, přerušovací lázeň, ustalovač), kontrolu teploty a zvětšování. Prováděné v temnotě nebo za bezpečnostního osvětlení, tyto operace tvoří tradiční most mezi zachyceným negativem a hotovou analogovou fotografií, na rozdíl od softwarového postupu Digitálního zpracování."
+  },
+  {
+   "id": "06.01.03.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Digital Processing comprises the computational and software-based techniques photographers use to correct, enhance, manipulate, and interpret digital images — color correction, exposure adjustment, retouching, compositing, and creative effects. It extends the traditional darkroom workflow with non-destructive, repeatable editing, distinct from the physical chemical techniques of Darkroom Processes.",
+   "cs": "Digitální zpracování zahrnuje výpočetní a softwarové techniky, které fotografové používají k opravě, vylepšení, úpravě a interpretaci digitálních obrazů — korekci barev, úpravu expozice, retušování, skládání a tvůrčí efekty. Rozšiřuje tradiční postup temné komory o nedestruktivní a opakovatelné úpravy, na rozdíl od fyzických chemických technik Procesů temné komory."
+  },
+  {
+   "id": "06.01.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Digital Art encompasses artistic practices that employ digital technologies—computers, software, interactive systems, algorithms—as the primary medium for creation, expression, and presentation. Digital art spans from raster and vector graphics to generative systems and immersive experiences, challenging traditional boundaries between art forms and redefining viewer engagement.",
+   "cs": "Digitální umění zahrnuje umělecké praktiky, které používají digitální technologie—počítače, software, interaktivní systémy, algoritmy—jako primární médium pro tvorbu, vyjádření a prezentaci. Digitální umění se rozprostírá od rastrové a vektorové grafiky po generativní systémy a ponořující zážitky, zpochybňujíc tradiční hranice mezi uměleckými formami a předefinovávajíc angažovanost diváka.",
+   "brief": "Digital Art encompasses artistic practices that employ digital technologies — computers, software, interactive systems, algorithms — as the primary medium for creation, expression, and presentation. Unlike a painting or a print, a digital work often has no single fixed physical original: the same file can be displayed, projected, or algorithmically regenerated in different forms without any loss of authenticity, and generative and interactive pieces may not even resolve to the same output twice.\n\nDigital Art shares its parent, Visual Arts, with [[06.01.01]] Painting, [[06.01.02]] Sculpture, and [[06.01.05]] Printmaking, each of which it can simulate or extend — digital painting software reproduces brushwork, 3D modeling reproduces sculptural volume, generative print series reproduce the edition logic of printmaking — without inheriting any of their physical material constraints. It overlaps most closely with [[06.01.03]] Photography where digital processing and computational imaging blur into outright synthesis, the boundary usually drawn at whether an optical capture of the world remains recognizable in the final image.\n\nInstitutions dedicated to born-digital work document its rapidly evolving practice; see [Rhizome](https://rhizome.org/) and the [ZKM Center for Art and Media](https://zkm.de/en)."
+  },
+  {
+   "id": "06.01.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Printmaking is the artistic practice of creating multiple images by transferring pigment from an inked matrix—such as a wood block, engraved plate, stone, or screen—onto paper or another substrate. Printmaking embraces both the technical disciplines of the medium and the conceptual potential of reproducibility, edition, and seriality.",
+   "cs": "Tisk je umělecká praxe vytváření více obrazů přenosem pigmentu z inkoustované matrice—jako je dřevěný blok, rytá deska, kámen nebo síto—na papír nebo jiný substrát. Tisk zahrnuje jak technické disciplíny média, tak koncepční potenciál reprodukovatelnosti, edice a seriálnosti.",
+   "brief": "Printmaking is the artistic practice of creating multiple images by transferring pigment from an inked matrix — a wood block, engraved plate, stone, or screen — onto paper or another substrate. Because the matrix can be inked and pressed repeatedly, the medium is built around reproducibility: an edition of prints made from the same matrix is understood as multiple originals rather than copies of a single one, and the print run's size and the matrix's eventual wear are part of the work's meaning.\n\nPrintmaking shares its parent, Visual Arts, with [[06.01.01]] Painting, from which it borrows composition and color but not the direct, one-off application of pigment to a surface, and with [[06.01.04]] Digital Art, whose print-on-demand and generative-edition practices raise the same questions of seriality and authenticity in a purely digital register. It is closer in physical process to [[06.01.02]] Sculpture than the other visual arts — both carve or engrave a matrix before the finished work exists — though sculpture's matrix typically is the work, while printmaking's matrix only ever produces it.\n\nPrint collections document techniques and historical editions across centuries; see the [British Museum's prints and drawings collection](https://www.britishmuseum.org/collection) and the [International Print Center New York](https://ipcny.org/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "06.01.01",
+   "to": "06.01.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.01",
+   "to": "06.01.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.01",
+   "to": "06.01.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.01",
+   "to": "06.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.01",
+   "to": "06.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.02",
+   "to": "06.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.02",
+   "to": "06.01.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.02",
+   "to": "06.01.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.02",
+   "to": "06.01.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.02",
+   "to": "06.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.03",
+   "to": "06.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.03",
+   "to": "06.01.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.03",
+   "to": "06.01.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.03",
+   "to": "06.01.03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.03",
+   "to": "06.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.04",
+   "to": "06.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.04",
+   "to": "06.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.04",
+   "to": "06.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.04",
+   "to": "06.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.05",
+   "to": "06.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.05",
+   "to": "06.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01.05",
+   "to": "06.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01",
+   "to": "06.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01",
+   "to": "06.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01",
+   "to": "06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.01",
+   "to": "06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

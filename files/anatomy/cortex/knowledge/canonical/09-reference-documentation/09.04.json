@@ -1,0 +1,43 @@
+{
+ "domain": "09.04",
+ "nodes": [
+  {
+   "id": "09.04",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Maps and atlases are spatial representations showing geography, political boundaries, infrastructure networks, or thematic data distribution. They encode complex geographic relationships into visual form.",
+   "cs": "Mapy a atlasy jsou prostorové reprezentace ukazující zeměpis, politické hranice, infrastrukturní sítě nebo distribuci tematických dat. Kódují složité geografické vztahy do vizuální podoby.",
+   "brief": "Maps and atlases are spatial representations showing geography, political boundaries, infrastructure networks, or thematic data distribution. They encode complex geographic relationships into visual form, letting a reader grasp scale, distance, and adjacency at a glance that prose description cannot convey as efficiently.\n\nWithin [[09]] Reference & Documentation, this branch is the reference counterpart to the applied skill covered in [[08.06]] Navigation: a map is the artifact, navigation is the practice of reading and correlating it against real terrain. It also relates to [[09.10]] Historical Archives, since historical maps are themselves primary sources documenting how borders, settlements, and place names changed over time, and to [[01]] Natural Sciences, since thematic maps of climate, geology, or ecosystems apply earth-science data to cartographic form.\n\nFor a comprehensive open cartographic dataset, see [OpenStreetMap](https://www.openstreetmap.org/), and for authoritative historical map collections, the [David Rumsey Map Collection](https://www.davidrumsey.com/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "09.04",
+   "to": "01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09.04",
+   "to": "08.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09.04",
+   "to": "09.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09.04",
+   "to": "09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

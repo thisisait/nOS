@@ -1,0 +1,43 @@
+{
+ "domain": "04.02",
+ "nodes": [
+  {
+   "id": "04.02",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Analysis of human social structures, institutions, interactions, and cultural systems operating at collective levels from small groups to entire societies.",
+   "cs": "Analýza lidských sociálních struktur, institucí, interakcí a kulturních systémů na úrovni skupin a společnosti.",
+   "brief": "Sociology analyzes human social structures, institutions, and interactions at levels ranging from small groups to entire societies, examining how norms, roles, and organizations emerge, persist, and change. It shares its subject matter, human behavior, with [[04.01]] Psychology, but shifts the unit of analysis from the individual mind to collective patterns: class, family, bureaucracy, religion, and culture as systems that shape and are shaped by the people within them.\n\nThe discipline overlaps closely with [[04.03]] Anthropology, which studies comparable social structures through a more historical and cross-cultural lens, and with [[04.05]] Political Science, which narrows sociology's concern with power and organization to the specific institutions of the state. It also supplies the theoretical apparatus that [[04.09]] Demography draws on when interpreting population statistics as evidence of social change rather than raw counts.\n\nSince its nineteenth-century founders sought to apply scientific method to social life, sociology has developed distinct traditions, structural-functionalist, conflict-based, and interpretive, that still frame debates over inequality, urbanization, and institutional change today. The [American Sociological Association](https://www.asanet.org/about/what-is-sociology/) provides a broad orientation to the field's scope and subfields, and the [Stanford Encyclopedia of Philosophy entry on social institutions](https://plato.stanford.edu/entries/social-institutions/) gives the conceptual grounding shared with political theory."
+  }
+ ],
+ "relations": [
+  {
+   "from": "04.02",
+   "to": "04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.02",
+   "to": "04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.02",
+   "to": "04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.02",
+   "to": "04.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

@@ -1,0 +1,258 @@
+{
+ "domain": "11.01",
+ "nodes": [
+  {
+   "id": "11.01",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "File formats are standardized encoding schemes defining how data is stored and interpreted digitally. They enable software interoperability and long-term digital preservation across platform and time.",
+   "cs": "Formáty souborů jsou standardizované schémata kódování definující, jak jsou data uložena a interpretována digitálně. Umožňují interoperabilitu softwaru a dlouhodobou digitální archivaci přes platformy a čas.",
+   "brief": "File formats are standardized encoding schemes that define how data is stored and interpreted digitally, enabling software interoperability and long-term digital preservation across platform and time. A format's preservation value rests on whether its specification is open, documented, and implementable independent of any single vendor.\n\nThe category anchors five media-specific subfields directly beneath it — [[11.01.01]] Document Formats, [[11.01.02]] Image Formats, and [[11.01.03]] Audio Formats among them, alongside Video Formats and Archive Formats — each carrying its own migration risks and preferred archival variants. It is distinct from but complementary to [[11.02]] Compression Methods, which reduces the size of data already committed to a format rather than defining the format's structure, and from [[11.03]] Encryption & Security, which protects a file's confidentiality without touching how its content is encoded.\n\nThe [PRONOM technical registry](https://www.nationalarchives.gov.uk/PRONOM/) maintained by the UK National Archives is the standard reference for format identification and obsolescence risk, and the [Library of Congress Recommended Formats Statement](https://www.loc.gov/preservation/resources/rfs/) guides archival format selection."
+  },
+  {
+   "id": "11.01.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Document formats are file structures for encoding text, layout, metadata, and formatting—PDF, DOCX, ODT. They preserve content and visual presentation across software versions and operating systems.",
+   "cs": "Formáty dokumentů jsou souborové struktury kódující text, rozložení, metadat a formátování—PDF, DOCX, ODT. Zachovávají obsah a vizuální prezentaci přes verze softwaru a operační systémy.",
+   "brief": "Document formats are file structures that encode text, layout, metadata, and formatting so that a document's content and visual presentation survive across software versions and operating systems — PDF, DOCX, and ODT are the three in common preservation use. A document format differs from a plain text encoding by committing to a fixed page geometry, font and style information, and often embedded objects like images or tables, all of which must round-trip intact for the document to remain usable decades after the software that created it is gone.\n\nPreservation practice favors formats with open, published specifications over proprietary ones precisely because a closed format's decoder can disappear with its vendor: PDF/A is the ISO-standardized archival profile of PDF built for this reason, restricting the format to self-contained, font-embedded documents with no external dependencies, and the OpenDocument Format underlying ODT is likewise an open ISO/IEC standard rather than a single company's format. Within [[11.01]] File Formats, Document Formats sits alongside [[11.01.02]] Image Formats and [[11.01.03]] Audio Formats as one of five media-specific subfields (rounded out by video and archive formats), each carrying its own migration risk profile; documents frequently travel bundled inside [[11.01.05]] Archive Formats for transport, and once committed to a format they still need [[11.03]] Encryption & Security to control access without altering the encoding itself.\n\nThe [PDF Association](https://www.pdfa.org/) maintains the current PDF and PDF/A specifications and conformance resources, and OASIS publishes the [OpenDocument Format standard](https://www.oasis-open.org/standard/opendocument/) underlying ODT and related open document formats."
+  },
+  {
+   "id": "11.01.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Image formats are encoding standards for visual data including raster formats storing pixel grids—JPEG, PNG—and vector formats encoding geometric shapes and paths—SVG, EPS. Each format balances compression, quality, and scalability differently.",
+   "cs": "Formáty obrázků jsou standardy kódování vizuálních dat zahrnující rastrové formáty ukládající pixelové sítě—JPEG, PNG—a vektorové formáty kódující geometrické tvary a cesty—SVG, EPS. Každý formát vyvažuje kompresi, kvalitu a škálovatelnost odlišně.",
+   "brief": "Image formats are encoding standards for visual data, split between two fundamentally different representations: raster formats such as JPEG and PNG store a fixed grid of pixels, while vector formats such as SVG and EPS store geometric shapes and paths that can be redrawn at any resolution without loss. The distinction determines a format's preservation behavior — a raster image degrades or pixelates when enlarged past its native resolution, while a vector image scales losslessly but cannot represent a photograph's continuous tonal detail, so archives typically need both families rather than treating one as a universal successor to the other.\n\nWithin each family, formats trade compression against fidelity: JPEG's lossy compression shrinks photographic file size at the cost of discarding data on every save, while PNG's lossless compression preserves every pixel exactly, at a larger file size, and is preferred for screenshots, diagrams, and any image requiring transparency. Within [[11.01]] File Formats, Image Formats sits alongside [[11.01.01]] Document Formats and [[11.01.04]] Video Formats — video is best understood as a sequence of raster frames plus a temporal dimension neither still-image family encodes — and shares the same open-versus-proprietary preservation calculus as [[11.01.05]] Archive Formats, favoring formats with public specifications that will still be decodable after any single vendor's tools disappear.\n\nThe [Library of Congress Recommended Formats Statement](https://www.loc.gov/preservation/resources/rfs/still-image/) lists preferred still-image formats for long-term archiving, and the [PRONOM technical registry](https://www.nationalarchives.gov.uk/PRONOM/) documents format identifiers and obsolescence risk for both raster and vector encodings."
+  },
+  {
+   "id": "11.01.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Standardized codecs and container specifications for encoding and storing acoustic information—ranging from lossy compression formats (MP3, AAC) to lossless preservation (FLAC, WAV). Distinct from visual media by encoding temporal sound waves rather than visual intensity or motion data.",
+   "cs": "Standardizované kodeky a kontejnerové formáty pro zakódování a uchovávání zvukových informací—od ztrátových kompresí (MP3, AAC) po bezeztrátové archivace (FLAC, WAV). Odlišuje se od vizuálních médií kódováním časových zvukových vln namísto intenzity světla či pohybu.",
+   "brief": "Audio formats are standardized codecs and container specifications for encoding and storing acoustic information — sound pressure changes sampled over time, rather than the spatial intensity data that image and video formats encode. The family splits along the same lossy/lossless axis as still images: MP3 and AAC discard perceptually redundant frequency data to shrink file size, while FLAC and WAV preserve the sampled waveform exactly, at a larger size, making them the preferred choice whenever the recording itself — not just its casual playback — is the object being preserved.\n\nA container format and its codec are distinct layers worth separating: WAV is a container that typically holds uncompressed PCM samples, while FLAC is both codec and container, compressing losslessly rather than merely storing raw samples. Within [[11.01]] File Formats, Audio Formats sits beside [[11.01.04]] Video Formats, whose own audio track is usually a separate encoded stream multiplexed into the video container, and beside [[11.01.01]] Document Formats and [[11.01.02]] Image Formats as the remaining media-specific subfields; long-term audio archives lean on the same open-specification preference that guides [[11.01.05]] Archive Formats, since a proprietary codec can become undecodable once its license or tooling lapses.\n\nThe [Library of Congress Recommended Formats Statement](https://www.loc.gov/preservation/resources/rfs/audio/) sets out preferred audio formats for archival retention, and the [International Association of Sound and Audiovisual Archives (IASA)](https://www.iasa-web.org/) publishes technical guidelines for digitizing and preserving sound recordings."
+  },
+  {
+   "id": "11.01.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Standardized codecs and container specifications for encoding and storing visual frame sequences—ranging from lossy streaming formats (H.264, VP9) to lossless capture (ProRes, DNxHD). Distinct from audio by encoding spatial intensity and motion rather than temporal frequency content, and from still images by the intrinsic time dimension.",
+   "cs": "Standardizované kodeky a kontejnerové formáty pro zakódování a uchovávání posloupností vizuálních snímků—od ztrátových streamovacích formátů (H.264, VP9) po bezeztrátový záznam (ProRes, DNxHD). Odlišuje se od zvuku kódováním prostorové intenzity a pohybu namísto časového spektra a od statických obrázků vnitřní časovou dimenzí.",
+   "brief": "Video formats are standardized codecs and container specifications for encoding sequences of visual frames over time — spatial intensity data like a still image, but with motion and an intrinsic time dimension neither audio nor image formats carry. Streaming-oriented codecs such as H.264 and VP9 apply heavy lossy compression tuned for playback bandwidth, while capture and mastering codecs such as ProRes and DNxHD stay close to lossless so that footage survives repeated editing generations without visible degradation — the same distinction between a distribution copy and a preservation master that runs through every media-specific subfield.\n\nA video file is typically a container multiplexing at least two separately encoded streams: a visual track using a video codec and an audio track using an audio codec from [[11.01.03]] Audio Formats, which is why video preservation inherits audio's codec-obsolescence risk on top of its own. Within [[11.01]] File Formats, Video Formats sits beside [[11.01.02]] Image Formats, whose raster encoding underlies every individual frame, and beside [[11.01.01]] Document Formats and [[11.01.05]] Archive Formats as the remaining subfields covering the same open-versus-proprietary preservation tradeoff — a streaming codec optimized for today's bandwidth is not necessarily the codec an archive should commit to for decades of storage.\n\nThe [Library of Congress Recommended Formats Statement](https://www.loc.gov/preservation/resources/rfs/moving-image/) lists preferred moving-image formats for archival deposit, and the [FFmpeg documentation](https://ffmpeg.org/documentation.html) remains the standard open reference for the codecs and containers in active preservation use."
+  },
+  {
+   "id": "11.01.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Standardized container and compression methods for bundling and reducing digital file sizes—including both compression-focused formats (ZIP, 7z, RAR) and streaming archives (TAR). Distinct from media codecs by operating at the file-aggregation level rather than stream encoding, enabling efficient transport and storage of multi-file collections.",
+   "cs": "Standardizované kontejnery a kompresní metody pro seskupení a redukci velikosti digitálních souborů—včetně kompresí zaměřených formátů (ZIP, 7z, RAR) i streamovacích archivů (TAR). Odlišuje se od mediálních kodeků operováním na úrovni agregace souborů namísto kódování streamů, což umožňuje efektivní transport a uchovávání vícesouborových kolekcí.",
+   "brief": "Archive formats are standardized container and compression methods for bundling multiple files into a single unit and, usually, reducing its total size — ZIP, 7z, and RAR combine aggregation with compression, while TAR is a streaming archive that concatenates files losslessly and typically relies on a separate compressor like gzip for size reduction. The distinction from a media codec is one of level: a codec compresses the content of a single stream, while an archive format operates above that, packaging any number of already-formatted files — documents, images, audio, video — into one transportable object without caring what is inside each one.\n\nThat file-agnosticism is exactly why archive formats sit downstream of every other subfield in [[11.01]] File Formats: a preservation package routinely bundles [[11.01.01]] Document Formats, [[11.01.02]] Image Formats, [[11.01.03]] Audio Formats, and [[11.01.04]] Video Formats together inside a single archive for transfer or deposit, so an archive format's own openness and longevity gate access to everything it contains — an undecodable or proprietary archive locks away every file inside it regardless of how well each individual format was chosen. ZIP's wide, openly documented adoption is why it remains the default preservation-safe choice over RAR, whose specification has historically been more restricted.\n\nThe [PKWARE ZIP file format specification](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) is the canonical reference for the ZIP format, and the [Library of Congress Recommended Formats Statement](https://www.loc.gov/preservation/resources/rfs/textual/) lists preferred archive and compression formats for long-term deposit."
+  }
+ ],
+ "relations": [
+  {
+   "from": "11.01.01",
+   "to": "11.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.01",
+   "to": "11.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.01",
+   "to": "11.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.01",
+   "to": "11.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.01",
+   "to": "11.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.02",
+   "to": "11.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.02",
+   "to": "11.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.02",
+   "to": "11.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.02",
+   "to": "11.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.03",
+   "to": "11.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.03",
+   "to": "11.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.03",
+   "to": "11.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.03",
+   "to": "11.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.03",
+   "to": "11.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.04",
+   "to": "11.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.04",
+   "to": "11.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.04",
+   "to": "11.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.04",
+   "to": "11.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.04",
+   "to": "11.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.05",
+   "to": "11.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.05",
+   "to": "11.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.05",
+   "to": "11.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.05",
+   "to": "11.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01.05",
+   "to": "11.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01",
+   "to": "11.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01",
+   "to": "11.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01",
+   "to": "11.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01",
+   "to": "11.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.01",
+   "to": "11.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

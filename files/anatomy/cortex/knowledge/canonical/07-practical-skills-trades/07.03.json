@@ -1,0 +1,307 @@
+{
+ "domain": "07.03",
+ "nodes": [
+  {
+   "id": "07.03",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Electronics comprises the theory and practice of controlling and conducting electrical current through semiconductor and passive components. This field covers circuit analysis, component behavior, signal processing, and the application of electrical principles to both analog and digital systems.",
+   "cs": "Elektronika zahrnuje teorii a praxi řízení a vedení elektrického proudu pomocí polovodičových a pasivních součástí. Tato oblast zahrnuje analýzu obvodů, chování součástí, zpracování signálu a aplikaci elektrických principů na analogové a digitální systémy.",
+   "brief": "Electronics comprises the theory and practice of controlling and conducting electrical current through semiconductor and passive components. Work in this field ranges from analyzing a static circuit to programming a system that reacts to its environment in real time, but all of it rests on the same foundation: predicting how voltage and current will behave across resistors, capacitors, transistors, and integrated circuits.\n\nThe field anchors [[07.03.01]] as that foundation — reading and building circuits from discrete components — [[07.03.02]] as the programmable layer that turns a circuit into a responsive system, and [[07.03.03]] as the regulation stage every other circuit depends on for stable operation. Electronics shares its parent, Practical Skills & Trades, with [[07.02]], which diagnoses mechanical rather than electrical faults, and stands apart from both in that its failures are frequently invisible until measured with a meter or scope.\n\n[All About Circuits](https://www.allaboutcircuits.com/) and the [IEEE](https://www.ieee.org/) document circuit theory and professional standards across the field."
+  },
+  {
+   "id": "07.03.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Basic circuits teach foundational electronics through simple combinations of components that demonstrate Ohm's Law, current flow, and energy transfer. This field progresses from component identification and soldering fundamentals through circuit design, measurement techniques, and hands-on troubleshooting methodology.",
+   "cs": "Základní obvody učí základní elektroniku prostřednictvím jednoduchých kombinací součástí, které ukazují Ohmův zákon, tok proudu a přenos energie. Tato oblast pokračuje od identifikace součástí a základů pájení přes návrh obvodů, techniky měření a praktickou metodologii řešení problémů.",
+   "brief": "Basic circuits is the entry point of [[07.03]] Electronics, teaching how voltage, current, and resistance interact through the simple component combinations that make up any circuit. Ohm's law and Kirchhoff's rules explain how current distributes across series and parallel paths, and hands-on work with resistors, capacitors, and simple networks builds the intuition needed before moving to active devices or programmable systems.\n\nThe field is organized as a progression: [[07.03.01.01]] Electronic Components introduces the parts themselves, [[07.03.01.02]] Circuit Design covers assembling them into working schematics, and soldering, measurement, and troubleshooting close the loop by building, verifying, and repairing a working circuit. Within Electronics, Basic Circuits is the shared foundation beneath [[07.03.02]] Microcontrollers, whose programs still ultimately drive and read the same voltage and current relationships, and beneath [[07.03.03]] Power Supplies, itself a specialized circuit built and tested with these same methods.\n\nThe [Electronic circuit](https://en.wikipedia.org/wiki/Electronic_circuit) overview and the [Ohm's law](https://en.wikipedia.org/wiki/Ohm%27s_law) article are durable references for the field's founding principles."
+  },
+  {
+   "id": "07.03.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Electronic components are discrete physical parts that exhibit specific electrical behaviors—resistance, capacitance, switching, amplification, or integrated function. This category encompasses passive parts (resistors, capacitors), active parts (transistors, diodes), and integrated circuits that combine multiple functions in silicon.",
+   "cs": "Elektronické součástky jsou jednotlivé fyzické části, které vykazují specifické elektrické chování—odpor, kapacitu, spínání, zesílení nebo integrovanou funkci. Tato kategorie zahrnuje pasivní součástky (rezistory, kondenzátory), aktivní součástky (tranzistory, diody) a integrované obvody, které kombinují více funkcí v křemíku."
+  },
+  {
+   "id": "07.03.01.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Resistors limit electrical current flow through a material with high resistance, converting excess energy to heat. Identified by color-coded bands or printed values, resistors are the most common passive component, used to protect circuits, divide voltage, and set operating points in amplifiers.",
+   "cs": "Rezistory omezují tok elektrického proudu přes materiál s vysokým odporem, přeměňují přebytečnou energii na teplo. Identifikovány barevnými pásky nebo vytištěnými hodnotami, rezistory jsou nejběžnější pasivní součástka, používaná k ochraně obvodů, dělení napětí a nastavení pracovních bodů v zesilovačích."
+  },
+  {
+   "id": "07.03.01.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Capacitors store electrical energy by accumulating charge on parallel plates separated by a dielectric material. Capacitance is measured in farads and determines energy storage; capacitors block direct current but pass alternating current, making them essential for filtering, coupling, and energy buffering.",
+   "cs": "Kondenzátory ukládají elektrickou energii hromadněním náboje na paralelních deskách oddělených dielektrickým materiálem. Kapacita se měří ve faradech a určuje skladování energie; kondenzátory blokují stejnosměrný proud, ale propouštějí střídavý proud, takže jsou nezbytné pro filtraci, vazbu a vyrovnávání energie."
+  },
+  {
+   "id": "07.03.01.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Transistors are semiconductor devices that amplify or switch electrical signals and power, acting as either amplifiers or logic switches. Their three terminals — base, collector, emitter in a BJT; gate, drain, source in a FET — give precise control over current flow, making transistors the basic building block of modern electronics.",
+   "cs": "Tranzistory jsou polovodičová zařízení, která zesilují nebo přepínají elektrické signály a výkon a fungují jako zesilovače nebo logické spínače. Jejich tři svorky — báze, kolektor, emitor u bipolárního tranzistoru; hradlo, drain a source u FET — umožňují přesné řízení toku proudu, takže tranzistory jsou základním stavebním prvkem moderní elektroniky."
+  },
+  {
+   "id": "07.03.01.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Diodes are two-terminal semiconductors that conduct current in one direction while blocking it in reverse, using a p-n junction to create an asymmetric barrier. Diodes rectify alternating current to direct current, protect circuits from reverse voltage, and enable switching applications.",
+   "cs": "Diody jsou polovodičová zařízení se dvěma svorkami, která vedou proud v jednom směru a blokují jej v opačném směru pomocí p-n křižovatiny, která vytváří asymetrickou bariéru. Diody usměrňují střídavý proud na stejnosměrný, chrání obvody před obrácením napětí a umožňují spínací aplikace."
+  },
+  {
+   "id": "07.03.01.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Integrated circuits combine multiple transistors, resistors, and capacitors into a single semiconductor die, enabling complex functions like amplification, logic processing, and signal conversion. ICs scale from simple gates to microprocessors, reducing component count and power consumption while increasing reliability.",
+   "cs": "Integrované obvody kombinují více tranzistorů, rezistorů a kondenzátorů do jedné polovodičové destičky, což umožňuje komplexní funkce jako zesílení, logické zpracování a konverzi signálu. Integrované obvody se škálují od jednoduchých hradel po mikroprocesory, snižují počet součástí a spotřebu energie při zvýšení spolehlivosti."
+  },
+  {
+   "id": "07.03.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Circuit design arranges components to achieve a desired electrical function while balancing performance, cost, and reliability. The process runs from requirements specification through schematic capture, simulation, breadboard prototyping, and layout optimization.",
+   "cs": "Návrh obvodu uspořádává součástky tak, aby dosáhly požadované elektrické funkce, s ohledem na rovnováhu výkonu, nákladů a spolehlivosti. Proces postupuje od specifikace požadavků přes tvorbu schématu, simulaci, prototypování na nepájivém poli až po optimalizaci rozvržení desky."
+  },
+  {
+   "id": "07.03.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Soldering techniques join electronic components to circuit boards with molten solder alloy, forming both a mechanical and an electrical connection. Hand soldering, wave soldering, and reflow soldering each suit a different production scale; correct technique avoids cold joints, component damage, and reliability failures.",
+   "cs": "Techniky pájení spojují elektronické součástky s deskami plošných spojů pomocí roztavené pájecí slitiny a vytvářejí mechanické i elektrické spojení. Ruční pájení, vlnové pájení a přetavovací pájení se hodí pro různé rozsahy výroby; správná technika zabraňuje studeným spojům, poškození součástek a problémům se spolehlivostí."
+  },
+  {
+   "id": "07.03.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Testing and measurement quantifies circuit behavior using multimeters, oscilloscopes, and specialized instruments to verify voltage, current, frequency, and waveforms. Accurate measurement ensures components operate within specification and circuits perform as designed before being deployed.",
+   "cs": "Testování a měření kvantifikuje chování obvodu pomocí multimetrů, osciloskopů a specializovaných přístrojů k ověření napětí, proudu, frekvence a průběhů. Přesné měření zajišťuje, že součástky pracují v rámci specifikací a obvody fungují tak, jak jsou navrženy, před jejich nasazením."
+  },
+  {
+   "id": "07.03.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Troubleshooting is the systematic process of isolating and repairing circuit faults: measuring signals, comparing the results against expected values, and narrowing down the failure point. Effective troubleshooting combines measurement discipline, circuit understanding, and logical deduction to restore function.",
+   "cs": "Řešení problémů je systematický proces izolace a opravy poruch obvodu: měření signálů, porovnávání výsledků s očekávanými hodnotami a zužování okruhu bodů selhání. Účinné řešení problémů kombinuje měřicí disciplínu, porozumění obvodům a logickou dedukci k obnovení funkčnosti."
+  },
+  {
+   "id": "07.03.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Microcontrollers are compact computing systems on a chip, integrating a processor, memory, and peripherals to enable programmable control of external devices. Microcontrollers execute firmware to read sensors, make decisions, and drive actuators, forming the intelligence in embedded systems.",
+   "cs": "Mikrokontroléry jsou kompaktní výpočetní systémy na čipu, integrují procesor, paměť a periférie umožňující programovatelné řízení externích zařízení. Mikrokontroléry provádějí firmware pro čtení senzorů, rozhodování a řízení aktuátorů, tvořící inteligenci vložených systémů.",
+   "brief": "Microcontrollers are compact computing systems on a single chip, combining a processor core, memory, and input/output peripherals to control external hardware through firmware. A microcontroller reads sensors, evaluates logic, and drives actuators such as motors, displays, and relays, forming the programmable intelligence layer inside embedded devices from appliances to robotics.\n\nWithin [[07.03]] Electronics, microcontrollers sit above [[07.03.01]] Basic Circuits, which supplies the voltage, current, and component fundamentals that a microcontroller's pins ultimately manipulate: every GPIO pin toggling a relay or reading a sensor is still governed by the same circuit laws taught there. Microcontrollers also depend on [[07.03.03]] Power Supplies for clean, regulated voltage rails, since digital logic is sensitive to noise and brownouts that analog circuits tolerate more easily. Practically, a failed microcontroller project is often diagnosed with the same tools covered under [[07.03.05]] Electronics Repair — oscilloscope traces and continuity checks — before firmware is even suspected.\n\nThe [Microcontroller](https://en.wikipedia.org/wiki/Microcontroller) overview and the [Embedded system](https://en.wikipedia.org/wiki/Embedded_system) article cover the hardware and system-design context in depth."
+  },
+  {
+   "id": "07.03.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Power supplies convert and regulate electrical energy to provide stable, filtered voltage to circuits, transforming wall power into usable direct current at required levels. Power supply design addresses voltage regulation, current capacity, thermal dissipation, and protection against overload.",
+   "cs": "Zdroje napájení převádějí a regulují elektrickou energii, aby zajistily stabilní a filtrované napětí k obvodům, transformují síťové napětí na použitelný stejnosměrný proud na požadované úrovni. Návrh zdroje napájení řeší regulaci napětí, kapacitu proudu, tepelné rozptýlení a ochranu proti přetížení.",
+   "brief": "Power supplies convert raw electrical energy, typically AC mains voltage, into the stable, filtered DC voltage that circuits require to operate. Design work in this field addresses rectification, voltage regulation, current capacity, thermal dissipation, and protection circuitry against overload, short circuits, and voltage spikes, spanning simple linear regulators through efficient switch-mode designs.\n\nPower supplies is one of the applied specialties of [[07.03]] Electronics, building directly on [[07.03.01]] Basic Circuits — a regulated supply is itself a circuit obeying Ohm's law and requiring the same soldering and measurement skills used to build and verify any other board. It is also a dependency rather than a peer for much of the branch: [[07.03.02]] Microcontrollers and other digital logic cannot function without the clean, noise-free rails this field is responsible for delivering, and diagnosing a \"dead\" project under [[07.03.05]] Electronics Repair often starts by checking whether the power supply itself is still within spec.\n\nThe [Power supply](https://en.wikipedia.org/wiki/Power_supply) overview and the [Switched-mode power supply](https://en.wikipedia.org/wiki/Switched-mode_power_supply) article cover linear and switching topologies in detail."
+  },
+  {
+   "id": "07.03.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Radio electronics covers wireless transmission and reception of signals, using modulation, antennas, and frequency tuning to send information through air or space. Applications range from AM/FM broadcast receivers to modern Wi-Fi and cellular systems.",
+   "cs": "Radiová elektronika pokrývá bezdrátový přenos a příjem signálů pomocí modulace, antén a ladění frekvence k vysílání informací vzduchem nebo vesmírem. Aplikace se pohybují od AM/FM přijímačů až po moderní Wi-Fi a mobilní systémy.",
+   "brief": "Radio electronics covers the wireless transmission and reception of signals, using modulation, antennas, and frequency tuning to carry information through air or space without a physical conductor. The field spans everything from AM/FM broadcast receivers and amateur radio transceivers to the RF front ends inside modern Wi-Fi and cellular systems, and covers both the analog signal-processing theory and the practical construction of transmitters, receivers, and antennas.\n\nAs a branch of [[07.03]] Electronics, radio work rests on the same foundation as every other specialty here: [[07.03.01]] Basic Circuits supplies the amplifier and filter fundamentals that shape a radio signal, while a stable, low-noise supply from [[07.03.03]] Power Supplies is essential because RF circuits are unusually sensitive to power-rail noise bleeding into a receiver's front end. Fault-finding on a radio build draws on the same oscilloscope and spectrum-analysis techniques taught under [[07.03.05]] Electronics Repair, adapted to the higher frequencies involved.\n\nThe [Radio](https://en.wikipedia.org/wiki/Radio) overview and the [Amplitude modulation](https://en.wikipedia.org/wiki/Amplitude_modulation) article cover the transmission principles and historical broadcast context."
+  },
+  {
+   "id": "07.03.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Electronics repair restores malfunctioning electronic equipment through component diagnosis, part replacement, and circuit rework. Repair technicians use oscilloscopes and multimeters to locate faults, desolder and solder components, and verify function before returning equipment to service.",
+   "cs": "Oprava elektroniky obnovuje nefunkční elektronické zařízení pomocí diagnostiky součástí, výměny dílů a přepraování obvodů. Technici oprav používají osciloskopy a multimetry k lokalizaci poruch, odstraňují a pájedí součástky a ověřují funkčnost před vrácením zařízení do provozu.",
+   "brief": "Electronics repair restores malfunctioning equipment through systematic fault diagnosis, component replacement, and circuit rework. Technicians use multimeters, oscilloscopes, and schematic diagrams to trace a failure to a specific component or connection, then desolder and replace parts before verifying that the repaired circuit meets its original specification.\n\nElectronics repair is the diagnostic capstone of [[07.03]] Electronics: it draws its measurement and desoldering technique from [[07.03.01]] Basic Circuits, and its most common patients are failures within [[07.03.03]] Power Supplies (the single most frequent point of failure in most equipment) and within [[07.03.02]] Microcontrollers-based designs, where a repair technician must distinguish a hardware fault from a firmware bug before reaching for the soldering iron. The same fault-isolation method extends to [[07.03.04]] Radio Electronics, adapted to RF-specific symptoms like drift and intermittent reception.\n\nThe [Electronics technician](https://en.wikipedia.org/wiki/Electronics_technician) overview and the [Troubleshooting](https://en.wikipedia.org/wiki/Troubleshooting) article describe the diagnostic methodology in general terms."
+  }
+ ],
+ "relations": [
+  {
+   "from": "07.03.01",
+   "to": "07.03.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.01",
+   "to": "07.03.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.01",
+   "to": "07.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.01",
+   "to": "07.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.01",
+   "to": "07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.02",
+   "to": "07.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.02",
+   "to": "07.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.02",
+   "to": "07.03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.02",
+   "to": "07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.03",
+   "to": "07.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.03",
+   "to": "07.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.03",
+   "to": "07.03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.03",
+   "to": "07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.04",
+   "to": "07.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.04",
+   "to": "07.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.04",
+   "to": "07.03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.04",
+   "to": "07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.05",
+   "to": "07.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.05",
+   "to": "07.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.05",
+   "to": "07.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.05",
+   "to": "07.03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03.05",
+   "to": "07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03",
+   "to": "07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03",
+   "to": "07.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03",
+   "to": "07.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.03",
+   "to": "07.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

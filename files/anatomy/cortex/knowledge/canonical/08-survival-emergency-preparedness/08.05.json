@@ -1,0 +1,244 @@
+{
+ "domain": "08.05",
+ "nodes": [
+  {
+   "id": "08.05",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Fire making produces combustion through ignition of fuel using friction, sparks, or chemical reactions, essential for warmth, cooking, water purification, psychological comfort, and tool hardening across survival contexts.",
+   "cs": "Vytváření ohně produkuje spalování prostřednictvím zapálení paliva pomocí tření, jisker nebo chemických reakcí, nezbytné pro teplo, vaření, čištění vody, psychologické pohodlí a kalení nástrojů v různých kontextech přežití.",
+   "brief": "Fire making produces controlled combustion through the ignition of fuel using friction, sparks, or chemical reaction, and it is one of the most multiplying skills in survival — a single reliable fire delivers warmth, cooked food, purified water, tool hardening, and psychological comfort simultaneously. [[08.05.01]] Friction methods (bow drill, hand drill) and [[08.05.02]] spark methods (ferrocerium rod, flint and steel) represent the two classical ignition families, each with different tool, material, and skill-level requirements, while fire maintenance and fuel-type choice determine whether an ignited flame becomes a sustained, useful fire or burns out in minutes.\n\nFire's centrality shows up across [[08]] Survival & Emergency Preparedness: boiling as a treatment method under [[08.02]] Water Procurement & Purification requires a maintained fire, and a [[08.04]] Shelter Construction sited to contain and reflect heat multiplies a fire's warmth output — sustained warmth is itself a frontline treatment for hypothermia. Fire safety threads through all of it — an uncontrolled fire converts a survival asset into the emergency it was meant to prevent, which is why safety technique is taught alongside ignition method rather than as an afterthought.\n\nIgnition technique is heavily practice-dependent — reading dry tinder and building a fire lay correctly matters more than the ignition source itself. The [Bushcraft USA community fire-making resources](https://www.bushcraftusa.com/) document field-tested friction and spark technique, and the [Wikipedia article on fire making](https://en.wikipedia.org/wiki/Fire_making) surveys ignition methods across cultures and eras."
+  },
+  {
+   "id": "08.05.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Friction methods generate heat and ignition through mechanical rubbing of wood against wood, using bow drills or hand drills to concentrate pressure and velocity until spontaneous combustion occurs.",
+   "cs": "Metody tření generují teplo a zapálení prostřednictvím mechanického tření dřeva o dřevo, používají luk vrtáky nebo ruční vrtáky k soustředění tlaku a rychlosti, dokud nedojde ke spontánnímu spalování.",
+   "brief": "Friction methods ignite fire by converting mechanical motion into heat, rubbing wood against wood — most commonly with a bow drill or hand drill — until friction and pressure raise a wood dust pile past its ignition point and a coal forms. The technique demands dry, low-resin wood for both spindle and fireboard, a matched hardness pairing that generates fine hot dust rather than smearing or stalling, and sustained physical effort to keep rotational speed and downward pressure constant until the coal catches.\n\nFriction sits alongside [[08.05.02]] spark methods as the two classical ignition families within [[08.05]] Fire Making, distinguished by their tool and skill demands: friction needs no metal or flint, only correctly selected wood and technique, while spark methods trade physical exertion for a striking tool. Once a coal forms, it still depends on [[08.05.03]] fire maintenance to grow into a sustained flame, and the wood selected for the drill set is structural rather than combustible — a different criterion from the dry fuel wood [[08.05.04]] fuel types catalogs for burning.\n\nFriction ignition is the most skill-dependent of the ignition methods and typically requires extended practice before it reliably produces a coal. The [Wikipedia article on the bow drill](https://en.wikipedia.org/wiki/Bow_drill) documents the mechanics and wood-pairing principles, and [Primitive Ways](http://www.primitiveways.com/fire.html) catalogs regional wood species tested for friction fire by species and hardness."
+  },
+  {
+   "id": "08.05.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Spark methods strike ferrous materials such as flint against steel or use chemical reactions to produce ignition-capable sparks, requiring tinder that catches and sustains the flame until kindling accepts full combustion.",
+   "cs": "Metody jisker narážejí železné materiály, jako je pazourek, proti oceli nebo používají chemické reakce k produkci zažívacích jisek, vyžadují tlejné, které chytí a udržují plamen, dokud se podpal neujme plného spalování.",
+   "brief": "Spark methods ignite fire by striking ferrous or pyrophoric material to throw hot particles — flint against steel, or a ferrocerium rod scraped with a striker — onto tinder fine and dry enough to catch a spark before it cools. Success depends less on physical exertion than on tinder preparation: char cloth, fatwood shavings, or processed plant down catch a spark that raw kindling cannot, and the caught ember must be nursed with breath and additional tinder before it becomes flame.\n\nSpark methods sit alongside [[08.05.01]] friction methods as the two classical ignition families within [[08.05]] Fire Making — spark trades the wood-selection and physical-effort demands of friction for a striking tool and tinder discipline, and modern ferrocerium rods work reliably even on damp tinder that would defeat a friction set. An established spark still needs [[08.05.03]] fire maintenance to grow past the ember stage, and dry [[08.05.04]] fuel types staged in advance determine whether that growth succeeds on the first attempt.\n\nBecause a ferrocerium rod or flint kit is compact, reliable in wet conditions, and requires comparatively little practice, it is the spark method most survival kits standardize on. The [Wikipedia article on ferrocerium](https://en.wikipedia.org/wiki/Ferrocerium) covers the metallurgy behind modern spark rods, and the [Wikipedia article on flint and steel](https://en.wikipedia.org/wiki/Flint_and_steel) documents the historical striking method and tinder requirements."
+  },
+  {
+   "id": "08.05.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Fire maintenance sustains and controls established flames through fuel management, airflow regulation, and heat distribution, distinguishing the active tending of fire from its initial creation.",
+   "cs": "Údržba ohně udržuje a kontroluje vytvořené plameny prostřednictvím správy paliva, regulace toku vzduchu a distribuce tepla, rozlišuje aktivní péči o oheň od jeho počátečního vytvoření.",
+   "brief": "Fire maintenance sustains and controls an already-established flame through fuel management, airflow regulation, and heat distribution, separating the active tending of fire from the act of igniting it. A tended fire is built in stages — tinder and kindling give way to progressively larger fuel, arranged in a lay (teepee, log cabin, or lean-to) that controls how air reaches the flame — and maintenance means feeding that structure before it collapses into embers or smothers under too much fuel at once.\n\nMaintenance is the stage that follows both ignition families in [[08.05]] Fire Making: neither [[08.05.01]] friction methods nor [[08.05.02]] spark methods produce more than an ember or a first flame, and maintenance is what converts that into a fire that lasts the night. Fuel choice under maintenance draws directly on [[08.05.04]] fuel types — different woods burn hot and fast or slow and long — and every maintenance decision is bounded by [[08.05.05]] fire safety, since airflow and fuel load that grow a fire too aggressively are the same variables that let it escape control.\n\nMaintenance technique varies by purpose — a cooking fire wants concentrated coals, a signal fire wants smoke or height, a warming fire wants steady, long-burning fuel — so the same ignition can be tended toward different ends. The [Wikipedia article on campfire](https://en.wikipedia.org/wiki/Campfire) covers fire-lay types and tending practice, and the [Wikipedia article on combustion](https://en.wikipedia.org/wiki/Combustion) explains the fuel-oxygen-heat relationship maintenance manages."
+  },
+  {
+   "id": "08.05.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Fuel types encompass materials burned to sustain fire including dry wood, charcoal, plant matter, animal fats, and mineral oils, selected for combustibility, heat output, smoke characteristics, and local availability.",
+   "cs": "Typy paliv zahrnují materiály spalované k udržení ohně včetně suchého dřeva, uhlí, rostlinné hmoty, živočišných tuků a minerálních olejů, vybrané pro hořlavost, výstup tepla, charakteristiky kouře a místní dostupnost.",
+   "brief": "Fuel types are the materials burned to sustain a fire — dry wood, charcoal, plant matter, animal fats, and mineral oils — selected for combustibility, heat output, smoke characteristics, and what a given location actually offers. Wood fuel splits by hardness and resin content: softwoods and resinous species ignite fast and burn hot but consume quickly and spark, while dense hardwoods take longer to catch but produce steadier, longer-lasting coals suited to overnight burning.\n\nFuel selection feeds directly into [[08.05.03]] fire maintenance within [[08.05]] Fire Making, which stages fuel by size and burn rate to keep a fire alive without collapsing or smothering it, and it interacts with [[08.05.05]] fire safety, since resinous or resin-rich wood spits sparks that a poorly sited fire lay lets escape. Fuel wood is a distinct resource from the structural wood [[08.04.05]] building materials selects for shelter framing — the criteria are largely opposite, since fuel wood is chosen to burn readily while structural wood is chosen to resist it.\n\nFuel availability is the single most site-dependent variable in fire making, so technique built around one region's fuel — dense temperate hardwood, say — needs adjustment where only damp softwood, dung, or oil-bearing plants are available. The [Wikipedia article on firewood](https://en.wikipedia.org/wiki/Firewood) covers species selection and seasoning, and the [Wikipedia article on fuel](https://en.wikipedia.org/wiki/Fuel) surveys combustible material categories more broadly."
+  },
+  {
+   "id": "08.05.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Fire safety encompasses hazard prevention and damage control around established flames, including water reserves, firebreak creation, and smoke management to prevent uncontrolled spread and injury.",
+   "cs": "Bezpečnost ohně zahrnuje prevenci nebezpečí a řízení škod kolem vytvořených plamenů, včetně rezerv vody, vytváření protiodborných přestávek a řízení kouře, aby se zabránilo nekontrolovanému rozšíření a poranění.",
+   "brief": "Fire safety covers hazard prevention and damage control around an established flame — clearing a firebreak, keeping a water reserve on hand, siting the fire away from overhanging branches and dry ground cover, and managing smoke so it neither signals unwanted attention nor causes injury indoors. It treats fire as a controlled but always-escapable resource: every safety measure exists to keep a useful fire from becoming the emergency it was built to prevent.\n\nSafety is not a separate stage but runs through the other techniques in [[08.05]] Fire Making — the fuel load [[08.05.04]] fuel types stages and the airflow [[08.05.03]] fire maintenance regulates are the same variables that let a fire escape control if mismanaged, and both ignition families, [[08.05.01]] friction methods and [[08.05.02]] spark methods, produce open flame that safety practice must contain from the first spark onward. Fire sited to warm a shelter carries the added risk of proximity to flammable structure, which is why site selection is a safety decision as much as a comfort one.\n\nFire escapes are disproportionately caused by wind-driven spread and dry ground fuel rather than the ignition method itself, so site selection and a cleared perimeter matter more than any single technique. The [Wikipedia article on wildfire](https://en.wikipedia.org/wiki/Wildfire) covers how uncontrolled fire spreads and how firebreaks interrupt it, and the [National Fire Protection Association](https://www.nfpa.org/) publishes campfire and outdoor-fire safety guidance referenced across wilderness training programs."
+  }
+ ],
+ "relations": [
+  {
+   "from": "08.05.01",
+   "to": "08.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.01",
+   "to": "08.05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.01",
+   "to": "08.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.01",
+   "to": "08.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.02",
+   "to": "08.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.02",
+   "to": "08.05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.02",
+   "to": "08.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.02",
+   "to": "08.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.03",
+   "to": "08.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.03",
+   "to": "08.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.03",
+   "to": "08.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.03",
+   "to": "08.05.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.03",
+   "to": "08.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.04",
+   "to": "08.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.04",
+   "to": "08.05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.04",
+   "to": "08.05.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.04",
+   "to": "08.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.05",
+   "to": "08.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.05",
+   "to": "08.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.05",
+   "to": "08.05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.05",
+   "to": "08.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05.05",
+   "to": "08.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05",
+   "to": "08.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05",
+   "to": "08.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05",
+   "to": "08.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05",
+   "to": "08.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.05",
+   "to": "08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

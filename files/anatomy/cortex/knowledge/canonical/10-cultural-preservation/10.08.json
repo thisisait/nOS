@@ -1,0 +1,43 @@
+{
+ "domain": "10.08",
+ "nodes": [
+  {
+   "id": "10.08",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Rituals and ceremonies are formalized practices marking significant cultural, spiritual, or lifecycle moments—birth, coming of age, marriage, death. They externalize internal transitions and reinforce community identity.",
+   "cs": "Rituály a ceremoniály jsou formalizované praktiky označující významné kulturní, spirituální nebo životní momenty—narození, dospělost, sňatek, smrt. Externalizují vnitřní přechody a posilují identitu komunity.",
+   "brief": "Rituals and ceremonies are formalized practices that mark significant cultural, spiritual, or lifecycle moments — birth, coming of age, marriage, death — externalizing internal transitions and reinforcing community identity through prescribed sequence and symbol.\n\nThe branch shares its festive and performative register with [[10.07]] Games & Recreation, where contest or play is folded into a rite rather than staged as its own tradition, and with [[10.05]] Music & Songs, whose repertoires are frequently composed specifically for ceremonial use and are meaningless outside it. It is distinct from [[10.02]] Folklore & Mythology, which supplies the belief system a ceremony often enacts rather than the enactment itself. All four sit under [[10]] Cultural Preservation.\n\nUNESCO's [Social Practices, Rituals and Festive Events](https://ich.unesco.org/en/social-practices-rituals-and-festive-events-00055) domain is the standard reference for classifying and safeguarding this material, and the [Human Relations Area Files](https://hraf.yale.edu/) cross-cultural database indexes ceremonial practice across documented societies."
+  }
+ ],
+ "relations": [
+  {
+   "from": "10.08",
+   "to": "10.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.08",
+   "to": "10.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.08",
+   "to": "10.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.08",
+   "to": "10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

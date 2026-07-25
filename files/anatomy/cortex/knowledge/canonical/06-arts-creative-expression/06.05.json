@@ -1,0 +1,50 @@
+{
+ "domain": "06.05",
+ "nodes": [
+  {
+   "id": "06.05",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Culinary arts is the craft and science of preparing, cooking, and presenting food for consumption, encompassing technique, flavor composition, and aesthetic presentation.",
+   "cs": "Kulinářské umění je řemeslo a věda přípravy, vaření a prezentace jídla ke konzumaci, zahrnující techniku, složení chutě a estetickou prezentaci.",
+   "brief": "Culinary arts is the craft and science of preparing, cooking, and presenting food for consumption. It combines technique — knife work, heat control, fermentation, emulsification — with flavor composition and visual presentation, so a dish functions simultaneously as nourishment, as a sensory experience, and, in its plating, as a small act of visual design.\n\nWithin [[06]], culinary arts is the subfield whose finished work is consumed and destroyed by its own use, unlike [[06.01]] or [[06.04]], whose objects persist after the making is done. It shares craft's emphasis on material fluency and hand skill with [[06.04]], and shares design's attention to composition and presentation with [[06.03]], while remaining distinct from [[06.02]] in that the \"performance\" of cooking is usually private, finished before the diner ever perceives it.\n\nThe [Culinary Institute of America](https://www.ciachef.edu/) and reference works such as [Harold McGee's food-science writing](https://curiouscook.com/) document technique and the underlying chemistry of cooking."
+  }
+ ],
+ "relations": [
+  {
+   "from": "06.05",
+   "to": "06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.05",
+   "to": "06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.05",
+   "to": "06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.05",
+   "to": "06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.05",
+   "to": "06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

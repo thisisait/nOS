@@ -1,0 +1,230 @@
+{
+ "domain": "06.03",
+ "nodes": [
+  {
+   "id": "06.03",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Design is the practice of planning and creating visual solutions for communication, products, and environments across graphic, industrial, fashion, interior, and digital domains.",
+   "cs": "Design je praxe plánování a tvorby vizuálních řešení pro komunikaci, produkty a prostředí přes grafické, průmyslové, módní, interiérové a digitální domény.",
+   "brief": "Design is the practice of planning visual and functional solutions to communication, product, and environmental problems, rather than pursuing expression for its own sake. A designer works within constraints set by a client, a manufacturing process, or a human body, and success is measured by whether the solution works for its intended user, not only by whether it is visually resolved.\n\nThe field anchors [[06.03.01]] for two-dimensional communication — typography, layout, branding — [[06.03.02]] for mass-manufactured physical products, and [[06.03.05]] for the interactive layer of software interfaces, the newest of the five subfields but now the largest in practice. Design shares its parent with [[06.01]], from which it is distinguished by that functional constraint, and with [[06.04]], whose objects are individually made by hand rather than specified for reproduction.\n\nThe [Cooper Hewitt, Smithsonian Design Museum](https://www.cooperhewitt.org/) and the [Nielsen Norman Group](https://www.nngroup.com/) document design history and interaction-design research respectively."
+  },
+  {
+   "id": "06.03.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Graphic design is the creation of visual communication through typography, imagery, and layout applied to printed and digital media.",
+   "cs": "Grafický design je tvorba vizuální komunikace pomocí typografie, obrazů a rozvržení na tisknutých a digitálních médiích.",
+   "brief": "Graphic Design is the practice of visual communication through typography, imagery, and layout, applied to printed and digital media to inform, persuade, or brand a message for a specific audience. It resolves problems of legibility, hierarchy, and visual identity rather than pursuing image-making for its own sake.\n\nGraphic Design shares its parent [[06.03]] with [[06.03.05]], which extends the same typographic and compositional vocabulary into interactive, code-driven interfaces rather than fixed print or digital layouts, and with [[06.03.02]] and [[06.03.03]], which apply design thinking to three-dimensional physical form instead of two-dimensional composition. Its boundary with fine art lies in the client-facing, communicative purpose that anchors every graphic design brief.\n\nProfessional practice and standards are documented by [AIGA, the professional association for design](https://www.aiga.org/), and historical typographic and print collections are held by the [Cooper Hewitt, Smithsonian Design Museum](https://www.cooperhewitt.org/)."
+  },
+  {
+   "id": "06.03.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Industrial design is the creation of functional and aesthetically coherent three-dimensional products for manufacture and everyday use.",
+   "cs": "Průmyslový design je vytváření funkčních a esteticky soudržných trojrozměrných produktů určených k výrobě a každodennímu použití.",
+   "brief": "Industrial Design is the creation of functional, manufacturable three-dimensional products — from furniture to electronics — that balance ergonomics, materials, and production constraints with aesthetic coherence. A design is specified once as drawings, models, and tolerances, then reproduced identically at scale, unlike an object made by hand.\n\nIndustrial Design shares its parent [[06.03]] with [[06.03.01]], whose two-dimensional communication tools it uses to specify a product before manufacture, and with [[06.03.05]], with which it increasingly overlaps as physical products gain interactive digital interfaces. It is distinguished from [[06.04.01]] and the rest of [[06.04]] by that same reproduction line: crafts are individually made, industrial design is specified for the factory.\n\nThe [Museum of Modern Art's design collection](https://www.moma.org/collection/) and the [Industrial Designers Society of America](https://www.idsa.org/) document the field's history and professional practice."
+  },
+  {
+   "id": "06.03.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Fashion design is the creation of garments and accessories for wear, balancing aesthetic expression with functional fit and material behavior.",
+   "cs": "Módní design je tvorba oděvů a doplňků k nošení, vyrovnávající se estetickému vyjádření s funkčním přiléhavostí a chováním materiálu.",
+   "brief": "Fashion Design is the creation of garments and accessories for wear, balancing aesthetic expression with functional fit, movement, and the behavior of cloth on a moving body. A design must be pattern-drafted, cut, and constructed from textiles before it can be judged on the runway or the street.\n\nFashion Design shares its parent [[06.03]] with [[06.03.01]], whose composition and branding tools shape how a collection is presented and marketed, and with [[06.03.04]], which applies the same balance of aesthetics and function to inhabited space rather than the body. It draws directly on [[06.04.02]], the craft that produces the woven and knitted cloth every garment is cut from — a cross-branch relationship as load-bearing as any within Design itself.\n\nThe [Council of Fashion Designers of America](https://cfda.com/) and the [Victoria and Albert Museum's fashion collections](https://www.vam.ac.uk/) document contemporary practice and historical costume."
+  },
+  {
+   "id": "06.03.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Interior design is the planning and customization of indoor spaces for function, comfort, and aesthetic coherence through spatial arrangement, materials, and furnishings.",
+   "cs": "Interiérový design je plánování a přizpůsobování vnitřních prostorů pro funkci, pohodlí a estetickou soudržnost prostřednictvím prostorového uspořádání a materiálů.",
+   "brief": "Interior Design is the planning and customization of indoor spaces for function, comfort, and aesthetic coherence, coordinating spatial arrangement, materials, lighting, and furnishings within the constraints of an existing architectural shell.\n\nInterior Design shares its parent [[06.03]] with [[06.03.02]], whose furniture and fixtures it selects and arranges within a space, and with [[06.03.03]], with which it shares a concern for material behavior and human comfort applied at a different scale — the body versus the room. It also draws on [[06.04]], whose handmade objects — ceramics, textiles, glass — often furnish the finished interior alongside manufactured pieces.\n\nThe [American Society of Interior Designers](https://www.asid.org/) and the [Victoria and Albert Museum](https://www.vam.ac.uk/) document professional standards and historical interiors."
+  },
+  {
+   "id": "06.03.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "UX/UI design is the creation of interactive digital experiences through interface design, user flows, and information architecture.",
+   "cs": "UX/UI design je vytváření interaktivních digitálních zážitků prostřednictvím návrhu rozhraní, toků uživatele a informační architektury.",
+   "brief": "UX/UI Design is the creation of interactive digital experiences through interface design, user flows, and information architecture, shaping how a person navigates and understands a piece of software rather than how a static page is read.\n\nUX/UI Design shares its parent [[06.03]] with [[06.03.01]], whose typography and layout vocabulary it inherits and extends into interaction states, transitions, and responsive behavior, and with [[06.03.02]], as the design of physical products and their software interfaces increasingly converge in connected devices. It is the newest of the five design subfields but now the largest in practice, driven by the growth of software as the primary medium people interact with daily.\n\nThe [Nielsen Norman Group](https://www.nngroup.com/) and the [Interaction Design Foundation](https://www.interaction-design.org/) publish research and reference material on usability and interaction design practice."
+  }
+ ],
+ "relations": [
+  {
+   "from": "06.03.01",
+   "to": "06.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.01",
+   "to": "06.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.01",
+   "to": "06.03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.01",
+   "to": "06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.02",
+   "to": "06.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.02",
+   "to": "06.03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.02",
+   "to": "06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.02",
+   "to": "06.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.02",
+   "to": "06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.03",
+   "to": "06.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.03",
+   "to": "06.03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.03",
+   "to": "06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.03",
+   "to": "06.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.04",
+   "to": "06.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.04",
+   "to": "06.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.04",
+   "to": "06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.04",
+   "to": "06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.05",
+   "to": "06.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.05",
+   "to": "06.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03.05",
+   "to": "06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03",
+   "to": "06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03",
+   "to": "06.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03",
+   "to": "06.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03",
+   "to": "06.03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.03",
+   "to": "06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

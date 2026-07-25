@@ -1,0 +1,496 @@
+{
+ "domain": "03.07",
+ "nodes": [
+  {
+   "id": "03.07",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Energy encompasses the generation, conversion, distribution, and storage of power for industrial, commercial, and domestic use. It covers the full cycle from primary resources (Renewable Energy, Fossil Fuels, Nuclear Energy) through transmission systems (Power Distribution) and temporary holding (Energy Storage), addressing the technical disciplines that enable societal energy demand.",
+   "cs": "Energie zahrnuje generování, konverzi, distribuci a skladování síly pro průmyslové, komerční a domácí použití. Pokrývá celý cyklus od primárních zdrojů (Renewable Energy, Fossil Fuels, Nuclear Energy) přes přenosové systémy (Power Distribution) a dočasné skladování (Energy Storage), řešící technické disciplíny, které umožňují společenskou poptávku po energii.",
+   "brief": "Energy encompasses the generation, conversion, distribution, and storage of power for industrial, commercial, and domestic use. It covers the full cycle from primary resources — [[03.07.01]] Renewable Energy, [[03.07.02]] Fossil Fuels, and [[03.07.03]] Nuclear Energy — through transmission systems in [[03.07.05]] Power Distribution, to temporary holding in [[03.07.04]] Energy Storage, addressing the technical disciplines that enable societal energy demand at every stage between extraction or generation and final use.\n\nEnergy sits inside [[03]] Applied Sciences & Technology as a supplier to nearly every other branch: [[03.06]] Transportation depends on it for vehicle propulsion and increasingly for electrification, and [[03.01]] Engineering's nuclear and electrical disciplines design the plants and grids that Renewable Energy, Fossil Fuels, and Power Distribution actually run on. Its four resource subfields compete on cost, carbon intensity, and dispatchability, which makes Energy Storage the field's current focal point — the technology that determines how much intermittent renewable generation a grid can actually absorb.\n\nEnergy infrastructure is governed by national regulators and international coordinating bodies. For global energy statistics and policy analysis, see the [International Energy Agency](https://www.iea.org/), and for a technical overview of energy systems, the [Encyclopaedia Britannica](https://www.britannica.com/science/energy-conversion)."
+  },
+  {
+   "id": "03.07.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Renewable Energy comprises generation technologies powered by natural replenishing sources—sunlight, wind, flowing water, Earth's heat, and organic matter—that do not deplete finite resources. It spans design, deployment, and integration pathways, distinct from Fossil Fuels (which consume stored carbon) and Nuclear Energy (which uses fissile material).",
+   "cs": "Obnovitelná energie zahrnuje generační technologie poháněné přírodními obnovitelnými zdroji—slunečním zářením, větrem, tekoucí vodou, teplem Země a organickou hmotou—které nespotřebovávají konečné zdroje. Pokrývá návrh, nasazení a integrační cesty, odlišné od fosilních paliv (která konzumují uložený uhlík) a jaderné energie (která používá štěpný materiál).",
+   "brief": "Renewable Energy comprises generation technologies powered by natural, continuously replenishing sources — sunlight, wind, flowing water, Earth's internal heat, and organic matter — that do not deplete finite reserves. It spans the design, deployment, and grid-integration of these technologies, organized by source into [[03.07.01.01]] Solar Energy, Wind Energy, Hydroelectric power, Geothermal energy, and Biomass Energy.\n\nWithin [[03.07]] Energy it stands opposite [[03.07.02]] Fossil Fuels, which consumes stored carbon rather than replenishing flows, and [[03.07.03]] Nuclear Energy, which draws on fissile material; all three compete as primary generation sources feeding the same electrical grid. Because sunlight and wind output varies with weather and time of day, renewable generation depends heavily on [[03.07.04]] Energy Storage to smooth intermittency and match supply to demand — the pairing that determines how much of a grid's total load renewables can realistically cover.\n\nRenewable-energy deployment and policy are tracked internationally by the [International Renewable Energy Agency](https://www.irena.org/) and the [International Energy Agency](https://www.iea.org/renewables)."
+  },
+  {
+   "id": "03.07.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Solar Energy encompasses the technologies that convert sunlight into usable heat or electricity. It includes photovoltaic cells (direct conversion), solar thermal collectors (heat), and concentrated systems (magnification), with applications ranging from residential panels to utility-scale farms and from stationary installations to off-grid systems.",
+   "cs": "Sluneční energie zahrnuje technologie, které přeměňují sluneční záření na použitelné teplo nebo elektřinu. Zahrnuje fotovoltaické články (přímá konverze), solární tepelné sběrače (teplo) a koncentrované systémy (zvětšení), s aplikacemi od domácích panelů po farmy v měřítku sítě a od stacionárních instalací po systémy mimo síť."
+  },
+  {
+   "id": "03.07.01.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Photovoltaic systems are electrical generation technologies that directly convert sunlight into electricity using semiconductor solar cells, ranging from single-panel rooftop arrays to multi-megawatt, grid-tied solar farms — distinct from standalone, battery-backed deployments (Off-grid solar setup).",
+   "cs": "Fotovoltaické systémy jsou technologie výroby elektřiny, které přímo přeměňují sluneční záření na elektřinu pomocí polovodičových slunečních článků, od jednopanelových střešních instalací po vícemegawattové, síťové sluneční farmy – odlišné od samostatných, bateriemi zálohovaných instalací (Off-grid solar setup)."
+  },
+  {
+   "id": "03.07.01.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Solar thermal systems convert sunlight into heat energy for water heating, space heating, or process heat applications. They use absorber plates or evacuated tubes to capture solar radiation and transfer the heat to a fluid (water or thermal oil), separate from photovoltaic electric conversion (Photovoltaic systems).",
+   "cs": "Solární tepelné systémy přeměňují sluneční záření na tepelnou energii pro ohřev vody, vytápění prostor nebo aplikace procesního tepla. Používají absorpční desky nebo evakuované trubice k zachycení sluneční radiace a přenosu tepla tekutinou (voda nebo tepelný olej), oddělené od fotovoltaické elektrické konverze (Photovoltaic systems)."
+  },
+  {
+   "id": "03.07.01.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Concentrated solar power (CSP) technologies use mirrors or lenses to focus sunlight onto a small receiver area, achieving high temperatures for electricity generation via steam turbines or direct thermal engines. CSP systems are typically utility-scale and require direct sunlight (distinct from diffuse-radiation solar PV and thermal).",
+   "cs": "Technologie koncentrované sluneční energie (CSP) používají zrcadla nebo čočky k zaostření slunečního záření na malou přijímací plochu, dosahující vysokých teplot pro výrobu elektřiny prostřednictvím parních turbín nebo přímých tepelných motorů. Systémy CSP jsou obvykle v měřítku elektrárny a vyžadují přímé sluneční záření (oddělené od difuzní-radiační solární PV a tepelné)."
+  },
+  {
+   "id": "03.07.01.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Solar panel manufacturing encompasses the industrial production of photovoltaic cells and panels, including silicon purification, wafer processing, cell assembly, and module encapsulation. It addresses supply-chain processes, materials sourcing, quality control, and efficiency improvements in the PV supply chain.",
+   "cs": "Výroba solárních panelů zahrnuje průmyslovou výrobu fotovoltaických článků a panelů, včetně čištění křemíku, zpracování waferu, montáže článků a zapouzdření modulu. Řeší procesy v dodavatelském řetězci, sourcing materiálů, kontrolu kvality a zlepšování účinnosti v dodavatelském řetězci PV."
+  },
+  {
+   "id": "03.07.01.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Off-grid solar systems are standalone solar installations designed to function independently of the electrical grid. They typically include photovoltaic arrays, battery storage, inverters, and voltage regulators, serving remote locations, mobile platforms, or resilience-focused applications where grid connection is impractical or undesired.",
+   "cs": "Solární systémy mimo síť jsou samostatné solární instalace navržené k fungování nezávisle na elektrické síti. Obvykle zahrnují fotovoltaické pole, úložiště baterií, měniče a regulátory napětí, sloužící vzdáleným místům, mobilním platformám nebo aplikacím zaměřeným na odolnost, kde je připojení sítě nepraktické nebo nežádoucí."
+  },
+  {
+   "id": "03.07.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Wind Energy encompasses technologies that convert wind kinetic energy into electrical power. It spans from small-scale turbines serving individual properties to utility-scale wind farms, addressing rotor design, power electronics, tower engineering, and site-specific resource assessment across land-based and offshore installations.",
+   "cs": "Větrná energie zahrnuje technologie, které přeměňují kinetickou energii větru na elektrickou energii. Rozšiřuje se od malých turbín sloužících jednotlivým nemovitostem po farmy větrné energie v měřítku sítě, řešící návrh rotoru, výkonovou elektroniku, inženýrství věží a posouzení zdrojů specifických pro lokalitu v pozemských a offshore instalacích."
+  },
+  {
+   "id": "03.07.01.02.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Wind turbine design encompasses the engineering of rotating machinery that converts wind into rotational mechanical power. It addresses aerodynamic blade geometry, structural integrity under variable loads, drivetrain components (gearbox, generator, bearings), and control systems that optimize power extraction and manage extreme conditions.",
+   "cs": "Návrh větrné turbíny zahrnuje inženýrství rotačních strojů, které přeměňují vítr na rotační mechanickou sílu. Řeší aerodynamiku geometrie lopaty, strukturální integritu při proměnlivých zátěžích, komponentech pohonu (převodovka, generátor, ložiska) a systémy řízení, které optimalizují extrakci výkonu a řídí extrémní podmínky."
+  },
+  {
+   "id": "03.07.01.02.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Small-scale wind systems are wind turbines with capacities typically below 100 kW, designed for distributed generation at residential, agricultural, or community scales. They trade the aggregate output of utility-scale wind farms for lower installation cost, reduced visual and noise impact, and tolerance of variable, gusty wind regimes.",
+   "cs": "Systémy větrné energie malého měřítka jsou větrné turbíny s kapacitou obvykle nižší než 100 kW, navržené pro distribuovanou výrobu v domácím, zemědělském nebo komunitním měřítku. Oproti agregovanému výkonu větrných farem ve velkém měřítku nabízejí nižší instalační náklady, menší vizuální a hlukový dopad a snášenlivost k proměnlivým, poryvitým větrným podmínkám."
+  },
+  {
+   "id": "03.07.01.02.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Wind farm planning addresses the design, siting, and operational integration of multiple utility-scale wind turbines into cohesive energy-producing facilities. It covers site-survey methodology, environmental impact assessment, grid-connection protocols, and multi-turbine array optimization to maximize collective power output.",
+   "cs": "Plánování větrné farmy řeší návrh, umístění a operační integraci několika větrných turbín v měřítku sítě do souvisejících zařízení pro výrobu energie. Pokrývá metodiku průzkumu lokality, posouzení vlivů na životní prostředí, protokoly připojení k síti a optimalizaci pole více turbín pro maximalizaci kolektivního výkonu."
+  },
+  {
+   "id": "03.07.01.02.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Vertical axis turbines (VAT) are wind turbines with rotation axes oriented perpendicular to the wind flow (typically vertical), contrasting with the dominant horizontal-axis turbines. VATs operate across broader wind directions, tolerate variable wind speeds, and are suited for urban environments with gusty flows and lower average wind speeds.",
+   "cs": "Turbíny se svislou osou (VAT) jsou větrné turbíny s osami rotace orientovanými kolmo na směr toku větru (obvykle svisle), na rozdíl od dominantních turbín s vodorovnou osou. VAT pracují v širších větrných směrech, tolerují proměnlivé rychlosti větru a jsou vhodné pro městská prostředí s poryvistými toky a nižšími průměrnými rychlostmi větru."
+  },
+  {
+   "id": "03.07.01.02.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Wind resource assessment is the systematic evaluation of wind characteristics at a proposed site to determine the feasibility, efficiency, and economic viability of a wind energy project. It combines wind-speed measurement, directional frequency analysis, vertical wind-shear profiling, and long-term trend modeling to guide turbine selection and farm layout.",
+   "cs": "Posouzení větrného zdroje je systematické hodnocení větrných charakteristik na navrhovaném místě pro určení uskutečnitelnosti, účinnosti a ekonomické životaschopnosti projektu větrné energie. Zahrnuje měření rychlosti větru, analýzu směrové frekvence, profilování vertikálního střihu větru a modelování dlouhodobých trendů pro volbu turbíny a rozvržení farmy."
+  },
+  {
+   "id": "03.07.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Hydroelectric power harnesses the gravitational potential energy of flowing or falling water to generate electricity. It encompasses dam engineering, run-of-river systems, and pumped-storage approaches, ranging from large-scale cascade facilities to micro-hydro systems serving small communities.",
+   "cs": "Vodní energie využívá gravitační potenciální energii tekoucí nebo padající vody k generování elektřiny. Zahrnuje stavbu přehrad, systémy bez přehrady a přístup akumulace čerpáním, pohybující se od velkých kaskádových zařízení po mikro-hydro systémy sloužící malým komunitám."
+  },
+  {
+   "id": "03.07.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Geothermal energy extraction utilizes Earth's internal heat to generate electricity or provide direct heating. It encompasses reservoir engineering, drilling, heat-pump systems for moderate gradients, and binary-cycle generators for lower-temperature applications, distinct from surface solar thermal systems.",
+   "cs": "Extrakce geotermální energie využívá vnitřní teplo Země k generování elektřiny nebo poskytování přímého vytápění. Zahrnuje inženýrství zásobníků, vrtání, tepelné čerpadlo pro mírné gradienty a binární generátory cyklů pro aplikace s nižší teplotou, odlišné od povrchových solárních tepelných systémů."
+  },
+  {
+   "id": "03.07.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Biomass energy converts organic matter such as wood, agricultural residue, and biosolids into heat or electricity through combustion, anaerobic digestion, or biochemical conversion. It covers feedstock sourcing and processing, combustion efficiency, and carbon-neutrality accounting, occupying a middle ground between depleting fossil fuels and purely renewable resources such as solar and wind.",
+   "cs": "Energie z biomasy přeměňuje organickou hmotu, jako je dřevo, zemědělský odpad a biosolidy, na teplo nebo elektřinu prostřednictvím spalování, anaerobní digesce nebo biochemické konverze. Zahrnuje získávání a zpracování suroviny, účinnost spalování a účtování uhlíkové neutrality a zaujímá střední pozici mezi vyčerpatelnými fosilními palivy a čistě obnovitelnými zdroji, jako je slunce nebo vítr."
+  },
+  {
+   "id": "03.07.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Fossil Fuels encompasses energy extraction and processing from carbon-rich deposits formed over geological time—coal, crude oil, and natural gas. It addresses exploration, extraction technologies, refining, and combustion, with carbon cycling consequences distinct from Renewable Energy (replenishing sources) and Nuclear Energy (fissile materials).",
+   "cs": "Fosilní paliva zahrnují extrakci energie a zpracování z bohatých na uhlík ložisek vytvořených během geologického času—uhlí, surová ropa a zemní plyn. Řeší průzkum, technologie těžby, rafinaci a spalování, s důsledky uhlíkového cyklu odlišnými od obnovitelné energie (obnovující zdroje) a jaderné energie (štěpný materiál).",
+   "brief": "Fossil Fuels encompasses the extraction and processing of energy from carbon-rich deposits formed over geological time — coal, crude oil, and natural gas. It covers exploration, [[03.07.02.01]] Oil Extraction, refining, coal technology, and natural-gas production, together with [[03.07.02.05]] Carbon Capture technologies developed to mitigate the combustion emissions these fuels release.\n\nWithin [[03.07]] Energy it contrasts with [[03.07.01]] Renewable Energy, which draws on replenishing flows rather than a finite stored resource, and with [[03.07.03]] Nuclear Energy, whose fissile fuel cycle carries no direct carbon emissions. All three remain primary generation sources for the electrical grid, and fossil-fuel plants' comparatively easy dispatchability — unlike weather-dependent renewables — keeps them in the generation mix even as Carbon Capture and storage attempt to close the gap with lower-carbon alternatives.\n\nGlobal production, reserves, and market data are tracked by the [International Energy Agency](https://www.iea.org/fuels-and-technologies/oil) and the [U.S. Energy Information Administration](https://www.eia.gov/energyexplained/oil-and-petroleum-products/)."
+  },
+  {
+   "id": "03.07.02.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Oil extraction encompasses the techniques and technologies for removing crude petroleum from underground reservoirs—including drilling, well completion, production optimization, and enhanced-recovery methods. It addresses offshore platforms, onshore wells, and shale plays with varying geological and economic challenges.",
+   "cs": "Těžba ropy zahrnuje techniky a technologie pro odstraňování surové ropy z podzemních zásobníků—včetně vrtání, dokončení vrtů, optimalizace produkce a metody zlepšené těžby. Řeší offshore platformy, suchozemské vrty a břidlicové štávy s různými geologickými a ekonomickými výzvami."
+  },
+  {
+   "id": "03.07.02.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Refining processes convert crude petroleum into marketable products—gasoline, diesel, jet fuel, heating oil, and chemical feedstocks—through distillation, cracking, and chemical conversion. It addresses separation by boiling point, catalytic transformation of heavy fractions, and purity/octane specifications.",
+   "cs": "Rafinační procesy přeměňují surovou ropu na komerční produkty—benzín, naftu, tryskové palivo, topný olej a chemické suroviny—prostřednictvím destilace, krakování a chemické konverze. Řeší oddělení podle bodu varu, katalytickou transformaci těžkých frakcí a specifikace čistoty/oktanového čísla."
+  },
+  {
+   "id": "03.07.02.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Coal technology encompasses extraction, processing, and combustion of coal for electricity generation and heat. It addresses mining methods (surface and underground), coal-grade classification, pulverization for power plants, and emission-control systems (scrubbers, precipitators) to manage environmental byproducts.",
+   "cs": "Technologie uhlí zahrnuje těžbu, zpracování a spalování uhlí pro výrobu elektřiny a tepla. Řeší metody těžby (povrchová a podzemní), klasifikaci třídy uhlí, pulverizaci pro elektrárny a systémy kontroly emisí (skrubery, odlučovače) k řízení ekologických vedlejších produktů."
+  },
+  {
+   "id": "03.07.02.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Natural gas encompasses the extraction, processing, transmission, and combustion of methane-rich fuel drawn from underground reservoirs. It covers drilling techniques, compression, pipeline networks, storage terminals, and end-use applications in power generation, heating, and industrial processes, and is treated as a lower-carbon fossil fuel relative to coal and oil.",
+   "cs": "Zemní plyn zahrnuje těžbu, zpracování, přenos a spalování paliva bohatého na metan z podzemních zásobníků. Řeší techniky vrtání, kompresi, potrubní sítě, skladovací terminály a koncové využití při výrobě elektřiny, vytápění a v průmyslových procesech a je vnímán jako fosilní palivo s nižší uhlíkovou stopou ve srovnání s uhlím a ropou."
+  },
+  {
+   "id": "03.07.02.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Carbon capture technologies extract CO₂ from ambient air (direct air capture) or from point sources (industrial exhaust, power plants) to reduce atmospheric greenhouse gas concentration. It covers capture mechanisms (adsorption, absorption, membranes), compression, transport, and end-use pathways (utilization or permanent storage).",
+   "cs": "Technologie zachycování uhlíku extrahují CO₂ z okolního vzduchu (přímé zachycování ze vzduchu) nebo ze zdrojů v místě (průmyslové výfuky, elektrárny) pro snížení atmosférické koncentrace skleníkových plynů. Pokrývá mechanismy zachycování (adsorpce, absorpce, membrány), kompresi, transport a koncové cesty využití (využití nebo permanentní skladování)."
+  },
+  {
+   "id": "03.07.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Nuclear Energy harnesses the release of energy from atomic nucleus splitting (fission) or fusion to generate electricity. It encompasses reactor design, fuel preparation, safety systems, waste management, and decommissioning—operating at scale independent of renewable variability and distinct from fossil fuel carbon emissions.",
+   "cs": "Jaderná energie využívá uvolňování energie ze štěpení atomového jádra (štěpení) nebo fúze k generování elektřiny. Zahrnuje návrh reaktoru, přípravu paliva, bezpečnostní systémy, správu odpadu a vyřazení z provozu—fungující v měřítku nezávislém na obnovitelné variabilitě a odlišném od emisí uhlíku fosilních paliv.",
+   "brief": "Nuclear Energy harnesses the energy released by splitting atomic nuclei ([[03.07.03.01]] Nuclear Fission) or, prospectively, by fusing them ([[03.07.03.02]] Nuclear Fusion) to generate electricity. It covers reactor design, fuel preparation, safety protocols, and the handling of nuclear waste through storage and disposal.\n\nIt draws on [[03.01.09]] Nuclear Engineering for the reactor physics and containment engineering that underlie its plants, and within Energy it operates at a generation scale independent of weather, unlike [[03.07.01]] Renewable Energy, and without the direct carbon emissions of [[03.07.02]] Fossil Fuels. Its long-lived waste-management and safety burden is the field's defining trade-off against those two alternatives, and like them it feeds the same electrical grid.\n\nFor international safety standards and reactor data, see the [International Atomic Energy Agency](https://www.iaea.org/), and for a technical overview of fission and fusion, the [World Nuclear Association](https://world-nuclear.org/)."
+  },
+  {
+   "id": "03.07.03.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Nuclear fission is the splitting of heavy atomic nuclei (typically uranium-235 or plutonium-239) into lighter fragments, releasing enormous energy. It is the basis of current commercial nuclear reactors, where controlled chain reactions sustain steady power output, contrasting with fusion (nucleus-combining) approaches.",
+   "cs": "Jaderné štěpení je štěpení těžkých atomových jader (obvykle uran-235 nebo plutonium-239) na lehčí fragmenty, uvolňující obrovskou energii. Jedná se o základ současných komerčních jaderných reaktorů, kde řízeným řetězovými reakcemi udržují stabilní výkon, na rozdíl od fúzních (kombinujících jádra) přístupů."
+  },
+  {
+   "id": "03.07.03.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Nuclear fusion is the combining of lightweight atomic nuclei (deuterium, tritium) at extreme temperatures to form heavier nuclei, releasing vast energy. It powers stars and remains in experimental/prototype phase for Earth-based power generation, distinct from fission reactors which are commercially deployed at scale.",
+   "cs": "Jaderná fúze je spojování lehkých atomových jader (deuterium, tritium) při extrémních teplotách s tvorbou těžších jader, uvolňující obrovskou energii. Pohání hvězdy a zůstává v experimentální/prototypové fázi pro energetiku na Zemi, odlišné od štěpných reaktorů, které jsou komerčně nasazeny v měřítku."
+  },
+  {
+   "id": "03.07.03.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Reactor design covers the engineering and architecture of nuclear facilities that sustain controlled fission chain reactions to generate heat and electricity. It addresses core configuration, cooling systems, containment structures, control-rod mechanisms, and safety redundancy to prevent meltdowns and contain radiation.",
+   "cs": "Návrh reaktoru zahrnuje inženýrství a architekturu jaderných zařízení, která udržují řízené štěpné řetězové reakce pro výrobu tepla a elektřiny. Řeší konfiguraci aktivní zóny, chladicí systémy, ochranné kontejnmentové struktury, mechanismy regulačních tyčí a bezpečnostní redundanci k zabránění tavení a úniku radiace."
+  },
+  {
+   "id": "03.07.03.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Radioactive byproducts generated by nuclear fission reactions, requiring secure geological containment due to their hazard longevity spanning thousands of years.",
+   "cs": "Radioaktivní vedlejší produkty jaderného štěpení vyžadující bezpečné uskladnění v geologických formacích kvůli jejich dlouhodobé nebezpečnosti."
+  },
+  {
+   "id": "03.07.03.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Regulatory frameworks and operational procedures designed to prevent nuclear accidents, mitigate radiation release, and ensure facility containment integrity throughout the lifecycle.",
+   "cs": "Regulační rámce a provozní postupy navržené k prevenci jaderných havárií a zajištění bezpečnosti v zařízeních po dobu jejich provozu."
+  },
+  {
+   "id": "03.07.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Technologies and systems that capture and retain energy in various physical and chemical forms for later release, bridging temporal gaps between generation and consumption.",
+   "cs": "Technologie a systémy uchovávající energii v různých fyzikálních a chemických formách k jejímu pozdějšímu uvolnění, překlenující rozdíl mezi výrobou a spotřebou.",
+   "brief": "Energy Storage comprises technologies and systems that capture and retain energy in physical or chemical form for later release, bridging the temporal gap between when energy is generated and when it is consumed. Its subfields divide by storage medium: [[03.07.04.01]] Battery Technology and other electrochemical cells, mechanical storage such as pumped hydro and flywheels, chemical and thermal storage, and [[03.07.04.05]] Hydrogen Storage.\n\nWithin Energy it is the pairing technology that makes [[03.07.01]] Renewable Energy's intermittent, weather-dependent output usable on demand, storing surplus generation for release when sunlight or wind falls short — a role [[03.07.02]] Fossil Fuels needs far less, since it can be dispatched on demand from stored fuel. Storage sits between generation and [[03.07.05]] Power Distribution, smoothing supply before it reaches the transmission grid.\n\nFor technology comparisons and deployment tracking, see the [International Renewable Energy Agency's storage overview](https://www.irena.org/Energy-Transition/Technology/Energy-storage) and the [U.S. Department of Energy's storage program](https://www.energy.gov/oe/energy-storage)."
+  },
+  {
+   "id": "03.07.04.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Electrochemical systems converting chemical energy directly into electrical energy through reversible redox reactions, used across mobile, stationary, and grid-scale applications.",
+   "cs": "Elektrochemické systémy převádějící chemickou energii na elektrickou prostřednictvím vratných redoxních reakcí."
+  },
+  {
+   "id": "03.07.04.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Energy retention via mechanical systems such as flywheels, pumped hydro, or compressed air, storing kinetic or potential energy for later conversion to electricity.",
+   "cs": "Uchovávání energie mechanickými systémy jako jsou setrvačníky nebo čerpací hydro, ukládající kinetickou nebo potenciální energii."
+  },
+  {
+   "id": "03.07.04.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Energy conversion into chemical bonds—typically through hydrogen production, synthetic fuels, or ammonia synthesis—enabling long-duration storage and cross-sector coupling.",
+   "cs": "Převod energie na chemické vazby, obvykle výrobou vodíku nebo syntetických paliv, umožňující dlouhodobé uskladnění."
+  },
+  {
+   "id": "03.07.04.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Heat retention in solid, liquid, or phase-change materials for later thermodynamic recovery, applicable to district heating, process heat, and electricity generation.",
+   "cs": "Uchovávání tepla v pevných, kapalných nebo fázově měnících se materiálech k pozdější obnově, použitelné v distrikčním vytápění."
+  },
+  {
+   "id": "03.07.04.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Containment and preservation of hydrogen gas or liquid under pressure or cryogenic conditions, enabling fuel-cell applications and energy transport over distance.",
+   "cs": "Uskladnění vodíku v plynné nebo kapalné formě za zvýšeného tlaku nebo kryogenických podmínek, umožňující palivočlánkové aplikace."
+  },
+  {
+   "id": "03.07.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Infrastructure and systems transmitting electrical power from generation sources to end-users via transmission lines, substations, and distribution networks.",
+   "cs": "Infrastruktura přenášející elektrickou energii od zdrojů k spotřebitelům přes vysokonapěťové vedení, transformovny a distribuční sítě.",
+   "brief": "Power Distribution covers the infrastructure and systems that carry electrical power from generation sources to end users — transmission lines, substations, transformers, and local distribution networks that step voltage down for industrial, commercial, and domestic delivery.\n\nWithin Energy it is the delivery stage that all three primary generation sources feed into: [[03.07.01]] Renewable Energy, [[03.07.02]] Fossil Fuels, and [[03.07.03]] Nuclear Energy each produce power that Power Distribution carries to consumers, while [[03.07.04]] Energy Storage buffers supply before or after it enters the grid to match fluctuating generation with demand. It draws on [[03.01.03]] Electrical Engineering for the transformer, transmission-line, and grid-control disciplines that keep the network stable.\n\nFor grid reliability standards and technical background, see the [North American Electric Reliability Corporation](https://www.nerc.com/) and the [International Energy Agency's electricity overview](https://www.iea.org/topics/electricity)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "03.07.01",
+   "to": "03.07.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.01",
+   "to": "03.07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.01",
+   "to": "03.07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.01",
+   "to": "03.07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.01",
+   "to": "03.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.02",
+   "to": "03.07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.02",
+   "to": "03.07.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.02",
+   "to": "03.07.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.02",
+   "to": "03.07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.02",
+   "to": "03.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.03",
+   "to": "03.01.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.03",
+   "to": "03.07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.03",
+   "to": "03.07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.03",
+   "to": "03.07.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.03",
+   "to": "03.07.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.04",
+   "to": "03.07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.04",
+   "to": "03.07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.04",
+   "to": "03.07.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.04",
+   "to": "03.07.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.04",
+   "to": "03.07.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.05",
+   "to": "03.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.05",
+   "to": "03.07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.05",
+   "to": "03.07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.05",
+   "to": "03.07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07.05",
+   "to": "03.07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07",
+   "to": "03.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07",
+   "to": "03.07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07",
+   "to": "03.07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07",
+   "to": "03.07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07",
+   "to": "03.07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07",
+   "to": "03.07.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.07",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

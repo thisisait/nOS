@@ -1,0 +1,36 @@
+{
+ "domain": "03.04",
+ "nodes": [
+  {
+   "id": "03.04",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Architecture designs and realizes buildings, spaces, and urban systems that respond to human needs, environmental conditions, and aesthetic principles.",
+   "cs": "Architektura navrhuje a realizuje budovy, prostory a městské systémy reagující na lidské potřeby, environmentální podmínky a estetické principy.",
+   "brief": "Architecture designs and realizes buildings, spaces, and urban systems that respond to human needs, environmental conditions, and aesthetic principles. It works at scales from a single dwelling to whole districts, balancing structural feasibility, climate and site response, regulatory codes, and the cultural and symbolic meaning a building carries for the people who use it — the concern that distinguishes it from disciplines that solve the same physical problems purely on engineering terms.\n\nArchitecture sits inside [[03]] Applied Sciences & Technology beside [[03.01]] Engineering, on whose structural, mechanical, and electrical disciplines it depends to make a design physically buildable, and [[03.05]] Manufacturing, which supplies the prefabricated components and materials increasingly used in modern construction. Unlike most of its siblings, architecture has no dedicated subcategory tree in this taxonomy yet — its output is judged as a single integrated discipline rather than divided into structural, urban, and interior specializations.\n\nArchitectural practice is governed by building codes, licensure, and — for larger projects — urban planning regulation. For professional standards and practice guidance, see the [American Institute of Architects](https://www.aia.org/), and for a global reference on architectural history and theory, the [Encyclopaedia Britannica](https://www.britannica.com/topic/architecture)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "03.04",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.04",
+   "to": "03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.04",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

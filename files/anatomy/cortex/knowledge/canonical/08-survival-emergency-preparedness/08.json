@@ -1,0 +1,113 @@
+{
+ "domain": "08",
+ "nodes": [
+  {
+   "id": "08",
+   "level": 0,
+   "kind": "seed-override",
+   "en": "Knowledge that sustains life when normal infrastructure fails — treating injury, securing water, food, shelter, fire, and warmth, finding one's way, communicating, staying safe, and keeping a clear mind. Spans first aid, water purification, food preservation, shelter, fire making, navigation, emergency communication, defense, disaster response, and psychological resilience.",
+   "cs": "Znalosti, jež udržují život při selhání běžné infrastruktury — ošetření zranění, zajištění vody, potravy, přístřeší, ohně a tepla, orientace v terénu, komunikace, obrana a zachování jasné mysli. Zahrnují první pomoc, úpravu vody, konzervaci potravin, stavbu přístřeší, rozdělávání ohně, navigaci, nouzovou komunikaci, obranu a bezpečnost, reakci na katastrofy a psychickou odolnost.",
+   "brief": "Survival and emergency preparedness comprise the knowledge that sustains human life when normal infrastructure fails — in wilderness, disaster, or societal disruption. The domain is organized by the hierarchy of survival needs: immediate medical care, then water, shelter, fire, and food, then the capacities to navigate, communicate, stay secure, and endure. Its standard of value is stark — knowledge earns its place by keeping people alive with minimal tools and time.\n\n[[08.01]] First Aid & Medical stabilizes injury and illness without a hospital; [[08.02]] Water Procurement & Purification and [[08.03]] Food Preservation & Storage secure the two consumables life depends on; [[08.04]] Shelter Construction and [[08.05]] Fire Making protect the body's core temperature; [[08.06]] Navigation and [[08.07]] Emergency Communication restore orientation and contact; [[08.08]] Defense & Security and [[08.09]] Disaster Response address threat and large-scale crisis; and [[08.10]] Psychological Resilience maintains the judgment on which every other skill depends.\n\nThe domain condenses the medicine, chemistry, and engineering of the [[01]] Natural Sciences and [[03]] Applied Sciences & Technology into field-usable procedure, draws manual competence from [[07]] Practical Skills & Trades, and hands off to [[12]] Post-Disaster Rebuilding once immediate survival is secured and reconstruction begins."
+  }
+ ],
+ "relations": [
+  {
+   "from": "08",
+   "to": "01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08",
+   "to": "08.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08",
+   "to": "08.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08",
+   "to": "08.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08",
+   "to": "08.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08",
+   "to": "08.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08",
+   "to": "08.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08",
+   "to": "08.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08",
+   "to": "08.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08",
+   "to": "08.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08",
+   "to": "08.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08",
+   "to": "12",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

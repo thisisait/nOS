@@ -1,0 +1,71 @@
+{
+ "domain": "01",
+ "nodes": [
+  {
+   "id": "01",
+   "level": 0,
+   "kind": "seed-override",
+   "en": "The empirical study of the physical universe — matter, energy, life, Earth, and the cosmos — through observation, experiment, and testable theory. Spans physics, chemistry, biology, the Earth sciences, and astronomy; distinguished from the formal sciences by its grounding in evidence and from applied science by its pursuit of explanation rather than use.",
+   "cs": "Empirické zkoumání přírody — hmoty, energie, života, Země i vesmíru — prostřednictvím pozorování, experimentu a ověřitelných teorií. Zahrnuje fyziku, chemii, biologii, vědy o Zemi a astronomii; od formálních věd se liší oporou v empirických důkazech, od aplikovaných věd snahou o vysvětlení, nikoli o využití.",
+   "brief": "The natural sciences comprise the empirical study of the physical universe — matter, energy, life, planets, and the cosmos — through observation, experiment, and theories that make testable predictions. Their unifying commitment is methodological: claims stand or fall on evidence, instruments extend the senses, and mathematics supplies the language in which laws are stated. From this shared method the natural sciences have produced the most reliable body of knowledge humanity possesses, from the structure of the atom to the age of the universe.\n\nInternally the domain layers by scale and subject. [[01.01]] Physics states the fundamental laws of matter, energy, and force; [[01.02]] Chemistry studies how substances combine and transform; [[01.03]] Biology examines living systems from molecules to ecosystems; [[01.04]] Earth Sciences treat the planet itself — its rocks, oceans, atmosphere, and climate; and [[01.05]] Astronomy extends inquiry beyond Earth to stars, galaxies, and the universe at large. Each level draws on those beneath it: chemistry rests on quantum physics, biology on chemistry, and the Earth and space sciences integrate all of them into planetary and cosmic histories.\n\nThe domain's boundaries are drawn by method and aim. The [[02]] Formal Sciences supply the mathematics, logic, and computation the natural sciences use but are not themselves empirical; [[03]] Applied Sciences & Technology turns natural-scientific findings toward practical ends; and the [[04]] Social Sciences apply comparable empirical methods to human behavior and institutions. See [Encyclopaedia Britannica: science](https://www.britannica.com/science/science) and [Stanford Encyclopedia of Philosophy: Scientific Method](https://plato.stanford.edu/entries/scientific-method/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "01",
+   "to": "01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01",
+   "to": "01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01",
+   "to": "01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01",
+   "to": "01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01",
+   "to": "01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01",
+   "to": "02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01",
+   "to": "04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

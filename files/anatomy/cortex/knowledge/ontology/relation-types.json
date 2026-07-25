@@ -1,0 +1,117 @@
+{
+ "version": 1,
+ "types": [
+  {
+   "type": "analogous-to",
+   "label": "analogous to",
+   "color": "#5eead4",
+   "description": "The two share an analogous structure.",
+   "status": "seed"
+  },
+  {
+   "type": "causes",
+   "label": "causes",
+   "color": "#f472b6",
+   "description": "The source brings about the target.",
+   "status": "seed"
+  },
+  {
+   "type": "contradicts",
+   "label": "contradicts",
+   "color": "#ef4444",
+   "description": "The two are in direct conflict.",
+   "status": "seed"
+  },
+  {
+   "type": "defines",
+   "label": "defines",
+   "color": "#fcd34d",
+   "description": "The source gives the definition of the target.",
+   "status": "seed"
+  },
+  {
+   "type": "depends-on",
+   "label": "depends on",
+   "color": "#22d3ee",
+   "description": "The source requires the target to hold or exist.",
+   "status": "seed"
+  },
+  {
+   "type": "derived-from",
+   "label": "derived from",
+   "color": "#e879f9",
+   "description": "The source is derived from the target.",
+   "status": "seed"
+  },
+  {
+   "type": "duality",
+   "label": "duality",
+   "color": "#f472b6",
+   "description": "The two are dual formulations of one another.",
+   "status": "seed"
+  },
+  {
+   "type": "exemplifies",
+   "label": "exemplifies",
+   "color": "#fbbf24",
+   "description": "The source is an instance or example of the target.",
+   "status": "seed"
+  },
+  {
+   "type": "generalizes",
+   "label": "generalizes",
+   "color": "#a78bfa",
+   "description": "The source is a broader case of the target.",
+   "status": "seed"
+  },
+  {
+   "type": "prerequisite-for",
+   "label": "prerequisite for",
+   "color": "#38bdf8",
+   "description": "The source must be understood before the target.",
+   "status": "seed"
+  },
+  {
+   "type": "refutes",
+   "label": "refutes",
+   "color": "#f87171",
+   "description": "The source is evidence against the target.",
+   "status": "seed"
+  },
+  {
+   "type": "related-concept",
+   "label": "related",
+   "color": "rgba(120,130,150,0.30)",
+   "description": "A generic semantic relation.",
+   "status": "seed"
+  },
+  {
+   "type": "requires",
+   "label": "requires",
+   "color": "#f59e0b",
+   "description": "The source cannot run or apply without the target.",
+   "status": "seed"
+  },
+  {
+   "type": "specializes",
+   "label": "specializes",
+   "color": "#c084fc",
+   "description": "The source is a narrower case of the target.",
+   "status": "seed"
+  },
+  {
+   "type": "supersedes",
+   "label": "supersedes",
+   "color": "#fb923c",
+   "description": "The source replaces or obsoletes the target.",
+   "status": "seed"
+  },
+  {
+   "type": "supports",
+   "label": "supports",
+   "color": "#34d399",
+   "description": "The source is evidence for the target.",
+   "status": "seed"
+  }
+ ]
+}

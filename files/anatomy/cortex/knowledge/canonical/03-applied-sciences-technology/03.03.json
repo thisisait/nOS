@@ -1,0 +1,655 @@
+{
+ "domain": "03.03",
+ "nodes": [
+  {
+   "id": "03.03",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Agriculture is the applied science and practice of cultivating plants and raising animals for food, fiber, fuel, and other products, encompassing crop production, livestock management, soil stewardship, and sustainable resource management.",
+   "cs": "Zemědělství je aplikovaná věda a praxe pěstování rostlin a chovu zvířat na potraviny, vlákna, palivo a další produkty, zahrnující produkci plodin, chov hospodářských zvířat, péči o půdu a udržitelné řízení zdrojů.",
+   "brief": "Agriculture is the applied science and practice of cultivating plants and raising animals for food, fiber, fuel, and other products, encompassing crop production, livestock management, soil stewardship, and sustainable resource management. Its disciplines divide by resource and method: [[03.03.01]] Crop Science and [[03.03.04]] Horticulture study plant cultivation, [[03.03.02]] Animal Husbandry covers livestock, [[03.03.03]] Soil Science underlies both, and newer intensive methods such as [[03.03.09]] Hydroponics and [[03.03.08]] Permaculture reorganize production around resource efficiency and ecological design rather than open-field farming alone.\n\nAgriculture sits inside [[03]] Applied Sciences & Technology beside disciplines it feeds into and draws from: [[03.09]] Biotechnology supplies the genetic tools behind modern crop and livestock breeding, and [[03.07]] Energy increasingly overlaps with agriculture through biofuel crops and on-farm renewable generation. [[03.03.07]] Agricultural Engineering is the branch's own bridge to [[03.01]] Engineering, applying mechanical and structural design to irrigation, machinery, and storage.\n\nAgricultural practice is shaped by regional soil and climate conditions and governed by food-safety and environmental regulation. For global data and policy guidance, see the [Food and Agriculture Organization of the United Nations](https://www.fao.org/), and for research-based agronomic practice, the [USDA](https://www.usda.gov/)."
+  },
+  {
+   "id": "03.03.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Crop Science encompasses the scientific cultivation of plants for food, fiber, and industrial uses, including crop selection, propagation methods, growth optimization, integrated pest and disease management, and harvest practices.",
+   "cs": "Věda o plodinách zahrnuje vědecké pěstování rostlin na potraviny, vlákna a průmyslové použití, včetně výběru plodiny, metod rozmnožování, optimalizace růstu, integrovaného managementu škůdců a nemocí a sklizňových postupů.",
+   "brief": "Crop Science is the discipline that studies the cultivation of plants for food, fiber, and industrial use, covering crop selection, propagation methods, growth optimization, integrated pest and disease management, and harvest practice. It organizes its subject matter by crop category: [[03.03.01.01]] Grain Crops and legumes anchor staple food and protein production, [[03.03.01.02]] Vegetable Farming and fruit cultivation cover perishable produce grown for direct consumption, and herbs and spices form smaller-scale, high-value plantings grown for flavor and medicinal compounds rather than bulk calories.\n\nWithin [[03.03]] Agriculture, Crop Science depends on [[03.03.03]] Soil Science for the nutrient and structural conditions its crops grow in, and it sits alongside [[03.03.04]] Horticulture, which applies similar cultivation techniques at smaller scale and higher intensity to ornamental and specialty plants. Where a farm intensifies production without open fields, [[03.03.09]] Hydroponics substitutes engineered nutrient solutions for the soil chemistry Crop Science otherwise manages directly.\n\nModern crop science combines field agronomy with plant breeding and, increasingly, genomic selection to raise yield and resilience under shifting climate conditions. For research-based agronomic guidance, see the [USDA Agricultural Research Service](https://www.ars.usda.gov/), and for global crop production data, the [Food and Agriculture Organization](https://www.fao.org/food-agriculture-statistics/en/)."
+  },
+  {
+   "id": "03.03.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Grain Crops encompasses the cultivation of cereal grains and grass seeds for human consumption, animal feed, and industrial processing, focusing on yield optimization, disease resistance, and soil nutrient management.",
+   "cs": "Obilniny zahrnují pěstování obilovin a semen trav na lidskou spotřebu, krmiva pro zvířata a průmyslové zpracování, se zaměřením na optimalizaci výnosu, odolnost vůči nemocím a management živin v půdě."
+  },
+  {
+   "id": "03.03.01.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Wheat cultivation encompasses the scientific and practical techniques for growing wheat varieties, including soil preparation, planting methods, fertilization regimens, pest and disease control, and harvesting for grain and straw production.",
+   "cs": "Pěstování pšenice zahrnuje vědecké a praktické techniky pro pěstování odrůd pšenice, včetně přípravy půdy, metod výsevu, schémat hnojení, kontroly škůdců a nemocí a sklizně zrna a slámy."
+  },
+  {
+   "id": "03.03.01.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Rice farming encompasses the cultivation of rice varieties adapted to flooded or non-flooded growing systems, including paddy management, water control, transplanting or direct seeding techniques, and grain processing protocols.",
+   "cs": "Pěstování rýže zahrnuje pěstování odrůd rýže přizpůsobených zaplavovaným nebo nezaplavovaným systémům pěstování, včetně managementu rýžových polí, kontroly vody, technik transplantace nebo přímého výsevu a protokolů zpracování zrna."
+  },
+  {
+   "id": "03.03.01.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Corn cultivation encompasses the production of maize varieties for grain, silage, and industrial uses, including field preparation, hybrid seed selection, irrigation management, and pest control strategies specific to corn agronomy.",
+   "cs": "Pěstování kukuřice zahrnuje produkci odrůd kukuřice na zrno, siláž a průmyslové použití, včetně přípravy pole, výběru hybridních semen, managementu zavlažování a strategie kontroly škůdců specifické pro kukuřičnou agronomii."
+  },
+  {
+   "id": "03.03.01.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Barley cultivation encompasses the growing of barley varieties for malting, animal feed, and food production, including variety selection, soil requirement assessment, growth timing, and harvest practices suited to barley agronomy.",
+   "cs": "Pěstování ječmene zahrnuje pěstování odrůd ječmene na slad, krmiva pro zvířata a potravinářskou produkci, včetně výběru odrůdy, posouzení požadavků na půdu, načasování růstu a sklizňových postupů vhodných pro ječmennou agronomii."
+  },
+  {
+   "id": "03.03.01.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Oat cultivation encompasses the production of oat varieties for human consumption, animal feed, and industrial applications, including crop management practices, disease and pest mitigation, and harvest timing to preserve grain quality.",
+   "cs": "Pěstování ovsa zahrnuje produkci odrůd ovsa na lidskou spotřebu, krmiva pro zvířata a průmyslové aplikace, včetně praktik managementu plodin, zmírňování nemocí a škůdců a načasování sklizně k zachování kvality zrna."
+  },
+  {
+   "id": "03.03.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Vegetable Farming encompasses the cultivation of herbaceous plants and edible plant parts for human consumption, including field and garden production, greenhouse and hydroponic cultivation, and post-harvest handling of fresh produce.",
+   "cs": "Pěstování zeleniny zahrnuje pěstování bylických rostlin a jedlých částí rostlin pro lidskou spotřebu, včetně terénního a zahradního pěstování, skleníkového a hydroponického pěstování a postklizňové manipulace se čerstvou produkcí."
+  },
+  {
+   "id": "03.03.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Fruit Cultivation encompasses the growing of fruit-bearing plants, including orchard establishment and management, tree or vine training, pollination, integrated pest control, and harvesting for fresh market and processing.",
+   "cs": "Pěstování ovoce zahrnuje pěstování rostlin nesoucích ovoce, včetně zřizování a managementu sadů, výchovy stromů nebo révů, opylování, integrované kontroly škůdců a sklizně na čerstvý trh a zpracování."
+  },
+  {
+   "id": "03.03.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Legume cultivation raises nitrogen-fixing plants — beans, peas, lentils, and other pulses — for human consumption, animal feed, and soil amendment through their symbiotic nitrogen fixation.",
+   "cs": "Pěstování luštěnin zahrnuje rostliny vázající vzdušný dusík — fazole, hrách, čočku a další luštěniny — pro lidskou spotřebu, krmivo pro zvířata a zlepšování půdy prostřednictvím jejich symbiotické fixace dusíku."
+  },
+  {
+   "id": "03.03.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Herb and spice cultivation raises aromatic and flavoring plants for culinary, medicinal, and cosmetic use, spanning propagation, harvesting, drying, and processing techniques specific to each variety.",
+   "cs": "Pěstování bylin a koření zahrnuje aromatické a kořeninové rostliny pro kulinářské, léčebné a kosmetické využití, včetně množení, sklizně, sušení a zpracovatelských postupů specifických pro jednotlivé odrůdy."
+  },
+  {
+   "id": "03.03.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Animal Husbandry encompasses the raising and breeding of domestic livestock for food production, fiber, work capacity, and other agricultural products, including selective breeding, nutrition management, health protocols, and housing systems.",
+   "cs": "Chov hospodářských zvířat zahrnuje chování a chov domácích zvířat na potravinářskou produkci, vlákna, pracovní kapacitu a další zemědělské produkty, včetně selektivního chovu, managementu výživy, zdravotních protokolů a ubytovacích systémů.",
+   "brief": "Animal Husbandry is the practice of raising and breeding domestic livestock for food, fiber, work capacity, and other agricultural products, covering selective breeding, nutrition management, health protocols, and housing systems. Its major branches split by species and product: [[03.03.02.01]] Cattle Farming and sheep and goat raising cover large and small ruminants kept for meat, milk, and fiber; [[03.03.02.02]] Poultry Farming produces eggs and meat on much shorter production cycles; and pig farming and beekeeping cover monogastric meat production and pollination-linked honey production respectively.\n\nWithin [[03.03]] Agriculture, Animal Husbandry pairs with [[03.03.01]] Crop Science through feed: grain and legume harvests supply the rations that livestock convert into meat, milk, and eggs, while manure returns nutrients that [[03.03.03]] Soil Science tracks as part of soil fertility management. It differs from [[03.03.05]] Aquaculture mainly in habitat — Aquaculture raises aquatic rather than terrestrial species — while sharing the same underlying logic of controlled breeding and feeding for production output.\n\nLivestock health and welfare are regulated by veterinary and food-safety authorities in most jurisdictions, and production practice varies widely between intensive confinement systems and extensive pasture-based operations. For international animal-health standards, see the [World Organisation for Animal Health](https://www.woah.org/), and for global livestock production data, the [Food and Agriculture Organization](https://www.fao.org/animal-production/en/)."
+  },
+  {
+   "id": "03.03.02.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Cattle Farming encompasses the raising of beef and dairy cattle breeds, including grazing system management, supplementary feed production, selective breeding, health monitoring, milk production and processing, and meat production operations.",
+   "cs": "Chov skotu zahrnuje chování masných a mlékařských plemen skotu, včetně managementu systémů pastvy, produkce doplňkového krmiva, selektivního chovu, monitorování zdraví, produkce a zpracování mléka a provozů produkce masa."
+  },
+  {
+   "id": "03.03.02.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Poultry Farming encompasses the raising of domesticated birds including chickens, ducks, geese, and turkeys for egg and meat production, including housing systems, feed formulation, disease prevention programs, and processing protocols.",
+   "cs": "Chov drůbeže zahrnuje chování domácích ptáků včetně slepic, kachen, hus a krocanů na produkci vajec a masa, včetně systémů ubytování, formulace krmiva, programů prevence nemocí a zpracovacích protokolů."
+  },
+  {
+   "id": "03.03.02.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Sheep and goat farming raises these breeds for wool, meat, milk, and dairy products, spanning grazing-system optimization, selective breeding, parasite control, and fiber and dairy processing.",
+   "cs": "Chov ovcí a koz zahrnuje plemena chovaná na vlnu, maso, mléko a mléčné výrobky, včetně optimalizace pastevních systémů, selektivního šlechtění, kontroly parazitů a zpracování vlny a mléka."
+  },
+  {
+   "id": "03.03.02.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Pig Farming encompasses the raising of pigs for meat and pork products, including housing and confinement systems, feed formulation, reproductive management, health and biosecurity protocols, and slaughter and processing operations.",
+   "cs": "Chov prasat zahrnuje chování prasat na maso a vepřové produkty, včetně ubytovacích a uzavírací systémů, formulace krmiva, reprodukčního managementu, zdravotních a biosecurity protokolů a jatečních a zpracovacích operací."
+  },
+  {
+   "id": "03.03.02.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Beekeeping encompasses the maintenance of honeybee colonies for honey and other hive products including beeswax, propolis, and pollen, including hive management, disease and parasite control, and seasonal operations.",
+   "cs": "Chovatelství včel zahrnuje udržování kolonií včel medonosných na med a další produkty z úlu, včetně vosku, propolisu a pylu, včetně managementu úlů, kontroly nemocí a parazitů a sezónních operací."
+  },
+  {
+   "id": "03.03.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Soil Science encompasses the study and management of soil properties, composition, and processes to optimize agricultural productivity and environmental health, including soil formation, nutrient cycling, contamination assessment, and conservation practices.",
+   "cs": "Pedologie zahrnuje studium a management vlastností, složení a procesů půdy za účelem optimalizace zemědělské produktivity a zdraví životního prostředí, včetně tvorby půdy, cyklingu živin, posouzení kontaminace a konzervačních postupů.",
+   "brief": "Soil Science studies the properties, composition, and processes of soil in order to manage agricultural productivity and environmental health, covering soil formation, nutrient cycling, contamination assessment, and conservation practice. It organizes this work by soil property and intervention: [[03.03.03.01]] Soil Types classifies soils by texture and origin, fertilizers and pH management adjust chemical fertility, [[03.03.03.03]] Composting builds organic matter from decomposed material, and erosion control protects the physical soil structure that the other subfields depend on.\n\nWithin [[03.03]] Agriculture, Soil Science is the shared foundation beneath [[03.03.01]] Crop Science and [[03.03.02]] Animal Husbandry: crop yields track soil nutrient status directly, and livestock manure is one of the organic inputs Soil Science manages through composting and nutrient cycling. [[03.03.09]] Hydroponics represents the discipline's counterpoint — a production method that engineers a nutrient solution specifically to bypass the soil chemistry Soil Science otherwise manages.\n\nSoil assessment underpins both crop-yield forecasting and land-use regulation, and degraded or contaminated soils are among the slowest agricultural resources to restore. For soil classification and management guidance, see the [USDA Natural Resources Conservation Service](https://www.nrcs.usda.gov/resources/education-and-teaching-materials/soils), and for global soil data, the [FAO Global Soil Partnership](https://www.fao.org/global-soil-partnership/en/)."
+  },
+  {
+   "id": "03.03.03.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Soil classification characterizes soils by particle-size distribution, structural properties, organic-matter content, and physical-chemical traits that determine their suitability for agricultural use.",
+   "cs": "Klasifikace půdních typů charakterizuje půdy podle zrnitostního složení, strukturních vlastností, obsahu organické hmoty a fyzikálně-chemických vlastností, které určují jejich vhodnost pro zemědělské využití."
+  },
+  {
+   "id": "03.03.03.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Fertilizer application supplies soil with essential plant nutrients such as nitrogen, phosphorus, and potassium through organic and synthetic formulations, covering application methods and their environmental impact.",
+   "cs": "Hnojení dodává půdě základní živiny rostlin, jako je dusík, fosfor a draslík, prostřednictvím organických a syntetických přípravků, včetně metod aplikace a jejich dopadu na životní prostředí."
+  },
+  {
+   "id": "03.03.03.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Composting encompasses the biological decomposition of organic materials into stable humus suitable for soil amendment, including feedstock selection, decomposition rate management, microbial processes, and finished compost quality assessment.",
+   "cs": "Kompostování zahrnuje biologickou rozklad organických materiálů na stabilní humus vhodný pro zlepšení půdy, včetně výběru surovin, managementu rychlosti rozkladu, mikrobiálních procesů a posuzování kvality hotového kompostu."
+  },
+  {
+   "id": "03.03.03.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Erosion Control encompasses techniques and practices to prevent soil loss from water and wind action, including terracing, contour plowing, vegetation cover establishment, windbreaks, and engineered barriers that protect soil integrity.",
+   "cs": "Ochrana proti erozi zahrnuje techniky a postupy k prevenci ztráty půdy vodní a větrnou erózí, včetně terasování, orby v obrysu, vytváření vegetačního pokrytí, větrných zábran a stavebních bariér, které chrání integritu půdy."
+  },
+  {
+   "id": "03.03.03.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "pH Management encompasses the assessment and adjustment of soil acidity and alkalinity to optimize nutrient availability and microbial activity for plant growth, including lime application, sulfur amendments, and pH monitoring protocols.",
+   "cs": "Management pH zahrnuje posouzení a úpravu kyselosti a alkalinity půdy za účelem optimalizace dostupnosti živin a mikrobiální aktivity pro růst rostlin, včetně aplikace vápna, sulfidových měnidel a protokolů monitorování pH."
+  },
+  {
+   "id": "03.03.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Horticulture encompasses the intensive cultivation of vegetables, fruits, herbs, and ornamental plants using specialized techniques and controlled environments to maximize yield, quality, and production efficiency.",
+   "cs": "Zahradnictví zahrnuje intenzivní pěstování zeleniny, ovoce, bylin a okrasných rostlin pomocí specializovaných technik a kontrolovaných prostředí, aby se maximalizoval výnos, kvalita a efektivita produkce.",
+   "brief": "Horticulture is the intensive cultivation of vegetables, fruits, herbs, and ornamental plants using specialized techniques and controlled environments to maximize yield, quality, and production efficiency. It shares its plant-cultivation core with [[03.03.01]] Crop Science but operates at a different scale and intent: Crop Science optimizes broad-acre staple production, while Horticulture concentrates on smaller plots, greenhouses, and nurseries where individual plant care and aesthetic or culinary quality matter as much as volume.\n\nHorticulture depends on [[03.03.03]] Soil Science for the growing-medium chemistry its beds and containers require, and it borders [[03.03.09]] Hydroponics and [[03.03.08]] Permaculture at its controlled-environment edge — where growers replace open soil with engineered nutrient delivery or integrate ornamental and edible plantings into a designed ecological system rather than a conventional bed.\n\nThe discipline spans commercial nursery production, urban and home gardening, and landscape and ornamental horticulture, each governed by different plant-health and quality standards. For horticultural research and best practice, see the [Royal Horticultural Society](https://www.rhs.org.uk/), and for the professional scientific literature, the [American Society for Horticultural Science](https://www.ashs.org/)."
+  },
+  {
+   "id": "03.03.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Aquaculture encompasses the farming of aquatic organisms including finfish, crustaceans, mollusks, and aquatic plants in controlled water environments for food production, commercial products, and ecological purposes.",
+   "cs": "Akvakultura zahrnuje chov vodních organismů včetně ryb s ploutví, korýšů, měkkýšů a vodních rostlin v kontrolovaných vodních prostředích pro potravinářskou produkci, komerční produkty a ekologické účely.",
+   "brief": "Aquaculture is the farming of aquatic organisms — finfish, crustaceans, mollusks, and aquatic plants — in controlled water environments for food production, commercial products, and ecological purposes. It parallels [[03.03.02]] Animal Husbandry in method — selective breeding, managed nutrition, and disease control applied to a captive population — but substitutes water for land as the production environment, which changes its infrastructure needs from barns and pasture to ponds, tanks, and net pens.\n\nWithin [[03.03]] Agriculture, Aquaculture increasingly intersects with [[03.03.09]] Hydroponics in integrated aquaponic systems, where fish waste supplies the nutrient solution that plants grow in, and it competes with wild-capture fisheries as the faster-growing source of global seafood supply. Site selection for aquaculture depends on water quality assessment that overlaps with the environmental monitoring [[03.03.03]] Soil Science performs on land.\n\nAquaculture output now exceeds wild fisheries in global seafood production and is regulated for water-quality, disease-control, and environmental-impact standards that vary by species and system. For global aquaculture statistics and guidance, see the [FAO Fisheries and Aquaculture Division](https://www.fao.org/fishery/en), and for sustainable-seafood standards, the [Aquaculture Stewardship Council](https://asc-aqua.org/)."
+  },
+  {
+   "id": "03.03.06",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Forestry manages tree cultivation across large landscapes and long time horizons to harvest timber, fiber, and fuel while sustaining ecological services.",
+   "cs": "Lesnictví spravuje pěstování stromů na rozsáhlých krajinách a dlouhých časových horizonech pro získávání dřeva, vláken a paliva při zachování ekologických služeb.",
+   "brief": "Forestry manages tree cultivation across large landscapes and long time horizons to harvest timber, fiber, and fuel while sustaining ecological services such as watershed protection and carbon storage. Its production logic differs sharply from the rest of [[03.03]] Agriculture: where [[03.03.01]] Crop Science and [[03.03.04]] Horticulture work on annual or seasonal cycles, forestry plans rotations that span decades, which pushes its management toward stand-level growth modeling rather than field-by-field seasonal planning.\n\nForestry shares equipment and mechanization concerns with [[03.03.07]] Agricultural Engineering, which designs the harvesting and processing machinery both fields depend on, and it borders [[03.03.08]] Permaculture where agroforestry systems deliberately integrate trees with crops or livestock on the same land rather than dedicating it to timber alone.\n\nForest management practice spans industrial timber plantations, multi-use public forests, and conservation-oriented management, each governed by distinct harvesting and sustainability regulation. For international forestry data and standards, see the [FAO Forestry Division](https://www.fao.org/forestry/en/), and for sustainable-forest certification, the [Forest Stewardship Council](https://fsc.org/)."
+  },
+  {
+   "id": "03.03.07",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Agricultural engineering designs and optimizes machinery, equipment, and systems for crop production, animal husbandry, and farm logistics.",
+   "cs": "Zemědělské inženýrství navrhuje a optimalizuje stroje, zařízení a systémy pro rostlinnou výrobu, chov zvířat a zemědělskou logistiku.",
+   "brief": "Agricultural Engineering designs and optimizes machinery, equipment, and systems for crop production, animal husbandry, and farm logistics, applying mechanical and structural engineering principles to problems specific to farming. It is [[03.03]] Agriculture's own bridge to [[03.01]] Engineering: irrigation systems, harvesting machinery, grain storage structures, and automated livestock housing all require the same design and stress-analysis discipline used in general mechanical and civil engineering, applied to farm-specific loads and environments.\n\nThe subfield serves [[03.03.01]] Crop Science and [[03.03.02]] Animal Husbandry directly, building the tractors, irrigation infrastructure, and confinement systems those disciplines rely on for actual production, and it increasingly overlaps with [[03.03.09]] Hydroponics, whose controlled-environment systems depend on engineered climate control, water delivery, and structural design rather than open-field equipment.\n\nAgricultural engineering practice ranges from farm-equipment manufacturing to irrigation-system design and post-harvest storage infrastructure, and is shaped by both mechanical-engineering standards and farm-specific safety regulation. For professional standards and research, see the [American Society of Agricultural and Biological Engineers](https://www.asabe.org/), and for global agricultural mechanization data, the [FAO Agricultural Engineering resources](https://www.fao.org/agriculture/engineering/en/)."
+  },
+  {
+   "id": "03.03.08",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Permaculture designs integrated agricultural systems combining plants, animals, water, and structures in stable, regenerative patterns requiring minimal external inputs.",
+   "cs": "Permakultura navrhuje integrované zemědělské systémy kombinující rostliny, zvířata, vodu a stavby v udržitelných, regenerativních schématech s minimálními vnějšími vstupy.",
+   "brief": "Permaculture designs integrated agricultural systems that combine plants, animals, water, and structures in stable, regenerative patterns requiring minimal external inputs. It departs from the input-driven model shared by [[03.03.01]] Crop Science and [[03.03.02]] Animal Husbandry, which optimize single crops or species for yield, by instead designing whole-site ecosystems where each element's outputs — animal manure, plant residue, water runoff — become another element's inputs.\n\nPermaculture overlaps with [[03.03.10]] Organic Farming in rejecting synthetic fertilizers and pesticides, but goes further by redesigning land layout and species mix around ecological function rather than applying organic inputs to a conventional field pattern. It also borders [[03.03.06]] Forestry through agroforestry techniques, which integrate tree crops into the same designed system as annual plants and livestock.\n\nThe discipline is applied at scales from backyard gardens to whole-farm redesigns and is taught through a standardized permaculture design certificate curriculum rather than formal academic accreditation. For the discipline's foundational design principles, see the [Permaculture Research Institute](https://www.permaculturenews.org/), and for David Holmgren's original design-principles framework, see [Permaculture Principles](https://permacultureprinciples.com/)."
+  },
+  {
+   "id": "03.03.09",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Hydroponics grows plants in nutrient-rich water solutions without soil, enabling precise environmental control and high-density production in contained systems.",
+   "cs": "Hydroponika pěstuje rostliny v živných roztocích bez půdy, umožňuje přesnou kontrolu prostředí a vysokou hustotu produkce v uzavřených systémech.",
+   "brief": "Hydroponics grows plants in nutrient-rich water solutions without soil, enabling precise environmental control and high-density production in contained systems. It replaces the soil chemistry [[03.03.03]] Soil Science manages in open-field agriculture with an engineered nutrient solution delivered directly to plant roots, which removes soil-borne pests and variable field conditions as production constraints but requires continuous monitoring of solution chemistry instead.\n\nHydroponics sits at the controlled-environment edge of [[03.03]] Agriculture alongside [[03.03.04]] Horticulture, which it often intensifies rather than replaces — greenhouse vegetable and herb production frequently combines horticultural technique with a hydroponic growing medium. It also converges with [[03.03.05]] Aquaculture in aquaponic systems, where fish waste supplies the dissolved nutrients that hydroponic plants take up, closing a nutrient loop between the two production methods.\n\nThe technique depends on reliable electricity and water-treatment infrastructure, which makes it more capital-intensive than open-field cultivation but allows production in climates or locations unsuited to conventional farming, including urban and vertical-farming installations. For controlled-environment agriculture research, see [Cornell University's Controlled Environment Agriculture program](https://cea.cals.cornell.edu/), and for hydroponic system design guidance, the [FAO Hydroponics resources](https://www.fao.org/land-water/water/water-management/hydroponics/en/)."
+  },
+  {
+   "id": "03.03.10",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Organic farming produces crops and livestock using natural inputs and biological processes, excluding synthetic pesticides, fertilizers, and genetic modification.",
+   "cs": "Ekologické zemědělství produkuje plodiny a zvířata pomocí přírodních vstupů a biologických procesů, vylučuje syntetické pesticidy, hnojiva a genetické modifikace.",
+   "brief": "Organic farming produces crops and livestock using natural inputs and biological processes, excluding synthetic pesticides, fertilizers, and genetically modified organisms. Fertility and pest management rely on crop rotation, composting, cover cropping, and biological controls rather than synthetic chemistry, and livestock are raised without routine antibiotics or synthetic growth hormones. The result is a certifiable production standard, not merely a philosophy: organic status is verified against defined rules rather than self-declared.\n\nOrganic farming draws directly on [[03.03.03]] Soil Science for the fertility-building techniques that replace synthetic fertilizer, and on [[03.03.02]] Animal Husbandry for the welfare and feeding standards that govern organic livestock. It shares its resource-conserving ethos with [[03.03.08]] Permaculture, but the two differ in scope: permaculture designs whole self-sustaining ecological systems, while organic farming is a narrower, certifiable set of input restrictions that can apply to a single crop or herd. [[03.03.01]] Crop Science, by contrast, studies plant production broadly, including the conventional and synthetic-input methods organic farming deliberately excludes.\n\nOrganic practice sits within [[03.03]] Agriculture and is governed by region-specific certification bodies. For the U.S. federal standard, see the [USDA National Organic Program](https://www.ams.usda.gov/services/organic-certification), and for the international movement's principles and standards, see [IFOAM Organics International](https://www.ifoam.bio/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "03.03.01",
+   "to": "03.03.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.01",
+   "to": "03.03.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.01",
+   "to": "03.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.01",
+   "to": "03.03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.01",
+   "to": "03.03.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.01",
+   "to": "03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.02",
+   "to": "03.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.02",
+   "to": "03.03.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.02",
+   "to": "03.03.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.02",
+   "to": "03.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.02",
+   "to": "03.03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.02",
+   "to": "03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.03",
+   "to": "03.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.03",
+   "to": "03.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.03",
+   "to": "03.03.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.03",
+   "to": "03.03.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.03",
+   "to": "03.03.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.03",
+   "to": "03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.04",
+   "to": "03.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.04",
+   "to": "03.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.04",
+   "to": "03.03.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.04",
+   "to": "03.03.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.05",
+   "to": "03.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.05",
+   "to": "03.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.05",
+   "to": "03.03.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.05",
+   "to": "03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.06",
+   "to": "03.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.06",
+   "to": "03.03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.06",
+   "to": "03.03.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.06",
+   "to": "03.03.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.06",
+   "to": "03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.07",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.07",
+   "to": "03.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.07",
+   "to": "03.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.07",
+   "to": "03.03.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.07",
+   "to": "03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.08",
+   "to": "03.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.08",
+   "to": "03.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.08",
+   "to": "03.03.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.08",
+   "to": "03.03.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.09",
+   "to": "03.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.09",
+   "to": "03.03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.09",
+   "to": "03.03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.09",
+   "to": "03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.10",
+   "to": "03.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.10",
+   "to": "03.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.10",
+   "to": "03.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.10",
+   "to": "03.03.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03.10",
+   "to": "03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03",
+   "to": "03.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03",
+   "to": "03.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03",
+   "to": "03.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03",
+   "to": "03.03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03",
+   "to": "03.03.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03",
+   "to": "03.03.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03",
+   "to": "03.03.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03",
+   "to": "03.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03",
+   "to": "03.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.03",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

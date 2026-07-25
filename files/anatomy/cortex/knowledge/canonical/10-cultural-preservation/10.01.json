@@ -1,0 +1,251 @@
+{
+ "domain": "10.01",
+ "nodes": [
+  {
+   "id": "10.01",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Languages are systematic sets of symbols and rules enabling communication within and between communities. They encode cultural concepts, historical experience, and unique perspectives on meaning.",
+   "cs": "Jazyky jsou systémové sady symbolů a pravidel umožňující komunikaci v rámci a mezi komunitami. Kódují kulturní koncepce, historické zkušenosti a jedinečné pohledy na smysl.",
+   "brief": "Languages are systematic sets of symbols and rules — sounds, gestures, written marks, grammar — that let members of a community exchange meaning and let communities exchange meaning with one another. Beyond mere transmission, a language encodes the concepts, historical experience, and categories of thought particular to the people who speak it, so that losing a language means losing a way of parsing the world, not just a set of words.\n\nThis node organizes the subfields needed to document and preserve a language as a working system: Language Dictionaries record vocabulary and meaning, [[10.01.02]] Grammars record the structural rules that combine words into sentences, Sign Languages extend the same documentary need to visual-gestural languages, and [[10.01.05]] Translation Resources bridge between languages once both are documented. [[10.01.03]] Endangered Languages is the urgency case within this set — languages nearing extinction, where documentation cannot wait for the leisurely pace of academic grammar-writing.\n\nLanguage sits alongside [[10.02]] Folklore & Mythology and [[10.10]] Oral Histories as one of the three pillars of intangible cultural transmission, since myth and oral testimony are both carried in a specific language whose loss can strand the content they hold. For endangered-language status and documentation priorities, see UNESCO's [Atlas of the World's Languages in Danger](https://www.unesco.org/en/silo/atlas-languages-danger), and for a comprehensive language catalog and vitality data, [Ethnologue](https://www.ethnologue.com/)."
+  },
+  {
+   "id": "10.01.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Language dictionaries document vocabulary and definitions specific to individual languages. They preserve lexical precision and show how meaning develops within a linguistic system.",
+   "cs": "Jazykové slovníky dokumentují slovní zásobu a definice specifické pro jednotlivé jazyky. Zachovávají lexikální přesnost a ukazují, jak se smysl vyvíjí v rámci jazykového systému.",
+   "brief": "Language Dictionaries document the vocabulary of individual languages — headwords, definitions, pronunciation, usage examples — preserving the lexical precision of a language and showing how its meanings have shifted and branched over time. A dictionary alone captures the words a language uses but not how those words combine into sentences.\n\nThat second half of the picture belongs to [[10.01.02]] Grammars, the structural rules — phonology, morphology, syntax — that a dictionary's word list needs in order to become usable language rather than a bare glossary; the two subfields are typically produced together for any language under serious documentation. Within [[10.01]] Languages, dictionary work becomes most urgent for [[10.01.03]] Endangered Languages, where a lexicon may vanish with its last few speakers if it is not recorded, and it feeds directly into [[10.01.05]] Translation Resources, which cannot bridge two languages without a dictionary for each side of that bridge. [[10.01.04]] Sign Languages require the same lexicographic treatment in visual-gestural form, since a sign lexicon documents handshape and meaning exactly as a spoken-language dictionary documents phonetic form and meaning.\n\nFor methodology on documenting under-resourced languages, see the [Endangered Languages Project](https://www.endangeredlanguages.com/), and for a large aggregated multilingual lexical resource, [Wiktionary](https://www.wiktionary.org/)."
+  },
+  {
+   "id": "10.01.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Grammars are formal descriptions of linguistic structure—phonology, morphology, syntax—and conjugation rules governing word formation and sentence construction. They make implicit language patterns explicit for learning and analysis.",
+   "cs": "Gramatiky jsou formální popisy jazykové struktury—fonologie, morfologie, syntaxe—a konjugačních pravidel řídících tvorbu slov a konstrukci vět. Činí implicitní jazykové vzory explicitní pro učení a analýzu.",
+   "brief": "Grammars are formal descriptions of a language's structure — its phonology (sound system), morphology (word formation), and syntax (sentence construction) — along with the conjugation and declension rules that govern how words change form. A native speaker follows these patterns unconsciously; a grammar makes them explicit, which is what turns tacit fluency into something a learner or a documenter can study and reconstruct.\n\nA grammar and a [[10.01.01]] Language Dictionaries are complementary halves of full language documentation within [[10.01]] Languages: the dictionary supplies the words, the grammar supplies the rules for combining them, and neither substitutes for the other. Grammar description becomes time-critical for [[10.01.03]] Endangered Languages, where the structural rules often exist only in the intuition of a shrinking pool of speakers and are lost entirely once documentation stops. [[10.01.04]] Sign Languages have their own grammars — distinct systems of spatial and simultaneous structure rather than the linear phonology of spoken language — that require the same formal treatment on their own terms rather than being described as if they were spoken language rendered by hand.\n\nFor a standard reference framework for grammatical description, see the [World Atlas of Language Structures](https://wals.info/), and for typological grammar data across thousands of languages, the [Glottolog](https://glottolog.org/) catalog."
+  },
+  {
+   "id": "10.01.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Endangered languages are languages with few remaining speakers facing extinction without active preservation efforts. They represent unique worldviews and cultural knowledge at risk of permanent loss.",
+   "cs": "Ohrožené jazyky jsou jazyky s malým počtem zbývajících mluvčích čelících vymírání bez aktivních úsilí o zachování. Představují jedinečné světonázory a kulturní vědomost v riziku trvalé ztráty.",
+   "brief": "Endangered Languages are languages with few remaining speakers, on a trajectory toward extinction unless active preservation effort intervenes. Each one encodes a worldview and body of cultural knowledge — ways of classifying plants, kinship, land, time — that cannot be fully recovered once the last fluent speaker is gone, which is what separates language loss from ordinary language change.\n\nWithin [[10.01]] Languages, this node names the urgency case that drives the pace of the other lexicographic subfields: a [[10.01.01]] Language Dictionaries and a [[10.01.02]] Grammars description that would otherwise be compiled over decades of leisurely academic work instead have to be rushed to completion while remaining speakers are still alive to consult. The same urgency applies to [[10.01.04]] Sign Languages, some of which — village and family sign languages in particular — are as endangered as any spoken minority language and just as poorly documented. Endangered-language work also depends on [[10.10]] Oral Histories, since a speaker's narratives are often the richest available corpus of the language in natural use, not just its vocabulary and rules in isolation.\n\nFor current endangerment status and documentation priorities worldwide, see UNESCO's [Atlas of the World's Languages in Danger](https://www.unesco.org/en/silo/atlas-languages-danger), and for community-driven documentation tools, the [Endangered Languages Project](https://www.endangeredlanguages.com/)."
+  },
+  {
+   "id": "10.01.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Sign languages are complete human languages expressed through manual gestures, hand positions, and facial expressions. They enable full linguistic and cultural participation for deaf and hard-of-hearing communities.",
+   "cs": "Znakové jazyky jsou úplné lidské jazyky vyjádřené manuálními gesty, pozicemi rukou a výrazy obličeje. Umožňují plnou jazykovou a kulturní účast hluchých a nedoslýchavých komunit.",
+   "brief": "Sign Languages are complete human languages expressed through manual gestures, hand shape and position, and facial expression rather than sound — not pantomime or a manual code for a spoken language, but independent linguistic systems with their own grammar and vocabulary. They give deaf and hard-of-hearing communities full linguistic and cultural participation on the same terms spoken languages give hearing communities.\n\nDocumenting a sign language requires the same lexicographic and structural work as any [[10.01]] Languages entry, adapted to a visual-gestural medium: a sign-language [[10.01.01]] Language Dictionaries records handshape and meaning where a spoken dictionary records phonetic form and meaning, and a sign-language [[10.01.02]] Grammars description captures spatial and simultaneous structure — using the space around the signer to mark reference and tense — in place of the linear sequencing spoken grammar describes. Many sign languages, particularly village and family sign languages that arose within small deaf communities, are themselves [[10.01.03]] Endangered Languages, and just as urgent to document since each carries its own history independent of the surrounding spoken language and of larger sign languages like ASL or BSL.\n\nFor a comprehensive catalog of the world's sign languages, see [Ethnologue's sign language listings](https://www.ethnologue.com/), and for linguistic research methodology specific to sign languages, the [Sign Language Linguistics Society](https://slls.eu/)."
+  },
+  {
+   "id": "10.01.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Translation resources are tools and references—glossaries, terminology databases, parallel texts—enabling conversion of meaning between language pairs. They bridge linguistic distance while acknowledging irreducible cultural differences.",
+   "cs": "Překladatelské zdroje jsou nástroje a reference—glosáře, terminologické databáze, paralelní texty—umožňující konverzi smyslu mezi jazykové páry. Překlenují jazykové vzdálenosti a přitom uznávají neredukovatelné kulturní rozdíly.",
+   "brief": "Translation resources are the tools and reference works that let meaning cross from one language to another: bilingual and multilingual glossaries, terminology databases, and parallel texts aligning the same passage across languages. Unlike a single-language dictionary, a translation resource is built around correspondence — it records not just what a word means but which word or phrase in another language carries the closest equivalent meaning, while flagging the residue that never translates cleanly because it is tied to a specific culture's categories of thought.\n\nTranslation work depends on the language documentation that precedes it. [[10.01.01]] Language Dictionaries and [[10.01.02]] Grammars establish what a language's words mean and how they combine before a translator can map correspondences between two languages; Translation Resources is the layer built on top of both, once each side of the pair is documented. The need is sharpest for [[10.01.03]] Endangered Languages, where a parallel text or bilingual glossary may be the only record connecting a vanishing language to a widely known one, and it extends to [[10.10]] Oral Histories, whose testimony is preservable across audiences only if someone can translate the language it was told in — folklore and myth carried in a single community's tongue face the same barrier.\n\nWithin [[10.01]] Languages, Translation Resources is the outward-facing subfield — the other four subcategories document a language on its own terms, this one connects it to every other language a preservation effort needs to reach. The EU's [IATE terminology database](https://iate.europa.eu/) is a working example of a large multilingual terminology resource, and the [OPUS parallel corpus collection](https://opus.nlpl.eu/) aggregates aligned parallel texts across hundreds of language pairs for exactly this kind of correspondence work."
+  }
+ ],
+ "relations": [
+  {
+   "from": "10.01.01",
+   "to": "10.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.01",
+   "to": "10.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.01",
+   "to": "10.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.01",
+   "to": "10.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.01",
+   "to": "10.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.02",
+   "to": "10.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.02",
+   "to": "10.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.02",
+   "to": "10.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.02",
+   "to": "10.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.03",
+   "to": "10.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.03",
+   "to": "10.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.03",
+   "to": "10.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.03",
+   "to": "10.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.03",
+   "to": "10.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.04",
+   "to": "10.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.04",
+   "to": "10.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.04",
+   "to": "10.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.04",
+   "to": "10.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.05",
+   "to": "10.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.05",
+   "to": "10.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.05",
+   "to": "10.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.05",
+   "to": "10.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01.05",
+   "to": "10.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01",
+   "to": "10.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01",
+   "to": "10.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01",
+   "to": "10.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01",
+   "to": "10.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.01",
+   "to": "10.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

@@ -1,0 +1,36 @@
+{
+ "domain": "04.05",
+ "nodes": [
+  {
+   "id": "04.05",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Political science examines systems of governance, the exercise of power, and state institutions. It addresses authority, collective decision-making, and political organization.",
+   "cs": "Politologie zkoumá systémy správy, uplatňování moci a státní instituce. Zabývá se autoritou, kolektivním rozhodováním a politickou organizací.",
+   "brief": "Political science examines systems of governance, the exercise of power, and the institutions of the state, studying how authority is gained, exercised, and constrained, and how collective decisions get made and enforced. It treats power and organization as its central objects, narrowing the broader concern of [[04.02]] Sociology with social structures to the specific machinery of government, parties, and international relations.\n\nThe discipline draws heavily on [[04.06]] Law to understand the constitutional and statutory frameworks that structure political authority, and on [[04.04]] Economics to model how institutions shape incentives, redistribution, and public choice. Its subfields, comparative politics, international relations, political theory, and public administration, divide the field by scale, from the internal organization of a single state to the anarchic structure of the international system.\n\nSince Aristotle's classification of constitutions, political science has moved between normative theorizing about legitimate authority and empirical study of how political systems actually behave, a tension that still separates political philosophy from positive political science today. The [American Political Science Association](https://www.apsanet.org/RESOURCES/For-Students/What-is-Political-Science) outlines the field's scope, and the [Stanford Encyclopedia of Philosophy entry on political authority](https://plato.stanford.edu/entries/authority/) covers its normative foundations."
+  }
+ ],
+ "relations": [
+  {
+   "from": "04.05",
+   "to": "04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.05",
+   "to": "04.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.05",
+   "to": "04.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

@@ -1,0 +1,50 @@
+{
+ "domain": "10.06",
+ "nodes": [
+  {
+   "id": "10.06",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Stories and narratives are fictional and historical accounts preserving cultural experience, wisdom, and values. They transmit lessons and meaning through plot, character, and metaphor across time.",
+   "cs": "Příběhy a narativy jsou fiktivní a historické účty zachovávající kulturní zkušenost, moudrost a hodnoty. Přenášejí lekce a smysl prostřednictvím zápletky, postav a metafory v čase.",
+   "brief": "Stories and narratives are fictional and historical accounts that preserve cultural experience, wisdom, and values, transmitting lessons and meaning through plot, character, and metaphor across generations. The branch covers folktales, legends, fables, parables, and epic cycles — material shaped for narrative effect rather than doctrinal belief or literal genealogy.\n\nIt sits beside [[10.02]] Folklore & Mythology, which the same communities use to encode cosmology and sacred belief rather than lesson or entertainment, and beside [[10.10]] Oral Histories, which preserves testimony about real events and real people rather than the fictionalized or archetypal figures of a tale. [[10.09]] Traditional Art Techniques often carries stories forward in embodied form — a griot's performance, a puppet-theatre cycle, a carved narrative frieze — so the boundary between telling and craft is porous rather than fixed. The wider frame is [[10]] Cultural Preservation itself, and the material borders [[05]] Humanities scholarship wherever a tale is studied and historicized rather than simply retold.\n\nUNESCO classifies oral narrative as one of the core domains of intangible heritage — see [Oral Traditions and Expressions](https://ich.unesco.org/en/oral-traditions-and-expressions-00053) — and the [Library of Congress American Folklife Center](https://www.loc.gov/folklife/) maintains one of the largest documented collections of recorded narrative material."
+  }
+ ],
+ "relations": [
+  {
+   "from": "10.06",
+   "to": "05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.06",
+   "to": "10.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.06",
+   "to": "10.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.06",
+   "to": "10.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.06",
+   "to": "10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

@@ -1,0 +1,50 @@
+{
+ "domain": "05.06",
+ "nodes": [
+  {
+   "id": "05.06",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Cultural Studies analyzes how societies create meaning, identity, and power through artifacts, practices, and institutions—popular culture, mass media, consumption, and everyday life. It examines whose interests are served by cultural representations (ideology), how identity is constructed (race, class, gender, nation), and how subordinated groups resist or appropriate dominant meanings. Interdisciplinary and politically engaged; it bridges Literary Studies, Sociology, History, and Media Studies in interrogating culture as a contested terrain.",
+   "cs": "Kulturní studia analyzují, jak společnosti vytváří smysl, identitu a moc skrze artefakty, praktiky a instituce—populární kulturu, masová média, spotřebu a každodenní život. Zkoumají, čí zájmy jsou slouženy kulturními reprezentacemi (ideologie), jak se konstruuje identita (rasa, třída, pohlaví, národ) a jak se podřízené skupiny staví nebo přivlastňují dominantní smysly. Interdisciplinární a politicky angažovaný; propojuje Literární studia, Sociologii, Historii a Mediální studia v zpochybňování kultury jako spornému terénu.",
+   "brief": "Cultural Studies analyzes how societies create meaning, identity, and power through artifacts, practices, and institutions — popular culture, mass media, consumption, and everyday life. It examines whose interests are served by cultural representations, how identity is constructed along lines of race, class, gender, and nation, and how subordinated groups resist or appropriate dominant meanings.\n\nWithin [[05]] Humanities, Cultural Studies is interdisciplinary by design, bridging Literature (textual analysis), [[05.08]] Media Studies (technological systems of representation), and [[05.09]] Gender Studies and [[05.10]] Ethnic Studies (identity and power). It borrows historical method from History to trace how meanings and representations change over time, and shares its interest in ideology and institutions with [[04]] Social Sciences, particularly sociology.\n\nInterdisciplinary and politically engaged, Cultural Studies treats culture as contested terrain rather than a neutral backdrop. For the discipline's professional body and current scholarship, see the [Cultural Studies Association](https://culturalstudiesassociation.org/); for the flagship peer-reviewed journal, [Cultural Studies (Taylor & Francis)](https://www.tandfonline.com/toc/rcus20/current)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "05.06",
+   "to": "04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.06",
+   "to": "05.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.06",
+   "to": "05.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.06",
+   "to": "05.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.06",
+   "to": "05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

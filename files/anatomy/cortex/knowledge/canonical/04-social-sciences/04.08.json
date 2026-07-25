@@ -1,0 +1,29 @@
+{
+ "domain": "04.08",
+ "nodes": [
+  {
+   "id": "04.08",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Geography analyzes human and physical patterns across spatial systems and their interactions. It examines settlement, climate, resources, and cultural distributions.",
+   "cs": "Geografie analyzuje lidské a fyzické vzorce v prostorových systémech a jejich interakce. Zkoumá osídlení, klima, zdroje a kulturní rozšíření.",
+   "brief": "Geography analyzes human and physical patterns across spatial systems and their interactions, examining settlement, climate, resources, and cultural distributions and the processes that connect them. Its human branch overlaps with [[04.03]] Anthropology in explaining how cultures distribute themselves across landscapes, while its physical branch connects to the earth and environmental sciences that study climate, landforms, and ecosystems independent of human presence.\n\nPopulation distribution links geography closely to [[04.09]] Demography: where demography quantifies population structure and change, geography explains the spatial logic behind that distribution, why settlements cluster, migrate, or decline in particular places. The discipline's dual human-physical character makes it a bridging field, translating findings from social and natural sciences into spatially explicit maps and models.\n\nGeographic information systems have transformed the field since the late twentieth century, turning spatial analysis into a quantitative, data-intensive practice used well beyond academic geography, from urban planning to epidemiology. The [American Association of Geographers](https://www.aag.org/discover-geography/) provides an overview of the discipline's scope and subfields, and the [National Geographic Society's resource library](https://education.nationalgeographic.org/resource/geography) offers accessible reference material on core concepts."
+  }
+ ],
+ "relations": [
+  {
+   "from": "04.08",
+   "to": "04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.08",
+   "to": "04.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

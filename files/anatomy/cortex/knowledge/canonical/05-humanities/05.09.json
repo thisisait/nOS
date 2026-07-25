@@ -1,0 +1,50 @@
+{
+ "domain": "05.09",
+ "nodes": [
+  {
+   "id": "05.09",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Gender Studies examines how gender shapes social institutions, cultural practices, and individual identities across historical and contemporary contexts. It integrates perspectives from history, sociology, anthropology, and literature to analyze gender roles, power relations, and systems of inequality, centering marginalized voices in knowledge production.",
+   "cs": "Studium genderu zkoumá, jak gender utváří společenské instituce, kulturní praktiky a individuální identity v historických i současných kontextech. Integruje perspektivy z historie, sociologie, antropologie a literatury k analýze genderových rolí, mocenských vztahů a systémů nerovnosti, přičemž marginalizované hlasy staví do středu výroby vědomostí.",
+   "brief": "Gender Studies examines how gender shapes social institutions, cultural practices, and individual identities across historical and contemporary contexts. It integrates perspectives from history, sociology, anthropology, and literature to analyze gender roles, power relations, and systems of inequality, centering marginalized voices in knowledge production.\n\nWithin [[05]] Humanities, Gender Studies shares its analytical concern with power and representation with [[05.06]] Cultural Studies and [[05.10]] Ethnic Studies, and draws on [[05.04]] Literature and History for primary evidence of how gender roles were represented and lived. Its integration of sociological and anthropological method also connects it to [[04]] Social Sciences.\n\nBy centering marginalized voices and treating gender as a category of analysis rather than a fixed given, Gender Studies has reshaped how the rest of the humanities read texts, institutions, and history. For current scholarship and the discipline's professional body, see the [National Women's Studies Association](https://www.nwsa.org/); for a broad reference on gender theory, the [Stanford Encyclopedia of Philosophy entry on feminist philosophy](https://plato.stanford.edu/entries/feminism-topics/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "05.09",
+   "to": "04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.09",
+   "to": "05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.09",
+   "to": "05.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.09",
+   "to": "05.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.09",
+   "to": "05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

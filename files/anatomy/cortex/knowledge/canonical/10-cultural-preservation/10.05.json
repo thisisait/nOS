@@ -1,0 +1,43 @@
+{
+ "domain": "10.05",
+ "nodes": [
+  {
+   "id": "10.05",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Music and songs are vocal and instrumental compositions integral to cultural expression, ritual, and social bonding. They transmit emotional and spiritual meaning across generations through performance.",
+   "cs": "Hudba a písně jsou vokální a instrumentální kompozice integrální do kulturního vyjádření, rituálu a sociálního spojení. Přenášejí emocionální a spirituální smysl mezi generacemi prostřednictvím výkonu.",
+   "brief": "Music and songs are vocal and instrumental compositions — lullabies, work songs, ceremonial chants, ballads, dance music — that carry emotional and spiritual meaning through performance rather than through text alone. A song's melody, rhythm, and performance context are as much a part of its cultural content as its lyrics, which is why recording only the words of a traditional song loses most of what made it worth preserving.\n\nMusic is frequently the performative core of [[10.08]] Rituals & Ceremonies, providing the sonic structure that paces a rite; sung narrative overlaps with [[10.06]] Stories & Narratives wherever a ballad tells a story in musical form, and a song's lyrics survive only within the specific [[10.01]] Language in which they were composed, so translation for meaning necessarily loses the sound-meaning fit of the original. Where a song transmits historical memory rather than fiction or ritual, it functions as sung [[10.10]] Oral History.\n\nEthnomusicological archives preserve recordings alongside performance context: the [Smithsonian Folkways](https://folkways.si.edu/) collection documents traditional and folk music worldwide with liner notes on cultural context, and the [International Council for Traditional Music](https://ictmusic.org/) sets scholarly standards for ethnomusicological fieldwork and preservation."
+  }
+ ],
+ "relations": [
+  {
+   "from": "10.05",
+   "to": "10.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.05",
+   "to": "10.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.05",
+   "to": "10.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.05",
+   "to": "10.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

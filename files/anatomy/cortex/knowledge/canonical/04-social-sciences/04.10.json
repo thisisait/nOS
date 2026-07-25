@@ -1,0 +1,29 @@
+{
+ "domain": "04.10",
+ "nodes": [
+  {
+   "id": "04.10",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Archaeology reconstructs past human societies through the excavation and analysis of material remains. It employs dating techniques and artifact interpretation to understand cultural and technological change.",
+   "cs": "Archeologie rekonstruuje minulé lidské společnosti prostřednictvím vykopávek a analýzy hmotných zbytků. Používá techniky datování a interpretaci artefaktů k pochopení kulturních a technologických změn.",
+   "brief": "Archaeology reconstructs past human societies through the excavation and analysis of material remains, employing dating techniques and artifact interpretation to trace cultural and technological change where no written record survives. It forms one of [[04.03]] Anthropology's four core branches, supplying the discipline's only direct evidence about societies that left no living informants to interview.\n\nIts methods overlap with [[04.08]] Geography in reconstructing past landscapes and settlement patterns from stratigraphy, sediment analysis, and spatial survey, and increasingly borrow scientific dating techniques, radiocarbon, dendrochronology, stratigraphic seriation, from the natural sciences to build chronologies independent of textual sources. Excavation, survey, and laboratory analysis of artifacts together let archaeologists infer diet, technology, trade, and social organization from physical traces alone.\n\nThe discipline splits by period and region, prehistoric, classical, historical, and industrial archaeology among others, and by increasing reliance on non-invasive techniques such as ground-penetrating radar and satellite survey that limit destructive excavation. The [Archaeological Institute of America](https://www.archaeological.org/about/what-is-archaeology/) offers an accessible overview of the field's methods and scope, and [UNESCO's World Heritage archaeology resources](https://whc.unesco.org/en/archaeological-heritage/) situate the discipline within global heritage preservation."
+  }
+ ],
+ "relations": [
+  {
+   "from": "04.10",
+   "to": "04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.10",
+   "to": "04.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

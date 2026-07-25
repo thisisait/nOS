@@ -1,0 +1,71 @@
+{
+ "domain": "11",
+ "nodes": [
+  {
+   "id": "11",
+   "level": 0,
+   "kind": "seed-override",
+   "en": "Techniques for keeping digital information intact, readable, and secure over time — encoding it in durable formats, compressing it efficiently, protecting it cryptographically, replicating it in backups, and recovering it after loss. Spans file formats, compression, encryption and security, backup strategies, and data recovery; it underwrites every digitally stored domain.",
+   "cs": "Postupy, jež uchovávají digitální informace neporušené, čitelné a zabezpečené v čase — kódování do trvanlivých formátů, účinná komprese, kryptografická ochrana, replikace v zálohách a obnova po ztrátě. Zahrnují souborové formáty, kompresi, šifrování a bezpečnost, zálohovací strategie a obnovu dat; podpírají každou digitálně uloženou oblast.",
+   "brief": "Digital preservation comprises the techniques that keep digital information intact, readable, and secure across time and technological change. Digital data faces distinctive threats — media decay, format obsolescence, silent corruption, and unauthorized access — and the domain answers each with engineering discipline: durable encodings, redundancy, integrity checking, and planned migration. Its horizon is measured in decades, against hardware and software generations measured in years.\n\n[[11.01]] File Formats determine whether stored information remains interpretable — open, documented formats are preservation's foundation; [[11.02]] Compression Methods trade storage for computation within limits set by information theory; [[11.03]] Encryption & Security protects integrity and confidentiality; [[11.04]] Backup Strategies multiply copies across media, locations, and time; and [[11.05]] Data Recovery salvages information after failure, corruption, or loss.\n\nThe domain applies the computer science and information theory of the [[02]] Formal Sciences to a custodial mission it shares with analog archiving: it carries the reference corpus of [[09]] Reference & Documentation and the recordings of [[10]] Cultural Preservation forward through time. See [Digital Preservation Coalition: Digital Preservation Handbook](https://www.dpconline.org/handbook)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "11",
+   "to": "02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11",
+   "to": "09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11",
+   "to": "10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11",
+   "to": "11.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11",
+   "to": "11.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11",
+   "to": "11.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11",
+   "to": "11.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11",
+   "to": "11.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

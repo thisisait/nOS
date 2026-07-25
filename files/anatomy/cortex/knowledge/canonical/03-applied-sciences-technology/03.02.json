@@ -1,0 +1,711 @@
+{
+ "domain": "03.02",
+ "nodes": [
+  {
+   "id": "03.02",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Medicine is the science and practice of diagnosing, treating, and preventing disease and injury to maintain and restore human health through biological, chemical, and behavioral interventions.",
+   "cs": "Medicína je věda a praxe diagnostiky, léčby a prevence nemocí a zranění k udržení a obnovení lidského zdraví prostřednictvím biologických, chemických a behaviorálních zásahů.",
+   "brief": "Medicine is the science and practice of diagnosing, treating, and preventing disease and injury to maintain and restore human health through biological, chemical, and behavioral interventions. Its clinical core spans [[03.02.01]] Anatomy and [[03.02.02]] Physiology, which describe the body's structure and function; [[03.02.03]] Pathology and [[03.02.04]] Pharmacology, which study disease mechanisms and the drugs that treat them; and applied branches such as [[03.02.05]] Clinical Medicine, [[03.02.06]] Surgery, [[03.02.07]] Psychiatry, and [[03.02.09]] Emergency Medicine, which turn that knowledge into direct patient care across settings and timescales.\n\nMedicine sits inside [[03]] Applied Sciences & Technology beside disciplines that supply or borrow from it: [[03.09]] Biotechnology develops the molecular tools — vaccines, diagnostics, gene therapies — that clinical medicine deploys, while [[03.03]] Agriculture and public-health nutrition intersect with Preventive Medicine's concern for disease avoidance before treatment is needed. Unlike most of its applied siblings, medicine treats a single, non-standardizable subject — the individual patient — which keeps clinical judgment central even as its underlying sciences become more quantitative.\n\nMedical practice is governed by licensure, clinical-trial evidence standards, and international health regulation. For clinical and consumer-facing medical reference, see the [Mayo Clinic](https://www.mayoclinic.org/), and for global health guidance and disease surveillance, the [World Health Organization](https://www.who.int/)."
+  },
+  {
+   "id": "03.02.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Anatomy describes the structure, organization, and relationships of body tissues and organs, including their gross form and microscopic composition, establishing the foundation for understanding physiology and disease.",
+   "cs": "Anatomie popisuje strukturu, organizaci a vztahy tělních tkání a orgánů včetně jejich hrubé formy a mikroskopického složení a tvoří základ pro pochopení fyziologie a nemocí.",
+   "brief": "Anatomy describes the structure, organization, and relationships of body tissues and organs, from gross form visible to the eye down to microscopic composition. It divides descriptively along organ systems — the [[03.02.01.01]] Skeletal System's bones and joints, the Muscular System's contractile tissue, the [[03.02.01.03]] Nervous System's signaling networks, and the Cardiovascular and Respiratory Systems' circulatory and gas-exchange structures — and this system-by-system mapping of what the body is built from establishes the foundation the rest of medicine works from.\n\nAnatomy pairs directly with [[03.02.02]] Physiology, which explains how the structures anatomy catalogs actually function; together the two form the descriptive-and-mechanistic base that [[03.02.03]] Pathology draws on to identify how disease deviates from normal structure and function, and that [[03.02.06]] Surgery depends on directly, since operating on tissue safely requires precise anatomical knowledge of what lies where.\n\nAnatomical knowledge is typically built through cadaveric dissection, medical imaging, and histology, and remains the first subject taught in most medical curricula because every later clinical discipline assumes it. For a comprehensive reference on the field, see the [Encyclopaedia Britannica](https://www.britannica.com/science/human-anatomy) entry on human anatomy, and for the standardized naming of anatomical structures, the [Terminologia Anatomica](https://fipat.library.dal.ca/ta2/) maintained by the Federative International Programme for Anatomical Terminology."
+  },
+  {
+   "id": "03.02.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The skeletal system provides rigid support, protection of vital organs, and attachment points for muscles through bones, cartilage, and connective tissues forming the body's structural framework.",
+   "cs": "Kostra poskytuje pevnou podporu, ochranu životně důležitých orgánů a místa připojení svalů prostřednictvím kostí, chrupavky a spojovacích tkání tvořících kostru těla."
+  },
+  {
+   "id": "03.02.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The muscular system enables movement, maintains posture, and generates force through skeletal muscles, smooth muscles, and cardiac muscle connected to bone and organs via tendons.",
+   "cs": "Svalová soustava umožňuje pohyb, udržuje postoj a vyvíjí sílu prostřednictvím kosterního svalstva, hladké svaloviny a srdeční svaloviny spojené s kostmi a orgány přes šlachy."
+  },
+  {
+   "id": "03.02.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The nervous system processes sensory information, controls voluntary and involuntary functions, and enables cognition through the brain, spinal cord, and peripheral nerves transmitting electrical and chemical signals.",
+   "cs": "Nervová soustava zpracovává smyslové informace, řídí dobrovolné a nedobrovolné funkce a umožňuje kognici prostřednictvím mozku, míchy a periferních nervů přenášejících elektrické a chemické signály."
+  },
+  {
+   "id": "03.02.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The cardiovascular system transports oxygen, nutrients, hormones, and waste products throughout the body via the heart, arteries, capillaries, and veins delivering blood to all tissues.",
+   "cs": "Kardiovaskulární soustava přepravuje kyslík, živiny, hormony a produkty metabolismu po celém těle prostřednictvím srdce, tepen, kapilár a žil dodávajících krev do všech tkání."
+  },
+  {
+   "id": "03.02.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The respiratory system exchanges oxygen and carbon dioxide between air and blood through the lungs, airways, and diaphragm, enabling aerobic metabolism in all body tissues.",
+   "cs": "Dýchací soustava si vyměňuje kyslík a oxid uhličitý mezi vzduchem a krví prostřednictvím plic, dýchacích cest a bránice a umožňuje aerobní metabolismus všech tělesných tkání."
+  },
+  {
+   "id": "03.02.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Physiology explains how body systems function through biochemical and biophysical mechanisms, integrating cellular, organ, and whole-organism processes to maintain life and respond to environmental demands.",
+   "cs": "Fyziologie vysvětluje, jak fungují tělesné systémy prostřednictvím biochemických a biofyzikálních mechanismů, integrujícíc buněčné, orgánové a celoorganismové procesy k udržení života a reakci na environmentální požadavky.",
+   "brief": "Physiology explains how body systems function through biochemical and biophysical mechanisms, integrating processes at the cellular, organ, and whole-organism level to maintain life and respond to environmental demands. Its subfields track this integration outward from the smallest working unit: [[03.02.02.01]] Cellular Physiology examines how individual cells generate energy and signal, [[03.02.02.03]] Homeostasis studies how the body holds internal conditions like temperature and pH stable despite external change, and Endocrinology covers the hormonal signaling that coordinates organ function across the whole body.\n\nPhysiology is the functional counterpart to [[03.02.01]] Anatomy — anatomy names the structures, physiology explains what they do — and this pairing underlies [[03.02.03]] Pathology's account of disease, since a disease is defined largely by which normal physiological process has failed. [[03.02.04]] Pharmacology, in turn, depends on physiology to predict how a drug's biochemical action will alter organ function once administered.\n\nPhysiological knowledge is produced through controlled experiment — isolated tissue preparation, whole-animal study, and increasingly computational modeling of organ systems — rather than through observation of disease alone. For a standard physiology reference, see the [National Library of Medicine's Physiology bookshelf](https://www.ncbi.nlm.nih.gov/books/NBK538172/), and for cardiovascular and respiratory physiology specifically, the [American Physiological Society](https://www.physiology.org/)."
+  },
+  {
+   "id": "03.02.02.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Cellular physiology describes how cells generate and use energy, transport substances, respond to signals, and maintain organization through molecular mechanisms including metabolism and intracellular communication.",
+   "cs": "Buněčná fyziologie popisuje, jak si buňky generují a využívají energii, transportují látky, reagují na signály a udržují organizaci prostřednictvím molekulárních mechanismů včetně metabolismu a vnitrobuněčné komunikace."
+  },
+  {
+   "id": "03.02.02.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Organ systems physiology examines how integrated networks of organs coordinate to perform complex functions like circulation, respiration, digestion, and elimination through chemical and neural signaling.",
+   "cs": "Fyziologie orgánových soustav zkoumá, jak integrované sítě orgánů koordinují provádění složitých funkcí jako oběh, dýchání, trávení a vylučování prostřednictvím chemické a nervové signalizace."
+  },
+  {
+   "id": "03.02.02.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Homeostasis maintains stable internal conditions through negative feedback mechanisms regulating body temperature, pH, osmolarity, and other variables within narrow physiological ranges despite external changes.",
+   "cs": "Homeostáza udržuje stálé vnitřní podmínky prostřednictvím negativní zpětné vazby regulující tělesnou teplotu, pH, osmolaritu a další proměnné v úzlých fyziologických rozmezích navzdory vnějším změnám."
+  },
+  {
+   "id": "03.02.02.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Metabolism encompasses all biochemical reactions that extract, transform, and store energy from nutrients including glycolysis, aerobic respiration, fatty acid oxidation, and anabolic synthesis of molecules.",
+   "cs": "Metabolismus zahrnuje všechny biochemické reakce, které extrahují, transformují a skladují energii z živin včetně glykolýzy, aerobního dýchání, oxidace mastných kyselin a anabolické syntézy molekul."
+  },
+  {
+   "id": "03.02.02.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Endocrinology studies hormone-mediated regulation of growth, reproduction, metabolism, stress response, and behavior through signaling between endocrine glands and target tissues.",
+   "cs": "Endokrinologie studuje hormonálně zprostředkovanou regulaci růstu, reprodukce, metabolismu, reakce na stres a chování prostřednictvím signalizace mezi endokrinními žlázami a cílovými tkáněmi."
+  },
+  {
+   "id": "03.02.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Pathology is the study of disease including its causes, mechanisms, effects on structure and function, and the ways tissues and organs respond to injury and abnormality.",
+   "cs": "Patologie je studiem nemoci včetně její příčin, mechanismů, účinků na strukturu a funkci a způsobů, kterými si tkáně a orgány odpovídají na poranění a abnormalitu.",
+   "brief": "Pathology studies disease — its causes, mechanisms, effects on structure and function, and the ways tissues and organs respond to injury and abnormality. It organizes disease by causal category: [[03.02.03.01]] Infectious Diseases arise from pathogens, Genetic Disorders from inherited or acquired mutations, [[03.02.03.03]] Oncology from uncontrolled cell growth, and Autoimmune Diseases from the immune system attacking the body's own tissue — a taxonomy of mechanism that lets clinicians reason from a patient's presentation back to a likely cause.\n\nPathology sits between the descriptive sciences and clinical practice: it takes [[03.02.01]] Anatomy's normal structure and [[03.02.02]] Physiology's normal function as its baseline and defines disease as deviation from both, then hands that diagnosis forward to [[03.02.05]] Clinical Medicine, which turns a pathological finding into a treatment plan.\n\nPathologists work primarily through tissue biopsy, autopsy, and laboratory analysis of blood and other specimens, and their findings anchor most definitive diagnoses in modern medicine. For a foundational pathology reference, see the [American Society for Clinical Pathology](https://www.ascp.org/), and for cancer-specific pathology and staging standards, the [National Cancer Institute](https://www.cancer.gov/)."
+  },
+  {
+   "id": "03.02.03.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Infectious diseases result from pathogenic microorganisms including bacteria, viruses, fungi, and parasites that invade tissues, evade immune responses, and cause tissue damage and systemic symptoms.",
+   "cs": "Infekční nemoci vyplývají z patogenních mikroorganismů včetně bakterií, virů, hub a parazitů, které vnikají do tkání, vyhýbají se imunitním odpovědím a způsobují poranění tkání a systémové symptomy."
+  },
+  {
+   "id": "03.02.03.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Genetic disorders arise from inherited or de novo mutations in DNA causing abnormalities in protein structure and function that affect development, metabolism, and disease risk across generations.",
+   "cs": "Genetické poruchy vznikají z dědičných nebo nových mutací v DNA způsobujících abnormality v proteinové struktuře a funkci ovlivňující vývoj, metabolismus a riziko nemoci v průběhu generací."
+  },
+  {
+   "id": "03.02.03.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Oncology is the study of cancer arising from uncontrolled cell growth, invasion, and metastasis due to mutations in genes controlling cell division, apoptosis, and tumor suppression.",
+   "cs": "Onkologie je studiem rakoviny vznikající z nekontrolovaného růstu buněk, invaze a metastází v důsledku mutací v genech řídících dělení buněk, apoptózu a tlumení nádorů."
+  },
+  {
+   "id": "03.02.03.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Autoimmune diseases occur when the immune system misdirects its attack against self-tissues causing inflammation, tissue destruction, and loss of normal function in organs and systems.",
+   "cs": "Autoimunitní nemoci vznikají, když si imunitní systém nesprávně nasměruje svůj útok proti vlastním tkáním způsobujícím zánět, destrukci tkání a ztrátu normální funkce orgánů a soustav."
+  },
+  {
+   "id": "03.02.03.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Degenerative diseases involve progressive loss of tissue and organ function due to aging, oxidative stress, protein misfolding, or cell death resulting in irreversible decline in specific systems.",
+   "cs": "Degenerativní nemoci zahrnují postupnou ztrátu funkce tkání a orgánů v důsledku stárnutí, oxidačního stresu, nesprávného skládání proteinů nebo úmrtí buněk vedoucího k nezvratné degeneraci určitých soustav."
+  },
+  {
+   "id": "03.02.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Pharmacology is the study of drug interactions with biological systems including drug composition, mechanism of action, absorption, metabolism, effects on tissues, and therapeutic applications.",
+   "cs": "Farmakologie je studiem interakce léků s biologickými systémy včetně složení léků, mechanismu účinku, absorpce, metabolismu, účinků na tkáně a terapeutických aplikacích.",
+   "brief": "Pharmacology studies how drugs interact with biological systems: their composition, mechanism of action, absorption and metabolism, effects on tissue, and therapeutic application. Its subfields divide largely by therapeutic target — [[03.02.04.01]] Antibiotics act against pathogens, Cardiovascular Drugs regulate heart and vessel function, and Psychotropic Medications act on brain chemistry — while [[03.02.04.05]] Pharmaceutical Production covers the manufacturing and quality-control processes that turn a validated compound into a distributable drug.\n\nPharmacology applies [[03.02.02]] Physiology's account of normal organ function to predict how a chemical compound will alter it, and it studies disease mechanisms established by [[03.02.03]] Pathology to identify what a drug needs to correct. The output of that work feeds directly into [[03.02.05]] Clinical Medicine's treatment protocols, which specify which drug, at what dose, for which diagnosis.\n\nDrugs move from laboratory characterization through controlled clinical trials before reaching approved therapeutic use, a pipeline regulated to guard against both ineffective and unsafe compounds. For drug mechanism and interaction reference, see the [U.S. National Library of Medicine's DailyMed](https://dailymed.nlm.nih.gov/), and for global drug-safety and essential-medicines guidance, the [WHO Model List of Essential Medicines](https://www.who.int/publications/i/item/WHO-MHP-HPS-EML-2023.02)."
+  },
+  {
+   "id": "03.02.04.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Antibiotics are antimicrobial compounds that kill or inhibit bacteria through mechanisms such as cell wall disruption, protein synthesis inhibition, or DNA damage, providing selective toxicity to microbial pathogens.",
+   "cs": "Antibiotika jsou antimikrobiální sloučeniny, které zabíjejí nebo inhibují bakterie prostřednictvím mechanismů, jako je narušení buněčné stěny, inhibice proteinové syntézy nebo poškození DNA, poskytující selektivní toxicitu patogenním mikroorganismům."
+  },
+  {
+   "id": "03.02.04.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Pain management drugs alter perception and transmission of pain signals through mechanisms including nociceptor blocking, neurotransmitter modulation, and central nervous system effects to reduce suffering.",
+   "cs": "Léčiva pro léčbu bolesti mění vnímání a přenos bolestivých signálů prostřednictvím mechanismů včetně blokování nociceptorů, modulace neurotransmiterů a účinků na centrální nervový systém ke snížení bolesti."
+  },
+  {
+   "id": "03.02.04.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Cardiovascular drugs alter heart function and blood vessel behavior through mechanisms including beta-blockade, vasodilation, positive inotropy, and anticoagulation to treat hypertension, arrhythmia, and heart failure.",
+   "cs": "Kardiovaskulární léčiva mění funkci srdce a chování cévní soupravy prostřednictvím mechanismů včetně beta-blokády, vasodilatace, pozitivní inotropie a antikoagulace k léčbě vysokého krevního tlaku, arytmií a srdečního selhání."
+  },
+  {
+   "id": "03.02.04.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Psychotropic medications modify mood, perception, cognition, and behavior through neurotransmitter regulation including serotonin reuptake inhibition, dopamine modulation, and GABA enhancement in the central nervous system.",
+   "cs": "Psychotropní léčiva mění náladu, vnímání, kognici a chování prostřednictvím regulace neurotransmiterů včetně inhibice zpětného vychytávání serotoninu, modulace dopaminu a zesílení GABA v centrálním nervovém systému."
+  },
+  {
+   "id": "03.02.04.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Pharmaceutical production encompasses the manufacturing, formulation, quality assurance, and scale-up of drugs from raw materials to final products meeting regulatory standards for safety, purity, and efficacy.",
+   "cs": "Výroba farmaceutických přípravků zahrnuje výrobu, formulaci, zajištění kvality a zvětšování měřítka léků z surových materiálů na konečné produkty splňující regulační standardy bezpečnosti, čistoty a účinnosti."
+  },
+  {
+   "id": "03.02.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Clinical medicine is the practice of diagnosing and treating disease in patients through examination, testing, and intervention based on pathological understanding and evidence, including patient management and outcomes.",
+   "cs": "Klinická medicína je praxe diagnostiky a léčby nemocí u pacientů prostřednictvím vyšetření, testování a intervence založené na patologickém porozumění a důkazech včetně péče o pacienty a výsledků.",
+   "brief": "Clinical Medicine is the practice of diagnosing and treating disease in individual patients through examination, testing, and intervention, applying the pathological and pharmacological understanding built elsewhere in medicine to real cases and real outcomes. Its subfields track a patient's path through the system: [[03.02.05.01]] Diagnostic Methods identify what is wrong, Treatment Protocols specify standardized responses, Patient Care covers the ongoing management of a patient's condition, and Medical Documentation records the encounter for continuity and accountability.\n\nClinical Medicine is the point where [[03.02.03]] Pathology's disease mechanisms and [[03.02.04]] Pharmacology's drug knowledge meet an actual patient, and it functions as the general practice from which more specialized clinical disciplines branch: [[03.02.06]] Surgery, Psychiatry, Pediatrics, and [[03.02.09]] Emergency Medicine each apply the same diagnose-and-treat logic to a narrower population or intervention type.\n\nClinical decisions increasingly follow evidence-based medicine, which weighs interventions against outcomes data from controlled trials rather than relying on individual practitioner experience alone. For clinical practice guidelines and evidence summaries, see [UpToDate](https://www.uptodate.com/), and for systematic reviews of treatment efficacy, the [Cochrane Library](https://www.cochranelibrary.com/)."
+  },
+  {
+   "id": "03.02.05.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Diagnostic methods are techniques and technologies that identify disease by collecting and interpreting patient data including imaging, laboratory analysis, biopsies, and physiological monitoring to guide treatment.",
+   "cs": "Diagnostické metody jsou techniky a technologie, které identifikují nemoc sbíráním a interpretací údajů pacienta včetně zobrazování, laboratorní analýzy, biopsií a fyziologického monitorování k vedení léčby."
+  },
+  {
+   "id": "03.02.05.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Treatment protocols are standardized, evidence-based guidelines that specify which therapeutic agents, procedures, and rehabilitation strategies to apply, in what sequence and dosage, for a given diagnosis. They define the care pathway itself, not the hands-on execution of individual clinical acts, which is the domain of Medical Procedures.",
+   "cs": "Léčebné protokoly jsou standardizované, na důkazech založené postupy, které stanovují, jaké terapeutické prostředky, výkony a rehabilitační strategie použít, v jakém pořadí a dávkování, pro danou diagnózu. Definují samotnou léčebnou cestu, nikoli provedení jednotlivých klinických výkonů, což je doménou Lékařských výkonů."
+  },
+  {
+   "id": "03.02.05.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Patient Care addresses the delivery of medical and psychosocial support during treatment and recovery, encompassing nursing care, pain management, nutritional support, and psychological counseling.",
+   "cs": "Péče o pacienty se zaměřuje na poskytování lékařské a psychosociální podpory během léčby a rekonvalescence, včetně zdravotnické péče, managementu bolesti, nutriční podpory a psychologického poradenství."
+  },
+  {
+   "id": "03.02.05.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Medical Procedures catalogs the concrete technical interventions performed on a patient's body — injections, catheterization, biopsy sampling, suturing, and wound dressing — as discrete hands-on skills distinct from the diagnostic reasoning of Diagnostic Methods, the intervention planning of Treatment Protocols, and the ongoing support of Patient Care.",
+   "cs": "Lékařské výkony zahrnují konkrétní technické zákroky prováděné na těle pacienta — injekce, katetrizaci, odběr biopsie, šití ran a ošetřování ran — jako samostatné praktické dovednosti odlišné od diagnostického uvažování Diagnostických metod, plánování intervencí v Léčebných protokolech a průběžné podpory v Péči o pacienta."
+  },
+  {
+   "id": "03.02.05.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Medical Documentation comprises the systematic recording, organization, and maintenance of patient health information, including medical records, clinical notes, diagnostic results, and evidence of treatment outcomes.",
+   "cs": "Lékařská dokumentace zahrnuje systematické zaznamenávání, organizaci a udržování pacientských zdravotních informací, včetně zdravotnických záznamů, klinických poznámek, diagnostických výsledků a důkazů léčebných výsledků."
+  },
+  {
+   "id": "03.02.06",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Surgery is the medical discipline involving operative intervention to treat disease or injury through tissue manipulation, tissue removal, or tissue repair under controlled conditions, encompassing both elective and emergency procedures.",
+   "cs": "Chirurgie je lékařský obor zahrnující operativní intervenci k léčbě nemoci nebo úrazu prostřednictvím manipulace s tkáněmi, jejich odstranění nebo opravy v kontrolovaných podmínkách, zahrnující volitelné i pohotovostní výkony.",
+   "brief": "Surgery treats disease or injury through direct operative intervention — tissue manipulation, removal, or repair — performed under controlled conditions, spanning both planned elective procedures and urgent operative response. Its subfields cover the full operative episode: General Surgery and [[03.02.06.02]] Emergency Surgery differ by whether the procedure is scheduled or immediate, [[03.02.06.03]] Anesthesia manages the patient's unconsciousness and pain control during the operation, and Post-operative Care manages recovery afterward.\n\nSurgery depends on [[03.02.01]] Anatomy for the precise structural knowledge that makes operating on tissue safe, and it shares its emergency-response logic with [[03.02.09]] Emergency Medicine, since [[03.02.06.02]] Emergency Surgery frequently follows directly from an emergency-medicine trauma diagnosis. It sits alongside [[03.02.05]] Clinical Medicine as one of the discipline's two primary intervention paths — pharmacological versus operative — chosen according to which is likelier to resolve the underlying condition.\n\nModern surgical practice has shifted substantially toward minimally invasive and image-guided techniques that reduce operative trauma and recovery time compared to open procedures. For surgical practice standards, see the [American College of Surgeons](https://www.facs.org/), and for anesthesia safety guidelines, the [American Society of Anesthesiologists](https://www.asahq.org/)."
+  },
+  {
+   "id": "03.02.06.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "General Surgery encompasses elective and routine surgical procedures addressing diverse pathologies of the abdomen, digestive system, endocrine organs, and superficial structures.",
+   "cs": "Obecná chirurgie zahrnuje volitelné a rutinní chirurgické výkony řešící různé patologie břicha, trávicího systému, endokrinních orgánů a povrchových struktur."
+  },
+  {
+   "id": "03.02.06.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Emergency Surgery addresses acute surgical crises requiring immediate operative intervention to prevent death or serious morbidity, including trauma management, acute abdominal conditions, and hemorrhage control.",
+   "cs": "Pohotovostní chirurgie se zabývá akutními chirurgickými krizemi vyžadujícími okamžitou operativní intervenci, aby se zabránilo smrti nebo vážné morbidita, včetně managementu traumat, akutních břišních stavů a kontroly krvácení."
+  },
+  {
+   "id": "03.02.06.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Anesthesia encompasses the pharmacological and technical approaches to suppress consciousness, pain sensation, and reflexes during surgical and diagnostic procedures, enabling safe operative intervention.",
+   "cs": "Anestezie zahrnuje farmakologické a technické přístupy k potlačení vědomí, smyslu pro bolest a reflexů během chirurgických a diagnostických výkonů, což umožňuje bezpečnou operativní intervenci."
+  },
+  {
+   "id": "03.02.06.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Surgical Techniques encompasses the practical methods, instruments, and procedural approaches employed to perform operations safely and effectively, including minimally invasive laparoscopy and traditional open procedures.",
+   "cs": "Chirurgické techniky zahrnují praktické metody, nástroje a procedurální přístupy používané k bezpečnému a efektivnímu provedení operací, včetně minimálně invazivní laparoskopie a tradičních otevřených postupů."
+  },
+  {
+   "id": "03.02.06.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Post-operative Care addresses the medical management during recovery following surgical procedures, encompassing pain control, infection prevention, wound healing monitoring, and functional rehabilitation to restore patient mobility.",
+   "cs": "Pooperační péče se zabývá lékařským managementem během rekonvalescence po chirurgických výkonech, včetně kontroly bolesti, prevence infekce, monitorování hojení ran a funkční rehabilitace k obnovení pacientské mobility."
+  },
+  {
+   "id": "03.02.07",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Psychiatry is the medical discipline addressing mental health conditions, behavioral disorders, and psychological disturbances through diagnostic assessment, pharmacological treatment, psychotherapy, and social rehabilitation.",
+   "cs": "Psychiatrie je lékařský obor zabývající se duševními zdravotními stavy, poruchami chování a psychologickými poruchami prostřednictvím diagnostického vyšetření, farmakologické léčby, psychoterapie a sociální rehabilitace.",
+   "brief": "Psychiatry addresses mental health conditions, behavioral disorders, and psychological disturbances through diagnostic assessment, pharmacological treatment, psychotherapy, and social rehabilitation. It is distinguished from most of medicine's other clinical branches by treating disorders of thought, mood, and behavior rather than disorders of a specific physical organ system, though many psychiatric conditions have identifiable biological correlates.\n\nPsychiatry is one of [[03.02.05]] Clinical Medicine's specialized branches, applying the same diagnose-and-treat structure to mental rather than somatic presentation, and it draws its pharmacological treatments from [[03.02.04]] Pharmacology's psychotropic medications specifically. It intersects with [[03.02.08]] Pediatrics in child and adolescent psychiatry, and with [[03.02.09]] Emergency Medicine when a psychiatric crisis — acute suicidality or psychosis — requires immediate intervention.\n\nPsychiatric diagnosis relies on standardized clinical criteria rather than laboratory tests, most notably the DSM classification system, since no definitive biomarker yet distinguishes most psychiatric disorders. For diagnostic criteria, see the [American Psychiatric Association](https://www.psychiatry.org/), and for global mental-health epidemiology and treatment guidance, the [World Health Organization's mental health program](https://www.who.int/health-topics/mental-health)."
+  },
+  {
+   "id": "03.02.08",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Pediatrics is the medical discipline focused on the health and disease of infants, children, and adolescents, addressing developmental factors, growth physiology, and age-specific conditions unique to growing organisms.",
+   "cs": "Pediatrie je lékařský obor zaměřený na zdraví a nemoci kojenců, dětí a adolescentů, zabývající se vývojovými faktory, fyziologií růstu a věkem specifickými stavy jedinečnými pro rostoucí organismy.",
+   "brief": "Pediatrics focuses on the health and disease of infants, children, and adolescents, addressing developmental factors, growth physiology, and age-specific conditions that arise from a still-growing organism rather than a mature one. It treats the same organ systems as adult medicine but interprets them against constantly shifting developmental baselines — normal heart rate, growth curves, and dosing all change with age in ways adult medicine does not need to track.\n\nPediatrics is a population-defined branch of [[03.02.05]] Clinical Medicine, applying diagnosis and treatment to patients defined by age rather than by organ system or intervention type, and it overlaps with [[03.02.07]] Psychiatry in child and adolescent mental health and with [[03.02.06]] Surgery in pediatric surgical subspecialties, where operative technique must account for a child's smaller and still-developing anatomy. [[03.02.09]] Emergency Medicine likewise maintains pediatric-specific protocols, since dosing and resuscitation technique cannot be scaled down naively from adult standards.\n\nPediatric care extends beyond illness treatment into preventive well-child visits, immunization schedules, and developmental screening, reflecting the discipline's emphasis on monitoring growth as much as treating disease. For pediatric clinical guidelines, see the [American Academy of Pediatrics](https://www.aap.org/), and for global child-health standards, the [World Health Organization's child health program](https://www.who.int/health-topics/child-health)."
+  },
+  {
+   "id": "03.02.09",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Emergency Medicine encompasses the diagnosis and treatment of acute, life-threatening conditions requiring immediate intervention, including trauma management, acute illness, poisoning, and medical crises.",
+   "cs": "Medicína krizových stavů zahrnuje diagnostiku a léčbu akutních, ohrožujících život stavů vyžadujících okamžitou intervenci, včetně managementu traumat, akutních onemocnění, otrav a lékařských krizí.",
+   "brief": "Emergency Medicine diagnoses and treats acute, life-threatening conditions requiring immediate intervention — trauma, acute illness, poisoning, and other medical crises where minutes materially affect outcome. Unlike most clinical disciplines, it is organized around time pressure and diagnostic uncertainty rather than a specific organ system or patient population: an emergency physician must stabilize a patient and narrow a differential diagnosis with incomplete information, often before definitive test results return.\n\nEmergency Medicine functions as the acute-response counterpart to [[03.02.05]] Clinical Medicine's more deliberative diagnostic process, and it hands off directly to [[03.02.06]] Surgery when a trauma case requires operative intervention. It maintains age-specific protocols shared with [[03.02.08]] Pediatrics and crisis-intervention protocols shared with [[03.02.07]] Psychiatry for patients presenting with acute psychiatric emergencies such as severe suicidality.\n\nEmergency departments triage patients by acuity to allocate limited resources to the most time-critical cases first, a system formalized through standardized triage scales used internationally. For emergency-care clinical standards, see the [American College of Emergency Physicians](https://www.acep.org/), and for triage and mass-casualty protocol references, the [World Health Organization's emergency care program](https://www.who.int/health-topics/emergency-care)."
+  },
+  {
+   "id": "03.02.10",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Preventive Medicine encompasses strategies to prevent disease onset and progression through vaccination, health screening, lifestyle modification, occupational health protection, and environmental health safeguards.",
+   "cs": "Preventivní medicína zahrnuje strategie zabránění vzniku a progrese nemoci prostřednictvím očkování, zdravotnického screeningu, změny životního stylu, ochrany zdraví v práci a ochrany zdraví v životním prostředí.",
+   "brief": "Preventive Medicine is the branch of medicine that intervenes before disease develops or progresses, using vaccination, health screening, lifestyle counseling, occupational health protection, and environmental health safeguards to reduce the burden [[03.02.05]] Clinical Medicine would otherwise have to treat. It complements [[03.02.09]] Emergency Medicine's reactive stance by shifting resources upstream: a population screened for hypertension or vaccinated against influenza generates fewer acute crises for emergency departments to manage.\n\nThe specialty draws its interventions from elsewhere in the medical tree — [[03.02.04]] Pharmacology supplies the vaccines and prophylactic drugs it administers — and reaches beyond medicine itself: [[03.09]] Biotechnology develops the diagnostic assays and vaccine platforms it deploys at population scale, while food-safety and nutrition standards from [[03.03]] Agriculture shape the dietary guidance it issues.\n\nPractice ranges from individual counseling in a clinic to population-level programs run by public health agencies, and its evidence base is built on epidemiological studies of risk factors rather than case-by-case diagnosis. For clinical screening recommendations, see the [U.S. Preventive Services Task Force](https://www.uspreventiveservicestaskforce.org/), and for global immunization policy, the [World Health Organization](https://www.who.int/health-topics/vaccines-and-immunization)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "03.02.01",
+   "to": "03.02.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.01",
+   "to": "03.02.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.01",
+   "to": "03.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.01",
+   "to": "03.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.01",
+   "to": "03.02.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.02",
+   "to": "03.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.02",
+   "to": "03.02.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.02",
+   "to": "03.02.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.02",
+   "to": "03.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.02",
+   "to": "03.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.03",
+   "to": "03.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.03",
+   "to": "03.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.03",
+   "to": "03.02.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.03",
+   "to": "03.02.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.03",
+   "to": "03.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.04",
+   "to": "03.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.04",
+   "to": "03.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.04",
+   "to": "03.02.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.04",
+   "to": "03.02.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.04",
+   "to": "03.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.05",
+   "to": "03.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.05",
+   "to": "03.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.05",
+   "to": "03.02.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.05",
+   "to": "03.02.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.05",
+   "to": "03.02.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.06",
+   "to": "03.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.06",
+   "to": "03.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.06",
+   "to": "03.02.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.06",
+   "to": "03.02.06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.06",
+   "to": "03.02.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.07",
+   "to": "03.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.07",
+   "to": "03.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.07",
+   "to": "03.02.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.07",
+   "to": "03.02.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.08",
+   "to": "03.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.08",
+   "to": "03.02.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.08",
+   "to": "03.02.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.08",
+   "to": "03.02.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.09",
+   "to": "03.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.09",
+   "to": "03.02.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.09",
+   "to": "03.02.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.09",
+   "to": "03.02.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.10",
+   "to": "03.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.10",
+   "to": "03.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.10",
+   "to": "03.02.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.10",
+   "to": "03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02.10",
+   "to": "03.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02",
+   "to": "03.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02",
+   "to": "03.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02",
+   "to": "03.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02",
+   "to": "03.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02",
+   "to": "03.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02",
+   "to": "03.02.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02",
+   "to": "03.02.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02",
+   "to": "03.02.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02",
+   "to": "03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02",
+   "to": "03.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.02",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

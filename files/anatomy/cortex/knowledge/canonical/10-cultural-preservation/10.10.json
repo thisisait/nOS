@@ -1,0 +1,43 @@
+{
+ "domain": "10.10",
+ "nodes": [
+  {
+   "id": "10.10",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Oral histories are spoken accounts of past events and family lineages transmitted across generations without written documentation. They preserve personal experience and community memory outside institutional archives.",
+   "cs": "Ústní historie jsou mluvené zprávy minulých událostí a rodinných rodokmenů předávané generacemi bez písemné dokumentace. Zachovávají osobní zkušenost a komunitní paměť mimo institucionální archivy.",
+   "brief": "Oral histories are spoken accounts of past events and family lineages transmitted across generations without written documentation, preserving personal experience and community memory outside institutional archives.\n\nThe branch is the testimonial counterpart to [[10.06]] Stories & Narratives, sharing its spoken transmission but reporting remembered fact about real people rather than fictionalized or archetypal narrative, and it complements [[10.01]] Languages wherever the language itself, not only the account, is endangered and the recording is the last record of both. It shares its methodology with [[05]] Humanities oral-history scholarship, which formalizes interview and archival method for the same raw testimony, under the parent [[10]] Cultural Preservation.\n\nThe [Oral History Association](https://oralhistory.org/) sets the professional standards for interview method, consent, and archiving, and the [Library of Congress StoryCorps collection](https://www.loc.gov/collections/storycorps/) is one of the largest public oral-history archives of ordinary family testimony."
+  }
+ ],
+ "relations": [
+  {
+   "from": "10.10",
+   "to": "05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.10",
+   "to": "10.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.10",
+   "to": "10.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.10",
+   "to": "10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

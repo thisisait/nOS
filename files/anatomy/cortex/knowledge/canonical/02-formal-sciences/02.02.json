@@ -1,0 +1,977 @@
+{
+ "domain": "02.02",
+ "nodes": [
+  {
+   "id": "02.02",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "The study of computation, information and automated systems: from the theory of what can be computed, through algorithms, programming languages and software construction, to systems (databases, operating systems, networks), security, artificial intelligence and graphics. Distinguished from the sibling Mathematics by its focus on effective processes and engineered computing artifacts, and from Information Theory by covering computation broadly rather than quantifying information.",
+   "cs": "Studium výpočtů, informace a automatizovaných systémů: od teorie toho, co lze vypočítat, přes algoritmy, programovací jazyky a tvorbu softwaru až po systémy (databáze, operační systémy, sítě), bezpečnost, umělou inteligenci a grafiku. Od sourozenecké matematiky ji odlišuje zaměření na efektivní procesy a inženýrsky budované výpočetní artefakty, od teorie informace to, že pokrývá výpočty obecně, nikoli kvantifikaci informace.",
+   "brief": "Computer Science is the study of computation, information and automated systems, ranging from the theory of what can be computed at all, through algorithms, programming languages and software construction, to systems such as databases, operating systems and networks, and on to security, artificial intelligence and graphics. It treats the computer as both an object of study and an instrument, asking what problems are solvable, how efficiently, and how to build the software and systems that solve them in practice.\n\nComputer science sits beside [[02.01]] within the Formal Sciences: mathematics supplies the proofs and structures — automata, complexity classes, discrete structures — on which theoretical computer science is built, while computer science adds the constraint that a solution must actually be carried out by a machine in bounded time and space. Its subfields split along the path from theory to artifact: [[02.02.09]] builds systems that perform tasks associated with intelligent behavior, [[02.02.08]] studies how to protect systems and data against adversarial manipulation, and [[02.02.04]] studies how to design, build and maintain software systems at scale.\n\nComputer science borders [[02.04]] most closely in questions of coding, compression and communication, where information theory's quantitative limits on what a channel or code can achieve bound what computer systems can transmit and store. For further reading, see the [ACM Computing Classification System](https://dl.acm.org/ccs) and the [Encyclopaedia Britannica entry on computer science](https://www.britannica.com/science/computer-science)."
+  },
+  {
+   "id": "02.02.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "The mathematical foundations of computation: machine models and formal languages, what is computable and at what cost, program correctness, and the type-theoretic and lambda-calculus foundations of programming. Distinguished from the sibling Algorithms & Data Structures by studying the models and limits of computation rather than designing concrete efficient procedures.",
+   "cs": "Matematické základy výpočtů: strojové modely a formální jazyky, co je vypočitatelné a za jakou cenu, korektnost programů a typově-teoretické a lambda-kalkulové základy programování. Od sourozeneckých algoritmů a datových struktur se liší tím, že studuje modely a meze výpočtů, nikoli návrh konkrétních efektivních postupů.",
+   "brief": "Theoretical Computer Science studies the mathematical foundations of computation: automata theory and formal languages describe machine models and the languages they recognize, complexity theory classifies problems by the resources — time, memory — required to solve them, formal methods develop techniques for proving a program correct rather than merely testing it, and type theory and lambda calculus supply the foundational calculus underlying most programming languages, connecting logic and computation at the deepest level.\n\n[[02.02.01.01]] Automata Theory supplies the machine models whose resource requirements [[02.02.01.02]] Complexity Theory then classifies, asking not just whether a problem is computable but how expensive it is to compute. [[02.02.01.04]] Type Theory and [[02.02.01.05]] Lambda Calculus are similarly linked: lambda calculus gives the bare-bones model of computation as function application, and type theory layers a discipline on top of it that rules out entire classes of errors before a program ever runs — the basis of every statically typed language in use today.\n\nWithin [[02.02]] Computer Science, theoretical computer science is distinguished from its sibling [[02.02.02]] Algorithms & Data Structures by studying the models and limits of computation in the abstract, rather than designing concrete efficient procedures. For further reading, see [ACM SIGACT](https://sigact.org/) and the Stanford Encyclopedia of Philosophy entry on [computability and complexity](https://plato.stanford.edu/entries/computability/)."
+  },
+  {
+   "id": "02.02.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Abstract machines and the formal languages they recognize, organized along the Chomsky hierarchy: finite automata with regular languages, pushdown automata with context-free languages, up to Turing machines and decidability. The machine-model backbone of theoretical CS feeding parsing and verification; the resource costs of computation belong to the sibling Complexity Theory.",
+   "cs": "Abstraktní stroje a formální jazyky, které rozpoznávají, uspořádané podle Chomského hierarchie: konečné automaty s regulárními jazyky, zásobníkové automaty s bezkontextovými jazyky, až po Turingovy stroje a rozhodnutelnost. Strojově-modelová páteř teoretické informatiky, na niž navazují parsování a verifikace; zdrojová náročnost výpočtů patří sourozenecké teorii složitosti."
+  },
+  {
+   "id": "02.02.01.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The weakest standard machine model — finitely many states and no auxiliary memory: DFA/NFA equivalence via the subset construction, the pumping lemma and closure properties, recognizing exactly the regular languages. Contrast the stack-augmented Pushdown automata and the unrestricted Turing machines among its siblings.",
+   "cs": "Nejslabší standardní strojový model — konečně mnoho stavů a žádná pomocná paměť: ekvivalence DKA/NKA podsetovou konstrukcí, pumping lemma a uzávěrové vlastnosti, rozpoznává přesně regulární jazyky. Srovnej sourozence: zásobníkem rozšířené zásobníkové automaty a neomezené Turingovy stroje."
+  },
+  {
+   "id": "02.02.01.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Finite automata augmented with a stack, recognizing exactly the context-free languages: deterministic and nondeterministic variants, equivalence with context-free grammars, and their role as the machine model behind parsers. Strictly between the sibling models — memoryless Finite automata and tape-equipped Turing machines.",
+   "cs": "Konečné automaty rozšířené o zásobník, rozpoznávající přesně bezkontextové jazyky: deterministické a nedeterministické varianty, ekvivalence s bezkontextovými gramatikami a role strojového modelu parserů. Leží striktně mezi sourozeneckými modely — bezpaměťovými konečnými automaty a Turingovými stroji s páskou."
+  },
+  {
+   "id": "02.02.01.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The unrestricted model of computation with an infinite tape: universality, the Church–Turing thesis, the halting problem and undecidability, plus variants (multi-tape, nondeterministic) that ground complexity classes. The top of the automata hierarchy whose lower rungs are the sibling Finite and Pushdown automata.",
+   "cs": "Neomezený model výpočtu s nekonečnou páskou: univerzalita, Churchova–Turingova teze, problém zastavení a nerozhodnutelnost, plus varianty (vícepáskové, nedeterministické), o něž se opírají třídy složitosti. Vrchol hierarchie automatů, jejíž nižší příčky tvoří sourozenecké konečné a zásobníkové automaty."
+  },
+  {
+   "id": "02.02.01.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The algebraic notation for regular languages — union, concatenation and Kleene star — equivalent in power to finite automata (Kleene's theorem), with the conversion algorithms and algebraic laws linking the two. Covers the formal-language concept behind practical regex matching; the machine-side view lives in the sibling Finite automata node.",
+   "cs": "Algebraický zápis regulárních jazyků — sjednocení, zřetězení a Kleeneho hvězdička — výpočetně ekvivalentní konečným automatům (Kleeneho věta), včetně převodních algoritmů a algebraických zákonů, jež obojí spojují. Pokrývá formálně-jazykový koncept za praktickým regexovým vyhledáváním; strojový pohled patří sourozeneckému uzlu konečných automatů."
+  },
+  {
+   "id": "02.02.01.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Grammars whose production rules rewrite a single nonterminal regardless of context, generating exactly the context-free languages recognized by pushdown automata. Central to parsing programming languages and modeling nested, recursive structure — strictly more expressive than regular expressions but weaker than Turing machines.",
+   "cs": "Gramatiky, jejichž přepisovací pravidla nahrazují jediný neterminál bez ohledu na okolí, a generují tak právě bezkontextové jazyky rozpoznávané zásobníkovými automaty. Klíčové pro syntaktickou analýzu programovacích jazyků a modelování vnořené, rekurzivní struktury — silnější než regulární výrazy, ale slabší než Turingovy stroje."
+  },
+  {
+   "id": "02.02.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The study of the intrinsic resources — time, memory, randomness — required to solve computational problems, classifying them into complexity classes and relating classes via reductions. Unlike automata theory, which asks what is computable at all, complexity theory asks how efficiently it can be computed; the P vs NP question is its defining open problem.",
+   "cs": "Studium vnitřních zdrojů — času, paměti, náhodnosti — potřebných k řešení výpočetních problémů, jejich zařazování do tříd složitosti a vzájemné porovnávání tříd pomocí redukcí. Na rozdíl od teorie automatů, která se ptá, co je vůbec vypočitatelné, se teorie složitosti ptá, jak efektivně to lze spočítat; otázka P vs NP je jejím zásadním otevřeným problémem."
+  },
+  {
+   "id": "02.02.01.02.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The open question whether every problem whose solution can be verified in polynomial time (NP) can also be solved in polynomial time (P). A Millennium Prize problem whose resolution would reshape cryptography, optimization, and our understanding of the limits of efficient computation; covers NP-completeness, relativization barriers, and consequences of either answer.",
+   "cs": "Otevřená otázka, zda každý problém, jehož řešení lze ověřit v polynomiálním čase (NP), lze v polynomiálním čase i vyřešit (P). Problém tisíciletí, jehož rozřešení by proměnilo kryptografii, optimalizaci i chápání hranic efektivního počítání; zahrnuje NP-úplnost, bariéry relativizace a důsledky obou možných odpovědí."
+  },
+  {
+   "id": "02.02.01.02.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The catalogue of resource-bounded sets of problems — P, NP, PSPACE, EXPTIME, BPP, and the wider complexity zoo — their definitions, inclusions, separations, and complete problems. Where the sibling P vs NP node covers one specific open question, this node covers the taxonomy of classes itself and the hierarchy theorems relating them.",
+   "cs": "Katalog množin problémů vymezených zdrojovými omezeními — P, NP, PSPACE, EXPTIME, BPP a širší „zoo složitosti“ — jejich definice, inkluze, separace a úplné problémy. Zatímco sesterský uzel P vs NP pokrývá jednu konkrétní otevřenou otázku, tento uzel pokrývá samotnou taxonomii tříd a věty o hierarchiích, které je propojují."
+  },
+  {
+   "id": "02.02.01.02.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Techniques for transforming one problem into another so that hardness or membership results transfer: polynomial-time many-one and Turing reductions, log-space reductions, gadget constructions, and approximation-preserving reductions. The working tool for proving NP-completeness and populating the complexity classes catalogued by the sibling node.",
+   "cs": "Techniky převodu jednoho problému na jiný tak, aby se přenášely výsledky o obtížnosti či příslušnosti: polynomiální many-one a Turingovy redukce, redukce v logaritmickém prostoru, konstrukce gadgetů a redukce zachovávající aproximaci. Pracovní nástroj pro důkazy NP-úplnosti a zaplňování tříd složitosti katalogizovaných sesterským uzlem."
+  },
+  {
+   "id": "02.02.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Mathematically rigorous techniques for specifying and verifying hardware and software: model checking, theorem proving, abstract interpretation, and specification languages such as TLA+, Z, or Alloy. Distinct from its theory siblings by its engineering aim — proving concrete systems correct against a specification rather than studying computation in the abstract.",
+   "cs": "Matematicky rigorózní techniky pro specifikaci a verifikaci hardwaru a softwaru: model checking, dokazování vět, abstraktní interpretace a specifikační jazyky jako TLA+, Z nebo Alloy. Od teoretických sourozenců se liší inženýrským cílem — dokazovat správnost konkrétních systémů vůči specifikaci, nikoli studovat výpočet abstraktně."
+  },
+  {
+   "id": "02.02.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Formal systems in which every term carries a type, serving both as a foundation for mathematics (Martin-Löf type theory, homotopy type theory) and as the basis of programming-language type systems and proof assistants like Coq, Agda, and Lean. Builds on the untyped lambda calculus of the sibling node by adding typing disciplines, and underpins the Curry–Howard correspondence between proofs and programs.",
+   "cs": "Formální systémy, v nichž každý term nese typ; slouží jako základ matematiky (Martin-Löfova teorie typů, homotopická teorie typů) i jako podklad typových systémů programovacích jazyků a důkazových asistentů Coq, Agda či Lean. Na netypovaný lambda kalkul ze sesterského uzlu navazuje přidáním typových disciplín a stojí za Curryho–Howardovou korespondencí mezi důkazy a programy."
+  },
+  {
+   "id": "02.02.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The untyped calculus of function abstraction and application — variables, lambda abstraction, beta reduction — that is Turing-complete and serves as the minimal core of functional programming. Covers reduction strategies, Church encodings, combinators, and normalization; typed extensions belong under the sibling Type Theory node.",
+   "cs": "Netypovaný kalkul abstrakce a aplikace funkcí — proměnné, lambda abstrakce, beta redukce — který je turingovsky úplný a tvoří minimální jádro funkcionálního programování. Pokrývá redukční strategie, Churchova kódování, kombinátory a normalizaci; typovaná rozšíření patří pod sesterský uzel Teorie typů."
+  },
+  {
+   "id": "02.02.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "The design and analysis of concrete computational procedures and the data organizations they operate on: sorting, searching, graph traversal, dynamic programming, and the trees, hash tables, and heaps that support them. Bridges theoretical computer science and software engineering — asymptotic analysis meets practical implementation and choice of the right structure for a workload.",
+   "cs": "Návrh a analýza konkrétních výpočetních postupů a datových organizací, nad nimiž pracují: řazení, vyhledávání, procházení grafů, dynamické programování a stromy, hašovací tabulky či haldy, které je podpírají. Most mezi teoretickou informatikou a softwarovým inženýrstvím — asymptotická analýza se zde potkává s praktickou implementací a volbou správné struktury pro danou zátěž.",
+   "brief": "Algorithms & Data Structures designs and analyzes concrete computational procedures and the data organizations that support them: sorting arranges data into order, search locates a target within it, graph algorithms solve problems on networks of connected nodes, dynamic programming builds solutions to complex problems from solutions to their overlapping subproblems, and data structures such as trees, hash tables, and heaps organize data so that these operations run efficiently.\n\n[[02.02.02.05]] Data Structures underlies the rest of the branch — the choice between a hash table, a balanced tree, or a heap determines how fast [[02.02.02.02]] Search Algorithms and ordinary sorting can run over the same data. [[02.02.02.03]] Graph Algorithms and dynamic programming are similarly linked in practice: many graph problems, from shortest paths to network flow, are solved by breaking them into overlapping subproblems, the same technique dynamic programming formalizes in general.\n\nWithin [[02.02]] Computer Science, the field bridges [[02.02.01]] Theoretical Computer Science and [[02.02.04]] Software Engineering: it takes the asymptotic analysis theory provides and turns it into the practical judgment of which structure fits a given workload. For further reading, see MIT OpenCourseWare's [Introduction to Algorithms](https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/) and the [NIST Dictionary of Algorithms and Data Structures](https://xlinux.nist.gov/dads/)."
+  },
+  {
+   "id": "02.02.02.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Algorithms that arrange elements of a collection into order, from comparison-based methods (quicksort, mergesort, heapsort) bounded by O(n log n) to non-comparison techniques like radix sort and hybrid production sorts like Timsort. Covers stability, in-place operation, cache behavior, and worst-versus-average-case trade-offs that decide which sort fits which workload.",
+   "cs": "Algoritmy uspořádávající prvky kolekce, od porovnávacích metod (quicksort, mergesort, heapsort) omezených hranicí O(n log n) po neporovnávací techniky jako radix sort a hybridní produkční řazení typu Timsort. Pokrývá stabilitu, řazení na místě, chování vůči cache a kompromisy mezi nejhorším a průměrným případem, které rozhodují, které řazení sedí které zátěži."
+  },
+  {
+   "id": "02.02.02.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The divide-and-conquer sort that partitions around a pivot and recurses on both sides: O(n log n) average, O(n²) worst case, in-place and cache-friendly but not stable. Covers pivot-selection strategies, three-way partitioning for duplicate keys, and introsort-style hybrids that cap the worst case.",
+   "cs": "Řazení typu rozděl a panuj, které rozdělí prvky kolem pivotu a rekurzivně zpracuje obě části: průměrně O(n log n), v nejhorším případě O(n²), pracuje na místě a šetří cache, ale není stabilní. Zahrnuje strategie volby pivotu, trojcestné dělení pro opakované klíče a hybridy typu introsort, které omezují nejhorší případ."
+  },
+  {
+   "id": "02.02.02.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The divide-and-conquer sort that splits the input in half, sorts each half, and merges: guaranteed O(n log n) in all cases and stable, at the cost of O(n) auxiliary space. The method of choice for linked lists and external sorting of data too large for memory, and the merge step underlies Timsort and many parallel sorts.",
+   "cs": "Řazení typu rozděl a panuj, které vstup rozpůlí, obě poloviny seřadí a slije: zaručené O(n log n) ve všech případech a stabilní, za cenu O(n) pomocné paměti. První volba pro spojové seznamy a externí řazení dat nevejdoucích se do paměti; krok slévání je základem Timsortu i mnoha paralelních řazení."
+  },
+  {
+   "id": "02.02.02.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The comparison sort that builds a binary max-heap over the array and repeatedly extracts the maximum: guaranteed O(n log n), in-place with O(1) extra space, but not stable and with poor cache locality compared to quicksort. Valued where worst-case bounds and constant memory matter, e.g. inside introsort's fallback path.",
+   "cs": "Porovnávací řazení, které nad polem postaví binární max-haldu a opakovaně odebírá maximum: zaručené O(n log n), na místě s O(1) přídavné paměti, avšak nestabilní a s horší lokalitou cache než quicksort. Cení se tam, kde záleží na nejhorším případu a konstantní paměti, např. jako záložní větev introsortu."
+  },
+  {
+   "id": "02.02.02.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "A non-comparison sort that processes keys digit by digit (LSD or MSD) using a stable bucket distribution such as counting sort, achieving O(nk) time for k-digit keys and beating the O(n log n) comparison bound. Effective for integers, fixed-length strings, and other bounded-alphabet keys; unlike its comparison-based siblings it cannot sort by arbitrary predicates.",
+   "cs": "Neporovnávací řazení zpracovávající klíče číslici po číslici (LSD či MSD) pomocí stabilního rozdělování do přihrádek, typicky counting sortem; dosahuje času O(nk) pro k-ciferné klíče a překonává porovnávací hranici O(n log n). Účinné pro celá čísla, řetězce pevné délky a jiné klíče nad omezenou abecedou; na rozdíl od porovnávacích sourozenců neumí řadit podle libovolného predikátu."
+  },
+  {
+   "id": "02.02.02.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The adaptive hybrid of mergesort and insertion sort that detects and merges naturally occurring runs, giving O(n) on nearly-sorted data, O(n log n) worst case, and stability. The default sort in Python and Java's object sorting, designed around real-world data patterns rather than adversarial inputs.",
+   "cs": "Adaptivní hybrid mergesortu a řazení vkládáním, který vyhledává a slévá přirozeně se vyskytující seřazené úseky; na téměř seřazených datech dosahuje O(n), v nejhorším případě O(n log n) a je stabilní. Výchozí řazení v Pythonu a pro objekty v Javě, navržené pro vzory reálných dat, nikoli pro nepřátelské vstupy."
+  },
+  {
+   "id": "02.02.02.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Algorithms for locating an element or solution within a data set or state space: binary search on ordered data, hashing-based lookup, and systematic state-space exploration such as backtracking, branch-and-bound, and heuristic search (A*). Distinct from Graph Algorithms, which covers graph-structural problems broadly — here the focus is the act of finding a target efficiently.",
+   "cs": "Algoritmy pro nalezení prvku nebo řešení v datové množině či stavovém prostoru: binární vyhledávání nad uspořádanými daty, vyhledávání hašováním a systematické prohledávání stavového prostoru jako backtracking, metoda větví a mezí či heuristické hledání (A*). Liší se od Grafových algoritmů, které pokrývají grafové problémy obecně — zde je těžištěm efektivní nalezení cíle."
+  },
+  {
+   "id": "02.02.02.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Algorithms operating on vertex-and-edge structures: traversal (BFS, DFS), shortest paths (Dijkstra, Bellman–Ford, Floyd–Warshall), minimum spanning trees, network flows, matchings, topological sorting, and connectivity. Covers the algorithmic toolkit itself; the graph as a data representation (adjacency lists vs matrices) lives under Data Structures > Graphs.",
+   "cs": "Algoritmy pracující nad strukturami z vrcholů a hran: procházení (BFS, DFS), nejkratší cesty (Dijkstra, Bellman–Ford, Floyd–Warshall), minimální kostry, toky v sítích, párování, topologické řazení a souvislost. Pokrývá samotnou algoritmickou výbavu; graf jako datová reprezentace (seznamy sousedů vs. matice) patří pod Datové struktury > Grafy."
+  },
+  {
+   "id": "02.02.02.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The technique of solving problems with overlapping subproblems and optimal substructure by storing subproblem results — memoization top-down or tabulation bottom-up. Covers classic formulations (knapsack, edit distance, longest common subsequence, matrix-chain ordering) and the art of defining state spaces and recurrences; distinct from divide-and-conquer, whose subproblems do not overlap.",
+   "cs": "Technika řešení problémů s překrývajícími se podproblémy a optimální substrukturou pomocí ukládání výsledků podproblémů — memoizace shora dolů, či tabulace zdola nahoru. Pokrývá klasické úlohy (batoh, editační vzdálenost, nejdelší společná podposloupnost, násobení řetězce matic) a umění návrhu stavového prostoru a rekurencí; liší se od metody rozděl a panuj, jejíž podproblémy se nepřekrývají."
+  },
+  {
+   "id": "02.02.02.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Ways of organizing data in memory to support efficient operations: trees, hash tables, heaps, graphs, and tries, along with the arrays, lists, stacks, and queues they build on. The counterpart to the algorithm siblings under this branch — the focus is the representation and its operation costs (insert, lookup, delete), not the procedures that consume it.",
+   "cs": "Způsoby organizace dat v paměti pro efektivní operace: stromy, hašovací tabulky, haldy, grafy a trie, spolu s poli, seznamy, zásobníky a frontami, na nichž stavějí. Protějšek algoritmických sourozenců této větve — těžištěm je reprezentace a ceny jejích operací (vložení, vyhledání, smazání), nikoli procedury, které ji využívají."
+  },
+  {
+   "id": "02.02.02.05.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Hierarchical linked structures for ordered data: binary search trees and their self-balancing variants (AVL, red-black) giving O(log n) search, insert, and delete, plus disk-oriented B-trees and B+-trees that underpin databases and filesystems. Covers rotations, balancing invariants, and range queries — ordered operations that hash tables cannot provide.",
+   "cs": "Hierarchické spojové struktury pro uspořádaná data: binární vyhledávací stromy a jejich samovyvažující varianty (AVL, červeno-černé) s O(log n) vyhledáním, vložením i smazáním, plus diskově orientované B-stromy a B+-stromy, na nichž stojí databáze a souborové systémy. Pokrývá rotace, vyvažovací invarianty a intervalové dotazy — uspořádané operace, které hašovací tabulky nenabízejí."
+  },
+  {
+   "id": "02.02.02.05.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Structures mapping keys to values via a hash function into an array of buckets, giving expected O(1) lookup, insert, and delete. Covers hash-function design, collision resolution (chaining, open addressing, Robin Hood), load factors and resizing, and cuckoo or perfect hashing — trading the ordered traversal of trees for raw point-lookup speed.",
+   "cs": "Struktury mapující klíče na hodnoty hašovací funkcí do pole přihrádek, s očekávaným O(1) vyhledáním, vložením i smazáním. Pokrývá návrh hašovacích funkcí, řešení kolizí (řetězení, otevřené adresování, Robin Hood), faktor zaplnění a zvětšování, i kukaččí či perfektní hašování — výměnou za rychlost bodového dotazu se vzdává uspořádaného průchodu stromů."
+  },
+  {
+   "id": "02.02.02.05.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Tree-shaped structures maintaining the heap property — each parent ordered before its children — typically as an implicit array-backed binary heap, giving O(1) access to the minimum or maximum and O(log n) insert and extract. The standard engine behind priority queues, heapsort, and Dijkstra's algorithm; covers binary, d-ary, binomial, and Fibonacci variants.",
+   "cs": "Stromové struktury udržující haldovou vlastnost — každý rodič je uspořádán před svými potomky — typicky jako implicitní binární halda nad polem, s O(1) přístupem k minimu či maximu a O(log n) vložením a odebráním. Standardní motor prioritních front, heapsortu a Dijkstrova algoritmu; pokrývá binární, d-ární, binomiální i Fibonacciho varianty."
+  },
+  {
+   "id": "02.02.02.05.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "In-memory representations of vertex-and-edge structures — adjacency lists, adjacency matrices, edge lists, and compressed sparse formats — and their trade-offs in space, edge lookup, and neighbor iteration for sparse versus dense graphs. Covers the representation layer only; the procedures that run over it belong to the sibling-branch Graph Algorithms node.",
+   "cs": "Paměťové reprezentace struktur z vrcholů a hran — seznamy sousedů, matice sousednosti, seznamy hran a komprimované řídké formáty — a jejich kompromisy v paměti, dotazu na hranu a iteraci sousedů u řídkých versus hustých grafů. Pokrývá pouze reprezentační vrstvu; procedury nad ní běžící patří uzlu Grafové algoritmy v sesterské větvi."
+  },
+  {
+   "id": "02.02.02.05.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Prefix trees storing strings character by character along root-to-node paths, so lookup, insert, and prefix enumeration cost O(key length) independent of the number of keys. The natural structure for autocomplete, dictionaries, and IP routing; covers compressed radix/Patricia trees and succinct variants that tame the memory overhead plain tries carry compared to hash tables.",
+   "cs": "Prefixové stromy ukládající řetězce znak po znaku podél cest od kořene, takže vyhledání, vložení i výčet podle prefixu stojí O(délky klíče) nezávisle na počtu klíčů. Přirozená struktura pro našeptávače, slovníky a směrování IP; pokrývá komprimované radix/Patricia stromy a úsporné varianty krotící paměťovou režii, kterou prosté trie nesou oproti hašovacím tabulkám."
+  },
+  {
+   "id": "02.02.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "The design, semantics, and comparative study of programming languages, organized here by paradigm and niche: system languages, scripting languages, functional languages, JVM languages, and domain-specific languages. Covers language features, type systems in practice, runtimes, and interoperability — the formal foundations (lambda calculus, type theory) live under Theoretical Computer Science.",
+   "cs": "Návrh, sémantika a srovnávací studium programovacích jazyků, zde členěné podle paradigmatu a určení: systémové jazyky, skriptovací jazyky, funkcionální jazyky, jazyky pro JVM a doménově specifické jazyky. Pokrývá jazykové rysy, typové systémy v praxi, běhová prostředí a interoperabilitu — formální základy (lambda kalkul, teorie typů) patří pod Teoretickou informatiku.",
+   "brief": "Programming Languages studies the design, semantics, and implementation of the notations used to instruct computers, comparing how different language families structure computation, data, and control flow. The subfield is organized here by paradigm and niche, from [[02.02.03.01]] built for close control over hardware and memory, through scripting and JVM-hosted languages, to [[02.02.03.03]] centered on function application and immutable data, and domain-specific languages purpose-built for a narrow problem rather than general-purpose computation.\n\nProgramming Languages borders [[02.02.01]], which supplies the formal foundations — lambda calculus, type theory, operational semantics — that a language's syntax and type system put into practice; a language designer works within those foundations rather than reinventing them. It also feeds directly into [[02.02.04]], since the paradigm and tooling a team adopts constrain which design patterns and architectures are practical to build and maintain at scale.\n\nFor further reading, see the [Wikipedia overview of programming languages](https://en.wikipedia.org/wiki/Programming_language) and the [ACM SIGPLAN community page](https://www.sigplan.org/), the primary research venue for programming-language design and implementation."
+  },
+  {
+   "id": "02.02.03.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Languages built for operating systems, embedded software, and performance-critical infrastructure — C, C++, Rust, Go, and assembly — characterized by compilation to native code, fine control over memory layout, and minimal runtime. The contrast with the scripting siblings is deliberate: predictable performance and hardware access over interactive convenience.",
+   "cs": "Jazyky stavěné pro operační systémy, vestavěný software a výkonnostně kritickou infrastrukturu — C, C++, Rust, Go a assembler — vyznačující se kompilací do nativního kódu, jemnou kontrolou nad rozložením paměti a minimálním runtime. Kontrast se skriptovacími sourozenci je záměrný: předvídatelný výkon a přístup k hardwaru před interaktivním pohodlím."
+  },
+  {
+   "id": "02.02.03.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The minimal procedural systems language of Unix heritage: manual memory management, pointers, a thin standard library, and a stable ABI that makes it the lingua franca for operating systems, embedded targets, and foreign-function interfaces. Covers the ISO C standards, undefined behavior, and idioms; its object-oriented superset concerns belong to the sibling C++ node.",
+   "cs": "Minimalistický procedurální systémový jazyk unixového původu: ruční správa paměti, ukazatele, tenká standardní knihovna a stabilní ABI, díky němuž je lingua franca operačních systémů, vestavěných zařízení a rozhraní pro volání mezi jazyky. Pokrývá normy ISO C, nedefinované chování a idiomy; objektově orientovaná nadstavba patří sesterskému uzlu C++."
+  },
+  {
+   "id": "02.02.03.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The multi-paradigm systems language extending C with classes, templates, RAII, and a large standard library, driven by zero-cost abstraction — high-level constructs compiling to code as fast as hand-written C. Covers the modern C++ standards (C++11 through C++23), move semantics, template metaprogramming, and the sharp edges of manual lifetime management that Rust's ownership model was designed to eliminate.",
+   "cs": "Multiparadigmatický systémový jazyk rozšiřující C o třídy, šablony, RAII a rozsáhlou standardní knihovnu, vedený zásadou abstrakce s nulovou režií — vysokoúrovňové konstrukce se kompilují do kódu rychlého jako ručně psané C. Pokrývá moderní normy (C++11 až C++23), move sémantiku, šablonové metaprogramování i ostré hrany ruční správy životnosti, které měl Rustův model vlastnictví odstranit."
+  },
+  {
+   "id": "02.02.03.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The systems language whose compile-time ownership and borrowing model guarantees memory safety and data-race freedom without a garbage collector, at C/C++-level performance. Covers the borrow checker, lifetimes, traits, fearless concurrency, unsafe blocks, and the Cargo ecosystem — trading Go's simplicity for stronger static guarantees.",
+   "cs": "Systémový jazyk, jehož model vlastnictví a výpůjček vynucovaný při kompilaci zaručuje paměťovou bezpečnost a nepřítomnost datových závodů bez garbage collectoru, při výkonu na úrovni C/C++. Pokrývá borrow checker, lifetimes, traity, bezstarostnou souběžnost, bloky unsafe a ekosystém Cargo — výměnou za jednoduchost Go nabízí silnější statické záruky."
+  },
+  {
+   "id": "02.02.03.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Google's deliberately small compiled language for networked services: goroutines and channels for built-in concurrency, a garbage collector, fast compilation, and a rich standard library, prioritizing readability and team-scale maintainability. The pragmatic middle of the system-language family — safer and simpler than C/C++, less strict and less zero-cost than Rust — and the implementation language of Docker and Kubernetes.",
+   "cs": "Záměrně malý kompilovaný jazyk od Googlu pro síťové služby: goroutiny a kanály pro vestavěnou souběžnost, garbage collector, rychlá kompilace a bohatá standardní knihovna, s důrazem na čitelnost a udržovatelnost v týmech. Pragmatický střed systémové rodiny — bezpečnější a jednodušší než C/C++, méně přísný a méně „zero-cost“ než Rust — a implementační jazyk Dockeru a Kubernetes."
+  },
+  {
+   "id": "02.02.03.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Human-readable mnemonics mapping nearly one-to-one onto a processor's machine instructions — registers, addressing modes, calling conventions — for ISAs such as x86-64, ARM/AArch64, and RISC-V. Used where compilers cannot reach: boot code, interrupt handlers, SIMD hot paths, reverse engineering, and exploit analysis; the lowest rung of this branch, beneath even C.",
+   "cs": "Člověku čitelné mnemotechnické zápisy mapované téměř jedna ku jedné na strojové instrukce procesoru — registry, adresovací režimy, volací konvence — pro instrukční sady jako x86-64, ARM/AArch64 a RISC-V. Používá se tam, kam kompilátory nedosáhnou: zaváděcí kód, obsluhy přerušení, horké cesty SIMD, reverzní inženýrství a analýza exploitů; nejnižší příčka této větve, ještě pod C."
+  },
+  {
+   "id": "02.02.03.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Dynamically typed, interpreter- or VM-hosted languages optimized for developer speed — Python, JavaScript, Ruby, Perl, PHP — where code runs without an explicit compile step and gluing systems together is a first-class use case. The trade against the system-language siblings is runtime overhead and later error detection in exchange for brevity, rich standard libraries, and rapid iteration.",
+   "cs": "Dynamicky typované jazyky běžící v interpretu či VM, optimalizované pro rychlost vývoje — Python, JavaScript, Ruby, Perl, PHP — kde kód běží bez explicitního kompilačního kroku a slepování systémů je prvotřídní použití. Daní oproti systémovým sourozencům je běhová režie a pozdější odhalení chyb, výměnou za stručnost, bohaté standardní knihovny a rychlou iteraci."
+  },
+  {
+   "id": "02.02.03.02.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The general-purpose scripting language defined by readable indentation-based syntax, a \"batteries included\" standard library, and dominant ecosystems in data science, machine learning, and automation (NumPy, pandas, PyTorch). Covers CPython and alternative runtimes, the GIL and its removal efforts, type hints, and packaging — breadth of ecosystem is what separates it from Ruby and Perl.",
+   "cs": "Univerzální skriptovací jazyk vymezený čitelnou syntaxí založenou na odsazení, standardní knihovnou „s bateriemi“ a dominantními ekosystémy v datové vědě, strojovém učení a automatizaci (NumPy, pandas, PyTorch). Pokrývá CPython i alternativní běhová prostředí, GIL a snahy o jeho odstranění, typové anotace a balíčkování — šíře ekosystému jej odlišuje od Ruby a Perlu."
+  },
+  {
+   "id": "02.02.03.02.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The language of the web: prototype-based, event-driven, single-threaded with an async event loop, running natively in every browser and on servers via Node.js and successors. Covers the ECMAScript standards, closures and promises, the npm ecosystem, and TypeScript as its statically typed superset — unique among its siblings in being unavoidable for client-side web work.",
+   "cs": "Jazyk webu: prototypový, událostmi řízený, jednovláknový s asynchronní smyčkou událostí, běžící nativně v každém prohlížeči a na serverech přes Node.js a nástupce. Pokrývá normy ECMAScript, closures a promises, ekosystém npm a TypeScript jako staticky typovanou nadstavbu — mezi sourozenci je jedinečný tím, že se mu při klientském vývoji webu nelze vyhnout."
+  },
+  {
+   "id": "02.02.03.02.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The dynamic object-oriented language where everything is an object and developer happiness is an explicit design goal, known for expressive blocks, open classes, and metaprogramming. Its center of gravity is Ruby on Rails and the convention-over-configuration web style it popularized — more uniformly object-oriented than Python, more readable than Perl.",
+   "cs": "Dynamický objektově orientovaný jazyk, v němž je vše objektem a radost vývojáře je výslovným návrhovým cílem; proslulý expresivními bloky, otevřenými třídami a metaprogramováním. Jeho těžištěm je Ruby on Rails a styl webového vývoje „konvence před konfigurací“, který zpopularizoval — objektově jednotnější než Python, čitelnější než Perl."
+  },
+  {
+   "id": "02.02.03.02.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The text-processing veteran with regular expressions woven into the syntax, context-sensitive semantics, and the TIMTOWTDI motto (\"there's more than one way to do it\"), plus CPAN as one of the oldest module archives. Once the default for Unix administration, bioinformatics, and early CGI web work, now largely succeeded by Python for new projects but still ubiquitous in legacy pipelines and one-liners.",
+   "cs": "Veterán zpracování textu s regulárními výrazy vetkanými přímo do syntaxe, kontextově citlivou sémantikou a mottem TIMTOWTDI („víc než jeden způsob, jak to udělat“), plus CPAN jako jeden z nejstarších archivů modulů. Kdysi výchozí volba pro správu Unixu, bioinformatiku a rané CGI weby, dnes pro nové projekty z velké části nahrazen Pythonem, ale stále všudypřítomný ve starších pipeline a jednořádkových skriptech."
+  },
+  {
+   "id": "02.02.03.02.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The server-side language born as an HTML preprocessor that still powers most of the web through WordPress, Laravel, Symfony, and Composer's ecosystem. Covers its request-per-execution model, the PHP 7/8 performance and type-system renaissance (JIT, enums, attributes), and runtimes like PHP-FPM and FrankenPHP — web-first by design where its siblings are general-purpose.",
+   "cs": "Serverový jazyk zrozený jako preprocesor HTML, který přes WordPress, Laravel, Symfony a ekosystém Composeru stále pohání většinu webu. Pokrývá model „jeden požadavek, jeden běh“, výkonnostní a typovou renesanci PHP 7/8 (JIT, výčty, atributy) a běhová prostředí jako PHP-FPM či FrankenPHP — na rozdíl od univerzálních sourozenců je od návrhu zaměřen na web."
+  },
+  {
+   "id": "02.02.03.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Languages organized around functions as values, immutability, and expression-oriented computation — Haskell, OCaml, F#, Erlang/Elixir, Clojure, and the ML family — with pattern matching, algebraic data types, and often powerful type inference. Distinguished from the other paradigm siblings by treating side effects as something to isolate or make explicit; JVM-hosted functional hybrids like Scala sit primarily under JVM Languages.",
+   "cs": "Jazyky postavené na funkcích jako hodnotách, neměnnosti dat a výpočtu orientovaném na výrazy — Haskell, OCaml, F#, Erlang/Elixir, Clojure a rodina ML — s pattern matchingem, algebraickými datovými typy a často silným odvozováním typů. Od ostatních paradigmatických sourozenců se liší tím, že vedlejší účinky izolují nebo činí explicitními; funkcionální hybridy na JVM jako Scala patří primárně pod Jazyky pro JVM."
+  },
+  {
+   "id": "02.02.03.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Languages targeting the Java Virtual Machine — Java itself, Kotlin, Scala, Groovy, Clojure — sharing its garbage-collected runtime, JIT compilation, threading model, and mutual interoperability through JVM bytecode. The grouping is by runtime rather than paradigm: a Scala program is functional, a Kotlin program pragmatic-OO, yet both draw on the same Java library ecosystem and deployment story.",
+   "cs": "Jazyky cílící na Java Virtual Machine — samotná Java, Kotlin, Scala, Groovy, Clojure — sdílející její runtime s garbage collectorem, JIT kompilaci, model vláken a vzájemnou interoperabilitu skrze JVM bytecode. Seskupení je podle běhového prostředí, nikoli paradigmatu: program ve Scale je funkcionální, v Kotlinu pragmaticky objektový, oba však čerpají ze stejného ekosystému javovských knihoven a způsobu nasazení."
+  },
+  {
+   "id": "02.02.03.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Languages designed for one problem domain rather than general computation: SQL for queries, regular expressions for text patterns, HTML/CSS for documents, Makefiles and HCL for builds and infrastructure, plus embedded DSLs hosted inside general-purpose languages. Covers the design trade-off that defines them — expressive power surrendered for domain concision and analyzability — unlike every general-purpose sibling in this branch.",
+   "cs": "Jazyky navržené pro jednu problémovou doménu, nikoli pro obecný výpočet: SQL pro dotazy, regulární výrazy pro textové vzory, HTML/CSS pro dokumenty, Makefile a HCL pro sestavování a infrastrukturu, plus vestavěné DSL hostované uvnitř obecných jazyků. Pokrývá určující návrhový kompromis — vzdání se výpočetní síly výměnou za doménovou stručnost a analyzovatelnost — čímž se liší od všech obecných sourozenců této větve."
+  },
+  {
+   "id": "02.02.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Software engineering is the discipline of designing, implementing, and maintaining software systems through systematic methodologies. It encompasses design patterns for reusable solutions, architectural principles for system organization, testing strategies for quality assurance, DevOps practices for automation and deployment, and agile methodologies for iterative development.",
+   "cs": "Softwarové inženýrství je disciplína navrhování, implementace a údržby softwarových systémů pomocí systematických metod. Zahrnuje návrhové vzory pro opakovaně použitelná řešení, principy architektury pro organizaci systémů, strategie testování pro zajištění kvality, praxi DevOps pro automatizaci a nasazení a agilní metodologie pro iterativní vývoj.",
+   "brief": "Software Engineering is the discipline of designing, building, and maintaining software systems through systematic methodologies rather than ad hoc coding. It spans [[02.02.04.01]] for reusable solutions to recurring design problems, [[02.02.04.02]] for the organization of a system into components and their interactions, [[02.02.04.03]] for verifying that a system behaves as intended, DevOps practices for automating build and deployment, and agile methodologies for managing iterative development.\n\nSoftware Engineering sits downstream of [[02.02.03]]: the paradigm and tooling a language provides shape which architectures and patterns a team can practically sustain as a codebase grows. It also borders [[02.02.07]], since the systems software engineers build ultimately run as processes on an operating system and communicate over a network — engineering discipline is what keeps that composition maintainable rather than accidental.\n\nFor further reading, see the [Wikipedia overview of software engineering](https://en.wikipedia.org/wiki/Software_engineering) and the [IEEE Software Engineering Body of Knowledge (SWEBOK)](https://www.computer.org/education/bodies-of-knowledge/software-engineering), the field's standard reference curriculum."
+  },
+  {
+   "id": "02.02.04.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Named, reusable solutions to recurring object-oriented design problems, catalogued by scope — creational (Singleton, Factory, Builder), structural (Adapter, Decorator, Composite), and behavioral (Observer, Strategy, Command) — most influentially by the Gang of Four. Distinct from Software Architecture's system-level structure: patterns operate at the class-and-object level, giving developers a shared vocabulary for recurring micro-structures rather than a system's overall shape.",
+   "cs": "Pojmenovaná, znovupoužitelná řešení opakujících se problémů objektově orientovaného návrhu, katalogizovaná podle rozsahu — tvořivé (Singleton, Factory, Builder), strukturální (Adapter, Decorator, Composite) a chování (Observer, Strategy, Command) — nejvlivněji sepsaná Gang of Four. Na rozdíl od Softwarové architektury, která řeší strukturu systému jako celku, vzory působí na úrovni tříd a objektů a dávají vývojářům sdílený slovník pro opakující se mikrostruktury."
+  },
+  {
+   "id": "02.02.04.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The system-level structure of a software system: its decomposition into components, the connectors and protocols linking them, and the principles — layering, modularity, coupling and cohesion — governing that organization, captured in styles such as microservices, event-driven, layered, and hexagonal architecture. Distinct from Design Patterns' class-level solutions and from DevOps' delivery concerns: architecture fixes the shape a system takes before code is written.",
+   "cs": "Systémová úroveň struktury softwarového systému: jeho rozklad na komponenty, konektory a protokoly, které je propojují, a principy — vrstvení, modularita, provázanost a soudržnost — řídící jejich organizaci, zachycená ve stylech jako mikroslužby, architektura řízená událostmi, vrstvená a hexagonální architektura. Na rozdíl od Návrhových vzorů, které řeší úroveň tříd, a DevOps, které řeší dodávku, architektura určuje tvar systému ještě před napsáním kódu."
+  },
+  {
+   "id": "02.02.04.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Systematic verification of software correctness across levels — unit, integration, system, and acceptance testing — and techniques such as test-driven development, mocking, and coverage analysis, distinguishing functional correctness (does it meet the spec) from non-functional checks (performance, security). Distinct from DevOps' automation of the delivery pipeline that runs these tests, and from Design Patterns/Architecture's concern with structure rather than verification.",
+   "cs": "Systematické ověřování správnosti softwaru napříč úrovněmi — jednotkové, integrační, systémové a akceptační testování — a technik jako vývoj řízený testy, mockování a analýza pokrytí, které odlišují funkční správnost (splnění specifikace) od nefunkčních kontrol (výkon, bezpečnost). Na rozdíl od DevOps, které automatizuje doručovací pipeline spouštějící tyto testy, se testování soustředí na ověřování, nikoli na strukturu jako Návrhové vzory či Architektura."
+  },
+  {
+   "id": "02.02.04.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "DevOps integrates software development and IT operations through automation, continuous integration, continuous delivery, and infrastructure-as-code practices to accelerate deployment cycles.",
+   "cs": "DevOps integruje vývoj softwaru a provoz IT prostřednictvím automatizace, kontinuální integrace, kontinuálního doručování a praktik infrastruktury jako kódu, aby se urychlily cykly nasazení."
+  },
+  {
+   "id": "02.02.04.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Agile methodologies are iterative and incremental approaches to software development that prioritize adaptability, team collaboration, and continuous feedback over rigid upfront planning.",
+   "cs": "Agilní metodologie jsou iterativní a inkrementální přístupy k vývoji softwaru, které upřednostňují přizpůsobivost, týmovou spolupráci a kontinuální zpětnou vazbu před pevným předběžným plánováním."
+  },
+  {
+   "id": "02.02.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Databases are organized systems for persistent storage, retrieval, and management of structured and unstructured data. They range from relational databases enforcing ACID properties to NoSQL systems prioritizing scalability and flexibility, grounded in formal database theory.",
+   "cs": "Databáze jsou organizované systémy pro trvalé ukládání, vyhledávání a správu strukturovaných a nestrukturovaných dat. Sahají od relačních databází vynucujících vlastnosti ACID až po systémy NoSQL upřednostňující škálovatelnost a flexibilitu, založené na teorii databází.",
+   "brief": "Databases is the study of organized systems for the persistent storage, retrieval, and management of structured and unstructured data. It ranges from [[02.02.05.01]], which enforce ACID transactional guarantees over tabular data, to [[02.02.05.02]], which trade strict consistency for horizontal scalability and flexible schemas, grounded throughout in [[02.02.05.03]] — the formal models (relational algebra, normalization, query optimization) that both families implement in different ways. SQL as a query language and data warehousing for analytical workloads round out the subfield's practical surface.\n\nDatabases draws directly on [[02.02.01]] for the formal grounding of query languages and consistency models, and it borders software engineering wherever an application's data-access layer becomes part of the system's overall architecture rather than a plugged-in component. The relational/NoSQL split itself reflects a broader systems trade-off — consistency versus availability under partition — that recurs across [[02.02.07]]'s distributed systems.\n\nFor further reading, see the [Wikipedia overview of databases](https://en.wikipedia.org/wiki/Database) and the classic reference [Database System Concepts by Silberschatz, Korth, and Sudarshan](https://www.db-book.com/)."
+  },
+  {
+   "id": "02.02.05.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Relational databases organize data into tables with rows and columns, connected through keys and relationships, enforcing data integrity through normalization and supporting complex queries via SQL.",
+   "cs": "Relační databáze organizují data do tabulek s řádky a sloupci, propojené klíči a vztahy, vynucují integritu dat normalizací a podporují složité dotazy prostřednictvím SQL."
+  },
+  {
+   "id": "02.02.05.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "NoSQL databases provide non-relational storage models—including document stores, key-value pairs, and columnar systems—designed for horizontal scalability and flexible schema evolution.",
+   "cs": "Databáze NoSQL poskytují nerelační modely úložiště—včetně úložišť dokumentů, dvojic klíč-hodnota a sloupcových systémů—navržené pro horizontální škálovatelnost a flexibilní vývoj schématu."
+  },
+  {
+   "id": "02.02.05.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Database theory provides the mathematical and formal foundations for data organization, including normalization principles, query optimization, transaction semantics, and data consistency models.",
+   "cs": "Teorie databází poskytuje matematické a formální základy pro organizaci dat, včetně principů normalizace, optimalizace dotazů, sémantiky transakcí a modelů konzistence dat."
+  },
+  {
+   "id": "02.02.05.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "SQL (Structured Query Language) is the standard declarative language for querying, manipulating, and managing relational databases.",
+   "cs": "SQL (Structured Query Language) je standardní deklarativní jazyk pro dotazování, manipulaci a správu relačních databází."
+  },
+  {
+   "id": "02.02.05.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Data warehousing integrates and consolidates large volumes of data from heterogeneous sources into a structure optimized for analytical queries and business intelligence, rather than for day-to-day operational transactions.",
+   "cs": "Datové sklady integrují a konsolidují velké objemy dat z heterogenních zdrojů do struktury optimalizované pro analytické dotazy a podnikovou analytiku (business intelligence), nikoli pro běžné provozní transakce."
+  },
+  {
+   "id": "02.02.06",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Operating systems are software layers that manage hardware resources and provide services to applications, including kernel design, process and memory management, file systems, and device interfaces.",
+   "cs": "Operační systémy jsou softwarové vrstvy, které spravují hardwarové prostředky a poskytují služby aplikacím, včetně návrhu jádra, správy procesů a paměti, souborových systémů a rozhraní zařízení.",
+   "brief": "Operating Systems studies the software layer that manages a computer's hardware resources and exposes them to applications through a stable set of services. It covers [[02.02.06.01]] — the core that mediates every hardware access — together with [[02.02.06.02]] and [[02.02.06.03]], which schedule competing programs onto a CPU and partition physical memory among them, and extends to file systems for persistent storage and device drivers for hardware-specific I/O.\n\nThe operating system is the substrate every other systems subfield ultimately runs on: [[02.02.07]] depends on the kernel's network stack to move packets, and DevOps practices in [[02.02.04]] are built around the process and resource model an operating system exposes. Conversely, an operating system is itself just a large, long-lived piece of software, so its design draws on the same architecture and testing concerns as any other system.\n\nFor further reading, see the [Wikipedia overview of operating systems](https://en.wikipedia.org/wiki/Operating_system) and the open textbook [Operating Systems: Three Easy Pieces](https://pages.cs.wisc.edu/~remzi/OSTEP/)."
+  },
+  {
+   "id": "02.02.06.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Kernel design encompasses the architecture and implementation of a system's core component, which arbitrates hardware resource access and enforces security policies.",
+   "cs": "Návrh jádra zahrnuje architekturu a implementaci centrální komponenty systému, která rozhoduje o přístupu k hardwarovým prostředkům a vynucuje zásady zabezpečení."
+  },
+  {
+   "id": "02.02.06.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Process management controls the creation, scheduling, prioritization, and termination of processes, including context switching and inter-process communication.",
+   "cs": "Správa procesů řídí vytváření, plánování, prioritizaci a ukončování procesů, včetně přepnutí kontextu a komunikace mezi procesy."
+  },
+  {
+   "id": "02.02.06.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Memory management governs allocation, deallocation, and protection of memory regions across processes, using techniques such as virtual memory, paging, and garbage collection.",
+   "cs": "Správa paměti řídí přidělování, uvolňování a ochranu paměťových oblastí mezi procesy a využívá techniky jako virtuální paměť, stránkování a automatický sběr odpadků (garbage collection)."
+  },
+  {
+   "id": "02.02.06.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "File systems organize data into hierarchical structures on storage devices, providing indexing, access control, and persistence mechanisms for efficient data retrieval.",
+   "cs": "Souborové systémy organizují data do hierarchických struktur na úložných zařízeních, poskytují indexování, řízení přístupu a mechanismy trvalosti pro efektivní vyhledávání dat."
+  },
+  {
+   "id": "02.02.06.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Device drivers are software modules that abstract hardware device operations, providing standardized interfaces between the kernel and hardware peripherals.",
+   "cs": "Ovladače zařízení jsou softwarové moduly, které abstrahují operace hardwarových zařízení a poskytují standardizovaná rozhraní mezi jádrem a hardwarovými perifériemi."
+  },
+  {
+   "id": "02.02.07",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Computer networks are systems of interconnected autonomous computers and devices that communicate through standardized protocols. They encompass network protocols, security mechanisms, distributed computing patterns, web technologies, and wireless transmission methods.",
+   "cs": "Počítačové sítě jsou systémy vzájemně propojených autonomních počítačů a zařízení, která komunikují prostřednictvím standardizovaných protokolů. Zahrnují síťové protokoly, mechanismy zabezpečení, vzory distribuovaného počítání, webové technologie a metody bezdrátového přenosu.",
+   "brief": "Computer Networks studies how autonomous computers and devices interconnect and communicate through standardized protocols. It covers [[02.02.07.01]], the layered rules (from link-layer framing to application-layer messaging) that let heterogeneous machines interoperate; [[02.02.07.03]], which builds on those protocols to coordinate multiple machines toward a shared goal; and extends to network security mechanisms, web technologies, and wireless transmission methods.\n\nEvery network protocol ultimately moves data through an operating system's kernel, so Computer Networks depends on [[02.02.06]] for the socket and I/O primitives it builds on. It also borders [[02.02.08]] closely: a protocol correct in the absence of an adversary can still be insecure once one is assumed, which is why network security appears as a topic on both sides of that boundary — studied here as a networking mechanism, and studied in [[02.02.08]] as a defense against active attack.\n\nFor further reading, see the [Wikipedia overview of computer networks](https://en.wikipedia.org/wiki/Computer_network) and the IETF's [index of Internet Standards (RFCs)](https://www.rfc-editor.org/standards), the primary source for the protocols the field studies."
+  },
+  {
+   "id": "02.02.07.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Network protocols are standardized rules and formats governing data transmission between network nodes, specifying timing, error detection, and message structure.",
+   "cs": "Síťové protokoly jsou standardizovaná pravidla a formáty řídící přenos dat mezi uzly sítě, určující načasování, detekci chyb a strukturu zprávy."
+  },
+  {
+   "id": "02.02.07.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Network security encompasses measures and practices for protecting network infrastructure and communication channels from unauthorized access, interception, and interference.",
+   "cs": "Bezpečnost sítě zahrnuje opatření a postupy pro ochranu síťové infrastruktury a komunikačních kanálů před neoprávněným přístupem, odposloucháváním a interferencí."
+  },
+  {
+   "id": "02.02.07.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Distributed systems are collections of autonomous computers coordinating their actions through message passing over networks to solve problems collectively.",
+   "cs": "Distribuované systémy jsou sbírky autonomních počítačů koordinujících své akce prostřednictvím předávání zpráv přes sítě, aby řešily problémy kolektivně."
+  },
+  {
+   "id": "02.02.07.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Web technologies encompass the standards, protocols, and frameworks for publishing and delivering content over the World Wide Web, including HTTP, markup languages, and application platforms.",
+   "cs": "Webové technologie zahrnují standardy, protokoly a rámce pro publikování a doručování obsahu přes celosvětovou síť, včetně HTTP, jazyků značek a aplikačních platforem."
+  },
+  {
+   "id": "02.02.07.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Wireless networks use radio frequency or other non-wired transmission media to enable data communication between devices, distinct from wired network technologies.",
+   "cs": "Bezdrátové sítě používají radiofrekvenční nebo jiná bezdrátová přenosová média, aby umožnily komunikaci dat mezi zařízeními, odlišně od drátěných síťových technologií."
+  },
+  {
+   "id": "02.02.08",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Computer security comprises measures, protocols, and practices protecting systems from unauthorized access, data breaches, and malicious activities. It spans cryptographic techniques, network security, application hardening, malware analysis, and digital evidence investigation.",
+   "cs": "Bezpečnost počítačů zahrnuje opatření, protokoly a postupy chránící systémy před neoprávněným přístupem, porušením dat a škodlivými aktivitami. Rozprostírá se na kryptografické techniky, bezpečnost sítě, posílení aplikací, analýzu malwaru a vyšetřování digitálních důkazů.",
+   "brief": "Computer Security studies the measures, protocols, and practices that protect systems from unauthorized access, data breaches, and malicious activity. It spans [[02.02.08.01]], which provides the mathematical primitives (encryption, hashing, signatures) that make confidentiality and integrity guarantees possible; network security and [[02.02.08.03]], which apply those primitives and other controls to protect systems in transit and at the application layer; malware analysis, which studies the software attackers deploy; and [[02.02.08.05]], which reconstructs what happened after a compromise from the digital evidence it leaves behind.\n\nComputer Security is best understood as an adversarial lens applied across the rest of computer science rather than an isolated topic: it studies [[02.02.07]]'s protocols under the assumption of an active attacker, and it studies [[02.02.06]]'s process and memory isolation as the boundary a malicious program tries to break. That adversarial framing is what separates this subfield from cryptography or networking studied on their own terms.\n\nFor further reading, see the [Wikipedia overview of computer security](https://en.wikipedia.org/wiki/Computer_security) and the [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework), a widely adopted reference for security practice."
+  },
+  {
+   "id": "02.02.08.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Cryptography employs mathematical algorithms to transform plaintext into ciphertext, enabling secure communication through encryption, decryption, and authentication mechanisms.",
+   "cs": "Kryptografie používá matematické algoritmy k transformaci otevřeného textu na šifrovaný text, což umožňuje bezpečnou komunikaci prostřednictvím mechanismů šifrování, dešifrování a ověřování."
+  },
+  {
+   "id": "02.02.08.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Network security protects network infrastructure, communication channels, and data in transit against network-layer threats — intrusion, eavesdropping, denial-of-service — distinct from cryptography's algorithmic guarantees and application security's code-level defenses.",
+   "cs": "Bezpečnost sítě chrání síťovou infrastrukturu, komunikační kanály a data v přenosu proti hrozbám na úrovni sítě – průnikům, odposlechu a útokům typu odepření služby – na rozdíl od algoritmických záruk kryptografie a softwarových obran bezpečnosti aplikací."
+  },
+  {
+   "id": "02.02.08.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Application security integrates protective measures into software design and implementation to prevent vulnerabilities, injection attacks, and exploitation of application-level weaknesses.",
+   "cs": "Bezpečnost aplikací integruje ochranná opatření do návrhu a implementace softwaru, aby se zabránilo zranitelnostem, útokům typu injection a zneužití slabostí na úrovni aplikace."
+  },
+  {
+   "id": "02.02.08.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Malware analysis involves examining malicious software to understand its behavior, attack mechanisms, and impact, enabling threat detection and remediation.",
+   "cs": "Analýza malwaru zahrnuje zkoumání škodlivého softwaru, aby se pochopilo jeho chování, útočné mechanismy a dopad, což umožňuje detekci a nápravu hrozeb."
+  },
+  {
+   "id": "02.02.08.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Digital forensics applies techniques for acquiring, preserving, and analyzing digital evidence from computer systems and networks for investigation and legal proceedings.",
+   "cs": "Digitální forenzní analýza aplikuje techniky pro získávání, uchování a analýzu digitálních důkazů z počítačových systémů a sítí pro vyšetřování a právní řízení."
+  },
+  {
+   "id": "02.02.09",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Artificial intelligence is the field of computer science developing systems capable of performing tasks requiring human-level reasoning. It encompasses machine learning for data-driven improvement, deep learning through neural networks, natural language processing for language understanding, computer vision for image analysis, and reinforcement learning for interactive problem-solving.",
+   "cs": "Umělá inteligence je oblast informatiky rozvíjející systémy schopné provádět úkoly vyžadující lidskou úroveň uvažování. Zahrnuje strojové učení pro zlepšování řízené daty, hluboké učení prostřednictvím neuronových sítí, zpracování přirozeného jazyka pro porozumění jazyku, počítačové vidění pro analýzu obrázků a učení se zesílením pro interaktivní řešení problémů.",
+   "brief": "Artificial Intelligence is the field of computer science that builds systems capable of performing tasks associated with human-level reasoning and perception. It is organized here by approach: [[02.02.09.01]] for systems that improve at a task from data rather than explicit rules, [[02.02.09.02]] for the neural-network methods that now underlie most modern machine learning, [[02.02.09.03]] for systems that process and generate human language, computer vision for systems that interpret images, and reinforcement learning for systems that learn through interaction and reward.\n\nArtificial Intelligence depends heavily on [[02.02.02]] for the search, optimization, and data-structure techniques its methods are built from, and it draws its statistical machinery from [[02.01]] rather than reinventing probability theory locally. The rapid growth of [[02.02.09.02]] has in turn reshaped several of its sibling subfields — natural language processing and computer vision are today dominated by deep architectures rather than the symbolic or statistical methods that once defined them.\n\nFor further reading, see the [Wikipedia overview of artificial intelligence](https://en.wikipedia.org/wiki/Artificial_intelligence) and the standard reference textbook [Artificial Intelligence: A Modern Approach](http://aima.cs.berkeley.edu/), by Russell and Norvig."
+  },
+  {
+   "id": "02.02.09.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Machine learning develops algorithms that improve performance on tasks through exposure to data and experience, without explicit programming for each scenario.",
+   "cs": "Strojové učení vyvíjí algoritmy, které zlepšují výkon úkolů prostřednictvím vystavení datům a zkušenosti, bez explicitního programování pro každý scénář."
+  },
+  {
+   "id": "02.02.09.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Deep learning uses artificial neural networks with multiple layers to automatically learn hierarchical representations of data, enabling powerful pattern recognition.",
+   "cs": "Hluboké učení používá umělé neuronové sítě s více vrstvami, aby automaticky naučily hierarchické reprezentace dat, což umožňuje výkonné rozpoznávání vzorů."
+  },
+  {
+   "id": "02.02.09.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Natural language processing develops computational methods for machines to understand, interpret, and generate human language with semantic meaning.",
+   "cs": "Zpracování přirozeného jazyka vyvíjí výpočetní metody, aby stroje porozuměly, interpretovaly a generovaly lidský jazyk se sémantickým významem."
+  },
+  {
+   "id": "02.02.09.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Computer vision enables machines to analyze and extract meaningful information from images and video data through computational and mathematical techniques.",
+   "cs": "Počítačové vidění umožňuje strojům analyzovat a extrahovat smysluplné informace z obrazových a videických dat prostřednictvím výpočetních a matematických technik."
+  },
+  {
+   "id": "02.02.09.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Reinforcement learning trains agents through interaction with an environment, where actions are guided by reward signals, enabling autonomous problem-solving.",
+   "cs": "Učení se zesílením trénuje agenty interakcí s prostředím, kde akce vedou signály odměn, což umožňuje autonomní řešení problémů."
+  },
+  {
+   "id": "02.02.10",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Computer graphics encompasses the techniques and systems for generating, manipulating, and rendering visual images and animations using computational methods.",
+   "cs": "Počítačová grafika zahrnuje techniky a systémy pro generování, manipulaci a vykreslování vizuálních obrázků a animací pomocí výpočetních metod.",
+   "brief": "Computer Graphics studies the techniques and systems for generating, manipulating, and rendering visual images and animations by computational means, from the geometric representation of shapes and scenes to the algorithms that turn them into pixels on a screen. It covers rendering pipelines, geometric modeling, animation, and the real-time performance constraints that separate interactive graphics (games, simulations) from offline rendering (film, visualization).\n\nComputer Graphics draws heavily on [[02.02.02]] for the geometric and numerical algorithms — rasterization, ray tracing, spatial data structures — that make rendering tractable, and it depends on [[02.02.06]] for the device drivers that expose GPU hardware to an application. It also sits in an inverse relationship to [[02.02.09]]'s computer vision: graphics renders a scene description into an image, while computer vision recovers a scene description from an image, and the two fields increasingly share techniques (differentiable rendering, neural radiance fields).\n\nFor further reading, see the [Wikipedia overview of computer graphics](https://en.wikipedia.org/wiki/Computer_graphics) and the standard reference textbook [Computer Graphics: Principles and Practice](https://www.pearson.com/en-us/subject-catalog/p/computer-graphics-principles-and-practice/P200000003399), by Hughes, van Dam, et al."
+  }
+ ],
+ "relations": [
+  {
+   "from": "02.02.01",
+   "to": "02.02.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.01",
+   "to": "02.02.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.01",
+   "to": "02.02.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.01",
+   "to": "02.02.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.01",
+   "to": "02.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.01",
+   "to": "02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.02",
+   "to": "02.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.02",
+   "to": "02.02.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.02",
+   "to": "02.02.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.02",
+   "to": "02.02.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.02",
+   "to": "02.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.02",
+   "to": "02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.03",
+   "to": "02.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.03",
+   "to": "02.02.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.03",
+   "to": "02.02.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.03",
+   "to": "02.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.04",
+   "to": "02.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.04",
+   "to": "02.02.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.04",
+   "to": "02.02.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.04",
+   "to": "02.02.04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.04",
+   "to": "02.02.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.05",
+   "to": "02.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.05",
+   "to": "02.02.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.05",
+   "to": "02.02.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.05",
+   "to": "02.02.05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.05",
+   "to": "02.02.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.06",
+   "to": "02.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.06",
+   "to": "02.02.06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.06",
+   "to": "02.02.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.06",
+   "to": "02.02.06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.06",
+   "to": "02.02.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.07",
+   "to": "02.02.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.07",
+   "to": "02.02.07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.07",
+   "to": "02.02.07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.07",
+   "to": "02.02.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.08",
+   "to": "02.02.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.08",
+   "to": "02.02.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.08",
+   "to": "02.02.08.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.08",
+   "to": "02.02.08.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.08",
+   "to": "02.02.08.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.09",
+   "to": "02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.09",
+   "to": "02.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.09",
+   "to": "02.02.09.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.09",
+   "to": "02.02.09.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.09",
+   "to": "02.02.09.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.10",
+   "to": "02.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.10",
+   "to": "02.02.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.10",
+   "to": "02.02.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02",
+   "to": "02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02",
+   "to": "02.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02",
+   "to": "02.02.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02",
+   "to": "02.02.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02",
+   "to": "02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

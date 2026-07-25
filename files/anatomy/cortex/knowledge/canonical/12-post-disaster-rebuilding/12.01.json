@@ -1,0 +1,279 @@
+{
+ "domain": "12.01",
+ "nodes": [
+  {
+   "id": "12.01",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Essential physical systems and technologies required to restore basic societal function after large-scale infrastructure failure—including energy generation, water access, waste containment, information exchange, and local transport. Serves as the load-bearing foundation upon which tool-making, medicine, and community decision-making can rebuild.",
+   "cs": "Nezbytné fyzické systémy a technologie požadované k obnovení základních společenských funkcí po velkoplošném selhání infrastruktury—včetně energetické výroby, přístupu k vodě, omezení odpadu, výměny informací a místní dopravy. Slouží jako nosná základna na níž se mohou odbudovat výroba nástrojů, medicína a komunitární rozhodování.",
+   "brief": "Basic Infrastructure is the set of physical systems and technologies that restore a functioning society after industrial supply chains collapse: reliable energy, potable water, waste containment, information exchange, and local transport, built and maintained at the smallest workable scale rather than an industrial one. It is the load-bearing layer beneath the rest of rebuilding — [[12.02]] Tool Making, [[12.03]] Essential Chemistry, and [[12.04]] Basic Medicine Production all consume infrastructure outputs (power, clean water, working transport) before they can operate, and [[12.05]] Community Organization needs the communication channels infrastructure provides to coordinate at all.\n\nFive subfields anchor beneath it. [[12.01.01]] Basic Power Generation covers small-scale mechanical and electrical generation; [[12.01.02]] Water Systems covers sourcing, storage, and distribution; Sanitation covers waste containment and disease prevention; Communication Networks covers information exchange without a telecom industry; Basic Transportation covers local movement of people and goods. Each treats the same problem modern engineering solves at civilizational scale, but reduced to what a small group can build and repair with salvaged or hand-tooled materials.\n\nElsewhere in the corpus, [[03.07]] Energy and [[08.02]] Water Procurement & Purification cover the same generation and purification techniques at industrial and field-survival scale respectively — Basic Infrastructure sits between them, borrowing their principles while assuming neither a power grid nor prepackaged filtration media. For deeper technique, [Low-tech Magazine](https://www.lowtechmagazine.com/) documents historical low-energy infrastructure solutions, and [Appropedia](https://www.appropedia.org/) catalogs buildable small-scale power, water, and sanitation designs."
+  },
+  {
+   "id": "12.01.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Methods and devices for converting natural energy sources into usable electrical power—including human-powered systems (hand cranks, pedals), gravitational fall (water wheels), and combustion of stored fuel. Foundational to all technical recovery; enables water pumping, communication, food preservation, and manufacturing.",
+   "cs": "Metody a zařízení pro přeměnu přírodních zdrojů energie na použitelný elektrický proud—včetně lidské síly (ruční korby, pedály), gravitačního pádu (vodní kola) a spalování uloženého paliva. Základní pro všechnu technickou obnovu; umožňuje čerpání vody, komunikaci, konzervaci potravin a výrobu.",
+   "brief": "Basic Power Generation covers the methods and devices for converting natural energy sources into usable electrical or mechanical power at a scale a small group can build and repair without an industrial supply chain: human-powered systems such as hand cranks and pedal generators, gravitational systems such as water wheels, and combustion of stored or gathered fuel. It is foundational to every other recovery activity — pumping water, running communication equipment, refrigerating or drying food, and powering tools all consume the electricity or mechanical work this subfield produces, so a rebuilding effort that skips it stalls everywhere else at once.\n\nWithin [[12.01]] Basic Infrastructure, Basic Power Generation is the first-consumed subfield: [[12.01.02]] Water Systems needs power or gravity to move water at any real volume, [[12.01.04]] Communication Networks needs it to run any equipment beyond line-of-sight signaling, and [[12.01.03]] Sanitation and basic transportation both lean on it for anything mechanized. It relates to but is distinct in scale from [[03.07]] Energy, which covers the same generation principles — combustion, water power, human power — engineered for an industrial grid rather than a single settlement rebuilding from salvage.\n\n[Low-tech Magazine](https://www.lowtechmagazine.com/) documents historical human- and water-powered generation techniques in working detail, and [Appropedia](https://www.appropedia.org/) catalogs buildable small-scale generator designs suited to salvaged materials."
+  },
+  {
+   "id": "12.01.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Technologies for accessing, purifying, and distributing fresh water—including gravity-fed collection, mechanical or chemical filtration, and preventing microbial contamination. Distinct from sanitation by addressing source and potability rather than waste disposal; essential for drinking, cooking, agriculture, and disease prevention.",
+   "cs": "Technologie pro přístup, čištění a distribuci pitné vody—včetně gravitačního sběru, mechanické či chemické filtrace a prevence mikrobiální kontaminace. Odlišuje se od sanitace zaměřením na zdroj a pitnost namísto likvidace odpadu; nezbytná pro pití, vaření, zemědělství a prevenci chorob.",
+   "brief": "Water Systems covers the technologies for accessing, purifying, and distributing fresh water: gravity-fed collection from elevated sources, mechanical or chemical filtration, and the disinfection methods that prevent microbial contamination. It addresses the water-source side of public health — getting drinkable water to people — which is what separates it from [[12.01.03]] Sanitation, covering the waste-disposal side; the two are complementary halves of disease prevention rather than overlapping concerns, and a settlement needs both since safe water in and contained waste out is a single loop that fails if either half is missing.\n\nWithin [[12.01]] Basic Infrastructure, Water Systems is one of the earliest subfields any rebuilding effort reaches, since drinking, cooking, and agriculture all depend on it directly; moving water at any real volume typically needs the mechanical lift or pumping that [[12.01.01]] Basic Power Generation supplies, and distributed water systems benefit from the coordination that [[12.01.04]] Communication Networks enables across a settlement. It shares core purification and filtration technique with [[08.02]] Water Procurement & Purification, which covers the same problem at individual or field-survival scale rather than settlement-level distribution.\n\nThe [CDC Safe Water System guide](https://www.cdc.gov/safe-water-system/about/index.html) documents household and community-scale water treatment methods, and [Appropedia](https://www.appropedia.org/wiki/Category:Water_supply) catalogs buildable low-tech filtration and distribution designs."
+  },
+  {
+   "id": "12.01.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Methods for containing and processing human and organic waste to prevent disease transmission and environmental contamination—including composting, latrine construction, and grey-water separation. Distinct from water systems by addressing excreta and runoff rather than drinking-water sourcing; foundational to public health in dense settlements.",
+   "cs": "Metody pro zadržení a zpracování lidských a organických odpadů aby se zabránilo přenosu chorob a znečištění prostředí—včetně kompostování, stavby toalet a oddělení šedé vody. Odlišuje se od vodních systémů zaměřením na exkrementy a odtok namísto zdroje pitné vody; základní pro veřejné zdraví v hustě osídlených oblastech.",
+   "brief": "Sanitation covers the methods for containing and processing human and organic waste to prevent disease transmission and environmental contamination: composting systems that convert waste into usable soil amendment, latrine construction that isolates excreta from water sources and living space, and grey-water separation that keeps wash water out of the waste stream it doesn't belong in. It addresses the waste-disposal side of public health, distinct from [[12.01.02]] Water Systems' focus on sourcing and purifying drinking water — the two form a single disease-prevention loop, and sanitation becomes more urgent, not less, as a settlement grows denser and waste concentrates faster than it would be dispersed naturally.\n\nWithin [[12.01]] Basic Infrastructure, Sanitation depends on [[12.01.02]] Water Systems wherever grey-water separation or flush-based methods are used, and on [[12.01.01]] Basic Power Generation for any mechanized waste processing beyond gravity-fed latrines; poor sanitation is also the single fastest way to overwhelm the recovery [[12.04]] Basic Medicine Production is meant to support, since untreated waste-borne disease outpaces what improvised medicine can treat.\n\nThe [Sphere Handbook's WASH chapter](https://spherestandards.org/handbook/) sets the standard humanitarian minimums for sanitation in emergency and displaced-settlement contexts, and the [SuSanA (Sustainable Sanitation Alliance) knowledge base](https://www.susana.org/) documents composting toilets and low-tech sanitation designs in detail."
+  },
+  {
+   "id": "12.01.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Infrastructure and methods for transmitting information over distance—including messenger systems, signal relay (smoke, light, sound), and wireless/electrical networks. Enables coordination between settlements, warning dissemination, and knowledge sharing; distinct from transportation by moving information rather than physical goods or people.",
+   "cs": "Infrastruktura a metody pro přenos informací na dálku—včetně poselských systémů, přenosu signálu (kouř, světlo, zvuk) a bezdrátových/elektrických sítí. Umožňuje koordinaci mezi osadami, šíření varování a sdílení znalostí; odlišuje se od dopravy přenosem informací namísto fyzických věcí či lidí.",
+   "brief": "Communication Networks covers the infrastructure and methods for transmitting information over distance without an intact telecom industry: human messenger systems, signal relay using smoke, light, or sound, and wireless or wired electrical networks built and maintained at settlement scale. It moves information rather than physical goods or people, which is what separates it from [[12.01.05]] Basic Transportation — a messenger literally rides transportation infrastructure to deliver a message, but the message itself, not the courier's onward journey, is the output this subfield is built to produce.\n\nCoordination between settlements, warning dissemination ahead of hazards, and knowledge sharing about what works elsewhere all route through this subfield, and every method beyond direct line-of-sight signaling depends on [[12.01.01]] Basic Power Generation to run relay or radio equipment. Within [[12.01]] Basic Infrastructure, it is the coordination layer that lets [[12.01.02]] Water Systems and [[12.01.03]] Sanitation problems discovered in one part of a settlement reach the people who can fix them, and that lets separate settlements pool knowledge instead of each relearning the same recovery techniques independently.\n\n[Low-tech Magazine](https://www.lowtechmagazine.com/) documents historical signal-relay and low-power radio techniques in working detail, and the [ARRL's Amateur Radio Emergency Communications resources](https://www.arrl.org/emergency-communications) cover building and operating radio networks without commercial infrastructure."
+  },
+  {
+   "id": "12.01.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Technologies and infrastructure for moving people and goods across local distances—including animal traction, wheeled vehicles, watercraft, and footpaths. Supports trade, resource distribution, and emergency mobility; distinct from communication systems by transporting material cargo rather than information.",
+   "cs": "Technologie a infrastruktura pro přepravu lidí a zboží na lokální vzdálenosti—včetně tahu zvířat, vozidel na kolech, plavidel a pěších cest. Podporuje obchod, distribuci zdrojů a nouzovou mobilitu; odlišuje se od komunikačních systémů přepravou hmotného zboží namísto informací.",
+   "brief": "Basic Transportation is the set of techniques and physical infrastructure for moving people and goods across local distances without depending on an industrial supply chain — animal traction (carts, sledges, pack animals), wheeled vehicles built from salvaged or hand-tooled parts, watercraft (rafts, rowboats, small sailing craft), and maintained footpaths or trail networks. It exists to keep trade, resource distribution, and emergency mobility functioning at whatever scale a community can build and repair itself, in contrast to industrial transportation systems that assume factories, refined fuel, and paved highway networks.\n\nWithin [[12.01]] Basic Infrastructure, Basic Transportation shares a firm boundary with [[12.01.04]] Communication Networks: the two subfields divide the same underlying problem — moving something between two points — along the line between material cargo and information, so a courier walking a message is communication while the same courier hauling grain is transportation. It also draws directly on [[12.01.01]] Basic Power Generation wherever a vehicle needs more than muscle — a water-wheel-driven winch hauling a barge, or a small combustion engine repurposed for a cart — and its footpaths and waterways depend on routes surveyed and maintained under the same infrastructure umbrella.\n\nAt industrial scale, the same problem is addressed by [[03.06]] Transportation, which assumes vehicle manufacturing, fuel refining, and engineered road and rail networks; Basic Transportation solves the identical need for moving people and cargo but reduced to hand tools, salvage, and animal power. The draft-animal side of the field overlaps with [[03.03.02]] Animal Husbandry, which covers the breeding, feeding, and health care that keeps working animals fit for hauling and traction. For concrete builds, [Low-tech Magazine](https://www.lowtechmagazine.com/) documents historical animal-powered and human-powered transport systems, and [Appropedia](https://www.appropedia.org/) catalogs buildable cart, boat, and trail designs for low-resource settings."
+  }
+ ],
+ "relations": [
+  {
+   "from": "12.01.01",
+   "to": "03.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.01",
+   "to": "12.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.01",
+   "to": "12.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.01",
+   "to": "12.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.01",
+   "to": "12.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.02",
+   "to": "08.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.02",
+   "to": "12.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.02",
+   "to": "12.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.02",
+   "to": "12.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.02",
+   "to": "12.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.03",
+   "to": "12.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.03",
+   "to": "12.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.03",
+   "to": "12.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.03",
+   "to": "12.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.04",
+   "to": "12.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.04",
+   "to": "12.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.04",
+   "to": "12.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.04",
+   "to": "12.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.04",
+   "to": "12.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.05",
+   "to": "03.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.05",
+   "to": "03.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.05",
+   "to": "12.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.05",
+   "to": "12.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01.05",
+   "to": "12.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01",
+   "to": "03.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01",
+   "to": "08.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01",
+   "to": "12.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01",
+   "to": "12.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01",
+   "to": "12.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01",
+   "to": "12.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01",
+   "to": "12.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12.01",
+   "to": "12.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

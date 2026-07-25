@@ -1,7 +1,8 @@
 # files/anatomy/cortex/ — the Cortex organ (vendored port)
 
-**Status:** P-4 build-sequence steps 1–3 landed. Pure half green. Store NOT wired,
-daemon NOT stood up, no Ansible role yet.
+**Status:** P-4 build-sequence steps 1–4 and 6 landed. The store is wired and
+materialises itself from git; the ANN index is at its measured tuning. Daemon NOT
+stood up (step 7), no Ansible role yet (step 9), nothing deployed.
 
 Cortex is the nOS reasoning organ — the fourth brain beside Bone (signals), Wing
 (observes) and Pulse (keeps time). It is a **verbatim port** of KEAP v1.27.0's
@@ -52,44 +53,167 @@ Therefore:
 | `src/game/{data,types}/taxonomy.ts` | KEAP `src/game/…` | verbatim — the 790-node spine |
 | `server/*.test.ts` | KEAP `server/…` | verbatim — 83 + 54 + 4 = 141 tests |
 | `knowledge/onto1-{compose,conformance}.mjs` | KEAP `knowledge/…` | verbatim |
-| `knowledge/spine/`, `knowledge/fixtures/onto1/` | KEAP `knowledge/…` | verbatim |
+| `knowledge/{_ontology,ingest,spine-render}.mjs` | KEAP `knowledge/…` | verbatim — the git materialisation path |
+| `knowledge/{spine,canonical,ontology}/`, `knowledge/fixtures/onto1/` | KEAP `knowledge/…` | verbatim — the git SoT itself |
+| `scripts/ann-recall.mjs` | KEAP `scripts/…` | verbatim |
 | `docs/specs/*.md` | KEAP `docs/specs/…` | verbatim — the normative specs the modules cite by § |
 
-Locally authored (the only non-ported files): `package.json`, `tsconfig.json`,
-`tsconfig.server.json`, `vitest.config.ts`, `.gitignore`, `VERSION`, this README.
-`tsconfig.server.json`'s `compilerOptions` are byte-identical to KEAP's — a
-divergence there means the two repos typecheck the same source differently.
+Locally authored (the only non-ported files): `server/cortex-{config,ann,store,store-cli}.ts`,
+`server/cortex-store.test.ts`, `scripts/ann-corpus.mjs`, `package.json`,
+`tsconfig.json`, `tsconfig.server.json`, `vitest.config.ts`, `.gitignore`,
+`VERSION`, this README. `tsconfig.server.json`'s `compilerOptions` are
+byte-identical to KEAP's — a divergence there means the two repos typecheck the
+same source differently.
+
+### Known vendor drift (as of 2026-07-25)
+
+The port ref was KEAP `dev` @ `264cc22`. KEAP `dev` has since moved to `c880f03`,
+and **one commit touches the vendored set**: `273de0e` *"docs(schema): name
+object_type_definitions as dead schema at its DDL"*.
+
+| file | drift |
+|---|---|
+| `server/migrations.ts` | +23 lines of SQL `--` comment inside migration 001's `object_type_definitions` DDL |
+| `docs/specs/cortex-validate.md` | one line citation repointed, 60 → 83 |
+
+Both are comment-only: no statement changes, no schema change, no effect on the
+`onto1` digest or the `cx1` registry hash. The vendor pin has deliberately NOT
+been bumped here — moving it is a scope decision, not a side effect of a store
+stage. Re-syncing is the usual plain `cp` of those two files.
 
 ## Verifying the port
 
 ```sh
 nvm use 22                 # Node 22 + npm 10. NOT npm 11 — it writes a lock npm 10 rejects.
 npm ci
-npm run typecheck          # all 15 TS files, strict, clean
-npm test                   # 141 tests
+npm run typecheck          # strict, clean
+npm test                   # 167 tests (141 ported + 26 store/ANN)
 npm run conformance        # 6 onto1 fixtures
+npm run spine:check        # knowledge/spine/*.json ≡ the generated src/game/data/taxonomy.ts
 ```
 
-The digest gate: on a **freshly initialised** store (790 spine nodes, 16 seed
-verbs, zero `taxonomy_nodes_ext` rows) `cortexOntologyVersion()` must return
-**`onto1:76d1f3ad728b382b`**. Any ext node, any admin-confirmed verb, or any label
-edit legitimately moves it — always grade on a fresh store.
+### The digest gate, and the two digests it is easy to confuse
 
-Note that no *lifted* test asserts that literal string; `onto1-agreement.test.ts`
-proves runtime ≡ reference only *relatively*. Pinning the literal is build-step 5's
-job and is still outstanding.
+On a **freshly initialised** store (790 spine nodes, 16 seed verbs, zero
+`taxonomy_nodes_ext` rows) `cortexOntologyVersion()` must return
+**`onto1:76d1f3ad728b382b`**.
+
+That literal is a statement about the **port** — "this TypeScript computes what
+the reference computes for the same input" — and it is only reproducible on a
+store with no delta in it. `npm run store:init` builds exactly such a store and
+`server/cortex-store.test.ts` asserts the literal against it.
+
+A **materialised** store (below) carries 1750 nodes and a different, larger
+digest. That one is a statement about the **corpus**, and it is the value that
+must agree with KEAP's live digest at cutover for ASTs to bind. Neither number is
+wrong; grading one against the other is.
+
+## The store (build sequence step 4)
+
+```sh
+npm run store:init         # create/open the store, no ingest — the fresh-digest shape
+npm run store:materialise  # + run the git ingest path, then tune the ANN index
+npm run store:status       # facts about the store as it stands
+```
+
+Config: **`cortex_store_path`** (env `CORTEX_STORE_PATH`), default `~/cortex/data`,
+matching `bone_runtime_dir: ~/bone`. `KEAP_DATA_DIR` is honoured when
+`CORTEX_STORE_PATH` is unset so the vendored tests keep working untouched.
+
+**The store file is `keap.db`, not `cortex.db`.** Design §3 wrote `cortex.db`;
+`server/db.ts:30` and `knowledge/ingest.mjs:60` each independently join the
+basename onto a directory env var, so renaming it means patching two vendored
+files forever. `cortex_store_path` therefore names the **directory**, which is
+what actually isolates the organ. This is not the shared `keap.db` that
+`cortex-full-scope-decision.md` forbids — different directory, different file,
+different `db_identity`, and `cortex-store.ts`'s `assertOwnStore()` **refuses to
+open a populated store the organ did not create**, which is that rule made
+mechanical rather than aspirational.
+
+### What git materialises, and what it does not
+
+| layer | git source | lands in |
+|---|---|---|
+| spine, 790 nodes | `knowledge/spine/*.json` → `spine-render.mjs` → the checked-in `src/game/data/taxonomy.ts` | `taxonomy_fts` (never rows) |
+| delta, 960 ext nodes | `knowledge/canonical/**.json` (107 files, 1750 node records) via `knowledge/ingest.mjs` | `taxonomy_nodes_ext`, `node_descriptions`, `taxonomy_metadata`, `knowledge_imports` |
+| ToE edges, 4434 | same canonical files | `concept_relations` → mirrored to `relations` by `syncToeRelations()` each boot |
+| verbs, 16 | `knowledge/ontology/relation-types.json` + `RELATION_TYPE_SEED` (identical sets) | `relation_types` |
+| **corpus** | **none — no git source** | **not materialised. `knowledge_objects` stays empty; it is C2 scope and no cortex module reads it.** |
+
+`ingest.mjs` runs as a **child process** (it is a script that opens its own handle
+and closes it), after `initDb()` because it does not create the tables it writes.
+It is idempotent via the `knowledge_imports` sha markers — a second
+`store:materialise` applies 0 files and lands the identical digest.
+
+## The ANN index (build sequence step 6)
+
+`server/db.ts:330` creates `embeddings_vec_idx` with **default** parameters — the
+514.6 MB-for-3356-vectors shape measured in `docs/specs/durability-and-integrity.md`
+§4. `server/cortex-ann.ts` retunes it to `compress_neighbors=float8` +
+`max_neighbors=20` after `initDb()`, **without editing `db.ts`**, which works
+because of four verified properties:
+
+1. `DROP INDEX` takes the `_shadow` tables with it.
+2. Re-creating with parameters **reindexes rows already present** — the retune is
+   not a wipe.
+3. `sqlite_master.sql` records the parameters, so live tuning is checkable.
+4. Re-running db.ts's own `CREATE INDEX IF NOT EXISTS …(libsql_vector_idx(vector))`
+   over an already-tuned index is a **no-op that preserves the parameters**.
+
+(4) is load-bearing: it means `initDb()` cannot silently revert the store to the
+514 MB shape on the next boot. `cortex-store.test.ts` pins it.
+
+Degradation is preserved end-to-end: no vector layer ⇒ `outcome: 'unavailable'`,
+FTS and the tree still materialise, the boot does not fail. A *rejected* tuned DDL
+restores db.ts's default index rather than leaving the store index-less.
+
+### Measured, 2026-07-25, 3356 × 768-d, k=10, 200 queries
+
+`npm run ann:corpus -- --out /tmp/v.json` then `npm run ann:recall -- --vectors /tmp/v.json`.
+
+| variant | shadow | build | µs/query | recall@10 |
+|---|---|---|---|---|
+| default (db.ts as shipped) | 514.6 MB | 47.7 s | 12370 | 99.80% |
+| `float8` | 224.5 MB | 23.5 s | 7525 | **99.95%** |
+| `max_neighbors=20` | 209.8 MB | 15.9 s | 4930 | 94.10% |
+| **`float8` + `mn=20` (shipped)** | **65.6 MB** | **5.7 s** | **2270** | **94.25%** |
+| `float1bit` | 41.0 MB | 7.7 s | 4870 | 72.20% |
+| CONTROL `mn=3` | 41.0 MB | 2.8 s | 860 | 21.10% |
+
+The size and build columns reproduce `durability-and-integrity.md` §4 **exactly**,
+which is what makes the recall column trustworthy. The CONTROL at 21.1% proves the
+harness discriminates.
+
+**Design §3's "recall@10 = 100%" does not reproduce, and the number should be
+retired.** It was measured on near-orthogonal random vectors — the corpus shape
+`durability-and-integrity.md` §4 itself warns about, because there "10 results
+returned" says nothing about *which* 10. On a clustered corpus (`ann-corpus.mjs`,
+120 centroids, gaussian spread, L2-normalised) the shipped tuning scores
+**94.25%**. The *decision*
+still holds (8× smaller, 5× faster, and `float1bit` is decisively disqualified at
+72.2%), but note the cost is carried by `max_neighbors=20`, not by compression:
+`float8` alone scores 99.95% at 224.5 MB. If ~94% recall@10 is ever judged too
+expensive, that is the fallback, and it is still 2.3× smaller than today.
 
 ## Not done yet
 
-- **Step 4 — store.** `server/db.ts:29-30` captures `KEAP_DATA_DIR` at module load
-  and hardcodes the filename `keap.db`. Pointing the organ at `~/cortex/data/cortex.db`
-  needs an explicit decision: accept `~/cortex/data/keap.db` (env var alone, zero
-  source edits) or edit that one line and give up strict byte-identity on `db.ts`.
-- **Step 5** — pin the literal digest in a test.
-- **Steps 6–8** — ANN index, `server/index.ts` daemon, e2e. `package.json`'s `build`
-  and `start` scripts already name `server/index.ts` / `dist-server/index.js`; that
-  entrypoint does not exist yet, so `npm run build` does not run.
+- **Step 5** — pin the literal digest in a test. Partly satisfied as a side effect:
+  `cortex-store.test.ts` asserts `onto1:76d1f3ad728b382b` against a fresh store
+  built by the organ's own boot path. Step 5 still owns doing it from
+  `onto1-agreement.test.ts` and wiring the conformance gate into both repos' CI.
+- **Steps 7–8** — `server/index.ts` daemon, e2e. `package.json`'s `build` and
+  `start` scripts already name `server/index.ts` / `dist-server/index.js`; that
+  entrypoint does not exist yet, so `npm run build` does not run. The daemon
+  should boot by calling `openStore()` — that is the whole of steps 4+6.
 - **Steps 9–13** — Ansible role, plugin, CI jobs, blank verify, KEAP cutover.
+  For the role: `cortex_store_path` defaults to `~/cortex/data`, the build step
+  needs `npm run store:materialise` after `npm ci`, and `~/cortex/data/` must be
+  added to the host-daemon restic set (design §7.6). The ANN and FTS indexes are
+  regenerable and can be excluded from the snapshot.
+- **Embeddings.** The store's `embeddings` table is empty and will stay so until
+  the Pulse job `keap-embed-sync` runs (step 10) — the embedder is deliberately
+  outside the organ. Until then `npm run ann:recall` must be fed a synthetic
+  corpus (`npm run ann:corpus`); afterwards use `--from-store` and re-measure.
 
 ## Two design-doc intents that are dead
 

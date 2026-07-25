@@ -1,0 +1,50 @@
+{
+ "domain": "05.10",
+ "nodes": [
+  {
+   "id": "05.10",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Ethnic Studies investigates how ethnicity, race, and cultural identity intersect with power, institutions, and social structures. It examines the histories, cultures, and contemporary experiences of marginalized ethnic and racial groups, analyzing identity formation, discrimination, and resistance while centering the voices and scholarship of communities under study.",
+   "cs": "Studium etnicity zkoumá, jak etnická příslušnost, rasa a kulturní identita se protínají s mocí, institucemi a společenskými strukturami. Zkoumá historie, kultury a současné zkušenosti marginalizovaných etnických a rasových skupin, analyzujíc formování identity, diskriminaci a odpor, přičemž staví hlasy a vědeckou práci studovaných komunít do středu.",
+   "brief": "Ethnic Studies investigates how ethnicity, race, and cultural identity intersect with power, institutions, and social structures. It examines the histories, cultures, and contemporary experiences of marginalized ethnic and racial groups, analyzing identity formation, discrimination, and resistance while centering the voices and scholarship of the communities under study.\n\nWithin [[05]] Humanities, Ethnic Studies shares its focus on identity, power, and marginalized voice with [[05.09]] Gender Studies and [[05.06]] Cultural Studies, and draws on [[05.01]] History and Literature for evidence of how racial and ethnic identity were constructed and contested over time. It also converges with [[04]] Social Sciences in its use of sociological and anthropological method to document discrimination and structural inequality.\n\nBy centering the scholarship of the communities it studies rather than treating them purely as objects of outside analysis, Ethnic Studies reframes historical and cultural narratives around agency and resistance. For current research and the discipline's professional body, see the [National Association for Ethnic Studies](https://www.ethnicstudies.org/); for demographic and social data on ethnic and racial groups, the [Pew Research Center's Race & Ethnicity program](https://www.pewresearch.org/topic/race-ethnicity/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "05.10",
+   "to": "04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.10",
+   "to": "05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.10",
+   "to": "05.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.10",
+   "to": "05.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.10",
+   "to": "05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

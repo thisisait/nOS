@@ -1,0 +1,43 @@
+{
+ "domain": "10.07",
+ "nodes": [
+  {
+   "id": "10.07",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Games and recreation are competitive or leisure activities reflecting cultural values and social structures. They encode learning, skill development, and community participation in structured play.",
+   "cs": "Hry a rekreace jsou konkurenční nebo volnočasové aktivity odrážející kulturní hodnoty a sociální struktury. Kódují učení, rozvoj dovedností a participaci komunity v strukturované hře.",
+   "brief": "Games and recreation are competitive or leisure activities that reflect cultural values and social structures, encoding learning, skill development, and community participation in structured play. The branch spans children's games, sport, gambling and wagering traditions, and organized recreational practice passed down within a community rather than codified by a governing sports body.\n\nIt overlaps [[10.08]] Rituals & Ceremonies wherever play is embedded in a rite of passage — a competitive contest marking a coming-of-age ceremony, a game reserved for a festival calendar — and it overlaps [[10.03]] Traditions & Customs wherever a game is less about contest than about custom, etiquette, or seasonal observance. Both branches share the parent [[10]] Cultural Preservation, and the material borders [[06]] Arts & Creative Expression wherever a game's performance — a dance-game, a ritualized combat sport — is itself an aesthetic form.\n\nThe [Strong National Museum of Play](https://www.museumofplay.org/) documents traditional games across cultures, and UNESCO's [Social Practices, Rituals and Festive Events](https://ich.unesco.org/en/social-practices-rituals-and-festive-events-00055) domain covers the festive contexts many traditional games belong to."
+  }
+ ],
+ "relations": [
+  {
+   "from": "10.07",
+   "to": "06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.07",
+   "to": "10.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.07",
+   "to": "10.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.07",
+   "to": "10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

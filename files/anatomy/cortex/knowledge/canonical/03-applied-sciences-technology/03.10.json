@@ -1,0 +1,36 @@
+{
+ "domain": "03.10",
+ "nodes": [
+  {
+   "id": "03.10",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Manipulation and exploitation of matter at the atomic and molecular scale (1–100 nanometers), creating novel materials and devices with emergent properties.",
+   "cs": "Manipulace hmoty v atomovém a molekulárním měřítku (1–100 nanometrů) za účelem vytvoření nových materiálů s jedinečnými vlastnostmi.",
+   "brief": "Nanotechnology is the manipulation and exploitation of matter at the atomic and molecular scale, roughly 1 to 100 nanometers, creating novel materials and devices with emergent properties that differ from the same substance at bulk scale. Work at this scale spans nanoparticle synthesis, nanoscale device fabrication, and the characterization tools needed to observe and manipulate structures far below the resolution of visible light.\n\nNanotechnology sits inside [[03]] Applied Sciences & Technology as the newest and smallest-scale of its disciplines, feeding [[03.01]] Engineering's materials-engineering branch with novel substances and increasingly informing [[03.09]] Biotechnology through nanoscale drug-delivery and diagnostic tools. Unlike most of its siblings, nanotechnology has no dedicated subcategory tree in this taxonomy yet — its output is treated as a single integrated discipline rather than split by material class or application.\n\nNanomaterial safety and characterization are governed by emerging, still-evolving regulatory frameworks given the field's recency. For a technical overview of the field, see the [Encyclopaedia Britannica](https://www.britannica.com/technology/nanotechnology), and for U.S. federal research coordination and safety guidance, the [National Nanotechnology Initiative](https://www.nano.gov/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "03.10",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.10",
+   "to": "03.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.10",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

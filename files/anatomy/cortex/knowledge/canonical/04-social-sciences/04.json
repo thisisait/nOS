@@ -1,0 +1,106 @@
+{
+ "domain": "04",
+ "nodes": [
+  {
+   "id": "04",
+   "level": 0,
+   "kind": "seed-override",
+   "en": "The empirical study of human behavior, societies, and institutions — how individuals think and act, how groups organize, exchange, govern, and learn. Spans psychology, sociology, anthropology, economics, political science, law, education, geography, demography, and archaeology; distinguished from the humanities by its reliance on systematic observation and measurement.",
+   "cs": "Empirické studium lidského chování, společností a institucí — toho, jak jednotlivci myslí a jednají a jak se společnosti organizují, hospodaří, vládnou a vzdělávají. Zahrnuje psychologii, sociologii, antropologii, ekonomii, politologii, právo, pedagogiku, geografii, demografii a archeologii; od humanitních věd se liší důrazem na systematické pozorování a měření.",
+   "brief": "The social sciences study human beings in their individual and collective life — how people think, decide, and develop; how societies organize, produce, and govern; and how populations distribute themselves across space and time. Their defining commitment is to investigate human affairs with systematic observation, comparison, and measurement, turning surveys, experiments, statistics, fieldwork, and excavation on subject matter that the humanities approach through interpretation.\n\n[[04.01]] Psychology examines mind and behavior in the individual; [[04.02]] Sociology and [[04.03]] Anthropology study societies and cultures, the one chiefly in complex modern settings, the other comparatively across all of humanity; [[04.04]] Economics analyzes production, exchange, and allocation under scarcity; [[04.05]] Political Science and [[04.06]] Law treat power, governance, and binding rules; [[04.07]] Education studies teaching and learning; [[04.08]] Geography and [[04.09]] Demography map human activity and population structure; and [[04.10]] Archaeology recovers past societies from their material remains.\n\nThe domain borrows experimental and statistical method from the [[01]] Natural Sciences and formal modeling from the [[02]] Formal Sciences, while sharing its subject — humanity — with the [[05]] Humanities, which study meaning and culture through interpretive rather than quantitative means. See [Encyclopaedia Britannica: social science](https://www.britannica.com/topic/social-science)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "04",
+   "to": "01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04",
+   "to": "02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04",
+   "to": "04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04",
+   "to": "04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04",
+   "to": "04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04",
+   "to": "04.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04",
+   "to": "04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04",
+   "to": "04.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04",
+   "to": "04.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04",
+   "to": "04.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04",
+   "to": "04.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04",
+   "to": "04.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04",
+   "to": "05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

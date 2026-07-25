@@ -1,0 +1,265 @@
+{
+ "domain": "08.04",
+ "nodes": [
+  {
+   "id": "08.04",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Shelter construction creates protective structures using available materials and techniques suited to climate and terrain, providing insulation from elements, security from predators, and psychological safety essential for extended survival.",
+   "cs": "Stavba přístřeší vytváří ochranné struktury pomocí dostupných materiálů a technik vhodných pro klima a terén, poskytuje izolaci od prvků, bezpečnost před predátory a psychologickou bezpečnost nezbytnou pro prodloužené přežití.",
+   "brief": "Shelter construction creates protective structures from available materials and site-appropriate technique, providing insulation from weather, security from predators, and the psychological stability that sustained survival depends on as much as any physical resource. [[08.04.01]] Temporary shelters address the first hours of an emergency — quick to build, minimal tools required — while permanent structures apply the same underlying principles to a site a survivor expects to occupy for weeks or longer, and [[08.04.03]] insulation techniques determine whether either structure actually holds heat once built, which is often the difference that matters most.\n\nThis node sits at the center of [[08]] Survival & Emergency Preparedness because shelter is what makes every other survival activity sustainable: a fire is far easier to maintain and far safer inside a wind-blocking structure, which is why [[08.05]] Fire Making and shelter construction are usually planned together rather than sequentially, and a shelter sited near a reliable source feeds directly into [[08.02]] Water Procurement & Purification logistics. Building-materials knowledge — reading what a given terrain actually offers, from snow to timber to earth — underlies every shelter type above it.\n\nShelter design is highly climate-dependent, so technique that works in a temperate forest can be actively dangerous in arctic or desert conditions. The [SAS Survival Handbook](https://en.wikipedia.org/wiki/SAS_Survival_Handbook) is a widely referenced field guide covering shelter types by environment, and the [Wikipedia article on survival skills](https://en.wikipedia.org/wiki/Survival_skills) situates shelter construction within the broader survival skill set."
+  },
+  {
+   "id": "08.04.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Temporary shelters provide rapid protection using lightweight materials and simple construction requiring minimal tools, suitable for emergency situations, transit camps, or short-term occupation before permanent establishment.",
+   "cs": "Dočasné přístřeší poskytuje rychlou ochranu pomocí lehkých materiálů a jednoduché stavby vyžadující minimální nástroje, vhodné pro havarijní situace, přechodné tábory nebo krátkodobou obsazení před trvalým založením.",
+   "brief": "Temporary shelters provide rapid protection from the elements using lightweight materials and simple construction that demands little in the way of tools or time, suited to the first hours or days of an emergency, a transit camp, or any situation where a survivor cannot yet commit to a fixed location. Speed and minimal resource use are the defining constraints — a temporary shelter that takes as long to build as a permanent one has failed its purpose.\n\nWithin [[08.04]] Shelter Construction, temporary shelters are the entry point that [[08.04.02]] permanent structures later replace once a site is confirmed and longer occupation is expected; both depend on the same [[08.04.05]] building materials knowledge to read what a given terrain actually offers, and both need [[08.04.03]] insulation techniques layered in before either one reliably holds heat. A well-sited temporary shelter also determines whether a fire can be built and maintained nearby, since wind-blocking structure and fire-making in [[08.05]] Fire Making are usually planned together.\n\nA lean-to, debris hut, or tarp shelter each trade differently between speed, weatherproofing, and material demand, and the right choice depends heavily on the immediate hazard — wind, rain, or cold. The [Wikipedia article on survival skills](https://en.wikipedia.org/wiki/Survival_skills) situates shelter construction within the broader emergency skill set, and the [SAS Survival Handbook](https://en.wikipedia.org/wiki/SAS_Survival_Handbook) documents specific temporary-shelter designs by environment."
+  },
+  {
+   "id": "08.04.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Permanent structures provide long-term shelter using durable materials and techniques designed for year-round habitation, incorporating weatherproofing, structural stability, and features supporting daily life and safety.",
+   "cs": "Trvalé struktury poskytují dlouhodobé přístřeší pomocí odolných materiálů a technik navržených pro celoroční obytnost, začleňují ochraňující proti počasí, strukturální stabilitu a funkce podporující každodenní život a bezpečnost.",
+   "brief": "Permanent structures provide long-term shelter built from durable materials and techniques suited to year-round habitation, incorporating weatherproofing, structural stability, and the features — storage, fire management, sleeping areas — that daily life over weeks or months requires. They represent the far end of the same spectrum as [[08.04.01]] temporary shelters: where a temporary shelter optimizes for speed, a permanent structure optimizes for durability and comfort, accepting a much larger time and material investment in exchange.\n\nBuilding a permanent structure draws on the same [[08.04.05]] building materials knowledge as any other shelter in [[08.04]] Shelter Construction, but at greater depth — durable construction demands understanding load-bearing capacity, moisture resistance, and long-term material behavior, not just what is available nearby. [[08.04.03]] Insulation techniques matter even more here than in temporary shelters, since a permanent structure is expected to hold heat efficiently across an entire season rather than a single night, and in cold or arid climates the same durability goals can instead be met by [[08.04.04]] underground shelters, which trade construction difficulty for superior thermal stability.\n\nSite selection is as consequential as construction technique — proximity to water, defensibility, and drainage all shape whether a permanent structure remains viable through changing seasons. The [Wikipedia article on survival skills](https://en.wikipedia.org/wiki/Survival_skills) covers permanent-shelter principles within the wider emergency preparedness skill set."
+  },
+  {
+   "id": "08.04.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Insulation techniques reduce heat transfer between interior and exterior through barriers of trapped air, reflective surfaces, or thermal mass, critical for maintaining comfortable temperature without excessive fuel consumption.",
+   "cs": "Techniky izolace snižují přenos tepla mezi interiérem a exteriérem prostřednictvím bariér uvězněného vzduchu, reflexivních ploch nebo tepelné kapacity, kritické pro udržení pohodlné teploty bez nadměrné spotřeby paliva.",
+   "brief": "Insulation techniques reduce heat transfer between a shelter's interior and the exterior environment, using layers of trapped air, reflective surfaces, or thermal mass to slow the loss of body heat or fire-generated warmth. Good insulation is what turns a structurally sound shelter into a livable one — without it, even a well-built shelter fails at its core purpose of maintaining a survivable interior temperature.\n\nInsulation applies across every shelter type in [[08.04]] Shelter Construction rather than belonging to just one: it is what makes [[08.04.01]] temporary shelters survivable overnight in cold conditions with minimal material, what [[08.04.02]] permanent structures need to hold heat efficiently across a full season, and it is largely why [[08.04.04]] underground shelters perform so well thermally — packed earth is itself a powerful insulator requiring little added technique. Choice of insulating material follows directly from [[08.04.05]] building materials knowledge, since what insulates well (dry leaves, snow, animal fur, dead air gaps) varies entirely by what a given terrain provides.\n\nMoisture is insulation's chief enemy — wet insulating material conducts heat away far faster than it blocks it, which is why layering and weatherproofing are inseparable concerns in practice. The [Wikipedia article on survival skills](https://en.wikipedia.org/wiki/Survival_skills) covers insulation and thermal-protection principles as part of the broader shelter and cold-weather survival skill set."
+  },
+  {
+   "id": "08.04.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Underground shelters utilize earth structures for thermal stability and protection from surface hazards, offering natural insulation and radiation shielding while presenting challenges in ventilation, moisture control, and construction difficulty.",
+   "cs": "Podzemní přístřeší využívá zemní struktury pro tepelnou stabilitu a ochranu před povrchovými nebezpečími, nabízí přirozenou izolaci a stínění radiace, zatímco představuje výzvy v větrání, kontrole vlhkosti a obtížnosti stavby.",
+   "brief": "Underground shelters use earth itself as structure, digging into or building beneath the ground to exploit soil's natural thermal stability and its capacity to block wind, radiation, and surface hazards that above-ground structures remain exposed to. The tradeoff is construction difficulty: earthworks demand more labor and time than most above-ground alternatives, and they introduce ventilation and moisture-control challenges that [[08.04.01]] temporary shelters and [[08.04.02]] permanent structures do not face in the same way.\n\nWithin [[08.04]] Shelter Construction, underground shelters are the specialist choice for climates where temperature extremes or exposure make above-ground insulation impractical — packed earth delivers much of what [[08.04.03]] insulation techniques must otherwise engineer from scratch, which is why underground designs often need comparatively little added insulating material. What earth is actually diggable and stable enough to shelter in nonetheless depends on the same [[08.04.05]] building materials assessment that governs every other shelter type in this branch.\n\nPoor ventilation is the underground shelter's most dangerous failure mode — carbon dioxide buildup and, if any fire is used inside, carbon monoxide, can turn a thermally excellent shelter lethal. The [Wikipedia article on survival skills](https://en.wikipedia.org/wiki/Survival_skills) covers underground and earth-sheltered construction within the broader survival skill set."
+  },
+  {
+   "id": "08.04.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Building materials encompass substances used in shelter construction including wood, stone, earth, metal, and plant fibers, selected for availability, durability, thermal properties, and suitability to local climate conditions.",
+   "cs": "Stavební materiály zahrnují látky používané při stavbě přístřeší včetně dřeva, kamene, zeminy, kovu a rostlinných vláken, vybrané pro dostupnost, odolnost, tepelné vlastnosti a vhodnost k místním klimatickým podmínkám.",
+   "brief": "Building materials are the substances a shelter builder selects and works — wood, stone, earth, snow, metal salvage, and plant fiber — chosen for local availability, weather durability, thermal insulating value, and how readily they can be shaped with hand tools or none at all. Reading a site for its building materials is inseparable from reading it for shelter potential: standing dead timber supplies a frame, packed earth or sod adds thermal mass, bark or palm fronds shed rain, and plant fiber twists into cordage for lashings.\n\nThe knowledge underlies every shelter type in [[08.04]] Shelter Construction: [[08.04.01]] temporary shelters draw on whatever lies within arm's reach for a structure built in hours, while [[08.04.02]] permanent structures justify hauling or processing heavier, longer-lasting material for a site occupied over weeks. [[08.04.03]] Insulation techniques turn a chosen material's thermal property into an actual heat-retention strategy, and the same wood that frames a wall is a different resource from the dry, resinous wood [[08.05.04]] fuel types demands for burning — structural and combustible wood are selected on opposite criteria.\n\nMaterial identification is regionally specific, so a technique from a temperate forest guide translates poorly to arctic or desert terrain. The [Wikipedia article on building material](https://en.wikipedia.org/wiki/Building_material) surveys material categories and properties, and [Low-tech Magazine's coverage of earthen construction](https://www.lowtechmagazine.com/) documents traditional load-bearing earth and stone technique still viable without industrial tools."
+  }
+ ],
+ "relations": [
+  {
+   "from": "08.04.01",
+   "to": "08.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.01",
+   "to": "08.04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.01",
+   "to": "08.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.01",
+   "to": "08.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.01",
+   "to": "08.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.02",
+   "to": "08.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.02",
+   "to": "08.04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.02",
+   "to": "08.04.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.02",
+   "to": "08.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.02",
+   "to": "08.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.03",
+   "to": "08.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.03",
+   "to": "08.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.03",
+   "to": "08.04.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.03",
+   "to": "08.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.03",
+   "to": "08.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.04",
+   "to": "08.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.04",
+   "to": "08.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.04",
+   "to": "08.04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.04",
+   "to": "08.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.04",
+   "to": "08.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.05",
+   "to": "08.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.05",
+   "to": "08.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.05",
+   "to": "08.04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.05",
+   "to": "08.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04.05",
+   "to": "08.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04",
+   "to": "08.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04",
+   "to": "08.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04",
+   "to": "08.04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04",
+   "to": "08.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.04",
+   "to": "08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

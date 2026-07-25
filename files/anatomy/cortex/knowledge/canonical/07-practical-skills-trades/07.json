@@ -1,0 +1,113 @@
+{
+ "domain": "07",
+ "nodes": [
+  {
+   "id": "07",
+   "level": 0,
+   "kind": "seed-override",
+   "en": "Hands-on skills and trades that build, maintain, and repair the physical fabric of daily life — structures, machines, circuits, pipes, wood, metal, gardens, food, and cloth. Spans construction, mechanics, electronics, plumbing, carpentry, welding, gardening, cooking, sewing, and automotive work; distinguished from engineering by its basis in manual craft and working practice over design theory.",
+   "cs": "Praktické dovednosti a řemesla, jež budují, udržují a opravují hmotné zázemí každodenního života — stavby, stroje, obvody, potrubí, dřevo, kov, zahrady, jídlo i textil. Zahrnují stavebnictví, mechaniku, elektroniku, instalatérství, tesařství, svařování, zahradničení, vaření, šití a automechaniku; od inženýrství se liší tím, že vycházejí z ruční zručnosti a pracovní praxe, nikoli z teorie návrhu.",
+   "brief": "Practical skills and trades are the hands-on disciplines that build, maintain, and repair the physical fabric of daily life. Their knowledge is embodied and procedural — acquired through apprenticeship and practice, verified by whether the joint holds, the circuit carries, and the engine runs — and it forms the working counterpart to the design knowledge of engineering.\n\n[[07.01]] Construction erects and finishes buildings; [[07.05]] Carpentry and [[07.06]] Welding work wood and metal into structure; [[07.02]] Mechanics and [[07.10]] Automotive keep machines and vehicles running; [[07.03]] Electronics assembles and repairs circuits and devices; [[07.04]] Plumbing installs and maintains water and waste systems; and [[07.07]] Gardening, [[07.08]] Cooking, and [[07.09]] Sewing sustain the household economy of food and clothing.\n\nThe trades execute and maintain what [[03]] Applied Sciences & Technology designs, shade into [[06]] Arts & Creative Expression where craft rises to aesthetic ambition, and supply the manual competence on which [[08]] Survival & Emergency Preparedness and [[12]] Post-Disaster Rebuilding depend when specialized infrastructure is unavailable."
+  }
+ ],
+ "relations": [
+  {
+   "from": "07",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07",
+   "to": "06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07",
+   "to": "07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07",
+   "to": "07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07",
+   "to": "07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07",
+   "to": "07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07",
+   "to": "07.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07",
+   "to": "07.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07",
+   "to": "07.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07",
+   "to": "07.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07",
+   "to": "07.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07",
+   "to": "07.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07",
+   "to": "08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07",
+   "to": "12",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

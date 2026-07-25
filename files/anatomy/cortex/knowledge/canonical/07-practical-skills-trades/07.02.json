@@ -1,0 +1,251 @@
+{
+ "domain": "07.02",
+ "nodes": [
+  {
+   "id": "07.02",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Mechanics is the science and practice of maintaining, repairing, and rebuilding mechanical systems—primarily engines, transmissions, and power-transmission assemblies—to restore function and performance.",
+   "cs": "Mechanika je věda a praxe údržby, opravy a repase mechanických systémů—především motorů, převodovek a sestav pro přenos výkonu—za účelem obnovení funkce a výkonu.",
+   "brief": "Mechanics is the science and practice of maintaining, repairing, and rebuilding mechanical systems that generate, transmit, and control motion — principally engines and the drivetrain and control systems built around them. Diagnosis is central to the discipline: a mechanic works backward from a symptom (noise, vibration, loss of power) to the specific component or system that produces it.\n\nThe field anchors [[07.02.01]] as the power-generating core of the system, [[07.02.02]] as the assembly that delivers that power to the wheels, and [[07.02.04]] as the safety-critical system that stops the vehicle. Mechanics shares its parent, Practical Skills & Trades, with [[07.03]], which applies a comparable diagnostic method to electrical and signal faults rather than mechanical ones, and with [[07.01]], whose systems are static rather than moving parts under load.\n\nThe [ASE (National Institute for Automotive Service Excellence)](https://www.ase.com/) certifies and documents professional standards across automotive mechanical repair."
+  },
+  {
+   "id": "07.02.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Engine repair encompasses the diagnosis, disassembly, service, and reassembly of internal combustion engines across fuel types and scales, restoring power delivery and fuel efficiency through component reconditioning or replacement.",
+   "cs": "Oprava motoru zahrnuje diagnostiku, demontáž a opětovnou montáž spalovacích motorů, obnovení výkonu a efektivnosti paliva.",
+   "brief": "Engine repair is the diagnosis, disassembly, service, and reassembly of internal combustion engines across fuel types and scales, restoring power delivery and fuel efficiency through component reconditioning or replacement. The discipline begins with [[07.02.01.01]], tracing a symptom back to its source before any disassembly, and covers the gasoline [[07.02.01.02]] engine family as well as diesel and other compression-ignition designs as distinct service traditions, down to engines built for equipment rather than vehicles; when wear exceeds serviceable limits, [[07.02.01.05]] governs the machining and reassembly tolerances of a full rebuild.\n\nEngine repair is the power-generating starting point of [[07.02]]'s drivetrain: the output it restores is what [[07.02.02]] then converts into motion at the wheels, so an engine problem often first presents as a transmission or performance complaint elsewhere in the system.\n\nThe [SAE International](https://www.sae.org/) standards body publishes the engineering specifications referenced across engine design, diagnostics, and rebuild practice, and [ASE](https://www.ase.com/) certifies professional competency in engine repair."
+  },
+  {
+   "id": "07.02.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Engine diagnostics identifies mechanical and operational faults in internal combustion engines through systematic testing, sensor analysis, and symptom correlation. Diagnostic procedures distinguish combustion efficiency issues, component wear, and control-system failures from one another, narrowing root causes before repair work begins.",
+   "cs": "Diagnostika motoru identifikuje mechanické a provozní vady v spalovacích motorech pomocí systematického testování, analýzy senzorů a korelace symptomů. Diagnostické postupy odlišují problémy s účinností spalování, opotřebením součástí a selháním řídicích systémů, aby zúžily příčiny před zahájením oprav."
+  },
+  {
+   "id": "07.02.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Combustion engines convert fuel-air mixture combustion into mechanical motion through piston displacement and crankshaft rotation. This field covers spark-ignition (petrol) engine design, operation, troubleshooting, and modification, distinguishing them from diesel engines by ignition method and fuel properties.",
+   "cs": "Spalovací motory přeměňují spalování palivového a vzdušného směsi na mechanický pohyb posuvem pístu a rotací klikového hřídele. Tato oblast zahrnuje konstrukční řešení, provoz, řešení problémů a modifikace motorů se zážehem (benzín), které se liší od dieselových motorů metodou zážehu a vlastnostmi paliva."
+  },
+  {
+   "id": "07.02.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Diesel engines operate on compression-ignition principles, using high-pressure fuel injection to ignite fuel without spark plugs. This field covers diesel engine design, high-pressure fuel systems, emission control, and repair techniques specific to compression-ignition combustion.",
+   "cs": "Dieselové motory pracují na principu vznícení stlačením, používají vstřik paliva pod vysokým tlakem bez zapalovacích svíček. Tato oblast zahrnuje konstrukční řešení, systémy vysokotlakého vstřiku, řízení emisí a opravy specifické pro spalování vznícené stlačením."
+  },
+  {
+   "id": "07.02.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Small engines power portable and stand-alone equipment such as lawn mowers, generators, and chainsaws, typically using a single or dual cylinder at modest displacement and power output. Service demands differ from automotive engines in scale and the degree of component standardization.",
+   "cs": "Malé motory pohánějí přenosné a samostatné zařízení, jako jsou sekačky, generátory a motorové pily, obvykle s jedním nebo dvěma válci a skromným zdvihovým objemem a výkonem. Servisní nároky se liší od automobilních motorů v měřítku a míře standardizace součástí."
+  },
+  {
+   "id": "07.02.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Engine rebuild procedures restore worn or damaged engines to factory specifications through systematic disassembly, component replacement or repair, and reassembly with precision fitting. Rebuilds address accumulated wear, internal damage from overheating or contamination, and restore compression and performance.",
+   "cs": "Postupy obnovy motorů obnovují opotřebené nebo poškozené motory na tovární specifikace systematickým rozebráním, výměnou nebo opravou součástí a opětovným složením s přesným usazením. Obnovy řeší postupné opotřebení, vnitřní poškození od přehřívání nebo kontaminace a obnovují kompresi a výkon."
+  },
+  {
+   "id": "07.02.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Transmission systems convert engine power into controlled motion at the wheels through gearing ratios, fluid coupling, or electrical transfer. This field covers hydraulic, mechanical, and electronic transmission types used in vehicles, maintenance procedures, and fluid dynamics principles.",
+   "cs": "Systémy převodovky přeměňují výkon motoru na řízený pohyb kol pomocí převodových poměrů, kapalinového spojení nebo elektrického přenosu. Tato oblast zahrnuje hydraulické, mechanické a elektronické převodovky používané v vozidlech, postupy údržby a principy dynamiky kapalin.",
+   "brief": "Transmission systems convert the power [[07.02.01]] engine repair restores into controlled motion at the wheels, through gearing ratios, fluid coupling, or electrical transfer. The field covers manual and automatic gearboxes, the hydraulic torque converters and fluid-coupling components shared with [[07.02.05]], and the electronic control units that manage shift timing in modern automatic and continuously variable designs, alongside the fluid-service and rebuild procedures each type requires.\n\nA transmission fault often masquerades as an engine problem — hesitation, slipping, or unusual noise under load — because the two systems sit in the same power path within [[07.02]], which is why diagnosis in this subfield starts by ruling engine repair in or out before opening the gearbox itself.\n\nThe [SAE International](https://www.sae.org/) standards body publishes transmission fluid and design specifications, and the [Automatic Transmission Rebuilders Association](https://www.atra.com/) documents rebuild procedure and diagnostic technique."
+  },
+  {
+   "id": "07.02.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Suspension and steering systems maintain vehicle stability and directional control by managing wheel geometry, damping, and driver input translation. This field covers springs, shock absorbers, linkages, and steering mechanisms that isolate the chassis from road impacts while enabling precise handling.",
+   "cs": "Systémy podvozku a řízení udržují stabilitu vozidla a řízení směru správou geometrie kol, tlumením a převodem vstupu řidiče. Tato oblast zahrnuje pružiny, tlumiče, vazby a mechanismy řízení, které izolují podvozek od nárazu cesty a umožňují přesné řízení.",
+   "brief": "Suspension and steering systems maintain vehicle stability and directional control by managing wheel geometry, damping, and the translation of driver input into wheel angle. The field covers springs and shock absorbers that isolate the chassis from road impacts, the linkages and geometry that keep tires tracking true under load, and the steering gear and linkages that turn a driver's wheel input into wheel angle — a system that, on power-assisted vehicles, draws on the same [[07.02.05]] fluid circuits used elsewhere in the drivetrain.\n\nSuspension and steering shares its wheel-end territory with [[07.02.04]]: both systems mount at the same corner of the vehicle, and a worn component in one frequently shows up as a symptom attributed to the other, such as pulling or vibration under braking. Both sit within [[07.02]] alongside the power-generating and power-transmitting subfields upstream of them.\n\n[SAE International](https://www.sae.org/) publishes the engineering standards for suspension geometry and steering systems, and [ASE](https://www.ase.com/) certifies professional competency in suspension and steering repair."
+  },
+  {
+   "id": "07.02.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Brake systems stop or slow vehicles through friction conversion of kinetic energy to heat, using mechanical, hydraulic, or regenerative methods. This field covers drum and disc brake design, fluid mechanics, brake pad composition, anti-lock systems, and service procedures.",
+   "cs": "Brzdné systémy zastavují nebo zpomalují vozidla přeměnou kinetické energie na teplo prostřednictvím tření pomocí mechanických, hydraulických nebo regeneračních metod. Tato oblast zahrnuje konstrukční řešení bubnových a kotoučových brzd, dynamiku kapalin, složení brzdových destiček, protiblokovací systémy a postupy údržby.",
+   "brief": "Brake systems stop or slow a vehicle by converting kinetic energy to heat through friction, using mechanical, hydraulic, or regenerative methods. The field covers drum and disc brake design, the fluid mechanics of hydraulic actuation — sharing its fluid circuits and reservoir components with [[07.02.05]] — brake pad and shoe friction-material composition, anti-lock control systems, and the bleeding, resurfacing, and pad-replacement procedures that keep the system within safe tolerance.\n\nBrake systems mount at the same wheel-end assembly as [[07.02.03]], so a pull, vibration, or noise diagnosed as a brake fault can originate in worn suspension or steering components instead, and vice versa; both are safety-critical subfields within [[07.02]] where a missed diagnosis has consequences beyond drivability.\n\nThe [National Highway Traffic Safety Administration](https://www.nhtsa.gov/) sets the vehicle safety standards that brake systems must meet, and [SAE International](https://www.sae.org/) publishes the engineering specifications referenced in brake design and service."
+  },
+  {
+   "id": "07.02.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Hydraulic systems transmit and control power using pressurized fluid in sealed circuits, enabling precise force multiplication and remote actuation. This field covers pump operation, pressure regulators, cylinders, motors, and troubleshooting of fluid systems found across vehicles and industrial equipment.",
+   "cs": "Hydraulické systémy přenášejí a řídí výkon pomocí tlakované kapaliny v uzavřených okruzích, což umožňuje přesné zvýšení síly a dálkové ovládání. Tato oblast zahrnuje provoz čerpadel, regulátory tlaku, válce, motory a řešení problémů kapalinových systémů v vozidlech a průmyslových zařízeních.",
+   "brief": "Hydraulic systems transmit and control mechanical power by pressurizing an incompressible fluid, typically oil, within a sealed circuit of pumps, valves, cylinders, and motors. Because the fluid is nearly incompressible, force applied at one point transfers with minimal loss to another point, and sizing the receiving piston relative to the driving piston multiplies force according to Pascal's law. This branch of [[07.02]] Mechanics covers the operation and maintenance of pumps, pressure regulators, hoses, seals, and actuators, plus the diagnostic work of tracing leaks, contamination, and pressure loss across vehicle and industrial fluid-power systems.\n\nHydraulics supplies the actuation muscle behind several sibling fields in Mechanics. [[07.02.04]] Brake Systems rely on hydraulic fluid to convert pedal force into clamping pressure at the wheels, and [[07.02.03]] Suspension & Steering uses hydraulic assist to lighten steering effort and, in some designs, to actively damp ride motion. [[07.02.02]] Transmission Systems overlaps at the torque converter and hydraulic clutch packs that couple engine output to the gearbox. Outside Mechanics, the same pump-cylinder-valve vocabulary reappears in heavy construction and industrial machinery, where hydraulics is often the only practical way to deliver high force in a compact package.\n\nReference material on the underlying physics and component design is widely available; the [Pascal's law](https://en.wikipedia.org/wiki/Pascal%27s_law) article covers the pressure-transmission principle, and the [hydraulic machinery](https://en.wikipedia.org/wiki/Hydraulic_machinery) overview surveys pump, valve, and actuator types across applications."
+  }
+ ],
+ "relations": [
+  {
+   "from": "07.02.01",
+   "to": "07.02.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.01",
+   "to": "07.02.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.01",
+   "to": "07.02.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.01",
+   "to": "07.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.01",
+   "to": "07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.02",
+   "to": "07.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.02",
+   "to": "07.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.02",
+   "to": "07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.03",
+   "to": "07.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.03",
+   "to": "07.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.03",
+   "to": "07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.04",
+   "to": "07.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.04",
+   "to": "07.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.04",
+   "to": "07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.05",
+   "to": "07.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.05",
+   "to": "07.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.05",
+   "to": "07.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02.05",
+   "to": "07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02",
+   "to": "07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02",
+   "to": "07.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02",
+   "to": "07.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02",
+   "to": "07.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.02",
+   "to": "07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

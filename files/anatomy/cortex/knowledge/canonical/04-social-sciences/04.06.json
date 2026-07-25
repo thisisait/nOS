@@ -1,0 +1,29 @@
+{
+ "domain": "04.06",
+ "nodes": [
+  {
+   "id": "04.06",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Law systematizes rules governing conduct, rights, and obligations within and between societies. It encompasses jurisprudence, institutions, and mechanisms for dispute resolution.",
+   "cs": "Právo systematizuje pravidla upravující chování, práva a povinnosti v rámci společností a mezi nimi. Zahrnuje jurisprudenci, instituce a mechanismy pro řešení sporů.",
+   "brief": "Law systematizes the rules governing conduct, rights, and obligations within and between societies, encompassing jurisprudence, institutions, and the mechanisms through which disputes are resolved and rules enforced. It gives concrete, enforceable form to the authority that [[04.05]] Political Science studies at the level of institutions and legitimacy, translating political decisions into binding rules that courts and administrators apply.\n\nThe discipline spans public law, constitutional, administrative, and criminal, which structures the relationship between citizens and the state, and private law, contract, tort, and property, which governs relations between individuals and organizations. Its methods and history connect closely to [[04.02]] Sociology, which studies how legal rules function in practice and how they both reflect and reshape social norms, a relationship jurisprudence calls the sociology of law.\n\nLegal systems worldwide fall into major families, common law, civil law, religious law, and mixed systems, that differ in how they derive authority and precedent, though all share the core function of resolving disputes predictably. The [Legal Information Institute at Cornell](https://www.law.cornell.edu/wex) offers an accessible reference across legal topics and jurisdictions, and the [Stanford Encyclopedia of Philosophy entry on the concept of law](https://plato.stanford.edu/entries/legal-concept/) addresses the field's foundational debates."
+  }
+ ],
+ "relations": [
+  {
+   "from": "04.06",
+   "to": "04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.06",
+   "to": "04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

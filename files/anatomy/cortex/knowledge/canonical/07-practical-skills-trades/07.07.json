@@ -1,0 +1,251 @@
+{
+ "domain": "07.07",
+ "nodes": [
+  {
+   "id": "07.07",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Gardening cultivates and maintains plants for food, ornament, or ecological purposes, encompassing soil management, planting, growth maintenance, and pest management. Bridges practical horticulture through multiple interdependent subdisciplines rather than a single isolated skill.",
+   "cs": "Zahradničství kultivuje a udržuje rostliny pro jídlo, zdobení nebo ekologické účely, zahrnuje správu půdy, sázení, údržbu růstu a správu škůdců. Propojuje praktické zahradnické dovednosti přes více vzájemně závislých subdisciplín spíše než jednu izolovanou dovednost.",
+   "brief": "Gardening is the cultivation and maintenance of plants for food, ornament, or ecological benefit, spanning everything from a windowsill herb pot to a working vegetable plot. The discipline rests on reading soil and season before touching a plant: [[07.07.01]] soil preparation establishes the structure, drainage, and nutrient base a planting will draw on, while [[07.07.05]] composting closes the loop by returning organic waste to that same soil as usable fertility rather than landfill. Once beds are prepared, technique shifts to the living plant itself — spacing, timing, and propagation choices at planting, followed by ongoing pruning and pest management that keep a planting productive rather than merely alive.\n\nGardening's outputs feed directly into two neighboring disciplines. Vegetables and herbs grown at [[07]] Practical Skills & Trades level become raw material for [[07.08]] Cooking, and a harvest that exceeds immediate kitchen use is exactly what [[08.03]] Food Preservation & Storage exists to carry through the off-season — canning, drying, and fermenting turn a garden's seasonal surplus into year-round food security. This is why gardening reads as practical infrastructure rather than a purely decorative hobby: it is the first link in a food chain that continues through preservation and preparation.\n\nBeyond the household plot, gardening principles scale into market horticulture, permaculture design, and urban food-security programs. The [Royal Horticultural Society](https://www.rhs.org.uk/) maintains an extensive practical growing guide, and the [Wikipedia article on gardening](https://en.wikipedia.org/wiki/Gardening) surveys its history and major traditions across cultures."
+  },
+  {
+   "id": "07.07.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Soil preparation readies growing beds and field plots for planting by tilling, amending with compost or nutrients, and testing pH and structure. Establishes the foundation for plant establishment, preceding and distinct from planting, maintenance pruning, and pest control.",
+   "cs": "Příprava půdy připravuje záhony a polní plochy k sázení tím, že je orá, obohacuje kompostem nebo živinami a testuje pH a strukturu. Vytváří základ pro usazení rostlin, předchází sázení a je odlišná od údržby prořezávání a kontroly škůdců.",
+   "brief": "Soil preparation is the set of practices that ready growing beds and field plots for planting — tilling or loosening compacted ground, amending with compost or mineral nutrients, and testing pH and structure before a single seed goes in. It is the foundation step of [[07.07]] Gardening: every subsequent stage, from [[07.07.02]] planting techniques through ongoing [[07.07.03]] pruning and [[07.07.04]] pest control, inherits whatever fertility, drainage, and tilth the bed was given at this stage.\n\nThe practice draws directly on [[07.07.05]] composting, which supplies the organic humus most soil preparation amends into existing ground rather than relying solely on synthetic fertilizer; a gardener who composts is, in effect, manufacturing their own soil-preparation input on-site. Soil testing — checking pH, drainage, and nutrient levels before amending — distinguishes deliberate preparation from simply turning the earth, since the correct amendment depends entirely on what the existing soil lacks.\n\nAs the entry point of [[07.07]] Gardening within [[07]] Practical Skills & Trades, soil preparation determines much of a planting's eventual success or failure before growth technique ever enters the picture. The [Royal Horticultural Society's soil guidance](https://www.rhs.org.uk/soil-composts-mulches) covers testing and amendment in practical detail, and the [USDA Natural Resources Conservation Service soil health resources](https://www.nrcs.usda.gov/conservation-basics/natural-resource-concerns/soil/soil-health) document the science behind structure and fertility management."
+  },
+  {
+   "id": "07.07.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Planting techniques select appropriate depth, spacing, timing, and methods for seeds or seedlings to ensure healthy establishment and vigor. Distinct from preceding soil preparation and from maintenance pruning and pest control.",
+   "cs": "Techniky sázení vybírají vhodnou hloubku, rozestup, časování a metody pro semena nebo sazenice, aby se zajistilo zdravé usazení a vitalita. Odlišné od předcházející přípravy půdy a od údržby prořezávání a kontroly škůdců.",
+   "brief": "Planting techniques cover the choices that determine whether a seed or seedling establishes successfully: depth, spacing, timing relative to season and frost dates, and the method appropriate to the plant — direct sowing, transplanting, or propagation from cuttings. The discipline sits immediately downstream of [[07.07.01]] soil preparation within [[07.07]] Gardening, applying the bed that preparation created to the specific requirements of each species being grown.\n\nCorrect spacing and depth prevent the competition for light, water, and nutrients that stunts overcrowded plantings, while timing against seasonal and climatic windows determines whether a plant germinates into favorable conditions or struggles against frost or heat stress. These choices set the trajectory a planting follows through the growing season, handing off next to ongoing [[07.07.03]] pruning to shape growth and [[07.07.04]] pest control to defend it, both of which react to and build on decisions made at planting.\n\nWithin [[07]] Practical Skills & Trades, planting technique is where gardening's preparatory work turns into a living crop, and getting it wrong is difficult to correct later — a seed planted too deep or a seedling set out before the last frost rarely recovers fully. The [Royal Horticultural Society's growing guides](https://www.rhs.org.uk/) and the [Wikipedia article on sowing](https://en.wikipedia.org/wiki/Sowing) both survey timing and method across common crops."
+  },
+  {
+   "id": "07.07.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Pruning removes dead, diseased, or overgrown plant parts to promote healthy structure, shape, and productivity through clean cuts that heal effectively. Maintains established plants during active growth, distinct from initial planting and from pest intervention.",
+   "cs": "Prořezávání odstraňuje mrtvé, nemocné nebo přerostlé části rostlin, aby se podpořila zdravá struktura, tvar a produktivita prostřednictvím čistých řezů, které se hojí účinně. Udržuje již existující rostliny během aktivního růstu, odlišné od počátečního sázení a intervence proti škůdcům.",
+   "brief": "Pruning is the selective removal of dead, diseased, damaged, or overgrown plant parts to promote healthy structure, shape, and productivity, performed with clean cuts positioned and timed so the plant heals rather than scars or invites infection. Unlike [[07.07.02]] planting techniques, which establish a plant, pruning is a maintenance practice applied to plants already established and actively growing, repeated across seasons rather than performed once.\n\nWhere and how a cut is made matters as much as whether it is made at all: cutting too close weakens the branch collar's ability to seal, cutting too far leaves a stub prone to rot, and pruning at the wrong point in a plant's growth cycle can remove the buds or wood that would have produced the next season's flowers or fruit. Pruning works in the same maintenance register as [[07.07.04]] pest control — both intervene on an established planting rather than preparing or founding it — but where pest control responds to external threats, pruning shapes the plant's own structure and vigor.\n\nAs a recurring discipline within [[07.07]] Gardening, pruning demands the kind of tacit, tool-specific skill typical of [[07]] Practical Skills & Trades — knowing a species' growth habit determines the right cut as much as the tool does. The [Royal Horticultural Society's pruning guidance](https://www.rhs.org.uk/plants/types/pruning-and-training) covers technique and timing by plant type, and the [Wikipedia article on pruning](https://en.wikipedia.org/wiki/Pruning) surveys the practice's history and methods."
+  },
+  {
+   "id": "07.07.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Pest control prevents or eliminates insects, mites, fungi, and other organisms that damage crops or ornamental plants through biological, chemical, or mechanical methods. Addresses external threats to established plants, distinct from soil preparation, planting, and pruning.",
+   "cs": "Kontrola škůdců zabraňuje nebo eliminuje hmyz, roztoče, houby a jiné organismy, které poškozují plodiny nebo okrasné rostliny, prostřednictvím biologických, chemických nebo mechanických metod. Řeší externí hrozby pro již existující rostliny, odlišné od přípravy půdy, sázení a prořezávání.",
+   "brief": "Pest control is the practice of preventing or eliminating insects, mites, fungi, and other organisms that damage crops or ornamental plants, using biological, chemical, or mechanical methods matched to the pest and the setting. It addresses threats that arrive from outside the plant after [[07.07.02]] planting techniques have established it, distinguishing it from [[07.07.01]] soil preparation and planting, which shape the plant's founding conditions, and from [[07.07.03]] pruning, which manages the plant's own structure.\n\nMethod choice follows a rough escalation: biological controls (introducing or encouraging natural predators), mechanical controls (barriers, traps, hand removal), and chemical controls (targeted or broad-spectrum pesticides) trade off speed and precision against ecological disruption, and integrated pest management combines all three rather than defaulting to the most aggressive option. Because pests are opportunistic, effective control depends on regular inspection working alongside pruning and planting decisions — dense, poorly spaced plantings and damaged tissue both increase vulnerability.\n\nWithin [[07.07]] Gardening and the broader [[07]] Practical Skills & Trades branch, pest control is the discipline most directly in tension between productivity and ecological impact, which is why integrated approaches are now the norm in professional horticulture. The [EPA's integrated pest management overview](https://www.epa.gov/safepestcontrol/integrated-pest-management-ipm-principles) documents the standard framework, and the [Royal Horticultural Society's pest guidance](https://www.rhs.org.uk/prevention-protection) covers common garden pests and control options."
+  },
+  {
+   "id": "07.07.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Composting decomposes organic waste—leaves, kitchen scraps, manure—into nutrient-rich humus that improves soil fertility and structure for future planting. Produces an amendment input for soil preparation, closing the cycle between waste and bed improvement.",
+   "cs": "Kompostování rozkládá organický odpad—listy, kuchyňský odpad, hnoj—na bohatou humus, která zlepšuje úrodnost a strukturu půdy pro budoucí sázení. Vytváří zlepšující vstup pro přípravu půdy, zavírá cyklus mezi odpadem a vylepšením záhonu.",
+   "brief": "Composting is the controlled decomposition of organic waste — fallen leaves, kitchen scraps, manure, garden trimmings — into humus, a nutrient-rich material that improves soil fertility, structure, and water retention. Unlike the plant-facing disciplines of [[07.07]] Gardening, composting works on the input side: it produces the amendment that [[07.07.01]] soil preparation then works into a bed, closing the loop between waste and the fertility a new planting depends on.\n\nEffective composting balances carbon-rich \"brown\" material (dry leaves, straw, cardboard) against nitrogen-rich \"green\" material (fresh scraps, grass clippings), along with moisture and aeration, to keep the microbial decomposition process active rather than stalling into anaerobic rot; a well-managed pile generates enough heat to break down material in weeks rather than the months a neglected pile takes. This makes composting a small-scale application of the same organic-matter cycling that underlies soil ecology more broadly, and a household practicing it converts what would otherwise be landfill waste into a renewable garden input.\n\nComposting closes the cycle within [[07.07]] Gardening and, more broadly, exemplifies the resourcefulness typical of [[07]] Practical Skills & Trades — turning a waste stream into a productive input rather than discarding it. The [US EPA composting guidance](https://www.epa.gov/recycle/composting-home) covers home methods and troubleshooting, and the [Wikipedia article on compost](https://en.wikipedia.org/wiki/Compost) surveys the microbiology and history of the practice."
+  }
+ ],
+ "relations": [
+  {
+   "from": "07.07.01",
+   "to": "07.07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.01",
+   "to": "07.07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.01",
+   "to": "07.07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.01",
+   "to": "07.07.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.01",
+   "to": "07.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.01",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.02",
+   "to": "07.07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.02",
+   "to": "07.07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.02",
+   "to": "07.07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.02",
+   "to": "07.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.02",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.03",
+   "to": "07.07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.03",
+   "to": "07.07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.03",
+   "to": "07.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.03",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.04",
+   "to": "07.07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.04",
+   "to": "07.07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.04",
+   "to": "07.07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.04",
+   "to": "07.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.04",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.05",
+   "to": "07.07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.05",
+   "to": "07.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07.05",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07",
+   "to": "07.07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07",
+   "to": "07.07.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07",
+   "to": "07.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.07",
+   "to": "08.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

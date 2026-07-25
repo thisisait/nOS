@@ -1,0 +1,43 @@
+{
+ "domain": "11.04",
+ "nodes": [
+  {
+   "id": "11.04",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Systematic replication of data across geographically or logically distinct storage media—including full copies (mirror), incremental snapshots, and versioned archives. Ensures recovery from hardware failure, data corruption, and accidental deletion; complements but is distinct from archival formats and compression which address density and longevity separately.",
+   "cs": "Systematické replikování dat přes geograficky či logicky oddělená úložiště—včetně plných kopií (zrcadlení), přírůstkových snímků a verzovaných archivů. Zajišťuje obnovu z hardwarových selhání, poškození dat a náhodného smazání; doplňuje ale je odlišné od archivačních formátů a komprese adresujících hustotu a trvanlivost odděleně.",
+   "brief": "Backup strategies are the systematic replication of data across geographically or logically distinct storage media, including full mirror copies, incremental snapshots, and versioned archives, ensuring recovery from hardware failure, data corruption, and accidental deletion.\n\nThe branch is distinct from but complements [[11.01]] File Formats and [[11.02]] Compression Methods, which address long-term readability and storage density rather than redundancy itself, and it is the preventive counterpart to [[11.05]] Data Recovery, which operates only once a backup regime has already failed. Backed-up copies stored off-site or with a third party typically need the protections defined under [[11.03]] Encryption & Security to remain confidential outside the custodian's direct control.\n\nThe commonly cited 3-2-1 rule — three copies, two media types, one off-site — is formalized in the [Library of Congress Digital Preservation program](https://www.loc.gov/preservation/digital/) guidance, and the [Open Archival Information System reference model](https://public.ccsds.org/pubs/650x0m2.pdf) frames backup redundancy within the full preservation lifecycle."
+  }
+ ],
+ "relations": [
+  {
+   "from": "11.04",
+   "to": "11.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.04",
+   "to": "11.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.04",
+   "to": "11.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.04",
+   "to": "11.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

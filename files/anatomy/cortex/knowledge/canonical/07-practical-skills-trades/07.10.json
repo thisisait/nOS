@@ -1,0 +1,29 @@
+{
+ "domain": "07.10",
+ "nodes": [
+  {
+   "id": "07.10",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Automotive encompasses operation, maintenance, and repair of motor vehicles, blending mechanical, electrical, and diagnostic knowledge to keep engines, drivetrains, and systems functioning. A broad applied discipline distinct from pure mechanics by its vehicle-specific focus.",
+   "cs": "Automobilový průmysl zahrnuje provoz, údržbu a opravy motorových vozidel, kombinuje mechanické, elektrické a diagnostické znalosti, aby motory, převody a systémy fungovaly. Rozsáhlá aplikovaná disciplína odlišná od čisté mechaniky svým zaměřením na vozidla.",
+   "brief": "Automotive covers the operation, maintenance, and repair of motor vehicles, blending mechanical, electrical, and increasingly software-driven diagnostic knowledge to keep engines, drivetrains, brakes, and onboard systems functioning safely. What distinguishes it from general mechanics is its vehicle-specific focus: an automotive technician reasons about integrated systems — engine, transmission, suspension, electronics — that must work together within the tight packaging and safety tolerances of a road vehicle, rather than about mechanisms in isolation.\n\nAs a member of [[07]] Practical Skills & Trades, automotive work draws directly on [[07.06]] Welding for frame, exhaust, and body repair, and it inherits the same discipline of reading how heat and stress affect a structural joint before trusting it to carry a load on the road. Modern vehicles have also pulled automotive work toward electronics diagnostics — reading fault codes and sensor data is now as routine as turning a wrench, which pushes the trade further from pure mechanics and closer to systems troubleshooting.\n\nCertification in this field runs through standards such as ASE, and the trade continues to shift with vehicle electrification, which is changing what \"automotive maintenance\" even means. The [ASE certification program](https://www.ase.com/) documents the professional standards most automotive technicians train against, and the [Wikipedia article on automobile repair shops](https://en.wikipedia.org/wiki/Automobile_repair_shop) surveys the trade's structure and history."
+  }
+ ],
+ "relations": [
+  {
+   "from": "07.10",
+   "to": "07.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.10",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

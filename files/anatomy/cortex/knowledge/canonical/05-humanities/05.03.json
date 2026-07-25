@@ -1,0 +1,50 @@
+{
+ "domain": "05.03",
+ "nodes": [
+  {
+   "id": "05.03",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Linguistics is the scientific study of human language—its sounds (phonology), word formation (morphology), sentence structure (syntax), meaning (semantics), use in social contexts (sociolinguistics), acquisition by children (language development), and history and relationships among languages (historical and comparative linguistics). Distinguished from informal language study by its use of rigorous empirical methods and formal theoretical frameworks. Foundational to Epistemology (meaning and knowledge), Cultural Studies (language and power), and Cognitive Science.",
+   "cs": "Jazykověda je vědeckým studiem lidského jazyka—jeho zvuky (fonologie), tvoření slov (morfologie), struktura věty (syntax), smysl (sémantika), použití v sociálních kontextech (sociolingvistika), získávání dětmi (vývoj jazyka) a historii a vztahy mezi jazyky (historická a srovnávací jazykověda). Rozlišuje se od neformálního studia jazyka pomocí přísných empirických metod a formálních teoretických rámců. Základní pro Teorii poznání (smysl a vědomí), Kulturní studia (jazyk a síla) a Kognitivní vědu.",
+   "brief": "Linguistics is the scientific study of human language — its sounds (phonology), word formation (morphology), sentence structure (syntax), meaning (semantics), use in social context (sociolinguistics), acquisition by children, and the historical relationships among languages (comparative linguistics). It applies rigorous empirical methods and formal theoretical models rather than prescriptive grammar rules.\n\nWithin [[05]] Humanities, Linguistics grounds [[05.02]] Philosophy's epistemology and philosophy of language in observable data about how meaning actually works, and it supplies [[05.04]] Literature with the formal apparatus — phonology, syntax, semantics — used to analyze style and form. Its sociolinguistic branch overlaps with [[05.06]] Cultural Studies in examining how language encodes power and identity, and with [[04]] Social Sciences more broadly in its use of empirical, data-driven method rather than close reading of individual texts.\n\nBecause language is the medium through which nearly every other humanities discipline transmits its evidence — texts, testimony, doctrine — Linguistics functions as a foundational, cross-cutting field. For a professional overview of the discipline and its subfields, see the [Linguistic Society of America](https://www.linguisticsociety.org/); for a comprehensive catalog of the world's languages, [Ethnologue](https://www.ethnologue.com/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "05.03",
+   "to": "04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.03",
+   "to": "05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.03",
+   "to": "05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.03",
+   "to": "05.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.03",
+   "to": "05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

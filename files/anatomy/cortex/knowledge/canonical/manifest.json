@@ -1,0 +1,574 @@
+{
+ "domains": [
+  {
+   "domain": "01.01",
+   "file": "01-natural-sciences/01.01.json",
+   "nodes": 321,
+   "relations": 742
+  },
+  {
+   "domain": "01.02",
+   "file": "01-natural-sciences/01.02.json",
+   "nodes": 145,
+   "relations": 391
+  },
+  {
+   "domain": "01.03",
+   "file": "01-natural-sciences/01.03.json",
+   "nodes": 154,
+   "relations": 416
+  },
+  {
+   "domain": "01.04",
+   "file": "01-natural-sciences/01.04.json",
+   "nodes": 11,
+   "relations": 0
+  },
+  {
+   "domain": "01.05",
+   "file": "01-natural-sciences/01.05.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "02.01",
+   "file": "02-formal-sciences/02.01.json",
+   "nodes": 263,
+   "relations": 682
+  },
+  {
+   "domain": "02.02",
+   "file": "02-formal-sciences/02.02.json",
+   "nodes": 84,
+   "relations": 0
+  },
+  {
+   "domain": "02.03",
+   "file": "02-formal-sciences/02.03.json",
+   "nodes": 4,
+   "relations": 0
+  },
+  {
+   "domain": "02.04",
+   "file": "02-formal-sciences/02.04.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "02.05",
+   "file": "02-formal-sciences/02.05.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "03.01",
+   "file": "03-applied-sciences-technology/03.01.json",
+   "nodes": 51,
+   "relations": 0
+  },
+  {
+   "domain": "03.02",
+   "file": "03-applied-sciences-technology/03.02.json",
+   "nodes": 41,
+   "relations": 0
+  },
+  {
+   "domain": "03.03",
+   "file": "03-applied-sciences-technology/03.03.json",
+   "nodes": 31,
+   "relations": 0
+  },
+  {
+   "domain": "03.04",
+   "file": "03-applied-sciences-technology/03.04.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "03.05",
+   "file": "03-applied-sciences-technology/03.05.json",
+   "nodes": 26,
+   "relations": 0
+  },
+  {
+   "domain": "03.06",
+   "file": "03-applied-sciences-technology/03.06.json",
+   "nodes": 21,
+   "relations": 0
+  },
+  {
+   "domain": "03.07",
+   "file": "03-applied-sciences-technology/03.07.json",
+   "nodes": 36,
+   "relations": 0
+  },
+  {
+   "domain": "03.08",
+   "file": "03-applied-sciences-technology/03.08.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "03.09",
+   "file": "03-applied-sciences-technology/03.09.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "03.10",
+   "file": "03-applied-sciences-technology/03.10.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "04.01",
+   "file": "04-social-sciences/04.01.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "04.02",
+   "file": "04-social-sciences/04.02.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "04.03",
+   "file": "04-social-sciences/04.03.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "04.04",
+   "file": "04-social-sciences/04.04.json",
+   "nodes": 26,
+   "relations": 0
+  },
+  {
+   "domain": "04.05",
+   "file": "04-social-sciences/04.05.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "04.06",
+   "file": "04-social-sciences/04.06.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "04.07",
+   "file": "04-social-sciences/04.07.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "04.08",
+   "file": "04-social-sciences/04.08.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "04.09",
+   "file": "04-social-sciences/04.09.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "04.10",
+   "file": "04-social-sciences/04.10.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "05.01",
+   "file": "05-humanities/05.01.json",
+   "nodes": 36,
+   "relations": 0
+  },
+  {
+   "domain": "05.02",
+   "file": "05-humanities/05.02.json",
+   "nodes": 26,
+   "relations": 0
+  },
+  {
+   "domain": "05.03",
+   "file": "05-humanities/05.03.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "05.04",
+   "file": "05-humanities/05.04.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "05.05",
+   "file": "05-humanities/05.05.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "05.06",
+   "file": "05-humanities/05.06.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "05.07",
+   "file": "05-humanities/05.07.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "05.08",
+   "file": "05-humanities/05.08.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "05.09",
+   "file": "05-humanities/05.09.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "05.10",
+   "file": "05-humanities/05.10.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "06.01",
+   "file": "06-arts-creative-expression/06.01.json",
+   "nodes": 26,
+   "relations": 0
+  },
+  {
+   "domain": "06.02",
+   "file": "06-arts-creative-expression/06.02.json",
+   "nodes": 16,
+   "relations": 0
+  },
+  {
+   "domain": "06.03",
+   "file": "06-arts-creative-expression/06.03.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "06.04",
+   "file": "06-arts-creative-expression/06.04.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "06.05",
+   "file": "06-arts-creative-expression/06.05.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "07.01",
+   "file": "07-practical-skills-trades/07.01.json",
+   "nodes": 21,
+   "relations": 0
+  },
+  {
+   "domain": "07.02",
+   "file": "07-practical-skills-trades/07.02.json",
+   "nodes": 11,
+   "relations": 0
+  },
+  {
+   "domain": "07.03",
+   "file": "07-practical-skills-trades/07.03.json",
+   "nodes": 16,
+   "relations": 0
+  },
+  {
+   "domain": "07.04",
+   "file": "07-practical-skills-trades/07.04.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "07.05",
+   "file": "07-practical-skills-trades/07.05.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "07.06",
+   "file": "07-practical-skills-trades/07.06.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "07.07",
+   "file": "07-practical-skills-trades/07.07.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "07.08",
+   "file": "07-practical-skills-trades/07.08.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "07.09",
+   "file": "07-practical-skills-trades/07.09.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "07.10",
+   "file": "07-practical-skills-trades/07.10.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "08.01",
+   "file": "08-survival-emergency-preparedness/08.01.json",
+   "nodes": 26,
+   "relations": 0
+  },
+  {
+   "domain": "08.02",
+   "file": "08-survival-emergency-preparedness/08.02.json",
+   "nodes": 16,
+   "relations": 0
+  },
+  {
+   "domain": "08.03",
+   "file": "08-survival-emergency-preparedness/08.03.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "08.04",
+   "file": "08-survival-emergency-preparedness/08.04.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "08.05",
+   "file": "08-survival-emergency-preparedness/08.05.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "08.06",
+   "file": "08-survival-emergency-preparedness/08.06.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "08.07",
+   "file": "08-survival-emergency-preparedness/08.07.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "08.08",
+   "file": "08-survival-emergency-preparedness/08.08.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "08.09",
+   "file": "08-survival-emergency-preparedness/08.09.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "08.10",
+   "file": "08-survival-emergency-preparedness/08.10.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "09.01",
+   "file": "09-reference-documentation/09.01.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "09.02",
+   "file": "09-reference-documentation/09.02.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "09.03",
+   "file": "09-reference-documentation/09.03.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "09.04",
+   "file": "09-reference-documentation/09.04.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "09.05",
+   "file": "09-reference-documentation/09.05.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "09.06",
+   "file": "09-reference-documentation/09.06.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "09.07",
+   "file": "09-reference-documentation/09.07.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "09.08",
+   "file": "09-reference-documentation/09.08.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "09.09",
+   "file": "09-reference-documentation/09.09.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "09.10",
+   "file": "09-reference-documentation/09.10.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "10.01",
+   "file": "10-cultural-preservation/10.01.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "10.02",
+   "file": "10-cultural-preservation/10.02.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "10.03",
+   "file": "10-cultural-preservation/10.03.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "10.04",
+   "file": "10-cultural-preservation/10.04.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "10.05",
+   "file": "10-cultural-preservation/10.05.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "10.06",
+   "file": "10-cultural-preservation/10.06.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "10.07",
+   "file": "10-cultural-preservation/10.07.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "10.08",
+   "file": "10-cultural-preservation/10.08.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "10.09",
+   "file": "10-cultural-preservation/10.09.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "10.10",
+   "file": "10-cultural-preservation/10.10.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "11.01",
+   "file": "11-digital-preservation/11.01.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "11.02",
+   "file": "11-digital-preservation/11.02.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "11.03",
+   "file": "11-digital-preservation/11.03.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "11.04",
+   "file": "11-digital-preservation/11.04.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "11.05",
+   "file": "11-digital-preservation/11.05.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "12.01",
+   "file": "12-post-disaster-rebuilding/12.01.json",
+   "nodes": 6,
+   "relations": 0
+  },
+  {
+   "domain": "12.02",
+   "file": "12-post-disaster-rebuilding/12.02.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "12.03",
+   "file": "12-post-disaster-rebuilding/12.03.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "12.04",
+   "file": "12-post-disaster-rebuilding/12.04.json",
+   "nodes": 1,
+   "relations": 0
+  },
+  {
+   "domain": "12.05",
+   "file": "12-post-disaster-rebuilding/12.05.json",
+   "nodes": 1,
+   "relations": 0
+  }
+ ]
+}

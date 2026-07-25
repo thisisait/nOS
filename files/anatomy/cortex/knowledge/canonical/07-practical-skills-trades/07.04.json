@@ -1,0 +1,244 @@
+{
+ "domain": "07.04",
+ "nodes": [
+  {
+   "id": "07.04",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Plumbing encompasses the design, installation, and maintenance of systems for water supply, drainage, and gas distribution in buildings. This field covers pipe materials, fittings, regulations, and repair techniques essential for delivering clean water and safely removing waste.",
+   "cs": "Instalatérství zahrnuje návrh, instalaci a údržbu systémů pro dodávku vody, odvodnění a distribuci plynu v budovách. Tato oblast pokrývá materiály potrubí, díly, předpisy a opravy nezbytné pro dodávku čisté vody a bezpečné odstranění odpadu.",
+   "brief": "Plumbing encompasses the design, installation, and maintenance of systems that supply clean water, distribute gas, and remove waste from buildings. The discipline runs on two opposed physical principles at once — pressurized supply lines that push water where it is needed, and gravity-fed drainage that must fall continuously to carry waste away — and most plumbing faults trace back to one of those two systems being violated.\n\nThe field anchors [[07.04.01]] as the pressurized supply network, [[07.04.04]] as its gravity-driven counterpart, and [[07.04.03]] as the appliance layer that conditions water before it reaches a fixture. Plumbing shares its parent, Practical Skills & Trades, with [[07.01]], whose framing and roofing work must accommodate pipe routing before walls close, and with [[07.05]], which builds and finishes the fixtures plumbing ultimately connects to.\n\nThe [International Association of Plumbing and Mechanical Officials](https://www.iapmo.org/) publishes the model plumbing code referenced across most jurisdictions."
+  },
+  {
+   "id": "07.04.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Pipe systems distribute water and gas through buildings using metal, plastic, or composite materials selected for pressure rating, corrosion resistance, and cost. Pipe sizing, layout, and joinery techniques ensure proper flow and prevent leaks in both supply and drainage applications.",
+   "cs": "Systémy potrubí distribuují vodu a plyn skrze budovy pomocí kovových, plastových nebo kompozitních materiálů vybraných pro tlakovou třídu, odolnost korozi a náklady. Dimenzování potrubí, rozvržení a techniky spojování zajišťují správný tok a zabraňují netěsnostem v dodávce i odvodňovacích aplikacích.",
+   "brief": "Pipe systems distribute water and gas through buildings using metal, plastic, or composite materials chosen for pressure rating, corrosion resistance, and cost. Work in this field covers pipe sizing, layout planning, and joinery techniques — threading, soldering, solvent welding, or compression fittings — that keep both supply and drainage runs leak-free under their working pressure.\n\nAs the supply-side counterpart within [[07.04]] Plumbing, pipe systems feed the fixtures that [[07.04.02]] Fixtures Installation connects to walls and floors, and supplies the cold input that [[07.04.03]] Water Heating raises to usable temperature. Correct pipe sizing and pitch also set the conditions [[07.04.04]] Drainage Systems depends on downstream, since undersized or misrouted supply lines can produce the pressure and flow problems that later show up as drainage complaints. Failures in any of these runs — a burst joint, a corroded section — become the subject matter of [[07.04.05]] Plumbing Repair.\n\nThe [Plumbing](https://en.wikipedia.org/wiki/Plumbing) overview and the [Piping](https://en.wikipedia.org/wiki/Piping) article cover material choices and system layout in more depth."
+  },
+  {
+   "id": "07.04.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Fixtures installation positions and secures sinks, toilets, showers, faucets, and other water-using appliances within buildings, connecting them to supply and drainage networks. Proper installation ensures watertight seals, correct operation, and access for future maintenance.",
+   "cs": "Instalace zařízení umísťuje a zajišťuje umyvadla, záchody, sprchy, faucety a další zařízení používající vodu v budovách, připojuje je k sítím dodávky a odvodňování. Správná instalace zajišťuje vodotěsné těsnosti, správný provoz a přístup pro budoucí údržbu.",
+   "brief": "Fixtures installation positions and secures sinks, toilets, showers, faucets, and other water-using appliances, connecting each one to the building's supply and drainage networks. The work centers on watertight seals, correct alignment and leveling, and leaving access for future maintenance, alongside familiarity with the mounting hardware and shutoff valves specific to each fixture type.\n\nWithin [[07.04]] Plumbing, fixtures installation sits downstream of [[07.04.01]] Pipe Systems, which delivers the supply line and drain stub each fixture connects to, and it frequently overlaps with [[07.04.03]] Water Heating where a fixture such as a shower or sink draws hot water from a dedicated line. A fixture that leaks at the connection, rather than within the fixture body itself, is typically the point where installation work meets [[07.04.05]] Plumbing Repair — many callbacks trace back to a seal or fitting that was not properly seated during installation.\n\nThe [Plumbing fixture](https://en.wikipedia.org/wiki/Plumbing_fixture) overview describes the common fixture types and their connection requirements."
+  },
+  {
+   "id": "07.04.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Water heating systems generate hot water for domestic and commercial use through electric resistance, gas combustion, or renewable energy methods. System selection considers capacity, efficiency, space constraints, and local fuel availability.",
+   "cs": "Systémy ohřevu vody generují horkou vodu pro domácí a komerční použití elektrickou rezistencí, spalováním plynu nebo obnovitelnými metodami. Výběr systému zvažuje kapacitu, účinnost, prostorové omezení a místní dostupnost paliva.",
+   "brief": "Water heating systems raise the temperature of domestic and commercial water supplies using electric resistance elements, gas combustion, heat pumps, or solar collectors. Selecting a system weighs storage capacity, recovery rate, energy efficiency, available fuel or electrical service, and the physical space a tank or tankless unit requires.\n\nWater heating draws its cold-water input from [[07.04.01]] Pipe Systems and delivers hot water onward to the taps and showers that [[07.04.02]] Fixtures Installation connects, making it the thermal link between supply and use within [[07.04]] Plumbing. A failed heating element, a leaking tank, or a faulty thermostat falls to [[07.04.05]] Plumbing Repair, which must first determine whether a fault originates in the heater itself or in the supply pressure feeding it.\n\nThe [Water heating](https://en.wikipedia.org/wiki/Water_heating) overview and the [Tankless water heating](https://en.wikipedia.org/wiki/Tankless_water_heating) article compare storage and on-demand approaches."
+  },
+  {
+   "id": "07.04.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Drainage systems remove used water and waste from buildings through sloped pipe networks that flow to municipal sewers or septic systems. Proper pitch, venting, and trap design prevent blockages, backflow, and odor problems.",
+   "cs": "Drenážní systémy odstraňují použitou vodu a odpad z budov skrze sklonovaná potrubní sítě, která tekou do městských kanalizací nebo septických systémů. Správný sklon, větrání a návrh zátahů zabraňují upchávání, zpětnému toku a problémům s vůní.",
+   "brief": "Drainage systems remove used water and waste from a building through sloped pipe networks that flow by gravity to a municipal sewer or septic system. Correct design depends on consistent pitch, vent stacks that admit air behind the falling water column, and trap seals at each fixture that block sewer gas from entering occupied spaces.\n\nDrainage is the downstream counterpart to [[07.04.01]] Pipe Systems within [[07.04]] Plumbing: every fixture that [[07.04.02]] Fixtures Installation connects to a supply line also needs a drain connection sized and vented correctly, and a clog or slow drain is one of the most common calls routed to [[07.04.05]] Plumbing Repair. Because drainage relies on gravity rather than pump pressure, its faults are frequently structural — inadequate slope or a collapsed section — rather than the fitting-level failures typical of supply-side pipe work.\n\nThe [Drain-waste-vent system](https://en.wikipedia.org/wiki/Drain-waste-vent_system) overview describes venting requirements and trap design in detail."
+  },
+  {
+   "id": "07.04.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Plumbing repair addresses leaks, clogs, frozen pipes, and failed fixtures by locating problems through inspection and pressure testing, then replacing components or clearing blockages. Emergency repairs stabilize damage; permanent repairs restore full function.",
+   "cs": "Oprava instalatérství řeší netěsnosti, ucpaní, zamrznutá potrubí a nefunkční zařízení hledáním problémů inspekcí a tlakovými testy, poté výměnou součástí nebo čištěním ucpaní. Nouzové opravy stabilizují poškození; trvalé opravy obnovují plnou funkčnost.",
+   "brief": "Plumbing repair diagnoses and corrects failures across a building's water and drainage systems — leaking joints, frozen or burst pipes, clogged drains, and worn fixtures — turning inspection findings (visual checks, pressure testing, camera scoping) into a targeted fix rather than a blanket replacement. It draws on knowledge of both halves of plumbing's physics: pressurized supply lines that must hold static pressure without weeping, and gravity-fed drainage that must maintain a continuous fall or back up. Repair work splits into two tempos: emergency stabilization that stops active damage (shutoff valves, temporary patches, water extraction) and permanent repair that restores full function.\n\nPlumbing repair sits alongside the systems it fixes: [[07.04.01]] Pipe Systems supplies the pressurized network whose leaks and bursts are among repair's most common calls; [[07.04.04]] Drainage Systems is the gravity-fed counterpart whose clogs and slow drains define another large share of repair work; and [[07.04.02]] Fixtures Installation and [[07.04.03]] Water Heating are the endpoints — faucets, toilets, water heaters — whose failures repair technicians restore or, when beyond repair, hand off to. As part of [[07.04]] Plumbing, repair depends on the same code and material knowledge that governs new installation, applied under time pressure and often without the luxury of opening a wall.\n\nRepair diagnostics increasingly rely on non-destructive tools — pressure gauges, moisture meters, and small sewer cameras — that let a plumber locate a fault before cutting into a wall or slab. The [International Association of Plumbing and Mechanical Officials](https://www.iapmo.org/) code that governs new plumbing work also sets the baseline a repair must meet, and consumer guidance from [This Old House](https://www.thisoldhouse.com/plumbing) covers common household repair techniques."
+  }
+ ],
+ "relations": [
+  {
+   "from": "07.04.01",
+   "to": "07.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.01",
+   "to": "07.04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.01",
+   "to": "07.04.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.01",
+   "to": "07.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.01",
+   "to": "07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.02",
+   "to": "07.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.02",
+   "to": "07.04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.02",
+   "to": "07.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.02",
+   "to": "07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.03",
+   "to": "07.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.03",
+   "to": "07.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.03",
+   "to": "07.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.03",
+   "to": "07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.04",
+   "to": "07.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.04",
+   "to": "07.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.04",
+   "to": "07.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.04",
+   "to": "07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.05",
+   "to": "07.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.05",
+   "to": "07.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.05",
+   "to": "07.04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.05",
+   "to": "07.04.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04.05",
+   "to": "07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04",
+   "to": "07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04",
+   "to": "07.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04",
+   "to": "07.04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04",
+   "to": "07.04.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.04",
+   "to": "07.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

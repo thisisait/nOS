@@ -1,0 +1,85 @@
+{
+ "domain": "12",
+ "nodes": [
+  {
+   "id": "12",
+   "level": 0,
+   "kind": "seed-override",
+   "en": "Knowledge for reconstructing the material and social foundations of civilization from minimal means — restoring water, sanitation, and power, making tools, producing essential chemicals and medicines, and organizing communities. Spans basic infrastructure, tool making, essential chemistry, basic medicine production, and community organization; it begins where immediate survival ends.",
+   "cs": "Znalosti pro obnovu hmotných a společenských základů civilizace z minimálních prostředků — obnovení vody, hygieny a energie, výroba nástrojů, příprava nezbytných chemikálií a léčiv a organizace společenství. Zahrnují základní infrastrukturu, výrobu nástrojů, nezbytnou chemii, výrobu základních léčiv a organizaci komunity; začínají tam, kde končí bezprostřední přežití.",
+   "brief": "Post-disaster rebuilding comprises the knowledge needed to reconstruct the material and social foundations of civilization from minimal means — after war, pandemic, natural catastrophe, or systemic collapse. The domain is a deliberate compression of civilization's technical inheritance: for each essential capability it asks what must be known to recreate it from scratch, without supply chains, specialists, or intact institutions.\n\n[[12.01]] Basic Infrastructure restores water supply, sanitation, power, and roads — the substrate every other recovery depends on; [[12.02]] Tool Making bootstraps the instruments of production, from forge to machine tools; [[12.03]] Essential Chemistry recreates the key substances — soap, lime, acids, fertilizers, fuels — on which health and industry rest; [[12.04]] Basic Medicine Production restores antiseptics, analgesics, and antibiotics; and [[12.05]] Community Organization rebuilds the cooperation, order, and decision-making that make collective work possible.\n\nThe domain begins where [[08]] Survival & Emergency Preparedness ends — when the crisis is survived and reconstruction starts — and it distills the [[01]] Natural Sciences and [[03]] Applied Sciences & Technology into a bootstrap sequence executed with the manual skills of [[07]] Practical Skills & Trades, guided by the preserved record of [[09]] Reference & Documentation. See [The Knowledge (Lewis Dartnell)](https://the-knowledge.org/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "12",
+   "to": "01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12",
+   "to": "08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12",
+   "to": "09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12",
+   "to": "12.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12",
+   "to": "12.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12",
+   "to": "12.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12",
+   "to": "12.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "12",
+   "to": "12.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

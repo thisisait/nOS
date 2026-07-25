@@ -1,0 +1,43 @@
+{
+ "domain": "10.09",
+ "nodes": [
+  {
+   "id": "10.09",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Traditional art techniques are craft methods and aesthetic practices maintained across generations—weaving, metalwork, carving, painting. They preserve manual skill and aesthetic sensibility specific to cultural contexts.",
+   "cs": "Tradiční umělecké techniky jsou řemeslnické metody a estetické praktiky udržované generacemi—tkalcovství, zpracování kovu, řezba, malba. Zachovávají manuální dovednost a estetickou sensibilitu specifickou pro kulturní kontexty.",
+   "brief": "Traditional art techniques are craft methods and aesthetic practices maintained across generations — weaving, metalwork, carving, painting — preserving manual skill and a cultural context's aesthetic sensibility rather than any single finished object.\n\nThe branch is the hands-on counterpart to [[10.06]] Stories & Narratives, which a technique frequently illustrates or accompanies (a woven narrative textile, a carved story panel), and it borders [[06]] Arts & Creative Expression wherever the same technique is practiced as contemporary fine art rather than inherited craft — the dividing line is transmission lineage, not the object itself. It sits alongside [[10.03]] Traditions & Customs, whose material culture a technique often produces, under the shared parent [[10]] Cultural Preservation.\n\nThe [UNESCO Traditional Craftsmanship](https://ich.unesco.org/en/traditional-craftsmanship-00057) domain is the standard reference for safeguarding these techniques, and the [World Crafts Council](https://www.worldcrafts.org/) documents living craft traditions by region."
+  }
+ ],
+ "relations": [
+  {
+   "from": "10.09",
+   "to": "06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.09",
+   "to": "10.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.09",
+   "to": "10.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10.09",
+   "to": "10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

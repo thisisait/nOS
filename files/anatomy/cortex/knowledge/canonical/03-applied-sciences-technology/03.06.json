@@ -1,0 +1,585 @@
+{
+ "domain": "03.06",
+ "nodes": [
+  {
+   "id": "03.06",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Transportation designs, operates, and maintains systems for moving people and goods across air, land, and water, encompassing vehicles, infrastructure, logistics, and traffic management.",
+   "cs": "Přeprava navrhuje, provozuje a udržuje systémy pro přepravu osob a zboží po vzduchu, zemi a vodě, zahrnuje vozidla, infrastrukturu, logistiku a správu dopravy.",
+   "brief": "Transportation designs, operates, and maintains systems for moving people and goods across air, land, and water, encompassing vehicles, infrastructure, logistics, and traffic management. Its disciplines split by medium — [[03.06.01]] Automotive Technology and [[03.06.04]] Rail Transport cover land movement, [[03.06.02]] Aviation covers air, and [[03.06.03]] Maritime covers water — while cross-cutting fields such as [[03.06.06]] Logistics, [[03.06.07]] Transport Infrastructure, and [[03.06.08]] Traffic Management coordinate movement across all three.\n\nTransportation sits inside [[03]] Applied Sciences & Technology as a direct consumer of [[03.01]] Engineering, whose mechanical, civil, and aerospace disciplines design the vehicles and structures a transport system runs on, and it increasingly overlaps with [[03.07]] Energy as [[03.06.09]] Alternative Transport shifts vehicle fleets toward electric and low-carbon power. [[03.06.10]] Space Transportation extends the same logistics and vehicle-design discipline beyond the atmosphere, the branch's newest and fastest-growing frontier.\n\nTransportation systems are governed by safety regulation and international standards specific to each mode. For global civil aviation standards, see the [International Civil Aviation Organization](https://www.icao.int/), and for maritime safety and shipping regulation, the [International Maritime Organization](https://www.imo.org/)."
+  },
+  {
+   "id": "03.06.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Automotive technology develops and maintains land vehicles, including engines, electric drivetrains, autonomous systems, safety features, and maintenance procedures.",
+   "cs": "Automobilová technologie vyvíjí a udržuje pozemní vozidla, včetně motorů, elektrických pohonných systémů, autonomních systémů, bezpečnostních prvků a postupů údržby.",
+   "brief": "Automotive Technology develops and maintains land vehicles, spanning the powertrain, safety systems, and maintenance practices that keep cars, trucks, and buses running, from combustion engines through electric drivetrains and self-driving software.\n\nIts subfields track the vehicle's own systems: engine and drivetrain design, [[03.06.01.02]] Electric Vehicles as the electrified alternative, [[03.06.01.03]] Autonomous Vehicles layering perception and control software on either, and vehicle safety and maintenance closing the loop from crash protection to in-service upkeep.\n\nWithin [[03.06]] Transportation, Automotive Technology is the land-based counterpart to [[03.06.02]] Aviation and [[03.06.04]] Rail Transport — the road, air, and rail networks that carry passengers and freight by different media. For international vehicle-safety regulation, see the [UN Economic Commission for Europe's World Forum for Harmonization of Vehicle Regulations](https://unece.org/transport/vehicle-regulations), and for US standards and recalls, the [National Highway Traffic Safety Administration](https://www.nhtsa.gov/)."
+  },
+  {
+   "id": "03.06.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Engine technology designs and optimizes internal combustion engines, turbochargers, and combustion control systems that convert fuel into mechanical power for vehicles.",
+   "cs": "Technologie motorů navrhuje a optimalizuje spalovací motory, turbokompresory a systémy řízení spalování, které převádějí palivo na mechanickou energii vozidel."
+  },
+  {
+   "id": "03.06.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Electric vehicles develop battery, electric motor, power electronics, and charging systems that propel and manage energy for zero-emission or low-emission road transportation.",
+   "cs": "Elektrická vozidla vyvíjejí baterie, elektromotory, výkonovou elektroniku a nabíjecí systémy, které pohánějí a řídí energii pro bezemisní nebo nízkoemisní silniční dopravu."
+  },
+  {
+   "id": "03.06.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Autonomous vehicles integrate sensors, perception algorithms, and decision-making systems to navigate and operate vehicles with minimal or no human driver input.",
+   "cs": "Autonomní vozidla integrují senzory, algoritmy vnímání a systémy rozhodování pro navigaci a provoz vozidel s minimální nebo bez vstupu lidského řidiče."
+  },
+  {
+   "id": "03.06.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Vehicle safety develops crash protection systems, collision avoidance, restraint systems, and structural design features that reduce injury and death in traffic accidents.",
+   "cs": "Bezpečnost vozidel vyvíjí systémy ochrany při nárazu, vyhýbání se kolizím, zádržné systémy a konstrukční prvky, které snižují zranění a smrt v dopravních nehodách."
+  },
+  {
+   "id": "03.06.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Vehicle maintenance performs scheduled service, repairs, diagnostics, and component replacement to preserve vehicle performance, reliability, and safety throughout its operational life.",
+   "cs": "Údržba vozidel provádí plánovanou službu, opravy, diagnostiku a výměnu součástí, aby se zachovaly výkon vozidla, spolehlivost a bezpečnost po dobu jeho provozu."
+  },
+  {
+   "id": "03.06.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Aviation designs, operates, and maintains aircraft and air-traffic systems for passenger and cargo transportation, including aircraft design, flight operations, maintenance, and pilot training.",
+   "cs": "Letectví navrhuje, provozuje a udržuje letadla a systémy řízení letového provozu pro přepravu cestujících a nákladu, včetně návrhu letadel, letových operací, údržby a školení pilotů.",
+   "brief": "Aviation designs, operates, and maintains aircraft and the air-traffic systems that keep them safely separated, covering everything from airframe engineering to the training that certifies the people who fly and service them.\n\nIts subfields split the discipline along the aircraft's own lifecycle and operating environment: [[03.06.02.01]] Aircraft Design covers the vehicle itself, [[03.06.02.03]] Air Traffic Control governs the airspace it flies through, and [[03.06.02.05]] Pilot Training certifies the crew who operate it, alongside flight-systems engineering and maintenance disciplines that keep aircraft airworthy between flights.\n\nWithin [[03.06]] Transportation, Aviation is the air-based counterpart to [[03.06.01]] Automotive Technology's land vehicles and Maritime's waterborne craft, sharing with both a safety-certification culture that predates almost every other transport mode. For global civil-aviation standards, see the [International Civil Aviation Organization](https://www.icao.int/), and for US airworthiness and certification rules, the [Federal Aviation Administration](https://www.faa.gov/)."
+  },
+  {
+   "id": "03.06.02.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Aircraft Design encompasses the engineering discipline of creating aircraft structures, aerodynamic systems, and integrated mechanical subsystems for flight. It spans conceptual layouts, stress analysis, and manufacturing integration, distinguishing itself from the operational systems (Flight Systems) and support disciplines (Maintenance, Pilot Training, Air Traffic Control).",
+   "cs": "Návrh letadel zahrnuje inženýrskou disciplínu vytváření letadlových struktur, aerodynamických systémů a integrovaných mechanických subsystémů pro let. Pokrývá koncepční rozvržení, analýzu napětí a integraci výroby a liší se od operačních systémů (Flight Systems) a podpůrných disciplín (Maintenance, Pilot Training, Air Traffic Control)."
+  },
+  {
+   "id": "03.06.02.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Flight Systems covers the operating principles, control mechanisms, and functional subsystems that enable aircraft to achieve and maintain flight. It includes avionics, propulsion integration, hydraulics, and flight-control surfaces—the installed systems that translate design into dynamic operation, separate from the aircraft architecture itself (Aircraft Design).",
+   "cs": "Flight Systems pokrývá principy provozu, řídicí mechanismy a funkční subsystémy, které umožňují letadlu dosáhnout a udržet let. Zahrnuje avioniku, integraci pohonu, hydrauliku a řídící plochy – instalované systémy, které přeměňují design na dynamický provoz, oddělené od samotné architektury letadla (Aircraft Design)."
+  },
+  {
+   "id": "03.06.02.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Air Traffic Control addresses the coordination and safety systems for managing aircraft movement in airspace, including radar, communication protocols, traffic sequencing, and collision avoidance. It governs the external operational environment and regulatory framework, distinct from onboard flight systems (Flight Systems) and ground-based maintenance (Aircraft Maintenance).",
+   "cs": "Řízení letového provozu řeší koordinační a bezpečnostní systémy pro řízení pohybu letadel v letovém prostoru, včetně radaru, komunikačních protokolů, sekvenování provozu a vyhýbání se kolizím. Řídí vnější operační prostředí a regulační rámec, odlišný od letadlových palubních systémů (Flight Systems) a údržby na zemi (Aircraft Maintenance)."
+  },
+  {
+   "id": "03.06.02.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Aircraft Maintenance encompasses the inspection, repair, and lifecycle management of aircraft and their systems between flights. It includes scheduled maintenance, fault diagnosis, component replacement, and airworthiness verification, functioning as the support discipline separate from design (Aircraft Design), active flight operations (Flight Systems), and crew preparation (Pilot Training).",
+   "cs": "Údržba letadel zahrnuje inspekci, opravu a řízení životního cyklu letadel a jejich systémů mezi lety. Zahrnuje plánovanou údržbu, diagnostiku poruch, výměnu součástí a ověřování letové způsobilosti, fungující jako podpůrná disciplína oddělená od návrhu (Aircraft Design), aktivního letového provozu (Flight Systems) a přípravy posádky (Pilot Training)."
+  },
+  {
+   "id": "03.06.02.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Pilot Training covers the competency development, procedural training, and certification pathways for aviation personnel who operate aircraft in flight. It addresses type ratings, emergency procedures, and regulatory proficiency standards, serving as the human-factors complement to design (Aircraft Design), systems operation (Flight Systems), and ground support (Aircraft Maintenance).",
+   "cs": "Trénink pilotů pokrývá rozvoj kompetencí, procedurální trénink a certifikační cesty pro letušský personál, který provozuje letadla za letu. Řeší typové oprávnění, postupy pro nouzové situace a normy regulační odbornosti, sloužící jako doplněk lidských faktorů k návrhu (Aircraft Design), provozu systémů (Flight Systems) a pozemní podpoře (Aircraft Maintenance)."
+  },
+  {
+   "id": "03.06.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Maritime encompasses the design, operation, and supporting systems for waterborne transport, including ship construction, propulsion, cargo handling, and navigation. It addresses the full lifecycle of seaborne commerce and naval engineering, serving as a major transport mode alongside Aviation, Rail, and road-based alternatives (Automotive Technology, Alternative Transport).",
+   "cs": "Námořnictví zahrnuje návrh, provoz a podpůrné systémy vodního přepravy, včetně stavby lodí, pohonu, manipulace s nákladem a navigace. Řeší kompletní životní cyklus námořního obchodu a lodního inženýrství, sloužící jako hlavní přepravní mód vedle letectví (Aviation), železnice (Rail Transport) a silničních alternativ (Automotive Technology, Alternative Transport).",
+   "brief": "Maritime covers the design, construction, propulsion, and navigation of waterborne vessels, together with the cargo-handling and port systems that turn ships into a functioning freight and passenger network, spanning both commercial shipping and naval engineering.\n\nAs the water-based transport mode, Maritime sits alongside [[03.06.02]] Aviation and [[03.06.04]] Rail Transport within [[03.06]] Transportation, and it is the physical carrier that [[03.06.06]] Logistics coordinates for the bulk of world trade by tonnage — most intercontinental freight moves by sea because no other mode matches its cost-per-ton over long distances.\n\nMaritime safety and construction standards are set internationally rather than by a single national authority, reflecting a fleet that crosses jurisdictions on every voyage. For global shipping safety, pollution, and crew standards, see the [International Maritime Organization](https://www.imo.org/), and for vessel classification and technical standards, [DNV](https://www.dnv.com/maritime/)."
+  },
+  {
+   "id": "03.06.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Rail Transport covers the design, infrastructure, and operation of railway systems for passenger and freight movement. It encompasses track engineering, rolling-stock design, signaling, and rail logistics, distinguishing itself from road transport (Automotive Technology), air transport (Aviation), and multimodal logistics coordination (Logistics).",
+   "cs": "Železniční doprava pokrývá návrh, infrastrukturu a provoz železničních systémů pro přepravu cestujících a zboží. Zahrnuje inženýrství tratí, návrh kolejových vozidel, signalizaci a železniční logistiku, odlišující se od silniční přepravy (Automotive Technology), letecké přepravy (Aviation) a multimodální logistické koordinace (Logistics).",
+   "brief": "Rail Transport covers the design, construction, and operation of railway systems for passenger and freight movement, spanning track and civil-engineering works, rolling-stock design, and the signaling systems that keep trains safely spaced on shared lines.\n\nWithin [[03.06]] Transportation, Rail Transport is the fixed-guideway counterpart to [[03.06.01]] Automotive Technology's road vehicles, trading the flexibility of individual routing for the energy efficiency and capacity of steel-wheel-on-steel-rail haulage; it shares that trade-off closely with [[03.06.05]] Public Transit, whose urban metro and tram networks are themselves a form of rail. [[03.06.06]] Logistics relies on rail as one of its core long-haul freight modes alongside road and sea.\n\nFor international railway interoperability and safety standards, see the [International Union of Railways (UIC)](https://uic.org/), and for a technical overview of railway engineering, the [Encyclopaedia Britannica](https://www.britannica.com/technology/railroad)."
+  },
+  {
+   "id": "03.06.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Public Transit addresses the design and operation of mass-transportation systems within urban and regional areas, including buses, metros, trams, and light rail. It focuses on passenger capacity, route optimization, and accessibility rather than individual or freight transport, distinct from private-vehicle technology (Automotive Technology) and long-haul freight systems (Logistics).",
+   "cs": "Veřejná doprava řeší návrh a provoz masivních přepravních systémů v městských a regionálních oblastech, včetně autobusů, metra, tramvají a lehkých drah. Zaměřuje se na kapacitu cestujících, optimalizaci tras a přístupnost spíše než na individuální nebo nákladní přepravu, odlišující se od technologie osobních vozidel (Automotive Technology) a dlouhodobých nákladních systémů (Logistics).",
+   "brief": "Public Transit addresses the design and operation of mass-transportation systems within urban and regional areas — buses, metro and subway networks, trams, and light rail — optimizing for passenger capacity, route coverage, and accessibility rather than the point-to-point flexibility of private vehicles.\n\nWithin [[03.06]] Transportation, Public Transit shares its fixed-guideway technology with [[03.06.04]] Rail Transport wherever it runs on rails, and its road-based buses depend on the same vehicle engineering as [[03.06.01]] Automotive Technology, but it is planned and scheduled by [[03.06.08]] Traffic Management as a system rather than as individual trips. It is a deliberate low-footprint alternative to the private car, occupying the same policy space as [[03.06.09]] Alternative Transport's cycling and micro-mobility options.\n\nFor international public-transport standards and advocacy, see the [International Association of Public Transport (UITP)](https://www.uitp.org/), and for US transit planning and funding guidance, the [Federal Transit Administration](https://www.transit.dot.gov/)."
+  },
+  {
+   "id": "03.06.06",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Logistics encompasses the planning, coordination, and execution of goods movement and storage across supply chains and modes of transport. It integrates procurement, inventory management, distribution networks, and modal selection, serving as the connective discipline across modal technologies (Aviation, Maritime, Rail, Automotive) and infrastructure (Transport Infrastructure).",
+   "cs": "Logistika zahrnuje plánování, koordinaci a realizaci pohybu a skladování zboží v dodavatelských řetězcích a přepravních módech. Integruje nákup, řízení zásob, distribuční sítě a výběr módu, sloužící jako spojovací disciplína přes modální technologie (Aviation, Maritime, Rail, Automotive) a infrastrukturu (Transport Infrastructure).",
+   "brief": "Logistics plans, coordinates, and executes the movement and storage of goods across supply chains, integrating procurement, inventory management, warehousing, and the choice of transport mode into a single discipline aimed at delivering the right goods to the right place at the right cost.\n\nRather than owning a mode of its own, Logistics is the connective layer across [[03.06]] Transportation's modal technologies — it routes freight between [[03.06.02]] Aviation for speed, [[03.06.03]] Maritime for volume, and [[03.06.04]] Rail Transport for overland bulk haulage, choosing among them (and the road network) by cost, urgency, and cargo type. It depends on [[03.06.07]] Transport Infrastructure's terminals and ports as the physical handoff points between modes.\n\nFor global standards on containerized shipping and supply-chain interoperability, see the [International Organization for Standardization's logistics standards](https://www.iso.org/committee/54706.html), and for an industry overview, the [Council of Supply Chain Management Professionals](https://cscmp.org/)."
+  },
+  {
+   "id": "03.06.07",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Transport Infrastructure covers the fixed assets and systems—roads, bridges, terminals, ports, tunnels, and right-of-way—that enable movement across all transport modes. It addresses planning, construction, and maintenance of the physical backbone, separate from the vehicles/vessels (Modal technologies) and operational systems (Traffic Management).",
+   "cs": "Dopravní infrastruktura pokrývá pevné aktiva a systémy—silnice, mosty, terminály, přístavy, tunely a pozemní parcely—které umožňují pohyb ve všech přepravních módech. Řeší plánování, stavbu a údržbu fyzické páteře, oddělené od vozidel/plavidel (Modální technologie) a operačních systémů (Traffic Management).",
+   "brief": "Transport Infrastructure covers the fixed physical assets — roads, bridges, tunnels, terminals, ports, and rail right-of-way — that every transport mode depends on but none of them owns outright, addressing the planning, construction, and long-term maintenance of the built backbone that movement runs on.\n\nWithin [[03.06]] Transportation, Infrastructure is the shared substrate under [[03.06.01]] Automotive Technology's roads, [[03.06.04]] Rail Transport's track, and [[03.06.03]] Maritime's ports, distinguishing it from the vehicles and vessels that travel over it and from [[03.06.08]] Traffic Management, which governs how that fixed capacity is used in real time rather than how it is built.\n\nFor US infrastructure investment and standards, see the [Federal Highway Administration](https://www.fhwa.dot.gov/), and for a global perspective on infrastructure planning, the [World Bank's transport overview](https://www.worldbank.org/en/topic/transport)."
+  },
+  {
+   "id": "03.06.08",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Traffic Management addresses the real-time coordination, regulation, and optimization of movement flow across all transport modes and infrastructure. It encompasses signal timing, congestion management, incident response, and demand management, serving as the operational-control discipline distinct from physical infrastructure (Transport Infrastructure) and modal engineering (Aviation, Maritime, Rail, Automotive).",
+   "cs": "Řízení provozu řeší koordinaci v reálném čase, regulaci a optimalizaci toku pohybu ve všech přepravních módech a infrastruktuře. Zahrnuje časování signálů, řízení kongescí, reagování na incidenty a řízení poptávky, sloužící jako provozní kontrolní disciplína odlišná od fyzické infrastruktury (Transport Infrastructure) a modálního inženýrství (Aviation, Maritime, Rail, Automotive).",
+   "brief": "Traffic Management addresses the real-time coordination, regulation, and optimization of movement flow across transport modes and infrastructure, covering signal timing, congestion management, incident response, and demand-management measures such as tolling and access restrictions.\n\nWithin [[03.06]] Transportation, Traffic Management is the operational-control layer that sits on top of the fixed assets built by [[03.06.07]] Transport Infrastructure, governing how road capacity is allocated moment to moment among [[03.06.01]] Automotive Technology's private vehicles and [[03.06.05]] Public Transit's scheduled services, and increasingly among [[03.06.09]] Alternative Transport's cyclists and pedestrians as well.\n\nFor US traffic-control engineering standards, see the [Manual on Uniform Traffic Control Devices](https://mutcd.fhwa.dot.gov/), and for professional guidance on traffic engineering practice, the [Institute of Transportation Engineers](https://www.ite.org/)."
+  },
+  {
+   "id": "03.06.09",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Alternative Transport encompasses emerging and specialized modes of movement outside conventional automotive, aviation, maritime, and rail systems—including cycling, micro-mobility, pedestrian systems, and novel technologies like hyperloop and air taxis. It addresses the innovations and low-energy alternatives to established transport modes.",
+   "cs": "Alternativní doprava zahrnuje vznikající a specializované módy pohybu mimo konvenční automobilový, letecký, námořní a železniční systémy—včetně cyklismu, mikromobility, pěších systémů a nových technologií jako hyperloop a letající taxi. Řeší inovace a nízko-energetické alternativy k zavedeným přepravním módům.",
+   "brief": "Alternative Transport encompasses movement modes outside the conventional automotive, aviation, maritime, and rail systems — cycling, micro-mobility devices such as e-scooters, pedestrian infrastructure, and emerging technologies like hyperloop and urban air taxis — united by a low-energy or experimental profile rather than a shared vehicle type.\n\nWithin [[03.06]] Transportation, Alternative Transport is the innovation edge of the branch, sharing infrastructure planning concerns with [[03.06.05]] Public Transit and [[03.06.08]] Traffic Management (bike lanes and pedestrian zones compete with road and transit capacity for the same right-of-way) while some of its more speculative technologies, like hyperloop, borrow engineering principles from both [[03.06.01]] Automotive Technology's ground vehicles and [[03.06.02]] Aviation's high-speed aerodynamics.\n\nFor international micro-mobility and active-transport policy, see the [International Transport Forum](https://www.itf-oecd.org/), and for a technical overview of emerging transport concepts, the [Encyclopaedia Britannica](https://www.britannica.com/technology/hyperloop)."
+  },
+  {
+   "id": "03.06.10",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Space Transportation addresses the design, launch systems, and orbital logistics for vehicles and cargo beyond Earth's atmosphere. It encompasses rocket engineering, satellite deployment, interplanetary vehicles, and space-station logistics, extending transport principles into the extraterrestrial domain separate from atmospheric and terrestrial modes.",
+   "cs": "Vesmírná doprava řeší návrh, systémy vypouštění a orbitální logistiku vozidel a nákladu mimo zemskou atmosféru. Zahrnuje raketové inženýrství, nasazení satelitů, meziplanetární vozidla a logistiku vesmírné stanice, rozšiřující přepravní principy do mimozemské domény oddělené od atmosférických a suchozemských módů.",
+   "brief": "Space Transportation is the branch of [[03.06]] Transportation concerned with moving people, cargo, and instruments beyond Earth's atmosphere. It covers launch-vehicle and rocket-engine design, satellite deployment and orbital insertion, interplanetary transfer trajectories, and the logistics of resupplying and operating crewed space stations, extending the vehicle-design and cargo-movement discipline of terrestrial transport into an environment governed by vacuum, microgravity, and orbital mechanics rather than atmosphere and terrain.\n\nIt stands beside [[03.06.02]] Aviation as the two powered-flight branches of Transportation, sharing propulsion and aerodynamics roots with [[03.01.05]] Aerospace Engineering, whose airframe and propulsion disciplines underlie both aircraft and launch vehicles. It differs from [[03.06.09]] Alternative Transport, which pursues low-carbon propulsion for terrestrial fleets rather than escape from them, and it draws on [[03.06.06]] Logistics for the ground-segment supply chains — fuel, components, mission cargo — that keep launch campaigns and station resupply running. Within Applied Sciences & Technology, it is the branch's newest and fastest-growing frontier, expanding as commercial launch providers lower the cost of orbital access.\n\nSpace transportation is regulated nationally and coordinated internationally through spaceflight and orbital-debris standards. For mission programs and technical overviews, see [NASA](https://www.nasa.gov/), and for the international coordinating body on peaceful uses of outer space, the [UN Office for Outer Space Affairs](https://www.unoosa.org/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "03.06.01",
+   "to": "03.06.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.01",
+   "to": "03.06.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.01",
+   "to": "03.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.01",
+   "to": "03.06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.01",
+   "to": "03.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.02",
+   "to": "03.06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.02",
+   "to": "03.06.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.02",
+   "to": "03.06.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.02",
+   "to": "03.06.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.02",
+   "to": "03.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.03",
+   "to": "03.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.03",
+   "to": "03.06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.03",
+   "to": "03.06.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.03",
+   "to": "03.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.04",
+   "to": "03.06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.04",
+   "to": "03.06.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.04",
+   "to": "03.06.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.04",
+   "to": "03.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.05",
+   "to": "03.06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.05",
+   "to": "03.06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.05",
+   "to": "03.06.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.05",
+   "to": "03.06.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.05",
+   "to": "03.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.06",
+   "to": "03.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.06",
+   "to": "03.06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.06",
+   "to": "03.06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.06",
+   "to": "03.06.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.06",
+   "to": "03.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.07",
+   "to": "03.06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.07",
+   "to": "03.06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.07",
+   "to": "03.06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.07",
+   "to": "03.06.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.07",
+   "to": "03.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.08",
+   "to": "03.06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.08",
+   "to": "03.06.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.08",
+   "to": "03.06.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.08",
+   "to": "03.06.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.08",
+   "to": "03.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.09",
+   "to": "03.06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.09",
+   "to": "03.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.09",
+   "to": "03.06.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.09",
+   "to": "03.06.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.09",
+   "to": "03.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.10",
+   "to": "03.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.10",
+   "to": "03.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.10",
+   "to": "03.06.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.10",
+   "to": "03.06.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06.10",
+   "to": "03.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06",
+   "to": "03.06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06",
+   "to": "03.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06",
+   "to": "03.06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06",
+   "to": "03.06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06",
+   "to": "03.06.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06",
+   "to": "03.06.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06",
+   "to": "03.06.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06",
+   "to": "03.06.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06",
+   "to": "03.06.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06",
+   "to": "03.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.06",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

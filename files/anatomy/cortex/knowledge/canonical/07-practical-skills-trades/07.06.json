@@ -1,0 +1,272 @@
+{
+ "domain": "07.06",
+ "nodes": [
+  {
+   "id": "07.06",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Welding joins metal pieces by melting and fusing them together with heat, creating permanent structural bonds. This field encompasses arc, gas, and resistance welding methods, safety protocols, metallurgy principles, and inspection techniques.",
+   "cs": "Svařování spojuje kovové kusy jejich tavením a fuzí pomocí tepla, vytváří trvalé strukturální vazby. Tato oblast zahrnuje obloukové, plynové a odporové metody svařování, bezpečnostní protokoly, principy metalurgie a techniky kontroly.",
+   "brief": "Welding is the trade of joining metal pieces into a single permanent piece by melting the base material, an added filler, or both, and letting the joint solidify into a continuous structural bond. The field covers a family of processes distinguished mainly by their heat source and shielding method — arc welding strikes an electric arc between an electrode and the workpiece, MIG welding feeds a continuous consumable wire under a gas shield for speed and easy automation, [[07.06.03]] TIG welding uses a non-consumable tungsten electrode for precise, high-quality joints in thin or exotic metals, and gas welding burns a fuel-oxygen mixture for portable, low-infrastructure work. Regardless of process, [[07.06.05]] welding safety underpins the whole discipline: arc flash, fume inhalation, fire risk, and electrical hazards make protective equipment and ventilation non-negotiable rather than optional.\n\nAs a member of [[07]] Practical Skills & Trades, welding sits alongside [[07.10]] Automotive, whose repair work often depends on welded frame and exhaust joints, and it draws on the same metallurgical intuition that separates load-bearing structural metalwork from the organic-material craft of [[07.07]] Gardening. Sound welds require reading how heat affects grain structure and residual stress, which is why metallurgy and weld inspection are taught alongside torch and arc technique rather than after it.\n\nBeyond the workshop, welding underwrites shipbuilding, pipeline construction, and structural steel erection, and its inspection standards — radiographic and ultrasonic testing of welds — are load-bearing for public safety in bridges and pressure vessels. The [American Welding Society](https://www.aws.org/) publishes the certification codes most industrial welding follows, and the [Wikipedia overview of welding](https://en.wikipedia.org/wiki/Welding) surveys process history and classification."
+  },
+  {
+   "id": "07.06.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Arc welding creates a localized electrical arc between an electrode and workpiece that heats metal to melting and fuses it. Shielded Metal Arc Welding (SMAW), Gas Metal Arc Welding (GMAW), and Flux-Cored Arc Welding (FCAW) are common arc methods suited for thick material and field work.",
+   "cs": "Obloukové svařování vytváří lokalizovaný elektrický oblouk mezi elektrodou a obrobkem, který ohřívá kov na tání a fúze. Chráněné obloukové svařování (SMAW), Plynné obloukové svařování (GMAW) a Svařování s plynným jádrem (FCAW) jsou běžné obloukové metody vhodné pro silný materiál a práci v poli.",
+   "brief": "Arc welding strikes and sustains an electric arc between an electrode and the workpiece, generating heat intense enough to melt both the base metal and, in most processes, a consumable filler, which fuses into a single joint as it cools. \"Arc welding\" is a family name rather than one technique: Shielded Metal Arc Welding (SMAW, the classic stick electrode), Gas Metal Arc Welding (GMAW), and Flux-Cored Arc Welding (FCAW) all strike the same kind of arc but differ in how they feed filler metal and shield the weld pool from atmospheric contamination.\n\n[[07.06.02]] MIG Welding is GMAW under its common trade name — a continuously fed wire electrode shielded by an external gas — making it the fast, semiautomatic member of the arc-welding family rather than a separate process. [[07.06.03]] TIG Welding shares arc welding's electrical heat source but substitutes a non-consumable tungsten electrode for precise, filler-optional control, while [[07.06.04]] Gas Welding abandons electricity entirely for a fuel-oxygen flame. Because arc processes run higher current and produce more spatter and UV radiation than gas welding, [[07.06.05]] Welding Safety practice — eye protection, fume extraction, insulated leads — is inseparable from arc technique rather than an add-on to it.\n\nSMAW's simple equipment and tolerance for rust, paint, and outdoor wind make it the standard choice for field repair and heavy structural work, while GMAW/MIG dominates indoor production welding where speed and cleanliness matter more than portability. Within [[07.06]] Welding, arc methods cover the majority of industrial and structural welding volume. The [American Welding Society](https://www.aws.org/) certifies arc welding procedures and welder qualifications used across the trade."
+  },
+  {
+   "id": "07.06.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "MIG welding uses a semiautomatic process where a continuously fed wire electrode and shielding gas create an arc. MIG is fast, clean, and beginner-friendly, making it ideal for thin sheet metal and production work.",
+   "cs": "Svařování MIG používá poloautomatický proces, kde nepřetržitě podávaná drátěná elektroda a ochranný plyn vytváří oblouk. MIG je rychlý, čistý a vhodný pro začátečníky, což jej činí ideálním pro tenký plech a produkční práci.",
+   "brief": "MIG welding (Metal Inert Gas welding, formally Gas Metal Arc Welding) feeds a continuous, consumable wire electrode through a welding gun while an inert or semi-inert shielding gas flows around the arc, protecting the molten pool from atmospheric oxygen and nitrogen. Because the wire feed and arc are both automated once the trigger is pulled, MIG is the most beginner-friendly arc process — there is no separate filler rod to coordinate by hand — and its clean, low-spatter weld requires comparatively little post-weld grinding.\n\nMIG is one member of the family covered by [[07.06.01]] Arc Welding, distinguished from [[07.06.03]] TIG Welding by its consumable, automatically fed electrode rather than a hand-fed rod under a non-consumable tungsten tip, and from [[07.06.04]] Gas Welding by using an electric arc rather than a combustion flame as its heat source. Its speed and low skill floor make it the default choice for thin sheet metal and high-volume production work, where TIG's slower, more controlled arc would be uneconomical. As with every arc process, [[07.06.05]] Welding Safety practice around fume extraction and eye protection applies to MIG at full force.\n\nMIG's main limitation is wind sensitivity — the shielding gas disperses in outdoor drafts, exposing the weld to porosity — which is why SMAW remains preferred for exposed field repair despite MIG's speed advantage indoors. Within [[07.06]] Welding, MIG is the process most associated with automotive body work and light fabrication. The [American Welding Society](https://www.aws.org/) documents GMAW/MIG procedure specifications and the [Lincoln Electric welding technology guide](https://www.lincolnelectric.com/en/welding-and-cutting-resource-center) covers equipment and technique."
+  },
+  {
+   "id": "07.06.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "TIG welding uses a non-consumable tungsten electrode and inert gas shielding to produce high-quality welds with precise control, excelling on thin materials and stainless steel. Distinct from arc and MIG welding by its manual electrode positioning and from gas welding by its electrical power source.",
+   "cs": "Svařování TIG používá nehořlavou wolframovou elektrodu a štítění inertním plynem k vytvoření vysoce kvalitních spojů s přesnou kontrolu, vynikajícím na tenkých materiálech a nerezové oceli. Liší se od obloukového a MIG svařování ručním umístěním elektrody a od plynového svařování svým elektrickým zdrojem.",
+   "brief": "TIG welding (Tungsten Inert Gas welding, formally Gas Tungsten Arc Welding) strikes an arc from a non-consumable tungsten electrode, shielded by an inert gas such as argon, while the welder feeds filler rod into the pool by hand — or omits it entirely for autogenous welds on thin material. The separation of arc control (foot pedal or torch hand) from filler feed (the other hand) gives TIG the finest control of any common welding process, at the cost of speed: it is the slowest of the arc methods to execute well.\n\nTIG belongs to the family covered by [[07.06.01]] Arc Welding but differs from [[07.06.02]] MIG Welding in using a non-consumable electrode with optional, hand-fed filler rather than a continuously fed consumable wire, which is why TIG excels on thin gauge material and stainless steel where MIG's higher heat input would warp or burn through. It differs from [[07.06.04]] Gas Welding in its power source — an electric arc rather than a combustion flame — though both share manual filler-rod technique, which is part of why welders often learn gas welding first as a stepping stone to TIG's two-handed coordination. [[07.06.05]] Welding Safety applies to TIG's UV and arc-flash exposure exactly as it does to the other arc processes.\n\nTIG's precision makes it the standard for aerospace tubing, food-grade stainless fabrication, and any joint where weld appearance and metallurgical purity both matter, while its low deposition rate rules it out for thick structural steel best served by SMAW. Within [[07.06]] Welding, TIG requires the longest training curve of the arc processes. The [American Welding Society](https://www.aws.org/) publishes GTAW/TIG procedure standards, and the [Miller Electric welding basics guide](https://www.millerwelds.com/resources/welding-basics) covers technique fundamentals."
+  },
+  {
+   "id": "07.06.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Gas welding melts metal using an open flame from burning acetylene or other gases, typically oxy-acetylene, producing lower temperatures and simpler equipment than electrical methods. Predates electrical welding and remains valuable for portable fieldwork and certain repairs.",
+   "cs": "Plynové svařování roztavuje kov otevřeným plamenem ze spalujícího se acetylenu nebo jiných plynů, typicky kyslíku a acetylenu, s nižšími teplotami a jednoduššími nástroji než elektrické metody. Předchází elektrickému svařování a zůstává cenné pro přenosné práce v terénu a určité opravy.",
+   "brief": "Gas welding melts and fuses metal using an open flame — typically oxy-acetylene, burning acetylene gas with pure oxygen to reach around 3,200°C — rather than an electric arc, feeding filler rod into the molten pool by hand much as TIG welding does. Gas welding predates every electric process historically and remains distinctive for equipment that needs no power supply at all: two gas cylinders, hoses, and a torch, which is why it stays valuable for remote fieldwork, farm and pipeline repair, and situations where electricity is unavailable or unsafe.\n\nGas welding sits in the family covered by [[07.06.01]] Arc Welding as the one process using combustion rather than electricity for heat, distinct from [[07.06.02]] MIG Welding's automated wire feed and from [[07.06.03]] TIG Welding's electric arc despite sharing TIG's hand-fed filler technique. Its lower, more spread-out heat than arc processes makes it gentler on thin or older metal and well suited to brazing and metal cutting with the same torch, though it welds more slowly and with a larger heat-affected zone than any arc method. [[07.06.05]] Welding Safety for gas welding centers on cylinder handling, flashback prevention, and flame control rather than electrical hazard, a different risk profile from the arc processes.\n\nThe oxy-acetylene torch's versatility — welding, brazing, and cutting from one toolset — keeps it in general fabrication and repair shops even where arc processes have replaced it for primary structural welding. Within [[07.06]] Welding, gas welding is the process most tied to portable, low-infrastructure work. The [American Welding Society](https://www.aws.org/) documents oxy-fuel welding and cutting standards."
+  },
+  {
+   "id": "07.06.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Welding safety encompasses hazard prevention and protective protocols for all welding methods, including arc-radiation protection for eyes and skin, respiratory safety from fumes, and fire prevention. Applies across every welding process, managing risk rather than technique.",
+   "cs": "Bezpečnost svařování zahrnuje prevenci nebezpečí a ochranné postupy pro všechny metody svařování, včetně ochrany očí a kůže před obloukým zářením, respirační bezpečnosti před výpary a prevence požáru. Vztahuje se na všechny procesy svařování, řídí riziko spíše než techniku.",
+   "brief": "Welding safety is the body of hazard-prevention protocols and protective equipment that every welding process must observe to protect the welder and bystanders from arc radiation, toxic fumes, fire, and electrical shock. It differs from the process-specific disciplines in [[07.06]] Welding by cutting across all of them: the retina-damaging ultraviolet flash of [[07.06.01]] arc welding, the fume load of [[07.06.02]] MIG welding's shielding-gas breakdown, the tungsten-electrode risks of [[07.06.03]] TIG welding, and the open-flame hazards of [[07.06.04]] gas welding all fall under the same umbrella of ventilation, eye and skin protection, and fire-watch discipline rather than technique.\n\nBecause the hazards are common to the trade rather than to any single joining method, welding safety is taught and certified as a standing prerequisite, not as an optional add-on: auto-darkening helmets, flame-resistant clothing, respiratory protection against metal fume fever, and grounding procedures to prevent electric shock apply whether the arc is struck with a stick electrode or a TIG torch. Fire watch and hot-work permitting extend the discipline beyond the welder to the surrounding workspace, since sparks and slag remain a fire risk long after the arc is extinguished.\n\nWelding safety sits within [[07.06]] Welding and, more broadly, within [[07]] Practical Skills & Trades, where hands-on trades generally carry occupational hazards that licensing and certification bodies formalize into enforceable standards. The [OSHA welding, cutting, and brazing standard](https://www.osha.gov/welding-cutting-brazing) sets the regulatory baseline in the United States, and the [American Welding Society's safety and health fact sheets](https://www.aws.org/) detail practice-level guidance for fume extraction and PPE selection."
+  }
+ ],
+ "relations": [
+  {
+   "from": "07.06.01",
+   "to": "07.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.01",
+   "to": "07.06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.01",
+   "to": "07.06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.01",
+   "to": "07.06.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.01",
+   "to": "07.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.02",
+   "to": "07.06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.02",
+   "to": "07.06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.02",
+   "to": "07.06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.02",
+   "to": "07.06.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.02",
+   "to": "07.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.03",
+   "to": "07.06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.03",
+   "to": "07.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.03",
+   "to": "07.06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.03",
+   "to": "07.06.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.03",
+   "to": "07.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.04",
+   "to": "07.06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.04",
+   "to": "07.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.04",
+   "to": "07.06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.04",
+   "to": "07.06.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.04",
+   "to": "07.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.05",
+   "to": "07.06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.05",
+   "to": "07.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.05",
+   "to": "07.06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.05",
+   "to": "07.06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.05",
+   "to": "07.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06.05",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06",
+   "to": "07.06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06",
+   "to": "07.06.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06",
+   "to": "07.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06",
+   "to": "07.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.06",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

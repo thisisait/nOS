@@ -1,0 +1,36 @@
+{
+ "domain": "04.09",
+ "nodes": [
+  {
+   "id": "04.09",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Demography studies population structure, vital statistics, and demographic change. It analyzes birth rates, mortality, migration, and age composition.",
+   "cs": "Demografie studuje populační strukturu, vitální statistiku a demografické změny. Analyzuje porodnost, mortalitu, migraci a věkové složení.",
+   "brief": "Demography studies population structure, vital statistics, and demographic change, analyzing birth rates, mortality, migration, and age composition as the quantitative substrate beneath social, economic, and political life. It supplies [[04.02]] Sociology with the population-level measurements that ground claims about social change, and supplies [[04.04]] Economics with the labor-supply and consumption data that drive long-run growth models.\n\nIts spatial dimension connects it to [[04.08]] Geography, which explains why population concentrates, migrates, or declines in particular places rather than merely counting how many people live there. Demographic methods, life tables, cohort analysis, population projections, are technical and largely shared across the social sciences that depend on population data, from public health to urban planning.\n\nSince Malthus's early population theory, demography has moved from speculative projection to a rigorously quantitative discipline central to policy areas such as pension design, migration management, and epidemic modeling. The [UN Population Division](https://www.un.org/development/desa/pd/) publishes the authoritative global population data and projections the field relies on, and the [Population Reference Bureau](https://www.prb.org/) offers accessible explainers of core demographic concepts and trends."
+  }
+ ],
+ "relations": [
+  {
+   "from": "04.09",
+   "to": "04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.09",
+   "to": "04.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.09",
+   "to": "04.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

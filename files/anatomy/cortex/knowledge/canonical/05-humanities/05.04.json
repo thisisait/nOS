@@ -1,0 +1,50 @@
+{
+ "domain": "05.04",
+ "nodes": [
+  {
+   "id": "05.04",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Literature encompasses written and oral texts valued for aesthetic, narrative, or cultural significance—novels, poetry, drama, epic, and folk traditions spanning all epochs and cultures. Literary study examines aesthetic form (style, genre, prosody), interpretation (meaning-making), historical context (period, author, audience), and social impact (representation, ideology, voice). Distinguished from Linguistics by its focus on texts' significance and from History by its emphasis on imaginative construction; it remains central to humanistic understanding and cultural identity.",
+   "cs": "Literatura zahrnuje psané a ústní texty oceňované pro estetickou, narativní nebo kulturní významnost—romány, poezii, drama, epos a lidové tradice sahající přes všechny epochy a kultury. Literární studie zkoumají estetickou formu (styl, žánr, metrika), interpretaci (tvorba smyslu), historický kontext (období, autor, publikum) a sociální dopad (reprezentace, ideologie, hlas). Rozlišuje se od Jazykovědy svým zaměřením na významnost textů a od Historie svým důrazem na imaginativní konstrukci; zůstává ústředním pro humanistické chápání a kulturní identitu.",
+   "brief": "Literature encompasses written and oral texts valued for aesthetic, narrative, or cultural significance — novels, poetry, drama, epic, and folk traditions spanning all epochs and cultures. Literary study examines aesthetic form (style, genre, prosody), interpretation (meaning-making), historical context (period, author, audience), and social impact (representation, ideology, voice).\n\nWithin [[05]] Humanities, Literature draws its formal vocabulary from [[05.03]] Linguistics (phonology, syntax, semantics applied to style) and its interpretive lenses from [[05.06]] Cultural Studies (ideology, representation) and [[05.09]] Gender Studies (voice, marginalized perspective). It is distinguished from [[05.01]] History by its emphasis on imaginative construction over documentary reconstruction, even where the two overlap in historical fiction and epic.\n\nLiterary study remains central to humanistic understanding because texts are both artifacts and arguments — how a work says something is inseparable from what it says. For open-access primary texts across languages and periods, see [Project Gutenberg](https://www.gutenberg.org/); for scholarly close readings and poet biographies, the [Poetry Foundation](https://www.poetryfoundation.org/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "05.04",
+   "to": "05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.04",
+   "to": "05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.04",
+   "to": "05.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.04",
+   "to": "05.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.04",
+   "to": "05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

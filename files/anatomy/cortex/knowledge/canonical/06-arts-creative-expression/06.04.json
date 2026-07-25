@@ -1,0 +1,230 @@
+{
+ "domain": "06.04",
+ "nodes": [
+  {
+   "id": "06.04",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Crafts are handmade objects created through traditional skills and material mastery, emphasizing individual making and the artisan's direct engagement with materials in pottery, textiles, jewelry, glass, and bookbinding.",
+   "cs": "Řemesla jsou ručně vyrobené objekty vytvářené tradičními dovednostmi a zvládnutím materiálu, zdůrazňující individuální tvorbu v keramice, textiliích, šperkařství, skle a vazbě knih.",
+   "brief": "Crafts are handmade objects produced through traditional skills and direct engagement with material — clay, fiber, metal, glass, paper — where the maker's hand shapes every individual piece rather than specifying a design for industrial reproduction. Mastery in this field is measured by material fluency: knowing how a material behaves under heat, tension, or pressure well enough to work with it rather than against it.\n\nThe field anchors [[06.04.01]] for vessels and forms shaped from fired clay, [[06.04.02]] for cloth and fiber structures built by hand or loom, and [[06.04.05]] for the assembly of pages into a durable bound structure. Crafts shares its parent with [[06.03]], which plans objects for reproduction rather than making each one individually, and with [[06.01]], whose object is primarily communicative rather than functional or ornamental.\n\nThe [Smithsonian American Art Museum's craft collections](https://americanart.si.edu/) and the [Crafts Council](https://www.craftscouncil.org.uk/) document technique and contemporary practice across these disciplines."
+  },
+  {
+   "id": "06.04.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Pottery and ceramics is the craft of shaping clay and mineral bodies through hand-building or wheel-throwing, then hardening through high-temperature firing.",
+   "cs": "Keramika je řemeslo tvarování hlíny a minerálních těles ručním budováním nebo na hrnčířském kruhu, poté zpevňováním vysokoteplotním pálením.",
+   "brief": "Pottery and Ceramics is the craft of shaping clay and mineral bodies through hand-building or wheel-throwing, then hardening the form permanently through high-temperature firing. The material's behavior under heat — vitrification, glaze chemistry, shrinkage — is as central to the craft as the shaping itself.\n\nPottery and Ceramics shares its parent [[06.04]] with [[06.04.02]], a fiber-based craft with a comparably ancient hand-making tradition, and with [[06.04.03]], with which it sometimes overlaps in decorative glaze and inlay work. It is set apart from [[06.03.02]] by the same individual-versus-reproduced line that separates all of Crafts from Design: a potter shapes each vessel by hand, while an industrial designer specifies a form for the factory.\n\nThe [American Museum of Ceramic Art](https://www.amoca.org/) and the [Victoria and Albert Museum's ceramics collections](https://www.vam.ac.uk/) document technique and history across traditions."
+  },
+  {
+   "id": "06.04.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Weaving and textiles is the craft of interlocking fibers through systematic interlacing on looms or by hand, producing cloth, tapestries, and three-dimensional fabric structures.",
+   "cs": "Tkaní a textilie je řemeslo vzájemného propojení vláken systematickým vzájemným plétením na tkacích strojích nebo ručně, tvořící látky a tapiserie.",
+   "brief": "Weaving and Textiles is the craft of interlocking fibers through systematic interlacing on looms or by hand, producing cloth, tapestries, and three-dimensional fabric structures from thread. Tension, thread count, and fiber choice determine the finished cloth's drape, strength, and pattern as much as the weave structure itself.\n\nWeaving and Textiles shares its parent [[06.04]] with [[06.04.01]], a comparably ancient hand-craft tradition, and with [[06.04.03]], with which fiber and metal work sometimes combine in mixed-media pieces. It feeds directly into [[06.03.03]], the design discipline that cuts and constructs garments from woven and knitted cloth — one of the field's most direct links across the Arts & Creative Expression branch.\n\nThe [George Washington University Textile Museum](https://museum.gwu.edu/) and the [Victoria and Albert Museum's textile collections](https://www.vam.ac.uk/) document weaving technique and history across cultures."
+  },
+  {
+   "id": "06.04.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Jewelry making is the craft of fashioning decorative and wearable objects from metals, gemstones, and found materials using techniques like casting, forging, and stone-setting.",
+   "cs": "Šperkařství je řemeslo vytváření dekorativních a nositelných objektů z kovů, drahokamů a nalezeného materiálu pomocí technik jako je lití a kování.",
+   "brief": "Jewelry Making is the craft of fashioning decorative and wearable objects from metals, gemstones, and found materials using techniques such as casting, forging, and stone-setting. Precision at small scale — soldering joints, setting a stone without cracking it — distinguishes the craft from larger-scale metalwork.\n\nJewelry Making shares its parent [[06.04]] with [[06.04.04]], with which it shares hot-working and cold-working techniques and sometimes collaborates directly in combined glass-and-metal pieces, and with [[06.04.01]], another materials-driven hand-craft with its own firing and finishing discipline. It is set apart from mass-manufactured jewelry — the domain of [[06.03.02]] — by the same individual-making line that defines all of Crafts.\n\nThe [Gemological Institute of America](https://www.gia.edu/) and the [Victoria and Albert Museum's jewellery collections](https://www.vam.ac.uk/) document materials, technique, and historical design."
+  },
+  {
+   "id": "06.04.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Glassworking is the craft of forming objects from glass through melting, blowing, casting, or cold-working techniques, producing vessels, sculptural forms, and decorative panels.",
+   "cs": "Skleněnská práce je řemeslo vytváření objektů ze skla tavením, foukáním, litím nebo studenými technikami, tvořící nádoby a dekorativní panely.",
+   "brief": "Glassworking is the craft of forming objects from glass through melting, blowing, casting, or cold-working techniques, producing vessels, sculptural forms, and decorative panels. Molten glass must be shaped within a narrow working-temperature window, giving the craft a distinctive rhythm of heating, shaping, and controlled cooling (annealing) absent from cold materials.\n\nGlassworking shares its parent [[06.04]] with [[06.04.03]], with which it shares hot-forming and cold-working technique and sometimes combines directly in mixed glass-and-metal pieces, and with [[06.04.01]], another kiln-dependent craft whose firing discipline parallels glass annealing. It also neighbors [[06.04.05]], the craft of assembling finished pages into a bound volume, sharing Crafts' broader emphasis on hand-mastery of an unforgiving material.\n\nThe [Corning Museum of Glass](https://home.cmog.org/) and the [Victoria and Albert Museum's glass collections](https://www.vam.ac.uk/) document technique and history across glassmaking traditions."
+  },
+  {
+   "id": "06.04.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Bookbinding is the craft of assembling pages and covers into a durable bound volume through sewing, gluing, and finishing techniques.",
+   "cs": "Vazba knih je řemeslo skládání stran a obálek do trvalého vázaného svazku pomocí techniky šití, lepení a dokončování.",
+   "brief": "Bookbinding is the craft of assembling printed or blank pages into a durable bound volume through sewing, gluing, and finishing. A binder joins signatures — folded and gathered sheets — with thread structures such as Coptic or long stitch, or bonds single leaves at the spine with adhesive in case and perfect binding, then attaches boards or wrappers covered in leather, cloth, or paper, finishing the volume with endpapers, headbands, and tooled or stamped decoration.\n\nBookbinding sits within [[06.04]], the craft field defined by hand-shaping a single material into a finished object rather than specifying a design for reproduction. It shares that parent with [[06.04.01]], which fires clay into vessels, [[06.04.02]], which builds cloth and fiber structures on a loom or by hand, and [[06.04.04]], which shapes molten glass by blowing or casting — each craft trading bookbinding's paper and thread for a different material's own working temperature and tolerance.\n\nThe [Guild of Book Workers](https://guildofbookworkers.org/) documents binding structures and conservation technique, and the [British Library's book conservation guidance](https://www.bl.uk/conservation) covers the repair and preservation side of the same discipline."
+  }
+ ],
+ "relations": [
+  {
+   "from": "06.04.01",
+   "to": "06.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.01",
+   "to": "06.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.01",
+   "to": "06.04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.01",
+   "to": "06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.02",
+   "to": "06.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.02",
+   "to": "06.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.02",
+   "to": "06.04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.02",
+   "to": "06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.03",
+   "to": "06.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.03",
+   "to": "06.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.03",
+   "to": "06.04.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.03",
+   "to": "06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.04",
+   "to": "06.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.04",
+   "to": "06.04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.04",
+   "to": "06.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.04",
+   "to": "06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.05",
+   "to": "06.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.05",
+   "to": "06.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.05",
+   "to": "06.04.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04.05",
+   "to": "06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04",
+   "to": "06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04",
+   "to": "06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04",
+   "to": "06.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04",
+   "to": "06.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "06.04",
+   "to": "06.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

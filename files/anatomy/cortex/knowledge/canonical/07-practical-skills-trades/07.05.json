@@ -1,0 +1,265 @@
+{
+ "domain": "07.05",
+ "nodes": [
+  {
+   "id": "07.05",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Carpentry is the craft of designing, building, and finishing wooden structures and furnishings through hand and power tools. This field encompasses structural framing, finish carpentry, joinery methods, and wood selection for aesthetics and durability.",
+   "cs": "Tesařství je řemeslo navrhování, stavby a dokončování dřevěných struktur a nábytku pomocí ručního a motorového nářadí. Tato oblast zahrnuje konstrukční rámování, interiérové tesařství, metody spojování a výběr dřeva pro estetiku a trvanlivost.",
+   "brief": "Carpentry is the craft of designing, building, and finishing wooden structures and furnishings using hand and power tools. The discipline spans a wide range of scale, from the structural framing that gives a building its skeleton to the fine joinery of a single drawer, but all of it depends on reading wood as a living material — grain direction, moisture movement, and species behavior all decide how a joint will hold.\n\nThe field anchors [[07.05.01]] as the mechanical connection method that holds wood pieces together without relying solely on fasteners, [[07.05.02]] as the free-standing objects built from those joints, and [[07.05.04]] as the protective and aesthetic surface treatment applied once a piece is assembled. Carpentry shares its parent, Practical Skills & Trades, with [[07.01]], whose framing work carpentry finishes and furnishes, and with [[07.04]], whose fixtures carpentry-built cabinetry frequently houses.\n\nThe [Fine Woodworking](https://www.finewoodworking.com/) archive and the [Woodwork Institute](https://woodworkinstitute.com/) document technique and trade standards across the craft."
+  },
+  {
+   "id": "07.05.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Joinery is the art of connecting wooden pieces using mechanical joints—mortise-and-tenon, dovetails, box joints, and dowels—rather than nails or screws. Strong, durable joinery creates furniture and structures that endure without fastener corrosion or creep.",
+   "cs": "Spojování je umění spojování dřevěných kusů pomocí mechanických spojů—čepové a zámkové spoje, vlaštovčí ocasy, box-joinery a kolíky—spíše než hřebíky nebo šrouby. Silné a trvalé spojování vytváří nábytek a struktury, které vydrží bez korze hřebíků nebo styraní.",
+   "brief": "Joinery is the craft of connecting wooden pieces through interlocking mechanical geometry — mortise-and-tenon, dovetail, box joint, and dowel — rather than through nails, screws, or adhesive alone. A well-cut joint transfers load through the shape of the wood itself, so it holds without the corrosion, creep, or loosening that plagues purely fastener-driven connections, and it can flex with the wood's seasonal expansion and contraction instead of fighting it.\n\nJoinery underlies the two disciplines built from it: [[07.05.02]] Furniture Making assembles free-standing pieces around joints chosen for load and appearance, while [[07.05.03]] Cabinetry applies the same joints inside fixed architectural casework, where wood movement must be accommodated against a rigid structure rather than a free frame. Once a joint is assembled, [[07.05.04]] Wood Finishing protects and finishes the surface, and where an old joint has failed, [[07.05.05]] Wood Restoration diagnoses and re-cuts or reinforces it. As the foundational technique of [[07.05]] Carpentry, joinery is usually the first skill a carpentry apprenticeship teaches, because every other carpentry discipline assumes it.\n\nJoint choice follows wood movement: mortise-and-tenon and dovetails lock across the grain to resist the seasonal swelling and shrinking that would otherwise rack a glued butt joint apart, which is why hand-cut joinery still outperforms adhesive-only construction in solid-wood furniture exposed to humidity swings. The [Fine Woodworking joinery archive](https://www.finewoodworking.com/techniques/joinery) documents technique across the major joint families, and [Popular Woodworking](https://www.popularwoodworking.com/) magazine covers traditional and modern practice."
+  },
+  {
+   "id": "07.05.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Furniture making designs and builds functional decorative pieces—tables, chairs, cabinets, and beds—using wood selection, finishing, and assembly to blend form with utility. Each piece balances aesthetics, structural integrity, and material economy.",
+   "cs": "Výroba nábytku navrhuje a staví funkční dekorativní kusy—stoly, židle, skříně a postele—pomocí výběru dřeva, dokončení a montáže, které spojují formu a užitečnost. Každý kus vyrovnává estetiku, strukturální integritu a hospodaření s materiálem.",
+   "brief": "Furniture making designs and builds free-standing functional objects — tables, chairs, cabinets, beds — that must simultaneously hold load, survive years of use, and read as visually resolved. Every piece is a negotiation between three constraints: structural integrity (a chair leg must not rack under a sitter's weight), material economy (wood is expensive and grain-matched boards are scarcer still), and aesthetics (proportion, joinery visibility, and finish that make the piece worth building by hand rather than buying flat-packed).\n\nFurniture making draws directly on [[07.05.01]] Joinery for the mechanical connections that hold a piece together without relying on hardware alone, and on [[07.05.04]] Wood Finishing to protect and present the assembled surface. It sits beside [[07.05.03]] Cabinetry, which applies the same wood-and-joint vocabulary to built-in rather than free-standing work, and beside [[07.05.05]] Wood Restoration, which returns aged furniture pieces to service. Within [[07.05]] Carpentry, furniture making is the discipline most exposed to design as much as technique — a maker chooses proportion and form, not only joinery method.\n\nSpecies and cut selection precede assembly: grain orientation on a tabletop resists cupping, and quarter-sawn stock is chosen for stability in legs and rails that must stay true. The [Fine Woodworking](https://www.finewoodworking.com/) archive documents furniture-making technique across styles, and the [Smithsonian American Art Museum's furniture collection notes](https://americanart.si.edu/) place the craft in its historical design lineage."
+  },
+  {
+   "id": "07.05.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Cabinetry is the specialized craft of building custom fitted wooden storage and display cabinets integrated into architectural spaces. Precision joinery, wood movement accommodation, and hardware selection are critical for seamless function and appearance.",
+   "cs": "Skříňování je specializované řemeslo stavby vlastního přizpůsobeného dřevěného ukládacího a vystavovacího nábytku integrovaného do architektonických prostorů. Přesné spojování, zohlednění pohybu dřeva a výběr hardwaru jsou rozhodující pro bezproblémové fungování a vzhled.",
+   "brief": "Cabinetry builds custom, fitted wooden storage and display casework — kitchen cabinets, built-in shelving, wardrobes — designed to integrate seamlessly into an architectural space rather than stand independently. Because a cabinet is fixed against walls, floors, and ceilings that do not move with the seasons the way the cabinet's own wood does, cabinetry demands tighter tolerance on wood-movement accommodation than free-standing furniture, along with hardware selection (hinges, slides, catches) chosen for decades of repeated use.\n\nCabinetry shares its joint vocabulary with [[07.05.01]] Joinery and its material judgment with [[07.05.02]] Furniture Making, the free-standing sibling it most resembles in technique but not in constraint — a cabinet cannot simply be moved if its joints rack, so [[07.05.04]] Wood Finishing and correct assembly matter even more at the built-in scale. Within [[07.05]] Carpentry, cabinetry is also the discipline most connected to its parent branch's other trades: fitted cabinets frequently house the fixtures installed by [[07.04]] Plumbing, so cabinet dimensions and plumbing rough-in must be coordinated before either trade closes its work.\n\nModern cabinetry blends traditional joinery with manufactured hardware and, increasingly, CNC-cut face frames and panels, but the underlying accommodation for wood movement — frame-and-panel construction that lets a solid-wood panel expand and contract inside a stable frame — remains unchanged from pre-industrial casework. The [Woodwork Institute](https://woodworkinstitute.com/) publishes cabinetry quality and construction standards used across the trade."
+  },
+  {
+   "id": "07.05.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Wood finishing applies protective and aesthetic coatings—stains, oils, waxes, and varnishes—to enhance color, texture, and durability. Proper surface preparation, application technique, and curing ensure finishes protect against moisture, scratches, and environmental damage.",
+   "cs": "Dokončení dřeva aplikuje ochranné a estetické nátěry—barviva, oleje, vosky a laky—ke zvýšení barvy, textury a trvanlivosti. Správná příprava povrchu, technika aplikace a vytvrzení zajišťují, že nátěry chrání vlhkost, poškrábání a poškození okolím.",
+   "brief": "Wood finishing applies protective and aesthetic coatings — stains, oils, waxes, and varnishes — to a wood surface after it has been shaped and assembled, closing the piece against moisture, abrasion, and UV degradation while shaping how its color and grain read. A finish is judged by three independent properties: how it alters appearance (color deepening, sheen level, grain pop), how it protects (moisture barrier, scratch resistance), and how it ages (whether it can be renewed by re-coating or must be fully stripped).\n\nFinishing is the final step applied to work from [[07.05.02]] Furniture Making and [[07.05.03]] Cabinetry, both of which depend on [[07.05.01]] Joinery to hold their shape before a finish is ever applied — a finish cannot compensate for a poorly cut joint, only protect a well-cut one. When an old finish has failed — alligatored, clouded, or worn through — [[07.05.05]] Wood Restoration strips and refinishes the piece, often the largest single step in a restoration project. Within [[07.05]] Carpentry, finishing is the discipline most sensitive to environmental conditions: temperature, humidity, and dust during cure determine whether a coat levels smoothly or fails.\n\nSurface preparation — sanding progression, grain raising, and stain absorption control on porous species like pine — typically determines finish quality more than the topcoat product itself. The [Fine Woodworking finishing archive](https://www.finewoodworking.com/techniques/finishing) documents preparation and application technique across oil, varnish, and film finishes."
+  },
+  {
+   "id": "07.05.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Wood restoration returns damaged, aged, or worn wooden pieces to functional and aesthetic condition through assessment, cleaning, repair, and refinishing. Restoration preserves original character while addressing structural issues and surface deterioration.",
+   "cs": "Obnova dřeva vrací poškozené, staré nebo opotřebované dřevěné kusy do funkčního a estetického stavu prostřednictvím posouzení, čištění, opravy a přefinišování. Obnova zachovává původní charakter a zároveň řeší strukturální problémy a zhoršování povrchu.",
+   "brief": "Wood restoration returns a damaged, aged, or worn wooden piece to functional and aesthetic condition through a sequence of assessment, cleaning, structural repair, and refinishing, with the guiding constraint that the work preserve the piece's original character rather than remake it. Restoration differs from ordinary repair in its historical stakes — a period piece's value depends on how much original material and joinery survive, so a restorer must decide, joint by joint, whether to reinforce, reproduce, or replace.\n\nRestoration draws on every other discipline in [[07.05]] Carpentry: it re-cuts or reinforces failed connections using [[07.05.01]] Joinery technique, references [[07.05.02]] Furniture Making and [[07.05.03]] Cabinetry construction methods to reproduce period-correct parts, and finishes with [[07.05.04]] Wood Finishing after stripping and repairing the surface — usually the most visible and time-consuming stage of a restoration project. Structural assessment before any repair begins is what separates restoration from a simple refinish: a piece that looks merely worn may in fact have failed joints hidden under an intact finish.\n\nMuseums and conservators favor reversible repair methods — hide glue over synthetic adhesives, in-kind wood species matching — so a later restorer can undo an earlier intervention without damaging original material. The [American Institute for Conservation](https://www.culturalheritage.org/) publishes conservation standards that inform high-value furniture restoration practice."
+  }
+ ],
+ "relations": [
+  {
+   "from": "07.05.01",
+   "to": "07.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.01",
+   "to": "07.05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.01",
+   "to": "07.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.01",
+   "to": "07.05.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.01",
+   "to": "07.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.02",
+   "to": "07.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.02",
+   "to": "07.05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.02",
+   "to": "07.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.02",
+   "to": "07.05.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.02",
+   "to": "07.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.03",
+   "to": "07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.03",
+   "to": "07.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.03",
+   "to": "07.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.03",
+   "to": "07.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.03",
+   "to": "07.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.04",
+   "to": "07.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.04",
+   "to": "07.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.04",
+   "to": "07.05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.04",
+   "to": "07.05.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.04",
+   "to": "07.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.05",
+   "to": "07.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.05",
+   "to": "07.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.05",
+   "to": "07.05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.05",
+   "to": "07.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05.05",
+   "to": "07.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05",
+   "to": "07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05",
+   "to": "07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05",
+   "to": "07.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05",
+   "to": "07.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.05",
+   "to": "07.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

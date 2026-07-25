@@ -1,0 +1,482 @@
+{
+ "domain": "05.01",
+ "nodes": [
+  {
+   "id": "05.01",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "History examines past events, societies, and transformations through documentary and material evidence. It traces causation, continuity, and change across time.",
+   "cs": "Dějiny zkoumají minulé události, společnosti a transformace prostřednictvím dokumentárních a hmotných důkazů. Sledují příčinnost, kontinuitu a změny v čase.",
+   "brief": "History is the systematic study of past human events and societies through documentary and material evidence, establishing chronology, causation, and change over time. It examines political, social, economic, and intellectual developments across civilizations, working from primary sources — archives, artifacts, oral testimony — filtered through source criticism to reconstruct and interpret what happened and why.\n\nWithin [[05]] Humanities, History supplies the temporal backbone that the rest of the branch draws on for context, while [[05.06]] Cultural Studies borrows historical method to trace how meanings and identities changed over time. The field is organized into period subfields (Ancient, Medieval, Modern, Contemporary) and a thematic one (Military History); Ancient History overlaps closely with [[05.07]] Classics in its study of Greco-Roman antiquity, though Classics privileges textual and philological analysis while History privileges chronological reconstruction across all eras and cultures.\n\nThe branch also intersects [[10]] Cultural Preservation, whose archives and oral-history projects supply the raw material historians interpret, and [[04]] Social Sciences, which studies the same human societies through generalizable models rather than narrative reconstruction. For primary sources and archival scholarship, see the [Library of Congress](https://www.loc.gov/); for professional standards and historiographical methodology, the [American Historical Association](https://www.historians.org/)."
+  },
+  {
+   "id": "05.01.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Ancient history studies civilizations and societies from the emergence of writing to the fall of Rome and equivalent transformations in other regions (~3000-500 CE). It employs textual and archaeological evidence.",
+   "cs": "Starověké dějiny studují civilizace a společnosti od vzniku písma do pádu Říma a ekvivalentních transformací v jiných oblastech (~3000-500 n. l.). Používají textové a archeologické důkazy.",
+   "brief": "Ancient history studies civilizations and societies from the emergence of writing to the fall of Rome and equivalent transformations elsewhere, roughly the third millennium BCE to the fifth century CE. It reconstructs political, economic, and cultural life from surviving texts, inscriptions, and material remains, weighting each source differently depending on how much a given civilization wrote down.\n\nThe period is organized regionally: [[05.01.01.03]] (Ancient Greece) and [[05.01.01.04]] (Roman Empire) anchor the Mediterranean sequence that hands off directly to [[05.01.02]] (Medieval History) at Rome's fall, while [[05.01.01.10]] (Archaeological Methods) supplies the excavation and dating techniques every regional study depends on, since written sources thin out the further back the record goes.\n\nAncient history shares its evidentiary toolkit with [[05.01.05]] (Military History), which treats ancient warfare — siege craft, phalanx and legion tactics — as a specialized lens on the same civilizations, drawing on the same fragmentary textual and material record.\n\nThe [British Museum's ancient world collections](https://www.britishmuseum.org/collection) and the [Perseus Digital Library](http://www.perseus.tufts.edu/hopper/) provide primary sources and material culture references used throughout the field."
+  },
+  {
+   "id": "05.01.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Mesopotamian civilizations comprise the urban societies and states of the Tigris-Euphrates valley, innovators in writing, law, and administration. They established archetypes for complex governance and cultural transmission.",
+   "cs": "Mezopotamské civilizace zahrnují městské společnosti a státy doliny Tigridu a Eufratu, inovátory v písmu, právu a správě. Vytvořily archetypy pro složitou správu a kulturní přenos."
+  },
+  {
+   "id": "05.01.01.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Sumerian civilization represents the earliest known complex society in Mesopotamia with urban centers, temple economies, and the first writing systems (~3500-1900 BCE). It established foundational forms of government and knowledge organization.",
+   "cs": "Součanská civilizace představuje nejstarší známou složitou společnost v Mezopotamii s městskými centry, chrámovými ekonomikami a prvními systémy psaní (~3500-1900 př. n. l.). Vytvořila základní formy vlády a organizace znalostí."
+  },
+  {
+   "id": "05.01.01.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Babylonian empire was a Mesopotamian state centered on the Euphrates valley, known for legal codes, astronomical observation, and cultural synthesis (~1900-1600 and 625-539 BCE). It amalgamated Sumerian and Akkadian traditions under centralized rule.",
+   "cs": "Babylonská říše byla mezopotamským státem se sídlem v povodí Eufratu, známá právními kódexy, astronomickým pozorováním a kulturní syntézou (~1900-1600 a 625-539 př. n. l.). Sjednotila sumérské a akkadské tradice pod centralizovanou vládu."
+  },
+  {
+   "id": "05.01.01.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Assyrian empire was a Mesopotamian military and administrative power that dominated the region through territorial expansion and bureaucratic organization (~2600-609 BCE). It established archetypes for imperial governance and military logistics.",
+   "cs": "Asyrská říše byla mezopotamskou vojenskou a administrativní mocností, která ovládala region prostřednictvím územní expanze a byrokratické organizace (~2600-609 př. n. l.). Vytvořila archetypy pro imperiální správu a vojenskou logistiku."
+  },
+  {
+   "id": "05.01.01.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Akkadian empire was a Semitic power that unified Mesopotamia under centralized control and established the Akkadian language as lingua franca (~2334-2154 BCE). It merged Sumerian institutional forms with Semitic political structures.",
+   "cs": "Akkadská říše byla semitskou mocností, která sjednotila Mezopotamii pod centralizovanou kontrolu a zavedla akkadštinu jako lingua franca (~2334-2154 př. n. l.). Sloučila sumérské institucionální formy se semitskými politickými strukturami."
+  },
+  {
+   "id": "05.01.01.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Cuneiform writing is a wedge-mark script developed in Mesopotamia initially for recording temple accounts and evolved to write multiple languages. It served administration, religious texts, and literature for over three millennia.",
+   "cs": "Klínové písmo je klínový systém vytvořený v Mezopotamii původně pro záznam chrámových účtů a vyvinulo se k zápisu více jazyků. Sloužilo pro správu, náboženské texty a literaturu po dobu více než tři tisíce let."
+  },
+  {
+   "id": "05.01.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Ancient Egypt encompasses the civilization of the Nile valley with distinctive pharaonic kingship, monumental architecture, and institutional continuity spanning three thousand years. Its religious and administrative systems established enduring models.",
+   "cs": "Starověký Egypt zahrnuje civilizaci údolí Nilu s charakteristickým faraonským královstvím, monumentální architekturou a institucionální kontinuitou trvající tři tisíce let. Jeho náboženské a administrativní systémy vytvořily trvalé modely."
+  },
+  {
+   "id": "05.01.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Ancient Greece encompasses the interconnected city-states and kingdoms of the eastern Mediterranean with democratic experiments, philosophical traditions, and literary innovations. It established foundations for political theory and natural inquiry.",
+   "cs": "Starověké Řecko zahrnuje propojené městské státy a království východního Středozemí s demokratickými pokusy, filozofickými tradicemi a literárními inovacemi. Vytvořilo základy politické teorie a přírodního zkoumání."
+  },
+  {
+   "id": "05.01.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Roman Empire was a Mediterranean superpower that unified vast territories through military conquest, legal innovation, and administrative infrastructure. Its law, engineering, and governance models profoundly shaped subsequent civilizations.",
+   "cs": "Římská říše byla středomořskou velmocí, která sjednotila rozsáhlá území vojenským dobýváním, právní inovací a administrativní infrastrukturou. Její právo, inženýrství a modely správy hluboce ovlivnily následné civilizace."
+  },
+  {
+   "id": "05.01.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Ancient China comprises the earliest complex civilizations of East Asia with continuous cultural traditions, dynastic governance, and technological innovations. It developed foundational forms of bureaucracy and philosophy.",
+   "cs": "Starověká Čína zahrnuje nejstarší složité civilizace Východní Asie s kontinuálními kulturními tradicemi, dynastickým řízením a technologickými inovacemi. Vyvinula základní formy byrokracie a filozofie."
+  },
+  {
+   "id": "05.01.01.06",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Ancient India encompasses diverse civilizations of the Indian subcontinent with distinct religious systems, social hierarchies, and literary traditions. It developed foundational philosophical and mathematical innovations.",
+   "cs": "Starověká Indie zahrnuje rozmanité civilizace indického subkontinentu se zřetelnými náboženskými systémy, sociální hierarchií a literárními tradicemi. Vyvinula základní filozofické a matematické inovace."
+  },
+  {
+   "id": "05.01.01.07",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Pre-Columbian Americas encompasses the indigenous societies of North and South America before sustained contact with Europeans. These cultures developed distinct agricultural systems, urban centers, and political organizations.",
+   "cs": "Předkolumbovská Amerika zahrnuje původní společnosti Severní a Jižní Ameriky před trvalým kontaktem s Evropany. Tyto kultury vyvinuly odlišné zemědělské systémy, městská centra a politické organizace."
+  },
+  {
+   "id": "05.01.01.08",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Ancient Africa comprises the civilizations and societies south of the Sahara with distinct economic systems, state formations, and cultural practices. It developed complex trade networks and technological adaptations.",
+   "cs": "Starověká Afrika zahrnuje civilizace a společnosti na jihu Sahary s odlišnými ekonomickými systémy, státními formacemi a kulturními praktikami. Vyvinula složité obchodní sítě a technologické adaptace."
+  },
+  {
+   "id": "05.01.01.09",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Ancient Near East covers the archaeological and historical study of Anatolia, the Levant, and Persia, tracing cross-regional trade, migration, and cultural exchange among Bronze and Iron Age polities, distinct from the separately treated traditions of Mesopotamian Civilizations and Ancient Egypt.",
+   "cs": "Starý Blízký východ zahrnuje archeologické a historické studium Anatolie, Levanty a Persie, sleduje meziregionální obchod, migraci a kulturní výměnu mezi státními útvary doby bronzové a železné, odlišně od samostatně pojednaných tradic Mezopotámských civilizací a Starověkého Egypta."
+  },
+  {
+   "id": "05.01.01.10",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Archaeological methods comprise the techniques for excavation, stratigraphy, artifact analysis, and dating of material remains. These methods enable inference of settlement patterns, subsistence practices, and cultural change.",
+   "cs": "Archeologické metody zahrnují techniky vykopávání, stratigrafie, analýzy artefaktů a datování hmotných zbytků. Tyto metody umožňují závěry o osídlení, obživě a kulturních změnách."
+  },
+  {
+   "id": "05.01.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Medieval history studies European societies and their interactions from the early medieval period through the fifteenth century, tracing political fragmentation, religious authority, and cultural transformation.",
+   "cs": "Středověké dějiny studují evropské společnosti a jejich interakce od raného středověku do patnáctého století, sledují politickou fragmentaci, náboženskou autoritu a kulturní transformaci.",
+   "brief": "Medieval history studies European societies and their interactions from the early medieval period through the fifteenth century, tracing political fragmentation after Rome's collapse, the rise of ecclesiastical authority, and the gradual cultural transformation that reshaped the continent's institutions.\n\nThe period runs chronologically from [[05.01.02.01]] (Early Medieval, 500-1000) through the high and late medieval centuries, with punctuating crises such as [[05.01.02.04]] (The Crusades) and [[05.01.02.05]] (The Black Death) marking shifts in religious mobilization and demographic collapse respectively; both episodes are studied as turning points rather than isolated events.\n\nMedieval history picks up where [[05.01.01]] (Ancient History) ends at Rome's fall and hands off to [[05.01.03]] (Modern History) at the Renaissance, forming the middle panel of the continuous chronological sequence that structures the History branch.\n\nThe [Internet Medieval Sourcebook](https://sourcebooks.fordham.edu/sbook.asp) and the [British Library's medieval manuscripts collection](https://www.bl.uk/medieval-english-french-manuscripts) provide primary texts and manuscript facsimiles widely cited in the field."
+  },
+  {
+   "id": "05.01.02.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Early Medieval period marks the transformation of the western Roman Empire into successor states, characterized by political decentralization, rural economy, and Christian consolidation (~500-1000 CE).",
+   "cs": "Raně středověké období označuje transformaci západořímské říše v státy nástupce, charakterizované politickou decentralizací, venkovskou ekonomikou a křesťanskou konsolidací (~500-1000 n. l.)."
+  },
+  {
+   "id": "05.01.02.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "High Medieval period witnessed economic expansion, population growth, state formation, and strengthened ecclesiastical authority in Europe (~1000-1300 CE). Feudalism, urbanization, and scholasticism defined this era.",
+   "cs": "Vrcholně středověké období bylo svědkem hospodářské expanze, růstu populace, vzniku států a posílené církevní autority v Evropě (~1000-1300 n. l.). Feudalismus, urbanizace a scholastika toto období definovaly."
+  },
+  {
+   "id": "05.01.02.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Late Medieval period encompasses state consolidation, military-technological innovation, and crisis across Europe (~1300-1500 CE). It witnessed the transition from feudalism toward early modern political structures.",
+   "cs": "Pozdně středověké období zahrnuje konsolidaci států, vojensko-technologickou inovaci a krizi v Evropě (~1300-1500 n. l.). Svědkuje přechodu od feudalismu k raně novověkým politickým strukturám."
+  },
+  {
+   "id": "05.01.02.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The Crusades were religious-military expeditions and conflicts between Christian European and Islamic powers for control of the eastern Mediterranean and Levantine holy sites (~1095-1291). They drove economic, cultural, and technological exchange.",
+   "cs": "Křížové výpravy byly nábožensko-vojenské expedice a konflikty mezi křesťanskými evropskými a islámskými mocnostmi o kontrolu východního Středozemí a levantských posvátných míst (~1095-1291). Vedly k hospodářské, kulturní a technologické výměně."
+  },
+  {
+   "id": "05.01.02.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The Black Death was a pandemic of plague originating in Central Asia that devastated European, African, and Asian populations in the 14th century. It triggered demographic collapse, economic restructuring, and social upheaval.",
+   "cs": "Černá smrt byla pandemie moru pocházejícího ze střední Asie, která v 14. století zničila evropské, africké a asijské populace. Spustila demografický kolaps, hospodářskou restrukturalizaci a sociální nepokoje."
+  },
+  {
+   "id": "05.01.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Modern history traces the transformation of European societies through intellectual movements, technological innovation, and global expansion from the Renaissance to industrial systems. It encompasses the emergence of nation-states and secularization.",
+   "cs": "Novověké dějiny sledují transformaci evropských společností prostřednictvím intelektuálních pohybů, technologických inovací a globální expanze od renesance k průmyslovým systémům. Zahrnují vznik národních států a sekularizaci.",
+   "brief": "Modern history traces the transformation of European societies from the Renaissance through the consolidation of industrial systems, following the intellectual movements, technological innovation, and global expansion that produced the modern nation-state and displaced religious authority with secular institutions.\n\nThe arc begins with [[05.01.03.01]] (Renaissance) humanism and the Age of Exploration's overseas voyages, continues through Enlightenment rationalism, and culminates in the [[05.01.03.04]] (Industrial Revolution)'s reorganization of production and social class; [[05.01.03.05]] (Colonialism) runs alongside this arc as the mechanism through which European expansion reshaped the rest of the world.\n\nModern history follows [[05.01.02]] (Medieval History) at the Renaissance and gives way to [[05.01.04]] (Contemporary History) around 1900, when mass media and total war begin to dominate the historical record in ways the modern period's slower print-and-postal communications did not.\n\nThe [Modern History Sourcebook](https://sourcebooks.fordham.edu/mod/modsbook.asp) and the [Encyclopaedia Britannica overview of the Enlightenment](https://www.britannica.com/event/Enlightenment-European-history) are commonly cited entry points into the period's primary and secondary literature."
+  },
+  {
+   "id": "05.01.03.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Renaissance denotes the cultural and intellectual movement of the fourteenth through seventeenth centuries emphasizing human potential, classical learning, and artistic innovation. It marked the transition from medieval to early modern Europe.",
+   "cs": "Renesance označuje kulturní a intelektuální hnutí čtrnáctého až sedmnáctého století zdůrazňující lidský potenciál, klasické učení a uměleckou inovaci. Označila přechod ze středověké na raně novověkou Evropu."
+  },
+  {
+   "id": "05.01.03.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Age of Exploration encompasses the period of European overseas expansion through maritime technology and trade from the fifteenth through eighteenth centuries. It initiated sustained global encounter and colonialism.",
+   "cs": "Věk objevů zahrnuje období evropské námořní expanze prostřednictvím námořní technologie a obchodu od patnáctého do osmnáctého století. Inicioval trvalý globální kontakt a kolonialismus."
+  },
+  {
+   "id": "05.01.03.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Enlightenment was an intellectual movement of the seventeenth and eighteenth centuries emphasizing reason, empiricism, individual rights, and natural law. It challenged traditional authority and shaped modern political philosophy.",
+   "cs": "Osvícenství bylo intelektuálním hnutím sedmnáctého a osmnáctého století zdůrazňujícím rozum, empirismus, individuální práva a přirozené právo. Zpochybnilo tradiční autoritu a utvářelo moderní politickou filozofii."
+  },
+  {
+   "id": "05.01.03.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Industrial Revolution denotes the shift from artisanal and agrarian production to mechanized factory manufacturing, beginning in Britain in the eighteenth century and spreading through Europe and North America in the nineteenth. It reorganized labor into wage employment, drove mass urbanization, and supplied the technological and capital base that intensified Colonialism's extractive reach, distinguishing it from the preceding intellectual ferment of the Enlightenment.",
+   "cs": "Průmyslová revoluce označuje přechod od řemeslné a agrární výroby k mechanizované tovární produkci; začala v Británii v osmnáctém století a v devatenáctém se rozšířila po Evropě a Severní Americe. Reorganizovala práci do podoby námezdního zaměstnání, urychlila masovou urbanizaci a poskytla technologickou a kapitálovou základnu, jež zesílila extraktivní dosah Kolonialismu, čímž se odlišuje od předcházejícího myšlenkového kvasu Osvícenství."
+  },
+  {
+   "id": "05.01.03.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Colonialism designates the historical system (16th-20th centuries) by which European powers imposed territorial rule and extractive institutions across Africa, Asia, the Americas, and Oceania. Alongside the maritime reconnaissance of the Age of Exploration and the technological shift of the Industrial Revolution, it marks a defining transformation of early-modern and modern global relations, distinct from medieval feudal expansion and preceding Decolonization.",
+   "cs": "Kolonialismus označuje historický systém (16.-20. století), jímž evropské mocnosti prosadily teritoriální nadvládu a extrakční instituce v Africe, Asii, Americe a Oceánii. Vedle námořního průzkumu Věku expedicí a technologického zvratu Průmyslové revoluce představuje určující proměnu vztahů raného novověku a novověku v celosvětovém měřítku, odlišnou od středověké feudální expanze a předcházející Dekolonizaci."
+  },
+  {
+   "id": "05.01.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Contemporary History is the study of human affairs from approximately 1901 to the present, encompassing World Wars, Cold War ideological conflicts, Decolonization of former European territories, Globalization of commerce and culture, and Digital Age's transformation of information and communication. Distinct from Modern History (1500–1900) through its emphasis on mass media, nuclear geopolitics, and transnational integration; it prioritizes lived experience and recent primary sources.",
+   "cs": "Moderní dějiny (20.–21. století) je výzkum lidských záležitostí přibližně od roku 1901 do současnosti, zahrnující Světové války, ideologické konflikty Studené války, Dekolonizaci bývalých evropských území, Globalizaci obchodu a kultury a transformaci informací a komunikace Digitálním věkem. Na rozdíl od dějin novověku (1500–1900) se vyznačuje důrazem na masová média, jadernou geopolitiku a transnacionální integraci; upřednostňuje prožité zkušenosti a nedávné primární zdroje.",
+   "brief": "Contemporary history studies human affairs from approximately 1901 to the present, a period defined by mass media, nuclear geopolitics, and transnational integration rather than the print-and-postal world of [[05.01.03]] (Modern History) that precedes it. It prioritizes lived experience, oral testimony, and recent primary sources alongside the archival record.\n\nIts core episodes run in rough sequence: the [[05.01.04.01]] (World Wars) shattered the nineteenth-century state system, the [[05.01.04.02]] (Cold War) organized the resulting order around two ideological blocs, and decolonization dismantled the European empires those wars had already weakened; [[05.01.04.05]] (Digital Age) covers the most recent transformation, as networked computing reorganizes information and communication yet again.\n\nContemporary history overlaps [[05.01.05]] (Military History) closely in its first half — the two World Wars are studied from both the general-history and the military-strategy angle — before diverging as the Cold War's conflicts become more ideological and economic than purely military.\n\nThe [Imperial War Museums' history collections](https://www.iwm.org.uk/history) and the [Cold War International History Project](https://www.wilsoncenter.org/program/cold-war-international-history-project) are widely used primary-source archives for the period."
+  },
+  {
+   "id": "05.01.04.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The World Wars (1914-1945) encompass two successive conflicts of industrial scale that reshaped global politics: World War I's entrenched trench warfare and clashing multinational empires, and World War II's ideological contest between fascism and democracy alongside the atrocities of the Holocaust. Distinguished from the Cold War's ideological proxy conflicts and preceding Decolonization's nationalist movements, the World Wars mark modernity's first era of total war.",
+   "cs": "Světové války (1914-1945) zahrnují dva po sobě jdoucí konflikty průmyslového rozsahu, které přetvořily světovou politiku: první světovou válku se zakořeněnými zákopovými boji a střetem mnohonárodních impérií a druhou světovou válku s ideologickým střetem fašismu a demokracie a atrocitami Holokaustu. Na rozdíl od ideologických zástupných konfliktů Studené války a předcházejících nacionalistických hnutí Dekolonizace představují Světové války první éru totální války novověku."
+  },
+  {
+   "id": "05.01.04.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The Cold War (1947-1991) designates the ideological and geopolitical standoff between the Soviet Union and the United States, marked by proxy wars, nuclear brinkmanship, espionage, and competing spheres of influence across Europe, Asia, and the developing world. It follows the World Wars' exhaustion of European hegemony, overlaps with Decolonization, and precedes Globalization's post-ideological capitalist integration.",
+   "cs": "Studená válka (1947-1991) označuje ideologické a geopolitické soupeření mezi Sovětským svazem a Spojenými státy, vyznačující se zástupnými válkami, jaderným balancováním na hraně, špionáží a soupeřícími sférami vlivu v Evropě, Asii a rozvojovém světě. Následuje po vyčerpání evropské hegemonie Světovými válkami, souběžně probíhá s Dekolonizací a předchází post-ideologické kapitalistické integraci Globalizace."
+  },
+  {
+   "id": "05.01.04.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Decolonization (1945-1975) is the process by which former European colonies in Africa, Asia, and the Caribbean achieved independence through nationalist movements, armed struggle, and negotiated transfers of sovereignty. Catalyzed by the World Wars' exhaustion of European powers and running concurrently with Cold War geopolitics -- where the superpowers competed for influence in the newly independent states -- it redistributed global political authority and prepared the ground for Globalization.",
+   "cs": "Dekolonizace (1945-1975) je proces, jímž bývalé evropské kolonie v Africe, Asii a Karibiku dosáhly nezávislosti prostřednictvím nacionalistických hnutí, ozbrojených bojů a vyjednaných předání suverenity. Katalyzována vyčerpáním evropských mocností Světovými válkami a probíhající souběžně s geopolitikou Studené války -- v níž supervelmoci soutěžily o vliv v nově nezávislých státech --, přerozdělila globální politickou autoritu a připravila půdu pro Globalizaci."
+  },
+  {
+   "id": "05.01.04.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Globalization (1980s onward) is the accelerating integration of economies, cultures, and communications across borders through free trade, multinational corporations, migration, and the Internet. Enabled by the Cold War's end and the Digital Age's connectivity, it reshapes labor, consumption, and cultural identity at planetary scale, distinct from earlier trade networks by its speed, reach, and reflexivity.",
+   "cs": "Globalizace (od 80. let 20. století) je akcelerující integrace ekonomik, kultur a komunikace přes hranice prostřednictvím volného obchodu, nadnárodních korporací, migrace a Internetu. Umožněna koncem Studené války a propojením Digitálního věku, přetváří práci, spotřebu a kulturní identitu v globálním měřítku, liší se od dřívějších obchodních sítí svou rychlostí, dosahem a reflexivitou."
+  },
+  {
+   "id": "05.01.04.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The Digital Age (1990s onward) designates the historical period defined by pervasive computing, the Internet, social media, and algorithmic systems that reshape commerce, politics, and human identity. Coinciding with Globalization's free-trade integration and enabled by Moore's Law, it marks an unprecedented acceleration of information flow and the rise of virtual economies and digital surveillance -- the most recent major transformation within Contemporary History.",
+   "cs": "Digitální věk (od 90. let 20. století) označuje historické období určené všudypřítomnou výpočetní technikou, Internetem, sociálními médii a algoritmickými systémy, které přetvářejí obchod, politiku a lidskou identitu. Souběžně s volnoobchodní integrací Globalizace a umožněn Moorovým zákonem představuje bezprecedentní zrychlení toku informací a vznik virtuálních ekonomik a digitálního dohledu -- nejnovější velkou transformaci v rámci Soudobých dějin."
+  },
+  {
+   "id": "05.01.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Military History is the study of warfare, armed conflict, military institutions, and their impacts on political, economic, and social change across epochs. Distinguished from general History by its focus on strategy, logistics, weaponry, recruitment, and the lived experience of combatants and civilians; it spans from ancient siege warfare through contemporary asymmetric conflict.",
+   "cs": "Vojenská historie je výzkum válčení, ozbrojených konfliktů, vojenských institucí a jejich dopadu na politické, ekonomické a sociální změny across dějin. Na rozdíl od obecné Historie se vyznačuje zaměřením na strategii, logistiku, zbrojení, nábor a prožité zkušenosti bojovníků a civilistů; sahá od starověkého obléhacího válčení přes současné asymetrické konflikty.",
+   "brief": "Military history studies warfare, armed conflict, and military institutions, and how they have shaped political, economic, and social change across epochs. It is distinguished from general history by its sustained focus on strategy, logistics, weaponry, and recruitment, alongside the lived experience of combatants and civilians caught in conflict.\n\nUnlike the other branches of [[05.01]] (History), it is organized by theme rather than confined to a single era: siege warfare in [[05.01.01]] (Ancient History), chivalric and crusading combat in [[05.01.02]] (Medieval History), and the professionalized armies of [[05.01.03]] (Modern History) are all studied through the same analytical lens of command, supply, and tactics.\n\nIts heaviest concentration of material falls within [[05.01.04]] (Contemporary History), where the [[05.01.04.01]] (World Wars) industrialized combat at a scale that made logistics and mass mobilization as decisive as tactics on the battlefield, a shift that continues to define how later, more asymmetric conflicts are analyzed.\n\nThe [West Point Department of History's military history resources](https://www.westpoint.edu/academics/academic-departments/history/american-military-history) and the [Osprey Publishing military history catalogue](https://ospreypublishing.com/us/military-history/) are standard reference points for campaign-level detail across periods."
+  }
+ ],
+ "relations": [
+  {
+   "from": "05.01.01",
+   "to": "05.01.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.01",
+   "to": "05.01.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.01",
+   "to": "05.01.01.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.01",
+   "to": "05.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.01",
+   "to": "05.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.02",
+   "to": "05.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.02",
+   "to": "05.01.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.02",
+   "to": "05.01.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.02",
+   "to": "05.01.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.02",
+   "to": "05.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.03",
+   "to": "05.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.03",
+   "to": "05.01.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.03",
+   "to": "05.01.03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.03",
+   "to": "05.01.03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.03",
+   "to": "05.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.04",
+   "to": "05.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.04",
+   "to": "05.01.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.04",
+   "to": "05.01.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.04",
+   "to": "05.01.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.04",
+   "to": "05.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.05",
+   "to": "05.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.05",
+   "to": "05.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.05",
+   "to": "05.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.05",
+   "to": "05.01.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.05",
+   "to": "05.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01.05",
+   "to": "05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01",
+   "to": "04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01",
+   "to": "05.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01",
+   "to": "05.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01",
+   "to": "05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05.01",
+   "to": "10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

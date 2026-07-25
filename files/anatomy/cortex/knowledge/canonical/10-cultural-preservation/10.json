@@ -1,0 +1,113 @@
+{
+ "domain": "10",
+ "nodes": [
+  {
+   "id": "10",
+   "level": 0,
+   "kind": "seed-override",
+   "en": "The safeguarding of intangible human heritage — the languages, stories, songs, customs, recipes, games, and rituals through which communities transmit identity across generations. Spans folklore and mythology, traditions, music, narratives, traditional art techniques, and oral histories; it keeps cultural practice alive, where the humanities analyze it.",
+   "cs": "Ochrana nehmotného lidského dědictví — jazyků, příběhů, písní, zvyků, receptů, her a rituálů, jimiž společenství předávají identitu z generace na generaci. Zahrnuje folklor a mytologii, tradice, hudbu, vyprávění, tradiční umělecké techniky a orální historii; udržuje kulturní praxi živou, zatímco humanitní vědy ji analyzují.",
+   "brief": "Cultural preservation safeguards intangible human heritage — the languages, stories, songs, customs, recipes, games, rituals, and techniques through which communities transmit identity from generation to generation. Its subject is living practice: knowledge that exists chiefly in memory, speech, and performance, and that disappears when transmission breaks. The domain therefore combines documentation — recording, transcription, archiving — with revitalization, keeping practices in active use.\n\n[[10.01]] Languages preserves linguistic diversity, the medium of all the rest; [[10.02]] Folklore & Mythology and [[10.06]] Stories & Narratives keep the inherited tale-worlds of communities; [[10.05]] Music & Songs and [[10.09]] Traditional Art Techniques carry performed and made tradition; [[10.03]] Traditions & Customs, [[10.08]] Rituals & Ceremonies, and [[10.07]] Games & Recreation preserve patterned social practice; [[10.04]] Traditional Recipes keeps foodways; and [[10.10]] Oral Histories records first-person testimony before it is lost.\n\nWhere the [[05]] Humanities analyze culture and [[06]] Arts & Creative Expression creates it, cultural preservation keeps it transmissible; its recordings and transcripts join the archives of [[09]] Reference & Documentation, and their digital forms depend on [[11]] Digital Preservation. See [UNESCO: What is Intangible Cultural Heritage?](https://ich.unesco.org/en/what-is-intangible-heritage-00003)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "10",
+   "to": "05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10",
+   "to": "06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10",
+   "to": "09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10",
+   "to": "10.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10",
+   "to": "10.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10",
+   "to": "10.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10",
+   "to": "10.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10",
+   "to": "10.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10",
+   "to": "10.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10",
+   "to": "10.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10",
+   "to": "10.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10",
+   "to": "10.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10",
+   "to": "10.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "10",
+   "to": "11",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

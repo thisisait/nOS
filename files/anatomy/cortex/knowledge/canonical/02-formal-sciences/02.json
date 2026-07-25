@@ -1,0 +1,78 @@
+{
+ "domain": "02",
+ "nodes": [
+  {
+   "id": "02",
+   "level": 0,
+   "kind": "seed-override",
+   "en": "The study of abstract formal systems — number, structure, computation, inference, information, and organized complexity — whose truths are established by definition and proof rather than observation. Encompasses mathematics, computer science, logic, information theory, and systems theory; it supplies the languages and methods the empirical sciences use to model the world.",
+   "cs": "Studium abstraktních formálních systémů — čísel, struktur, výpočtů, úsudku, informace a organizované složitosti — jejichž pravdy se opírají o definice a důkazy, nikoli o pozorování. Zahrnuje matematiku, informatiku, logiku, teorii informace a teorii systémů; poskytuje jazyky a metody, jimiž empirické vědy modelují svět.",
+   "brief": "The formal sciences study abstract systems of structure and inference — number, computation, proof, information, and organized complexity — whose results are established by definition and demonstration rather than by observation. A theorem, once proved, holds in every possible world that satisfies its axioms; this independence from experiment distinguishes the formal sciences from every empirical domain and makes them the common infrastructure of exact thought.\n\n[[02.01]] Mathematics is the domain's core, the general science of quantity, structure, space, and change; [[02.03]] Logic isolates the laws of valid inference on which mathematical proof itself depends; [[02.02]] Computer Science studies computation — what can be computed, how efficiently, and by what algorithms and machines; [[02.04]] Information Theory quantifies information, compression, and the limits of communication over noisy channels; and [[02.05]] Systems Theory studies organization, feedback, and emergence in complex systems regardless of their substrate.\n\nThe formal sciences supply the languages in which the [[01]] Natural Sciences state their laws and the [[04]] Social Sciences build their models, while computer science and information theory underpin the digital technologies of [[03]] Applied Sciences & Technology and the practices of [[11]] Digital Preservation. See [Stanford Encyclopedia of Philosophy: Philosophy of Mathematics](https://plato.stanford.edu/entries/philosophy-mathematics/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "02",
+   "to": "01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02",
+   "to": "02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02",
+   "to": "02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02",
+   "to": "02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02",
+   "to": "02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02",
+   "to": "02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02",
+   "to": "04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02",
+   "to": "11",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

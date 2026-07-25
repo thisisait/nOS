@@ -1,0 +1,307 @@
+{
+ "domain": "08.02",
+ "nodes": [
+  {
+   "id": "08.02",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Water procurement and purification comprises the location, extraction, and treatment of water sources to ensure potability and safety, foundational to survival as the human body cannot function without regular hydration.",
+   "cs": "Získávání a čištění vody zahrnuje vyhledání, extrakci a zpracování vodních zdrojů k zajištění pitnosti a bezpečnosti, základní pro přežití, protože lidské tělo nemůže fungovat bez pravidelné hydratace.",
+   "brief": "Water procurement and purification is the location, extraction, and treatment of water sources to make them safe to drink, and it is foundational to survival because the human body tolerates dehydration far less than it tolerates hunger. [[08.02.01]] Finding water sources comes first — reading terrain, vegetation, and weather for where water collects — followed by [[08.02.02]] purification methods that remove or neutralize the pathogens and contaminants raw water typically carries, from boiling and filtration to chemical treatment. Once water is safe, storage and conservation determine how far a limited supply stretches between procurement opportunities.\n\nWithin [[08]] Survival & Emergency Preparedness, this node is a direct dependency for the others: [[08.01]] First Aid & Medical relies on a clean water supply to treat shock, heat illness, and wound cleaning, and boiling as a purification method draws directly on [[08.05]] Fire Making capability — a survivor without fire is limited to filtration or chemical treatment alone. Few other nodes in this branch have as many downstream dependents, which is why water procurement is typically taught before shelter or food skills in most survival curricula.\n\nPurification method choice depends heavily on context — a boil-water advisory calls for different action than a wilderness stream. The [CDC's guidance on making water safe in an emergency](https://www.cdc.gov/healthywater/emergency/making-water-safe.html) documents field-tested purification methods, and the [Wikipedia article on water purification](https://en.wikipedia.org/wiki/Water_purification) surveys the underlying treatment technologies."
+  },
+  {
+   "id": "08.02.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Finding water sources involves locating natural and artificial supplies of fresh water through observation of landscape features, biological indicators, and precipitation collection, distinguishing viable sources from contaminated or inaccessible ones.",
+   "cs": "Vyhledávání vodních zdrojů zahrnuje lokalizaci přírodních a umělých zásob sladké vody pomocí pozorování prvků krajiny, biologických indikátorů a sbírání srážek, rozlišování životaschopných zdrojů od kontaminovaných nebo nedostupných.",
+   "brief": "Finding water sources is the first step of water procurement & purification: locating natural and artificial fresh water through landscape reading, biological indicators (converging animal trails, certain plant species), and precipitation collection, then distinguishing a genuinely viable source from one that is contaminated or unreachable.\n\nIts five children correspond to distinct extraction strategies rather than variations on one technique: [[08.02.01.01]] groundwater location and rainwater collection tap existing water directly, while dew collection, solar stills, and plant moisture extraction generate usable water from ambient moisture when no open source exists — the arid-environment fallback when the first two methods fail.\n\nA source found here is never assumed safe — it feeds directly into [[08.02.02]] purification methods before consumption, and its yield determines how much [[08.02.03]] water storage and [[08.02.05]] water conservation must stretch a supply between successful finds. In practice, water-finding skill sets the ceiling on everything downstream in this node: no purification technique compensates for a source that cannot be relocated.\n\nThe [US Army Survival Manual (FM 21-76) water procurement chapter](https://www.globalsecurity.org/military/library/policy/army/fm/21-76/) documents the landscape-reading techniques this node covers, and the [USGS groundwater basics](https://www.usgs.gov/special-topics/water-science-school/science/groundwater) explain the hydrology behind locating a reliable underground source."
+  },
+  {
+   "id": "08.02.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Groundwater location identifies subsurface water reserves accessed through wells, boreholes, or springs, using geological knowledge and landscape observation to predict water depth and availability without complex drilling equipment.",
+   "cs": "Lokalizace podzemní vody identifikuje podpovrchové zásoby vody dostupné prostřednictvím studní, vrtů nebo pramenů, s použitím geologických znalostí a pozorování krajiny k předvídání hloubky a dostupnosti vody bez komplexního vrtného vybavení."
+  },
+  {
+   "id": "08.02.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Rainwater collection gathers precipitation directly from the atmosphere using surfaces, containers, and simple filtration, providing a renewable freshwater source during wet seasons and recoverable through storage systems.",
+   "cs": "Sbírání dešťové vody shromažďuje srážky přímo z atmosféry pomocí ploch, nádob a jednoduchého filtrování, poskytující obnovitelný zdroj sladké vody během vlhkých období a využitelný prostřednictvím skladovacích systémů."
+  },
+  {
+   "id": "08.02.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Dew collection extracts moisture from the air and vegetation surfaces during cool periods using absorbent materials and gravity-fed condensation, yielding small but potable quantities useful for supplementing other procurement methods.",
+   "cs": "Sbírání rosy získává vlhkost ze vzduchu a povrchů vegetace během chladných období pomocí absorpčních materiálů a kondenzace gravitací, poskytující malá, ale pitná množství užitečná pro doplnění jiných metod získávání."
+  },
+  {
+   "id": "08.02.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Solar stills harness evaporation and condensation under transparent barriers to distill water from soil, plants, or saline sources, converting non-potable inputs into drinkable output using only sunlight and basic materials.",
+   "cs": "Sluneční destilátor využívá odpařování a kondenzaci pod průhlednými bariérami k destilaci vody z půdy, rostlin nebo solných zdrojů, přeměňuje nepitné vstupy na pitný výstup pomocí pouze slunečního světla a základních materiálů."
+  },
+  {
+   "id": "08.02.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Plant moisture extraction obtains water from living vegetation through collection of plant secretions, root systems, and stem tissue, useful in environments where surface water is scarce but vegetation is established.",
+   "cs": "Získávání vlhkosti z rostlin získává vodu ze žijící vegetace prostřednictvím sběru rostlinných sekrecí, kořenového systému a tkáně stonku, užitečné v prostředích, kde je povrchová voda vzácná, ale vegetace je vytvořena."
+  },
+  {
+   "id": "08.02.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Purification methods remove or neutralize biological, chemical, and physical contaminants from water through distinct processes including thermal, chemical, and mechanical approaches, ensuring safety for consumption and medical use.",
+   "cs": "Metody čištění odstraňují nebo neutralizují biologické, chemické a fyzikální znečišťující látky z vody prostřednictvím odlišných procesů včetně tepelných, chemických a mechanických přístupů, zajišťující bezpečnost pro spotřebu a zdravotnické použití.",
+   "brief": "Purification methods take water located by [[08.02.01]] finding water sources and remove or neutralize the biological, chemical, and physical contaminants it typically carries, converting a found source into water safe for drinking or medical use. No single method covers every contaminant class, which is why the node splits into five distinct processes rather than one technique with variations.\n\n[[08.02.02.01]] Boiling and distillation apply heat — boiling kills pathogens, distillation additionally separates out dissolved minerals and some chemicals — while chemical treatment and UV sterilization neutralize pathogens without heat, trading fuel cost for chemical supply or a power source. [[08.02.02.04]] Filtration systems remove particulate matter and many pathogens mechanically, and in practice a field purification routine layers filtration ahead of one of the other four to catch what filtration alone cannot.\n\nPurification's output feeds directly into [[08.02.04]] water testing, which confirms whether a given method actually succeeded, and into [[08.02.03]] water storage, since purified water still requires protection from recontamination. Method choice here has direct consequences elsewhere in this branch — boiling depends on the same fire-making capability that keeps a camp warm.\n\nThe [CDC's guidance on making water safe in an emergency](https://www.cdc.gov/healthywater/emergency/making-water-safe.html) ranks these methods by effectiveness and required resources, and the [EPA's drinking water treatment overview](https://www.epa.gov/ground-water-and-drinking-water) documents the contaminant classes each process addresses."
+  },
+  {
+   "id": "08.02.02.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Boiling denatures pathogens and some chemical contaminants through sustained high temperature, the most reliable field purification method requiring only heat and a container, effective against viruses, bacteria, and parasites.",
+   "cs": "Vařením se denaturují patogeny a některé chemické znečišťující látky prostřednictvím soustředěného vysokého tepla, nejspolehlivější polní metoda čištění vyžadující pouze teplo a nádobu, účinná proti virům, bakteriím a parazitům."
+  },
+  {
+   "id": "08.02.02.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Chemical treatment introduces disinfectants such as chlorine, iodine, or bleach to kill or inactivate pathogens without boiling; it is effective in portable form and useful when fuel is scarce, though taste alteration and residual toxicity require consideration.",
+   "cs": "Chemická úprava vody zavádí dezinfekční prostředky jako chlor, jód nebo bělidlo, aby usmrtily nebo inaktivovaly patogeny bez varu; je účinná v přenosné formě a užitečná, když je palivo vzácné, ačkoli je nutné zvážit změnu chuti a zbytkovou toxicitu."
+  },
+  {
+   "id": "08.02.02.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "UV sterilization exposes water to ultraviolet light that damages pathogen DNA and RNA, rendering microorganisms unable to reproduce; it is portable in battery-powered systems and effective for clear water but ineffective against particles that shield microbes.",
+   "cs": "UV sterilizace vystavuje vodu ultrafialovému záření, které poškozuje DNA a RNA patogenů a znemožňuje mikroorganismům rozmnožování; je přenosná v bateriemi napájených systémech a účinná u čiré vody, ale neúčinná proti částicím stínícím mikroby."
+  },
+  {
+   "id": "08.02.02.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Filtration systems pass water through porous materials such as sand, cloth, or activated charcoal to remove suspended particles, pathogens, and some chemical contaminants, functioning through mechanical straining and biological action without external energy.",
+   "cs": "Filtrační systémy propouštějí vodu porézními materiály, jako je písek, tkanina nebo aktivní uhlí, aby odstranily suspendované částice, patogeny a některé chemické znečišťující látky, fungující prostřednictvím mechanického prosévání a biologického účinku bez vnější energie."
+  },
+  {
+   "id": "08.02.02.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Distillation separates water from contaminants through boiling and condensation, collecting the pure water vapor while leaving dissolved salts and microbes behind; it is energy-intensive but effective against all forms of contamination including salinity.",
+   "cs": "Destilace odděluje vodu od znečišťujících látek varem a kondenzací, shromažďuje čistou vodní páru a ponechává rozpuštěné soli a mikroby v původním roztoku; je energeticky náročná, ale účinná proti všem formám znečištění včetně slanosti."
+  },
+  {
+   "id": "08.02.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Water storage preserves potable water in sealed containers for extended periods using protection against light, contamination, and biological growth, essential for bridging supply gaps during procurement disruptions or dry seasons.",
+   "cs": "Skladování vody uchovává pitnou vodu v uzavřených nádobách po delší dobu pomocí ochrany před světlem, kontaminací a biologickým růstem, nezbytné pro překlenutí nedostatků nabídky během přerušení nebo suchých období.",
+   "brief": "Water storage preserves water that has already been [[08.02.02]] purified, holding it in sealed, light-protected containers so contamination and biological growth do not undo the purification step before the water is actually used. It is the buffer between procurement events — the reserve that bridges a dry season, a contaminated local source, or any disruption in the ability to find and purify water on demand.\n\nContainer choice and placement matter as much as the water itself: opaque or dark containers limit the algae growth clear plastic invites, food-grade materials avoid leaching chemicals into long-stored water, and rotation schedules catch degradation before it becomes a hidden risk at the moment of greatest need.\n\nStorage sits downstream of [[08.02.01]] finding water sources and [[08.02.02]] purification methods in water procurement & purification, and works in tandem with [[08.02.05]] water conservation — a large stored reserve buys time, but conservation determines how far it actually stretches once procurement is disrupted. [[08.02.04]] Water testing periodically re-verifies stored water, since a seal can fail silently over months.\n\nThe [CDC's guidance on storing water for emergencies](https://www.cdc.gov/healthywater/emergency/creating-storing-emergency-water-supply.html) sets the standard container and rotation practices, and [FEMA's water supply preparedness page](https://www.ready.gov/water) documents the reserve volumes recommended per household."
+  },
+  {
+   "id": "08.02.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Water testing assesses potability through visual, sensory, and chemical examination to detect microbial contamination, mineral content, and chemical hazards, enabling informed treatment decisions and confirmation of purification success.",
+   "cs": "Testování vody posuzuje pitnost prostřednictvím vizuálního, sensitivního a chemického vyšetření k detekci mikrobiální kontaminace, obsahu minerálů a chemických nebezpečí, umožňuje informované rozhodnutí o léčbě a potvrzení úspěchu čištění.",
+   "brief": "Water testing assesses whether water is actually potable, using visual inspection, sensory checks (odor, taste), and chemical or biological indicators to detect microbial contamination, mineral content, and chemical hazards. It closes the loop that [[08.02.01]] finding water sources and [[08.02.02]] purification methods open — a source is found, treated, and then tested to confirm the treatment actually worked rather than assumed to have worked.\n\nField testing operates on a spectrum: simple methods like clarity and odor checks catch obvious problems immediately, while test strips and portable kits detect specific hazards like chlorine residual, pH, or bacterial presence that no unaided sense can identify. Neither substitutes fully for the other — a source can look and smell clean while carrying a dangerous pathogen load, which is why purification is never skipped on the assumption that a source \"looks fine.\"\n\nTesting also applies to [[08.02.03]] water storage, since a sealed container's contents can degrade or become contaminated over months without visible signs, and its results feed back into procurement decisions and into [[08.02.05]] water conservation — a source that repeatedly fails testing gets abandoned, and remaining supply must stretch further until [[08.02.01]] finding water sources locates a replacement.\n\nThe [EPA's guidance on testing drinking water](https://www.epa.gov/privatewells/potential-well-water-contaminants-and-their-impacts) documents which contaminants require which test method, and the [CDC's field water testing overview](https://www.cdc.gov/healthywater/drinking/travel/water-testing.html) explains the limits of visual and sensory assessment alone."
+  },
+  {
+   "id": "08.02.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Water conservation minimizes consumption through rationing, leak prevention, and reuse of water for multiple purposes, extending supply availability during shortages and reducing the labor required for procurement and purification.",
+   "cs": "Úspora vody minimalizuje spotřebu prostřednictvím přidělování, prevence úniku a opětovného použití vody pro více účelů, prodlužuje dostupnost zásob během nedostatků a snižuje práci požadovanou pro získávání a čištění.",
+   "brief": "Water conservation is the set of practices that stretch a limited water supply further — rationing consumption, preventing losses to evaporation and leaks, and reusing water across successive purposes (cooking water becomes wash water becomes irrigation water) before it is finally discarded. It matters most precisely when procurement is hardest: after [[08.02.01]] finding water sources and [[08.02.02]] purification methods have converted raw water into a safe, finite supply, conservation determines how many days that supply actually lasts.\n\nWithin [[08.02]] Water Procurement & Purification, conservation is the discipline that closes the loop between acquisition and use: it works hand in hand with [[08.02.03]] water storage, since a well-sealed, properly sized container is what makes rationing possible in the first place, and it depends on water testing having already confirmed which water is safe to reuse for lower-priority tasks like washing. Where the other nodes in this branch answer \"how do I get and clean water,\" conservation answers \"how do I make it last.\"\n\nBecause dehydration degrades judgment and physical capability quickly, conservation practice must never cross into unsafe restriction of drinking water itself — the discipline applies to non-drinking uses first. The [Wikipedia article on water conservation](https://en.wikipedia.org/wiki/Water_conservation) surveys rationing and reuse techniques across household and emergency contexts."
+  }
+ ],
+ "relations": [
+  {
+   "from": "08.02.01",
+   "to": "08.02.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.01",
+   "to": "08.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.01",
+   "to": "08.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.01",
+   "to": "08.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.02",
+   "to": "08.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.02",
+   "to": "08.02.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.02",
+   "to": "08.02.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.02",
+   "to": "08.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.02",
+   "to": "08.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.03",
+   "to": "08.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.03",
+   "to": "08.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.03",
+   "to": "08.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.03",
+   "to": "08.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.04",
+   "to": "08.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.04",
+   "to": "08.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.04",
+   "to": "08.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.04",
+   "to": "08.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.05",
+   "to": "08.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.05",
+   "to": "08.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.05",
+   "to": "08.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02.05",
+   "to": "08.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02",
+   "to": "08.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02",
+   "to": "08.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02",
+   "to": "08.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02",
+   "to": "08.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.02",
+   "to": "08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

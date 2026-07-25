@@ -1,0 +1,43 @@
+{
+ "domain": "02.04",
+ "nodes": [
+  {
+   "id": "02.04",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Information theory quantifies, transmits, and stores information using probability and mathematics. It establishes fundamental limits on data compression and communication rates, applying to signal processing, cryptography, and statistical inference.",
+   "cs": "Teorie informace kvantifikuje, přenáší a uchovává informaci pomocí pravděpodobnosti a matematiky. Stanovuje fundamentální limity komprese dat a komunikačních rychlostí, aplikuje se na zpracování signálů, kryptografii a statistickou inferenci.",
+   "brief": "Information Theory quantifies, transmits and stores information using probability and mathematics, establishing fundamental limits on how far data can be compressed and how fast it can be communicated over a noisy channel without error. It treats information itself — independent of the meaning of a message — as a measurable quantity, and its central results (entropy, channel capacity) hold regardless of the particular technology used to send or store a signal.\n\nInformation theory sits within the Formal Sciences beside [[02.01]], whose probability and combinatorics supply its mathematical machinery, and beside [[02.02]], whose networks, storage systems and security mechanisms are information theory's most direct application: [[02.02.07]] designs the channels whose capacity information theory bounds, and [[02.02.08]] relies on information-theoretic security proofs to state what an adversary can and cannot learn from an encrypted message. Unlike its neighbors it currently has no further subdivision in this taxonomy, reflecting a field organized more around a small set of foundational theorems than a spread of specialized subdisciplines.\n\nIts results extend well beyond communications engineering into statistical inference, thermodynamics and genetics, wherever a quantity behaves like uncertainty that is resolved by receiving a message. For further reading, see Claude Shannon's founding paper [\"A Mathematical Theory of Communication\"](https://ia802205.us.archive.org/23/items/bstj27-3-379/bstj27-3-379.pdf) and the [Encyclopaedia Britannica entry on information theory](https://www.britannica.com/science/information-theory)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "02.04",
+   "to": "02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.04",
+   "to": "02.02.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.04",
+   "to": "02.02.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.04",
+   "to": "02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

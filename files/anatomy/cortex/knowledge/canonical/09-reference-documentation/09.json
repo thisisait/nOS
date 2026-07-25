@@ -1,0 +1,106 @@
+{
+ "domain": "09",
+ "nodes": [
+  {
+   "id": "09",
+   "level": 0,
+   "kind": "seed-override",
+   "en": "Compiled works organized for consultation rather than continuous reading — the codified record of facts, terms, methods, places, and designs. Spans encyclopedias, dictionaries, technical manuals, maps and atlases, standards, formulas and tables, protocols, blueprints, patents, and historical archives; its value rests on accuracy, organization, and retrievability.",
+   "cs": "Souborná díla uspořádaná k vyhledávání, nikoli k souvislé četbě — kodifikovaný záznam faktů, pojmů, postupů, míst a návrhů. Zahrnují encyklopedie, slovníky, technické příručky, mapy a atlasy, normy a specifikace, vzorce a tabulky, protokoly a postupy, výkresy a schémata, patenty a historické archivy; jejich hodnota spočívá v přesnosti, uspořádání a dohledatelnosti.",
+   "brief": "Reference and documentation comprise compiled works organized for consultation rather than continuous reading — the codified record of facts, terms, methods, places, designs, and precedents. The domain's genres share a common architecture: authoritative content, systematic arrangement, and retrieval apparatus — indexes, keys, coordinates, numbering — that lets a reader extract one fact from millions. Its cardinal virtues are accuracy, currency, and retrievability.\n\n[[09.01]] Encyclopedias survey knowledge at large and [[09.02]] Dictionaries codify the words that carry it; [[09.03]] Technical Manuals and [[09.07]] Protocols & Procedures prescribe how to operate, maintain, and act; [[09.04]] Maps & Atlases fix knowledge to place; [[09.05]] Standards & Specifications and [[09.06]] Formulas & Tables state the agreed measures and constants on which engineering and science rely; [[09.08]] Blueprints & Schematics and [[09.09]] Patents record designs and inventions; and [[09.10]] Historical Archives preserve the primary documents from which history is written.\n\nEvery other domain deposits its distilled knowledge here, which makes the reference shelf the natural payload of preservation: [[11]] Digital Preservation keeps its digital forms intact, while the [[05]] Humanities and [[10]] Cultural Preservation depend on its archives for sources and memory. See [Encyclopaedia Britannica: reference work](https://www.britannica.com/topic/reference-work)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "09",
+   "to": "05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09",
+   "to": "09.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09",
+   "to": "09.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09",
+   "to": "09.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09",
+   "to": "09.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09",
+   "to": "09.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09",
+   "to": "09.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09",
+   "to": "09.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09",
+   "to": "09.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09",
+   "to": "09.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09",
+   "to": "09.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09",
+   "to": "10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09",
+   "to": "11",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

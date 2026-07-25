@@ -1,0 +1,50 @@
+{
+ "domain": "09.01",
+ "nodes": [
+  {
+   "id": "09.01",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Encyclopedias are comprehensive general-knowledge reference works organizing information alphabetically or by subject. They synthesize established knowledge from multiple domains into accessible, cross-referenced entries.",
+   "cs": "Encyklopedie jsou komplexní referenční díla obecných znalostí organizující informace abecedně nebo podle předmětu. Syntetizují zavedenou vědomost z více oblastí do přístupných, křížově odkazovaných položek.",
+   "brief": "Encyclopedias are comprehensive general-knowledge reference works organizing information alphabetically or by subject. They synthesize established knowledge from multiple domains into accessible, cross-referenced entries, trading the depth of a specialist source for breadth and a single consistent entry point into any topic.\n\nWithin [[09]] Reference & Documentation, encyclopedias sit closest to [[09.02]] Dictionaries — both are alphabetically organized lookup works, but a dictionary defines words while an encyclopedia explains the concepts behind them — and they draw content from every other branch of the taxonomy, since an encyclopedia entry is itself a summary of specialist knowledge held elsewhere, from [[01]] Natural Sciences to [[07]] Practical Skills & Trades. Unlike [[09.10]] Historical Archives, which preserves primary source material largely unedited, an encyclopedia is a secondary, synthesized account.\n\nFor a canonical general-purpose reference, see the [Encyclopaedia Britannica](https://www.britannica.com/), and for a large collaboratively maintained encyclopedia, [Wikipedia](https://www.wikipedia.org/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "09.01",
+   "to": "01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09.01",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09.01",
+   "to": "09.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09.01",
+   "to": "09.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "09.01",
+   "to": "09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

@@ -1,0 +1,36 @@
+{
+ "domain": "03.09",
+ "nodes": [
+  {
+   "id": "03.09",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Application of biological organisms and molecular processes to develop products and services, bridging biology, chemistry, and engineering at the cellular and biochemical level.",
+   "cs": "Aplikace biologických organizmů a molekulárních procesů k vývoji produktů a služeb, spojující biologii, chemii a inženýrství.",
+   "brief": "Biotechnology is the application of biological organisms and molecular processes to develop products and services, bridging biology, chemistry, and engineering at the cellular and biochemical level. It covers genetic engineering, fermentation and cell-culture production, and the diagnostic and therapeutic tools built from living systems — work that treats cells and molecules as the raw material and manufacturing platform rather than metal, plastic, or silicon.\n\nBiotechnology sits inside [[03]] Applied Sciences & Technology as a supplier to two of its siblings in particular: [[03.02]] Medicine deploys the vaccines, diagnostics, and gene therapies biotechnology develops, and [[03.03]] Agriculture relies on it for genetically improved crops and livestock. Unlike most of its siblings, biotechnology has no dedicated subcategory tree in this taxonomy yet — its output is treated as a single integrated discipline rather than split into genetic engineering, industrial fermentation, and diagnostic specializations.\n\nBiotechnology products are governed by biosafety and clinical-approval regulation before reaching the market. For biosafety and regulatory guidance, see the [World Health Organization](https://www.who.int/), and for a technical overview of the field, the [Encyclopaedia Britannica](https://www.britannica.com/science/biotechnology)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "03.09",
+   "to": "03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.09",
+   "to": "03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.09",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

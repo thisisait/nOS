@@ -1,0 +1,230 @@
+{
+ "domain": "01.05",
+ "nodes": [
+  {
+   "id": "01.05",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "The natural science of celestial objects and the universe beyond Earth — planets, stars, galaxies, and the cosmos as a whole, their composition, motion, origin, and evolution. Sibling to the Earth-bound sciences; it groups planetary science, stellar and galactic astronomy, cosmology, and astrobiology.",
+   "cs": "Přírodní věda o nebeských tělesech a vesmíru za hranicemi Země — planetách, hvězdách, galaxiích a kosmu jako celku, jejich složení, pohybu, původu a vývoji. Sourozenec věd o Zemi; sdružuje planetární vědu, hvězdnou a galaktickou astronomii, kosmologii a astrobiologii.",
+   "brief": "Astronomy is the natural science of celestial objects and the universe beyond Earth: planets, stars, galaxies, and the cosmos as a whole, together with their composition, motion, origin and evolution. Unlike most sciences it studies its subjects almost entirely at a distance, through the light and other radiation that reaches Earth's telescopes and detectors.\n\nAstronomy sits beside [[01.04]] within the Natural Sciences: Earth Sciences studies the one planet reachable by direct sampling, while astronomy extends the same physical questions — composition, structure, history — outward to everything else. Its subfields divide by scale: [[01.05.01]] studies planets, moons and other bodies within star systems, [[01.05.04]] studies the origin, structure and fate of the universe as a whole, and [[01.05.05]] asks where and how life could arise on other worlds, drawing on both astronomy and biology. Because a star or a black hole is, at bottom, matter and radiation obeying physical law, astronomy leans directly on [[01.01]] for the mechanics, thermodynamics and relativity that describe stellar and galactic behavior.\n\nAstrobiology in particular reaches across branches, connecting astronomy's search for habitable worlds to the biochemistry that defines life itself. For further reading, see [NASA's science pages](https://science.nasa.gov/) and the [Encyclopaedia Britannica entry on astronomy](https://www.britannica.com/science/astronomy)."
+  },
+  {
+   "id": "01.05.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "The study of planets, moons, asteroids, comets, and planetary systems — their formation, geology, atmospheres, and dynamics, including the Solar System and exoplanets. Narrower than Astronomy as a whole and distinct from Stellar Astronomy: its subjects are the bodies that orbit stars rather than the stars themselves.",
+   "cs": "Studium planet, měsíců, asteroidů, komet a planetárních soustav — jejich vzniku, geologie, atmosfér a dynamiky, včetně Sluneční soustavy a exoplanet. Užší než astronomie jako celek a odlišné od hvězdné astronomie: jeho předmětem jsou tělesa obíhající hvězdy, nikoli hvězdy samotné.",
+   "brief": "Planetary Science studies planets, moons, asteroids, comets, and the planetary systems that host them: their formation, geology, atmospheres, interiors, and orbital dynamics, spanning both the Solar System and the exoplanets discovered around other stars. It treats a planet as a physical body to be characterized the way a geologist or physicist would characterize any object — by composition, internal structure, thermal history, and the processes still reshaping its surface and atmosphere.\n\nWithin [[01.05]] Astronomy, planetary science is bounded by scale rather than by method: it studies the bodies that orbit a star, while [[01.05.02]] Stellar Astronomy studies the star itself, and the same system often supports research in both. It shares its search for habitable worlds with [[01.05.05]] Astrobiology, which asks not just what a planet is made of but whether it could support life — a question planetary science supplies the geological and atmospheric groundwork for.\n\nThe field also reaches across branches into [[01.04]] Earth Sciences: Earth is itself a planet, and comparative planetology routinely applies techniques developed for terrestrial geology — plate tectonics, volcanism, atmospheric circulation — to Mars, Venus, and the icy moons of the outer Solar System, while importing back lessons about how planets evolve over billions of years. For further reading, see NASA's [Solar System Exploration](https://solarsystem.nasa.gov/) portal and the [NASA Exoplanet Exploration](https://exoplanets.nasa.gov/) program."
+  },
+  {
+   "id": "01.05.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "The study of stars — their formation, structure, energy generation, evolution, and death, and the classification of stellar types and populations. Distinct from Planetary Science (orbiting bodies) and Galactic Astronomy (star systems in aggregate): its unit of study is the individual star and its life cycle.",
+   "cs": "Studium hvězd — jejich vzniku, stavby, tvorby energie, vývoje a zániku a klasifikace hvězdných typů a populací. Odlišná od planetární vědy (obíhající tělesa) a galaktické astronomie (hvězdné soustavy jako celek): jednotkou studia je jednotlivá hvězda a její životní cyklus.",
+   "brief": "Stellar Astronomy studies stars: their formation from collapsing gas and dust, internal structure and energy generation through nuclear fusion, evolution across a lifespan of millions to billions of years, and eventual death as a white dwarf, neutron star, or black hole. It classifies stars by spectral type, luminosity, and mass, and uses that classification to reconstruct the life cycle of a star from a single snapshot of its light.\n\nWithin [[01.05]] Astronomy, stellar astronomy is bounded on one side by [[01.05.01]] Planetary Science, which studies the bodies orbiting a star rather than the star itself, and on the other by [[01.05.03]] Galactic Astronomy, which treats stars in aggregate as the populations that make up a galaxy rather than as individual objects. A single star system can sit at the center of research in all three, viewed at different scales.\n\nThe field leans directly on [[01.01]] Physics for the nuclear, thermodynamic, and relativistic processes that govern a star's interior and its final collapse — a star is, at bottom, a self-gravitating body of plasma obeying the same physical laws tested in terrestrial laboratories, just at temperatures and densities no laboratory can reach. For further reading, see NASA's overview of [stars](https://science.nasa.gov/universe/stars/) and the Britannica entry on [star](https://www.britannica.com/science/star-astronomy)."
+  },
+  {
+   "id": "01.05.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "The study of galaxies — their structure, composition, dynamics, and evolution, including the Milky Way and external galaxies, star clusters, and interstellar matter. Broader in scale than Stellar Astronomy (single stars) yet narrower than Cosmology (the universe as a whole): its unit is the galaxy.",
+   "cs": "Studium galaxií — jejich struktury, složení, dynamiky a vývoje, včetně Mléčné dráhy a vnějších galaxií, hvězdokup a mezihvězdné hmoty. Rozsáhlejší než hvězdná astronomie (jednotlivé hvězdy), avšak užší než kosmologie (vesmír jako celek): jeho jednotkou je galaxie.",
+   "brief": "Galactic Astronomy studies galaxies: their structure, composition, dynamics, and evolution, including the Milky Way viewed from within and external galaxies observed across the electromagnetic spectrum, together with the star clusters and interstellar matter that fill the space between individual stars. Its unit of study is not the star but the galaxy — a bound system of billions of stars, gas, dust, and dark matter held together by gravity.\n\nWithin [[01.05]] Astronomy, galactic astronomy sits between [[01.05.02]] Stellar Astronomy, which studies the individual stars that populate a galaxy, and [[01.05.04]] Cosmology, which studies the universe as a whole; a galaxy is itself a population of stars and, at the same time, one of the building blocks cosmology arranges into the large-scale structure of the cosmos.\n\nThe field draws heavily on [[01.01]] Physics for the gravitational dynamics that hold a galaxy together and for the evidence — rotation curves that defy the visible mass — that first pointed astronomers toward dark matter. For further reading, see NASA's overview of [galaxies](https://science.nasa.gov/universe/galaxies/) and the Britannica entry on [galaxy](https://www.britannica.com/science/galaxy)."
+  },
+  {
+   "id": "01.05.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "The study of the universe as a whole — its origin, large-scale structure, composition, expansion, and ultimate fate, including the Big Bang, dark matter, and dark energy. The largest-scale astronomical discipline, distinct from Galactic Astronomy: it treats the cosmos itself as its object of study.",
+   "cs": "Studium vesmíru jako celku — jeho původu, velkorozměrové struktury, složení, rozpínání a konečného osudu, včetně velkého třesku, temné hmoty a temné energie. Astronomický obor s největším měřítkem, odlišný od galaktické astronomie: jeho předmětem je kosmos sám.",
+   "brief": "Cosmology studies the universe as a whole: its origin in the Big Bang, its large-scale structure of galaxies and voids, its composition of ordinary matter, dark matter, and dark energy, its expansion history, and its ultimate fate. It is the largest-scale astronomical discipline, treating the cosmos itself — rather than any object within it — as the thing to be explained.\n\nWithin [[01.05]] Astronomy, cosmology sits beyond [[01.05.03]] Galactic Astronomy: where galactic astronomy studies individual galaxies and their internal dynamics, cosmology arranges billions of them into the filaments and voids of the cosmic web and asks how that structure grew from the near-uniform early universe. It also borders [[01.05.05]] Astrobiology at one remove, since the same expanding, evolving universe that cosmology describes is the stage on which the conditions for life elsewhere must arise.\n\nCosmology depends directly on [[01.01]] Physics — general relativity supplies the equations that describe an expanding spacetime, and particle physics supplies the physics of the hot early universe that cosmic microwave background observations now let astronomers test directly. For further reading, see NASA's [universe overview](https://science.nasa.gov/universe/overview/) and the Britannica entry on [cosmology](https://www.britannica.com/science/cosmology)."
+  },
+  {
+   "id": "01.05.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "The study of the potential for life beyond Earth — the origin of life, its limits and requirements, habitability of other worlds, and the search for biosignatures. Interdisciplinary at the boundary of astronomy and biology, distinct from the purely physical astronomical siblings by centering on life and its cosmic prospects.",
+   "cs": "Studium možnosti života mimo Zemi — původu života, jeho mezí a požadavků, obyvatelnosti jiných světů a hledání biosignatur. Mezioborová disciplína na pomezí astronomie a biologie, odlišná od čistě fyzikálních astronomických oborů důrazem na život a jeho kosmické vyhlídky.",
+   "brief": "Astrobiology studies the potential for life beyond Earth: the origin of life itself, the physical and chemical limits within which it can exist, the habitability of planets and moons other than our own, and the search for biosignatures — chemical or spectral traces that would indicate life is or was present. It is interdisciplinary by necessity, sitting at the boundary between astronomy and biology rather than fully inside either.\n\nWithin [[01.05]] Astronomy, astrobiology draws its targets from [[01.05.01]] Planetary Science, which characterizes the geology and atmospheres of candidate worlds, and its broader context from [[01.05.04]] Cosmology, since the conditions for life anywhere depend on the age, chemistry, and structure of the universe those worlds formed in.\n\nThe field reaches directly into [[01.03]] Biology for its account of what life requires and how it might arise from non-living chemistry — the same question of biogenesis that biology asks about Earth, astrobiology asks about every other world a telescope or a probe can reach. For further reading, see [NASA Astrobiology](https://astrobiology.nasa.gov/) and the Britannica entry on [astrobiology](https://www.britannica.com/science/astrobiology)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "01.05.01",
+   "to": "01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.01",
+   "to": "01.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.01",
+   "to": "01.05.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.01",
+   "to": "01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.02",
+   "to": "01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.02",
+   "to": "01.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.02",
+   "to": "01.05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.02",
+   "to": "01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.03",
+   "to": "01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.03",
+   "to": "01.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.03",
+   "to": "01.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.03",
+   "to": "01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.04",
+   "to": "01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.04",
+   "to": "01.05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.04",
+   "to": "01.05.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.04",
+   "to": "01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.05",
+   "to": "01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.05",
+   "to": "01.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.05",
+   "to": "01.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05.05",
+   "to": "01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05",
+   "to": "01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05",
+   "to": "01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05",
+   "to": "01.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05",
+   "to": "01.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "01.05",
+   "to": "01.05.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

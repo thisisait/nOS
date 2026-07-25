@@ -1,0 +1,405 @@
+{
+ "domain": "08.01",
+ "nodes": [
+  {
+   "id": "08.01",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "First aid and medical knowledge provides immediate emergency care and stabilization for injuries and illness when professional medical help is absent, encompassing assessment, intervention, and triage. Spans immediate treatment through sustained care in resource-constrained settings.",
+   "cs": "První pomoc a lékařské vědomosti poskytují okamžitou péči v nouzi a stabilizaci zranění a nemocí, když není profesionální lékařská péče dostupná, zahrnuje posouzení, zásah a třídu. Sahá od okamžité péče až po trvalou péči v prostředí s omezenými zdroji.",
+   "brief": "First aid and medical knowledge provides immediate emergency care and stabilization for injuries and illness when professional medical help is absent or delayed, spanning rapid assessment, hands-on intervention, and triage under pressure. [[08.01.01]] Basic first aid covers the foundational skills — wound care, CPR, choking response — that every other branch in this node builds on, while [[08.01.02]] trauma care escalates that foundation to severe bleeding, fractures, and shock, and [[08.01.03]] wilderness medicine adapts both to settings where evacuation may be hours or days away rather than minutes.\n\nThis node sits inside [[08]] Survival & Emergency Preparedness precisely because medical knowledge alone is not enough once professional care is out of reach — treating shock or heat illness in the field depends on the same [[08.02]] Water Procurement & Purification skills that keep a patient hydrated, and a sustained emergency response draws on shelter and fire capability just as much as on bandaging technique. First aid is therefore rarely practiced in isolation; it is the node survival scenarios route through once the immediate danger is under control.\n\nFormal training in this field runs through internationally recognized courses, and currency matters — protocols change as evidence updates. The [American Red Cross first aid and CPR training](https://www.redcross.org/take-a-class/first-aid) is a widely available certification path, and the [WHO basic emergency care guidance](https://www.who.int/teams/integrated-health-services/clinical-services-and-systems/emergency-and-critical-care) documents the clinical standards behind field triage and stabilization."
+  },
+  {
+   "id": "08.01.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Basic first aid addresses common injuries and medical emergencies—choking, unconsciousness, wounds, burns, fractures, shock—using standard assessment and response protocols to stabilize and prepare for transport. Provides foundational life-saving techniques distinct from trauma surgery or wilderness-specific interventions.",
+   "cs": "Základní první pomoc řeší běžná zranění a lékařské nouze—dušení, bezvědomí, rány, popáleniny, fraktury, šok—pomocí standardních protokolů posouzení a odezvy k stabilizaci a přípravě na transport. Poskytuje základní techniky záchrany života odlišné od traumatické chirurgie nebo intervencí specifických pro divočinu.",
+   "brief": "Basic first aid is the first line of response to common injuries and medical emergencies — choking, unconsciousness, wounds, burns, fractures, and shock — using standardized assessment and stabilization protocols until professional care arrives or the patient reaches transport. It is deliberately foundational: the skill set every responder learns first, before trauma surgery or wilderness-specific improvisation enter the picture.\n\nIts five children break the discipline into discrete competencies, from [[08.01.01.01]] CPR & resuscitation for failing circulation and breathing to [[08.01.01.02]] wound care, burn treatment, fracture management, and shock treatment for the physical injury itself. Each escalates in the same direction — from immediate life support to bleeding control to structural stabilization — mirroring how a real casualty is worked through in sequence.\n\nBasic first aid is the threshold [[08.01.02]] trauma care crosses when an injury exceeds what standard protocols can stabilize — a tourniquet or chest decompression picks up where wound care and shock treatment stop. [[08.01.03]] Wilderness medicine adapts these same techniques to settings without rapid evacuation, and [[08.01.05]] medication knowledge supplies the pharmacological judgment that supports a first aid response once the immediate emergency is under control.\n\nCertification keeps these protocols current as evidence-based guidance changes. The [American Red Cross first aid and CPR training](https://www.redcross.org/take-a-class/first-aid) and the [American Heart Association's CPR guidelines](https://cpr.heart.org/en/cpr-courses-and-kits) are the two most widely recognized certification paths."
+  },
+  {
+   "id": "08.01.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "CPR and resuscitation restore cardiopulmonary function through chest compressions, rescue breaths, and defibrillation once the heart stops or breathing ceases. It is the most time-critical first-aid intervention, demanding immediate and continuous action to prevent death.",
+   "cs": "CPR a resuscitace obnovují kardiopulmonální funkci prostřednictvím masáží hrudníku, záchranných dechů a defibrilace, jakmile selže srdce nebo se zastaví dýchání. Jde o časově nejkritičtější intervenci v první pomoci, vyžadující okamžité a nepřetržité působení, aby se zabránilo smrti."
+  },
+  {
+   "id": "08.01.01.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Adult CPR applies chest compressions and rescue breathing appropriate to adult physiology, using hand placement and compression depth calibrated for larger bodies. Differs from child CPR by compression depth and speed, and from Heimlich by addressing circulatory arrest rather than airway blockage.",
+   "cs": "CPR pro dospělé aplikuje masáže hrudníku a záchranný dech vhodný pro fyziologii dospělých, s použitím umístění rukou a hloubky komprese kalibrované pro větší těla. Liší se od CPR pro děti hloubkou a rychlostí komprese a od manévru Heimlich tím, že se zabývá zástavou oběhu spíše než obstrukcí dýchacích cest."
+  },
+  {
+   "id": "08.01.01.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Child CPR adjusts compression depth, hand positioning, and ventilation volumes for smaller bodies and developing physiology, typically applied to ages 1–14. Uses both hands and higher compression rates than adult CPR and differs from infant-specific techniques by targeting older children.",
+   "cs": "CPR pro děti upravuje hloubku komprese, umístění rukou a objemy ventilace pro menší těla a rozvíjející se fyziologii, obvykle aplikováno na věk 1–14 let. Používá obě ruce a vyšší míry komprese než CPR pro dospělé a liší se od technik specifických pro kojence cílením na starší děti."
+  },
+  {
+   "id": "08.01.01.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "AED (Automated External Defibrillator) usage deploys portable devices that detect irregular heart rhythms and deliver electrical shocks to restore normal heartbeat. Complements CPR by addressing specific arrhythmias (ventricular fibrillation, pulseless ventricular tachycardia) that require electrical therapy beyond mechanical compressions.",
+   "cs": "Použití AED (automatického externího defibrilátoru) nasazuje přenosná zařízení, která detekují nepravidelné srdeční rytmy a dodávají elektrické šoky k obnovení normálního úderu srdce. Doplňuje CPR řešením specifických arytmií (fibrilace komor, bezduchová ventrikulární tachykardie), které vyžadují elektrickou terapii mimo mechanické komprese."
+  },
+  {
+   "id": "08.01.01.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The Heimlich maneuver clears airway obstructions using rapid upward abdominal thrusts that force air from the lungs, used when choking prevents breathing. It addresses airway blockage, distinct from cardiac arrest (CPR), the recovery position, or automated defibrillation.",
+   "cs": "Heimlichův manévr odstraňuje překážky v dýchacích cestách rychlými vzestupnými tlaky na břicho, které vypudí vzduch z plic; používá se, když dušení brání dýchání. Řeší blokádu dýchacích cest, na rozdíl od srdeční zástavy (CPR), stabilizované polohy nebo automatické defibrilace."
+  },
+  {
+   "id": "08.01.01.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The recovery position lays an unconscious, breathing person on their side with the head tilted back, keeping the airway open and allowing fluid to drain. It stabilizes an unresponsive victim while awaiting professional help, distinct from active resuscitation and from airway-obstruction interventions.",
+   "cs": "Stabilizovaná poloha ukládá v bezvědomí dýchající osobu na bok s hlavou zakloněnou, aby se udržela průchodnost dýchacích cest a umožnil odtok tekutin. Stabilizuje nereagující oběť během čekání na odbornou pomoc, na rozdíl od aktivní resuscitace a zásahů při obstrukci dýchacích cest."
+  },
+  {
+   "id": "08.01.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Wound care stops bleeding, prevents infection, and promotes healing by cleaning, applying antiseptic, dressing, and monitoring cuts, lacerations, and abrasions. It addresses non-thermal tissue injury, distinct from burns, fractures, and systemic shock.",
+   "cs": "Péče o rány zastavuje krvácení, brání infekci a podporuje hojení prostřednictvím čištění, aplikace antiseptik, obvazů a sledování řezných, tržných a odřených ran. Řeší netepelné poranění tkáně, na rozdíl od popálenin, fraktur a systémového šoku."
+  },
+  {
+   "id": "08.01.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Burn treatment cools, cleanses, and covers thermal injuries to prevent infection and fluid loss, with responses scaled to severity - from water immersion for minor burns to emergency evacuation for extensive injuries. It addresses heat-induced tissue damage, distinct from traumatic wounds, fractures, or systemic collapse.",
+   "cs": "Léčba popálenin chladí, čistí a kryje tepelná poranění, aby se zabránilo infekci a ztrátě tekutin, s reakcemi odpovídajícími závažnosti - od ponoření do vody u menších popálenin až po nouzovou evakuaci u rozsáhlých zranění. Řeší poranění tkáně způsobené teplem, na rozdíl od traumatických ran, fraktur nebo systémového kolapsu."
+  },
+  {
+   "id": "08.01.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Fracture management immobilizes broken bones to prevent further damage, control pain, and allow healing, using splints, slings, or makeshift supports applied in field conditions. It addresses skeletal injury, distinct from soft-tissue wounds, thermal injuries, or visceral trauma.",
+   "cs": "Péče o fraktury imobilizuje zlomené kosti, aby se zabránilo dalšímu poranění, tlumila se bolest a umožnilo hojení pomocí dlah, závěsů nebo provizorních podpěr aplikovaných v terénních podmínkách. Řeší kostní poranění, na rozdíl od poranění měkkých tkání, tepelných poranění nebo viscerálního traumatu."
+  },
+  {
+   "id": "08.01.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Shock treatment addresses the life-threatening cascade of inadequate blood circulation—manifesting as pale skin, rapid pulse, weakness, confusion—through fluid restoration, positioning, and warmth to prevent systemic collapse. Prevents organ failure from hemorrhage, infection, or severe injury, distinct from treating the primary wound or fracture.",
+   "cs": "Léčba šoku řeší život ohrožující kaskádu nedostatečného oběhu krve—projevující se bledou kůží, rychlým pulzem, slabostí, zmateností—prostřednictvím obnovy tekutin, umístění a udržení tepla, aby se zabránilo systémovému kolapsu. Zabraňuje selhání orgánů způsobenému krvácením, infekcí nebo vážným zraněním, odlišné od léčby primární rány nebo fraktury."
+  },
+  {
+   "id": "08.01.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Trauma care manages severe, life-threatening injuries requiring advanced techniques: hemorrhage control beyond basic pressure, chest decompression for pneumothorax, spinal stabilization, and airway management in austere conditions. Escalates beyond basic first aid by addressing penetrating and crush injuries in resource-scarce settings.",
+   "cs": "Péče o trauma zvládá vážná, život ohrožující zranění vyžadující pokročilé techniky: kontrolu krvácení mimo základní tlak, dekomprese hrudníku pro pneumotorax, stabilizaci páteře a řízení dýchacích cest v přísných podmínkách. Eskaluje nad rámec základní první pomoci řešením penetrujících a drtících zranění v prostředí s omezenými zdroji.",
+   "brief": "Trauma care escalates beyond [[08.01.01]] basic first aid to manage severe, life-threatening injuries — penetrating wounds, crush injuries, and hemorrhage that overwhelms standard pressure dressings — using advanced techniques such as chest decompression, spinal stabilization, and airway management in conditions where a hospital is not immediately reachable.\n\nIts children map the sequence a severe trauma casualty is actually run through: [[08.01.02.01]] bleeding control and tourniquet application address the most time-critical threat, exsanguination, within minutes; [[08.01.02.03]] chest wound management follows for penetrating thoracic injury; and head injury care and spinal injury management address the two injury types where movement itself can cause further harm, demanding immobilization before any transport.\n\nWhere basic first aid assumes standard protocols suffice, trauma care assumes they do not — it borrows heavily from military and paramedic doctrine developed for exactly this resource-scarce escalation, and it hands off to [[08.01.03]] wilderness medicine when evacuation itself is delayed by hours or days rather than minutes. The pharmacological side of trauma stabilization, from pain control to hemorrhage-slowing agents, belongs to [[08.01.05]] medication knowledge.\n\nThe [Stop the Bleed program](https://www.stopthebleed.org/) trains bystanders in exactly this hemorrhage-control sequence, and the [Committee on Tactical Combat Casualty Care guidelines](https://www.deployedmedicine.com/market/11) document the austere-conditions protocols trauma care draws from."
+  },
+  {
+   "id": "08.01.02.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Bleeding control applies progressive techniques—direct pressure, elevation, pressure points, hemostatic agents, and tourniquet preparation—to stop hemorrhage and preserve blood volume when wounds are severe. The foundational trauma skill preceding tourniquet placement or surgical intervention.",
+   "cs": "Kontrola krvácení aplikuje progresivní techniky—přímý tlak, zvednutí, tlakové body, hemostatické látky a příprava turniketu—k zastavení krvácení a zachování objemu krve, když jsou rány vážné. Základní trauma dovednost předcházející umístění turniketu nebo chirurgickému zásahu."
+  },
+  {
+   "id": "08.01.02.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Tourniquet application occludes blood flow to a limb using a tight band or device to stop massive hemorrhage when direct pressure fails, prioritized for extremity trauma. An escalation beyond manual bleeding control, requiring precise placement and time documentation to minimize tissue damage.",
+   "cs": "Aplikace turniketu uzavře přítok krve do končetiny pomocí pevného pásu nebo zařízení, aby se zastavilo masivní krvácení, když přímý tlak selže, s prioritou pro trauma končetin. Eskalace nad rámec ruční kontroly krvácení, vyžadující přesné umístění a dokumentaci času, aby se minimalizovalo poškození tkáně."
+  },
+  {
+   "id": "08.01.02.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Chest wound management addresses penetrating thoracic trauma through wound sealing (to prevent air entry and pneumothorax), wound packing for internal bleeding control, and positioning to maintain respiratory function. Specialized care for injuries compromising respiration or cardiac function.",
+   "cs": "Péče o rány na hrudníku řeší penetrující thorakální trauma prostřednictvím utěsnění rany (aby se zabránilo vstupu vzduchu a pneumotoraxu), balení rany pro kontrolu interního krvácení a umístění pro zachování respirační funkce. Specializovaná péče o zranění narušující dýchání nebo srdeční funkci."
+  },
+  {
+   "id": "08.01.02.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Head injury care stabilizes and monitors victims of skull, brain, or facial trauma for neurological deterioration, using protective positioning and immobilization to prevent secondary spinal or intracranial injury. Balances competing risks: elevated intracranial pressure and potential cervical spine involvement.",
+   "cs": "Péče o zranění hlavy stabilizuje a monitoruje oběti traumatu lebky, mozku nebo obličeje pro neurologické zhoršení, pomocí ochranného umístění a imobilizace, aby se zabránilo sekundárnímu poranění páteře nebo intrakraniálnímu poranění. Vyvažuje konkurenční rizika: zvýšený intrakraniální tlak a potenciální zapojení krční páteře."
+  },
+  {
+   "id": "08.01.02.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Spinal injury management immobilizes the spine during patient movement to prevent secondary paralysis from unstable fractures or spinal cord damage, using backboards, cervical collars, and log-roll techniques. Precaution-focused care that prioritizes preventing new injury over comfort, based on mechanism-of-injury assessment.",
+   "cs": "Péče o zranění páteře imobilizuje páteř během pohybu pacienta, aby se zabránilo sekundární paralýze z nestabilních fraktur nebo poranění míchy, pomocí zádových desek, cervikálních límců a technik log-rollu. Péče zaměřená na prevenci, která upřednostňuje prevenci nového poranění před komfortem, na základě posouzení mechanismu poranění."
+  },
+  {
+   "id": "08.01.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Wilderness medicine adapts first aid and trauma care to remote or resource-scarce environments where professional evacuation is delayed or impossible, incorporating environmental hazards (hypothermia, altitude sickness, dehydration, venomous bites) and improvised materials. Extends standard protocols by addressing extended self-care, evacuation delays, and environmental stressors.",
+   "cs": "Medicína v divočině přizpůsobuje první pomoc a péči o trauma vzdáleným nebo zdrojům chudým prostředím, kde je profesionální evakuace zpožděna nebo nemožná, začleňuje environmentální nebezpečí (hypotermie, horskou nemoc, dehydrataci, jedovaté kousance) a provizorní materiály. Rozšiřuje standardní protokoly řešením rozšířené péče o sebe, zpoždění evakuace a environmentálních stresů.",
+   "brief": "Wilderness medicine takes the protocols of [[08.01.01]] basic first aid and [[08.01.02]] trauma care and adapts them for environments where professional evacuation is delayed by hours or days rather than minutes — a setting that changes not just technique but the entire calculus of care, since a responder must sustain a patient rather than simply stabilize and hand off.\n\nTwo classes of problem define the field: environmental hazards absent from standard first aid curricula — hypothermia, altitude sickness, dehydration, venomous bites — and the practical need to improvise splints, dressings, and shelter from whatever materials are on hand when a first-aid kit runs out. Extended self-care is the throughline: a wilderness responder plans for days of ongoing management, not a single intervention before transport.\n\nThe field sits alongside [[08.01.04]] emergency childbirth and [[08.01.05]] medication knowledge as one of the ways first aid & medical extends past the initial-response window, and it draws directly on [[08.02]] water procurement & purification — a dehydrated or hypothermic patient in the backcountry cannot be stabilized by medical technique alone.\n\nThe [Wilderness Medical Society](https://wms.org/) publishes the clinical practice guidelines the field is built on, and [NOLS Wilderness Medicine](https://www.nols.edu/en/wilderness-medicine/) trains the improvised-care skills that separate this discipline from standard first aid."
+  },
+  {
+   "id": "08.01.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Emergency childbirth manages imminent or in-progress labor outside a medical facility, covering labor-progression assessment, delivery assistance, placenta delivery, and immediate postpartum care for mother and infant. Handles a normal physiological process accelerated by circumstance, distinct from trauma, infection, or pathological illness.",
+   "cs": "Porod v nouzi řídí předstihovaný nebo probíhající porod mimo zdravotnické zařízení, zahrnuje posouzení pokroku porodu, asistenci při porodu, vykázání placenty a okamžitou poporodní péči pro matku a novorozence. Zvládá normální fyziologický proces zrychlený okolnostmi, odlišný od traumatu, infekce nebo patologické nemoci.",
+   "brief": "Emergency childbirth manages labor that begins or progresses too quickly to reach a medical facility, covering assessment of labor stage, hands-on delivery assistance, placenta delivery, and immediate postpartum care for both mother and newborn. It occupies a distinct niche within [[08.01]] first aid & medical: unlike [[08.01.01]] basic first aid or [[08.01.02]] trauma care, it responds to a normal physiological process rather than an injury or illness, so the responder's role is to support and monitor rather than to treat a pathology.\n\nThat distinction shapes the skill set — recognizing the stages of labor, positioning the mother, catching and clearing the newborn's airway, and managing the third stage (placenta delivery) without the surgical or pharmacological intervention available in a hospital. Complications do intersect with the rest of first aid: postpartum hemorrhage calls on the same bleeding-control principles as [[08.01.02]] trauma care, and a birth occurring outside normal medical access often coincides with the resource constraints [[08.01.03]] wilderness medicine addresses.\n\nBecause the newborn's and mother's medication needs differ sharply from a typical casualty's, [[08.01.05]] medication knowledge — dosing, contraindications in pregnancy and lactation — is a closely related dependency once the delivery itself is complete.\n\nThe [American College of Obstetricians and Gynecologists](https://www.acog.org/womens-health) publishes patient-facing guidance on labor and delivery, and the [St John Ambulance emergency childbirth first aid guide](https://www.sja.org.uk/get-advice/first-aid-advice/) documents the field procedure this node covers."
+  },
+  {
+   "id": "08.01.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Medication knowledge encompasses pharmacological understanding—drug categories, mechanisms of action, side effects, interactions, and proper administration—applied to emergency and survival contexts. Provides informed decision-making for treatment, balancing benefit against risk when professional pharmacological guidance is absent.",
+   "cs": "Znalosti o lécích zahrnují farmakologické chápání—kategorie léčiv, mechanismy působení, vedlejší účinky, interakce a správné podání—aplikované v kontextech nouze a přežití. Poskytuje informované rozhodování pro léčbu, vyvažuje prospěch proti riziku, když není profesionální farmakologické vedení dostupné.",
+   "brief": "Medication knowledge supplies the pharmacological judgment first aid & medical draws on once immediate stabilization is done — drug categories, mechanisms of action, side effects, and interactions, applied to decisions made without a pharmacist or physician to consult.\n\nIts five children divide that judgment by function: [[08.01.05.01]] antibiotics and [[08.01.05.02]] pain management cover the two drug classes a survival responder reaches for most often, herbal medicine addresses non-pharmaceutical alternatives when manufactured drugs run out, and [[08.01.05.04]] basic medication production and dosage calculations underpin both — the first for extending a limited supply, the second for the arithmetic that keeps any of these interventions safe rather than harmful.\n\nMedication supports every sibling in this branch: [[08.01.02]] trauma care depends on pain and hemorrhage-related pharmacology, and [[08.01.03]] wilderness medicine depends on it for extended self-care once resupply is unavailable. Getting dosage wrong is not a minor error in this context — it is the single most common way well-intentioned treatment becomes harm.\n\nThe [WHO Model List of Essential Medicines](https://www.who.int/groups/expert-committee-on-selection-and-use-of-essential-medicines/essential-medicines-lists) sets the reference standard for which drugs matter most, and the [CDC's guidance on antibiotic use and resistance](https://www.cdc.gov/antibiotic-use/index.html) documents why self-directed antibiotic use carries real long-term risk."
+  },
+  {
+   "id": "08.01.05.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Antibiotics are drugs that kill or inhibit bacteria, preventing or treating infections when wounds, surgery, or illness risk microbial invasion. Knowledge covers common drugs (amoxicillin, tetracycline), spectrum of coverage, resistance patterns, and when to administer them in survival scenarios with limited professional oversight.",
+   "cs": "Antibiotika jsou léčiva, která zabíjejí nebo inhibují bakterie a předcházejí infekcím nebo je léčí, když rány, operace či nemoci hrozí mikrobiální invazí. Znalost zahrnuje běžná léčiva (amoxicilin, tetracyklin), spektrum účinku, vzorce rezistence a kdy je podávat ve scénářích přežití s omezeným odborným dohledem."
+  },
+  {
+   "id": "08.01.05.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Pain management addresses physical suffering through pharmacological (opioids, NSAIDs, local anesthetics) and non-pharmacological (distraction, immobilization, cold, heat) methods matched to injury severity and available resources. It balances relief against the risks of sedation, addiction, and resource depletion in austere, resource-scarce settings.",
+   "cs": "Zvládání bolesti řeší fyzické utrpení prostřednictvím farmakologických (opioidy, NSAID, lokální anestetika) a nefarmakologických (rozptýlení, imobilizace, chlad, teplo) metod přizpůsobených závažnosti zranění a dostupným zdrojům. Vyvažuje úlevu od bolesti proti rizikům sedace, závislosti a vyčerpání zdrojů v podmínkách s omezenými zdroji."
+  },
+  {
+   "id": "08.01.05.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Herbal medicine uses plants and plant-derived compounds to treat illness and maintain health, distinct from synthesized pharmaceutical drugs but sharing the medication knowledge domain with antibiotics, analgesics, and production methods.",
+   "cs": "Medicína na bázi bylinek využívá rostliny a jejich deriváty k léčbě nemocí a udržování zdraví, odlišná od syntetických farmaceutických léků, ale sdílející doménu znalostí o lécích s antibiotikami a metodami výroby."
+  },
+  {
+   "id": "08.01.05.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Basic medication production encompasses the extraction, synthesis, and preparation of pharmaceutical compounds using accessible materials and equipment, enabling self-sufficiency in emergency contexts where commercial supplies are unavailable.",
+   "cs": "Výroba základních léků zahrnuje extrakci, syntézu a přípravu farmaceutických látek pomocí dostupných materiálů a zařízení, umožňující soběstačnost v havarijních situacích, kdy nejsou komerční zdroje dostupné."
+  },
+  {
+   "id": "08.01.05.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Dosage calculations determine the appropriate quantity of medication to administer based on patient weight, age, medical condition, and drug properties, critical for safe therapeutic effect and harm prevention across pharmaceutical and herbal treatments.",
+   "cs": "Výpočty dávek určují vhodné množství léku na základě váhy pacienta, věku, zdravotního stavu a vlastností léku, kritické pro bezpečný terapeutický účinek a prevenci škod v případě farmaceutických i bylinných léků."
+  }
+ ],
+ "relations": [
+  {
+   "from": "08.01.01",
+   "to": "08.01.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.01",
+   "to": "08.01.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.01",
+   "to": "08.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.01",
+   "to": "08.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.01",
+   "to": "08.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.02",
+   "to": "08.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.02",
+   "to": "08.01.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.02",
+   "to": "08.01.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.02",
+   "to": "08.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.02",
+   "to": "08.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.03",
+   "to": "08.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.03",
+   "to": "08.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.03",
+   "to": "08.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.03",
+   "to": "08.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.03",
+   "to": "08.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.04",
+   "to": "08.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.04",
+   "to": "08.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.04",
+   "to": "08.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.04",
+   "to": "08.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.04",
+   "to": "08.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.05",
+   "to": "08.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.05",
+   "to": "08.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.05",
+   "to": "08.01.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.05",
+   "to": "08.01.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01.05",
+   "to": "08.01.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01",
+   "to": "08.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01",
+   "to": "08.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01",
+   "to": "08.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01",
+   "to": "08.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.01",
+   "to": "08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

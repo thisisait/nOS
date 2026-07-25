@@ -1,0 +1,36 @@
+{
+ "domain": "11.05",
+ "nodes": [
+  {
+   "id": "11.05",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Techniques for reconstructing or accessing lost or inaccessible data—including disk imaging, partition repair, logical file recovery from overwritten storage, and data forensics. Presupposes backup and storage redundancy failures; distinct from backup strategies by operating post-disaster when primary data is already unavailable.",
+   "cs": "Techniky pro rekonstrukci nebo přístup k ztraceným či nedostupným datům—včetně vytváření diskových obrazů, opravy oddílů, logického obnovení souborů z přepsaného úložiště a forenzní analýzy. Předpokládá selhání zálohování a redundance úložišť; odlišuje se od zálohových strategií operováním po katastrofě kdy jsou primární data již nedostupná.",
+   "brief": "Data recovery covers techniques for reconstructing or accessing lost or inaccessible data, including disk imaging, partition repair, logical file recovery from overwritten storage, and data forensics.\n\nThe branch presupposes that [[11.04]] Backup Strategies and storage redundancy have already failed — it is the last line of defense rather than the first — and it is frequently complicated by [[11.03]] Encryption & Security, since a properly encrypted device with a lost key cannot be recovered by forensic means alone. Where the damage is at the encoding level rather than the physical-media level, remediation instead falls to [[11.01]] File Formats expertise — repairing a truncated or malformed file structure rather than imaging a failing disk.\n\nThe [NIST Guide to Integrating Forensic Techniques into Incident Response (SP 800-86)](https://csrc.nist.gov/pubs/sp/800/86/final) documents standard forensic recovery method, and the [Library of Congress Digital Preservation program](https://www.loc.gov/preservation/digital/) addresses recovery planning within a broader preservation strategy."
+  }
+ ],
+ "relations": [
+  {
+   "from": "11.05",
+   "to": "11.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.05",
+   "to": "11.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.05",
+   "to": "11.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

@@ -1,0 +1,244 @@
+{
+ "domain": "04.01",
+ "nodes": [
+  {
+   "id": "04.01",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Scientific study of human and animal behavior, mental processes, and the neural substrates underlying cognition, emotion, and social interaction.",
+   "cs": "Vědecké studium chování, mentálních procesů a neurálních základů poznání, emocí a sociální interakce.",
+   "brief": "Psychology is the scientific study of behavior and mental processes in humans and animals, spanning perception, cognition, emotion, motivation, and social interaction. It seeks causal explanations at multiple levels, from the neural substrates examined in [[04.01.05]] Neuropsychology to the higher-order reasoning and memory addressed by [[04.01.01]] Cognitive Psychology, unifying biological, computational, and phenomenological accounts of mind under a common empirical method.\n\nIts subfields divide the discipline by developmental stage, social context, and clinical application: developmental psychology traces change across the lifespan, social psychology studies how others shape thought and behavior, and [[04.01.04]] Clinical Psychology applies the field's findings to diagnosing and treating mental disorders. Where [[04.02]] Sociology examines patterns at the level of groups and institutions, psychology keeps the individual mind as its unit of analysis, and the two disciplines regularly borrow each other's methods when behavior crosses that boundary, as in the study of prejudice, conformity, or collective decision-making.\n\nPsychology also sits alongside [[04.03]] Anthropology in explaining human variation, contrasting anthropology's cross-cultural, historical lens with psychology's controlled, often laboratory-based experimentation. Its findings underpin fields from education to organizational behavior and public health policy. Readers can consult the [American Psychological Association](https://www.apa.org/topics/psychology) for an overview of subfields and professional standards, or the [Stanford Encyclopedia of Philosophy entry on cognitive science](https://plato.stanford.edu/entries/cognitive-science/) for the conceptual foundations shared with philosophy of mind."
+  },
+  {
+   "id": "04.01.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Investigation of how the mind acquires, represents, processes, and retrieves information, encompassing perception, memory, attention, language, and reasoning.",
+   "cs": "Studium toho, jak mysl přijímá, reprezentuje, zpracovává a vybavuje si informace, včetně vnímání, paměti a uvažování.",
+   "brief": "Cognitive Psychology investigates how the mind acquires, represents, processes, and retrieves information, encompassing perception, memory, attention, language, and reasoning. It treats mental activity as an information-processing system, modeling the stages between sensory input and behavioral output.\n\nWithin [[04.01]] Psychology it supplies the study of higher-order mental processes that [[04.01.05]] Neuropsychology grounds in neural substrates, examining the same faculties — memory, attention, reasoning — from the functional rather than the anatomical side. It complements [[04.01.02]] Developmental Psychology, which traces how these cognitive capacities emerge and change across the lifespan, and its experimental methods and findings underpin [[04.01.04]] Clinical Psychology's assessment of cognitive impairment and disorder.\n\nFor an overview of the field's core findings and methods, see the [American Psychological Association's cognitive psychology topic page](https://www.apa.org/topics/cognitive-psychology) and the [Stanford Encyclopedia of Philosophy's entry on cognitive science](https://plato.stanford.edu/entries/cognitive-science/)."
+  },
+  {
+   "id": "04.01.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Examination of how psychological capacities, behavior patterns, and social relationships change systematically across the human lifespan from infancy through old age.",
+   "cs": "Zkoumání změn psychologických schopností, chování a sociálních vztahů v průběhu lidského života.",
+   "brief": "Developmental Psychology examines how psychological capacities, behavior patterns, and social relationships change systematically across the human lifespan, from infancy through old age. It studies the mechanisms — biological maturation, learning, social environment — that drive these changes at each life stage.\n\nWithin [[04.01]] Psychology it traces the emergence and change of the same faculties that [[04.01.01]] Cognitive Psychology studies at a given moment — memory, reasoning, language — showing how they develop from infancy onward, and it examines how [[04.01.03]] Social Psychology's interpersonal dynamics are learned and internalized across childhood and adolescence. Its findings on early developmental disruption inform [[04.01.04]] Clinical Psychology's diagnosis of disorders with a developmental origin.\n\nFor research summaries and lifespan milestones, see the [American Psychological Association's developmental psychology topic page](https://www.apa.org/topics/developmental-psychology) and the [Society for Research in Child Development](https://www.srcd.org/)."
+  },
+  {
+   "id": "04.01.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Study of how individuals' thoughts, feelings, and behaviors are shaped by social contexts, interpersonal dynamics, and group membership.",
+   "cs": "Studium vlivu sociálního prostředí, mezilidských vztahů a skupinové příslušnosti na myšlení, emoce a chování.",
+   "brief": "Social Psychology studies how individuals' thoughts, feelings, and behaviors are shaped by social contexts, interpersonal dynamics, and group membership. It examines phenomena such as conformity, persuasion, prejudice, attraction, and group decision-making.\n\nWithin [[04.01]] Psychology it keeps the individual as the unit of analysis while foregrounding social influence, distinguishing it from [[04.01.02]] Developmental Psychology's lifespan focus and [[04.01.01]] Cognitive Psychology's information-processing focus, though all three draw on shared experimental methods. It borders [[04.02]] Sociology where behavior crosses from the individual to the group level, as in the study of collective decision-making or intergroup conflict, and its findings on maladaptive social behavior inform [[04.01.04]] Clinical Psychology's treatment of social anxiety and related disorders.\n\nFor an overview of core theories and experiments, see the [American Psychological Association's social psychology topic page](https://www.apa.org/topics/social-psychology) and the [Society for Personality and Social Psychology](https://spsp.org/)."
+  },
+  {
+   "id": "04.01.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Assessment, diagnosis, and evidence-based treatment of psychological disorders and mental health conditions through behavioral, cognitive, and therapeutic interventions.",
+   "cs": "Posuzování, diagnostika a na důkazech založená léčba psychologických poruch a stavů duševního zdraví prostřednictvím behaviorálních, kognitivních a terapeutických intervencí.",
+   "brief": "Clinical Psychology covers the assessment, diagnosis, and evidence-based treatment of psychological disorders and mental health conditions, applying behavioral, cognitive, and other therapeutic interventions to relieve distress and dysfunction.\n\nWithin [[04.01]] Psychology it is the applied counterpart to the field's research subfields, drawing on [[04.01.01]] Cognitive Psychology's models of memory and reasoning to diagnose cognitive impairment, on [[04.01.02]] Developmental Psychology to identify disorders with a developmental origin, and on [[04.01.03]] Social Psychology to treat conditions rooted in social functioning such as social anxiety. It shares its diagnostic and neurological grounding with [[04.01.05]] Neuropsychology where disorders have an identifiable neural basis.\n\nFor diagnostic standards and treatment guidelines, see the [American Psychological Association's clinical psychology topic page](https://www.apa.org/topics/clinical-psychology) and the [World Health Organization's mental health overview](https://www.who.int/health-topics/mental-health)."
+  },
+  {
+   "id": "04.01.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Investigation of relationships between brain structure and function and behavioral or cognitive changes, especially following neurological injury or disease.",
+   "cs": "Zkoumání vztahů mezi strukturou a funkcí mozku a změnami chování či poznávání, zejména po neurologickém poranění nebo onemocnění.",
+   "brief": "Neuropsychology investigates how the structure and function of the brain give rise to behavior and cognition, and how injury, disease, or developmental disorder disrupts that mapping. It combines lesion studies, functional and structural neuroimaging, and standardized cognitive testing to link specific mental functions — memory, language, attention, executive control — to specific neural systems, most directly through cases where damage to a defined brain region produces a predictable, measurable deficit.\n\nWithin [[04.01]] Psychology, neuropsychology is the branch most directly anchored in biology. It complements [[04.01.01]] Cognitive Psychology's functional models of mental processes with an account of their neural implementation, and its assessments feed [[04.01.04]] Clinical Psychology's diagnostic work whenever a patient's symptoms suggest organic brain involvement rather than a purely psychiatric origin. Where [[04.01.02]] Developmental Psychology charts the typical trajectory of cognitive functions across the lifespan, neuropsychology is the discipline usually consulted once that trajectory is disrupted by stroke, trauma, or neurodegenerative disease.\n\nIts findings also inform rehabilitation medicine and forensic assessment, wherever a legal or clinical decision turns on the extent of a specific cognitive impairment. The [National Academy of Neuropsychology](https://nanonline.org/) documents professional standards and assessment practice, and the [Britannica overview of neuropsychology](https://www.britannica.com/science/neuropsychology) gives a concise account of the field's history and methods."
+  }
+ ],
+ "relations": [
+  {
+   "from": "04.01.01",
+   "to": "04.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.01",
+   "to": "04.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.01",
+   "to": "04.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.01",
+   "to": "04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.02",
+   "to": "04.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.02",
+   "to": "04.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.02",
+   "to": "04.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.02",
+   "to": "04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.03",
+   "to": "04.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.03",
+   "to": "04.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.03",
+   "to": "04.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.03",
+   "to": "04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.03",
+   "to": "04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.04",
+   "to": "04.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.04",
+   "to": "04.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.04",
+   "to": "04.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.04",
+   "to": "04.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.04",
+   "to": "04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.05",
+   "to": "04.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.05",
+   "to": "04.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.05",
+   "to": "04.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01.05",
+   "to": "04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01",
+   "to": "04.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01",
+   "to": "04.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01",
+   "to": "04.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01",
+   "to": "04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.01",
+   "to": "04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

@@ -1,0 +1,43 @@
+{
+ "domain": "02.05",
+ "nodes": [
+  {
+   "id": "02.05",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Systems theory examines how elements interact within unified wholes and studies emergent properties arising from relationships rather than isolated components. It applies across disciplines to understand feedback, dynamics, and organization in complex systems.",
+   "cs": "Teorie systémů zkoumá, jak prvky vzájemně působí v jednotných celcích, a studuje vznikající vlastnosti vycházející ze vztahů spíše než z izolovaných komponent. Aplikuje se napříč disciplínami k pochopení zpětných vazeb, dynamiky a organizace v komplexních systémech.",
+   "brief": "Systems Theory examines how elements interact within unified wholes and studies the emergent properties that arise from the relationships between components rather than from any component in isolation. It supplies a vocabulary — feedback, equilibrium, hierarchy, emergence — that applies wherever a set of interacting parts behaves in ways none of the parts would predict alone, whether the parts are organisms, machines or people.\n\nSystems theory sits within the Formal Sciences beside [[02.01]] and [[02.02]], both of which it draws on for formal tools: mathematics supplies the differential equations and network models used to describe feedback and stability, while computer science provides the computational systems in which those models are simulated and, increasingly, the software architectures systems theory itself is used to design. It shares its historical origin with [[02.04]] in the mid-twentieth-century cybernetics movement, and the two fields still overlap wherever a system's behavior is described in terms of information flow and control.\n\nBecause it deliberately abstracts away from any one domain, systems theory reaches directly into other branches of this taxonomy — most visibly into [[01.03.05]], where feedback and equilibrium describe how populations, predators and resources interact within an ecosystem. For further reading, see Ludwig von Bertalanffy's foundational [\"General System Theory\"](https://monoskop.org/images/2/26/Von_Bertalanffy_Ludwig_General_System_Theory_1968.pdf) and the [Encyclopaedia Britannica entry on systems theory](https://www.britannica.com/science/systems-theory)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "02.05",
+   "to": "01.03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.05",
+   "to": "02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.05",
+   "to": "02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.05",
+   "to": "02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

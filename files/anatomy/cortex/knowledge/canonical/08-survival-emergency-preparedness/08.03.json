@@ -1,0 +1,265 @@
+{
+ "domain": "08.03",
+ "nodes": [
+  {
+   "id": "08.03",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Food preservation and storage extends the shelf life of perishable foodstuffs through various chemical, thermal, and microbiological techniques, enabling long-term food security independent of seasonal availability and supply chains.",
+   "cs": "Konzervace potravin a skladování prodlužuje trvanlivost potravin náchylných k zkažení pomocí různých chemických, tepelných a mikrobiologických technik, umožňuje dlouhodobou potravinářskou bezpečnost nezávislou na sezónní dostupnosti a dodavatelských řetězcích.",
+   "brief": "Food preservation and storage extends the shelf life of perishable food through chemical, thermal, and microbiological techniques, building long-term food security independent of seasonal availability and supply chains. [[08.03.01]] Canning and jarring seals food in an oxygen-free, heat-sterilized environment for shelf-stable storage measured in years, while drying and dehydration removes the moisture pathogens need to grow, and [[08.03.05]] fermentation takes the opposite approach — cultivating beneficial microorganisms that outcompete spoilage organisms while adding flavor and, often, nutritional value.\n\nThis node bridges [[08]] Survival & Emergency Preparedness with everyday practice: its techniques overlap directly with [[07.08]] Cooking's kitchen-scale preservation and depend on [[07.07]] Gardening for the seasonal surplus worth preserving in the first place — a garden's late-summer glut is exactly what canning and fermentation exist to carry through winter. Reliable preservation also depends on clean water, since brining, canning liquid, and fermentation brines all require water clean enough not to introduce the contamination the technique is meant to prevent.\n\nImproperly preserved food carries real risk — botulism in particular is a hazard specific to poorly executed canning — so technique discipline matters more here than in most kitchen skills. The [USDA complete guide to home canning](https://nchfp.uga.edu/how/general/usda-complete-guide-home-canning) is the reference standard for safe preservation practice, and the [Wikipedia article on food preservation](https://en.wikipedia.org/wiki/Food_preservation) surveys the techniques and their history."
+  },
+  {
+   "id": "08.03.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Canning and jarring seals cooked food in glass containers with heat-processed seals to exclude oxygen and pathogens, enabling shelf-stable storage for years and distinguishing this thermal-based method from other preservation approaches.",
+   "cs": "Konzervování a zavařování uzavírá vařené potraviny do skleněných nádob tepelně zpracovanými těsněními, aby se vylučil kyslík a patogeny, umožňuje skladování stabilní na polici po dobu let a rozlišuje tuto tepelně založenou metodu od jiných přístupů konzervace.",
+   "brief": "Canning and jarring preserves cooked food by sealing it into glass jars processed with heat, driving out oxygen and destroying the microorganisms that cause spoilage so the sealed jar can sit at room temperature for years rather than days. The heat-processing step is what separates it from the branch's other methods: where [[08.03.02]] drying and dehydration and [[08.03.04]] salting and curing work by removing the moisture pathogens need, canning instead creates an airtight, sterilized environment that starves them of oxygen as well.\n\nWithin [[08.03]] Food Preservation & Storage, canning is the method best suited to high-moisture foods — fruits, vegetables, stocks, sauces — that dry poorly and would need refrigeration without it. Choosing between canning and a drier method like [[08.03.03]] smoking meats or [[08.03.05]] fermentation usually comes down to the food itself and the flavor profile wanted, since all five techniques in this branch share the same underlying goal of extending shelf life without refrigeration.\n\nCanning is also the branch's least forgiving technique: an improperly processed low-acid jar is the classic vector for botulism, so jar sterilization, processing time, and acidity all have to be right, not approximate. The [USDA complete guide to home canning](https://nchfp.uga.edu/how/general/usda-complete-guide-home-canning) is the reference standard for safe processing times and acidity requirements by food type."
+  },
+  {
+   "id": "08.03.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Drying and dehydration removes water from food through exposure to heat and air circulation, halting microbial growth and enzymatic spoilage while concentrating nutrients and flavors, one of humanity's oldest preservation methods.",
+   "cs": "Sušení a dehydratace odstraňují vodu z potravin prostřednictvím vystavení teplu a cirkulaci vzduchu, zastavují mikrobiální růst a enzymatický rozpad, zatímco koncentrují živiny a chutě, jednu z nejstarších metod konzervace lidstva.",
+   "brief": "Drying and dehydration preserves food by removing the water microorganisms need to grow, using heat, airflow, or both to reduce moisture content until spoilage organisms can no longer establish themselves. It is among the oldest preservation techniques in human use, requiring no special containers or chemicals — sun, wind, and a low fire are often enough — which makes it one of the most accessible methods in [[08.03]] Food Preservation & Storage.\n\nDehydration shares its water-removal principle with [[08.03.04]] salting and curing, which draws out moisture by osmosis rather than evaporation, and with [[08.03.03]] smoking meats, which combines drying with an antimicrobial smoke coating. It contrasts most sharply with [[08.03.01]] canning and jarring, which preserves high-moisture food intact rather than concentrating it, and with [[08.03.05]] fermentation, which preserves by cultivating microbes rather than excluding them.\n\nDried food's chief advantage is weight and volume — a dehydrated meal packs a fraction of its fresh weight, which is why it dominates backpacking and long-term storage caches alike. The [Wikipedia article on food drying](https://en.wikipedia.org/wiki/Drying_(food)) surveys sun-drying, dehydrator, and smoke-drying techniques across cultures."
+  },
+  {
+   "id": "08.03.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Smoking meats applies wood smoke to preserve meat through simultaneous cooking, drying, and antimicrobial coating, imparting flavor and extending storage life while distinguishing this method from other heat-based food preservation.",
+   "cs": "Uzení masa aplikuje kouř ze dřeva k zachování masa prostřednictvím současného vaření, sušení a antimikrobiálního nátěru, propůjčuje chuť a prodlužuje dobu uskladnění, zatímco rozlišuje tuto metodu od jiného tepelně založeného konzervování potravin.",
+   "brief": "Smoking meats preserves through the combined action of heat, dehydration, and the antimicrobial and antioxidant compounds carried in wood smoke, which coat the meat's surface and slow both bacterial growth and fat rancidity. Unlike techniques that preserve mainly by removing water or excluding oxygen, smoking layers several preservation mechanisms at once, which is part of why it produces some of the longest shelf lives among traditional methods when combined with salting.\n\nSmoking is frequently paired with [[08.03.04]] salting and curing — salt draws out surface moisture first, priming the meat for smoke penetration and further extending storage life — and it shares its drying mechanism with [[08.03.02]] drying and dehydration, though smoke's antimicrobial coating is what sets it apart. Within [[08.03]] Food Preservation & Storage, it sits alongside [[08.03.01]] canning and [[08.03.05]] fermentation as one of five distinct approaches to the same underlying problem of extending shelf life without refrigeration.\n\nWood choice matters as much as technique — resinous softwoods impart bitter, sometimes toxic compounds, while hardwoods like hickory, oak, and applewood are the traditional standards. The [Wikipedia article on smoking (cooking)](https://en.wikipedia.org/wiki/Smoking_(cooking)) covers hot- and cold-smoking methods and their preservation chemistry."
+  },
+  {
+   "id": "08.03.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Salting and curing preserves meat and fish by drawing out moisture through osmosis using salt, creating a hostile environment for pathogens and enabling storage without refrigeration, historically the dominant preservation method across cultures.",
+   "cs": "Solení a kváskování konzervuje maso a ryby vylučováním vlhkosti osmózou pomocí soli, vytváří nepřátelské prostředí pro patogeny a umožňuje skladování bez chlazení, historicky dominantní metoda konzervace v různých kulturách.",
+   "brief": "Salting and curing preserves meat and fish by drawing moisture out through osmosis: salt applied directly or as a brine creates a concentration gradient that pulls water from the food's cells, leaving an environment too dry and saline for most spoilage bacteria to survive in. Historically it was the dominant preservation method across cultures precisely because salt, unlike fuel for smoking or fire for canning, could be produced and stored indefinitely before it was ever needed.\n\nCuring is the natural precursor to [[08.03.03]] smoking meats, which typically follows a salt cure to prime the meat's surface for smoke penetration, and it shares its moisture-removal logic with [[08.03.02]] drying and dehydration, though osmosis rather than evaporation does the work. Within [[08.03]] Food Preservation & Storage, it stands apart from [[08.03.01]] canning, which preserves moisture-rich food intact, and from [[08.03.05]] fermentation, which preserves by cultivating rather than excluding microbial life.\n\nCuring salts used for meat (as opposed to plain table salt) are often blended with sodium nitrite specifically to guard against botulism, a risk this branch's other methods must also manage carefully. The [Wikipedia article on meat curing](https://en.wikipedia.org/wiki/Meat_curing) covers dry-curing, brining, and the food-safety chemistry involved."
+  },
+  {
+   "id": "08.03.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Fermentation preserves vegetables and other foods through controlled microbial action that produces lactic acid, creating acidity that inhibits spoilage organisms while developing complex flavors and increasing nutrient bioavailability.",
+   "cs": "Kvašení konzervuje zeleninu a další potraviny prostřednictvím kontrolované mikrobiální aktivity, která produkuje kyselinu mléčnou, vytváří kyselost, která inhibuje organismy zkažení, zatímco vyvíjí komplexní chutě a zvyšuje biodostupnost živin.",
+   "brief": "Fermentation preserves food through controlled microbial action, typically lactic-acid bacteria that convert sugars into acids that make the environment hostile to spoilage organisms while the beneficial microbes themselves proliferate. It is the branch's outlier in mechanism: where [[08.03.01]] canning, [[08.03.02]] drying, [[08.03.03]] smoking, and [[08.03.04]] salting and curing all preserve by excluding or destroying microbial life, fermentation preserves by deliberately cultivating it.\n\nThat difference in mechanism produces a difference in outcome: fermented foods gain complex flavors and often improved nutrient bioavailability that the other four methods in [[08.03]] Food Preservation & Storage do not confer, which is why fermentation is chosen as much for what it adds to food as for how long it extends shelf life. It does still depend on the same food-safety discipline as the branch's other techniques — clean water and controlled salinity keep the fermentation dominated by the intended lactic-acid bacteria rather than competing, spoilage-causing organisms.\n\nVegetable fermentation (sauerkraut, kimchi, pickles) is the most accessible entry point, requiring only salt, water, and time. The [Wikipedia article on fermentation in food processing](https://en.wikipedia.org/wiki/Fermentation_in_food_processing) surveys the microbiology and traditional techniques across cuisines."
+  }
+ ],
+ "relations": [
+  {
+   "from": "08.03.01",
+   "to": "08.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.01",
+   "to": "08.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.01",
+   "to": "08.03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.01",
+   "to": "08.03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.01",
+   "to": "08.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.02",
+   "to": "08.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.02",
+   "to": "08.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.02",
+   "to": "08.03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.02",
+   "to": "08.03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.02",
+   "to": "08.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.03",
+   "to": "08.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.03",
+   "to": "08.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.03",
+   "to": "08.03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.03",
+   "to": "08.03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.03",
+   "to": "08.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.04",
+   "to": "08.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.04",
+   "to": "08.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.04",
+   "to": "08.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.04",
+   "to": "08.03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.04",
+   "to": "08.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.05",
+   "to": "08.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.05",
+   "to": "08.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.05",
+   "to": "08.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.05",
+   "to": "08.03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03.05",
+   "to": "08.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03",
+   "to": "07.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03",
+   "to": "07.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03",
+   "to": "08.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03",
+   "to": "08.03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.03",
+   "to": "08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

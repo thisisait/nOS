@@ -1,0 +1,50 @@
+{
+ "domain": "08.09",
+ "nodes": [
+  {
+   "id": "08.09",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Disaster response encompasses organized procedures for mitigating impacts of large-scale catastrophic events—earthquakes, floods, hurricanes—through coordinated deployment of resources, evacuation, and recovery operations.",
+   "cs": "Reakce na katastrofu zahrnuje organizované procedury ke zmírnění dopadů velkoplošných katastrofických událostí—zemětřesení, povodně, hurikány—prostřednictvím koordinovaného nasazení zdrojů, evakuace a obnovy.",
+   "brief": "Disaster response encompasses organized procedures for mitigating impacts of large-scale catastrophic events—earthquakes, floods, hurricanes—through coordinated deployment of resources, evacuation, and recovery operations. It operates at a different scale than most of this branch: where other subfields equip an individual or household, disaster response coordinates households, neighborhoods, and institutions together.\n\nWithin [[08]] Survival & Emergency Preparedness it draws directly on [[08.01]] First Aid & Medical for mass-casualty triage and on [[08.07]] Emergency Communication for coordinating evacuation and relief across a disrupted area; it also depends on [[08.10]] Psychological Resilience, since sustained recovery operations test responders and survivors over weeks rather than hours. Compared with [[08.08]] Defense & Security, which addresses threats from other people, this subfield addresses threats from the environment itself.\n\nFor evacuation planning and hazard-specific guidance, see the U.S. [Federal Emergency Management Agency](https://www.ready.gov/), and for international disaster-response coordination standards, the [International Federation of Red Cross and Red Crescent Societies](https://www.ifrc.org/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "08.09",
+   "to": "08.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.09",
+   "to": "08.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.09",
+   "to": "08.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.09",
+   "to": "08.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.09",
+   "to": "08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

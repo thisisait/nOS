@@ -1,0 +1,606 @@
+{
+ "domain": "03.05",
+ "nodes": [
+  {
+   "id": "03.05",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Manufacturing transforms raw materials into finished goods through industrial processes, technologies, and systems, encompassing material conversion, assembly, automation, quality assurance, and logistics optimization.",
+   "cs": "Výroba transformuje surové materiály na hotové výrobky průmyslovými procesy, technologiemi a systémy zahrnujícími přeměnu materiálů, montáž, automatizaci, zajištění kvality a optimalizaci logistiky.",
+   "brief": "Manufacturing transforms raw materials into finished goods through industrial processes, technologies, and systems, encompassing material conversion, assembly, automation, quality assurance, and logistics optimization. Its disciplines follow the production sequence: [[03.05.01]] Metalworking, [[03.05.02]] Plastics Manufacturing, and [[03.05.03]] Textile Manufacturing convert raw material into usable stock, [[03.05.05]] Assembly Systems and [[03.05.07]] Manufacturing Automation combine parts into finished products, and [[03.05.06]] Quality Control together with [[03.05.09]] Supply Chain Management ensure what leaves the plant meets specification and reaches its market.\n\nManufacturing sits inside [[03]] Applied Sciences & Technology as the downstream partner of [[03.01]] Engineering, which supplies the product and process designs that a factory then produces at scale, and of [[03.08]] Telecommunications and industrial networking, on which its automation and supply-chain systems increasingly depend for real-time coordination. [[03.05.08]] Lean Manufacturing and [[03.05.10]] Manufacturing Safety cut across every stage, applying efficiency and worker-protection discipline to the whole production line rather than to a single process step.\n\nManufacturing practice is shaped by industry-specific quality and safety standards. For international manufacturing and quality-management standards, see the [International Organization for Standardization](https://www.iso.org/), and for a survey of manufacturing technologies and history, the [Encyclopaedia Britannica](https://www.britannica.com/technology/mass-production)."
+  },
+  {
+   "id": "03.05.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Metalworking shapes, joins, and treats metals through casting, forging, machining, and heat treatment to create components and structures.",
+   "cs": "Zpracování kovů tvaruje, spojuje a upravuje kovy odléváním, kováním, obráběním a tepelným zpracováním pro vytváření součástí a konstrukcí.",
+   "brief": "Metalworking shapes, joins, and treats metals through casting, forging, machining, and heat treatment to create components and structures. Bulk-forming processes such as casting and forging shape metal from a molten or heated mass, while [[03.05.01.03]] Machining removes material from solid stock to reach precise dimensions, and sheet-metal cutting, bending, and stamping form thin flat stock into panels and enclosures. [[03.05.01.05]] Heat Treatment sits apart from the shaping processes: it alters a part's internal microstructure to change hardness, strength, or ductility without changing its shape, and is typically the last step before a metal part is accepted.\n\nMetalworking is one of the material-conversion branches of [[03.05]] Manufacturing, standing alongside [[03.05.02]] Plastics Manufacturing as an alternative route from raw material to usable stock — plastics substitute polymer molding and extrusion for the metal-specific processes of casting and forging. Because metalworking involves extreme heat, high force, and sharp tooling, the discipline is closely tied to [[03.05.10]] Manufacturing Safety, whose protective procedures are written largely around exactly these hazards.\n\nMetalworking is one of the oldest applied sciences, and its modern practice is documented in engineering handbooks and standards bodies. For an overview of processes and history, see the [Encyclopaedia Britannica entry on metallurgy](https://www.britannica.com/technology/metallurgy), and for current welding and joining standards, the [American Welding Society](https://www.aws.org/)."
+  },
+  {
+   "id": "03.05.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Metal casting melts metals and pours them into molds to produce complex shapes with internal cavities, varying by mold material and cooling method.",
+   "cs": "Odlévání kovů tavuje kovy a nalévá je do forem pro tvorbu složitých tvarů s vnitřními dutinami, lišící se materiálem formy a způsobem ochlazování."
+  },
+  {
+   "id": "03.05.01.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Sand casting produces metal parts by pouring molten metal into single-use molds made from compacted sand, economical for prototypes and small production runs.",
+   "cs": "Písková forma odlévá kovové součásti nalitím rozpuštěného kovu do jednorázových forem z zhutněného písku, ekonomická pro prototypy a malé série."
+  },
+  {
+   "id": "03.05.01.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Die casting injects molten metal under high pressure into reusable steel molds, producing precise net-shaped parts suitable for mass production.",
+   "cs": "Vstřikování do formy vhání rozpuštěný kov pod vysokým tlakem do opětovně použitelných ocelových forem, produkuje přesné čisté tvary vhodné pro hromadnou výrobu."
+  },
+  {
+   "id": "03.05.01.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Investment casting creates precision parts using ceramic shell molds built layer-by-layer around a wax pattern, enabling fine surface detail and complex geometries.",
+   "cs": "Investiční odlévání vytváří přesné součásti pomocí keramických skořepinových forem postavených vrstvu po vrstvě kolem voskového modelu, umožňuje jemný povrch a složité geometrie."
+  },
+  {
+   "id": "03.05.01.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Continuous casting produces metal ingots, slabs, or ribbons by pouring molten metal into a moving mold and extracting the solidified strand in one continuous process.",
+   "cs": "Spojité odlévání produkuje kovové ingoty, desky nebo pásky nalitím rozpuštěného kovu do pohybující se formy a extrahováním zpevněného pásu v jednom nepřetržitém procesu."
+  },
+  {
+   "id": "03.05.01.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Centrifugal casting pours molten metal into a rotating mold, using centrifugal force to distribute metal radially and create hollow cylindrical or conical components.",
+   "cs": "Střediskové odlévání nalévá rozpuštěný kov do rotující formy, používá odstředivou sílu k radiálnímu rozložení kovu a vytváření dutých válcových nebo kuželovitých součástí."
+  },
+  {
+   "id": "03.05.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Forging shapes metal through mechanical deformation via hammering, pressing, or compressive forces, creating strong, dense components without internal cavities.",
+   "cs": "Kování tvaruje kov prostřednictvím mechanické deformace pomocí kladiv, lisů nebo tlačných sil, vytváří silné, husté součásti bez vnitřních dutin."
+  },
+  {
+   "id": "03.05.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Machining removes material from metal stock using rotary or reciprocating cutting tools—milling, turning, drilling, grinding—to achieve precise dimensions and complex features.",
+   "cs": "Obrábění odstraňuje materiál z kovového polotovaru pomocí rotačních nebo posuvných řezných nástrojů—frézování, soustružení, vrtání, broušení—k dosažení přesných rozměrů a složitých prvků."
+  },
+  {
+   "id": "03.05.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Sheet metal working cuts, bends, stamps, and forms thin metal stock into panels, enclosures, and structural components using presses, shears, and dies.",
+   "cs": "Práce se tenkým plechem řeže, ohýbá, lisuje a tvaruje tenký kovový polotovar do panelů, krytů a nosných součástí pomocí lisů, nůžek a forem."
+  },
+  {
+   "id": "03.05.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Heat treatment modifies metal properties—strength, hardness, ductility—through controlled heating, cooling, and sometimes chemical processing, without changing external shape.",
+   "cs": "Tepelné zpracování modifikuje vlastnosti kovu—pevnost, tvrdost, tažnost—prostřednictvím kontrolovaného zahřívání, chlazení a někdy chemické úpravy, bez změny vnějšího tvaru."
+  },
+  {
+   "id": "03.05.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Plastics manufacturing transforms polymers into finished parts and products through injection, extrusion, blow molding, thermoforming, and additive processes.",
+   "cs": "Výroba plastů transformuje polymery na hotové součásti a výrobky prostřednictvím vstřikování, extruze, foukacího tvarování, termoformování a aditivních procesů.",
+   "brief": "Plastics manufacturing transforms polymers into finished parts and products through injection, extrusion, blow molding, thermoforming, and additive processes. [[03.05.02.01]] Injection Molding is the dominant process for high-volume solid parts, forcing molten polymer into a mold cavity, while extrusion and blow molding shape continuous profiles and hollow containers respectively, and thermoforming reshapes pre-made plastic sheet over a mold. [[03.05.02.05]] 3D Printing departs from all of these: rather than shaping a bulk or molten mass, it builds a part up layer by layer directly from a digital model, trading production speed for design freedom and tool-free prototyping.\n\nPlastics manufacturing is a material-conversion branch of [[03.05]] Manufacturing, occupying the same production stage as [[03.05.01]] Metalworking but working with polymers whose lower melting points and moldability allow complex, single-shot geometries that machining a metal part would require many separate operations to achieve. Because polymer parts vary more with mold wear, temperature, and material batch than machined metal does, plastics production leans especially heavily on [[03.05.06]] Quality Control to catch warping, sink marks, and dimensional drift.\n\nFor a technical overview of polymer processing methods, see the [Society of Plastics Engineers](https://www.4spe.org/), and for material and process standards, the [ASTM International plastics standards](https://www.astm.org/products-services/standards-and-publications/standards/plastics-standards.html)."
+  },
+  {
+   "id": "03.05.02.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Injection molding heats plastic pellets and injects the molten polymer into closed molds, cooling to form solid parts with precise dimensions and surface finish.",
+   "cs": "Vstřikování do formy ohřívá plastové granule a vstřikuje rozpuštěný polymer do uzavřených forem, chladí se, aby se vytvořily pevné součásti s přesnými rozměry a povrchem."
+  },
+  {
+   "id": "03.05.02.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Extrusion pushes molten plastic through shaped dies to create continuous profiles—rods, tubes, sheets—or cut segments, used for structural and decorative components.",
+   "cs": "Extruze tlačí rozpuštěný plast skrze tvarovací trysky k vytváření nepřetržitých profilů—tyčí, trubic, desek—nebo řezaných segmentů, používá se pro konstrukční a dekorativní součásti."
+  },
+  {
+   "id": "03.05.02.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Blow molding expands hot plastic inside a mold using compressed air, creating hollow parts like bottles, containers, and tanks with uniform wall thickness.",
+   "cs": "Foukací tvarování rozšiřuje horký plast uvnitř formy pomocí stlačeného vzduchu, vytváří duté součásti jako lahve, nádoby a nádrže s jednotnou tloušťkou stěny."
+  },
+  {
+   "id": "03.05.02.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Thermoforming heats plastic sheet until pliable, then stretches it over molds using air or mechanical pressure, producing shallow to medium-depth hollow parts.",
+   "cs": "Termoformování zahřívá plastový plech na měkkou konzistenci, pak jej napřahuje přes formy pomocí vzduchu nebo mechanického tlaku, vytváří mělké až středně hluboké duté součásti."
+  },
+  {
+   "id": "03.05.02.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "3D printing deposits plastic material layer-by-layer using additive processes like fused deposition modeling or stereolithography, building solid or hollow parts without molds.",
+   "cs": "3D tisk ukládá plastový materiál vrstvu po vrstvě pomocí aditivních procesů jako je tisk taveniny nebo stereolitografie, staví pevné nebo duté součásti bez forem."
+  },
+  {
+   "id": "03.05.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Textile manufacturing converts fibers—natural and synthetic—into fabrics and finished products through spinning, weaving, knitting, dyeing, and finishing processes.",
+   "cs": "Textilní výroba převádí vláka—přírodní i syntetická—v tkaniny a hotové výrobky prostřednictvím předení, tkaní, pletení, barvení a hotových procesů.",
+   "brief": "Textile manufacturing converts fibers — natural and synthetic — into fabrics and finished products through spinning, weaving, knitting, dyeing, and finishing processes. Spinning twists raw fiber into continuous yarn, weaving and knitting interlace that yarn into fabric by two different structural logics, and dyeing and finishing then add color, texture, and functional treatments such as water resistance or flame retardancy before the fabric is cut and sewn into a finished product.\n\nTextile manufacturing is a material-conversion branch of [[03.05]] Manufacturing, working a fiber into fabric the way [[03.05.01]] Metalworking works ingots into structural stock — both take a raw material through progressive shaping stages before assembly — though textile fiber is pliable and worked cold, unlike metal's reliance on heat and force. Synthetic fibers such as polyester and nylon connect the discipline to [[03.05.02]] Plastics Manufacturing, since they are extruded from the same polymer feedstocks before being spun into yarn. Color consistency, tensile strength, and shrinkage tolerance are verified under the same [[03.05.06]] Quality Control discipline applied across the rest of manufacturing.\n\nFor an overview of fiber and fabric production, see the [Encyclopaedia Britannica entry on textiles](https://www.britannica.com/technology/textile), and for industry standards, the [American Association of Textile Chemists and Colorists](https://www.aatcc.org/)."
+  },
+  {
+   "id": "03.05.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Electronics manufacturing assembles and interconnects discrete components and circuit boards to produce electronic devices, including assembly, soldering, testing, and packaging.",
+   "cs": "Výroba elektroniky montuje a propojuje diskrétní součásti a desky plošných spojů, aby vyráběla elektronická zařízení, včetně montáže, pájení, testování a balení.",
+   "brief": "Electronics manufacturing assembles and interconnects discrete components and circuit boards to produce electronic devices, including assembly, soldering, testing, and packaging. Surface-mount and through-hole placement position resistors, capacitors, and integrated circuits onto a printed circuit board, reflow or wave soldering fuses them electrically and mechanically, and in-circuit and functional testing confirm the assembled board behaves as designed before it is packaged into a finished device.\n\nElectronics manufacturing is closely related to [[03.05.05]] Assembly Systems, on whose pick-and-place and automated-line techniques it draws directly, and it depends more heavily than most manufacturing branches on [[03.05.06]] Quality Control, since a single faulty solder joint can fail an entire board in ways invisible to casual inspection. [[03.05.07]] Manufacturing Automation dominates this branch even more than others: modern electronics lines run largely unattended, with human intervention reserved for setup, exception handling, and rework. The devices this branch produces are frequently destined for [[03.08]] Telecommunications equipment, whose networking hardware is itself electronics-manufactured.\n\nFor process standards governing circuit board assembly, see [IPC — Association Connecting Electronics Industries](https://www.ipc.org/), and for a general overview, the [Encyclopaedia Britannica entry on electronics](https://www.britannica.com/technology/electronics)."
+  },
+  {
+   "id": "03.05.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Assembly systems design and integrate mechanical and automated processes for combining pre-manufactured parts into finished products, optimizing speed and accuracy.",
+   "cs": "Montážní systémy navrhují a integrují mechanické a automatizované procesy pro kombinování předem vyrobených součástí do hotových výrobků, optimalizují rychlost a přesnost.",
+   "brief": "Assembly systems design and integrate mechanical and automated processes for combining pre-manufactured parts into finished products, optimizing speed and accuracy. An assembly system spans conveyor and fixture design, robotic and manual work-station layout, and the sequencing logic that determines in what order parts join together — the discipline sits downstream of every material-conversion process in [[03.05]] Manufacturing, since it is where cast, machined, molded, and stamped parts actually become a single product.\n\nAssembly systems are inseparable in modern practice from [[03.05.07]] Manufacturing Automation, which supplies the robotic arms, conveyors, and programmable controllers that increasingly replace manual assembly stations, and their output is verified against specification under [[03.05.06]] Quality Control before a product ships. [[03.05.04]] Electronics Manufacturing is one of the heaviest consumers of assembly-systems technique, since populating and soldering a circuit board is itself a high-precision assembly operation. [[03.05.08]] Lean Manufacturing principles are applied most visibly at the assembly stage, where takt time and station balancing directly determine a line's throughput.\n\nFor an overview of assembly line design and history, see the [Encyclopaedia Britannica entry on mass production](https://www.britannica.com/technology/mass-production), and for current robotics-integration standards, the [International Federation of Robotics](https://ifr.org/)."
+  },
+  {
+   "id": "03.05.06",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Quality control tests, inspects, and verifies manufactured parts and products against specifications to ensure conformance, reliability, and safety standards.",
+   "cs": "Kontrola kvality testuje, kontroluje a ověřuje vyrobené součásti a výrobky podle specifikací, aby se zajistila shoda, spolehlivost a bezpečnostní normy.",
+   "brief": "Quality control tests, inspects, and verifies manufactured parts and products against specifications to ensure conformance, reliability, and safety standards. Its methods range from dimensional measurement and statistical sampling on the production floor to destructive and non-destructive testing of finished units, and its output is a pass/fail or rework decision applied consistently across every stage of [[03.05]] Manufacturing rather than to any single process.\n\nQuality control shares its statistical toolkit with [[03.05.08]] Lean Manufacturing, whose waste-reduction goals depend on catching defects as early and cheaply as possible rather than at final inspection, and it functions as the gate that [[03.05.09]] Supply Chain Management relies on before a batch is released to customers or downstream assemblers. The specifications a quality-control program checks against originate in [[03.01]] Engineering design tolerances, and where a defect poses a hazard rather than just a nonconformance, quality control hands off to [[03.05.10]] Manufacturing Safety.\n\nFor internationally recognized quality-management standards, see [ISO 9001](https://www.iso.org/iso-9001-quality-management.html), and for statistical process control methodology, the [American Society for Quality](https://asq.org/)."
+  },
+  {
+   "id": "03.05.07",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Manufacturing automation designs and implements machinery, robotics, and control systems that perform manufacturing tasks with minimal human intervention.",
+   "cs": "Výrobní automatizace navrhuje a implementuje stroje, roboty a řídicí systémy, které vykonávají výrobní úkoly s minimální lidskou intervencí.",
+   "brief": "Manufacturing automation designs and implements machinery, robotics, and control systems that perform manufacturing tasks with minimal human intervention. Its scope spans fixed-sequence machinery, programmable robotic arms, and the sensor and control-system layer — PLCs, machine vision, and increasingly networked industrial control — that lets a line adjust to variation without a human operator resetting it by hand.\n\nAutomation is the technology base that [[03.05.05]] Assembly Systems builds on for robotic and conveyor-driven lines, and it is most fully realized in [[03.05.04]] Electronics Manufacturing, where pick-and-place and reflow lines run with almost no manual intervention. Industrial control systems increasingly rely on the networking infrastructure covered under [[03.08]] Telecommunications to coordinate machines across a plant floor in real time. [[03.05.08]] Lean Manufacturing treats automation as a means to an end — eliminating waste and variability — rather than an end in itself, and cautions against automating a wasteful process instead of first redesigning it.\n\nFor an overview of industrial automation and control, see the [Encyclopaedia Britannica entry on automation](https://www.britannica.com/technology/automation), and for current standards, the [International Society of Automation](https://www.isa.org/)."
+  },
+  {
+   "id": "03.05.08",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Lean manufacturing systematically reduces waste, variability, and non-value-added steps in production processes, improving efficiency and reducing costs.",
+   "cs": "Štíhle výroba systematicky snižuje plýtvání, variabilitu a kroky bez přidané hodnoty ve výrobních procesech, zvyšuje efektivnost a snižuje náklady.",
+   "brief": "Lean manufacturing systematically reduces waste, variability, and non-value-added steps in production processes, improving efficiency and reducing costs. Rooted in the Toyota Production System, its methods — just-in-time flow, kanban pull scheduling, single-minute exchange of die, and continuous kaizen improvement — apply less as a fixed toolkit and more as a discipline for exposing which steps in a process actually add value to the customer and eliminating the rest.\n\nLean principles are applied across [[03.05]] Manufacturing but are most visible at the [[03.05.05]] Assembly Systems stage, where line balancing and takt time directly determine throughput, and they share statistical foundations with [[03.05.06]] Quality Control, since catching a defect immediately is itself a form of waste reduction. Lean's just-in-time inventory philosophy extends the discipline outward into [[03.05.09]] Supply Chain Management, coordinating supplier delivery timing with production need rather than holding buffer stock. It treats [[03.05.07]] Manufacturing Automation as a tool to apply only after a process has been simplified, not a substitute for simplification.\n\nFor the discipline's origin and methodology, see the [Lean Enterprise Institute](https://www.lean.org/), and for a historical overview of the Toyota Production System, the [Encyclopaedia Britannica entry on Toyota](https://www.britannica.com/topic/Toyota-Motor-Corporation)."
+  },
+  {
+   "id": "03.05.09",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Supply chain management plans and optimizes the flow of materials, components, and finished products from suppliers through manufacturing to end customers.",
+   "cs": "Správa dodavatelského řetězce plánuje a optimalizuje tok materiálů, součástí a hotových výrobků od dodavatelů přes výrobu k zákazníkům.",
+   "brief": "Supply chain management plans and optimizes the flow of materials, components, and finished products from suppliers through manufacturing to end customers. It covers supplier selection and contracting, inventory and demand forecasting, and the logistics network that moves goods between each stage — treating the factory not as an isolated unit but as one link in a chain that starts with raw-material extraction and ends with delivery.\n\nSupply chain management is the outward-facing counterpart to the rest of [[03.05]] Manufacturing: it depends on [[03.05.06]] Quality Control to guarantee that what a supplier delivers and what a plant ships both meet specification, and it shares [[03.05.08]] Lean Manufacturing's just-in-time philosophy, using pull-based ordering to minimize the inventory held at any point in the chain. Because materials and finished goods must physically move between suppliers, plants, and customers, the discipline depends directly on [[03.06]] Transportation networks and their capacity, cost, and reliability.\n\nFor global standards and practice in supply chain and logistics, see the [Council of Supply Chain Management Professionals](https://cscmp.org/), and for a broader overview, the [Encyclopaedia Britannica entry on supply chain management](https://www.britannica.com/topic/supply-chain-management)."
+  },
+  {
+   "id": "03.05.10",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Manufacturing safety identifies and mitigates hazards in industrial environments through training, equipment design, protective measures, and regulatory compliance.",
+   "cs": "Bezpečnost v průmyslu identifikuje a zmírňuje nebezpečí v průmyslových prostředích prostřednictvím školení, návrhu zařízení, ochranných opatření a dodržování předpisů.",
+   "brief": "Manufacturing Safety identifies, assesses, and mitigates the hazards that arise wherever raw material is converted into finished goods, combining engineering controls, protective equipment, worker training, and regulatory compliance into a single discipline that runs across the whole production line rather than any one process step.\n\nBecause hazards differ by process, Manufacturing Safety draws its scope from its sibling disciplines: [[03.05.07]] Manufacturing Automation introduces machine-guarding and lockout/tagout requirements around robotic cells, [[03.05.01]] Metalworking carries chemical, thermal, and mechanical exposure risks specific to cutting and forming processes, and [[03.05.06]] Quality Control shares its inspection discipline but is aimed at the product rather than the worker. [[03.05.08]] Lean Manufacturing is its closest structural relative — both are cross-cutting programs applied to the whole line, one optimizing for waste, the other for harm.\n\nWithin [[03.05]] Manufacturing, safety compliance is what keeps automation, high-volume assembly, and supply-chain throughput sustainable rather than merely fast; regulators increasingly tie production permits to a documented safety management system. For the primary US regulatory framework, see the [Occupational Safety and Health Administration](https://www.osha.gov/), and for the international management-system standard, see [ISO 45001](https://www.iso.org/standard/63787.html)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "03.05.01",
+   "to": "03.05.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.01",
+   "to": "03.05.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.01",
+   "to": "03.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.01",
+   "to": "03.05.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.01",
+   "to": "03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.02",
+   "to": "03.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.02",
+   "to": "03.05.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.02",
+   "to": "03.05.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.02",
+   "to": "03.05.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.02",
+   "to": "03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.03",
+   "to": "03.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.03",
+   "to": "03.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.03",
+   "to": "03.05.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.03",
+   "to": "03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.04",
+   "to": "03.05.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.04",
+   "to": "03.05.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.04",
+   "to": "03.05.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.04",
+   "to": "03.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.05",
+   "to": "03.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.05",
+   "to": "03.05.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.05",
+   "to": "03.05.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.05",
+   "to": "03.05.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.05",
+   "to": "03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.06",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.06",
+   "to": "03.05.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.06",
+   "to": "03.05.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.06",
+   "to": "03.05.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.06",
+   "to": "03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.07",
+   "to": "03.05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.07",
+   "to": "03.05.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.07",
+   "to": "03.05.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.07",
+   "to": "03.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.08",
+   "to": "03.05.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.08",
+   "to": "03.05.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.08",
+   "to": "03.05.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.08",
+   "to": "03.05.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.08",
+   "to": "03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.09",
+   "to": "03.05.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.09",
+   "to": "03.05.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.09",
+   "to": "03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.09",
+   "to": "03.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.10",
+   "to": "03.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.10",
+   "to": "03.05.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.10",
+   "to": "03.05.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.10",
+   "to": "03.05.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05.10",
+   "to": "03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05",
+   "to": "03.05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05",
+   "to": "03.05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05",
+   "to": "03.05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05",
+   "to": "03.05.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05",
+   "to": "03.05.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05",
+   "to": "03.05.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05",
+   "to": "03.05.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05",
+   "to": "03.05.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05",
+   "to": "03.05.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05",
+   "to": "03.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.05",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

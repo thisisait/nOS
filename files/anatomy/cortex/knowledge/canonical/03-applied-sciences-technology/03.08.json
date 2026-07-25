@@ -1,0 +1,36 @@
+{
+ "domain": "03.08",
+ "nodes": [
+  {
+   "id": "03.08",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Electronic transmission and reception of information via radio, wire, fiber, or satellite media, encompassing voice, data, and multimedia services.",
+   "cs": "Elektronický přenos a příjem informací prostřednictvím rádiových, vodičových, optických nebo satelitních médií.",
+   "brief": "Telecommunications is the electronic transmission and reception of information via radio, wire, fiber, or satellite media, encompassing voice, data, and multimedia services. It spans the physical transmission media themselves, the protocols that structure information for reliable transfer, and the network infrastructure — switches, base stations, satellites — that routes signals between senders and receivers across distance.\n\nTelecommunications sits inside [[03]] Applied Sciences & Technology as the communications backbone the rest of the branch increasingly depends on: [[03.05]] Manufacturing's automation and supply-chain systems rely on it for real-time coordination across a factory or a network of suppliers, and [[03.01]] Engineering's electrical discipline designs the circuits, antennas, and signal-processing hardware telecommunications systems run on. Unlike most of its siblings, telecommunications has no dedicated subcategory tree in this taxonomy yet — its output is treated as a single integrated discipline rather than split into wireless, fiber, and satellite specializations.\n\nTelecommunications infrastructure and spectrum use are governed by national regulators and coordinated internationally. For global standards and spectrum coordination, see the [International Telecommunication Union](https://www.itu.int/), and for a technical overview of the field, the [Encyclopaedia Britannica](https://www.britannica.com/technology/telecommunications-system)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "03.08",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.08",
+   "to": "03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03.08",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

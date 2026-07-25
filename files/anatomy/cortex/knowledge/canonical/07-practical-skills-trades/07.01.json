@@ -1,0 +1,349 @@
+{
+ "domain": "07.01",
+ "nodes": [
+  {
+   "id": "07.01",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Construction is the practice of assembling structural systems, enclosures, and built environments from materials and components through foundations, framing, masonry, roofing, and insulation.",
+   "cs": "Stavba je praxe skládání konstrukčních systémů, uzavření a vestavěného prostředí z materiálů a součástí prostřednictvím základů, sloupového systému, zděně, střešního pokrytí a izolace.",
+   "brief": "Construction is the practice of assembling structural systems, enclosures, and built environments from raw materials and manufactured components. It sequences work from the ground up: a building must have a stable base before it can carry walls, and a weathertight envelope before the systems inside it can be finished, so the subfields of this category are also, largely, its construction order.\n\nThe field anchors [[07.01.01]] as the load-bearing base a structure sits on, [[07.01.02]] as the skeletal system of studs, joists, and trusses built on top of it, and [[07.01.04]] as the weather barrier that closes the structure at the top. Construction shares its parent, Practical Skills & Trades, with [[07.05]], which finishes and furnishes the same structural shell with wood, and with [[07.04]], which threads water and gas systems through it once the frame is in place.\n\nThe [International Code Council](https://www.iccsafe.org/) publishes the model building codes referenced across most residential and commercial construction practice."
+  },
+  {
+   "id": "07.01.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Foundations are the structural subsystems that interface between the building and soil, transmitting loads safely into the earth while managing water and settlement through concrete work, excavation, drainage, waterproofing, and load calculations.",
+   "cs": "Základy jsou konstrukční podsystémy rozhraní mezi budovou a zemí, bezpečně přenášející zatížení do zeminy a řídící vodu a sedání prostřednictvím betonových prací, výkopu, odvodňování a hydroizolace.",
+   "brief": "Foundations are the structural subsystems that interface between a building and the soil beneath it, transmitting the structure's loads safely into the earth while managing groundwater and long-term settlement. The field covers footing and slab placement in [[07.01.01.01]], the removal and grading of soil that precedes it in [[07.01.01.02]], drainage piping and waterproofing membranes that keep groundwater out of the assembly, and the soil-bearing and structural sizing calculations in [[07.01.01.05]] that determine how wide and deep the foundation must be.\n\nFoundations is the first subfield in [[07.01]]'s construction sequence: a stable base must exist before [[07.01.02]] can erect the structural skeleton above it, and drainage and waterproofing decisions made here determine how much moisture the rest of the envelope has to manage. Poor load calculation or waterproofing at this stage is the most common cause of a building's structural or moisture failures years later.\n\nThe [American Concrete Institute](https://www.concrete.org/) publishes the design and construction standards for footings and foundation walls, and the [International Code Council](https://www.iccsafe.org/) sets the model building code provisions that govern foundation depth and bearing requirements."
+  },
+  {
+   "id": "07.01.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Concrete Work is the practice of mixing, placing, and curing Portland-cement composites to form hardened structural elements, spanning mix formulation, placement technique, reinforcement, and curing.",
+   "cs": "Betonářské práce jsou praxí míchání, umísťování a vytvrzování portlandských cementových kompozitů za vzniku ztvrdlých konstrukčních prvků, zahrnující formulaci směsi, techniky umísťování, výztuž a vytvrzování."
+  },
+  {
+   "id": "07.01.01.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Mixing ratios specify the proportional amounts of cement, aggregates, water, and additives in concrete formulation, directly governing workability, strength, and durability.",
+   "cs": "Míchací poměry určují proporční množství cementu, kameniva, vody a přísad v betonové formulaci, přímo řídící zpracovatelnost, pevnost a trvanlivost."
+  },
+  {
+   "id": "07.01.01.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Pouring techniques govern the physical placement of concrete into forms, including flow path management, consolidation methods, and surface finishing to ensure complete filling and adequate compaction.",
+   "cs": "Techniky betonování řídí fyzické umísťování betonu do forem, včetně správy toku, metod zhutnění a povrchového dokončování."
+  },
+  {
+   "id": "07.01.01.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Reinforcement comprises steel bars or mesh embedded within concrete to resist tensile forces that the concrete matrix alone cannot withstand, improving structural integrity and crack control.",
+   "cs": "Výztuž sestává z ocelových prutů nebo sítě zasazené do betonu, která odolává tahu, zlepšující konstrukční integritu a kontrolu trhlin."
+  },
+  {
+   "id": "07.01.01.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Curing process is the controlled hydration of Portland cement over time, requiring adequate moisture, temperature, and duration to develop full strength and durability.",
+   "cs": "Proces tvrzení je kontrolovaná hydratace portlandského cementu v čase, vyžadující adekvátní vlhkost, teplotu a dobu."
+  },
+  {
+   "id": "07.01.01.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Foundation types—footings, slabs, piles, and caissons—determine how loads transfer from the superstructure into the soil, selected based on soil capacity, depth to competent strata, and water table conditions.",
+   "cs": "Typologií základů určují, jak zatížení přechází ze superstruktury do zeminy, vybrané na základě nosnosti zeminy a hloubky k pevné vrstvě."
+  },
+  {
+   "id": "07.01.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Excavation is the removal of earth and rock to establish the space for foundation placement, involving site assessment, equipment selection, slope stability, and safe working practices.",
+   "cs": "Výkop je odstraňování zeminy a hornin k vytvoření prostoru pro umísťování základů, zahrnující posouzení lokality a výběr zařízení."
+  },
+  {
+   "id": "07.01.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Drainage systems manage subsurface water accumulation through perforated pipes, gravel beds, and surface grading to prevent hydrostatic pressure on foundations and preserve structural integrity.",
+   "cs": "Odvodňovací systémy řídí hromadění podzemní vody skrze děrované trubky a kamenné lože, aby se zabránilo hydrostatickému tlaku na základy."
+  },
+  {
+   "id": "07.01.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Waterproofing applies barrier membranes or coatings to foundation surfaces to prevent water infiltration into the structure, critical for below-grade spaces and environments with high water tables.",
+   "cs": "Hydroizolace aplikuje bariérové membrány nebo nátěry na povrchy základů, aby se zabránilo průsaku vody do struktury."
+  },
+  {
+   "id": "07.01.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Load calculations determine the expected structural and environmental forces acting on a foundation through analysis of building mass, occupancy, climate, and soil conditions, informing the sizing and design of foundation elements.",
+   "cs": "Výpočty zatížení určují očekávané konstrukční a environmentální síly skrze analýzu hmotnosti budovy a klimatu."
+  },
+  {
+   "id": "07.01.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Framing is the assembly of a structural skeleton using beams, columns, joists, and bracing to support the building's weight and resist lateral forces through wood, steel, and composite systems.",
+   "cs": "Sloupový systém je montáž konstrukční kostry pomocí trámů, sloupů a trámu k podpoře hmotnosti budovy prostřednictvím dřeva, oceli a kompozitů.",
+   "brief": "Framing is the assembly of a structural skeleton — beams, columns, joists, studs, and bracing — that carries a building's weight and resists lateral forces such as wind and seismic loading. The discipline splits by material into [[07.01.02.01]], the dimensional-lumber system dominant in North American residential construction, and [[07.01.02.02]], the light-gauge and structural-steel systems used where fire resistance or long spans matter; both feed into [[07.01.02.05]], the vertical walls that carry roof and floor loads down to the foundation, and into the roof-specific truss and rafter geometry built on top of them.\n\nFraming rises directly on the base that [[07.01.01]] establishes and sits within [[07.01]]'s construction sequence: the roof is covered once its framing is complete, and insulation is installed inside the stud and joist cavities this subfield creates.\n\nThe [American Wood Council](https://awc.org/) publishes the design standards for wood-framed structures, and the [American Institute of Steel Construction](https://www.aisc.org/) sets the equivalent standards for steel framing systems."
+  },
+  {
+   "id": "07.01.02.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Wood framing assembles dimensional lumber into light-frame structures using nails, bolts, and connectors, economical for low- to mid-rise residential and light commercial applications.",
+   "cs": "Dřevěný rám skládá rozměrové řezivo do lehkých rámových konstrukcí, ekonomických pro nízké až střední bytové aplikace."
+  },
+  {
+   "id": "07.01.02.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Steel framing uses hot-rolled or fabricated steel members in bolted or welded connections, enabling long spans and supporting heavy loads in high-rise and large-span applications.",
+   "cs": "Ocelový rám používá nýtované nebo svářené spojení, umožňující dlouhé rozpětí v aplikacích vysokých budov."
+  },
+  {
+   "id": "07.01.02.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Roof framing comprises the structural system directly supporting roof covering, typically pitched or flat trusses and joists, engineered to resist gravity loads, snow, wind, and seismic forces.",
+   "cs": "Střešní rám sestává z konstrukčního systému přímo podpírající střešní pokrytí, konstruované tak, aby odolalo zatížení."
+  },
+  {
+   "id": "07.01.02.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Floor systems—joists, beams, and decking—span between supports to create habitable or functional levels, engineered for live loads, dead loads, and dynamic forces.",
+   "cs": "Podlahové systémy rozprostírají se mezi podporami k vytvoření obytných úrovní, navržené pro živá a mrtvá zatížení."
+  },
+  {
+   "id": "07.01.02.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Load-bearing walls are vertical structural elements that carry compressive forces from upper stories to the foundation, distinguished from non-load-bearing partitions by their structural necessity.",
+   "cs": "Nosné stěny jsou vertikální konstrukční prvky přenášející tlaková zatížení z horních pater na základy."
+  },
+  {
+   "id": "07.01.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Masonry is the assembly of individual units—stone, brick, or block—bound with mortar into coherent walls and structures, offering thermal mass, durability, and fire resistance.",
+   "cs": "Zděň je skládání jednotlivých prvků—kamene nebo cihly—spojených maltou v soudržné stěny a struktury.",
+   "brief": "Masonry is the assembly of individual units — stone, brick, or concrete block — bound with mortar into walls and structures that offer thermal mass, durability, and fire resistance beyond what framed construction provides. Unlike [[07.01.02]], which builds a skeleton and covers it with a separate finish layer, masonry units are simultaneously the structure and its visible surface, so unit selection, coursing pattern, and mortar joint finish are structural and aesthetic decisions at once.\n\nAs one of [[07.01]]'s structural subfields, masonry bears on the base [[07.01.01]] establishes just as framing does, and its thermal mass changes how much [[07.01.05]] a masonry wall needs compared to a framed one — a masonry wall stores and releases heat over hours, which shifts insulation strategy toward continuous exterior layers rather than cavity fill.\n\nThe [Masonry Society](https://masonrysociety.org/) publishes structural design standards for masonry construction, and the [International Masonry Institute](https://www.imiweb.org/) documents installation technique and craft training."
+  },
+  {
+   "id": "07.01.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Roofing comprises the weather-resistant covering layer—shingles, membrane, metal panels, or tiles—that protects the structural frame and interior from precipitation, UV radiation, and thermal extremes.",
+   "cs": "Střešní pokrytí se skládá z odolné vůči počasí přesahující vrstvy, která chrání konstrukční rám a interiér.",
+   "brief": "Roofing is the weather-resistant covering layer — shingles, membrane, metal panels, or tiles — that closes a building at the top, protecting the structural frame and interior from precipitation, ultraviolet exposure, and thermal extremes. The covering is fastened to the truss or rafter geometry [[07.01.02.03]] provides, and its slope, underlayment, and flashing details are chosen to shed water at the roof's specific pitch and penetrations rather than merely cover the deck.\n\nRoofing is the last envelope-closing step in [[07.01]]'s construction sequence, following [[07.01.02]]'s skeletal framing and preceding the interior work that [[07.01.05]] insulation and finish trades depend on staying dry. A roof that fails to shed water compromises the insulation and framing beneath it long before the covering itself visibly fails.\n\nThe [National Roofing Contractors Association](https://www.nrca.net/) publishes installation and material standards across shingle, membrane, and metal roofing systems."
+  },
+  {
+   "id": "07.01.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Insulation is the thermal control layer—mineral fiber, foam, or cellulose—installed within walls, roofs, and floors to minimize heat transfer and reduce energy consumption for climate control.",
+   "cs": "Izolace je vrstva tepelné kontroly, instalovaná v stěnách a střechách, aby se minimalizoval přenos tepla.",
+   "brief": "Insulation is the thermal control layer — mineral fiber batts, spray or rigid foam, or loose-fill cellulose — installed within walls, roofs, and floors to slow heat transfer and reduce the energy a building needs for heating and cooling. It is installed inside the cavities [[07.01.02]] framing creates and beneath or above the covering [[07.01.04]] provides, so its placement and vapor-barrier detailing depend on decisions made in both of those subfields.\n\nInsulation is typically the last of [[07.01]]'s structural subfields to close, since a wall or roof cavity must be framed and weathertight before insulation can be installed without risking moisture entrapment; [[07.01.03]] achieves a comparable thermal effect through mass rather than a dedicated low-conductivity layer, trading insulation's thin profile for a wall that stores heat instead of blocking it.\n\nThe [North American Insulation Manufacturers Association](https://insulationinstitute.org/) publishes material and installation standards, and the [U.S. Department of Energy's insulation guidance](https://www.energy.gov/energysaver/insulation) sets recommended R-values by climate zone."
+  }
+ ],
+ "relations": [
+  {
+   "from": "07.01.01",
+   "to": "07.01.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.01",
+   "to": "07.01.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.01",
+   "to": "07.01.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.01",
+   "to": "07.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.01",
+   "to": "07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.02",
+   "to": "07.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.02",
+   "to": "07.01.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.02",
+   "to": "07.01.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.02",
+   "to": "07.01.02.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.02",
+   "to": "07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.03",
+   "to": "07.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.03",
+   "to": "07.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.03",
+   "to": "07.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.03",
+   "to": "07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.04",
+   "to": "07.01.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.04",
+   "to": "07.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.04",
+   "to": "07.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.04",
+   "to": "07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.05",
+   "to": "07.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.05",
+   "to": "07.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.05",
+   "to": "07.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01.05",
+   "to": "07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01",
+   "to": "07.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01",
+   "to": "07.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01",
+   "to": "07.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01",
+   "to": "07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.01",
+   "to": "07.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

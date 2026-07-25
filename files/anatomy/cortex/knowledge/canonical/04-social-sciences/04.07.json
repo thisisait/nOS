@@ -1,0 +1,29 @@
+{
+ "domain": "04.07",
+ "nodes": [
+  {
+   "id": "04.07",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Education studies learning processes, pedagogical methods, and institutional systems for knowledge transmission. It addresses curriculum, assessment, and human development across the lifespan.",
+   "cs": "Pedagogika studuje procesy učení, pedagogické metody a institucionální systémy pro přenos znalostí. Zabývá se kurikulem, hodnocením a lidským rozvojem po celou dobu života.",
+   "brief": "Education studies learning processes, pedagogical methods, and the institutional systems through which knowledge, skills, and values are transmitted across generations, addressing curriculum design, assessment, and human development from early childhood through adulthood. It draws directly on [[04.01]] Psychology's account of cognitive and developmental change to explain how learning actually happens at different ages and in different conditions.\n\nAs an applied field, education also depends on [[04.02]] Sociology to understand how schooling interacts with class, culture, and institutional structure, why access, achievement, and outcomes vary systematically across social groups rather than only across individuals. Its subfields split by level (early childhood, primary, secondary, higher, and adult education), by function (curriculum studies, educational psychology, and policy), and by setting (formal schooling versus informal and lifelong learning).\n\nModern education research increasingly combines experimental methods borrowed from psychology with the institutional and comparative analysis borrowed from sociology and policy studies, particularly in evaluating large-scale reforms. [UNESCO's overview of education as a field and a right](https://www.unesco.org/en/education) situates the discipline in global policy, and the [Stanford Encyclopedia of Philosophy entry on the philosophy of education](https://plato.stanford.edu/entries/education-philosophy/) covers its normative foundations."
+  }
+ ],
+ "relations": [
+  {
+   "from": "04.07",
+   "to": "04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.07",
+   "to": "04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

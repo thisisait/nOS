@@ -1,0 +1,244 @@
+{
+ "domain": "08.06",
+ "nodes": [
+  {
+   "id": "08.06",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Navigation determines location and direction of travel through observation of natural features, celestial bodies, magnetic instruments, and maps, enabling purposeful movement across unfamiliar terrain without electronic aids.",
+   "cs": "Navigace určuje polohu a směr cesty prostřednictvím pozorování přírodních prvků, nebeských těles, magnetických přístrojů a map, umožňuje účelný pohyb přes neznámý terén bez elektronických pomůcek.",
+   "brief": "Navigation determines location and direction of travel through observation of natural features, celestial bodies, magnetic instruments, and maps, enabling purposeful movement across unfamiliar terrain without electronic aids. It covers five techniques ordered roughly by reliability under duress: celestial navigation, [[08.06.02]] Compass Usage, natural navigation, [[08.06.04]] Map Reading, and GPS Alternatives for when satellite systems fail and dead reckoning takes over.\n\nNavigation sits within [[08]] Survival & Emergency Preparedness alongside [[08.07]] Emergency Communication — a lost party often needs both together, since a known position is what makes a distress call actionable. It also shares ground with [[09.04]] Maps & Atlases in Reference & Documentation: the map itself is a reference artifact, while Navigation is the skill of reading and correlating it against the terrain. Because a navigation error compounds with every step taken on a wrong bearing, redundancy matters: practicing celestial and natural methods before they are needed means a broken or lost compass does not strand a traveler.\n\nFor canonical technique reference, see the navigation chapters of the [US Army Survival Manual](https://www.globalsecurity.org/military/library/policy/army/fm/21-76/), and for celestial method fundamentals, the [Royal Institute of Navigation](https://rin.org.uk/)."
+  },
+  {
+   "id": "08.06.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Celestial navigation uses the positions of stars, planets, and the sun to determine geographic coordinates and heading, providing direction and latitude-longitude reference points independent of magnetic fields or ground features.",
+   "cs": "Nebeská navigace používá pozice hvězd, planet a slunce k určení geografických souřadnic a kurzu, poskytuje orientační body a zeměpisné souřadnice nezávislé na magnetických polích nebo pozemních prvcích.",
+   "brief": "Celestial navigation determines geographic position and heading from the observed positions of the sun, moon, planets, and stars, using their predictable movement across the sky as a reference frame independent of magnetic fields, satellites, or ground features. A navigator measures the angle between a celestial body and the horizon — historically with a sextant, more simply by hand-width estimation or shadow-stick observation — and cross-references known star positions or solar angle against time of day to derive latitude and, with more instrumentation, longitude.\n\nCelestial navigation is one of five techniques cataloged under [[08.06]] Navigation, and it overlaps directly with [[08.06.03]] natural navigation, which folds star and sun observation into a broader set of environmental cues rather than treating celestial bodies as the sole reference. It is the method of last resort when [[08.06.02]] compass usage fails from magnetic interference or equipment loss, and unlike [[08.06.04]] map reading, it requires no printed material at all — only clear sky and known reference points, which is also its chief limitation.\n\nCelestial method accuracy depends heavily on clear sky, latitude (star identification shifts significantly between hemispheres), and practiced angle estimation, so it is best learned and rehearsed before an emergency rather than attempted cold. The [Wikipedia article on celestial navigation](https://en.wikipedia.org/wiki/Celestial_navigation) covers the underlying method and instruments, and the [Royal Institute of Navigation](https://rin.org.uk/) publishes reference material on both instrumented and improvised celestial technique."
+  },
+  {
+   "id": "08.06.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Compass usage applies magnetic-needle orientation instruments to determine cardinal directions and maintain bearing across terrain, assuming magnetic declination awareness and functioning equipment to prevent navigation errors.",
+   "cs": "Použití kompasu aplikuje přístroje orientace magnetické jehly k určení kardinalních směrů a udržení kurzu přes terén, předpokládá vědomí magnetické deklinace a funkčnosti zařízení, aby se zabránilo chybám navigace.",
+   "brief": "Compass usage applies a magnetic-needle instrument to determine cardinal direction and hold a bearing across terrain, converting a fixed heading into sustained travel direction even when landmarks are absent or obscured. Reliable use requires correcting for magnetic declination — the offset between magnetic north and true north, which varies by location and shifts over time — and keeping the compass away from ferrous metal or electronics that deflect the needle.\n\nCompass usage is the instrumented counterpart to [[08.06.03]] natural navigation within [[08.06]] Navigation: both establish heading, but a compass trades environmental reading skill for equipment dependency, which is exactly the dependency [[08.06.05]] GPS Alternatives exists to address when a compass itself is lost, damaged, or rendered unreliable by local magnetic anomaly. Compass bearing is most effective paired with [[08.06.04]] map reading, since a heading alone establishes direction of travel but not position — the two together triangulate both.\n\nDeclination correction is the single most common source of compass navigation error, since a bearing plotted against magnetic north without adjustment drifts steadily off a true-north route. The [Wikipedia article on compass](https://en.wikipedia.org/wiki/Compass) covers instrument types and use, and [NOAA's magnetic declination calculator](https://www.ngdc.noaa.gov/geomag/declination.shtml) provides current, location-specific correction values."
+  },
+  {
+   "id": "08.06.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Natural navigation uses environmental cues—stars, sun position, terrain features, wind patterns—to determine location and direction without instruments. It combines celestial observation with landscape reading, enabling wayfinding when technology fails.",
+   "cs": "Přirozená navigace používá přírodní znaky—hvězdy, polohu slunce, terénní prvky, směr větru—k určení polohy a směru bez přístrojů. Kombinuje nebeské pozorování s čtením krajiny a umožňuje orientaci, když technika selže.",
+   "brief": "Natural navigation determines location and direction from environmental cues — star and sun position, moss and vegetation growth patterns, prevailing wind, snow drift shape, and terrain features — combining celestial observation with landscape reading into a single instrument-free skill. It depends on layering multiple weak signals rather than trusting any one cue alone, since any single natural indicator (moss growth, for instance) is unreliable in isolation and only becomes trustworthy when several independent cues agree.\n\nIt overlaps directly with [[08.06.01]] celestial navigation, which it absorbs as one input among several rather than treating as a self-sufficient method, and it serves as the fallback within [[08.06]] Navigation when [[08.06.02]] compass usage is unavailable — the two are complementary rather than competing, since natural cues can also catch a compass error that would otherwise go unnoticed. Because it requires no equipment, it pairs naturally with [[08.06.04]] map reading in a survival context: a map supplies scale and destination, and natural cues supply direction of travel when no compass confirms it.\n\nNatural navigation accuracy is highly cue- and region-specific — moss growth patterns, wind direction, and vegetation lean vary by hemisphere, climate, and local geography — so any single rule of thumb ported uncritically from another region will mislead. Tristan Gooley's [The Natural Navigator](https://www.naturalnavigator.com/) is a widely cited practitioner reference on reading environmental cues, and the [Wikipedia article on natural navigation](https://en.wikipedia.org/wiki/Natural_navigation) surveys the technique's history and core methods."
+  },
+  {
+   "id": "08.06.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Map reading is the interpretation of cartographic symbols, scale, and spatial relationships to determine current position and plan routes. It converts two-dimensional representations into three-dimensional environmental understanding.",
+   "cs": "Čtení mapy je interpretace kartografických symbolů, měřítka a prostorových vztahů k určení aktuální polohy a plánování tras. Převádí dvojrozměrné reprezentace v trojrozměrné chápání prostředí.",
+   "brief": "Map reading interprets cartographic symbols, contour lines, scale, and spatial relationships to determine current position and plan a route across terrain, converting a two-dimensional printed representation into three-dimensional environmental understanding. Core skill includes contour interpretation (reading elevation and slope from line spacing), scale-based distance estimation, and terrain association — matching visible features like ridgelines and drainages against their map symbols to confirm position without instruments.\n\nMap reading is most effective paired with [[08.06.02]] compass usage within [[08.06]] Navigation — a compass bearing plotted on a map yields both direction and confirmed position, which neither tool alone reliably provides — and it shares purpose with [[08.06.01]] celestial navigation and [[08.06.03]] natural navigation as position-finding methods that converge on the same goal by different means. A map itself is a reference artifact closely related to [[09.04]] Maps & Atlases in Reference & Documentation, but map reading is the distinct skill of correlating that artifact against the terrain actually underfoot.\n\nTopographic maps, which encode elevation through contour lines, are the standard reference for terrain-based navigation and reward practiced interpretation more than any other map type. The [Wikipedia article on topographic map](https://en.wikipedia.org/wiki/Topographic_map) covers contour and symbol conventions, and the [USGS guide to reading topographic maps](https://www.usgs.gov/faqs/how-do-i-read-topographic-map) walks through practical terrain-correlation technique."
+  },
+  {
+   "id": "08.06.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "GPS alternatives are non-electronic positioning techniques including dead reckoning, terrain association, and celestial observation. These methods provide location determination when satellite systems are unavailable or unreliable.",
+   "cs": "Alternativy GPS jsou bezelektronické polohové techniky zahrnující zemské hledaní, terénní asociaci a nebeské pozorování. Tyto metody umožňují určení polohy, když jsou satelitní systémy nedostupné nebo nespolehlivé.",
+   "brief": "GPS Alternatives are the non-electronic positioning techniques a navigator falls back on when satellite systems are jammed, exhausted, or simply absent: dead reckoning tracks distance and heading from a known start point, terrain association matches visible landmarks against a mental or paper map, and celestial observation fixes position from the sun, moon, and stars. None of these require power or signal reception, which is exactly what makes them survive the failure modes that take GPS down.\n\nEach technique borrows directly from a sibling under [[08.06]] Navigation: dead reckoning is [[08.06.02]] Compass Usage paired with pace count and elapsed time, terrain association is [[08.06.04]] Map Reading run in reverse — terrain to map instead of map to terrain — and celestial observation is a field-expedient subset of the fuller methods taught under [[08.06.01]] Celestial Navigation. [[08.06.03]] Natural Navigation supplies the environmental cues — sun angle, prevailing wind, vegetation growth patterns — that make dead reckoning and terrain association reliable without instruments at all.\n\nRedundancy is the point: a party that has drilled these methods before a GPS outage does not need to relearn navigation under stress, they simply switch technique. For dead-reckoning procedure and error-correction tables, see the [American Practical Navigator (Bowditch)](https://msi.nga.mil/Publications/APN), and for a field-tested terrain-association method, the [US Army Survival Manual FM 21-76](https://www.globalsecurity.org/military/library/policy/army/fm/21-76/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "08.06.01",
+   "to": "08.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.01",
+   "to": "08.06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.01",
+   "to": "08.06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.01",
+   "to": "08.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.02",
+   "to": "08.06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.02",
+   "to": "08.06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.02",
+   "to": "08.06.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.02",
+   "to": "08.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.03",
+   "to": "08.06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.03",
+   "to": "08.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.03",
+   "to": "08.06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.03",
+   "to": "08.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.04",
+   "to": "08.06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.04",
+   "to": "08.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.04",
+   "to": "08.06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.04",
+   "to": "08.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.04",
+   "to": "09.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.05",
+   "to": "08.06.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.05",
+   "to": "08.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.05",
+   "to": "08.06.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.05",
+   "to": "08.06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06.05",
+   "to": "08.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06",
+   "to": "08.06.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06",
+   "to": "08.06.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06",
+   "to": "08.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06",
+   "to": "08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.06",
+   "to": "09.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

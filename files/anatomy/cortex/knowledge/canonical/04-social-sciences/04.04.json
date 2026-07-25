@@ -1,0 +1,480 @@
+{
+ "domain": "04.04",
+ "nodes": [
+  {
+   "id": "04.04",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Analysis of how individuals, firms, and societies allocate scarce resources to satisfy unlimited wants, examining production, distribution, and consumption decisions.",
+   "cs": "Analýza alokace omezených zdrojů pro uspokojení neomezených potřeb, zkoumající výrobu, distribuci a spotřebu.",
+   "brief": "Economics analyzes how individuals, firms, and societies allocate scarce resources to satisfy unlimited wants, studying production, distribution, and consumption decisions and the incentives that drive them. The discipline splits along scale into [[04.04.01]] Microeconomics, which models the choices of individual agents and markets, and [[04.04.02]] Macroeconomics, which studies aggregate phenomena such as growth, inflation, and unemployment; [[04.04.03]] Econometrics supplies the statistical tools both branches use to test their models against data.\n\nEconomics borders [[04.05]] Political Science where markets meet state power, in regulation, taxation, and trade policy, and borders [[04.09]] Demography where population structure drives labor supply, consumption, and long-run growth. Applied branches extend the core theory to specific domains: financial markets, labor markets, environmental resources, and international trade each have their own dedicated subfield, while economic history traces how these forces played out before the tools of formal modeling existed.\n\nSince the marginalist revolution of the late nineteenth century, economics has increasingly relied on mathematical modeling and empirical testing, a shift that behavioral economics has partly challenged by reintroducing psychological realism into the model of the decision-maker. The [Library of Economics and Liberty](https://www.econlib.org/library/Enc/) offers an accessible reference to core concepts and subfields, and the [IMF's overview of economic principles](https://www.imf.org/external/pubs/ft/fandd/basics/) situates the discipline in policy practice."
+  },
+  {
+   "id": "04.04.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Study of individual economic actors—consumers, firms, and markets—and how their decisions on production, pricing, and consumption determine resource allocation.",
+   "cs": "Studium jednotlivých ekonomických subjektů, jejich rozhodnutí o výrobě, ceně a spotřebě, která určují alokaci zdrojů.",
+   "brief": "Microeconomics studies the decisions of individual economic actors — consumers choosing what to buy, firms choosing what and how much to produce, and the markets where these choices meet — and how those decisions jointly determine prices and the allocation of scarce resources. Its core machinery models behavior as constrained optimization: consumers maximize utility subject to a budget, firms maximize profit subject to a technology, and markets clear through the interaction of [[04.04.01.01]] Supply and Demand.\n\nThe field builds this machinery in layers. [[04.04.01.02]] Consumer Theory formalizes how a budget-constrained household chooses among goods, [[04.04.01.03]] Production Theory does the same for a firm choosing inputs and output, and [[04.04.01.04]] Market Structures examines how the number and behavior of competing firms — from perfect competition to monopoly — shapes the resulting prices and welfare. A further subfield, Game Theory Applications, extends the analysis to settings where firms or consumers act strategically, anticipating each other's choices rather than simply reacting to a fixed market price.\n\nMicroeconomics is the counterpart to [[04.04.02]] Macroeconomics, which aggregates these individual decisions into national output, employment, and price levels rather than modeling them one actor at a time; the two share the same optimizing framework but differ in the unit of analysis. Applied fields such as financial and labor economics extend microeconomic tools to specific markets, for capital and for labor respectively. Standard treatments appear in the [MIT OpenCourseWare microeconomics course](https://ocw.mit.edu/courses/14-01-principles-of-microeconomics-fall-2018/) and the [Library of Economics and Liberty's microeconomics entries](https://www.econlib.org/library/Topics/College/microeconomics.html)."
+  },
+  {
+   "id": "04.04.01.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Fundamental economic principle explaining how the quantity of goods consumers desire interacts with the quantity producers supply, determining market price and equilibrium.",
+   "cs": "Ekonomický princip vysvětlující interakci mezi poptávkou spotřebitelů a nabídkou producentů, určující tržní cenu a rovnováhu."
+  },
+  {
+   "id": "04.04.01.01.01",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The price and quantity combination at which the amount of goods supplied exactly matches the amount demanded, resulting in market clearing and stability.",
+   "cs": "Kombinace ceny a množství, při které se nabízené množství přesně rovná poptávanému množství."
+  },
+  {
+   "id": "04.04.01.01.02",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Measure of responsiveness of quantity demanded or supplied to percentage changes in price, indicating how sensitive economic actors are to price movements.",
+   "cs": "Míra citlivosti poptávaného nebo nabízeného množství na změny v ceně."
+  },
+  {
+   "id": "04.04.01.01.03",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The economic benefit consumers receive when the price they pay is less than the maximum they would willingly pay, reflecting consumer welfare gain.",
+   "cs": "Ekonomický prospěch, který spotřebitelé získají, když cena, kterou platí, je nižší než maximální cena, kterou by zaplatili."
+  },
+  {
+   "id": "04.04.01.01.04",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "The economic gain producers receive when the price they receive exceeds the minimum acceptable price, reflecting producer welfare benefit.",
+   "cs": "Ekonomický prospěch výrobců, když cena, kterou dostávají, přesahuje minimální přijatelnou cenu."
+  },
+  {
+   "id": "04.04.01.01.05",
+   "level": 4,
+   "kind": "seed-override",
+   "en": "Situations where the free market allocates resources inefficiently, resulting from externalities, monopoly power, information asymmetry, or public goods provision.",
+   "cs": "Situace, kdy svobodný trh alokuje zdroje neefektivně kvůli externalitám, monopolní moci nebo nedokonalým informacím."
+  },
+  {
+   "id": "04.04.01.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Analysis of how consumers make purchasing decisions based on preferences, income, and prices, modeling rational choice and utility maximization.",
+   "cs": "Analýza toho, jak spotřebitelé činí rozhodnutí o nákupech na základě svých preferencí, příjmu a cen."
+  },
+  {
+   "id": "04.04.01.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Study of how firms combine inputs—labor, capital, materials—to produce outputs, examining cost structures, efficiency, and technology adoption.",
+   "cs": "Studium toho, jak firmy kombinují vstupy k výrobě výstupu, zkoumají strukturu nákladů a technologii."
+  },
+  {
+   "id": "04.04.01.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Classifications of markets based on levels of competition—perfect competition, monopolistic competition, oligopoly, and monopoly—determining firm behavior and outcomes.",
+   "cs": "Klasifikace trhů na základě úrovně konkurence, určující chování a výsledky firem."
+  },
+  {
+   "id": "04.04.01.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Strategic analysis of decision-making situations where outcomes depend on actions of multiple parties, modeled as games with defined payoff structures.",
+   "cs": "Strategická analýza rozhodovacích situací, kde výsledky závísí na činnostech více stran, modelované jako hry."
+  },
+  {
+   "id": "04.04.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Study of aggregate economic phenomena—national output, employment, price levels, and international trade—and the policies that influence them.",
+   "cs": "Studium agregovaných ekonomických jevů, nacionalního výstupu, zaměstnanosti a cen, a politik, které je ovlivňují.",
+   "brief": "Macroeconomics studies the economy as a whole rather than one actor at a time: aggregate output, employment, price levels, and international trade, and the forces that drive their fluctuations over the business cycle. Its central variables are [[04.04.02.01]] GDP and Growth, which track how much an economy produces and how that production expands over time, and [[04.04.02.02]] Inflation, which tracks the rate at which the general price level erodes the value of money.\n\nMacroeconomic analysis links these aggregates to [[04.04.02.03]] Unemployment, the share of the labor force without work, and to the two levers governments use to steer the cycle: [[04.04.02.04]] Monetary Policy, exercised by a central bank through interest rates and the money supply, and Fiscal Policy, exercised through government spending and taxation. The Phillips-curve tension between inflation and unemployment, and the debate over how far policy can smooth the business cycle without distorting it, run through the subfield's core models.\n\nMacroeconomics complements [[04.04.01]] Microeconomics, which builds the same optimizing logic from the bottom up rather than modeling aggregates directly, and draws its empirical toolkit from econometrics to test competing theories of growth and the business cycle against national accounts data. The [Federal Reserve Economic Data (FRED)](https://fred.stlouisfed.org/) provides the standard aggregate time series used throughout the field, and the [IMF's overview of macroeconomic principles](https://www.imf.org/external/pubs/ft/fandd/basics/) situates the theory in policy practice."
+  },
+  {
+   "id": "04.04.02.01",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Measurement and analysis of the total market value of goods and services produced in an economy and its rate of increase over time.",
+   "cs": "Měření a analýza celkové tržní hodnoty zboží a služeb vytvořených v ekonomice a její tempo růstu."
+  },
+  {
+   "id": "04.04.02.02",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Sustained increase in the general price level of goods and services in an economy, reducing purchasing power and affecting investment and savings behavior.",
+   "cs": "Trvalý nárůst obecné cenové hladiny zboží a služeb v ekonomice, snižující kupní sílu."
+  },
+  {
+   "id": "04.04.02.03",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "The state of labor-force participants unable to find work despite seeking employment, measured as a percentage of the total labor force.",
+   "cs": "Stav pracovníků, kteří nemohou najít zaměstnání přes jejich hledání, měřeno jako procento celkové pracovní síly."
+  },
+  {
+   "id": "04.04.02.04",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Central bank actions regulating money supply and interest rates to influence inflation, employment, and economic growth.",
+   "cs": "Činnosti centrální banky regulující peněžní zásobu a úrokové sazby k ovlivnění inflace a hospodářského růstu."
+  },
+  {
+   "id": "04.04.02.05",
+   "level": 3,
+   "kind": "seed-override",
+   "en": "Government decisions regarding taxation and spending that affect aggregate demand, resource allocation, and macroeconomic stabilization.",
+   "cs": "Rozhodnutí vlády o daních a výdajích, která ovlivňují agregovanou poptávku a makroekonomickou stabilizaci."
+  },
+  {
+   "id": "04.04.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Application of statistical and mathematical techniques to test economic theories and estimate relationships between economic variables from empirical data.",
+   "cs": "Aplikace statistických a matematických technik k testování ekonomických teorií pomocí empirických údajů.",
+   "brief": "Econometrics applies statistical and mathematical techniques to economic data, turning the qualitative claims of economic theory into testable, quantitative relationships. Its central task is estimation: given observed prices, incomes, or output, it fits models that recover the underlying parameters — an elasticity, a multiplier, a policy effect — while accounting for the fact that economic variables are rarely produced by controlled experiments.\n\nThis empirical discipline is the shared toolkit of the field: [[04.04.01]] Microeconomics and [[04.04.02]] Macroeconomics both rely on econometric methods to test their models against real markets and national accounts, and applied branches such as [[04.04.09]] Labor Economics and [[04.04.08]] Financial Economics use the same regression and time-series techniques to estimate wage effects or asset-pricing relationships in their own domains. Because economic data is observational rather than experimental, much of the field's methodology addresses confounding and reverse causation — instrumental variables, natural experiments, and panel-data methods that isolate a causal effect from mere correlation.\n\nThe field's methods now extend into other social sciences wherever theory meets observational data, from political science to sociology, but economics remains its principal home. The [Nobel Prize committee's account of the 2021 economics prize](https://www.nobelprize.org/prizes/economic-sciences/2021/press-release/) for natural-experiment methods gives an accessible entry point to modern causal econometrics, and the [Library of Economics and Liberty's econometrics entry](https://www.econlib.org/library/Enc/Econometrics.html) surveys the field's core techniques."
+  },
+  {
+   "id": "04.04.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Integration of psychological insights into economic analysis, revealing how cognitive biases, heuristics, and social preferences deviate from rational-choice assumptions.",
+   "cs": "Integrování psychologických poznatků do ekonomické analýzy, odhalující odchylky od racionálních předpokladů.",
+   "brief": "Behavioral economics integrates findings from psychology into economic analysis, replacing the assumption of a fully rational, self-interested decision-maker with models that account for cognitive biases, mental shortcuts, and social preferences. Where classical theory predicts choices from a stable set of preferences and unlimited computational ability, behavioral economics documents systematic deviations — loss aversion, present bias, overconfidence — that recur across markets and cannot be explained away as noise.\n\nThe subfield emerged as a corrective to [[04.04.01]] Microeconomics' rational-choice core, testing its predictions against laboratory and field experiments rather than assuming them axiomatically, and its findings increasingly shape policy through \"nudge\" interventions that redesign choice environments instead of mandating outcomes. It shares its experimental method with [[04.01]] Psychology, from which it imports both its theoretical constructs (heuristics, biases) and its empirical toolkit (controlled experiments, survey instruments).\n\nApplications now reach [[04.04.08]] Financial Economics, where behavioral models explain asset-price anomalies that efficient-market theory struggles with, and public policy, where governments have institutionalized behavioral insight teams. The [Nobel Prize committee's account of Richard Thaler's 2017 prize](https://www.nobelprize.org/prizes/economic-sciences/2017/press-release/) surveys the field's founding contributions, and the [Behavioural Insights Team](https://www.bi.team/) documents its practical application in public policy."
+  },
+  {
+   "id": "04.04.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "International economics examines trade flows, capital movements, and economic relations between nations. It addresses comparative advantage, exchange rates, and development disparities across borders.",
+   "cs": "Mezinárodní ekonomie zkoumá obchodní toky, pohyby kapitálu a ekonomické vztahy mezi národy. Zabývá se komparativní výhodou, devizovými kurzy a rozvojovými rozdíly přes hranice.",
+   "brief": "International economics examines economic relations that cross national borders: trade in goods and services, movements of capital and labor, and the exchange rates that translate one country's prices into another's. Its foundational result is the theory of comparative advantage, which shows that countries gain from trade even when one is more efficient at producing everything, as long as each specializes in what it produces relatively best.\n\nThe field splits naturally into a trade side and a monetary side. The trade side extends [[04.04.01]] Microeconomics' analysis of markets to cross-border exchange, tariffs, and trade agreements, while the monetary side extends [[04.04.02]] Macroeconomics to exchange-rate regimes, balance-of-payments accounting, and the transmission of one country's business cycle to another's through trade and capital flows. Persistent disparities in income and development between trading partners connect the field to [[04.04.06]] Development Economics, which focuses specifically on the growth trajectories of lower-income economies.\n\nGlobal integration since the mid-twentieth century, formalized through institutions such as the WTO and the IMF, has made international economics central to debates over globalization, currency crises, and trade policy. The [WTO's overview of international trade theory](https://www.wto.org/english/res_e/booksp_e/anrep_e/world_trade_report10_e.pdf) and the [IMF's balance-of-payments manual](https://www.imf.org/external/pubs/ft/bop/2007/bopman6.htm) provide the field's standard institutional references."
+  },
+  {
+   "id": "04.04.06",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Development economics analyzes poverty reduction, structural transformation, and growth pathways in lower-income economies. It addresses capital formation, institution building, and technology adoption.",
+   "cs": "Ekonomika rozvoje analyzuje snižování chudoby, strukturální transformaci a růstové cesty v ekonomikách s nižšími příjmy. Zabývá se tvorbou kapitálu, budováním institucí a adopcí technologií.",
+   "brief": "Development economics analyzes how lower-income economies escape poverty and undergo structural transformation — the shift from subsistence agriculture toward industry and services that has historically accompanied sustained growth. It studies the mechanisms behind that shift: capital formation, the building of functioning institutions, and the adoption of technology already available elsewhere but not yet diffused locally.\n\nThe field applies [[04.04.02]] Macroeconomics' growth theory to economies where markets, property rights, and state capacity are often incomplete, and it leans heavily on [[04.04.03]] Econometrics, particularly randomized controlled trials, to evaluate which interventions — microcredit, conditional cash transfers, infrastructure investment — actually raise incomes rather than merely being plausible in theory. It connects closely to [[04.04.05]] International Economics wherever trade access, foreign investment, or capital flight shapes a country's growth path.\n\nThe randomized-evaluation movement associated with the 2019 Nobel Prize reshaped the field's empirical standards over the past two decades, shifting it from broad growth-accounting exercises toward micro-level tests of specific policy tools. The [World Bank's World Development Report series](https://www.worldbank.org/en/publication/wdr) and the [Nobel Prize committee's account of the 2019 economics prize](https://www.nobelprize.org/prizes/economic-sciences/2019/press-release/) document the field's major empirical findings and methodology."
+  },
+  {
+   "id": "04.04.07",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Environmental economics addresses the costs and benefits of resource depletion, pollution, and ecosystem services in production. It applies market mechanisms and policy tools to internalize environmental externalities.",
+   "cs": "Environmentální ekonomie se zabývá náklady a přínosy vyčerpávání zdrojů, znečištění a ekosystémových služeb v produkci. Uplatňuje tržní mechanismy a politické nástroje pro internalizaci environmentálních externalit.",
+   "brief": "Environmental economics addresses the costs and benefits of resource depletion, pollution, and ecosystem services that ordinary market transactions leave out of their price. Its central concept is the externality: a cost or benefit that falls on a third party rather than the buyer and seller who generate it, such as the harm carbon emissions impose on the climate regardless of who purchased the fuel.\n\nThe field's central task is internalizing these externalities — making producers and consumers bear the full social cost of their choices — through instruments such as carbon taxes, cap-and-trade permit markets, and Pigouvian taxation more broadly. It applies [[04.04.01]] Microeconomics' price-theoretic tools to non-market goods like clean air or biodiversity, developing valuation methods (contingent valuation, hedonic pricing) for resources that have no observable market price at all.\n\nEnvironmental economics overlaps with [[04.04.06]] Development Economics wherever resource depletion and poverty interact, and with public policy wherever climate change, fisheries collapse, or deforestation require a collective-action solution that markets alone cannot supply. The [OECD's environmental economics resources](https://www.oecd.org/en/topics/environmental-economics.html) and the [IPCC's economic assessment of climate mitigation](https://www.ipcc.ch/report/ar6/wg3/) document current policy-relevant research."
+  },
+  {
+   "id": "04.04.08",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Financial economics studies markets for credit, equity, and derivatives, and the pricing of assets under uncertainty. It examines portfolio theory, market efficiency, and valuation models.",
+   "cs": "Finanční ekonomie studuje trhy pro úvěr, kmenové kapitály a deriváty a oceňování aktiv za nejistoty. Zkoumá teorii portfolia, účinnost trhu a oceňovací modely.",
+   "brief": "Financial economics studies markets for credit, equity, and derivatives, and how assets are priced under uncertainty about their future payoffs. Its core question is valuation: what a claim on an uncertain future cash flow is worth today, given the risk attached to it and the returns available on alternative investments.\n\nThe field's foundational results — portfolio theory, the efficient-markets hypothesis, and option-pricing models — extend [[04.04.01]] Microeconomics' treatment of choice under uncertainty to the specific problem of allocating wealth across risky assets over time. [[04.04.04]] Behavioral Economics has increasingly challenged the efficiency assumption, documenting price anomalies and bubbles that pure rational-expectations models struggle to explain.\n\nFinancial economics underpins the regulation of banks, exchanges, and pension systems, and its models are the working tools of the asset-management and derivatives industries. The [Nobel Prize committee's account of the 2013 economics prize](https://www.nobelprize.org/prizes/economic-sciences/2013/press-release/), shared for work on asset-price efficiency and behavior, and the [CFA Institute's investment-analysis curriculum](https://www.cfainstitute.org/en/programs/cfa/curriculum) document the field's standard models and their practical application."
+  },
+  {
+   "id": "04.04.09",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Labor economics analyzes employment, wages, and human capital as factors of production. It examines labor markets, skill formation, and wage-productivity relationships.",
+   "cs": "Pracovní ekonomie analyzuje zaměstnanost, mzdy a lidský kapitál jako výrobní faktory. Zkoumá pracovní trhy, tvorbu dovedností a vztahy mezi mzdami a produktivitou.",
+   "brief": "Labor economics analyzes employment, wages, and human capital — the skills and education embodied in workers — as a factor of production traded in its own market. Its central question is how wages are set: through the interaction of labor supply, workers deciding how much to work and in what occupation, and labor demand, firms deciding how many workers to hire at a given wage and productivity level.\n\nThe field applies [[04.04.01]] Microeconomics' supply-and-demand framework to the specific case of a market where the good being traded is a person's time and skill, complicated by factors — unions, minimum wages, search frictions, discrimination — that keep real labor markets from clearing as cleanly as a textbook commodity market. It connects to [[04.04.02]] Macroeconomics through [[04.04.02.03]] Unemployment, the aggregate measure that labor economics explains at the level of individual worker and firm behavior.\n\nHuman capital theory, the field's foundational contribution, treats education and training as an investment that raises future earnings, reframing schooling choices in the same cost-benefit terms as a firm's investment decision. The [Bureau of Labor Statistics](https://www.bls.gov/) provides the standard empirical data used throughout the field, and the [Nobel Prize committee's account of the 2021 economics prize](https://www.nobelprize.org/prizes/economic-sciences/2021/press-release/) documents foundational natural-experiment work on wages and employment."
+  },
+  {
+   "id": "04.04.10",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Economic history traces the evolution of production systems, exchange mechanisms, and institutions across time. It integrates economic analysis with historical evidence to understand material transformations.",
+   "cs": "Hospodářské dějiny sledují vývoj produkčních systémů, mechanismů výměny a institucí v čase. Integrují ekonomickou analýzu s historickými důkazy k pochopení materiálních transformací.",
+   "brief": "Economic history traces how production systems, exchange mechanisms, and economic institutions have evolved across societies and eras, treating markets, money, and property regimes as historical artifacts rather than timeless constants. It draws on quantitative techniques from [[04.04.01]] (Microeconomics) and [[04.04.08]] (Financial Economics) to reinterpret archival and statistical evidence — price series, trade ledgers, census records — as evidence for long-run economic change.\n\nEconomic history occupies the border between [[04.04]] (Economics) and [[05.01]] (History): it borrows economics' formal tools while relying on history's source criticism and periodization. Episodes such as the [[05.01.03.04]] (Industrial Revolution) or medieval trade networks appear as case studies where the two disciplines converge, distinguishing economic history from the ahistorical, model-first approach of most other economics subfields.\n\nFurther reading: the [EH.Net Encyclopedia of Economic History](https://eh.net/encyclopedia/) collects peer-reviewed overviews of major episodes and debates, and the [Cliometric Society](https://cliometrics.org/) documents the quantitative (\"cliometric\") methodology that reshaped the field after the 1960s."
+  }
+ ],
+ "relations": [
+  {
+   "from": "04.04.01",
+   "to": "04.04.01.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.01",
+   "to": "04.04.01.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.01",
+   "to": "04.04.01.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.01",
+   "to": "04.04.01.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.01",
+   "to": "04.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.02",
+   "to": "04.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.02",
+   "to": "04.04.02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.02",
+   "to": "04.04.02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.02",
+   "to": "04.04.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.02",
+   "to": "04.04.02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.03",
+   "to": "04.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.03",
+   "to": "04.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.03",
+   "to": "04.04.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.03",
+   "to": "04.04.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.04",
+   "to": "04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.04",
+   "to": "04.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.04",
+   "to": "04.04.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.05",
+   "to": "04.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.05",
+   "to": "04.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.05",
+   "to": "04.04.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.06",
+   "to": "04.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.06",
+   "to": "04.04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.06",
+   "to": "04.04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.07",
+   "to": "04.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.07",
+   "to": "04.04.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.08",
+   "to": "04.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.08",
+   "to": "04.04.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.09",
+   "to": "04.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.09",
+   "to": "04.04.02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.09",
+   "to": "04.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.10",
+   "to": "04.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.10",
+   "to": "04.04.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.10",
+   "to": "04.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.10",
+   "to": "05.01.03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04.10",
+   "to": "05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04",
+   "to": "04.04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04",
+   "to": "04.04.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04",
+   "to": "04.04.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04",
+   "to": "04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.04",
+   "to": "04.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

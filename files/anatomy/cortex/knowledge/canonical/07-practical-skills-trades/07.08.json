@@ -1,0 +1,279 @@
+{
+ "domain": "07.08",
+ "nodes": [
+  {
+   "id": "07.08",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Cooking transforms raw ingredients into prepared food through heat and technique, encompassing method mastery, flavor development, and food safety. A practical art spanning multiple specialized domains rather than a single unified skill.",
+   "cs": "Vaření transformuje suroviny na připravené jídlo prostřednictvím tepla a techniky, zahrnuje zvládnutí metod, vývoj chuti a bezpečnost potravin. Praktické umění, které se rozprostírá přes více specializovaných domén spíše než jednu sjednocenou dovednost.",
+   "brief": "Cooking transforms raw ingredients into prepared food through the application of heat and technique, spanning everything from searing a single egg to running a restaurant line. Basic techniques — knife work, heat control, seasoning — form the vocabulary every other branch of cooking builds on, while [[07.08.02]] baking specializes that vocabulary around the precise chemistry of flour, leavening, and oven heat, where technique tolerates far less improvisation than stovetop work. Flavor and method are only half the discipline: nutrition and special diets address what cooked food does inside the body, and [[07.08.03]] food preservation covers kitchen-scale techniques — jams, pickles, freezing — for extending a dish or ingredient beyond its immediate use.\n\nAs part of [[07]] Practical Skills & Trades, cooking's raw material chain starts upstream in [[07.07]] Gardening, whose harvest supplies the vegetables and herbs a kitchen works with, and it shares conceptual ground with — but is distinct in scale and purpose from — [[08.03]] Food Preservation & Storage, whose survival-oriented canning, drying, and fermentation build long-term food security rather than finish a recipe. A household cook moves fluidly between these registers: preserving a glut of tomatoes is culinary technique and emergency preparedness at once.\n\nFood safety runs underneath every technique in this branch — proper internal temperatures, safe holding times, and cross-contamination control prevent the illness that untrained cooking most commonly causes. The [ServSafe food safety program](https://www.servsafe.com/) documents the standards most professional kitchens certify against, and [Harold McGee's *On Food and Cooking*](https://en.wikipedia.org/wiki/On_Food_and_Cooking) remains the reference text on the chemistry behind cooking technique."
+  },
+  {
+   "id": "07.08.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Basic cooking techniques—sautéing, boiling, roasting, braising, grilling, simmering—form the foundation for all savory preparation and distinguish everyday cuisine from baking, preservation, and specialized dietary approaches.",
+   "cs": "Základní techniky vaření—opékání, vařování, pečení, dušení, grilování, mírné vaření—tvoří základ veškerého slunečného vaření a odlišují každodenní kuchyni od pečení, konzervace a specializovaných dietních přístupů.",
+   "brief": "Basic cooking techniques — sautéing, boiling, roasting, braising, grilling, simmering — are the foundational methods of applying heat to food that underlie all savory preparation, forming the shared vocabulary the rest of [[07.08]] Cooking builds on. They are distinguished from each other chiefly by the heat-transfer medium (dry oven heat, hot fat, simmering liquid) and by how much moisture the method retains or drives off in the food.\n\nThese methods differ in kind from [[07.08.02]] Baking, whose reliance on oven chemistry — precise ratios, leavening, controlled rise — tolerates far less improvisation than a sauté pan or stockpot; a cook can adjust seasoning and timing on a braise by taste in a way a baker cannot mid-bake for a cake. Basic technique mastery also makes [[07.08.03]] food preservation and dietary adaptation under [[07.08.04]] nutrition practical day to day, since a cook who commands heat control can adjust any recipe to a preservation method or a dietary constraint without relearning the underlying method.\n\nAs the entry point of [[07.08]] Cooking within [[07]] Practical Skills & Trades, basic technique is typically the first competency taught in professional kitchens and home-cooking curricula alike, before specialization into any one branch. [Serious Eats' technique guides](https://www.seriouseats.com/cooking-techniques-5117568) document method-level detail with the reasoning behind each step, and the [Wikipedia article on cooking](https://en.wikipedia.org/wiki/Cooking) surveys the major methods and their history."
+  },
+  {
+   "id": "07.08.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Baking uses controlled heat in an oven to cook breads, cakes, pastries, and other items where chemistry and precise timing create structure and texture. Requires exact measurements and regulated conditions, fundamentally different from stovetop and grill methods.",
+   "cs": "Pečení používá kontrolované teplo v troubě k vaření chleba, koláčů, zákusků a dalších položek, kde chemie a přesné časování vytváří strukturu a texturu. Vyžaduje přesné měření a regulované podmínky, zásadně odlišné od metod na sporáku a grilování.",
+   "brief": "Baking is the technique of cooking food with controlled, enveloping heat in an oven — breads, cakes, pastries, and similar items — where chemistry and precise timing create structure and texture rather than technique alone. It is distinguished from the stovetop and grill methods of [[07.08.01]] basic techniques by how little room it leaves for improvisation: leavening reactions, gluten development, and Maillard browning all depend on measured ratios and consistent oven temperature, so a substitution that a sauté tolerates can collapse a cake.\n\nThis precision-first character connects baking to [[07.08.04]] nutrition, since ingredient substitution for dietary reasons — reducing sugar, replacing gluten, cutting fat — interacts with the same chemistry that gives baked goods their structure, making baking one of the harder domains to adapt for [[07.08.05]] special diets without retesting the recipe. Where basic technique rewards taste-as-you-go adjustment, baking rewards measurement: scales, thermometers, and timers are standard tools rather than optional aids.\n\nWithin [[07.08]] Cooking and the wider [[07]] Practical Skills & Trades branch, baking is often taught and certified as a distinct specialization — pastry and baking programs exist separately from general culinary training — reflecting how much of the skill is chemistry-adjacent rather than purely manual technique. [King Arthur Baking's baking guides](https://www.kingarthurbaking.com/learn) document ratios and troubleshooting in detail, and [Harold McGee's *On Food and Cooking*](https://en.wikipedia.org/wiki/On_Food_and_Cooking) remains the standard reference on the chemistry behind it."
+  },
+  {
+   "id": "07.08.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Food preservation extends shelf life through canning, freezing, drying, salting, fermenting, or curing, preventing spoilage and enabling storage across seasons. Transforms fresh food into shelf-stable products rather than cooking for immediate consumption.",
+   "cs": "Konzervace potravin prodlužuje dobu použitelnosti konzervováním, mražením, sušením, solením, kvasením nebo uzením, zabraňuje zkažení a umožňuje skladování přes sezony. Transformuje čerstvé jídlo na stabilní produkty spíše než vaření k okamžité spotřebě.",
+   "brief": "Food preservation, within [[07.08]] Cooking, covers kitchen-scale techniques — canning, freezing, drying, salting, fermenting, curing — for extending a dish or ingredient's usable life beyond the meal it was cooked for. It transforms fresh food into a shelf-stable or freezer-stable product rather than preparing food for immediate consumption, which sets it apart from [[07.08.01]] basic techniques and [[07.08.02]] baking, both oriented toward a meal eaten soon after cooking.\n\nThe kitchen-scale practice here is closely related to, but distinct in scale and purpose from, [[08.03]] Food Preservation & Storage: a home cook turning a glut of garden tomatoes into a batch of sauce or a jar of pickles is applying the same core techniques — acidification, sugar or salt concentration, heat processing, dehydration — that survival-oriented food storage scales up for long-term security. The upstream supply for kitchen preservation often traces back to [[07.07]] Gardening, whose seasonal harvest regularly exceeds what a household can eat fresh.\n\nBecause improperly preserved food is a genuine safety risk — botulism from under-processed canned goods is the best-documented failure mode — food preservation carries stricter procedural discipline than most other cooking techniques within [[07]] Practical Skills & Trades. The [USDA Complete Guide to Home Canning](https://nchfp.uga.edu/) is the authoritative US reference for safe processing times and acidity levels, and the [Wikipedia article on food preservation](https://en.wikipedia.org/wiki/Food_preservation) surveys methods across cultures and eras."
+  },
+  {
+   "id": "07.08.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Nutrition science examines how foods and their components affect body function, health, and disease prevention, informing ingredient selection and meal composition. Provides the biological rationale behind cooking choices, distinct from technique execution and special-diet implementation.",
+   "cs": "Věda o výživě zkoumá, jak potraviny a jejich složky ovlivňují funkci těla, zdraví a prevenci nemocí, informují výběr ingrediencí a složení jídel. Poskytuje biologické zdůvodnění voleb při vaření, odlišné od vykonání techniky a realizace speciální dietu.",
+   "brief": "Nutrition, within [[07.08]] Cooking, is the science of how foods and their components — macronutrients, vitamins, minerals, fiber — affect body function, health, and disease prevention, providing the biological rationale behind ingredient selection and meal composition. It is distinct from [[07.08.01]] basic techniques and [[07.08.02]] baking, which govern how food is executed, by instead governing why particular ingredients and proportions are chosen in the first place.\n\nNutrition knowledge is what makes [[07.08.05]] special diets practical rather than arbitrary: adapting a recipe for a medical or ethical dietary constraint requires understanding which nutrients a substitution gains or loses, not just which ingredient is swapped for which. A cook who understands nutrition can adjust a dish's macronutrient balance or micronutrient content deliberately, rather than only its flavor and texture, closing the loop between what a kitchen produces and what a body needs.\n\nAs part of [[07.08]] Cooking within [[07]] Practical Skills & Trades, nutrition sits at the boundary between culinary craft and biological science, and professional culinary training increasingly treats it as a core competency rather than a separate specialty. The [USDA Dietary Guidelines for Americans](https://www.dietaryguidelines.gov/) document the evidence-based framework most nutrition guidance in the US builds on, and the [Wikipedia article on nutrition](https://en.wikipedia.org/wiki/Nutrition) surveys the underlying biology."
+  },
+  {
+   "id": "07.08.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Special diets accommodate allergies, intolerances, ethical commitments, medical conditions, or cultural preferences by modifying ingredients and preparation methods. Applies cooking techniques and nutritional knowledge to specific dietary goals or constraints.",
+   "cs": "Speciální diety vycházejí z alergií, intolerancí, etických závazků, lékařských stavů nebo kulturních preferencí úpravou ingrediencí a metod přípravy. Aplikují techniky vaření a znalosti o výživě na specifické dietní cíle nebo omezení.",
+   "brief": "Special diets modify cooking's raw materials and techniques to meet a constraint external to taste alone — an allergy, an intolerance, a medical prescription, a religious rule, or an ethical commitment such as veganism. Where [[07.08.01]] basic techniques teaches how to control heat and seasoning and [[07.08.04]] nutrition explains what a diet does inside the body, special diets applies both to a specific goal: substituting xanthan gum for gluten in a bread dough, replacing dairy fat with coconut oil in a sauce, or restructuring a meal plan around a diabetic's glycemic targets.\n\nThe practice sits alongside [[07.08.02]] baking and [[07.08.03]] food preservation as one of the specialized branches [[07.08]] Cooking divides into once basic technique is assumed — a gluten-free baker, for instance, must rebuild baking's flour chemistry from scratch rather than simply omitting an ingredient. Special diets also reaches outside cooking into [[08.01.05]] medication knowledge, since drug-nutrient interactions and prescribed elimination diets (low-sodium, low-potassium) originate in medical rather than culinary decisions.\n\nReliable guidance distinguishes allergy from intolerance and preference from prescription, since the margin for error differs sharply: a celiac reacting to trace gluten faces gut damage, not discomfort. The [Academy of Nutrition and Dietetics](https://www.eatright.org/health/wellness/diet-trends) and the [Celiac Disease Foundation](https://celiac.org/gluten-free-living/) document evidence-based approaches to the most common medical and lifestyle diets."
+  }
+ ],
+ "relations": [
+  {
+   "from": "07.08.01",
+   "to": "07.08.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.01",
+   "to": "07.08.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.01",
+   "to": "07.08.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.01",
+   "to": "07.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.01",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.02",
+   "to": "07.08.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.02",
+   "to": "07.08.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.02",
+   "to": "07.08.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.02",
+   "to": "07.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.02",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.03",
+   "to": "07.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.03",
+   "to": "07.08.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.03",
+   "to": "07.08.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.03",
+   "to": "07.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.03",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.03",
+   "to": "08.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.04",
+   "to": "07.08.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.04",
+   "to": "07.08.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.04",
+   "to": "07.08.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.04",
+   "to": "07.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.04",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.05",
+   "to": "07.08.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.05",
+   "to": "07.08.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.05",
+   "to": "07.08.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.05",
+   "to": "07.08.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.05",
+   "to": "07.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08.05",
+   "to": "08.01.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08",
+   "to": "07.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08",
+   "to": "07.08.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08",
+   "to": "07.08.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.08",
+   "to": "08.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

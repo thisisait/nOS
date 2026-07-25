@@ -1,0 +1,230 @@
+{
+ "domain": "08.07",
+ "nodes": [
+  {
+   "id": "08.07",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Emergency communication encompasses technologies and protocols for establishing contact during crises when normal infrastructure is damaged or overwhelmed. It spans radio systems, visual codes, and decentralized networks enabling coordinated response.",
+   "cs": "Nouzová komunikace zahrnuje technologie a protokoly pro navázání kontaktu během krizí, kdy normální infrastruktura selhává. Pokrývá radiové systémy, vizuální kódy a decentralizované sítě umožňující koordinovanou reakci.",
+   "brief": "Emergency communication encompasses technologies and protocols for establishing contact during crises when normal infrastructure is damaged or overwhelmed. It spans radio systems, visual codes, and decentralized networks enabling coordinated response: [[08.07.01]] Radio Communication covers two-way and shortwave transmission when cellular networks are down, [[08.07.03]] Morse Code provides a signal encoding that survives when voice channels are too noisy or weak to carry speech, and further subfields cover visual signaling, standardized emergency codes, and device-to-device mesh networks that route messages without a central tower.\n\nThe branch pairs closely with [[08.06]] Navigation within [[08]] Survival & Emergency Preparedness: a distress signal is only useful once a position can be attached to it, and rescuers coordinate their own approach using the same radio and code protocols this branch documents. It also borders [[03]] Applied Sciences & Technology, since radio propagation and mesh-network protocols draw on the same electronics and networking principles taught there, applied here under the constraint of no fixed infrastructure.\n\nFor amateur radio licensing and emergency-net protocols, see the [American Radio Relay League](https://www.arrl.org/), and for standardized distress signal procedure, the [International Maritime Organization](https://www.imo.org/)."
+  },
+  {
+   "id": "08.07.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Radio communication uses electromagnetic waves to transmit voice or data across distance. In emergency contexts, it provides reliable long-range contact independent of wired infrastructure.",
+   "cs": "Radiová komunikace používá elektromagnetické vlny k přenosu hlasu nebo dat na vzdálenost. V nouzových situacích poskytuje spolehlivý dlouhodosahový kontakt nezávislý na kabelové infrastruktuře.",
+   "brief": "Radio Communication uses electromagnetic waves to carry voice or data across distance, giving an emergency responder or stranded party contact that does not depend on cell towers, cables, or any fixed infrastructure at all. It covers the practical range from handheld VHF/UHF radios for line-of-sight contact to shortwave (HF) sets that can bounce a signal off the ionosphere and reach the far side of a continent.\n\nWithin [[08.07]] Emergency Communication, radio is the carrier that the branch's other subfields ride on or substitute for: [[08.07.03]] Morse Code is a signal encoding that fits inside a radio channel too weak or noisy for clear voice, [[08.07.04]] Emergency Codes are the standardized phrases (MAYDAY, PAN-PAN) spoken over that same channel so any listening station recognizes the urgency instantly, and [[08.07.05]] Mesh Networks extend the same electromagnetic-wave principle into a decentralized, tower-free relay system built from many small radios instead of one strong one. When radio silence or equipment failure rules out transmission entirely, [[08.07.02]] Visual Signaling is the fallback that needs no electronics at all.\n\nFor amateur radio licensing, emergency-net procedure, and equipment guidance, see the [American Radio Relay League](https://www.arrl.org/), and for the international regulatory framework governing emergency radio use, the [International Telecommunication Union](https://www.itu.int/en/ITU-R/Pages/default.aspx)."
+  },
+  {
+   "id": "08.07.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Visual signaling communicates through light, color, or gesture—mirrors reflecting sunlight, smoke signals, flag codes, or hand gestures. It requires no electronic equipment and works across line of sight.",
+   "cs": "Vizuální signalizace komunikuje světlem, barvou nebo gestem—zrcadly odrážejícími sluneční světlo, kouřovými signály, vlaječkovými kódy nebo ručními gesty. Nevyžaduje elektronické vybavení a funguje do přímého dohledu.",
+   "brief": "Visual Signaling communicates through light, color, or gesture rather than a transmitted wave: a mirror flashing reflected sunlight, a column of smoke, a sequence of colored flags, or a deliberate hand gesture. Its defining constraint is line of sight — it carries no farther than the eye can resolve it — and its defining advantage is that it requires no electronic equipment, no battery, and no license to use.\n\nThat trade-off places it opposite [[08.07.01]] Radio Communication within [[08.07]] Emergency Communication: radio reaches far beyond sight but depends on working equipment and, for shortwave use, a license, while visual signaling works the moment equipment fails or batteries die, at the cost of range. It shares its non-electronic character with [[08.07.04]] Emergency Codes, since a signal fire or a flag pattern is only useful if both sender and receiver recognize the same standardized code — the international distress panel signals and the maritime flag alphabet are visual-signaling implementations of those codes. [[08.07.03]] Morse Code is itself frequently sent visually, blinked by flashlight or mirror, showing how the branch's subfields overlap in practice rather than staying in separate lanes.\n\nFor the internationally recognized ground-to-air visual signal codes, see the [ICAO ground-air visual signal code](https://www.icao.int/safety/), and for maritime flag signaling procedure, the [International Code of Signals maintained by the IMO](https://www.imo.org/)."
+  },
+  {
+   "id": "08.07.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Morse code encodes messages as sequences of dots and dashes transmitted via sound, light, or radio. It enabled long-distance communication before voice transmission and remains useful in low-bandwidth emergency scenarios.",
+   "cs": "Morseův kód zakóduje zprávy jako posloupnosti teček a čárek přenášené zvukem, světlem nebo rádiem. Umožňoval dlouhodosahovou komunikaci před hlasovým přenosem a zůstává užitečný v nouzových situacích s nízkou šířkou pásma.",
+   "brief": "Morse Code encodes a message as sequences of dots and dashes — short and long pulses — that can be carried by sound, light, or radio with nothing more than an on/off switch. It predates voice transmission by decades and outlasts it in one specific niche: a channel too weak, too noisy, or too narrow-band for intelligible speech can still carry a clean Morse pulse train.\n\nInside [[08.07]] Emergency Communication, Morse is a cross-cutting encoding rather than a channel of its own: sent over [[08.07.01]] Radio Communication it punches through interference that would garble voice, and sent as light pulses it becomes a form of [[08.07.02]] Visual Signaling, a flashlight or signal lamp blinking the same dot-dash pattern a radio operator would key. It sits alongside [[08.07.04]] Emergency Codes as a second layer of compression — SOS itself (···---···) is both a Morse sequence and a recognized emergency code, the two subfields meeting at that single symbol.\n\nFor the standard International Morse Code character set and timing rules, see the [ITU-R M.1677 recommendation](https://www.itu.int/rec/R-REC-M.1677/en), and for practical operator training resources, the [American Radio Relay League](https://www.arrl.org/)."
+  },
+  {
+   "id": "08.07.04",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Emergency codes are standardized signal sequences—SOS, MAYDAY, PAN, securite—recognized internationally by rescue and maritime authorities. They compress urgent information into brief, unmistakable patterns.",
+   "cs": "Nouzové kódy jsou standardizované signální posloupnosti—SOS, MAYDAY, PAN, sécurité—uznávané mezinárodně záchranným a námořním sborem. Komprimují naléhavé informace do stručných, nepomylných vzorů.",
+   "brief": "Emergency Codes are standardized signal sequences — SOS, MAYDAY, PAN-PAN, SÉCURITÉ — recognized internationally by rescue, aviation, and maritime authorities regardless of the sender's language. Their value is compression and unambiguity: a rescuer who hears or reads one of these codes knows instantly what class of urgency it signals, without needing to parse a full sentence.\n\nThese codes are carrier-agnostic and travel across every other subfield of [[08.07]] Emergency Communication: spoken or keyed over [[08.07.01]] Radio Communication, tapped out in [[08.07.03]] Morse Code (SOS's ···---··· is the best-known example), or displayed through [[08.07.02]] Visual Signaling as a distress panel or flare pattern. What makes a sequence an emergency code rather than an ordinary message is exactly that international recognition — the same three letters or flash pattern must mean the same thing to a rescuer anywhere, which is why the codes are fixed by treaty rather than left to local convention.\n\nFor the formal definitions and usage procedure of MAYDAY, PAN-PAN, and SÉCURITÉ, see the [International Maritime Organization's Global Maritime Distress and Safety System](https://www.imo.org/en/OurWork/Safety/Pages/GMDSS.aspx), and for the aviation equivalents, [ICAO Annex 10](https://www.icao.int/safety/)."
+  },
+  {
+   "id": "08.07.05",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Mesh networks distribute communication across multiple nodes where each device relays messages for others, eliminating dependence on central infrastructure. They function even when individual nodes fail or go offline.",
+   "cs": "Mesh sítě distribuují komunikaci across více uzlů, kde každé zařízení přenáší zprávy ostatních a eliminuje závislost na centrální infrastruktuře. Fungují i když jednotlivé uzly selžou nebo přejdou do režimu offline.",
+   "brief": "Mesh Networks distribute communication across many devices instead of one: each node relays messages on behalf of its neighbors, so the network as a whole keeps functioning even when individual nodes fail, are destroyed, or simply go offline. There is no central tower or base station to knock out — the infrastructure is the collection of end-user devices itself.\n\nThis makes mesh the most infrastructure-independent subfield of [[08.07]] Emergency Communication, one step beyond [[08.07.01]] Radio Communication: traditional radio still typically relies on a single powerful transmitter or repeater, while a mesh network is built from many low-power radios cooperating, so it degrades gracefully instead of failing outright when part of it is knocked out. In disaster response the two are often combined — a mesh network carrying routine traffic locally while a long-range radio link bridges the mesh to the outside world, with [[08.07.04]] Emergency Codes still used within either channel to mark priority traffic during the handoff.\n\nFor open mesh-networking protocols used in disaster response, see the [goTenna and Meshtastic project documentation](https://meshtastic.org/), and for humanitarian deployment case studies, the [International Federation of Red Cross and Red Crescent Societies](https://www.ifrc.org/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "08.07.01",
+   "to": "08.07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.01",
+   "to": "08.07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.01",
+   "to": "08.07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.01",
+   "to": "08.07.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.01",
+   "to": "08.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.02",
+   "to": "08.07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.02",
+   "to": "08.07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.02",
+   "to": "08.07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.02",
+   "to": "08.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.03",
+   "to": "08.07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.03",
+   "to": "08.07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.03",
+   "to": "08.07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.03",
+   "to": "08.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.04",
+   "to": "08.07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.04",
+   "to": "08.07.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.04",
+   "to": "08.07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.04",
+   "to": "08.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.05",
+   "to": "08.07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.05",
+   "to": "08.07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07.05",
+   "to": "08.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07",
+   "to": "08.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07",
+   "to": "08.07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07",
+   "to": "08.07.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.07",
+   "to": "08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

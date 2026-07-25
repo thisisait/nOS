@@ -13,6 +13,12 @@
 		"test": "vitest run",
 		"test:e2e": "playwright test",
 		"conformance": "node knowledge/onto1-conformance.mjs",
+		"spine:check": "node knowledge/spine-render.mjs --check",
+		"store:init": "tsx server/cortex-store-cli.ts init",
+		"store:materialise": "tsx server/cortex-store-cli.ts materialise",
+		"store:status": "tsx server/cortex-store-cli.ts status",
+		"ann:corpus": "node scripts/ann-corpus.mjs",
+		"ann:recall": "node scripts/ann-recall.mjs",
 		"start": "node dist-server/index.js"
 	},
 	"dependencies": {

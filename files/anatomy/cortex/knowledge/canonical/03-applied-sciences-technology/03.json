@@ -1,0 +1,113 @@
+{
+ "domain": "03",
+ "nodes": [
+  {
+   "id": "03",
+   "level": 0,
+   "kind": "seed-override",
+   "en": "The systematic application of scientific knowledge to practical human ends — building, healing, feeding, powering, connecting, and making. Spans engineering, medicine, agriculture, architecture, manufacturing, transportation, energy, telecommunications, biotechnology, and nanotechnology; distinguished from the natural sciences by its criterion of usefulness rather than truth.",
+   "cs": "Soustavné uplatňování vědeckých poznatků k praktickým lidským cílům — stavět, léčit, živit, pohánět, spojovat a vyrábět. Zahrnuje inženýrství, lékařství, zemědělství, architekturu, výrobu, dopravu, energetiku, telekomunikace, biotechnologie a nanotechnologie; od přírodních věd se liší kritériem užitečnosti, nikoli pravdivosti.",
+   "brief": "Applied sciences and technology turn scientific understanding into working systems that serve human needs — shelter, health, food, movement, power, and communication. Where the natural sciences ask whether a claim is true, the applied sciences ask whether a design works: their results are judged by reliability, efficiency, safety, and cost under real constraints, and their history is the history of civilization's expanding material capability.\n\n[[03.01]] Engineering is the domain's methodological core, the disciplined design of structures, machines, and systems; [[03.02]] Medicine applies biological science to preventing and treating disease; [[03.03]] Agriculture applies it to producing food and fiber; [[03.04]] Architecture unites engineering with design in the built environment; [[03.05]] Manufacturing converts materials into finished goods at scale; [[03.06]] Transportation and [[03.08]] Telecommunications move people, goods, and information; [[03.07]] Energy captures, converts, and distributes power; and [[03.09]] Biotechnology and [[03.10]] Nanotechnology engineer living systems and matter at the molecular scale.\n\nThe domain draws its principles from the [[01]] Natural Sciences and its computational methods from the [[02]] Formal Sciences, while [[07]] Practical Skills & Trades carry out its designs in the field and [[12]] Post-Disaster Rebuilding distills its essentials into a bootstrap kit for reconstruction. See [Encyclopaedia Britannica: technology](https://www.britannica.com/technology/technology)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "03",
+   "to": "01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03",
+   "to": "02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03",
+   "to": "03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03",
+   "to": "03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03",
+   "to": "03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03",
+   "to": "03.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03",
+   "to": "03.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03",
+   "to": "03.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03",
+   "to": "03.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03",
+   "to": "03.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03",
+   "to": "03.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03",
+   "to": "03.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03",
+   "to": "07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "03",
+   "to": "12",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

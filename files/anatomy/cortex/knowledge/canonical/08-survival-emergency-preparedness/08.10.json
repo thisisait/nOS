@@ -1,0 +1,50 @@
+{
+ "domain": "08.10",
+ "nodes": [
+  {
+   "id": "08.10",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Psychological resilience is the mental and emotional capacity to maintain function and purpose despite prolonged stress, loss, or trauma. It develops through preparation, community connection, and practiced coping strategies.",
+   "cs": "Psychologická odolnost je mentální a emoční schopnost udržovat funkci a účel navzdory dlouhodobému stresu, ztrátě nebo traumatu. Vyvíjí se prostřednictvím přípravy, komunální spojení a procvičovaných strategií zvládání.",
+   "brief": "Psychological resilience is the mental and emotional capacity to maintain function and purpose despite prolonged stress, loss, or trauma. It develops through preparation, community connection, and practiced coping strategies rather than innate temperament alone, which is why it belongs alongside the practical subfields of this branch rather than in a purely clinical context.\n\nWithin [[08]] Survival & Emergency Preparedness it underlies effective performance in [[08.09]] Disaster Response, where responders and survivors face sustained operations over weeks, and in [[08.08]] Defense & Security, where composure under threat determines whether de-escalation or panic drives a decision. It also connects outward to [[03.02]] Medicine within [[03]] Applied Sciences & Technology, since chronic stress and trauma response are studied clinically there, while this branch focuses on the field-applicable preparation an individual can practice in advance.\n\nFor evidence-based resilience-building frameworks, see the [American Psychological Association](https://www.apa.org/topics/resilience) resilience guidance, and for disaster-specific mental health resources, the [World Health Organization](https://www.who.int/health-topics/emergencies) emergencies program."
+  }
+ ],
+ "relations": [
+  {
+   "from": "08.10",
+   "to": "03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.10",
+   "to": "03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.10",
+   "to": "08.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.10",
+   "to": "08.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "08.10",
+   "to": "08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

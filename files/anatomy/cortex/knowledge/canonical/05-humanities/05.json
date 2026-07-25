@@ -1,0 +1,106 @@
+{
+ "domain": "05",
+ "nodes": [
+  {
+   "id": "05",
+   "level": 0,
+   "kind": "seed-override",
+   "en": "The interpretive study of human culture and meaning — the record of what people have thought, written, believed, and made of themselves. Spans history, philosophy, linguistics, literature, and the study of religion, culture, media, gender, ethnicity, and the classical world; distinguished from the social sciences by interpretation, criticism, and close reading rather than measurement.",
+   "cs": "Interpretativní studium lidské kultury a významu — záznamu toho, co lidé mysleli, čemu věřili, co psali a čím se stali. Zahrnuje historii, filozofii, lingvistiku, literaturu a studium náboženství, kultury, médií, genderu, etnicity a antického světa; od společenských věd se liší interpretací, kritikou a pozorným čtením namísto měření.",
+   "brief": "The humanities study human culture and meaning — what people have thought, believed, written, said, and valued — through interpretation, criticism, and close engagement with texts, languages, and traditions. Their aim is understanding rather than prediction: a humanistic account succeeds when it renders a work, an era, or a practice intelligible in its own terms and in ours.\n\n[[05.01]] History reconstructs and interprets the human past from its sources; [[05.02]] Philosophy examines the most general questions of knowledge, reality, and value; [[05.03]] Linguistics analyzes the structure of human language; [[05.04]] Literature studies verbal art and its traditions; [[05.05]] Religious Studies treats belief systems and their practices comparatively; [[05.07]] Classics unites language, literature, and history in the study of the ancient Mediterranean world; and [[05.06]] Cultural Studies, [[05.08]] Media Studies, [[05.09]] Gender Studies, and [[05.10]] Ethnic Studies bring critical interpretation to contemporary culture, communication, and identity.\n\nThe humanities share their subject with the [[04]] Social Sciences but differ in method — interpretation and argument rather than measurement. They analyze the works whose creation belongs to [[06]] Arts & Creative Expression and whose living transmission is the concern of [[10]] Cultural Preservation. See [Encyclopaedia Britannica: humanities](https://www.britannica.com/topic/humanities) and the [Stanford Encyclopedia of Philosophy](https://plato.stanford.edu/)."
+  }
+ ],
+ "relations": [
+  {
+   "from": "05",
+   "to": "04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05",
+   "to": "05.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05",
+   "to": "05.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05",
+   "to": "05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05",
+   "to": "05.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05",
+   "to": "05.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05",
+   "to": "05.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05",
+   "to": "05.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05",
+   "to": "05.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05",
+   "to": "05.09",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05",
+   "to": "05.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05",
+   "to": "06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "05",
+   "to": "10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

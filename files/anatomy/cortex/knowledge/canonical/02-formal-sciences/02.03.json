@@ -1,0 +1,151 @@
+{
+ "domain": "02.03",
+ "nodes": [
+  {
+   "id": "02.03",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Logic is the formal study of reasoning and inference, examining the principles of valid argumentation and the structure of deductive systems.",
+   "cs": "Logika je formální studium uvažování a závěru, které zkoumá principy platné argumentace a strukturu deduktivních systémů.",
+   "brief": "Logic is the formal study of reasoning and inference: the principles that separate a valid argument from an invalid one, and the structure of the deductive systems in which such arguments are built and checked. It abstracts away from the particular subject matter of an argument to study the pattern of inference itself — what follows from what, and why.\n\nLogic sits beside [[02.01]] and [[02.02]] within the Formal Sciences: mathematics relies on logic to certify that a proof is valid, and computer science relies on it to specify what a program does and to verify that it does it correctly, so logic supplies foundational tools to both of its neighbors rather than standing apart from them. Its own subfields divide by where the inference is studied: [[02.03.01]] formalizes logic within mathematics itself, using the same axiomatic method mathematics applies elsewhere; [[02.03.02]] studies reasoning as it bears on meaning, truth and argument in natural language and philosophy; and [[02.03.03]] studies how inference can be automated and checked mechanically, feeding directly back into computer science.\n\nBecause a proof assistant or an automated theorem prover sits exactly at the boundary between [[02.03.03]] and [[02.02]], logic is often the discipline that makes the mathematics–computer science boundary concrete. For further reading, see the [Stanford Encyclopedia of Philosophy's entry on classical logic](https://plato.stanford.edu/entries/logic-classical/) and the [Encyclopaedia Britannica entry on logic](https://www.britannica.com/topic/logic)."
+  },
+  {
+   "id": "02.03.01",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Mathematical logic applies mathematical methods to formal logical systems, including propositional logic, predicate calculus, and proof theory.",
+   "cs": "Matematická logika aplikuje matematické metody na formální logické systémy, včetně výrokové logiky, predikátového počtu a teorie důkazů.",
+   "brief": "Mathematical Logic applies mathematical methods to formal logical systems, treating propositions, proofs, and inference as objects of mathematical study in their own right. Its traditional core divides into propositional and predicate calculus, which formalize what can be expressed and validly inferred; proof theory, which studies the structure of proofs as formal objects; model theory, which studies the relationship between formal languages and the structures that satisfy them; and set theory, which supplies a foundational universe for the rest of mathematics.\n\nMathematical Logic sits beside [[02.03.02]] and [[02.03.03]] within [[02.03]]: where philosophical logic asks what reasoning and truth mean, mathematical logic formalizes reasoning using the same axiomatic method [[02.01]] applies elsewhere, and computational logic asks how that formalized reasoning can be carried out mechanically. Gödel's incompleteness theorems, proved within mathematical logic, are the classic result showing that even a fully formalized mathematical system cannot prove every true statement about itself.\n\nFor further reading, see the [Stanford Encyclopedia of Philosophy's entry on classical logic](https://plato.stanford.edu/entries/logic-classical/) and the [Wikipedia overview of mathematical logic](https://en.wikipedia.org/wiki/Mathematical_logic)."
+  },
+  {
+   "id": "02.03.02",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Philosophical logic examines the nature of logical truth, reasoning principles, and the foundations of logical systems through philosophical inquiry.",
+   "cs": "Filozofická logika zkoumá povahu logické pravdy, principy uvažování a základy logických systémů prostřednictvím filozofického zkoumání.",
+   "brief": "Philosophical Logic examines the nature of logical truth, the principles of valid reasoning, and the foundations of logical systems through philosophical inquiry rather than formal proof alone. It covers questions such as what makes an argument valid, how logical connectives like negation and implication should be understood, the study of non-classical systems (modal, intuitionistic, paraconsistent logic) that challenge classical assumptions, and the relationship between logical form and natural-language meaning.\n\nPhilosophical Logic sits beside [[02.03.01]] and [[02.03.03]] within [[02.03]]: where mathematical logic formalizes reasoning as a mathematical object and computational logic mechanizes it, philosophical logic asks the prior question of what a logical system is supposed to capture and why one formalization should be preferred over another — a question mathematical logic's proofs presuppose an answer to but do not themselves settle.\n\nFor further reading, see the [Stanford Encyclopedia of Philosophy's entry on philosophical logic](https://plato.stanford.edu/entries/logic-philosophical/) and the [Encyclopaedia Britannica entry on logic](https://www.britannica.com/topic/logic)."
+  },
+  {
+   "id": "02.03.03",
+   "level": 2,
+   "kind": "seed-override",
+   "en": "Computational logic studies formal systems and algorithms for representing and reasoning with propositions in computing. It bridges pure logical theory with practical implementation in computer architectures and programming languages.",
+   "cs": "Výpočetní logika studuje formální systémy a algoritmy pro reprezentaci a usuzování s výroky v informatice. Propojuje čistou logickou teorii s praktickou implementací v počítačových architekturách a programovacích jazycích.",
+   "brief": "Computational logic studies how formal systems of inference can be represented, automated, and checked by machine. It formalizes propositions, proofs, and inference rules as data structures and algorithms, turning the question of whether an argument is valid into a computation that a program can carry out — the basis of automated theorem proving, logic programming, and formal verification.\n\nIt sits alongside its two siblings inside [[02.03]] Logic: [[02.03.01]] Mathematical Logic supplies the axiomatic systems (first-order logic, set theory, proof theory) that computational logic implements and automates, while [[02.03.02]] Philosophical Logic studies the informal reasoning and semantic questions (validity, meaning, modality) that computational systems must first formalize before they can check them. Computational logic is also where Logic's abstract inference meets [[02.02]] Computer Science directly: SAT and SMT solvers, proof assistants, and logic-programming languages such as Prolog are computational-logic techniques put to work inside compilers, verification tools, and symbolic-AI systems.\n\nBecause a theorem prover or a type checker is simultaneously a logical system and a running program, computational logic is the discipline that keeps that duality coherent. For a working survey of the field's methods, see the [Association for Symbolic Logic](https://aslonline.org/) and the [Association for Computing Machinery](https://www.acm.org/)'s coverage of automated reasoning and formal methods."
+  }
+ ],
+ "relations": [
+  {
+   "from": "02.03.01",
+   "to": "02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.03.01",
+   "to": "02.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.03.01",
+   "to": "02.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.03.01",
+   "to": "02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.03.02",
+   "to": "02.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.03.02",
+   "to": "02.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.03.02",
+   "to": "02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.03.03",
+   "to": "02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.03.03",
+   "to": "02.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.03.03",
+   "to": "02.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.03.03",
+   "to": "02.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.03",
+   "to": "02.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.03",
+   "to": "02.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.03",
+   "to": "02.03.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.03",
+   "to": "02.03.02",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.03",
+   "to": "02.03.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

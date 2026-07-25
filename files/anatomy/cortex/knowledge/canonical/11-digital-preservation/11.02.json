@@ -1,0 +1,36 @@
+{
+ "domain": "11.02",
+ "nodes": [
+  {
+   "id": "11.02",
+   "level": 1,
+   "kind": "seed-override",
+   "en": "Techniques and algorithms for reducing data volume through mathematical transformation—balancing information density against decompression overhead. Includes lossless methods (Huffman, DEFLATE) that preserve fidelity and lossy methods (transform coding, quantization) that tolerate reconstruction error; orthogonal to encryption which protects confidentiality rather than reducing size.",
+   "cs": "Techniky a algoritmy pro snížení objemu dat matematickou transformací—vyvažující hustotu informací vůči režii dekomprese. Zahrnuje bezeztrátové metody (Huffman, DEFLATE) zachovávající věrnost a ztrátové metody (transformační kódování, kvantování) tolerující chyby rekonstrukce; ortogonální k šifrování chránícímu důvěrnost spíše než velikost.",
+   "brief": "Compression methods are techniques and algorithms for reducing data volume through mathematical transformation, trading information density against decompression overhead. Lossless methods such as Huffman coding and DEFLATE preserve exact fidelity and suit archival masters, while lossy methods such as transform coding and quantization tolerate reconstruction error and suit access copies where storage cost matters more than exactness.\n\nThe category is orthogonal to [[11.03]] Encryption & Security, which protects confidentiality rather than reducing size — the two are commonly layered together but solve unrelated problems — and it operates on data already committed to a structure defined by [[11.01]] File Formats, many of which (ZIP, JPEG, MP4) embed a compression scheme as part of the format itself. Choosing a lossless method for a preservation master versus a lossy one for a distribution copy is a decision made under [[11.04]] Backup Strategies as much as under this branch, since a corrupted lossy master cannot be reconstructed the way a lossless one sometimes can.\n\nThe [DEFLATE specification (RFC 1951)](https://www.rfc-editor.org/rfc/rfc1951) documents the algorithm underlying ZIP and gzip, and the [Library of Congress Recommended Formats Statement](https://www.loc.gov/preservation/resources/rfs/) sets institutional guidance on which compressed formats are safe for long-term archival use."
+  }
+ ],
+ "relations": [
+  {
+   "from": "11.02",
+   "to": "11.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.02",
+   "to": "11.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "11.02",
+   "to": "11.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}
