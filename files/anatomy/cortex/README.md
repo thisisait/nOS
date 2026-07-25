@@ -1,8 +1,9 @@
 # files/anatomy/cortex/ — the Cortex organ (vendored port)
 
-**Status:** P-4 build-sequence steps 1–4 and 6 landed. The store is wired and
-materialises itself from git; the ANN index is at its measured tuning. Daemon NOT
-stood up (step 7), no Ansible role yet (step 9), nothing deployed.
+**Status:** P-4 build-sequence steps 1–6 landed. The store is wired and
+materialises itself from git, the ANN index is at its measured tuning, and the
+onto1 digest gate is **green and pinned**. Daemon NOT stood up (step 7), no
+Ansible role yet (step 9), nothing deployed.
 
 Cortex is the nOS reasoning organ — the fourth brain beside Bone (signals), Wing
 (observes) and Pulse (keeps time). It is a **verbatim port** of KEAP v1.27.0's
@@ -59,7 +60,7 @@ Therefore:
 | `docs/specs/*.md` | KEAP `docs/specs/…` | verbatim — the normative specs the modules cite by § |
 
 Locally authored (the only non-ported files): `server/cortex-{config,ann,store,store-cli}.ts`,
-`server/cortex-store.test.ts`, `scripts/ann-corpus.mjs`, `package.json`,
+`server/cortex-store.test.ts`, `server/onto1-digest.test.ts`, `scripts/ann-corpus.mjs`, `package.json`,
 `tsconfig.json`, `tsconfig.server.json`, `vitest.config.ts`, `.gitignore`,
 `VERSION`, this README. `tsconfig.server.json`'s `compilerOptions` are
 byte-identical to KEAP's — a divergence there means the two repos typecheck the
@@ -87,21 +88,49 @@ stage. Re-syncing is the usual plain `cp` of those two files.
 nvm use 22                 # Node 22 + npm 10. NOT npm 11 — it writes a lock npm 10 rejects.
 npm ci
 npm run typecheck          # strict, clean
-npm test                   # 167 tests (141 ported + 26 store/ANN)
-npm run conformance        # 6 onto1 fixtures
+npm test                   # 186 tests (141 ported + 26 store/ANN + 19 digest gate)
+                           #   — includes the 6 onto1 fixtures, run as a child process
+npm run conformance        # the same 6 fixtures, standalone
 npm run spine:check        # knowledge/spine/*.json ≡ the generated src/game/data/taxonomy.ts
 ```
 
-### The digest gate, and the two digests it is easy to confuse
+### The digest gate (build sequence step 5 — THE HARD GATE)
 
 On a **freshly initialised** store (790 spine nodes, 16 seed verbs, zero
 `taxonomy_nodes_ext` rows) `cortexOntologyVersion()` must return
 **`onto1:76d1f3ad728b382b`**.
 
-That literal is a statement about the **port** — "this TypeScript computes what
-the reference computes for the same input" — and it is only reproducible on a
-store with no delta in it. `npm run store:init` builds exactly such a store and
-`server/cortex-store.test.ts` asserts the literal against it.
+Three files assert it, from three different directions, and they are not
+redundant:
+
+| file | axis | what a failure means |
+|---|---|---|
+| `server/onto1-agreement.test.ts` | *ported, verbatim* — runtime **vs** the git reference, RELATIVE | the two implementations diverged from each other |
+| `server/onto1-digest.test.ts` | *local* — both **vs** the literal, ABSOLUTE | the port diverged from KEAP's deployed validator |
+| `server/cortex-store.test.ts` | *local* — the organ's **own boot path**, end to end | `openStore()` does not produce the graded state |
+
+The agreement test alone is not enough: it is a relative proof, and a port that
+had moved the reference implementation and the runtime the same way would still
+pass it. `onto1-digest.test.ts` supplies the literal, asserts the input state
+**first and separately** (so a state mismatch reads as "wrong state", not
+"broken port"), and proves the digest is a function of its input rather than a
+constant — a rename, a re-parent, a verb-label edit and a registered grown row
+each move it; a dropped row and an agent-planted `proposed` verb each do not.
+
+**Measured caveat, and the reason the fixtures are a separate gate:** all 790 seed
+ids are ASCII, no seed name carries a non-ASCII character, and `localeCompare`
+happens to agree with code-unit order on this exact id set. So §3.1 collation and
+§3.3's UTF-8 requirement are **not discriminated at real-tree scale** — an
+implementation that got both wrong would still reproduce this digest.
+`case-05-verbs` and `case-06-unicode-and-tabs` are what catch those. That is why
+`onto1-digest.test.ts` runs `knowledge/onto1-conformance.mjs` as a child process:
+`npm test` fails if any of the six fixtures fails, instead of the edge rules
+riding on someone remembering to type `npm run conformance`.
+
+Verified against KEAP directly, not only against the vendored copy: KEAP `dev`
+@ `c880f03` composes the **byte-identical** 806-line / 29 396-byte canonical
+string (`sha256 76d1f3ad728b382bb4c56659d92af06524ca23aab5ec6f19d90f23de3742c7de`,
+of which the digest is the first 16 hex).
 
 A **materialised** store (below) carries 1750 nodes and a different, larger
 digest. That one is a statement about the **corpus**, and it is the value that
@@ -197,10 +226,10 @@ expensive, that is the fallback, and it is still 2.3× smaller than today.
 
 ## Not done yet
 
-- **Step 5** — pin the literal digest in a test. Partly satisfied as a side effect:
-  `cortex-store.test.ts` asserts `onto1:76d1f3ad728b382b` against a fresh store
-  built by the organ's own boot path. Step 5 still owns doing it from
-  `onto1-agreement.test.ts` and wiring the conformance gate into both repos' CI.
+- **Step 11 (CI)** — the digest and conformance gates are now both inside
+  `npm test`, so the step-11 `cortex` job inherits them; what remains is the job
+  itself, the `tests/anatomy/` pytest shim, and adding the shared conformance
+  gate to the retained KEAP repo's CI (KEAP-side, a separate PR).
 - **Steps 7–8** — `server/index.ts` daemon, e2e. `package.json`'s `build` and
   `start` scripts already name `server/index.ts` / `dist-server/index.js`; that
   entrypoint does not exist yet, so `npm run build` does not run. The daemon

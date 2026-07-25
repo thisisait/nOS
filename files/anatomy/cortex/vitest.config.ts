@@ -9,8 +9,10 @@ import { defineConfig } from 'vitest/config';
  *
  * `knowledge/**\/*.test.mjs` is in the glob on purpose even though no such file
  * has been ported yet — KEAP's ontology-sot round-trip test is C2 scope. The
- * glob matching nothing is not a gate: the P-4 gate is the digest assertion in
- * server/onto1-agreement.test.ts, which IS a .ts file and IS collected.
+ * glob matching nothing is not a gate: the P-4 hard gate is
+ * server/onto1-digest.test.ts, which IS a .ts file and IS collected, and which
+ * also shells out to knowledge/onto1-conformance.mjs so the six fixtures fail
+ * `npm test` rather than waiting for someone to type `npm run conformance`.
  */
 export default defineConfig({
 	test: {
