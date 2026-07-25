@@ -103,13 +103,42 @@ The directive as stated points at **D**. **DECIDED: Option D** (operator, 2026-0
 
 **Critical path runs through KEAP's two prerequisites; nOS scopes in parallel.**
 
-| # | phase | owner | can start |
+| # | phase | owner | status |
 |---|---|---|---|
-| P-1 | promote the 790-node spine `src/game/data/taxonomy.ts` → `knowledge/canonical/`; `server/taxonomy.ts` reads it as data; bring it under the lint + round-trip gate | **KEAP** | **now** (independently worth doing; unblocks everything) |
-| P-2 | draft the `onto1:` **composition contract** (registration order / boot fixpoint / zone-depth finalize / K1 override) + a **conformance fixture** (canonical input tree → the exact `onto1:` it must produce) | **KEAP** drafts (has the ground truth), **nOS** conforms | after/with P-1 |
-| P-3 | scope the **nOS cortex organ**: language + host (port `validate` is TS/Node + a 215-test suite → a Node anatomy service is the low-friction target vs a PHP/Python rewrite), the runtime store (libsql/SQLite), ANN params (tuned), where it sits (new organ vs Bone/Wing sidecar), how the recall gate + host-Ollama embedder wire in | **nOS** | **now** (design, parallel to P-1/P-2) |
-| P-4 | port `validate` + its test suite into the nOS cortex organ against the P-2 fixture | **nOS** | after P-1..P-3 |
+| P-1 | promote the 790-node spine → data; `server/taxonomy.ts` reads it as data; bring it under the lint + round-trip gate | **KEAP** | ✅ **DONE** (v1.27.0) |
+| P-2 | `onto1:` **composition contract** + a **conformance fixture** | **KEAP** drafts, **nOS** conforms | ✅ **DONE** (v1.27.0) |
+| P-3 | scope the **nOS cortex organ**: language + host (port `validate` is TS/Node + a 215-test suite → a Node anatomy service is the low-friction target vs a PHP/Python rewrite), the runtime store (libsql/SQLite), ANN params, where it sits (new organ vs Bone/Wing sidecar), how the recall gate + host-Ollama embedder wire in | **nOS** | **now** (design, unblocked) |
+| P-4 | port `validate` + its 215-test suite into the nOS cortex organ against the P-2 fixture, graded on KEAP **v1.27.0** | **nOS** | after P-3 |
 | P-5 | KEAP UI re-points at the nOS cortex API; KEAP keeps its product backend | **KEAP** | after P-4 |
+
+### P-1 / P-2 landed — the artifacts nOS ports against (KEAP v1.27.0)
+
+- **Grading ref = KEAP `v1.27.0`.** Pin committed locally on the nOS box (`5928fb72`,
+  two files, **unpushed**, no converge run) — an nOS-side `keap_version`/`keap_repo_ref`
+  bump lands when the port is ready to build, not before.
+- **Spine (P-1):** the 790-node spine is now `knowledge/spine/*.json` (12 domain files +
+  manifest) — **`knowledge/spine/`, NOT `canonical/`** (ingest walks `canonical/` as domain
+  *deltas*; the spine is a sibling, like `ontology/`). Composition-neutral: `onto1:76d1f3ad728b382b`
+  over 790 nodes before and after. The fact that killed Option C is gone — git now carries
+  the whole tree.
+- **Composition contract (P-2):** `docs/specs/onto1-composition-contract.md` is normative;
+  `knowledge/onto1-compose.mjs` is the reference impl (plain ESM — no server, DB, or TS);
+  `knowledge/fixtures/onto1/` has six cases. Grade with `node knowledge/onto1-conformance.mjs`
+  (or read the `expected` block per fixture). **Port traps the KEAP agent flagged:** §2.2
+  (fixpoint, 12 passes), §2.3 (existing id wins **and consumes the row**), §3.1 (sort by
+  UTF-16 code units, **not** `localeCompare`), §3.3 (`description` deliberately excluded — a
+  port that adds it is "more correct" and still mismatches).
+- **ANN params (P-3 input, measured not estimated):** on 3 355 live vectors, k=10, 200
+  deterministic queries — default 514.4 MB / 7 430 µs·q⁻¹; **recommended `float8` +
+  `max_neighbors=20` → 65.6 MB / 1 720 µs**, all at recall@10 = 100 %. **Not** `float1bit`
+  (41 MB but 1-bit neighbour compression degrades first as N grows). Re-measure at 20–50 k;
+  harness `scripts/ann-recall.mjs` runs anywhere with libsql + an exported vectors file.
+  KEAP deliberately did **not** retune its own index — the store migrates to nOS, so tuning
+  a departing component is churn.
+- **KEAP's own next pick (not nOS's path, but flagged):** captures are the only *unversioned*
+  user data — `--remove=data` wiped 128 of them without a trace. This is the same
+  managed-resources / backup gap nOS just built **backrest** for; wiring the KEAP `/data`
+  volume into the backrest set closes it.
 
 **nOS starts P-3 now** (a design pass on the cortex organ's shape — likely a Node
 service reusing KEAP's `validate`/store code, so the 215 tests port intact). The
