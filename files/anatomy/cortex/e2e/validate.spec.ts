@@ -204,6 +204,44 @@ test.describe('cortex validate', () => {
     expect((await bad.json()).success).toBe(false);
   });
 
+  test('an unparseable BODY is the envelope too — not express HTML, and never a stack', async ({
+    request,
+  }) => {
+    // A body-parser SyntaxError is an ERROR, not a response: it skips every
+    // ordinary handler and lands in express's built-in finalhandler, which
+    // answers text/html with `err.stack` inlined whenever NODE_ENV is not
+    // 'production' — and nothing in this organ's deployment sets NODE_ENV. The
+    // reply used to be ten stack frames carrying absolute host paths
+    // (…/node_modules/body-parser/lib/types/json.js:96:19), which is both a
+    // disclosure and a straight contradiction of the 404 handler's stated
+    // contract that everything is answered in the {success,error} envelope.
+    for (const body of ['{"source": ', '{"source": "@input",}', 'not json at all']) {
+      const res = await request.post('/agent/v1/validate', { headers: RO, data: body });
+      expect(res.status(), body).toBe(400);
+      expect(res.headers()['content-type'], body).toContain('application/json');
+      const text = await res.text();
+      expect(text).not.toContain('SyntaxError');
+      expect(text).not.toContain('node_modules');
+      expect(text).not.toContain('    at ');
+      const json = JSON.parse(text) as { success: boolean; error: string };
+      expect(json.success).toBe(false);
+      expect(json.error).toContain('malformed request');
+    }
+
+    // The 2 MB TRANSPORT ceiling answers in the envelope as well. It is a
+    // different limit from §3.6's 4096-char program cap, which is a typed
+    // `program_too_large` entry inside a 200 — see the parser's own note in
+    // server/index.ts. This asserts the transport half.
+    const huge = await request.post('/agent/v1/validate', {
+      headers: RO,
+      data: JSON.stringify({ source: 'x'.repeat(3 * 1024 * 1024) }),
+    });
+    expect(huge.status()).toBe(413);
+    const hugeJson = (await huge.json()) as { success: boolean; error: string };
+    expect(hugeJson.success).toBe(false);
+    expect(hugeJson.error).toContain('entity.too.large');
+  });
+
   test('kg:/ent: return a constant refusal that is independent of the operand', async ({ request }) => {
     const a = await validate(request, { source: '@input | get(kg:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee)' });
     const b = await validate(request, { source: '@input | get(kg:11111111-2222-3333-4444-555555555555)' });

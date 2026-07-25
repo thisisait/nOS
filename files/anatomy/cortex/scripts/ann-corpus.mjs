@@ -63,7 +63,11 @@ if (!OUT) {
 let rows;
 
 if (has('from-store')) {
-  const storeDir = process.env.CORTEX_STORE_PATH ?? process.env.KEAP_DATA_DIR ?? path.join(os.homedir(), 'cortex', 'data');
+  // CORTEX_STORE_PATH or the organ's own default — never KEAP_DATA_DIR. This
+  // resolution mirrors server/cortex-config.ts:envStoreDir() and must keep
+  // mirroring it: a measurement script that reads a different store than the
+  // daemon measures the wrong file.
+  const storeDir = process.env.CORTEX_STORE_PATH ?? path.join(os.homedir(), 'cortex', 'data');
   const dbPath = path.join(storeDir, 'keap.db');
   const db = new Database(dbPath, { readonly: true });
   rows = db

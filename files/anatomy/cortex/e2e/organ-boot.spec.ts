@@ -125,6 +125,25 @@ test.describe('organ boot', () => {
         expect(json.error).toContain('agent surface disabled');
       }
 
+      // "503 for the WHOLE surface" has to survive a request that never reaches
+      // a route handler. `express.json()` mounted app-wide runs in front of
+      // agentAuth, and a body-parser SyntaxError skips every ordinary handler
+      // for express's finalhandler — so an UNAUTHENTICATED caller sending a
+      // truncated body to a daemon with NO tokens configured got 400 text/html
+      // with a full stack trace, while a well-formed body on the same route got
+      // the 503. The parser is mounted behind agentAuth now: the bearer check
+      // is genuinely first, and nothing unauthorised is ever parsed.
+      const malformed = await ctx.post('/agent/v1/validate', {
+        headers: { 'Content-Type': 'application/json' },
+        data: '{"source": ',
+      });
+      expect(malformed.status()).toBe(503);
+      expect(malformed.headers()['content-type']).toContain('application/json');
+      const malformedText = await malformed.text();
+      expect(malformedText).not.toContain('SyntaxError');
+      expect(malformedText).not.toContain('node_modules');
+      expect((JSON.parse(malformedText) as { error: string }).error).toContain('agent surface disabled');
+
       // And it is its OWN store: two cortex daemons on one host mint two
       // identities and never share a file. The organ inherits no identity —
       // not KEAP's, not a sibling's (docs/specs/cortex-full-scope-decision.md,

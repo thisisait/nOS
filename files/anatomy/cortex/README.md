@@ -154,8 +154,15 @@ npm run store:status       # facts about the store as it stands
 ```
 
 Config: **`cortex_store_path`** (env `CORTEX_STORE_PATH`), default `~/cortex/data`,
-matching `bone_runtime_dir: ~/bone`. `KEAP_DATA_DIR` is honoured when
-`CORTEX_STORE_PATH` is unset so the vendored tests keep working untouched.
+matching `bone_runtime_dir: ~/bone`. **`KEAP_DATA_DIR` is not consulted.** It was
+briefly, "so the vendored tests keep working untouched" — but those tests
+(`server/cortex-resolve.test.ts:20`, `onto1-agreement.test.ts:37`,
+`onto1-digest.test.ts:70`) set `KEAP_DATA_DIR` and import `server/db.ts`, which
+reads the variable itself; none of them goes through `resolveStoreConfig`. The
+fallback protected nothing and aimed an unconfigured organ at KEAP's data
+directory. `openStore()` still *sets* `KEAP_DATA_DIR` from the resolved
+directory — that is how the vendored `db.ts` and `ingest.mjs` are pointed at the
+organ's store. The flow is one way.
 
 **The store file is `keap.db`, not `cortex.db`.** Design §3 wrote `cortex.db`;
 `server/db.ts:30` and `knowledge/ingest.mjs:60` each independently join the
@@ -163,9 +170,19 @@ basename onto a directory env var, so renaming it means patching two vendored
 files forever. `cortex_store_path` therefore names the **directory**, which is
 what actually isolates the organ. This is not the shared `keap.db` that
 `cortex-full-scope-decision.md` forbids — different directory, different file,
-different `db_identity`, and `cortex-store.ts`'s `assertOwnStore()` **refuses to
-open a populated store the organ did not create**, which is that rule made
-mechanical rather than aspirational.
+different `db_identity`, and `cortex-store.ts`'s `assertClaimable()` **refuses to
+open a store file the organ did not create**, which is that rule made mechanical
+rather than aspirational.
+
+That guard runs on the **filesystem, before `initDb()`** — bytes on disk plus the
+`.cortex-store.json` marker, no SQL and no connection. It has to: `initDb()` sets
+`journal_mode = WAL`, execs the schema, runs `runMigrations()` and INSERTs a
+`db_identity`, so a guard placed after it can only *report* the write it exists
+to prevent. Bytes-on-disk is also the only discriminator that is immune to the
+schema question — a row count over hand-picked tables reads a foreign database
+whose content lives elsewhere as "empty" and claims it. After `initDb()`,
+`assertOwnStore()` handles the half a filesystem cannot: marker present but
+`db_identity` changed ⇒ the file was **replaced**.
 
 ### What git materialises, and what it does not
 
@@ -281,6 +298,19 @@ no-op emitter to mistake for a working one later.
    passes every behavioural assertion there is. That is the whole reason the port
    instruction singles this file out.
 3. RW satisfies an `ro` requirement; `ro` does not satisfy `rw`.
+
+Rule 1 means **nothing runs in front of `agentAuth`**, and that includes the JSON
+body parser. `express.json()` is mounted on the `validate` route *behind* the
+auth middleware rather than app-wide, because a body-parser `SyntaxError` is an
+error rather than a response: it skips every ordinary handler and lands in
+express's built-in final handler, which answers `text/html` carrying the full
+stack whenever `NODE_ENV !== 'production'` — which no deployment of this organ
+sets. A truncated JSON body with **no** `Authorization` header, against a daemon
+with **no** tokens configured, therefore used to return a stack trace with
+absolute host paths where the contract promised a 503. Parsing after the bearer
+check means an unauthorised body is never read. A four-argument error handler
+sits below the 404 as the backstop; it answers in the `{success,error}` envelope
+and discloses only the status and body-parser's `type` token.
 
 `/health` deliberately still answers when the surface is disabled, reporting
 `surface: "disabled"`. A liveness probe that 503s for want of a token would make a

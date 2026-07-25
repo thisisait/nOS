@@ -20,9 +20,11 @@
  *      day one. Bindings carry a 900 s TTL, so the blast radius of not
  *      inheriting is one TTL of drift rejections, and a drift rejection is the
  *      mechanism working.
- *   2. It does NOT share, open, read or copy KEAP's `keap.db`. `assertOwnStore()`
- *      below makes that mechanical rather than aspirational: a populated store
- *      the organ did not create is REFUSED, not adopted.
+ *   2. It does NOT share, open, read or copy KEAP's `keap.db`. `assertClaimable()`
+ *      below makes that mechanical rather than aspirational: a store file the
+ *      organ did not create is REFUSED — BEFORE anything opens it read-write —
+ *      not adopted. See the two functions' own headers for why the check is
+ *      split across `initDb()` rather than sitting on one side of it.
  *
  * ── Git materialisation ─────────────────────────────────────────────────────
  *
@@ -146,70 +148,155 @@ export interface OpenStoreOptions {
 }
 
 /**
- * Refuse a populated store the organ did not create.
+ * The organ's claim on a directory. `unreadable` is kept DISTINCT from `absent`:
+ * both mean "we cannot show a claim", but only one of them can be explained by
+ * "nobody has been here yet", and the refusal message says which.
+ */
+type MarkerState =
+  | { kind: 'absent' }
+  | { kind: 'unreadable' }
+  | { kind: 'present'; marker: StoreMarker };
+
+function readMarker(cfg: CortexStoreConfig): MarkerState {
+  if (!fs.existsSync(cfg.markerPath)) return { kind: 'absent' };
+  try {
+    return { kind: 'present', marker: JSON.parse(fs.readFileSync(cfg.markerPath, 'utf8')) as StoreMarker };
+  } catch {
+    return { kind: 'unreadable' };
+  }
+}
+
+/** Bytes on disk for the store file and its WAL sidecar. `0` means "there is
+ *  nothing here", which is the ONLY state the organ may claim. */
+function storeBytes(cfg: CortexStoreConfig): number {
+  let bytes = 0;
+  for (const p of [cfg.dbPath, `${cfg.dbPath}-wal`]) {
+    try {
+      bytes += fs.statSync(p).size;
+    } catch {
+      /* not there — contributes nothing */
+    }
+  }
+  return bytes;
+}
+
+/**
+ * Refuse a store file the organ did not create — BEFORE anything opens it.
  *
  * "Do not share keap.db, not even read-only, not even transitionally" is a rule
  * that only holds if something enforces it, and the failure mode it guards is
  * quiet: pointing `CORTEX_STORE_PATH` at KEAP's data directory would produce an
  * organ that boots, answers, and is a second writer on someone else's file.
  *
- * The discriminator is the same `populated` predicate `establishDbIdentity()`
- * uses (db.ts:425) plus a marker this module owns:
+ * ── Why this runs before `initDb()`, and why it does no SQL ─────────────────
  *
- *   marker absent, store empty      → the organ's own fresh store; claim it
- *   marker absent, store populated  → REFUSE. Rows we did not put there.
+ * `initDb()` (db.ts:334-377) is not a probe. It opens the file READ-WRITE, sets
+ * `journal_mode = WAL`, execs the whole SCHEMA, runs `runMigrations()` (which
+ * applies every migration id the target lacks and INSERTs a `schema_migrations`
+ * row for each), execs VECTOR_SCHEMA, runs three ALTER TABLE sweeps, and calls
+ * `initializeAppMetadata()` + `establishDbIdentity()`. A guard placed after all
+ * of that cannot prevent the write it exists to prevent: it can only complain
+ * once the foreign file has already been mutated, WAL-mode has been turned on
+ * underneath its owner, and — against a KEAP database behind this vendored
+ * migration set — unshipped migrations have been applied to a live corpus.
+ *
+ * So the decision is made here, from the FILESYSTEM alone:
+ *
+ *   marker present            → our claim; the identity check after `initDb()`
+ *                               verifies the file underneath it did not change
+ *   marker absent, 0 bytes    → nothing is here; the organ's own fresh store
+ *   marker absent, any bytes  → REFUSE. Untouched, unopened, unmigrated.
+ *
+ * No SQL, deliberately. Counting tables or rows would mean opening a connection
+ * on a file we have just decided might not be ours — and a read-only libsql
+ * handle on a WAL database still creates the `-shm` sidecar, so even the
+ * "harmless" probe writes. Size is the one discriminator that needs no handle,
+ * knows nothing about anyone's schema, and therefore cannot be fooled by a
+ * database whose content lives in tables this organ has never heard of.
+ */
+function assertClaimable(cfg: CortexStoreConfig, state: MarkerState): void {
+  if (state.kind === 'present') return;
+  const bytes = storeBytes(cfg);
+  if (bytes === 0) return;
+
+  throw new Error(
+    `Refusing to open ${cfg.dbPath}: ${bytes} bytes of database are already there and the organ ` +
+      'carries no claim on them.\n' +
+      (state.kind === 'unreadable'
+        ? `The marker ${cfg.markerPath} exists but could not be parsed, so it proves nothing.\n`
+        : `There is no ${path.basename(cfg.markerPath)} in this directory.\n`) +
+      'This is what pointing the organ at a FOREIGN store looks like — most likely KEAP\'s own\n' +
+      'data directory. The cortex organ mints its own identity and materialises everything from\n' +
+      'git (docs/specs/cortex-full-scope-decision.md, "Two corrections"); it is never a second\n' +
+      'writer on another service\'s libsql file, so nothing has been opened and nothing has been\n' +
+      'written — the file is exactly as it was.\n' +
+      `Point CORTEX_STORE_PATH at a directory of the organ's own, or remove ${cfg.dbPath}.`,
+  );
+}
+
+/**
+ * Verify, after `initDb()`, that the database under our marker is still the one
+ * we claimed — and record the claim on a store this boot created.
+ *
+ * This runs AFTER `initDb()` because it needs `db_identity`, which only exists
+ * once the schema does. It is NOT the foreign-store guard; `assertClaimable()`
+ * above is, and it has already run. What is left here is the half that a
+ * filesystem probe cannot answer:
+ *
  *   marker present, identity agrees → our store, as expected
  *   marker present, identity differs→ REFUSE. The file underneath was replaced —
  *                                     the exact 2026-07-22 signal `db_identity`
  *                                     was added to catch.
+ *   marker absent                   → this boot created the file; claim it
+ *
+ * The `freshThisBoot` assertion is belt to `assertClaimable()`'s braces, and it
+ * is deliberately not load-bearing: `establishDbIdentity()` derives that flag
+ * from db.ts's own two-table `populated` predicate (db.ts:424-426), which sees
+ * `taxonomy_nodes_ext` and `knowledge_objects` and none of the other ~40 tables.
+ * A foreign database whose content sits anywhere else reads as fresh to it. That
+ * narrowness is exactly why the real discriminator is bytes-on-disk and not a
+ * row count, and why this check can only ever confirm — never establish —
+ * ownership.
  */
-function assertOwnStore(db: DbModule, cfg: CortexStoreConfig, log: (l: string) => void): void {
-  const d = db.getDb();
+function assertOwnStore(
+  db: DbModule,
+  cfg: CortexStoreConfig,
+  state: MarkerState,
+  log: (l: string) => void,
+): void {
   const identity = db.getDbIdentity();
-  const populated =
-    (d.prepare('SELECT COUNT(*) c FROM taxonomy_nodes_ext').get() as { c: number }).c > 0 ||
-    (d.prepare('SELECT COUNT(*) c FROM knowledge_objects').get() as { c: number }).c > 0;
 
-  let marker: StoreMarker | null = null;
-  if (fs.existsSync(cfg.markerPath)) {
-    try {
-      marker = JSON.parse(fs.readFileSync(cfg.markerPath, 'utf8')) as StoreMarker;
-    } catch {
-      marker = null; // unreadable — treated as absent, and rewritten below
-    }
-  }
-
-  if (marker && identity && marker.dbIdentity !== identity.id) {
+  if (state.kind === 'present' && identity && state.marker.dbIdentity !== identity.id) {
     throw new Error(
       `Cortex store identity mismatch at ${cfg.dbPath}.\n` +
-        `  marker claims db_identity ${marker.dbIdentity}\n` +
+        `  marker claims db_identity ${state.marker.dbIdentity}\n` +
         `  the file carries        ${identity.id}\n` +
         'The database under this directory was REPLACED. Everything with a git source\n' +
         'rebuilds; anything without one is gone. Investigate before deleting the marker.',
     );
   }
 
-  if (!marker && populated) {
+  if (state.kind === 'present' || !identity) return;
+
+  if (!identity.freshThisBoot) {
     throw new Error(
-      `Refusing to open ${cfg.dbPath}: it holds curated rows but carries no cortex store marker.\n` +
-        'This is what pointing the organ at a FOREIGN store looks like — most likely KEAP\'s own\n' +
-        'data directory. The cortex organ mints its own identity and materialises everything from\n' +
-        'git (docs/specs/cortex-full-scope-decision.md, "Two corrections"); it is never a second\n' +
-        'writer on another service\'s libsql file.\n' +
-        `Point CORTEX_STORE_PATH at a directory of the organ's own, or remove ${cfg.dbPath}.`,
+      `Refusing to claim ${cfg.dbPath}: it carries db_identity ${identity.id}, which this boot did\n` +
+        'not mint, and no cortex store marker. A pre-existing identity written into the organ\'s\n' +
+        'own marker is db_identity CARRY-OVER — every `ast.binding` this organ stamps would then\n' +
+        'agree with a database it does not own, and the drift check that exists to catch a\n' +
+        'replaced store would report agreement (docs/specs/cortex-full-scope-decision.md,\n' +
+        '"Two corrections" #1).',
     );
   }
 
-  if (!marker && identity) {
-    const claim: StoreMarker = {
-      organ: 'pazny.cortex',
-      dbIdentity: identity.id,
-      dbFile: path.basename(cfg.dbPath),
-      createdAt: new Date().toISOString(),
-    };
-    fs.writeFileSync(cfg.markerPath, JSON.stringify(claim, null, 2) + '\n');
-    log(`[store] claimed ${cfg.storeDir} (db_identity ${identity.id})`);
-  }
+  const claim: StoreMarker = {
+    organ: 'pazny.cortex',
+    dbIdentity: identity.id,
+    dbFile: path.basename(cfg.dbPath),
+    createdAt: new Date().toISOString(),
+  };
+  fs.writeFileSync(cfg.markerPath, JSON.stringify(claim, null, 2) + '\n');
+  log(`[store] claimed ${cfg.storeDir} (db_identity ${identity.id})`);
 }
 
 /** `knowledge/spine-render.mjs --check` — the checked-in `src/game/data/taxonomy.ts`
@@ -287,6 +374,13 @@ export async function openStore(opts: OpenStoreOptions = {}): Promise<StoreHandl
   fs.mkdirSync(cfg.storeDir, { recursive: true });
   process.env.KEAP_DATA_DIR = cfg.storeDir;
 
+  // FIRST, before the spine gate, before `./db` is even imported: decide whether
+  // this directory is ours to write to. Everything below this line opens a
+  // read-write handle sooner or later, and a guard that runs after one of them
+  // is a guard that reports a write instead of preventing it.
+  const marker = readMarker(cfg);
+  assertClaimable(cfg, marker);
+
   const spine = checkSpineInSync(cfg);
   if (!spine.ok && (opts.requireSpineInSync ?? true)) {
     throw new Error(
@@ -298,7 +392,7 @@ export async function openStore(opts: OpenStoreOptions = {}): Promise<StoreHandl
 
   const db: DbModule = await import('./db');
   await db.initDb();
-  assertOwnStore(db, cfg, log);
+  assertOwnStore(db, cfg, marker, log);
 
   // ── git materialisation, ingest half (child process, before we read the tree)
   const ingest = opts.materialise ? runIngest(cfg, { force: opts.force, log }) : null;

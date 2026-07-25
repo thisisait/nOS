@@ -160,7 +160,18 @@ async function main(): Promise<void> {
   // `analyzeCortex` checks the length before tokenizing, so an oversize body is
   // never scanned. Keep the two limits distinct — collapsing them turns a
   // repairable report into an opaque 413.
-  app.use(express.json({ limit: '2mb' }));
+  //
+  // MOUNTED PER ROUTE, BEHIND `agentAuth`, not app-wide. app.use()ing it puts
+  // body parsing in front of the bearer check, and a body-parser SyntaxError is
+  // an ERROR, not a response: it skips every normal handler below it and lands
+  // in express's built-in final handler, which answers text/html carrying the
+  // full stack whenever NODE_ENV !== 'production'. That broke two contracts at
+  // once — the envelope one stated at the 404 handler, and rule 1 of agentAuth
+  // ("neither token configured ⇒ 503 for the whole surface"), because an
+  // unauthenticated caller could get an HTML stack trace with absolute host
+  // paths out of a daemon whose agent surface was DISABLED. Parsing after the
+  // auth middleware means an unauthorised body is never read, let alone parsed.
+  const jsonBody = express.json({ limit: '2mb' });
 
   // ── /health ────────────────────────────────────────────────────────────────
   /**
@@ -225,7 +236,7 @@ async function main(): Promise<void> {
   // This route reads NOTHING from `req.agentName`. That header is self-asserted
   // and unbound to the token; it may be logged, it may not be believed, and no
   // scope, filter or limit here keys on it.
-  app.post('/agent/v1/validate', agentAuth('ro'), (req, res) => {
+  app.post('/agent/v1/validate', agentAuth('ro'), jsonBody, (req, res) => {
     const parsed = cortexValidateRequestSchema.safeParse(req.body);
     // Phase 1. A malformed REQUEST is a transport error; a malformed PROGRAM is
     // data (§3.1), and comes back as a 200 report with typed entries.
@@ -254,6 +265,31 @@ async function main(): Promise<void> {
   app.use((req, res) =>
     fail(res, 404, `no such route on the cortex organ: ${req.method} ${req.path}`),
   );
+
+  /**
+   * The envelope of last resort — a FOUR-argument handler, which is the only
+   * kind express dispatches errors to. The 404 above has two arguments and
+   * therefore never sees one; without this, anything thrown or `next(err)`d
+   * inside a handler falls through to express's finalhandler and comes back as
+   * text/html — with `err.stack` inlined whenever NODE_ENV !== 'production',
+   * which no deployment of this organ currently sets.
+   *
+   * Nothing about the error reaches the client except its status and, for the
+   * 4xx that body-parser raises, its `type` (`entity.parse.failed`,
+   * `entity.too.large`) — a stable, contentless token. The message and the stack
+   * go to the log, where the operator is. A 5xx says only 'internal error':
+   * anything more specific is a detail of an unexpected failure, and unexpected
+   * failures are precisely the ones whose details were not vetted for disclosure.
+   */
+  app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    const e = (err ?? {}) as { status?: unknown; statusCode?: unknown; type?: unknown };
+    const claimed = typeof e.status === 'number' ? e.status : typeof e.statusCode === 'number' ? e.statusCode : 500;
+    const status = Number.isInteger(claimed) && claimed >= 400 && claimed <= 599 ? claimed : 500;
+    console.error(`[cortex] request error (${status})`, err);
+    if (res.headersSent) return;
+    const type = typeof e.type === 'string' ? e.type : null;
+    fail(res, status, status >= 500 ? 'internal error' : `malformed request${type ? `: ${type}` : ''}`);
+  });
 
   app.listen(PORT, HOST, () => {
     console.log(`[cortex] listening on http://${HOST}:${PORT}`);

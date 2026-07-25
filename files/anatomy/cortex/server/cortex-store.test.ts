@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import Database from 'libsql';
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -208,14 +209,24 @@ describe('degradation when the vector layer is unavailable', () => {
   it('boots FTS-only instead of crashing, and still materialises the tree', () => {
     // A stock-SQLite build has no `libsql_vector_idx`, so db.ts's VECTOR_SCHEMA
     // throws and `vectorsOk` goes false (db.ts:344-350). We cannot swap the
-    // native driver here, so we reproduce the same REJECTION: pre-create
-    // `embeddings` with a TEXT vector column. `CREATE TABLE IF NOT EXISTS`
-    // no-ops over it and the index create is then refused with
-    // "unexpected vector column type: TEXT" — the identical code path.
+    // native driver here, so we reproduce the same REJECTION: give `embeddings`
+    // a TEXT vector column. `CREATE TABLE IF NOT EXISTS` no-ops over it and the
+    // index create is then refused with "unexpected vector column type: TEXT" —
+    // the identical code path.
+    //
+    // The vector layer is removed from a store the organ ALREADY OWNS rather
+    // than hand-built into an empty directory. A hand-built `keap.db` under no
+    // marker is indistinguishable from somebody else's database, and
+    // `assertClaimable()` now refuses it before opening it — correctly, and this
+    // fixture is not the exception to that. Losing the vector layer under an
+    // existing deployment (a rebuilt libsql, a host migration) is also the shape
+    // this degradation actually takes in the field.
     const dir = dirFor('novectors');
-    fs.mkdirSync(dir, { recursive: true });
+    const init = cli('init', dir);
+    expect(init.status, init.out).toBe(0);
     const d = new Database(path.join(dir, STORE_DB_FILENAME));
-    d.pragma('journal_mode = WAL');
+    d.exec(`DROP INDEX IF EXISTS ${ANN_INDEX_NAME}`);
+    d.exec('DROP TABLE embeddings');
     d.exec(`CREATE TABLE embeddings (
        kind TEXT NOT NULL, ref_id TEXT NOT NULL, model TEXT, dim INTEGER,
        content_hash TEXT, vector TEXT, updated_at INTEGER, PRIMARY KEY (kind, ref_id))`);
@@ -236,6 +247,36 @@ describe('degradation when the vector layer is unavailable', () => {
   });
 });
 
+/** Everything the organ could have written into a store directory, as one
+ *  comparable value: the bytes of every file plus the set of filenames. A
+ *  refusal has to leave this IDENTICAL — that is what "never a second writer"
+ *  means, and it is the half the old assertions never checked. */
+function dirFingerprint(dir: string): { files: string[]; sha: Record<string, string> } {
+  const files = fs.readdirSync(dir).sort();
+  const sha: Record<string, string> = {};
+  for (const f of files) {
+    sha[f] = crypto.createHash('sha256').update(fs.readFileSync(path.join(dir, f))).digest('hex');
+  }
+  return { files, sha };
+}
+
+/** Open a store file, run some SQL, and leave NOTHING behind but `keap.db` —
+ *  the WAL is checkpointed and truncated away so the fingerprint above is stable
+ *  across the handle's lifetime rather than across libsql's flushing whims. */
+function withDb(dbPath: string, fn: (d: Database.Database) => void): void {
+  const d = new Database(dbPath);
+  try {
+    fn(d);
+    d.pragma('wal_checkpoint(TRUNCATE)');
+  } finally {
+    d.close();
+  }
+  for (const suffix of ['-wal', '-shm']) {
+    const p = dbPath + suffix;
+    if (fs.existsSync(p)) fs.rmSync(p);
+  }
+}
+
 describe('the organ never adopts a foreign store', () => {
   it('refuses a populated store that carries no cortex marker', () => {
     const dir = dirFor('foreign');
@@ -246,8 +287,107 @@ describe('the organ never adopts a foreign store', () => {
     fs.rmSync(path.join(dir, '.cortex-store.json'));
     const refused = cli('status', dir);
     expect(refused.status).toBe(1);
-    expect(refused.out).toContain('carries no cortex store marker');
     expect(refused.out).toContain('FOREIGN store');
+  });
+
+  it('refuses a database it has never seen WITHOUT OPENING IT — not one byte written', () => {
+    // The guard's whole claim is "it is never a second writer on another
+    // service's libsql file". A guard that runs after `initDb()` cannot make
+    // that claim: `initDb()` sets journal_mode=WAL, execs the schema, applies
+    // every migration the target lacks and INSERTs a db_identity — so the
+    // refusal, however well worded, arrives after the write it names.
+    //
+    // The file here is deliberately NOT KEAP-shaped: its content lives in a
+    // table the organ has never heard of, which is what a row-count predicate
+    // over two hand-picked tables reads as "empty".
+    const dir = dirFor('foreign-untouched');
+    fs.mkdirSync(dir, { recursive: true });
+    const dbPath = path.join(dir, STORE_DB_FILENAME);
+    withDb(dbPath, (d) => {
+      d.exec('CREATE TABLE somebody_elses_ledger (id INTEGER PRIMARY KEY, note TEXT)');
+      d.prepare("INSERT INTO somebody_elses_ledger (id, note) VALUES (1, 'not the organ''s')").run();
+    });
+    const before = dirFingerprint(dir);
+
+    const refused = cli('status', dir);
+    expect(refused.status).toBe(1);
+    expect(refused.out).toContain('FOREIGN store');
+    expect(refused.out).toContain('nothing has been opened and nothing has been\nwritten');
+
+    // Byte-for-byte, filename-for-filename. No WAL, no -shm, no marker: the
+    // refusal is a decision made on the filesystem, before any handle exists.
+    expect(dirFingerprint(dir)).toEqual(before);
+    expect(before.files).toEqual([STORE_DB_FILENAME]);
+
+    // And the schema is still the foreign one — no SCHEMA exec, no migrations.
+    const d = new Database(dbPath, { readonly: false });
+    const tables = (
+      d.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all() as Array<{
+        name: string;
+      }>
+    ).map((r) => r.name);
+    d.close();
+    expect(tables).toEqual(['somebody_elses_ledger']);
+  });
+
+  it('refuses a KEAP-shaped store whose rows live outside ext-nodes and objects', () => {
+    // The reachable production case: a KEAP instance provisioned and serving
+    // before its canonical-ingest step has run (taxonomy_nodes_ext empty) and
+    // without KEAP_USER_FILES_DIR (knowledge_objects empty). It still holds
+    // course progress, curated metadata, captures and moderated relations —
+    // none of which a two-table `populated` predicate can see, so the organ
+    // claimed the directory and then rebuilt the FTS index, reseeded the verb
+    // vocabulary and DELETEd the source='toe' relations inside somebody else's
+    // live database, exit 0.
+    const dir = dirFor('foreign-keapshaped');
+    const init = cli('init', dir);
+    expect(init.status, init.out).toBe(0);
+    const dbPath = path.join(dir, STORE_DB_FILENAME);
+
+    withDb(dbPath, (d) => {
+      d.prepare(
+        `INSERT INTO course_progress (user_id, course_id, progress, completed_chapters)
+         VALUES ('alice', 7, 42, 3)`,
+      ).run();
+      // The two tables the old predicate DID look at stay empty, which is the
+      // entire point: this store is unmistakably somebody's, and invisible.
+      expect((d.prepare('SELECT COUNT(*) c FROM taxonomy_nodes_ext').get() as { c: number }).c).toBe(0);
+      expect((d.prepare('SELECT COUNT(*) c FROM knowledge_objects').get() as { c: number }).c).toBe(0);
+    });
+    fs.rmSync(path.join(dir, '.cortex-store.json'));
+    const before = dirFingerprint(dir);
+
+    const refused = cli('status', dir);
+    expect(refused.status).toBe(1);
+    expect(refused.out).toContain('FOREIGN store');
+    expect(refused.out).not.toContain('[store] claimed');
+    expect(dirFingerprint(dir)).toEqual(before);
+    expect(fs.existsSync(path.join(dir, '.cortex-store.json'))).toBe(false);
+  });
+
+  it('never writes a foreign db_identity into its own marker', () => {
+    // cortex-full-scope-decision.md "Two corrections" #1. If the organ adopts a
+    // directory whose db_identity it did not mint, `/health`'s
+    // `binding.databaseId` and every `ast.binding` it stamps carry someone
+    // else's id — and Wing's "databaseId moved ⇒ REJECT" drift check reports
+    // AGREEMENT across two different databases. The mechanism that exists to
+    // catch a replaced store would be the thing hiding one.
+    const dir = dirFor('foreign-identity');
+    const init = cli('init', dir);
+    expect(init.status, init.out).toBe(0);
+    const FOREIGN_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+
+    withDb(path.join(dir, STORE_DB_FILENAME), (d) => {
+      d.prepare(
+        `UPDATE app_settings SET value = ? WHERE user_id = 'system' AND key = 'db_identity'`,
+      ).run(JSON.stringify({ id: FOREIGN_ID, initializedAt: 1700000000 }));
+    });
+    fs.rmSync(path.join(dir, '.cortex-store.json'));
+
+    const refused = cli('status', dir);
+    expect(refused.status).toBe(1);
+    expect(fs.existsSync(path.join(dir, '.cortex-store.json'))).toBe(false);
+    expect(refused.out).not.toContain(FOREIGN_ID);
   });
 
   it('refuses when the file under the marker was replaced', () => {
@@ -268,12 +408,49 @@ describe('the organ never adopts a foreign store', () => {
 });
 
 describe('store configuration', () => {
-  it('prefers CORTEX_STORE_PATH, then KEAP_DATA_DIR, then ~/cortex/data', () => {
+  it('resolves CORTEX_STORE_PATH, then ~/cortex/data — and NEVER KEAP_DATA_DIR', () => {
     expect(resolveStoreConfig({ CORTEX_STORE_PATH: '/a', KEAP_DATA_DIR: '/b' }).storeDir).toBe('/a');
-    // KEAP_DATA_DIR is honoured so the VENDORED tests, which set it directly,
-    // keep working without a patch.
-    expect(resolveStoreConfig({ KEAP_DATA_DIR: '/b' }).storeDir).toBe('/b');
+    // KEAP_DATA_DIR is KEAP's vocabulary for KEAP's data directory. Honouring it
+    // as a fallback aimed an UNCONFIGURED organ at another service's live
+    // libsql file — precisely the environments the default exists for. The
+    // fallback's stated justification ("so the vendored tests keep working")
+    // was false: cortex-resolve.test.ts:20, onto1-agreement.test.ts:37 and
+    // onto1-digest.test.ts:70 set KEAP_DATA_DIR and import server/db.ts, which
+    // reads the variable ITSELF. None of them calls resolveStoreConfig.
+    expect(resolveStoreConfig({ KEAP_DATA_DIR: '/b' }).storeDir).toBe(path.join(os.homedir(), 'cortex', 'data'));
     expect(resolveStoreConfig({}).storeDir).toBe(path.join(os.homedir(), 'cortex', 'data'));
+  });
+
+  it('an unconfigured organ lands in its OWN default, not in an inherited KEAP_DATA_DIR', () => {
+    // The unit assertion above proves the resolver; this proves the BOOT, which
+    // is where it matters — `openStore()` mkdirs the resolved directory and
+    // opens a database in it. A unit that runs with a shared EnvironmentFile, a
+    // compose env_file, or an operator shell that sourced KEAP's environment
+    // gets KEAP_DATA_DIR for free; `cortex_store_path` is the thing that might
+    // not be templated yet. HOME is redirected so "the default" is observable
+    // without writing into the developer's real ~/cortex/data.
+    const home = dirFor('nofallback-home');
+    const keapDir = dirFor('nofallback-keapdata');
+    fs.mkdirSync(home, { recursive: true });
+    fs.mkdirSync(keapDir, { recursive: true });
+
+    const env: NodeJS.ProcessEnv = { ...process.env, HOME: home, USERPROFILE: home, KEAP_DATA_DIR: keapDir };
+    delete env.CORTEX_STORE_PATH;
+    const res = spawnSync(process.execPath, ['--import', 'tsx', CLI, 'init', '--json'], {
+      cwd: ORGAN,
+      encoding: 'utf8',
+      env,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    const out = `${res.stdout ?? ''}${res.stderr ?? ''}`;
+    expect(res.status, out).toBe(0);
+    const line = out.split('\n').find((l) => l.startsWith('CORTEX_STORE_RESULT '))!;
+    const parsed = JSON.parse(line.slice('CORTEX_STORE_RESULT '.length)) as CliResult;
+
+    expect(parsed.facts.dbPath).toBe(path.join(home, 'cortex', 'data', STORE_DB_FILENAME));
+    // The inherited directory was never resolved to, never mkdir'd into, never
+    // opened. It is as empty as it was handed over.
+    expect(fs.readdirSync(keapDir)).toEqual([]);
   });
 
   it('defaults the ANN parameters to the measured optimum', () => {
