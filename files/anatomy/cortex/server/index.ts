@@ -9,11 +9,31 @@
  *   POST /agent/v1/validate          agentAuth('ro') — typecheck a program, zero side effects
  *   GET  /agent/v1/validate/opcodes  agentAuth('ro') — the published registry Wing gates against
  *
- * and NOTHING else. Every other `/agent/v1/*` path KEAP serves — taxonomy,
- * search, objects, relations, tables, fs, lint, captures, curator, topics,
- * embeddings, openapi.json — and the whole `/api` + SPA surface stay in KEAP.
- * The 404 handler at the bottom says so in the envelope rather than letting an
- * unmounted path fall through to something that looks like a server error.
+ * and — since S2 (`docs/plans/cortex-corpus-parallel.md`) — the INGESTION half,
+ * which exists so the organ can be fed the same corpus KEAP is fed, from the
+ * same host sources, and the two can then be compared:
+ *
+ *   GET  /agent/v1/fs/status         agentAuth('ro') — roots, last pass, last REFUSAL
+ *   POST /agent/v1/fs/sync           agentAuth('rw') — one mirror pass over the host tree
+ *   GET  /agent/v1/objects           agentAuth('ro') — the id set, paged (KEAP's shape)
+ *   GET  /agent/v1/objects/:id       agentAuth('ro') — one card, for the body hash
+ *   GET  /agent/v1/captures          agentAuth('ro') — the review queue
+ *   GET  /agent/v1/embeddings/pending agentAuth('ro') — the embed diff (model + dim)
+ *   POST /agent/v1/embeddings        agentAuth('rw') — vectors back from the host job
+ *   GET  /ingest/v1/health           unauthenticated device probe
+ *   POST /ingest/v1/capture          capture-tier bearer — the consolidator's target
+ *
+ * Every one of these is KEAP's route at KEAP's path with KEAP's response shape,
+ * lifted from `server/agent.ts` / `server/intake.ts`. That is not laziness: the
+ * fan-out feeders and the nightly diff harness talk to BOTH daemons with ONE
+ * client, and a shape that drifted would make a difference in the report
+ * indistinguishable from a difference in the corpus.
+ *
+ * Still NOT here, and staying in KEAP: taxonomy CRUD, semantic search,
+ * relations, tables, lint, curator, topics, promotions, openapi.json, and the
+ * whole `/api` + SPA surface. The 404 handler at the bottom says so in the
+ * envelope rather than letting an unmounted path fall through to something that
+ * looks like a server error.
  *
  * ── Import order is load-bearing ────────────────────────────────────────────
  *
@@ -85,6 +105,12 @@ const MATERIALISE_ON_BOOT = process.env.CORTEX_MATERIALISE_ON_BOOT === '1';
 function aliasTokenEnv(env: NodeJS.ProcessEnv): void {
   if (env.CORTEX_TOKEN_RO?.trim()) env.KEAP_AGENT_TOKEN_RO = env.CORTEX_TOKEN_RO;
   if (env.CORTEX_TOKEN_RW?.trim()) env.KEAP_AGENT_TOKEN_RW = env.CORTEX_TOKEN_RW;
+  // S2: the capture tier. The consolidator fan-out POSTs /ingest/v1/capture to
+  // both targets, and it MUST hold two DIFFERENT secrets under two DIFFERENT
+  // names (§2.1) — one env name meaning two secrets on one host is how a write
+  // token reaches the wrong daemon. Inside the organ's own process the ported
+  // `tokens.ts` still reads the KEAP_* name; the plist sets the CORTEX_* one.
+  if (env.CORTEX_TOKEN_CAPTURE?.trim()) env.KEAP_AGENT_TOKEN_CAPTURE = env.CORTEX_TOKEN_CAPTURE;
 }
 
 const ok = (res: Response, data?: unknown) => res.json({ success: true, data });
@@ -110,12 +136,20 @@ async function main(): Promise<void> {
 
   // ── 2. the cortex modules, AFTER the store has fixed KEAP_DATA_DIR ─────────
   aliasTokenEnv(process.env);
+  // S2: same seam, same one-way flow — CORTEX_FS_* onto the KEAP_FS_* names the
+  // ported fs-sync reads, BEFORE `./fs-sync` is imported (it resolves its roots
+  // at module load, exactly as `db.ts` resolves its data directory).
+  const { aliasFsEnv } = await import('./cortex-fs');
+  aliasFsEnv(process.env);
   const { TOKEN_RO, TOKEN_RW, tokenEquals } = await import('./tokens');
   const { CORTEX_CONTRACT_VERSION, cortexRegistryHash, listOpcodes } = await import('./cortex-opcodes');
   const { cortexOntologyVersion } = await import('./cortex-ontology-version');
   const { validateCortex } = await import('./cortex-validate');
   const { cortexValidateRequestSchema } = await import('../shared/contracts/cortex');
   const { buildVersion } = await import('./build-version');
+  const { fsSyncStatus, startFsSync, syncAllFs } = await import('./fs-sync');
+  const { EMBED_MODEL, EMBED_DIM, pendingEmbeddings } = await import('./embeddings');
+  const { registerIngestRoutes } = await import('./intake');
 
   /**
    * Bearer auth — LIFTED from KEAP `server/agent.ts:63-81`, behaviour for
@@ -259,6 +293,139 @@ async function main(): Promise<void> {
     });
   });
 
+  // ── S2: the ingestion half ─────────────────────────────────────────────────
+  // Routes LIFTED from KEAP `server/agent.ts` (fs 744-777, embeddings 338-370,
+  // objects 819-859, captures 887-912) and `server/intake.ts`. Shapes are
+  // KEAP's, deliberately: one client feeds both daemons and one harness reads
+  // both, so a drifted shape would surface in the nightly report as a corpus
+  // difference that does not exist.
+
+  /** KEAP's `/agent/v1/objects` cap. Kept identical so the harness's paging
+   *  loop is the same loop against both sides — a larger page here would make
+   *  the organ's read cheaper and the comparison asymmetric for no gain. */
+  const MAX_LIMIT = 50;
+  const trim = (s: string | undefined) => (s && s.length > 500 ? `${s.slice(0, 500)}…` : s);
+
+  app.get('/agent/v1/fs/status', agentAuth('ro'), (_req, res) => ok(res, fsSyncStatus()));
+
+  // rw, not ro: a pass WRITES the corpus (upserts, and — behind five guards —
+  // prunes). The read-only token must not be able to reshape a knowledge base.
+  app.post('/agent/v1/fs/sync', agentAuth('rw'), jsonBody, (_req, res) => {
+    const roots = fsSyncStatus().userRoots;
+    if (!roots.length) {
+      return fail(res, 503, 'fs sync disabled: neither CORTEX_FS_USER_ROOTS nor KEAP_USER_FILES_DIR configured');
+    }
+    // The THROWING form on purpose (see `guardedSyncAllFs`): a caller that asked
+    // for a pass and can be told "refused, and here is why" is told. Only the
+    // unattended boot/interval callers swallow it. The 4-arg error handler at
+    // the bottom turns the throw into a 500 in the standard envelope, with the
+    // reason in the daemon log where the operator is.
+    const r = syncAllFs();
+    if (!r) return fail(res, 409, 'sync in progress');
+    ok(res, { ...(r.users ?? {}), mappings: r.mappings });
+  });
+
+  app.get('/agent/v1/objects', agentAuth('ro'), (req, res) => {
+    const type = req.query.type ? String(req.query.type) : undefined;
+    const limit = Math.min(Number(req.query.limit) || 20, MAX_LIMIT);
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
+    const items = db.getObjects('', true, type);
+    ok(res, {
+      total: items.length,
+      results: items.slice(offset, offset + limit).map((o) => ({
+        id: o.id,
+        type: o.type,
+        title: o.title,
+        description: trim(o.description),
+        resource: o.resource,
+        tags: o.tags,
+        userId: o.userId,
+      })),
+    });
+  });
+
+  app.get('/agent/v1/objects/:id', agentAuth('ro'), (req, res) => {
+    const o = db.getObject(req.params.id);
+    if (!o) return fail(res, 404, 'unknown object');
+    // KEAP truncates the body at 8000 chars for its 16 KiB tool budget. The
+    // truncation is REPRODUCED rather than lifted, because the harness hashes
+    // this field: an organ that returned full bodies where KEAP returned
+    // truncated ones would report every long card as a mismatch. `contentLink`
+    // is dropped — it resolves against KEAP's content services, which this
+    // organ does not have.
+    ok(res, { ...o, body: o.body && o.body.length > 8000 ? `${o.body.slice(0, 8000)}\n…[truncated]` : o.body });
+  });
+
+  app.get('/agent/v1/captures', agentAuth('ro'), (req, res) => {
+    const limit = Math.min(Number(req.query.limit) || 20, MAX_LIMIT);
+    const source = req.query.source ? String(req.query.source) : undefined;
+    let items = db.getAllMetadataApi('', true);
+    if (source) items = items.filter((c) => c.source === source);
+    ok(res, {
+      total: items.length,
+      items: items.slice(0, limit).map((c) => ({
+        id: c.id,
+        title: c.title,
+        description: trim(c.description),
+        url: c.url,
+        source: c.source,
+        modality: c.modality,
+        attribution: c.userId,
+        metadata: c.metadata,
+      })),
+    });
+  });
+
+  // ── the embedding split, host side ─────────────────────────────────────────
+  // The organ decides WHAT to embed (canonical text + content_hash diff); the
+  // keap-embed-sync fan-out decides HOW (loopback Ollama) and pushes vectors
+  // back. `model` and `dim` travel on the wire, which is what lets the fan-out
+  // assert both targets declare the SAME pair before either pass runs (§4.3) —
+  // one assertion converting a silent incomparability into a visible halt.
+  app.get('/agent/v1/embeddings/pending', agentAuth('ro'), (req, res) => {
+    if (!db.vectorSearchAvailable()) return fail(res, 503, 'vector layer unavailable');
+    const limit = Math.min(Number(req.query.limit) || 100, 500);
+    const { pending, total, pruned } = pendingEmbeddings(limit);
+    ok(res, { model: EMBED_MODEL, dim: EMBED_DIM, total, pruned, items: pending });
+  });
+
+  app.post('/agent/v1/embeddings', agentAuth('rw'), jsonBody, (req, res) => {
+    if (!db.vectorSearchAvailable()) return fail(res, 503, 'vector layer unavailable');
+    const { model, dim, items } = req.body ?? {};
+    if (!model || !Array.isArray(items) || !items.length) {
+      return fail(res, 400, 'model + non-empty items required');
+    }
+    if (Number(dim) !== EMBED_DIM) return fail(res, 400, `dim must be ${EMBED_DIM}`);
+    const rows: Array<{ kind: 'taxonomy' | 'capture' | 'note' | 'object'; refId: string; contentHash: string; vector: number[] }> = [];
+    for (const it of items) {
+      if (
+        !['taxonomy', 'capture', 'note', 'object'].includes(it?.kind) ||
+        typeof it?.refId !== 'string' ||
+        typeof it?.contentHash !== 'string' ||
+        !Array.isArray(it?.vector) ||
+        it.vector.length !== EMBED_DIM
+      ) {
+        return fail(res, 400, `invalid item at index ${rows.length}`);
+      }
+      rows.push({ kind: it.kind, refId: it.refId, contentHash: it.contentHash, vector: it.vector });
+    }
+    // No `scheduleTopicRecluster()`: topics-mode is a KEAP UI concern and this
+    // organ does not serve /topics. Declaring the trigger without the surface
+    // would be the "declaring a contract you do not serve" mistake the health
+    // handler's `contracts` block already refuses to make.
+    ok(res, { upserted: db.upsertEmbeddings(String(model), EMBED_DIM, rows), submittedBy: `agent:${req.agentName}` });
+  });
+
+  // ── /ingest/v1 — the consolidator's target, capture-tier bearer ────────────
+  // `jsonBody` is threaded in so it runs AFTER that bearer check, never before.
+  //
+  // No `markCorpusDirty()` wrapper around it, deliberately: `corpus_fts` is read
+  // by exactly one thing, `search.ts::hybridSearch`, and this organ does not
+  // serve semantic search. Marking an index dirty that nothing rebuilds and
+  // nothing queries would be motion that looks like correctness. When the search
+  // surface lands, the dirty flag lands with it.
+  registerIngestRoutes(app, jsonBody);
+
   // Anything else is not this organ's. Answered in the same {success,error}
   // envelope so a caller that wandered over from KEAP's surface gets a fact
   // ("cortex does not serve this") rather than express's default HTML.
@@ -300,6 +467,16 @@ async function main(): Promise<void> {
     console.log(
       `[cortex] agent surface    ${TOKEN_RO || TOKEN_RW ? 'enabled' : 'DISABLED — no token configured, /agent/v1/* answers 503'}`,
     );
+    const roots = fsSyncStatus().userRoots;
+    console.log(
+      roots.length
+        ? `[cortex] fs roots         ${roots.map((r) => `${r.spec}=${r.path}${r.exists ? '' : ' (ABSENT)'}`).join(', ')}`
+        : '[cortex] fs roots         none configured — the corpus mirror is inert',
+    );
+    // AFTER listen: /health answers while the first walk runs, so a slow tree
+    // never makes a live organ look dead. `startFsSync` swallows a refusal (the
+    // mount sentinel) rather than taking the daemon down with it.
+    startFsSync();
   });
 }
 
