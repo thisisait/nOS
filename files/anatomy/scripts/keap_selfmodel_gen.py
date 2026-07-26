@@ -544,6 +544,11 @@ CREDENTIAL_EN = {
         "The Gitea personal access token. An issued secret bound to one forge account and a "
         "chosen scope set, standing in for a password on both Git transport and API calls."
     ),
+    "gitlab": (
+        "The GitLab personal access token. An issued forge secret scoped to `api` and "
+        "`write_repository`, minted only when the agent forge is enabled and stored in "
+        "`~/.nos/secrets.yml`; it stands in for a password on both the API and Git transport."
+    ),
     "grafana": (
         "The Grafana service-account token. An issued secret that belongs to a non-human "
         "account rather than to a person, so it survives any individual leaving."
@@ -556,6 +561,13 @@ CREDENTIAL_EN = {
         "The Infisical service token. An issued secret whose only purpose is to fetch other "
         "secrets, scoped to one project path; it sits at the root of the estate's secret "
         "chain."
+    ),
+    "influxdb": (
+        "The InfluxDB all-access API token. An issued secret minted once at first-run "
+        "database setup (DOCKER_INFLUXDB_INIT_ADMIN_TOKEN, read only against an empty "
+        "store); it is presented under InfluxDB's own `Token` scheme rather than as a "
+        "bearer, and re-rendering it does not rotate the live token — a fresh one needs "
+        "the database reinitialised."
     ),
     "jellyfin": (
         "The Jellyfin API key. An issued server-level secret that bypasses the per-viewer "
@@ -606,6 +618,12 @@ CREDENTIAL_EN = {
         "The Vaultwarden API token. An issued secret that reaches the vault server's API "
         "only — the vault items themselves stay encrypted under a separate master key this "
         "token cannot unlock."
+    ),
+    "woodpecker": (
+        "The Woodpecker personal access token. An OAuth-derived bearer secret minted in the "
+        "UI after the first Gitea login — it cannot exist on a fresh blank — carried as "
+        "`Authorization: Bearer`; distinct from the separate `woodpecker_prom_token` that "
+        "gates the metrics endpoint."
     ),
     "wordpress": (
         "The WordPress application password. An issued per-application secret used with basic "
