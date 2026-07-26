@@ -840,8 +840,12 @@ services:
     # due jobs and POSTs the run rows back. It binds no socket, so it has no
     # port_var, no domain_var and no http health_check to give — inventing one
     # would describe a surface that does not exist. Liveness comes from the
-    # launchd/systemd-user unit, which `version_source: launchd` already probes
-    # (nos_state_lib introspect_launchd_loaded → healthy/installed="loaded").
+    # host service unit, which `version_source: launchd` probes on BOTH platforms
+    # (nos_state_lib: introspect_launchd_loaded → `launchctl list` on macOS,
+    # introspect_systemd_user_loaded → `systemctl --user show -p LoadState
+    # <label>.service` on the Linux port) → healthy/installed="loaded". The
+    # systemd half was added 2026-07-26: before it, this row's ONLY liveness
+    # declaration returned null on Linux for a Pulse that was loaded and ticking.
     # No version_var either: the role pins no pulse_version; the only version
     # string is the package's own __version__, which Ansible never reads.
     category: automation

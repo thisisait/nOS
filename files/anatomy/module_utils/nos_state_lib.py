@@ -354,6 +354,38 @@ def introspect_launchd_loaded(label: str) -> Optional[bool]:
     return False
 
 
+def introspect_systemd_user_loaded(label: str) -> Optional[bool]:
+    """Linux sibling of ``introspect_launchd_loaded``.
+
+    ``version_source: launchd`` is a *host-daemon* declaration, not a macOS one:
+    on the Linux port (v0.4-beta) ``pazny.linux.systemd_user::ensure_unit``
+    renders the SAME label as ``<label>.service`` under
+    ``~/.config/systemd/user/`` for bone / pulse / backup / backrest. Without this
+    probe those rows reported ``healthy: null, installed: null`` on a running
+    daemon — byte-identical to one that was never installed — which is exactly
+    the "silence indistinguishable from absence" failure the manifest rows that
+    carry no ``health_check`` rely on this signal to avoid.
+
+    Parity with launchd is deliberate: ``launchctl list`` reports a bootstrapped
+    job whether or not it is currently running, so the analogue is ``LoadState``
+    (unit file found + parsed), NOT ``ActiveState``. Both mean "loaded", and both
+    leave "is it actually ticking?" to the log.
+
+    Returns None — honest unknown — when systemctl is absent (macOS) or the user
+    bus is unreachable (no ``XDG_RUNTIME_DIR`` / DBus).
+    """
+    if not _which("systemctl"):
+        return None
+    rc, out, _err = _run(
+        ["systemctl", "--user", "show", "-p", "LoadState", "--value",
+         "%s.service" % label],
+        timeout=5,
+    )
+    if rc != 0:
+        return None
+    return out.strip() == "loaded"
+
+
 def introspect_service(
     svc: Dict[str, Any],
     role_vars: Optional[Dict[str, Any]] = None,
@@ -410,6 +442,11 @@ def introspect_service(
         label = svc.get("launchd_label")
         if label:
             loaded = introspect_launchd_loaded(label)
+            if loaded is None:
+                # No launchctl (or it refused): we are not on macOS. The same
+                # organ ships as a systemd --user unit on the Linux port, so ask
+                # there before declaring the daemon unknowable.
+                loaded = introspect_systemd_user_loaded(label)
             entry["healthy"] = loaded
             # launchd has no version concept; surface "loaded" as a token.
             entry["installed"] = "loaded" if loaded else None
@@ -482,6 +519,7 @@ __all__ = [
     "introspect_docker_running",
     "introspect_launchd_loaded",
     "introspect_service",
+    "introspect_systemd_user_loaded",
     "load_manifest",
     "resolve_container_names",
     "resolve_primary_container_name",

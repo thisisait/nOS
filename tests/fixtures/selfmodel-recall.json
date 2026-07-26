@@ -3,6 +3,61 @@
   "k": 5,
   "cases": [
     {
+      "q": "AgentKit agents",
+      "expect": [
+        "node:nos.host.wing",
+        "title:list-agents"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "Article 30 records",
+      "expect": [
+        "node:nos.host.wing",
+        "title:list-gdpr-processing"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "GDPR register",
+      "expect": [
+        "node:nos.host.wing",
+        "title:list-gdpr-processing"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "Traefik overview",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:get-overview"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "WMS/WFS capabilities",
+      "expect": [
+        "node:nos.engineering.qgis-server",
+        "title:get-capabilities"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.engineering"
+      ]
+    },
+    {
       "q": "account settings",
       "expect": [
         "node:nos.infra.bluesky-pds",
@@ -36,6 +91,17 @@
       ]
     },
     {
+      "q": "activate this repo in woodpecker",
+      "expect": [
+        "node:nos.devops.woodpecker",
+        "title:activate-repo"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
       "q": "add SSO provider",
       "expect": [
         "node:nos.infra.authentik",
@@ -44,6 +110,61 @@
       "forbid": [
         "node:nos",
         "node:nos.infra"
+      ]
+    },
+    {
+      "q": "add a job to the catalog",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:register-pulse-job"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "add a mail user",
+      "expect": [
+        "node:nos.infra.smtp-stalwart",
+        "title:provision-mailbox"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "add a new bucket",
+      "expect": [
+        "node:nos.data.influxdb",
+        "title:create-bucket"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.data"
+      ]
+    },
+    {
+      "q": "add allowed host to paperclip",
+      "expect": [
+        "node:nos.devops.paperclip",
+        "title:register-allowed-hostname"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "add an mcp server to hermes",
+      "expect": [
+        "node:nos.host.hermes",
+        "title:add-mcp-server"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -80,6 +201,17 @@
       ]
     },
     {
+      "q": "add member to gitlab project",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:grant-maintainer"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
       "q": "add monitor",
       "expect": [
         "node:nos.iiab.uptime-kuma",
@@ -113,6 +245,17 @@
       ]
     },
     {
+      "q": "add to the preservation queue",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:submit-capture"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
       "q": "add webhook",
       "expect": [
         "node:nos.devops.gitea",
@@ -121,6 +264,28 @@
       "forbid": [
         "node:nos",
         "node:nos.devops"
+      ]
+    },
+    {
+      "q": "advertise a subnet route",
+      "expect": [
+        "node:nos.host.tailscale",
+        "title:advertise-subnet"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "aggregate health",
+      "expect": [
+        "node:nos.host.bone",
+        "title:check-aggregate-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -135,14 +300,59 @@
       ]
     },
     {
+      "q": "alert my phone",
+      "expect": [
+        "node:nos.iiab.ntfy",
+        "title:publish-notification"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "allow SSH over the tailnet",
+      "expect": [
+        "node:nos.host.tailscale",
+        "title:enable-ssh"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "am I connected to the tailnet",
+      "expect": [
+        "node:nos.host.tailscale",
+        "title:check-status"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "any firing alerts",
       "expect": [
         "node:nos.observability.grafana",
+        "node:nos.observability.prometheus",
         "title:list-alerts"
       ],
       "forbid": [
         "node:nos",
         "node:nos.observability"
+      ]
+    },
+    {
+      "q": "any knowledge-base issues",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:read-lint"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
       ]
     },
     {
@@ -157,6 +367,50 @@
       ]
     },
     {
+      "q": "apply pulse config",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:reconverge-pulse"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "apply tag",
+      "expect": [
+        "node:nos.host.bone",
+        "title:run-tag"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "apply the upgrade",
+      "expect": [
+        "node:nos.host.bone",
+        "title:apply-upgrade"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "are all services healthy",
+      "expect": [
+        "node:nos.host.bone",
+        "title:check-aggregate-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "ask AI",
       "expect": [
         "node:nos.iiab.open-webui",
@@ -165,6 +419,17 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "bone health",
+      "expect": [
+        "node:nos.host.bone",
+        "title:check-liveness"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -179,6 +444,17 @@
       ]
     },
     {
+      "q": "bootstrap paperclip CEO",
+      "expect": [
+        "node:nos.devops.paperclip",
+        "title:bootstrap-ceo"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
       "q": "bounce container",
       "expect": [
         "node:nos.infra.portainer",
@@ -187,6 +463,61 @@
       "forbid": [
         "node:nos",
         "node:nos.infra"
+      ]
+    },
+    {
+      "q": "bring hermes web ui online",
+      "expect": [
+        "node:nos.host.hermes",
+        "title:start-dashboard"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "bring openclaw online",
+      "expect": [
+        "node:nos.host.openclaw",
+        "title:run-gateway"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "bring tailscale up",
+      "expect": [
+        "node:nos.host.tailscale",
+        "title:connect"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "call the time/fetch/memory/git/... MCP tool",
+      "expect": [
+        "node:nos.iiab.mcp-gateway",
+        "title:invoke-tool"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "capture this page",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:submit-capture"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
       ]
     },
     {
@@ -201,6 +532,50 @@
       ]
     },
     {
+      "q": "change max concurrent agents",
+      "expect": [
+        "node:nos.host.openclaw",
+        "title:set-config"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "change the tick interval",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:reconverge-pulse"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "chat with hermes",
+      "expect": [
+        "node:nos.host.hermes",
+        "title:chat"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "check CI pipeline stats",
+      "expect": [
+        "node:nos.devops.woodpecker",
+        "title:read-metrics"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
       "q": "check CPU/memory/disk",
       "expect": [
         "node:nos.observability.grafana",
@@ -209,6 +584,17 @@
       "forbid": [
         "node:nos",
         "node:nos.observability"
+      ]
+    },
+    {
+      "q": "check InfluxDB health",
+      "expect": [
+        "node:nos.data.influxdb",
+        "title:check-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.data"
       ]
     },
     {
@@ -223,6 +609,28 @@
       ]
     },
     {
+      "q": "check Mailpit health",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:health-check"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "check Traefik health",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:health-ping"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
       "q": "check alert status",
       "expect": [
         "node:nos.observability.grafana",
@@ -234,6 +642,17 @@
       ]
     },
     {
+      "q": "check backup status",
+      "expect": [
+        "node:nos.host.backup",
+        "title:check-backup-status"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "check container logs",
       "expect": [
         "node:nos.infra.portainer",
@@ -242,6 +661,17 @@
       "forbid": [
         "node:nos",
         "node:nos.infra"
+      ]
+    },
+    {
+      "q": "check gitlab api access",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:get-user"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
       ]
     },
     {
@@ -267,6 +697,50 @@
       ]
     },
     {
+      "q": "check ntfy health",
+      "expect": [
+        "node:nos.iiab.ntfy",
+        "title:health-check"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "check received mail",
+      "expect": [
+        "node:nos.infra.smtp-stalwart",
+        "title:read-mailbox"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "check row counts after restore",
+      "expect": [
+        "node:nos.host.backup",
+        "title:verify-restore"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "check scrape targets",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:list-targets"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
       "q": "check status",
       "expect": [
         "node:nos.iiab.uptime-kuma",
@@ -278,10 +752,109 @@
       ]
     },
     {
+      "q": "check tailscale status",
+      "expect": [
+        "node:nos.host.tailscale",
+        "title:check-status"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "check the agent daemon",
+      "expect": [
+        "node:nos.host.openclaw",
+        "title:check-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "check the bone daemon",
+      "expect": [
+        "node:nos.host.bone",
+        "title:check-liveness"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "check the job output",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:inspect-pulse-run"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "check the reasoning organ",
+      "expect": [
+        "node:nos.host.cortex",
+        "title:check-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "check the scheduler",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:check-pulse-daemon"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "check this program against the taxonomy",
+      "expect": [
+        "node:nos.host.cortex",
+        "title:validate-program"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "check woodpecker repo status",
+      "expect": [
+        "node:nos.devops.woodpecker",
+        "title:check-repo-active"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
       "q": "check workflow results",
       "expect": [
         "node:nos.iiab.n8n",
         "title:list-executions"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "clear the inbox",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:delete-messages"
       ],
       "forbid": [
         "node:nos",
@@ -297,6 +870,72 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "cluster health",
+      "expect": [
+        "node:nos.host.bone",
+        "title:check-aggregate-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "connect telegram to hermes",
+      "expect": [
+        "node:nos.host.hermes",
+        "title:install-gateway"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "connect to the VPN",
+      "expect": [
+        "node:nos.host.tailscale",
+        "title:connect"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "converge tag",
+      "expect": [
+        "node:nos.host.bone",
+        "title:run-tag"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "cortex drift",
+      "expect": [
+        "node:nos.host.cortex",
+        "title:check-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "cortex health",
+      "expect": [
+        "node:nos.host.cortex",
+        "title:check-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -322,6 +961,17 @@
       ]
     },
     {
+      "q": "create a mailbox",
+      "expect": [
+        "node:nos.infra.smtp-stalwart",
+        "title:provision-mailbox"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
       "q": "create alert",
       "expect": [
         "node:nos.observability.grafana",
@@ -330,6 +980,17 @@
       "forbid": [
         "node:nos",
         "node:nos.observability"
+      ]
+    },
+    {
+      "q": "create an InfluxDB bucket",
+      "expect": [
+        "node:nos.data.influxdb",
+        "title:create-bucket"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.data"
       ]
     },
     {
@@ -434,6 +1095,28 @@
       ]
     },
     {
+      "q": "create the first paperclip admin",
+      "expect": [
+        "node:nos.devops.paperclip",
+        "title:bootstrap-ceo"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "create the nos forge project",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:create-project"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
       "q": "create user",
       "expect": [
         "node:nos.infra.authentik",
@@ -467,6 +1150,28 @@
       ]
     },
     {
+      "q": "current value of a metric on the host",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:query-instant"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "data processing activities",
+      "expect": [
+        "node:nos.host.wing",
+        "title:list-gdpr-processing"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "data source status",
       "expect": [
         "node:nos.observability.grafana",
@@ -475,6 +1180,72 @@
       "forbid": [
         "node:nos",
         "node:nos.observability"
+      ]
+    },
+    {
+      "q": "debug Traefik routing",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:get-rawdata"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "delete all captured mail",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:delete-messages"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "deliver a message via Stalwart",
+      "expect": [
+        "node:nos.infra.smtp-stalwart",
+        "title:send-mail"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "deploy from CI",
+      "expect": [
+        "node:nos.host.wing",
+        "title:trigger-deploy"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "did we receive a mail about",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:search-messages"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "does the nos project exist",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:get-project"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
       ]
     },
     {
@@ -500,6 +1271,50 @@
       ]
     },
     {
+      "q": "draw layer x for this bbox",
+      "expect": [
+        "node:nos.engineering.qgis-server",
+        "title:get-map"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.engineering"
+      ]
+    },
+    {
+      "q": "dry-run upgrade",
+      "expect": [
+        "node:nos.host.bone",
+        "title:plan-upgrade"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "dump Traefik config",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:get-rawdata"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "edge proxy summary",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:get-overview"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
       "q": "edit documentation",
       "expect": [
         "node:nos.b2b.outline",
@@ -511,6 +1326,39 @@
       ]
     },
     {
+      "q": "empty Mailpit",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:delete-messages"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "enable CI for the nos repo",
+      "expect": [
+        "node:nos.devops.woodpecker",
+        "title:activate-repo"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "enable tailscale ssh",
+      "expect": [
+        "node:nos.host.tailscale",
+        "title:enable-ssh"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "enable workflow",
       "expect": [
         "node:nos.iiab.n8n",
@@ -519,6 +1367,39 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "errors in the last hour",
+      "expect": [
+        "node:nos.observability.loki",
+        "title:query-range"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "estate inventory",
+      "expect": [
+        "node:nos.host.wing",
+        "title:list-systems"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "evaluate promql now",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:query-instant"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
       ]
     },
     {
@@ -552,6 +1433,50 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "expose hermes as an mcp server",
+      "expect": [
+        "node:nos.host.hermes",
+        "title:serve-mcp"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "fetch face layout config",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:read-config-tables"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "fetch inbox over IMAP",
+      "expect": [
+        "node:nos.infra.smtp-stalwart",
+        "title:read-mailbox"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "fetch trace by id",
+      "expect": [
+        "node:nos.observability.tempo",
+        "title:get-trace"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
       ]
     },
     {
@@ -610,6 +1535,17 @@
       ]
     },
     {
+      "q": "find email to/from",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:search-messages"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
       "q": "find files named query",
       "expect": [
         "node:nos.iiab.nextcloud",
@@ -621,6 +1557,28 @@
       ]
     },
     {
+      "q": "find forge project",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:get-project"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "find gitlab user by name",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:resolve-user"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
       "q": "find login for",
       "expect": [
         "node:nos.iiab.vaultwarden",
@@ -629,6 +1587,17 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "find slow requests",
+      "expect": [
+        "node:nos.observability.tempo",
+        "title:search-traceql"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
       ]
     },
     {
@@ -665,6 +1634,28 @@
       ]
     },
     {
+      "q": "flush woodpecker forge cache",
+      "expect": [
+        "node:nos.devops.woodpecker",
+        "title:refresh-forge-cache"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "full router/service/middleware state",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:get-rawdata"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
       "q": "generate download link",
       "expect": [
         "node:nos.iiab.rustfs",
@@ -695,6 +1686,17 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "get a WMS tile",
+      "expect": [
+        "node:nos.engineering.qgis-server",
+        "title:get-map"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.engineering"
       ]
     },
     {
@@ -742,6 +1744,28 @@
       ]
     },
     {
+      "q": "get gitlab project",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:get-project"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "get node feature vectors",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:get-feature-vectors"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
       "q": "get object from bucket",
       "expect": [
         "node:nos.iiab.rustfs",
@@ -775,6 +1799,17 @@
       ]
     },
     {
+      "q": "get state",
+      "expect": [
+        "node:nos.host.bone",
+        "title:read-state"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "get stream URL",
       "expect": [
         "node:nos.iiab.jellyfin",
@@ -783,6 +1818,61 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "get the OpenAPI spec",
+      "expect": [
+        "node:nos.iiab.mcp-gateway",
+        "title:get-openapi-spec"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "get the org id",
+      "expect": [
+        "node:nos.data.influxdb",
+        "title:list-orgs"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.data"
+      ]
+    },
+    {
+      "q": "get the paperclip invite url",
+      "expect": [
+        "node:nos.devops.paperclip",
+        "title:bootstrap-ceo"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "get the shell DataTables",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:read-config-tables"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "get the tailscale IP",
+      "expect": [
+        "node:nos.host.tailscale",
+        "title:get-ip"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -797,6 +1887,39 @@
       ]
     },
     {
+      "q": "get vector features",
+      "expect": [
+        "node:nos.engineering.qgis-server",
+        "title:get-feature"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.engineering"
+      ]
+    },
+    {
+      "q": "grant maintainer on nos forge",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:grant-maintainer"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "grep logs on the host",
+      "expect": [
+        "node:nos.observability.loki",
+        "title:query-instant"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
       "q": "how is service performing",
       "expect": [
         "node:nos.observability.grafana",
@@ -805,6 +1928,17 @@
       "forbid": [
         "node:nos",
         "node:nos.observability"
+      ]
+    },
+    {
+      "q": "how many routers/services are loaded",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:get-overview"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
       ]
     },
     {
@@ -830,6 +1964,116 @@
       ]
     },
     {
+      "q": "hub health",
+      "expect": [
+        "node:nos.host.wing",
+        "title:check-hub-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "ingest a datapoint",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:submit-capture"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "initialize paperclip",
+      "expect": [
+        "node:nos.devops.paperclip",
+        "title:onboard"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "install the hermes cross-channel gateway",
+      "expect": [
+        "node:nos.host.hermes",
+        "title:install-gateway"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "interactive hermes session",
+      "expect": [
+        "node:nos.host.hermes",
+        "title:chat"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "interactive openclaw session",
+      "expect": [
+        "node:nos.host.openclaw",
+        "title:open-tui"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "is <service> routed",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:list-http-routers"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "is Bone up",
+      "expect": [
+        "node:nos.host.bone",
+        "title:check-liveness"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "is InfluxDB up",
+      "expect": [
+        "node:nos.data.influxdb",
+        "title:check-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.data"
+      ]
+    },
+    {
+      "q": "is Mailpit up",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:health-check"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
       "q": "is Prometheus running",
       "expect": [
         "node:nos.observability.grafana",
@@ -841,10 +2085,197 @@
       ]
     },
     {
+      "q": "is Pulse running",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:check-pulse-daemon"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "is Traefik up",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:health-ping"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "is cortex up",
+      "expect": [
+        "node:nos.host.cortex",
+        "title:check-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "is everything up",
       "expect": [
         "node:nos.iiab.uptime-kuma",
         "title:get-status"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "is loki ready",
+      "expect": [
+        "node:nos.observability.loki",
+        "title:check-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "is ntfy up",
+      "expect": [
+        "node:nos.iiab.ntfy",
+        "title:health-check"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "is openclaw healthy",
+      "expect": [
+        "node:nos.host.openclaw",
+        "title:check-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "is prometheus healthy",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:check-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "is prometheus scraping X",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:list-targets"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "is tempo ready",
+      "expect": [
+        "node:nos.observability.tempo",
+        "title:check-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "is the VPN up",
+      "expect": [
+        "node:nos.host.tailscale",
+        "title:check-status"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "is the backup fresh",
+      "expect": [
+        "node:nos.host.backup",
+        "title:check-backup-status"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "is the edge proxy alive",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:health-ping"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "is the estate healthy",
+      "expect": [
+        "node:nos.host.wing",
+        "title:check-hub-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "is this repo activated in woodpecker",
+      "expect": [
+        "node:nos.devops.woodpecker",
+        "title:check-repo-active"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "kick the backup job",
+      "expect": [
+        "node:nos.host.backup",
+        "title:run-backup-now"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "kick the pulse daemon",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:restart-pulse"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "lint the knowledge base",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:run-lint"
       ],
       "forbid": [
         "node:nos",
@@ -860,6 +2291,61 @@
       "forbid": [
         "node:nos",
         "node:nos.data"
+      ]
+    },
+    {
+      "q": "list InfluxDB buckets",
+      "expect": [
+        "node:nos.data.influxdb",
+        "title:list-buckets"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.data"
+      ]
+    },
+    {
+      "q": "list InfluxDB orgs",
+      "expect": [
+        "node:nos.data.influxdb",
+        "title:list-orgs"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.data"
+      ]
+    },
+    {
+      "q": "list Traefik routers",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:list-http-routers"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "list Traefik services",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:list-http-services"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "list agents",
+      "expect": [
+        "node:nos.host.wing",
+        "title:list-agents"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -885,6 +2371,17 @@
       ]
     },
     {
+      "q": "list available MCP tools",
+      "expect": [
+        "node:nos.iiab.mcp-gateway",
+        "title:get-openapi-spec"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
       "q": "list backends",
       "expect": [
         "node:nos.observability.grafana",
@@ -893,6 +2390,17 @@
       "forbid": [
         "node:nos",
         "node:nos.observability"
+      ]
+    },
+    {
+      "q": "list captured emails",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:list-messages"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
       ]
     },
     {
@@ -929,6 +2437,17 @@
         "node:nos",
         "node:nos.b2b",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "list cortex opcodes",
+      "expect": [
+        "node:nos.host.cortex",
+        "title:get-opcodes"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -1011,6 +2530,17 @@
       ]
     },
     {
+      "q": "list job values in loki",
+      "expect": [
+        "node:nos.observability.loki",
+        "title:list-label-values"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
       "q": "list knowledge base sections",
       "expect": [
         "node:nos.b2b.outline",
@@ -1019,6 +2549,17 @@
       "forbid": [
         "node:nos",
         "node:nos.b2b"
+      ]
+    },
+    {
+      "q": "list label values",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:list-label-values"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
       ]
     },
     {
@@ -1034,14 +2575,39 @@
       ]
     },
     {
-      "q": "list mailboxes",
+      "q": "list loki labels",
       "expect": [
-        "node:nos.b2b.freescout",
-        "title:list-mailboxes"
+        "node:nos.observability.loki",
+        "title:list-labels"
       ],
       "forbid": [
         "node:nos",
-        "node:nos.b2b"
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "list mailboxes",
+      "expect": [
+        "node:nos.b2b.freescout",
+        "node:nos.infra.smtp-stalwart",
+        "title:list-mailboxes",
+        "title:list-principals"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.b2b",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "list map layers",
+      "expect": [
+        "node:nos.engineering.qgis-server",
+        "title:get-capabilities"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.engineering"
       ]
     },
     {
@@ -1100,6 +2666,17 @@
       ]
     },
     {
+      "q": "list pending embeddings",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:fetch-embedding-pending"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
       "q": "list posts",
       "expect": [
         "node:nos.iiab.wordpress",
@@ -1133,6 +2710,28 @@
       ]
     },
     {
+      "q": "list recording rules",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:list-rules"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "list registered services",
+      "expect": [
+        "node:nos.host.bone",
+        "title:list-services"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "list reports",
       "expect": [
         "node:nos.data.metabase",
@@ -1152,6 +2751,28 @@
       "forbid": [
         "node:nos",
         "node:nos.devops"
+      ]
+    },
+    {
+      "q": "list scheduled jobs",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:list-pulse-jobs"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "list searchable tempo tags",
+      "expect": [
+        "node:nos.observability.tempo",
+        "title:list-tag-names"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
       ]
     },
     {
@@ -1185,6 +2806,17 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "list systems",
+      "expect": [
+        "node:nos.host.wing",
+        "title:list-systems"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -1234,6 +2866,61 @@
       ]
     },
     {
+      "q": "log to the timeline",
+      "expect": [
+        "node:nos.host.bone",
+        "title:emit-event"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "logql instant query",
+      "expect": [
+        "node:nos.observability.loki",
+        "title:query-instant"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "logql range query",
+      "expect": [
+        "node:nos.observability.loki",
+        "title:query-range"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "logs over a time window",
+      "expect": [
+        "node:nos.observability.loki",
+        "title:query-range"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "loki readiness",
+      "expect": [
+        "node:nos.observability.loki",
+        "title:check-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
       "q": "look up author",
       "expect": [
         "node:nos.iiab.calibre-web",
@@ -1267,6 +2954,17 @@
       ]
     },
     {
+      "q": "make an empty gitlab project",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:create-project"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
       "q": "merge branch into base",
       "expect": [
         "node:nos.devops.gitea",
@@ -1275,6 +2973,17 @@
       "forbid": [
         "node:nos",
         "node:nos.devops"
+      ]
+    },
+    {
+      "q": "metric trend for the last hour",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:query-range"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
       ]
     },
     {
@@ -1333,6 +3042,17 @@
       ]
     },
     {
+      "q": "notify me when",
+      "expect": [
+        "node:nos.iiab.ntfy",
+        "title:publish-notification"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
       "q": "notify on push",
       "expect": [
         "node:nos.devops.gitea",
@@ -1341,6 +3061,94 @@
       "forbid": [
         "node:nos",
         "node:nos.devops"
+      ]
+    },
+    {
+      "q": "notify the operator",
+      "expect": [
+        "node:nos.host.bone",
+        "title:post-notification"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "ntfy status",
+      "expect": [
+        "node:nos.iiab.ntfy",
+        "title:health-check"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "onboard a fresh paperclip instance",
+      "expect": [
+        "node:nos.devops.paperclip",
+        "title:onboard"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "opcode registry",
+      "expect": [
+        "node:nos.host.cortex",
+        "title:get-opcodes"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "open an MR for an upgrade recipe",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:open-merge-request"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "open captured email",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:get-message"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "open hermes chat",
+      "expect": [
+        "node:nos.host.hermes",
+        "title:chat"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "open hermes dashboard",
+      "expect": [
+        "node:nos.host.hermes",
+        "title:start-dashboard"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -1355,6 +3163,17 @@
       ]
     },
     {
+      "q": "open security findings",
+      "expect": [
+        "node:nos.host.wing",
+        "title:list-remediation"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "open support requests",
       "expect": [
         "node:nos.b2b.freescout",
@@ -1366,6 +3185,17 @@
       ]
     },
     {
+      "q": "open the openclaw tui",
+      "expect": [
+        "node:nos.host.openclaw",
+        "title:open-tui"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "open ticket for description",
       "expect": [
         "node:nos.devops.gitea",
@@ -1374,6 +3204,39 @@
       "forbid": [
         "node:nos",
         "node:nos.devops"
+      ]
+    },
+    {
+      "q": "openclaw health",
+      "expect": [
+        "node:nos.host.openclaw",
+        "title:check-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "paperclip returns no response",
+      "expect": [
+        "node:nos.devops.paperclip",
+        "title:register-allowed-hostname"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "plan an upgrade",
+      "expect": [
+        "node:nos.host.bone",
+        "title:plan-upgrade"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -1392,6 +3255,116 @@
       "expect": [
         "node:nos.infra.bluesky-pds",
         "title:create-post"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "post vectors back to the cortex",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:upsert-embeddings"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "preview a migration",
+      "expect": [
+        "node:nos.host.bone",
+        "title:preview-migration"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "preview the pulse catalog",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:preview-pulse-catalog"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "preview upgrade recipe",
+      "expect": [
+        "node:nos.host.bone",
+        "title:plan-upgrade"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "prometheus alert state",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:list-alerts"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "prometheus readiness",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:check-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "promql over a time window",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:query-range"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "propose a recipe to the forge",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:open-merge-request"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "prove the backup restored",
+      "expect": [
+        "node:nos.host.backup",
+        "title:verify-restore"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "provision an email account",
+      "expect": [
+        "node:nos.infra.smtp-stalwart",
+        "title:provision-mailbox"
       ],
       "forbid": [
         "node:nos",
@@ -1421,6 +3394,138 @@
       ]
     },
     {
+      "q": "pull the full span tree for a trace",
+      "expect": [
+        "node:nos.observability.tempo",
+        "title:get-trace"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "pulse catalog",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:list-pulse-jobs"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "pulse daemon status",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:check-pulse-daemon"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "pulse due",
+      "expect": [
+        "node:nos.host.wing",
+        "title:list-due-pulse-jobs"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "pulse log",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:read-pulse-log"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "pulse run result",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:inspect-pulse-run"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "pulse view",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:review-pulse-jobs"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "push computed features to the cortex",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:upsert-features"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "push time-series data",
+      "expect": [
+        "node:nos.data.influxdb",
+        "title:write-points"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.data"
+      ]
+    },
+    {
+      "q": "push to topic",
+      "expect": [
+        "node:nos.iiab.ntfy",
+        "title:publish-notification"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "query InfluxDB",
+      "expect": [
+        "node:nos.data.influxdb",
+        "title:query-flux"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.data"
+      ]
+    },
+    {
+      "q": "query WFS",
+      "expect": [
+        "node:nos.engineering.qgis-server",
+        "title:get-feature"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.engineering"
+      ]
+    },
+    {
       "q": "query database",
       "expect": [
         "node:nos.data.metabase",
@@ -1431,6 +3536,17 @@
       "forbid": [
         "node:nos",
         "node:nos.data"
+      ]
+    },
+    {
+      "q": "query loki directly",
+      "expect": [
+        "node:nos.observability.loki",
+        "title:query-instant"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
       ]
     },
     {
@@ -1445,6 +3561,94 @@
       ]
     },
     {
+      "q": "query prometheus directly",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:query-instant"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "query the timeline",
+      "expect": [
+        "node:nos.host.wing",
+        "title:query-events"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "queue an alert",
+      "expect": [
+        "node:nos.host.bone",
+        "title:post-notification"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "raise a notification",
+      "expect": [
+        "node:nos.host.bone",
+        "title:post-notification"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "range query prometheus",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:query-range"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "re-render the pulse daemon",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:reconverge-pulse"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "read KEAP config tables",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:read-config-tables"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "read a mailbox",
+      "expect": [
+        "node:nos.infra.smtp-stalwart",
+        "title:read-mailbox"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
       "q": "read document id",
       "expect": [
         "node:nos.b2b.outline",
@@ -1453,6 +3657,50 @@
       "forbid": [
         "node:nos",
         "node:nos.b2b"
+      ]
+    },
+    {
+      "q": "read email id",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:get-message"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "read nOS state",
+      "expect": [
+        "node:nos.host.bone",
+        "title:read-state"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "read taxonomy embeddings",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:get-feature-vectors"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "read the last lint result",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:read-lint"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
       ]
     },
     {
@@ -1467,6 +3715,94 @@
       ]
     },
     {
+      "q": "read time-series data",
+      "expect": [
+        "node:nos.data.influxdb",
+        "title:query-flux"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.data"
+      ]
+    },
+    {
+      "q": "reconcile cortex drift",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:run-lint"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "record a metric to InfluxDB",
+      "expect": [
+        "node:nos.data.influxdb",
+        "title:write-points"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.data"
+      ]
+    },
+    {
+      "q": "record a telemetry event",
+      "expect": [
+        "node:nos.host.bone",
+        "title:emit-event"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "refresh gitlab trunk from github",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:sync-trunk"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "register a new mcp tool",
+      "expect": [
+        "node:nos.host.hermes",
+        "title:add-mcp-server"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "register a paperclip hostname",
+      "expect": [
+        "node:nos.devops.paperclip",
+        "title:register-allowed-hostname"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "register a pulse job",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:register-pulse-job"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "register user",
       "expect": [
         "node:nos.infra.authentik",
@@ -1475,6 +3811,83 @@
       "forbid": [
         "node:nos",
         "node:nos.infra"
+      ]
+    },
+    {
+      "q": "relay a message into the sink",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:send-test-mail"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "reload the scheduler",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:restart-pulse"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "remediation queue",
+      "expect": [
+        "node:nos.host.wing",
+        "title:list-remediation"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "render a map image",
+      "expect": [
+        "node:nos.engineering.qgis-server",
+        "title:get-map"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.engineering"
+      ]
+    },
+    {
+      "q": "replay a backup",
+      "expect": [
+        "node:nos.host.backup",
+        "title:restore-from-backup"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "resolve sso username to gitlab id",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:resolve-user"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "resolve tax/rel opcodes",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:validate-cortex-source"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
       ]
     },
     {
@@ -1489,6 +3902,17 @@
       ]
     },
     {
+      "q": "restart Pulse",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:restart-pulse"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "restart service",
       "expect": [
         "node:nos.infra.portainer",
@@ -1497,6 +3921,50 @@
       "forbid": [
         "node:nos",
         "node:nos.infra"
+      ]
+    },
+    {
+      "q": "restore from a dated backup",
+      "expect": [
+        "node:nos.host.backup",
+        "title:restore-from-backup"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "return geometries for layer x",
+      "expect": [
+        "node:nos.engineering.qgis-server",
+        "title:get-feature"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.engineering"
+      ]
+    },
+    {
+      "q": "review this upgrade",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:open-merge-request"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "roll back to date",
+      "expect": [
+        "node:nos.host.backup",
+        "title:restore-from-backup"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -1513,6 +3981,39 @@
       ]
     },
     {
+      "q": "run a Flux query",
+      "expect": [
+        "node:nos.data.influxdb",
+        "title:query-flux"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.data"
+      ]
+    },
+    {
+      "q": "run a backup now",
+      "expect": [
+        "node:nos.host.backup",
+        "title:run-backup-now"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "run an MCP operation through mcpo",
+      "expect": [
+        "node:nos.iiab.mcp-gateway",
+        "title:invoke-tool"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
       "q": "run automation name",
       "expect": [
         "node:nos.iiab.homeassistant",
@@ -1521,6 +4022,17 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "run hermes mcp",
+      "expect": [
+        "node:nos.host.hermes",
+        "title:serve-mcp"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -1546,10 +4058,76 @@
       ]
     },
     {
+      "q": "run the agent gateway",
+      "expect": [
+        "node:nos.host.openclaw",
+        "title:run-gateway"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "run the auto-deploy",
+      "expect": [
+        "node:nos.host.wing",
+        "title:trigger-deploy"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "run the corpus lint",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:run-lint"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "run the playbook tag",
+      "expect": [
+        "node:nos.host.bone",
+        "title:run-tag"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "run upgrade recipe",
+      "expect": [
+        "node:nos.host.bone",
+        "title:apply-upgrade"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "run workflow name",
       "expect": [
         "node:nos.iiab.n8n",
         "title:execute-workflow"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "save computed embeddings",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:upsert-embeddings"
       ],
       "forbid": [
         "node:nos",
@@ -1565,6 +4143,39 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "save for review",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:submit-capture"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "schedule a job",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:register-pulse-job"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "scheduled jobs",
+      "expect": [
+        "node:nos.host.wing",
+        "title:list-due-pulse-jobs"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -1594,6 +4205,17 @@
       "expect": [
         "node:nos.iiab.nextcloud",
         "title:search-files"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "search emails for",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:search-messages"
       ],
       "forbid": [
         "node:nos",
@@ -1634,6 +4256,17 @@
       ]
     },
     {
+      "q": "search traces",
+      "expect": [
+        "node:nos.observability.tempo",
+        "title:search-traceql"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
       "q": "search wiki for query",
       "expect": [
         "node:nos.b2b.outline",
@@ -1653,6 +4286,50 @@
       "forbid": [
         "node:nos",
         "node:nos.infra"
+      ]
+    },
+    {
+      "q": "send a push notification",
+      "expect": [
+        "node:nos.iiab.ntfy",
+        "title:publish-notification"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "send a test email",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:send-test-mail"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "send an email",
+      "expect": [
+        "node:nos.infra.smtp-stalwart",
+        "title:send-mail"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "send an event to Bone",
+      "expect": [
+        "node:nos.host.bone",
+        "title:emit-event"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -1678,6 +4355,17 @@
       ]
     },
     {
+      "q": "serve hermes conversations over mcp",
+      "expect": [
+        "node:nos.host.hermes",
+        "title:serve-mcp"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "service health overview",
       "expect": [
         "node:nos.iiab.uptime-kuma",
@@ -1686,6 +4374,17 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "service registry",
+      "expect": [
+        "node:nos.host.bone",
+        "title:list-services"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -1711,6 +4410,17 @@
       ]
     },
     {
+      "q": "set openclaw config",
+      "expect": [
+        "node:nos.host.openclaw",
+        "title:set-config"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "set up SSO for",
       "expect": [
         "node:nos.infra.authentik",
@@ -1719,6 +4429,17 @@
       "forbid": [
         "node:nos",
         "node:nos.infra"
+      ]
+    },
+    {
+      "q": "set up hermes messaging",
+      "expect": [
+        "node:nos.host.hermes",
+        "title:install-gateway"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -1741,6 +4462,28 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "share my home network over tailscale",
+      "expect": [
+        "node:nos.host.tailscale",
+        "title:advertise-subnet"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "show HTTP routers",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:list-http-routers"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
       ]
     },
     {
@@ -1774,6 +4517,28 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "show agent sessions",
+      "expect": [
+        "node:nos.host.wing",
+        "title:list-agents"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "show alerting rules",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:list-rules"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
       ]
     },
     {
@@ -2014,6 +4779,17 @@
       ]
     },
     {
+      "q": "show declared pulse jobs",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:preview-pulse-catalog"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "show deployed stacks",
       "expect": [
         "node:nos.infra.portainer",
@@ -2113,10 +4889,32 @@
       ]
     },
     {
+      "q": "show lint findings",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:read-lint"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
       "q": "show logs for service",
       "expect": [
         "node:nos.infra.portainer",
         "title:container-logs"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "show mail accounts",
+      "expect": [
+        "node:nos.infra.smtp-stalwart",
+        "title:list-principals"
       ],
       "forbid": [
         "node:nos",
@@ -2176,6 +4974,17 @@
       "forbid": [
         "node:nos",
         "node:nos.infra"
+      ]
+    },
+    {
+      "q": "show pending alerts",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:list-alerts"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
       ]
     },
     {
@@ -2267,6 +5076,39 @@
       ]
     },
     {
+      "q": "show the mail inbox",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:list-messages"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "show the message body",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:get-message"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "show the pulse dashboard",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:review-pulse-jobs"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "show tickets",
       "expect": [
         "node:nos.b2b.freescout",
@@ -2275,6 +5117,28 @@
       "forbid": [
         "node:nos",
         "node:nos.b2b"
+      ]
+    },
+    {
+      "q": "show trace <id>",
+      "expect": [
+        "node:nos.observability.tempo",
+        "title:get-trace"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "show upstream backends",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:list-http-services"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
       ]
     },
     {
@@ -2322,6 +5186,17 @@
       ]
     },
     {
+      "q": "show wing events",
+      "expect": [
+        "node:nos.host.wing",
+        "title:query-events"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "show workspaces",
       "expect": [
         "node:nos.infra.infisical",
@@ -2333,10 +5208,54 @@
       ]
     },
     {
+      "q": "start tailscale",
+      "expect": [
+        "node:nos.host.tailscale",
+        "title:connect"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "start the hermes dashboard",
+      "expect": [
+        "node:nos.host.hermes",
+        "title:start-dashboard"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "start the openclaw gateway",
+      "expect": [
+        "node:nos.host.openclaw",
+        "title:run-gateway"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "store document",
       "expect": [
         "node:nos.iiab.nextcloud",
         "title:upload-file"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "store embeddings",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:upsert-embeddings"
       ],
       "forbid": [
         "node:nos",
@@ -2366,6 +5285,83 @@
       ]
     },
     {
+      "q": "stream notifications",
+      "expect": [
+        "node:nos.iiab.ntfy",
+        "title:subscribe-topic"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "subnet router",
+      "expect": [
+        "node:nos.host.tailscale",
+        "title:advertise-subnet"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "subscribe to topic",
+      "expect": [
+        "node:nos.iiab.ntfy",
+        "title:subscribe-topic"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "sync dev and master to the forge",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:sync-trunk"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "sync gitea repos into woodpecker",
+      "expect": [
+        "node:nos.devops.woodpecker",
+        "title:refresh-forge-cache"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "talk to Inspektor Klepítko",
+      "expect": [
+        "node:nos.host.openclaw",
+        "title:open-tui"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "tempo readiness",
+      "expect": [
+        "node:nos.observability.tempo",
+        "title:check-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
       "q": "toggle switch",
       "expect": [
         "node:nos.iiab.homeassistant",
@@ -2385,6 +5381,50 @@
       "forbid": [
         "node:nos",
         "node:nos.observability"
+      ]
+    },
+    {
+      "q": "traceql query",
+      "expect": [
+        "node:nos.observability.tempo",
+        "title:search-traceql"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "traces for service X",
+      "expect": [
+        "node:nos.observability.tempo",
+        "title:search-traceql"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "trigger a deploy",
+      "expect": [
+        "node:nos.host.wing",
+        "title:trigger-deploy"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "trigger an off-cycle backup",
+      "expect": [
+        "node:nos.host.backup",
+        "title:run-backup-now"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -2423,6 +5463,50 @@
       ]
     },
     {
+      "q": "turn on woodpecker pipelines",
+      "expect": [
+        "node:nos.devops.woodpecker",
+        "title:activate-repo"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "typecheck a cortex-lang program",
+      "expect": [
+        "node:nos.host.cortex",
+        "title:validate-program"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "typecheck cortex-lang",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:validate-cortex-source"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "update GraphCanvas features",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:upsert-features"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
       "q": "update profile",
       "expect": [
         "node:nos.infra.bluesky-pds",
@@ -2431,6 +5515,17 @@
       "forbid": [
         "node:nos",
         "node:nos.infra"
+      ]
+    },
+    {
+      "q": "update the openclaw primary model",
+      "expect": [
+        "node:nos.host.openclaw",
+        "title:set-config"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -2489,10 +5584,131 @@
       ]
     },
     {
+      "q": "validate a pipeline source",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:validate-cortex-source"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "validate cortex source",
+      "expect": [
+        "node:nos.host.cortex",
+        "title:validate-program"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "validate gitlab token",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:get-user"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "validate woodpecker token",
+      "expect": [
+        "node:nos.devops.woodpecker",
+        "title:get-user"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "values for a log label",
+      "expect": [
+        "node:nos.observability.loki",
+        "title:list-label-values"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "values for a span tag",
+      "expect": [
+        "node:nos.observability.tempo",
+        "title:list-tag-values"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "verify SMTP capture",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:send-test-mail"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "verify the restore",
+      "expect": [
+        "node:nos.host.backup",
+        "title:verify-restore"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "watch URL",
       "expect": [
         "node:nos.iiab.uptime-kuma",
         "title:add-monitor"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "watch a topic for messages",
+      "expect": [
+        "node:nos.iiab.ntfy",
+        "title:subscribe-topic"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "what buckets exist",
+      "expect": [
+        "node:nos.data.influxdb",
+        "title:list-buckets"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.data"
+      ]
+    },
+    {
+      "q": "what can mcpo do",
+      "expect": [
+        "node:nos.iiab.mcp-gateway",
+        "title:get-openapi-spec"
       ],
       "forbid": [
         "node:nos",
@@ -2588,6 +5804,61 @@
       ]
     },
     {
+      "q": "what does <router> forward to",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:list-http-services"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "what does this QGIS project serve",
+      "expect": [
+        "node:nos.engineering.qgis-server",
+        "title:get-capabilities"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.engineering"
+      ]
+    },
+    {
+      "q": "what emails were sent",
+      "expect": [
+        "node:nos.iiab.mailpit",
+        "title:list-messages"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "what happened in that run",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:inspect-pulse-run"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "what happened recently",
+      "expect": [
+        "node:nos.host.wing",
+        "title:query-events"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "what happened with sensor",
       "expect": [
         "node:nos.iiab.homeassistant",
@@ -2654,6 +5925,39 @@
       ]
     },
     {
+      "q": "what is my tailnet address",
+      "expect": [
+        "node:nos.host.tailscale",
+        "title:get-ip"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "what is the runtime state",
+      "expect": [
+        "node:nos.host.bone",
+        "title:read-state"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "what is the scheduler doing",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:read-pulse-log"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "what is the secret",
       "expect": [
         "node:nos.infra.infisical",
@@ -2665,6 +5969,39 @@
       ]
     },
     {
+      "q": "what jobs are registered",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:list-pulse-jobs"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "what jobs exist",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:list-label-values"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "what jobs would be registered",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:preview-pulse-catalog"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "what libraries exist",
       "expect": [
         "node:nos.iiab.jellyfin",
@@ -2673,6 +6010,17 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "what log labels exist",
+      "expect": [
+        "node:nos.observability.loki",
+        "title:list-labels"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
       ]
     },
     {
@@ -2698,6 +6046,28 @@
       ]
     },
     {
+      "q": "what needs embedding",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:fetch-embedding-pending"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "what needs remediating",
+      "expect": [
+        "node:nos.host.wing",
+        "title:list-remediation"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "what pages exist",
       "expect": [
         "node:nos.iiab.wordpress",
@@ -2717,6 +6087,17 @@
       "forbid": [
         "node:nos",
         "node:nos.infra"
+      ]
+    },
+    {
+      "q": "what pulse jobs are due",
+      "expect": [
+        "node:nos.host.wing",
+        "title:list-due-pulse-jobs"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -2742,6 +6123,17 @@
       ]
     },
     {
+      "q": "what rules is prometheus evaluating",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:list-rules"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
       "q": "what secrets exist",
       "expect": [
         "node:nos.infra.infisical",
@@ -2750,6 +6142,17 @@
       "forbid": [
         "node:nos",
         "node:nos.infra"
+      ]
+    },
+    {
+      "q": "what services are known",
+      "expect": [
+        "node:nos.host.bone",
+        "title:list-services"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -2764,6 +6167,28 @@
       ]
     },
     {
+      "q": "what span tags exist",
+      "expect": [
+        "node:nos.observability.tempo",
+        "title:list-tag-names"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "what systems does Wing know",
+      "expect": [
+        "node:nos.host.wing",
+        "title:list-systems"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "what vaults exist",
       "expect": [
         "node:nos.iiab.vaultwarden",
@@ -2772,6 +6197,28 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "what vectors does the cortex hold",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:get-feature-vectors"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "what verbs does cortex accept",
+      "expect": [
+        "node:nos.host.cortex",
+        "title:get-opcodes"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -2794,6 +6241,17 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "what would this migration do",
+      "expect": [
+        "node:nos.host.bone",
+        "title:preview-migration"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {
@@ -2830,6 +6288,116 @@
       ]
     },
     {
+      "q": "when did the last backup run",
+      "expect": [
+        "node:nos.host.backup",
+        "title:check-backup-status"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "which containers are logging",
+      "expect": [
+        "node:nos.observability.loki",
+        "title:list-label-values"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "which corpus items are stale",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:fetch-embedding-pending"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "which exporters are up",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:list-targets"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "which instances are reporting",
+      "expect": [
+        "node:nos.observability.prometheus",
+        "title:list-label-values"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "which jobs are failing",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:review-pulse-jobs"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "which routes are live",
+      "expect": [
+        "node:nos.infra.traefik",
+        "title:list-http-routers"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
+      "q": "which services have traces",
+      "expect": [
+        "node:nos.observability.tempo",
+        "title:list-tag-values"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "which streams are available",
+      "expect": [
+        "node:nos.observability.loki",
+        "title:list-labels"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.observability"
+      ]
+    },
+    {
+      "q": "which users have email",
+      "expect": [
+        "node:nos.infra.smtp-stalwart",
+        "title:list-principals"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.infra"
+      ]
+    },
+    {
       "q": "who am I",
       "expect": [
         "node:nos.infra.bluesky-pds",
@@ -2838,6 +6406,28 @@
       "forbid": [
         "node:nos",
         "node:nos.infra"
+      ]
+    },
+    {
+      "q": "who am I on gitlab",
+      "expect": [
+        "node:nos.devops.gitlab",
+        "title:get-user"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "who am I on woodpecker",
+      "expect": [
+        "node:nos.devops.woodpecker",
+        "title:get-user"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
       ]
     },
     {
@@ -2876,6 +6466,61 @@
       ]
     },
     {
+      "q": "why did the tick fail",
+      "expect": [
+        "node:nos.host.pulse",
+        "title:read-pulse-log"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "wing hub health",
+      "expect": [
+        "node:nos.host.wing",
+        "title:check-hub-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "woodpecker can't find my repo",
+      "expect": [
+        "node:nos.devops.woodpecker",
+        "title:refresh-forge-cache"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "woodpecker pipeline metrics",
+      "expect": [
+        "node:nos.devops.woodpecker",
+        "title:read-metrics"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.devops"
+      ]
+    },
+    {
+      "q": "write a measurement",
+      "expect": [
+        "node:nos.data.influxdb",
+        "title:write-points"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.data"
+      ]
+    },
+    {
       "q": "write article",
       "expect": [
         "node:nos.iiab.wordpress",
@@ -2895,6 +6540,17 @@
       "forbid": [
         "node:nos",
         "node:nos.b2b"
+      ]
+    },
+    {
+      "q": "write node features",
+      "expect": [
+        "node:nos.iiab.keap",
+        "title:upsert-features"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
       ]
     }
   ]

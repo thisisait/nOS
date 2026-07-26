@@ -17,7 +17,7 @@
 launchctl print "gui/$(id -u)/eu.thisisait.nos.pulse"          # macOS
 systemctl --user status eu.thisisait.nos.pulse                  # Linux
 ```
-**Output:** the unit's load state, pid and last exit status. This is Pulse's liveness surface — there is no HTTP health endpoint, and `nos_state` reports `healthy` from exactly this signal (`version_source: launchd`).
+**Output:** the unit's load state, pid and last exit status. This is Pulse's liveness surface — there is no HTTP health endpoint. `nos_state` reads the same signal for its `healthy` / `installed: loaded` fields (`version_source: launchd` → `launchctl list` on macOS, `systemctl --user show -p LoadState` on Linux). Loaded is not running: a job that crash-loops still lists, so read the pid and last exit status, not just the presence of the line.
 
 ---
 
@@ -86,7 +86,9 @@ tail -n 100 ~/pulse/log/pulse.log
 ```bash
 NOS_PLAYBOOK_DIR="$PWD" python3 files/anatomy/scripts/discover-pulse-catalog.py
 ```
-**Output:** JSON on stdout — one `{source, plugin_name, job}` entry per job declared in `files/anatomy/plugins/*/plugin.yml` and `files/anatomy/agents/*.yml`. Writes nothing and calls no API. Placeholders like `{{ playbook_dir }}` are substituted **literally** from `NOS_*` env vars, not rendered by Jinja; unset vars leave the token in place. Exits `2` without `NOS_PLAYBOOK_DIR`.
+**Output:** JSON on stdout — one `{source, plugin_name, job}` entry per job declared in `files/anatomy/plugins/*/plugin.yml` and `files/anatomy/agents/*.yml`. Writes nothing and calls no API. Placeholders like `{{ playbook_dir }}` are substituted **literally** (plain `str.replace`, no Jinja engine) from the matching `NOS_*` env var.
+
+**Read an empty value correctly.** Substitution is **unconditional for every token in the script's own table**: an unset `NOS_*` var substitutes the **empty string**, so the arg renders `--token=` — the token does *not* survive. That is deliberate (`_expand`, 2026-05-25): the old `if replacement` guard left empty-valued known tokens literal and shipped `{{ … }}` into `pulse_jobs`, the silent failure the conductor caught. Only tokens **absent from the table** stay literal. The command above exports nothing but `NOS_PLAYBOOK_DIR`, so a bare preview blanks ~30 known tokens — that blank is the preview's, not the estate's; export the vars (or read the live catalog with `list-pulse-jobs`) before concluding a bearer shipped empty. Exits `2` without `NOS_PLAYBOOK_DIR`.
 
 ---
 
@@ -106,6 +108,8 @@ NOS_PLAYBOOK_DIR="$PWD" python3 files/anatomy/scripts/discover-pulse-catalog.py
 **Method:** playbook
 **Command:**
 ```bash
-ansible-playbook main.yml --tags pulse
+ansible-playbook main.yml --tags pulse --skip-tags stacks,core
 ```
 **Effect:** ensures `~/pulse/{venv,state,log}` exist, reinstalls the package into the venv, re-renders the launchd plist (or systemd `--user` unit) and reloads it. This is how `pulse_tick_interval_s`, `pulse_max_concurrent`, `pulse_dry_run` and `pulse_wing_api_base` overrides in `config.yml` take effect. The role's tasks need no sudo, so pressing Enter at the password prompt is enough.
+
+**`--skip-tags` is not optional — it is the blast radius.** Every task in `tasks/stacks/core-up.yml` and `tasks/stacks/stack-up.yml` carries the `always` tag, and `always` is selected no matter what `--tags` asks for. Bare `ansible-playbook main.yml --tags pulse` therefore runs `docker compose up -d` for **infra**, **observability** and all six wave-2 stacks *before* the first `pazny.pulse` task, and blocks on the STRICT per-stack health wait; one restart-looping container (the documented jellyfin / open-webui first-boot case) fails the play at that wait and the plist — the one thing this card promises — is never re-rendered. Verify the selection with `--list-tasks` before running it. The `pazny.pulse` tasks carry only `[anatomy, pulse]`, so they survive the skip; drop `--skip-tags` only when recreating every container is what you actually came for.
