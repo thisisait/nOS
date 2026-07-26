@@ -59,6 +59,7 @@ interface CliResult {
       servicesMissed: string[];
       domainsMerged: string[];
     } | null;
+    docNodesInStore: number;
   };
   facts: {
     dbPath: string;
@@ -197,6 +198,46 @@ describe('git materialisation (canonical ingest)', () => {
     // in `missed` — "silence" and "no such capability" are now different values.
     expect(docs.servicesMissed).toContain('traefik');
     expect(docs.servicesMissed.length).toBeGreaterThan(0);
+    // And the number that GATES the boot is MEASURED off the store, not read off
+    // the generator's stdout: on a healthy materialisation the two agree, but the
+    // assertion is against the store's own rows (docNodesInStore), which is what
+    // the desync case below proves the generator count could not have caught.
+    expect(first.materialise.docNodesInStore).toBe(docs.docNodes);
+    expect(first.materialise.docNodesInStore).toBeGreaterThan(0);
+  });
+
+  it('asserts docs coverage against the STORE, not the generator stdout — refuses a rows-gone desync', () => {
+    // The fee this feature exists to kill, reproduced for the prose layer: the
+    // generator's doc_nodes trailer is what it BUILT from the files on disk, which
+    // can diverge from what the store HOLDS the instant a knowledge_imports sha
+    // still matches while its rows are absent (a schema migration, a partial
+    // restore, an interrupted vacuum). Reproduce EXACTLY that: materialise, delete
+    // the doc metadata rows but KEEP the import markers, then re-materialise
+    // NON-forced. ingest.mjs sees the nos.* domains as unchanged and SKIPS them,
+    // never re-inserting — while the file-reading generator still reports 394.
+    const dir = dirFor('docs-desync');
+    const first = cli('materialise', dir);
+    expect(first.status, first.out).toBe(0);
+    const built = first.result!.materialise.docs!.docNodes;
+    expect(built).toBeGreaterThan(0);
+    expect(first.result!.materialise.docNodesInStore).toBe(built); // healthy: store == claim
+
+    withDb(path.join(dir, STORE_DB_FILENAME), (d) => {
+      // The doc briefs are exactly the object-briefs under nos.* ids; the
+      // knowledge_imports markers are left UNTOUCHED so the next non-forced
+      // ingest treats the domains as unchanged and declines to re-insert.
+      const before = (
+        d.prepare("SELECT COUNT(*) c FROM taxonomy_metadata WHERE id LIKE 'nos.%'").get() as { c: number }
+      ).c;
+      expect(before).toBe(built);
+      d.exec("DELETE FROM taxonomy_metadata WHERE id LIKE 'nos.%'");
+    });
+
+    const again = cli('materialise', dir);
+    // Reading the generator's stdout would boot this green (it still builds 394);
+    // measuring the store refuses it, because the store now holds zero doc rows.
+    expect(again.status, again.out).not.toBe(0);
+    expect(again.out.toLowerCase()).toContain('doc');
   });
 
   it('mirrors the ToE concept relations into the generalized store', () => {

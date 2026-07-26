@@ -126,8 +126,16 @@ export interface MaterialiseReport {
    *  green P-4 because every gate measured composition and none measured
    *  coverage; a fact nobody can read is a fact nobody checks. */
   slugRoots: string[];
-  /** Docs-as-knowledge coverage. null when the self-model (and thus docs) was not run. */
+  /** Docs-as-knowledge coverage AS REPORTED BY THE GENERATOR — what the child
+   *  process BUILT from the files on disk. null when the self-model (and thus
+   *  docs) was not run. Never the coverage ASSERTION: see `docNodesInStore`. */
   docs: DocsReport | null;
+  /** Doc nodes the STORE actually holds, MEASURED off DB rows (not the generator
+   *  stdout). This is what the coverage gate asserts on — a `docs.docNodes` that
+   *  only agreed with the file-reading generator would repeat the C1 gap one
+   *  level down: a store whose doc rows a non-forced re-ingest skipped would boot
+   *  green while every doc query returned nothing. 0 when docs were not run. */
+  docNodesInStore: number;
 }
 
 export interface StoreFacts {
@@ -504,6 +512,54 @@ export function runIngest(
   return parsed;
 }
 
+const DOC_KINDS = new Set(['skill', 'hint', 'note', 'snippet']);
+
+/**
+ * Count the doc nodes ACTUALLY IN THE STORE — read off DB rows, never off the
+ * generator's stdout.
+ *
+ * `keap_docs_gen` writes each doc node's typed brief (`{kind, source,
+ * provenance}`) to `taxonomy_metadata` as a JSON OBJECT. The self-model's own
+ * system/stack/credential nodes carry NO brief, and the git corpus carries a
+ * STRING brief under numeric domains — so an object brief with a `provenance`
+ * sidecar and a doc `kind`, under a `nos.*` id, is a doc node and nothing else
+ * is. That is the measurement the coverage gate must assert against.
+ *
+ * Why not trust `docs.docNodes`: that number is what the child process BUILT
+ * from the files on disk. It diverges from what the store HOLDS the instant a
+ * `knowledge_imports` sha still matches while the rows behind it are gone — a
+ * `taxonomy_metadata`/`node_descriptions` schema migration, a restored partial
+ * backup, an interrupted vacuum. `ingest.mjs` then sees the domain as unchanged
+ * and SKIPS it ("unchanged → continue"), never re-inserting; the file-reading
+ * generator still reports 394. Asserting on stdout would call that store
+ * documented — the exact "silence == no-such-capability" lie this feature kills,
+ * reproduced for the prose layer.
+ */
+function measureDocNodes(db: DbModule): number {
+  const rows = db
+    .getDb()
+    .prepare("SELECT data FROM taxonomy_metadata WHERE id LIKE 'nos.%'")
+    .all() as Array<{ data: string }>;
+  let n = 0;
+  for (const row of rows) {
+    let brief: unknown;
+    try {
+      brief = (JSON.parse(row.data) as { brief?: unknown }).brief;
+    } catch {
+      continue;
+    }
+    if (
+      brief &&
+      typeof brief === 'object' &&
+      (brief as { provenance?: unknown }).provenance &&
+      DOC_KINDS.has((brief as { kind?: unknown }).kind as string)
+    ) {
+      n += 1;
+    }
+  }
+  return n;
+}
+
 /**
  * Open (and, on request, materialise) the organ's store.
  *
@@ -574,6 +630,7 @@ export async function openStore(opts: OpenStoreOptions = {}): Promise<StoreHandl
   // coverage. So the store states what it covers, and refuses to come up
   // pretending otherwise.
   let slugRootIds: string[] = [];
+  let docNodesInStore = 0;
   if (opts.materialise && cfg.selfmodelEnabled) {
     const slugRoots = taxonomy
       .allNodes()
@@ -591,21 +648,40 @@ export async function openStore(opts: OpenStoreOptions = {}): Promise<StoreHandl
     // The DOCS coverage assertion — the half the C1 gap lacked. The self-model
     // slug-root check above proves the SHAPE landed; this proves the PROSE did.
     // Zero doc nodes is the same "corpus exhausted" lie one level down: every
-    // system node present, every one of them mute. `runDocs` already refuses it
-    // (the generator exits non-zero), but a store that materialised with docs
-    // ENABLED and still carries a null/empty docs report is a code path that
-    // skipped the assertion, so it is caught here too rather than trusted.
+    // system node present, every one of them mute.
+    //
+    // Crucially, this is MEASURED against the store, not read off `docs.docNodes`
+    // (the generator's file-derived stdout). Asserting on the stdout would be
+    // structurally WEAKER than the sibling slug-root check right above, which
+    // queries `taxonomy.allNodes()` — and it would miss the exact failure this
+    // feature exists to kill: the generator re-derives 394 from the files while a
+    // non-forced re-ingest, seeing an unchanged `knowledge_imports` sha, declined
+    // to re-insert doc rows a migration/partial-restore had dropped. The store
+    // would boot green logging "documented" with zero doc rows behind it.
     const docs = selfmodel?.docs ?? null;
-    if (!docs || docs.docNodes === 0) {
+    docNodesInStore = measureDocNodes(db);
+    if (!docs || docNodesInStore === 0) {
       throw new Error(
-        'materialisation ENABLED docs but produced no doc coverage — the self-model system nodes ' +
-          'would all resolve mute (no README, no skill, no note), which reads as "no such capability" ' +
-          'rather than "docs not generated". Set CORTEX_SELFMODEL=0 for a deliberately prose-free store.',
+        'materialisation ENABLED docs but the STORE holds zero doc rows — the self-model system ' +
+          'nodes would all resolve mute (no README, no skill, no note), which reads as "no such ' +
+          'capability" rather than "docs not generated". This is measured against the store, not the ' +
+          `generator's stdout (which built ${docs?.docNodes ?? 'null'}): a null docs report, or a doc ` +
+          'corpus a non-forced re-ingest skipped while its rows were absent, both land here. Set ' +
+          'CORTEX_SELFMODEL=0 for a deliberately prose-free store, or re-run with --force.',
+      );
+    }
+    if (docs.docNodes !== docNodesInStore) {
+      throw new Error(
+        `docs coverage desync: keap_docs_gen BUILT ${docs.docNodes} doc node(s) from the files on ` +
+          `disk, but the store HOLDS ${docNodesInStore}. A non-forced re-ingest skipped a domain whose ` +
+          'knowledge_imports sha still matched while its doc rows were gone (a schema migration, a ' +
+          'partial restore, an interrupted vacuum). The coverage claim is asserted against the store, ' +
+          'not the generator — re-run with --force to re-materialise the missing rows.',
       );
     }
     log(
       `[store] docs coverage: ${docs.servicesCovered.length}/${docs.servicesTotal} services documented, ` +
-        `${docs.servicesMissed.length} missed` +
+        `${docNodesInStore} doc node(s) in store, ${docs.servicesMissed.length} missed` +
         (docs.servicesMissed.length ? ` (${docs.servicesMissed.slice(0, 8).join(', ')}` +
           (docs.servicesMissed.length > 8 ? ', …)' : ')') : ''),
     );
@@ -641,6 +717,7 @@ export async function openStore(opts: OpenStoreOptions = {}): Promise<StoreHandl
       ftsRows,
       slugRoots: slugRootIds,
       docs: selfmodel?.docs ?? null,
+      docNodesInStore,
     },
     facts: storeFacts(cfg, db, taxonomy, ontologyVersion, ann),
   };
