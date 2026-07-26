@@ -173,6 +173,10 @@ final class RouterFactory
 		$router->addRoute('upgrades/<service>', 'Upgrades:service');
 		$router->addRoute('upgrades', 'Upgrades:default');
 		$router->addRoute('timeline', 'Timeline:default');
+		// Pulse job health (browser). The API half above has existed since
+		// 2026-05-04 and recorded every run; nothing rendered them, so a job
+		// failing on every fire since 2026-07-14 was invisible.
+		$router->addRoute('pulse', 'Pulse:default');
 		// B4c: reversible coexistence toggle verbs (browser, operator path). The
 		// authoritative toggle-as-primary / deactivate-secondary / cancel-queued
 		// controls. Specific routes BEFORE the bare 'coexistence' catch-all so the

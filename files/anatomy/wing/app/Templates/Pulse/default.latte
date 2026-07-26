@@ -1,0 +1,83 @@
+{block title}Pulse{/block}
+
+{block content}
+<h2 style="margin-bottom: 4px; font-size: 18px;">
+	Pulse
+	<span class="badge" style="font-size:13px; margin-left:8px;">{count($jobs)} jobs</span>
+	{if $counts['broken'] > 0}<span class="badge" style="font-size:13px; margin-left:4px; background:var(--bad,#b3261e); color:#fff;">{$counts['broken']} broken</span>{/if}
+	{if $counts['stuck'] > 0}<span class="badge" style="font-size:13px; margin-left:4px;">{$counts['stuck']} stuck</span>{/if}
+	{if $counts['failing'] > 0}<span class="badge" style="font-size:13px; margin-left:4px;">{$counts['failing']} failing</span>{/if}
+</h2>
+<div style="color:var(--text2); font-size:13px; margin-bottom:20px;">
+	Scheduled-job health, worst first. <strong>broken</strong> = has run and has
+	never once succeeded · <strong>stuck</strong> = started and never reported
+	back (the daemon died mid-job) · <strong>failing</strong> = last run exited
+	non-zero · <strong>never</strong> = registered but never fired.
+</div>
+
+{if $halted}
+<div class="banner" style="margin-bottom:16px; padding:10px 12px; border-left:3px solid var(--bad,#b3261e);">
+	An <strong>emergency halt</strong> is active — jobs are paused by operator action, not by schedule.
+</div>
+{/if}
+
+<table class="data" style="width:100%; margin-bottom:28px;">
+	<thead>
+		<tr>
+			<th style="text-align:left;">Job</th>
+			<th style="text-align:left;">State</th>
+			<th style="text-align:right;">ok / fail</th>
+			<th style="text-align:left;">Schedule</th>
+			<th style="text-align:left;">Last fired</th>
+			<th style="text-align:left;">Next</th>
+		</tr>
+	</thead>
+	<tbody>
+	{foreach $jobs as $j}
+		<tr>
+			<td><a href="/pulse?job={$j['id']}"><code>{$j['id']}</code></a></td>
+			<td>
+				<span class="badge">{$j['health']}</span>
+				{if $j['paused'] && $j['paused_reason']}<span style="color:var(--text2); font-size:12px;"> {$j['paused_reason']}</span>{/if}
+			</td>
+			<td style="text-align:right;">{$j['ok']} / {$j['bad']}{if $j['unfinished'] > 0} <span title="started, never finished">+{$j['unfinished']}?</span>{/if}</td>
+			<td><code style="font-size:12px;">{$j['schedule']}</code></td>
+			<td style="font-size:12px;">{$j['last_fired_at'] ?? '—'}</td>
+			<td style="font-size:12px;">{$j['next_fire_at'] ?? '—'}</td>
+		</tr>
+		{if $j['health'] === 'broken' || $j['health'] === 'failing'}
+		<tr>
+			<td colspan="6" style="padding-top:0; color:var(--text2); font-size:12px;">
+				<pre style="margin:0; white-space:pre-wrap; overflow-x:auto;">{$j['last_error']|truncate:400}</pre>
+			</td>
+		</tr>
+		{/if}
+	{/foreach}
+	</tbody>
+</table>
+
+<h3 style="font-size:15px; margin-bottom:8px;">
+	Recent runs
+	{if $jobFilter}<span class="badge" style="font-size:12px; margin-left:6px;">{$jobFilter}</span> <a href="/pulse" class="filter-btn">clear</a>{/if}
+</h3>
+<table class="data" style="width:100%;">
+	<thead>
+		<tr>
+			<th style="text-align:left;">Fired</th>
+			<th style="text-align:left;">Job</th>
+			<th style="text-align:right;">Exit</th>
+			<th style="text-align:right;">Duration</th>
+		</tr>
+	</thead>
+	<tbody>
+	{foreach $runs as $r}
+		<tr>
+			<td style="font-size:12px;">{$r['fired_at']}</td>
+			<td><code style="font-size:12px;">{$r['job_id']}</code></td>
+			<td style="text-align:right;">{if $r['exit_code'] === null}<span title="never reported back">—</span>{else}{$r['exit_code']}{/if}</td>
+			<td style="text-align:right; font-size:12px;">{if $r['duration_ms'] !== null}{($r['duration_ms'] / 1000)|number:1} s{else}—{/if}</td>
+		</tr>
+	{/foreach}
+	</tbody>
+</table>
+{/block}
