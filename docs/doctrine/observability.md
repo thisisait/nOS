@@ -45,3 +45,14 @@ the emit.
 depends on whether Wing/Bone/ntfy is up, the coupling is wrong. Verify sinks with
 their own explicit health checks; never let a task's success ride on a telemetry
 POST landing.
+
+**If the API is the only observable path, an in-process shortcut is an
+unobservable call — and it is forbidden, however trivial.** Applies wherever a
+consumer and its backend end up colocated: the cortex organ, the KEAP UI once it
+runs natively on the host, Pulse jobs, Wing's AgentKit. All of them reach the
+knowledge backend over `/agent/v1`, so every read and write lands in one audited
+lineage. The rule exists because it will be tempting exactly when it is easiest —
+same host, same process tree, the store sitting right there — and *"it's right
+here"* is the sentence after which the audit trail quietly stops being complete.
+A performance argument does not override this; a measured, named, and documented
+cache in front of the API does.
