@@ -51,6 +51,14 @@ interface CliResult {
     descriptionOverrides: number;
     ftsRows: number;
     slugRoots: string[];
+    docs: {
+      docNodes: number;
+      nodesByKind: { skill: number; hint: number; note: number; snippet: number };
+      servicesTotal: number;
+      servicesCovered: string[];
+      servicesMissed: string[];
+      domainsMerged: string[];
+    } | null;
   };
   facts: {
     dbPath: string;
@@ -167,6 +175,28 @@ describe('git materialisation (canonical ingest)', () => {
     // `nos.*` operand answers unknown_operand and the refusal looks well-formed.
     expect(first.materialise.slugRoots).toContain('nos');
     expect(first.facts.ftsRows).toBe(first.facts.taxonomyNodes);
+  });
+
+  it('merges docs prose into the tree and reports coverage as data, not a log line', () => {
+    // The half the C1 gap lacked. The self-model places the SYSTEM nodes; this
+    // proves their PROSE reached the store too — and, crucially, that the store
+    // can SAY what it covers. A count that only appeared in a log would repeat
+    // exactly the failure that let 91 nodes go missing through a green P-4.
+    const docs = first.materialise.docs!;
+    expect(docs).not.toBeNull();
+    expect(docs.docNodes).toBeGreaterThan(0);
+    // every kind counted; the counts partition the node total (nothing lost)
+    const k = docs.nodesByKind;
+    expect(k.skill + k.hint + k.note + k.snippet).toBe(docs.docNodes);
+    // covered ⊎ missed == the whole estate — a service is documented or MISSED,
+    // never silently absent. This is the assertion; the number is not hardcoded
+    // (it moves with the estate) but the invariant is.
+    expect(docs.servicesCovered.length + docs.servicesMissed.length).toBe(docs.servicesTotal);
+    expect(docs.servicesCovered).toContain('gitea');
+    // The gap is named. traefik ships no docs/systems tree, so it appears by name
+    // in `missed` — "silence" and "no such capability" are now different values.
+    expect(docs.servicesMissed).toContain('traefik');
+    expect(docs.servicesMissed.length).toBeGreaterThan(0);
   });
 
   it('mirrors the ToE concept relations into the generalized store', () => {
