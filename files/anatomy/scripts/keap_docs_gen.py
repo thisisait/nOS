@@ -264,14 +264,29 @@ def build_docs(manifest_path: str, docs_root: str, repo_root: str) -> dict:
     counts = {k: 0 for k in DOC_KINDS}
     covered: list[str] = []
     missed: list[str] = []
+    empty: list[str] = []          # a doc tree EXISTS but produced zero nodes
+    docs_ignored: list[str] = []   # <sslug>/<file> prose outside the allowlist
 
     for sid in sorted(systems):
         sv = systems[sid]
         sslug = sv["slug"]
         ddir = _doc_dir(docs_root, sslug)
         if not ddir:
-            missed.append(sslug)
+            missed.append(sslug)   # genuinely NO docs/systems/<svc>/ tree
             continue
+
+        # Prose that lives outside the fixed allowlist (RUNBOOK.md, GUIDE.md, a
+        # typo'd AGENT.md) contributes zero nodes. Silently dropping it is the fee:
+        # authored prose on disk vanishing from the corpus with no signal. Name
+        # every unrecognized `.md` so it is REVEALED, not omitted — a consumer can
+        # then see the gap is "not parsed", not "does not exist".
+        try:
+            for entry in sorted(os.listdir(ddir)):
+                if entry.endswith(".md") and entry not in DOC_FILES \
+                        and os.path.isfile(os.path.join(ddir, entry)):
+                    docs_ignored.append(f"{sslug}/{entry}")
+        except OSError:
+            pass
 
         anchor = sv["node_id"]                 # nos.<stack>.<system>
         domain = f"{sm.ROOT_ID}.{sv['stack']}"  # the per-stack domain file to merge into
@@ -360,7 +375,11 @@ def build_docs(manifest_path: str, docs_root: str, repo_root: str) -> dict:
         if produced:
             covered.append(sslug)
         else:
+            # A tree that yielded nothing is still MISSED (no usable docs), but it
+            # is NOT the same as "no tree at all" — record it as `empty` too so the
+            # two causes are distinguishable instead of collapsing to one value.
             missed.append(sslug)
+            empty.append(sslug)
 
     total = counts["skill"] + counts["hint"] + counts["note"] + counts["snippet"]
     return {
@@ -372,6 +391,10 @@ def build_docs(manifest_path: str, docs_root: str, repo_root: str) -> dict:
             "services_total": len(systems),
             "services_covered": sorted(covered),
             "services_missed": sorted(missed),
+            # `empty` ⊆ `missed`: services WITH a docs tree that produced no node.
+            "services_empty": sorted(empty),
+            # Prose on disk outside the README/AGENTS/SKILLS allowlist, by name.
+            "docs_ignored": sorted(docs_ignored),
             "domains_merged": sorted(nodes_by_domain),
         },
     }

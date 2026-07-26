@@ -233,6 +233,36 @@ def test_ordinal_orders_children_across_source_files(tmp_path):
     assert ords == list(range(ords[0], ords[0] + 4)), f"ordinals are not monotonic: {ords}"
 
 
+def test_unrecognized_doc_files_are_revealed_by_name(tmp_path):
+    """A service whose prose lives in RUNBOOK.md / GUIDE.md — or a typo'd
+    AGENT.md — falls outside the fixed README/AGENTS/SKILLS allowlist and
+    contributes zero nodes with no signal. Authored prose that exists on disk
+    must be REVEALED as a counter (`docs_ignored`), never silently omitted."""
+    cov = _one_service_docs(tmp_path, {
+        "README.md": "## Setup\nreadme body\n",
+        "RUNBOOK.md": "## Ops\nrunbook prose that would otherwise be lost\n",
+    })["coverage"]
+    assert "gitea" in cov["services_covered"]          # README parsed → covered
+    assert "docs_ignored" in cov, "no counter reveals the dropped file"
+    assert any(x.endswith("gitea/RUNBOOK.md") for x in cov["docs_ignored"])
+
+
+def test_tree_present_but_ignored_is_not_conflated_with_no_tree(tmp_path):
+    """`services_missed` is field-documented as 'no docs/systems/<svc>/ tree', but
+    a service WITH a tree that produced zero parseable nodes was routed there too
+    — 'no docs tree' and 'docs present but ignored' collapsed to one value. The
+    tree's existence must be distinguishable."""
+    cov = _one_service_docs(tmp_path, {
+        "RUNBOOK.md": "## Ops\nonly ignored prose, no README/AGENTS/SKILLS\n",
+    })["coverage"]
+    assert "gitea" in cov["services_missed"]            # still: no USABLE docs
+    assert "gitea" in cov.get("services_empty", [])     # but the tree EXISTS
+    assert any(x.endswith("gitea/RUNBOOK.md") for x in cov["docs_ignored"])
+    # a service with no tree at all is missed but NOT empty — the two are distinct
+    assert "traefik" in cov["services_missed"]
+    assert "traefik" not in cov.get("services_empty", [])
+
+
 def test_zero_doc_nodes_fails_loudly(tmp_path):
     """Absence is not emptiness: a docs-root with nothing to walk must exit
     non-zero so the store refuses to boot, not log and continue."""
