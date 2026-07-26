@@ -17,6 +17,7 @@
  *   POST /agent/v1/fs/sync           agentAuth('rw') — one mirror pass over the host tree
  *   GET  /agent/v1/objects           agentAuth('ro') — the id set, paged (KEAP's shape)
  *   GET  /agent/v1/objects/:id       agentAuth('ro') — one card, for the body hash
+ *   GET  /agent/v1/graph             agentAuth('ro') — the TAXONOMY id set + edges
  *   GET  /agent/v1/captures          agentAuth('ro') — the review queue
  *   GET  /agent/v1/embeddings/pending agentAuth('ro') — the embed diff (model + dim)
  *   POST /agent/v1/embeddings        agentAuth('rw') — vectors back from the host job
@@ -29,9 +30,11 @@
  * client, and a shape that drifted would make a difference in the report
  * indistinguishable from a difference in the corpus.
  *
- * Still NOT here, and staying in KEAP: taxonomy CRUD, semantic search,
- * relations, tables, lint, curator, topics, promotions, openapi.json, and the
- * whole `/api` + SPA surface. The 404 handler at the bottom says so in the
+ * Still NOT here, and staying in KEAP: taxonomy CRUD, semantic search, relation
+ * WRITES and candidate generation, tables, lint, curator, topics, promotions,
+ * openapi.json, and the whole `/api` + SPA surface. (`/agent/v1/graph` is a
+ * read of the relation tables, not a relations surface — see its own header for
+ * why the diff harness needs it and why it is served whole rather than trimmed.) The 404 handler at the bottom says so in the
  * envelope rather than letting an unmounted path fall through to something that
  * looks like a server error.
  *
@@ -354,6 +357,75 @@ async function main(): Promise<void> {
     // is dropped — it resolves against KEAP's content services, which this
     // organ does not have.
     ok(res, { ...o, body: o.body && o.body.length > 8000 ? `${o.body.slice(0, 8000)}\n…[truncated]` : o.body });
+  });
+
+  // ── GET /agent/v1/graph — the taxonomy id set, and why it had to exist ─────
+  // LIFTED from KEAP `server/agent.ts:604-651`, node for node and filter for
+  // filter, so one harness reads one shape off both daemons.
+  //
+  // It is here for ONE reason and it is a diff-harness reason. Until this route
+  // existed, the taxonomy could only be compared on its COUNT (health's
+  // `corpus.taxonomyNodes`) and on the onto1 digest — and the digest is not
+  // available, because the running incumbent is KEAP 1.26.0 and does not publish
+  // one. A count-only comparison passes two DIFFERENT 1841-node trees as
+  // "PARITY", which is precisely the green a harness must not be able to earn:
+  // §4.4 of the plan asks for taxonomy node ID SETS, and an id set needs a route
+  // that lists ids. KEAP has had one all along; the organ was the missing half.
+  //
+  // Read-only and ro-scoped: `allNodes`, `getObjects`, `listRelations`,
+  // `listRelationTypes`, `embeddingStats` — every one a SELECT. The harness's
+  // access rule (§6.1, over /agent/v1 only, never a write) survives intact.
+  //
+  // The `edges`/`types` half comes with it rather than being trimmed away: a
+  // route that answers at KEAP's path in a shape that is KEAP's minus two keys
+  // is worse than no route, because a client reading `edges: []` cannot tell
+  // "this organ does not serve relations" from "this corpus has none". The
+  // organ's store carries both tables, so both are answered honestly.
+  //
+  // `relationEndpoint` is KEAP's both-endpoints-resolve guard (agent.ts:407-425),
+  // reduced to the boolean this route uses: it exists so no edge dangles off a
+  // retired node or a deleted object. KEAP's version also builds the classifier's
+  // text, which nothing here consumes.
+  type RelationKind = 'node' | 'object';
+  const endpointResolves = (kind: RelationKind, id: string): boolean =>
+    kind === 'node' ? Boolean(taxonomy.getNode(id)) : Boolean(db.getObject(id));
+
+  app.get('/agent/v1/graph', agentAuth('ro'), (_req, res) => {
+    const nodes: Array<{ id: string; kind: RelationKind; name: string; description?: string }> = [];
+    for (const n of taxonomy.allNodes()) {
+      nodes.push({ id: n.id, kind: 'node', name: n.name, description: trim(n.description) });
+    }
+    for (const o of db.getObjects('', true)) {
+      nodes.push({
+        id: `object:${o.id}`,
+        kind: 'object',
+        name: o.title,
+        description: trim(o.description ?? o.body ?? undefined),
+      });
+    }
+    const types = db.listRelationTypes().filter((t) => t.status === 'seed' || t.status === 'confirmed');
+    const activeTypes = new Set(types.map((t) => t.type));
+    const edges = db
+      .listRelations({ status: 'confirmed' })
+      .filter((r) => endpointResolves(r.fromKind, r.fromRef) && endpointResolves(r.toKind, r.toRef))
+      .filter((r) => activeTypes.has(r.type))
+      .map((r) => ({
+        from: r.fromKind === 'object' ? `object:${r.fromRef}` : r.fromRef,
+        to: r.toKind === 'object' ? `object:${r.toRef}` : r.toRef,
+        fromKind: r.fromKind,
+        toKind: r.toKind,
+        type: r.type,
+        confidence: r.confidence,
+        justification: r.justification,
+        source: r.source,
+        model: r.model,
+      }));
+    ok(res, {
+      nodes,
+      edges,
+      types,
+      meta: { vectors: db.vectorSearchAvailable(), embeddings: db.embeddingStats() },
+    });
   });
 
   app.get('/agent/v1/captures', agentAuth('ro'), (req, res) => {

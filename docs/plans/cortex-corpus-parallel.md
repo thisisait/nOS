@@ -804,6 +804,121 @@ The organ's embed pass was also exercised end to end against the new routes —
 (`taxonomy` 1 841, `note` 1 216, `object` 167, `capture` 1) at
 `nomic-embed-text`/768, leaving pending at 0.
 
+### 10.3b Step 7, second pass — the harness that adjudicates
+
+The version above prints a red light. That is not what makes running two
+builders worth more than migrating one into the other: **each corpus is a check
+on the other**, so a difference should say *which side is wrong*. Rebuilt around
+that, plus the per-table row counts and id sets §6.2 actually asks for.
+
+**Three referees, none of which either corpus controls.** A verdict without one
+is an opinion, and the harness publishes `unknown` rather than an opinion:
+
+| referee | settles |
+| --- | --- |
+| the host filesystem (`os.stat`, read-only, never opens a file) | "the organ's reader missed it" vs "KEAP kept a row for a deleted file"; and for a row both sides hold with different `size`/`mtime`, **which side matches the bytes on disk** |
+| `knowledge/canonical` at the pinned ref | a node in the pin + KEAP but not the organ = the organ's store was never re-materialised; the same node missing from KEAP = the **container** is behind the pin. Same shape, opposite culprit |
+| `~/.nos/keap-consolidate-state.json` | a capture gap that is a job which never ran, not an ingestion defect |
+
+**`GET /agent/v1/graph` was added to the organ** (KEAP's route, path and shape,
+`ro`, all SELECTs) for one reason: without it the taxonomy could only be compared
+on its COUNT — and **a count passes two different 1841-node trees as parity**.
+KEAP has had the route all along; the organ was the missing half.
+
+**23 verdict slugs, each with the evidence that picked it.** Four of them
+resolve to *neither corpus is wrong*, and those are gated as hard as the real
+defects — a harness that can only blame a corpus blames the wrong thing loudly:
+`not-a-mirror-row` (a KEAP surface the organ does not serve),
+`organ-pass-degraded` / `keap-pass-degraded` (a refused or truncated pass
+explains a missing id by itself), `shared-uids-divergence` (one env var),
+`fanout-never-ran`.
+
+**Gate:** `tests/anatomy/test_corpus_diff_harness.py`, **40 cases**, offline and
+hermetic — synthetic corpora, a `tmp_path` tree as the filesystem referee, plus
+one end-to-end run of the real script over two throwaway `/agent/v1` daemons.
+Mutation-checked: removing the degraded-pass pre-emption or inverting the
+stale-reader naming turns it red.
+
+**The first real run, and the four defects it found in the harness itself.**
+Live KEAP read-only (`1.26.0`) + a local organ on spare port **8198** against a
+**copy** of its store in `/tmp`. Nothing deployed, nothing written: KEAP's health
+was byte-identical before and after (3 355 vectors, same `db_identity`), and
+every mtime in the user tree pre-dates the session.
+
+```
+S2 corpus diff — night 1 (agree streak 0/3)
+  keap 1.26.0   cortex 0.1.0
+  real user docs   1         <- the denominator that matters
+  referees         filesystem yes · canonical tree yes · feeder state yes
+
+  table                        keap   organ    both  onlyK  onlyO   ids
+  knowledge_objects             170     167     167      3      0   DIFFER
+  knowledge_objects[fs:]        167     167     167      0      0   exact
+  taxonomy_nodes               1841    1841    1841      0      0   exact
+  taxonomy_metadata            1216    1216       —      0      0   —    (count only)
+  api_taxonomy_metadata         128       0       0     50      0   DIFFER
+  relations                     788     788       —      0      0   —    (count only)
+  embeddings[capture]           128       0 · [note] 1216 → 0 · [object] 170 → 0 · [taxonomy] 1841 → 0
+  embedded[object]              170    None  · embedded[taxonomy] 1841 None   (ref set NOT derived)
+  corpus parity    NOT PINNED — the pinned tree has 2393 nodes; keap has 1750,
+                   organ has 1750 (+91 generated, outside the referee), and 643
+                   are in NEITHER. An 'exact' id set above is agreement on a
+                   stale tree, not parity
+  onto1 digest     not served vs onto1:5d9bef3706a3c8ac   CEILING
+  VERDICT          DISAGREE (fs ids ok, body hashes ok, taxonomy ok,
+                             captures NO, embed shape ok, embedded refs NO)
+
+  [FEEDER ] fanout-never-ran ×1   keap 128 vs organ 0; the ledger is version 1
+            with targets ['keap'] — the fan-out has never fed the organ. The
+            corpora are not disagreeing; one was never written to.
+  [ORGAN  ] organ-embed-behind ×2  cortex holds 0 object vectors for 167 sources
+  [NEITHER] not-a-mirror-row ×3   type 'table', owner 'nos-agent', no fs: id
+  [NEITHER] both-behind-pin ×1    643 pinned nodes in NEITHER corpus
+  [NEITHER] outside-referee-jurisdiction ×1   91 nos.* nodes, generated
+```
+
+`fs ids exact` **and** `body hashes match` across all 167 — the §1.5 decision
+working: both sides read the same published host tree, so the `--facts-json`
+divergence has no opportunity to appear. `taxonomy exact` is now a real
+statement about **1 841 ids**, not two equal counts.
+
+The run's real value was the four things it found **in the harness**, all fixed
+and gated before this record was written:
+
+1. **`taxonomy 1841 vs 1841 PARITY` was a lie of omission.** Both sides agree —
+   and both are behind the pin by 643 nodes. The referee was only consulted for
+   ids that *differed*, so perfect agreement skipped it entirely, and the
+   strongest-looking line in the report answered §4.4's question wrongly. Now
+   there is a `corpus parity` line, and `both-behind-pin` is a finding. It is
+   deliberately **not** a verdict clause: parity is currency, not agreement, and
+   failing the 3-night clock for it would fail it for something the clock does
+   not measure.
+2. **A derived number that was wrong in a known direction.**
+   `embedded = sources − pending` holds only while `pending` is complete.
+   Truncated at the 500-item page cap it *overstates*, by exactly what the cap
+   hid — the first run reported **1 341 of 1 841 taxonomy refs "embedded" against
+   a store holding zero vectors**. Worse, `pending` is largest exactly when a
+   side is furthest behind. The derived set is now withheld when the cap is hit,
+   and the exact `byKind`-vs-sources row count carries the finding instead.
+3. **`embedded refs ok` over a store with no vectors.** The clause keyed only on
+   `only_in_*` findings, so when the ref-set diff was *skipped* the clause read
+   green — the same "two silences compared equal" failure the onto1 digest rule
+   already refuses. `count_mismatch` is now inside the clause.
+4. **91 false accusations from a referee out of its jurisdiction.**
+   `knowledge/canonical` is the source for the canonical taxonomy and nothing
+   else; the estate self-model registers `nos.*` through `registerExtNode`.
+   Judging those against the tree produced 91 × "fed from something this checkout
+   is not pinned to". The fix is structural rather than a hardcoded prefix — a
+   node is in jurisdiction when its ROOT segment is one the canonical tree
+   defines — so the next generated subtree needs no remembering.
+
+One honest wart, recorded rather than hidden: `GET /agent/v1/embeddings/pending`
+runs `pendingEmbeddings()`, which **prunes** vectors whose source row is gone. It
+is the only wire path publishing the model, the dimension and the pending diff,
+so the harness calls it and then asserts the returned `pruned` is 0 — a non-zero
+value is reported as `harness-side-effect`. A tool that writes while claiming not
+to is worse than one that admits it.
+
 ### 10.4 Four things this build learned that the design did not know
 
 1. **The pin is v1.34.0, not v1.32.1**, and v1.34.0 also populated
