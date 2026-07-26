@@ -1,6 +1,14 @@
 # P-4b: the cortex organ role — steps 9–12, blank trimmed
 
-Status: **planned**, 2026-07-25. Workflow definition at
+Status: **implemented through step 11 + docs**, 2026-07-25 — steps 9 (role),
+10 (plugin + KEAP env plumb), 11 (CI job + shims) and the Docs consolidation
+are committed on `feat/cortex-organ`; the live `--tags cortex` converge (step
+12 trimmed) is the operator's next act after merge to `dev`. Two deviations
+from the written design, both deliberate and recorded in the commits: the
+daemon runs IN-PLACE from `files/anatomy/cortex/` (the self-model NOS_ROOT is
+module-relative — an rsynced copy could not see the estate), and `cortex-base`
+declares NO pulse job (embed-sync is C2 scope; the C1 daemon has no embed
+surface). Workflow definition at
 `tools/workflows/nos-cortex-organ-role.js` (first entry in the repo's own
 workflows dir — nOS `.gitignore` excludes `.claude/*`, so the KEAP-side
 convention of `.claude/workflows/` does not carry over). Runs on
