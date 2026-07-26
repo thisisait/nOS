@@ -73,6 +73,9 @@ these values.
 | `server/db.ts` | 2 966 lines — the single data chokepoint | — | `wc -l` |
 | KEAP repo | 3.46 MiB packed, no LFS | — | `git count-objects -vH` |
 | fs-sync source | `{{ nos_data_root }}/tenants/<slug>/users`, bind-mounted RO | — | `compose.yml.j2` |
+| …and `nos_data_root` resolves to | **`/Volumes/SSD1TB/nOS/data`** — an **external, removable volume** | — | `config.yml:201` |
+| fs-sync id derivation | `fs:<uid>:<sha1(relPath)[:16]>`, uid = top-level directory NAME | must stay deterministic | `server/fs-sync.ts` |
+| fs-sync visibility | from the config `SHARED_UIDS` set, **not** filesystem permissions | — | `server/fs-sync.ts:479` |
 
 **The finding that shaped this plan:** the corpus is 11.5 MB and *nothing in it
 lacks an external source*. The earlier framing — "C2 moves a store with no git
@@ -299,7 +302,63 @@ provenance*, and knows nothing about where it came from.
 | # | question | blocks | owner |
 | --- | --- | --- | --- |
 | 1 | p95 latency of the ~33 UI routes once they cross the API — does the explorer need a named cache in front? | S4 | measure in S2 |
-| 2 | Does a caller identity actually unlock `kg:`/`ent:`? The scope decision promises it; nobody has verified it against Bone's middleware | S4 | verify in S0 |
-| 3 | fs-sync's per-user visibility and tenant scoping outside the container — the likeliest source of hidden coupling | S2 | research in S0 |
+| 2 | ~~Does a caller identity unlock `kg:`/`ent:`?~~ **ANSWERED 2026-07-26, and the answer is no — not yet.** See §8.1 | S4 | now owed work, not a question |
+| 3 | ~~fs-sync visibility and tenant scoping outside the container~~ **ANSWERED — de-risked.** See §8.2 | S2 | closed |
+| 4 | **NEW:** the user tree is on a removable volume and only Docker has a mount preflight. See §8.3 | S2 | design in S2 |
+
+### 8.1 The identity claim is aspirational
+
+KEAP's `cortex-full-scope-decision.md` makes caller identity **the** argument for
+the whole transplant: KEAP's agent surface cannot have one where it lives, but a
+host organ behind Bone's loopback token + Authentik JWKS would — and that is the
+precondition for `kg:`/`ent:` to ever resolve.
+
+Measured: the organ contains **zero references** to Bone, JWKS or Authentik. Its
+`agentAuth` was lifted verbatim from KEAP — one scope bit from a process-wide
+secret, `x-keap-agent` self-asserted and believed by nothing. **Today the organ's
+identity model is exactly as poor as KEAP's.**
+
+The capability does exist, but in the wrong language: `files/anatomy/bone/auth.py`
+has real JWKS caching, Authentik OAuth2 `client_credentials`, and scope checking.
+Grafting it means either a **new TypeScript dependency** (organ deps today are
+`express`, `libsql`, `zod` — no JWT library, and KEAP has none either) or a
+cross-language hop the organ design explicitly rejected ("without Python Bone
+proxying the TypeScript core").
+
+**Nothing in this plan schedules it.** It is not a blocker for S1–S3, which need
+no caller identity. It IS a blocker for the promise, and the honest position is:
+`kg:`/`ent:` stay refused until this is built, and the transplant's headline
+benefit is owed rather than delivered.
+
+### 8.2 fs-sync is safer to move than assumed
+
+The plan called this "the likeliest source of hidden coupling". It is not.
+Doctrine class 3 makes the filesystem the boundary: the uid is the **top-level
+directory name**, the object id is `fs:<uid>:<sha1(relPath)[:16]>`, and visibility
+comes from a config `SHARED_UIDS` set. None of it reads uid ownership or
+permissions, so a host daemon reading the same path derives the **same ids and the
+same visibility** as the container does.
+
+Two consequences: the container-vs-host permission worry was unfounded, and S2's
+diff harness gets much sharper — the two id sets should match **exactly**, not
+within a tolerance.
+
+The prune guards are also already correct and only need porting: zero files found
+while mirrors exist refuses the prune, an unreadable subtree truncates the walk
+and forbids pruning against it, and `pruneRefused` is surfaced as data so a
+refusal is observable rather than looking like "nothing to remove".
+
+### 8.3 The removable volume has no host-side guard
+
+`nos_data_root` is `/Volumes/SSD1TB/nOS/data` — the user tree lives on an
+**external volume**. The estate knows this: `tasks/stacks/docker-external-mount-preflight.yml`
+guards it. But that preflight protects **containers**, and a host daemon reading
+the path directly goes nowhere near it.
+
+So the guard that exists today does not cover the consumer S2 creates. fs-sync's
+own refuse-to-prune logic (§8.2) is the second line and would hold, but relying on
+it means the organ's correctness depends on a guard reacting to an unmounted disk
+rather than on never walking one. **S2 must add a host-side mount assertion**, and
+the workflow's `user-data` lens should hunt specifically for this.
 | 4 | Single libSQL file, FTS5 and force-sim at 10⁶ nodes | after S3 | own research |
 | 5 | What ends KEAP's code release train — a final tag, or a repo split? | S5 | decide in S4 |

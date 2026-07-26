@@ -142,6 +142,12 @@ NOBODY HAS VERIFIED THIS AGAINST BONE'S ACTUAL MIDDLEWARE. Do that now:
     call arriving at :8098 carries a verifiable caller identity, or is that aspirational?
   - what would actually have to be built? Name files.
   - and separately: object_type_definitions is empty and has no writer, so ent: needs one regardless.
+A 2026-07-26 dry run already established: ZERO Bone/JWKS/Authentik references in the organ, agentAuth
+lifted verbatim from KEAP, and the real capability sitting in files/anatomy/bone/auth.py (Python,
+with JWKS caching + OAuth2 client_credentials + scopes). Do not re-derive that — CONFIRM or REFUTE
+it, then go further than the dry run did: cost the graft in files and dependencies, and say which of
+the two shapes is right (a JWT library in the organ, or a Bone hop the design rejected).
+
 Answer "unknown" rather than reasoning your way to "yes". This claim justifies the plan's premise;
 if it is aspirational, the plan should say so instead of promising it.`,
   },
