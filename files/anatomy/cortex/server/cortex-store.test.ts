@@ -194,10 +194,14 @@ describe('git materialisation (canonical ingest)', () => {
     // (it moves with the estate) but the invariant is.
     expect(docs.servicesCovered.length + docs.servicesMissed.length).toBe(docs.servicesTotal);
     expect(docs.servicesCovered).toContain('gitea');
-    // The gap is named. traefik ships no docs/systems tree, so it appears by name
-    // in `missed` — "silence" and "no such capability" are now different values.
-    expect(docs.servicesMissed).toContain('traefik');
-    expect(docs.servicesMissed.length).toBeGreaterThan(0);
+    // S1 reached full coverage: every manifest service now ships a docs/systems
+    // tree, so `missed` is empty — traefik, once the named gap this assertion
+    // pointed at, is now covered. The partition invariant above is the standing
+    // guard; if a future service lands without docs it reappears in `missed` BY
+    // NAME (never silently absent — "silence" and "no such capability" stay
+    // different values). The count is not hardcoded; it moves with the estate.
+    expect(docs.servicesCovered).toContain('traefik');
+    expect(docs.servicesMissed).not.toContain('traefik');
     // And the number that GATES the boot is MEASURED off the store, not read off
     // the generator's stdout: on a healthy materialisation the two agree, but the
     // assertion is against the store's own rows (docNodesInStore), which is what
@@ -214,7 +218,8 @@ describe('git materialisation (canonical ingest)', () => {
     // restore, an interrupted vacuum). Reproduce EXACTLY that: materialise, delete
     // the doc metadata rows but KEEP the import markers, then re-materialise
     // NON-forced. ingest.mjs sees the nos.* domains as unchanged and SKIPS them,
-    // never re-inserting — while the file-reading generator still reports 394.
+    // never re-inserting — while the file-reading generator still reports its
+    // full built count.
     const dir = dirFor('docs-desync');
     const first = cli('materialise', dir);
     expect(first.status, first.out).toBe(0);
@@ -234,11 +239,15 @@ describe('git materialisation (canonical ingest)', () => {
     });
 
     const again = cli('materialise', dir);
-    // Reading the generator's stdout would boot this green (it still builds 394);
-    // measuring the store refuses it, because the store now holds zero doc rows.
+    // Reading the generator's stdout would boot this green (it still builds the
+    // full count); measuring the store refuses it, because the store now holds
+    // zero doc rows.
     expect(again.status, again.out).not.toBe(0);
     expect(again.out.toLowerCase()).toContain('doc');
-  });
+    // Full S1 coverage makes this test spawn two materialise CLIs over ~1k doc
+    // nodes plus the self-model; the default 5s timeout is too tight for the
+    // double round-trip. This budget is the round-trip cost, not slack.
+  }, 30000);
 
   it('mirrors the ToE concept relations into the generalized store', () => {
     expect(first.facts.toeRelations).toBe(4434);
