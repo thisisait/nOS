@@ -446,6 +446,13 @@
     NOS_MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password | default('') }}"
     NOS_CONSOLIDATE_FS_ROOTS: "{{ (nextcloud_data_dir | default('')) ~ ':' ~ (ansible_facts['env']['HOME'] ~ '/keap/inbox') }}"
     NOS_CONSOLIDATE_DB_EXCLUDE: "{{ mariadb_databases | default([]) | map(attribute='name') | join(',') }}"
+    # S2 fan-out: an EMPTY url is the off switch — keap-consolidate and
+    # keap-embed-sync then behave exactly as they did before the second target
+    # existed, rather than failing against a daemon that is not there.
+    NOS_CORTEX_FANOUT_URL: "{{ ('http://127.0.0.1:' ~ (cortex_port | default(8098))) if install_cortex | default(false) else '' }}"
+    NOS_CORTEX_RW_TOKEN: "{{ cortex_rw_token | default('') }}"
+    NOS_CORTEX_RO_TOKEN: "{{ cortex_ro_token | default('') }}"
+    NOS_CORTEX_CAPTURE_TOKEN: "{{ cortex_capture_token | default('') }}"
   register: _pulse_catalog_raw
   changed_when: false
   check_mode: false

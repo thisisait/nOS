@@ -104,6 +104,17 @@ def _build_substitutions() -> dict[str, str]:
         "{{ mariadb_root_password }}":    _env("NOS_MARIADB_ROOT_PASSWORD"),
         "{{ consolidate_fs_roots }}":     _env("NOS_CONSOLIDATE_FS_ROOTS"),
         "{{ consolidate_db_exclude }}":   _env("NOS_CONSOLIDATE_DB_EXCLUDE"),
+        # S2 corpus-in-parallel (docs/plans/cortex-corpus-parallel.md): the two
+        # keap-base feeders FAN OUT to the cortex organ, and cortex-base adds the
+        # agreement harness. The URL is Ansible-rendered to "" when the organ is
+        # not installed, which is what makes the fan-out degrade to exactly the
+        # single-target job it was. The tokens are DISTINCT names holding DISTINCT
+        # secrets from KEAP's — one name, two secrets, one host is how a write
+        # token reaches the wrong daemon (§2.1).
+        "{{ cortex_fanout_url }}":        _env("NOS_CORTEX_FANOUT_URL"),
+        "{{ cortex_rw_token }}":          _env("NOS_CORTEX_RW_TOKEN"),
+        "{{ cortex_ro_token }}":          _env("NOS_CORTEX_RO_TOKEN"),
+        "{{ cortex_capture_token }}":     _env("NOS_CORTEX_CAPTURE_TOKEN"),
     }
 
 

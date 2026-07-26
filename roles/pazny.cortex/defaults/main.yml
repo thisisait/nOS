@@ -48,3 +48,54 @@ cortex_selfmodel_enabled: true
 # Node binary override. Empty ⇒ auto-detect the nvm default (tasks/node.yml
 # installs it); the organ needs Node >= 22 (package.json engines).
 cortex_node_bin: ""
+
+# ==============================================================================
+# S2 — the corpus mirror (docs/plans/cortex-corpus-parallel.md)
+#
+# The organ reads the SAME host trees KEAP's compose file stacks at /user-files,
+# but as a HOST daemon: no bind mount, no container. Two roots, ordered, each
+# declaring how uids are derived. `child-dirs` is KEAP's behaviour verbatim;
+# `literal:<uid>` walks a root as if it were one uid's own directory, which is
+# how the `:ro`-mounted self-model tree keeps deriving the ids the container
+# derives through the nested mount.
+#
+# Permissions are NOT part of the derivation: fs-sync reads no st.uid, no
+# getuid(), no mode. Read-only-ness is enforced by the daemon never opening a
+# file for writing, and by the operator's own filesystem permissions.
+# ==============================================================================
+
+cortex_fs_enabled: true
+
+# The per-user doctrine tree. REAL USER DATA — read, never written.
+cortex_fs_users_root: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/users"
+
+# The published self-model tree. Sourced from the HOST tree the converge writes
+# (keap_selfmodel_root), NOT from the organ's own generated stage, for one
+# transitional reason with a named exit: roles/pazny.keap/tasks/selfmodel.yml
+# invokes the generator with --facts-json (live image/version/port/domain/
+# mem_limit/cpus) and cortex-store.ts::runSelfmodel passes none of them. Same
+# ids, DIFFERENT card bodies — so S3's "one corpus, two indexes" would be
+# quietly false while an id-only diff read green. The exit (the converge writes
+# a facts JSON that runSelfmodel passes through) is S4 scope.
+cortex_fs_shared_root: "{{ keap_selfmodel_root | default(nos_data_root ~ '/tenants/' ~ nos_tenant_slug ~ '/shared/nos-docs') }}"
+
+# MUST match keap_fs_sync_dirs and keap_selfmodel_uid. A divergence here does
+# not fail — it produces two corpora that legitimately differ, which the
+# nightly diff then reports as a defect that is really a config mismatch.
+cortex_fs_sync_dirs: "{{ keap_fs_sync_dirs | default('documents,library,inbox,nOS') }}"
+cortex_fs_shared_uids: "{{ keap_selfmodel_uid | default('nos-docs') }}"
+
+# 0 disables the in-daemon timer. Default 0: the pass is driven explicitly
+# (POST /agent/v1/fs/sync, or the boot pass) so a night is a decision rather
+# than a coincidence of when the daemon last restarted — and so §5.3's "halt
+# the organ's fs-sync" has something to halt.
+cortex_fs_sync_interval_s: 0
+
+# ── the mount sentinel ────────────────────────────────────────────────────────
+# nos_data_root is a REMOVABLE volume. An unmounted volume presents as an empty
+# directory — or, after an eject, as a stale empty MOUNTPOINT — both of which
+# walk cleanly and scan zero files. The five prune guards all react AFTER the
+# walk; the sentinel is what makes the organ refuse to walk at all.
+# Written at nos_data_root, NEVER inside tenants/<slug>/users: the user tree is
+# real user data and nothing in this stage writes to it.
+cortex_mount_sentinel_path: "{{ nos_data_root }}/.nos-mount-ok"

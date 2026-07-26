@@ -112,11 +112,35 @@ def test_plugin_validates_and_stays_loopback_pure():
     assert load_plugins.validate_manifest(manifest, schema) == []
     assert manifest["_NOS_PLUGIN"] == "cortex-base"
     assert manifest["requires"]["feature_flag"] == "install_cortex"
-    # Deliberate absences — presence of either is scope creep, not progress:
-    # no route ⇒ no authentik provider (§5); embeddings/recall are C2 ⇒ no
-    # pulse job until the daemon has an embed surface to sync against.
+    # Deliberate absence — presence is scope creep, not progress: no route ⇒ no
+    # authentik provider (§5).
     assert "authentik" not in manifest, "cortex-base must not register an Authentik provider"
-    assert "pulse" not in manifest, "no pulse job before C2 (no embed surface exists)"
+
+    # The pulse half of this gate used to read "no pulse job before C2 (no embed
+    # surface exists)". That premise was spent by S2
+    # (docs/plans/cortex-corpus-parallel.md): the daemon now serves
+    # /agent/v1/embeddings{,/pending} and /ingest/v1/capture. Rather than delete
+    # the assertion, it is narrowed to what still has to be true — because the
+    # thing worth preventing was never "a job", it was a job on this plugin
+    # QUIETLY BECOMING A WRITER.
+    #
+    # The two FEEDERS stay on keap-base and fan out (one job, N targets,
+    # incumbent first). cortex-base owns exactly one job: the agreement harness,
+    # which reads both corpora over /agent/v1 and writes to neither.
+    jobs = (manifest.get("pulse") or {}).get("jobs") or []
+    assert [j["name"] for j in jobs] == ["cortex-corpus-diff"], (
+        "cortex-base owns exactly one pulse job — the read-only agreement harness. "
+        "The consolidator and embed feeders belong on keap-base as FAN-OUT jobs: "
+        "duplicating them here would sweep the sources twice and give the shadow "
+        "its own schedule to drift on."
+    )
+    diff_env = jobs[0].get("env") or {}
+    # RO tokens only. A harness holding a write token is one edit away from
+    # being a repair tool, and a measurement that can fix what it measures
+    # stops being a measurement.
+    assert not [k for k in diff_env if k.endswith(("_RW", "_CAPTURE"))], (
+        f"the diff harness must hold read-only tokens only, got {sorted(diff_env)}"
+    )
 
 
 def test_keap_cutover_is_a_second_decision():

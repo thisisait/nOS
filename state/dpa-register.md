@@ -889,16 +889,26 @@ the backups it manages and its own operation logs.
 cortex-lang programs against the curated taxonomy and the controlled verb
 vocabulary, and reports the ontology/opcode/database drift axes on
 /health. Its store is materialised from the repository (spine + canonical
-tree + the generated nOS self-model) and holds NO per-user content and NO
-knowledge_objects corpus (that is C2 scope and stays with KEAP today).
-Callers are host-side system agents bearing service tokens; requests carry
-no human identity and nothing is written by the validate surface.
+tree + the generated nOS self-model).
+
+SINCE S2 (docs/plans/cortex-corpus-parallel.md) it ALSO mirrors the
+per-user filesystem tree — {{ nos_data_root }}/tenants/<slug>/users/<uid>/
+{documents,library,inbox} — as owner-scoped knowledge objects, and accepts
+consolidator datapoints on /ingest/v1/capture. The previous row said this
+service "holds NO per-user content and NO knowledge_objects corpus"; that
+stopped being true the moment fs-sync was ported, and it is corrected here
+rather than at the next audit. The mirror is READ-ONLY with respect to the
+user tree: the organ opens no file for writing, and every id and every
+visibility decision is derived from directory NAMES, never from filesystem
+ownership. Per-user data is duplicated from KEAP's identical mirror, from
+the same host source, so this adds a second COPY of an already-registered
+category — no new category of subject data enters the estate.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`
-- **Data categories:** `taxonomy_tree`, `validate_requests`
+- **Data subjects:** `operators`, `tenant_users`
+- **Data categories:** `taxonomy_tree`, `validate_requests`, `user_documents`, `consolidator_datapoints`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
-- **Retention:** transient (not persisted)
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** 'host' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 

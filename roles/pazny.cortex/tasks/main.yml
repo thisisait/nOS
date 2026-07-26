@@ -118,6 +118,82 @@
     (_cortex_materialise.stdout is search('self-model: [1-9][0-9]* domain'))
   notify: Restart cortex
 
+# ── S2: the corpus mirror seam (docs/plans/cortex-corpus-parallel.md) ────────
+# Everything here runs BEFORE the plist is rendered and the daemon bootstrapped,
+# because the daemon runs an fs-sync pass at BOOT: a sentinel written afterwards
+# would make the first pass of every fresh converge a refusal.
+
+- name: "[pazny.cortex] Compose the ordered fs roots list"
+  ansible.builtin.set_fact:
+    # ORDER IS THE CONTRACT. The users tree first, the published self-model tree
+    # second — the same order the compose file stacks them at /user-files, so the
+    # first-root-wins collision rule resolves the same way on both sides.
+    # `literal:<uid>` walks the shared root as one uid's own directory, which is
+    # what makes its relPaths (and therefore its object ids) identical to the
+    # ones the container derives through the nested mount.
+    _cortex_fs_user_roots: "child-dirs={{ cortex_fs_users_root }},literal:{{ cortex_fs_shared_uids }}={{ cortex_fs_shared_root }}"
+  when: cortex_fs_enabled | bool
+
+- name: "[pazny.cortex] Read the data root's volume UUID (recorded in the sentinel)"
+  ansible.builtin.command:
+    cmd: "/usr/sbin/diskutil info -plist {{ nos_data_root }}"
+  register: _cortex_diskutil
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - cortex_fs_enabled | bool
+    - ansible_os_family == 'Darwin'
+
+- name: "[pazny.cortex] Extract the volume UUID"
+  ansible.builtin.set_fact:
+    # Best-effort: recorded for a human reading the sentinel, never asserted on.
+    # The tenant slug is the discriminator that matters — it is what catches a
+    # DIFFERENT volume mounted at the same path, which is the case where every
+    # uid goes missing at once and the per-uid guard cannot help.
+    _cortex_volume_uuid: "{{ (_cortex_diskutil.stdout | default('') | regex_search('<key>VolumeUUID</key>\\s*<string>([^<]+)</string>', '\\1') | first) | default('', true) }}"
+  when: cortex_fs_enabled | bool
+
+# ── S2: the mount sentinel ───────────────────────────────────────────────────
+# nos_data_root is a REMOVABLE volume, and the organ's fs mirror walks it. An
+# unmounted volume presents as an empty directory — or, after an eject, as a
+# stale empty MOUNTPOINT — and both walk cleanly and scan zero files. The five
+# prune guards in fs-sync all REACT to a bad found-set after the walk; this file
+# is what lets the daemon refuse to walk at all.
+#
+# It is written at nos_data_root, NEVER inside tenants/<slug>/users: that tree
+# is real user data and this stage writes nothing into it. The converge is the
+# only writer; the organ only ever reads it.
+- name: "[pazny.cortex] Assert the data root is actually mounted"
+  ansible.builtin.stat:
+    path: "{{ nos_data_root }}"
+  register: _cortex_data_root
+  when: cortex_fs_enabled | bool
+
+- name: "[pazny.cortex] Fail when the data root is absent — the sentinel must not be written into a phantom"
+  ansible.builtin.fail:
+    msg: >-
+      {{ nos_data_root }} is not a directory. Writing the mount sentinel here would
+      create it on the boot volume UNDER an empty mountpoint, and the organ would then
+      happily walk an empty tree while believing the disk was present — which is the
+      exact failure the sentinel exists to prevent. Mount the volume and re-run.
+  when:
+    - cortex_fs_enabled | bool
+    - not (_cortex_data_root.stat.isdir | default(false))
+
+- name: "[pazny.cortex] Write the mount sentinel"
+  ansible.builtin.copy:
+    dest: "{{ cortex_mount_sentinel_path }}"
+    mode: '0644'
+    content: |
+      {{ {
+           'tenant': nos_tenant_slug,
+           'volumeUuid': (_cortex_volume_uuid | default('')) or None,
+           'writtenAt': ansible_date_time.iso8601,
+           'dataRoot': nos_data_root,
+         } | to_nice_json }}
+  when: cortex_fs_enabled | bool
+
 # ── Service manager: launchd (macOS) | systemd --user (Linux) ────────────────
 
 # ---- macOS: launchd ----
@@ -156,7 +232,14 @@
       CORTEX_STORE_PATH: "{{ cortex_store_path }}"
       CORTEX_TOKEN_RO: "{{ cortex_ro_token | default('') }}"
       CORTEX_TOKEN_RW: "{{ cortex_rw_token | default('') }}"
+      CORTEX_TOKEN_CAPTURE: "{{ cortex_capture_token | default('') }}"
       CORTEX_SELFMODEL: "{{ '1' if (cortex_selfmodel_enabled | default(true) | bool) else '0' }}"
+      CORTEX_FS_USER_ROOTS: "{{ _cortex_fs_user_roots }}"
+      CORTEX_FS_SYNC_DIRS: "{{ cortex_fs_sync_dirs }}"
+      CORTEX_FS_SHARED_UIDS: "{{ cortex_fs_shared_uids }}"
+      CORTEX_FS_SYNC_INTERVAL_S: "{{ cortex_fs_sync_interval_s | string }}"
+      CORTEX_FS_MOUNT_SENTINEL: "{{ cortex_mount_sentinel_path }}"
+      CORTEX_FS_TENANT_SLUG: "{{ nos_tenant_slug }}"
   no_log: true   # the dict embeds both bearer tokens — keep them out of -vvv output
   when: (nos_service_manager | default('launchd')) == 'systemd-user'
 

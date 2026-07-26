@@ -42,11 +42,42 @@
         <string>{{ cortex_ro_token | default('') }}</string>
         <key>CORTEX_TOKEN_RW</key>
         <string>{{ cortex_rw_token | default('') }}</string>
+        <!-- CAPTURE is the write-only intake tier for /ingest/v1/capture (S2):
+             the consolidator fan-out holds THIS secret under THIS name, and
+             KEAP's under KEAP's. One name meaning two secrets on one host is
+             how a write token reaches the wrong daemon. -->
+        <key>CORTEX_TOKEN_CAPTURE</key>
+        <string>{{ cortex_capture_token | default('') }}</string>
 
         <!-- Materialisation is a CONVERGE-time act (role task); a restart just
              opens the store. CORTEX_MATERIALISE_ON_BOOT deliberately unset. -->
         <key>CORTEX_SELFMODEL</key>
         <string>{{ '1' if (cortex_selfmodel_enabled | default(true) | bool) else '0' }}</string>
+{% if cortex_fs_enabled | default(true) | bool %}
+
+        <!-- ── S2: the corpus mirror (docs/plans/cortex-corpus-parallel.md) ──
+             The organ reads the same two host trees KEAP's compose file stacks
+             at /user-files, as a HOST daemon: no bind mount, no container. The
+             users tree is REAL USER DATA and is only ever read — fs-sync opens
+             no file for writing, and derives every id and every visibility
+             decision from directory NAMES, never from filesystem ownership.
+
+             CORTEX_FS_MOUNT_SENTINEL is the assertion that the removable volume
+             is actually mounted. Without it a walk over an ejected disk scans
+             zero files and looks exactly like an emptied tree. -->
+        <key>CORTEX_FS_USER_ROOTS</key>
+        <string>{{ _cortex_fs_user_roots }}</string>
+        <key>CORTEX_FS_SYNC_DIRS</key>
+        <string>{{ cortex_fs_sync_dirs }}</string>
+        <key>CORTEX_FS_SHARED_UIDS</key>
+        <string>{{ cortex_fs_shared_uids }}</string>
+        <key>CORTEX_FS_SYNC_INTERVAL_S</key>
+        <string>{{ cortex_fs_sync_interval_s }}</string>
+        <key>CORTEX_FS_MOUNT_SENTINEL</key>
+        <string>{{ cortex_mount_sentinel_path }}</string>
+        <key>CORTEX_FS_TENANT_SLUG</key>
+        <string>{{ nos_tenant_slug }}</string>
+{% endif %}
     </dict>
 
     <!-- launchd respawns on crash; ThrottleInterval prevents tight loops. -->

@@ -124,6 +124,13 @@ pulse:
         KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
         KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
         OLLAMA_URL: "http://127.0.0.1:11434"
+        # S2 fan-out: a SECOND target, not a moved one. Empty until the organ
+        # is installed, and the job then behaves exactly as it did. Distinct
+        # env NAMES holding distinct SECRETS is deliberate — one name meaning
+        # two secrets on one host is how a write token reaches the wrong
+        # daemon (docs/plans/cortex-corpus-parallel.md §2.1).
+        CORTEX_API_URL: "{{ cortex_fanout_url }}"
+        CORTEX_AGENT_TOKEN_RW: "{{ cortex_rw_token }}"
 
     # Semantic-lens feature sync (05:00 — after embed-sync, before lint):
     # projects each node's embedding onto the exemplar-difference axes +
@@ -159,6 +166,8 @@ pulse:
       env:
         KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
         KEAP_AGENT_TOKEN_CAPTURE: "{{ keap_agent_token_capture }}"
+        CORTEX_API_URL: "{{ cortex_fanout_url }}"
+        CORTEX_AGENT_TOKEN_CAPTURE: "{{ cortex_capture_token }}"
         NOS_CONSOLIDATE_FS_ROOTS: "{{ consolidate_fs_roots }}"
         NOS_MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
         NOS_CONSOLIDATE_DB_EXCLUDE: "{{ consolidate_db_exclude }}"

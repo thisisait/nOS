@@ -10,12 +10,13 @@
 # /agent route stays UNBUILT until a caller outside that set appears
 # (design §7 Q5).
 #
-# NO pulse job here either, deliberately: the design sketched keap-embed-sync
-# under cortex-base, but embeddings/recall are C2 scope
-# (docs/specs/cortex-full-scope-decision.md) and the C1 daemon exposes no embed
-# surface to sync against. keap-base already runs keap-embed-sync against
-# KEAP's own corpus; moving or duplicating it before C2 would point a writer at
-# an endpoint that does not exist.
+# S2 UPDATE (docs/plans/cortex-corpus-parallel.md). The note that used to stand
+# here — "NO pulse job, the C1 daemon exposes no embed surface to sync against"
+# — was correct and is now spent: the organ serves /agent/v1/embeddings{,/pending}
+# and /ingest/v1/capture, and keap-base's two feeders FAN OUT to it rather than
+# being moved or duplicated. This plugin gains ONE job, the agreement harness,
+# which writes to neither store. The embed job stays in keap-base because it is
+# still one job feeding N targets, incumbent first.
 # =============================================================================
 
 name: cortex-base
@@ -75,17 +76,63 @@ gdpr:
     cortex-lang programs against the curated taxonomy and the controlled verb
     vocabulary, and reports the ontology/opcode/database drift axes on
     /health. Its store is materialised from the repository (spine + canonical
-    tree + the generated nOS self-model) and holds NO per-user content and NO
-    knowledge_objects corpus (that is C2 scope and stays with KEAP today).
-    Callers are host-side system agents bearing service tokens; requests carry
-    no human identity and nothing is written by the validate surface.
+    tree + the generated nOS self-model).
+
+    SINCE S2 (docs/plans/cortex-corpus-parallel.md) it ALSO mirrors the
+    per-user filesystem tree — {{ nos_data_root }}/tenants/<slug>/users/<uid>/
+    {documents,library,inbox} — as owner-scoped knowledge objects, and accepts
+    consolidator datapoints on /ingest/v1/capture. The previous row said this
+    service "holds NO per-user content and NO knowledge_objects corpus"; that
+    stopped being true the moment fs-sync was ported, and it is corrected here
+    rather than at the next audit. The mirror is READ-ONLY with respect to the
+    user tree: the organ opens no file for writing, and every id and every
+    visibility decision is derived from directory NAMES, never from filesystem
+    ownership. Per-user data is duplicated from KEAP's identical mirror, from
+    the same host source, so this adds a second COPY of an already-registered
+    category — no new category of subject data enters the estate.
   legal_basis: legitimate_interests
   data_categories:
     - taxonomy_tree              # curated knowledge taxonomy + estate self-model
     - validate_requests          # agent-submitted programs, processed in-memory only
+    - user_documents             # fs mirror: title, path, size, mtime, text excerpt (BODY_CAP 4000)
+    - consolidator_datapoints    # capture queue rows fanned out from keap-consolidate
   data_subjects:
     - operators
-  retention_days: 0              # validate has zero side effects; the store holds no subject data
+    - tenant_users               # anyone with a per-user tree under tenants/<slug>/users
+  # Not 0 any more: the mirror persists until its source file disappears, at
+  # which point the pass prunes the object and pruneEmbeddings reaps its
+  # vector. Deletion is therefore driven by the filesystem, not by a clock —
+  # recorded as -1 ("retained while the source exists") rather than as a
+  # horizon nothing enforces.
+  retention_days: -1
   processors: []
   eu_residency: true
   transfers_outside_eu: false    # loopback-only host daemon; nothing leaves the box
+
+# =============================================================================
+# PULSE — the S2 agreement harness
+# =============================================================================
+pulse:
+  jobs:
+    # Reads BOTH corpora over /agent/v1 only and records one night in the ledger.
+    # It NEVER writes either store, and it never halts the incumbent: a target
+    # that is down makes the night VOID (neither +1 nor a reset), because a
+    # skipped night must not be able to advance a 3-night clock.
+    #
+    # 05:30 UTC — after keap-embed-sync (04:45) has run BOTH passes, so the diff
+    # sees two corpora in their settled state rather than mid-embed.
+    - name: cortex-corpus-diff
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/scripts/cortex-corpus-diff.py"
+      schedule: "30 5 * * *"
+      jitter_min: 5
+      max_runtime_s: 600
+      max_concurrent: 1
+      env:
+        # BARE tokens — the Pulse catalog does a LITERAL replace; Ansible
+        # pre-renders the values.
+        KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
+        KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
+        CORTEX_API_URL: "{{ cortex_fanout_url }}"
+        CORTEX_AGENT_TOKEN_RO: "{{ cortex_ro_token }}"
+        NOS_NOTIFY_BIN: "{{ playbook_dir }}/files/anatomy/scripts/nos-notify.sh"
