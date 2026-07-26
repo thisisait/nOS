@@ -273,7 +273,20 @@ The `emb1:` stamp, the LFS layout, the manifest gate, and the training pipeline
 over the compression language. Deliberately last: it needs a corpus that exists
 and a vocabulary that has stopped moving.
 
-**Exit:** a weights artefact resolvable by a third party from a clone alone.
+**Corpus skew is a precondition, not a detail.** Measured 2026-07-26: KEAP's
+taxonomy puts **67 % of its 1 750 nodes in 2 of 12 domains** (natural sciences
+811, formal sciences 354; the other ten have zero curated extensions), and **58 %
+of L1 branches have no children**. An embedding space fitted to that as it stands
+learns the shape of physics and mathematics and treats the rest as sparse noise —
+including Law, which is a childless stub and which the stated use case
+(*business logic connected to the legislation a company must follow*) depends on.
+
+Rebalancing, reweighting or growing the corpus is therefore S6 work that starts
+before any training does. `knowledge/DATASET.md` carries the per-domain table.
+
+**Exit:** a weights artefact resolvable by a third party from a clone alone, and
+a written statement of what the corpus it was fitted to over- and
+under-represents.
 
 ---
 
