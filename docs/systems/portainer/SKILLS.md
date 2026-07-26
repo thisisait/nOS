@@ -4,9 +4,16 @@
 
 ## Authentication
 
-- **Method:** Bearer JWT (obtained via `POST /api/auth`)
-- **Token:** `~/agents/tokens/portainer.token`
-- **Base URL:** `https://portainer.dev.local`
+- **Method:** Bearer JWT, obtained via `POST /api/auth` with
+  `{"Username": "admin", "Password": "{global_password_prefix}_pw_portainer"}`.
+  There is no pre-issued token file — mint a JWT per session.
+  (`~/agents/tokens/portainer.token` does not exist; that convention lives in
+  `files/openclaw/AGENTS.md` and nothing provisions it.)
+- **Base URL:** `https://{portainer_domain}` (default `https://portainer.dev.local`), or
+  `http://127.0.0.1:9002` from the host — the loopback publish the playbook uses.
+- **Reachability ceiling:** Docker calls are proxied through `docker-socket-proxy`.
+  With `portainer_socket_proxy_can_exec: false` the container-shell skills fail at the
+  proxy, not at Portainer.
 
 ---
 

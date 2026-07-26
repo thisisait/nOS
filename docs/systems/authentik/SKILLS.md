@@ -1,12 +1,16 @@
 # Authentik — Skills
 
-> Callable actions for Authentik. Each skill is API-first using `openclaw-bot` API token.
+> Callable actions for Authentik. Each skill is API-first against the Authentik
+> REST API v3.
 
 ## Authentication
 
 - **Method:** Bearer token (Authentik API Token)
-- **Token:** `~/agents/tokens/authentik.token`
-- **Base URL:** `https://auth.dev.local`
+- **Token:** `authentik_bootstrap_token` — playbook-generated, seeded as an API token
+  by the `00-admin-groups` blueprint, persisted to `~/.nos/secrets.yml`.
+  (There is no `~/agents/tokens/authentik.token` file and no `openclaw-bot` account;
+  that pairing is a convention in `files/openclaw/AGENTS.md` that nothing provisions.)
+- **Base URL:** `https://{authentik_domain}` (default `https://auth.dev.local`)
 - **Header:** `Authorization: Bearer <token>`
 
 ---
@@ -67,6 +71,12 @@
 }
 ```
 **Output:** Created provider object with `pk`
+
+**Note:** providers created this way are **not durable** — the blueprint engine
+reconciles `10-oidc-apps.yaml` on every container start from the per-plugin
+`authentik:` blocks. Use this for probing only; a permanent provider is a
+`files/anatomy/plugins/<svc>-base/plugin.yml` edit (or a
+`state/tofu-authentik-services.yml` entry when `authentik_engine: tofu`).
 
 ---
 

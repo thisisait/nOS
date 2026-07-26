@@ -5,10 +5,17 @@
 ## Authentication
 
 - **Method:** Bearer JWT (AT Protocol session)
-- **Token:** `~/agents/tokens/bluesky-pds.token`
-- **Base URL:** `https://pds.dev.local`
+- **Base URL:** `http://127.0.0.1:2583` (loopback publish — the reliable path; there is no
+  Traefik route and no `pds.<tld>` host). Use `https://{bluesky_pds_hostname}` only where
+  that hostname resolves (opt-in nginx vhost, or public DNS + federation).
 - **Header:** `Authorization: Bearer <jwt>`
-- **Session creation:** `POST /xrpc/com.atproto.server.createSession` with `{ "identifier": "openclaw-bot", "password": "..." }`
+- **Session creation:** `POST /xrpc/com.atproto.server.createSession` with
+  `{ "identifier": "<handle>", "password": "..." }` — e.g. the admin handle
+  `bluesky_pds_admin_handle` (default `pazny.bsky.dev.lan`) plus
+  `bluesky_pds_admin_password` (`{global_password_prefix}_pw_bluesky`), or a
+  bridge-provisioned `<username>.{bluesky_pds_hostname}` account.
+  There is no pre-issued token file and no `openclaw-bot` account; that pairing is a
+  convention in `files/openclaw/AGENTS.md` that nothing provisions.
 
 ---
 
