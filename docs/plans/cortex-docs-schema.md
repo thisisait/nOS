@@ -183,7 +183,7 @@ refactor from silent.
 **Closed in code, this stage** (not in prose):
 
 - `tests/anatomy/test_selfmodel_slug_charset.py` — runs **every** manifest
-  service id and stack (62 + 9, the whole estate) through `slug_or_die` and
+  service id and stack (63 + 9, the whole estate) through `slug_or_die` and
   asserts a valid slug; asserts the negative (`2fauth`, `3d-printer` →
   `SystemExit`); asserts the diacritic fold (`Pázny → pazny`) and that the
   produced pattern is `SLUG_RE`. Fee 03's "what closes it" was *"a gate in the

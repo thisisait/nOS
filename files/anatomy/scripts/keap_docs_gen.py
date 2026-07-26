@@ -291,7 +291,7 @@ def build_docs(manifest_path: str, docs_root: str, repo_root: str) -> dict:
 
     Anchors come from `keap_selfmodel_gen.build_slug_model` — so a doc can only
     hang off a system node the self-model actually placed, and coverage is
-    measured against the SAME 62-service estate, not a guess.
+    measured against the SAME 63-service estate, not a guess.
     """
     model = sm.build_slug_model(manifest_path, docs_root)
     systems = model["systems"]

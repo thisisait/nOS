@@ -50,7 +50,7 @@ service after a number recently.
 The guard `slug_or_die` already lived in the producer
 (`files/anatomy/scripts/keap_selfmodel_gen.py`); what was missing was proof it
 fires. `tests/anatomy/test_selfmodel_slug_charset.py` now runs **every** manifest
-service id and stack (62 + 9) through the KEAP charset and asserts a valid slug,
+service id and stack (63 + 9) through the KEAP charset and asserts a valid slug,
 asserts a leading-digit name (`2fauth`, `3d-printer`) raises loudly, and pins the
 pattern + diacritic fold. The silent-drop is now a red CI run.
 

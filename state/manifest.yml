@@ -833,6 +833,28 @@ services:
       url_template: "http://localhost:{{ bone_port }}/api/health"
       expect_status: 200
 
+  - id: pulse
+    # The scheduling organ (anatomy A4) — the fourth host organ, and the only
+    # one that LISTENS FOR NOTHING. Pulse is a client: every tick it CALLS Wing
+    # on loopback (pulse_wing_api_base = http://127.0.0.1:{{ wing_port }}) for
+    # due jobs and POSTs the run rows back. It binds no socket, so it has no
+    # port_var, no domain_var and no http health_check to give — inventing one
+    # would describe a surface that does not exist. Liveness comes from the
+    # launchd/systemd-user unit, which `version_source: launchd` already probes
+    # (nos_state_lib introspect_launchd_loaded → healthy/installed="loaded").
+    # No version_var either: the role pins no pulse_version; the only version
+    # string is the package's own __version__, which Ansible never reads.
+    category: automation
+    stack: null
+    install_flag: install_pulse
+    version_source: launchd
+    launchd_label: "eu.thisisait.nos.pulse"
+    # PULSE_STATE_DIR — the role creates it every converge and the daemon is
+    # configured to persist into it. Today nothing under pulse/ writes there
+    # (run state lives in wing.db via the Wing API); this declares WHERE Pulse's
+    # local state belongs, not a claim that it currently holds bytes.
+    data_path_var: pulse_state_dir
+
   - id: cortex
     # The reasoning organ — loopback-only host daemon (design §5: pure loopback
     # default, NO Traefik route; the id is in traefik_skip_ids). domain_var

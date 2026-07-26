@@ -204,7 +204,7 @@ def test_the_gap_is_reported_by_name_not_hidden(tmp_path):
 
     Pinned against a CONTROLLED gap — a docs-root holding only gitea's tree —
     rather than the live estate, because the live estate is now FULLY documented
-    (feat/cortex-docs-knowledge authored all 62 trees): asserting a specific live
+    (feat/cortex-docs-knowledge authored all 63 trees): asserting a specific live
     service is undocumented would encode a gap the branch deliberately closed.
     The mechanism under test is independent of how much happens to be covered."""
     cov = _one_service_docs(tmp_path, {"README.md": "## Setup\nbody\n"})["coverage"]

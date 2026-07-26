@@ -130,7 +130,8 @@ SYSTEM_NAME = {
     "metabase": "Metabase", "superset": "Superset", "influxdb": "InfluxDB",
     "freepbx": "FreePBX", "qgis-server": "QGIS Server",
     "alloy": "Grafana Alloy", "openclaw": "OpenClaw", "hermes": "Hermes",
-    "opencode": "OpenCode", "wing": "Wing", "bone": "Bone", "cortex": "Cortex",
+    "opencode": "OpenCode", "wing": "Wing", "bone": "Bone", "pulse": "Pulse",
+    "cortex": "Cortex",
     "iiab-terminal": "IIAB Terminal", "backup": "Backup", "backrest": "Backrest",
     "tailscale": "Tailscale",
 }
@@ -483,6 +484,14 @@ SYSTEM_EN = {
         "Bone, the local HTTP bridge between playbook runs and the estate's own state store. "
         "Ansible callbacks, agents and scripts post events here; it is the write path for the "
         "platform's self-knowledge."
+    ),
+    "pulse": (
+        "Pulse, the scheduling organ. Every thirty seconds it asks Wing which registered "
+        "jobs are due, forks each one as a subprocess under the operator's account, and "
+        "posts the exit code and output tails back — it holds no schedule and no queue of "
+        "its own, and it listens on no port. Where the backup job and the restic scheduler "
+        "each time only themselves, Pulse is the single timer the whole estate's declared "
+        "jobs run on."
     ),
     "cortex": (
         "Cortex, the reasoning organ. It typechecks agent-written cortex-lang programs "
