@@ -3,7 +3,7 @@
 > **One stack. Forty services. Zero SaaS bills.**
 >
 > `nOS` is the open-source integration engine behind [**This is AIT — Agentic IT**](https://thisisait.eu).
-> An Ansible playbook that orchestrates 73 roles, wires 40+ FOSS services together through one SSO,
+> An Ansible playbook that orchestrates 74 roles, wires 40+ FOSS services together through one SSO,
 > and turns an Apple Silicon Mac — or an Ubuntu 24.04 LTS host — into a reproducible, self-hosted, self-managing cloud.
 
 <p align="center">
@@ -476,7 +476,7 @@ nOS/
 ├── inventory                        # Ansible inventory (localhost)
 ├── security-update.sh               # security-only image pull
 │
-├── roles/pazny.<service>/           # 73 roles, one per service
+├── roles/pazny.<service>/           # 74 roles, one per service
 │   ├── defaults/  tasks/  handlers/  templates/  meta/
 │   └── templates/compose.yml.j2     # compose-override fragment
 │

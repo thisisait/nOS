@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~50 Docker services organized into 73 Ansible roles under the `pazny.*` namespace, 69 anatomy plugins for cross-service wiring, SSO (Authentik), secrets vault (Infisical), a unified web-desktop (nOS face), AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `nos --remove=data --confirm` (legacy `blank=true`) wipes everything and reinstalls from scratch.
+**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~50 Docker services organized into 74 Ansible roles under the `pazny.*` namespace, 70 anatomy plugins for cross-service wiring, SSO (Authentik), secrets vault (Infisical), a unified web-desktop (nOS face), AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `nos --remove=data --confirm` (legacy `blank=true`) wipes everything and reinstalls from scratch.
 
 `nOS` is the open-source reference implementation behind [**This is AIT — Agentic IT**](https://thisisait.eu). Forked from geerlingguy/mac-dev-playbook → roles renamed under the `pazny.*` namespace.
 
@@ -106,7 +106,7 @@ The core of nOS is the **anatomy** — a layered metaphor for how the platform i
 
 When working within the anatomy use **surgeon-like commit messages**: name the exact tendon / vein / bone touched, the symptom that surfaced the issue, the structural change that closes it, and the test that pins it. See P0.x commit series (`12a7828..ca26bd7`) for examples.
 
-### Role-based service delivery (73 roles under `pazny.*`)
+### Role-based service delivery (74 roles under `pazny.*`)
 
 Every Docker service is owned by an Ansible role in `roles/pazny.<service>/`. Each role follows the **compose-override pattern**:
 

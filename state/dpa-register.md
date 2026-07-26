@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 73 (69 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (67)
+- **Processing activities:** 74 (70 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (68)
 - **Transfers outside the EU:** 0 activities
 - **Activities engaging a third-party processor:** 0
 
@@ -878,6 +878,24 @@ the backups it manages and its own operation logs.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `backup_snapshots`, `backup_operation_metadata`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
+- **Storage:** 'host' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
+#### Cortex — `svc_cortex`
+- **Purpose:** Cortex is the estate's reasoning organ: it typechecks agent-authored
+cortex-lang programs against the curated taxonomy and the controlled verb
+vocabulary, and reports the ontology/opcode/database drift axes on
+/health. Its store is materialised from the repository (spine + canonical
+tree + the generated nOS self-model) and holds NO per-user content and NO
+knowledge_objects corpus (that is C2 scope and stays with KEAP today).
+Callers are host-side system agents bearing service tokens; requests carry
+no human identity and nothing is written by the validate surface.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `taxonomy_tree`, `validate_requests`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** transient (not persisted)

@@ -164,6 +164,7 @@
       # into ~/Library/LaunchAgents; without these a blank leaves stale plists
       # pointing at wiped data dirs (gated by test_blank_reset_plist_discovery).
       - "eu.thisisait.nos.bone.plist"
+      - "eu.thisisait.nos.cortex.plist"
       - "eu.thisisait.nos.pulse.plist"
       - "eu.thisisait.nos.wing.plist"
       - "eu.thisisait.nos.hermes.plist"
