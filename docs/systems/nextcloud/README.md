@@ -28,7 +28,7 @@ fallbacks. The domain derives from `tenant_domain` + `host_alias`, not a hardcod
 `dev.local`.
 
 > **Config vs data — the split is load-bearing.** `nextcloud_dir` is the *config-class*
-> bind (the PHP app tree; `tasks/post.yml` edits `{{ nextcloud_dir }}/config/config.php`
+> bind (the PHP app tree; `roles/pazny.nextcloud/tasks/post.yml` edits `{{ nextcloud_dir }}/config/config.php`
 > directly). It intentionally lives OUTSIDE the `nos_data_root` tree at
 > `~/projects/nextcloud`. `nextcloud_data_dir` is the *data-class* bind and is
 > tenant-shared (class 2) under `{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/`,
@@ -91,7 +91,7 @@ fallbacks. The domain derives from `tenant_domain` + `host_alias`, not a hardcod
 - **Trusted proxies** (`nextcloud_trusted_proxies`: `172.16/12`, `192.168/16`, `10/8`)
   must stay set, or Nextcloud sees one Docker gateway IP for the whole fleet and
   brute-force-429s the operator.
-- **ONLYOFFICE / euro-office** is wired by `tasks/post.yml` (`occ app:install onlyoffice`
+- **ONLYOFFICE / euro-office** is wired by `roles/pazny.nextcloud/tasks/post.yml` (`occ app:install onlyoffice`
   + `DocumentServerInternalUrl` over the shared network). `nextcloud` is added as a
   trusted domain so the docserver's download callback is accepted.
 

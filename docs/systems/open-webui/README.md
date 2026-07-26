@@ -29,7 +29,7 @@ credentials pin in `default.config.yml` / `default.credentials.yml`; role defaul
 - **Admin user:** `{{ default_admin_email }}` → `admin@dev.local` on the default tenant
   (`openwebui_admin_email`).
 - **Admin password:** `{global_password_prefix}_pw_openwebui_admin`
-  (`openwebui_admin_password`). `tasks/post.yml` seeds this admin **directly into `webui.db`** on an
+  (`openwebui_admin_password`). `roles/pazny.open_webui/tasks/post.yml` seeds this admin **directly into `webui.db`** on an
   empty DB and reconverges the bcrypt hash on later runs — it never POSTs the public signup endpoint.
 - **Local signup:** OFF. `openwebui_enable_signup: false` in `default.config.yml` shadows the role
   default `true`; the public `/auth/signup` page used to let anyone self-register, and the FIRST

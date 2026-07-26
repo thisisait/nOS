@@ -18,7 +18,7 @@
 
 - **None for agents.** There is no REST/bot API. Do not synthesize skills for
   this system — an agent that must read or send mail should call the mail server
-  (Mailpit `nos.iiab.mailpit`, or Stalwart `nos.infra.smtp_stalwart`) instead.
+  (Mailpit `nos.iiab.mailpit`, or Stalwart `nos.infra.smtp-stalwart`) instead.
 
 ### Skills Reference
 

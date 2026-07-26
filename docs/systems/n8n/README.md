@@ -71,7 +71,7 @@ with `n8n_ssrf_allowed_hostnames` / `n8n_ssrf_allowed_ip_ranges`; disable entire
 ## Health Check
 
 - **Endpoint:** `GET /healthz` → `200 OK`. The plugin `post_compose` health-wait polls
-  `http://127.0.0.1:5678/healthz`; `tasks/post.yml` waits on the same URL before the
+  `http://127.0.0.1:5678/healthz`; `roles/pazny.n8n/tasks/post.yml` waits on the same URL before the
   owner setup.
 - **Container healthcheck:** `wget -qO- http://localhost:5678/healthz` (interval 30s,
   retries 3, start period 30s).

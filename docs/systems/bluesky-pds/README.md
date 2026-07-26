@@ -13,7 +13,7 @@
 | **Reachable at** | `http://127.0.0.1:2583` (loopback publish). **No Traefik router** — the `bluesky_pds` row in `state/manifest.yml` has no `domain_var`, so the file-provider loop skips it (`traefik_auth_modes: bluesky_pds = none`) |
 | **Port** | `2583` (`bluesky_pds_port`; loopback publish `127.0.0.1:2583` → container `3000`) |
 | **Stack** | `infra` |
-| **Node id** | `nos.infra.bluesky_pds` |
+| **Node id** | `nos.infra.bluesky-pds` (hyphen — the manifest id `bluesky_pds` is slugified; `_` is not a legal KEAP segment char) |
 | **Toggle** | `install_bluesky_pds: true` |
 | **Image** | `ghcr.io/bluesky-social/pds:0.4` (`bluesky_pds_version`; upstream ships no semver tags — `0.4` tracks current) |
 | **Container** | `infra-bluesky-pds-1` (manifest id uses `_`, the compose service uses `-`) |

@@ -1447,6 +1447,17 @@
       ]
     },
     {
+      "q": "expose service status",
+      "expect": [
+        "node:nos.iiab.uptime-kuma",
+        "title:ensure-status-page"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
       "q": "fetch face layout config",
       "expect": [
         "node:nos.iiab.keap",
@@ -3053,6 +3064,17 @@
       ]
     },
     {
+      "q": "notify me when X goes down",
+      "expect": [
+        "node:nos.iiab.uptime-kuma",
+        "title:add-notification"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
+      ]
+    },
+    {
       "q": "notify on push",
       "expect": [
         "node:nos.devops.gitea",
@@ -3369,6 +3391,17 @@
       "forbid": [
         "node:nos",
         "node:nos.infra"
+      ]
+    },
+    {
+      "q": "publish a status page",
+      "expect": [
+        "node:nos.iiab.uptime-kuma",
+        "title:ensure-status-page"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
       ]
     },
     {
@@ -6485,6 +6518,17 @@
       "forbid": [
         "node:nos",
         "node:nos.host"
+      ]
+    },
+    {
+      "q": "wire alerts to ntfy",
+      "expect": [
+        "node:nos.iiab.uptime-kuma",
+        "title:add-notification"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.iiab"
       ]
     },
     {

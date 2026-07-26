@@ -36,7 +36,7 @@ silently skip admin-init + OAuth setup. TLS is terminated by Traefik.
 
 - **Admin user:** `admin`
 - **Admin password:** `portainer_admin_password` = `{global_password_prefix}_pw_portainer`
-  (`default.credentials.yml`). `tasks/post.yml` reconverges it via `PUT /api/users/1/passwd`
+  (`default.credentials.yml`). `roles/pazny.portainer/tasks/post.yml` reconverges it via `PUT /api/users/1/passwd`
   (which needs the *old* password in the body, so it alternates candidates).
   Opt-in drift self-heal: `portainer_admin_auto_reset` (default `false`).
 - **SSO bucket:** `native_oidc` (Authentik OAuth2 client `nos-portainer`), RBAC tier **1**

@@ -16,7 +16,7 @@
 | **Node id** | `nos.iiab.keap` |
 | **Toggle** | `install_keap: true` |
 | **Image** | `nos/keap:{{ keap_version }}` (default tag `1.34.0`) — BUILT FROM SOURCE, cloned from `thisisait/nos-keap` at `keap_repo_ref` (`v1.34.0`) |
-| **Data** | `{{ nos_data_root }}/platform/services/keap/data` → `/data` (default `~/nos/...`; external-storage override applies) |
+| **Data** | `{{ nos_data_root }}/platform/services/keap/data` → `/data` (default `~/nos/platform/services/keap/data`, `default.config.yml:68`). **No external-storage override** — `keap_data_dir` is absent from `tasks/stacks/external-paths.yml`, so setting `external_storage_root` leaves `keap.db` (the taxonomy) on the internal disk |
 | **Memory limit** | `512m` (`docker_mem_limit_light`) |
 | **Network** | `gated_net` only (Traefik-only; SEC-02) |
 

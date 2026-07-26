@@ -51,7 +51,16 @@ hardcoded `dev.local`.
      service in this estate; only one is true for yours.
 
   a) Host bind, platform-class (most services):
-     | **Data** | `{{ nos_data_root }}/platform/services/<svc>/data` → `/<mount>` (default `~/nos/...`; external-storage override applies) |
+     | **Data** | `{{ nos_data_root }}/platform/services/<svc>/data` → `/<mount>` (default `~/nos/platform/services/<svc>/data`) |
+
+     Spell the default OUT — `nos_data_root` resolves to `~/nos`
+     (`default.config.yml:41`). Do NOT write `~/nos/...`; an elided default is
+     a value nobody can check.
+     Do NOT append "external-storage override applies" here. Relocation is
+     PER-SERVICE and enumerated by hand in `tasks/stacks/external-paths.yml`
+     (~55 vars); roughly half the platform-class services — keap among them —
+     have NO override. grep that file for this service's path var and let the
+     answer decide the line below.
 
   b) Host bind, tenant-shared content (nextcloud, kiwix, maps, jellyfin, calibreweb):
      | **Data** | `{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/<svc>/data` → `/<mount>` (default `~/nos/tenants/dev/shared/<svc>/data`) |
@@ -99,9 +108,11 @@ this service's path var(s), and to what. Delete this line if it does not.
   or a human must mint it. **Do not invent a bot account or a token path.** There is no
   `openclaw-bot` service account and no `~/agents/tokens/` tree in this estate; if your
   service has no provisioned agent credential, write that sentence instead.
-- **Endpoints verified against repo source:** list the ones nOS itself calls (grep the
-  role's `tasks/post.yml` and the plugin `lifecycle:` block). Mark everything else as
-  upstream surface.
+- **Endpoints verified against repo source:** list the ones nOS itself calls (grep
+  `roles/pazny.<svc>/tasks/post.yml` and the plugin `lifecycle:` block). Mark everything
+  else as upstream surface. Cite that post-hook by its FULL repo-relative path — the bare
+  form resolves against the repo-root `tasks/` dir, which exists and holds no post-hook,
+  so the citation dead-ends.
 
 Delete this whole section if the service exposes no API (a database, a proxy, a headless
 substrate). See `docs/systems/nodered/SKILLS.md` for how to state an honest absence.

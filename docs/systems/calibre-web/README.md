@@ -28,7 +28,7 @@ data rows moved to `nos_data_root`.
 
 ## Authentication
 
-- **Admin user:** `admin` — the linuxserver image ships `admin` / `admin123`; `tasks/post.yml`
+- **Admin user:** `admin` — the linuxserver image ships `admin` / `admin123`; `roles/pazny.calibre_web/tasks/post.yml`
   resets the password on every run.
 - **Admin password:** `{global_password_prefix}_pw_calibreweb`
 - **SSO:** `forward_auth` (plugin `calibre-web-base`, `authentik.mode: forward_auth`, tier 3).
@@ -53,7 +53,7 @@ data rows moved to `nos_data_root`.
 
 ## Library autowiring
 
-`tasks/post.yml` makes the library self-provisioning on a blank run:
+`roles/pazny.calibre_web/tasks/post.yml` makes the library self-provisioning on a blank run:
 
 1. `chown -R abc:abc /books` so the PUID user can write the bind mount.
 2. `calibredb` creates an empty library when `/books/metadata.db` is absent.

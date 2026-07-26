@@ -31,7 +31,7 @@ still holds the compose files — only the data row moved to `nos_data_root`.
 ## Authentication
 
 - **Admin user:** `admin` (`homeassistant_admin_user`) — the owner account is created by
-  `tasks/post.yml` via the one-shot `POST /api/onboarding/users` flow. Once onboarding closes, later
+  `roles/pazny.homeassistant/tasks/post.yml` via the one-shot `POST /api/onboarding/users` flow. Once onboarding closes, later
   runs reconverge the password with `hass --script auth change_password` inside the container.
 - **Admin password:** `{global_password_prefix}_pw_homeassistant`
 - **SSO:** `native_oidc` (plugin `homeassistant-base`, tier 3 = user). HA core speaks OAuth2, not OIDC

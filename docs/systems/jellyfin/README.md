@@ -30,7 +30,7 @@
 
 ## Authentication
 
-- **Admin user:** `admin` (`jellyfin_admin_user`) — created by `tasks/post.yml` through the one-shot
+- **Admin user:** `admin` (`jellyfin_admin_user`) — created by `roles/pazny.jellyfin/tasks/post.yml` through the one-shot
   `/Startup/User` endpoint on a fresh install. Later runs reconverge the password via
   `AuthenticateUserByName` → `POST /Users/{id}/Password`.
 - **Admin password:** `{global_password_prefix}_pw_jellyfin`

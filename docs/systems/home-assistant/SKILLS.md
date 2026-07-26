@@ -11,8 +11,8 @@
 - **Base URL:** `https://home{host_alias_seg}.{tenant_domain}` (default `https://home.dev.local`)
 - **Header:** `Authorization: Bearer <token>`
 
-**When** a call to `/api/` or `/api/states` returns `401`, the token is missing or expired — that
-endpoint is not anonymous, which is also why it is not the container health probe.
+A `401` from `/api/` or `/api/states` means the token is missing or expired — that endpoint is
+not anonymous, which is also why it is not the container health probe.
 
 ---
 

@@ -24,6 +24,6 @@ Talk to the **mail server**, not the webmail frontend:
 
 - **Read/send captured dev mail** → use Mailpit's REST/SMTP API
   (`nos.iiab.mailpit`).
-- **Real IMAP/SMTP/JMAP** → talk to Stalwart (`nos.infra.smtp_stalwart`) directly.
+- **Real IMAP/SMTP/JMAP** → talk to Stalwart (`nos.infra.smtp-stalwart`) directly.
 
 SnappyMail sits *on top of* those; it adds no callable capability of its own.

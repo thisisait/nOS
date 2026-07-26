@@ -45,7 +45,7 @@
 **Trigger:** "set openclaw config", "change max concurrent agents", "update the openclaw primary model"
 **Method:** CLI
 **Command:** `openclaw config set <dotted.key> <value> --strict-json`
-**Examples (verbatim, from `tasks/main.yml`):**
+**Examples (verbatim, from `roles/pazny.openclaw/tasks/main.yml`):**
 ```bash
 openclaw config set agents.defaults.maxConcurrent 4 --strict-json
 openclaw config set agents.defaults.model.primary "ollama/qwen3-coder:30b" --strict-json

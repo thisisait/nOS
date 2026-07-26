@@ -228,10 +228,16 @@ def test_live_estate_is_fully_documented(tmp_path):
 
 
 def test_every_kind_is_producible_even_where_the_corpus_has_none():
-    """docs/systems declares no hints today (0 in the live count) — that is the
-    HONEST result of a declared-not-inferred contract, not a broken classifier.
-    Prove the classifier still produces a hint when the signal IS present, so a
-    future When/If lands as a hint the day it is written."""
+    """Every kind is producible; the live counts are whatever the corpus DECLARES,
+    which is the honest result of a declared-not-inferred contract. hints are rare
+    (3 today, all in pulse/README.md, each a genuinely conditional heading) because
+    a hint requires a leading `**When`/`**If` — so this proves the classifier still
+    produces one when the signal IS present, rather than pinning a count that moves
+    whenever a card is written.
+
+    NB the signal is section-wide: ONE `**When`-leading line retypes its whole
+    section, which is how home-assistant's Authentication section briefly became a
+    hint and lost its standing credential facts to a `note` filter (S1)."""
     cov = _build()["coverage"]
     assert cov["nodes_by_kind"]["skill"] > 0 and cov["nodes_by_kind"]["note"] > 0
     assert _gen().classify(["**When** X happens: do Y"], "note")["kind"] == "hint"
