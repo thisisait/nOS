@@ -216,6 +216,23 @@ def test_repeated_heading_text_coexists_not_crashes(tmp_path):
     assert len(set(ids)) == 2, f"repeated heading collapsed to one id: {ids}"
 
 
+def test_ordinal_orders_children_across_source_files(tmp_path):
+    """`ordinal` is the field that SEQUENCES a system's doc children. With the
+    per-file index reset, README section N, AGENTS section N and SKILLS section N
+    all collided on 100+N, so sorting a system's children strictly by ordinal —
+    the field's stated purpose — produced ties it could not break. Make it
+    monotonic across the whole system so README-then-AGENTS-then-SKILLS ordering
+    is actually expressed by the data."""
+    res = _one_service_docs(tmp_path, {
+        "README.md": "## A\nalpha\n\n## B\nbeta\n",
+        "AGENTS.md": "## C\ngamma\n\n## D\ndelta\n",
+    })
+    ords = sorted(n["ordinal"] for n in _gitea_doc_nodes(res))
+    assert len(ords) == 4, ords
+    assert len(set(ords)) == 4, f"ordinals are not unique across files: {ords}"
+    assert ords == list(range(ords[0], ords[0] + 4)), f"ordinals are not monotonic: {ords}"
+
+
 def test_zero_doc_nodes_fails_loudly(tmp_path):
     """Absence is not emptiness: a docs-root with nothing to walk must exit
     non-zero so the store refuses to boot, not log and continue."""

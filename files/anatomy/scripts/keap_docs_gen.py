@@ -277,6 +277,13 @@ def build_docs(manifest_path: str, docs_root: str, repo_root: str) -> dict:
         domain = f"{sm.ROOT_ID}.{sv['stack']}"  # the per-stack domain file to merge into
         seen: set[str] = set()
         produced = 0
+        # A per-SYSTEM ordinal, not per-file: it must monotonically order every doc
+        # child of this system across README → AGENTS → SKILLS. The old per-file
+        # reset made README §N, AGENTS §N and SKILLS §N all share 100+N, so a
+        # consumer sorting a system's children by `ordinal` (the field's whole
+        # purpose) got ties. Start at 100 so doc children still sort AFTER the
+        # system's credential (ordinal 0).
+        doc_ordinal = 100
 
         for fname in DOC_FILES:
             fpath = os.path.join(ddir, fname)
@@ -288,7 +295,7 @@ def build_docs(manifest_path: str, docs_root: str, repo_root: str) -> dict:
             filebase = sm.slug_or_die(os.path.splitext(fname)[0], "doc filename")
             prov = provenance(repo_root, fpath, data)
 
-            for ordi, (title, lines) in enumerate(iter_sections(bodytext)):
+            for title, lines in iter_sections(bodytext):
                 body = "\n".join(lines).strip()
                 meta = classify(lines, default_kind)
                 if meta["kind"] == "snippet":
@@ -338,9 +345,9 @@ def build_docs(manifest_path: str, docs_root: str, repo_root: str) -> dict:
                     "parentId": anchor,
                     "name": title or filebase,
                     "zone": "free",
-                    # doc children sort AFTER the system's credential (ordinal 0);
-                    # +100 keeps them out of the credential's slot deterministically.
-                    "ordinal": 100 + ordi,
+                    # Monotonic across the whole system (see doc_ordinal above), so
+                    # the field actually sequences README-then-AGENTS-then-SKILLS.
+                    "ordinal": doc_ordinal,
                     "en": _en_for(meta["kind"], title, body, meta),
                     "brief": brief["doc"],
                 }
@@ -348,6 +355,7 @@ def build_docs(manifest_path: str, docs_root: str, repo_root: str) -> dict:
                 provenance_by_id[node_id] = prov
                 counts[meta["kind"]] += 1
                 produced += 1
+                doc_ordinal += 1
 
         if produced:
             covered.append(sslug)
