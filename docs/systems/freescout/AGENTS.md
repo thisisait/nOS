@@ -9,8 +9,8 @@
 ### Context
 
 - API base: `https://helpdesk.dev.local/api/`
-- Auth: API key from `~/agents/tokens/freescout.token`
-- Bot user: `openclaw-bot` (FreeScout API key)
+- Auth: API key, `X-FreeScout-API-Key: <api-key>`
+- Bot user: none provisioned — generate an API key in Manage -> API & Webhooks
 - Header: `X-FreeScout-API-Key: <api-key>`
 
 ### Capabilities

@@ -9,8 +9,8 @@
 ### Context
 
 - API base: `https://git.dev.local/api/v1/`
-- Auth: Bearer token from `~/agents/tokens/gitea.token`
-- Bot user: `openclaw-bot` (Gitea user with admin privileges)
+- Auth: `Authorization: token <token>` — the `nos-agent-forge` token from `~/.nos/secrets.yml::gitea_api_token` (only when `gitea_agent_forge: true`)
+- Bot user: none — the forge token belongs to the admin user (`gitea_admin_user`); the playbook's own wiring uses admin Basic auth over 127.0.0.1
 - SSH: `git@localhost:2222`
 - CI integration: Woodpecker CI (Gitea OAuth)
 

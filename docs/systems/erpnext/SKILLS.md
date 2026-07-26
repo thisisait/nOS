@@ -1,11 +1,11 @@
 # ERPNext — Skills
 
-> Callable actions for ERPNext. Each skill is API-first using `openclaw-bot` API key.
+> Callable actions for ERPNext. Each skill is API-first using a Frappe API key + secret.
 
 ## Authentication
 
 - **Method:** API key + secret
-- **Token:** `~/agents/tokens/erpnext.token`
+- **Token:** none provisioned by the playbook — mint an API key/secret in the UI (User -> API Access)
 - **Base URL:** `https://erp.dev.local`
 - **Header:** `Authorization: token <api-key>:<api-secret>`
 

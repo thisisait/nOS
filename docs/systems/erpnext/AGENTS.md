@@ -9,8 +9,8 @@
 ### Context
 
 - API base: `https://erp.dev.local/api/resource/`
-- Auth: API key + secret from `~/agents/tokens/erpnext.token`
-- Bot user: `openclaw-bot` (ERPNext API user)
+- Auth: API key + secret, `Authorization: token <api-key>:<api-secret>`
+- Bot user: none provisioned — no playbook task creates an ERPNext API user; mint one by hand (User -> API Access)
 - Frappe REST API (resource-based CRUD)
 
 ### Capabilities

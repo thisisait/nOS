@@ -9,8 +9,8 @@
 ### Context
 
 - API base: `https://wiki.dev.local/api/`
-- Auth: Bearer API token from `~/agents/tokens/outline.token`
-- Bot user: `openclaw-bot`
+- Auth: Bearer Personal API Token, `Authorization: Bearer <token>`
+- Bot user: none provisioned — log in via SSO, then mint a token in Settings -> API Tokens
 
 ### Capabilities
 

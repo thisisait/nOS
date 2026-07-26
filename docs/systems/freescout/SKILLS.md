@@ -1,11 +1,11 @@
 # FreeScout — Skills
 
-> Callable actions for FreeScout. Each skill is API-first using `openclaw-bot` API key.
+> Callable actions for FreeScout. Each skill is API-first using a FreeScout API key.
 
 ## Authentication
 
 - **Method:** API key
-- **Token:** `~/agents/tokens/freescout.token`
+- **Token:** none provisioned by the playbook — generate an API key in Manage -> API & Webhooks
 - **Base URL:** `https://helpdesk.dev.local`
 - **Header:** `X-FreeScout-API-Key: <api-key>`
 

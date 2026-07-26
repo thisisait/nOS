@@ -1,11 +1,11 @@
 # Gitea — Skills
 
-> Callable actions for Gitea. Each skill is API-first using `openclaw-bot` service account.
+> Callable actions for Gitea. Each skill is API-first using the `nos-agent-forge` token (admin-owned, scope `write:repository`).
 
 ## Authentication
 
 - **Method:** Bearer token (Personal Access Token)
-- **Token:** `~/agents/tokens/gitea.token`
+- **Token:** `~/.nos/secrets.yml::gitea_api_token` — minted by `post-forge.yml` when `gitea_agent_forge: true`
 - **Base URL:** `https://git.dev.local`
 - **Header:** `Authorization: token <token>`
 
@@ -92,9 +92,9 @@
 
 ## create-api-token
 
-**Trigger:** (internal — used by playbook for openclaw-bot setup)
+**Trigger:** (internal — used by `post-forge.yml` to mint the agent-forge token)
 **Method:** API
 **Endpoint:** `POST /api/v1/users/{username}/tokens`
-**Input:** `{ "name": "openclaw-token", "scopes": ["all"] }`
-**Output:** `{ "id": 1, "name": "openclaw-token", "sha1": "<token>" }`
-**Auth:** Basic auth (admin credentials) for initial token creation
+**Input:** `{ "name": "nos-agent-forge", "scopes": ["write:repository"] }` (`gitea_agent_forge_token_name` / `gitea_agent_forge_token_scopes`)
+**Output:** `{ "id": 1, "name": "nos-agent-forge", "sha1": "<token>" }` — the value is shown once, so the role persists it to `~/.nos/secrets.yml`
+**Auth:** Basic auth (admin credentials) over `127.0.0.1` for initial token creation

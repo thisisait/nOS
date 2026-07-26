@@ -5,7 +5,7 @@
 ## Authentication
 
 - **Method:** Bearer token
-- **Token:** `~/agents/tokens/outline.token`
+- **Token:** none provisioned by the playbook — mint a Personal API Token in Settings -> API Tokens
 - **Base URL:** `https://wiki.dev.local`
 - **Header:** `Authorization: Bearer <token>`
 

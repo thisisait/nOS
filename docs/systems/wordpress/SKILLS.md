@@ -1,13 +1,13 @@
 # WordPress — Skills
 
-> Callable actions for WordPress. Each skill is API-first using `openclaw-bot` Application Password.
+> Callable actions for WordPress. Each skill is API-first using the `nos-devlog-bot` Application Password.
 
 ## Authentication
 
 - **Method:** Basic auth (Application Password)
-- **Token:** `~/agents/tokens/wordpress.token`
-- **Base URL:** `https://wp.dev.local`
-- **Header:** `Authorization: Basic <base64(openclaw-bot:app-password)>`
+- **Token:** `~/.nos/secrets.yml::wordpress_devlog_app_password` (Application Password `nos-devlog`)
+- **Base URL:** `https://wordpress.dev.local`
+- **Header:** `Authorization: Basic <base64(nos-devlog-bot:app-password)>`
 
 ---
 
