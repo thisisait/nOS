@@ -1,0 +1,127 @@
+"""Anatomy gate — the cortex organ's role/plugin/manifest contract (P-4b).
+
+The organ's daemon code has its own vitest + Playwright suites (CI `cortex`
+job); what THIS shim pins is the Ansible wiring around it — the part nothing
+else executes until a converge:
+
+  1. the role's shipped files exist (a deleted template is a crash at converge);
+  2. the plist embeds the fail-closed token pair and only loopback semantics;
+  3. the credentials follow the {{ global_password_prefix }}_pw_* pattern;
+  4. the manifest row is loopback-only: cortex MUST stay in traefik_skip_ids —
+     removing it silently derives a public route for a daemon whose auth model
+     assumes there is none (design §5);
+  5. main.yml imports the role gated on install_cortex with the cortex tag;
+  6. the plugin manifest validates against the loader schema and deliberately
+     carries NO authentik block and NO pulse jobs (C2 scope);
+  7. the vendored package-lock.json stays lockfileVersion 3 (npm 10 compatible)
+     — npm 11 writes locks npm 10 rejects, which has broken KEAP CI three times.
+"""
+
+from __future__ import annotations
+
+import json
+import pathlib
+import re
+import sys
+
+import yaml
+
+REPO = pathlib.Path(__file__).resolve().parents[2]
+ROLE = REPO / "roles" / "pazny.cortex"
+ORGAN = REPO / "files" / "anatomy" / "cortex"
+PLUGIN = REPO / "files" / "anatomy" / "plugins" / "cortex-base" / "plugin.yml"
+
+
+def test_role_files_present():
+    for p in [
+        ROLE / "defaults" / "main.yml",
+        ROLE / "tasks" / "main.yml",
+        ROLE / "templates" / "cortex.plist.j2",
+        ROLE / "handlers" / "main.yml",
+        ROLE / "meta" / "main.yml",
+        ORGAN / "package.json",
+        ORGAN / "package-lock.json",
+        ORGAN / "server" / "index.ts",
+        ORGAN / "knowledge" / "onto1-conformance.mjs",
+    ]:
+        assert p.exists(), f"cortex contract file missing: {p.relative_to(REPO)}"
+
+
+def test_plist_embeds_both_tokens_and_no_bind_override():
+    plist = (ROLE / "templates" / "cortex.plist.j2").read_text()
+    # Fail-closed rule: both tokens provisioned, or the surface 503s. The plist
+    # must template BOTH; an operator with only one configured is a defect the
+    # daemon reports, not one the template hides.
+    assert "CORTEX_TOKEN_RO" in plist and "cortex_ro_token" in plist
+    assert "CORTEX_TOKEN_RW" in plist and "cortex_rw_token" in plist
+    # The daemon defaults to 127.0.0.1; the role must not template a bind host
+    # override — a public bind is an explicit code decision, never a var.
+    # (Key-form check: the template may MENTION these names in comments.)
+    assert "<key>CORTEX_BIND_HOST</key>" not in plist
+    # Materialisation is a converge act (role task), never a boot act.
+    assert "<key>CORTEX_MATERIALISE_ON_BOOT</key>" not in plist
+
+
+def test_plist_rendered_mode_0600():
+    tasks = (ROLE / "tasks" / "main.yml").read_text()
+    render = re.search(r"cortex\.plist\.j2.*?mode: '(\d+)'", tasks, re.S)
+    assert render, "plist render task (with mode:) not found in tasks/main.yml"
+    assert render.group(1) == "0600", "plist embeds bearer tokens — must be 0600"
+
+
+def test_credentials_follow_prefix_pattern():
+    creds = (REPO / "default.credentials.yml").read_text()
+    assert 'cortex_ro_token: "{{ global_password_prefix }}_pw_cortex_ro"' in creds
+    assert 'cortex_rw_token: "{{ global_password_prefix }}_pw_cortex_rw"' in creds
+
+
+def test_manifest_row_is_loopback_only():
+    manifest = yaml.safe_load((REPO / "state" / "manifest.yml").read_text())
+    rows = [s for s in manifest["services"] if s.get("id") == "cortex"]
+    assert len(rows) == 1, "exactly one cortex row in state/manifest.yml"
+    row = rows[0]
+    assert row["install_flag"] == "install_cortex"
+    assert row["launchd_label"] == "eu.thisisait.nos.cortex"
+    assert row["port_var"] == "cortex_port"
+
+    traefik_vars = yaml.safe_load(
+        (REPO / "roles" / "pazny.traefik" / "vars" / "main.yml").read_text()
+    )
+    assert "cortex" in traefik_vars.get("traefik_skip_ids", []), (
+        "cortex left traefik_skip_ids — that silently derives a public route "
+        "for a loopback-auth daemon (design §5: pure loopback default)"
+    )
+
+
+def test_main_yml_imports_role_gated_and_tagged():
+    main = (REPO / "main.yml").read_text()
+    block = re.search(
+        r"name: pazny\.cortex\n(.*?)tags: \[([^\]]*)\]", main, re.S
+    )
+    assert block, "pazny.cortex import not found in main.yml"
+    assert "install_cortex" in block.group(1), "import must be gated on install_cortex"
+    assert "'cortex'" in block.group(2), "--tags cortex must reach the role"
+
+
+def test_plugin_validates_and_stays_loopback_pure():
+    sys.path.insert(0, str(REPO / "files" / "anatomy"))
+    from module_utils import load_plugins  # noqa: PLC0415
+
+    schema = json.loads((REPO / "state" / "schema" / "plugin.schema.json").read_text())
+    manifest = yaml.safe_load(PLUGIN.read_text())
+    assert load_plugins.validate_manifest(manifest, schema) == []
+    assert manifest["_NOS_PLUGIN"] == "cortex-base"
+    assert manifest["requires"]["feature_flag"] == "install_cortex"
+    # Deliberate absences — presence of either is scope creep, not progress:
+    # no route ⇒ no authentik provider (§5); embeddings/recall are C2 ⇒ no
+    # pulse job until the daemon has an embed surface to sync against.
+    assert "authentik" not in manifest, "cortex-base must not register an Authentik provider"
+    assert "pulse" not in manifest, "no pulse job before C2 (no embed surface exists)"
+
+
+def test_lockfile_is_npm10_compatible():
+    lock = json.loads((ORGAN / "package-lock.json").read_text())
+    assert lock.get("lockfileVersion") == 3, (
+        "package-lock.json must stay lockfileVersion 3 — npm 11 emits locks "
+        "npm 10 rejects (validate with `npx npm@10 ci --dry-run` before bumping)"
+    )

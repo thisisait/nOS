@@ -215,6 +215,49 @@ jobs:
         run: npm test
 
   # ──────────────────────────────────────────────────────────────────────────
+  # CORTEX – the reasoning organ (vendored KEAP v1.27.0 port, files/anatomy/
+  # cortex). Node-22 job modeled 1:1 on the face job above. The conformance
+  # step is the shared onto1 gate: the organ must keep reproducing the
+  # reference composition (6 fixtures + the pinned digest over the spine) on
+  # every push — KEAP v1.27.0 conformance IS the grading line (design §4).
+  # e2e runs against the BUILT bundle via Playwright's request fixture only
+  # (no browser download needed — no page/browser use in e2e/*.spec.ts).
+  # ──────────────────────────────────────────────────────────────────────────
+  cortex:
+    name: Cortex (reasoning organ)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v6
+
+      - name: Set up Node.
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: files/anatomy/cortex/package-lock.json
+
+      - name: Install organ dependencies (validates the npm-10 lockfile).
+        working-directory: files/anatomy/cortex
+        run: npm ci
+
+      - name: Build the daemon bundle (tsc typecheck + esbuild).
+        working-directory: files/anatomy/cortex
+        run: npm run build
+
+      - name: Unit + store tests (vitest).
+        working-directory: files/anatomy/cortex
+        run: npm test
+
+      - name: onto1 conformance (shared gate — fixtures + pinned digest).
+        working-directory: files/anatomy/cortex
+        run: node knowledge/onto1-conformance.mjs
+
+      - name: E2E against the built bundle (Playwright request-only).
+        working-directory: files/anatomy/cortex
+        run: npm run test:e2e
+
+  # ──────────────────────────────────────────────────────────────────────────
   # CONTRACTS DRIFT – regenerate Bone OpenAPI + Wing OpenAPI + Wing DDL
   # and diff against the committed artifacts under
   # files/anatomy/skills/contracts/. Anatomy A5 (2026-05-04) — surfaces

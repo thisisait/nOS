@@ -130,7 +130,7 @@ SYSTEM_NAME = {
     "metabase": "Metabase", "superset": "Superset", "influxdb": "InfluxDB",
     "freepbx": "FreePBX", "qgis-server": "QGIS Server",
     "alloy": "Grafana Alloy", "openclaw": "OpenClaw", "hermes": "Hermes",
-    "opencode": "OpenCode", "wing": "Wing", "bone": "Bone",
+    "opencode": "OpenCode", "wing": "Wing", "bone": "Bone", "cortex": "Cortex",
     "iiab-terminal": "IIAB Terminal", "backup": "Backup", "backrest": "Backrest",
     "tailscale": "Tailscale",
 }
@@ -483,6 +483,13 @@ SYSTEM_EN = {
         "Bone, the local HTTP bridge between playbook runs and the estate's own state store. "
         "Ansible callbacks, agents and scripts post events here; it is the write path for the "
         "platform's self-knowledge."
+    ),
+    "cortex": (
+        "Cortex, the reasoning organ. It typechecks agent-written cortex-lang programs "
+        "against the curated taxonomy and the controlled verb vocabulary, and stamps each "
+        "answer with the ontology, opcode and database versions it reasoned against — where "
+        "KEAP holds the knowledge itself, Cortex is the machinery that validates reasoning "
+        "over it."
     ),
     "iiab-terminal": (
         "The IIAB terminal, a text user interface set as the forced shell for the kiosk "
