@@ -15,6 +15,11 @@ const NOS = '/Users/pazny/projects/nOS'
 const KEAP = '/Users/pazny/projects/knowledge-explorer-and-preserver'
 const PLAN = `${NOS}/docs/plans/cortex-self-core.md`
 const BRANCH = 'feat/cortex-corpus-parallel'
+// S2 branches off the S1 line, NOT off dev: the docs/pulse/generator work
+// (S1, S1b, S1c, S1d) is unmerged, and the organ store this stage builds on
+// materialises docs + the pulse node from it. Diff against this base, not dev,
+// or every adversarial lens re-reviews all of S1.
+const BASE = '3aa6c7d3'
 
 const RULES = `
 HARD CONSTRAINTS
@@ -152,7 +157,7 @@ const LENSES = [
 ]
 const verified = await pipeline(
   LENSES,
-  (l) => agent(`${RULES}\nAdversarial review of ${BRANCH} (git diff dev...HEAD). Concrete failure scenarios only.\n${l.prompt}`,
+  (l) => agent(`${RULES}\nAdversarial review of ${BRANCH} (git diff ${BASE}...HEAD — the S1 line is the base, not dev). Concrete failure scenarios only.\n${l.prompt}`,
     { label: `verify:${l.key}`, phase: 'Verify', schema: FINDINGS, effort: 'high' }),
   (res, lens) => parallel(((res && res.findings) || [])
     .slice().sort((a, b) => (a.severity === b.severity ? 0 : a.severity === 'major' ? -1 : 1)).slice(0, 3)
