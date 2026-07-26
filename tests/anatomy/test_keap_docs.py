@@ -198,16 +198,33 @@ def test_coverage_is_data_and_partitions_the_estate():
     assert len(covered) + len(missed) == cov["services_total"]
 
 
-def test_the_gap_is_reported_by_name_not_hidden():
-    """The deliverable's hard rule: a service without docs appears as MISSED by
-    name. gitea is documented; traefik and gitlab are not — and the report says
-    so, so silence can never be read as 'no such capability'."""
-    cov = _build()["coverage"]
+def test_the_gap_is_reported_by_name_not_hidden(tmp_path):
+    """The deliverable's hard rule: a service without a docs tree appears as
+    MISSED by name, so silence can never be read as 'no such capability'.
+
+    Pinned against a CONTROLLED gap — a docs-root holding only gitea's tree —
+    rather than the live estate, because the live estate is now FULLY documented
+    (feat/cortex-docs-knowledge authored all 62 trees): asserting a specific live
+    service is undocumented would encode a gap the branch deliberately closed.
+    The mechanism under test is independent of how much happens to be covered."""
+    cov = _one_service_docs(tmp_path, {"README.md": "## Setup\nbody\n"})["coverage"]
     assert "gitea" in cov["services_covered"]
     for undocumented in ("traefik", "gitlab", "postgresql"):
         assert undocumented in cov["services_missed"], f"{undocumented} silently absent"
-    # the live estate's real shape: a real, non-trivial gap, surfaced as data
+    # with only one tree present, the gap is the overwhelming majority — surfaced
+    # as named data, never as a silent absence
     assert len(cov["services_missed"]) > len(cov["services_covered"])
+
+
+def test_live_estate_is_fully_documented(tmp_path):
+    """The branch's deliverable, pinned as a fact: every manifest service has a
+    docs tree that produces at least one node, so the live coverage report shows
+    zero missed and zero empty. If a future service lands in the manifest without
+    a docs/systems/<svc>/ tree, THIS is the gate that turns red and names it."""
+    cov = _build()["coverage"]
+    assert cov["services_missed"] == [], f"undocumented services: {cov['services_missed']}"
+    assert cov["services_empty"] == [], f"empty doc trees: {cov['services_empty']}"
+    assert len(cov["services_covered"]) == cov["services_total"]
 
 
 def test_every_kind_is_producible_even_where_the_corpus_has_none():

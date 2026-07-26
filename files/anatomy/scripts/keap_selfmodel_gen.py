@@ -573,6 +573,15 @@ CREDENTIAL_EN = {
         "The Jellyfin API key. An issued server-level secret that bypasses the per-viewer "
         "login, held by integrations rather than by a playback client."
     ),
+    "keap": (
+        "The KEAP agent bearer tokens. A scope-split set of three issued secrets — "
+        "read-only, read-write and capture (write-only intake) — that gate the "
+        "loopback `/agent/v1` knowledge surface, not any human login: the human "
+        "surface is SSO. Minted as `<prefix>_pw_keap_agent_{ro,rw,capture}`, injected "
+        "as container env and held by the AgentKit vault, so the scope an agent gets is "
+        "chosen by which of the three it is handed, and rotating one narrows or widens "
+        "exactly that scope."
+    ),
     "metabase": (
         "The Metabase session token. A time-limited secret obtained by exchanging a username "
         "and password, carried in a dedicated session header rather than as a bearer token."
