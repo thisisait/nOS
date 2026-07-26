@@ -71,6 +71,18 @@ whole "body transplant for the cortex" is complete.
 - C2 (corpus + ingestion migration) and C3 (quality pipelines) — own design
   passes per the scope decision.
 
+## One threat-model nuance (verify pass, 2026-07-25)
+
+"Pure loopback" means no *route* and no *bind* beyond 127.0.0.1 — it does NOT
+mean containers cannot reach the daemon: Docker Desktop's
+`host.docker.internal` resolves to the host, and a container can hit
+`:8098` through it (that is exactly how the P-5 cutover will work, and why
+`CORTEX_BACKEND_URL` renders that address). The trust boundary for container
+callers is therefore the fail-closed bearer auth (tokenless ⇒ 503,
+timingSafeEqual), not the loopback bind; the bind only removes the *network*
+exposure. Design §5's "unreachable from containers" claim holds for
+Docker-published loopback ports (A19), not for host-bound daemons.
+
 ## Open questions carried forward (design §7, still open)
 
 - public `/agent` route: stays unbuilt until a caller outside

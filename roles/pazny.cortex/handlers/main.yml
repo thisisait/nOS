@@ -1,10 +1,25 @@
 ---
+# Both platform branches LISTEN to one topic — the materialise task changes
+# rows the daemon holds in memory, so a notify that only launchd hears would
+# leave a Linux daemon serving a stale tree (found in the P-4b verify pass).
+
 # Full bootout…bootstrap cycle — a plain kickstart does not re-read the plist
 # env, and the tokens/store path live there (same lesson as the Bone handler).
-- name: Restart cortex
+- name: Restart cortex (launchd)
   ansible.builtin.shell: |
     LABEL="{{ cortex_launchd_label }}"; UID_NUM=$(id -u)
     launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
     sleep 1
     launchctl bootstrap "gui/${UID_NUM}" "$HOME/Library/LaunchAgents/${LABEL}.plist"
   when: (nos_service_manager | default('launchd')) == 'launchd'
+  listen: Restart cortex
+
+# systemd restart re-reads the unit's Environment= lines the same way the
+# bootout cycle re-reads the plist env.
+- name: Restart cortex (systemd --user)
+  ansible.builtin.systemd:
+    name: "{{ cortex_launchd_label }}"
+    scope: user
+    state: restarted
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'
+  listen: Restart cortex

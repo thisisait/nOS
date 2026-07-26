@@ -157,6 +157,7 @@
       CORTEX_TOKEN_RO: "{{ cortex_ro_token | default('') }}"
       CORTEX_TOKEN_RW: "{{ cortex_rw_token | default('') }}"
       CORTEX_SELFMODEL: "{{ '1' if (cortex_selfmodel_enabled | default(true) | bool) else '0' }}"
+  no_log: true   # the dict embeds both bearer tokens — keep them out of -vvv output
   when: (nos_service_manager | default('launchd')) == 'systemd-user'
 
 - name: "[pazny.cortex] (Linux) Install systemd --user service"
