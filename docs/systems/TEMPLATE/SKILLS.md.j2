@@ -1,31 +1,72 @@
-# {{ name }} — Skills
+{# ===========================================================================
+   TEMPLATE — docs/systems/<svc>/SKILLS.md
 
-> Callable actions for {{ name }}. Each skill is API-first using `openclaw-bot` service account.
+   Copy this into docs/systems/<svc>/ and replace EVERY <ANGLE-BRACKET> token.
+   Nothing renders this file; the Jinja is a shape, not a pipeline.
+
+   THIS FILE IS PARSED. `files/anatomy/scripts/keap_selfmodel_gen.py` reads it
+   into the KEAP self-model, and `tools/keap-recall-queries.py` turns every
+   `**Trigger:**` line into a recall-gate case. Two contracts follow from that:
+
+     1. A `## <heading>` section counts as a SKILL iff its body carries a
+        `**Trigger:**` line. Sections without one are prose.
+     2. The `## Authentication` section's `- **Method:** ...` line decides
+        whether a CREDENTIAL node is minted. Starting it with `N/A` or `None`
+        means "no credential exists" — use that when it is true.
+
+   After editing Trigger lines, regenerate the fixture:
+       python3 tools/keap-recall-queries.py
+   and confirm `python3 tools/keap-recall-queries.py --check` exits 0.
+
+   THERE IS NO `openclaw-bot` SERVICE ACCOUNT AND NO `~/agents/tokens/` TREE
+   in this estate. Both were template fictions. Do not reintroduce them.
+
+   A wrong endpoint in this file becomes a wrong fact in the knowledge corpus.
+   Document what repo source proves; mark everything else as upstream surface.
+   =========================================================================== #}
+# <Service Name> — Skills
+
+> <One line: what this service's callable surface is — or, if there is none,
+> say that plainly here. See docs/systems/nodered/SKILLS.md for how an honest
+> absence reads.>
 
 ## Authentication
 
-- **Method:** {{ api_auth | default('Bearer token') }}
-- **Token:** `~/agents/tokens/{{ slug }}.token`
-- **Base URL:** `https://{{ domain }}`
+- **Method:** <mechanism> — <"provisioned by nOS" | "human-minted, NOT provisioned by nOS" | "N/A — access is decided at the edge proxy">
+- **Where the credential comes from:** <the exact task/UI path that mints it, or
+  "nothing in the repo mints one">
+- **Base URL:** `https://{<svc>_domain}` (default `https://<svc>.dev.local`), or
+  `http://127.0.0.1:<PORT>` from the host (loopback publish; peer containers
+  cannot reach it)
+- **Required headers:** <any, e.g. `OCS-APIRequest: true`> — delete if none
+
+## Endpoints verified against repo source
+
+<List the endpoints nOS itself calls — grep the role's tasks/post.yml and the
+plugin's lifecycle: block. Then state that everything below is upstream surface.
+This section carries no Trigger line, so it is prose, not a skill.>
 
 ---
 
-{% for skill in skills | default([]) %}
-## {{ skill.name }}
+## <skill-name>
 
-**Trigger:** {{ skill.trigger }}
-**Method:** {{ skill.method | default('API') }}
-**Endpoint:** `{{ skill.endpoint }}`
-**Input:** {{ skill.input | default('None') }}
-**Output:** {{ skill.output | default('JSON response') }}
-
-{% if skill.example is defined %}
-**Example:**
-```
-{{ skill.example }}
-```
-{% endif %}
+**Trigger:** "<phrase a caller would say>", "<synonym>", "<another phrasing>"
+**Method:** <API | WebDAV | CLI | N/A>
+**Endpoint:** `<VERB /path>`
+**Input:** <params or body shape, or `None`>
+**Output:** <response shape>
+**Status:** <OPTIONAL — add this line only to FLAG a claim you could not verify.
+Say what you checked ("no repo source calls it") and what a reader should do
+before relying on it. Flag rather than delete: a silently removed wrong fact
+teaches nobody.>
 
 ---
 
-{% endfor %}
+{# Repeat the block above per skill. Delete every placeholder skill you do not
+   fill in — an unreplaced <skill-name> becomes a recall-gate case for a
+   capability that does not exist. #}
+
+## Notes
+
+<Storage shape, gotchas, and anything a caller would trip over. Keep the wording
+consistent with the README's storage row so the two cannot drift.>

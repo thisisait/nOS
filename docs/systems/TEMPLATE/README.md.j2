@@ -1,49 +1,119 @@
-# {{ name }}
+{# ===========================================================================
+   TEMPLATE — docs/systems/<svc>/README.md
 
-> {{ description }}
+   Copy this into docs/systems/<svc>/ and replace EVERY <ANGLE-BRACKET> token
+   with a value you READ from source. Nothing renders this file; the Jinja is
+   a shape, not a pipeline.
+
+   AUTHORING RULE — every row is sourced, not remembered:
+     URL / Port      roles/pazny.<svc>/defaults/main.yml + default.config.yml
+     Data / Config   the actual `volumes:` block in
+                     roles/pazny.<svc>/templates/compose.yml.j2 (LEFT of the
+                     colon = host path, RIGHT = container mount)
+     Image / Stack   state/manifest.yml row (image, stack, data_path_var,
+                     domain_var, port_var)
+     SSO bucket      files/anatomy/plugins/<svc>-base/plugin.yml (authentik.mode
+                     + authentik.tier) — never guess the bucket
+     Toggle          default.config.yml install_<svc>
+
+   default.config.yml OUTRANKS a role default when both define the var
+   (vars_files precedence). Read both; quote the winner.
+
+   Delete every row that does not apply. A missing row beats a wrong one.
+   =========================================================================== #}
+# <Service Name>
+
+> <One or two lines: what it IS and how it differs from its stack-mates. Name the
+> storage shape here — filesystem-only, database-backed, named volume, or stateless.>
 
 ## Quick Reference
 
 | | |
 |---|---|
-| **URL** | `https://{{ domain }}` |
-| **Port** | `{{ port }}` |
-| **Stack** | `{{ stack }}` |
-| **Toggle** | `{{ toggle_var }}: true` |
-| **Compose** | `~/stacks/{{ stack }}/docker-compose.yml` |
-| **Data** | `{{ data_dir }}` |
+| **URL** | `https://<svc>{host_alias_seg}.{tenant_domain}` (default `https://<svc>.dev.local`) |
+| **Port** | `<PORT>` (`<svc>_port`; loopback publish `127.0.0.1:<PORT>` → container `<CONTAINER_PORT>`) |
+| **Stack** | `<infra\|observability\|iiab\|apps\|devops\|b2b\|voip\|engineering\|data>` |
+| **Node id** | `nos.<stack>.<svc>` |
+| **Toggle** | `install_<svc>: true` |
+| **Image** | `<repo>/<image>:<TAG>` (`<svc>_version`) |
+| **Compose** | `~/stacks/<stack>/docker-compose.yml` + `~/stacks/<stack>/overrides/<svc>.yml` (role) + `~/stacks/<stack>/overrides/<svc>-base.yml` (plugin extension) |
+| **Container** | `<stack>-<svc>-1` |
+| **Data** | <PICK ONE — see "Storage row" below> |
+| **Memory limit** | `<1g>` (`docker_mem_limit_<light\|standard\|critical>`) |
+| **Networks** | `<stack>_net` + `shared_net` (`stacks_shared_network`) |
+
+`<svc>_domain`, `<svc>_port`, `<svc>_version` pin in `default.config.yml`; role defaults
+mirror them as fallbacks. The domain derives from `tenant_domain` + `host_alias`, NOT a
+hardcoded `dev.local`.
+
+<!-- ── Storage row — pick the ONE that matches the compose volumes: block ──────
+     Do not manufacture a directory. Each of these is a true answer for some
+     service in this estate; only one is true for yours.
+
+  a) Host bind, platform-class (most services):
+     | **Data** | `{{ nos_data_root }}/platform/services/<svc>/data` → `/<mount>` (default `~/nos/...`; external-storage override applies) |
+
+  b) Host bind, tenant-shared content (nextcloud, kiwix, maps, jellyfin, calibreweb):
+     | **Data** | `{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/<svc>/data` → `/<mount>` (default `~/nos/tenants/dev/shared/<svc>/data`) |
+
+  c) Docker NAMED VOLUME — not a host path at all (mariadb):
+     | **Data** | Docker **named volume** `<svc>_data` → `/<mount>` (NOT a host bind mount) |
+
+  d) Lives in a DATABASE, not on disk:
+     | **Database** | PostgreSQL schema `<svc>` on `infra-postgresql-1` — NOT a volume, NOT on the filesystem |
+
+  e) Persists NOTHING (stateless BFF, send-retry-WAL-only exporter):
+     | **Data** | None — stateless. <Say what that means: it re-derives state on start / holds only an in-memory send-retry buffer.> |
+
+     CONFIG vs DATA are different rows. Config that the playbook renders lives
+     under `~/stacks/<stack>/` and that is CORRECT and current — only the DATA
+     row derives from `nos_data_root`. If the service has both a config bind and
+     a data bind, give them SEPARATE rows and say which is which, e.g.:
+
+     | **Config** | `~/stacks/<stack>/<svc>/` (rendered by the role) → `/etc/<svc>` |
+
+     A pre-doctrine path (`~/<svc>`) is a legitimate finding, not a docs bug —
+     report it, keep the true value, do not "fix" it in prose.
+─────────────────────────────────────────────────────────────────────────── -->
+
+**External-storage override:** state whether `tasks/stacks/external-paths.yml` re-points
+this service's path var(s), and to what. Delete this line if it does not.
 
 ## Authentication
 
-- **Admin user:** `{{ admin_user | default('admin') }}`
-- **Admin password:** `{{ '{{ global_password_prefix }}' }}_pw_{{ slug }}`
-- **SSO:** {% if oidc %}Authentik OIDC (`{{ oidc_slug }}`){% else %}None{% endif %}
+- **Admin user:** `<user>` (`<svc>_admin_user`) — delete if none is provisioned
+- **Admin password:** `{global_password_prefix}_pw_<svc>` (`<svc>_admin_password`)
+  — quote the EXACT var. The DB password and the admin password are often different
+  secrets with confusingly similar names; check which one you are naming.
+- **SSO:** `<native_oidc | header_oidc | forward_auth | none>` — read
+  `files/anatomy/plugins/<svc>-base/plugin.yml` `authentik.mode`, RBAC tier
+  `authentik.tier`. Say WHERE it is configured (compose env block, `occ`/API post-hook,
+  or Traefik middleware) — the three behave differently on a blank.
+  - Redirect URI: `<from plugin.yml redirect_uris>`
+- **Autologin:** `<supports / cannot / ceiling>` — see `docs/sso-autologin-plan.md`.
 
 ## API Access
 
-- **Base URL:** `https://{{ domain }}/api/`
-- **Auth method:** {{ api_auth | default('Bearer token') }}
-- **Bot account:** `openclaw-bot` (auto-created by playbook)
-- **Token location:** `~/agents/tokens/{{ slug }}.token`
+- **Base URL:** `https://<svc>{host_alias_seg}.{tenant_domain}/<api-prefix>`
+- **Auth method:** `<mechanism>` — and say plainly whether nOS PROVISIONS the credential
+  or a human must mint it. **Do not invent a bot account or a token path.** There is no
+  `openclaw-bot` service account and no `~/agents/tokens/` tree in this estate; if your
+  service has no provisioned agent credential, write that sentence instead.
+- **Endpoints verified against repo source:** list the ones nOS itself calls (grep the
+  role's `tasks/post.yml` and the plugin `lifecycle:` block). Mark everything else as
+  upstream surface.
+
+Delete this whole section if the service exposes no API (a database, a proxy, a headless
+substrate). See `docs/systems/nodered/SKILLS.md` for how to state an honest absence.
 
 ## Health Check
 
-- **Endpoint:** `{{ health_endpoint | default('GET /') }}`
-- **Expected:** `{{ health_status | default('200 OK') }}`
+- **Endpoint:** `<GET /health>` — say what the plugin `post_compose` health-wait polls
+  and which status codes count as healthy (an SSO gate answering `302`/`401` IS healthy).
+- **Container healthcheck:** `<the exact test: from compose.yml.j2>` (interval, retries,
+  start period — a long start period is usually load-bearing; say why).
 
 ## Dependencies
 
-{% for dep in dependencies | default([]) %}
-- {{ dep }}
-{% endfor %}
-{% if not dependencies %}
-- None
-{% endif %}
-
-## Credentials
-
-| Variable | Description |
-|----------|-------------|
-{% for cred in credential_vars | default([]) %}
-| `{{ cred.var }}` | {{ cred.label }} |
-{% endfor %}
+- `<upstream service>` (`<what it is needed for>` — required or optional)
+- Delete the list and write `- None` if it truly has none.

@@ -1,34 +1,57 @@
-# {{ name }} — Agent Definition
+{# ===========================================================================
+   TEMPLATE — docs/systems/<svc>/AGENTS.md
 
-## {{ agent_name | default(name + 'Agent') }}
+   Copy this into docs/systems/<svc>/ and replace EVERY <ANGLE-BRACKET> token.
+   Nothing renders this file; the Jinja is a shape, not a pipeline.
 
-**System:** {{ name }}
-**Domain:** `{{ domain }}`
-**Role:** {{ agent_role | default('Manages and queries ' + name) }}
+   THE ONE RULE: an agent doc may only claim a capability that a REAL,
+   repo-provisioned credential can reach. If nOS mints no credential for this
+   service, say so — an honest absence is a true answer and beats a confident
+   invention. See docs/systems/nodered/AGENTS.md for the shape of that answer.
+
+   THERE IS NO `openclaw-bot` SERVICE ACCOUNT AND NO `~/agents/tokens/` TREE
+   in this estate. Both were template fictions that propagated into every doc
+   copied from here. Do not reintroduce them. Name the credential the repo
+   actually provisions, and say WHERE it is provisioned from.
+   =========================================================================== #}
+# <Service Name> — Agent Definition
+
+## <AgentName>
+
+**System:** <Service Name> (`<stack>` stack) — <one line: what it is>.
+**Domain:** `<svc>{host_alias_seg}.{tenant_domain}` (default `<svc>.dev.local`).
+**Role:** <What an agent would use it FOR — or state that it is a human-facing
+service with no agent role.>
 
 ### Context
 
-- API base: `https://{{ domain }}/api/`
-- Auth: Bearer token from `~/agents/tokens/{{ slug }}.token`
-- Bot user: `openclaw-bot`
-{% if extra_context is defined %}
-{% for ctx in extra_context %}
-- {{ ctx }}
-{% endfor %}
-{% endif %}
+- API base: `https://{<svc>_domain}/<api-prefix>`, or `http://127.0.0.1:<PORT>/...`
+  from the host (loopback publish — peer containers cannot reach a host loopback
+  publish; say so when it matters).
+- **Auth:** <mechanism> — and state plainly ONE of:
+  - "provisioned by `<the task that mints it>` and stored at `<the real location>`", or
+  - "human-minted in `<the UI path>`; nOS does not provision it".
+- Human access is `<native_oidc | header_oidc | forward_auth | none>`
+  (Authentik client `<nos-svc>`), RBAC tier `<N>` — read it from
+  `files/anatomy/plugins/<svc>-base/plugin.yml`, do not infer it from the URL.
+- Storage: <where its state lives — filesystem bind, named volume, DB schema, or
+  nothing>. Say which, using the same words as the README's storage row.
+- Health: `<GET /health>` → `<expected>`.
 
 ### Capabilities
 
-{% for cap in capabilities | default(['Query data', 'Manage configuration']) %}
-- {{ cap }}
-{% endfor %}
+<Either a list of what the credential above can actually do, or:>
 
-### Activation
+- None wired for agents. nOS provisions no `<svc>` token and no service account.
+  <Then say what DOES exist — e.g. an operator login — and that it is not an
+  agent identity.>
 
-```
-Deleguj na {{ agent_name | default(name + 'Agent') }}: [popis ukolu]
-```
+### For an agent
+
+<If there is no provisioned surface, say it here in one paragraph and point at
+SKILLS.md. If there is, note the caveats that would surprise a caller: rate
+limits, SSRF/egress restrictions, loopback-only reachability, tier gating.>
 
 ### Skills Reference
 
-See [SKILLS.md](SKILLS.md) for all callable actions.
+See [SKILLS.md](SKILLS.md).
