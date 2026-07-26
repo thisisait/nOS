@@ -27,7 +27,7 @@
 ### Activation
 
 ```
-Deleguj na DevOpsAgent: [popis ukolu]
+Delegate to DevOpsAgent: [task description]
 ```
 
 ### Skills Reference

@@ -1,6 +1,6 @@
 # WordPress
 
-> CMS pro webovy obsah. Spravuje stranky, clanky a media.
+> CMS for web content. Manages pages, posts and media.
 
 ## Quick Reference
 

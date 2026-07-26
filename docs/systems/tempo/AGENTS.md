@@ -6,6 +6,8 @@
 **Endpoint:** `http://localhost:3200` (loopback, unauthenticated)
 **Role:** Fetches traces by ID and runs TraceQL searches directly against the local Tempo query API.
 
+> **Roster note.** `TempoAgent` is a *per-system* definition, not a member of the closed ten-persona OpenClaw roster in `files/openclaw/AGENTS.md` — that roster assigns Tempo (with Grafana, Prometheus and Loki) to **`GrafanaAgent`**. Delegate with `Delegate to GrafanaAgent: …`; this page is the system-scoped API contract that persona reads.
+
 ### Context
 
 - API base: `http://localhost:3200/api/`

@@ -5,7 +5,7 @@
 ## Why there are no skills
 
 - **It is a pipe, not a store.** Alloy scrapes metrics, tails logs, and receives OTLP, then forwards them to Prometheus, Loki and Tempo. The *query* surface lives on those backends — see `../prometheus/SKILLS.md`, `../loki/SKILLS.md`, `../tempo/SKILLS.md`, or Grafana for a dashboarded view.
-- **Its config is Ansible-owned.** The pipeline is defined in `~/.config/alloy/config.alloy`, rendered by the `alloy-base` plugin and reloaded via `brew services restart alloy` during a playbook run. There is no operator- or agent-facing mutation API to reconfigure it at runtime.
+- **Its config is Ansible-owned.** The pipeline is defined in `files/observability/alloy/config.alloy.j2` and rendered by `tasks/observability.yml` to `{{ homebrew_prefix }}/etc/grafana-alloy/config.alloy` (default `/opt/homebrew/etc/grafana-alloy/config.alloy`), which is the only render wired to the reload handler. (`~/.config/alloy/config.alloy` is a second, minimal copy written by the `alloy-base` plugin; the `conf.d/*.river` fragments beside it are dormant. Neither is the running pipeline.) There is no operator- or agent-facing mutation API to reconfigure it at runtime.
 - **No auth, no SSO, loopback-only.** The UI on `:12345` and the OTLP receivers (`:4317`/`:4318`, bound to `127.0.0.1`) are host-local; there is no bot account or token to act as.
 
 ## The only HTTP surface (inspection, not action)

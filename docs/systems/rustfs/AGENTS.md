@@ -26,7 +26,7 @@
 ### Activation
 
 ```
-Deleguj na StorageAgent: [popis ukolu]
+Delegate to StorageAgent: [task description]
 ```
 
 ### Skills Reference

@@ -6,6 +6,8 @@
 **Endpoint:** `http://localhost:9090` (loopback, unauthenticated)
 **Role:** Runs read-only PromQL queries and inspects scrape/alert state directly against the local Prometheus HTTP API.
 
+> **Roster note.** `PrometheusAgent` is a *per-system* definition, not a member of the closed ten-persona OpenClaw roster in `files/openclaw/AGENTS.md` — that roster assigns Prometheus (with Grafana, Loki and Tempo) to **`GrafanaAgent`**. Delegate with `Delegate to GrafanaAgent: …`; this page is the system-scoped API contract that persona reads.
+
 ### Context
 
 - API base: `http://localhost:9090/api/v1/`

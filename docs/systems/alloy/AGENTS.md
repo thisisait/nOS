@@ -11,7 +11,7 @@
 - UI: `http://localhost:12345` — read-only pipeline inspection (components, graph).
 - Self-metrics: `GET /metrics`; readiness: `GET /-/ready`.
 - Auth: none — localhost-only, no TLS, no SSO.
-- Config is Ansible-owned (`~/.config/alloy/config.alloy`); it is reloaded by the playbook via `brew services restart alloy`, never by an agent.
+- Config is Ansible-owned: the live pipeline renders to `{{ homebrew_prefix }}/etc/grafana-alloy/config.alloy` (default `/opt/homebrew/etc/grafana-alloy/config.alloy`) from `files/observability/alloy/config.alloy.j2`, and only that render notifies the `Restart alloy` handler. The `alloy-base` plugin writes a second, minimal copy to `~/.config/alloy/config.alloy` that reloads nothing — do not send an agent there to "fix the pipeline". Reconfiguration is a playbook run, never an agent action.
 - Alloy forwards metrics → Prometheus, logs → Loki, traces → Tempo. To *query* those signals, use the backend agents (`../prometheus/`, `../loki/`, `../tempo/`) or Grafana, not Alloy.
 
 ### Capabilities

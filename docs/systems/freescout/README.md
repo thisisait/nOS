@@ -1,6 +1,6 @@
 # FreeScout
 
-> Helpdesk system. Spravuje zakaznicke konverzace a emaily.
+> Helpdesk system. Manages customer conversations and email.
 
 ## Quick Reference
 

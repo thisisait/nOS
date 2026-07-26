@@ -1,6 +1,6 @@
 # RustFS
 
-> S3-kompatibilni object storage. Drop-in nahrada MinIO. Buckety, presigned URLs.
+> S3-compatible object storage. A drop-in MinIO replacement. Buckets, presigned URLs.
 
 ## Quick Reference
 

@@ -25,7 +25,7 @@
 ### Activation
 
 ```
-Deleguj na DataAgent: [popis ukolu]
+Delegate to DataAgent: [task description]
 ```
 
 ### Skills Reference

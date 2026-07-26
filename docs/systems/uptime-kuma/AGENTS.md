@@ -28,7 +28,7 @@
 ### Activation
 
 ```
-Deleguj na MonitorAgent: [popis ukolu]
+Delegate to MonitorAgent: [task description]
 ```
 
 ### Skills Reference

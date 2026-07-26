@@ -1,6 +1,6 @@
 # ERPNext
 
-> CRM/ERP system. Spravuje obchodni data, faktury, zakazniky a zasoby.
+> CRM/ERP system. Manages business data, invoices, customers and inventory.
 
 ## Quick Reference
 

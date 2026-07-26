@@ -32,7 +32,7 @@
 ### Activation
 
 ```
-Deleguj na GrafanaAgent: [popis ukolu]
+Delegate to GrafanaAgent: [task description]
 ```
 
 ### Skills Reference

@@ -42,10 +42,15 @@ is defined only in `default.config.yml`; an external-storage override relocates 
   **Honest CE ceiling:** Authentik gates *access*, then Infisical still shows its own
   email + password form. Do not re-add `OIDC_*` env on CE.
   Break-glass when Authentik is down: `/login/admin`.
-  > **Stale elsewhere:** the `infisical` row in `state/manifest.yml` still carries
-  > `oidc: native`. The plugin manifest is the source of truth per
+  > **Stale elsewhere — and it propagates.** The `infisical` row in `state/manifest.yml`
+  > still carries `oidc: native`. The plugin manifest is the source of truth per
   > `roles/pazny.traefik/vars/main.yml`; the manifest field contradicts it and should
-  > be corrected at the source.
+  > be corrected at the source. This is **not** a dead metadata field: the manifest
+  > `oidc` value is read by `files/anatomy/scripts/keap_selfmodel_gen.py` (`render_service`,
+  > which emits `- **SSO:** {sv['oidc']}`), so the cortex knowledge node for Infisical
+  > currently asserts `SSO: native` while this page asserts `forward_auth`. Fixing the
+  > manifest row is what closes the contradiction in the knowledge graph; editing only
+  > this file cannot.
 
 ## API Access
 

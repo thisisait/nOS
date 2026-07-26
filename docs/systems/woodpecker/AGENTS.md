@@ -6,6 +6,8 @@
 **Domain:** `ci.<tenant_domain>`
 **Role:** Manages CI repo activation and reads pipeline state. Woodpecker runs the `.woodpecker.yml` pipeline on every Gitea push once a repo is activated.
 
+> **Roster note.** `WoodpeckerAgent` is a *per-system* definition, not a member of the closed ten-persona OpenClaw roster in `files/openclaw/AGENTS.md` — that roster assigns Woodpecker CI (with Gitea) to **`DevOpsAgent`**. Delegate with `Delegate to DevOpsAgent: …`; this page is the system-scoped API contract that persona reads.
+
 ### Context
 
 - API base (loopback): `http://127.0.0.1:8060/api/`

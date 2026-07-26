@@ -1,6 +1,6 @@
 # Uptime Kuma
 
-> Status monitoring a incident management. Sleduje dostupnost vsech sluzeb.
+> Status monitoring and incident management. Tracks the availability of every service.
 
 ## Quick Reference
 

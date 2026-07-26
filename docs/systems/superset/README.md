@@ -1,6 +1,6 @@
 # Apache Superset
 
-> Datova vizualizace a BI. Dashboardy, charty a SQL dotazy.
+> Data visualization and BI. Dashboards, charts and SQL queries.
 
 ## Quick Reference
 

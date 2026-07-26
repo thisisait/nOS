@@ -16,7 +16,8 @@
 | **Toggle** | `install_observability: true` |
 | **Install** | Homebrew formula `grafana-alloy`, run as a `brew services` daemon |
 | **Version** | not pinned — brew installs the current formula (`alloy_version` has no default) |
-| **Config** | `~/.config/alloy/config.alloy` (rendered from `alloy-base` plugin) |
+| **Config (live)** | `{{ homebrew_prefix }}/etc/grafana-alloy/config.alloy` → default `/opt/homebrew/etc/grafana-alloy/config.alloy`, rendered by `tasks/observability.yml` from `files/observability/alloy/config.alloy.j2` (464 lines — the whole pipeline). This is the **only** render wired to the reload handler (`notify: Restart alloy`, `main.yml`). |
+| **Config (plugin, second copy)** | `~/.config/alloy/config.alloy` — the `alloy-base` plugin also renders a **minimal core** here (`provisioning.config`, ~5.8 kB: logging + self-scrape + remote_write + loki.write + OTLP receiver). Nothing notifies a reload for it. Editing this file is **not** how you change the running pipeline. |
 | **Data** | none persistent — only a small on-disk WAL for send retries (~hours) |
 
 Anchor: Alloy's `state/manifest.yml` row has **no `stack:`** (it is host-installed, outside Docker Compose). `keap_selfmodel_gen.py` buckets a stackless row into `HOST_STACK = "host"`, so its taxonomy node is **`nos.host.alloy`**, not `nos.observability.alloy` — even though its category is `observability`.
@@ -33,7 +34,9 @@ Port note: Alloy's `4317`/`4318` are the **public** OTLP receivers apps send to.
 
 - **UI:** `http://localhost:12345` — a read-only inspection UI for the running pipeline (components, graph, self-metrics). Not an action API.
 - **Self-metrics:** `GET /metrics` (Prometheus format, Alloy's own telemetry).
-- **Config:** Alloy's config is **Ansible-owned** — rendered to `~/.config/alloy/config.alloy` and reloaded via `brew services restart alloy` during a playbook run, not through the API. There is no operator/agent-facing mutation surface.
+- **Config:** Alloy's config is **Ansible-owned** — rendered to `{{ homebrew_prefix }}/etc/grafana-alloy/config.alloy` and reloaded during a playbook run (the `Restart alloy` handler in `main.yml` unloads/loads `~/Library/LaunchAgents/homebrew.mxcl.grafana-alloy.plist`), not through the API. There is no operator/agent-facing mutation surface. To change what Alloy collects, edit `files/observability/alloy/config.alloy.j2` (or an `alloy_scrape_*` / `alloy_tail_*` toggle) and re-run — **not** `~/.config/alloy/`.
+
+> **Which file does the daemon actually read?** The launch argument lives in the upstream Homebrew formula's plist, which is not vendored here, so the literal path the binary opens cannot be established from this repo. What *is* established from source: `{{ homebrew_prefix }}/etc/grafana-alloy/config.alloy` carries the full pipeline and is the sole render wired to the reload handler, while `~/.config/alloy/` receives a minimal core plus dormant fragments. Treat the Homebrew-prefix file as authoritative; if you need certainty on the running host, read the `ProgramArguments` of `homebrew.mxcl.grafana-alloy.plist`.
 
 ## Health Check
 
@@ -49,7 +52,9 @@ Port note: Alloy's `4317`/`4318` are the **public** OTLP receivers apps send to.
 | Logs | Docker container stdout/stderr, nginx/php-fpm/agent logs | Loki (`loki.write`) |
 | Traces | OTLP from apps on `:4317`/`:4318` | Tempo (OTLP gRPC `:4327`) |
 
-Which collectors are active is controlled by the `alloy_scrape_*` / `alloy_tail_*` toggles in `default.config.yml` and the composition plugins (`alloy-host-metrics`, `alloy-docker-metrics`, `alloy-syslog`).
+Which collectors are active is controlled by the `alloy_scrape_*` / `alloy_tail_*` toggles in `default.config.yml`, read by `files/observability/alloy/config.alloy.j2` at render time.
+
+The three composition plugins (`alloy-host-metrics`, `alloy-docker-metrics`, `alloy-syslog`) do **not** control this today. Each is `structure-landed` by its own manifest header: it renders a River fragment to `~/.config/alloy/conf.d/<plugin>.river` and then lies dormant, because activating them needs Alloy launched as `alloy run config.alloy conf.d/` — a launch flag the Homebrew plist does not carry (an explicit Phase-3 TODO in `files/anatomy/plugins/alloy-host-metrics/plugin.yml`). The host-metrics scrape that *is* live comes from the inline block in the Ansible template, not from the plugin.
 
 ## Dependencies
 

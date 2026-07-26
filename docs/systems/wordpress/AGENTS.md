@@ -24,7 +24,7 @@
 ### Activation
 
 ```
-Deleguj na ContentAgent: [popis ukolu]
+Delegate to ContentAgent: [task description]
 ```
 
 ### Skills Reference

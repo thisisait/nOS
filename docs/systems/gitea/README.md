@@ -1,6 +1,6 @@
 # Gitea
 
-> Self-hosted Git server. Repozitare, issues, pull requesty, webhooky.
+> Self-hosted Git server. Repositories, issues, pull requests, webhooks.
 
 ## Quick Reference
 

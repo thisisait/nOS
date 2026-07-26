@@ -1,6 +1,6 @@
 # Metabase
 
-> BI dashboardy. SQL dotazy, vizualizace, sdileni reportu.
+> BI dashboards. SQL queries, visualizations, report sharing.
 
 ## Quick Reference
 

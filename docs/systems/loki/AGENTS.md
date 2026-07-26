@@ -6,6 +6,8 @@
 **Endpoint:** `http://localhost:3100` (loopback, unauthenticated)
 **Role:** Runs read-only LogQL queries and introspects log labels directly against the local Loki HTTP API.
 
+> **Roster note.** `LokiAgent` is a *per-system* definition, not a member of the closed ten-persona OpenClaw roster in `files/openclaw/AGENTS.md` — that roster assigns Loki (with Grafana, Prometheus and Tempo) to **`GrafanaAgent`**. Delegate with `Delegate to GrafanaAgent: …`; this page is the system-scoped API contract that persona reads.
+
 ### Context
 
 - API base: `http://localhost:3100/loki/api/v1/`

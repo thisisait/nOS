@@ -1,6 +1,6 @@
 # Grafana
 
-> Vizualizace metrik, logu a traces. Centralalni observability dashboard.
+> Visualization of metrics, logs and traces. The estate's central observability dashboard.
 
 ## Quick Reference
 

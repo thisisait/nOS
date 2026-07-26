@@ -1,6 +1,6 @@
 # Outline
 
-> Tymova wiki a knowledge base. Markdown editor, kolekce, vyhledavani.
+> Team wiki and knowledge base. Markdown editor, collections, search.
 
 ## Quick Reference
 
