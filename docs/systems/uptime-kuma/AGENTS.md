@@ -8,10 +8,14 @@
 
 ### Context
 
-- API base: `https://uptime.dev.local`
-- Auth: API key from `~/agents/tokens/uptime-kuma.token`
-- Bot user: `openclaw-bot`
-- WebSocket-based API (socket.io) for real-time, REST for read operations
+- API base: `https://uptime.dev.local` (loopback: `http://127.0.0.1:3001`)
+- Auth: admin user + password from `~/.nos/secrets.yml`, passed to the socket.io login.
+  There is no API-key file and no `openclaw-bot` account.
+- socket.io is the **only** management API. The handful of REST routes
+  (`/api/entry-page`, `/api/status-page/<slug>`, `/api/status-page/heartbeat/<slug>`,
+  `/api/badge/...`) are read-only status surfaces.
+- Reference implementation: `roles/pazny.uptime_kuma/files/setup-monitors.py`
+  (wraps `uptime_kuma_api.UptimeKumaApi`)
 
 ### Capabilities
 

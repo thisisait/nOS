@@ -1,14 +1,16 @@
 # Apache Superset — Skills
 
-> Callable actions for Superset. Each skill is API-first using `openclaw-bot` JWT.
+> Callable actions for Superset. Each skill is API-first using an admin JWT.
 
 ## Authentication
 
 - **Method:** Bearer JWT
-- **Token:** `~/agents/tokens/superset.token`
-- **Base URL:** `https://superset.dev.local`
+- **Credentials:** `~/.nos/secrets.yml` (`{global_password_prefix}_pw_superset`). There is
+  no persisted token file and no bot account — the JWT is minted per session.
+- **Base URL:** `https://superset.dev.local` (loopback: `http://127.0.0.1:8089`)
 - **Header:** `Authorization: Bearer <jwt>`
-- **Token refresh:** `POST /api/v1/security/login` with `{ "username": "openclaw-bot", "password": "...", "provider": "db" }`
+- **Token mint / refresh:** `POST /api/v1/security/login` with
+  `{ "username": "admin", "password": "...", "provider": "db" }`
 
 ---
 

@@ -5,9 +5,10 @@
 ## Authentication
 
 - **Method:** Session token (header `X-Metabase-Session`)
-- **Obtain:** `POST /api/session` with `{ "username": "...", "password": "..." }`
-- **Token:** `~/agents/tokens/metabase.token`
-- **Base URL:** `https://bi.dev.local`
+- **Obtain:** `POST /api/session` with `{ "username": "admin@dev.local", "password": "..." }`
+- **Credentials:** `~/.nos/secrets.yml` (`{global_password_prefix}_pw_metabase_admin`).
+  There is no persisted token file and no bot account — the session is minted per call.
+- **Base URL:** `https://bi.dev.local` (loopback: `http://127.0.0.1:3002`)
 
 ---
 

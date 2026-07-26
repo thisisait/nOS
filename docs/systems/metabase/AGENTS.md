@@ -8,9 +8,11 @@
 
 ### Context
 
-- API base: `https://bi.dev.local/api/`
-- Auth: Session token from `~/agents/tokens/metabase.token`
-- Bot user: `openclaw-bot`
+- API base: `https://bi.dev.local/api/` (loopback: `http://127.0.0.1:3002/api/`)
+- Auth: session token obtained at call time via `POST /api/session` with the admin
+  credentials from `~/.nos/secrets.yml`; sent as the `X-Metabase-Session` header
+- User: the shared admin `admin@dev.local` — nOS provisions **no** bot account for
+  Metabase (no `openclaw-bot`, no token file)
 
 ### Capabilities
 

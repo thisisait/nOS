@@ -8,10 +8,11 @@
 
 ### Context
 
-- API base: `https://superset.dev.local/api/v1/`
-- Auth: Bearer JWT from `~/agents/tokens/superset.token`
-- Bot user: `openclaw-bot` (Superset Admin role)
-- JWT obtained via `POST /api/v1/security/login`
+- API base: `https://superset.dev.local/api/v1/` (loopback: `http://127.0.0.1:8089/api/v1/`)
+- Auth: Bearer JWT minted per call via `POST /api/v1/security/login`
+- User: the shared `admin` account (Superset Admin role), credentials from
+  `~/.nos/secrets.yml`. nOS provisions **no** bot account for Superset (no
+  `openclaw-bot`, no token file).
 
 ### Capabilities
 

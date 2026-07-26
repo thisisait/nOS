@@ -3,15 +3,17 @@
 ## StorageAgent (S3)
 
 **System:** RustFS (iiab stack)
-**Domain:** `s3.dev.local`
+**Domain:** `fs.dev.local` (console only — `rustfs_domain`). There is no `s3.dev.local`.
 **Role:** Manages S3-compatible object storage — buckets, files, presigned URLs.
 
 ### Context
 
-- S3 endpoint: `https://s3.dev.local`
+- S3 endpoint: `http://127.0.0.1:9010` — loopback, plain HTTP, no public route
+- Console: `https://fs.dev.local` (Traefik → container port 9001)
 - Auth: AWS Signature V4 (access key + secret key)
-- Credentials in `~/agents/tokens/rustfs.env`
-- Compatible with aws-cli, boto3, any S3 SDK
+- Credentials in `~/.nos/secrets.yml` (`rustfs_access_key` / `rustfs_secret_key`);
+  there is no `~/agents/tokens/` directory in this repo
+- Compatible with aws-cli, boto3, restic, rclone, any S3 SDK
 
 ### Capabilities
 

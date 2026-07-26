@@ -1,13 +1,20 @@
 # Grafana — Skills
 
-> Callable actions for Grafana. Each skill is API-first using `openclaw-bot` service account.
+> Callable actions for Grafana. Each skill is API-first using the `mcp-gateway` service
+> account (the only one nOS provisions).
 
 ## Authentication
 
 - **Method:** Bearer token (Grafana Service Account)
-- **Token:** `~/agents/tokens/grafana.token`
-- **Base URL:** `https://grafana.dev.local`
+- **Token:** `~/nos/platform/services/mcpo/data/.grafana_sa_token` (`{{ mcpo_data_dir }}`)
+- **Service account:** `mcp-gateway`, role **Viewer**
+- **Base URL:** `https://grafana.dev.local` (loopback: `http://127.0.0.1:3000`)
 - **Header:** `Authorization: Bearer <token>`
+
+> **Read-only ceiling.** The provisioned token is a **Viewer**. The query / list / get
+> skills below work with it; `create-alert-rule` and `create-service-account` are write
+> operations and need admin HTTP basic auth (`admin` + `grafana_admin_password`) over
+> loopback — which is exactly how the playbook does them.
 
 ---
 
@@ -150,15 +157,18 @@ expr: {job="nginx"} |= "HTTP/1" | pattern `<_> <_> <_> <status> <_>` | status >=
 
 ## create-service-account
 
-**Trigger:** (internal — used by playbook for openclaw-bot setup)
-**Method:** API
+**Trigger:** (internal — this is what `roles/pazny.mcp_gateway/tasks/post.yml` runs)
+**Method:** API (admin basic auth over loopback, not the SA token)
 **Endpoint:** `POST /api/serviceaccounts`
-**Input:** `{ "name": "openclaw-bot", "role": "Admin" }`
-**Output:** `{ "id": 1, "name": "openclaw-bot" }`
+**Input:** `{ "name": "mcp-gateway", "role": "Viewer", "isDisabled": false }`
+**Output:** `{ "id": 1, "name": "mcp-gateway" }` (accepts `400`/`409` = already exists,
+then re-reads via `GET /api/serviceaccounts/search?query=mcp-gateway`)
 
 **Token creation:**
 ```
 POST /api/serviceaccounts/<id>/tokens
-{ "name": "openclaw-token" }
+{ "name": "mcpo-token-<epoch>" }
 → { "key": "<bearer-token>" }
 ```
+The key is written to `{{ mcpo_data_dir }}/.grafana_sa_token` (mode `0600`) so a compose
+restart keeps working.
