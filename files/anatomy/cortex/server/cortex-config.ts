@@ -128,6 +128,18 @@ export interface CortexStoreConfig {
    * shared directory, no dependency on KEAP being deployed.
    */
   selfmodelGen: string;
+  /**
+   * The docs-as-knowledge generator (`keap_docs_gen.py`). It runs AFTER
+   * `selfmodelGen` and merges the estate's prose — the `docs/systems/<svc>/`
+   * READMEs, agent briefs and skill sheets — into the self-model's per-stack
+   * canonical files as typed child nodes (`docs/plans/cortex-docs-schema.md`).
+   *
+   * It is a second script rather than a flag on the first because the two
+   * describe different things (SHAPE vs PROSE) and fail for different reasons —
+   * but they share one output tree and one ingest pass, because `ingest.mjs`
+   * wipes a domain subtree and a second `nos`-rooted pass would prune the first.
+   */
+  selfmodelDocsGen: string;
   selfmodelManifest: string;
   selfmodelPluginsDir: string;
   selfmodelDocsRoot: string;
@@ -205,6 +217,9 @@ export function resolveStoreConfig(env: NodeJS.ProcessEnv = process.env): Cortex
     selfmodelGen: env.CORTEX_SELFMODEL_GEN?.trim()
       ? path.resolve(env.CORTEX_SELFMODEL_GEN.trim())
       : path.join(NOS_ROOT, 'files', 'anatomy', 'scripts', 'keap_selfmodel_gen.py'),
+    selfmodelDocsGen: env.CORTEX_DOCS_GEN?.trim()
+      ? path.resolve(env.CORTEX_DOCS_GEN.trim())
+      : path.join(NOS_ROOT, 'files', 'anatomy', 'scripts', 'keap_docs_gen.py'),
     selfmodelManifest: path.join(NOS_ROOT, 'state', 'manifest.yml'),
     selfmodelPluginsDir: path.join(NOS_ROOT, 'files', 'anatomy', 'plugins'),
     selfmodelDocsRoot: path.join(NOS_ROOT, 'docs', 'systems'),

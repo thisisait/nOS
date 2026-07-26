@@ -69,7 +69,7 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { resolveStoreConfig, type CortexStoreConfig } from './cortex-config';
+import { resolveStoreConfig, NOS_ROOT, type CortexStoreConfig } from './cortex-config';
 import { applyAnnTuning, type AnnStatus } from './cortex-ann';
 
 type DbModule = typeof import('./db');
@@ -93,6 +93,26 @@ export interface IngestResult {
   [k: string]: unknown;
 }
 
+/**
+ * The docs-as-knowledge coverage claim, reported as DATA (design §6).
+ *
+ * This is the field the C1 self-model gap did not have. That gap — 91 `nos.*`
+ * nodes missing — survived a fully green P-4 because coverage was LOGGED and
+ * never ASSERTED: a router answering `unknown_operand` for a third of the estate
+ * looks identical to a router answering correctly. `servicesMissed` names the
+ * services that have NO doc tree, so "silence" and "no such capability" are no
+ * longer the same value (`hidden_fees/04`). null when docs were not generated.
+ */
+export interface DocsReport {
+  docNodes: number;
+  nodesByKind: { skill: number; hint: number; note: number; snippet: number };
+  servicesTotal: number;
+  servicesCovered: string[];
+  /** Manifest services with no `docs/systems/<svc>/` tree — the coverage GAP, by name. */
+  servicesMissed: string[];
+  domainsMerged: string[];
+}
+
 export interface MaterialiseReport {
   /** Spine SoT ↔ generated taxonomy.ts agreement (knowledge/spine-render.mjs --check). */
   spineInSync: boolean;
@@ -106,6 +126,8 @@ export interface MaterialiseReport {
    *  green P-4 because every gate measured composition and none measured
    *  coverage; a fact nobody can read is a fact nobody checks. */
   slugRoots: string[];
+  /** Docs-as-knowledge coverage. null when the self-model (and thus docs) was not run. */
+  docs: DocsReport | null;
 }
 
 export interface StoreFacts {
@@ -344,7 +366,7 @@ export function checkSpineInSync(cfg: CortexStoreConfig): { ok: boolean; output:
 export function runSelfmodel(
   cfg: CortexStoreConfig,
   opts: { force?: boolean; log?: (l: string) => void } = {},
-): { generated: boolean; canonicalDir: string; ingest: IngestResult | null } {
+): { generated: boolean; canonicalDir: string; ingest: IngestResult | null; docs: DocsReport } {
   const log = opts.log ?? ((l: string) => console.log(l));
   if (!fs.existsSync(cfg.selfmodelGen)) {
     throw new Error(
@@ -374,9 +396,81 @@ export function runSelfmodel(
         'With --schema slug that directory IS the output; its absence means the run produced nothing.',
     );
   }
+
+  // The DOCS pass merges the estate's prose into the self-model tree that was
+  // just written, BEFORE ingest — so it is one canonical tree, one ingest, one
+  // `nos` root. It must run after the self-model (its nodes have no parent system
+  // otherwise) and before ingest (ingest is where the merged tree becomes rows).
+  const docs = runDocs(cfg, canonicalDir, { log });
+
   const ingest = runIngest({ ...cfg, canonicalDir }, { force: opts.force, log });
   log(`[store] self-model: ${ingest.applied.length} domain(s) applied from the generated tree`);
-  return { generated: true, canonicalDir, ingest };
+  return { generated: true, canonicalDir, ingest, docs };
+}
+
+/**
+ * Merge `docs/systems/` prose into the self-model's canonical tree as typed
+ * nodes, and return the coverage claim.
+ *
+ * The generator (`keap_docs_gen.py`) EXITS NON-ZERO when it produces zero doc
+ * nodes — the "corpus exhausted" lie the store must refuse, not log past. So a
+ * failed run throws here rather than composing a self-model that silently lost
+ * every README. Absence is not emptiness: if the walk found nothing, the boot
+ * stops and says so.
+ */
+export function runDocs(
+  cfg: CortexStoreConfig,
+  canonicalDir: string,
+  opts: { log?: (l: string) => void } = {},
+): DocsReport {
+  const log = opts.log ?? ((l: string) => console.log(l));
+  if (!fs.existsSync(cfg.selfmodelDocsGen)) {
+    throw new Error(
+      `docs-as-knowledge generator not found at ${cfg.selfmodelDocsGen}. Set CORTEX_DOCS_GEN, ` +
+        'or CORTEX_SELFMODEL=0 to build a deliberately spine-only store.',
+    );
+  }
+  const gen = spawnSync('python3', [
+    cfg.selfmodelDocsGen,
+    '--manifest', cfg.selfmodelManifest,
+    '--docs-root', cfg.selfmodelDocsRoot,
+    '--canonical', canonicalDir,
+    '--repo-root', NOS_ROOT,
+  ], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+  if (gen.status !== 0) {
+    throw new Error(
+      `docs-as-knowledge generator exited ${gen.status} — a self-model with no doc prose is the ` +
+        `coverage lie the store refuses to boot on:\n${(gen.stderr || gen.stdout || '').slice(-4000)}`,
+    );
+  }
+  const line = (gen.stdout || '').split('\n').reverse().find((l) => l.trim().startsWith('{'));
+  if (!line) {
+    throw new Error(`docs-as-knowledge generator produced no JSON coverage trailer:\n${(gen.stdout || '').slice(-2000)}`);
+  }
+  const raw = JSON.parse(line) as {
+    doc_nodes: number;
+    nodes_by_kind: { skill: number; hint: number; note: number; snippet: number };
+    services_total: number;
+    services_covered: string[];
+    services_missed: string[];
+    domains_merged: string[];
+  };
+  const docs: DocsReport = {
+    docNodes: raw.doc_nodes,
+    nodesByKind: raw.nodes_by_kind,
+    servicesTotal: raw.services_total,
+    servicesCovered: raw.services_covered,
+    servicesMissed: raw.services_missed,
+    domainsMerged: raw.domains_merged,
+  };
+  log(
+    `[store] docs: ${docs.docNodes} node(s) ` +
+      `(${docs.nodesByKind.skill} skill / ${docs.nodesByKind.hint} hint / ` +
+      `${docs.nodesByKind.note} note / ${docs.nodesByKind.snippet} snippet), ` +
+      `coverage ${docs.servicesCovered.length}/${docs.servicesTotal} services ` +
+      `(${docs.servicesMissed.length} missed)`,
+  );
+  return docs;
 }
 
 export function runIngest(
@@ -493,6 +587,28 @@ export async function openStore(opts: OpenStoreOptions = {}): Promise<StoreHandl
       );
     }
     log(`[store] coverage: slug root(s) ${slugRoots.map((n) => n.id).join(', ')}`);
+
+    // The DOCS coverage assertion — the half the C1 gap lacked. The self-model
+    // slug-root check above proves the SHAPE landed; this proves the PROSE did.
+    // Zero doc nodes is the same "corpus exhausted" lie one level down: every
+    // system node present, every one of them mute. `runDocs` already refuses it
+    // (the generator exits non-zero), but a store that materialised with docs
+    // ENABLED and still carries a null/empty docs report is a code path that
+    // skipped the assertion, so it is caught here too rather than trusted.
+    const docs = selfmodel?.docs ?? null;
+    if (!docs || docs.docNodes === 0) {
+      throw new Error(
+        'materialisation ENABLED docs but produced no doc coverage — the self-model system nodes ' +
+          'would all resolve mute (no README, no skill, no note), which reads as "no such capability" ' +
+          'rather than "docs not generated". Set CORTEX_SELFMODEL=0 for a deliberately prose-free store.',
+      );
+    }
+    log(
+      `[store] docs coverage: ${docs.servicesCovered.length}/${docs.servicesTotal} services documented, ` +
+        `${docs.servicesMissed.length} missed` +
+        (docs.servicesMissed.length ? ` (${docs.servicesMissed.slice(0, 8).join(', ')}` +
+          (docs.servicesMissed.length > 8 ? ', …)' : ')') : ''),
+    );
   }
 
   const ftsRows = db.countRows('taxonomy_fts');
@@ -524,6 +640,7 @@ export async function openStore(opts: OpenStoreOptions = {}): Promise<StoreHandl
       descriptionOverrides: descRows.length,
       ftsRows,
       slugRoots: slugRootIds,
+      docs: selfmodel?.docs ?? null,
     },
     facts: storeFacts(cfg, db, taxonomy, ontologyVersion, ann),
   };
