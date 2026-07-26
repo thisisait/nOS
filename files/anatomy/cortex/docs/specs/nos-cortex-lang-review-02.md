@@ -1,5 +1,7 @@
 # nos-cortex-lang — KEAP consumer review, round 2
 
+> Vendored from thisisait/nos-keap @ v1.27.0 docs/specs/nos-cortex-lang-review-02.md — organ-side copy, vendored with the P-4 code port 2026-07-25. The KEAP original remains authoritative until the post-C4 docs cleanup; line-number citations here track the ORGAN tree, which is why they can differ from the original.
+
 Status: **review of the revised nOS design plan (2026-07-24).** Written from the
 KEAP side against v1.26.0, which is the substrate the plan builds on. Round 1
 (delivered as prose) corrected three structural errors — opcode source, Resolver

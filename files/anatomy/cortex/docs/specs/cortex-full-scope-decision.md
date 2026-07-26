@@ -1,5 +1,7 @@
 # How much of KEAP becomes the cortex organ
 
+> Vendored from thisisait/nos-keap @ v1.27.0 docs/specs/cortex-full-scope-decision.md — organ-side copy, vendored with the P-4 code port 2026-07-25. The KEAP original remains authoritative until the post-C4 docs cleanup; line-number citations here track the ORGAN tree, which is why they can differ from the original.
+
 Status: **decision**, taken 2026-07-25 under an operator directive to consider
 moving all of KEAP except the SoT data and the UI into nOS as the core cortex.
 Supersedes the scope half of `cortex-backend-boundary-reply.md` §3, which drew

@@ -18,6 +18,7 @@ Statuses: `done` (landed, historical value only) · `superseded` (by what) ·
 | `onto1-composition-contract.md` | **live-here** (vendored) | the byte-identity contract both implementations must satisfy; the CI conformance gate's law | keep in BOTH repos while two onto1 implementations exist (design §7 Q4) |
 | `cortex-full-scope-decision.md` | **live-here** (vendored) | the C1–C4 staging + the two corrections (no db_identity carry-over, no shared keap.db) | move wholly to nOS; KEAP copy becomes a pointer |
 | `cortex-validate.md` | **live-here** (vendored) | the validate surface spec the daemon implements | move to nOS at C4 (KEAP loses the surface) |
+| `cortex-cutover.md` | **live-keap** (added v1.29.0, NOT vendored) | the P-5 switch: `CORTEX_BACKEND_URL`, why it is a switch and not a failover, why the local modules survive one release, and `cortex.ontologyDrift` | delete with `server/cortex-*.ts` — it documents the KEAP half only, and once that half is gone the doc has no subject |
 | `durability-and-integrity.md` | **live-here** (vendored) | ANN tuning measurements (float8/max_neighbors=20) + store integrity doctrine | split: ANN/organ half moves, KEAP data-dir half stays |
 | `nos-cortex-lang-review-02.md` | **live-here** (vendored) | round-2 language review; P0 decisions baked into the port | archive after C4 (decisions are in code) |
 | `recall-gate.md` | **live-here** (vendored 2026-07-25) | gate semantics v2; the gate + embedder colocate host-side (design §3) — C2 runtime, organ doctrine already | move at C2 |
@@ -47,3 +48,26 @@ Statuses: `done` (landed, historical value only) · `superseded` (by what) ·
 `C1-GAP-selfmodel.md` (locally authored) + the eight `specs/` above. Vendored
 copies carry a provenance header (source repo @ tag); the KEAP originals stay
 authoritative until the post-C4 cleanup executes the right-hand column.
+
+**Audited 2026-07-26.** Three things this section claimed that the tree did not:
+
+1. **Only 3 of 8 carried the header.** The five vendored with the P-4 code port
+   (`cortex-full-scope-decision`, `cortex-validate`, `durability-and-integrity`,
+   `nos-cortex-lang-review-02`, `onto1-composition-contract`) had none — the
+   three vendored a day later in the Docs stage did. Stamped now, at v1.27.0,
+   which is the tag the code port was cut from.
+2. **One copy has already drifted**, and benignly, which is the useful part:
+   `cortex-validate.md` cites `server/migrations.ts:60` while KEAP's cites `:83`,
+   because v1.28.0's dead-schema comment shifted the line by 23. Both are
+   correct *for their own tree*. That is the whole vendoring hazard in one
+   diff — the copies are pinned to a snapshot, they will keep diverging, and
+   **nothing gates it**. The organ's CI runs the organ's own fixtures and is
+   structurally blind to divergence from the source. The only live detector is
+   KEAP's `cortex.ontologyDrift` health field, and it watches the *ontology
+   digest*, not the prose.
+3. **`cortex-cutover.md` did not exist here.** Added above.
+
+The header now says citations track the organ tree. That is a statement about
+what these copies are *for* — reading the organ's code — not a licence to let
+them rot. The post-C4 cleanup is what ends the duplication; until then, treat a
+KEAP-side spec edit as owing a re-vendor.

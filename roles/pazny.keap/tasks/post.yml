@@ -60,7 +60,11 @@
     - _keap_seed is not skipped
 
 # ── Knowledge ingest (git SoT → live DB, idempotent) ─────────────────────────
-# knowledge/canonical is bind-mounted RO from the clone; knowledge/ingest.mjs
+# The WHOLE of knowledge/ is bind-mounted RO from the clone — not just canonical.
+# The distinction matters and is the entire subject of KEAP's
+# docs/specs/deploy-knowledge-mount-split.md: ingest.mjs imports ./_ontology.mjs
+# and applies knowledge/ontology/, so a canonical-only mount left the image and
+# the git ref on two different versions of one SoT. knowledge/ingest.mjs
 # applies only the domain files whose sha256 changed (knowledge_imports marker),
 # so this is a no-op on a steady converge and a full load on a blank. A restart
 # materialises any applied change (registerExtNode → applyDescriptionOverride →

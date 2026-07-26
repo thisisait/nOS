@@ -1,5 +1,7 @@
 # Durability & data integrity — review and doctrine
 
+> Vendored from thisisait/nos-keap @ v1.27.0 docs/specs/durability-and-integrity.md — organ-side copy, vendored with the P-4 code port 2026-07-25. The KEAP original remains authoritative until the post-C4 docs cleanup; line-number citations here track the ORGAN tree, which is why they can differ from the original.
+
 Status: **review of 2026-07-24, acted on in part.** Written against v1.25.0 after
 the live database was found to have been recreated two days earlier without
 anyone noticing.

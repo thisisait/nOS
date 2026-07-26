@@ -35,8 +35,15 @@ services:
       - {{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}:/data
       # Knowledge SoT (git-tracked) mounted READ-ONLY from the clone —
       # knowledge/ingest.mjs (post.yml) reads it and applies idempotently. A RO
-      # bind-mount is not a docker volume (no volume spam); data changes ride the
-      # git ref, never an image rebuild.
+      # bind-mount is not a docker volume (no volume spam).
+      #
+      # It does NOT exist so "data changes can ride the git ref without an image
+      # rebuild" — that was the pre-2026-07-24 reasoning and it invites exactly
+      # the wrong conclusion, that skipping a rebuild is safe. `up -d --build`
+      # runs on every converge. The mount exists because the IMAGE CANNOT
+      # SELF-SERVE AN INGEST: the Dockerfile bakes only ingest/dump/lint.mjs, so
+      # without the mount there is no canonical tree in the container to apply.
+      # (KEAP docs/specs/deploy-knowledge-mount-split.md §3.)
       #
       # Mount ALL of knowledge/ (not just canonical): v1.26.0's ingest.mjs imports
       # ./_ontology.mjs and applies knowledge/ontology/, and the nos/keap image can
