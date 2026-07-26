@@ -216,16 +216,53 @@ def git_commit_of(repo_root: str, rel_path: str) -> tuple[str | None, str | None
         return None, None
 
 
+def git_blob_at(repo_root: str, commit: str, rel_path: str) -> str | None:
+    """The blob sha git RECORDS for rel_path AT commit, or None if the path is not
+    in that commit / anything fails. This is what makes commit+blob a coherent
+    pair: it is the hash you would get from `git cat-file blob` walking down from
+    `commit`, so it can be compared against the working-tree blob_sha."""
+    try:
+        out = subprocess.run(
+            ["git", "-C", repo_root, "rev-parse", "--verify", "-q", f"{commit}:{rel_path}"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if out.returncode != 0 or not out.stdout.strip():
+            return None
+        return out.stdout.strip()
+    except Exception:
+        return None
+
+
 def provenance(repo_root: str, abs_path: str, data: bytes) -> dict:
     rel = os.path.relpath(abs_path, repo_root)
+    blob_sha = git_blob_sha(data)          # hash of the WORKING-TREE bytes we embed
     commit, generated_at = git_commit_of(repo_root, rel)
-    return {
+
+    # commit+blob only make staleness a query (§4) if they describe the SAME bytes.
+    # `commit` is the last commit touching the path in HEAD history; `blob_sha` is
+    # the working-tree file the generator just read. While authoring — or running
+    # against a working copy — the file is frequently DIRTY, and then the commit's
+    # recorded blob is a DIFFERENT object: pairing them would name a commit from
+    # which `git cat-file blob <blob_sha>` is unreachable. Rather than ship that
+    # self-contradiction, verify the pair; if the bytes are not in the named commit,
+    # the honest provenance is "uncommitted" — drop the commit, keep the blob, and
+    # flag it so a consumer sees WHY the commit is absent (dirty) vs. no-git (null).
+    dirty = False
+    if commit is not None and git_blob_at(repo_root, commit, rel) != blob_sha:
+        dirty = True
+        commit = None
+        generated_at = None
+
+    prov = {
         "repo": os.path.basename(repo_root.rstrip("/")) or "nos",
         "path": rel,
         "commit": commit,
-        "blob_sha": git_blob_sha(data),
+        "blob_sha": blob_sha,
         "generated_at": generated_at,  # the doc's own commit time — the temporal axis §6
     }
+    if dirty:
+        prov["dirty"] = True
+    return prov
 
 
 # ── build the doc nodes ───────────────────────────────────────────────────────
@@ -266,6 +303,7 @@ def build_docs(manifest_path: str, docs_root: str, repo_root: str) -> dict:
     missed: list[str] = []
     empty: list[str] = []          # a doc tree EXISTS but produced zero nodes
     docs_ignored: list[str] = []   # <sslug>/<file> prose outside the allowlist
+    prov_unresolved = 0            # doc nodes whose commit could not be resolved
 
     for sid in sorted(systems):
         sv = systems[sid]
@@ -371,6 +409,8 @@ def build_docs(manifest_path: str, docs_root: str, repo_root: str) -> dict:
                 counts[meta["kind"]] += 1
                 produced += 1
                 doc_ordinal += 1
+                if prov.get("commit") is None:
+                    prov_unresolved += 1
 
         if produced:
             covered.append(sslug)
@@ -395,6 +435,10 @@ def build_docs(manifest_path: str, docs_root: str, repo_root: str) -> dict:
             "services_empty": sorted(empty),
             # Prose on disk outside the README/AGENTS/SKILLS allowlist, by name.
             "docs_ignored": sorted(docs_ignored),
+            # Doc nodes whose commit is null (dirty working tree, or read outside a
+            # git repo) — a resolvable pair is a query, an unresolvable one is a
+            # COUNTED absence, never a silent one.
+            "provenance_unresolved": prov_unresolved,
             "domains_merged": sorted(nodes_by_domain),
         },
     }

@@ -96,13 +96,18 @@ def test_sections_are_fence_aware():
 
 def test_provenance_shape_and_git_blob_sha():
     mod = _gen()
+    # b"hello" is NOT the committed bytes of gitea/README.md, so this is a DIRTY
+    # provenance: the five core keys are always present; the blob is the working
+    # bytes, and because they are not in the last commit the pair is not paired —
+    # commit drops to null and `dirty` flags WHY (not "no git", but "uncommitted").
     data = b"hello"
     prov = mod.provenance(str(ROOT), str(DOCS_ROOT / "gitea/README.md"), data)
-    assert set(prov) == {"repo", "path", "commit", "blob_sha", "generated_at"}
+    assert {"repo", "path", "commit", "blob_sha", "generated_at"} <= set(prov)
     assert prov["path"] == "docs/systems/gitea/README.md"
     # git-blob sha == `git hash-object` of the same bytes (verified: sha1 of the
     # framed blob), computed without git so it is stable for a dirty/untracked file
     assert prov["blob_sha"] == mod.git_blob_sha(data)
+    assert prov["dirty"] is True and prov["commit"] is None
 
 
 def test_provenance_is_in_brief_not_in_the_embedded_en():
@@ -119,6 +124,64 @@ def test_provenance_is_in_brief_not_in_the_embedded_en():
                 assert commit not in n["en"], f"{n['id']} leaked its commit into the body"
                 checked += 1
     assert checked > 0, "no committed provenance to check — wrong repo state?"
+
+
+def _tiny_repo(tmp_path, rel, content: str):
+    import os
+    import subprocess
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / os.path.dirname(rel)).mkdir(parents=True, exist_ok=True)
+    (repo / rel).write_text(content)
+
+    def g(*args):
+        subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
+
+    subprocess.run(["git", "init", "-q", str(repo)], check=True, capture_output=True)
+    g("config", "user.email", "t@t")
+    g("config", "user.name", "t")
+    g("add", "-A")
+    g("commit", "-q", "-m", "init")
+    return repo
+
+
+def test_provenance_commit_and_blob_never_describe_different_bytes(tmp_path):
+    """§4: 'commit+blob together make staleness a query' is only true if the two
+    describe the SAME bytes. `commit` came from committed HEAD history while
+    `blob_sha` came from the WORKING-TREE bytes — for a dirty file (the common
+    case while authoring / running against a copy) the pair is self-contradictory:
+    the named commit's version of the path hashes to something else, so
+    `git cat-file blob <blob_sha>` is unreachable from `commit`. The invariant:
+    if `commit` is present, `blob_sha` MUST resolve from it."""
+    import os as _os
+    mod = _gen()
+    rel = "docs/systems/gitea/README.md"
+    repo = _tiny_repo(tmp_path, rel, "committed content\n")
+    abs_path = str(repo / rel)
+
+    # clean: commit present AND the blob it names resolves to blob_sha
+    clean = open(abs_path, "rb").read()
+    prov = mod.provenance(str(repo), abs_path, clean)
+    assert prov["commit"] is not None
+    assert mod.git_blob_at(str(repo), prov["commit"], prov["path"]) == prov["blob_sha"]
+
+    # dirty: the bytes we embed differ from what any commit records
+    dirty = b"uncommitted edit that no commit holds\n"
+    prov2 = mod.provenance(str(repo), abs_path, dirty)
+    assert prov2["blob_sha"] == mod.git_blob_sha(dirty)
+    if prov2["commit"] is not None:
+        assert mod.git_blob_at(str(repo), prov2["commit"], prov2["path"]) == prov2["blob_sha"], \
+            "commit names bytes that are NOT blob_sha — the self-contradiction"
+
+
+def test_coverage_counts_unresolved_provenance(tmp_path):
+    """The compounding half: outside a git repo (or dirty) `commit` is silently
+    null. That absence must be COUNTED, not swallowed — a corpus where every
+    doc node's provenance is unresolvable should say so."""
+    # a docs tree that is NOT under any git repo → every commit resolves to null
+    cov = _one_service_docs(tmp_path, {"README.md": "## Setup\nbody\n"})["coverage"]
+    assert "provenance_unresolved" in cov
+    assert cov["provenance_unresolved"] == cov["doc_nodes"] > 0
 
 
 # ── §6: coverage is DATA, services missed are NAMED ────────────────────────────
