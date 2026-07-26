@@ -51,6 +51,12 @@ TODAY, not taken from the report:
 1. ZERO corpus rows lack an external source. If that has changed — a device capture arrived, someone
    authored an object by hand — then rebuild-instead-of-migrate is invalid and this workflow must
    STOP. The whole strategy rests on this one property.
+
+   S0 sharpened it and the sharpening matters: those external sources are USER FILES ON THE
+   REMOVABLE VOLUME /Volumes/SSD1TB, NOT GIT. The corpus is reproducible only while that volume is
+   mounted. Re-confirm the volume is mounted AND that the mount assertion S0 asked for exists before
+   any walk runs — a host daemon reading an unmounted path sees an empty tree, and an empty tree is
+   what the prune guards exist to survive.
 2. The fs-sync coupling answer (S0 open question 3): how user_id, visibility and tenant scope are
    derived, and what the container's RO mount implies that a host daemon would not inherit.
 
@@ -63,11 +69,33 @@ const design = await agent(`${RULES}
 Design the parallel corpus. Read ${PLAN} §6 S2 and ${KEAP}/server/fs-sync.ts (813 lines) in full.
 
 Decide, with reasons:
-1. **fs-sync as a host reader.** The organ is a host daemon, so it reads the user tree DIRECTLY and
-   the /user-files bind mount disappears rather than being re-plumbed. What changes: real filesystem
-   permissions instead of a container 'node' user against a RO mount. Does anything depend on that?
-   Keep the prune guards — a uid contributing 0 files must not mass-delete its mirrors, and an
-   unreadable subtree must refuse the prune rather than treat absence as deletion.
+1. **fs-sync as a host reader — and read this before scoping it.** S0 measured the tree fs-sync
+   actually walks and it is nearly empty. /user-files is TWO mounts stacked at one path:
+
+     {{ nos_data_root }}/tenants/<slug>/users            -> /user-files          (5 files)
+     {{ keap_selfmodel_root }}                           -> /user-files/nos-docs (176 files)
+
+   Of those 5, three are Bone's per-user .face/state.db files, one is .DS_Store, and exactly ONE is a
+   real document. The 166 nos-docs objects all come from the second mount — the self-model — which
+   **the organ already generates itself** (runSelfmodel() in cortex-store.ts, the C1 gap closure).
+
+   So porting fs-sync moves, for today's data, ONE PDF. Scope accordingly and say so plainly in the
+   report rather than implying a migration happened. The value of this stage is standing the
+   ingestion path up and proving it BEFORE there is data to lose, not moving a corpus that does not
+   exist yet. Note the consequence for stage 4: the diff harness will be comparing near-empty sets and
+   therefore cannot validate much — design it to say that rather than to report a green it did not earn.
+
+   The organ is a host daemon, so it reads the tree DIRECTLY and the bind mount disappears rather than
+   being re-plumbed. Real filesystem permissions replace a container 'node' user against a RO mount;
+   S0 established that fs-sync derives uid from the directory NAME and visibility from a config set,
+   so neither depends on that difference. Keep the prune guards — a uid contributing 0 files must not
+   mass-delete its mirrors, and an unreadable subtree must refuse the prune rather than treat absence
+   as deletion. With a 1-file tree those guards are the only thing standing between a transient mount
+   failure and the loss of the corpus, so they matter MORE here, not less.
+
+   And flag, do not fix: Bone's per-user SQLite lives INSIDE the tree the knowledge system walks. It
+   is skipped today only because .face is not in the KEAP_FS_SYNC_DIRS allowlist. Widening that
+   allowlist would mirror Bone's user state into the knowledge corpus.
 2. **Second write target, not a moved one.** The consolidator and embed-sync keep feeding KEAP AND
    start feeding the organ. Both must be idempotent against both targets. How is a partial failure
    handled — one target accepts, the other rejects?
