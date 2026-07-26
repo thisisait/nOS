@@ -1,12 +1,15 @@
 # Open WebUI — Skills
 
-> Callable actions for Open WebUI. API-first using `openclaw-bot` JWT token.
+> Callable actions for Open WebUI. API-first using a Bearer JWT obtained by signing in.
 
 ## Authentication
 
 - **Method:** Bearer JWT (obtained via `POST /api/v1/auths/signin`)
-- **Token:** `~/agents/tokens/open-webui.token`
-- **Base URL:** `https://ai.dev.local`
+- **Token:** not provisioned by the playbook — there is no `openclaw-bot` account and no
+  `~/agents/tokens/open-webui.token` file (both were `docs/systems/TEMPLATE/` boilerplate). Sign in as
+  the DB-seeded admin (`{{ default_admin_email }}`, password `{global_password_prefix}_pw_openwebui_admin`)
+  or as a user created in the UI. Local self-signup is OFF (`openwebui_enable_signup: false`).
+- **Base URL:** `https://ai{host_alias_seg}.{tenant_domain}` (default `https://ai.dev.local`)
 
 ---
 

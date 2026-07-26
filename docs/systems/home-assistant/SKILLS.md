@@ -5,9 +5,14 @@
 ## Authentication
 
 - **Method:** Bearer token (Long-Lived Access Token)
-- **Token:** `~/agents/tokens/home-assistant.token`
-- **Base URL:** `https://home.dev.local`
+- **Token:** not provisioned by the playbook — generate one from the HA user profile page and store it
+  wherever the caller keeps secrets. There is no `openclaw-bot` account and no
+  `~/agents/tokens/home-assistant.token` file; both were `docs/systems/TEMPLATE/` boilerplate.
+- **Base URL:** `https://home{host_alias_seg}.{tenant_domain}` (default `https://home.dev.local`)
 - **Header:** `Authorization: Bearer <token>`
+
+**When** a call to `/api/` or `/api/states` returns `401`, the token is missing or expired — that
+endpoint is not anonymous, which is also why it is not the container health probe.
 
 ---
 

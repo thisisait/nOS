@@ -3,15 +3,18 @@
 ## OpenWebUIAgent
 
 **System:** Open WebUI (iiab stack)
-**Domain:** `ai.dev.local`
+**Domain:** `ai{host_alias_seg}.{tenant_domain}` (default `ai.dev.local`)
 **Role:** Manages LLM models, chat sessions, and RAG pipelines.
 
 ### Context
 
-- API base: `https://ai.dev.local/api/`
-- Auth: Bearer JWT token from `~/agents/tokens/open-webui.token`
-- Bot user: `openclaw-bot`
-- Backend: Ollama at `http://host.docker.internal:11434`
+- API base: `https://ai{host_alias_seg}.{tenant_domain}/api/` (default `https://ai.dev.local/api/`)
+- Auth: Bearer JWT from `POST /api/v1/auths/signin`. The playbook provisions **no** bot account and
+  **no** token file — there is no `openclaw-bot` and no `~/agents/tokens/open-webui.token`. Sign in as
+  the DB-seeded admin (`{{ default_admin_email }}`) or a user created in the UI.
+- Backend: Ollama on the host at `http://host.docker.internal:11434`
+- Storage: SQLite `webui.db` in `/app/backend/data`
+  (`{{ nos_data_root }}/platform/services/openwebui/data`)
 
 ### Capabilities
 
@@ -24,7 +27,7 @@
 ### Activation
 
 ```
-Deleguj na OpenWebUIAgent: [popis ukolu]
+Delegate to OpenWebUIAgent: [task description]
 ```
 
 ### Skills Reference

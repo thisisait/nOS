@@ -1,12 +1,14 @@
 # Jellyfin — Skills
 
-> Callable actions for Jellyfin. Each skill is API-first using `openclaw-bot` API key.
+> Callable actions for Jellyfin. Each skill is API-first using a Jellyfin API key.
 
 ## Authentication
 
 - **Method:** API key
-- **Token:** `~/agents/tokens/jellyfin.token`
-- **Base URL:** `https://media.dev.local`
+- **Token:** not provisioned by the playbook — mint one under Dashboard → API Keys and store it
+  wherever the caller keeps secrets. There is no `openclaw-bot` account and no
+  `~/agents/tokens/jellyfin.token` file; both were `docs/systems/TEMPLATE/` boilerplate.
+- **Base URL:** `https://media{host_alias_seg}.{tenant_domain}` (default `https://media.dev.local`)
 - **Header:** `X-Emby-Token: <api-key>`
 
 ---
