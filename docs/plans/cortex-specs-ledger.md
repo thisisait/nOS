@@ -1,73 +1,73 @@
-# Cortex specs ledger — where each document lives and dies
+# Cortex docs — the map
 
-Status: **P-4b Docs stage**, 2026-07-25. The cortex transplant left its paper
-trail across two repos; this ledger says, per document, what is done, what is
-superseded, what the organ carries, and what stays with the KEAP product. The
-**KEAP repo is untouched** — the deletion pass there ("post-transplant
-cleanup") happens only after C4 lands, and this ledger is its shopping list.
+Rewritten 2026-07-26 for the publishability boundary
+(`cortex-self-core.md` §3). The previous version mapped a cortex-vs-product
+split that no longer exists.
 
-Statuses: `done` (landed, historical value only) · `superseded` (by what) ·
-`live-here` (organ runtime doctrine — vendored under
-`files/anatomy/cortex/docs/specs/`) · `live-keap` (product-side, stays) ·
-`split` (parts move at a named stage).
+**One rule.** A document lives where its **subject** lives. KEAP holds what can
+be published; nOS holds the runtime. Specs about the runtime therefore end up in
+nOS — but they move **with their code**, at the stage that moves it, not before.
+Moving paperwork ahead of its subject leaves a repo whose code has no spec.
 
-## KEAP `docs/specs/`
+## In force
 
-| document | status | note | post-C4 cleanup |
-| --- | --- | --- | --- |
-| `onto1-composition-contract.md` | **live-here** (vendored) | the byte-identity contract both implementations must satisfy; the CI conformance gate's law | keep in BOTH repos while two onto1 implementations exist (design §7 Q4) |
-| `cortex-full-scope-decision.md` | **live-here** (vendored) | the C1–C4 staging + the two corrections (no db_identity carry-over, no shared keap.db) | move wholly to nOS; KEAP copy becomes a pointer |
-| `cortex-validate.md` | **live-here** (vendored) | the validate surface spec the daemon implements | move to nOS at C4 (KEAP loses the surface) |
-| `cortex-cutover.md` | **live-keap** (added v1.29.0, NOT vendored) | the P-5 switch: `CORTEX_BACKEND_URL`, why it is a switch and not a failover, why the local modules survive one release, and `cortex.ontologyDrift` | delete with `server/cortex-*.ts` — it documents the KEAP half only, and once that half is gone the doc has no subject |
-| `durability-and-integrity.md` | **live-here** (vendored) | ANN tuning measurements (float8/max_neighbors=20) + store integrity doctrine | split: ANN/organ half moves, KEAP data-dir half stays |
-| `nos-cortex-lang-review-02.md` | **live-here** (vendored) | round-2 language review; P0 decisions baked into the port | archive after C4 (decisions are in code) |
-| `recall-gate.md` | **live-here** (vendored 2026-07-25) | gate semantics v2; the gate + embedder colocate host-side (design §3) — C2 runtime, organ doctrine already | move at C2 |
-| `ontology-anchoring.md` | **live-here** (vendored 2026-07-25) | domain packs + LLM context injector design — the organ's `/agent/v1/context` future | design work continues nOS-side |
-| `nos-selfmodel-keap-contract.md` | **live-here** (vendored 2026-07-25) | the cross-repo self-model contract; the organ now RUNS the generator itself (C1-GAP-selfmodel.md) | keep in both until C4 (KEAP still ingests the fixture) |
-| `nos-selfmodel-reply-01.md` | **done** | round-1 protocol agreement; content absorbed into the contract above | archive |
-| `cortex-backend-boundary-reply.md` | **superseded** — §3's cortex-vs-product line was overturned by `cortex-full-scope-decision.md` ("The directive changes the answer") | measured ground truth in §1–2 remains a useful record | archive with a pointer to the scope decision |
-| `handoff-nos-agent-2026-07-24.md` | **done** | v1.26.0 pin bump + the 07-22 wipe lesson; both acted on | archive |
-| `conditional-relations.md` | **live-keap** | R4 roadmap over the typed-relations product pipeline (design, not built) | stays — follows the corpus (C2/C3) if ever built |
-| `deploy-knowledge-mount-split.md` | **live-keap** | KEAP container mount doctrine ("all of knowledge/ or none") | stays — container deploy concern |
-| `table-graph-metadata-spec.md` | **live-keap** | DataTables — the named exception that never moves | stays |
-| `topic-mode-spec.md` | **live-keap** | explorer UI behaviour | stays |
+### nOS `docs/plans/`
 
-## nOS `docs/plans/`
+| document | what it governs |
+| --- | --- |
+| **`cortex-self-core.md`** | **the plan.** Boundary rule, measured present, S0–S6 roadmap, weights versioning, scale. Start here |
+| `nos-cortex-organ-design.md` | the organ's build record. Three open questions now resolved in place; §6 step 13's delete-and-flip is superseded by the KEAP cutover |
+| `nos-cortex-lang.md` | the language design record. Landed through KEAP v1.27.0; `cortex-validate.md` is the normative spec |
+| `nos-cortex-lang-wing-executor.md` | Wing's dispatch half — **forward design, not built** |
+| `cortex-specs-ledger.md` | this file |
 
-| document | status | note |
+### KEAP `docs/specs/` — runtime specs, awaiting their code
+
+These describe the runtime, so by the boundary rule they belong in nOS. They move
+at the stage named in the last column. Eight are **vendored** into
+`files/anatomy/cortex/docs/specs/` today; that duplication is
+`hidden_fees/11` and ends when the original is deleted rather than copied.
+
+| document | vendored | moves at |
 | --- | --- | --- |
-| `nos-cortex-organ-design.md` | **live-here** | P-3 design; §2 table + §6 build sequence are what P-4/P-4b implement. Two of its intents (db_identity carry-over, shared keap.db) are OVERRIDDEN by the scope decision — the doc's §7 says so |
-| `nos-cortex-organ-role.md` | **live-here** | this stage's plan + status |
-| `nos-cortex-lang.md` | **live-here** | the language plan (P0/P-1/P-2 line); landed through KEAP v1.27.0, kept as design record |
-| `nos-cortex-lang-wing-executor.md` | **split** | §8's network risk #6 dissolved by the organ placement (design §5); the executor half stays live for the Wing integration |
-| `cortex-backend-boundary-decision.md` / `-rfc.md` | **superseded** | by `cortex-full-scope-decision.md`; kept as the decision trail |
-| `cortex-specs-ledger.md` | **live-here** | this file |
+| `cortex-validate.md` | ✓ | S5 — the language spec follows the validator |
+| `recall-gate.md` | ✓ | S3 — the gate is what decides the index |
+| `durability-and-integrity.md` | ✓ | S3 — its §4 is the index decision |
+| `onto1-composition-contract.md` | ✓ | S5 — needed in **both** while two implementations exist |
+| `nos-selfmodel-keap-contract.md` | ✓ | S1 — the organ already runs the generator itself |
+| `ontology-anchoring.md` | ✓ | S1 — the context injector is docs-as-knowledge's sibling |
+| `cortex-full-scope-decision.md` | ✓ | S5 — reduced 2026-07-26 to the three findings code still cites |
+| `nos-cortex-lang-review-02.md` | ✓ (organ only) | already only here — KEAP's original was deleted |
+| `table-graph-metadata-spec.md` | — | S5 — DataTables moves, and it is the `ent:` registry |
+| `topic-mode-spec.md` | — | S5 — with the explorer UI |
+| `conditional-relations.md` | — | S5 — R4 design, follows the relations it extends |
+| `deploy-knowledge-mount-split.md` | — | **dies at S5** — it is about a container that stops existing. Its open items are `hidden_fees/12` |
+| `cortex-cutover.md` | — | **dies at S5** — documents the KEAP half of a switch that is deleted with it |
 
-## What the organ vendors (files/anatomy/cortex/docs/)
+### KEAP keeps, permanently
 
-`C1-GAP-selfmodel.md` (locally authored) + the eight `specs/` above. Vendored
-copies carry a provenance header (source repo @ tag); the KEAP originals stay
-authoritative until the post-C4 cleanup executes the right-hand column.
+Nothing in `docs/specs/` today. After S5 the repo is data and weights, and its
+documentation is about **the dataset**: what the taxonomy covers, how the
+ontology is structured, how weights are versioned and what they were trained on.
+None of that is written yet — it is S6's deliverable.
 
-**Audited 2026-07-26.** Three things this section claimed that the tree did not:
+## Vendoring rules
 
-1. **Only 3 of 8 carried the header.** The five vendored with the P-4 code port
-   (`cortex-full-scope-decision`, `cortex-validate`, `durability-and-integrity`,
-   `nos-cortex-lang-review-02`, `onto1-composition-contract`) had none — the
-   three vendored a day later in the Docs stage did. Stamped now, at v1.27.0,
-   which is the tag the code port was cut from.
-2. **One copy has already drifted**, and benignly, which is the useful part:
-   `cortex-validate.md` cites `server/migrations.ts:60` while KEAP's cites `:83`,
-   because v1.28.0's dead-schema comment shifted the line by 23. Both are
-   correct *for their own tree*. That is the whole vendoring hazard in one
-   diff — the copies are pinned to a snapshot, they will keep diverging, and
-   **nothing gates it**. The organ's CI runs the organ's own fixtures and is
-   structurally blind to divergence from the source. The only live detector is
-   KEAP's `cortex.ontologyDrift` health field, and it watches the *ontology
-   digest*, not the prose.
-3. **`cortex-cutover.md` did not exist here.** Added above.
+1. **Edit the original, then re-vendor.** Never edit a copy — the change is
+   invisible to the repo that owns the subject and dies at the next re-vendor.
+2. **Every vendored file carries a provenance header** naming the source repo and
+   tag. Gated by `tests/anatomy/test_cortex_vendored_docs.py`.
+3. **A KEAP-side spec edit owes a re-vendor.** Nothing enforces this across
+   repos; the only live detector is `cortex.ontologyDrift` on KEAP's health, and
+   it watches the ontology digest, not prose.
 
-The header now says citations track the organ tree. That is a statement about
-what these copies are *for* — reading the organ's code — not a licence to let
-them rot. The post-C4 cleanup is what ends the duplication; until then, treat a
-KEAP-side spec edit as owing a re-vendor.
+## Deleted 2026-07-26
+
+Kept in git history; deleted because a superseded document costs every reader the
+time to work out that it does not apply.
+
+| document | why |
+| --- | --- |
+| `cortex-backend-boundary-rfc.md` + `-decision.md` | the boundary they decided was overturned twice since |
+| `nos-cortex-organ-role.md` + `tools/workflows/nos-cortex-organ-role.js` | P-4b stage plan and its workflow; the work landed |
+| KEAP `cortex-backend-boundary-reply.md`, `handoff-nos-agent-2026-07-24.md`, `nos-selfmodel-reply-01.md`, `nos-cortex-lang-review-02.md` | replies, handoffs and round-1 protocol; absorbed or acted on |

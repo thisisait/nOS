@@ -35,8 +35,15 @@ correctly and every gate was green; nothing measured whether the result was
 
 ## What closes it
 
-C2 — the corpus and its ingestion: `knowledge_objects`, fs-sync, captures,
-embeddings, hybrid search, `/graph`. It is the real migration (a store with no git
-source) and it needs its own design pass, not a stretch of C1. Until it is
-scheduled, the honest description of the organ is "validate surface", and the
-docs should say that rather than "the fourth brain".
+**S2** in `docs/plans/cortex-self-core.md`: `knowledge_objects`, fs-sync,
+captures, embeddings, hybrid search, `/graph`.
+
+Restaged 2026-07-26. This entry originally called it "the real migration, a store
+with no git source". **That was false and measurement said so**: every corpus row
+has an external source — 166 of 170 objects are fs-sync mirrors, 3 are
+converge-seeded, 1 is a mirror too, and all 128 captures are filesystem-derived.
+So S2 rebuilds the corpus in parallel from the same host sources and diffs the
+two, instead of migrating anything.
+
+Until it lands, the honest description of the organ is "validate surface", and
+the docs should say that rather than "the fourth brain".

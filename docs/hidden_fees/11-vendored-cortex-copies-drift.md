@@ -30,11 +30,18 @@ KEAP surfaced the migrations.ts line skew.
 
 ## What closes it
 
-Deleting one of the two implementations. That is C4, and it is the only real
-answer; everything before it is mitigation.
+Deleting one of the two implementations. That is **S5** in
+`docs/plans/cortex-self-core.md`, and it is the only real answer; everything
+before it is mitigation.
+
+One mitigation landed 2026-07-26: `tests/anatomy/test_cortex_vendored_docs.py`
+asserts every vendored spec carries a provenance header. It cannot detect drift
+from the original — nothing in this repo can — but it stops the failure mode
+where someone edits the copy, believes the spec is fixed, and loses the change at
+the next re-vendor.
 
 The one live detector is KEAP's `cortex.ontologyDrift` on `/agent/v1/health`
 (v1.29.0): under organ mode it compares the two `onto1` digests and reports
 `match` / `differs`. It watches the **ontology**, not the code and not the prose,
 and it cannot be a gate because `differs` legitimately means two different things
-before and after C2.
+before and after S2 gives the organ its own corpus.

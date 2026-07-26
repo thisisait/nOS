@@ -277,6 +277,99 @@ and a vocabulary that has stopped moving.
 
 ---
 
+## 6b. The store and identity model
+
+Decided 2026-07-26, after §8.1 found the identity claim aspirational. This
+replaces "one store, one API, identity solves visibility".
+
+### Per-user stores, two tiers
+
+Each user's material lives in **their own libSQL file inside their own tree** —
+the same doctrine class 3 that fs-sync already follows: the filesystem is the
+boundary, not a `visibility` column. **Bone already does this**
+(`files/anatomy/bone/userstate.py`: `_db_path(uid)` →
+`{data_root}/tenants/<slug>/users/<uid>/.face/state.db`, `chmod 0700`, WAL), so
+the pattern is estate precedent rather than invention.
+
+It buys four things: the enumeration oracle for private data closes
+*structurally* rather than by filter; GDPR erasure becomes deleting a file; the
+vector index shards, which is a real answer to §5's size problem; and backup
+becomes per-user.
+
+**But it is never one store.** Measured today: 166 of 170 objects are `shared`,
+3 are `tier-users`, **1** is `private`; 3 057 of 3 355 embeddings are the shared
+tree. The ratio inverts once company data arrives, but the shape does not — every
+useful question needs the shared vocabulary *plus* the asker's own material. So
+the model is **shared reference store (read-only, opened by all) + personal store
+(read-write, opened by one)**, always joined. Design it; do not discover it in S2.
+
+### Two identities, and only one needs a token
+
+| identity | for | mechanism |
+| --- | --- | --- |
+| **cortex-as-itself** | estate-wide work: self-model, nightly consolidation, serving shared reference data | Authentik OAuth2 `client_credentials` — Bone's `auth.py` already implements the verification, and the librarian/curator agents are the precedent |
+| **cortex-for-user-X** | reading and writing X's own store | **the OS.** The process runs as the Unix user; the kernel decides. No token is involved in reading one's own data |
+
+That second row is the important one: it removes the JWKS graft from the common
+path entirely. A bearer is then needed only to talk to other services and to
+prove **on whose behalf** cortex acts.
+
+**And that is the gap with no existing answer.** "I am cortex acting for akadmin"
+is on-behalf-of / token exchange, which `client_credentials` cannot express.
+Nothing in the estate or in Authentik's current configuration does this today. It
+is the one piece of the identity design that must be researched rather than
+assembled.
+
+Cost of the spawn model: one Node runtime per active user (~50–80 MB), and
+lifecycle differs by platform — launchd user agents need the user logged in;
+`systemd --user` needs lingering (`roles/pazny.linux.systemd_user` exists).
+Mitigation is spawn-on-demand with an idle timeout.
+
+**Blast radius warning, and it is not hypothetical.** Bone's per-user DB is
+selected by a uid **parameter** behind a static shared bearer
+(`require_face_token`); `_validate_uid` checks path traversal, not authorization.
+So any holder of that token can name any uid. Per-user stores move the oracle
+from a `WHERE` clause into a **file path**, where getting it wrong leaks a whole
+store rather than a row. Copy Bone's layout; do not copy its enforcement. Tracked
+as `hidden_fees/13`.
+
+### `ent:` resolves against DataTables
+
+`ent:` was blocked on `object_type_definitions` — created by migration 001,
+touched by zero lines of code, never a row. The registry it needed already exists
+under a different name:
+
+```
+data_tables: id, user_id, title, description, schema_json, driver, visibility
+table_rows:  table_id, row_id, data
+table_row_history
+```
+
+User-defined schema, per-user ownership, visibility, a storage-driver
+abstraction, and history. That is the shape `ent:` needs, with live rows and a
+live consumer. **`ent:` resolves against DataTables; `object_type_definitions`
+gets dropped.**
+
+This also settles what DataTables *is*. It was defended as a product exception,
+then reclassified as estate state; both were wrong. It is **the entity registry —
+the missing half of the language**, and that is why it belongs beside the
+reasoning it serves.
+
+Two sources feed it, split by the same boundary rule as everything else:
+
+- **Estate entities** — services, jobs, runs, events, findings. These live in
+  Wing's database and Nette's `Explorer` is the ORM. Reflecting them yields
+  `ent:service`, `ent:job`, `ent:run` **immediately, with real rows**, before any
+  company data exists. That is a far cheaper route to a working `ent:` than
+  waiting for BYOD.
+- **Company entities** — declared or inferred from imported material.
+
+`ent:` resolution and AgentKit's tools (`McpKeapTool`, `McpWingTool`,
+`McpBoneTool`) **must share one registry**. Two disagreeing views of what exists
+is worse than no `ent:` at all.
+
+---
+
 ## 7. Ingestion beyond the estate
 
 The bring-your-own-data path, recorded so the design does not get fitted to the

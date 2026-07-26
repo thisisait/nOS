@@ -3,7 +3,7 @@
 > Vendored from thisisait/nos-keap @ v1.27.0 docs/specs/onto1-composition-contract.md — organ-side copy, vendored with the P-4 code port 2026-07-25. The KEAP original remains authoritative until the post-C4 docs cleanup; line-number citations here track the ORGAN tree, which is why they can differ from the original.
 
 Status: **normative.** P-2 of the cortex backend/UI split
-(`../nOS/docs/plans/cortex-backend-boundary-decision.md` §6a). Written against
+(the cortex backend/UI boundary decision, deleted 2026-07-26; git history). Written against
 KEAP v1.26.0.
 
 **Reference implementation:** `knowledge/onto1-compose.mjs` (plain ESM, no server,

@@ -64,3 +64,4 @@ One file per fee, `NN-short-slug.md`, with these headings:
 | [10](10-cortex-organ-cannot-recall.md) | The cortex organ can typecheck but cannot remember | anything is built assuming the organ is where reasoning happens | open |
 | [11](11-vendored-cortex-copies-drift.md) | Two implementations of one language, nothing compares them | a KEAP taxonomy/verb/opcode change lands without a re-vendor | open |
 | [12](12-keap-image-tag-is-not-a-version.md) | `nos/keap:<version>` means "whatever the last build produced" | a rollback is attempted, or `~/keap/src` is pulled by hand | open |
+| [13](13-per-user-db-without-enforcement.md) | A per-user database chosen by an unauthenticated parameter | the first user who must not read another's data | open |
