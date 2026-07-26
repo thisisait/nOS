@@ -298,12 +298,22 @@ def build_docs(manifest_path: str, docs_root: str, repo_root: str) -> dict:
                     continue
 
                 stub = title if title else "body"
-                block_slug = sm.slug_or_die(f"{filebase}-{stub}", "doc block")
-                if block_slug in seen:
-                    raise SystemExit(
-                        f"keap_docs_gen: duplicate doc block id {block_slug!r} under {anchor} "
-                        f"(file {fname}, section {title!r}). Block ids must be unique per system."
-                    )
+                base_slug = sm.slug_or_die(f"{filebase}-{stub}", "doc block")
+                # Two sections that share heading TEXT (a second `## Notes`, a
+                # repeated `### Example`/`### Parameters` — routine when one file
+                # documents several skills or endpoints) would slug identically.
+                # Raising here aborted keap_docs_gen, which fails the ENTIRE organ
+                # boot (runDocs throws), not just the one node. The schema asks
+                # strangers to "write the markdown they would write anyway", so a
+                # repeat is expected input, not corruption. Namespace the id by the
+                # occurrence ordinal instead: the FIRST keeps the clean slug (stable
+                # ids for existing docs), each subsequent one gets `-2`, `-3`, …
+                # deterministically by document order — legitimate repeats coexist.
+                block_slug = base_slug
+                dup = 2
+                while block_slug in seen:
+                    block_slug = f"{base_slug}-{dup}"
+                    dup += 1
                 seen.add(block_slug)
 
                 node_id = f"{anchor}.{block_slug}"

@@ -185,6 +185,37 @@ def test_merge_lands_doc_nodes_under_their_system_and_is_deterministic(tmp_path)
     assert (a / "nos" / "nos.devops.json").read_text() == (b / "nos" / "nos.devops.json").read_text()
 
 
+def _one_service_docs(tmp_path, files: dict[str, str]):
+    """A docs-root holding exactly one manifest service's tree (gitea, devops),
+    so build_docs runs the real manifest but walks only the prose under test.
+    Returns the coverage-carrying build result."""
+    docs = tmp_path / "systems"
+    (docs / "gitea").mkdir(parents=True)
+    for name, body in files.items():
+        (docs / "gitea" / name).write_text(body)
+    return _gen().build_docs(str(MANIFEST), str(docs), str(ROOT))
+
+
+def _gitea_doc_nodes(res):
+    return [n for nodes in res["nodes_by_domain"].values()
+            for n in nodes if n["id"].startswith("nos.devops.gitea.")]
+
+
+def test_repeated_heading_text_coexists_not_crashes(tmp_path):
+    """A second section that shares heading TEXT with an earlier one — a second
+    `## Notes`, `### Example`, `### Parameters`, all routine when one file
+    documents several skills/endpoints — must NOT raise `duplicate doc block id`
+    and abort keap_docs_gen, which fails the WHOLE organ boot (runDocs throws).
+    The schema invites strangers to write ordinary markdown; two identical
+    sub-headings is ordinary markdown. They must land as distinct nodes."""
+    res = _one_service_docs(tmp_path, {
+        "README.md": "## Notes\nfirst body\n\n## Notes\nsecond body\n",
+    })
+    ids = [n["id"] for n in _gitea_doc_nodes(res)]
+    assert len(ids) == 2, ids
+    assert len(set(ids)) == 2, f"repeated heading collapsed to one id: {ids}"
+
+
 def test_zero_doc_nodes_fails_loudly(tmp_path):
     """Absence is not emptiness: a docs-root with nothing to walk must exit
     non-zero so the store refuses to boot, not log and continue."""
