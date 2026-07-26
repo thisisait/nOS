@@ -65,14 +65,15 @@ these values.
 | KEAP corpus, durable payload | **~11.5 MB** | ±50 % | sum of `knowledge_objects` + `api_taxonomy_metadata` + `taxonomy_metadata` + `embeddings.vector` lengths |
 | corpus rows with **no source outside the container** | **0** | must stay 0 | every `knowledge_objects.id` is `fs:*` or a converge-seeded table row; all 128 captures are `source=app`, `origin=filesystem` |
 | KEAP `keap.db` file | 565 MB | — | `docker exec iiab-keap-1 ls -la /data/keap.db` |
-| …of which vector index | **513.8 MB** | — | `sum(length(data))` on `embeddings_vec_idx_shadow` |
+| …of which vector index | **513.8 MiB** (538,732,480 B ≈ 538.7 MB dec.) | — | `sum(length(data))` on `embeddings_vec_idx_shadow` |
 | embeddings | 3 355 · 9.8 MB of vectors | — | `count(*)`, `sum(length(vector))` on `embeddings` |
+| bytes/vector (index) | **160,575 B/vec** (measured; §5 model 153,600 = 1.045× low) | — | `513.8 MiB / 3355` |
 | full embed pass | 17.7 s | — | Pulse log, `keap-embed-sync` |
-| KEAP agent API surface | 49 endpoints, ~40 corpus-facing | — | grep `app.(get\|post)` in `server/agent.ts` |
-| KEAP UI API surface | 54 routes, ~33 corpus-facing | — | grep `'/api/` in `server/*routes*.ts` |
-| `server/db.ts` | 2 966 lines — the single data chokepoint | — | `wc -l` |
-| KEAP repo | 3.46 MiB packed, no LFS | — | `git count-objects -vH` |
-| fs-sync source | `{{ nos_data_root }}/tenants/<slug>/users`, bind-mounted RO | — | `compose.yml.j2` |
+| KEAP agent API surface | 49 endpoints (agent.ts 47 + intake.ts 2), **~44 corpus-facing**, 5 meta | — | `awk '/app\.(get\|post\|put\|delete\|patch)\(/'` (grep fails — files read as `data`) |
+| KEAP UI API surface | **69 routes** (routes.ts 61 + relations 4 + topics 4), **47 corpus-facing**, 22 product | — | `awk` over `server/*routes*.ts` **and** `server/fs-mappings.ts` (69 is a floor) |
+| `server/db.ts` | 2 966 lines — DB-connection owner, **not** the single SQL issuer (27 raw `.prepare()` outside it, all DataTables) | — | `wc -l`; per-module `awk '/\.prepare\(/'` |
+| KEAP repo | no LFS (confirmed); packed size **unmeasured** — host `~/keap/src` is a shallow graft at v1.26.0, nOS pins v1.32.1 | — | `git count-objects -vH` (needs full clone at pinned tip) |
+| fs-sync source | `{{ nos_data_root }}/tenants/<slug>/users`, bind-mounted RO (present but **near-empty**: 5 files, all Bone state — "exists" ≠ "has content") | — | `compose.yml.j2` |
 | …and `nos_data_root` resolves to | **`/Volumes/SSD1TB/nOS/data`** — an **external, removable volume** | — | `config.yml:201` |
 | fs-sync id derivation | `fs:<uid>:<sha1(relPath)[:16]>`, uid = top-level directory NAME | must stay deterministic | `server/fs-sync.ts` |
 | fs-sync visibility | from the config `SHARED_UIDS` set, **not** filesystem permissions | — | `server/fs-sync.ts:479` |
@@ -81,6 +82,13 @@ these values.
 lacks an external source*. The earlier framing — "C2 moves a store with no git
 source" — was false. This is not a data migration. It is a migration of
 **ownership**, and the data can be rebuilt rather than copied.
+
+> **S0 sharpening (2026-07-26):** the external sources are **user files on the
+> removable volume `/Volumes/SSD1TB`, not git** — reproducible via fs-sync only
+> while that volume is mounted (see §8.3). The count of rows with no external
+> source stays **0**, so ownership-not-data holds; but the corpus is *not*
+> git-rebuildable, and the durable text corpora are tiny (<135 KB) — the 11.5 MB
+> mass is vectors (10.3 MB) + `taxonomy_metadata.data` (1.46 MB).
 
 ---
 
@@ -145,12 +153,13 @@ entry whose blob is unresolvable must fail **loudly**, never silently degrade to
 ## 5. Scale — what "millions of nodes" actually costs
 
 libSQL's DiskANN stores, at each graph node, copies of its neighbours' vectors so
-traversal needs no random reads. That is the whole 153 KB/vector. The arithmetic
-matches the measurements exactly:
+traversal needs no random reads. That is the whole ~160 KB/vector (measured
+160,575 B; the ~50 × 768 × 4 B model is 4.5 % low — per-node own-copy + neighbour-id
+list + shadow-page overhead). The arithmetic matches the measurements closely:
 
 | configuration | per vector | at 1M nodes |
 | --- | --- | --- |
-| default (~50 neighbours × 768 dims × 4 B) | 153 KB | ~153 GB |
+| default (measured; model ~50 neighbours × 768 dims × 4 B) | ~160 KB | ~160 GB |
 | `compress_neighbors=float8` | 66.9 KB | ~67 GB |
 | `max_neighbors=20` | 62.5 KB | ~62 GB |
 | both | **19.5 KB** | ~20 GB |
@@ -199,6 +208,15 @@ its predecessor's report exists.
 Re-measure §2. Confirm zero corpus rows lack an external source. Confirm the
 organ still reports `onto1:5d9bef3706a3c8ac`, or explain the delta.
 
+**DONE 2026-07-26 — verdict YES-with-amendments** (`docs/plans/cortex-s0-report.md`).
+0-orphan-source STOP condition holds; digest reproduced from a **store copy** (the
+daemon is not running — no launchd plist, nothing on 8098). Note the two-digest
+split: conformance/port-fidelity gate = `onto1:76d1f3ad728b382b` (materialise=false,
+790-node reference); operational estate store = `onto1:5d9bef3706a3c8ac` (this
+plan's value). Operational aside: `keap-features-sync` is fixed (`f5addeb7`, exec
+bit `100755`) but **unproven** — both recorded runs failed exit 255 ~6.5 h before
+the fix; success pending the next daily fire (~2026-07-27 05:04 UTC).
+
 **Exit:** every §2 number reproduced or its change explained in writing.
 
 ### S1 — Docs become knowledge
@@ -231,10 +249,16 @@ disappears rather than being re-plumbed), the consolidator and embed-sync get a
 second target. Both corpora run side by side and are **diffed**.
 
 No copy, no cutover moment, reversible at every point. It is affordable only
-because of §2's finding.
+because of §2's finding. **S0 sharpened two prerequisites** (§8.2, §8.3): the
+organ's fs-sync must **reproduce the `/user-files` composition** — walk both host
+roots (`tenants/<slug>/users` and `shared/nos-docs`, labelled the shared uid) or
+the self-model vanishes silently — and S2 **must add a host-side mount assertion**
+for the removable `/Volumes/SSD1TB` volume, since the existing preflight guards
+only containers.
 
-**Exit:** organ and KEAP corpora agree on row counts and ids within a stated
-tolerance, for three consecutive nights.
+**Exit:** organ and KEAP corpora agree on row counts and ids **exactly** (not
+within a tolerance — the id derivation is deterministic, §8.2), *once the
+composition is reproduced*, for three consecutive nights.
 
 ### S3 — Index, decided on the gate
 
@@ -252,7 +276,7 @@ the corpus size it was measured at.
 ### S4 — Readers and writers move
 
 Pulse jobs, Wing AgentKit and the curator/librarian agents repoint at the organ.
-Then the KEAP UI's ~33 corpus routes. Per §3's doctrine line, everything goes over
+Then the KEAP UI's ~47 corpus routes (S0-measured; was ~33). Per §3's doctrine line, everything goes over
 `/agent/v1` — no in-process shortcut even once colocated.
 
 **Exit:** no consumer reaches KEAP's corpus; every corpus read and write appears
@@ -407,8 +431,8 @@ provenance*, and knows nothing about where it came from.
 
 | # | question | blocks | owner |
 | --- | --- | --- | --- |
-| 1 | p95 latency of the ~33 UI routes once they cross the API — does the explorer need a named cache in front? | S4 | measure in S2 |
-| 2 | ~~Does a caller identity unlock `kg:`/`ent:`?~~ **ANSWERED 2026-07-26, and the answer is no — not yet.** See §8.1 | S4 | now owed work, not a question |
+| 1 | ~~p95 latency of the ~33 UI routes once they cross the API~~ **ANSWERED (S0) — only `/api/graph` (1.92 MB, ~175 ms, rebuilt uncached every call) warrants a cache; one split cache, ETag on `layoutVersion`.** See §8.4 | S4 | measured in S0 |
+| 2 | ~~Does a caller identity unlock `kg:`/`ent:`?~~ **NOT re-verified in S0** (research slot returned null); §8.1's static finding stands as owed/aspirational — **re-run before S4.** See §8.1 | S4 | now owed work, not a question |
 | 3 | ~~fs-sync visibility and tenant scoping outside the container~~ **ANSWERED — de-risked.** See §8.2 | S2 | closed |
 | 4 | **NEW:** the user tree is on a removable volume and only Docker has a mount preflight. See §8.3 | S2 | design in S2 |
 
@@ -436,6 +460,11 @@ no caller identity. It IS a blocker for the promise, and the honest position is:
 `kg:`/`ent:` stay refused until this is built, and the transplant's headline
 benefit is owed rather than delivered.
 
+> **S0 did NOT re-verify this** (2026-07-26 — the research slot returned a null
+> answer). The finding above is the *static* pre-S0 read and remains correctly
+> framed as owed; treat it as **S0-unverified** and re-run the identity question
+> before S4, when it actually gates.
+
 ### 8.2 fs-sync is safer to move than assumed
 
 The plan called this "the likeliest source of hidden coupling". It is not.
@@ -453,6 +482,39 @@ The prune guards are also already correct and only need porting: zero files foun
 while mirrors exist refuses the prune, an unreadable subtree truncates the walk
 and forbids pruning against it, and `pruneRefused` is surfaced as data so a
 refusal is observable rather than looking like "nothing to remove".
+
+> **S0 correction (2026-07-26) — the coupling is real but MISLOCATED.** It is not
+> in `fs-sync.ts` (which is portable, as above); it is in the **compose mount
+> stack**. `/user-files` is TWO host trees overlaid: `tenants/<slug>/users`
+> (`compose:62`) **plus** a nested bind-mount of `keap_selfmodel_root` (host
+> `tenants/<slug>/shared/nos-docs`) onto `/user-files/nos-docs` (`compose:70`). On
+> the host, `tenants/<slug>/users/nos-docs` is an **empty pre-created mountpoint**
+> — the self-model content lives at a *different* host path. A host daemon walking
+> `users/` directly sees `nos-docs` empty and the **entire shared self-model
+> disappears silently** (fs-sync's per-uid zero-scan prune guard *holds it back*
+> rather than deleting, so it degrades to silent staleness, not data loss). **S2
+> MUST walk both host roots** (`users/` and `shared/nos-docs`) and label the second
+> as the shared uid, **and** guard against macOS VirtioFS empty-body reads
+> (directory enumerates, file bodies read empty — `bodyOf` swallows the error and
+> upserts a correct-size/mtime node with an empty body; a content-fidelity failure
+> the prune guards do NOT catch — see memory `backrest-spike-virtiofs-blocker`).
+> So "the two id sets match exactly" holds **only if S2 reproduces the
+> composition**; a naive `users/` walk will not match.
+
+### 8.4 The explorer's API-crossing cost (Open Q1 — answered in S0)
+
+Only **`/api/graph`** matters: **1.92 MB, ~175 ms server-compute, rebuilt uncached
+every request**, paid on every cold load, every 5-min refetch, and every new
+viewer. Everything else the explorer calls (`/api/health`, `/api/graph/neighbors`,
+`/api/taxonomy-metadata/{id}`) is <17 KB and <25 ms warm and needs no cache.
+`neighbors` reads the anchor's **stored** vector (no live Ollama embed), so S4
+adds no embedding round-trip there. The payload is ~97 % viewer-independent
+(nodes+links+relations+meta) with a small RBAC-filtered per-viewer object layer
+(44.6 KB / 170 objects). **A cache must split:** memoize the viewer-independent
+skeleton once (~175 ms of work), compose the per-viewer object layer per request;
+`meta.layoutVersion` is already a content hash → add `If-None-Match` for a **304**
+on the 5-min refetch. Invalidation is host-side (taxonomy write, layout rebake,
+metadata sync).
 
 ### 8.3 The removable volume has no host-side guard
 
