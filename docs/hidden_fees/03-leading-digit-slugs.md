@@ -44,3 +44,18 @@ fails on a mismatch — planned as check (b) of the self-model producer gate:
 That converts a silent disappearance into a failed CI run. Until it exists, the
 only thing standing between nOS and an invisible node is that nobody has named a
 service after a number recently.
+
+## Closed — 2026-07-26
+
+The guard `slug_or_die` already lived in the producer
+(`files/anatomy/scripts/keap_selfmodel_gen.py`); what was missing was proof it
+fires. `tests/anatomy/test_selfmodel_slug_charset.py` now runs **every** manifest
+service id and stack (62 + 9) through the KEAP charset and asserts a valid slug,
+asserts a leading-digit name (`2fauth`, `3d-printer`) raises loudly, and pins the
+pattern + diacritic fold. The silent-drop is now a red CI run.
+
+The Cortex docs schema (`docs/plans/cortex-docs-schema.md` §5) routes every doc
+node id through the same `slug_or_die`, so this gate covers docs too — there is
+no second charset implementation to drift. Re-opens only if a new id-minting path
+bypasses `slug_or_die`; the design forbids that (call the function, do not
+re-derive the rule).
