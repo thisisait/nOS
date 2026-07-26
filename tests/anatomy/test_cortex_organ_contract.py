@@ -119,6 +119,34 @@ def test_plugin_validates_and_stays_loopback_pure():
     assert "pulse" not in manifest, "no pulse job before C2 (no embed surface exists)"
 
 
+def test_keap_cutover_is_a_second_decision():
+    """The KEAP P-5 flip is gated on its OWN flag, defaulting off.
+
+    Standing the organ up and repointing a live product's reasoning at it are two
+    decisions. Collapsing them into `install_cortex` would mean the organ cannot
+    be converged and observed without simultaneously taking KEAP's typechecker
+    out of the path — and the rollback for that is a KEAP release, not a var.
+
+    Also pins the pairing: KEAP 500s (naming the missing variable) if it gets the
+    URL without the token, so rendering one without the other is a broken deploy
+    that only shows up at the first validate call.
+    """
+    keap_defaults = yaml.safe_load((REPO / "roles" / "pazny.keap" / "defaults" / "main.yml").read_text())
+    assert keap_defaults["keap_cortex_cutover"] is False, (
+        "keap_cortex_cutover must default OFF — a converge that stands up the "
+        "organ must not also silently repoint KEAP's reasoning at it"
+    )
+
+    compose = (REPO / "roles" / "pazny.keap" / "templates" / "compose.yml.j2").read_text()
+    guard = re.search(r"\{%\s*if\s*\(install_cortex[^%]*keap_cortex_cutover[^%]*%\}(.*?)\{%\s*endif\s*%\}", compose, re.S)
+    assert guard, "the CORTEX_BACKEND_URL block must be gated on install_cortex AND keap_cortex_cutover"
+    assert "CORTEX_BACKEND_URL" in guard.group(1)
+    assert "CORTEX_TOKEN_RO" in guard.group(1), (
+        "CORTEX_BACKEND_URL without CORTEX_TOKEN_RO is a half-configured cutover: "
+        "KEAP 500s at the first validate call"
+    )
+
+
 def test_lockfile_is_npm10_compatible():
     lock = json.loads((ORGAN / "package-lock.json").read_text())
     assert lock.get("lockfileVersion") == 3, (

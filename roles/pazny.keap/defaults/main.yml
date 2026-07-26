@@ -42,7 +42,20 @@ keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # earlier created_at than their root and single-pass boot registration drops the
 # WHOLE TREE without a word. v1.21.0 fixes the point and tests both iteration
 # directions. Pinned by tests/anatomy/test_keap_pin_not_cancelled.py.
-keap_repo_ref: "v1.28.0"
+keap_repo_ref: "v1.29.0"
+
+# ── The cortex cutover (KEAP P-5) ────────────────────────────────────────────
+# false ⇒ KEAP answers /agent/v1/validate with its OWN typechecker (the shipped
+# default, and what has been live all along). true ⇒ it proxies to the pazny.cortex
+# organ and its local typechecker never runs; compose then also plumbs
+# cortex_ro_token. Requires install_cortex AND keap_repo_ref >= v1.29.0 — earlier
+# images ignore the variable entirely.
+#
+# Separate from install_cortex on purpose: standing the organ up and repointing a
+# live product's reasoning at it are two decisions. Converge the organ first, watch
+# `/agent/v1/health .data.cortex` on both sides, THEN flip this. Rollback is
+# flipping it back and converging — no rebuild, no tag.
+keap_cortex_cutover: false
 
 keap_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 keap_cpus: "{{ docker_cpus_light | default(1) }}"

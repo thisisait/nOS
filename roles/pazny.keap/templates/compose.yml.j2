@@ -86,12 +86,25 @@ services:
       KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
       KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
       KEAP_AGENT_TOKEN_CAPTURE: "{{ keap_agent_token_capture }}"
-{% if install_cortex | default(false) %}
-      # The host cortex organ's validate surface (P-4, loopback 8098). RENDER
-      # ONLY today: KEAP's code does not read this var yet — the client flip is
-      # P-5 (build seq. step 13, a separate supervised KEAP PR). Present now so
-      # the cutover is a code change, not an infra change.
+{% if (install_cortex | default(false)) and (keap_cortex_cutover | default(false)) %}
+      # ── THE CUTOVER IS LIVE ────────────────────────────────────────────────
+      # KEAP v1.29.0+ READS these: with CORTEX_BACKEND_URL set, /agent/v1/validate
+      # and /validate/opcodes are proxied to the host cortex organ and KEAP's own
+      # typechecker never runs. Unreachable organ ⇒ 502, never a silent fall back
+      # to local (KEAP docs/specs/cortex-cutover.md §1: the two backends stamp
+      # different databaseIds, and a fallback hands out ASTs from a language the
+      # operator does not think is live).
+      #
+      # Gated on its OWN flag, not on install_cortex, so a converge can stand the
+      # organ up and leave KEAP answering locally. Standing up a daemon and
+      # repointing a live product's reasoning at it are two decisions, and
+      # collapsing them into one variable means the first cannot be tested
+      # without the second. Rollback is `keap_cortex_cutover: false` + converge.
       CORTEX_BACKEND_URL: "http://host.docker.internal:{{ cortex_port | default(8098) }}"
+      # Required WITH the URL. The organ has its own token space; KEAP presents
+      # this rather than forwarding the caller's bearer, which means nothing on
+      # the far side. URL without token ⇒ KEAP 500s and names the missing var.
+      CORTEX_TOKEN_RO: "{{ cortex_ro_token }}"
 {% endif %}
 {% if keap_fs_sync | default(true) %}
       # FS-sync (v1.7.0): mirror per-user files → knowledge objects. Root is the
