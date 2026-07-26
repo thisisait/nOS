@@ -8,9 +8,67 @@
    "en": "Techniques and algorithms for reducing data volume through mathematical transformation—balancing information density against decompression overhead. Includes lossless methods (Huffman, DEFLATE) that preserve fidelity and lossy methods (transform coding, quantization) that tolerate reconstruction error; orthogonal to encryption which protects confidentiality rather than reducing size.",
    "cs": "Techniky a algoritmy pro snížení objemu dat matematickou transformací—vyvažující hustotu informací vůči režii dekomprese. Zahrnuje bezeztrátové metody (Huffman, DEFLATE) zachovávající věrnost a ztrátové metody (transformační kódování, kvantování) tolerující chyby rekonstrukce; ortogonální k šifrování chránícímu důvěrnost spíše než velikost.",
    "brief": "Compression methods are techniques and algorithms for reducing data volume through mathematical transformation, trading information density against decompression overhead. Lossless methods such as Huffman coding and DEFLATE preserve exact fidelity and suit archival masters, while lossy methods such as transform coding and quantization tolerate reconstruction error and suit access copies where storage cost matters more than exactness.\n\nThe category is orthogonal to [[11.03]] Encryption & Security, which protects confidentiality rather than reducing size — the two are commonly layered together but solve unrelated problems — and it operates on data already committed to a structure defined by [[11.01]] File Formats, many of which (ZIP, JPEG, MP4) embed a compression scheme as part of the format itself. Choosing a lossless method for a preservation master versus a lossy one for a distribution copy is a decision made under [[11.04]] Backup Strategies as much as under this branch, since a corrupted lossy master cannot be reconstructed the way a lossless one sometimes can.\n\nThe [DEFLATE specification (RFC 1951)](https://www.rfc-editor.org/rfc/rfc1951) documents the algorithm underlying ZIP and gzip, and the [Library of Congress Recommended Formats Statement](https://www.loc.gov/preservation/resources/rfs/) sets institutional guidance on which compressed formats are safe for long-term archival use."
+  },
+  {
+   "id": "11.02.01",
+   "level": 2,
+   "parentId": "11.02",
+   "name": "Lossless Compression",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Reversible reduction of size, the entropy limit it approaches, and the algorithm families in general use.",
+   "cs": "Vratné zmenšení velikosti, entropická mez, k níž se blíží, a běžně užívané rodiny algoritmů."
+  },
+  {
+   "id": "11.02.02",
+   "level": 2,
+   "parentId": "11.02",
+   "name": "Lossy Compression",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Irreversible reduction exploiting perceptual limits, its use in media, and its unsuitability for records of record.",
+   "cs": "Nevratné zmenšení využívající meze vnímání, jeho užití u médií a nevhodnost pro dokumenty trvalé hodnoty."
+  },
+  {
+   "id": "11.02.03",
+   "level": 2,
+   "parentId": "11.02",
+   "name": "Archive Formats and Containers",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Container formats bundling many files, their integrity features, and the recovery properties of each.",
+   "cs": "Kontejnerové formáty sdružující mnoho souborů, jejich integritní prvky a schopnost obnovy u každého."
+  },
+  {
+   "id": "11.02.04",
+   "level": 2,
+   "parentId": "11.02",
+   "name": "Compression and Preservation Risk",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Why a compressed archive concentrates risk: one corrupted block can cost far more than its own size.",
+   "cs": "Proč komprimovaný archiv koncentruje riziko: jediný poškozený blok může stát mnohem víc než svou vlastní velikost."
   }
  ],
  "relations": [
+  {
+   "from": "11.02.01",
+   "to": "02.04.02.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "11.02.02",
+   "to": "02.04.02.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "11.02",
    "to": "11.01",

@@ -228,6 +228,83 @@
    "en": "Organic farming produces crops and livestock using natural inputs and biological processes, excluding synthetic pesticides, fertilizers, and genetic modification.",
    "cs": "Ekologické zemědělství produkuje plodiny a zvířata pomocí přírodních vstupů a biologických procesů, vylučuje syntetické pesticidy, hnojiva a genetické modifikace.",
    "brief": "Organic farming produces crops and livestock using natural inputs and biological processes, excluding synthetic pesticides, fertilizers, and genetically modified organisms. Fertility and pest management rely on crop rotation, composting, cover cropping, and biological controls rather than synthetic chemistry, and livestock are raised without routine antibiotics or synthetic growth hormones. The result is a certifiable production standard, not merely a philosophy: organic status is verified against defined rules rather than self-declared.\n\nOrganic farming draws directly on [[03.03.03]] Soil Science for the fertility-building techniques that replace synthetic fertilizer, and on [[03.03.02]] Animal Husbandry for the welfare and feeding standards that govern organic livestock. It shares its resource-conserving ethos with [[03.03.08]] Permaculture, but the two differ in scope: permaculture designs whole self-sustaining ecological systems, while organic farming is a narrower, certifiable set of input restrictions that can apply to a single crop or herd. [[03.03.01]] Crop Science, by contrast, studies plant production broadly, including the conventional and synthetic-input methods organic farming deliberately excludes.\n\nOrganic practice sits within [[03.03]] Agriculture and is governed by region-specific certification bodies. For the U.S. federal standard, see the [USDA National Organic Program](https://www.ams.usda.gov/services/organic-certification), and for the international movement's principles and standards, see [IFOAM Organics International](https://www.ifoam.bio/)."
+  },
+  {
+   "id": "03.03.11",
+   "level": 2,
+   "parentId": "03.03",
+   "name": "Veterinary Science",
+   "zone": "votable",
+   "ordinal": 10,
+   "kind": "ext",
+   "en": "The medicine of non-human animals, and the point where animal and human health meet. It shares its physiology with medicine and its economics with agriculture, and it carries a responsibility neither has alone: most emerging human infections originate in animals.",
+   "cs": "Medicína zvířat a místo, kde se setkává zdraví zvířat a lidí. Sdílí fyziologii s medicínou a ekonomiku se zemědělstvím a nese odpovědnost, kterou žádná z nich nemá sama: většina nově vznikajících lidských infekcí pochází ze zvířat."
+  },
+  {
+   "id": "03.03.11.01",
+   "level": 3,
+   "parentId": "03.03.11",
+   "name": "Comparative Anatomy and Physiology",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Structural and functional differences across species, and why a dose, a drug or a procedure does not transfer between them.",
+   "cs": "Stavební a funkční rozdíly mezi druhy a proč se dávka, lék ani zákrok mezi nimi nepřenášejí."
+  },
+  {
+   "id": "03.03.11.02",
+   "level": 3,
+   "parentId": "03.03.11",
+   "name": "Animal Diseases and Diagnosis",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Infectious, parasitic, metabolic and genetic conditions across companion, farm and wild species, and the diagnostic approach to each.",
+   "cs": "Infekční, parazitární, metabolická a genetická onemocnění u zvířat společenských, hospodářských i volně žijících a diagnostický přístup ke každému."
+  },
+  {
+   "id": "03.03.11.03",
+   "level": 3,
+   "parentId": "03.03.11",
+   "name": "Zoonoses and One Health",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Diseases transmissible between animals and humans, and the integrated approach treating human, animal and environmental health as one problem.",
+   "cs": "Nemoci přenosné mezi zvířaty a lidmi a integrovaný přístup pojímající zdraví lidí, zvířat a prostředí jako jeden problém."
+  },
+  {
+   "id": "03.03.11.04",
+   "level": 3,
+   "parentId": "03.03.11",
+   "name": "Herd Health and Production Medicine",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Managing disease at population level in livestock, and the interaction between health, productivity and economics.",
+   "cs": "Řízení zdraví na úrovni stáda u hospodářských zvířat a souhra zdraví, produktivity a ekonomiky."
+  },
+  {
+   "id": "03.03.11.05",
+   "level": 3,
+   "parentId": "03.03.11",
+   "name": "Veterinary Public Health and Food Safety",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Control of disease along the food chain, meat and milk hygiene, and residue and antimicrobial monitoring.",
+   "cs": "Kontrola nemocí v potravním řetězci, hygiena masa a mléka a sledování reziduí a antimikrobik."
+  },
+  {
+   "id": "03.03.11.06",
+   "level": 3,
+   "parentId": "03.03.11",
+   "name": "Animal Welfare",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Assessment of welfare state, the frameworks used to define it, and the standards governing husbandry, transport and slaughter.",
+   "cs": "Posuzování stavu welfare, rámce jeho vymezení a normy upravující chov, přepravu a porážku."
   }
  ],
  "relations": [
@@ -573,6 +650,34 @@
    "type": "references",
    "explored": null,
    "source": "brief-xref"
+  },
+  {
+   "from": "03.03.11.02",
+   "to": "01.03.11.10",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.03.11.03",
+   "to": "03.02.11.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.03.11.05",
+   "to": "03.02.11.08",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.03.11.06",
+   "to": "05.02.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
   },
   {
    "from": "03.03",

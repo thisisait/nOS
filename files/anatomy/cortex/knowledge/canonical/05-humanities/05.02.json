@@ -188,6 +188,83 @@
    "en": "Logic is the study of valid reasoning and the principles that govern correct inference—formal logic (truth-functional validity, quantifiers, modal operators) and informal logic (reasoning in natural language, fallacies, argumentation) constitute the field. Symbolic logic translates arguments into formal notation to test validity; logical systems (classical, intuitionistic, paraconsistent) offer competing frameworks. Foundational to all philosophy, mathematics, and computer science; it ensures that Epistemology, Metaphysics, and Ethics rest on sound reasoning.",
    "cs": "Logika je výzkumem platného uvažování a principů, které řídí správný závěr—formální logika (pravdivostně-funkční platnost, kvantifikátory, modální operátory) a neformální logika (uvažování v přirozeném jazyce, sofismata, argumentace) tvoří obor. Symbolická logika překládá argumenty do formální notace pro testování platnosti; logické systémy (klasické, intuicionistické, parakonsistentní) nabízejí konkurenční rámce. Základní pro všechnu filozofii, matematiku a informatiku; zajišťuje, aby Teorie poznání, Metafyzika a Etika spočívaly na zdravém uvažování.",
    "brief": "Logic is the study of what makes an argument valid — the formal and informal principles that separate correct inference from mere assertion, independent of whether any particular premise happens to be true. Formal logic translates arguments into symbolic notation and tests validity by structure alone (truth-functional connectives, quantifiers, modal operators), while informal logic examines reasoning as it actually occurs in natural language, cataloguing the fallacies that make invalid arguments feel persuasive. Competing formal systems — classical, intuitionistic, paraconsistent — differ in which inference rules they accept, each suited to different foundational commitments about truth and contradiction.\n\nWithin [[05.02]] Philosophy, Logic supplies the inferential backbone the other branches build arguments with: [[05.02.02]] Epistemology relies on it to distinguish justified belief from mere true opinion, while [[05.02.03]] Ethics and [[05.02.04]] Aesthetics use it to test whether a normative or evaluative claim actually follows from its premises. It is nonetheless distinct from [[05.02.01]] Metaphysics, which asks what exists rather than what validly follows — a metaphysical claim can be perfectly coherent and still false, where a logical argument can be perfectly valid and still lead from false premises to a false conclusion.\n\nLogic's reach extends well beyond Philosophy: mathematical proof, computer science's type systems, and legal argumentation all borrow its validity criteria directly. For a rigorously maintained overview of formal and philosophical logic, see the [Stanford Encyclopedia of Philosophy](https://plato.stanford.edu/entries/logic-classical/); for the historical development of formal systems, the [Internet Encyclopedia of Philosophy](https://iep.utm.edu/logsuppl/)."
+  },
+  {
+   "id": "05.02.06",
+   "level": 2,
+   "parentId": "05.02",
+   "name": "Philosophy of Science",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "What distinguishes scientific knowledge from other kinds, how theories are confirmed or overturned, and what science is entitled to claim. Every experimental discipline rests on answers to these whether or not it examines them.",
+   "cs": "Co odlišuje vědecké poznání od jiných druhů, jak se teorie potvrzují či vyvracejí a co si věda smí nárokovat. Každá experimentální disciplína stojí na odpovědích, ať už je zkoumá, nebo ne."
+  },
+  {
+   "id": "05.02.06.01",
+   "level": 3,
+   "parentId": "05.02.06",
+   "name": "Scientific Method",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Observation, hypothesis, prediction and test as an idealised cycle, and the ways actual practice departs from it.",
+   "cs": "Pozorování, hypotéza, předpověď a test jako idealizovaný cyklus a způsoby, jimiž se skutečná praxe od něj odchyluje."
+  },
+  {
+   "id": "05.02.06.02",
+   "level": 3,
+   "parentId": "05.02.06",
+   "name": "Induction, Falsification and Confirmation",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The problem of justifying general claims from finite evidence, and the competing accounts of what testing achieves.",
+   "cs": "Problém ospravedlnění obecných tvrzení z konečného souboru dokladů a soupeřící výklady toho, čeho zkoušení dosahuje."
+  },
+  {
+   "id": "05.02.06.03",
+   "level": 3,
+   "parentId": "05.02.06",
+   "name": "Explanation, Causation and Laws",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "What it is to explain rather than merely describe, and the difference between a correlation, a cause and a law.",
+   "cs": "Co znamená vysvětlit spíše než jen popsat a rozdíl mezi korelací, příčinou a zákonem."
+  },
+  {
+   "id": "05.02.06.04",
+   "level": 3,
+   "parentId": "05.02.06",
+   "name": "Models, Idealisation and Realism",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Whether theories describe an unobservable reality or organise experience, and the deliberate falsehoods models contain.",
+   "cs": "Zda teorie popisují nepozorovatelnou skutečnost, či pořádají zkušenost, a záměrné nepravdy, které modely obsahují."
+  },
+  {
+   "id": "05.02.06.05",
+   "level": 3,
+   "parentId": "05.02.06",
+   "name": "Reproducibility and Scientific Integrity",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Replication as the mechanism by which claims become knowledge, and the practices — preregistration, peer review, data sharing — that support or fail it.",
+   "cs": "Replikace jako mechanismus, jímž se z tvrzení stává poznání, a praktiky — preregistrace, recenzní řízení, sdílení dat — které ji podporují či selhávají."
+  },
+  {
+   "id": "05.02.06.06",
+   "level": 3,
+   "parentId": "05.02.06",
+   "name": "Scientific Change",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "How disciplines shift: accumulation, paradigm change, and research programmes as competing accounts of scientific progress.",
+   "cs": "Jak se obory mění: kumulace, změna paradigmatu a výzkumné programy jako soupeřící výklady vědeckého pokroku."
   }
  ],
  "relations": [
@@ -351,6 +428,34 @@
    "type": "references",
    "explored": null,
    "source": "brief-xref"
+  },
+  {
+   "from": "05.02.06.01",
+   "to": "09.05.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.02.06.02",
+   "to": "04.04.03.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.02.06.03",
+   "to": "04.04.03.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.02.06.05",
+   "to": "04.02.05.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
   },
   {
    "from": "05.02",

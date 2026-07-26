@@ -8,9 +8,60 @@
    "en": "Protocols and procedures are documented sequences of steps for conducting operations, experiments, diplomatic exchanges, or medical treatments. They standardize methods and ensure reproducibility across practitioners and contexts.",
    "cs": "Protokoly a procedury jsou dokumentované posloupnosti kroků pro provádění operací, experimentů, diplomatických výměn nebo lékařských postupů. Standardizují metody a zajišťují reprodukovatelnost u praktikujících a v různých kontextech.",
    "brief": "Protocols and procedures are documented, ordered sequences of steps for carrying out a repeatable activity — a laboratory experiment, a surgical intervention, a diplomatic exchange, an emergency response — written so that any qualified practitioner produces the same outcome. Where a formula supplies a value and a standard sets a requirement, a procedure specifies the sequence of actions that gets a practitioner from starting conditions to a defined result.\n\nThis node is broader in scope than [[09.03]] Technical Manuals, which document how to operate or repair one specific system: a manual is procedure bound to a product, while protocols here cover process-driven fields — clinical medicine, scientific method, diplomacy, safety response — that are not tied to any single artifact. [[09.05]] Standards & Specifications set the outcome a process must achieve; the procedure is the sequence that achieves it. The living-tradition counterpart is [[10.08]] Rituals & Ceremonies, which likewise sequences prescribed steps but transmits them through practice and observance rather than formal written documentation.\n\nRigor here means unambiguous, testable steps and version control, since a stale or ambiguous procedure directly causes reproducibility failure or harm. Clinical and research procedures typically reference the [World Health Organization](https://www.who.int/) for standardized health protocols, and diplomatic protocol traces to conventions such as the [Vienna Convention on Diplomatic Relations](https://legal.un.org/ilc/texts/instruments/english/conventions/9_1_1961.pdf)."
+  },
+  {
+   "id": "09.07.01",
+   "level": 2,
+   "parentId": "09.07",
+   "name": "Standard Operating Procedures",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Written procedures fixing how a recurring task is done, why they exist, and the drift between written and actual practice.",
+   "cs": "Písemné postupy stanovující provedení opakovaného úkonu, proč existují a rozdíl mezi psanou a skutečnou praxí."
+  },
+  {
+   "id": "09.07.02",
+   "level": 2,
+   "parentId": "09.07",
+   "name": "Checklists",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Short verification lists for high-consequence tasks, the read-do and do-confirm forms, and the evidence for their effect.",
+   "cs": "Krátké ověřovací seznamy pro úkony s vysokými následky, formy čti-dělej a dělej-potvrď a doklady o jejich účinku."
+  },
+  {
+   "id": "09.07.03",
+   "level": 2,
+   "parentId": "09.07",
+   "name": "Emergency Protocols",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Pre-agreed responses to foreseeable failures, escalation paths, and the drills that keep them usable.",
+   "cs": "Předem dohodnuté reakce na předvídatelná selhání, eskalační cesty a nácviky, jež je udržují použitelné."
+  },
+  {
+   "id": "09.07.04",
+   "level": 2,
+   "parentId": "09.07",
+   "name": "Laboratory and Field Protocols",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Reproducible method descriptions, controls, and the detail required for an independent party to repeat the work.",
+   "cs": "Reprodukovatelné popisy metod, kontroly a míra podrobnosti nutná k tomu, aby práci zopakoval někdo nezávislý."
   }
  ],
  "relations": [
+  {
+   "from": "09.07.02",
+   "to": "03.02.11.07",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "09.07",
    "to": "09.03",

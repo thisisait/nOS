@@ -8,9 +8,60 @@
    "en": "Disaster response encompasses organized procedures for mitigating impacts of large-scale catastrophic events—earthquakes, floods, hurricanes—through coordinated deployment of resources, evacuation, and recovery operations.",
    "cs": "Reakce na katastrofu zahrnuje organizované procedury ke zmírnění dopadů velkoplošných katastrofických událostí—zemětřesení, povodně, hurikány—prostřednictvím koordinovaného nasazení zdrojů, evakuace a obnovy.",
    "brief": "Disaster response encompasses organized procedures for mitigating impacts of large-scale catastrophic events—earthquakes, floods, hurricanes—through coordinated deployment of resources, evacuation, and recovery operations. It operates at a different scale than most of this branch: where other subfields equip an individual or household, disaster response coordinates households, neighborhoods, and institutions together.\n\nWithin [[08]] Survival & Emergency Preparedness it draws directly on [[08.01]] First Aid & Medical for mass-casualty triage and on [[08.07]] Emergency Communication for coordinating evacuation and relief across a disrupted area; it also depends on [[08.10]] Psychological Resilience, since sustained recovery operations test responders and survivors over weeks rather than hours. Compared with [[08.08]] Defense & Security, which addresses threats from other people, this subfield addresses threats from the environment itself.\n\nFor evacuation planning and hazard-specific guidance, see the U.S. [Federal Emergency Management Agency](https://www.ready.gov/), and for international disaster-response coordination standards, the [International Federation of Red Cross and Red Crescent Societies](https://www.ifrc.org/)."
+  },
+  {
+   "id": "08.09.01",
+   "level": 2,
+   "parentId": "08.09",
+   "name": "Disaster Types and Impacts",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Rapid and slow-onset events, their characteristic damage profiles, and the secondary hazards each generates.",
+   "cs": "Rychlé a pomalu nastupující události, jejich typické profily škod a druhotná ohrožení, jež každá vytváří."
+  },
+  {
+   "id": "08.09.02",
+   "level": 2,
+   "parentId": "08.09",
+   "name": "Preparedness Planning",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Household and community plans, supply caches, rally points and the exercises that make a plan real.",
+   "cs": "Plány domácnosti a komunity, zásoby, shromaždiště a nácviky, jež z plánu činí skutečnost."
+  },
+  {
+   "id": "08.09.03",
+   "level": 2,
+   "parentId": "08.09",
+   "name": "Emergency Response",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Immediate priorities, triage of tasks and people, and the incident-command structure coordinating them.",
+   "cs": "Bezprostřední priority, třídění úkolů i osob a struktura velení zásahu, jež je koordinuje."
+  },
+  {
+   "id": "08.09.04",
+   "level": 2,
+   "parentId": "08.09",
+   "name": "Recovery and Reconstruction",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "The long phase after the emergency: shelter, services, livelihoods, and building back with reduced vulnerability.",
+   "cs": "Dlouhá fáze po mimořádné události: přístřeší, služby, obživa a obnova se sníženou zranitelností."
   }
  ],
  "relations": [
+  {
+   "from": "08.09.04",
+   "to": "04.08.05.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "08.09",
    "to": "08.01",

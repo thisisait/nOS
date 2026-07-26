@@ -8,9 +8,96 @@
    "en": "Religious Studies investigates religions—their doctrines, practices, institutions, and social impacts—across cultures and history using humanistic and social-scientific methods. It encompasses theology (doctrine and belief), ritual and worship, scripture and myth, religious experience and mysticism, institutional history (churches, monasteries, hierarchies), and religion's roles in politics, ethics, and identity. Distinguished from Theology (which advocates within a tradition) by its analytical stance; it illuminates human meaning-making and cultural diversity.",
    "cs": "Religiologické studie zkoumají náboženství—jejich nauky, praktiky, instituce a sociální dopady—přes kultury a historii pomocí humanitních a sociálně-vědeckých metod. Zahrnují teologii (doktrínu a víru), rituál a uctívání, písmo a mýtus, náboženskou zkušenost a mystiku, institucionální historii (kostely, kláštery, hierarchie) a role náboženství v politice, etice a identitě. Rozlišují se od Teologie (která se zastává v tradici) svou analytickou pozicí; osvětlují lidské vytváření smyslu a kulturní rozmanitost.",
    "brief": "Religious Studies investigates religions — their doctrines, practices, institutions, and social impacts — across cultures and history, using humanistic and social-scientific methods rather than doctrinal advocacy. It encompasses theology, ritual and worship, scripture and myth, religious experience and mysticism, and institutional history.\n\nWithin [[05]] Humanities, Religious Studies shares its analytical, argument-driven approach to belief with [[05.02]] Philosophy (philosophy of religion) while examining institutions and social impact alongside [[05.01]] History and [[04]] Social Sciences. It overlaps with [[10]] Cultural Preservation wherever scripture, ritual, and oral doctrine survive as endangered cultural heritage rather than living practice.\n\nDistinguished from theology, which advocates within a tradition, Religious Studies illuminates how belief systems shape — and are shaped by — human meaning-making and cultural diversity. For comparative scholarship and professional standards, see the [American Academy of Religion](https://www.aarweb.org/); for primary religious texts across traditions, the [Internet Sacred Text Archive](https://sacred-texts.com/)."
+  },
+  {
+   "id": "05.05.01",
+   "level": 2,
+   "parentId": "05.05",
+   "name": "Comparative Religion",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Systematic comparison of traditions by belief, practice, institution and text, and the problem of describing one tradition in another's vocabulary.",
+   "cs": "Systematické srovnávání tradic podle věrouky, praxe, instituce a textu a problém popisu jedné tradice slovníkem jiné."
+  },
+  {
+   "id": "05.05.02",
+   "level": 2,
+   "parentId": "05.05",
+   "name": "Sacred Texts and Interpretation",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Canon formation, exegesis, and the interpretive traditions that grow around an authoritative text.",
+   "cs": "Utváření kánonu, exegeze a výkladové tradice, jež kolem autoritativního textu vyrůstají."
+  },
+  {
+   "id": "05.05.03",
+   "level": 2,
+   "parentId": "05.05",
+   "name": "Ritual and Practice",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "What adherents do rather than believe: rite, festival, pilgrimage, prayer and the social work each performs.",
+   "cs": "Co vyznavači konají spíše než věří: obřad, svátek, pouť, modlitba a společenská práce, kterou každé z toho koná."
+  },
+  {
+   "id": "05.05.04",
+   "level": 2,
+   "parentId": "05.05",
+   "name": "Religion and Society",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Religion as institution: its relation to state, law, education and identity, and the secularisation debate.",
+   "cs": "Náboženství jako instituce: jeho vztah ke státu, právu, vzdělávání a identitě a spor o sekularizaci."
+  },
+  {
+   "id": "05.05.05",
+   "level": 2,
+   "parentId": "05.05",
+   "name": "Philosophy of Religion",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Arguments concerning divine existence, the problem of evil, faith and reason, and religious language.",
+   "cs": "Argumenty o existenci božství, problém zla, víra a rozum a náboženský jazyk."
+  },
+  {
+   "id": "05.05.06",
+   "level": 2,
+   "parentId": "05.05",
+   "name": "Mysticism and Religious Experience",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "First-person accounts of the sacred, their cross-traditional similarities, and the interpretive dispute over what they establish.",
+   "cs": "Osobní svědectví o posvátnu, jejich podobnosti napříč tradicemi a výkladový spor o to, co dokládají."
   }
  ],
  "relations": [
+  {
+   "from": "05.05.02",
+   "to": "05.04.03.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.05.04",
+   "to": "04.02.02.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.05.05",
+   "to": "05.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "05.05",
    "to": "04",

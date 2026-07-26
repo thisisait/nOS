@@ -8,9 +8,60 @@
    "en": "Defense and security encompasses strategies and techniques for protecting persons and resources from threats including violence, theft, and coercion. It ranges from awareness and avoidance to direct resistance methods.",
    "cs": "Obrana a bezpečnost zahrnuje strategie a techniky ochrany osob a majetku před hrozbami včetně násilí, krádeží a nátlaku. Sahá od povědomí a vyhýbání se až po metody přímého odporu.",
    "brief": "Defense and security encompasses strategies and techniques for protecting persons and resources from threats including violence, theft, and coercion. It ranges from awareness and avoidance to direct resistance methods, prioritizing de-escalation and environmental control before physical confrontation becomes necessary.\n\nThe branch sits within [[08]] Survival & Emergency Preparedness alongside [[08.09]] Disaster Response, since both threat models — human aggression and environmental catastrophe — often materialize together during a breakdown of normal order, and alongside [[08.10]] Psychological Resilience, which supplies the composure defense decisions depend on under stress. It also touches [[08.04]] Shelter Construction, since a secure shelter's site and design are themselves a defensive measure. Compared with formal law-enforcement or military doctrine, this branch is scoped to what an individual or small group can apply without institutional backup.\n\nFor situational-awareness and de-escalation research, see the [National Institute of Justice](https://nij.ojp.gov/) personal-safety materials, and for practical home and travel security guidance, the [Red Cross](https://www.redcross.org/) preparedness resources."
+  },
+  {
+   "id": "08.08.01",
+   "level": 2,
+   "parentId": "08.08",
+   "name": "Situational Awareness",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Observing and interpreting an environment for threat, the habits that sustain it, and the cost of vigilance.",
+   "cs": "Pozorování a vyhodnocování prostředí z hlediska hrozby, návyky, jež to udržují, a cena bdělosti."
+  },
+  {
+   "id": "08.08.02",
+   "level": 2,
+   "parentId": "08.08",
+   "name": "Physical Security",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Barriers, lighting, locks and layered protection of a site, and the principle of delaying rather than preventing.",
+   "cs": "Bariéry, osvětlení, zámky a vrstvená ochrana objektu a zásada zdržet spíše než zabránit."
+  },
+  {
+   "id": "08.08.03",
+   "level": 2,
+   "parentId": "08.08",
+   "name": "Personal Safety and De-escalation",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Avoiding, defusing and disengaging from confrontation, and why avoidance dominates every other option.",
+   "cs": "Vyhýbání se konfrontaci, její zklidnění a odchod z ní a proč je vyhnutí lepší než kterákoli jiná možnost."
+  },
+  {
+   "id": "08.08.04",
+   "level": 2,
+   "parentId": "08.08",
+   "name": "Community Defence and Coordination",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Shared watch, agreed signals and mutual assistance, and the legal limits on collective self-protection.",
+   "cs": "Sdílená hlídka, dohodnuté signály a vzájemná pomoc a právní meze kolektivní sebeobrany."
   }
  ],
  "relations": [
+  {
+   "from": "08.08.03",
+   "to": "04.01.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "08.08",
    "to": "08.04",

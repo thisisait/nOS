@@ -8,9 +8,329 @@
    "en": "Information theory quantifies, transmits, and stores information using probability and mathematics. It establishes fundamental limits on data compression and communication rates, applying to signal processing, cryptography, and statistical inference.",
    "cs": "Teorie informace kvantifikuje, přenáší a uchovává informaci pomocí pravděpodobnosti a matematiky. Stanovuje fundamentální limity komprese dat a komunikačních rychlostí, aplikuje se na zpracování signálů, kryptografii a statistickou inferenci.",
    "brief": "Information Theory quantifies, transmits and stores information using probability and mathematics, establishing fundamental limits on how far data can be compressed and how fast it can be communicated over a noisy channel without error. It treats information itself — independent of the meaning of a message — as a measurable quantity, and its central results (entropy, channel capacity) hold regardless of the particular technology used to send or store a signal.\n\nInformation theory sits within the Formal Sciences beside [[02.01]], whose probability and combinatorics supply its mathematical machinery, and beside [[02.02]], whose networks, storage systems and security mechanisms are information theory's most direct application: [[02.02.07]] designs the channels whose capacity information theory bounds, and [[02.02.08]] relies on information-theoretic security proofs to state what an adversary can and cannot learn from an encrypted message. Unlike its neighbors it currently has no further subdivision in this taxonomy, reflecting a field organized more around a small set of foundational theorems than a spread of specialized subdisciplines.\n\nIts results extend well beyond communications engineering into statistical inference, thermodynamics and genetics, wherever a quantity behaves like uncertainty that is resolved by receiving a message. For further reading, see Claude Shannon's founding paper [\"A Mathematical Theory of Communication\"](https://ia802205.us.archive.org/23/items/bstj27-3-379/bstj27-3-379.pdf) and the [Encyclopaedia Britannica entry on information theory](https://www.britannica.com/science/information-theory)."
+  },
+  {
+   "id": "02.04.01",
+   "level": 2,
+   "parentId": "02.04",
+   "name": "Entropy and Information Measures",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The quantification of uncertainty. Information is measured by how much a message reduces what you did not know, which makes \"amount of information\" a property of the source rather than of the text — the single idea the whole field is built on.",
+   "cs": "Kvantifikace neurčitosti. Informace se měří tím, nakolik zpráva zmenší to, co jste nevěděli, takže „množství informace\" je vlastností zdroje, nikoli textu — jediná myšlenka, na níž je celý obor postaven."
+  },
+  {
+   "id": "02.04.01.01",
+   "level": 3,
+   "parentId": "02.04.01",
+   "name": "Shannon Entropy",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The average information content of a source, its maximisation at uniform distribution, and its interpretation as a lower bound on description length.",
+   "cs": "Průměrný informační obsah zdroje, jeho maximum při rovnoměrném rozdělení a jeho výklad jako dolní mez délky popisu."
+  },
+  {
+   "id": "02.04.01.02",
+   "level": 3,
+   "parentId": "02.04.01",
+   "name": "Joint, Conditional and Mutual Information",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "How uncertainty decomposes across several variables, and the measure of how much one tells you about another.",
+   "cs": "Jak se neurčitost rozkládá mezi několik proměnných a míra toho, kolik jedna vypovídá o druhé."
+  },
+  {
+   "id": "02.04.01.03",
+   "level": 3,
+   "parentId": "02.04.01",
+   "name": "Relative Entropy and Divergence",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Kullback-Leibler divergence as the cost of assuming the wrong distribution, and its role in inference and model fitting.",
+   "cs": "Kullbackova-Leiblerova divergence jako cena předpokladu nesprávného rozdělení a její role v inferenci a fitování modelů."
+  },
+  {
+   "id": "02.04.01.04",
+   "level": 3,
+   "parentId": "02.04.01",
+   "name": "Differential and Continuous Entropy",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Extension of the measures to continuous variables, and the ways the discrete intuition fails there.",
+   "cs": "Rozšíření měr na spojité proměnné a způsoby, jimiž tam diskrétní intuice selhává."
+  },
+  {
+   "id": "02.04.02",
+   "level": 2,
+   "parentId": "02.04",
+   "name": "Source Coding and Compression",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "How short a representation can be. The source coding theorem sets an exact limit — the entropy — below which lossless compression is impossible, which turns \"how well can this be compressed\" from an engineering question into a measurable property.",
+   "cs": "Jak krátká může být reprezentace. Věta o kódování zdroje stanoví přesnou mez — entropii — pod niž je bezeztrátová komprese nemožná, čímž se z otázky „jak dobře to jde zkomprimovat\" stává měřitelná vlastnost."
+  },
+  {
+   "id": "02.04.02.01",
+   "level": 3,
+   "parentId": "02.04.02",
+   "name": "Lossless Coding",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Huffman, arithmetic and dictionary methods, their optimality relative to the entropy bound, and where each is preferable.",
+   "cs": "Huffmanovo, aritmetické a slovníkové kódování, jejich optimalita vůči entropické mezi a kde je které vhodnější."
+  },
+  {
+   "id": "02.04.02.02",
+   "level": 3,
+   "parentId": "02.04.02",
+   "name": "Rate-Distortion Theory",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The trade-off when exact reconstruction is not required: the minimum rate achievable for a permitted level of error.",
+   "cs": "Kompromis, když se nevyžaduje přesná rekonstrukce: minimální přenosová rychlost dosažitelná při povolené míře chyby."
+  },
+  {
+   "id": "02.04.02.03",
+   "level": 3,
+   "parentId": "02.04.02",
+   "name": "Lossy Compression",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Transform coding, quantisation and perceptual models as applied to images, audio and video.",
+   "cs": "Transformační kódování, kvantizace a perceptuální modely v aplikaci na obraz, zvuk a video."
+  },
+  {
+   "id": "02.04.02.04",
+   "level": 3,
+   "parentId": "02.04.02",
+   "name": "Universal Coding",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Methods achieving near-optimal compression without knowing the source distribution in advance.",
+   "cs": "Metody dosahující téměř optimální komprese bez předchozí znalosti rozdělení zdroje."
+  },
+  {
+   "id": "02.04.03",
+   "level": 2,
+   "parentId": "02.04",
+   "name": "Channel Coding and Reliability",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "How to communicate correctly over a medium that corrupts. The channel coding theorem is among the most counter-intuitive results in the mathematical sciences: below a computable capacity, arbitrarily reliable transmission is possible over an unreliable channel.",
+   "cs": "Jak sdělovat správně přes médium, které kazí. Věta o kódování kanálu patří k nejméně intuitivním výsledkům matematických věd: pod vypočitatelnou kapacitou je přes nespolehlivý kanál možný libovolně spolehlivý přenos."
+  },
+  {
+   "id": "02.04.03.01",
+   "level": 3,
+   "parentId": "02.04.03",
+   "name": "Channel Capacity",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The maximum rate at which information can pass through a noisy channel with vanishing error, and how it is computed.",
+   "cs": "Maximální rychlost, jíž může informace projít zašuměným kanálem s mizivou chybou, a jak se počítá."
+  },
+  {
+   "id": "02.04.03.02",
+   "level": 3,
+   "parentId": "02.04.03",
+   "name": "Error-Detecting and Correcting Codes",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Parity, Hamming, cyclic and modern iterative codes, and the trade of redundancy against protection.",
+   "cs": "Paritní, Hammingovy, cyklické a moderní iterativní kódy a výměna redundance za ochranu."
+  },
+  {
+   "id": "02.04.03.03",
+   "level": 3,
+   "parentId": "02.04.03",
+   "name": "Noise Models",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Characterisation of channel corruption — additive, erasure, burst — and why the model determines which code is appropriate.",
+   "cs": "Charakterizace poškození kanálu — aditivní, výmazové, shlukové — a proč model určuje, který kód je vhodný."
+  },
+  {
+   "id": "02.04.03.04",
+   "level": 3,
+   "parentId": "02.04.03",
+   "name": "Information-Theoretic Security",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Secrecy defined by information rather than by computational difficulty, and the conditions under which it is achievable.",
+   "cs": "Utajení definované informačně, nikoli výpočetní obtížností, a podmínky, za nichž je dosažitelné."
+  },
+  {
+   "id": "02.04.04",
+   "level": 2,
+   "parentId": "02.04",
+   "name": "Algorithmic Information and Complexity",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "The alternative account: the information in an object is the length of the shortest program that produces it. It connects information to computation and to randomness, and it is uncomputable — which is itself informative.",
+   "cs": "Alternativní pojetí: informace v objektu je délka nejkratšího programu, který jej vytvoří. Spojuje informaci s výpočtem a s náhodností a je nevyčíslitelná — což je samo o sobě poučné."
+  },
+  {
+   "id": "02.04.04.01",
+   "level": 3,
+   "parentId": "02.04.04",
+   "name": "Kolmogorov Complexity",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The shortest-description measure, its invariance up to a constant, and its uncomputability.",
+   "cs": "Míra nejkratšího popisu, její invariance až na konstantu a její nevyčíslitelnost."
+  },
+  {
+   "id": "02.04.04.02",
+   "level": 3,
+   "parentId": "02.04.04",
+   "name": "Randomness and Incompressibility",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The identification of a random sequence with one that admits no shorter description than itself.",
+   "cs": "Ztotožnění náhodné posloupnosti s takovou, která nepřipouští kratší popis než sebe samu."
+  },
+  {
+   "id": "02.04.04.03",
+   "level": 3,
+   "parentId": "02.04.04",
+   "name": "Minimum Description Length",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Model selection by total description length of model plus data, and its relation to Bayesian inference.",
+   "cs": "Výběr modelu podle celkové délky popisu modelu a dat a jeho vztah k bayesovské inferenci."
+  },
+  {
+   "id": "02.04.05",
+   "level": 2,
+   "parentId": "02.04",
+   "name": "Signals and Representation",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "How continuous phenomena become discrete records without loss, and what is irrecoverably discarded when they do not. Every measurement, recording and embedding is an instance of this problem.",
+   "cs": "Jak se spojité jevy stávají diskrétními záznamy bez ztráty a co se nenávratně zahodí, když ne. Každé měření, záznam i vnoření je případem tohoto problému."
+  },
+  {
+   "id": "02.04.05.01",
+   "level": 3,
+   "parentId": "02.04.05",
+   "name": "Sampling and Reconstruction",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The sampling theorem, the Nyquist rate, and aliasing as the failure mode when it is violated.",
+   "cs": "Vzorkovací věta, Nyquistova frekvence a aliasing jako selhání při jejím porušení."
+  },
+  {
+   "id": "02.04.05.02",
+   "level": 3,
+   "parentId": "02.04.05",
+   "name": "Quantisation",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Mapping continuous amplitude onto finite levels, the error it introduces, and the noise-shaping techniques that redistribute it.",
+   "cs": "Zobrazení spojité amplitudy na konečný počet úrovní, chyba, kterou zavádí, a techniky tvarování šumu, jež ji přerozdělují."
+  },
+  {
+   "id": "02.04.05.03",
+   "level": 3,
+   "parentId": "02.04.05",
+   "name": "Transform Representations",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Fourier, wavelet and related decompositions as changes of basis that make structure explicit and compression possible.",
+   "cs": "Fourierovy, waveletové a příbuzné rozklady jako změny báze, které zviditelňují strukturu a umožňují kompresi."
+  },
+  {
+   "id": "02.04.05.04",
+   "level": 3,
+   "parentId": "02.04.05",
+   "name": "Vector Representations and Embeddings",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Encoding objects as points in a metric space so that proximity carries meaning, and what such a representation preserves and destroys.",
+   "cs": "Kódování objektů jako bodů v metrickém prostoru tak, aby blízkost nesla význam, a co taková reprezentace zachovává a co ničí."
   }
  ],
  "relations": [
+  {
+   "from": "02.04.01.01",
+   "to": "01.01.03.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "02.04.01.03",
+   "to": "02.01.04.45",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "02.04.02.01",
+   "to": "02.02.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "02.04.02.03",
+   "to": "06.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "02.04.03.04",
+   "to": "02.02.08.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "02.04.04.01",
+   "to": "02.02.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "02.04.05.01",
+   "to": "01.01.03.06",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "02.04.05.04",
+   "to": "02.02.09",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "02.04",
    "to": "02.01",

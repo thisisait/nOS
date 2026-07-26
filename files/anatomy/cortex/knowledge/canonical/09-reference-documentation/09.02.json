@@ -8,9 +8,67 @@
    "en": "Dictionaries are repositories mapping words to definitions, etymologies, and usage examples within a language. They preserve semantic precision and document how meaning shifts across historical periods.",
    "cs": "Slovníky jsou úložiště mapující slova na definice, etymologie a příklady použití v rámci jazyka. Zachovávají sémantickou přesnost a dokumentují, jak se značení mění v čase.",
    "brief": "Dictionaries are repositories mapping words to definitions, etymologies, and usage examples within a language. They preserve semantic precision and document how meaning shifts across historical periods, serving as the arbiter of correct usage that other reference works assume rather than establish.\n\nWithin [[09]] Reference & Documentation, dictionaries are the semantic counterpart to [[09.01]] Encyclopedias: where an encyclopedia explains a concept, a dictionary fixes the word for it, and the two are frequently consulted together when a reader meets unfamiliar terminology. Dictionaries also underpin [[09.05]] Standards & Specifications, since a specification's precision depends on terms whose meaning is fixed and shared — a standards body cannot define tolerances on a word that means different things to different readers.\n\nFor an authoritative historical dictionary of English, see the [Oxford English Dictionary](https://www.oed.com/), and for a freely available general dictionary, [Merriam-Webster](https://www.merriam-webster.com/)."
+  },
+  {
+   "id": "09.02.01",
+   "level": 2,
+   "parentId": "09.02",
+   "name": "Lexicography",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The making of dictionaries: what counts as a word, how senses are distinguished, and the corpus evidence behind a definition.",
+   "cs": "Tvorba slovníků: co se počítá za slovo, jak se rozlišují významy a jaké korpusové doklady stojí za definicí."
+  },
+  {
+   "id": "09.02.02",
+   "level": 2,
+   "parentId": "09.02",
+   "name": "Dictionary Types",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Monolingual, bilingual, etymological, technical and learner dictionaries, and the different questions each answers.",
+   "cs": "Výkladové, překladové, etymologické, odborné a slovníky pro nerodilé mluvčí a různé otázky, jež každý zodpovídá."
+  },
+  {
+   "id": "09.02.03",
+   "level": 2,
+   "parentId": "09.02",
+   "name": "Terminology and Glossaries",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Domain-specific term collections, the discipline of defining a term once, and its role in translation and standards.",
+   "cs": "Oborové sbírky termínů, kázeň definovat termín jednou a jejich role v překladu a normalizaci."
+  },
+  {
+   "id": "09.02.04",
+   "level": 2,
+   "parentId": "09.02",
+   "name": "Machine-Readable Lexicons",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Dictionaries as data: structured entries, word lists and lexical databases usable by programs rather than people.",
+   "cs": "Slovníky jako data: strukturovaná hesla, seznamy slov a lexikální databáze použitelné programy, nikoli lidmi."
   }
  ],
  "relations": [
+  {
+   "from": "09.02.01",
+   "to": "05.03.02.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "09.02.04",
+   "to": "02.02.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "09.02",
    "to": "09.01",

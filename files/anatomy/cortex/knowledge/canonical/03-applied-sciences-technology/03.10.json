@@ -8,9 +8,103 @@
    "en": "Manipulation and exploitation of matter at the atomic and molecular scale (1–100 nanometers), creating novel materials and devices with emergent properties.",
    "cs": "Manipulace hmoty v atomovém a molekulárním měřítku (1–100 nanometrů) za účelem vytvoření nových materiálů s jedinečnými vlastnostmi.",
    "brief": "Nanotechnology is the manipulation and exploitation of matter at the atomic and molecular scale, roughly 1 to 100 nanometers, creating novel materials and devices with emergent properties that differ from the same substance at bulk scale. Work at this scale spans nanoparticle synthesis, nanoscale device fabrication, and the characterization tools needed to observe and manipulate structures far below the resolution of visible light.\n\nNanotechnology sits inside [[03]] Applied Sciences & Technology as the newest and smallest-scale of its disciplines, feeding [[03.01]] Engineering's materials-engineering branch with novel substances and increasingly informing [[03.09]] Biotechnology through nanoscale drug-delivery and diagnostic tools. Unlike most of its siblings, nanotechnology has no dedicated subcategory tree in this taxonomy yet — its output is treated as a single integrated discipline rather than split by material class or application.\n\nNanomaterial safety and characterization are governed by emerging, still-evolving regulatory frameworks given the field's recency. For a technical overview of the field, see the [Encyclopaedia Britannica](https://www.britannica.com/technology/nanotechnology), and for U.S. federal research coordination and safety guidance, the [National Nanotechnology Initiative](https://www.nano.gov/)."
+  },
+  {
+   "id": "03.10.01",
+   "level": 2,
+   "parentId": "03.10",
+   "name": "Nanoscale Phenomena",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Why matter behaves differently below roughly a hundred nanometres: surface-to-volume ratio, quantum confinement and dominant surface forces.",
+   "cs": "Proč se hmota pod zhruba sto nanometry chová jinak: poměr povrchu k objemu, kvantové omezení a převládající povrchové síly."
+  },
+  {
+   "id": "03.10.02",
+   "level": 2,
+   "parentId": "03.10",
+   "name": "Nanomaterials",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Nanoparticles, nanotubes, two-dimensional materials and nanostructured composites, and the properties each contributes.",
+   "cs": "Nanočástice, nanotrubice, dvourozměrné materiály a nanostrukturní kompozity a vlastnosti, jimiž každý přispívá."
+  },
+  {
+   "id": "03.10.03",
+   "level": 2,
+   "parentId": "03.10",
+   "name": "Fabrication and Self-Assembly",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Top-down patterning and bottom-up assembly, lithographic limits, and structures that organise themselves.",
+   "cs": "Strukturování shora dolů a skládání zdola nahoru, meze litografie a struktury, jež se organizují samy."
+  },
+  {
+   "id": "03.10.04",
+   "level": 2,
+   "parentId": "03.10",
+   "name": "Nanoscale Characterisation",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Scanning probe, electron and X-ray methods for seeing and measuring at a scale below the wavelength of light.",
+   "cs": "Sondové, elektronové a rentgenové metody pro pozorování a měření pod vlnovou délkou světla."
+  },
+  {
+   "id": "03.10.05",
+   "level": 2,
+   "parentId": "03.10",
+   "name": "Applications",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Electronics, catalysis, energy storage, medicine and filtration as the domains where nanoscale control has changed what is possible.",
+   "cs": "Elektronika, katalýza, ukládání energie, medicína a filtrace jako oblasti, kde nanoskopická kontrola změnila možnosti."
+  },
+  {
+   "id": "03.10.06",
+   "level": 2,
+   "parentId": "03.10",
+   "name": "Nanosafety",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Toxicology of particles small enough to cross biological barriers, exposure assessment and the regulatory gap.",
+   "cs": "Toxikologie částic dost malých na překročení biologických bariér, hodnocení expozice a regulační mezera."
   }
  ],
  "relations": [
+  {
+   "from": "03.10.01",
+   "to": "01.01.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.10.02",
+   "to": "01.02.11.07",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.10.04",
+   "to": "01.01.09",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.10.06",
+   "to": "03.02.11.08",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "03.10",
    "to": "03.01",

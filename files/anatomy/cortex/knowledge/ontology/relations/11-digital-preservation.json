@@ -1,0 +1,138 @@
+{
+ "version": 1,
+ "partition": "11-digital-preservation",
+ "relations": [
+  {
+   "from": "11.01",
+   "fromKind": "node",
+   "to": "09.08.04",
+   "toKind": "node",
+   "type": "requires",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.78,
+   "justification": "Long-lived digital geometry requires a documented exchange format; a model in a proprietary format is a hostage to its vendor.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "11.01",
+   "fromKind": "node",
+   "to": "09.08.04",
+   "toKind": "node",
+   "type": "supersedes",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.75,
+   "justification": "Digital models superseded the drawing as the authoritative definition of a part; the drawing became a derived view.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "11.01",
+   "fromKind": "node",
+   "to": "11.02",
+   "toKind": "node",
+   "type": "prerequisite-for",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.85,
+   "justification": "Compression is applied to formats; what a container permits bounds what compression can be used.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "11.02.01",
+   "fromKind": "node",
+   "to": "02.04.02.01",
+   "toKind": "node",
+   "type": "analogous-to",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.96,
+   "justification": "Practical lossless compression is source coding; the algorithms in a preservation toolkit are the theorems of information theory implemented.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "11.02",
+   "fromKind": "node",
+   "to": "11.04",
+   "toKind": "node",
+   "type": "prerequisite-for",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.72,
+   "justification": "Backup design trades compression against recoverability, so the compression properties are prior.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "11.03.03",
+   "fromKind": "node",
+   "to": "12.05.04",
+   "toKind": "node",
+   "type": "exemplifies",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.7,
+   "justification": "Key management exemplifies the coordination problem: a secret shared by too few is lost and by too many is not a secret.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "11.03.04",
+   "fromKind": "node",
+   "to": "11.03.03",
+   "toKind": "node",
+   "type": "requires",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.97,
+   "justification": "Long-term access to encrypted material is conditional on key survival; key loss is the commonest cause of permanent data loss.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "11.03",
+   "fromKind": "node",
+   "to": "11.04",
+   "toKind": "node",
+   "type": "prerequisite-for",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.79,
+   "justification": "An encrypted backup is only as recoverable as its key management, which is an encryption question.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "11.04.03",
+   "fromKind": "node",
+   "to": "11.04.01",
+   "toKind": "node",
+   "type": "requires",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.98,
+   "justification": "A backup strategy that is never restore-tested is not a backup; verification is a constituent of the practice, not an optional addition.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "11.04.04",
+   "fromKind": "node",
+   "to": "04.06.15.03",
+   "toKind": "node",
+   "type": "depends-on",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.76,
+   "justification": "Offsite copies depend on the cross-border transfer regime once the offsite location is in another jurisdiction.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "11.05.04",
+   "fromKind": "node",
+   "to": "09.10.04",
+   "toKind": "node",
+   "type": "requires",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.81,
+   "justification": "Forensic soundness requires a documented chain of custody, which is an access-and-rights discipline before it is a technical one.",
+   "createdAt": 1785000000
+  }
+ ]
+}

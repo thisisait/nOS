@@ -8,9 +8,67 @@
    "en": "Cryptographic protection of data confidentiality and integrity during storage and transmission—spanning symmetric ciphers (AES, ChaCha20) for shared-key encryption and asymmetric methods (RSA, ECDSA) for key exchange and authentication. Distinct from compression by prioritizing secrecy and tamper-detection over size reduction.",
    "cs": "Kryptografická ochrana důvěrnosti a integrity dat během ukládání a přenosu—zahrnující symetrické šifry (AES, ChaCha20) pro sdílené klíče a asymetrické metody (RSA, ECDSA) pro výměnu klíčů a autentifikaci. Odlišuje se od komprese upřednostňováním tajnosti a detekce manipulace před redukcí velikosti.",
    "brief": "Encryption and security cover the cryptographic protection of data confidentiality and integrity during storage and transmission, spanning symmetric ciphers such as AES and ChaCha20 for shared-key encryption and asymmetric methods such as RSA and ECDSA for key exchange and authentication.\n\nThe branch is distinct from [[11.02]] Compression Methods by prioritizing secrecy and tamper-detection over size reduction, though the two are frequently applied in sequence — compress, then encrypt — since encrypted data is incompressible. It intersects [[11.04]] Backup Strategies wherever an archive's redundancy copies must themselves be encrypted at rest, and it creates the long-horizon risk [[11.05]] Data Recovery exists to answer: an encryption key lost alongside its data renders that data permanently, rather than temporarily, inaccessible.\n\nThe [NIST Cryptographic Standards and Guidelines](https://csrc.nist.gov/projects/cryptographic-standards-and-guidelines) catalog the vetted algorithms referenced above, and the [Digital Preservation Coalition Handbook](https://www.dpconline.org/handbook) discusses key-management practice specific to long-term archival custody."
+  },
+  {
+   "id": "11.03.01",
+   "level": 2,
+   "parentId": "11.03",
+   "name": "Symmetric and Asymmetric Encryption",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The two families, what each is for, and why practical systems use both together.",
+   "cs": "Dvě rodiny šifer, k čemu každá slouží a proč praktické systémy užívají obě dohromady."
+  },
+  {
+   "id": "11.03.02",
+   "level": 2,
+   "parentId": "11.03",
+   "name": "Hashing and Integrity",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "One-way digests for verifying that data has not changed, and the difference between integrity and authenticity.",
+   "cs": "Jednosměrné otisky pro ověření, že se data nezměnila, a rozdíl mezi integritou a autenticitou."
+  },
+  {
+   "id": "11.03.03",
+   "level": 2,
+   "parentId": "11.03",
+   "name": "Key Management",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Generation, storage, rotation and recovery of keys, and why key loss is the commonest cause of permanent data loss.",
+   "cs": "Generování, uložení, obměna a obnova klíčů a proč je ztráta klíče nejčastější příčinou trvalé ztráty dat."
+  },
+  {
+   "id": "11.03.04",
+   "level": 2,
+   "parentId": "11.03",
+   "name": "Encryption and Long-Term Access",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "The tension between confidentiality now and readability decades later, and the escrow and re-encryption strategies addressing it.",
+   "cs": "Napětí mezi důvěrností dnes a čitelností za desítky let a strategie úschovy klíčů a přešifrování, jež je řeší."
   }
  ],
  "relations": [
+  {
+   "from": "11.03.01",
+   "to": "02.02.08.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "11.03.02",
+   "to": "02.04.04.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "11.03",
    "to": "11.02",

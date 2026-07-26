@@ -250,7 +250,12 @@ describe('git materialisation (canonical ingest)', () => {
   }, 30000);
 
   it('mirrors the ToE concept relations into the generalized store', () => {
-    expect(first.facts.toeRelations).toBe(4434);
+    // 4434 → 4643 at the S2 corpus-parity pin (organ knowledge/ re-synced from
+    // keap_repo_ref v1.34.0: canonical 1750 → 2393 nodes, ontology/relations
+    // 0 → 417 typed edges). This literal is a CORPUS statement, not a port one —
+    // it moves whenever the pin moves, and the move belongs in the parity commit
+    // so the number is never adjusted quietly to make a red suite green.
+    expect(first.facts.toeRelations).toBe(4643);
   });
 
   it('applies the ontology verb registry without growing the live vocabulary', () => {
@@ -282,9 +287,28 @@ describe('git materialisation (canonical ingest)', () => {
     expect(again.status, again.out).toBe(0);
     expect(again.result!.materialise.ingest?.applied).toEqual([]);
     // The canonical layer and the ontology layer keep separate skip ledgers:
-    // 107 domain files in `skipped`, the verb registry in `ontology.skipped`.
+    // 107 domain files in `skipped`, the verb registry + the typed-edge
+    // partitions in `ontology.skipped`. The 12 `relations:*` entries arrived
+    // with the S2 corpus-parity pin (v1.34.0 populated knowledge/ontology/
+    // relations/, which was empty in git at v1.27.0) — asserted by NAME rather
+    // than by count so a partition silently disappearing is a failure, not a
+    // smaller number nobody reads.
     expect(again.result!.materialise.ingest?.skipped.length).toBe(107);
-    expect(again.result!.materialise.ingest?.ontology.skipped).toEqual(['types']);
+    expect(again.result!.materialise.ingest?.ontology.skipped).toEqual([
+      'types',
+      'ontology:relations:01-natural-sciences',
+      'ontology:relations:02-formal-sciences',
+      'ontology:relations:03-applied-sciences-technology',
+      'ontology:relations:04-social-sciences',
+      'ontology:relations:05-humanities',
+      'ontology:relations:06-arts-creative-expression',
+      'ontology:relations:07-practical-skills-trades',
+      'ontology:relations:08-survival-emergency-preparedness',
+      'ontology:relations:09-reference-documentation',
+      'ontology:relations:10-cultural-preservation',
+      'ontology:relations:11-digital-preservation',
+      'ontology:relations:12-post-disaster-rebuilding',
+    ]);
     expect(again.result!.materialise.ingest?.changed).toBe(false);
     expect(again.result!.facts.ontologyVersion).toBe(first.facts.ontologyVersion);
     expect(again.result!.facts.taxonomyNodes).toBe(first.facts.taxonomyNodes);

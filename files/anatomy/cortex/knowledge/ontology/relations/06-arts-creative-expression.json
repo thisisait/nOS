@@ -1,0 +1,18 @@
+{
+ "version": 1,
+ "partition": "06-arts-creative-expression",
+ "relations": [
+  {
+   "from": "06.03",
+   "fromKind": "node",
+   "to": "03.01",
+   "toKind": "node",
+   "type": "depends-on",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.78,
+   "justification": "Design depends on engineering for what is makeable; the constraint is what distinguishes design from styling.",
+   "createdAt": 1785000000
+  }
+ ]
+}

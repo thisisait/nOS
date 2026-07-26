@@ -8,9 +8,60 @@
    "en": "Techniques for reconstructing or accessing lost or inaccessible data—including disk imaging, partition repair, logical file recovery from overwritten storage, and data forensics. Presupposes backup and storage redundancy failures; distinct from backup strategies by operating post-disaster when primary data is already unavailable.",
    "cs": "Techniky pro rekonstrukci nebo přístup k ztraceným či nedostupným datům—včetně vytváření diskových obrazů, opravy oddílů, logického obnovení souborů z přepsaného úložiště a forenzní analýzy. Předpokládá selhání zálohování a redundance úložišť; odlišuje se od zálohových strategií operováním po katastrofě kdy jsou primární data již nedostupná.",
    "brief": "Data recovery covers techniques for reconstructing or accessing lost or inaccessible data, including disk imaging, partition repair, logical file recovery from overwritten storage, and data forensics.\n\nThe branch presupposes that [[11.04]] Backup Strategies and storage redundancy have already failed — it is the last line of defense rather than the first — and it is frequently complicated by [[11.03]] Encryption & Security, since a properly encrypted device with a lost key cannot be recovered by forensic means alone. Where the damage is at the encoding level rather than the physical-media level, remediation instead falls to [[11.01]] File Formats expertise — repairing a truncated or malformed file structure rather than imaging a failing disk.\n\nThe [NIST Guide to Integrating Forensic Techniques into Incident Response (SP 800-86)](https://csrc.nist.gov/pubs/sp/800/86/final) documents standard forensic recovery method, and the [Library of Congress Digital Preservation program](https://www.loc.gov/preservation/digital/) addresses recovery planning within a broader preservation strategy."
+  },
+  {
+   "id": "11.05.01",
+   "level": 2,
+   "parentId": "11.05",
+   "name": "Logical Recovery",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Recovering from deletion, corruption and filesystem damage where the medium is intact.",
+   "cs": "Obnova po smazání, poškození dat a poruše souborového systému tam, kde je médium neporušené."
+  },
+  {
+   "id": "11.05.02",
+   "level": 2,
+   "parentId": "11.05",
+   "name": "Physical Recovery",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Recovery from failed media, the clean-room and specialist requirement, and why powering on a failing drive makes it worse.",
+   "cs": "Obnova z poškozených médií, nutnost čistého prostoru a odborníka a proč zapnutí selhávajícího disku situaci zhorší."
+  },
+  {
+   "id": "11.05.03",
+   "level": 2,
+   "parentId": "11.05",
+   "name": "Format Obsolescence",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Data that survives but cannot be read, and the migration and emulation strategies that address it.",
+   "cs": "Data, jež přežila, ale nelze je přečíst, a strategie migrace a emulace, jež to řeší."
+  },
+  {
+   "id": "11.05.04",
+   "level": 2,
+   "parentId": "11.05",
+   "name": "Forensic Soundness",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Working on copies, documenting the chain of custody, and preserving evidence that recovery does not alter the original.",
+   "cs": "Práce na kopiích, dokumentace řetězce nakládání a zachování dokladu, že obnova nezměnila originál."
   }
  ],
  "relations": [
+  {
+   "from": "11.05.03",
+   "to": "11.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "11.05",
    "to": "11.01",

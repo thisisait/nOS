@@ -1,0 +1,42 @@
+{
+ "version": 1,
+ "partition": "07-practical-skills-trades",
+ "relations": [
+  {
+   "from": "07.01",
+   "fromKind": "node",
+   "to": "03.04.02",
+   "toKind": "node",
+   "type": "depends-on",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.87,
+   "justification": "Construction practice depends on structural understanding; the trade rules encode load paths.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "07.02",
+   "fromKind": "node",
+   "to": "03.01",
+   "toKind": "node",
+   "type": "depends-on",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.85,
+   "justification": "Mechanics as a trade depends on mechanical engineering for the systems it services.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "07.03",
+   "fromKind": "node",
+   "to": "01.01.04",
+   "toKind": "node",
+   "type": "depends-on",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.89,
+   "justification": "Practical electronics depends on electromagnetism; circuit reasoning is its lumped approximation.",
+   "createdAt": 1785000000
+  }
+ ]
+}

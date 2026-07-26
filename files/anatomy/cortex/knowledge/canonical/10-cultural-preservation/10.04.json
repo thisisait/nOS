@@ -8,9 +8,60 @@
    "en": "Traditional recipes are documented food-preparation methods embodying regional and cultural identity. They preserve culinary knowledge and connect communities to land, ingredients, and history.",
    "cs": "Tradiční recepty jsou dokumentované způsoby přípravy jídla vtělující regionální a kulturní identitu. Zachovávají kulinární vědomost a spojují komunity se zemí, ingrediencemi a historií.",
    "brief": "Traditional recipes are documented food-preparation methods — ingredient combinations, techniques, seasonal timing, ritual food for specific occasions — that carry a community's regional and cultural identity in edible form. A recipe preserves not just a procedure but a relationship to land and season: what grows locally, what was historically scarce or abundant, and what techniques developed in response to available fuel, storage, and climate.\n\nThis node was split out from the broader [[10.03]] Traditions & Customs specifically because food preparation carries enough distinct documentary needs — precise measurement, ingredient substitution, technique — to merit its own category, the same reasoning that separated [[10.09]] Traditional Art Techniques for craft practice. Unlike a modern recipe optimized for reproducibility in any kitchen, a traditional recipe is often tied to a specific place, utensil, or hearth technology, so preserving it well means recording that context alongside the ingredient list.\n\nCulinary heritage databases attempt exactly this contextual preservation: the [Ark of Taste](https://www.fondazioneslowfood.com/en/ark-of-taste-slow-food/) catalog run by Slow Food documents endangered regional foods and preparation methods worldwide, and UNESCO recognizes several culinary traditions directly under its [Intangible Cultural Heritage](https://ich.unesco.org/) programme."
+  },
+  {
+   "id": "10.04.01",
+   "level": 2,
+   "parentId": "10.04",
+   "name": "Regional Cuisines",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Cooking traditions shaped by available ingredients, climate and exchange, and the logic connecting a cuisine to its place.",
+   "cs": "Kuchařské tradice utvářené dostupnými surovinami, podnebím a výměnou a logika spojující kuchyni s jejím místem."
+  },
+  {
+   "id": "10.04.02",
+   "level": 2,
+   "parentId": "10.04",
+   "name": "Preservation Techniques",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Drying, salting, smoking, fermenting and pickling as the pre-refrigeration technologies that shaped what could be eaten.",
+   "cs": "Sušení, solení, uzení, kvašení a nakládání jako technologie před chlazením, jež určovaly, co bylo možné jíst."
+  },
+  {
+   "id": "10.04.03",
+   "level": 2,
+   "parentId": "10.04",
+   "name": "Recipe Transmission",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "How methods pass between generations, the tacit knowledge a written recipe omits, and what is lost in writing it down.",
+   "cs": "Jak se postupy předávají mezi generacemi, tiché vědění, jež psaný recept vynechává, a co se ztrácí zápisem."
+  },
+  {
+   "id": "10.04.04",
+   "level": 2,
+   "parentId": "10.04",
+   "name": "Ingredients and Substitution",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Traditional ingredients, their functional role, and principled substitution when one is unavailable.",
+   "cs": "Tradiční suroviny, jejich funkční role a poučená náhrada, není-li některá dostupná."
   }
  ],
  "relations": [
+  {
+   "from": "10.04.02",
+   "to": "08.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "10.04",
    "to": "10.03",

@@ -8,9 +8,67 @@
    "en": "Historical archives are primary-source collections preserving records of past events, institutions, and persons—letters, photographs, government documents, business ledgers. They provide evidence for understanding history beyond published accounts.",
    "cs": "Historické archivy jsou sbírky primárních zdrojů zachovávající záznamy minulých událostí, institucí a osob—dopisy, fotografie, vládní dokumenty, obchodní účetnictví. Poskytují důkazy k pochopení historie mimo publikované zprávy.",
    "brief": "Historical archives are collections of primary-source material — correspondence, photographs, government records, business ledgers, institutional files — preserved in their original or near-original form rather than summarized or reinterpreted. Their evidentiary value comes precisely from being unmediated: a letter or ledger entry captures information that later published accounts may simplify, omit, or reframe.\n\nWhere most of this branch's siblings document present-day working knowledge — [[09.03]] Technical Manuals, [[09.05]] Standards & Specifications — this node documents the past, and its material becomes source evidence for [[05]] Humanities scholarship rather than a working reference consulted for current operation. [[09.09]] Patents form one specialized stream that flows into this node over time, since a patent filed decades ago becomes historical evidence of technical practice once the invention itself is obsolete. The oral counterpart to a written archive is [[10.10]] Oral Histories, which preserves the same category of firsthand testimony through recorded speech rather than paper record.\n\nArchival practice is governed by standards of provenance, custody, and access. The [International Council on Archives](https://www.ica.org/) sets professional standards for archival description and preservation, and national archives such as the [US National Archives and Records Administration](https://www.archives.gov/) provide durable, publicly searchable holdings."
+  },
+  {
+   "id": "09.10.01",
+   "level": 2,
+   "parentId": "09.10",
+   "name": "Archival Principles",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Provenance and original order as the organising rules, and why archives are described in aggregate rather than item by item.",
+   "cs": "Provenience a původní uspořádání jako organizační zásady a proč se archivy popisují souhrnně, nikoli kus po kuse."
+  },
+  {
+   "id": "09.10.02",
+   "level": 2,
+   "parentId": "09.10",
+   "name": "Finding Aids and Description",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Catalogues, inventories and descriptive standards through which a holding becomes searchable.",
+   "cs": "Katalogy, inventáře a popisné normy, jimiž se fond stává prohledatelným."
+  },
+  {
+   "id": "09.10.03",
+   "level": 2,
+   "parentId": "09.10",
+   "name": "Preservation of Physical Records",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Deterioration mechanisms of paper, film and magnetic media, storage conditions, and conservation intervention.",
+   "cs": "Mechanismy degradace papíru, filmu a magnetických médií, podmínky uložení a konzervační zásah."
+  },
+  {
+   "id": "09.10.04",
+   "level": 2,
+   "parentId": "09.10",
+   "name": "Access, Rights and Restriction",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Who may consult what and when: privacy periods, copyright and the tension between access and protection.",
+   "cs": "Kdo smí nahlížet do čeho a kdy: ochranné lhůty, autorské právo a napětí mezi přístupem a ochranou."
   }
  ],
  "relations": [
+  {
+   "from": "09.10.01",
+   "to": "04.10.06",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "09.10.04",
+   "to": "04.06.15.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "09.10",
    "to": "05",

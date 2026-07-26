@@ -8,9 +8,60 @@
    "en": "Stories and narratives are fictional and historical accounts preserving cultural experience, wisdom, and values. They transmit lessons and meaning through plot, character, and metaphor across time.",
    "cs": "Příběhy a narativy jsou fiktivní a historické účty zachovávající kulturní zkušenost, moudrost a hodnoty. Přenášejí lekce a smysl prostřednictvím zápletky, postav a metafory v čase.",
    "brief": "Stories and narratives are fictional and historical accounts that preserve cultural experience, wisdom, and values, transmitting lessons and meaning through plot, character, and metaphor across generations. The branch covers folktales, legends, fables, parables, and epic cycles — material shaped for narrative effect rather than doctrinal belief or literal genealogy.\n\nIt sits beside [[10.02]] Folklore & Mythology, which the same communities use to encode cosmology and sacred belief rather than lesson or entertainment, and beside [[10.10]] Oral Histories, which preserves testimony about real events and real people rather than the fictionalized or archetypal figures of a tale. [[10.09]] Traditional Art Techniques often carries stories forward in embodied form — a griot's performance, a puppet-theatre cycle, a carved narrative frieze — so the boundary between telling and craft is porous rather than fixed. The wider frame is [[10]] Cultural Preservation itself, and the material borders [[05]] Humanities scholarship wherever a tale is studied and historicized rather than simply retold.\n\nUNESCO classifies oral narrative as one of the core domains of intangible heritage — see [Oral Traditions and Expressions](https://ich.unesco.org/en/oral-traditions-and-expressions-00053) — and the [Library of Congress American Folklife Center](https://www.loc.gov/folklife/) maintains one of the largest documented collections of recorded narrative material."
+  },
+  {
+   "id": "10.06.01",
+   "level": 2,
+   "parentId": "10.06",
+   "name": "Storytelling Traditions",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The performer, the audience and the occasion as constitutive of the story rather than incidental to it.",
+   "cs": "Vypravěč, publikum a příležitost jako konstitutivní součásti příběhu, nikoli jeho okolnosti."
+  },
+  {
+   "id": "10.06.02",
+   "level": 2,
+   "parentId": "10.06",
+   "name": "Narrative Structure in Oral Tradition",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Formula, repetition and episodic construction as memory technology rather than stylistic preference.",
+   "cs": "Formule, opakování a epizodická výstavba jako paměťová technologie, nikoli slohová záliba."
+  },
+  {
+   "id": "10.06.03",
+   "level": 2,
+   "parentId": "10.06",
+   "name": "Personal and Community Narrative",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Family history, local legend and testimony as the stories a community tells to know itself.",
+   "cs": "Rodinná historie, místní pověst a svědectví jako příběhy, jimiž se společenství poznává."
+  },
+  {
+   "id": "10.06.04",
+   "level": 2,
+   "parentId": "10.06",
+   "name": "Digital Storytelling and Revival",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Contemporary re-mediation of oral forms, and what transfers to a recorded medium and what does not.",
+   "cs": "Současné převádění ústních forem do nových médií a co se do záznamu přenese a co ne."
   }
  ],
  "relations": [
+  {
+   "from": "10.06.02",
+   "to": "05.04.01.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "10.06",
    "to": "05",

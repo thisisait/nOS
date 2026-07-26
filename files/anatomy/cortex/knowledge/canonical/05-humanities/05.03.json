@@ -8,9 +8,417 @@
    "en": "Linguistics is the scientific study of human language—its sounds (phonology), word formation (morphology), sentence structure (syntax), meaning (semantics), use in social contexts (sociolinguistics), acquisition by children (language development), and history and relationships among languages (historical and comparative linguistics). Distinguished from informal language study by its use of rigorous empirical methods and formal theoretical frameworks. Foundational to Epistemology (meaning and knowledge), Cultural Studies (language and power), and Cognitive Science.",
    "cs": "Jazykověda je vědeckým studiem lidského jazyka—jeho zvuky (fonologie), tvoření slov (morfologie), struktura věty (syntax), smysl (sémantika), použití v sociálních kontextech (sociolingvistika), získávání dětmi (vývoj jazyka) a historii a vztahy mezi jazyky (historická a srovnávací jazykověda). Rozlišuje se od neformálního studia jazyka pomocí přísných empirických metod a formálních teoretických rámců. Základní pro Teorii poznání (smysl a vědomí), Kulturní studia (jazyk a síla) a Kognitivní vědu.",
    "brief": "Linguistics is the scientific study of human language — its sounds (phonology), word formation (morphology), sentence structure (syntax), meaning (semantics), use in social context (sociolinguistics), acquisition by children, and the historical relationships among languages (comparative linguistics). It applies rigorous empirical methods and formal theoretical models rather than prescriptive grammar rules.\n\nWithin [[05]] Humanities, Linguistics grounds [[05.02]] Philosophy's epistemology and philosophy of language in observable data about how meaning actually works, and it supplies [[05.04]] Literature with the formal apparatus — phonology, syntax, semantics — used to analyze style and form. Its sociolinguistic branch overlaps with [[05.06]] Cultural Studies in examining how language encodes power and identity, and with [[04]] Social Sciences more broadly in its use of empirical, data-driven method rather than close reading of individual texts.\n\nBecause language is the medium through which nearly every other humanities discipline transmits its evidence — texts, testimony, doctrine — Linguistics functions as a foundational, cross-cutting field. For a professional overview of the discipline and its subfields, see the [Linguistic Society of America](https://www.linguisticsociety.org/); for a comprehensive catalog of the world's languages, [Ethnologue](https://www.ethnologue.com/)."
+  },
+  {
+   "id": "05.03.01",
+   "level": 2,
+   "parentId": "05.03",
+   "name": "Phonetics and Phonology",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The sounds of language: how they are produced and perceived as physical events, and how a particular language organises them into a system of contrasts. The distinction between the two is the discipline’s first lesson — one studies sound, the other studies which sound differences carry meaning.",
+   "cs": "Zvuky jazyka: jak vznikají a jsou vnímány jako fyzikální jevy a jak je konkrétní jazyk uspořádává do soustavy protikladů. Rozlišení obojího je první lekcí oboru — jedno zkoumá zvuk, druhé to, které zvukové rozdíly nesou význam."
+  },
+  {
+   "id": "05.03.01.01",
+   "level": 3,
+   "parentId": "05.03.01",
+   "name": "Articulatory Phonetics",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "How speech sounds are produced by the vocal tract, classified by place and manner of articulation and by voicing.",
+   "cs": "Jak jsou hlásky tvořeny mluvidly, tříděné podle místa a způsobu artikulace a podle znělosti."
+  },
+  {
+   "id": "05.03.01.02",
+   "level": 3,
+   "parentId": "05.03.01",
+   "name": "Acoustic and Auditory Phonetics",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The physical signal of speech — formants, pitch, duration, intensity — and how the ear and brain recover categories from it.",
+   "cs": "Fyzikální signál řeči — formanty, výška, trvání, intenzita — a jak z něj sluch a mozek rekonstruují kategorie."
+  },
+  {
+   "id": "05.03.01.03",
+   "level": 3,
+   "parentId": "05.03.01",
+   "name": "Phonemes and Distinctive Features",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The minimal contrastive units of a language, established by minimal pairs, and the feature bundles that decompose them.",
+   "cs": "Minimální rozlišovací jednotky jazyka zjišťované minimálními páry a svazky rysů, které je rozkládají."
+  },
+  {
+   "id": "05.03.01.04",
+   "level": 3,
+   "parentId": "05.03.01",
+   "name": "Prosody",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Stress, rhythm, intonation and tone as carriers of grammatical and communicative meaning above the level of the segment.",
+   "cs": "Přízvuk, rytmus, intonace a tón jako nositelé gramatického a komunikačního významu nad rovinou hlásky."
+  },
+  {
+   "id": "05.03.01.05",
+   "level": 3,
+   "parentId": "05.03.01",
+   "name": "Writing Systems and Orthography",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "How spoken language is represented graphically — alphabetic, syllabic, logographic — and why spelling and pronunciation drift apart.",
+   "cs": "Jak se mluvený jazyk zachycuje graficky — hláskově, slabičně, logograficky — a proč se pravopis a výslovnost rozcházejí."
+  },
+  {
+   "id": "05.03.02",
+   "level": 2,
+   "parentId": "05.03",
+   "name": "Morphology",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The internal structure of words: the minimal meaningful units they are built from and the systematic processes that combine them. It is where a language reveals whether it prefers to encode grammar inside the word or between words.",
+   "cs": "Vnitřní stavba slov: minimální významové jednotky, z nichž jsou složena, a systematické procesy, které je spojují. Zde jazyk odhaluje, zda dává přednost kódování gramatiky uvnitř slova, nebo mezi slovy."
+  },
+  {
+   "id": "05.03.02.01",
+   "level": 3,
+   "parentId": "05.03.02",
+   "name": "Morphemes and Word Formation",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Roots, affixes and their combination through derivation and compounding to form new lexemes.",
+   "cs": "Kořeny, afixy a jejich spojování odvozováním a skládáním do nových lexémů."
+  },
+  {
+   "id": "05.03.02.02",
+   "level": 3,
+   "parentId": "05.03.02",
+   "name": "Inflection and Grammatical Categories",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Case, number, gender, tense, aspect, mood and person as systematic modifications marking a word’s role.",
+   "cs": "Pád, číslo, rod, čas, vid, způsob a osoba jako systematické obměny značící úlohu slova."
+  },
+  {
+   "id": "05.03.02.03",
+   "level": 3,
+   "parentId": "05.03.02",
+   "name": "Morphological Typology",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Classification of languages as isolating, agglutinative, fusional or polysynthetic by how much they pack into a word.",
+   "cs": "Třídění jazyků na izolační, aglutinační, flektivní a polysyntetické podle toho, kolik toho vtěsnají do slova."
+  },
+  {
+   "id": "05.03.02.04",
+   "level": 3,
+   "parentId": "05.03.02",
+   "name": "The Lexicon",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "The stored inventory of a language: how it is structured, how it grows through borrowing and coinage, and what a dictionary can and cannot capture.",
+   "cs": "Uložený inventář jazyka: jak je strukturován, jak roste přejímáním a tvořením nových slov a co slovník zachytit může a nemůže."
+  },
+  {
+   "id": "05.03.03",
+   "level": 2,
+   "parentId": "05.03",
+   "name": "Syntax",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "How words combine into phrases and sentences, and the constraints that make some combinations impossible even when their meaning would be clear. Syntax is where linguistics comes closest to formal logic and to the theory of computation.",
+   "cs": "Jak se slova spojují do frází a vět a jaká omezení činí některé kombinace nemožnými, i když by jejich význam byl jasný. V syntaxi se lingvistika nejvíce přibližuje formální logice a teorii vyčíslitelnosti."
+  },
+  {
+   "id": "05.03.03.01",
+   "level": 3,
+   "parentId": "05.03.03",
+   "name": "Constituency and Phrase Structure",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The hierarchical grouping of words into nested units, and the tests that reveal grouping which linear order hides.",
+   "cs": "Hierarchické seskupování slov do vnořených jednotek a testy odhalující strukturu, kterou lineární pořadí skrývá."
+  },
+  {
+   "id": "05.03.03.02",
+   "level": 3,
+   "parentId": "05.03.03",
+   "name": "Grammatical Relations and Valency",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Subject, object and their equivalents, and the way a predicate determines how many arguments it requires and in what form.",
+   "cs": "Podmět, předmět a jejich obdoby a způsob, jímž přísudek určuje, kolik doplnění vyžaduje a v jaké podobě."
+  },
+  {
+   "id": "05.03.03.03",
+   "level": 3,
+   "parentId": "05.03.03",
+   "name": "Word Order and Typology",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Dominant orderings of subject, verb and object across languages, and the correlations that make word order predictive of other properties.",
+   "cs": "Převládající pořadí podmětu, slovesa a předmětu napříč jazyky a korelace, které z pořadí činí ukazatel dalších vlastností."
+  },
+  {
+   "id": "05.03.03.04",
+   "level": 3,
+   "parentId": "05.03.03",
+   "name": "Formal Grammars",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Rule systems generating the sentences of a language, their hierarchy by generative power, and the question of where natural language sits within it.",
+   "cs": "Systémy pravidel generující věty jazyka, jejich hierarchie podle generativní síly a otázka, kam do ní patří přirozený jazyk."
+  },
+  {
+   "id": "05.03.04",
+   "level": 2,
+   "parentId": "05.03",
+   "name": "Semantics and Pragmatics",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "What expressions mean, and what speakers mean by them on an occasion. The division is the discipline’s sharpest: semantics studies meaning that survives out of context, pragmatics studies everything that does not.",
+   "cs": "Co výrazy znamenají a co jimi mluvčí při dané příležitosti míní. Toto dělení je v oboru nejostřejší: sémantika zkoumá význam, který přežije mimo kontext, pragmatika vše ostatní."
+  },
+  {
+   "id": "05.03.04.01",
+   "level": 3,
+   "parentId": "05.03.04",
+   "name": "Lexical Semantics",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The meaning of words and the relations between them — synonymy, antonymy, hyponymy, polysemy — and the structure of semantic fields.",
+   "cs": "Význam slov a vztahy mezi nimi — synonymie, antonymie, hyponymie, polysémie — a struktura významových polí."
+  },
+  {
+   "id": "05.03.04.02",
+   "level": 3,
+   "parentId": "05.03.04",
+   "name": "Compositional Semantics",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "How the meaning of a complex expression is derived from its parts and their arrangement, and where composition breaks down.",
+   "cs": "Jak se význam složeného výrazu odvozuje z jeho částí a jejich uspořádání a kde se skládání hroutí."
+  },
+  {
+   "id": "05.03.04.03",
+   "level": 3,
+   "parentId": "05.03.04",
+   "name": "Reference and Truth Conditions",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "How expressions pick out things in the world, and the analysis of sentence meaning as the conditions under which it would be true.",
+   "cs": "Jak výrazy odkazují k věcem ve světě a rozbor významu věty jako podmínek, za nichž by byla pravdivá."
+  },
+  {
+   "id": "05.03.04.04",
+   "level": 3,
+   "parentId": "05.03.04",
+   "name": "Implicature and Speech Acts",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Meaning conveyed without being said, the cooperative principles that generate it, and utterances that perform actions rather than describe.",
+   "cs": "Význam sdělený, aniž byl vyřčen, kooperační principy, které jej vytvářejí, a promluvy, jež konají namísto popisu."
+  },
+  {
+   "id": "05.03.04.05",
+   "level": 3,
+   "parentId": "05.03.04",
+   "name": "Deixis and Context",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Expressions whose reference depends on who is speaking, when and where, and the contextual parameters they require.",
+   "cs": "Výrazy, jejichž odkaz závisí na tom, kdo mluví, kdy a kde, a kontextové parametry, které vyžadují."
+  },
+  {
+   "id": "05.03.05",
+   "level": 2,
+   "parentId": "05.03",
+   "name": "Historical and Comparative Linguistics",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "How languages change and how genetic relationships between them are established. It is the branch that turned linguistics into a science in the nineteenth century, by showing that sound change is regular enough to be reconstructed backwards.",
+   "cs": "Jak se jazyky mění a jak se zjišťují jejich příbuzenské vztahy. Právě tato větev učinila v devatenáctém století z lingvistiky vědu tím, že ukázala, že hláskové změny jsou dost pravidelné na zpětnou rekonstrukci."
+  },
+  {
+   "id": "05.03.05.01",
+   "level": 3,
+   "parentId": "05.03.05",
+   "name": "Sound Change and Regularity",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The observation that phonetic change applies systematically across the lexicon, and the correspondences it leaves between related languages.",
+   "cs": "Poznatek, že hlásková změna působí systematicky napříč slovní zásobou, a odpovídající si dvojice, které zanechává mezi příbuznými jazyky."
+  },
+  {
+   "id": "05.03.05.02",
+   "level": 3,
+   "parentId": "05.03.05",
+   "name": "The Comparative Method",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Reconstruction of an unattested parent language from systematic correspondences among its descendants.",
+   "cs": "Rekonstrukce nedoloženého prajazyka ze systematických shod mezi jeho potomky."
+  },
+  {
+   "id": "05.03.05.03",
+   "level": 3,
+   "parentId": "05.03.05",
+   "name": "Language Families",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The major genetic groupings of the world’s languages and the evidence on which membership is claimed or disputed.",
+   "cs": "Hlavní genetické skupiny jazyků světa a doklady, na nichž se příslušnost tvrdí či zpochybňuje."
+  },
+  {
+   "id": "05.03.05.04",
+   "level": 3,
+   "parentId": "05.03.05",
+   "name": "Contact, Borrowing and Creoles",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Change driven by contact rather than descent, from lexical borrowing to structural convergence and the emergence of pidgins and creoles.",
+   "cs": "Změny způsobené kontaktem spíše než původem, od přejímání slov po strukturní konvergenci a vznik pidžinů a kreolů."
+  },
+  {
+   "id": "05.03.06",
+   "level": 2,
+   "parentId": "05.03",
+   "name": "Sociolinguistics and Language Acquisition",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Language as social behaviour and as something learned. Variation is not noise around a standard — it is structured by class, region, age and situation, and describing that structure is as much a part of the discipline as describing grammar.",
+   "cs": "Jazyk jako sociální chování a jako něco osvojovaného. Variabilita není šum kolem normy — je strukturována třídou, regionem, věkem a situací a popis této struktury patří k oboru stejně jako popis gramatiky."
+  },
+  {
+   "id": "05.03.06.01",
+   "level": 3,
+   "parentId": "05.03.06",
+   "name": "Variation and Register",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Systematic differences by region, social group and situation, and the concept of a standard as a socially selected variety rather than a linguistically superior one.",
+   "cs": "Systematické rozdíly podle regionu, sociální skupiny a situace a pojetí spisovnosti jako společensky vybrané variety, nikoli jazykově nadřazené."
+  },
+  {
+   "id": "05.03.06.02",
+   "level": 3,
+   "parentId": "05.03.06",
+   "name": "First Language Acquisition",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The stages by which children acquire phonology, morphology and syntax, and the poverty-of-stimulus argument that made the process theoretically interesting.",
+   "cs": "Stadia, jimiž si děti osvojují zvukovou stavbu, tvarosloví a skladbu, a argument z chudoby podnětu, který učinil tento proces teoreticky zajímavým."
+  },
+  {
+   "id": "05.03.06.03",
+   "level": 3,
+   "parentId": "05.03.06",
+   "name": "Second Language Acquisition",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "How additional languages are learned, the role of transfer and age, and the difference between acquisition and instruction.",
+   "cs": "Jak se osvojují další jazyky, role transferu a věku a rozdíl mezi osvojováním a výukou."
+  },
+  {
+   "id": "05.03.06.04",
+   "level": 3,
+   "parentId": "05.03.06",
+   "name": "Language Policy and Endangerment",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Official status, education and media as forces shaping which languages survive, and the scale of ongoing language loss.",
+   "cs": "Úřední status, vzdělávání a média jako síly určující, které jazyky přežijí, a rozsah probíhajícího zániku jazyků."
   }
  ],
  "relations": [
+  {
+   "from": "05.03.01.02",
+   "to": "01.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.03.03.04",
+   "to": "02.02.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.03.03.04",
+   "to": "02.03.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.03.04.02",
+   "to": "02.03.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.03.04.03",
+   "to": "02.03.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.03.05.03",
+   "to": "04.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.03.06.02",
+   "to": "04.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.03.06.04",
+   "to": "05.06",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "05.03",
    "to": "04",

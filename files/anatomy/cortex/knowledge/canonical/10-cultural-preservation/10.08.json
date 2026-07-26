@@ -8,6 +8,50 @@
    "en": "Rituals and ceremonies are formalized practices marking significant cultural, spiritual, or lifecycle moments—birth, coming of age, marriage, death. They externalize internal transitions and reinforce community identity.",
    "cs": "Rituály a ceremoniály jsou formalizované praktiky označující významné kulturní, spirituální nebo životní momenty—narození, dospělost, sňatek, smrt. Externalizují vnitřní přechody a posilují identitu komunity.",
    "brief": "Rituals and ceremonies are formalized practices that mark significant cultural, spiritual, or lifecycle moments — birth, coming of age, marriage, death — externalizing internal transitions and reinforcing community identity through prescribed sequence and symbol.\n\nThe branch shares its festive and performative register with [[10.07]] Games & Recreation, where contest or play is folded into a rite rather than staged as its own tradition, and with [[10.05]] Music & Songs, whose repertoires are frequently composed specifically for ceremonial use and are meaningless outside it. It is distinct from [[10.02]] Folklore & Mythology, which supplies the belief system a ceremony often enacts rather than the enactment itself. All four sit under [[10]] Cultural Preservation.\n\nUNESCO's [Social Practices, Rituals and Festive Events](https://ich.unesco.org/en/social-practices-rituals-and-festive-events-00055) domain is the standard reference for classifying and safeguarding this material, and the [Human Relations Area Files](https://hraf.yale.edu/) cross-cultural database indexes ceremonial practice across documented societies."
+  },
+  {
+   "id": "10.08.01",
+   "level": 2,
+   "parentId": "10.08",
+   "name": "Rites of Passage",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The separation, liminality and reincorporation structure common to transition rituals across cultures.",
+   "cs": "Struktura odloučení, prahovosti a znovuzačlenění společná přechodovým rituálům napříč kulturami."
+  },
+  {
+   "id": "10.08.02",
+   "level": 2,
+   "parentId": "10.08",
+   "name": "Communal Ceremony",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Collective observances producing shared emotion and reaffirming order, and the conditions under which they work.",
+   "cs": "Kolektivní obřady vytvářející sdílené prožitky a znovupotvrzující řád a podmínky, za nichž fungují."
+  },
+  {
+   "id": "10.08.03",
+   "level": 2,
+   "parentId": "10.08",
+   "name": "Ritual Objects and Spaces",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Things and places set apart, the rules governing their handling, and what marks the boundary of the sacred.",
+   "cs": "Věci a místa vyčleněná stranou, pravidla zacházení s nimi a co vyznačuje hranici posvátného."
+  },
+  {
+   "id": "10.08.04",
+   "level": 2,
+   "parentId": "10.08",
+   "name": "Continuity and Adaptation",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "How ritual survives migration, prohibition and secularisation by changing what it can and keeping what it must.",
+   "cs": "Jak rituál přežívá migraci, zákaz a sekularizaci tím, že mění, co může, a zachovává, co musí."
   }
  ],
  "relations": [

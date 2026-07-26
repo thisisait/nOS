@@ -8,9 +8,60 @@
    "en": "Blueprints and schematics are technical drawings showing construction, electrical, mechanical, or architectural design details. They translate design concepts into precise specifications for fabrication and assembly.",
    "cs": "Nákresy a schémata jsou technické výkresy ukazující stavební, elektrické, mechanické nebo architektonické detaily návrhu. Přeměňují koncepce návrhu na přesné specifikace pro výrobu a montáž.",
    "brief": "Blueprints and schematics are technical drawings that specify how something is built: architectural plans, electrical wiring diagrams, mechanical assembly drawings, and structural details rendered in a shared graphical vocabulary of symbols, scales, and projections. They translate a design concept into the precise geometry and connectivity a fabricator or builder needs to reproduce it exactly.\n\nWhere [[09.03]] Technical Manuals explain how to operate or maintain a finished system, this node documents how the system was built in the first place — the drawing precedes the object. [[09.05]] Standards & Specifications define the dimensional tolerances, symbol conventions, and material requirements a drawing must conform to, and [[09.09]] Patents frequently embed schematic drawings as part of a legal disclosure, so the same drawing convention appears in both an engineering and an intellectual-property context. The discipline that produces these drawings sits within [[03]] Applied Sciences & Technology.\n\nReading and producing blueprints reliably depends on standardized drafting conventions. The [ISO technical drawing standards](https://www.iso.org/committee/49340.html) (ISO 128 and related) govern line types, projections, and symbols internationally, and the [American National Standards Institute](https://www.ansi.org/) publishes the parallel drafting standards used across US industry."
+  },
+  {
+   "id": "09.08.01",
+   "level": 2,
+   "parentId": "09.08",
+   "name": "Technical Drawing",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Orthographic projection, sections and views as the shared language of manufacture and construction.",
+   "cs": "Pravoúhlé promítání, řezy a pohledy jako sdílený jazyk výroby a stavby."
+  },
+  {
+   "id": "09.08.02",
+   "level": 2,
+   "parentId": "09.08",
+   "name": "Dimensioning and Tolerancing",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Specifying size and permissible variation so that independently made parts fit, and the cost of tightening a tolerance.",
+   "cs": "Určení rozměru a přípustné odchylky tak, aby nezávisle vyrobené díly lícovaly, a cena zpřísnění tolerance."
+  },
+  {
+   "id": "09.08.03",
+   "level": 2,
+   "parentId": "09.08",
+   "name": "Schematics and Wiring Diagrams",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Symbolic representation of electrical, hydraulic and control systems, where topology matters and physical layout does not.",
+   "cs": "Symbolické znázornění elektrických, hydraulických a řídicích systémů, kde záleží na topologii a nikoli na fyzickém rozmístění."
+  },
+  {
+   "id": "09.08.04",
+   "level": 2,
+   "parentId": "09.08",
+   "name": "Computer-Aided Design and Models",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Digital geometry as the authoritative definition of a part, and the exchange formats through which it travels.",
+   "cs": "Digitální geometrie jako závazná definice dílu a výměnné formáty, jimiž putuje."
   }
  ],
  "relations": [
+  {
+   "from": "09.08.02",
+   "to": "09.05.03.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "09.08",
    "to": "03",

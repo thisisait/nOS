@@ -8,9 +8,60 @@
    "en": "Games and recreation are competitive or leisure activities reflecting cultural values and social structures. They encode learning, skill development, and community participation in structured play.",
    "cs": "Hry a rekreace jsou konkurenční nebo volnočasové aktivity odrážející kulturní hodnoty a sociální struktury. Kódují učení, rozvoj dovedností a participaci komunity v strukturované hře.",
    "brief": "Games and recreation are competitive or leisure activities that reflect cultural values and social structures, encoding learning, skill development, and community participation in structured play. The branch spans children's games, sport, gambling and wagering traditions, and organized recreational practice passed down within a community rather than codified by a governing sports body.\n\nIt overlaps [[10.08]] Rituals & Ceremonies wherever play is embedded in a rite of passage — a competitive contest marking a coming-of-age ceremony, a game reserved for a festival calendar — and it overlaps [[10.03]] Traditions & Customs wherever a game is less about contest than about custom, etiquette, or seasonal observance. Both branches share the parent [[10]] Cultural Preservation, and the material borders [[06]] Arts & Creative Expression wherever a game's performance — a dance-game, a ritualized combat sport — is itself an aesthetic form.\n\nThe [Strong National Museum of Play](https://www.museumofplay.org/) documents traditional games across cultures, and UNESCO's [Social Practices, Rituals and Festive Events](https://ich.unesco.org/en/social-practices-rituals-and-festive-events-00055) domain covers the festive contexts many traditional games belong to."
+  },
+  {
+   "id": "10.07.01",
+   "level": 2,
+   "parentId": "10.07",
+   "name": "Traditional Games",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Games played without manufactured equipment, their distribution across cultures, and the striking convergence of rules.",
+   "cs": "Hry hrané bez vyráběného vybavení, jejich rozšíření napříč kulturami a nápadná shoda pravidel."
+  },
+  {
+   "id": "10.07.02",
+   "level": 2,
+   "parentId": "10.07",
+   "name": "Board and Strategy Games",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Ancient board games, their descent and diffusion, and their relation to formal game theory.",
+   "cs": "Starobylé deskové hry, jejich původ a šíření a jejich vztah k formální teorii her."
+  },
+  {
+   "id": "10.07.03",
+   "level": 2,
+   "parentId": "10.07",
+   "name": "Physical Contests and Dance",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Movement traditions serving competition, celebration and cohesion, and their transmission by imitation.",
+   "cs": "Pohybové tradice sloužící soutěži, oslavě a soudržnosti a jejich předávání nápodobou."
+  },
+  {
+   "id": "10.07.04",
+   "level": 2,
+   "parentId": "10.07",
+   "name": "Play and Enculturation",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "How games teach roles, rules and risk, and why every known society has them.",
+   "cs": "Jak hry učí role, pravidla a riziko a proč je má každá známá společnost."
   }
  ],
  "relations": [
+  {
+   "from": "10.07.02",
+   "to": "02.01.04.49",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "10.07",
    "to": "06",

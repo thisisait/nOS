@@ -8,9 +8,71 @@
    "en": "Automotive encompasses operation, maintenance, and repair of motor vehicles, blending mechanical, electrical, and diagnostic knowledge to keep engines, drivetrains, and systems functioning. A broad applied discipline distinct from pure mechanics by its vehicle-specific focus.",
    "cs": "Automobilový průmysl zahrnuje provoz, údržbu a opravy motorových vozidel, kombinuje mechanické, elektrické a diagnostické znalosti, aby motory, převody a systémy fungovaly. Rozsáhlá aplikovaná disciplína odlišná od čisté mechaniky svým zaměřením na vozidla.",
    "brief": "Automotive covers the operation, maintenance, and repair of motor vehicles, blending mechanical, electrical, and increasingly software-driven diagnostic knowledge to keep engines, drivetrains, brakes, and onboard systems functioning safely. What distinguishes it from general mechanics is its vehicle-specific focus: an automotive technician reasons about integrated systems — engine, transmission, suspension, electronics — that must work together within the tight packaging and safety tolerances of a road vehicle, rather than about mechanisms in isolation.\n\nAs a member of [[07]] Practical Skills & Trades, automotive work draws directly on [[07.06]] Welding for frame, exhaust, and body repair, and it inherits the same discipline of reading how heat and stress affect a structural joint before trusting it to carry a load on the road. Modern vehicles have also pulled automotive work toward electronics diagnostics — reading fault codes and sensor data is now as routine as turning a wrench, which pushes the trade further from pure mechanics and closer to systems troubleshooting.\n\nCertification in this field runs through standards such as ASE, and the trade continues to shift with vehicle electrification, which is changing what \"automotive maintenance\" even means. The [ASE certification program](https://www.ase.com/) documents the professional standards most automotive technicians train against, and the [Wikipedia article on automobile repair shops](https://en.wikipedia.org/wiki/Automobile_repair_shop) surveys the trade's structure and history."
+  },
+  {
+   "id": "07.10.01",
+   "level": 2,
+   "parentId": "07.10",
+   "name": "Vehicle Systems",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Engine, transmission, brakes, steering, suspension and electrics as interacting systems rather than separate parts.",
+   "cs": "Motor, převodovka, brzdy, řízení, zavěšení a elektrika jako vzájemně působící systémy, nikoli oddělené díly."
+  },
+  {
+   "id": "07.10.02",
+   "level": 2,
+   "parentId": "07.10",
+   "name": "Diagnosis",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Reasoning from symptom to cause, the value of a systematic procedure, and diagnostic tools and codes.",
+   "cs": "Uvažování od příznaku k příčině, hodnota systematického postupu a diagnostické nástroje a kódy."
+  },
+  {
+   "id": "07.10.03",
+   "level": 2,
+   "parentId": "07.10",
+   "name": "Routine Maintenance",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Fluids, filters, tyres, belts and the service intervals that prevent most failures.",
+   "cs": "Kapaliny, filtry, pneumatiky, řemeny a servisní intervaly předcházející většině poruch."
+  },
+  {
+   "id": "07.10.04",
+   "level": 2,
+   "parentId": "07.10",
+   "name": "Repair Practice",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Safe working procedure, torque and fastener discipline, and knowing which repairs are beyond improvisation.",
+   "cs": "Bezpečný pracovní postup, kázeň v utahovacích momentech a spojovacích prvcích a poznání, které opravy jsou nad možnosti improvizace."
+  },
+  {
+   "id": "07.10.05",
+   "level": 2,
+   "parentId": "07.10",
+   "name": "Electric and Hybrid Vehicles",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Battery, motor and power-electronic systems, their maintenance differences, and the high-voltage hazard.",
+   "cs": "Bateriové, motorové a výkonově-elektronické systémy, odlišnosti údržby a riziko vysokého napětí."
   }
  ],
  "relations": [
+  {
+   "from": "07.10.05",
+   "to": "03.07",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "07.10",
    "to": "07.06",

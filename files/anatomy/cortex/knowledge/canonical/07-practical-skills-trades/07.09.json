@@ -8,9 +8,60 @@
    "en": "Sewing joins fabric using needle and thread to create or repair garments and textiles, combining pattern interpretation, hand control, and material understanding. A standalone practical craft independent from mechanics, construction, and other trades.",
    "cs": "Šití spojuje textil jehlou a nití k vytvoření nebo opravě oděvů a textilií, kombinuje interpretaci vzorů, kontrolu rukou a chápání materiálu. Samostatné praktické řemeslo nezávislé na mechanice, stavebnictví a dalších řemeslech.",
    "brief": "Sewing is the craft of joining fabric with needle and thread to construct or repair garments and textiles, combining pattern reading, hand and machine control, and an understanding of how different materials behave under tension and stitch. Unlike trades built around rigid materials, sewing works with material that stretches, frays, and drapes, which is why pattern interpretation — translating a two-dimensional cut into a three-dimensional garment — is as central to the craft as the stitching itself.\n\nAs a member of [[07]] Practical Skills & Trades, sewing stands apart from metal- and machine-oriented siblings such as [[07.06]] Welding and [[07.10]] Automotive: those trades join or shape rigid materials with heat and mechanical force, while sewing's permanent bonds come from thread tension and needle geometry alone. The skill set nonetheless overlaps at the edges — upholstery and vehicle interior work borrow sewing technique inside an automotive context, and heavy canvas and leather work sit closer to sewing than to any other trade in this branch.\n\nSewing scales from mending a single seam to industrial garment manufacturing and pattern drafting for fashion design. The [Bernina sewing basics guide](https://www.bernina.com/en-us/blog/sewing-basics) is a practical starting reference for stitch types and machine setup, and the [Wikipedia article on sewing](https://en.wikipedia.org/wiki/Sewing) surveys hand and machine sewing history and technique."
+  },
+  {
+   "id": "07.09.01",
+   "level": 2,
+   "parentId": "07.09",
+   "name": "Hand and Machine Sewing",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Basic stitches, seam types and machine operation, and when each is the right tool.",
+   "cs": "Základní stehy, druhy švů a obsluha stroje a kdy je co správným nástrojem."
+  },
+  {
+   "id": "07.09.02",
+   "level": 2,
+   "parentId": "07.09",
+   "name": "Pattern and Fit",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Measurement, pattern drafting and alteration, and the geometry of dressing a three-dimensional body in flat cloth.",
+   "cs": "Míry, konstrukce a úprava střihu a geometrie oblečení trojrozměrného těla plochou látkou."
+  },
+  {
+   "id": "07.09.03",
+   "level": 2,
+   "parentId": "07.09",
+   "name": "Textiles and Materials",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Fibre types, weave and knit structure, and the behaviour each gives a finished garment.",
+   "cs": "Druhy vláken, struktura tkaniny a pleteniny a chování, jež každá dává hotovému oděvu."
+  },
+  {
+   "id": "07.09.04",
+   "level": 2,
+   "parentId": "07.09",
+   "name": "Repair and Alteration",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Mending, patching, resizing and reinforcement as the skills that extend the life of what already exists.",
+   "cs": "Spravování, záplatování, úprava velikosti a zpevňování jako dovednosti prodlužující život již existujícího."
   }
  ],
  "relations": [
+  {
+   "from": "07.09.03",
+   "to": "10.09.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "07.09",
    "to": "07.06",

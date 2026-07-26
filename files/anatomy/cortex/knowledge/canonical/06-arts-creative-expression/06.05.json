@@ -8,9 +8,71 @@
    "en": "Culinary arts is the craft and science of preparing, cooking, and presenting food for consumption, encompassing technique, flavor composition, and aesthetic presentation.",
    "cs": "Kulinářské umění je řemeslo a věda přípravy, vaření a prezentace jídla ke konzumaci, zahrnující techniku, složení chutě a estetickou prezentaci.",
    "brief": "Culinary arts is the craft and science of preparing, cooking, and presenting food for consumption. It combines technique — knife work, heat control, fermentation, emulsification — with flavor composition and visual presentation, so a dish functions simultaneously as nourishment, as a sensory experience, and, in its plating, as a small act of visual design.\n\nWithin [[06]], culinary arts is the subfield whose finished work is consumed and destroyed by its own use, unlike [[06.01]] or [[06.04]], whose objects persist after the making is done. It shares craft's emphasis on material fluency and hand skill with [[06.04]], and shares design's attention to composition and presentation with [[06.03]], while remaining distinct from [[06.02]] in that the \"performance\" of cooking is usually private, finished before the diner ever perceives it.\n\nThe [Culinary Institute of America](https://www.ciachef.edu/) and reference works such as [Harold McGee's food-science writing](https://curiouscook.com/) document technique and the underlying chemistry of cooking."
+  },
+  {
+   "id": "06.05.01",
+   "level": 2,
+   "parentId": "06.05",
+   "name": "Culinary Technique",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Heat transfer methods, knife work and the small number of underlying operations most dishes are assembled from.",
+   "cs": "Způsoby přenosu tepla, práce s nožem a malý počet základních operací, z nichž se skládá většina pokrmů."
+  },
+  {
+   "id": "06.05.02",
+   "level": 2,
+   "parentId": "06.05",
+   "name": "Flavour and Composition",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "How taste, aroma, texture and temperature combine, and the principles behind seasoning and balance.",
+   "cs": "Jak se skládá chuť, vůně, textura a teplota a zásady ochucování a vyváženosti."
+  },
+  {
+   "id": "06.05.03",
+   "level": 2,
+   "parentId": "06.05",
+   "name": "Food Science",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The chemistry and physics of cooking: emulsions, gels, browning reactions and protein denaturation.",
+   "cs": "Chemie a fyzika vaření: emulze, gely, hnědnutí a denaturace bílkovin."
+  },
+  {
+   "id": "06.05.04",
+   "level": 2,
+   "parentId": "06.05",
+   "name": "Kitchen Practice and Safety",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Organisation, sequencing, hygiene and temperature control as the difference between a kitchen that works and one that does not.",
+   "cs": "Organizace, sled úkonů, hygiena a kontrola teplot jako rozdíl mezi kuchyní, jež funguje, a jež ne."
+  },
+  {
+   "id": "06.05.05",
+   "level": 2,
+   "parentId": "06.05",
+   "name": "Culinary Traditions as Craft",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Cuisine as transmitted skill rather than recipe collection, and the apprenticeship through which it passes.",
+   "cs": "Kuchařství jako předávaná dovednost, nikoli sbírka receptů, a učňovství, jímž se předává."
   }
  ],
  "relations": [
+  {
+   "from": "06.05.03",
+   "to": "01.02.11",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "06.05",
    "to": "06.01",

@@ -1,0 +1,90 @@
+{
+ "version": 1,
+ "partition": "08-survival-emergency-preparedness",
+ "relations": [
+  {
+   "from": "08.02",
+   "fromKind": "node",
+   "to": "08.01",
+   "toKind": "node",
+   "type": "prerequisite-for",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.74,
+   "justification": "Water is the shorter-horizon constraint in a survival setting and conditions what medical care is even possible.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "08.03",
+   "fromKind": "node",
+   "to": "12.03.04",
+   "toKind": "node",
+   "type": "exemplifies",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.84,
+   "justification": "Traditional food preservation exemplifies applied preservative chemistry worked out empirically long before the mechanism was known.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "08.06",
+   "fromKind": "node",
+   "to": "09.04.01",
+   "toKind": "node",
+   "type": "requires",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.88,
+   "justification": "Navigation requires topographic representation; terrain reading is what turns a bearing into a route.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "08.09.02",
+   "fromKind": "node",
+   "to": "09.07.02",
+   "toKind": "node",
+   "type": "requires",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.87,
+   "justification": "A preparedness plan becomes usable through rehearsed checklists; an unexercised plan is a document, not a capability.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "08.09.03",
+   "fromKind": "node",
+   "to": "08.09.02",
+   "toKind": "node",
+   "type": "requires",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.9,
+   "justification": "Effective response requires a rehearsed plan; improvisation under acute stress reliably underperforms preparation.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "08.10.01",
+   "fromKind": "node",
+   "to": "04.01.01",
+   "toKind": "node",
+   "type": "exemplifies",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.86,
+   "justification": "The acute stress response is a worked case of cognitive load degrading judgement under time pressure.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "08.10.02",
+   "fromKind": "node",
+   "to": "08.10.01",
+   "toKind": "node",
+   "type": "requires",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.84,
+   "justification": "Psychological first aid requires understanding the acute stress response it is responding to, including which interventions make it worse.",
+   "createdAt": 1785000000
+  }
+ ]
+}

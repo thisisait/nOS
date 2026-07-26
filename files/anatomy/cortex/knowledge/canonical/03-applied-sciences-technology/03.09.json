@@ -8,9 +8,110 @@
    "en": "Application of biological organisms and molecular processes to develop products and services, bridging biology, chemistry, and engineering at the cellular and biochemical level.",
    "cs": "Aplikace biologických organizmů a molekulárních procesů k vývoji produktů a služeb, spojující biologii, chemii a inženýrství.",
    "brief": "Biotechnology is the application of biological organisms and molecular processes to develop products and services, bridging biology, chemistry, and engineering at the cellular and biochemical level. It covers genetic engineering, fermentation and cell-culture production, and the diagnostic and therapeutic tools built from living systems — work that treats cells and molecules as the raw material and manufacturing platform rather than metal, plastic, or silicon.\n\nBiotechnology sits inside [[03]] Applied Sciences & Technology as a supplier to two of its siblings in particular: [[03.02]] Medicine deploys the vaccines, diagnostics, and gene therapies biotechnology develops, and [[03.03]] Agriculture relies on it for genetically improved crops and livestock. Unlike most of its siblings, biotechnology has no dedicated subcategory tree in this taxonomy yet — its output is treated as a single integrated discipline rather than split into genetic engineering, industrial fermentation, and diagnostic specializations.\n\nBiotechnology products are governed by biosafety and clinical-approval regulation before reaching the market. For biosafety and regulatory guidance, see the [World Health Organization](https://www.who.int/), and for a technical overview of the field, the [Encyclopaedia Britannica](https://www.britannica.com/science/biotechnology)."
+  },
+  {
+   "id": "03.09.01",
+   "level": 2,
+   "parentId": "03.09",
+   "name": "Genetic Engineering",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Directed modification of genomes: recombinant techniques, targeted editing, and the delivery problem common to all of them.",
+   "cs": "Cílená úprava genomů: rekombinantní techniky, cílená editace a problém doručení společný všem."
+  },
+  {
+   "id": "03.09.02",
+   "level": 2,
+   "parentId": "03.09",
+   "name": "Industrial and Fermentation Biotechnology",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Organisms as production systems for chemicals, fuels, materials and food, and the scale-up from flask to reactor.",
+   "cs": "Organismy jako výrobní systémy pro chemikálie, paliva, materiály a potraviny a přechod od baňky k reaktoru."
+  },
+  {
+   "id": "03.09.03",
+   "level": 2,
+   "parentId": "03.09",
+   "name": "Medical Biotechnology",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Biologics, vaccines, diagnostics and cell therapies, and the manufacturing constraints that distinguish them from small-molecule drugs.",
+   "cs": "Biologika, vakcíny, diagnostika a buněčné terapie a výrobní omezení odlišující je od nízkomolekulárních léčiv."
+  },
+  {
+   "id": "03.09.04",
+   "level": 2,
+   "parentId": "03.09",
+   "name": "Agricultural Biotechnology",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Modification of crops and livestock for yield, resistance and quality, and the regulatory and acceptance questions it raises.",
+   "cs": "Úprava plodin a hospodářských zvířat pro výnos, odolnost a jakost a regulační otázky i otázky přijetí, jež vyvolává."
+  },
+  {
+   "id": "03.09.05",
+   "level": 2,
+   "parentId": "03.09",
+   "name": "Bioinformatics",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Computational handling of biological sequence and structure data, and the analysis that turns it into biological claims.",
+   "cs": "Výpočetní zpracování biologických sekvenčních a strukturních dat a analýza, jež z nich činí biologická tvrzení."
+  },
+  {
+   "id": "03.09.06",
+   "level": 2,
+   "parentId": "03.09",
+   "name": "Bioethics and Biosafety",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Containment, dual use, consent and the governance of technologies whose products reproduce themselves.",
+   "cs": "Zadržení, dvojí užití, souhlas a správa technologií, jejichž produkty se samy rozmnožují."
   }
  ],
  "relations": [
+  {
+   "from": "03.09.01",
+   "to": "01.03.11.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.09.03",
+   "to": "03.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.09.04",
+   "to": "03.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.09.05",
+   "to": "02.02.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.09.06",
+   "to": "05.02.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "03.09",
    "to": "03.02",

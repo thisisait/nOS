@@ -8,9 +8,96 @@
    "en": "Cultural Studies analyzes how societies create meaning, identity, and power through artifacts, practices, and institutions—popular culture, mass media, consumption, and everyday life. It examines whose interests are served by cultural representations (ideology), how identity is constructed (race, class, gender, nation), and how subordinated groups resist or appropriate dominant meanings. Interdisciplinary and politically engaged; it bridges Literary Studies, Sociology, History, and Media Studies in interrogating culture as a contested terrain.",
    "cs": "Kulturní studia analyzují, jak společnosti vytváří smysl, identitu a moc skrze artefakty, praktiky a instituce—populární kulturu, masová média, spotřebu a každodenní život. Zkoumají, čí zájmy jsou slouženy kulturními reprezentacemi (ideologie), jak se konstruuje identita (rasa, třída, pohlaví, národ) a jak se podřízené skupiny staví nebo přivlastňují dominantní smysly. Interdisciplinární a politicky angažovaný; propojuje Literární studia, Sociologii, Historii a Mediální studia v zpochybňování kultury jako spornému terénu.",
    "brief": "Cultural Studies analyzes how societies create meaning, identity, and power through artifacts, practices, and institutions — popular culture, mass media, consumption, and everyday life. It examines whose interests are served by cultural representations, how identity is constructed along lines of race, class, gender, and nation, and how subordinated groups resist or appropriate dominant meanings.\n\nWithin [[05]] Humanities, Cultural Studies is interdisciplinary by design, bridging Literature (textual analysis), [[05.08]] Media Studies (technological systems of representation), and [[05.09]] Gender Studies and [[05.10]] Ethnic Studies (identity and power). It borrows historical method from History to trace how meanings and representations change over time, and shares its interest in ideology and institutions with [[04]] Social Sciences, particularly sociology.\n\nInterdisciplinary and politically engaged, Cultural Studies treats culture as contested terrain rather than a neutral backdrop. For the discipline's professional body and current scholarship, see the [Cultural Studies Association](https://culturalstudiesassociation.org/); for the flagship peer-reviewed journal, [Cultural Studies (Taylor & Francis)](https://www.tandfonline.com/toc/rcus20/current)."
+  },
+  {
+   "id": "05.06.01",
+   "level": 2,
+   "parentId": "05.06",
+   "name": "Theories of Culture",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Culture as shared meaning, as practice, and as a field of struggle, and what each conception makes visible.",
+   "cs": "Kultura jako sdílený význam, jako praxe a jako pole zápasu a co každé pojetí zviditelňuje."
+  },
+  {
+   "id": "05.06.02",
+   "level": 2,
+   "parentId": "05.06",
+   "name": "Representation and Identity",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "How images and narratives construct categories of person, and the relation between representation and power.",
+   "cs": "Jak obrazy a vyprávění konstruují kategorie osob a vztah mezi reprezentací a mocí."
+  },
+  {
+   "id": "05.06.03",
+   "level": 2,
+   "parentId": "05.06",
+   "name": "Popular Culture",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Mass-produced and everyday culture as a serious object, and the debate over audience passivity and appropriation.",
+   "cs": "Masově vyráběná a každodenní kultura jako vážný předmět a spor o pasivitu publika a přivlastňování."
+  },
+  {
+   "id": "05.06.04",
+   "level": 2,
+   "parentId": "05.06",
+   "name": "Subcultures and Scenes",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Group formation around shared style and practice, and the trajectory from margin to mainstream.",
+   "cs": "Utváření skupin kolem sdíleného stylu a praxe a dráha od okraje k hlavnímu proudu."
+  },
+  {
+   "id": "05.06.05",
+   "level": 2,
+   "parentId": "05.06",
+   "name": "Cultural Production and Consumption",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Who makes culture, under what conditions, and how taste distinguishes and is distinguished by social position.",
+   "cs": "Kdo kulturu tvoří, za jakých podmínek a jak vkus odlišuje a je odlišován společenským postavením."
+  },
+  {
+   "id": "05.06.06",
+   "level": 2,
+   "parentId": "05.06",
+   "name": "Globalisation and Cultural Exchange",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Circulation of cultural forms across borders, hybridisation, and the homogenisation thesis and its critics.",
+   "cs": "Oběh kulturních forem přes hranice, hybridizace a teze o homogenizaci a její kritici."
   }
  ],
  "relations": [
+  {
+   "from": "05.06.02",
+   "to": "05.08.03.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.06.05",
+   "to": "04.02.01.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.06.06",
+   "to": "04.08.02.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "05.06",
    "to": "04",

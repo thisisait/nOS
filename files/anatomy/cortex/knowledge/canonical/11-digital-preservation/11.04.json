@@ -8,9 +8,60 @@
    "en": "Systematic replication of data across geographically or logically distinct storage media—including full copies (mirror), incremental snapshots, and versioned archives. Ensures recovery from hardware failure, data corruption, and accidental deletion; complements but is distinct from archival formats and compression which address density and longevity separately.",
    "cs": "Systematické replikování dat přes geograficky či logicky oddělená úložiště—včetně plných kopií (zrcadlení), přírůstkových snímků a verzovaných archivů. Zajišťuje obnovu z hardwarových selhání, poškození dat a náhodného smazání; doplňuje ale je odlišné od archivačních formátů a komprese adresujících hustotu a trvanlivost odděleně.",
    "brief": "Backup strategies are the systematic replication of data across geographically or logically distinct storage media, including full mirror copies, incremental snapshots, and versioned archives, ensuring recovery from hardware failure, data corruption, and accidental deletion.\n\nThe branch is distinct from but complements [[11.01]] File Formats and [[11.02]] Compression Methods, which address long-term readability and storage density rather than redundancy itself, and it is the preventive counterpart to [[11.05]] Data Recovery, which operates only once a backup regime has already failed. Backed-up copies stored off-site or with a third party typically need the protections defined under [[11.03]] Encryption & Security to remain confidential outside the custodian's direct control.\n\nThe commonly cited 3-2-1 rule — three copies, two media types, one off-site — is formalized in the [Library of Congress Digital Preservation program](https://www.loc.gov/preservation/digital/) guidance, and the [Open Archival Information System reference model](https://public.ccsds.org/pubs/650x0m2.pdf) frames backup redundancy within the full preservation lifecycle."
+  },
+  {
+   "id": "11.04.01",
+   "level": 2,
+   "parentId": "11.04",
+   "name": "Backup Strategies",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Full, incremental and differential schemes, their restore-time consequences, and the 3-2-1 rule.",
+   "cs": "Plné, přírůstkové a rozdílové schéma, jejich důsledky pro dobu obnovy a pravidlo 3-2-1."
+  },
+  {
+   "id": "11.04.02",
+   "level": 2,
+   "parentId": "11.04",
+   "name": "Storage Media and Lifetime",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Magnetic, optical, flash and tape characteristics, expected lifetimes, and the refresh cycle each requires.",
+   "cs": "Vlastnosti magnetických, optických, flash a páskových médií, očekávaná životnost a obnovovací cyklus, jejž každé vyžaduje."
+  },
+  {
+   "id": "11.04.03",
+   "level": 2,
+   "parentId": "11.04",
+   "name": "Verification and Restore Testing",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Why an unverified backup is not a backup, checksum verification, and periodic restore drills.",
+   "cs": "Proč neověřená záloha není záloha, ověřování kontrolními součty a pravidelné zkoušky obnovy."
+  },
+  {
+   "id": "11.04.04",
+   "level": 2,
+   "parentId": "11.04",
+   "name": "Offsite and Air-Gapped Copies",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Geographic and network separation as protection against correlated failure, including ransomware and site loss.",
+   "cs": "Zeměpisné a síťové oddělení jako ochrana proti korelovanému selhání, včetně vyděračského software a ztráty lokality."
   }
  ],
  "relations": [
+  {
+   "from": "11.04.03",
+   "to": "09.07.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "11.04",
    "to": "11.01",

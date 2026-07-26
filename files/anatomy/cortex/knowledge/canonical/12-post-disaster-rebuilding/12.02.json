@@ -8,9 +8,60 @@
    "en": "Fabrication and refinement of implements and mechanical systems—including metallurgy, woodworking, and assembly of hand tools. Presupposes basic energy availability and raw materials; supports agriculture, construction, and specialized crafts; distinct from chemistry by focusing on mechanical form rather than molecular transformation.",
    "cs": "Výroba a zlepšování nástrojů a mechanických systémů—včetně metalurgie, zpracování dřeva a složení ručních nástrojů. Předpokládá dostupnost základní energie a surovin; podporuje zemědělství, stavby a specializované řemeslo; odlišuje se od chemie zaměřením na mechanickou formu namísto molekulární transformace.",
    "brief": "Tool Making is the fabrication and maintenance of hand tools and simple machines — forging, casting, woodworking, and mechanical assembly — that converts raw or salvaged materials into the implements every other rebuilding effort depends on. It presupposes the energy and materials [[12.01]] Basic Infrastructure supplies and, in turn, produces the instruments that make [[12.03]] Essential Chemistry's apparatus and [[12.04]] Basic Medicine Production's equipment buildable; unlike those siblings, it works mechanical form rather than molecular or biological transformation, which is why none of the other rebuilding subfields can progress without a working toolkit first.\n\nElsewhere in the corpus, [[07.06]] Welding and [[03.05.01.03]] Machining cover the same joining and material-removal techniques at industrial precision and scale. Tool Making adapts the same underlying metallurgy and craft to what can be built and repaired by hand with a simple forge, salvaged stock, and no supply chain of replacement parts.\n\nFor technique and buildable designs, [Open Source Ecology's Global Village Construction Set](https://www.opensourceecology.org/gvcs/) documents open-hardware plans for the core machines a small group needs to bootstrap fabrication, and the [Wikipedia entry on blacksmithing](https://en.wikipedia.org/wiki/Blacksmith) covers the foundational hand-forging techniques this subfield draws on."
+  },
+  {
+   "id": "12.02.01",
+   "level": 2,
+   "parentId": "12.02",
+   "name": "Basic Hand Tools",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The minimal set for cutting, shaping, joining and measuring, and what each replaces when powered tools are unavailable.",
+   "cs": "Minimální sada pro řezání, tvarování, spojování a měření a co každý nástroj nahrazuje, nejsou-li dostupné elektrické."
+  },
+  {
+   "id": "12.02.02",
+   "level": 2,
+   "parentId": "12.02",
+   "name": "Metalworking Fundamentals",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Heating, forming, hardening and joining metal with simple equipment, and the properties that make each possible.",
+   "cs": "Ohřev, tváření, kalení a spojování kovu jednoduchým vybavením a vlastnosti, jež to umožňují."
+  },
+  {
+   "id": "12.02.03",
+   "level": 2,
+   "parentId": "12.02",
+   "name": "Tool Maintenance and Sharpening",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Keeping an edge, preventing corrosion, and repairing rather than replacing.",
+   "cs": "Udržení ostří, prevence koroze a oprava namísto výměny."
+  },
+  {
+   "id": "12.02.04",
+   "level": 2,
+   "parentId": "12.02",
+   "name": "Improvised Tooling",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Making a tool to make a tool: bootstrapping capability from salvage and available materials.",
+   "cs": "Výroba nástroje pro výrobu nástroje: budování schopnosti ze získaného materiálu a toho, co je po ruce."
   }
  ],
  "relations": [
+  {
+   "from": "12.02.02",
+   "to": "03.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "12.02",
    "to": "03.05.01.03",

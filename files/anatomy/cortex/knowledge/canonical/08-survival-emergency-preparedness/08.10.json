@@ -8,9 +8,67 @@
    "en": "Psychological resilience is the mental and emotional capacity to maintain function and purpose despite prolonged stress, loss, or trauma. It develops through preparation, community connection, and practiced coping strategies.",
    "cs": "Psychologická odolnost je mentální a emoční schopnost udržovat funkci a účel navzdory dlouhodobému stresu, ztrátě nebo traumatu. Vyvíjí se prostřednictvím přípravy, komunální spojení a procvičovaných strategií zvládání.",
    "brief": "Psychological resilience is the mental and emotional capacity to maintain function and purpose despite prolonged stress, loss, or trauma. It develops through preparation, community connection, and practiced coping strategies rather than innate temperament alone, which is why it belongs alongside the practical subfields of this branch rather than in a purely clinical context.\n\nWithin [[08]] Survival & Emergency Preparedness it underlies effective performance in [[08.09]] Disaster Response, where responders and survivors face sustained operations over weeks, and in [[08.08]] Defense & Security, where composure under threat determines whether de-escalation or panic drives a decision. It also connects outward to [[03.02]] Medicine within [[03]] Applied Sciences & Technology, since chronic stress and trauma response are studied clinically there, while this branch focuses on the field-applicable preparation an individual can practice in advance.\n\nFor evidence-based resilience-building frameworks, see the [American Psychological Association](https://www.apa.org/topics/resilience) resilience guidance, and for disaster-specific mental health resources, the [World Health Organization](https://www.who.int/health-topics/emergencies) emergencies program."
+  },
+  {
+   "id": "08.10.01",
+   "level": 2,
+   "parentId": "08.10",
+   "name": "Acute Stress Response",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Physiological and cognitive reaction to threat, how it degrades judgement, and what it makes easier.",
+   "cs": "Fyziologická a kognitivní reakce na ohrožení, jak zhoršuje úsudek a co naopak usnadňuje."
+  },
+  {
+   "id": "08.10.02",
+   "level": 2,
+   "parentId": "08.10",
+   "name": "Psychological First Aid",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Immediate support after a critical incident: safety, calm, connection and practical help rather than debriefing.",
+   "cs": "Bezprostřední podpora po kritické události: bezpečí, uklidnění, propojení a praktická pomoc namísto rozboru."
+  },
+  {
+   "id": "08.10.03",
+   "level": 2,
+   "parentId": "08.10",
+   "name": "Building Resilience",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Practices strengthening capacity to endure: sleep, routine, social ties, meaning and rehearsed competence.",
+   "cs": "Praktiky posilující schopnost snášet zátěž: spánek, režim, sociální vazby, smysl a nacvičená způsobilost."
+  },
+  {
+   "id": "08.10.04",
+   "level": 2,
+   "parentId": "08.10",
+   "name": "Group Morale and Leadership",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Sustaining a group under prolonged strain, the signs of deterioration, and what leadership can and cannot fix.",
+   "cs": "Udržení skupiny při dlouhodobé zátěži, příznaky zhoršení a co vedení může a nemůže napravit."
   }
  ],
  "relations": [
+  {
+   "from": "08.10.01",
+   "to": "04.01.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "08.10.02",
+   "to": "03.02.11.07",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "08.10",
    "to": "03.02",

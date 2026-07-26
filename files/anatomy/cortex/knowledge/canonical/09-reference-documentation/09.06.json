@@ -8,9 +8,60 @@
    "en": "Formulas and tables are mathematical expressions and data compilations enabling calculation and reference lookup. They compress knowledge into compact, reusable forms for engineering, science, and commerce.",
    "cs": "Vzorce a tabulky jsou matematické výrazy a datové kompilace umožňující výpočet a vyhledávání v referenčních materiálech. Komprimují vědomost do kompaktních, opakovaně použitelných forem pro inženýrství, vědu a obchod.",
    "brief": "Formulas and tables are compact computational references: mathematical and physical expressions paired with the numeric compilations — physical constants, conversion factors, statistical distributions, material properties — needed to evaluate them without re-deriving each value from first principles. They serve engineering, science, and commerce wherever a calculation must be looked up rather than reasoned out anew.\n\nThis node holds the raw computational substrate that other reference formats consume rather than define. [[09.03]] Technical Manuals embed formula tables inside step-by-step procedures for operating or repairing a system, but the manual's purpose is the procedure, not the underlying mathematics; [[09.05]] Standards & Specifications codify the tolerances and test methods a table's values must satisfy, while this node supplies the values themselves. The constants and relations collected here originate in [[01]] Natural Sciences and are applied downstream in [[03]] Applied Sciences & Technology, where engineering calculation depends on trusted, unit-consistent source data.\n\nA table's value rests entirely on the traceability and precision of its source. The [NIST Reference on Constants, Units, and Uncertainty](https://physics.nist.gov/cuu/Constants/) is the internationally recognized authority for fundamental physical constants, and [Wolfram MathWorld](https://mathworld.wolfram.com/) is a widely used canonical reference for mathematical formulas and identities."
+  },
+  {
+   "id": "09.06.01",
+   "level": 2,
+   "parentId": "09.06",
+   "name": "Mathematical Tables",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Precomputed values — logarithms, trigonometric functions, integrals — their historical necessity and continuing use as reference.",
+   "cs": "Předpočítané hodnoty — logaritmy, goniometrické funkce, integrály — jejich historická nutnost a trvající referenční užití."
+  },
+  {
+   "id": "09.06.02",
+   "level": 2,
+   "parentId": "09.06",
+   "name": "Physical and Chemical Constants",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Recommended values of fundamental constants and material properties, their uncertainties, and the bodies that maintain them.",
+   "cs": "Doporučené hodnoty fundamentálních konstant a vlastností látek, jejich nejistoty a orgány, které je udržují."
+  },
+  {
+   "id": "09.06.03",
+   "level": 2,
+   "parentId": "09.06",
+   "name": "Engineering Data",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Material strengths, tolerances, thread and fastener standards, and the tabulated properties designs are checked against.",
+   "cs": "Pevnosti materiálů, tolerance, normy závitů a spojovacích prvků a tabelované vlastnosti, proti nimž se návrhy kontrolují."
+  },
+  {
+   "id": "09.06.04",
+   "level": 2,
+   "parentId": "09.06",
+   "name": "Conversion and Reference Charts",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Unit conversions, nomograms and quick-reference aids, and the error risk each is designed to remove.",
+   "cs": "Převody jednotek, nomogramy a rychlé pomůcky a riziko chyby, jež má každá odstranit."
   }
  ],
  "relations": [
+  {
+   "from": "09.06.02",
+   "to": "09.05.04.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "09.06",
    "to": "01",

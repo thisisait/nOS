@@ -8,9 +8,67 @@
    "en": "Technical manuals are instructional documents detailing operation, maintenance, repair, or assembly of equipment and systems. They translate design intent into step-by-step guidance for users and technicians.",
    "cs": "Technické příručky jsou instrukční dokumenty podrobně popisující provoz, údržbu, opravu nebo montáž zařízení a systémů. Přeměňují záměr návrhu na postupný návod pro uživatele a techniky.",
    "brief": "Technical manuals are instructional documents detailing operation, maintenance, repair, or assembly of equipment and systems. They translate design intent into step-by-step guidance for users and technicians, sitting between the engineering knowledge that produced a system and the practical skill needed to keep it running.\n\nWithin [[09]] Reference & Documentation, technical manuals draw directly on [[09.08]] Blueprints & Schematics, since a repair procedure is only actionable when paired with the diagram of what is being repaired, and they frequently cite [[09.05]] Standards & Specifications to state the tolerances and parts a technician must respect. The branch also connects to [[03]] Applied Sciences & Technology and [[07]] Practical Skills & Trades, since a manual is where engineered systems and hands-on craft meet — the document exists specifically to let a trades practitioner service equipment they did not design.\n\nFor an archive of historical and contemporary equipment manuals, see the [Internet Archive Manuals collection](https://archive.org/details/manuals), and for military technical-manual standards, the U.S. [Defense Technical Information Center](https://discover.dtic.mil/)."
+  },
+  {
+   "id": "09.03.01",
+   "level": 2,
+   "parentId": "09.03",
+   "name": "Technical Writing",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Producing instructions that can be followed under stress by someone who is not the author, and the plain-language principles that make that possible.",
+   "cs": "Tvorba pokynů, jimiž se dá řídit pod tlakem někým, kdo není autor, a zásady srozumitelného jazyka, které to umožňují."
+  },
+  {
+   "id": "09.03.02",
+   "level": 2,
+   "parentId": "09.03",
+   "name": "Manual Structure",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Task orientation, modularity, indexing and versioning, and why a manual organised by product structure fails its reader.",
+   "cs": "Orientace na úkon, modularita, rejstřík a verzování a proč příručka uspořádaná podle stavby výrobku selhává vůči čtenáři."
+  },
+  {
+   "id": "09.03.03",
+   "level": 2,
+   "parentId": "09.03",
+   "name": "Maintenance and Repair Documentation",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Service procedures, parts identification, tolerances and the diagnostic trees that make repair possible without the designer.",
+   "cs": "Servisní postupy, identifikace dílů, tolerance a diagnostické stromy umožňující opravu bez konstruktéra."
+  },
+  {
+   "id": "09.03.04",
+   "level": 2,
+   "parentId": "09.03",
+   "name": "Safety Documentation",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Warnings, hazard classification, material safety data and the legal weight documentation carries after an accident.",
+   "cs": "Výstrahy, klasifikace nebezpečí, bezpečnostní listy a právní váha dokumentace po nehodě."
   }
  ],
  "relations": [
+  {
+   "from": "09.03.01",
+   "to": "05.08.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "09.03.04",
+   "to": "04.06.11.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "09.03",
    "to": "03",

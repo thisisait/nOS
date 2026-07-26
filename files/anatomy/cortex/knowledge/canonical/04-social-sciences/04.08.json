@@ -8,9 +8,512 @@
    "en": "Geography analyzes human and physical patterns across spatial systems and their interactions. It examines settlement, climate, resources, and cultural distributions.",
    "cs": "Geografie analyzuje lidské a fyzické vzorce v prostorových systémech a jejich interakce. Zkoumá osídlení, klima, zdroje a kulturní rozšíření.",
    "brief": "Geography analyzes human and physical patterns across spatial systems and their interactions, examining settlement, climate, resources, and cultural distributions and the processes that connect them. Its human branch overlaps with [[04.03]] Anthropology in explaining how cultures distribute themselves across landscapes, while its physical branch connects to the earth and environmental sciences that study climate, landforms, and ecosystems independent of human presence.\n\nPopulation distribution links geography closely to [[04.09]] Demography: where demography quantifies population structure and change, geography explains the spatial logic behind that distribution, why settlements cluster, migrate, or decline in particular places. The discipline's dual human-physical character makes it a bridging field, translating findings from social and natural sciences into spatially explicit maps and models.\n\nGeographic information systems have transformed the field since the late twentieth century, turning spatial analysis into a quantitative, data-intensive practice used well beyond academic geography, from urban planning to epidemiology. The [American Association of Geographers](https://www.aag.org/discover-geography/) provides an overview of the discipline's scope and subfields, and the [National Geographic Society's resource library](https://education.nationalgeographic.org/resource/geography) offers accessible reference material on core concepts."
+  },
+  {
+   "id": "04.08.01",
+   "level": 2,
+   "parentId": "04.08",
+   "name": "Physical Geography",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The spatial study of natural systems at the Earth’s surface — landforms, climate, water, soils and life — and the processes that distribute them. It shares its subject matter with the Earth sciences but asks a different question: not how a process works, but why the world looks the way it does from place to place.",
+   "cs": "Prostorové studium přírodních systémů na zemském povrchu — tvarů reliéfu, podnebí, vody, půd a života — a procesů, které je rozmisťují. Sdílí předmět s vědami o Zemi, ale klade jinou otázku: nikoli jak proces funguje, nýbrž proč svět vypadá místo od místa tak, jak vypadá."
+  },
+  {
+   "id": "04.08.01.01",
+   "level": 3,
+   "parentId": "04.08.01",
+   "name": "Geomorphology",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The origin and evolution of landforms through weathering, erosion, transport and deposition, and the tectonic uplift those processes work against.",
+   "cs": "Vznik a vývoj tvarů reliéfu zvětráváním, erozí, transportem a sedimentací a tektonické výzdvihy, proti nimž tyto procesy působí."
+  },
+  {
+   "id": "04.08.01.02",
+   "level": 3,
+   "parentId": "04.08.01",
+   "name": "Climatology and Meteorology",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Atmospheric circulation, weather systems and the long-run climate patterns that result, together with the controls — latitude, altitude, continentality, ocean currents — that explain their distribution.",
+   "cs": "Atmosférická cirkulace, povětrnostní systémy a dlouhodobé klimatické vzorce z nich plynoucí spolu s činiteli — zeměpisnou šířkou, nadmořskou výškou, kontinentalitou, mořskými proudy — které vysvětlují jejich rozložení."
+  },
+  {
+   "id": "04.08.01.03",
+   "level": 3,
+   "parentId": "04.08.01",
+   "name": "Hydrology and Water Resources",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The distribution and movement of water through the hydrological cycle: catchments, river regimes, groundwater, and the availability of fresh water as a spatially uneven resource.",
+   "cs": "Rozložení a pohyb vody hydrologickým cyklem: povodí, říční režimy, podzemní voda a dostupnost sladké vody jako prostorově nerovnoměrného zdroje."
+  },
+  {
+   "id": "04.08.01.04",
+   "level": 3,
+   "parentId": "04.08.01",
+   "name": "Biogeography",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "The spatial distribution of species and ecosystems, the climatic and historical factors controlling it, and the biome pattern that results.",
+   "cs": "Prostorové rozšíření druhů a ekosystémů, klimatické a historické faktory, které je řídí, a výsledný biomový vzorec."
+  },
+  {
+   "id": "04.08.01.05",
+   "level": 3,
+   "parentId": "04.08.01",
+   "name": "Soil Geography",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Soil formation from parent rock, climate, relief, organisms and time, the resulting soil types, and their agricultural significance.",
+   "cs": "Vznik půd z matečné horniny, podnebí, reliéfu, organismů a času, výsledné půdní typy a jejich zemědělský význam."
+  },
+  {
+   "id": "04.08.01.06",
+   "level": 3,
+   "parentId": "04.08.01",
+   "name": "Glaciology and the Cryosphere",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Ice sheets, glaciers, sea ice and permafrost as landscape-forming agents and as components of the climate system.",
+   "cs": "Ledovcové štíty, ledovce, mořský led a permafrost jako činitelé utvářející krajinu a jako součásti klimatického systému."
+  },
+  {
+   "id": "04.08.02",
+   "level": 2,
+   "parentId": "04.08",
+   "name": "Human Geography",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "How people organise themselves in space: where they settle, how they move, how economic activity distributes itself, and how territory is claimed and governed. It is the half of geography that borders economics, sociology and political science, and it uses their concepts spatially.",
+   "cs": "Jak se lidé organizují v prostoru: kde se usazují, jak se pohybují, jak se rozmisťuje hospodářská činnost a jak se nárokuje a spravuje území. Je to polovina geografie sousedící s ekonomií, sociologií a politologií, jejichž pojmy užívá prostorově."
+  },
+  {
+   "id": "04.08.02.01",
+   "level": 3,
+   "parentId": "04.08.02",
+   "name": "Population Geography",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Spatial distribution of population, density and its determinants, migration flows, and the demographic transition as it plays out unevenly across regions.",
+   "cs": "Prostorové rozložení obyvatelstva, hustota a její činitelé, migrační toky a demografický přechod probíhající v regionech nerovnoměrně."
+  },
+  {
+   "id": "04.08.02.02",
+   "level": 3,
+   "parentId": "04.08.02",
+   "name": "Urban Geography",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The formation, internal structure and hierarchy of settlements, urbanisation as a process, and the functional relationship between a city and its region.",
+   "cs": "Vznik, vnitřní struktura a hierarchie sídel, urbanizace jako proces a funkční vztah mezi městem a jeho zázemím."
+  },
+  {
+   "id": "04.08.02.03",
+   "level": 3,
+   "parentId": "04.08.02",
+   "name": "Economic Geography",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The spatial organisation of production, trade and consumption: why industries cluster, how location decisions are made, and the core-periphery patterns that persist.",
+   "cs": "Prostorová organizace výroby, obchodu a spotřeby: proč se odvětví shlukují, jak se rozhoduje o lokalizaci a jaké přetrvávají vzorce jádra a periferie."
+  },
+  {
+   "id": "04.08.02.04",
+   "level": 3,
+   "parentId": "04.08.02",
+   "name": "Political Geography",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Territory, boundaries and sovereignty as spatial facts: how states delimit themselves, how borders are drawn and disputed, and how administrative space is organised.",
+   "cs": "Území, hranice a suverenita jako prostorové skutečnosti: jak se státy vymezují, jak se hranice kreslí a zpochybňují a jak je uspořádán správní prostor."
+  },
+  {
+   "id": "04.08.02.05",
+   "level": 3,
+   "parentId": "04.08.02",
+   "name": "Cultural Geography",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "The spatial distribution of language, religion, ethnicity and cultural practice, and the diffusion processes by which they spread and change.",
+   "cs": "Prostorové rozšíření jazyka, náboženství, etnicity a kulturních praktik a difuzní procesy, jimiž se šíří a mění."
+  },
+  {
+   "id": "04.08.02.06",
+   "level": 3,
+   "parentId": "04.08.02",
+   "name": "Transport and Communication Geography",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Networks moving people, goods and information, their accessibility effects, and the way connection reshapes distance as an economic and social quantity.",
+   "cs": "Sítě přepravující lidi, zboží a informace, jejich vliv na dostupnost a způsob, jímž propojení mění vzdálenost jako ekonomickou a sociální veličinu."
+  },
+  {
+   "id": "04.08.03",
+   "level": 2,
+   "parentId": "04.08",
+   "name": "Cartography and Geoinformatics",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The representation and analysis of spatial data: how a curved Earth is put on a flat surface, how position is defined, and how spatial information is captured, stored and interrogated. This is the methodological core that the rest of the discipline depends on.",
+   "cs": "Zobrazování a analýza prostorových dat: jak se zakřivená Země převádí na rovinu, jak se definuje poloha a jak se prostorová informace pořizuje, ukládá a dotazuje. Jde o metodické jádro, na němž stojí zbytek oboru."
+  },
+  {
+   "id": "04.08.03.01",
+   "level": 3,
+   "parentId": "04.08.03",
+   "name": "Map Projections",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Systematic transformation of the Earth’s surface onto a plane, the distortions of area, shape, distance and direction that are unavoidable, and the trade-offs between them.",
+   "cs": "Systematický převod zemského povrchu do roviny, nevyhnutelná zkreslení plochy, tvaru, vzdálenosti a směru a kompromisy mezi nimi."
+  },
+  {
+   "id": "04.08.03.02",
+   "level": 3,
+   "parentId": "04.08.03",
+   "name": "Geodesy and Coordinate Systems",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The figure of the Earth, reference ellipsoids and datums, and the coordinate frameworks — geographic and projected — in which position is expressed.",
+   "cs": "Tvar Země, referenční elipsoidy a geodetické datumy a souřadnicové systémy — zeměpisné a rovinné — v nichž se poloha vyjadřuje."
+  },
+  {
+   "id": "04.08.03.03",
+   "level": 3,
+   "parentId": "04.08.03",
+   "name": "Remote Sensing",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Acquisition of surface information without contact, from aerial photography to multispectral and radar satellite imagery, and the interpretation of what each band records.",
+   "cs": "Získávání informací o povrchu bez kontaktu, od leteckých snímků po multispektrální a radarová družicová data, a interpretace toho, co každé pásmo zaznamenává."
+  },
+  {
+   "id": "04.08.03.04",
+   "level": 3,
+   "parentId": "04.08.03",
+   "name": "Geographic Information Systems",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Systems storing, combining and querying spatially referenced data, the vector and raster models underlying them, and the overlay operations that make them analytical rather than merely descriptive.",
+   "cs": "Systémy ukládající, kombinující a dotazující prostorově vztažená data, vektorový a rastrový model, na nichž stojí, a překryvné operace, které z nich činí nástroj analytický, nikoli jen popisný."
+  },
+  {
+   "id": "04.08.03.05",
+   "level": 3,
+   "parentId": "04.08.03",
+   "name": "Spatial Analysis",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Quantitative description of pattern in space: distance and neighbourhood, clustering and dispersion, interpolation, and the spatial autocorrelation that makes ordinary statistics unsafe on geographic data.",
+   "cs": "Kvantitativní popis prostorového vzorce: vzdálenost a sousedství, shlukování a rozptyl, interpolace a prostorová autokorelace, kvůli níž je běžná statistika na geografických datech nespolehlivá."
+  },
+  {
+   "id": "04.08.03.06",
+   "level": 3,
+   "parentId": "04.08.03",
+   "name": "Thematic Mapping and Visualisation",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Design choices that make a map communicate — classification, symbolisation, colour and generalisation — and the ways each can mislead.",
+   "cs": "Návrhová rozhodnutí, díky nimž mapa sděluje — třídění, symbolizace, barva a generalizace — a způsoby, jimiž každé z nich může klamat."
+  },
+  {
+   "id": "04.08.04",
+   "level": 2,
+   "parentId": "04.08",
+   "name": "Regional Geography",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Synthesis rather than analysis: the description of particular parts of the world as integrated wholes, in which physical setting, population, economy and political organisation are treated together. It is where the systematic branches are put back into one picture.",
+   "cs": "Syntéza namísto analýzy: popis konkrétních částí světa jako integrovaných celků, v nichž se přírodní podmínky, obyvatelstvo, hospodářství a politické uspořádání pojednávají společně. Zde se systematické větve skládají zpět do jednoho obrazu."
+  },
+  {
+   "id": "04.08.04.01",
+   "level": 3,
+   "parentId": "04.08.04",
+   "name": "Continents and Major World Regions",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The conventional division of land into continents and macro-regions, the criteria behind it, and the ways different traditions draw the lines.",
+   "cs": "Konvenční dělení pevnin na kontinenty a makroregiony, kritéria za ním a způsoby, jimiž různé tradice vedou hranice."
+  },
+  {
+   "id": "04.08.04.02",
+   "level": 3,
+   "parentId": "04.08.04",
+   "name": "Oceans, Seas and Coasts",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The world ocean and its basins, circulation and marine zones, and the coastal interface where the greatest share of population concentrates.",
+   "cs": "Světový oceán a jeho pánve, cirkulace a mořské zóny a pobřežní rozhraní, kde se soustřeďuje největší podíl obyvatelstva."
+  },
+  {
+   "id": "04.08.04.03",
+   "level": 3,
+   "parentId": "04.08.04",
+   "name": "Climate Zones and Biomes",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The recurring belt pattern of climate and vegetation from equator to pole, the classification systems describing it, and the altitude analogue in mountains.",
+   "cs": "Opakující se pásmové uspořádání podnebí a vegetace od rovníku k pólu, klasifikační systémy, které je popisují, a jeho výškový protějšek v horách."
+  },
+  {
+   "id": "04.08.04.04",
+   "level": 3,
+   "parentId": "04.08.04",
+   "name": "The Political Map of the World",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "States, dependencies and international organisations as the current territorial arrangement, and the processes of formation and dissolution that keep changing it.",
+   "cs": "Státy, závislá území a mezinárodní organizace jako současné územní uspořádání a procesy vzniku a zániku, které je stále mění."
+  },
+  {
+   "id": "04.08.04.05",
+   "level": 3,
+   "parentId": "04.08.04",
+   "name": "Regional Disparities and Development",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Systematic differences in living standards between and within regions, their measurement, and the convergence or divergence observed over time.",
+   "cs": "Systematické rozdíly v životní úrovni mezi regiony i uvnitř nich, jejich měření a pozorovaná konvergence či divergence v čase."
+  },
+  {
+   "id": "04.08.05",
+   "level": 2,
+   "parentId": "04.08",
+   "name": "Environmental Geography",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "The interaction between human activity and the physical environment, treated spatially: where hazards fall, where resources are, how land use changes, and who bears the consequences. It is the branch in which the two halves of the discipline are forced to meet.",
+   "cs": "Interakce lidské činnosti a přírodního prostředí pojednaná prostorově: kde dopadají hrozby, kde leží zdroje, jak se mění využití krajiny a kdo nese následky. Je to větev, v níž se obě poloviny oboru musí setkat."
+  },
+  {
+   "id": "04.08.05.01",
+   "level": 3,
+   "parentId": "04.08.05",
+   "name": "Natural Hazards and Risk",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The spatial distribution of earthquakes, volcanic activity, floods, storms and landslides, and the exposure and vulnerability that turn a hazard into a disaster.",
+   "cs": "Prostorové rozložení zemětřesení, sopečné činnosti, povodní, bouří a sesuvů a expozice a zranitelnost, které z hrozby činí katastrofu."
+  },
+  {
+   "id": "04.08.05.02",
+   "level": 3,
+   "parentId": "04.08.05",
+   "name": "Land Use and Land Cover Change",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "How the surface is used and how that use shifts — deforestation, agricultural expansion, urban growth — together with the methods that detect change over time.",
+   "cs": "Jak je povrch využíván a jak se toto využití mění — odlesňování, rozšiřování zemědělské půdy, růst měst — spolu s metodami zjišťování změn v čase."
+  },
+  {
+   "id": "04.08.05.03",
+   "level": 3,
+   "parentId": "04.08.05",
+   "name": "Resource Distribution and Extraction",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The uneven geography of minerals, energy, water and arable land, and the economic and political consequences of that unevenness.",
+   "cs": "Nerovnoměrná geografie nerostů, energie, vody a orné půdy a hospodářské i politické důsledky této nerovnoměrnosti."
+  },
+  {
+   "id": "04.08.05.04",
+   "level": 3,
+   "parentId": "04.08.05",
+   "name": "Human Impact on Landscapes",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Anthropogenic transformation of terrain, hydrology and vegetation, from terracing and drainage to urban surfaces, and the persistence of those changes.",
+   "cs": "Antropogenní přeměna terénu, hydrologie a vegetace, od teras a odvodnění po městské povrchy, a trvalost těchto změn."
+  },
+  {
+   "id": "04.08.05.05",
+   "level": 3,
+   "parentId": "04.08.05",
+   "name": "Sustainability and Environmental Planning",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Spatial planning instruments aimed at reconciling use with long-term capacity, including protected areas, zoning and impact assessment.",
+   "cs": "Nástroje územního plánování usilující o sladění využívání s dlouhodobou únosností, včetně chráněných území, zónování a posuzování vlivů."
   }
  ],
  "relations": [
+  {
+   "from": "04.08.01.01",
+   "to": "01.04.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.01.01",
+   "to": "01.04.06",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.01.02",
+   "to": "01.04.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.01.02",
+   "to": "01.04.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.01.03",
+   "to": "01.04.09",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.01.04",
+   "to": "01.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.01.06",
+   "to": "01.04.10",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.02.01",
+   "to": "04.09",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.02.02",
+   "to": "04.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.02.03",
+   "to": "04.04.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.02.03",
+   "to": "04.04.06",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.02.04",
+   "to": "04.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.02.04",
+   "to": "04.06.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.03.03",
+   "to": "02.02.10",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.03.04",
+   "to": "02.02.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.03.05",
+   "to": "02.02.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.04.02",
+   "to": "01.04.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.05.01",
+   "to": "01.04.07",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.05.01",
+   "to": "01.04.08",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.08.05.05",
+   "to": "04.06.16",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "04.08",
    "to": "04.03",

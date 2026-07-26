@@ -8,9 +8,60 @@
    "en": "Production and application of remedies for disease and injury using available plants and minerals—including herbalism, wound management, and fermentation-based preservation. Operates on empirical knowledge and traditional formulations rather than industrial pharmaceuticals; distinct from general chemistry by targeting health intervention and restoration.",
    "cs": "Výroba a aplikace prostředků na choroby a zranění ze dostupných rostlin a nerostů—včetně bylinářství, ošetřování ran a fermentačního uchovávání. Pracuje na základě empirických znalostí a tradičních formulací spíše než průmyslových léčiv; odlišuje se od všeobecné chemie zaměřením na zdravotní intervenci a obnovu.",
    "brief": "Basic Medicine Production is the manufacture and application of remedies for disease and injury from available plants, minerals, and simple fermentation, using empirical and traditional knowledge rather than an industrial pharmaceutical supply chain. It consumes the reagents [[12.03]] Essential Chemistry produces and the instruments [[12.02]] Tool Making fabricates, and its output — antiseptics, wound-care materials, and basic remedies — is what keeps a rebuilding population healthy enough to keep applying the other subfields.\n\nElsewhere in the corpus, [[03.02]] Medicine covers diagnosis and treatment across the full scope of modern clinical practice — imaging, laboratory analysis, licensed pharmaceuticals, and surgery. Basic Medicine Production is the narrow slice of that same subject that survives without hospitals or a pharmaceutical industry: herbalism, wound management, and fermentation-based preservation verified by observed outcomes rather than clinical trials.\n\n[*Where There Is No Doctor*](https://en.wikipedia.org/wiki/Where_There_Is_No_Doctor), Hesperian's community health manual, is the standard practical reference for medicine at exactly this resource level, and Lewis Dartnell's [*The Knowledge*](https://en.wikipedia.org/wiki/The_Knowledge:_How_to_Rebuild_Our_World_From_Scratch) covers producing antiseptics and basic antibiotics such as penicillin from first principles."
+  },
+  {
+   "id": "12.04.01",
+   "level": 2,
+   "parentId": "12.04",
+   "name": "Antiseptics and Disinfection",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Preparing and using agents that prevent wound and surgical infection, and the concentration that matters.",
+   "cs": "Příprava a užití prostředků bránících infekci ran a operačních míst a koncentrace, na níž záleží."
+  },
+  {
+   "id": "12.04.02",
+   "level": 2,
+   "parentId": "12.04",
+   "name": "Oral Rehydration and Basic Formulations",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Simple preparations that address the commonest causes of preventable death, and their exact composition.",
+   "cs": "Jednoduché přípravky řešící nejčastější příčiny odvratitelných úmrtí a jejich přesné složení."
+  },
+  {
+   "id": "12.04.03",
+   "level": 2,
+   "parentId": "12.04",
+   "name": "Medicinal Plants and Extraction",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Traditional pharmacognosy, extraction methods, and the dosing uncertainty that makes plant medicine hazardous.",
+   "cs": "Tradiční farmakognozie, extrakční metody a nejistota dávkování, jež činí rostlinné léčitelství rizikovým."
+  },
+  {
+   "id": "12.04.04",
+   "level": 2,
+   "parentId": "12.04",
+   "name": "Sterilisation and Storage",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Heat and chemical sterilisation, sterile technique, and the shelf-life limits of what is produced.",
+   "cs": "Tepelná a chemická sterilizace, sterilní technika a meze trvanlivosti vyrobeného."
   }
  ],
  "relations": [
+  {
+   "from": "12.04.01",
+   "to": "08.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "12.04",
    "to": "03.02",

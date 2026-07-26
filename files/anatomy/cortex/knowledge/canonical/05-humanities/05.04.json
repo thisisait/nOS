@@ -8,9 +8,329 @@
    "en": "Literature encompasses written and oral texts valued for aesthetic, narrative, or cultural significance—novels, poetry, drama, epic, and folk traditions spanning all epochs and cultures. Literary study examines aesthetic form (style, genre, prosody), interpretation (meaning-making), historical context (period, author, audience), and social impact (representation, ideology, voice). Distinguished from Linguistics by its focus on texts' significance and from History by its emphasis on imaginative construction; it remains central to humanistic understanding and cultural identity.",
    "cs": "Literatura zahrnuje psané a ústní texty oceňované pro estetickou, narativní nebo kulturní významnost—romány, poezii, drama, epos a lidové tradice sahající přes všechny epochy a kultury. Literární studie zkoumají estetickou formu (styl, žánr, metrika), interpretaci (tvorba smyslu), historický kontext (období, autor, publikum) a sociální dopad (reprezentace, ideologie, hlas). Rozlišuje se od Jazykovědy svým zaměřením na významnost textů a od Historie svým důrazem na imaginativní konstrukci; zůstává ústředním pro humanistické chápání a kulturní identitu.",
    "brief": "Literature encompasses written and oral texts valued for aesthetic, narrative, or cultural significance — novels, poetry, drama, epic, and folk traditions spanning all epochs and cultures. Literary study examines aesthetic form (style, genre, prosody), interpretation (meaning-making), historical context (period, author, audience), and social impact (representation, ideology, voice).\n\nWithin [[05]] Humanities, Literature draws its formal vocabulary from [[05.03]] Linguistics (phonology, syntax, semantics applied to style) and its interpretive lenses from [[05.06]] Cultural Studies (ideology, representation) and [[05.09]] Gender Studies (voice, marginalized perspective). It is distinguished from [[05.01]] History by its emphasis on imaginative construction over documentary reconstruction, even where the two overlap in historical fiction and epic.\n\nLiterary study remains central to humanistic understanding because texts are both artifacts and arguments — how a work says something is inseparable from what it says. For open-access primary texts across languages and periods, see [Project Gutenberg](https://www.gutenberg.org/); for scholarly close readings and poet biographies, the [Poetry Foundation](https://www.poetryfoundation.org/)."
+  },
+  {
+   "id": "05.04.01",
+   "level": 2,
+   "parentId": "05.04",
+   "name": "Literary Genres and Forms",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The conventional kinds into which literature is divided, and the formal features that constitute each. Genre is not a filing system but a set of expectations a reader brings and a writer may satisfy or deliberately break.",
+   "cs": "Ustálené druhy, do nichž se literatura dělí, a formální rysy, které každý z nich ustavují. Žánr není třídicí systém, ale soubor očekávání, která čtenář přináší a autor je může naplnit či záměrně porušit."
+  },
+  {
+   "id": "05.04.01.01",
+   "level": 3,
+   "parentId": "05.04.01",
+   "name": "Poetry",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Verse as language organised by sound and line, its metrical systems, and the lyric, epic and dramatic modes.",
+   "cs": "Verš jako řeč organizovaná zvukem a veršovou linií, jeho metrické systémy a lyrický, epický a dramatický modus."
+  },
+  {
+   "id": "05.04.01.02",
+   "level": 3,
+   "parentId": "05.04.01",
+   "name": "Prose Fiction",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Narrative in prose from the short story to the novel, and the sub-forms that developed within each.",
+   "cs": "Prozaické vyprávění od povídky k románu a dílčí formy, které se uvnitř každé z nich vyvinuly."
+  },
+  {
+   "id": "05.04.01.03",
+   "level": 3,
+   "parentId": "05.04.01",
+   "name": "Drama",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Text written for performance, its structural conventions, and the tragic, comic and modern forms.",
+   "cs": "Text psaný pro jevištní provedení, jeho stavebné konvence a tragické, komické a moderní formy."
+  },
+  {
+   "id": "05.04.01.04",
+   "level": 3,
+   "parentId": "05.04.01",
+   "name": "Non-Fiction and the Essay",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Literary writing that claims to describe the world — essay, memoir, reportage — and the boundary questions it raises.",
+   "cs": "Literární psaní, které si nárokuje popis skutečnosti — esej, memoár, reportáž — a hraniční otázky, jež vyvolává."
+  },
+  {
+   "id": "05.04.01.05",
+   "level": 3,
+   "parentId": "05.04.01",
+   "name": "Oral Literature",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Composition and transmission without writing: epic, ballad, folktale and proverb, and the formulaic technique that makes memorisation possible.",
+   "cs": "Tvorba a předávání bez písma: epos, balada, pohádka a přísloví a formulová technika umožňující zapamatování."
+  },
+  {
+   "id": "05.04.02",
+   "level": 2,
+   "parentId": "05.04",
+   "name": "Poetics and Literary Devices",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The craft level: metre, sound, figure and structure, and how each produces effect. This is the vocabulary that lets a reader say what a text is doing rather than only what it is about.",
+   "cs": "Řemeslná rovina: metrum, zvuk, figura a stavba a to, jak každé z nich působí. Je to slovník, který čtenáři umožňuje říci, co text dělá, nikoli jen o čem je."
+  },
+  {
+   "id": "05.04.02.01",
+   "level": 3,
+   "parentId": "05.04.02",
+   "name": "Metre and Versification",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Systems organising verse by syllable count, stress or quantity, and the tension between metrical pattern and natural speech rhythm.",
+   "cs": "Systémy organizující verš počtem slabik, přízvukem či délkou a napětí mezi metrickým vzorcem a přirozeným rytmem řeči."
+  },
+  {
+   "id": "05.04.02.02",
+   "level": 3,
+   "parentId": "05.04.02",
+   "name": "Figurative Language",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Metaphor, metonymy, simile and symbol as transfers of meaning, and the cognitive work each asks of a reader.",
+   "cs": "Metafora, metonymie, přirovnání a symbol jako přenosy významu a myšlenková práce, kterou každý z nich po čtenáři žádá."
+  },
+  {
+   "id": "05.04.02.03",
+   "level": 3,
+   "parentId": "05.04.02",
+   "name": "Sound Devices",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Rhyme, alliteration, assonance and euphony as organisation of the acoustic surface of a text.",
+   "cs": "Rým, aliterace, asonance a eufonie jako organizace zvukového povrchu textu."
+  },
+  {
+   "id": "05.04.02.04",
+   "level": 3,
+   "parentId": "05.04.02",
+   "name": "Narrative Structure",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Plot, point of view, narrator, time and focalisation as the machinery through which a story is told rather than merely occurring.",
+   "cs": "Zápletka, hledisko, vypravěč, čas a fokalizace jako mechanismus, jímž je příběh vyprávěn, nikoli jen jak se udál."
+  },
+  {
+   "id": "05.04.02.05",
+   "level": 3,
+   "parentId": "05.04.02",
+   "name": "Composition and Style",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Arrangement, register, sentence rhythm and diction as the marks by which an individual manner of writing is recognised.",
+   "cs": "Uspořádání, rejstřík, větný rytmus a volba slov jako znaky, podle nichž se rozpoznává osobitý způsob psaní."
+  },
+  {
+   "id": "05.04.03",
+   "level": 2,
+   "parentId": "05.04",
+   "name": "Literary Theory and Criticism",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Systematic reflection on what literature is, how it means, and what interpreting it involves. The competing schools disagree less about which texts matter than about where meaning is located — in the work, the author, the reader, or the surrounding order.",
+   "cs": "Systematická úvaha o tom, co je literatura, jak znamená a co obnáší její výklad. Soupeřící směry se neshodují méně na tom, které texty jsou důležité, než na tom, kde se význam nachází — v díle, autorovi, čtenáři, či okolním řádu."
+  },
+  {
+   "id": "05.04.03.01",
+   "level": 3,
+   "parentId": "05.04.03",
+   "name": "Formalism and Structuralism",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Approaches locating meaning in the internal organisation of the text and in the systems of convention that make it legible.",
+   "cs": "Přístupy hledající význam ve vnitřní organizaci textu a v konvenčních systémech, které jej činí čitelným."
+  },
+  {
+   "id": "05.04.03.02",
+   "level": 3,
+   "parentId": "05.04.03",
+   "name": "Hermeneutics and Reader Response",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Interpretation as an activity, the role of the reader in producing meaning, and the historical situatedness of understanding.",
+   "cs": "Výklad jako činnost, role čtenáře při vytváření významu a dějinná zakotvenost porozumění."
+  },
+  {
+   "id": "05.04.03.03",
+   "level": 3,
+   "parentId": "05.04.03",
+   "name": "Historical and Sociological Criticism",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Reading literature in relation to the conditions of its production, circulation and reception.",
+   "cs": "Čtení literatury ve vztahu k podmínkám její tvorby, šíření a přijetí."
+  },
+  {
+   "id": "05.04.03.04",
+   "level": 3,
+   "parentId": "05.04.03",
+   "name": "Post-Structuralism and Critical Theory",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Approaches questioning stable meaning, authorial authority and the boundary of the text itself.",
+   "cs": "Přístupy zpochybňující ustálený význam, autorskou autoritu a hranici textu samotného."
+  },
+  {
+   "id": "05.04.03.05",
+   "level": 3,
+   "parentId": "05.04.03",
+   "name": "Comparative and World Literature",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Study across languages and traditions, translation as a condition of that study, and the problem of canon formation.",
+   "cs": "Studium napříč jazyky a tradicemi, překlad jako podmínka takového studia a problém utváření kánonu."
+  },
+  {
+   "id": "05.04.04",
+   "level": 2,
+   "parentId": "05.04",
+   "name": "Textual Analysis and Interpretation",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "The practical skill the subject exists to teach: reading a text closely enough to say what it does, and supporting that claim from evidence within it. Everything else in literary study is scaffolding for this.",
+   "cs": "Praktická dovednost, kvůli níž předmět existuje: číst text natolik pozorně, aby šlo říci, co dělá, a doložit to důkazy z něj samého. Vše ostatní v literární výuce je lešením pro toto."
+  },
+  {
+   "id": "05.04.04.01",
+   "level": 3,
+   "parentId": "05.04.04",
+   "name": "Close Reading",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Detailed attention to word choice, structure and pattern, and the discipline of grounding interpretation in the text.",
+   "cs": "Podrobná pozornost k volbě slov, stavbě a vzorcům a kázeň opírat výklad o text."
+  },
+  {
+   "id": "05.04.04.02",
+   "level": 3,
+   "parentId": "05.04.04",
+   "name": "Theme and Motif",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Recurrent ideas and images, the difference between what a work is about and what it says, and how repetition builds significance.",
+   "cs": "Opakující se myšlenky a obrazy, rozdíl mezi tím, o čem dílo je, a tím, co říká, a jak opakování buduje význam."
+  },
+  {
+   "id": "05.04.04.03",
+   "level": 3,
+   "parentId": "05.04.04",
+   "name": "Character and Characterisation",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "How persons are constructed in a text, the means by which they are revealed, and the interpretive risk of treating them as real.",
+   "cs": "Jak jsou v textu utvářeny postavy, jakými prostředky jsou odhalovány a výkladové riziko zacházet s nimi jako se skutečnými lidmi."
+  },
+  {
+   "id": "05.04.04.04",
+   "level": 3,
+   "parentId": "05.04.04",
+   "name": "Context and Intertextuality",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "The relation of a work to other works and to its moment, and the allusive networks a text participates in.",
+   "cs": "Vztah díla k jiným dílům a ke své době a aluzivní sítě, jichž se text účastní."
+  },
+  {
+   "id": "05.04.04.05",
+   "level": 3,
+   "parentId": "05.04.04",
+   "name": "Argument and Literary Essay",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Building and defending an interpretive claim in writing, with evidence, structure and acknowledgement of alternatives.",
+   "cs": "Vytvoření a obhájení výkladové teze v písemné podobě, s důkazy, stavbou a uznáním alternativ."
   }
  ],
  "relations": [
+  {
+   "from": "05.04.01.03",
+   "to": "06.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.04.01.05",
+   "to": "10",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.04.02.01",
+   "to": "05.03.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.04.02.02",
+   "to": "05.03.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.04.03.01",
+   "to": "05.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.04.03.02",
+   "to": "05.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.04.03.03",
+   "to": "04.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.04.03.04",
+   "to": "05.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "05.04",
    "to": "05.01",

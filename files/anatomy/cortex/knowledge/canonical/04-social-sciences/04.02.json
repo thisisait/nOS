@@ -8,9 +8,376 @@
    "en": "Analysis of human social structures, institutions, interactions, and cultural systems operating at collective levels from small groups to entire societies.",
    "cs": "Analýza lidských sociálních struktur, institucí, interakcí a kulturních systémů na úrovni skupin a společnosti.",
    "brief": "Sociology analyzes human social structures, institutions, and interactions at levels ranging from small groups to entire societies, examining how norms, roles, and organizations emerge, persist, and change. It shares its subject matter, human behavior, with [[04.01]] Psychology, but shifts the unit of analysis from the individual mind to collective patterns: class, family, bureaucracy, religion, and culture as systems that shape and are shaped by the people within them.\n\nThe discipline overlaps closely with [[04.03]] Anthropology, which studies comparable social structures through a more historical and cross-cultural lens, and with [[04.05]] Political Science, which narrows sociology's concern with power and organization to the specific institutions of the state. It also supplies the theoretical apparatus that [[04.09]] Demography draws on when interpreting population statistics as evidence of social change rather than raw counts.\n\nSince its nineteenth-century founders sought to apply scientific method to social life, sociology has developed distinct traditions, structural-functionalist, conflict-based, and interpretive, that still frame debates over inequality, urbanization, and institutional change today. The [American Sociological Association](https://www.asanet.org/about/what-is-sociology/) provides a broad orientation to the field's scope and subfields, and the [Stanford Encyclopedia of Philosophy entry on social institutions](https://plato.stanford.edu/entries/social-institutions/) gives the conceptual grounding shared with political theory."
+  },
+  {
+   "id": "04.02.01",
+   "level": 2,
+   "parentId": "04.02",
+   "name": "Social Structure and Stratification",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The durable patterns of position and inequality that persist regardless of who occupies them. Sociology’s founding observation is that outcomes correlate with position more strongly than with individual effort, and that this requires explanation.",
+   "cs": "Trvalé vzorce postavení a nerovnosti, které přetrvávají bez ohledu na to, kdo je zaujímá. Zakládajícím pozorováním sociologie je, že výsledky korelují s postavením silněji než s individuálním úsilím a že to vyžaduje vysvětlení."
+  },
+  {
+   "id": "04.02.01.01",
+   "level": 3,
+   "parentId": "04.02.01",
+   "name": "Class, Status and Power",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The main dimensions along which societies are ranked, the theories explaining them, and their imperfect overlap.",
+   "cs": "Hlavní dimenze, podle nichž se společnosti hierarchizují, teorie, které je vysvětlují, a jejich nedokonalý překryv."
+  },
+  {
+   "id": "04.02.01.02",
+   "level": 3,
+   "parentId": "04.02.01",
+   "name": "Social Mobility",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Movement between positions within a lifetime and across generations, and what its rate reveals about openness.",
+   "cs": "Pohyb mezi postaveními v průběhu života a mezi generacemi a to, co jeho míra vypovídá o otevřenosti."
+  },
+  {
+   "id": "04.02.01.03",
+   "level": 3,
+   "parentId": "04.02.01",
+   "name": "Race, Ethnicity and Gender",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Ascribed categories as organising principles of social life, and the mechanisms producing unequal outcomes along them.",
+   "cs": "Připsané kategorie jako organizační principy společenského života a mechanismy vytvářející podle nich nerovné výsledky."
+  },
+  {
+   "id": "04.02.01.04",
+   "level": 3,
+   "parentId": "04.02.01",
+   "name": "Networks and Social Capital",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Relationships as a resource, the difference between strong and weak ties, and how structure of connection shapes opportunity.",
+   "cs": "Vztahy jako zdroj, rozdíl mezi silnými a slabými vazbami a jak struktura propojení utváří příležitosti."
+  },
+  {
+   "id": "04.02.02",
+   "level": 2,
+   "parentId": "04.02",
+   "name": "Social Institutions",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The organised, persistent arrangements through which societies meet recurring needs — family, education, work, religion, media. They are what makes behaviour predictable across strangers, and what makes change slow.",
+   "cs": "Organizovaná a přetrvávající uspořádání, jimiž společnosti uspokojují opakující se potřeby — rodina, vzdělávání, práce, náboženství, média. Právě ona činí chování předvídatelným mezi cizími lidmi a změnu pomalou."
+  },
+  {
+   "id": "04.02.02.01",
+   "level": 3,
+   "parentId": "04.02.02",
+   "name": "Family and Kinship",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Forms of household and descent, the functions attributed to family, and the changes in partnership and childbearing observed across societies.",
+   "cs": "Formy domácnosti a příbuzenství, funkce připisované rodině a změny v partnerství a rodičovství pozorované napříč společnostmi."
+  },
+  {
+   "id": "04.02.02.02",
+   "level": 3,
+   "parentId": "04.02.02",
+   "name": "Education",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Schooling as socialisation, as credentialing and as a mechanism of both mobility and reproduction of advantage.",
+   "cs": "Školství jako socializace, jako udělování kvalifikací a jako mechanismus mobility i reprodukce zvýhodnění."
+  },
+  {
+   "id": "04.02.02.03",
+   "level": 3,
+   "parentId": "04.02.02",
+   "name": "Work and Organisations",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "How labour is divided and coordinated, bureaucratic and other organisational forms, and the changing nature of employment.",
+   "cs": "Jak je práce dělena a koordinována, byrokratické a jiné organizační formy a proměňující se povaha zaměstnání."
+  },
+  {
+   "id": "04.02.02.04",
+   "level": 3,
+   "parentId": "04.02.02",
+   "name": "Religion and Belief",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Religion as a social institution, its integrative and divisive effects, and the secularisation debate.",
+   "cs": "Náboženství jako sociální instituce, jeho integrační i rozdělující účinky a spor o sekularizaci."
+  },
+  {
+   "id": "04.02.02.05",
+   "level": 3,
+   "parentId": "04.02.02",
+   "name": "Media and Culture",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Production and circulation of symbolic goods, and the relation between cultural consumption and social position.",
+   "cs": "Produkce a oběh symbolických statků a vztah mezi kulturní spotřebou a sociálním postavením."
+  },
+  {
+   "id": "04.02.03",
+   "level": 2,
+   "parentId": "04.02",
+   "name": "Socialisation, Deviance and Control",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "How people come to want what their society expects, what happens when they do not, and the machinery by which conformity is produced. Deviance is studied not as pathology but as a relation between behaviour and rule.",
+   "cs": "Jak si lidé osvojí chtít to, co jejich společnost očekává, co se stane, když ne, a jakým aparátem se konformita vytváří. Deviace se nezkoumá jako patologie, ale jako vztah mezi jednáním a pravidlem."
+  },
+  {
+   "id": "04.02.03.01",
+   "level": 3,
+   "parentId": "04.02.03",
+   "name": "Socialisation and Identity",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Acquisition of norms, roles and self-concept through family, peers, school and media across the life course.",
+   "cs": "Osvojování norem, rolí a sebepojetí prostřednictvím rodiny, vrstevníků, školy a médií v průběhu života."
+  },
+  {
+   "id": "04.02.03.02",
+   "level": 3,
+   "parentId": "04.02.03",
+   "name": "Norms, Roles and Interaction",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The rules governing everyday encounters, the expectations attached to positions, and the negotiation of meaning in face-to-face life.",
+   "cs": "Pravidla řídící každodenní setkání, očekávání vázaná na pozice a vyjednávání významu v bezprostředním styku."
+  },
+  {
+   "id": "04.02.03.03",
+   "level": 3,
+   "parentId": "04.02.03",
+   "name": "Theories of Deviance",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Explanations of rule-breaking from strain, learning, control and labelling perspectives, and what each takes as needing explanation.",
+   "cs": "Vysvětlení porušování pravidel z hlediska strain, učení, kontroly a nálepkování a to, co každé z nich pokládá za vyžadující vysvětlení."
+  },
+  {
+   "id": "04.02.03.04",
+   "level": 3,
+   "parentId": "04.02.03",
+   "name": "Social Control and Punishment",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Formal and informal mechanisms enforcing conformity, and the social functions attributed to punishment beyond deterrence.",
+   "cs": "Formální a neformální mechanismy vynucující konformitu a společenské funkce připisované trestu nad rámec odstrašení."
+  },
+  {
+   "id": "04.02.04",
+   "level": 2,
+   "parentId": "04.02",
+   "name": "Social Change and Collective Behaviour",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "How societies transform: through movements, through demographic and technological shifts, and through the slow accumulation of altered practice. The recurring question is when grievance becomes mobilisation.",
+   "cs": "Jak se společnosti proměňují: hnutími, demografickými a technologickými posuny a pomalým hromaděním změněné praxe. Opakující se otázkou je, kdy se z nespokojenosti stane mobilizace."
+  },
+  {
+   "id": "04.02.04.01",
+   "level": 3,
+   "parentId": "04.02.04",
+   "name": "Social Movements",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Sustained collective challenges to authority, the resources and opportunities enabling them, and the framing that sustains participation.",
+   "cs": "Trvalé kolektivní výzvy vůči autoritě, zdroje a příležitosti, které je umožňují, a rámování udržující účast."
+  },
+  {
+   "id": "04.02.04.02",
+   "level": 3,
+   "parentId": "04.02.04",
+   "name": "Modernisation and Globalisation",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Long-run structural transformations and their contested consequences for community, inequality and cultural difference.",
+   "cs": "Dlouhodobé strukturní proměny a jejich sporné důsledky pro pospolitost, nerovnost a kulturní odlišnost."
+  },
+  {
+   "id": "04.02.04.03",
+   "level": 3,
+   "parentId": "04.02.04",
+   "name": "Urbanisation and Community",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The shift to urban living and its effects on social ties, and the persistence of community in altered form.",
+   "cs": "Přechod k městskému způsobu života a jeho dopady na sociální vazby a přetrvávání pospolitosti ve změněné podobě."
+  },
+  {
+   "id": "04.02.04.04",
+   "level": 3,
+   "parentId": "04.02.04",
+   "name": "Technology and Society",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Reciprocal shaping of technical systems and social arrangements, and the difficulty of separating cause from effect.",
+   "cs": "Vzájemné utváření technických systémů a společenských uspořádání a obtížnost odlišení příčiny od následku."
+  },
+  {
+   "id": "04.02.05",
+   "level": 2,
+   "parentId": "04.02",
+   "name": "Sociological Methods",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "How claims about society are established and tested. The subject’s credibility rests here: the same question answered by survey, ethnography or administrative data can yield different pictures, and knowing why is part of the discipline.",
+   "cs": "Jak se zjišťují a ověřují tvrzení o společnosti. Zde spočívá věrohodnost oboru: tatáž otázka zodpovězená dotazníkem, etnografií či administrativními daty může poskytnout odlišné obrazy a vědět proč je součástí disciplíny."
+  },
+  {
+   "id": "04.02.05.01",
+   "level": 3,
+   "parentId": "04.02.05",
+   "name": "Survey Research",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Sampling, question design and non-response, and the inferential step from a sample to a population.",
+   "cs": "Výběr, konstrukce otázek a nedostupnost respondentů a inferenční krok od vzorku k populaci."
+  },
+  {
+   "id": "04.02.05.02",
+   "level": 3,
+   "parentId": "04.02.05",
+   "name": "Qualitative and Ethnographic Methods",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Interviewing, participant observation and the analysis of meaning, and the criteria by which such work is judged rigorous.",
+   "cs": "Rozhovory, zúčastněné pozorování a analýza významu a kritéria, podle nichž se taková práce posuzuje jako důsledná."
+  },
+  {
+   "id": "04.02.05.03",
+   "level": 3,
+   "parentId": "04.02.05",
+   "name": "Comparative and Historical Methods",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Systematic comparison across cases and over time, and the problem of small numbers with many variables.",
+   "cs": "Systematické srovnávání napříč případy a v čase a problém malého počtu případů s mnoha proměnnými."
+  },
+  {
+   "id": "04.02.05.04",
+   "level": 3,
+   "parentId": "04.02.05",
+   "name": "Quantitative Analysis of Social Data",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Measurement, association and the persistent difficulty of moving from correlation to causal claim in observational social data.",
+   "cs": "Měření, souvislost a trvalá obtížnost přechodu od korelace ke kauzálnímu tvrzení v pozorovacích sociálních datech."
+  },
+  {
+   "id": "04.02.05.05",
+   "level": 3,
+   "parentId": "04.02.05",
+   "name": "Research Ethics",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Consent, confidentiality and harm in research on human subjects, and the review structures governing it.",
+   "cs": "Souhlas, důvěrnost a újma při výzkumu na lidských subjektech a přezkumné struktury, které jej upravují."
   }
  ],
  "relations": [
+  {
+   "from": "04.02.01.01",
+   "to": "04.04.09",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.02.01.02",
+   "to": "04.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.02.02.02",
+   "to": "04.07",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.02.02.03",
+   "to": "04.04.09",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.02.02.05",
+   "to": "05.08",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.02.03.04",
+   "to": "04.06.07",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.02.04.02",
+   "to": "04.05.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.02.04.03",
+   "to": "04.08.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.02.05.01",
+   "to": "04.04.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.02.05.04",
+   "to": "04.04.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "04.02",
    "to": "04.01",

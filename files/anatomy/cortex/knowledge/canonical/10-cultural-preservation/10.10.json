@@ -8,9 +8,67 @@
    "en": "Oral histories are spoken accounts of past events and family lineages transmitted across generations without written documentation. They preserve personal experience and community memory outside institutional archives.",
    "cs": "Ústní historie jsou mluvené zprávy minulých událostí a rodinných rodokmenů předávané generacemi bez písemné dokumentace. Zachovávají osobní zkušenost a komunitní paměť mimo institucionální archivy.",
    "brief": "Oral histories are spoken accounts of past events and family lineages transmitted across generations without written documentation, preserving personal experience and community memory outside institutional archives.\n\nThe branch is the testimonial counterpart to [[10.06]] Stories & Narratives, sharing its spoken transmission but reporting remembered fact about real people rather than fictionalized or archetypal narrative, and it complements [[10.01]] Languages wherever the language itself, not only the account, is endangered and the recording is the last record of both. It shares its methodology with [[05]] Humanities oral-history scholarship, which formalizes interview and archival method for the same raw testimony, under the parent [[10]] Cultural Preservation.\n\nThe [Oral History Association](https://oralhistory.org/) sets the professional standards for interview method, consent, and archiving, and the [Library of Congress StoryCorps collection](https://www.loc.gov/collections/storycorps/) is one of the largest public oral-history archives of ordinary family testimony."
+  },
+  {
+   "id": "10.10.01",
+   "level": 2,
+   "parentId": "10.10",
+   "name": "Oral History Method",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Interviewing for memory rather than fact, the collaborative construction of testimony, and its evidentiary status.",
+   "cs": "Rozhovor zaměřený na paměť spíše než na fakt, společné utváření svědectví a jeho důkazní postavení."
+  },
+  {
+   "id": "10.10.02",
+   "level": 2,
+   "parentId": "10.10",
+   "name": "Memory and Testimony",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "How recollection is reconstructed rather than replayed, and what that implies for using it as a source.",
+   "cs": "Jak se vzpomínka rekonstruuje spíše než přehrává a co z toho plyne pro její užití jako pramene."
+  },
+  {
+   "id": "10.10.03",
+   "level": 2,
+   "parentId": "10.10",
+   "name": "Recording and Transcription",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Capture, transcription conventions, and the decisions that turn speech into a citable text.",
+   "cs": "Záznam, přepisové konvence a rozhodnutí, jimiž se z řeči stává citovatelný text."
+  },
+  {
+   "id": "10.10.04",
+   "level": 2,
+   "parentId": "10.10",
+   "name": "Ethics and Consent",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Informed consent, ownership of testimony, anonymisation and the right of a narrator to withdraw.",
+   "cs": "Poučený souhlas, vlastnictví svědectví, anonymizace a právo vypravěče své sdělení stáhnout."
   }
  ],
  "relations": [
+  {
+   "from": "10.10.02",
+   "to": "04.01.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "10.10.04",
+   "to": "04.02.05.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "10.10",
    "to": "05",

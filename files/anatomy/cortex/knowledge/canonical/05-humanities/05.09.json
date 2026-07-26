@@ -8,9 +8,96 @@
    "en": "Gender Studies examines how gender shapes social institutions, cultural practices, and individual identities across historical and contemporary contexts. It integrates perspectives from history, sociology, anthropology, and literature to analyze gender roles, power relations, and systems of inequality, centering marginalized voices in knowledge production.",
    "cs": "Studium genderu zkoumá, jak gender utváří společenské instituce, kulturní praktiky a individuální identity v historických i současných kontextech. Integruje perspektivy z historie, sociologie, antropologie a literatury k analýze genderových rolí, mocenských vztahů a systémů nerovnosti, přičemž marginalizované hlasy staví do středu výroby vědomostí.",
    "brief": "Gender Studies examines how gender shapes social institutions, cultural practices, and individual identities across historical and contemporary contexts. It integrates perspectives from history, sociology, anthropology, and literature to analyze gender roles, power relations, and systems of inequality, centering marginalized voices in knowledge production.\n\nWithin [[05]] Humanities, Gender Studies shares its analytical concern with power and representation with [[05.06]] Cultural Studies and [[05.10]] Ethnic Studies, and draws on [[05.04]] Literature and History for primary evidence of how gender roles were represented and lived. Its integration of sociological and anthropological method also connects it to [[04]] Social Sciences.\n\nBy centering marginalized voices and treating gender as a category of analysis rather than a fixed given, Gender Studies has reshaped how the rest of the humanities read texts, institutions, and history. For current scholarship and the discipline's professional body, see the [National Women's Studies Association](https://www.nwsa.org/); for a broad reference on gender theory, the [Stanford Encyclopedia of Philosophy entry on feminist philosophy](https://plato.stanford.edu/entries/feminism-topics/)."
+  },
+  {
+   "id": "05.09.01",
+   "level": 2,
+   "parentId": "05.09",
+   "name": "Sex, Gender and Embodiment",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The distinction between biological and social categories, its uses and its contested boundaries.",
+   "cs": "Rozlišení mezi biologickými a společenskými kategoriemi, jeho užití a sporné hranice."
+  },
+  {
+   "id": "05.09.02",
+   "level": 2,
+   "parentId": "05.09",
+   "name": "Gender and Social Structure",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "How gender organises work, family, property and authority, and the mechanisms reproducing that organisation.",
+   "cs": "Jak gender organizuje práci, rodinu, majetek a autoritu a mechanismy tuto organizaci reprodukující."
+  },
+  {
+   "id": "05.09.03",
+   "level": 2,
+   "parentId": "05.09",
+   "name": "Feminist Theory",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The main theoretical traditions, their differing diagnoses of inequality, and the remedies each proposes.",
+   "cs": "Hlavní teoretické tradice, jejich odlišné diagnózy nerovnosti a nápravy, jež každá navrhuje."
+  },
+  {
+   "id": "05.09.04",
+   "level": 2,
+   "parentId": "05.09",
+   "name": "Masculinities",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Men and masculinity as an object of study rather than an unmarked default, and the plurality of forms it takes.",
+   "cs": "Muži a maskulinita jako předmět studia namísto nepříznakového východiska a mnohost forem, jichž nabývá."
+  },
+  {
+   "id": "05.09.05",
+   "level": 2,
+   "parentId": "05.09",
+   "name": "Intersectionality",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "How gender combines with class, race and other positions to produce outcomes none explains alone.",
+   "cs": "Jak se gender kombinuje s třídou, rasou a dalšími pozicemi a vytváří výsledky, jež žádná z nich sama nevysvětlí."
+  },
+  {
+   "id": "05.09.06",
+   "level": 2,
+   "parentId": "05.09",
+   "name": "Gender, Law and Policy",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Equality legislation, reproductive and family law, violence and their enforcement, across jurisdictions.",
+   "cs": "Legislativa rovnosti, reprodukční a rodinné právo, násilí a jejich vynucování napříč jurisdikcemi."
   }
  ],
  "relations": [
+  {
+   "from": "05.09.02",
+   "to": "04.02.01.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.09.05",
+   "to": "04.02.01.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.09.06",
+   "to": "04.06.11.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "05.09",
    "to": "04",

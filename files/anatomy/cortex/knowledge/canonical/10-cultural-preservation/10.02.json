@@ -8,9 +8,60 @@
    "en": "Folklore and mythology are narrative and belief systems explaining cultural origins, moral values, and natural phenomena through story. They preserve pre-literate knowledge and encode community identity.",
    "cs": "Folklór a mytologie jsou narativní a věřící systémy vysvětlující kulturní původy, morální hodnoty a přírodní jevy prostřednictvím příběhu. Zachovávají před-literární vědomost a kódují identitu komunity.",
    "brief": "Folklore and mythology are narrative and belief systems — origin myths, legends, cosmologies, moral tales — that explain where a community comes from, what it values, and why the natural world behaves as it does, transmitted by story rather than by formal doctrine. In societies without extensive writing, these narratives functioned as the primary vehicle for preserving cosmology, ethics, and history across generations.\n\nThis node is narrower than [[10.06]] Stories & Narratives, which covers the wider body of transmitted tales — including secular folktales and personal anecdote — while folklore and mythology specifically carries explanatory and belief content about origins and the sacred. Myth frequently supplies the narrative that [[10.08]] Rituals & Ceremonies enact in performance, so a creation myth and the ceremony reenacting it are companion artifacts of the same belief system. Like all of this branch, mythic material survives only within the specific [[10.01]] Language that carries it, and once documented becomes source material for [[05]] Humanities scholarship in comparative mythology and religious studies.\n\nComprehensive scholarly grounding is available from the [American Folklore Society](https://afsnet.org/), which sets professional standards for folklore documentation and fieldwork, and from the [Encyclopaedia Britannica](https://www.britannica.com/topic/mythology) overview of world mythology traditions."
+  },
+  {
+   "id": "10.02.01",
+   "level": 2,
+   "parentId": "10.02",
+   "name": "Myth and Cosmology",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Narratives accounting for origin and order, their recurring structures across cultures, and their social function.",
+   "cs": "Vyprávění o počátku a řádu, jejich opakující se struktury napříč kulturami a jejich společenská funkce."
+  },
+  {
+   "id": "10.02.02",
+   "level": 2,
+   "parentId": "10.02",
+   "name": "Folktale and Legend",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Traditional narrative types, their classification, and the distinction between tale, legend and anecdote.",
+   "cs": "Tradiční vyprávěcí typy, jejich klasifikace a rozdíl mezi pohádkou, pověstí a historkou."
+  },
+  {
+   "id": "10.02.03",
+   "level": 2,
+   "parentId": "10.02",
+   "name": "Folk Belief and Custom",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Vernacular belief about luck, protection, weather and health, and its persistence alongside formal systems.",
+   "cs": "Lidová víra o štěstí, ochraně, počasí a zdraví a její přetrvávání vedle formálních systémů."
+  },
+  {
+   "id": "10.02.04",
+   "level": 2,
+   "parentId": "10.02",
+   "name": "Collection and Documentation",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Recording oral tradition without destroying it: fieldwork, informed consent, archive deposit and attribution.",
+   "cs": "Zaznamenávání ústní tradice bez jejího zničení: terénní práce, poučený souhlas, archivní uložení a uvedení zdroje."
   }
  ],
  "relations": [
+  {
+   "from": "10.02.01",
+   "to": "05.05.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "10.02",
    "to": "05",

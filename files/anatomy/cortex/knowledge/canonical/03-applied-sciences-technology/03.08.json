@@ -8,9 +8,103 @@
    "en": "Electronic transmission and reception of information via radio, wire, fiber, or satellite media, encompassing voice, data, and multimedia services.",
    "cs": "Elektronický přenos a příjem informací prostřednictvím rádiových, vodičových, optických nebo satelitních médií.",
    "brief": "Telecommunications is the electronic transmission and reception of information via radio, wire, fiber, or satellite media, encompassing voice, data, and multimedia services. It spans the physical transmission media themselves, the protocols that structure information for reliable transfer, and the network infrastructure — switches, base stations, satellites — that routes signals between senders and receivers across distance.\n\nTelecommunications sits inside [[03]] Applied Sciences & Technology as the communications backbone the rest of the branch increasingly depends on: [[03.05]] Manufacturing's automation and supply-chain systems rely on it for real-time coordination across a factory or a network of suppliers, and [[03.01]] Engineering's electrical discipline designs the circuits, antennas, and signal-processing hardware telecommunications systems run on. Unlike most of its siblings, telecommunications has no dedicated subcategory tree in this taxonomy yet — its output is treated as a single integrated discipline rather than split into wireless, fiber, and satellite specializations.\n\nTelecommunications infrastructure and spectrum use are governed by national regulators and coordinated internationally. For global standards and spectrum coordination, see the [International Telecommunication Union](https://www.itu.int/), and for a technical overview of the field, the [Encyclopaedia Britannica](https://www.britannica.com/technology/telecommunications-system)."
+  },
+  {
+   "id": "03.08.01",
+   "level": 2,
+   "parentId": "03.08",
+   "name": "Transmission Media",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Copper, optical fibre and free-space radio as physical carriers, and the bandwidth, loss and interference characteristics of each.",
+   "cs": "Měď, optické vlákno a volný prostor jako fyzická média a jejich charakteristiky šířky pásma, útlumu a rušení."
+  },
+  {
+   "id": "03.08.02",
+   "level": 2,
+   "parentId": "03.08",
+   "name": "Modulation and Multiplexing",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Encoding information onto a carrier, and the sharing of one medium among many signals in time, frequency, code or space.",
+   "cs": "Vtištění informace do nosné a sdílení jednoho média mnoha signály v čase, frekvenci, kódu či prostoru."
+  },
+  {
+   "id": "03.08.03",
+   "level": 2,
+   "parentId": "03.08",
+   "name": "Network Architecture",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Switching, routing and the layered models by which heterogeneous networks interoperate.",
+   "cs": "Přepojování, směrování a vrstvené modely, jimiž spolu heterogenní sítě spolupracují."
+  },
+  {
+   "id": "03.08.04",
+   "level": 2,
+   "parentId": "03.08",
+   "name": "Mobile and Wireless Systems",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Cellular architecture, handover, spectrum allocation, and the successive generations of mobile standards.",
+   "cs": "Buňková architektura, předávání spojení, přidělování spektra a postupné generace mobilních standardů."
+  },
+  {
+   "id": "03.08.05",
+   "level": 2,
+   "parentId": "03.08",
+   "name": "Satellite and Long-Haul Communication",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Orbital and submarine infrastructure, latency and coverage trade-offs, and the backbone carrying intercontinental traffic.",
+   "cs": "Orbitální a podmořská infrastruktura, kompromisy mezi zpožděním a pokrytím a páteř nesoucí mezikontinentální provoz."
+  },
+  {
+   "id": "03.08.06",
+   "level": 2,
+   "parentId": "03.08",
+   "name": "Regulation and Spectrum Management",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Allocation of a finite shared resource, interference coordination, and the international framework governing both.",
+   "cs": "Přidělování konečného sdíleného zdroje, koordinace rušení a mezinárodní rámec upravující obojí."
   }
  ],
  "relations": [
+  {
+   "from": "03.08.01",
+   "to": "01.01.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.08.02",
+   "to": "02.04.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.08.03",
+   "to": "02.02.07",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.08.06",
+   "to": "04.06.06.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "03.08",
    "to": "03.01",

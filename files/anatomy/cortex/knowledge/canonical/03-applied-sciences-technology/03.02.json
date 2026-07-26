@@ -298,6 +298,193 @@
    "en": "Preventive Medicine encompasses strategies to prevent disease onset and progression through vaccination, health screening, lifestyle modification, occupational health protection, and environmental health safeguards.",
    "cs": "Preventivní medicína zahrnuje strategie zabránění vzniku a progrese nemoci prostřednictvím očkování, zdravotnického screeningu, změny životního stylu, ochrany zdraví v práci a ochrany zdraví v životním prostředí.",
    "brief": "Preventive Medicine is the branch of medicine that intervenes before disease develops or progresses, using vaccination, health screening, lifestyle counseling, occupational health protection, and environmental health safeguards to reduce the burden [[03.02.05]] Clinical Medicine would otherwise have to treat. It complements [[03.02.09]] Emergency Medicine's reactive stance by shifting resources upstream: a population screened for hypertension or vaccinated against influenza generates fewer acute crises for emergency departments to manage.\n\nThe specialty draws its interventions from elsewhere in the medical tree — [[03.02.04]] Pharmacology supplies the vaccines and prophylactic drugs it administers — and reaches beyond medicine itself: [[03.09]] Biotechnology develops the diagnostic assays and vaccine platforms it deploys at population scale, while food-safety and nutrition standards from [[03.03]] Agriculture shape the dietary guidance it issues.\n\nPractice ranges from individual counseling in a clinic to population-level programs run by public health agencies, and its evidence base is built on epidemiological studies of risk factors rather than case-by-case diagnosis. For clinical screening recommendations, see the [U.S. Preventive Services Task Force](https://www.uspreventiveservicestaskforce.org/), and for global immunization policy, the [World Health Organization](https://www.who.int/health-topics/vaccines-and-immunization)."
+  },
+  {
+   "id": "03.02.11",
+   "level": 2,
+   "parentId": "03.02",
+   "name": "Public Health and Epidemiology",
+   "zone": "votable",
+   "ordinal": 10,
+   "kind": "ext",
+   "en": "The health of populations rather than of patients. Epidemiology supplies the method — measuring how disease distributes and why — and public health the intervention, which is why the two are treated as one field and why both are statistical before they are clinical.",
+   "cs": "Zdraví populací namísto pacientů. Epidemiologie dodává metodu — měření, jak se nemoc rozkládá a proč — a veřejné zdraví zásah; proto se obojí pojednává jako jeden obor a proto je obojí dříve statistické než klinické."
+  },
+  {
+   "id": "03.02.11.01",
+   "level": 3,
+   "parentId": "03.02.11",
+   "name": "Measures of Disease Frequency",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Incidence, prevalence, mortality and the person-time denominators that make rates comparable between populations.",
+   "cs": "Incidence, prevalence, úmrtnost a jmenovatele osobo-času, díky nimž jsou míry srovnatelné mezi populacemi."
+  },
+  {
+   "id": "03.02.11.02",
+   "level": 3,
+   "parentId": "03.02.11",
+   "name": "Study Designs",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Cohort, case-control, cross-sectional and interventional designs, and what each can and cannot establish.",
+   "cs": "Kohortové, případové, průřezové a intervenční uspořádání a to, co každé může a nemůže prokázat."
+  },
+  {
+   "id": "03.02.11.03",
+   "level": 3,
+   "parentId": "03.02.11",
+   "name": "Bias, Confounding and Causal Inference",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Systematic error in observational health research, the confounders that mimic effects, and the criteria for inferring cause.",
+   "cs": "Systematická chyba v observačním zdravotnickém výzkumu, matoucí proměnné napodobující účinek a kritéria pro odvození příčiny."
+  },
+  {
+   "id": "03.02.11.04",
+   "level": 3,
+   "parentId": "03.02.11",
+   "name": "Infectious Disease Epidemiology",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Transmission dynamics, the basic reproduction number, herd immunity and outbreak investigation.",
+   "cs": "Dynamika přenosu, základní reprodukční číslo, kolektivní imunita a šetření ohnisek."
+  },
+  {
+   "id": "03.02.11.05",
+   "level": 3,
+   "parentId": "03.02.11",
+   "name": "Chronic Disease and Risk Factors",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Long-latency conditions, the exposures associated with them, and the population attributable fraction.",
+   "cs": "Onemocnění s dlouhou latencí, expozice s nimi spojené a populační atributivní podíl."
+  },
+  {
+   "id": "03.02.11.06",
+   "level": 3,
+   "parentId": "03.02.11",
+   "name": "Health Systems and Policy",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Financing, access, quality and the organisation of care, and the trade-offs any system makes among them.",
+   "cs": "Financování, dostupnost, kvalita a organizace péče a kompromisy, které mezi nimi každý systém činí."
+  },
+  {
+   "id": "03.02.11.07",
+   "level": 3,
+   "parentId": "03.02.11",
+   "name": "Prevention and Health Promotion",
+   "zone": "votable",
+   "ordinal": 6,
+   "kind": "ext",
+   "en": "Primary, secondary and tertiary prevention, screening and its harms, and behavioural and structural interventions.",
+   "cs": "Primární, sekundární a terciární prevence, screening a jeho škody a intervence behaviorální i strukturní."
+  },
+  {
+   "id": "03.02.11.08",
+   "level": 3,
+   "parentId": "03.02.11",
+   "name": "Environmental and Occupational Health",
+   "zone": "votable",
+   "ordinal": 7,
+   "kind": "ext",
+   "en": "Exposures in the workplace and the wider environment, dose-response relationships, and exposure limits.",
+   "cs": "Expozice na pracovišti a v širším prostředí, vztahy dávka-odpověď a limity expozice."
+  },
+  {
+   "id": "03.02.12",
+   "level": 2,
+   "parentId": "03.02",
+   "name": "Sports Science and Kinesiology",
+   "zone": "votable",
+   "ordinal": 11,
+   "kind": "ext",
+   "en": "Human movement and physical performance studied systematically: how the body produces work, adapts to training, and fails under load. It sits here because its foundations are physiological, though its practice spans education, medicine and coaching.",
+   "cs": "Systematické studium lidského pohybu a tělesné výkonnosti: jak tělo vytváří práci, jak se adaptuje na trénink a jak selhává při zátěži. Je zde proto, že jeho základy jsou fyziologické, ačkoli praxe zasahuje do vzdělávání, medicíny i trenérství."
+  },
+  {
+   "id": "03.02.12.01",
+   "level": 3,
+   "parentId": "03.02.12",
+   "name": "Exercise Physiology",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Acute and chronic responses to physical work: energy systems, cardiorespiratory function and metabolic adaptation.",
+   "cs": "Akutní a chronické reakce na tělesnou práci: energetické systémy, kardiorespirační funkce a metabolická adaptace."
+  },
+  {
+   "id": "03.02.12.02",
+   "level": 3,
+   "parentId": "03.02.12",
+   "name": "Biomechanics of Movement",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Forces, levers and motion applied to the body, gait and technique analysis, and the mechanics of injury.",
+   "cs": "Síly, páky a pohyb aplikované na tělo, analýza chůze a techniky a mechanika úrazu."
+  },
+  {
+   "id": "03.02.12.03",
+   "level": 3,
+   "parentId": "03.02.12",
+   "name": "Motor Control and Learning",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "How movement is planned and refined, the stages of skill acquisition, and the role of feedback and practice structure.",
+   "cs": "Jak je pohyb plánován a zdokonalován, stadia osvojování dovednosti a role zpětné vazby a struktury nácviku."
+  },
+  {
+   "id": "03.02.12.04",
+   "level": 3,
+   "parentId": "03.02.12",
+   "name": "Training Theory",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Overload, progression, specificity and recovery as the principles of adaptation, and periodisation as their scheduling.",
+   "cs": "Přetížení, progrese, specifičnost a zotavení jako principy adaptace a periodizace jako jejich rozvržení."
+  },
+  {
+   "id": "03.02.12.05",
+   "level": 3,
+   "parentId": "03.02.12",
+   "name": "Sports Nutrition",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Energy and macronutrient requirements of training, hydration, timing, and the evidence base for supplementation.",
+   "cs": "Energetické a makroživinové nároky tréninku, hydratace, časování a důkazní základ suplementace."
+  },
+  {
+   "id": "03.02.12.06",
+   "level": 3,
+   "parentId": "03.02.12",
+   "name": "Sports Medicine and Injury Prevention",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Common musculoskeletal injuries, their mechanisms, rehabilitation, and screening for risk.",
+   "cs": "Běžná muskuloskeletální poranění, jejich mechanismy, rehabilitace a screening rizika."
+  },
+  {
+   "id": "03.02.12.07",
+   "level": 3,
+   "parentId": "03.02.12",
+   "name": "Physical Education and Lifelong Activity",
+   "zone": "votable",
+   "ordinal": 6,
+   "kind": "ext",
+   "en": "Teaching movement competence, the public-health case for activity across the life course, and barriers to participation.",
+   "cs": "Výuka pohybové gramotnosti, veřejnozdravotní argument pro aktivitu v průběhu života a překážky účasti."
   }
  ],
  "relations": [
@@ -629,6 +816,83 @@
    "type": "references",
    "explored": null,
    "source": "brief-xref"
+  },
+  {
+   "from": "03.02.11.01",
+   "to": "04.04.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.02.11.02",
+   "to": "04.04.03.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.02.11.03",
+   "to": "04.04.03.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.02.11.04",
+   "to": "01.03.11.10",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.02.11.06",
+   "to": "04.05.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.02.11.08",
+   "to": "04.06.16",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.02.12.01",
+   "to": "01.03.11.08",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.02.12.02",
+   "to": "01.01.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.02.12.03",
+   "to": "04.01.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.02.12.05",
+   "to": "07.08.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.02.12.07",
+   "to": "04.07",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
   },
   {
    "from": "03.02",

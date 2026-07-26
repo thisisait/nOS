@@ -8,9 +8,110 @@
    "en": "Holistic study of human cultures, both past and present, examining material culture, social organization, language, and biological variation across societies.",
    "cs": "Holistické studium lidských kultur, minulých i současných, zkoumající hmotnou kulturu, sociální organizaci a jazykové rozdíly.",
    "brief": "Anthropology is the holistic study of human cultures, past and present, encompassing material culture, social organization, language, and biological variation across societies. It distinguishes itself from [[04.02]] Sociology by its comparative, often long-durée and cross-cultural approach, and from [[04.01]] Psychology by treating the individual as inseparable from the cultural system that gives their behavior meaning.\n\nIts subfields split along method and evidence: living communities are studied through ethnographic fieldwork, languages through linguistic analysis, human biological variation through physical anthropology, and vanished societies through [[04.10]] Archaeology, which reconstructs past cultures from excavated material remains rather than living informants. The discipline's attention to settlement patterns and cultural distribution also connects it to [[04.08]] Geography, which supplies the spatial framework for interpreting where and why cultures took the forms they did.\n\nAnthropology's four-field tradition, cultural, linguistic, biological, and archaeological, remains a distinguishing feature of the discipline in North America, though the branches operate largely independently elsewhere. The [American Anthropological Association](https://www.americananthro.org/AdvanceYourCareer/Content.aspx?ItemNumber=1971) sets out the field's scope and ethical standards, and the [Stanford Encyclopedia of Philosophy entry on relativism](https://plato.stanford.edu/entries/relativism/) addresses the methodological debate at the discipline's core."
+  },
+  {
+   "id": "04.03.01",
+   "level": 2,
+   "parentId": "04.03",
+   "name": "Social and Cultural Anthropology",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The comparative study of human societies and their meanings, built on long-term participant observation rather than survey or experiment. Its characteristic claim is that practices which look irrational from outside are coherent from within.",
+   "cs": "Srovnávací studium lidských společností a jejich významů, založené na dlouhodobém zúčastněném pozorování, nikoli na dotazníku či experimentu. Jeho charakteristickým tvrzením je, že praktiky zvenčí nesmyslné jsou zevnitř soudržné."
+  },
+  {
+   "id": "04.03.02",
+   "level": 2,
+   "parentId": "04.03",
+   "name": "Biological Anthropology",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Humans as a biological species: evolution, variation, primatology and the relationship between biology and behaviour.",
+   "cs": "Člověk jako biologický druh: evoluce, variabilita, primatologie a vztah mezi biologií a chováním."
+  },
+  {
+   "id": "04.03.03",
+   "level": 2,
+   "parentId": "04.03",
+   "name": "Linguistic Anthropology",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Language as cultural practice — how speech constructs identity, relationship and social order, rather than merely describing them.",
+   "cs": "Jazyk jako kulturní praxe — jak řeč vytváří identitu, vztah a společenský řád, spíše než aby je jen popisovala."
+  },
+  {
+   "id": "04.03.04",
+   "level": 2,
+   "parentId": "04.03",
+   "name": "Ethnography and Fieldwork",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "The method: entering a setting, participating, recording, and the reflexive problem of the observer as part of what is observed.",
+   "cs": "Metoda: vstup do prostředí, účast, záznam a reflexivní problém pozorovatele jako součásti pozorovaného."
+  },
+  {
+   "id": "04.03.05",
+   "level": 2,
+   "parentId": "04.03",
+   "name": "Kinship, Exchange and Ritual",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "The classical subjects — descent and alliance, gift and reciprocity, rite and symbol — through which the discipline built its theory.",
+   "cs": "Klasická témata — původ a spříznění, dar a reciprocita, obřad a symbol — na nichž obor vybudoval svou teorii."
+  },
+  {
+   "id": "04.03.06",
+   "level": 2,
+   "parentId": "04.03",
+   "name": "Applied and Medical Anthropology",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "The discipline used practically: in health, development and organisations, and the ethical questions that use raises.",
+   "cs": "Obor v praktickém užití: ve zdravotnictví, rozvoji a organizacích, a etické otázky, které takové užití vyvolává."
   }
  ],
  "relations": [
+  {
+   "from": "04.03.02",
+   "to": "01.03.11",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.03.03",
+   "to": "05.03.06",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.03.04",
+   "to": "04.02.05.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.03.05",
+   "to": "04.02.02.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.03.06",
+   "to": "03.02.11",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "04.03",
    "to": "04.01",

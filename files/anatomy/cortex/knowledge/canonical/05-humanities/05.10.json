@@ -8,9 +8,96 @@
    "en": "Ethnic Studies investigates how ethnicity, race, and cultural identity intersect with power, institutions, and social structures. It examines the histories, cultures, and contemporary experiences of marginalized ethnic and racial groups, analyzing identity formation, discrimination, and resistance while centering the voices and scholarship of communities under study.",
    "cs": "Studium etnicity zkoumá, jak etnická příslušnost, rasa a kulturní identita se protínají s mocí, institucemi a společenskými strukturami. Zkoumá historie, kultury a současné zkušenosti marginalizovaných etnických a rasových skupin, analyzujíc formování identity, diskriminaci a odpor, přičemž staví hlasy a vědeckou práci studovaných komunít do středu.",
    "brief": "Ethnic Studies investigates how ethnicity, race, and cultural identity intersect with power, institutions, and social structures. It examines the histories, cultures, and contemporary experiences of marginalized ethnic and racial groups, analyzing identity formation, discrimination, and resistance while centering the voices and scholarship of the communities under study.\n\nWithin [[05]] Humanities, Ethnic Studies shares its focus on identity, power, and marginalized voice with [[05.09]] Gender Studies and [[05.06]] Cultural Studies, and draws on [[05.01]] History and Literature for evidence of how racial and ethnic identity were constructed and contested over time. It also converges with [[04]] Social Sciences in its use of sociological and anthropological method to document discrimination and structural inequality.\n\nBy centering the scholarship of the communities it studies rather than treating them purely as objects of outside analysis, Ethnic Studies reframes historical and cultural narratives around agency and resistance. For current research and the discipline's professional body, see the [National Association for Ethnic Studies](https://www.ethnicstudies.org/); for demographic and social data on ethnic and racial groups, the [Pew Research Center's Race & Ethnicity program](https://www.pewresearch.org/topic/race-ethnicity/)."
+  },
+  {
+   "id": "05.10.01",
+   "level": 2,
+   "parentId": "05.10",
+   "name": "Race and Ethnicity as Categories",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "How group boundaries are constructed, maintained and changed, and the difference between ascription and identification.",
+   "cs": "Jak se skupinové hranice vytvářejí, udržují a mění a rozdíl mezi připsáním a sebeidentifikací."
+  },
+  {
+   "id": "05.10.02",
+   "level": 2,
+   "parentId": "05.10",
+   "name": "Migration and Diaspora",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Communities formed by movement, their relation to origin and destination, and the transmission of identity across generations.",
+   "cs": "Společenství vzniklá pohybem, jejich vztah k místu původu i cíli a předávání identity mezi generacemi."
+  },
+  {
+   "id": "05.10.03",
+   "level": 2,
+   "parentId": "05.10",
+   "name": "Racism and Discrimination",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Individual, institutional and structural forms, their measurement, and the mechanisms producing unequal outcomes.",
+   "cs": "Individuální, institucionální a strukturní podoby, jejich měření a mechanismy vytvářející nerovné výsledky."
+  },
+  {
+   "id": "05.10.04",
+   "level": 2,
+   "parentId": "05.10",
+   "name": "Indigenous Studies",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Peoples with prior claim to a territory, their legal and political status, and knowledge systems developed outside the academy.",
+   "cs": "Národy s předchozím nárokem na území, jejich právní a politické postavení a znalostní systémy vzniklé mimo akademii."
+  },
+  {
+   "id": "05.10.05",
+   "level": 2,
+   "parentId": "05.10",
+   "name": "Multiculturalism and Integration",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Policy models for plural societies, the assumptions each makes, and the evidence on what they achieve.",
+   "cs": "Politické modely pro pluralitní společnosti, předpoklady, jež každý činí, a doklady o tom, čeho dosahují."
+  },
+  {
+   "id": "05.10.06",
+   "level": 2,
+   "parentId": "05.10",
+   "name": "Postcolonial Perspectives",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "The lasting effects of colonial rule on states, economies and knowledge, and the critique of universal categories.",
+   "cs": "Trvalé následky koloniální vlády na státy, hospodářství a poznání a kritika univerzálních kategorií."
   }
  ],
  "relations": [
+  {
+   "from": "05.10.02",
+   "to": "04.08.02.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.10.03",
+   "to": "04.06.11.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.10.05",
+   "to": "04.05.05.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "05.10",
    "to": "04",

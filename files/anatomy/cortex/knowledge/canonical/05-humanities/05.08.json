@@ -8,9 +8,256 @@
    "en": "Media Studies investigates how societies create, distribute, and interpret texts through technological systems—newspapers, radio, television, film, the Internet, and social media. It examines media's economic structures (ownership, monopoly, advertising), representational practices (stereotypes, framing, narrative), audience reception and interpretation, and media's roles in politics, culture, and identity formation. Interdisciplinary; it bridges Communication, Cultural Studies, Literary Analysis, and Technology Studies.",
    "cs": "Mediální studia zkoumají, jak společnosti vytvářejí, distribuují a interpretují texty skrze technologické systémy—noviny, rádio, televizi, film, Internet a sociální média. Zkoumají ekonomické struktury médií (vlastnictví, monopol, reklama), reprezentační praktiky (stereotypy, rámování, narativ), příjem a interpretaci publika a role médií v politice, kultuře a tvorbě identity. Interdisciplinární; propojují Komunikaci, Kulturní studia, Literární analýzu a Technologická studia.",
    "brief": "Media Studies investigates how societies create, distribute, and interpret texts through technological systems — newspapers, radio, television, film, the Internet, and social media. It examines media's economic structures (ownership, advertising), representational practices (framing, stereotypes), audience reception, and media's roles in politics and identity formation.\n\nWithin [[05]] Humanities, Media Studies applies [[05.06]] Cultural Studies' concern with ideology and representation to specifically technological systems of distribution, and shares [[05.04]] Literature's tools of textual analysis when reading film and broadcast narrative. Its study of media economics and audience behavior connects it to [[04]] Social Sciences, particularly communication research and sociology.\n\nAs the technological systems for distributing texts have multiplied, Media Studies has become indispensable for understanding how power and representation operate at scale. For current research on communication technologies and their social effects, see the [International Communication Association](https://www.icahdq.org/); for data on media consumption and its societal impact, the [Pew Research Center](https://www.pewresearch.org/topic/news-habits-media/)."
+  },
+  {
+   "id": "05.08.01",
+   "level": 2,
+   "parentId": "05.08",
+   "name": "Communication Theory",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "How messages are produced, transmitted, received and understood, and why the transmission model — sender, channel, receiver — is both indispensable and insufficient. Meaning is reconstructed by the receiver, not delivered by the sender.",
+   "cs": "Jak se sdělení vytvářejí, přenášejí, přijímají a chápou a proč je přenosový model — odesílatel, kanál, příjemce — nepostradatelný i nedostatečný zároveň. Význam příjemce rekonstruuje, odesílatel jej nedoručuje."
+  },
+  {
+   "id": "05.08.01.01",
+   "level": 3,
+   "parentId": "05.08.01",
+   "name": "Models of Communication",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Transmission, interactional and transactional models, what each captures, and the noise and feedback each admits.",
+   "cs": "Přenosový, interakční a transakční model, co každý zachycuje a jaký šum a zpětnou vazbu připouští."
+  },
+  {
+   "id": "05.08.01.02",
+   "level": 3,
+   "parentId": "05.08.01",
+   "name": "Verbal and Non-Verbal Communication",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Language, paralanguage, gesture, proxemics and expression, and the weight each carries in interpretation.",
+   "cs": "Jazyk, paralingvistika, gesto, proxemika a výraz a váha, kterou každé nese při výkladu."
+  },
+  {
+   "id": "05.08.01.03",
+   "level": 3,
+   "parentId": "05.08.01",
+   "name": "Interpersonal and Group Communication",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Dialogue, listening, conflict and the dynamics of communication in small groups.",
+   "cs": "Dialog, naslouchání, konflikt a dynamika komunikace v malých skupinách."
+  },
+  {
+   "id": "05.08.01.04",
+   "level": 3,
+   "parentId": "05.08.01",
+   "name": "Intercultural Communication",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "How cultural frames shape encoding and interpretation, and the recurring sources of cross-cultural misunderstanding.",
+   "cs": "Jak kulturní rámce utvářejí kódování a výklad a opakující se zdroje mezikulturního nedorozumění."
+  },
+  {
+   "id": "05.08.01.05",
+   "level": 3,
+   "parentId": "05.08.01",
+   "name": "Organisational Communication",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Information flow within institutions, formal and informal channels, and the failure modes of each.",
+   "cs": "Tok informací uvnitř institucí, formální a neformální kanály a jejich typická selhání."
+  },
+  {
+   "id": "05.08.02",
+   "level": 2,
+   "parentId": "05.08",
+   "name": "Rhetoric and Argumentation",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The systematic study of persuasion: how a case is constructed, what makes it convincing, and how to tell a good argument from an effective one. It is the oldest communication discipline and the most directly transferable.",
+   "cs": "Systematické studium přesvědčování: jak se buduje argumentace, co ji činí přesvědčivou a jak odlišit dobrý argument od účinného. Je to nejstarší komunikační obor a nejsnáze přenositelný."
+  },
+  {
+   "id": "05.08.02.01",
+   "level": 3,
+   "parentId": "05.08.02",
+   "name": "Classical Rhetoric",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Ethos, pathos and logos, the canons of invention, arrangement, style, memory and delivery, and their continuing use.",
+   "cs": "Étos, patos a logos, kánony nalézání, uspořádání, slohu, paměti a přednesu a jejich trvající užití."
+  },
+  {
+   "id": "05.08.02.02",
+   "level": 3,
+   "parentId": "05.08.02",
+   "name": "Argument Structure",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Claims, grounds, warrants and qualifiers, and the reconstruction of an argument from ordinary prose.",
+   "cs": "Tvrzení, důvody, oprávnění a omezení a rekonstrukce argumentu z běžné prózy."
+  },
+  {
+   "id": "05.08.02.03",
+   "level": 3,
+   "parentId": "05.08.02",
+   "name": "Fallacies",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Recurring patterns of defective reasoning, formal and informal, and why some remain persuasive despite being invalid.",
+   "cs": "Opakující se vzorce chybného usuzování, formální i neformální, a proč některé zůstávají přesvědčivé, ač jsou neplatné."
+  },
+  {
+   "id": "05.08.02.04",
+   "level": 3,
+   "parentId": "05.08.02",
+   "name": "Public Speaking and Presentation",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Structuring and delivering spoken argument to an audience, and adapting to it without abandoning the case.",
+   "cs": "Stavba a přednes mluveného argumentu před publikem a přizpůsobení se mu bez opuštění věci."
+  },
+  {
+   "id": "05.08.02.05",
+   "level": 3,
+   "parentId": "05.08.02",
+   "name": "Persuasion and Influence",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Empirical findings on attitude change, the routes it takes, and the ethical boundary between persuading and manipulating.",
+   "cs": "Empirické poznatky o změně postojů, cesty, jimiž probíhá, a etická hranice mezi přesvědčováním a manipulací."
+  },
+  {
+   "id": "05.08.03",
+   "level": 2,
+   "parentId": "05.08",
+   "name": "Media and Information Literacy",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The practical competence of evaluating what reaches you: who produced a message, for whom, with what interest, and how much of it is verifiable. It is the applied end of both communication study and epistemology.",
+   "cs": "Praktická způsobilost hodnotit, co se k vám dostane: kdo sdělení vytvořil, pro koho, s jakým zájmem a nakolik je ověřitelné. Je to aplikované vyústění komunikačních studií i epistemologie."
+  },
+  {
+   "id": "05.08.03.01",
+   "level": 3,
+   "parentId": "05.08.03",
+   "name": "Media Systems and Ownership",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Who produces mass communication, how it is financed, and the effect of ownership and business model on output.",
+   "cs": "Kdo vytváří masovou komunikaci, jak je financována a jaký vliv má vlastnictví a obchodní model na obsah."
+  },
+  {
+   "id": "05.08.03.02",
+   "level": 3,
+   "parentId": "05.08.03",
+   "name": "Agenda Setting and Framing",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "How selection and presentation shape what audiences think about and how they think about it.",
+   "cs": "Jak výběr a podání utvářejí, o čem publikum přemýšlí a jak o tom přemýšlí."
+  },
+  {
+   "id": "05.08.03.03",
+   "level": 3,
+   "parentId": "05.08.03",
+   "name": "Verification and Fact-Checking",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Practical methods for establishing whether a claim, image or account is what it purports to be.",
+   "cs": "Praktické metody zjišťování, zda tvrzení, obraz či svědectví jsou tím, zač se vydávají."
+  },
+  {
+   "id": "05.08.03.04",
+   "level": 3,
+   "parentId": "05.08.03",
+   "name": "Disinformation and Propaganda",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Deliberately misleading communication, the techniques it uses, and why correction is weaker than the original claim.",
+   "cs": "Záměrně klamavá komunikace, techniky, které užívá, a proč je oprava slabší než původní tvrzení."
+  },
+  {
+   "id": "05.08.03.05",
+   "level": 3,
+   "parentId": "05.08.03",
+   "name": "Algorithmic Curation",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Automated selection of what is shown, the feedback loops it creates, and its effect on the diversity of exposure.",
+   "cs": "Automatizovaný výběr zobrazovaného, zpětnovazební smyčky, které vytváří, a jeho vliv na rozmanitost expozice."
   }
  ],
  "relations": [
+  {
+   "from": "05.08.01.02",
+   "to": "05.03.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.08.01.04",
+   "to": "05.03.06.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.08.02.01",
+   "to": "05.04.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.08.02.02",
+   "to": "02.03.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.08.02.03",
+   "to": "02.03.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.08.03.03",
+   "to": "05.02.06.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.08.03.05",
+   "to": "04.06.15.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "05.08",
    "to": "04",

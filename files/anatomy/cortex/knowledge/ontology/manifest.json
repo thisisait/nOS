@@ -1,6 +1,67 @@
 {
  "version": 1,
  "types": 16,
- "relations": 0,
- "partitions": []
+ "relations": 417,
+ "partitions": [
+  {
+   "partition": "01-natural-sciences",
+   "file": "relations/01-natural-sciences.json",
+   "relations": 82
+  },
+  {
+   "partition": "02-formal-sciences",
+   "file": "relations/02-formal-sciences.json",
+   "relations": 81
+  },
+  {
+   "partition": "03-applied-sciences-technology",
+   "file": "relations/03-applied-sciences-technology.json",
+   "relations": 53
+  },
+  {
+   "partition": "04-social-sciences",
+   "file": "relations/04-social-sciences.json",
+   "relations": 114
+  },
+  {
+   "partition": "05-humanities",
+   "file": "relations/05-humanities.json",
+   "relations": 28
+  },
+  {
+   "partition": "06-arts-creative-expression",
+   "file": "relations/06-arts-creative-expression.json",
+   "relations": 1
+  },
+  {
+   "partition": "07-practical-skills-trades",
+   "file": "relations/07-practical-skills-trades.json",
+   "relations": 3
+  },
+  {
+   "partition": "08-survival-emergency-preparedness",
+   "file": "relations/08-survival-emergency-preparedness.json",
+   "relations": 7
+  },
+  {
+   "partition": "09-reference-documentation",
+   "file": "relations/09-reference-documentation.json",
+   "relations": 25
+  },
+  {
+   "partition": "10-cultural-preservation",
+   "file": "relations/10-cultural-preservation.json",
+   "relations": 6
+  },
+  {
+   "partition": "11-digital-preservation",
+   "file": "relations/11-digital-preservation.json",
+   "relations": 11
+  },
+  {
+   "partition": "12-post-disaster-rebuilding",
+   "file": "relations/12-post-disaster-rebuilding.json",
+   "relations": 6
+  }
+ ]
 }

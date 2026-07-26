@@ -8,9 +8,71 @@
    "en": "Traditional art techniques are craft methods and aesthetic practices maintained across generations—weaving, metalwork, carving, painting. They preserve manual skill and aesthetic sensibility specific to cultural contexts.",
    "cs": "Tradiční umělecké techniky jsou řemeslnické metody a estetické praktiky udržované generacemi—tkalcovství, zpracování kovu, řezba, malba. Zachovávají manuální dovednost a estetickou sensibilitu specifickou pro kulturní kontexty.",
    "brief": "Traditional art techniques are craft methods and aesthetic practices maintained across generations — weaving, metalwork, carving, painting — preserving manual skill and a cultural context's aesthetic sensibility rather than any single finished object.\n\nThe branch is the hands-on counterpart to [[10.06]] Stories & Narratives, which a technique frequently illustrates or accompanies (a woven narrative textile, a carved story panel), and it borders [[06]] Arts & Creative Expression wherever the same technique is practiced as contemporary fine art rather than inherited craft — the dividing line is transmission lineage, not the object itself. It sits alongside [[10.03]] Traditions & Customs, whose material culture a technique often produces, under the shared parent [[10]] Cultural Preservation.\n\nThe [UNESCO Traditional Craftsmanship](https://ich.unesco.org/en/traditional-craftsmanship-00057) domain is the standard reference for safeguarding these techniques, and the [World Crafts Council](https://www.worldcrafts.org/) documents living craft traditions by region."
+  },
+  {
+   "id": "10.09.01",
+   "level": 2,
+   "parentId": "10.09",
+   "name": "Textile Techniques",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Spinning, weaving, dyeing and embroidery traditions, their regional signatures, and the labour they encode.",
+   "cs": "Techniky předení, tkaní, barvení a vyšívání, jejich regionální rukopis a práce, kterou v sobě nesou."
+  },
+  {
+   "id": "10.09.02",
+   "level": 2,
+   "parentId": "10.09",
+   "name": "Ceramics and Pottery",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Forming, decorating and firing traditions, and the relationship between local clay and local form.",
+   "cs": "Tradice tvarování, zdobení a výpalu a vztah mezi místní hlínou a místní formou."
+  },
+  {
+   "id": "10.09.03",
+   "level": 2,
+   "parentId": "10.09",
+   "name": "Woodwork and Carving",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Joinery, carving and turning traditions, tool sets, and the transmission of technique through apprenticeship.",
+   "cs": "Tradice truhlářství, řezbářství a soustružení, nástrojové vybavení a předávání techniky učňovstvím."
+  },
+  {
+   "id": "10.09.04",
+   "level": 2,
+   "parentId": "10.09",
+   "name": "Metalwork and Jewellery",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Smithing, casting and ornamental metal traditions, and the value systems the objects carry.",
+   "cs": "Kovářské, slévačské a zdobné kovodělné tradice a hodnotové systémy, jež předměty nesou."
+  },
+  {
+   "id": "10.09.05",
+   "level": 2,
+   "parentId": "10.09",
+   "name": "Documentation of Craft Process",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Recording a technique so it can be reconstructed: sequence, tooling, materials and the judgement calls a maker makes.",
+   "cs": "Zaznamenání techniky tak, aby šla rekonstruovat: sled, nástroje, materiály a rozhodnutí, jež řemeslník činí."
   }
  ],
  "relations": [
+  {
+   "from": "10.09.01",
+   "to": "06.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "10.09",
    "to": "06",

@@ -8,9 +8,362 @@
    "en": "Systems theory examines how elements interact within unified wholes and studies emergent properties arising from relationships rather than isolated components. It applies across disciplines to understand feedback, dynamics, and organization in complex systems.",
    "cs": "Teorie systémů zkoumá, jak prvky vzájemně působí v jednotných celcích, a studuje vznikající vlastnosti vycházející ze vztahů spíše než z izolovaných komponent. Aplikuje se napříč disciplínami k pochopení zpětných vazeb, dynamiky a organizace v komplexních systémech.",
    "brief": "Systems Theory examines how elements interact within unified wholes and studies the emergent properties that arise from the relationships between components rather than from any component in isolation. It supplies a vocabulary — feedback, equilibrium, hierarchy, emergence — that applies wherever a set of interacting parts behaves in ways none of the parts would predict alone, whether the parts are organisms, machines or people.\n\nSystems theory sits within the Formal Sciences beside [[02.01]] and [[02.02]], both of which it draws on for formal tools: mathematics supplies the differential equations and network models used to describe feedback and stability, while computer science provides the computational systems in which those models are simulated and, increasingly, the software architectures systems theory itself is used to design. It shares its historical origin with [[02.04]] in the mid-twentieth-century cybernetics movement, and the two fields still overlap wherever a system's behavior is described in terms of information flow and control.\n\nBecause it deliberately abstracts away from any one domain, systems theory reaches directly into other branches of this taxonomy — most visibly into [[01.03.05]], where feedback and equilibrium describe how populations, predators and resources interact within an ecosystem. For further reading, see Ludwig von Bertalanffy's foundational [\"General System Theory\"](https://monoskop.org/images/2/26/Von_Bertalanffy_Ludwig_General_System_Theory_1968.pdf) and the [Encyclopaedia Britannica entry on systems theory](https://www.britannica.com/science/systems-theory)."
+  },
+  {
+   "id": "02.05.01",
+   "level": 2,
+   "parentId": "02.05",
+   "name": "Systems and Boundaries",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "What it means to treat something as a system: a set of elements whose interaction produces behaviour none of them has alone. The first analytical act is drawing the boundary, and it is a choice rather than a discovery.",
+   "cs": "Co znamená pojednávat něco jako systém: soubor prvků, jejichž vzájemné působení vytváří chování, jež nemá žádný z nich sám. Prvním analytickým úkonem je vytyčení hranice, a to je volba, nikoli objev."
+  },
+  {
+   "id": "02.05.01.01",
+   "level": 3,
+   "parentId": "02.05.01",
+   "name": "System, Boundary and Environment",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The distinction between what is inside, what is outside, and what crosses, and how the boundary choice determines the analysis.",
+   "cs": "Rozlišení toho, co je uvnitř, co vně a co hranici překračuje, a jak volba hranice určuje analýzu."
+  },
+  {
+   "id": "02.05.01.02",
+   "level": 3,
+   "parentId": "02.05.01",
+   "name": "State, Structure and Behaviour",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "A system described by its variables, by the connections among them, and by the trajectory those connections produce over time.",
+   "cs": "Systém popsaný svými proměnnými, vazbami mezi nimi a trajektorií, kterou tyto vazby v čase vytvářejí."
+  },
+  {
+   "id": "02.05.01.03",
+   "level": 3,
+   "parentId": "02.05.01",
+   "name": "Open, Closed and Isolated Systems",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Classification by what may cross the boundary — matter, energy, information — and why open systems can maintain order.",
+   "cs": "Třídění podle toho, co smí překročit hranici — hmota, energie, informace — a proč otevřené systémy dokáží udržovat řád."
+  },
+  {
+   "id": "02.05.01.04",
+   "level": 3,
+   "parentId": "02.05.01",
+   "name": "Hierarchy and Modularity",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Systems composed of systems, the near-decomposability that makes them analysable, and the interfaces between levels.",
+   "cs": "Systémy složené ze systémů, téměř-rozložitelnost, která je činí analyzovatelnými, a rozhraní mezi úrovněmi."
+  },
+  {
+   "id": "02.05.02",
+   "level": 2,
+   "parentId": "02.05",
+   "name": "Feedback and Control",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The mechanism by which a system acts on its own future state. Negative feedback stabilises, positive feedback amplifies, and almost every persistent structure in nature or engineering is an arrangement of the two.",
+   "cs": "Mechanismus, jímž systém působí na svůj vlastní budoucí stav. Záporná zpětná vazba stabilizuje, kladná zesiluje a téměř každá trvalá struktura v přírodě i technice je uspořádáním obojího."
+  },
+  {
+   "id": "02.05.02.01",
+   "level": 3,
+   "parentId": "02.05.02",
+   "name": "Negative Feedback and Regulation",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Error-correcting loops, setpoints and homeostasis as the general form of self-regulation.",
+   "cs": "Smyčky korigující odchylku, žádané hodnoty a homeostáze jako obecná podoba samoregulace."
+  },
+  {
+   "id": "02.05.02.02",
+   "level": 3,
+   "parentId": "02.05.02",
+   "name": "Positive Feedback and Instability",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Self-reinforcing loops producing growth, collapse and lock-in, and why they end.",
+   "cs": "Sebeposilující smyčky vytvářející růst, kolaps a uzamčení, a proč končí."
+  },
+  {
+   "id": "02.05.02.03",
+   "level": 3,
+   "parentId": "02.05.02",
+   "name": "Stability and Equilibrium",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Fixed points, attractors, and the conditions under which a perturbed system returns, oscillates or departs.",
+   "cs": "Pevné body, atraktory a podmínky, za nichž se narušený systém vrací, osciluje nebo se vzdaluje."
+  },
+  {
+   "id": "02.05.02.04",
+   "level": 3,
+   "parentId": "02.05.02",
+   "name": "Control Theory",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Design of inputs to make a system behave as required, including feedforward, proportional-integral-derivative control and observability.",
+   "cs": "Návrh vstupů, aby se systém choval požadovaně, včetně dopředné vazby, PID regulace a pozorovatelnosti."
+  },
+  {
+   "id": "02.05.02.05",
+   "level": 3,
+   "parentId": "02.05.02",
+   "name": "Delay, Oscillation and Overshoot",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "How lag between action and effect turns a stabilising loop into an oscillating one.",
+   "cs": "Jak zpoždění mezi zásahem a účinkem mění stabilizující smyčku v oscilující."
+  },
+  {
+   "id": "02.05.03",
+   "level": 2,
+   "parentId": "02.05",
+   "name": "Complexity and Emergence",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Behaviour that belongs to the whole and not to any part. Emergence is not mysticism: it is what happens when interaction is non-linear and the aggregate obeys regularities its components do not.",
+   "cs": "Chování, jež náleží celku a žádné jeho části. Emergence není mystika: je to, co nastává, když je interakce nelineární a agregát se řídí zákonitostmi, jimiž se jeho složky neřídí."
+  },
+  {
+   "id": "02.05.03.01",
+   "level": 3,
+   "parentId": "02.05.03",
+   "name": "Nonlinearity and Chaos",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Sensitivity to initial conditions, deterministic unpredictability, and the difference between complicated and chaotic.",
+   "cs": "Citlivost na počáteční podmínky, deterministická nepředvídatelnost a rozdíl mezi složitým a chaotickým."
+  },
+  {
+   "id": "02.05.03.02",
+   "level": 3,
+   "parentId": "02.05.03",
+   "name": "Self-Organisation",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Order arising without a designer, from pattern formation in physical systems to spontaneous coordination in social ones.",
+   "cs": "Řád vznikající bez návrháře, od tvorby vzorů ve fyzikálních systémech po spontánní koordinaci v sociálních."
+  },
+  {
+   "id": "02.05.03.03",
+   "level": 3,
+   "parentId": "02.05.03",
+   "name": "Adaptation and Evolution of Systems",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Systems that change their own rules in response to their environment, and the selection processes driving that change.",
+   "cs": "Systémy měnící vlastní pravidla v reakci na prostředí a selekční procesy, které tuto změnu pohánějí."
+  },
+  {
+   "id": "02.05.03.04",
+   "level": 3,
+   "parentId": "02.05.03",
+   "name": "Resilience and Robustness",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Capacity to absorb disturbance without changing regime, the trade-off against efficiency, and the fragility that optimisation buys.",
+   "cs": "Schopnost pohltit narušení beze změny režimu, kompromis vůči efektivnosti a křehkost, kterou optimalizace kupuje."
+  },
+  {
+   "id": "02.05.03.05",
+   "level": 3,
+   "parentId": "02.05.03",
+   "name": "Scale and Power Laws",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Regularities that hold across orders of magnitude, and what a heavy-tailed distribution implies about typical and extreme events.",
+   "cs": "Zákonitosti platné napříč řády velikosti a co těžký chvost rozdělení vypovídá o typických a extrémních jevech."
+  },
+  {
+   "id": "02.05.04",
+   "level": 2,
+   "parentId": "02.05",
+   "name": "Networks",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Systems described by what is connected to what. The topology of connection turns out to predict behaviour — spread, robustness, influence — often better than the properties of the nodes themselves.",
+   "cs": "Systémy popsané tím, co je s čím spojeno. Topologie propojení předpovídá chování — šíření, odolnost, vliv — často lépe než vlastnosti samotných uzlů."
+  },
+  {
+   "id": "02.05.04.01",
+   "level": 3,
+   "parentId": "02.05.04",
+   "name": "Graph Structure and Metrics",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Degree, path length, clustering and centrality as the basic descriptors of a network.",
+   "cs": "Stupeň, délka cesty, shlukování a centralita jako základní popisné veličiny sítě."
+  },
+  {
+   "id": "02.05.04.02",
+   "level": 3,
+   "parentId": "02.05.04",
+   "name": "Network Topologies",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Random, small-world and scale-free structures, how each arises, and the behaviour each supports.",
+   "cs": "Náhodné, malosvětové a bezškálové struktury, jak každá vzniká a jaké chování umožňuje."
+  },
+  {
+   "id": "02.05.04.03",
+   "level": 3,
+   "parentId": "02.05.04",
+   "name": "Diffusion and Contagion",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Propagation of disease, information and failure across a network, and the thresholds governing whether spread takes hold.",
+   "cs": "Šíření nemoci, informace a poruchy sítí a prahy určující, zda se šíření uchytí."
+  },
+  {
+   "id": "02.05.04.04",
+   "level": 3,
+   "parentId": "02.05.04",
+   "name": "Robustness and Cascading Failure",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Why networks tolerate random loss but not targeted removal, and how local failure becomes systemic.",
+   "cs": "Proč sítě snášejí náhodné výpadky, ale nikoli cílené odstranění, a jak se z místního selhání stává systémové."
+  },
+  {
+   "id": "02.05.05",
+   "level": 2,
+   "parentId": "02.05",
+   "name": "Cybernetics and Modelling",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "The comparative study of control and communication in machines, organisms and organisations, and the practice of building models that stand in for a system well enough to reason with.",
+   "cs": "Srovnávací studium řízení a sdělování ve strojích, organismech a organizacích a praxe budování modelů, které systém zastoupí natolik dobře, aby se s nimi dalo uvažovat."
+  },
+  {
+   "id": "02.05.05.01",
+   "level": 3,
+   "parentId": "02.05.05",
+   "name": "Requisite Variety",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The law that a regulator must have at least as much variety as the disturbances it must absorb.",
+   "cs": "Zákon, že regulátor musí mít alespoň tolik rozmanitosti jako poruchy, které má pohltit."
+  },
+  {
+   "id": "02.05.05.02",
+   "level": 3,
+   "parentId": "02.05.05",
+   "name": "Models and Abstraction",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "What a model deliberately omits, the purposes that justify the omission, and the failure mode of mistaking model for system.",
+   "cs": "Co model záměrně vynechává, účely ospravedlňující vynechání a selhání spočívající v záměně modelu za systém."
+  },
+  {
+   "id": "02.05.05.03",
+   "level": 3,
+   "parentId": "02.05.05",
+   "name": "Simulation",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Executing a model to explore behaviour that cannot be derived analytically, and the validation problem that follows.",
+   "cs": "Spouštění modelu k prozkoumání chování, jež nelze odvodit analyticky, a problém validace, který z toho plyne."
+  },
+  {
+   "id": "02.05.05.04",
+   "level": 3,
+   "parentId": "02.05.05",
+   "name": "Systems Thinking in Practice",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Applying the vocabulary to organisations and policy: stocks and flows, unintended consequences, and leverage points.",
+   "cs": "Uplatnění tohoto slovníku na organizace a politiku: zásoby a toky, nezamýšlené důsledky a body pákového účinku."
   }
  ],
  "relations": [
+  {
+   "from": "02.05.01.04",
+   "to": "02.02.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "02.05.02.01",
+   "to": "01.03.11.08",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "02.05.02.04",
+   "to": "03.01.02.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "02.05.03.02",
+   "to": "01.03.11.06",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "02.05.03.05",
+   "to": "04.04.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "02.05.04.02",
+   "to": "04.02.01.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "02.05.04.03",
+   "to": "04.08.02.06",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "02.05.05.04",
+   "to": "04.05.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "02.05",
    "to": "01.03.05",

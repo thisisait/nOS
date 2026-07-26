@@ -1,0 +1,78 @@
+{
+ "version": 1,
+ "partition": "12-post-disaster-rebuilding",
+ "relations": [
+  {
+   "from": "12.01",
+   "fromKind": "node",
+   "to": "12.02",
+   "toKind": "node",
+   "type": "prerequisite-for",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.76,
+   "justification": "Tool-making presupposes the basic infrastructure — power, water, shelter — that makes sustained work possible.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "12.02.04",
+   "fromKind": "node",
+   "to": "12.02.03",
+   "toKind": "node",
+   "type": "requires",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.86,
+   "justification": "Improvised tooling requires maintenance skill; a tool made from salvage degrades faster than one that was manufactured.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "12.03",
+   "fromKind": "node",
+   "to": "01.02",
+   "toKind": "node",
+   "type": "specializes",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.83,
+   "justification": "Field chemistry specialises chemistry to what can be done without laboratory infrastructure.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "12.03",
+   "fromKind": "node",
+   "to": "12.04",
+   "toKind": "node",
+   "type": "prerequisite-for",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.88,
+   "justification": "Medicine production depends on the field chemistry that produces its reagents and solvents.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "12.04.01",
+   "fromKind": "node",
+   "to": "12.03.01",
+   "toKind": "node",
+   "type": "requires",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.85,
+   "justification": "Antiseptic preparation depends on the water-treatment chemistry that makes clean water available in the first place.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "12.05.02",
+   "fromKind": "node",
+   "to": "12.05.01",
+   "toKind": "node",
+   "type": "requires",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.88,
+   "justification": "Rationing requires a decision structure with enough legitimacy that the allocation is accepted; without it the rule is not followed.",
+   "createdAt": 1785000000
+  }
+ ]
+}

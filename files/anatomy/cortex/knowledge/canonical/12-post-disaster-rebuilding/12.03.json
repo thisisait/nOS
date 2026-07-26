@@ -8,9 +8,60 @@
    "en": "Fundamental chemical processes and reactions applicable to survival—including soap-making, fermentation, water disinfection, and soil amendment. Operates at the scale of household and field rather than industrial synthesis; enables food preservation, hygiene, and agricultural productivity distinct from medicine which focuses on disease treatment.",
    "cs": "Základní chemické procesy a reakce použitelné pro přežití—včetně výroby mýdla, fermentace, dezinfekce vody a úpravy půdy. Pracuje v měřítku domácností a polí spíše než průmyslové syntézy; umožňuje konzervaci potravin, hygienu a zemědělskou produktivitu odlišně od medicíny zaměřené na léčbu chorob.",
    "brief": "Essential Chemistry is the set of household- and field-scale chemical processes — soap-making, fermentation, water disinfection, and soil amendment — that a rebuilding group needs once industrial chemical supply chains are gone. It draws on the tools [[12.02]] Tool Making provides and the power and water [[12.01]] Basic Infrastructure supplies, operating at the scale of a household or field rather than an industrial plant; its outputs in turn feed [[12.04]] Basic Medicine Production, which needs antiseptics and solvents this subfield produces.\n\nElsewhere in the corpus, [[01.02]] Chemistry covers the same acid-base, fermentation, and oxidation reactions with full academic and industrial rigor and instrumentation. Essential Chemistry is that same science reduced to what can be practiced with household apparatus, empirically verified results, and locally available reagents rather than a laboratory supply catalog.\n\nLewis Dartnell's [*The Knowledge: How to Rebuild Our World from Scratch*](https://en.wikipedia.org/wiki/The_Knowledge:_How_to_Rebuild_Our_World_From_Scratch) devotes chapters to exactly this scale of chemistry — soap, acids, and preservation from first principles — and the [Wikipedia entry on saponification](https://en.wikipedia.org/wiki/Saponification) documents the core reaction behind soap-making, one of this subfield's foundational techniques."
+  },
+  {
+   "id": "12.03.01",
+   "level": 2,
+   "parentId": "12.03",
+   "name": "Water Treatment Chemistry",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Disinfection, coagulation and filtration chemistry, and the dosing that makes water safe rather than merely clear.",
+   "cs": "Chemie dezinfekce, koagulace a filtrace a dávkování, jež činí vodu bezpečnou, nikoli jen čirou."
+  },
+  {
+   "id": "12.03.02",
+   "level": 2,
+   "parentId": "12.03",
+   "name": "Soap, Alkali and Cleaning Agents",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Saponification from ash and fat, and the hygiene chain that depends on it.",
+   "cs": "Zmýdelnění z popela a tuku a hygienický řetězec, který na něm závisí."
+  },
+  {
+   "id": "12.03.03",
+   "level": 2,
+   "parentId": "12.03",
+   "name": "Fuels and Combustion",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Producing and storing usable fuel, combustion efficiency, and the hazards of confined burning.",
+   "cs": "Výroba a skladování použitelného paliva, účinnost spalování a rizika hoření v uzavřeném prostoru."
+  },
+  {
+   "id": "12.03.04",
+   "level": 2,
+   "parentId": "12.03",
+   "name": "Preservatives and Basic Reagents",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Salt, acids, alkalis and simple reagents, their preparation, and their role in food and material preservation.",
+   "cs": "Sůl, kyseliny, zásady a jednoduchá činidla, jejich příprava a role v konzervaci potravin a materiálů."
   }
  ],
  "relations": [
+  {
+   "from": "12.03.01",
+   "to": "08.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "12.03",
    "to": "01.02",

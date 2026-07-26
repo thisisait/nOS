@@ -8,9 +8,60 @@
    "en": "Traditions and customs are established social practices—greetings, celebrations, dress codes—passed through generations within communities. They embody cultural values and reinforce social cohesion.",
    "cs": "Tradice a zvyky jsou zavedené společenské praktiky—zdravení, oslavy, oděvní kódy—předávané generacemi v rámci komunit. Vtělují kulturní hodnoty a posilují sociální soudržnost.",
    "brief": "Traditions and customs are the established social practices of everyday and periodic life — greetings, dress codes, seasonal celebrations, rites of passage, hospitality norms — that a community repeats across generations without necessarily formalizing them into doctrine. Their persistence, more than any written record, is what embodies a community's values and keeps its members socially bound to one another.\n\nThis node is the general category from which several more specific customary practices have been split into their own nodes for finer documentation: [[10.04]] Traditional Recipes covers customary food preparation specifically, and [[10.09]] Traditional Art Techniques covers customary craft and decorative practice; both would otherwise fall under this node's broad scope. [[10.08]] Rituals & Ceremonies is the more formalized, often sacred subset of custom — a wedding rehearsal dinner is a custom, the wedding ceremony itself is a ritual. Documenting a custom well means recording not just what is done but the occasion and meaning attached to it, since the same act performed outside its context loses the significance that made it worth preserving.\n\nEthnographic method for recording custom is set by anthropological practice; the [Smithsonian Center for Folklife and Cultural Heritage](https://folklife.si.edu/) documents and publishes living-tradition fieldwork, and UNESCO's [Intangible Cultural Heritage](https://ich.unesco.org/) programme provides the international framework for safeguarding customary practice."
+  },
+  {
+   "id": "10.03.01",
+   "level": 2,
+   "parentId": "10.03",
+   "name": "Life-Cycle Customs",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Practices marking birth, coming of age, marriage and death, and their role in making transitions socially real.",
+   "cs": "Zvyky provázející narození, dospívání, sňatek a smrt a jejich role v tom, že činí přechody společensky skutečnými."
+  },
+  {
+   "id": "10.03.02",
+   "level": 2,
+   "parentId": "10.03",
+   "name": "Calendar Customs",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Seasonal and annual observances, their agricultural and religious anchors, and their adaptation to urban life.",
+   "cs": "Obyčeje vázané na roční dobu a kalendář, jejich zemědělské a náboženské ukotvení a přizpůsobení městskému životu."
+  },
+  {
+   "id": "10.03.03",
+   "level": 2,
+   "parentId": "10.03",
+   "name": "Foodways",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "What is eaten, when, with whom and why, as one of the most durable and most portable markers of identity.",
+   "cs": "Co se jí, kdy, s kým a proč, jako jeden z nejtrvalejších a nejpřenosnějších znaků identity."
+  },
+  {
+   "id": "10.03.04",
+   "level": 2,
+   "parentId": "10.03",
+   "name": "Dress and Material Custom",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Clothing, ornament and household objects as carriers of belonging, and their revival as heritage.",
+   "cs": "Oděv, ozdoba a předměty domácnosti jako nositelé příslušnosti a jejich obroda coby dědictví."
   }
  ],
  "relations": [
+  {
+   "from": "10.03.03",
+   "to": "07.08",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "10.03",
    "to": "10.04",

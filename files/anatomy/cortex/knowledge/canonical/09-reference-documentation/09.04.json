@@ -8,9 +8,67 @@
    "en": "Maps and atlases are spatial representations showing geography, political boundaries, infrastructure networks, or thematic data distribution. They encode complex geographic relationships into visual form.",
    "cs": "Mapy a atlasy jsou prostorové reprezentace ukazující zeměpis, politické hranice, infrastrukturní sítě nebo distribuci tematických dat. Kódují složité geografické vztahy do vizuální podoby.",
    "brief": "Maps and atlases are spatial representations showing geography, political boundaries, infrastructure networks, or thematic data distribution. They encode complex geographic relationships into visual form, letting a reader grasp scale, distance, and adjacency at a glance that prose description cannot convey as efficiently.\n\nWithin [[09]] Reference & Documentation, this branch is the reference counterpart to the applied skill covered in [[08.06]] Navigation: a map is the artifact, navigation is the practice of reading and correlating it against real terrain. It also relates to [[09.10]] Historical Archives, since historical maps are themselves primary sources documenting how borders, settlements, and place names changed over time, and to [[01]] Natural Sciences, since thematic maps of climate, geology, or ecosystems apply earth-science data to cartographic form.\n\nFor a comprehensive open cartographic dataset, see [OpenStreetMap](https://www.openstreetmap.org/), and for authoritative historical map collections, the [David Rumsey Map Collection](https://www.davidrumsey.com/)."
+  },
+  {
+   "id": "09.04.01",
+   "level": 2,
+   "parentId": "09.04",
+   "name": "Topographic Maps",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Representation of terrain by contour, relief and feature symbology, and reading elevation and slope from a sheet.",
+   "cs": "Znázornění terénu vrstevnicemi, stínováním a smluvenými značkami a čtení nadmořské výšky a sklonu z mapového listu."
+  },
+  {
+   "id": "09.04.02",
+   "level": 2,
+   "parentId": "09.04",
+   "name": "Thematic and Statistical Maps",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Maps carrying a single variable over geography, the classification choices they require, and how those choices change the message.",
+   "cs": "Mapy nesoucí jednu proměnnou nad územím, klasifikační volby, jež vyžadují, a jak tyto volby mění sdělení."
+  },
+  {
+   "id": "09.04.03",
+   "level": 2,
+   "parentId": "09.04",
+   "name": "Nautical and Aeronautical Charts",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Navigation-specific representations: depth, hazard, airspace and procedure, and the currency requirements attached to them.",
+   "cs": "Navigačně specifická zobrazení: hloubka, překážka, vzdušný prostor a postupy a požadavky na jejich aktuálnost."
+  },
+  {
+   "id": "09.04.04",
+   "level": 2,
+   "parentId": "09.04",
+   "name": "Atlases and Gazetteers",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Bound and indexed collections, place-name authority, and the political sensitivity of naming and boundary depiction.",
+   "cs": "Vázané a rejstříkované sbírky, autorita zeměpisných jmen a politická citlivost pojmenování a zákresu hranic."
   }
  ],
  "relations": [
+  {
+   "from": "09.04.01",
+   "to": "04.08.03.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "09.04.02",
+   "to": "04.08.03.06",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "09.04",
    "to": "01",

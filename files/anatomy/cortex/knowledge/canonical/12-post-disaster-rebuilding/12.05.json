@@ -8,9 +8,67 @@
    "en": "Frameworks and practices for collective decision-making, resource allocation, and conflict resolution—including governance structures, work coordination, and knowledge sharing protocols. Integrates outcomes from infrastructure, tool-making, and medicine into coherent social systems; distinct from technical domains by operating on human coordination rather than material transformation.",
    "cs": "Rámce a postupy pro kolektivní rozhodování, přidělování zdrojů a řešení konfliktů—včetně vládních struktur, koordinace práce a protokolů sdílení znalostí. Integruje výsledky infrastruktury, výroby nástrojů a medicíny do soudržných společenských systémů; odlišuje se od technických domén operováním na lidské koordinaci spíše než hmotné transformaci.",
    "brief": "Community Organization is the set of frameworks and practices for collective decision-making, resource allocation, and conflict resolution — governance structures, work coordination, and knowledge-sharing protocols — that a rebuilding group needs to keep applying its technical knowledge without collapsing back into disorder. Unlike its siblings it produces no physical output; instead it integrates the results of [[12.01]] Basic Infrastructure, [[12.02]] Tool Making, [[12.03]] Essential Chemistry, and [[12.04]] Basic Medicine Production into a coherent social system, which is why it is sequenced last even though its coordination function operates continuously alongside the other four.\n\nElsewhere in the corpus, [[04.05]] Political Science studies governance, authority, and collective decision-making as an academic discipline at state and institutional scale. Community Organization is the same subject matter compressed to small-group, post-collapse practice — informal authority, ad hoc dispute resolution, and survival-driven division of labor rather than constitutions and formal state institutions.\n\nElinor Ostrom's [*Governing the Commons*](https://en.wikipedia.org/wiki/Governing_the_Commons) documents the design principles that let small groups manage shared resources without central authority or collapse into disorder, directly applicable to a rebuilding community's resource-allocation problem, and Lewis Dartnell's [*The Knowledge*](https://en.wikipedia.org/wiki/The_Knowledge:_How_to_Rebuild_Our_World_From_Scratch) frames why social organization is what keeps rebuilt technical knowledge from being lost again."
+  },
+  {
+   "id": "12.05.01",
+   "level": 2,
+   "parentId": "12.05",
+   "name": "Decision-Making Structures",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Assemblies, delegation and consent-based methods for groups without a standing authority.",
+   "cs": "Shromáždění, delegování a metody založené na souhlasu pro skupiny bez ustavené autority."
+  },
+  {
+   "id": "12.05.02",
+   "level": 2,
+   "parentId": "12.05",
+   "name": "Resource Allocation",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Deciding who gets what when supply is short: rationing, prioritisation and the legitimacy the method needs.",
+   "cs": "Rozhodování, kdo co dostane při nedostatku: přídělový systém, stanovení priorit a legitimita, kterou metoda potřebuje."
+  },
+  {
+   "id": "12.05.03",
+   "level": 2,
+   "parentId": "12.05",
+   "name": "Conflict Resolution",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Mediation and restorative practice where formal courts are unavailable, and the enforcement problem they face.",
+   "cs": "Mediace a restorativní praxe tam, kde nejsou dostupné formální soudy, a problém vynutitelnosti, jemuž čelí."
+  },
+  {
+   "id": "12.05.04",
+   "level": 2,
+   "parentId": "12.05",
+   "name": "Communication and Coordination",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Keeping a dispersed group informed and aligned without infrastructure, and the failure modes of rumour.",
+   "cs": "Udržení rozptýlené skupiny informované a sladěné bez infrastruktury a selhání plynoucí z fám."
   }
  ],
  "relations": [
+  {
+   "from": "12.05.01",
+   "to": "04.05.01.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "12.05.03",
+   "to": "04.06.17.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "12.05",
    "to": "04.05",

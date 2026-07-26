@@ -8,9 +8,271 @@
    "en": "Standards and specifications are formalized technical requirements and measurement baselines for materials, components, and processes. They enable interoperability and consistent quality across manufacturers and contexts.",
    "cs": "Normy a specifikace jsou formalizované technické požadavky a měřící základy pro materiály, součásti a procesy. Umožňují interoperabilitu a konzistentní kvalitu u výrobců a v různých kontextech.",
    "brief": "Standards and specifications are formalized technical requirements and measurement baselines for materials, components, and processes. They enable interoperability and consistent quality across manufacturers and contexts, functioning as the shared agreement that lets independently produced parts and systems work together.\n\nWithin [[09]] Reference & Documentation, standards depend on [[09.02]] Dictionaries for terminology whose meaning is fixed and unambiguous, and they are consulted alongside [[09.03]] Technical Manuals, which apply a standard's tolerances to a specific piece of equipment's maintenance procedure. The branch also anchors [[03]] Applied Sciences & Technology broadly, since engineering disciplines from electronics to construction operate within the boundaries standards bodies define — a component is safe to combine with another precisely because both were built to the same specification.\n\nFor international standards across nearly every technical field, see the [International Organization for Standardization](https://www.iso.org/), and for U.S. national standards coordination, the [National Institute of Standards and Technology](https://www.nist.gov/)."
+  },
+  {
+   "id": "09.05.01",
+   "level": 2,
+   "parentId": "09.05",
+   "name": "Units and the SI",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The International System of Units: seven base quantities from which every other measure is derived, now defined by fixed values of physical constants rather than by artefacts. It is the shared vocabulary that makes measurements from different places comparable at all.",
+   "cs": "Mezinárodní soustava jednotek: sedm základních veličin, z nichž se odvozují všechny ostatní míry, dnes definovaných pevnými hodnotami fyzikálních konstant namísto etalonů. Je to sdílený slovník, který vůbec umožňuje srovnávat měření z různých míst."
+  },
+  {
+   "id": "09.05.01.01",
+   "level": 3,
+   "parentId": "09.05.01",
+   "name": "Base and Derived Units",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The seven base units, the derived units built from them, and the coherence that makes conversion factors unnecessary within the system.",
+   "cs": "Sedm základních jednotek, odvozené jednotky z nich sestavené a koherence, díky níž nejsou uvnitř soustavy potřeba převodní součinitele."
+  },
+  {
+   "id": "09.05.01.02",
+   "level": 3,
+   "parentId": "09.05.01",
+   "name": "Definition by Physical Constants",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The 2019 redefinition fixing the values of the Planck constant, elementary charge and others, and why an invariant definition beats a physical prototype.",
+   "cs": "Redefinice z roku 2019 pevně stanovující hodnoty Planckovy konstanty, elementárního náboje a dalších, a proč je invariantní definice lepší než fyzický etalon."
+  },
+  {
+   "id": "09.05.01.03",
+   "level": 3,
+   "parentId": "09.05.01",
+   "name": "Prefixes and Orders of Magnitude",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Decimal prefixes as a compact notation for scale, and the habit of reasoning about quantities by their exponent.",
+   "cs": "Desítkové předpony jako úsporný zápis měřítka a zvyk uvažovat o veličinách podle jejich exponentu."
+  },
+  {
+   "id": "09.05.01.04",
+   "level": 3,
+   "parentId": "09.05.01",
+   "name": "Non-SI and Legacy Units",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Units retained by convention or by field, the conversion hazards they create, and the failures caused by unit confusion.",
+   "cs": "Jednotky zachované konvencí či oborem, převodní rizika, která vytvářejí, a selhání způsobená záměnou jednotek."
+  },
+  {
+   "id": "09.05.02",
+   "level": 2,
+   "parentId": "09.05",
+   "name": "Dimensional Analysis",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Reasoning about physical relationships from the dimensions of the quantities alone. It catches errors before any calculation, constrains the form an unknown law can take, and is the cheapest check available in the physical sciences.",
+   "cs": "Uvažování o fyzikálních vztazích pouze z rozměrů veličin. Odhalí chybu ještě před výpočtem, omezuje tvar, jehož může neznámý zákon nabýt, a je nejlevnější kontrolou dostupnou v přírodních vědách."
+  },
+  {
+   "id": "09.05.02.01",
+   "level": 3,
+   "parentId": "09.05.02",
+   "name": "Dimensional Homogeneity",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The requirement that both sides of a physical equation carry the same dimensions, and its use as an error check.",
+   "cs": "Požadavek, aby obě strany fyzikální rovnice nesly tytéž rozměry, a jeho užití jako kontroly chyb."
+  },
+  {
+   "id": "09.05.02.02",
+   "level": 3,
+   "parentId": "09.05.02",
+   "name": "Dimensionless Groups",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Ratios that eliminate units, their role in similarity and scaling, and why they govern behaviour across sizes.",
+   "cs": "Poměry vylučující jednotky, jejich role v podobnosti a škálování a proč řídí chování napříč velikostmi."
+  },
+  {
+   "id": "09.05.02.03",
+   "level": 3,
+   "parentId": "09.05.02",
+   "name": "Scaling and Similarity",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Prediction of behaviour at one size from measurement at another, and where geometric scaling breaks down.",
+   "cs": "Předpověď chování v jedné velikosti z měření v jiné a kde geometrické škálování selhává."
+  },
+  {
+   "id": "09.05.02.04",
+   "level": 3,
+   "parentId": "09.05.02",
+   "name": "Fermi Estimation",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Order-of-magnitude reasoning from decomposition and rough inputs, and its value as a check on any quantitative claim.",
+   "cs": "Řádové uvažování rozkladem a hrubými vstupy a jeho hodnota jako kontroly jakéhokoli kvantitativního tvrzení."
+  },
+  {
+   "id": "09.05.03",
+   "level": 2,
+   "parentId": "09.05",
+   "name": "Uncertainty and Error",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "No measurement is a number; every measurement is a number with a doubt attached. Stating that doubt honestly, and propagating it correctly, is what separates a measurement from a guess.",
+   "cs": "Žádné měření není číslo; každé měření je číslo s připojenou pochybností. Poctivě tuto pochybnost uvést a správně ji šířit je to, co odlišuje měření od odhadu."
+  },
+  {
+   "id": "09.05.03.01",
+   "level": 3,
+   "parentId": "09.05.03",
+   "name": "Systematic and Random Error",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The distinction between bias that repetition cannot remove and scatter that it can, and why only one is fixed by averaging.",
+   "cs": "Rozdíl mezi vychýlením, které opakování neodstraní, a rozptylem, který ano, a proč jen jedno z toho řeší průměrování."
+  },
+  {
+   "id": "09.05.03.02",
+   "level": 3,
+   "parentId": "09.05.03",
+   "name": "Uncertainty Propagation",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "How the uncertainty of inputs combines into the uncertainty of a computed result.",
+   "cs": "Jak se nejistoty vstupů skládají do nejistoty vypočteného výsledku."
+  },
+  {
+   "id": "09.05.03.03",
+   "level": 3,
+   "parentId": "09.05.03",
+   "name": "Significant Figures and Reporting",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Conventions for expressing precision, and the false confidence created by reporting more digits than are justified.",
+   "cs": "Konvence vyjadřování přesnosti a falešná jistota vzniklá uváděním více číslic, než je oprávněné."
+  },
+  {
+   "id": "09.05.03.04",
+   "level": 3,
+   "parentId": "09.05.03",
+   "name": "Accuracy, Precision and Resolution",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Three properties routinely confused, the differences between them, and why an instrument can be precise and wrong.",
+   "cs": "Tři běžně zaměňované vlastnosti, rozdíly mezi nimi a proč může být přístroj přesný a přitom nesprávný."
+  },
+  {
+   "id": "09.05.04",
+   "level": 2,
+   "parentId": "09.05",
+   "name": "Metrology and Traceability",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "The infrastructure that makes a measurement mean the same thing everywhere: reference standards, unbroken chains of comparison back to them, and the institutions maintaining both.",
+   "cs": "Infrastruktura, díky níž měření znamená všude totéž: referenční etalony, nepřerušené řetězce srovnání až k nim a instituce, které obojí udržují."
+  },
+  {
+   "id": "09.05.04.01",
+   "level": 3,
+   "parentId": "09.05.04",
+   "name": "Calibration and Traceability",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Comparison of an instrument against a reference of known uncertainty, and the documented chain back to a national or international standard.",
+   "cs": "Porovnání přístroje s referencí o známé nejistotě a doložený řetězec zpět k národnímu či mezinárodnímu etalonu."
+  },
+  {
+   "id": "09.05.04.02",
+   "level": 3,
+   "parentId": "09.05.04",
+   "name": "Standards Bodies",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The international and national organisations defining and maintaining measurement and technical standards.",
+   "cs": "Mezinárodní a národní organizace definující a udržující měřicí a technické normy."
+  },
+  {
+   "id": "09.05.04.03",
+   "level": 3,
+   "parentId": "09.05.04",
+   "name": "Technical Standards and Specifications",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Documents fixing requirements so that independently made things interoperate, and the process by which they are agreed.",
+   "cs": "Dokumenty stanovující požadavky tak, aby nezávisle vyrobené věci spolupracovaly, a proces, jímž se na nich shoduje."
+  },
+  {
+   "id": "09.05.04.04",
+   "level": 3,
+   "parentId": "09.05.04",
+   "name": "Time and Frequency Standards",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Atomic timekeeping, coordinated universal time and the leap-second adjustment, as the reference for the most precisely measured quantity there is.",
+   "cs": "Atomové měření času, koordinovaný světový čas a přestupné sekundy jako reference pro nejpřesněji měřenou veličinu vůbec."
   }
  ],
  "relations": [
+  {
+   "from": "09.05.01.02",
+   "to": "01.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "09.05.01.04",
+   "to": "03.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "09.05.02.04",
+   "to": "02.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "09.05.03.01",
+   "to": "05.02.06",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "09.05.03.02",
+   "to": "04.02.05.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "09.05.04.04",
+   "to": "01.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "09.05",
    "to": "03",

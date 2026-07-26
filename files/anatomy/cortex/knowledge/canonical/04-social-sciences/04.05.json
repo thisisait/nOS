@@ -8,9 +8,423 @@
    "en": "Political science examines systems of governance, the exercise of power, and state institutions. It addresses authority, collective decision-making, and political organization.",
    "cs": "Politologie zkoumá systémy správy, uplatňování moci a státní instituce. Zabývá se autoritou, kolektivním rozhodováním a politickou organizací.",
    "brief": "Political science examines systems of governance, the exercise of power, and the institutions of the state, studying how authority is gained, exercised, and constrained, and how collective decisions get made and enforced. It treats power and organization as its central objects, narrowing the broader concern of [[04.02]] Sociology with social structures to the specific machinery of government, parties, and international relations.\n\nThe discipline draws heavily on [[04.06]] Law to understand the constitutional and statutory frameworks that structure political authority, and on [[04.04]] Economics to model how institutions shape incentives, redistribution, and public choice. Its subfields, comparative politics, international relations, political theory, and public administration, divide the field by scale, from the internal organization of a single state to the anarchic structure of the international system.\n\nSince Aristotle's classification of constitutions, political science has moved between normative theorizing about legitimate authority and empirical study of how political systems actually behave, a tension that still separates political philosophy from positive political science today. The [American Political Science Association](https://www.apsanet.org/RESOURCES/For-Students/What-is-Political-Science) outlines the field's scope, and the [Stanford Encyclopedia of Philosophy entry on political authority](https://plato.stanford.edu/entries/authority/) covers its normative foundations."
+  },
+  {
+   "id": "04.05.01",
+   "level": 2,
+   "parentId": "04.05",
+   "name": "Political Theory",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The normative questions underneath political practice: what makes authority legitimate, what a citizen owes and is owed, and how competing goods such as liberty, equality and security are to be traded off. Every institutional arrangement embodies answers to these whether or not it states them.",
+   "cs": "Normativní otázky pod politickou praxí: co činí autoritu legitimní, co občan dluží a co mu náleží a jak vyvažovat soupeřící hodnoty jako svoboda, rovnost a bezpečnost. Každé institucionální uspořádání na ně odpovídá, ať už to vysloví, nebo ne."
+  },
+  {
+   "id": "04.05.01.01",
+   "level": 3,
+   "parentId": "04.05.01",
+   "name": "Legitimacy and Authority",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Why anyone should obey: consent, tradition, legality and performance as competing grounds, and the difference between power and the right to exercise it.",
+   "cs": "Proč by měl kdokoli poslouchat: souhlas, tradice, zákonnost a výkonnost jako soupeřící důvody a rozdíl mezi mocí a právem ji vykonávat."
+  },
+  {
+   "id": "04.05.01.02",
+   "level": 3,
+   "parentId": "04.05.01",
+   "name": "Liberty, Equality and Justice",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The principal political values, the tensions between them, and the main theories of how a just distribution should be determined.",
+   "cs": "Hlavní politické hodnoty, napětí mezi nimi a základní teorie určování spravedlivého rozdělení."
+  },
+  {
+   "id": "04.05.01.03",
+   "level": 3,
+   "parentId": "04.05.01",
+   "name": "The Social Contract Tradition",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Accounts deriving political obligation from a hypothetical agreement, and what each takes the pre-political condition to be like.",
+   "cs": "Výklady odvozující politickou povinnost z hypotetické dohody a to, jak si každý z nich představuje předpolitický stav."
+  },
+  {
+   "id": "04.05.01.04",
+   "level": 3,
+   "parentId": "04.05.01",
+   "name": "Democracy and Its Critics",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Justifications for rule by the many, the forms it takes, and the standing objections concerning competence, majority tyranny and capture.",
+   "cs": "Ospravedlnění vlády mnohých, formy, jichž nabývá, a trvalé námitky ohledně kompetence, tyranie většiny a ovládnutí zájmy."
+  },
+  {
+   "id": "04.05.01.05",
+   "level": 3,
+   "parentId": "04.05.01",
+   "name": "Ideologies",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Liberalism, conservatism, socialism, nationalism and their variants as coherent programmes linking values, diagnosis and prescription.",
+   "cs": "Liberalismus, konzervatismus, socialismus, nacionalismus a jejich varianty jako soudržné programy spojující hodnoty, diagnózu a předpis."
+  },
+  {
+   "id": "04.05.02",
+   "level": 2,
+   "parentId": "04.05",
+   "name": "Comparative Government",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "How states are actually organised, compared systematically rather than described one at a time. The point of comparison is to separate what follows from a design choice from what follows from circumstance.",
+   "cs": "Jak jsou státy skutečně uspořádány, srovnávané systematicky namísto popisu jednoho po druhém. Smyslem srovnání je oddělit to, co plyne z konstrukčního rozhodnutí, od toho, co plyne z okolností."
+  },
+  {
+   "id": "04.05.02.01",
+   "level": 3,
+   "parentId": "04.05.02",
+   "name": "Regime Types",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Democratic, authoritarian and hybrid orders, the criteria distinguishing them, and the difficulty of classifying cases near the boundary.",
+   "cs": "Demokratické, autoritářské a hybridní řády, kritéria jejich rozlišení a obtížnost zařazení případů poblíž hranice."
+  },
+  {
+   "id": "04.05.02.02",
+   "level": 3,
+   "parentId": "04.05.02",
+   "name": "Executive-Legislative Relations",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Parliamentary, presidential and semi-presidential designs, and the consequences each has for stability and accountability.",
+   "cs": "Parlamentní, prezidentský a poloprezidentský model a důsledky, které každý z nich má pro stabilitu a odpovědnost."
+  },
+  {
+   "id": "04.05.02.03",
+   "level": 3,
+   "parentId": "04.05.02",
+   "name": "Party Systems",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "How many parties compete and on what dimensions, the cleavages underlying them, and the effect of electoral rules on the outcome.",
+   "cs": "Kolik stran soutěží a v jakých dimenzích, jaké štěpné linie za nimi stojí a jak volební pravidla ovlivňují výsledek."
+  },
+  {
+   "id": "04.05.02.04",
+   "level": 3,
+   "parentId": "04.05.02",
+   "name": "Federalism and Decentralisation",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "The vertical distribution of authority, its rationales, and the coordination problems it creates.",
+   "cs": "Vertikální rozdělení pravomocí, jeho zdůvodnění a koordinační problémy, které vytváří."
+  },
+  {
+   "id": "04.05.02.05",
+   "level": 3,
+   "parentId": "04.05.02",
+   "name": "State Capacity and Governance Quality",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "The ability of a state to implement what it decides, and the measures of corruption, rule of law and administrative effectiveness used to assess it.",
+   "cs": "Schopnost státu provést, co rozhodne, a ukazatele korupce, právního státu a správní účinnosti sloužící k jejímu posouzení."
+  },
+  {
+   "id": "04.05.03",
+   "level": 2,
+   "parentId": "04.05",
+   "name": "Elections and Political Behaviour",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "How preferences become outcomes, and how citizens form the preferences in the first place. The two halves constrain each other: rules shape behaviour, and behaviour determines what rules produce.",
+   "cs": "Jak se z preferencí stávají výsledky a jak si občané preference vůbec utvářejí. Obě poloviny se navzájem omezují: pravidla utvářejí chování a chování určuje, co pravidla vyprodukují."
+  },
+  {
+   "id": "04.05.03.01",
+   "level": 3,
+   "parentId": "04.05.03",
+   "name": "Electoral Systems",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Majoritarian, proportional and mixed rules, how each translates votes into seats, and the strategic incentives each creates.",
+   "cs": "Většinová, poměrná a smíšená pravidla, jak každé převádí hlasy na mandáty a jaké strategické podněty vytváří."
+  },
+  {
+   "id": "04.05.03.02",
+   "level": 3,
+   "parentId": "04.05.03",
+   "name": "Voting Behaviour",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "What explains how people vote — social position, partisanship, issues, evaluation of performance — and the stability of each explanation.",
+   "cs": "Co vysvětluje, jak lidé volí — sociální postavení, stranická identifikace, témata, hodnocení výkonu — a stabilita každého vysvětlení."
+  },
+  {
+   "id": "04.05.03.03",
+   "level": 3,
+   "parentId": "04.05.03",
+   "name": "Public Opinion",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "How collective preferences are formed, measured and moved, and the methodological difficulties of surveying them honestly.",
+   "cs": "Jak se utvářejí, měří a mění kolektivní preference a metodologické obtíže jejich poctivého zjišťování."
+  },
+  {
+   "id": "04.05.03.04",
+   "level": 3,
+   "parentId": "04.05.03",
+   "name": "Political Participation",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Voting, protest, membership and civic activity as forms of engagement, and the systematic inequalities in who participates.",
+   "cs": "Volby, protest, členství a občanská aktivita jako formy zapojení a systematické nerovnosti v tom, kdo se účastní."
+  },
+  {
+   "id": "04.05.03.05",
+   "level": 3,
+   "parentId": "04.05.03",
+   "name": "Media and Political Communication",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "How information reaches citizens, agenda setting and framing effects, and the consequences of fragmented and algorithmic distribution.",
+   "cs": "Jak se informace dostávají k občanům, nastolování agendy a rámování a důsledky fragmentované a algoritmické distribuce."
+  },
+  {
+   "id": "04.05.04",
+   "level": 2,
+   "parentId": "04.05",
+   "name": "International Relations",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Politics where no authority stands above the participants. That single structural fact — anarchy in the technical sense — is what the competing theories of the field are all trying to work out the consequences of.",
+   "cs": "Politika tam, kde nad účastníky nestojí žádná autorita. Právě tato jediná strukturní skutečnost — anarchie v odborném smyslu — je tím, jejíž důsledky se soupeřící teorie oboru snaží vyvodit."
+  },
+  {
+   "id": "04.05.04.01",
+   "level": 3,
+   "parentId": "04.05.04",
+   "name": "Theories of International Politics",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Realist, liberal and constructivist accounts of what drives state behaviour, and what each takes to be fixed and what changeable.",
+   "cs": "Realistické, liberální a konstruktivistické výklady toho, co pohání chování států, a co každý z nich pokládá za dané a co za měnitelné."
+  },
+  {
+   "id": "04.05.04.02",
+   "level": 3,
+   "parentId": "04.05.04",
+   "name": "Security and Conflict",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Causes of war, deterrence and the security dilemma, and the conditions under which peace is stable.",
+   "cs": "Příčiny války, odstrašení a bezpečnostní dilema a podmínky, za nichž je mír stabilní."
+  },
+  {
+   "id": "04.05.04.03",
+   "level": 3,
+   "parentId": "04.05.04",
+   "name": "International Institutions and Cooperation",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Why states build organisations and regimes despite having no enforcer, and what those institutions can and cannot compel.",
+   "cs": "Proč státy budují organizace a režimy, ač nemají vykonavatele, a k čemu tyto instituce mohou a nemohou přinutit."
+  },
+  {
+   "id": "04.05.04.04",
+   "level": 3,
+   "parentId": "04.05.04",
+   "name": "Global Political Economy",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "The interaction of markets and states across borders: trade, finance, development and the distributional politics of each.",
+   "cs": "Souhra trhů a států přes hranice: obchod, finance, rozvoj a distribuční politika každého z nich."
+  },
+  {
+   "id": "04.05.04.05",
+   "level": 3,
+   "parentId": "04.05.04",
+   "name": "Transnational Issues",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Problems no state can solve alone — climate, pandemics, migration, proliferation — and the collective-action structure they share.",
+   "cs": "Problémy, které žádný stát nevyřeší sám — klima, pandemie, migrace, šíření zbraní — a struktura kolektivního jednání, kterou sdílejí."
+  },
+  {
+   "id": "04.05.05",
+   "level": 2,
+   "parentId": "04.05",
+   "name": "Public Policy and Administration",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "How a political decision becomes an implemented outcome, and how anyone can tell whether it worked. This is where political science meets economics and law in practice rather than in theory.",
+   "cs": "Jak se z politického rozhodnutí stane uskutečněný výsledek a jak lze zjistit, zda zabralo. Zde se politologie setkává s ekonomií a právem v praxi, nikoli v teorii."
+  },
+  {
+   "id": "04.05.05.01",
+   "level": 3,
+   "parentId": "04.05.05",
+   "name": "The Policy Cycle",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Agenda setting, formulation, adoption, implementation and evaluation as stages, and the ways real processes depart from the model.",
+   "cs": "Nastolení agendy, formulace, přijetí, provedení a hodnocení jako fáze a způsoby, jimiž se skutečné procesy od modelu odchylují."
+  },
+  {
+   "id": "04.05.05.02",
+   "level": 3,
+   "parentId": "04.05.05",
+   "name": "Policy Instruments",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Regulation, taxation, spending, information and public provision as the available levers, and the criteria for choosing among them.",
+   "cs": "Regulace, zdanění, výdaje, informace a veřejné poskytování jako dostupné páky a kritéria volby mezi nimi."
+  },
+  {
+   "id": "04.05.05.03",
+   "level": 3,
+   "parentId": "04.05.05",
+   "name": "Bureaucracy and Implementation",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Why decisions change on the way to being carried out, discretion at street level, and the principal-agent problem in public organisations.",
+   "cs": "Proč se rozhodnutí cestou k provedení mění, uvážení na výkonné úrovni a problém zmocnitele a zmocněnce ve veřejných organizacích."
+  },
+  {
+   "id": "04.05.05.04",
+   "level": 3,
+   "parentId": "04.05.05",
+   "name": "Policy Evaluation",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Establishing whether an intervention caused an observed change, and the designs that make such a claim credible.",
+   "cs": "Zjišťování, zda zásah způsobil pozorovanou změnu, a uspořádání, která takové tvrzení činí věrohodným."
+  },
+  {
+   "id": "04.05.05.05",
+   "level": 3,
+   "parentId": "04.05.05",
+   "name": "Interest Groups and Lobbying",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Organised influence on policy, why some interests organise more easily than others, and the regulation of access.",
+   "cs": "Organizovaný vliv na politiku, proč se některé zájmy organizují snáze než jiné, a regulace přístupu."
   }
  ],
  "relations": [
+  {
+   "from": "04.05.01.01",
+   "to": "04.06.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.05.01.02",
+   "to": "05.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.05.01.03",
+   "to": "05.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.05.02.02",
+   "to": "04.06.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.05.02.04",
+   "to": "04.06.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.05.02.05",
+   "to": "04.06.06",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.05.03.05",
+   "to": "05.08",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.05.04.03",
+   "to": "04.06.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.05.04.04",
+   "to": "04.04.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.05.04.05",
+   "to": "04.08.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.05.05.02",
+   "to": "04.06.06",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.05.05.04",
+   "to": "04.04.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "04.05",
    "to": "04.02",

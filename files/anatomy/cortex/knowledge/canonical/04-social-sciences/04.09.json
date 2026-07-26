@@ -8,9 +8,110 @@
    "en": "Demography studies population structure, vital statistics, and demographic change. It analyzes birth rates, mortality, migration, and age composition.",
    "cs": "Demografie studuje populační strukturu, vitální statistiku a demografické změny. Analyzuje porodnost, mortalitu, migraci a věkové složení.",
    "brief": "Demography studies population structure, vital statistics, and demographic change, analyzing birth rates, mortality, migration, and age composition as the quantitative substrate beneath social, economic, and political life. It supplies [[04.02]] Sociology with the population-level measurements that ground claims about social change, and supplies [[04.04]] Economics with the labor-supply and consumption data that drive long-run growth models.\n\nIts spatial dimension connects it to [[04.08]] Geography, which explains why population concentrates, migrates, or declines in particular places rather than merely counting how many people live there. Demographic methods, life tables, cohort analysis, population projections, are technical and largely shared across the social sciences that depend on population data, from public health to urban planning.\n\nSince Malthus's early population theory, demography has moved from speculative projection to a rigorously quantitative discipline central to policy areas such as pension design, migration management, and epidemic modeling. The [UN Population Division](https://www.un.org/development/desa/pd/) publishes the authoritative global population data and projections the field relies on, and the [Population Reference Bureau](https://www.prb.org/) offers accessible explainers of core demographic concepts and trends."
+  },
+  {
+   "id": "04.09.01",
+   "level": 2,
+   "parentId": "04.09",
+   "name": "Population Structure",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Composition by age and sex, the population pyramid as its representation, and the momentum a structure carries into the future.",
+   "cs": "Složení podle věku a pohlaví, věková pyramida jako jeho znázornění a setrvačnost, kterou struktura nese do budoucna."
+  },
+  {
+   "id": "04.09.02",
+   "level": 2,
+   "parentId": "04.09",
+   "name": "Fertility",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Measurement of childbearing, the total fertility rate, replacement level, and the determinants of decline.",
+   "cs": "Měření plodnosti, úhrnná plodnost, záchovná úroveň a činitelé poklesu."
+  },
+  {
+   "id": "04.09.03",
+   "level": 2,
+   "parentId": "04.09",
+   "name": "Mortality and Longevity",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Death rates, life expectancy, the life table as the discipline's central instrument, and the causes of change.",
+   "cs": "Úmrtnost, naděje dožití, úmrtnostní tabulka jako ústřední nástroj oboru a příčiny změn."
+  },
+  {
+   "id": "04.09.04",
+   "level": 2,
+   "parentId": "04.09",
+   "name": "Migration",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Movement between places, its measurement, the selectivity of who moves, and its effect on both origin and destination.",
+   "cs": "Pohyb mezi místy, jeho měření, selektivita toho, kdo se stěhuje, a dopad na zdroj i cíl."
+  },
+  {
+   "id": "04.09.05",
+   "level": 2,
+   "parentId": "04.09",
+   "name": "Demographic Transition",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "The historical shift from high to low birth and death rates, its stages, and the debate over how general the pattern is.",
+   "cs": "Historický posun od vysoké k nízké porodnosti a úmrtnosti, jeho fáze a spor o obecnost tohoto vzorce."
+  },
+  {
+   "id": "04.09.06",
+   "level": 2,
+   "parentId": "04.09",
+   "name": "Projection and Data Sources",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Censuses, registers and surveys as inputs, and the cohort-component method by which populations are projected forward.",
+   "cs": "Sčítání, registry a šetření jako vstupy a kohortně-komponentní metoda projekce populací."
   }
  ],
  "relations": [
+  {
+   "from": "04.09.02",
+   "to": "04.08.02.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.09.03",
+   "to": "03.02.11.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.09.04",
+   "to": "04.08.02.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.09.05",
+   "to": "04.04.06",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.09.06",
+   "to": "04.02.05.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "04.09",
    "to": "04.02",

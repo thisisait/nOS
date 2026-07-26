@@ -8,9 +8,121 @@
    "en": "Education studies learning processes, pedagogical methods, and institutional systems for knowledge transmission. It addresses curriculum, assessment, and human development across the lifespan.",
    "cs": "Pedagogika studuje procesy učení, pedagogické metody a institucionální systémy pro přenos znalostí. Zabývá se kurikulem, hodnocením a lidským rozvojem po celou dobu života.",
    "brief": "Education studies learning processes, pedagogical methods, and the institutional systems through which knowledge, skills, and values are transmitted across generations, addressing curriculum design, assessment, and human development from early childhood through adulthood. It draws directly on [[04.01]] Psychology's account of cognitive and developmental change to explain how learning actually happens at different ages and in different conditions.\n\nAs an applied field, education also depends on [[04.02]] Sociology to understand how schooling interacts with class, culture, and institutional structure, why access, achievement, and outcomes vary systematically across social groups rather than only across individuals. Its subfields split by level (early childhood, primary, secondary, higher, and adult education), by function (curriculum studies, educational psychology, and policy), and by setting (formal schooling versus informal and lifelong learning).\n\nModern education research increasingly combines experimental methods borrowed from psychology with the institutional and comparative analysis borrowed from sociology and policy studies, particularly in evaluating large-scale reforms. [UNESCO's overview of education as a field and a right](https://www.unesco.org/en/education) situates the discipline in global policy, and the [Stanford Encyclopedia of Philosophy entry on the philosophy of education](https://plato.stanford.edu/entries/education-philosophy/) covers its normative foundations."
+  },
+  {
+   "id": "04.07.01",
+   "level": 2,
+   "parentId": "04.07",
+   "name": "Learning Theory",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "How learning is understood to happen — behaviourist, cognitive, constructivist and social accounts — and what each implies for teaching.",
+   "cs": "Jak se rozumí tomu, jak učení probíhá — behavioristický, kognitivní, konstruktivistický a sociální výklad — a co každý znamená pro vyučování."
+  },
+  {
+   "id": "04.07.02",
+   "level": 2,
+   "parentId": "04.07",
+   "name": "Curriculum and Instruction",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "What is taught and how it is sequenced, the design of instruction, and the gap between intended, delivered and learned curriculum.",
+   "cs": "Co se učí a v jakém sledu, návrh výuky a rozdíl mezi kurikulem zamýšleným, realizovaným a osvojeným."
+  },
+  {
+   "id": "04.07.03",
+   "level": 2,
+   "parentId": "04.07",
+   "name": "Assessment and Evaluation",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Measuring learning: formative and summative purposes, validity and reliability, and the ways assessment reshapes what is taught.",
+   "cs": "Měření učení: formativní a sumativní účel, validita a reliabilita a způsoby, jimiž hodnocení přetváří to, co se učí."
+  },
+  {
+   "id": "04.07.04",
+   "level": 2,
+   "parentId": "04.07",
+   "name": "Educational Psychology",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Motivation, memory, individual differences and development as they bear on classroom practice.",
+   "cs": "Motivace, paměť, individuální rozdíly a vývoj ve vztahu k praxi ve třídě."
+  },
+  {
+   "id": "04.07.05",
+   "level": 2,
+   "parentId": "04.07",
+   "name": "Educational Systems and Policy",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "How schooling is organised, funded and governed, and the comparative evidence on what different arrangements produce.",
+   "cs": "Jak je školství organizováno, financováno a řízeno a srovnávací doklady o tom, co různá uspořádání přinášejí."
+  },
+  {
+   "id": "04.07.06",
+   "level": 2,
+   "parentId": "04.07",
+   "name": "Pedagogy of Specific Domains",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Subject-specific teaching: the misconceptions characteristic of each field and the representations that address them.",
+   "cs": "Oborové didaktiky: miskoncepce typické pro každý obor a reprezentace, které je řeší."
+  },
+  {
+   "id": "04.07.07",
+   "level": 2,
+   "parentId": "04.07",
+   "name": "Lifelong and Adult Learning",
+   "zone": "votable",
+   "ordinal": 6,
+   "kind": "ext",
+   "en": "Education beyond initial schooling, its motivations and constraints, and the recognition of learning acquired outside institutions.",
+   "cs": "Vzdělávání po skončení počáteční školní docházky, jeho motivace a omezení a uznávání učení získaného mimo instituce."
   }
  ],
  "relations": [
+  {
+   "from": "04.07.01",
+   "to": "04.01.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.07.03",
+   "to": "04.04.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.07.04",
+   "to": "04.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.07.05",
+   "to": "04.05.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.07.07",
+   "to": "04.02.02.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "04.07",
    "to": "04.01",

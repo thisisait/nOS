@@ -8,9 +8,176 @@
    "en": "Encyclopedias are comprehensive general-knowledge reference works organizing information alphabetically or by subject. They synthesize established knowledge from multiple domains into accessible, cross-referenced entries.",
    "cs": "Encyklopedie jsou komplexní referenční díla obecných znalostí organizující informace abecedně nebo podle předmětu. Syntetizují zavedenou vědomost z více oblastí do přístupných, křížově odkazovaných položek.",
    "brief": "Encyclopedias are comprehensive general-knowledge reference works organizing information alphabetically or by subject. They synthesize established knowledge from multiple domains into accessible, cross-referenced entries, trading the depth of a specialist source for breadth and a single consistent entry point into any topic.\n\nWithin [[09]] Reference & Documentation, encyclopedias sit closest to [[09.02]] Dictionaries — both are alphabetically organized lookup works, but a dictionary defines words while an encyclopedia explains the concepts behind them — and they draw content from every other branch of the taxonomy, since an encyclopedia entry is itself a summary of specialist knowledge held elsewhere, from [[01]] Natural Sciences to [[07]] Practical Skills & Trades. Unlike [[09.10]] Historical Archives, which preserves primary source material largely unedited, an encyclopedia is a secondary, synthesized account.\n\nFor a canonical general-purpose reference, see the [Encyclopaedia Britannica](https://www.britannica.com/), and for a large collaboratively maintained encyclopedia, [Wikipedia](https://www.wikipedia.org/)."
+  },
+  {
+   "id": "09.01.01",
+   "level": 2,
+   "parentId": "09.01",
+   "name": "Reference Works",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Publications designed to be consulted rather than read: what distinguishes an encyclopedia from a dictionary from a handbook, and the editorial decisions that determine what a reader can find.",
+   "cs": "Publikace určené k nahlédnutí, nikoli ke čtení: čím se liší encyklopedie od slovníku a od příručky a jaká redakční rozhodnutí určují, co čtenář najde."
+  },
+  {
+   "id": "09.01.01.01",
+   "level": 3,
+   "parentId": "09.01.01",
+   "name": "Encyclopedic Form",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Coverage, entry granularity, and the editorial policy governing scope, neutrality and revision.",
+   "cs": "Rozsah, členění hesel a redakční politika upravující záběr, nestrannost a revizi."
+  },
+  {
+   "id": "09.01.01.02",
+   "level": 3,
+   "parentId": "09.01.01",
+   "name": "Collaborative and Open Reference",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Openly edited reference works, the review mechanisms substituting for editorial authority, and their characteristic strengths and failure modes.",
+   "cs": "Otevřeně editovaná referenční díla, kontrolní mechanismy nahrazující redakční autoritu a jejich typické přednosti i selhání."
+  },
+  {
+   "id": "09.01.01.03",
+   "level": 3,
+   "parentId": "09.01.01",
+   "name": "Citation and Attribution",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Systems for pointing at sources, why they exist, and what a citation does and does not certify.",
+   "cs": "Systémy odkazování na zdroje, proč existují a co citace stvrzuje a co nikoli."
+  },
+  {
+   "id": "09.01.01.04",
+   "level": 3,
+   "parentId": "09.01.01",
+   "name": "Source Evaluation",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Judging reliability, currency, independence and expertise, and the specific difficulty of doing so at machine speed.",
+   "cs": "Posuzování spolehlivosti, aktuálnosti, nezávislosti a odbornosti a specifická obtížnost tohoto posouzení strojovou rychlostí."
+  },
+  {
+   "id": "09.01.02",
+   "level": 2,
+   "parentId": "09.01",
+   "name": "Knowledge Organisation",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "How bodies of knowledge are structured so that something can be found in them. Classification is not neutral description — every scheme encodes a view of what the important distinctions are, and this taxonomy is itself an instance.",
+   "cs": "Jak se soubory poznání strukturují, aby se v nich dalo něco najít. Klasifikace není neutrální popis — každé schéma kóduje pohled na to, které rozdíly jsou důležité, a tato taxonomie je sama takovým případem."
+  },
+  {
+   "id": "09.01.02.01",
+   "level": 3,
+   "parentId": "09.01.02",
+   "name": "Classification Schemes",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Hierarchical and faceted systems, the general library classifications, and the trade-off between depth and usability.",
+   "cs": "Hierarchické a fasetové systémy, obecné knihovnické klasifikace a kompromis mezi hloubkou a použitelností."
+  },
+  {
+   "id": "09.01.02.02",
+   "level": 3,
+   "parentId": "09.01.02",
+   "name": "Taxonomies and Ontologies",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Structured vocabularies from simple hierarchies to formal ontologies with typed relations and inference.",
+   "cs": "Strukturované slovníky od prostých hierarchií po formální ontologie s typovanými vztahy a odvozováním."
+  },
+  {
+   "id": "09.01.02.03",
+   "level": 3,
+   "parentId": "09.01.02",
+   "name": "Controlled Vocabularies and Thesauri",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Fixed term sets with defined relations between them, and why free text and controlled terms serve different purposes.",
+   "cs": "Pevné soubory termínů s definovanými vztahy mezi nimi a proč volný text a řízené termíny slouží různým účelům."
+  },
+  {
+   "id": "09.01.02.04",
+   "level": 3,
+   "parentId": "09.01.02",
+   "name": "Identifiers and Persistence",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Stable names for things, the difference between a location and an identity, and why links rot.",
+   "cs": "Stabilní jména pro věci, rozdíl mezi umístěním a identitou a proč odkazy hnijí."
+  },
+  {
+   "id": "09.01.02.05",
+   "level": 3,
+   "parentId": "09.01.02",
+   "name": "Metadata",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Descriptive, structural and administrative data about a resource, the standards expressing it, and its role in retrieval.",
+   "cs": "Popisná, strukturní a administrativní data o zdroji, normy, které je vyjadřují, a jejich role při vyhledávání."
+  },
+  {
+   "id": "09.01.02.06",
+   "level": 3,
+   "parentId": "09.01.02",
+   "name": "Indexing and Retrieval",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Turning a collection into something searchable, the lexical and semantic approaches available, and how relevance is judged.",
+   "cs": "Proměna sbírky v prohledatelnou, dostupné lexikální a sémantické přístupy a způsob posuzování relevance."
   }
  ],
  "relations": [
+  {
+   "from": "09.01.01.03",
+   "to": "05.04.04.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "09.01.02.01",
+   "to": "01.03.11",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "09.01.02.02",
+   "to": "02.02.09",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "09.01.02.03",
+   "to": "05.03.04.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "09.01.02.06",
+   "to": "02.02.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "09.01",
    "to": "01",

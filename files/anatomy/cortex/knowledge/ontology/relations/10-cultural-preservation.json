@@ -1,0 +1,78 @@
+{
+ "version": 1,
+ "partition": "10-cultural-preservation",
+ "relations": [
+  {
+   "from": "10.04.02",
+   "fromKind": "node",
+   "to": "08.03",
+   "toKind": "node",
+   "type": "exemplifies",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.9,
+   "justification": "Traditional preservation techniques are the pre-refrigeration food technology the survival domain teaches as method.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "10.06.02",
+   "fromKind": "node",
+   "to": "02.04.02.04",
+   "toKind": "node",
+   "type": "analogous-to",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.81,
+   "justification": "Oral-formulaic composition and universal coding are both strategies for transmitting more than the channel would otherwise carry — formula is a shared codebook.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "10.07.02",
+   "fromKind": "node",
+   "to": "02.01.04.49",
+   "toKind": "node",
+   "type": "exemplifies",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.81,
+   "justification": "Traditional board games are the empirical corpus that early game theory abstracted from.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "10.09.05",
+   "fromKind": "node",
+   "to": "10.10.01",
+   "toKind": "node",
+   "type": "requires",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.83,
+   "justification": "Recording a craft process requires the interview method oral history developed, because the knowledge is tacit and the maker cannot simply state it.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "10.09",
+   "fromKind": "node",
+   "to": "06.04",
+   "toKind": "node",
+   "type": "specializes",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.85,
+   "justification": "Traditional craft technique is the historically transmitted case of the craft practices Arts describes.",
+   "createdAt": 1785000000
+  },
+  {
+   "from": "10.10.01",
+   "fromKind": "node",
+   "to": "04.03.04",
+   "toKind": "node",
+   "type": "derived-from",
+   "source": "manual",
+   "status": "confirmed",
+   "confidence": 0.88,
+   "justification": "Oral history method derives from ethnographic interviewing and shares its reflexive problem.",
+   "createdAt": 1785000000
+  }
+ ]
+}

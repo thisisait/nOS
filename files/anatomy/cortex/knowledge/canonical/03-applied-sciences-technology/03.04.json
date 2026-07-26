@@ -8,9 +8,103 @@
    "en": "Architecture designs and realizes buildings, spaces, and urban systems that respond to human needs, environmental conditions, and aesthetic principles.",
    "cs": "Architektura navrhuje a realizuje budovy, prostory a městské systémy reagující na lidské potřeby, environmentální podmínky a estetické principy.",
    "brief": "Architecture designs and realizes buildings, spaces, and urban systems that respond to human needs, environmental conditions, and aesthetic principles. It works at scales from a single dwelling to whole districts, balancing structural feasibility, climate and site response, regulatory codes, and the cultural and symbolic meaning a building carries for the people who use it — the concern that distinguishes it from disciplines that solve the same physical problems purely on engineering terms.\n\nArchitecture sits inside [[03]] Applied Sciences & Technology beside [[03.01]] Engineering, on whose structural, mechanical, and electrical disciplines it depends to make a design physically buildable, and [[03.05]] Manufacturing, which supplies the prefabricated components and materials increasingly used in modern construction. Unlike most of its siblings, architecture has no dedicated subcategory tree in this taxonomy yet — its output is judged as a single integrated discipline rather than divided into structural, urban, and interior specializations.\n\nArchitectural practice is governed by building codes, licensure, and — for larger projects — urban planning regulation. For professional standards and practice guidance, see the [American Institute of Architects](https://www.aia.org/), and for a global reference on architectural history and theory, the [Encyclopaedia Britannica](https://www.britannica.com/topic/architecture)."
+  },
+  {
+   "id": "03.04.01",
+   "level": 2,
+   "parentId": "03.04",
+   "name": "Architectural Design",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The synthesis of use, site, structure and expression into a building, and the iterative process by which it is arrived at.",
+   "cs": "Syntéza užití, místa, konstrukce a výrazu do stavby a iterativní proces, jímž se k ní dospívá."
+  },
+  {
+   "id": "03.04.02",
+   "level": 2,
+   "parentId": "03.04",
+   "name": "Building Structures",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "How a building stands up: load paths, structural systems in timber, masonry, steel and concrete, and the limits of each.",
+   "cs": "Jak stavba stojí: cesty zatížení, konstrukční systémy ze dřeva, zdiva, oceli a betonu a meze každého z nich."
+  },
+  {
+   "id": "03.04.03",
+   "level": 2,
+   "parentId": "03.04",
+   "name": "Building Physics and Services",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Thermal, moisture, acoustic and light behaviour of the envelope, and the systems providing heat, air, water and power.",
+   "cs": "Tepelné, vlhkostní, akustické a světelné chování obálky a systémy zajišťující teplo, vzduch, vodu a energii."
+  },
+  {
+   "id": "03.04.04",
+   "level": 2,
+   "parentId": "03.04",
+   "name": "Urban Design and Planning",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "The arrangement of buildings, streets and open space at settlement scale, and the regulatory instruments shaping it.",
+   "cs": "Uspořádání staveb, ulic a volných ploch v měřítku sídla a regulační nástroje, jež je utvářejí."
+  },
+  {
+   "id": "03.04.05",
+   "level": 2,
+   "parentId": "03.04",
+   "name": "History and Theory of Architecture",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Building traditions and the ideas justifying them, and the relation between style, technology and society.",
+   "cs": "Stavební tradice a myšlenky, jež je ospravedlňují, a vztah mezi slohem, technologií a společností."
+  },
+  {
+   "id": "03.04.06",
+   "level": 2,
+   "parentId": "03.04",
+   "name": "Sustainable and Adaptive Building",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Energy and material performance over a building's life, retrofit of existing stock, and the reuse of what already stands.",
+   "cs": "Energetická a materiálová bilance po dobu životnosti stavby, obnova stávajícího fondu a opětovné využití toho, co již stojí."
   }
  ],
  "relations": [
+  {
+   "from": "03.04.02",
+   "to": "03.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.04.03",
+   "to": "01.01.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.04.04",
+   "to": "04.08.02.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "03.04.06",
+   "to": "04.06.16.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "03.04",
    "to": "03.01",

@@ -8,9 +8,49 @@
    "en": "Patents are legal documents recording inventions, their novel technical features, functional principles, and enforceable claims. They balance knowledge disclosure against temporary monopoly rights for inventors.",
    "cs": "Patenty jsou právní dokumenty zaznamenávající vynálezy, jejich inovativní technické prvky, funkční principy a vymáhatelné nároky. Vyvažují zveřejnění vědomostí proti dočasným exkluzivním právům pro vynálezce.",
    "brief": "A patent is a legal instrument that grants an inventor a time-limited monopoly over a technical invention in exchange for full public disclosure of how it works — its novel features, functional principles, and the enforceable claims that define the scope of protection. This makes patents a hybrid: simultaneously a legal contract with the state and a technical description detailed enough that a skilled practitioner could reproduce the invention once the exclusivity period expires.\n\nThe technical description inside a patent frequently takes the same graphical form as [[09.08]] Blueprints & Schematics, since drawings are the clearest way to disclose mechanical or structural novelty; unlike a blueprint used for fabrication, though, a patent drawing exists to establish legal priority and claim scope. Patents also interact with [[09.05]] Standards & Specifications when a patented technology becomes essential to an industry standard, creating the standard-essential-patent licensing regime. Taken cumulatively across decades, patent filings form a documentary record of technical progress that overlaps with [[09.10]] Historical Archives, and the underlying inventions belong to the same [[03]] Applied Sciences & Technology domain the disclosures describe.\n\nPatent search and full-text disclosure are freely accessible through national and international offices: the [World Intellectual Property Organization](https://www.wipo.int/portal/en/index.html) provides global patent search (PATENTSCOPE), and the [United States Patent and Trademark Office](https://www.uspto.gov/) maintains the full historical US patent record."
+  },
+  {
+   "id": "09.09.01",
+   "level": 2,
+   "parentId": "09.09",
+   "name": "Patent Documents",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Structure of a patent: claims, description, drawings and prior art, and why the claims alone define the right.",
+   "cs": "Struktura patentu: nároky, popis, výkresy a dosavadní stav techniky a proč právo vymezují jedině nároky."
+  },
+  {
+   "id": "09.09.02",
+   "level": 2,
+   "parentId": "09.09",
+   "name": "Patent Search and Classification",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Finding relevant prior art, the international classification schemes, and searching as a research method in its own right.",
+   "cs": "Vyhledávání relevantního stavu techniky, mezinárodní klasifikační systémy a rešerše jako svébytná výzkumná metoda."
+  },
+  {
+   "id": "09.09.03",
+   "level": 2,
+   "parentId": "09.09",
+   "name": "Patents as Technical Literature",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The disclosure bargain making patents a large, structured, freely readable record of applied technique.",
+   "cs": "Výměna za zveřejnění, díky níž jsou patenty rozsáhlým, strukturovaným a volně čitelným záznamem aplikované techniky."
   }
  ],
  "relations": [
+  {
+   "from": "09.09.01",
+   "to": "04.06.12.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "09.09",
    "to": "03",

@@ -8,9 +8,103 @@
    "en": "Archaeology reconstructs past human societies through the excavation and analysis of material remains. It employs dating techniques and artifact interpretation to understand cultural and technological change.",
    "cs": "Archeologie rekonstruuje minulé lidské společnosti prostřednictvím vykopávek a analýzy hmotných zbytků. Používá techniky datování a interpretaci artefaktů k pochopení kulturních a technologických změn.",
    "brief": "Archaeology reconstructs past human societies through the excavation and analysis of material remains, employing dating techniques and artifact interpretation to trace cultural and technological change where no written record survives. It forms one of [[04.03]] Anthropology's four core branches, supplying the discipline's only direct evidence about societies that left no living informants to interview.\n\nIts methods overlap with [[04.08]] Geography in reconstructing past landscapes and settlement patterns from stratigraphy, sediment analysis, and spatial survey, and increasingly borrow scientific dating techniques, radiocarbon, dendrochronology, stratigraphic seriation, from the natural sciences to build chronologies independent of textual sources. Excavation, survey, and laboratory analysis of artifacts together let archaeologists infer diet, technology, trade, and social organization from physical traces alone.\n\nThe discipline splits by period and region, prehistoric, classical, historical, and industrial archaeology among others, and by increasing reliance on non-invasive techniques such as ground-penetrating radar and satellite survey that limit destructive excavation. The [Archaeological Institute of America](https://www.archaeological.org/about/what-is-archaeology/) offers an accessible overview of the field's methods and scope, and [UNESCO's World Heritage archaeology resources](https://whc.unesco.org/en/archaeological-heritage/) situate the discipline within global heritage preservation."
+  },
+  {
+   "id": "04.10.01",
+   "level": 2,
+   "parentId": "04.10",
+   "name": "Excavation and Field Methods",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Survey, stratigraphic excavation and recording, and the principle that context is destroyed by the act of retrieving it.",
+   "cs": "Průzkum, stratigrafický výzkum a dokumentace a zásada, že kontext je zničen samotným aktem vyzvednutí."
+  },
+  {
+   "id": "04.10.02",
+   "level": 2,
+   "parentId": "04.10",
+   "name": "Dating Methods",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Relative and absolute chronology: stratigraphy, typology, radiocarbon, dendrochronology and luminescence.",
+   "cs": "Relativní a absolutní chronologie: stratigrafie, typologie, radiokarbon, dendrochronologie a luminiscence."
+  },
+  {
+   "id": "04.10.03",
+   "level": 2,
+   "parentId": "04.10",
+   "name": "Material Culture Analysis",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Artefacts as evidence: lithics, ceramics, metals and their manufacture, use and deposition.",
+   "cs": "Artefakty jako doklad: kamenná industrie, keramika, kovy a jejich výroba, užití a uložení."
+  },
+  {
+   "id": "04.10.04",
+   "level": 2,
+   "parentId": "04.10",
+   "name": "Bioarchaeology and Environment",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Human, animal and plant remains, and the reconstruction of diet, health, landscape and climate from them.",
+   "cs": "Lidské, zvířecí a rostlinné pozůstatky a rekonstrukce stravy, zdraví, krajiny a klimatu z nich."
+  },
+  {
+   "id": "04.10.05",
+   "level": 2,
+   "parentId": "04.10",
+   "name": "Archaeological Science",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Physical and chemical methods applied to material: isotopes, residues, provenance and ancient biomolecules.",
+   "cs": "Fyzikální a chemické metody aplikované na materiál: izotopy, rezidua, provenience a starobylé biomolekuly."
+  },
+  {
+   "id": "04.10.06",
+   "level": 2,
+   "parentId": "04.10",
+   "name": "Heritage Management and Ethics",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Protection of sites, the law governing excavation and export, and the questions of ownership and repatriation.",
+   "cs": "Ochrana lokalit, právo upravující výkopy a vývoz a otázky vlastnictví a navrácení."
   }
  ],
  "relations": [
+  {
+   "from": "04.10.02",
+   "to": "01.04.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.10.04",
+   "to": "01.03.11",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.10.05",
+   "to": "01.02.11",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.10.06",
+   "to": "04.06.12",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "04.10",
    "to": "04.03",

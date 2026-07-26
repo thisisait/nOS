@@ -8,9 +8,96 @@
    "en": "Classics is the study of ancient Greek and Roman civilizations—their literature (Homer, Sophocles, Virgil), philosophy (Plato, Aristotle), history (Athens, Rome), art and architecture, languages (Ancient Greek, Latin), and their profound influence on Western thought and institutions. Distinguished from History by its focus on textual interpretation and from Philosophy by its historical and cultural embeddedness; it remains foundational to Western intellectual tradition and increasingly incorporates non-elite sources and postcolonial reinterpretation.",
    "cs": "Klasická filologie je studiem starověkých řeckých a římských civilizací—jejich literatury (Homer, Sofokles, Virgil), filozofie (Platón, Aristoteles), historie (Atény, Řím), umění a architektury, jazyků (starořečtina, latina) a jejich hlubokého vlivu na západní myšlení a instituce. Rozlišuje se od Historie svým zaměřením na interpretaci textu a od Filozofie svým historickým a kulturním zakotvením; zůstává základní pro západní intelektuální tradici a stále více začleňuje neelitní zdroje a postkoloniální reinterpretaci.",
    "brief": "Classics is the study of ancient Greek and Roman civilizations — their literature, philosophy, history, art and architecture, and languages (Ancient Greek, Latin) — and their influence on Western thought and institutions. It combines philological analysis of primary texts with archaeological and historical evidence.\n\nWithin [[05]] Humanities, Classics overlaps with [[05.01]] History in its study of Athens and Rome, though it privileges textual interpretation over chronological breadth, and with [[05.02]] Philosophy in its close reading of Plato and Aristotle as foundational texts rather than purely historical artifacts. It also intersects [[10]] Cultural Preservation, where surviving manuscripts, inscriptions, and archaeological sites require active conservation.\n\nFoundational to the Western intellectual tradition, Classics increasingly incorporates non-elite sources and postcolonial reinterpretation to broaden its account of antiquity beyond canonical elite texts. For open-access ancient texts and commentary, see the [Perseus Digital Library](http://www.perseus.tufts.edu/); for the discipline's professional body, the [Society for Classical Studies](https://classicalstudies.org/)."
+  },
+  {
+   "id": "05.07.01",
+   "level": 2,
+   "parentId": "05.07",
+   "name": "Greek and Latin Languages",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The languages of classical antiquity, their grammar and reading, and their formative influence on later European vocabulary.",
+   "cs": "Jazyky klasického starověku, jejich mluvnice a četba a jejich formativní vliv na pozdější evropskou slovní zásobu."
+  },
+  {
+   "id": "05.07.02",
+   "level": 2,
+   "parentId": "05.07",
+   "name": "Classical Literature",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Epic, tragedy, comedy, lyric, history and oratory in Greek and Latin, and the genres they established.",
+   "cs": "Epos, tragédie, komedie, lyrika, dějepisectví a řečnictví v řečtině a latině a žánry, jež ustavily."
+  },
+  {
+   "id": "05.07.03",
+   "level": 2,
+   "parentId": "05.07",
+   "name": "Ancient Philosophy",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The philosophical schools of antiquity and the problems they set that later philosophy inherited.",
+   "cs": "Filozofické školy starověku a problémy, které vytkly a jež pozdější filozofie zdědila."
+  },
+  {
+   "id": "05.07.04",
+   "level": 2,
+   "parentId": "05.07",
+   "name": "Classical Art and Architecture",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Sculpture, painting, pottery and building in the Greek and Roman worlds, and the orders and canons they codified.",
+   "cs": "Sochařství, malířství, keramika a stavitelství řeckého a římského světa a řády a kánony, jež kodifikovaly."
+  },
+  {
+   "id": "05.07.05",
+   "level": 2,
+   "parentId": "05.07",
+   "name": "Classical Mythology",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "The narrative system of gods and heroes, its variants, and its continuing use as a shared reference.",
+   "cs": "Vyprávěcí systém bohů a hrdinů, jeho varianty a jeho trvající užití jako sdílené reference."
+  },
+  {
+   "id": "05.07.06",
+   "level": 2,
+   "parentId": "05.07",
+   "name": "Reception of Antiquity",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "How later periods have read, used and reinvented the classical world, and what each reading reveals about itself.",
+   "cs": "Jak pozdější doby antický svět četly, užívaly a znovu vynalézaly a co každé čtení prozrazuje o sobě samém."
   }
  ],
  "relations": [
+  {
+   "from": "05.07.01",
+   "to": "05.03.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.07.03",
+   "to": "05.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "05.07.04",
+   "to": "06.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
   {
    "from": "05.07",
    "to": "05.01",
