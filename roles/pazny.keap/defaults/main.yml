@@ -42,7 +42,7 @@ keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # earlier created_at than their root and single-pass boot registration drops the
 # WHOLE TREE without a word. v1.21.0 fixes the point and tests both iteration
 # directions. Pinned by tests/anatomy/test_keap_pin_not_cancelled.py.
-keap_repo_ref: "v1.33.0"
+keap_repo_ref: "v1.34.0"
 
 # ── The cortex cutover (KEAP P-5) ────────────────────────────────────────────
 # false ⇒ KEAP answers /agent/v1/validate with its OWN typechecker (the shipped
