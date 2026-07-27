@@ -85,10 +85,20 @@ cortex_fs_shared_root: "{{ keap_selfmodel_root | default(nos_data_root ~ '/tenan
 cortex_fs_sync_dirs: "{{ keap_fs_sync_dirs | default('documents,library,inbox,nOS') }}"
 cortex_fs_shared_uids: "{{ keap_selfmodel_uid | default('nos-docs') }}"
 
-# 0 disables the in-daemon timer. Default 0: the pass is driven explicitly
-# (POST /agent/v1/fs/sync, or the boot pass) so a night is a decision rather
-# than a coincidence of when the daemon last restarted — and so §5.3's "halt
-# the organ's fs-sync" has something to halt.
+# 0 disables the in-daemon timer. Default 0: the pass is driven explicitly so a
+# night is a decision rather than a coincidence of when the daemon last
+# restarted — and so §5.3's "halt the organ's fs-sync" has something to halt.
+#
+# WHAT DRIVES IT (this used to be the sentence's missing half, and its absence
+# was not cosmetic): the boot pass, the converge kick at the end of
+# tasks/main.yml, and the nightly `cortex-fs-sync` Pulse job at 04:30 UTC
+# (files/anatomy/plugins/cortex-base/plugin.yml). With none of those, 0 meant the
+# organ's mirror froze at the last converge that changed the build while KEAP
+# re-walked every 300 s, every file created since read as `only_in_keap` over a
+# clean-but-old pass, and the nightly diff blamed the organ's reader for files it
+# had never been asked to walk — which the 3-night agreement clock can never
+# survive. If you set this non-zero, the halt in §5.3 must also stop the timer,
+# not only the job.
 cortex_fs_sync_interval_s: 0
 
 # ── the mount sentinel ────────────────────────────────────────────────────────

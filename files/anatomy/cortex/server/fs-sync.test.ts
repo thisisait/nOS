@@ -89,6 +89,7 @@ interface SyncOut {
     mtime?: number;
     bodyHash: string | null;
     degradedRead?: boolean;
+    fm?: Record<string, string>;
   }>;
   embeddingsPending: number;
 }
@@ -480,6 +481,68 @@ describe('users pass — the destructive paths', () => {
     expect(r.result!.users!.emptyBodies).toBeUndefined();
     expect(r.result!.objects[0].degradedRead).toBeUndefined();
     expect(r.result!.objects[0].bodyHash).toBe(hash);
+  });
+
+  it('a degraded read keeps the whole CARD — type, title and fm, not just the body', () => {
+    // The case the body-only preservation missed. `parseCardFrontmatter(undefined)`
+    // returns `{body: undefined}` with no type, no title and no fm, so a
+    // transient EACCES rewrote a `type: skill` card titled 'Router spec' as a
+    // `page` titled '_stack.md' with its frontmatter gone — regenerating the
+    // exact "nine cards named _stack.md" failure the parser exists to fix, out
+    // of a row that was correct one pass earlier, while the degraded path
+    // claimed to destroy nothing.
+    const { tree, store } = scenario('degraded-card');
+    const abs = write(
+      tree,
+      'a/documents/router/_stack.md',
+      '---\ntype: skill\ntitle: Router spec\nowner: platform\n---\nthe spec body\n',
+    );
+    let r = sync(store, { CORTEX_FS_USER_ROOTS: childDirs(tree) });
+    let o = r.result!.objects[0];
+    expect([o.type, o.title]).toEqual(['skill', 'Router spec']);
+    expect(o.fm).toEqual({ type: 'skill', title: 'Router spec', owner: 'platform' });
+    const hash = o.bodyHash;
+
+    fs.chmodSync(abs, 0o000);
+    const later = new Date(Date.now() + 2000);
+    fs.utimesSync(abs, later, later);
+    try {
+      r = sync(store, { CORTEX_FS_USER_ROOTS: childDirs(tree) });
+      expect(r.result!.users!.emptyBodies).toBe(1);
+      o = r.result!.objects[0];
+      expect(o.degradedRead).toBe(true);
+      expect(o.type).toBe('skill');            // NOT reverted to the extension
+      expect(o.title).toBe('Router spec');     // NOT reverted to the basename
+      expect(o.fm).toEqual({ type: 'skill', title: 'Router spec', owner: 'platform' });
+      expect(o.bodyHash).toBe(hash);
+      expect(o.mtime).toBe(0);                 // still withheld → the next pass retries
+    } finally {
+      fs.chmodSync(abs, 0o644);
+    }
+
+    // …and the retry restores a row derived from the FILE again.
+    r = sync(store, { CORTEX_FS_USER_ROOTS: childDirs(tree) });
+    o = r.result!.objects[0];
+    expect(o.degradedRead).toBeUndefined();
+    expect([o.type, o.title]).toEqual(['skill', 'Router spec']);
+    expect(o.mtime).toBeGreaterThan(0);
+  });
+
+  it('a file that has NEVER read cleanly still falls back to extension + basename', () => {
+    // The other half of the rule: preserving the previous card must not turn
+    // into "no card at all" when there is no previous row to preserve.
+    const { tree, store } = scenario('degraded-first');
+    const abs = write(tree, 'a/documents/never.md', 'x');
+    fs.chmodSync(abs, 0o000);
+    try {
+      const r = sync(store, { CORTEX_FS_USER_ROOTS: childDirs(tree) });
+      const o = r.result!.objects[0];
+      expect(o.degradedRead).toBe(true);
+      expect([o.type, o.title]).toEqual(['page', 'never.md']);
+      expect(o.fm).toBeUndefined();
+    } finally {
+      fs.chmodSync(abs, 0o644);
+    }
   });
 });
 

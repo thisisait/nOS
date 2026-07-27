@@ -107,13 +107,27 @@ def detail(*, uid="akadmin", path="documents/a.md", size=10, mtime=1000, visibil
     }
 
 
-def host_tree(tmp_path, files, uid_dir="akadmin"):
-    """A `child-dirs` root with one uid directory. Returns the roots list."""
+# A file mtime that PREDATES the default last-pass the fixtures report
+# (2026-07-27T00:00:00Z). The staleness guard in adjudicate_objects only blames
+# the organ's reader for a file that was already there when it walked, so a test
+# about a MISSED READ has to place the file before the pass — a file written
+# "now" is newer than the fixture's pass and is correctly read as organ-stale.
+BEFORE_PASS = 1785067200  # 2026-07-26T12:00:00Z
+
+
+def host_tree(tmp_path, files, uid_dir="akadmin", mtime=None):
+    """A `child-dirs` root with one uid directory. Returns the roots list.
+
+    `mtime` back-dates every written file (epoch seconds) so a test can place
+    the file on either side of a side's last pass.
+    """
     root = tmp_path / "users"
     for rel, content in files.items():
         p = root / uid_dir / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(content)
+        if mtime is not None:
+            os.utime(p, (mtime, mtime))
     root.mkdir(parents=True, exist_ok=True)
     return [{"path": str(root), "spec": "child-dirs", "exists": True}]
 
@@ -165,7 +179,9 @@ def test_identical_corpora_agree_with_no_findings(tmp_path):
 
 
 def test_only_in_keap_and_the_file_exists_blames_the_organs_reader(tmp_path):
-    roots = host_tree(tmp_path, {"documents/a.md": "hello"})
+    # The file predates the organ's last pass, so this is a genuine missed read
+    # rather than a document that arrived after the walk (see BEFORE_PASS).
+    roots = host_tree(tmp_path, {"documents/a.md": "hello"}, mtime=BEFORE_PASS)
     k = mk_side("keap", objects=["fs:akadmin:aaa"], details={"fs:akadmin:aaa": detail()}, roots=roots)
     o = mk_side("cortex", objects=[], details={}, roots=roots)
     rep = report(k, o, roots)
@@ -267,6 +283,140 @@ def test_only_in_organ_with_no_file_at_all_is_the_organs_row_to_explain(tmp_path
     rep = report(k, o, roots)
     assert "organ-row-without-a-file" in verdicts(rep)
     assert culprit_of(rep, "organ-row-without-a-file") == {D.CULPRIT_ORGAN}
+
+
+# ── 3b. the organ's own staleness, which the mirror branch always had ────────
+
+
+def test_a_file_newer_than_the_organs_last_pass_is_staleness_not_a_missed_read(tmp_path):
+    """The mirror of `keap-stale`, and it was missing on this side.
+
+    The organ has NO in-daemon timer (`cortex_fs_sync_interval_s: 0` by design):
+    it walks at boot and from the nightly `cortex-fs-sync` job. KEAP re-walks
+    every 300 s. So on any estate where documents arrive between passes, KEAP has
+    rows the organ does not — the expected reading of a file created after the
+    organ last walked — and the harness used to stamp CULPRIT_ORGAN /
+    "the organ's reader walked past a file that is really there" for a reader
+    that was never asked to look. The fs-ids clause then fails every night and
+    the 3-night clock can never reach NIGHTS_REQUIRED."""
+    roots = host_tree(tmp_path, {"documents/plan.md": "hello"})
+    p = tmp_path / "users" / "akadmin" / "documents" / "plan.md"
+    os.utime(p, (2_000_000_000, 2_000_000_000))  # after the organ last walked
+    k = mk_side("keap", objects=["fs:akadmin:aaa"],
+                details={"fs:akadmin:aaa": detail(path="documents/plan.md", mtime=2_000_000_000)}, roots=roots)
+    o = mk_side("cortex", objects=[], details={}, roots=roots,
+                last_pass_at="2026-07-01T00:00:00.000Z")
+    rep = report(k, o, roots)
+    assert "organ-stale" in verdicts(rep)
+    assert "organ-reader-missed-it" not in verdicts(rep)
+    # The action has to name the thing that closes it — the organ has no timer,
+    # so "wait for the next pass" is only true if a job runs one.
+    f = next(f for f in rep["findings"] if f["verdict"] == "organ-stale")
+    assert "cortex-fs-sync" in f["action"]
+
+
+def test_a_file_older_than_the_organs_last_pass_still_blames_its_reader(tmp_path):
+    """The guard must not swallow the real defect it sits in front of."""
+    roots = host_tree(tmp_path, {"documents/old.md": "hello"})
+    p = tmp_path / "users" / "akadmin" / "documents" / "old.md"
+    os.utime(p, (1_000_000, 1_000_000))
+    k = mk_side("keap", objects=["fs:akadmin:aaa"],
+                details={"fs:akadmin:aaa": detail(path="documents/old.md", mtime=1_000_000)}, roots=roots)
+    o = mk_side("cortex", objects=[], details={}, roots=roots,
+                last_pass_at="2026-07-27T00:00:00.000Z")
+    rep = report(k, o, roots)
+    assert "organ-reader-missed-it" in verdicts(rep)
+    assert culprit_of(rep, "organ-reader-missed-it") == {D.CULPRIT_ORGAN}
+
+
+def test_new_documents_between_passes_do_not_raise_a_removal_shaped_halt(tmp_path):
+    """The compound failure, and the reason this is not cosmetic.
+
+    `removalShaped` is `any(organ-reader-missed-it) and organ.lastPass.removed >
+    0`. A boot pass that legitimately pruned ONE vanished file, plus an ordinary
+    week of new documents, therefore produced a `high` "HALT — removal-shaped
+    disagreement" data-loss alarm and ran `--halt-cmd` against the organ's
+    fs-sync. Nothing was removed that should not have been."""
+    roots = host_tree(tmp_path, {"documents/new1.md": "a", "documents/new2.md": "b"})
+    for n in ("new1.md", "new2.md"):
+        os.utime(tmp_path / "users" / "akadmin" / "documents" / n, (2_000_000_000, 2_000_000_000))
+    k = mk_side("keap", objects=["fs:akadmin:n1", "fs:akadmin:n2"],
+                details={"fs:akadmin:n1": detail(path="documents/new1.md", mtime=2_000_000_000),
+                         "fs:akadmin:n2": detail(path="documents/new2.md", mtime=2_000_000_000)},
+                roots=roots)
+    o = mk_side("cortex", objects=[], details={}, roots=roots,
+                last_pass_at="2026-07-01T00:00:00.000Z",
+                last_pass={"scanned": 40, "upserted": 0, "removed": 1, "unchanged": 39,
+                           "skipped": 0, "pruneRefused": False, "sentinel": "ok"})
+    rep = report(k, o, roots)
+    assert rep["removalShaped"] is False
+
+
+# ── 3c. the referee reads INSIDE its roots, and nowhere else ─────────────────
+
+
+def test_the_referee_refuses_an_absolute_path_from_the_wire(tmp_path):
+    """`frontmatter.path` is corpus data read over HTTP from a store with its own
+    write surfaces, and `os.path.join(root, '/etc/ssh/ssh_host_ed25519_key')`
+    returns the absolute component and DISCARDS the root. The referee then stats
+    an arbitrary host file and writes its resolved path, size and mtime verbatim
+    into a finding — persisted to ~/.nos and shipped to wing-inbox — while
+    claiming "STRICTLY READ-ONLY" of roots it does not enforce."""
+    roots = host_tree(tmp_path, {"documents/a.md": "hello"})
+    fs = D.HostReferee(roots)
+    r = fs.stat("akadmin", "/etc/hosts")
+    assert r["state"] == "unresolvable"
+    assert "absolute" in r["why"]
+    assert "size" not in r and "path" not in r
+
+
+def test_the_referee_refuses_a_dotdot_escape_from_the_wire(tmp_path):
+    roots = host_tree(tmp_path, {"documents/a.md": "hello"})
+    secret = tmp_path / "outside.txt"
+    secret.write_text("not the referee's to see")
+    fs = D.HostReferee(roots)
+    r = fs.stat("akadmin", "../../outside.txt")
+    assert r["state"] == "unresolvable"
+    assert ".." in r["why"]
+
+
+def test_the_referee_refuses_a_symlink_that_leaves_the_root(tmp_path):
+    """The lexical check cannot see this one: every segment is ordinary and the
+    escape happens in the filesystem."""
+    roots = host_tree(tmp_path, {"documents/a.md": "hello"})
+    outside = tmp_path / "outside.txt"
+    outside.write_text("not the referee's to see")
+    link = tmp_path / "users" / "akadmin" / "documents" / "link.txt"
+    os.symlink(outside, link)
+    fs = D.HostReferee(roots)
+    r = fs.stat("akadmin", "documents/link.txt")
+    assert r["state"] == "unresolvable"
+    assert "outside" in r["why"]
+
+
+def test_an_escaping_path_does_not_flip_the_culprit(tmp_path):
+    """The adjudication consequence, which is worse than the stat itself: a
+    crafted path that stats successfully turns `organ-row-without-a-file` into
+    `organ-reader-missed-it` — a different culprit and, through `removalShaped`,
+    a different halt decision."""
+    roots = host_tree(tmp_path, {})
+    (tmp_path / "users" / "akadmin").mkdir(parents=True, exist_ok=True)
+    k = mk_side("keap", objects=["fs:akadmin:aaa"],
+                details={"fs:akadmin:aaa": detail(path="/etc/hosts")}, roots=roots)
+    o = mk_side("cortex", objects=[], details={}, roots=roots)
+    rep = report(k, o, roots)
+    assert "organ-reader-missed-it" not in verdicts(rep)
+    assert "organ-root-missing-for-uid" in verdicts(rep)   # unresolvable -> config, not a defect
+    assert culprit_of(rep, "organ-root-missing-for-uid") == {D.CULPRIT_CONFIG}
+
+
+def test_an_ordinary_relative_path_is_still_resolved(tmp_path):
+    """The guard must not turn every legitimate lookup into `unresolvable`."""
+    roots = host_tree(tmp_path, {"documents/sub/a.md": "hello"})
+    fs = D.HostReferee(roots)
+    r = fs.stat("akadmin", "documents/sub/a.md")
+    assert r["state"] == "exists"
+    assert r["size"] == 5
 
 
 # ── 4. shared ids: the content digests ───────────────────────────────────────
@@ -453,13 +603,43 @@ def test_captures_are_inside_the_verdict():
     assert rep["clauses"]["captures"] is False
 
 
-def test_a_capture_gap_with_a_v2_ledger_is_a_partial_fanout():
+def test_a_ledger_ahead_of_its_store_names_the_rebuild_that_lost_the_rows():
+    """The ledger says both were swept and the store holds one. This used to
+    report `fanout-partial` — "recorded but did not land" — and send the operator
+    to "per-target rejection reasons", which do not exist.
+
+    It also named only ONE of the two causes, and the missing one is the
+    dangerous one: the ledger lives in ~/.nos, outside both stores, so a store
+    that is REBUILT under a surviving ledger never gets its capture rows back —
+    the source files are unchanged, every signature still matches, and not one
+    datapoint is re-POSTed. `tasks/removal-set.yml` calls the organ's store
+    expendable because it "re-materialises"; the taxonomy does, the `dp-<sha1>`
+    rows do not. One night's counts cannot separate the two causes, so the
+    finding must name both and hand over an action that works for either."""
     k = mk_side("keap", captures=["dp-0", "dp-1"])
     o = mk_side("cortex", captures=["dp-0"])
     rep = report(k, o, feeder={"version": 2, "targets": {"keap": 2, "cortex": 2}})
-    # The ledger says both were swept. A recorded signature with no row is the
-    # data-loss shape the target dimension exists to prevent.
+    assert "feeder-ledger-ahead-of-store" in verdicts(rep)
+    assert culprit_of(rep, "feeder-ledger-ahead-of-store") == {D.CULPRIT_FEEDER}
+    f = next(f for f in rep["findings"] if f["verdict"] == "feeder-ledger-ahead-of-store")
+    assert f["detail"] == {"target": "cortex", "ledger": 2, "store": 1}
+    # The action must be executable. "read the per-target rejection reasons" was
+    # not: nothing writes any.
+    assert "keap-consolidate-state.json" in f["action"]
+    assert "epoch" in f["action"]
+    assert rep["clauses"]["captures"] is False
+
+
+def test_a_ledger_that_is_merely_BEHIND_is_still_a_partial_fanout():
+    """The remaining `fanout-partial` case, kept distinct: the ledger has not
+    recorded everything the incumbent holds, which is a sweep mid-catch-up and
+    not a store that lost rows. Blaming a rebuild here would be as wrong as the
+    other way round."""
+    k = mk_side("keap", captures=["dp-0", "dp-1"])
+    o = mk_side("cortex", captures=["dp-0"])
+    rep = report(k, o, feeder={"version": 2, "targets": {"keap": 1, "cortex": 1}})
     assert "fanout-partial" in verdicts(rep)
+    assert "feeder-ledger-ahead-of-store" not in verdicts(rep)
 
 
 # ── 7. embeddings: same refs, same model, same dimension ─────────────────────
@@ -670,7 +850,10 @@ def _serve(corpus):
 
 
 def test_end_to_end_over_the_wire_reads_both_sides_and_adjudicates(tmp_path):
-    roots = host_tree(tmp_path, {"documents/a.md": "hello"})
+    # Predating the fixture's last pass keeps this a missed read over the wire;
+    # a file written "now" would be adjudicated organ-stale and prove nothing
+    # about the reader.
+    roots = host_tree(tmp_path, {"documents/a.md": "hello"}, mtime=BEFORE_PASS)
     st = os.stat(tmp_path / "users" / "akadmin" / "documents" / "a.md")
     obj = {"type": "page", "title": "a.md", "userId": "akadmin", "visibility": "private",
            "body": "hello", "path": "documents/a.md", "size": st.st_size, "mtime": int(st.st_mtime)}

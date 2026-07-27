@@ -68,6 +68,7 @@
  * `databaseId` by construction, and that disagreement is the drift mechanism
  * working, not a defect to paper over.
  */
+import { createHash } from 'node:crypto';
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { openStore } from './cortex-store';
@@ -496,7 +497,19 @@ async function main(): Promise<void> {
   // serve semantic search. Marking an index dirty that nothing rebuilds and
   // nothing queries would be motion that looks like correctness. When the search
   // surface lands, the dirty flag lands with it.
-  registerIngestRoutes(app, jsonBody);
+  // The store epoch (S2): a DIGEST of db_identity, not the identity — this route
+  // is pre-auth, so it publishes "am I still the same store" and nothing else.
+  // The consolidator's ledger is a cache of what this store holds; without an
+  // epoch a wiped store is never re-fed, because the source files are unchanged
+  // and every signature still matches. Absent identity ⇒ absent field ⇒ the
+  // feeder keeps its previous behaviour rather than resetting on every run.
+  registerIngestRoutes(
+    app,
+    jsonBody,
+    facts.dbIdentity?.id
+      ? createHash('sha256').update(`cortex-store:${facts.dbIdentity.id}`).digest('hex').slice(0, 16)
+      : undefined,
+  );
 
   // Anything else is not this organ's. Answered in the same {success,error}
   // envelope so a caller that wandered over from KEAP's surface gets a fact

@@ -110,10 +110,38 @@ gdpr:
   transfers_outside_eu: false    # loopback-only host daemon; nothing leaves the box
 
 # =============================================================================
-# PULSE — the S2 agreement harness
+# PULSE — the organ's mirror pass, then the S2 agreement harness
 # =============================================================================
 pulse:
   jobs:
+    # ── the pass ─────────────────────────────────────────────────────────────
+    # `cortex_fs_sync_interval_s` is 0 by design (the pass is a DECISION, and
+    # §5.3's halt needs something haltable) — and the decision was missing. With
+    # no interval, no job and a daemon the role restarts only when the plist
+    # template changes, the organ's ONLY pass was its boot pass: the mirror froze
+    # at the last converge that changed the build while KEAP re-walked every
+    # 300 s. Every file created since then read as `only_in_keap` over a CLEAN
+    # (just old) organ pass, so the harness blamed the organ's reader nightly and
+    # the 3-night clock could never reach NIGHTS_REQUIRED.
+    #
+    # 04:30 UTC — after the consolidator (04:15), before keap-embed-sync (04:45),
+    # so the night's new mirror rows have vectors by the time the diff reads both
+    # corpora at 05:30. This is also the job §5.3's `--halt-cmd` disables.
+    - name: cortex-fs-sync
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/scripts/cortex-fs-sync.py"
+      schedule: "30 4 * * *"
+      jitter_min: 2
+      max_runtime_s: 900
+      max_concurrent: 1
+      env:
+        # rw, not ro: a pass WRITES the corpus (upserts, and — behind five
+        # guards and the mount sentinel — prunes).
+        CORTEX_API_URL: "{{ cortex_fanout_url }}"
+        CORTEX_AGENT_TOKEN_RW: "{{ cortex_rw_token }}"
+        NOS_NOTIFY_BIN: "{{ playbook_dir }}/files/anatomy/scripts/nos-notify.sh"
+
+    # ── the measurement ──────────────────────────────────────────────────────
     # Reads BOTH corpora over /agent/v1 only and records one night in the ledger.
     # It NEVER writes either store, and it never halts the incumbent: a target
     # that is down makes the night VOID (neither +1 nor a reset), because a

@@ -173,12 +173,27 @@ function captureAuth(req: Request, res: Response, next: NextFunction) {
  * through here keeps it exactly where it belongs: AFTER `captureAuth`, so an
  * unauthorised body is never read, let alone parsed.
  */
-export function registerIngestRoutes(app: Express, bodyParser?: RequestHandler) {
+export function registerIngestRoutes(app: Express, bodyParser?: RequestHandler, storeEpoch?: string) {
   const parse: RequestHandler = bodyParser ?? ((_req, _res, next) => next());
 
   // Device connectivity probe — minimal on purpose (no corpus stats on a
   // public, pre-auth surface).
-  app.get('/ingest/v1/health', (_req, res) => ok(res, { status: 'OK' }));
+  //
+  // nOS S2 DIFF 2/2 (upstreamable, back-compatible: omit the argument and the
+  // response is byte-identical to KEAP's). `storeEpoch` is an OPAQUE token that
+  // changes when the store is REBUILT and at no other time — a digest of the
+  // store identity, never the identity itself, so a pre-auth surface publishes
+  // no corpus fact, only "am I still the store you were talking to".
+  //
+  // It exists because the consolidator's signature ledger lives in ~/.nos,
+  // outside every store, and offers an item only to targets whose recorded
+  // signature differs. A store that is wiped while its ledger survives is
+  // therefore never re-fed: the source files are unchanged, so not one
+  // `dp-<sha1>` capture row comes back, and the only cure was deleting a file
+  // nothing documents. With an epoch the feeder notices by itself.
+  app.get('/ingest/v1/health', (_req, res) =>
+    ok(res, { status: 'OK', ...(storeEpoch ? { storeEpoch } : {}) }),
+  );
 
   app.post('/ingest/v1/capture', captureAuth, parse, (req, res) => {
     let envelope: CaptureEnvelope;

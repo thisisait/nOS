@@ -128,19 +128,76 @@ def test_plugin_validates_and_stays_loopback_pure():
     # incumbent first). cortex-base owns exactly one job: the agreement harness,
     # which reads both corpora over /agent/v1 and writes to neither.
     jobs = (manifest.get("pulse") or {}).get("jobs") or []
-    assert [j["name"] for j in jobs] == ["cortex-corpus-diff"], (
-        "cortex-base owns exactly one pulse job — the read-only agreement harness. "
-        "The consolidator and embed feeders belong on keap-base as FAN-OUT jobs: "
-        "duplicating them here would sweep the sources twice and give the shadow "
-        "its own schedule to drift on."
+    assert sorted(j["name"] for j in jobs) == ["cortex-corpus-diff", "cortex-fs-sync"], (
+        "cortex-base owns exactly two pulse jobs — the organ's OWN mirror pass and the "
+        "read-only agreement harness. The consolidator and embed feeders belong on "
+        "keap-base as FAN-OUT jobs: duplicating them here would sweep the sources twice "
+        "and give the shadow its own schedule to drift on."
     )
-    diff_env = jobs[0].get("env") or {}
+    by_name = {j["name"]: j for j in jobs}
+    diff_env = by_name["cortex-corpus-diff"].get("env") or {}
     # RO tokens only. A harness holding a write token is one edit away from
     # being a repair tool, and a measurement that can fix what it measures
     # stops being a measurement.
     assert not [k for k in diff_env if k.endswith(("_RW", "_CAPTURE"))], (
         f"the diff harness must hold read-only tokens only, got {sorted(diff_env)}"
     )
+
+
+def test_something_actually_triggers_the_organs_mirror_pass():
+    """The pass has to be CAUSED by something. It was not.
+
+    `cortex_fs_sync_interval_s: 0` disables the in-daemon timer on purpose (the
+    pass is a decision, and §5.3's halt needs something haltable) — and nothing
+    made the decision: no interval, no job POSTing /agent/v1/fs/sync, and a role
+    that restarts the daemon only when the plist template changes. The organ's
+    ONLY pass was its boot pass, so its mirror froze at the last build-changing
+    converge while KEAP re-walked every 300 s. Every file created since then read
+    as `only_in_keap` over a CLEAN (just old) pass, the harness blamed the
+    organ's reader nightly, and the 3-night agreement clock could never advance.
+
+    Three things must therefore hold together, and a comment asserting any of
+    them is not one of the three."""
+    defaults = yaml.safe_load((ROLE / "defaults" / "main.yml").read_text())
+    manifest = yaml.safe_load(PLUGIN.read_text())
+    jobs = {j["name"]: j for j in (manifest.get("pulse") or {}).get("jobs") or []}
+    tasks = (ROLE / "tasks" / "main.yml").read_text()
+
+    # 1. the nightly job exists, runs the trigger, and holds a token that can
+    #    actually cause a pass (a pass WRITES; an ro token would 401 forever).
+    assert "cortex-fs-sync" in jobs, (
+        "with cortex_fs_sync_interval_s at 0 and no Pulse job, the organ's only pass "
+        "is its boot pass — the mirror freezes at the last converge that changed the build"
+    )
+    job = jobs["cortex-fs-sync"]
+    assert job["command"].endswith("files/anatomy/scripts/cortex-fs-sync.py")
+    assert (REPO / "files" / "anatomy" / "scripts" / "cortex-fs-sync.py").exists()
+    assert "CORTEX_AGENT_TOKEN_RW" in (job.get("env") or {}), (
+        "a mirror pass writes the corpus; an ro token makes this job a nightly 401"
+    )
+
+    # 2. it lands BEFORE the harness reads both corpora, or the diff measures a
+    #    pass that has not happened yet.
+    def minute_of(spec: str) -> int:
+        m, h = spec.split()[0], spec.split()[1]
+        return int(h) * 60 + int(m)
+
+    assert minute_of(job["schedule"]) < minute_of(jobs["cortex-corpus-diff"]["schedule"]), (
+        "the mirror pass must run before the agreement harness reads it"
+    )
+
+    # 3. the converge kicks a pass too — a converge that publishes new self-model
+    #    cards must not leave the organ without them until 04:30.
+    assert "/agent/v1/fs/sync" in tasks, (
+        "the role must kick one pass at converge, the way pazny.keap does at the end "
+        "of selfmodel.yml — otherwise the organ's corpus is only ever as fresh as its "
+        "last daemon restart"
+    )
+
+    # The default stays 0 (an interval is a coincidence, a job is a decision, and
+    # §5.3's halt has to have something to halt) — pinned so flipping it becomes a
+    # deliberate act that has to revisit the halt path.
+    assert defaults["cortex_fs_sync_interval_s"] == 0
 
 
 def test_keap_cutover_is_a_second_decision():

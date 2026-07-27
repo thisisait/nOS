@@ -270,6 +270,47 @@
   delay: 5
   until: _cortex_health.status | default(0) == 200
 
+# ── Kick one mirror pass, the way pazny.keap does at the end of selfmodel.yml ─
+# The daemon walks at boot, and the role restarts it only when the plist template
+# changes — so on a converge that changed anything else, the organ's mirror stays
+# frozen at whatever the last build-changing converge saw while KEAP re-walks
+# every 300 s. Nightly cover is the `cortex-fs-sync` Pulse job; this is the
+# converge half, so a run that publishes new self-model cards leaves the organ
+# holding them instead of waiting until 04:30.
+#
+# Never fatal: a REFUSED pass (the mount sentinel — nos_data_root is a removable
+# volume) is exactly the state the sentinel exists to produce, and it must not
+# take a converge down. 409 = a pass is already in flight, which is a success.
+- name: "[pazny.cortex] Kick one fs-sync pass (the converge half of the trigger)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ cortex_port }}/agent/v1/fs/sync"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ cortex_rw_token }}"
+    body_format: json
+    body: {}
+    status_code: [200, 409]
+    timeout: 600
+  register: _cortex_fs_kick
+  failed_when: false
+  changed_when: >-
+    ((_cortex_fs_kick.json.data.upserted | default(0)) | int
+     + (_cortex_fs_kick.json.data.removed | default(0)) | int) > 0
+  when: cortex_fs_enabled | default(true) | bool
+  no_log: true   # the Authorization header carries the RW token
+
+- name: "[pazny.cortex] Report the fs-sync pass (a refusal must be legible)"
+  ansible.builtin.debug:
+    msg: >-
+      cortex fs-sync: status {{ _cortex_fs_kick.status | default('skipped') }} ·
+      scanned {{ _cortex_fs_kick.json.data.scanned | default('n/a') }} ·
+      upserted {{ _cortex_fs_kick.json.data.upserted | default('n/a') }} ·
+      removed {{ _cortex_fs_kick.json.data.removed | default('n/a') }} ·
+      sentinel {{ _cortex_fs_kick.json.data.sentinel | default('n/a') }}
+      {{ '— REFUSED, nothing walked and nothing pruned (check the mount sentinel)'
+         if (_cortex_fs_kick.status | default(0)) | int not in [200, 409] else '' }}
+  when: cortex_fs_enabled | default(true) | bool
+
 - name: "[pazny.cortex] Setup summary"
   ansible.builtin.debug:
     msg: |

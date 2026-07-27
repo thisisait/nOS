@@ -661,10 +661,30 @@ export function syncUserFiles(): FsSyncResult {
     // nOS S2 DIFF 6d/6 — `readBody` in place of `bodyOf`; see its header.
     const read = readBody(f);
     const card = parseCardFrontmatter(read.body);
-    // A degraded read never destroys content: the previous body survives, and
+    // A degraded read never destroys content: the previous row's DERIVED CARD
+    // survives whole — body, type, title and the passthrough `fm` block — and
     // the mtime stamp is withheld so the skip key stays mismatched and the NEXT
     // pass retries the file instead of freezing the loss into the corpus.
+    //
+    // Whole, not just the body. `parseCardFrontmatter(undefined)` short-circuits
+    // to `{body: undefined}` with no type, no title and no fm, so preserving only
+    // `prev.body` and then writing `card.type ?? typeOf(relPath)` /
+    // `card.title ?? basename(relPath)` REVERTED a card on every transient EACCES
+    // or EIO: `documents/router/_stack.md` with `--- type: skill / title: Router
+    // spec ---` came back as type `page` titled `_stack.md`, with its frontmatter
+    // dropped — regenerating precisely the "nine cards named _stack.md" failure
+    // the parser above exists to fix, from a row that was correct a pass earlier.
+    // The stored row would then be derived from NEITHER the file nor a clean
+    // pass, so a wipe-and-rebuild produced a different corpus, and the nightly
+    // diff read it as `card-derivation-divergence` — "compare the two parsers" —
+    // over two identical parsers.
+    const degradedPrev = read.degraded ? prev : undefined;
     const body = read.degraded ? ((prev?.body as string | undefined) ?? undefined) : card.body;
+    // `?? undefined` on purpose: with no previous row (a file that has never read
+    // cleanly) the extension/basename fallback is still the right answer.
+    const cardType = degradedPrev?.type ?? card.type;
+    const cardTitle = degradedPrev?.title ?? card.title;
+    const cardFm = (degradedPrev?.frontmatter?.fm as Record<string, string> | undefined) ?? card.fm;
     if (read.degraded) emptyBodies++;
     // The file owns title/body/frontmatter; curated LINKS survive — union the
     // previous links (human/curator anchors) with refs found in the body, so a
@@ -683,8 +703,8 @@ export function syncUserFiles(): FsSyncResult {
     if (unresolved) danglingAnchors += unresolved;
     db.saveObject(f.uid, {
       id,
-      type: card.type ?? typeOf(f.relPath),
-      title: card.title ?? path.basename(f.relPath),
+      type: cardType ?? typeOf(f.relPath),
+      title: cardTitle ?? path.basename(f.relPath),
       // The folder path is embeddable context ("documents/finance/2026").
       description: dir === '.' ? undefined : dir,
       tags: [f.relPath.split('/')[0]],
@@ -694,7 +714,7 @@ export function syncUserFiles(): FsSyncResult {
         mtime: read.degraded ? 0 : f.mtime,
         fmv: FM_VERSION,
         ...(read.degraded ? { degradedRead: true } : {}),
-        ...(card.fm ? { fm: card.fm } : {}),
+        ...(cardFm ? { fm: cardFm } : {}),
       },
       body,
       links: [...links.values()],

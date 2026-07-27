@@ -39,9 +39,26 @@ this could have gone wrong:
      capture ids are deterministic (sid()) and /ingest/v1/capture upserts,
      so delivery is at-least-once with a deterministic key, which at the
      store is exactly-once. When unsure, send again.
-  4. THE BUDGET COUNTS SWEPT ITEMS, NOT POSTS. Otherwise a second target
-     halves the effective sweep rate and a lagging target starves
-     permanently behind a moving cap.
+  4. THE BUDGET IS PER TARGET, AND COUNTS ITEMS, NOT POSTS. Otherwise a
+     second target halves the effective sweep rate and a lagging target
+     starves permanently behind a moving cap — and, worse, a lagging
+     target STARVES THE INCUMBENT. One shared counter meant the organ's
+     empty ledger spent the whole 200-item budget inside the first root
+     (a 30 000-file Nextcloud tree KEAP already holds), so the sweep
+     broke out before `~/keap/inbox` was walked at all and a file the
+     operator dropped tonight waited 30000/200 = 150 nights to reach
+     KEAP. That is the parallel target degrading the production
+     pipeline, which property 1 says cannot happen. Each target now
+     spends its OWN budget: the walk continues while ANY target can
+     still take work, so the incumbent always reaches the end of the
+     root list on its own schedule.
+
+  5. THE INCUMBENT DECIDES THE EXIT CODE — AT THE END, NOT ONLY AT
+     PREFLIGHT. A store that was up at 04:15 and restarted at 04:16
+     fails every POST, is marked DOWN after three, and used to leave the
+     run returning 0 with a cheerful "N new/changed datapoints" line
+     counting what the SHADOW took. A night on which production accepted
+     nothing must not be indistinguishable from a clean one.
 
 Effects OUTSIDE the stores happen once: the MariaDB `docker exec` sweep
 runs once and its rows feed every target, and the notification fires once
@@ -62,6 +79,21 @@ Sources (all optional; a missing source is skipped silently):
 State: ~/.nos/keap-consolidate-state.json (signature per item PER TARGET;
 only new/changed items POST).
 
+THE LEDGER IS A CACHE OF WHAT A STORE HOLDS, NOT A RECORD OF WHAT WAS
+SENT. It lives outside both stores, so a store that is rebuilt while its
+ledger survives would never be re-fed: the files are unchanged, the
+signatures still match, and every `dp-<sha1>` capture row is gone for
+good. `~/cortex/data` is documented as expendable ("re-materialises …
+so removing it loses nothing without a source", tasks/removal-set.yml)
+— true of the taxonomy, false of the captures. So each target's ledger
+is stamped with that target's STORE EPOCH, read from its
+`/ingest/v1/health`; when the epoch changes the target's ledger is
+dropped and the next sweep re-offers everything it swept. Re-sends are
+free by construction (property 3). A target that publishes no epoch
+keeps today's behaviour exactly, and the nightly diff reports the
+resulting gap as `feeder-ledger-ahead-of-store` rather than as an
+ingestion defect.
+
 Env:
   KEAP_API_URL                default http://127.0.0.1:8091
   KEAP_AGENT_TOKEN_CAPTURE    required (write-only intake tier)
@@ -79,7 +111,8 @@ Env:
   NOS_NOTIFY_BIN              nos-notify.sh (batch summary; optional)
 
 Exit: 0 swept (even 0 new), 1 config error, 2 the INCUMBENT was
-unreachable. A parallel target being down is reported, never fatal.
+unreachable OR went down mid-run. A parallel target being down is
+reported, never fatal.
 """
 from __future__ import annotations
 
@@ -124,7 +157,7 @@ def sid(key: str) -> str:
 
 
 class Target:
-    """One write destination. Holds its OWN signature ledger and its OWN health."""
+    """One write destination. Holds its OWN signature ledger, health and budget."""
 
     def __init__(self, name: str, base: str, token: str, incumbent: bool):
         self.name = name
@@ -137,19 +170,38 @@ class Target:
         self.sent = 0
         self.failed = 0
         self._streak = 0
+        # PER-TARGET, so a lagging shadow cannot spend the incumbent's sweep.
+        self.budget = MAX_NEW
+        # The store epoch this target published at preflight (None = it does not
+        # publish one, which is today's behaviour for the KEAP container).
+        self.epoch: str | None = None
+        self.ledger_reset = False
 
     def ledger(self, source: str) -> dict:
         return self.state.setdefault(source, {})
 
+    @property
+    def hungry(self) -> bool:
+        """Can this target still take work this run?"""
+        return self.up and self.budget > 0
+
     def preflight(self) -> bool:
         try:
             req = urllib.request.Request(f"{self.base}/ingest/v1/health")
-            urllib.request.urlopen(req, timeout=10).read()
-            return True
+            raw = urllib.request.urlopen(req, timeout=10).read()
         except (urllib.error.URLError, OSError) as exc:
             self.up = False
             self.reason = f"unreachable: {exc}"
             return False
+        # The epoch is OPTIONAL and its absence is not an error: KEAP's container
+        # serves `{status: 'OK'}` and nothing else, and must keep working.
+        try:
+            body = json.loads(raw.decode())
+            epoch = (body.get("data") or {}).get("storeEpoch")
+            self.epoch = str(epoch) if isinstance(epoch, (str, int)) and str(epoch) else None
+        except (ValueError, AttributeError):
+            self.epoch = None
+        return True
 
     def post_capture(self, envelope: dict) -> bool:
         """One capture. Returns success; NEVER raises past this boundary."""
@@ -226,6 +278,26 @@ def load_state(targets: list[Target]) -> None:
         per_target = {"keap": {k: v for k, v in raw.items() if k in ("fs", "mariadb")}}
     for t in targets:
         t.state = per_target.get(t.name, {})
+        # ── the ledger is a cache of that STORE, and outlived it before ───────
+        # A wiped store keeps its ledger, every signature still matches, and no
+        # capture row is ever re-POSTed — the datapoints are simply gone. The
+        # epoch closes it without an operator having to know this file exists:
+        # a rebuilt store publishes a different one, and its ledger is dropped.
+        # Only when the target PUBLISHES an epoch; a target that does not keeps
+        # exactly today's behaviour rather than being re-fed every night.
+        if not t.epoch:
+            continue
+        recorded = t.state.get("_epoch")
+        if recorded and recorded != t.epoch:
+            t.state = {}
+            t.ledger_reset = True
+            print(
+                f"keap-consolidate: target '{t.name}' reports store epoch {t.epoch} but its ledger was "
+                f"written against {recorded} — the store was rebuilt, so its ledger is dropped and this "
+                "run re-offers everything (ids are deterministic; the intake upserts)",
+                file=sys.stderr,
+            )
+        t.state["_epoch"] = t.epoch
 
 
 def save_state(targets: list[Target]) -> None:
@@ -235,22 +307,38 @@ def save_state(targets: list[Target]) -> None:
     )
 
 
-def deliver(targets: list[Target], source: str, key: str, signature: str, envelope: dict) -> bool:
-    """Offer one swept item to every target that has not already taken it.
+def needing(targets: list[Target], source: str, key: str, signature: str) -> list[Target]:
+    """Targets that still have budget AND do not already hold this signature.
 
-    Returns True when at least one target needed it — that, not the number of
-    POSTs, is what the budget counts.
+    Computed BEFORE the envelope is built, so an item nobody needs costs one
+    dict lookup rather than a file read.
+    """
+    return [t for t in targets if t.hungry and t.ledger(source).get(key) != signature]
+
+
+def exhausted(targets: list[Target]) -> bool:
+    """True when no target can take another item — the only reason to stop
+    walking. Stopping when the FIRST target fills its budget is what let a
+    lagging shadow end the incumbent's sweep inside the first root."""
+    return not any(t.hungry for t in targets)
+
+
+def deliver(wanting: list[Target], source: str, key: str, signature: str, envelope: dict) -> None:
+    """Offer one swept item to the targets that asked for it.
+
+    Each target spends ITS OWN budget unit — an item is one item of work for
+    every store that has to take it, and a store that already holds it does no
+    work at all.
 
     State is recorded PER TARGET and only AFTER that target's ack, so a failed
     target's signature stays unwritten and the next run retries it and only it.
+    The budget is spent either way: a target that cannot take 200 items is not
+    made healthier by being handed 200 more.
     """
-    needing = [t for t in targets if t.up and t.ledger(source).get(key) != signature]
-    if not needing:
-        return False
-    for t in needing:
+    for t in wanting:
+        t.budget -= 1
         if t.post_capture(envelope):
             t.ledger(source)[key] = signature
-    return True
 
 
 # ── Filesystem sweep ──────────────────────────────────────────────────────────
@@ -270,10 +358,10 @@ def iter_fs_files():
                 yield base, path
 
 
-def sweep_fs(targets: list[Target], budget: list[int]) -> int:
+def sweep_fs(targets: list[Target]) -> int:
     new = 0
     for base, path in iter_fs_files():
-        if budget[0] <= 0:
+        if exhausted(targets):
             break
         try:
             st = path.stat()
@@ -281,7 +369,8 @@ def sweep_fs(targets: list[Target], budget: list[int]) -> int:
             continue
         key = str(path)
         signature = f"{int(st.st_mtime)}:{st.st_size}"
-        if all(not t.up or t.ledger("fs").get(key) == signature for t in targets):
+        wanting = needing(targets, "fs", key, signature)
+        if not wanting:
             continue
         ext = path.suffix.lower()
         modality = "media" if ext in MEDIA_EXT else "text"
@@ -308,9 +397,8 @@ def sweep_fs(targets: list[Target], budget: list[int]) -> int:
                 "ext": ext.lstrip("."),
             },
         }
-        if deliver(targets, "fs", key, signature, envelope):
-            new += 1
-            budget[0] -= 1
+        deliver(wanting, "fs", key, signature, envelope)
+        new += 1
     return new
 
 
@@ -327,7 +415,7 @@ def mariadb_query(query: str) -> list[list[str]]:
     return [line.split("\t") for line in out.stdout.splitlines() if line]
 
 
-def sweep_mariadb(targets: list[Target], budget: list[int]) -> int:
+def sweep_mariadb(targets: list[Target]) -> int:
     """ONE `docker exec` sweep, whose rows feed every target.
 
     The load this puts on MariaDB is an effect OUTSIDE the stores, so it must
@@ -346,7 +434,9 @@ def sweep_mariadb(targets: list[Target], budget: list[int]) -> int:
         return 0
     new = 0
     for schema, table, rows_s in tables:
-        if schema in DB_EXCLUDE or budget[0] <= 0:
+        if exhausted(targets):
+            break
+        if schema in DB_EXCLUDE:
             continue
         try:
             cols = mariadb_query(
@@ -361,7 +451,8 @@ def sweep_mariadb(targets: list[Target], budget: list[int]) -> int:
         # growing table doesn't re-capture every night.
         signature = hashlib.sha1(f"{col_sig}|{len(str(rows))}".encode()).hexdigest()[:16]
         key = f"{schema}.{table}"
-        if all(not t.up or t.ledger("mariadb").get(key) == signature for t in targets):
+        wanting = needing(targets, "mariadb", key, signature)
+        if not wanting:
             continue
         envelope = {
             "id": sid(f"mariadb:{key}"),
@@ -379,9 +470,8 @@ def sweep_mariadb(targets: list[Target], budget: list[int]) -> int:
                 "columns": [{"name": c, "type": t} for c, t in cols[:100]],
             },
         }
-        if deliver(targets, "mariadb", key, signature, envelope):
-            new += 1
-            budget[0] -= 1
+        deliver(wanting, "mariadb", key, signature, envelope)
+        new += 1
     return new
 
 
@@ -400,20 +490,23 @@ def main() -> int:
         return 2
 
     load_state(targets)
-    budget = [MAX_NEW]
     try:
-        fs_new = sweep_fs(targets, budget)
-        db_new = sweep_mariadb(targets, budget)
+        fs_new = sweep_fs(targets)
+        db_new = sweep_mariadb(targets)
     finally:
         save_state(targets)
 
     total = fs_new + db_new
-    capped = " (cap reached — rest lands next run)" if budget[0] <= 0 else ""
+    capped_targets = [t.name for t in targets if t.budget <= 0]
+    capped = f" (cap reached for {', '.join(capped_targets)} — rest lands next run)" if capped_targets else ""
     breakdown = ", ".join(
         f"{t.name} {t.sent} ok/{t.failed} failed" + ("" if t.up else " [DOWN]") for t in targets
     )
     print(f"keap-consolidate: {total} new/changed datapoints (fs {fs_new}, sql {db_new}){capped} — {breakdown}")
     for t in targets:
+        if t.ledger_reset:
+            print(f"keap-consolidate: target '{t.name}': ledger dropped (store epoch changed) — "
+                  f"{t.sent} item(s) re-sent this run", file=sys.stderr)
         if not t.up or t.failed:
             print(f"keap-consolidate: target '{t.name}': {t.reason or 'partial failures'}", file=sys.stderr)
 
@@ -438,6 +531,32 @@ def main() -> int:
                  "wing-inbox"],
                 check=False, timeout=30,
             )
+
+    # ── the incumbent decides the exit code, at the END of the run ───────────
+    # Preflight was the only place this was ever checked, so a store that was up
+    # at 04:15 and restarted at 04:16 produced: every POST failing, the target
+    # marked DOWN after three, the rest of the sweep silently skipping it — and
+    # `return 0` with a stdout line counting what the SHADOW took. Pulse recorded
+    # the job green. A night on which production accepted nothing has to be
+    # distinguishable from a clean one, and the exit code is the only thing above
+    # this job that reads anything.
+    if not incumbent.up:
+        print(
+            f"keap-consolidate: the INCUMBENT went down mid-run ({incumbent.reason}) — "
+            f"{incumbent.sent} of {incumbent.sent + incumbent.failed} POST(s) landed. Its unacknowledged "
+            "signatures were NOT recorded, so the next run retries exactly what it missed.",
+            file=sys.stderr,
+        )
+        if NOTIFY_BIN and os.path.exists(NOTIFY_BIN):
+            subprocess.run(
+                [NOTIFY_BIN, "high", "KEAP consolidator: the incumbent went down mid-run",
+                 f"{incumbent.reason}. {incumbent.sent} capture(s) landed before it stopped answering; "
+                 f"the sweep continued for the remaining targets ({breakdown}). Nothing was lost — the "
+                 "next run re-offers what KEAP did not acknowledge.",
+                 "wing-inbox"],
+                check=False, timeout=30,
+            )
+        return 2
     return 0
 
 

@@ -74,6 +74,10 @@ async function main(): Promise<number> {
       size: o.frontmatter?.size as number | undefined,
       mtime: o.frontmatter?.mtime as number | undefined,
       degradedRead: o.frontmatter?.degradedRead as boolean | undefined,
+      // The passthrough frontmatter block. Reported because a degraded read used
+      // to DROP it along with the card's type and title, and a field nobody can
+      // read is a field nobody checks (cortex-store.ts's rule).
+      fm: o.frontmatter?.fm as Record<string, string> | undefined,
       // The HASH, not the body: it is what catches the empty-body class and the
       // --facts-json divergence, both of which an id-only diff reads as green.
       bodyHash: o.body ? crypto.createHash('sha256').update(o.body).digest('hex') : null,

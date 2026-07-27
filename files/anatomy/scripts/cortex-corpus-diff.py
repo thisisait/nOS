@@ -429,6 +429,27 @@ class HostReferee:
     so there is no path by which this can read a document's contents, let alone
     write one.
 
+    It is also strictly IN-ROOT, which is a separate claim and used not to hold.
+    The relative path comes off the wire — `frontmatter.path` as either daemon
+    reports it — and `os.path.join(root, '/etc/ssh/ssh_host_ed25519_key')`
+    returns the absolute component and DISCARDS the root, as does any value
+    carrying `..`. The organ's own rows cannot express either (their relPaths are
+    built from `readdirSync` entries, which contain no '/'), but KEAP's rows are
+    not the organ's rows: they arrive over HTTP from a store with its own write
+    surfaces, and any of them that can set an `fs:`-prefixed id with a chosen
+    path would steer this referee onto an arbitrary host file — whose resolved
+    path, size and mtime are then written verbatim into a finding, persisted to
+    `~/.nos/cortex-corpus-diff.json` and shipped to wing-inbox. It also corrupts
+    the adjudication itself: a crafted path that stats successfully flips
+    `organ-row-without-a-file` into `organ-reader-missed-it`, which changes the
+    named culprit and, through `removalShaped`, the halt decision.
+
+    So the same double check `resolveInRoot` applies on the TypeScript side
+    applies here: lexical first (absolute, `..`, empty), then physical (the
+    realpath must stay under the root's realpath, so a symlink inside the tree
+    cannot walk out either). A path that fails is `unresolvable` with the reason
+    stated — never silently absent, which would blame a reader for a refusal.
+
     Roots come from the ORGAN's /agent/v1/fs/status, because those are host
     paths. KEAP's `dir` is `/user-files`, a path inside a container, which no
     host process can resolve — so KEAP's own view cannot referee itself, which
@@ -461,26 +482,77 @@ class HostReferee:
     def known_uids(self) -> set[str]:
         return set(self._uid_dirs)
 
+    @staticmethod
+    def _lexically_in_root(rel_path: str) -> str | None:
+        """None when the relative path is safe to join; else the reason it is not.
+
+        Refused BEFORE any filesystem call, so a hostile value never reaches
+        `os.stat` at all. The segment rules mirror `fs-roots.ts::resolveInRoot`
+        (`'', '.', '..'` and backslashes), plus the one that actually bites here:
+        an ABSOLUTE path, which `os.path.join` silently treats as a new root."""
+        if os.path.isabs(rel_path) or (os.path.altsep and rel_path.startswith(os.path.altsep)):
+            return f"path {rel_path!r} is absolute — an absolute component discards the root"
+        if "\\" in rel_path:
+            return f"path {rel_path!r} contains a backslash"
+        for seg in rel_path.replace(os.sep, "/").split("/"):
+            if seg in ("", ".", ".."):
+                return f"path {rel_path!r} contains a {seg!r} segment"
+        return None
+
+    def _resolve(self, d: str, rel_path: str) -> str | None:
+        """Absolute path inside root `d`, or None when it escapes it.
+
+        The PHYSICAL half of the check: a symlink inside the tree could point
+        anywhere, and `realpath` is the only thing that sees it. Compared against
+        the root's own realpath so a symlinked root (`/tmp` -> `/private/tmp` on
+        macOS) is not mistaken for an escape."""
+        try:
+            root_real = os.path.realpath(d)
+            cand = os.path.realpath(os.path.join(root_real, rel_path))
+        except OSError:
+            return None
+        if cand != root_real and not cand.startswith(root_real + os.sep):
+            return None
+        return os.path.join(root_real, rel_path)
+
     def stat(self, uid: str | None, rel_path: str | None) -> dict:
         """-> {'state': 'exists'|'absent'|'unresolvable', 'size':…, 'mtime':…}
 
         `unresolvable` is a first-class answer: no configured root can produce
         this uid at all, which is a CONFIGURATION difference between the two
         deployments and not a corpus defect. Collapsing it into 'absent' would
-        blame a reader for a root it was never given."""
+        blame a reader for a root it was never given. A path that refuses to stay
+        inside its root is `unresolvable` for the same reason — the harness
+        declines to answer rather than answering about a file it was never
+        supposed to be able to reach."""
         if not self.available or not uid or not rel_path:
             return {"state": "unresolvable", "why": "no host roots available to this harness"}
         dirs = self._uid_dirs.get(uid)
         if not dirs:
             return {"state": "unresolvable", "why": f"no configured root derives uid {uid!r}"}
+        bad = self._lexically_in_root(rel_path)
+        if bad:
+            return {"state": "unresolvable", "why": f"{bad}; the referee reads only inside its declared roots",
+                    "refused": rel_path}
+        tried: list[str] = []
+        escaped = False
         for d in dirs:
-            abs_path = os.path.join(d, rel_path)
+            abs_path = self._resolve(d, rel_path)
+            if abs_path is None:
+                escaped = True
+                continue
+            tried.append(abs_path)
             try:
                 st = os.stat(abs_path)
             except OSError:
                 continue
             return {"state": "exists", "size": st.st_size, "mtime": int(st.st_mtime), "path": abs_path}
-        return {"state": "absent", "tried": [os.path.join(d, rel_path) for d in dirs]}
+        if escaped and not tried:
+            return {"state": "unresolvable",
+                    "why": f"path {rel_path!r} resolves outside every root that derives uid {uid!r} "
+                           "(a symlink out of the tree); the referee reads only inside its declared roots",
+                    "refused": rel_path}
+        return {"state": "absent", "tried": tried}
 
 
 # ── referee 2: the pinned canonical tree in the repo ─────────────────────────
@@ -624,12 +696,35 @@ def adjudicate_objects(keap: Side, organ: Side, fs: HostReferee) -> tuple[TableD
         uid, rel = source_of(keap, oid)
         r = fs.stat(uid, rel)
         if r["state"] == "exists":
+            # STALENESS BEFORE BLAME — the mirror of the only_in_organ branch
+            # below, which has had this guard from the start while this one did
+            # not. The organ's pass is not on a timer (`cortex_fs_sync_interval_s`
+            # is 0 by design); it runs at boot and from the nightly `cortex-fs-sync`
+            # job. So "the file exists and the organ has no row" is the EXPECTED
+            # reading of a file created after the organ last walked, and calling
+            # it `organ-reader-missed-it` blames a reader that was never asked to
+            # look. Left unguarded it also fails the fs-ids clause every night on
+            # any estate where documents arrive between passes — the 3-night clock
+            # could then never reach NIGHTS_REQUIRED — and, through
+            # `removalShaped`, turns an ordinary week of new documents into a
+            # `high` data-loss alarm.
+            pass_at = organ.lastPassAt
+            if _pass_newer_than(pass_at, r["mtime"]) is False:
+                out.append(Finding(
+                    "knowledge_objects", "only_in_keap", oid, CULPRIT_ORGAN, "organ-stale",
+                    f"the file exists and was modified at {r['mtime']} (epoch), AFTER the organ's last pass at "
+                    f"{pass_at} — the organ has simply not walked since it appeared",
+                    "no defect; the next organ pass closes it. If it does not, check that the cortex-fs-sync "
+                    "Pulse job is running (the organ has no in-daemon timer), then re-read as organ-reader-missed-it",
+                    {"uid": uid, "relPath": rel, "fs": r, "organLastPass": pass_at}))
+                continue
             out.append(Finding(
                 "knowledge_objects", "only_in_keap", oid, CULPRIT_ORGAN, "organ-reader-missed-it",
-                f"the file EXISTS on the host ({r['path']}, {r['size']} bytes) and the organ's last pass was clean, "
-                "so the organ's reader walked past a file that is really there",
+                f"the file EXISTS on the host ({r['path']}, {r['size']} bytes), predates the organ's last pass at "
+                f"{pass_at}, and that pass was clean — so the organ's reader walked while the file was there and "
+                "produced no row",
                 f"check the organ's root list and CORTEX_FS_SYNC_DIRS against {rel!r} for uid {uid!r}",
-                {"uid": uid, "relPath": rel, "fs": r}))
+                {"uid": uid, "relPath": rel, "fs": r, "organLastPass": pass_at}))
         elif r["state"] == "absent":
             out.append(Finding(
                 "knowledge_objects", "only_in_keap", oid, CULPRIT_KEAP, "keap-stale-not-pruned",
@@ -1066,6 +1161,49 @@ def adjudicate_captures(keap: Side, organ: Side, feeder: dict) -> tuple[TableDif
         return t, out
 
     targets = feeder.get("targets") or {}
+    # ── the ledger claims rows the store does not have ───────────────────────
+    # This used to be reported as `fanout-partial` — "items swept for the organ
+    # were recorded but did not land" — with the action "read the fan-out's
+    # per-target rejection reasons". Those reasons do not exist, and the verdict
+    # names only ONE of the two causes of this observation. The other is the
+    # dangerous one and was invisible:
+    #
+    #   the ledger lives in ~/.nos, OUTSIDE both stores, and `deliver()` offers
+    #   an item only to targets whose recorded signature differs. So a store that
+    #   is REBUILT while its ledger survives never gets its capture rows back:
+    #   the source files are unchanged, every signature still matches, and not
+    #   one datapoint is re-POSTed. `tasks/removal-set.yml` says the organ's
+    #   store "re-materialises … so removing it loses nothing without a source" —
+    #   true of the taxonomy, false of every `dp-<sha1>` capture row.
+    #
+    # A single night's counts cannot separate the two causes, so the finding
+    # names both rather than picking one. What DOES separate them is the store
+    # epoch keap-consolidate now reads from `/ingest/v1/health`: a rebuilt store
+    # publishes a new one and its ledger is dropped on the next sweep, so this
+    # finding surviving a night is evidence for the rejection cause (or for a
+    # target that publishes no epoch at all).
+    ahead = []
+    for name, side in (("keap", keap), ("cortex", organ)):
+        recorded, held = targets.get(name), side.capturesTotal
+        if recorded is not None and held is not None and recorded > held:
+            ahead.append((name, recorded, held))
+    if ahead:
+        for name, recorded, held in ahead:
+            out.append(Finding(
+                "api_taxonomy_metadata", "count_mismatch", name, CULPRIT_FEEDER, "feeder-ledger-ahead-of-store",
+                f"the consolidator's ledger records {recorded} swept signature(s) for '{name}' but that store holds "
+                f"only {held} capture(s) — the ledger describes rows the store does not have, so the sweep considers "
+                "them delivered and will not offer them again. Two causes produce this and one night's counts cannot "
+                "tell them apart: the store was REBUILT under a surviving ledger, or the target acknowledged items it "
+                "did not keep",
+                f"check the target's store epoch first — a rebuilt store publishes a new one and keap-consolidate "
+                f"drops its ledger on the next sweep, which closes this by itself. If the epoch is unchanged (or the "
+                f"target publishes none, as KEAP's container does), drop targets.{name} from "
+                "~/.nos/keap-consolidate-state.json: re-sends are free, capture ids are deterministic and the intake "
+                "upserts",
+                {"target": name, "ledger": recorded, "store": held}))
+        return t, out
+
     if feeder.get("version") == 1 or "cortex" not in targets:
         out.append(Finding(
             "api_taxonomy_metadata", "count_mismatch", "-", CULPRIT_FEEDER, "fanout-never-ran",

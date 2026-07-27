@@ -39,12 +39,17 @@ class _Sink(BaseHTTPRequestHandler):
         if self.server.failing:
             self.send_error(503)
             return
-        self._json(200, {"success": True, "data": {"status": "OK"}})
+        # `storeEpoch` is OPTIONAL on purpose — KEAP's container serves
+        # `{status: 'OK'}` and nothing else, and must keep working.
+        data = {"status": "OK"}
+        if self.server.epoch is not None:
+            data["storeEpoch"] = self.server.epoch
+        self._json(200, {"success": True, "data": data})
 
     def do_POST(self):  # noqa: N802
         length = int(self.headers.get("content-length") or 0)
         body = json.loads(self.rfile.read(length) or b"{}")
-        if self.server.failing:
+        if self.server.failing or self.server.failing_posts:
             self.send_error(503)
             return
         self.server.received.append(body)
@@ -66,6 +71,8 @@ class Sink:
         self.http.received = []
         self.http.tokens = set()
         self.http.failing = False
+        self.http.failing_posts = False
+        self.http.epoch = None
         threading.Thread(target=self.http.serve_forever, daemon=True).start()
 
     @property
@@ -82,6 +89,14 @@ class Sink:
 
     def fail(self, failing: bool = True) -> None:
         self.http.failing = failing
+
+    def fail_posts(self, failing: bool = True) -> None:
+        """Health still answers; every capture is refused. This is what a store
+        that is restarted AFTER preflight looks like from the feeder."""
+        self.http.failing_posts = failing
+
+    def set_epoch(self, epoch: str | None) -> None:
+        self.http.epoch = epoch
 
     def stop(self) -> None:
         self.http.shutdown()
@@ -222,3 +237,164 @@ def test_a_url_without_a_token_is_loud_rather_than_a_silent_single_target(rig):
     assert "is NOT being fed" in proc.stderr
     assert len(cortex.received) == 0
     assert len(keap.received) == 2
+
+
+# ── the budget: a lagging shadow must not spend the incumbent's sweep ────────
+
+
+def test_a_lagging_shadow_does_not_starve_the_incumbent(rig, tmp_path):
+    """The estate the organ is actually added to: KEAP has already swept a large
+    tree (say the Nextcloud data dir), and the organ's ledger is empty.
+
+    With ONE shared budget, every one of those files reads as "somebody needs
+    it", `budget -= 1` fires on rows KEAP already holds, and the sweep breaks out
+    inside the first root — so the second root (`~/keap/inbox`, where the
+    operator drops things) is never walked, and a file dropped tonight waits
+    backlog/budget nights to reach the PRODUCTION store. That is the parallel
+    target degrading the production pipeline, which property 1 says cannot
+    happen; two files under one root cannot show it."""
+    run, keap, cortex, _default_root, state = rig
+
+    backlog = tmp_path / "nextcloud"
+    backlog.mkdir()
+    inbox = tmp_path / "drop"
+    inbox.mkdir()
+    for i in range(6):
+        (backlog / f"old{i}.md").write_text(f"old {i}")
+    (inbox / "tonight.md").write_text("the file the operator dropped tonight")
+
+    # KEAP already holds the whole backlog; the organ holds nothing.
+    state.write_text(json.dumps({
+        "version": 2,
+        "targets": {
+            "keap": {"fs": {str(backlog / f"old{i}.md"):
+                            f"{int((backlog / f'old{i}.md').stat().st_mtime)}:"
+                            f"{(backlog / f'old{i}.md').stat().st_size}" for i in range(6)}},
+            "cortex": {},
+        },
+    }))
+
+    proc = run(
+        NOS_CONSOLIDATE_FS_ROOTS=f"{backlog}:{inbox}",   # backlog FIRST, as FS_ROOTS is ordered
+        NOS_CONSOLIDATE_MAX="3",
+    )
+    assert proc.returncode == 0, proc.stderr
+
+    # THE ASSERTION: the incumbent reached the inbox. Its own budget was never
+    # touched by the organ's backlog, because it already held every one of those
+    # files and doing nothing costs nothing.
+    assert [c["title"] for c in keap.received] == ["tonight.md"]
+    # …and the shadow spent its own budget on its own backlog, in order.
+    assert len(cortex.received) == 3
+    assert all(c["title"].startswith("old") for c in cortex.received)
+
+
+def test_a_target_that_already_holds_an_item_spends_no_budget_on_it(rig, tmp_path):
+    """The corollary, stated separately because it is what makes the fix a
+    per-target budget rather than a bigger one: budget is WORK, and a store that
+    already holds a row does no work."""
+    run, keap, cortex, _default_root, state = rig
+    root = tmp_path / "tree"
+    root.mkdir()
+    for i in range(4):
+        (root / f"f{i}.md").write_text(f"body {i}")
+    st = (root / "f0.md").stat()
+    state.write_text(json.dumps({
+        "version": 2,
+        "targets": {"keap": {"fs": {str(root / "f0.md"): f"{int(st.st_mtime)}:{st.st_size}"}}},
+    }))
+
+    proc = run(NOS_CONSOLIDATE_FS_ROOTS=str(root), NOS_CONSOLIDATE_MAX="3")
+    assert proc.returncode == 0, proc.stderr
+    # f0 costs KEAP nothing, so its 3 units buy f1..f3 — all four files land.
+    assert sorted(c["title"] for c in keap.received) == ["f1.md", "f2.md", "f3.md"]
+    assert len(cortex.received) == 3  # the organ needed f0 too, and paid for it
+
+
+# ── the exit code: the incumbent decides it at the END, not only at preflight ─
+
+
+def test_an_incumbent_that_dies_after_preflight_is_not_a_green_night(rig):
+    """04:15 preflight OK; 04:16 the container is restarted by a converge, an
+    image bump or an OOM kill. Every POST fails, three consecutive failures mark
+    the target DOWN, the rest of the sweep skips it — and the run used to
+    `return 0` while stdout reported the datapoints the SHADOW took. Pulse then
+    records a night on which the production store accepted nothing as green."""
+    run, keap, cortex, root, _state = rig
+    for i in range(4):
+        (root / f"extra{i}.md").write_text(f"e{i}")
+    keap.fail_posts()
+
+    proc = run()
+    assert len(keap.received) == 0
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    assert "INCUMBENT went down mid-run" in proc.stderr
+    # The shadow still got the sweep — failure domains stay split; what changed
+    # is only that the run no longer LIES about the incumbent.
+    assert len(cortex.received) == 6
+
+
+def test_a_shadow_that_dies_after_preflight_is_still_not_fatal(rig):
+    """The other side of the same rule, so the fix cannot be read as 'any
+    mid-run failure is fatal'."""
+    run, keap, cortex, root, state = rig
+    for i in range(4):
+        (root / f"extra{i}.md").write_text(f"e{i}")
+    cortex.fail_posts()
+
+    proc = run()
+    assert proc.returncode == 0, proc.stderr
+    assert len(keap.received) == 6
+    assert len(cortex.received) == 0
+    assert read_state(state)["targets"].get("cortex", {}).get("fs", {}) == {}
+
+
+# ── the ledger is a cache of a STORE, and used to outlive it ─────────────────
+
+
+def test_a_wiped_store_is_re_fed_when_its_epoch_changes(rig):
+    """`rm -rf ~/cortex/data` + converge is the documented, sanctioned move: the
+    removal set says the store "re-materialises … so removing it loses nothing
+    without a source". True of the taxonomy; FALSE of every `dp-<sha1>` capture
+    row, because the ledger that says they were delivered lives in ~/.nos and
+    survives. The files are unchanged, the signatures still match, and nothing is
+    ever re-POSTed."""
+    run, keap, cortex, _root, state = rig
+    keap.set_epoch("keap-epoch-1")
+    cortex.set_epoch("cortex-epoch-1")
+    run()
+    assert len(cortex.received) == 2
+    assert read_state(state)["targets"]["cortex"]["_epoch"] == "cortex-epoch-1"
+
+    # …the organ's store is wiped and re-materialised: same files on disk, a NEW
+    # store identity, an empty capture table, an untouched ledger.
+    cortex.set_epoch("cortex-epoch-2")
+    proc = run()
+    assert proc.returncode == 0, proc.stderr
+    assert len(cortex.received) == 4, "the rebuilt store must be re-offered every swept item"
+    assert len(keap.received) == 2, "the incumbent's ledger is untouched — it did not lose anything"
+    assert "store was rebuilt" in proc.stderr
+    assert read_state(state)["targets"]["cortex"]["_epoch"] == "cortex-epoch-2"
+
+
+def test_a_stable_epoch_does_not_re_send_anything(rig):
+    """The epoch must not turn every night into a full re-sweep."""
+    run, keap, cortex, _root, _state = rig
+    keap.set_epoch("e1")
+    cortex.set_epoch("e1")
+    run()
+    run()
+    assert len(keap.received) == 2
+    assert len(cortex.received) == 2
+
+
+def test_a_target_that_publishes_no_epoch_behaves_exactly_as_before(rig, tmp_path):
+    """KEAP's container serves `{status: 'OK'}` and no epoch. It must keep
+    today's behaviour — not be re-fed nightly, and not crash the feeder."""
+    run, keap, cortex, _root, state = rig
+    run()
+    assert len(keap.received) == 2
+    proc = run()
+    assert proc.returncode == 0, proc.stderr
+    assert len(keap.received) == 2
+    assert "_epoch" not in read_state(state)["targets"]["keap"]

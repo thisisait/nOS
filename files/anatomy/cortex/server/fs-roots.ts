@@ -11,7 +11,7 @@
  *   - keys 'users' and 'user-files' are reserved — the per-user doctrine tree
  *     has its OWN sync pipeline (fs-sync users pass) and a root over it would
  *     double-ingest every file;
- *   - the overlap check vs KEAP_USER_FILES_DIR (realpath containment, both
+ *   - the overlap check vs EVERY per-user root (realpath containment, both
  *     directions) runs lazily at resolve time, so a conflicting root degrades
  *     to a typed error, never to double-ingest;
  *   - a root whose path does not exist stays REGISTERED with exists:false — a
@@ -20,13 +20,47 @@
  */
 import { realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { listUserRoots } from './cortex-fs';
 
 const KEY_RE = /^[a-z0-9][a-z0-9-]{0,31}$/;
 const RESERVED_KEYS = new Set(['users', 'user-files']);
 
-/** Same env var fs-sync.ts reads — read directly (not imported) so the
- *  dependency stays one-way: fs-sync → fs-roots, never back. */
-const USER_FILES_DIR = process.env.KEAP_USER_FILES_DIR ?? '';
+/**
+ * The per-user tree, as the users pass actually sees it.
+ *
+ * This used to be `process.env.KEAP_USER_FILES_DIR` read directly, "so the
+ * dependency stays one-way: fs-sync → fs-roots, never back". The direction was
+ * right and the VALUE was wrong: since §1.4 the users pass walks an ORDERED LIST
+ * of roots (`KEAP_FS_USER_ROOTS`, which the organ's deployment sets from
+ * `CORTEX_FS_USER_ROOTS`), and `KEAP_USER_FILES_DIR` is only ONE of the shapes
+ * that list can take — the organ's plist never sets it at all. So the guard this
+ * module's header calls a doctrine guard was reading a variable nobody sets, the
+ * `if` never ran, and a mapped-folder root over the per-user tree would have
+ * resolved cleanly and mirrored every user's documents under owner `fsmap:<id>`
+ * with the MAPPING's visibility — one user's files readable by everyone, and
+ * invisible to the users-pass prune filter (`source === 'fs'`) that would
+ * otherwise have cleaned the duplicates up.
+ *
+ * `listUserRoots` is the same resolver `fs-sync.ts` uses, so the guard is now
+ * defined against the roots that pass will really walk rather than against a
+ * second, hand-kept spelling of them. The dependency stays one-way: `cortex-fs`
+ * imports nothing local, so `fs-roots → cortex-fs ← fs-sync` has no cycle.
+ *
+ * Resolved LAZILY (and memoised) rather than at module load: `aliasFsEnv()` maps
+ * `CORTEX_FS_*` onto the `KEAP_FS_*` names at daemon start, and this module may
+ * be imported before that runs — reading the env at load would freeze an empty
+ * list and disable the guard exactly the way the old constant did.
+ */
+let userRootPaths: string[] | null = null;
+function perUserRoots(): string[] {
+  if (!userRootPaths) userRootPaths = listUserRoots().map((r) => r.path);
+  return userRootPaths;
+}
+
+/** Test seam only: drop the memoised roots so a scenario can re-resolve them. */
+export function _resetUserRootsCache(): void {
+  userRootPaths = null;
+}
 
 export interface FsRoot {
   key: string;
@@ -110,24 +144,29 @@ export function resolveInRoot(rootKey: string, relPath: string): ResolveInRootRe
     return { ok: false, error: 'not-a-dir', message: `root '${rootKey}' is not mounted at ${rootPath}` };
   }
 
-  // Lazy overlap guard vs the per-user tree: equal/ancestor/descendant in
-  // either direction would run two sync pipelines over one tree.
-  if (USER_FILES_DIR) {
+  // Lazy overlap guard vs EVERY per-user root: equal/ancestor/descendant in
+  // either direction would run two sync pipelines over one tree. Checked against
+  // all of them, not the first — a second root is exactly where a hand-written
+  // mapping is most likely to overlap, and the loop costs one realpath per root.
+  for (const usersDir of perUserRoots()) {
+    let usersReal: string;
     try {
-      const usersReal = realpathSync(USER_FILES_DIR);
-      if (
-        rootReal === usersReal ||
-        rootReal.startsWith(usersReal + path.sep) ||
-        usersReal.startsWith(rootReal + path.sep)
-      ) {
-        return {
-          ok: false,
-          error: 'conflicts-user-files',
-          message: `root '${rootKey}' conflicts with the per-user tree`,
-        };
-      }
+      usersReal = realpathSync(usersDir);
     } catch {
-      /* users dir not present — nothing to conflict with */
+      continue; // that root is not mounted right now — nothing to conflict with
+    }
+    if (
+      rootReal === usersReal ||
+      rootReal.startsWith(usersReal + path.sep) ||
+      usersReal.startsWith(rootReal + path.sep)
+    ) {
+      return {
+        ok: false,
+        error: 'conflicts-user-files',
+        message: `root '${rootKey}' (${rootReal}) overlaps the per-user tree at ${usersReal} — the ` +
+          'users pass already mirrors it, and a mapping over it would ingest every file a second time ' +
+          'under a mapping-wide visibility',
+      };
     }
   }
 
