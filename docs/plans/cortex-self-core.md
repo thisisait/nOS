@@ -311,6 +311,30 @@ never get: **one corpus, two indexes, one recall gate**. Establish the baseline
 against KEAP's untuned index, measure the organ's tuned one, accept only a
 variant that holds.
 
+**Corpus parity — MEASURED 2026-07-27, and it holds.** The v0.10 readiness review
+carried "corpus parity is broken and blocks S3's premise" as a finding. It was
+measured against two different artefacts at two different times (the organ's
+vendored canonical at 1750 vs KEAP's working tree at 2403). Re-measured against
+the live id sets:
+
+| | |
+| --- | --- |
+| vendored `knowledge/canonical`, both sides | **2393**, identical |
+| only in the organ | **1088 — every one a doc node** (`nos.<stack>.<system>.<readme\|agents\|skills>-*`) |
+| only in KEAP | **3**, the `table-*` DataTables rows the organ deliberately does not serve |
+
+So the taxonomy id sets agree exactly once the two by-design populations are set
+aside, and the `taxonomy` clause of the nightly diff has been green since the
+docs exclusion landed. **Parity is not an S3 blocker.**
+
+**But it is not "one corpus" either, and S3 must not pretend otherwise.** The
+organ's index covers 1088 nodes KEAP's does not, because the organ is the
+self-core and holds the estate's documentation. A recall gate run naively across
+both would compare an index over 3578 nodes against one over 2490 and read the
+difference as tuning. S3 measures over the **shared subset**, or it states the
+asymmetry in its own numbers — the same discipline the diff harness already
+applies one layer down.
+
 **Exit:** recall gate shows no regression against baseline; index size recorded
 per vector; `max_neighbors` documented as scale-dependent with the value used and
 the corpus size it was measured at.
