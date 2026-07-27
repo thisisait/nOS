@@ -234,7 +234,10 @@ if [[ "$INSERTED" -gt 0 && -n "${WING_EVENTS_HMAC_SECRET:-}" ]]; then
     SIG=$(printf '%s.%s' "$TS" "$NOTIF_BODY_COMPACT" \
           | openssl dgst -sha256 -hmac "$WING_EVENTS_HMAC_SECRET" \
           | awk '{print $NF}')   # openssl 3.x emits just <hex>; 1.x emits "(stdin)= <hex>"
-    BONE_URL="${BONE_API_URL:-http://127.0.0.1:9000}"
+    # 8099 is Bone, which verifies this HMAC. 9000 is Wing, which wants a
+    # Bearer — the fallback used to name it and turned every notification into
+    # a 401. Matches the default every other runner in tools/ already uses.
+    BONE_URL="${BONE_API_URL:-http://127.0.0.1:8099}"
     NOTIF_CODE=$(curl -sS -o /dev/null -w "%{http_code}" \
         -X POST \
         -H "X-Wing-Timestamp: $TS" \

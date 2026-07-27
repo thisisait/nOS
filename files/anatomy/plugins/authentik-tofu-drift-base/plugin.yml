@@ -65,7 +65,9 @@ pulse:
         # HMAC secret for Bone /api/v1/notifications. When unset the job
         # still plans + logs, it just skips the notification emit.
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
-        BONE_API_URL: "http://127.0.0.1:9000"
+        # 8099 is Bone (HMAC verifier); 9000 is Wing (Bearer) — see the
+        # gitleaks manifest for the same defect, found the same day.
+        BONE_API_URL: "http://127.0.0.1:{{ bone_port }}"
 
 # =============================================================================
 # NOTIFICATIONS — canonical A9 severity routing (gitleaks precedent).

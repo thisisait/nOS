@@ -72,6 +72,9 @@ def _build_substitutions() -> dict[str, str]:
         "{{ upgrade_architect_wing_api_token }}": _env("NOS_UPGRADE_ARCHITECT_WING_API_TOKEN"),
         "{{ migration_author_wing_api_token }}": _env("NOS_MIGRATION_AUTHOR_WING_API_TOKEN"),
         "{{ bone_secret }}":              _env("NOS_BONE_SECRET"),
+        # Bone's port, so a manifest need not hardcode 8099 (the gitleaks
+        # notification hardcoded 9000 — Wing's — and 401ed nightly).
+        "{{ bone_port }}":                _env("NOS_BONE_PORT"),
         # A9.4-fixup (2026-05-17): wing-base dispatch jobs reference
         # {{ wing_home }} in env (WING_DB_PATH) and {{ wing_app_dir }}
         # in args[] (dispatch-notifications.php lives under app/bin/,

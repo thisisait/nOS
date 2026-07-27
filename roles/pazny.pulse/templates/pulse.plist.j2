@@ -26,8 +26,19 @@
     <dict>
         <key>HOME</key>
         <string>{{ ansible_facts['env']['HOME'] }}</string>
+        <!-- The interpreter directory comes FIRST, and it is the one the repo
+             pins. Every Python job here is executed through its `#!/usr/bin/env
+             python3` shebang, so whatever `python3` this PATH resolves first IS
+             the runtime — and without the pin that was
+             {{ homebrew_prefix | default('/opt/homebrew') }}/opt/python@3.14, not
+             the 3.13.13 that `.python-version` names and that the operator's own
+             shell uses. Jobs with no third-party imports did not notice; the one
+             that imports numpy failed nightly with "numpy not available on the
+             host python" while numpy was installed all along — in the other
+             interpreter. A daemon must not silently run a different Python from
+             the repository it serves. -->
         <key>PATH</key>
-        <string>{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <string>{{ pulse_python | dirname }}:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
         <key>WING_API_BASE</key>
         <string>{{ pulse_wing_api_base }}</string>
         <key>WING_API_TOKEN</key>

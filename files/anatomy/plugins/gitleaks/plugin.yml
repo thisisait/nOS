@@ -66,7 +66,15 @@ pulse:
         # never matched, so this shipped the unrendered string + nightly scans
         # failed HMAC verification (caught by the live conductor 2026-05-25).
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
-        BONE_API_URL: "http://127.0.0.1:9000"
+        # 9000 is WING. Bone is 8099, and it is Bone that verifies the HMAC on
+        # /api/v1/notifications — so the signed POST was landing on Wing, which
+        # wants a Bearer token, and every nightly scan logged
+        # "notification POST returned HTTP 401 — findings ingested OK, audit
+        # only" and dropped its notification. Findings were ingested over the
+        # Wing API (correctly, on 9000, with the bearer), which is why nothing
+        # else looked wrong. Every other caller in the estate already defaults to
+        # 8099; this manifest was the sole outlier.
+        BONE_API_URL: "http://127.0.0.1:{{ bone_port }}"
         NOS_SCAN_DIR: "{{ playbook_dir }}"
         # Filter severity: only ingest findings at this level or above.
         # Values: critical | high | medium | low | info (lowest = ingest everything)

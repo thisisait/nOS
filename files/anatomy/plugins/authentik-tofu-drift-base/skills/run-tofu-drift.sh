@@ -34,7 +34,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../../../../.." && pwd)"
 TOFU_DIR="${NOS_TOFU_DIR:-$REPO_ROOT/terraform/authentik}"
-BONE_URL="${BONE_API_URL:-http://127.0.0.1:9000}"
+# 8099 is Bone, which verifies this HMAC; 9000 is Wing and answers 401.
+BONE_URL="${BONE_API_URL:-http://127.0.0.1:8099}"
 TIMEOUT_S="${TOFU_PLAN_TIMEOUT_S:-540}"
 RUN_ID="${PULSE_RUN_ID:-manual-$(date +%s)}"
 
