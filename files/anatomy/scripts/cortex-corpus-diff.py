@@ -405,12 +405,29 @@ def read_side(name: str, base: str, token: str, with_bodies: bool = True) -> Sid
         s.relationTypes = len(g.get("types", []))
 
     # ── captures ──────────────────────────────────────────────────────────────
+    # PAGED. The route caps at PAGE rows however large a limit is asked for, so
+    # a single read can only ever see one page — and two stores holding the SAME
+    # captures in a different write order return DIFFERENT pages, which the id
+    # diff then reports as divergence (measured 2026-07-27: 128 vs 128, first
+    # pages overlapping by 5, blamed on the fan-out).
+    #
+    # `offset` was added to both sides for exactly this walk. A side that does
+    # not serve it yet returns page 0 forever, so the loop stops on a page that
+    # yields no NEW ids and marks the set incomplete rather than looping or
+    # silently truncating — an older KEAP is a stated ceiling, not a wrong answer.
     caps = get(base, token, f"/agent/v1/captures?limit={PAGE}")["data"]
     s.capturesTotal = caps["total"]
-    s.captureIds = sorted(c["id"] for c in caps["items"])
-    # KEAP's route takes no offset, so the id set is exact only while the whole
-    # queue fits one page. Recorded rather than assumed.
-    s.capturesComplete = s.capturesTotal <= PAGE
+    seen = {c["id"] for c in caps["items"]}
+    offset = PAGE
+    while len(seen) < s.capturesTotal and offset < s.capturesTotal + PAGE:
+        page = get(base, token, f"/agent/v1/captures?limit={PAGE}&offset={offset}")["data"]
+        fresh = {c["id"] for c in page["items"]} - seen
+        if not fresh:
+            break  # no offset support, or the queue changed under us
+        seen |= fresh
+        offset += PAGE
+    s.captureIds = sorted(seen)
+    s.capturesComplete = len(seen) >= s.capturesTotal
 
     # ── embeddings: model, dim, and the pending (missing-or-stale) ref set ────
     pend = get_or_none(base, token, "/agent/v1/embeddings/pending?limit=500")

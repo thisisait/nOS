@@ -429,14 +429,24 @@ async function main(): Promise<void> {
     });
   });
 
+  // `offset` exists so a machine reader can enumerate the WHOLE queue. Without
+  // it the route is capped at MAX_LIMIT rows and the corpus diff can only see
+  // one page per side — which reads as "these corpora hold different captures"
+  // when they hold the same ones in a different write order. Measured
+  // 2026-07-27: 128 captures each, first 50 overlapping by 5, and the harness
+  // blamed the fan-out for it. Paging is only sound because
+  // db.getAllMetadataApi orders by `updated_at DESC, id`; over a non-total
+  // order an offset skips and repeats rows instead of walking them.
   app.get('/agent/v1/captures', agentAuth('ro'), (req, res) => {
     const limit = Math.min(Number(req.query.limit) || 20, MAX_LIMIT);
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
     const source = req.query.source ? String(req.query.source) : undefined;
     let items = db.getAllMetadataApi('', true);
     if (source) items = items.filter((c) => c.source === source);
     ok(res, {
       total: items.length,
-      items: items.slice(0, limit).map((c) => ({
+      offset,
+      items: items.slice(offset, offset + limit).map((c) => ({
         id: c.id,
         title: c.title,
         description: trim(c.description),

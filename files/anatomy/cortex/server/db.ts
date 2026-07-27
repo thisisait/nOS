@@ -648,11 +648,19 @@ function mapCaptureRow(row: CaptureDbRow): ApiTaxonomyMetadata {
   };
 }
 
+// `id` is a TIEBREAK, not decoration: `updated_at DESC` alone is not a total
+// order, and captures written in one batch share a timestamp to the second.
+// Under a paged read the rows that tie can be returned in a different order per
+// query, so a page boundary falling inside a tie silently SKIPS one row and
+// REPEATS another — the reader sees a corpus that is missing ids it holds.
+// Surfaced 2026-07-27 comparing two stores with the same 128 captures: KEAP's
+// were written over many nights, the cortex organ's all in one fan-out, and
+// their first 50 rows overlapped by 5.
 export function getAllMetadataApi(userId: string, seeAll: boolean): ApiTaxonomyMetadata[] {
   const d = getDb();
   const rows = seeAll
-    ? d.prepare('SELECT * FROM api_taxonomy_metadata ORDER BY updated_at DESC').all()
-    : d.prepare('SELECT * FROM api_taxonomy_metadata WHERE user_id = ? ORDER BY updated_at DESC').all(userId);
+    ? d.prepare('SELECT * FROM api_taxonomy_metadata ORDER BY updated_at DESC, id').all()
+    : d.prepare('SELECT * FROM api_taxonomy_metadata WHERE user_id = ? ORDER BY updated_at DESC, id').all(userId);
   return (rows as CaptureDbRow[]).map(mapCaptureRow);
 }
 
