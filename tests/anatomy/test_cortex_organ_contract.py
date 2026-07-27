@@ -234,3 +234,41 @@ def test_lockfile_is_npm10_compatible():
         "package-lock.json must stay lockfileVersion 3 — npm 11 emits locks "
         "npm 10 rejects (validate with `npx npm@10 ci --dry-run` before bumping)"
     )
+
+
+def test_volume_uuid_is_best_effort_and_cannot_abort_the_play():
+    """A field documented "never asserted on" must not be able to fail a converge.
+
+    Regression: the S2 mount sentinel read the data root's volume UUID with
+    `regex_search(...) | first | default('', true)`. `regex_search` yields None
+    (and `regex_findall` yields []) when nothing matches, and `first` RAISES on
+    those — so the trailing `default` never runs, the filter has already thrown.
+    The converge died at "Extract the volume UUID" with 'NoneType' object is not
+    iterable, on a best-effort field nothing reads.
+
+    Two things are pinned:
+      1. the empty-sequence guard (`+ ['']`) is present, so `first` always has
+         something to take;
+      2. diskutil is asked about a MOUNT POINT resolved via absolute /bin/df —
+         `diskutil info` exits 1 on a subdirectory (nos_data_root normally IS
+         one), and a bare `df` resolves to Homebrew's `duf` on some hosts, which
+         has no -P.
+    """
+    txt = (ROLE / "tasks" / "main.yml").read_text()
+    assert "_cortex_volume_uuid" in txt, "the volume-UUID fact vanished — update this gate"
+
+    block = txt.split("_cortex_volume_uuid", 1)[1].split("\n- name:", 1)[0]
+    assert "+ ['']" in block, (
+        "the empty-sequence guard is gone: regex_findall yields [] and `first` "
+        "raises on it, so a best-effort field can abort the play again"
+    )
+    assert "| first" in block, "gate assumes the `first` idiom; the extraction changed shape"
+
+    assert "/bin/df" in txt, (
+        "diskutil must be pointed at the mount point resolved by ABSOLUTE /bin/df "
+        "(a bare `df` can resolve to duf, and diskutil exits 1 on a subdirectory)"
+    )
+    assert "-plist {{ nos_data_root }}" not in txt, (
+        "diskutil is being handed nos_data_root itself again — it exits 1 on a "
+        "subdirectory, so the UUID could never be read; pass the resolved mount point"
+    )

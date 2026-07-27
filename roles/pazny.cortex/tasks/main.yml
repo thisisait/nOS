@@ -135,8 +135,19 @@
   when: cortex_fs_enabled | bool
 
 - name: "[pazny.cortex] Read the data root's volume UUID (recorded in the sentinel)"
-  ansible.builtin.command:
-    cmd: "/usr/sbin/diskutil info -plist {{ nos_data_root }}"
+  # `diskutil info` takes a VOLUME, not an arbitrary path inside one: given
+  # {{ nos_data_root }} (a subdirectory of the mount) it exits 1 and prints a
+  # plist with no VolumeUUID, so the UUID could never be read on any estate
+  # whose data root is not itself a mount point. Resolve the mount point with
+  # `df` first and ask diskutil about that.
+  #
+  # /bin/df by absolute path, not `df`: this operator's PATH resolves `df` to
+  # Homebrew's `duf`, which has no -P and exits non-zero. The command must not
+  # depend on which shims happen to be ahead of /bin on a given host.
+  ansible.builtin.shell:
+    cmd: >-
+      /usr/sbin/diskutil info -plist
+      "$(/bin/df -P {{ nos_data_root | quote }} | tail -1 | awk '{ print $NF }')"
   register: _cortex_diskutil
   changed_when: false
   failed_when: false
@@ -151,7 +162,16 @@
     # The tenant slug is the discriminator that matters — it is what catches a
     # DIFFERENT volume mounted at the same path, which is the case where every
     # uid goes missing at once and the per-uid guard cannot help.
-    _cortex_volume_uuid: "{{ (_cortex_diskutil.stdout | default('') | regex_search('<key>VolumeUUID</key>\\s*<string>([^<]+)</string>', '\\1') | first) | default('', true) }}"
+    #
+    # `+ ['']` is load-bearing, not defensive dressing: `regex_findall` yields []
+    # on no match and `first` RAISES on an empty sequence, so a trailing
+    # `| default('', true)` never runs — the filter has already thrown. That is
+    # what failed the converge here: a best-effort field aborted the play on a
+    # non-Darwin host, in check mode, or whenever diskutil printed no UUID.
+    _cortex_volume_uuid: >-
+      {{ ((_cortex_diskutil.stdout | default(''))
+          | regex_findall('<key>VolumeUUID</key>\s*<string>([^<]+)</string>')
+          + ['']) | first }}
   when: cortex_fs_enabled | bool
 
 # ── S2: the mount sentinel ───────────────────────────────────────────────────
