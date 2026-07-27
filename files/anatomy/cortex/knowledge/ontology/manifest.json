@@ -1,7 +1,7 @@
 {
  "version": 1,
  "types": 16,
- "relations": 417,
+ "relations": 442,
  "partitions": [
   {
    "partition": "01-natural-sciences",
@@ -11,7 +11,7 @@
   {
    "partition": "02-formal-sciences",
    "file": "relations/02-formal-sciences.json",
-   "relations": 81
+   "relations": 106
   },
   {
    "partition": "03-applied-sciences-technology",

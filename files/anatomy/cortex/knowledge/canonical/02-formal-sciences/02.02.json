@@ -599,6 +599,116 @@
    "en": "Computer graphics encompasses the techniques and systems for generating, manipulating, and rendering visual images and animations using computational methods.",
    "cs": "Počítačová grafika zahrnuje techniky a systémy pro generování, manipulaci a vykreslování vizuálních obrázků a animací pomocí výpočetních metod.",
    "brief": "Computer Graphics studies the techniques and systems for generating, manipulating, and rendering visual images and animations by computational means, from the geometric representation of shapes and scenes to the algorithms that turn them into pixels on a screen. It covers rendering pipelines, geometric modeling, animation, and the real-time performance constraints that separate interactive graphics (games, simulations) from offline rendering (film, visualization).\n\nComputer Graphics draws heavily on [[02.02.02]] for the geometric and numerical algorithms — rasterization, ray tracing, spatial data structures — that make rendering tractable, and it depends on [[02.02.06]] for the device drivers that expose GPU hardware to an application. It also sits in an inverse relationship to [[02.02.09]]'s computer vision: graphics renders a scene description into an image, while computer vision recovers a scene description from an image, and the two fields increasingly share techniques (differentiable rendering, neural radiance fields).\n\nFor further reading, see the [Wikipedia overview of computer graphics](https://en.wikipedia.org/wiki/Computer_graphics) and the standard reference textbook [Computer Graphics: Principles and Practice](https://www.pearson.com/en-us/subject-catalog/p/computer-graphics-principles-and-practice/P200000003399), by Hughes, van Dam, et al."
+  },
+  {
+   "id": "02.02.11",
+   "level": 2,
+   "parentId": "02.02",
+   "name": "Platform Engineering and Operations",
+   "zone": "votable",
+   "ordinal": 10,
+   "kind": "ext",
+   "en": "The discipline of running software as a service rather than shipping it as a product: how systems are deployed, observed, secured, recovered and kept running by people who did not write them. It is where computer science meets the operational reality that uptime is a property of an organisation, not of a program.",
+   "cs": "Obor provozování softwaru jako služby namísto dodávání jako produktu: jak se systémy nasazují, pozorují, zabezpečují, obnovují a udržují v chodu lidmi, kteří je nenapsali. Zde se informatika setkává s provozní realitou, že dostupnost je vlastností organizace, nikoli programu."
+  },
+  {
+   "id": "02.02.11.01",
+   "level": 3,
+   "parentId": "02.02.11",
+   "name": "Observability",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Understanding a running system from the outside through metrics, logs and traces, and the distinction between monitoring known failure modes and being able to ask a question nobody anticipated.",
+   "cs": "Porozumění běžícímu systému zvenčí pomocí metrik, logů a trasování a rozdíl mezi sledováním známých poruch a schopností položit otázku, kterou nikdo nepředvídal."
+  },
+  {
+   "id": "02.02.11.02",
+   "level": 3,
+   "parentId": "02.02.11",
+   "name": "Identity and Access Management",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Establishing who a caller is and what they may do: authentication, authorisation, single sign-on, service credentials and the secret material all of it rests on.",
+   "cs": "Zjištění, kdo je volající a co smí: autentizace, autorizace, jednotné přihlášení, služební přístupové údaje a tajemství, na nichž vše stojí."
+  },
+  {
+   "id": "02.02.11.03",
+   "level": 3,
+   "parentId": "02.02.11",
+   "name": "Deployment and Delivery",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Getting a change from a commit to a running system predictably: continuous integration and delivery, infrastructure as code, configuration management and release strategy.",
+   "cs": "Předvídatelné dopravení změny od commitu k běžícímu systému: kontinuální integrace a dodávka, infrastruktura jako kód, správa konfigurace a strategie vydávání."
+  },
+  {
+   "id": "02.02.11.04",
+   "level": 3,
+   "parentId": "02.02.11",
+   "name": "Containers and Orchestration",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Packaging a workload with its dependencies and scheduling it across machines: images, runtimes, composition, and the scheduler that decides what runs where.",
+   "cs": "Zabalení úlohy včetně jejích závislostí a její plánování napříč stroji: obrazy, běhová prostředí, skládání a plánovač rozhodující, co běží kde."
+  },
+  {
+   "id": "02.02.11.05",
+   "level": 3,
+   "parentId": "02.02.11",
+   "name": "Service Infrastructure",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "The components between a request and the code that answers it: reverse proxies, load balancers, service discovery, API gateways and message queues.",
+   "cs": "Součásti mezi požadavkem a kódem, který jej vyřídí: reverzní proxy, vyvažovače zátěže, objevování služeb, API brány a fronty zpráv."
+  },
+  {
+   "id": "02.02.11.06",
+   "level": 3,
+   "parentId": "02.02.11",
+   "name": "Data Infrastructure",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Operating the stores a platform depends on: relational and key-value databases, object storage, migration, replication, and backup with a tested restore.",
+   "cs": "Provoz úložišť, na nichž platforma stojí: relační a klíč-hodnota databáze, objektové úložiště, migrace, replikace a zálohování s ověřenou obnovou."
+  },
+  {
+   "id": "02.02.11.07",
+   "level": 3,
+   "parentId": "02.02.11",
+   "name": "Reliability Engineering",
+   "zone": "votable",
+   "ordinal": 6,
+   "kind": "ext",
+   "en": "Treating reliability as an engineering target: service objectives and error budgets, incident response, post-incident review, capacity planning and deliberate failure injection.",
+   "cs": "Pojetí spolehlivosti jako inženýrského cíle: cíle úrovně služby a chybové rozpočty, řešení incidentů, poincidentní rozbor, plánování kapacity a záměrné vyvolávání poruch."
+  },
+  {
+   "id": "02.02.11.08",
+   "level": 3,
+   "parentId": "02.02.11",
+   "name": "Platform Security Operations",
+   "zone": "votable",
+   "ordinal": 7,
+   "kind": "ext",
+   "en": "Keeping a running estate defensible: patch and vulnerability management, network segmentation, secret rotation, audit trails and the hardening baseline.",
+   "cs": "Udržení běžícího estate obhajitelným: správa záplat a zranitelností, segmentace sítě, obměna tajemství, auditní stopy a základní zpevnění."
+  },
+  {
+   "id": "02.02.11.09",
+   "level": 3,
+   "parentId": "02.02.11",
+   "name": "Self-Hosting and Estate Management",
+   "zone": "votable",
+   "ordinal": 8,
+   "kind": "ext",
+   "en": "Running a full service estate on infrastructure one owns: tenancy, resource allocation, upgrade coordination across coupled services, and the operational cost of independence.",
+   "cs": "Provozování celého souboru služeb na vlastní infrastruktuře: mandanti, přidělování zdrojů, koordinace aktualizací mezi provázanými službami a provozní cena nezávislosti."
   }
  ],
  "relations": [

@@ -311,6 +311,16 @@ never get: **one corpus, two indexes, one recall gate**. Establish the baseline
 against KEAP's untuned index, measure the organ's tuned one, accept only a
 variant that holds.
 
+**The organ caches its tree at boot — a re-materialise alone changes nothing a
+caller can see.** Found 2026-07-27 syncing 10 nodes in: the store CLI reported
+3588 nodes and the new digest while the running daemon still served 3578 and the
+old one, so the nightly diff read `organ-store-not-materialised` over a store
+that had just been materialised correctly. The verdict names the wrong cause but
+observes the right thing — the API is behind the file. **Any knowledge change
+therefore needs the daemon restarted**, which in practice means a converge; the
+nightly `cortex-fs-sync` cannot close a taxonomy drift, only an object one. Worth
+knowing before S3 tunes an index against a tree the daemon is not serving.
+
 **Corpus parity — MEASURED 2026-07-27, and it holds.** The v0.10 readiness review
 carried "corpus parity is broken and blocks S3's premise" as a finding. It was
 measured against two different artefacts at two different times (the organ's
