@@ -110,3 +110,38 @@ def test_only_the_organ_side_is_ever_excluded() -> None:
         "the docs exclusion must apply to onlyOrgan only; excluding them from "
         "onlyKeap would hide KEAP ingesting a corpus it does not own"
     )
+
+
+def test_a_truncated_id_listing_never_manufactures_divergence() -> None:
+    """Two capped pages must not be subtracted from each other.
+
+    Measured 2026-07-27: both /agent/v1/captures routes hard-cap at 50 rows
+    whatever limit is asked for, and the two implementations order differently.
+    Diffing those pages reported onlyKeap=45 / onlyOrgan=45 / both=5 over two
+    stores holding the SAME 128 rows, and the harness billed `fanout-partial` to
+    a fan-out that had just delivered 128 of 128 successfully.
+
+    A ceiling means the check did not run: compare counts, publish the ceiling,
+    accuse nobody — and do not read it as agreement either.
+    """
+    diff = _load(DIFF, "cortex_corpus_diff")
+    t = diff._id_table(
+        "api_taxonomy_metadata",
+        ["a", "b", "c"], ["c", "d", "e"],       # two disjoint-ish "pages"
+        128, 128,
+        ceiling="/agent/v1/captures takes no offset",
+    )
+    assert t.onlyKeap == [] and t.onlyOrgan == [], (
+        "a truncated listing was subtracted anyway — this is the fabricated "
+        "divergence that blamed the feeder"
+    )
+    assert t.comparable is False, "a ceiling must not read as a comparable id set"
+    assert t.ids_agree is False, (
+        "an unmeasured id set must not read as agreement either — the harness "
+        "does not publish an OK for a check that did not run"
+    )
+    assert t.counts_agree is True, "counts are still comparable under a ceiling"
+
+    # …and without a ceiling the diff must still work normally.
+    t2 = diff._id_table("x", ["a", "b"], ["b", "c"], 2, 2)
+    assert t2.onlyKeap == ["a"] and t2.onlyOrgan == ["c"] and t2.comparable is True

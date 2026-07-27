@@ -664,6 +664,29 @@ def _id_table(name: str, keap_ids, organ_ids, keap_rows=None, organ_rows=None,
             ceiling=ceiling or "one side does not serve an id listing — counts only",
         )
     k, o = set(keap_ids), set(organ_ids)
+    if ceiling:
+        # A TRUNCATED id listing must not be diffed. Both routes hard-cap at
+        # PAGE rows whatever limit is asked for, and the two implementations
+        # order differently, so subtracting one page from the other reports
+        # ids as "missing" that are simply on a page nobody fetched.
+        #
+        # Measured 2026-07-27: 128 captures per side, both pages capped at 50,
+        # and the subtraction produced onlyKeap=45 / onlyOrgan=45 / both=5 over
+        # two stores that hold the SAME 128 rows — a fabricated divergence, and
+        # `fanout-partial` blamed the feeder for it. Spot-checked: every id the
+        # organ returned is in KEAP, including the deterministic
+        # sid() of the file both were swept from.
+        #
+        # Counts still compare. `comparable=False` keeps `ids_agree` false so a
+        # ceiling is never read as agreement either — the check did not run, and
+        # this harness does not publish an unmeasured OK.
+        return TableDiff(
+            name=name,
+            keapRows=keap_rows if keap_rows is not None else len(k),
+            organRows=organ_rows if organ_rows is not None else len(o),
+            comparable=False,
+            ceiling=ceiling,
+        )
     return TableDiff(
         name=name,
         keapRows=keap_rows if keap_rows is not None else len(k),
@@ -1213,6 +1236,22 @@ def adjudicate_captures(keap: Side, organ: Side, feeder: dict) -> tuple[TableDif
     if t.counts_agree and t.ids_agree:
         return t, out
 
+    # A truncated listing cannot accuse anyone. Below this line every verdict
+    # reads an id-set difference as evidence about the FEEDER, and with a capped
+    # page that difference is an artefact of paging, not of delivery — on
+    # 2026-07-27 it billed `fanout-partial` to a fan-out that had just delivered
+    # 128 of 128. Say what was and was not measured, and stop.
+    if not t.comparable:
+        out.append(Finding(
+            "api_taxonomy_metadata", "ceiling", "-", CULPRIT_UNKNOWN, "counts-only",
+            f"{t.ceiling}; counts {t.keapRows} vs {t.organRows} "
+            f"{'agree' if t.counts_agree else 'DISAGREE'}, but the id sets cannot be compared — both routes "
+            f"hard-cap at {PAGE} rows and order differently, so a subtraction here invents missing ids",
+            "give /agent/v1/captures an offset (or raise its cap) on both sides; until then this clause "
+            "cannot be satisfied and the agreement streak cannot count a night on captures",
+            {"keapTotal": t.keapRows, "organTotal": t.organRows, "pageCap": PAGE}))
+        return t, out
+
     targets = feeder.get("targets") or {}
     # ── the ledger claims rows the store does not have ───────────────────────
     # This used to be reported as `fanout-partial` — "items swept for the organ
@@ -1344,8 +1383,21 @@ def build_report(keap: Side, organ: Side, fs: HostReferee, canonical: set[str] |
         # skipped is the same "two silences compared equal" failure the digest
         # rule refuses, and on the first real run it printed `embedded refs ok`
         # over a store holding zero vectors.
+        # ...but a ref whose SOURCE ROW only one side holds is not an embedding
+        # finding at all, and this adjudicator says so itself: the two
+        # `*-corpus-lacks-source` verdicts carry culprit=neither and the words
+        # "this is an object/taxonomy difference reported above, not an
+        # embedding one". Counting them here bills ONE difference to TWO
+        # clauses, and after the docs corpus was withdrawn from the taxonomy
+        # diff its 1088 nodes came straight back through this door — the organ
+        # embeds the documentation it alone holds, so `embedded refs` would have
+        # stayed false forever and the three-night clock still could not start.
+        # The underlying difference is not being forgiven; it is judged once,
+        # where its referee actually is.
         "embedded refs": not any(
-            f.table == "embeddings" and (f.case.startswith("only_in") or f.case == "count_mismatch")
+            f.table == "embeddings"
+            and (f.case.startswith("only_in") or f.case == "count_mismatch")
+            and not f.verdict.endswith("-corpus-lacks-source")
             for f in findings),
     }
     docs = real_user_docs(keap) or real_user_docs(organ)
