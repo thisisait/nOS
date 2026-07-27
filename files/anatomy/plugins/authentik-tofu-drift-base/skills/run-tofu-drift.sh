@@ -100,7 +100,11 @@ notify() {
     # Canonical form (sort_keys + compact) so Bone's HMAC verifier matches —
     # Bone re-canonicalizes via json.dumps(separators=(',',':'), sort_keys=True)
     # before computing the expected signature (live 2026-05-17 401 incident).
-    compact=$(echo "$body" | jq --sort-keys -c .)
+    # -a and printf, both load-bearing: Bone re-serialises the parsed body with
+    # Python json.dumps (ensure_ascii defaults TRUE), so a raw UTF-8 byte here
+    # signs different bytes than Bone verifies; and `echo` expands the \n inside
+    # a JSON string, which makes jq refuse the input and leaves this empty.
+    compact=$(printf '%s' "$body" | jq -a --sort-keys -c .)
     ts=$(date +%s)
     sig=$(printf '%s.%s' "$ts" "$compact" \
           | openssl dgst -sha256 -hmac "$WING_EVENTS_HMAC_SECRET" \

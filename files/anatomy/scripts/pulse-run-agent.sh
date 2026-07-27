@@ -128,7 +128,12 @@ trap '_release_agent_lock' EXIT
 # Surfaced live 2026-05-17 — every pulse-run-agent.sh agent_run_start/end
 # was 401'ing because the printf'd JSON wasn't key-sorted.
 #
-# Callers should build the body with `jq --sort-keys -c` to guarantee canonical
+# Callers must build the body with `jq -a --sort-keys -c` to guarantee canonical
+# form. `-a` is not optional: Bone re-serialises the parsed body with Python
+# json.dumps, whose ensure_ascii defaults TRUE, so any non-ASCII byte signed
+# raw here is verified as \uXXXX there and the HMAC cannot match. On a
+# Czech-operated estate that is every title with diacritics. Sorting alone
+# was the 2026-05-17 lesson; encoding is the 2026-07-27 one.
 # form (see agent_run_start / agent_run_end builders below).
 _post_wing_event() {
     local body="$1"
@@ -162,7 +167,7 @@ _post_wing_event() {
 _post_wing_notification() {
     local sev="$1" title="$2" body_md="$3"
     local payload ts sig
-    payload=$(jq --sort-keys -nc \
+    payload=$(jq -a --sort-keys -nc \
         --arg sev "$sev" --arg title "$title" --arg body "$body_md" \
         --arg agent "$AGENT_NAME" \
         --arg actor "$ACTOR_ID" --arg action_id "$ACTOR_ACTION_ID" \
@@ -244,7 +249,7 @@ TS_NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 # verifier matches. Safe-escapes the task prompt too — printf-based
 # inline JSON would break on backslashes / quotes / unicode.
 TASK_PREVIEW=$(echo "$TASK_PROMPT" | head -c 120 | tr -d '\n')
-_post_wing_event "$(jq --sort-keys -nc \
+_post_wing_event "$(jq -a --sort-keys -nc \
     --arg ts "$TS_NOW" \
     --arg run_id "$RUN_ID" \
     --arg src "$AGENT_NAME" \
@@ -357,7 +362,7 @@ RESULT_SUMMARY=$(echo "${CLAUDE_OUTPUT:-}" | tail -3 | head -c 200)
 # Same actor_action_id as start → events join in pulse_runs.actor_action_id.
 # Canonical JSON via jq (see _post_wing_event docstring for the Bone HMAC
 # canonicalization contract).
-_post_wing_event "$(jq --sort-keys -nc \
+_post_wing_event "$(jq -a --sort-keys -nc \
     --arg ts "$TS_END" \
     --arg run_id "$RUN_ID" \
     --arg src "$AGENT_NAME" \

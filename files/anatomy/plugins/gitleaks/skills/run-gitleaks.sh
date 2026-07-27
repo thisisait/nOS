@@ -229,7 +229,10 @@ if [[ "$INSERTED" -gt 0 && -n "${WING_EVENTS_HMAC_SECRET:-}" ]]; then
     # separators=(',',':') + sort_keys=True before computing the expected
     # signature. See files/anatomy/scripts/pulse-run-agent.sh's
     # _post_wing_event docstring for the live 2026-05-17 401 incident.
-    NOTIF_BODY_COMPACT=$(echo "$NOTIF_BODY" | jq --sort-keys -c .)
+    # -a and printf, both load-bearing — see the note above. This body carries
+    # "…and N more." whenever a scan finds more than three, so it was never
+    # ASCII in the case that matters.
+    NOTIF_BODY_COMPACT=$(printf '%s' "$NOTIF_BODY" | jq -a --sort-keys -c .)
     TS=$(date +%s)
     SIG=$(printf '%s.%s' "$TS" "$NOTIF_BODY_COMPACT" \
           | openssl dgst -sha256 -hmac "$WING_EVENTS_HMAC_SECRET" \

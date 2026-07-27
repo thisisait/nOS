@@ -44,7 +44,9 @@ payload="$(jq -nc --arg s "$sev" --arg t "$title" --arg b "$body" --argjson ch "
   '{severity:$s, title:$t, body:$b, channels:$ch,
     origin_plugin:"os-resume", actor_id:"agent:os-resume",
     metadata:{source:"os-resume"}}')"
-compact="$(printf '%s' "$payload" | jq --sort-keys -c .)"
+# -a: Bone verifies over Python json.dumps output, which escapes non-ASCII.
+# A Czech title signs clean here and 401s there without it.
+compact="$(printf '%s' "$payload" | jq -a --sort-keys -c .)"
 ts="$(date +%s)"
 sig="$(printf '%s.%s' "$ts" "$compact" | openssl dgst -sha256 -hmac "$secret" | awk '{print $NF}')"
 

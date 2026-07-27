@@ -27,11 +27,17 @@ def test_pulse_run_agent_hmac_uses_canonical_json():
     produces a signature that never matches and Bone 401's silently.
     """
     src = (REPO / "files/anatomy/scripts/pulse-run-agent.sh").read_text()
-    # The two callers that build agent_run_start/end bodies must use
-    # jq --sort-keys, not printf '...'.
-    assert "jq --sort-keys -nc" in src
-    # The _post_wing_notification helper also sorts.
-    assert "jq --sort-keys -nc" in src  # appears at least twice
+    # The callers that build agent_run_start/end bodies must use jq, not
+    # printf '...' — AND must pass -a. 2026-05-17 taught that an unsorted body
+    # never matches; 2026-07-27 taught that an unescaped one does not either:
+    # Bone's json.dumps defaults to ensure_ascii=True, so a raw UTF-8 byte signs
+    # different bytes than it verifies. Sorting was half the canonical form.
+    # Tightened, not relaxed: the old literal is a strict prefix of this one.
+    assert "jq -a --sort-keys -nc" in src
+    assert "jq --sort-keys -nc" not in src.replace("jq -a --sort-keys -nc", ""), (
+        "a builder still canonicalises without -a; see tests/anatomy/"
+        "test_hmac_signers_canonical.py for why that is a silent 401"
+    )
     # And no printf-based JSON construction for HMAC-signed bodies remains.
     # (Allow printf in the HMAC-signature line itself — that's just
     # ts.body concatenation.)

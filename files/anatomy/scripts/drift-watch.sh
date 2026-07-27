@@ -86,7 +86,9 @@ BODY=$(jq -n \
 
 # Canonical (sort_keys + compact) so Bone's HMAC verifier matches (it re-dumps
 # with separators=(',',':'), sort_keys=True). Mirrors run-gitleaks.sh.
-BODY_C=$(echo "$BODY" | jq --sort-keys -c .)
+# -a + printf: Bone re-serialises with Python json.dumps (ensure_ascii true),
+# and `echo` would expand a \n inside a JSON string into a literal newline.
+BODY_C=$(printf '%s' "$BODY" | jq -a --sort-keys -c .)
 TS=$(date +%s)
 SIG=$(printf '%s.%s' "$TS" "$BODY_C" \
       | openssl dgst -sha256 -hmac "$WING_EVENTS_HMAC_SECRET" | awk '{print $NF}')
