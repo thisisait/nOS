@@ -260,6 +260,48 @@ only containers.
 within a tolerance — the id derivation is deterministic, §8.2), *once the
 composition is reproduced*, for three consecutive nights.
 
+**BUILT 2026-07-27 — exit criterion NOT yet met, by construction.** Branch
+`feat/cortex-corpus-parallel` (off the unmerged S1 line at `3aa6c7d3`); design at
+`docs/plans/cortex-corpus-parallel.md`. What is true today:
+
+- **The composition is reproduced.** `fs-roots.ts` generalises the single
+  `USER_FILES_DIR` into an ordered roots list with a per-root uid mode
+  (`child-dirs` = today's behaviour verbatim; `literal:<uid>` walks a root as one
+  uid). Both roots hit the same walker, so relPaths and ids match. A symlink farm
+  was rejected because it fails **silently** — `syncUserFiles` lstats the uid dir
+  and skips non-directories, and `walkDir` skips symlinks by doctrine, so the
+  whole self-model would simply be absent with no error.
+- **First real comparison agrees exactly:** organ **167** `fs:` ids vs KEAP 167,
+  symmetric difference **0**, and all 167 body hashes match (166 `nos-docs` + 1
+  `akadmin` — the single real document). Second pass upserted 0, unchanged 167.
+  Embeddings 3225 upserted at `nomic-embed-text`/768, matching KEAP's model+dim.
+- **Nights of evidence: ZERO.** That was one manual run, not a night. The nightly
+  `cortex-corpus-diff` Pulse job (05:30 UTC) is what accumulates the three, and it
+  has never fired. **Do not read the agreement above as the exit criterion met.**
+- **The fan-out has never run:** organ captures 1 (a smoke POST) vs KEAP 128.
+
+Two findings that outrank the stage and belong to whoever runs S3:
+
+1. **Corpus parity is broken and it blocks S3's premise.** Measured: organ
+   `knowledge/canonical` 1750 nodes, KEAP working tree (v1.35.0) 2403, KEAP live
+   1841 taxonomy embeddings, nOS pinning `keap_repo_ref` v1.32.1. A recall
+   comparison across those measures the **taxonomy delta and blames the index**.
+   Pinned to v1.34.0 as S2 step 1 (`e4003ea4`), but the numbers must agree before
+   S3 draws any conclusion from a gate.
+2. **A `--facts-json` divergence nobody had noticed:** `roles/pazny.keap/tasks/selfmodel.yml`
+   passes `--facts-json`/`--deps-json`/`--anchors-json` to the self-model
+   generator; `cortex-store.ts::runSelfmodel` passes none. **Same ids, different
+   card bodies** — so an id-only diff reads green while the corpora differ. S2
+   therefore sources the shared uid from the published host tree
+   (`cortex_fs_shared_root`) as a transitional coupling; the exit is one change in
+   S4 (the converge writes the facts JSON to a host file, `runSelfmodel` passes it
+   through).
+
+The eight adversarial findings are closed in `9160d1ae` (see its message). Suites
+at that commit: pytest **2065 passed**/3 skipped, organ vitest **237**, onto1
+**6/6**; KEAP repo untouched, nothing written to the host user tree, live
+container not restarted.
+
 ### S3 — Index, decided on the gate
 
 `tools/workflows/cortex-s3-index.js`
