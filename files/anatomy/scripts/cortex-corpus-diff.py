@@ -188,6 +188,26 @@ CULPRIT_FEEDER = "feeder"    # the fan-out job, not either store
 CULPRIT_NEITHER = "neither"  # expected divergence, or not attributable yet
 CULPRIT_UNKNOWN = "unknown"  # no referee could reach this case — said, not guessed
 
+# Doc-corpus node ids, as `keap_docs_gen.py` mints them: the anchor is the
+# service node (`nos.<stack>.<system>`) and the leaf segment is
+# `<filebase>-<block-stub>`, where filebase is the slugified DOC_FILES name.
+# Keeping the two in step is pinned by
+# tests/anatomy/test_corpus_diff_docs_asymmetry.py rather than by comment.
+_DOC_FILEBASES = ("readme", "agents", "skills")
+_DOC_NODE_RE = re.compile(
+    r"^nos\.[a-z0-9-]+\.[a-z0-9-]+\.(?:" + "|".join(_DOC_FILEBASES) + r")(?:-|$)"
+)
+
+
+def _is_doc_node(node_id: str) -> bool:
+    """True for a node the organ generates from the estate's own documentation.
+
+    Measured 2026-07-27 against the live organ: this partitions its 1185 `nos.*`
+    nodes into exactly 1088 doc nodes and the 97 self-model nodes KEAP also
+    holds — no overlap, nothing left over.
+    """
+    return bool(_DOC_NODE_RE.match(node_id))
+
 
 @dataclass
 class Finding:
@@ -903,6 +923,39 @@ def adjudicate_taxonomy(keap: Side, organ: Side, canonical: set[str] | None) -> 
     t = _id_table("taxonomy_nodes", keap.taxonomyIds, organ.taxonomyIds,
                   keap.taxonomyNodes, organ.taxonomyNodes, ceiling)
     out: list[Finding] = []
+
+    # ── the docs corpus is an ASYMMETRY BY DESIGN, not a divergence ──────────
+    # S1 made the organ the estate's self-core: `keap_docs_gen.py` turns every
+    # docs/systems/<svc>/{README,AGENTS,SKILLS}.md into typed nodes hanging off
+    # the service they describe. KEAP has no such pass and is not supposed to —
+    # it holds publishable reference data, the organ holds the estate's own
+    # documentation (docs/plans/cortex-self-core.md §3, the publishability rule).
+    #
+    # So this population is PERMANENTLY organ-only and grows every time anyone
+    # documents a service. Left in the diff it makes `taxonomy` false forever,
+    # and `taxonomy` is an agreement clause — so `agrees` could never be true,
+    # and the three-night clock this whole stage exists to start could never
+    # tick once. S2 could not have anticipated it: it was designed before S1's
+    # docs landed in the same store.
+    #
+    # Withdrawn from the id diff, never silently: it is reported as its own
+    # finding and its own table row, so "excluded" is a number a reader sees
+    # rather than an absence they must infer.
+    docs_only = sorted(i for i in t.onlyOrgan if _is_doc_node(i))
+    if docs_only:
+        t.onlyOrgan = [i for i in t.onlyOrgan if not _is_doc_node(i)]
+        if t.organRows is not None:
+            t.organRows -= len(docs_only)
+        out.append(Finding(
+            "taxonomy_nodes", "expected_asymmetry", f"{len(docs_only)} node(s)", CULPRIT_NEITHER,
+            "organ-docs-corpus",
+            f"{len(docs_only)} node(s) are the estate's own documentation, which the organ generates and KEAP "
+            "deliberately does not hold — an asymmetry by design (the publishability rule), so it is withdrawn "
+            "from the id diff rather than counted as divergence",
+            "no action; if this number DROPS the organ lost doc nodes, and if doc ids appear in KEAP something "
+            "fed it a corpus it does not own",
+            {"count": len(docs_only), "sample": docs_only[:8],
+             "organRowsAfterExclusion": t.organRows}))
     if not t.comparable:
         if t.counts_agree:
             out.append(Finding(
