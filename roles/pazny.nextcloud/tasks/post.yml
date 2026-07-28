@@ -317,13 +317,38 @@
 # Register OnlyOffice as the DEFAULT editor for office formats — else a
 # double-clicked .xlsx/.docx opens Nextcloud's fallback viewer (which can't
 # render it → "Download failed") instead of redirecting to the OnlyOffice
-# editor. Uses `command:` (no shell) so the compact JSON (no spaces) is passed
-# as ONE literal argv element — a `shell:` here would brace-expand the JSON
-# commas and corrupt it.
+# editor.
+#
+# MUST be `argv:`. A free-form `command:` avoids the SHELL, but Ansible still
+# splits the string with shlex — and shlex STRIPS double quotes, so
+#     --value={"csv":true,"doc":true}
+# reaches occ as
+#     --value={csv:true,doc:true}
+# which is a JavaScript object literal, not JSON. The connector's
+# getDefaultFormats() is typed `: array` and does `json_decode($value, true)`,
+# json_decode returns null on that, and every page rendering the Files initial
+# state 500s with "Return value must be of type array, null returned"
+# (AppConfig.php:615). Measured live 2026-07-28 — the stored value was
+# byte-identical to shlex's output. `argv:` bypasses shell AND shlex, so the
+# JSON arrives intact.
 - name: "[pazny.nextcloud Post] OnlyOffice = default editor for office formats"
-  ansible.builtin.command: >
-    {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
-    php occ config:app:set onlyoffice {{ item.k }} --value={{ item.v }}
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin }}"
+      - compose
+      - -p
+      - iiab
+      - exec
+      - -T
+      - -u
+      - www-data
+      - nextcloud
+      - php
+      - occ
+      - config:app:set
+      - onlyoffice
+      - "{{ item.k }}"
+      - "--value={{ item.v }}"
   loop:
     - k: defFormats
       v: '{"csv":true,"doc":true,"docx":true,"odp":true,"ods":true,"odt":true,"pdf":true,"ppt":true,"pptx":true,"rtf":true,"txt":true,"xls":true,"xlsx":true}'
@@ -338,4 +363,9 @@
     - install_onlyoffice | default(false)
     - _nc_current_dbpass.stdout | default('') | trim != '__NC_NOT_INSTALLED__'
   check_mode: false
-  no_log: true   # jwt_secret in the second item
+  # NO no_log here. It used to carry `no_log: true` with the comment "jwt_secret
+  # in the second item" — copied from the task above, which is where the secret
+  # actually lives. This loop sets two format maps and holds nothing sensitive,
+  # and between no_log, `changed_when: false` and `failed_when: false` the task
+  # could not report the corrupted value by construction. It stayed invisible
+  # through every run until Nextcloud's Files page started throwing a 500.
