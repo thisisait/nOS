@@ -102,11 +102,25 @@ export interface CreateColumn {
 	options?: string[];
 }
 
+/** KEAP's `POST /agent/v1/tables` reads the column list from the body's TOP LEVEL
+ *  and wraps it itself:
+ *
+ *      createTableRequestSchema.safeParse({ ..., schema: { columns: b.columns } })
+ *
+ *  Sending only `schema.columns` therefore resolves `b.columns` to undefined and
+ *  the zod parse fails with the bare message "Required" — which the modal
+ *  surfaced verbatim, so every create attempt failed without naming a field.
+ *  Measured against the live v1.36.0 agent surface on 2026-07-28.
+ *
+ *  We emit BOTH spellings: `columns` is what the current server reads, `schema`
+ *  is what this contract documented and what a tolerant server accepts. Neither
+ *  is redundant while the two repos release independently. */
 export interface CreateTableBody {
 	slug: string;
 	title: string;
 	description?: string;
 	anchors?: string[];
+	columns: CreateColumn[];
 	schema: { columns: CreateColumn[] };
 }
 
@@ -132,6 +146,9 @@ export function buildCreateBody(input: {
 	const body: CreateTableBody = {
 		slug: input.slug.trim(),
 		title: input.title.trim(),
+		// Top-level `columns` is the one the server actually reads; `schema` mirrors
+		// it for a tolerant/older server. See the CreateTableBody note above.
+		columns,
 		schema: { columns }
 	};
 	const desc = input.description.trim();

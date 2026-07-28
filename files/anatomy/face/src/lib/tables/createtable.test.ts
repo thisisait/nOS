@@ -119,3 +119,43 @@ describe('buildCreateBody', () => {
 		expect(body.schema.columns[0].options).toEqual(['a', 'b']);
 	});
 });
+
+// ── the shape KEAP actually reads (2026-07-28) ────────────────────────────────
+//
+// `POST /agent/v1/tables` does NOT read `schema.columns`. It reads the body's
+// TOP-LEVEL `columns` and wraps it itself:
+//
+//     createTableRequestSchema.safeParse({ ..., schema: { columns: b.columns } })
+//
+// Sending only `schema` therefore resolved `b.columns` to undefined, zod failed,
+// and the modal surfaced the bare word "Required" — no field named, no way for
+// the operator to guess. Every create attempt from face failed this way.
+// Verified against the live v1.36.0 agent surface: `schema`-only => 400
+// {"success":false,"error":"Required"}; with top-level `columns` => 201 + table.
+describe('buildCreateBody — KEAP wire shape', () => {
+	const draft = {
+		slug: 'party',
+		title: 'Party',
+		description: '',
+		anchor: '',
+		columns: [
+			{ key: 'legal_name', label: 'Legal name', kind: 'text' as const, required: true, options: '' }
+		]
+	};
+
+	it('puts columns at the TOP LEVEL, which is where the server reads them', () => {
+		const body = buildCreateBody(draft);
+		expect(Array.isArray(body.columns)).toBe(true);
+		expect(body.columns[0].key).toBe('legal_name');
+	});
+
+	it('still mirrors them under schema for a tolerant server', () => {
+		const body = buildCreateBody(draft);
+		expect(body.schema.columns).toEqual(body.columns);
+	});
+
+	it('never emits a body whose only column list is nested', () => {
+		const body = buildCreateBody(draft) as unknown as Record<string, unknown>;
+		expect(body.columns, 'top-level columns missing => server-side zod "Required"').toBeDefined();
+	});
+});
