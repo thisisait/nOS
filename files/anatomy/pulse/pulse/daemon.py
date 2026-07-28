@@ -65,6 +65,12 @@ class PulseDaemon:
         self.wing = wing or WingClient(config.wing_api_base, config.wing_api_token)
         self._stop = threading.Event()
         self._inflight: set[threading.Thread] = set()
+        # job_id -> thread. `_inflight` alone cannot answer "is THIS job already
+        # running?", and Wing only advances next_fire_at when a run FINISHES —
+        # so a job that outlives one tick stays due and is dispatched again.
+        # pulse_jobs.max_concurrent has defaulted to 1 since the schema was
+        # written; this is where that column is finally honoured.
+        self._inflight_jobs: dict[str, threading.Thread] = {}
         self._inflight_lock = threading.Lock()
 
     # ── lifecycle ───────────────────────────────────────────────────────
@@ -109,6 +115,18 @@ class PulseDaemon:
         exit_code), False if rejected (validation, unknown runner, etc.).
         """
         job_id = str(job.get("id", "?"))
+        # Re-entrancy guard. next_fire_at only moves on finish, so every job
+        # whose runtime exceeds the tick interval is still due on the next tick.
+        # Measured 2026-07-28: conductor:vulnerability-scan (~500s, 30s ticks)
+        # was dispatched twice every single night; only its own PID lockfile kept
+        # the duplicate from running the scan concurrently, and the duplicate's
+        # instant exit is what advanced next_fire_at and ended the storm. A job
+        # without that lockfile would simply have run twice at once.
+        with self._inflight_lock:
+            running = self._inflight_jobs.get(job_id)
+        if running is not None and running.is_alive():
+            log.info("job %s already in flight; not re-dispatching", job_id)
+            return False
         runner = job.get("runner", "subprocess")
         if runner != "subprocess":
             # A8 will add "agent". For now, log + skip rather than crash.
@@ -141,6 +159,7 @@ class PulseDaemon:
         )
         with self._inflight_lock:
             self._inflight.add(t)
+            self._inflight_jobs[job_id] = t
         t.start()
         return True
 
@@ -187,6 +206,10 @@ class PulseDaemon:
         finally:
             with self._inflight_lock:
                 self._inflight.discard(thread)
+                # Only clear the guard if it still points at THIS thread — never
+                # drop a successor's claim.
+                if self._inflight_jobs.get(job_id) is thread:
+                    del self._inflight_jobs[job_id]
 
     # ── main loop ───────────────────────────────────────────────────────
 

@@ -167,3 +167,76 @@ def test_config_from_env_overrides(monkeypatch):
     assert cfg.tick_interval_s == 5.0
     assert cfg.max_concurrent_runs == 8
     assert cfg.dry_run is True
+
+
+# ── re-entrancy: one job, one run (2026-07-28) ─────────────────────────
+#
+# Wing advances pulse_jobs.next_fire_at only when a run FINISHES. A job that
+# outlives one tick therefore stays due and gets dispatched again — measured on
+# conductor:vulnerability-scan (~500s against a 30s tick), which was dispatched
+# twice every night for at least four nights. Its own PID lockfile turned the
+# duplicate into an instant no-op, and that no-op's finish is what advanced
+# next_fire_at and stopped the storm at exactly two. A job without such a
+# lockfile would have run twice concurrently — while pulse_jobs.max_concurrent
+# has said 1 since the schema was written.
+
+def _blocking_job_daemon():
+    """Daemon whose subprocess never returns until released."""
+    cfg = make_config()
+    wing = MagicMock()
+    d = PulseDaemon(cfg, wing=wing)
+    release = threading.Event()
+
+    def _slow(*_a, **_kw):
+        release.wait(timeout=5.0)
+        return RunResult(exit_code=0, stdout_tail="", stderr_tail="",
+                         duration_s=0.0, timed_out=False)
+
+    return d, wing, release, _slow
+
+
+def test_a_still_running_job_is_not_dispatched_again(monkeypatch):
+    d, wing, release, slow = _blocking_job_daemon()
+    monkeypatch.setattr("pulse.runners.subprocess.execute", slow)
+    job = {"id": "slow-job", "runner": "subprocess", "command": "/bin/true"}
+    try:
+        assert d._dispatch(job) is True, "first dispatch should fire"
+        # Give the worker thread a moment to actually enter the run.
+        for _ in range(100):
+            if wing.post_run_start.called:
+                break
+            time.sleep(0.01)
+        assert d._dispatch(job) is False, (
+            "the same job was dispatched while its previous run was still in flight; "
+            "next_fire_at has not moved yet, so nothing else prevents a duplicate run"
+        )
+    finally:
+        release.set()
+
+
+def test_the_guard_clears_once_the_run_finishes(monkeypatch):
+    d, wing, release, slow = _blocking_job_daemon()
+    monkeypatch.setattr("pulse.runners.subprocess.execute", slow)
+    job = {"id": "slow-job", "runner": "subprocess", "command": "/bin/true"}
+    assert d._dispatch(job) is True
+    release.set()
+    for _ in range(200):
+        if not d._inflight_jobs:
+            break
+        time.sleep(0.01)
+    assert "slow-job" not in d._inflight_jobs, (
+        "the in-flight guard outlived the run — the job would never fire again"
+    )
+    assert d._dispatch(job) is True, "a finished job must be dispatchable again"
+    release.set()
+
+
+def test_the_guard_is_per_job_not_global(monkeypatch):
+    """A long job must not block unrelated jobs — that would be a cap, not a guard."""
+    d, wing, release, slow = _blocking_job_daemon()
+    monkeypatch.setattr("pulse.runners.subprocess.execute", slow)
+    try:
+        assert d._dispatch({"id": "a", "runner": "subprocess", "command": "/bin/true"}) is True
+        assert d._dispatch({"id": "b", "runner": "subprocess", "command": "/bin/true"}) is True
+    finally:
+        release.set()
