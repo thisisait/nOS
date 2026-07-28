@@ -38,6 +38,15 @@ notes: |
   roles/pazny.gitea/defaults/main.yml — bump both 1.25.5 → 1.26.4 or a plain
   `ansible-playbook main.yml` re-render reverts this applied upgrade.
 
+  TWO RECIPES, NOT A WIDENED ONE (2026-07-28). REM-137 needs 1.26.x → 1.27.0.
+  The engine picks the FIRST recipe whose from_regex matches the installed
+  version (files/anatomy/bone/upgrades.py:81), so a sibling with `^1\.26\.` is
+  unambiguous — the two patterns cannot both match. Widening the first recipe's
+  regex instead would send a 1.25 install straight to 1.27.0, skipping the whole
+  1.26 line: Gitea's in-container migrations are forward-only and are exercised
+  per minor release, so a two-line jump runs a migration path nobody upstream
+  tests. A 1.25 install therefore takes two hops, one run each.
+
   DEFENSE-IN-DEPTH (post-upgrade hardening notes, not recipe steps): set
   GITEA__security__REVERSE_PROXY_TRUSTED_PROXIES to loopback (127.0.0.0/8,::1/128)
   and weigh REQUIRE_SIGNIN_VIEW to gate anonymous package/OCI reads (it also blocks
@@ -70,6 +79,126 @@ recipes:
         Single-app recreate: only devops-gitea-1 bounces (compose recreate on the
         new tag). No shared DB (embedded sqlite in the data volume); backups + the
         http health gate are read-only. First 1.26 boot runs forward-only schema
+        migrations so the health gate allows a generous window.
+
+    pre:
+      - id: backup_db
+        type: exec.shell
+        command: >-
+          docker exec devops-gitea-1 sqlite3 /data/gitea/gitea.db
+          ".backup '/tmp/gitea-{{ upgrade_id }}.db'"
+          && docker cp devops-gitea-1:/tmp/gitea-{{ upgrade_id }}.db
+          ~/.nos/backups/{{ upgrade_id }}/gitea.db
+          && docker exec devops-gitea-1 rm -f /tmp/gitea-{{ upgrade_id }}.db
+        allow_shell: true
+      - id: backup_data
+        type: backup.volume
+        src: "{{ gitea_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitea
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/healthz"
+        expect_status: 200
+        timeout_sec: 300
+        interval_sec: 5
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitea
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ gitea_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: restore_db
+        type: exec.shell
+        command: >-
+          cp ~/.nos/backups/{{ upgrade_id }}/gitea.db
+          {{ gitea_data_dir }}/gitea/gitea.db
+        allow_shell: true
+
+  - id: "gitea-1.26-to-1.27"
+    from_regex: "^1\\.26\\."
+    to: "1.27.0"
+    severity: security
+    changelog_url: "https://blog.gitea.com/release-of-1.27.0/"
+    release_date: "2026-07-13"
+    notes: |
+      Gitea 1.26.4 → 1.27.0. Closes REM-137. Same-org tag bump on the same sqlite
+      engine; forward-only in-container migrations run on first 1.27 boot, so the
+      health gate keeps the generous window the 1.25→1.26 recipe uses.
+
+      WHY THIS IS CRITICAL. The 2026-07-13 advisory wave is the largest in Gitea's
+      history: an OSV version-aware query for code.gitea.io/gitea@1.26.4 returns 37
+      vulnerabilities, 36 of them fixed in 1.27.0. There is NO 1.26.5 — the 1.26
+      line received no backport, so the pinned version sits at the top of every
+      affected range, and 1.27.0 is the SOLE patched version for every advisory in
+      the wave.
+
+        - CVE-2026-58443 (CVSS 9.6) — a public-only, write:repository token can
+          update PRIVATE pull-request head branches: the public-only restriction is
+          checked against the ROUTE repository (the public base), never against the
+          private head repo receiving the push. PoC is publicly disclosed.
+        - CVE-2026-56750 (CVSS 9.1) — remember-me token theft does not invalidate
+          the ATTACKER's session. On a hash mismatch Gitea deletes only the
+          victim's cookie, defeating the split-token model and leaving indefinite
+          persistent access.
+        - CVE-2026-58436 (CVSS 8.7) — the Locale middleware parses the raw
+          Accept-Language header in front of EVERY unauthenticated request. The
+          x/text v0.3.8 guard caps '-' separators at 1000 but not '_', which the
+          scanner aliases to '-' before parsing, so an underscore-built header
+          re-enters the quadratic path. One anonymous GET pins a core for ~2s per
+          MiB, and it returns 200, so it never shows on 4xx/5xx dashboards. This is
+          EDGE-REACHABLE here: traefik_auth_modes.gitea='oidc' means native_oidc
+          with NO forward-auth middleware, so the anonymous landing and sign-in
+          pages are served and the loopback bind on 3003 gates only the direct
+          container port, not the Traefik path.
+
+      READ THIS ONE BEFORE UPGRADING — it changes operator expectations:
+      CVE-2026-55987, OAuth2 sign-in REACTIVATES an administrator-deactivated
+      account on auth sources without refresh tokens. nOS uses Authentik as gitea's
+      native_oidc source, so any account deactivated in Gitea (rather than in
+      Authentik) may have been silently reactivated on the user's next SSO login.
+      After this upgrade, AUDIT the active-user list against Authentik rather than
+      assuming the deactivations held.
+
+      NOT CLOSED BY THIS BUMP: GHSA-263q-5cv3-xq9g / CVE-2025-68939 (HIGH,
+      forbidden-extension release attachments) still lists no fixed version in OSV.
+      1.27.0 fixes the web-form variant (CVE-2026-58428); the parent record remains
+      open upstream. Tracked for lineage only — do not mark it resolved on this run.
+
+      SHADOW-PIN BUMP IS MANDATORY, same as the 1.25→1.26 recipe: gitea_version
+      lives in BOTH default.config.yml (wins by vars_files precedence) AND
+      roles/pazny.gitea/defaults/main.yml. Bump both 1.26.4 → 1.27.0 or the next
+      plain `ansible-playbook main.yml` re-render reverts this applied upgrade.
+
+    coexistence_supported: false
+
+    requires:
+      min_disk_free_gb: 2
+      service_healthy: true
+
+    reset:
+      scope: container
+      estimated_sec: 120
+      affected_services: [gitea]
+      reason: >-
+        Single-app recreate: only devops-gitea-1 bounces (compose recreate on the
+        new tag). No shared DB (embedded sqlite in the data volume); backups + the
+        http health gate are read-only. First 1.27 boot runs forward-only schema
         migrations so the health gate allows a generous window.
 
     pre:
