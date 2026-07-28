@@ -31,11 +31,28 @@ therefore tracked separately and merged only at §5.
 | # | Step | Gate | State |
 | --- | --- | --- | --- |
 | A1 | Referee agrees on all six clauses | manual verification | **done** 2026-07-27 |
-| A2 | Night 1 — first honest `cortex-corpus-diff` | `AGREES: true` | fires 07:34 CEST 2026-07-28 |
+| A2 | Night 1 — first honest `cortex-corpus-diff` | `AGREES: true` | **done** 2026-07-28 05:34 UTC, all six clauses, `agreeStreak: 1` |
 | A3 | Night 2 | `AGREES: true` | 2026-07-29 |
 | A4 | Night 3 | `AGREES: true` | 2026-07-30 |
 | A5 | Docs review | operator-requested, pre-tag | not started |
 | A6 | `dev → master` PR, tag `v0.10-beta` | CI green, `RELEASE.md` written | blocked on A4 |
+
+**The streak's denominator, quoted from the harness itself.** Night 1 passed all
+six clauses and the report still closed with:
+
+> This run does not show that ingestion is correct. It shows that two near-empty
+> corpora are equally near-empty.
+
+`realUserDocs: 2` against a disclosure floor of 25. Nine behaviours went
+unexercised — prune, move/rename, multi-user attribution, visibility flip, the
+20 000-file cap, EACCES truncation, more than one tenant, bodies over `BODY_CAP`,
+non-ASCII paths. Three green nights therefore license exactly one sentence:
+**the two corpora agree, under a fixed harness, repeatedly.** They do not license
+"ingestion is correct", and §5's release wording is written to stay inside that.
+
+The harness disclaiming itself is the feature. It is also the argument for §3's
+ordering: real user documents arrive with the operator's business data, so the
+floor is crossed by doing the work, not by waiting.
 
 **A2–A4 are wall-clock, not work.** Nothing accelerates them; a manual run is a
 diagnostic, not a night. That is the whole reason the clock had to start before
