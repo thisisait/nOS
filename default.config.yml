@@ -1137,7 +1137,7 @@ mariadb_container_name: "infra-mariadb-1"
 # ==============================================================================
 
 redis_docker: false                    # true = Redis in Docker (for cross-stack access)
-redis_version: "8.6.3"                  # REM-103: re-pin off the EOL 8.0 branch (final 8.0.6) — May-2026 DarkReplica cluster; supersedes 7.4.6 CVE-2025-49844 (RediShell RCE)
+redis_version: "8.6.5"                  # REM-103: re-pin off the EOL 8.0 branch (final 8.0.6) — May-2026 DarkReplica cluster; supersedes 7.4.6 CVE-2025-49844 (RediShell RCE)
 redis_container_name: "infra-redis-1"   # live <stack>-<service>-1; used by upgrade recipe docker-exec
 
 # ==============================================================================
@@ -1371,7 +1371,7 @@ prometheus_version: "v3.11.3"   # synced to role default (cleared version-pin sh
 loki_version: "3.7.2"           # synced to role default (cleared version-pin shadow)
 
 # Gitea Docker
-gitea_version: "1.26.4"                 # REM-099: 1.25.x EOL — CVE-2026-27771 pkg-registry reads, CVE-2026-22874 SSRF, OAuth2 scope bypass; exactly 1.26.4 (1.26.3 regression). Migration 2026-07-09-gitea-1-25-5-to-1-26-4
+gitea_version: "1.27.0"                 # REM-099: 1.25.x EOL — CVE-2026-27771 pkg-registry reads, CVE-2026-22874 SSRF, OAuth2 scope bypass; exactly 1.26.4 (1.26.3 regression). Migration 2026-07-09-gitea-1-25-5-to-1-26-4
 
 # ── Grafana ───────────────────────────────────────────────────────────────────
 grafana_admin_user: "admin"
@@ -1529,7 +1529,7 @@ nos_agent_forge: "gitlab"
 
 openwebui_domain: "ai{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 openwebui_port: 3004             # Internal container port 8080 → host 3004
-openwebui_version: "0.9.6"      # 0.8 adds native MCP + function calling + code exec. DB migration ~few min.
+openwebui_version: "0.10.2"      # 0.8 adds native MCP + function calling + code exec. DB migration ~few min.
 openwebui_secret_key: "{{ global_password_prefix }}_pw_openwebui"
 openwebui_enable_signup: false   # pure-SSO: public local signup OFF (was true →
                                  # public /auth/signup first-admin race). Users
@@ -1968,7 +1968,7 @@ authentik_oidc_homeassistant_client_secret: "{{ global_password_prefix }}_pw_oid
 # RUSTFS – S3-compatible object storage
 # ==============================================================================
 
-rustfs_version: "1.0.0-beta.9"         # CVE-2025-68926 baseline + alpha.91 multipart auth hardening (#2411) + OIDC claim fix (#2386)
+rustfs_version: "1.0.0-beta.11"         # CVE-2025-68926 baseline + alpha.91 multipart auth hardening (#2411) + OIDC claim fix (#2386)
 rustfs_api_port: 9010               # S3 API (aws-cli, rclone, restic, SDK...) – 9000 taken by PHP-FPM
 rustfs_console_port: 9001           # Web console
 rustfs_domain: "fs{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
@@ -2607,7 +2607,7 @@ authentik_oidc_issuer: "https://{{ authentik_domain | default('auth' ~ (_host_al
 # Central vault for DB passwords, API keys, certificates. E2EE.
 # ==============================================================================
 
-infisical_version: "v0.160.4"   # synced to role default (cleared version-pin shadow)
+infisical_version: "v0.162.14"   # synced to role default (cleared version-pin shadow)
 infisical_domain: "vault{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 infisical_port: 8075
 infisical_encryption_key: "{{ global_password_prefix }}_pw_infisical_enc"
@@ -2725,7 +2725,7 @@ nos_infisical_projects:
 # Each nOS tenant has their own vault for personal passwords.
 # ==============================================================================
 
-vaultwarden_version: "1.36.0"            # CVE pins + S2 freshness sweep 2026-06-10 (patch line)
+vaultwarden_version: "1.37.0"            # CVE pins + S2 freshness sweep 2026-06-10 (patch line)
 vaultwarden_domain: "pass{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 vaultwarden_port: 8062
 vaultwarden_signups_allowed: false                 # Admin creates accounts

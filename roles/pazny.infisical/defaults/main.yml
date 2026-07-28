@@ -7,7 +7,7 @@
 # centralized for prefix rotation.
 # ==============================================================================
 
-infisical_version: "v0.160.4"                       # aligned with default.config.yml (source of truth — bump there too)
+infisical_version: "v0.162.14"                       # aligned with default.config.yml (source of truth — bump there too)
 infisical_domain: "vault{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 infisical_port: 8075
 infisical_db_name: "infisical"
