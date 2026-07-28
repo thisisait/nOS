@@ -185,8 +185,19 @@ done
 PENDING=$(jq '[.components | to_entries[] | select(.value.last_checked == null)] | length' "$STATE_FILE")
 
 if [ "$PENDING" -eq 0 ]; then
-    jq '.scan_cycle += 1 | .last_full_scan = now | todate' "$STATE_FILE" > "${STATE_FILE}.tmp" \
-        && mv "${STATE_FILE}.tmp" "$STATE_FILE"
+    # `now | todate` MUST be parenthesised. `|` is jq's pipe, so
+    # `.last_full_scan = now | todate` assigns the epoch and then pipes the whole
+    # OBJECT into todate, which dies with "strftime/1 requires parsed datetime
+    # inputs". The write then never happened: scan_cycle froze at 16 and
+    # PROBE_INDEX (= scan_cycle % 8) pinned the attack probe to index 0 forever,
+    # so 7 of the 8 probes had not run since the freeze. Exit code stayed 0
+    # throughout — the error only ever appeared on stderr.
+    if jq '.scan_cycle += 1 | .last_full_scan = (now | todate)' "$STATE_FILE" > "${STATE_FILE}.tmp"; then
+        mv "${STATE_FILE}.tmp" "$STATE_FILE"
+    else
+        rm -f "${STATE_FILE}.tmp"
+        log "ERROR: could not advance scan_cycle — the attack probe will not rotate"
+    fi
     NEW_CYCLE=$(jq -r '.scan_cycle' "$STATE_FILE")
     log "Full cycle complete! Starting cycle $NEW_CYCLE"
 fi
