@@ -131,6 +131,64 @@ an index over rows already written is a migration; adding it now is a DDL line.
 
 ---
 
+## 3b. 1:N and N:N — one mechanism covers both
+
+**1:N needs nothing beyond `rowRef`.** Put the reference on the MANY side:
+`invoice.customer → party`. The "one" side is recovered by the back-reference
+index (§3), which is also what the UI panel reads. There is no join table and no
+second column kind. Cardinality is expressed by *where the column lives*, which is
+the same rule every relational schema uses and the one least likely to drift.
+
+**N:N is a junction table with two `rowRef` columns** — not an array column.
+
+The tempting shortcut is a `rowRefList` holding many ids in one cell. Reject it:
+
+- A many-to-many edge almost always carries its own attributes — role, share,
+  `valid_from`/`valid_to`, signatory flag. `party ↔ agreement` is meaningless
+  without "in what capacity". An array cell has nowhere to put them, so the first
+  real requirement forces a migration.
+- `AggregateQuery` groups by column values. An array column cannot be a
+  `dimension` without an unnest operator that the contract does not have, so
+  every N:N question would fall outside the OLAP surface that already exists.
+- Row history is per row. An array cell turns "who was added to this agreement
+  and when" into a diff of two JSON blobs.
+
+A junction table is itself a DataTable, so it inherits validation, history,
+visibility, the driver abstraction and aggregation for free. The cost is one
+table per relationship, which is the honest price of an edge that carries data.
+
+**Consequence for the graph, and it is the same gap one layer up.**
+`graphMetaSchema.edges[]` resolves a column to another graph node via
+`toKind: 'node' | 'object'`. There is **no `'row'`**, exactly as there is no
+`rowRef` among the column kinds. So `rowRef` lands with a matching
+`toKind: 'row'`, or the joins exist in the store and are invisible in `/explore`.
+Ship them together.
+
+---
+
+## 3c. Why rows still will not appear in `/explore` — read this before loading data
+
+Measured 2026-07-28 against the live v1.36.0 contract. `graphMetaSchema` defines
+`mode: 'card' | 'rows'` and the comment on it is explicit:
+
+> `'rows'` = ALSO project each row as its own node (**materialised in Stage 2;
+> Stage 1 ACCEPTS the value but renders CARD-ONLY** — see `server/graph.ts`).
+
+So a table declared `mode: 'rows'` validates, stores, and renders **as a single
+card**. Per-row projection is specified, not built. The full `node` block
+(`labelColumn`, `idColumn`, `kind`, `anchorColumn`) is defined in the contract for
+stability and does nothing yet.
+
+That is the real answer to "I added data and cannot see it in KEAP explore", and
+it survives every fix in §3: creating the table now works, the rows are stored and
+readable over `/agent/v1/tables/:slug/rows`, and `/explore` will still show one
+card. **KEAP graph Stage 2 is the work item**, and it is independent of `rowRef`.
+
+Nothing here argues against loading data now. It argues against expecting
+`/explore` to be the place you see it — the Tables app is, until Stage 2 lands.
+
+---
+
 ## 4. What goes into DataTables, and what does not
 
 The operator's stated payload: tax, contact, invoicing and delivery details;
@@ -217,6 +275,55 @@ So the integration is **not** "cortex reads Firefly". It is:
 This keeps one copy of every fact, which is the property that makes a knowledge
 system trustworthy, and it keeps the connector count at one per system rather than
 one per consumer.
+
+---
+
+## 6b. Google's Open Knowledge Format — what to take and what not to
+
+OKF (Google Cloud, v0.1 2026-06-12, **v0.2 2026-07-25**) packages knowledge as a
+directory of markdown files with YAML frontmatter, cross-linked by ordinary
+relative markdown links into a directed graph. It requires **exactly one field on
+every concept: `type`**. Everything else — which types exist, what other fields
+appear, what the body contains — is left to the producer. Reserved filenames:
+`index.md` (category / progressive disclosure) and `log.md` (chronological
+history). The file path is the concept's identity.
+
+**The first thing to notice is that nOS already built this shape, independently.**
+`cortex-fs-sync` mirrors a doctrine tree of markdown into typed nodes; the organ
+generates `nos.<stack>.<system>.(readme|agents|skills)-*` from
+`docs/systems/<svc>/{README,AGENTS,SKILLS}.md`; the taxonomy is a directory
+hierarchy with cross-links. That convergence is the argument for taking OKF
+seriously — and also the reason it must not be adopted as the internal model.
+
+**What OKF does not have**, all of which the estate depends on: a schema for
+entities (`ent:` needs one — OKF's single `type` field is deliberately not that),
+vectors, per-user visibility, RBAC, audit lineage, row-level history, or any
+notion of a store. It is a **distribution format**, not a database.
+
+**Recommendation: adopt OKF as an export target, not as the model.** Concretely:
+
+- **An OKF exporter over the shared reference corpus** is cheap — the taxonomy is
+  already a tree of typed nodes with bodies and links, which is nearly a
+  one-to-one mapping. It gives `cortex-self-core.md` §S6 its stated exit criterion
+  almost for free: *"a weights artefact resolvable by a third party from a clone
+  alone"* becomes a bundle any agent can read without nOS.
+- **Borrow the `type`-only discipline** for fs-mapped documents. One required
+  frontmatter field is a rule the estate can actually hold, and it makes the docs
+  corpus exportable without a second pass.
+- **`log.md` maps onto the devlog** — worth checking whether the devlog bundle can
+  emit one per namespace rather than inventing a parallel history format.
+- **Do not** make OKF an import dependency or a runtime contract. It is six weeks
+  old and already on its second version; two releases in six weeks is a moving
+  target, and the estate's rule is that a spec earns load-bearing status by
+  holding still. An exporter is reversible; a model is not.
+
+Verify the v0.2 delta against the spec before implementing — the description above
+is anchored on v0.1, which is the version with a published worked example.
+
+Sources: [Google Cloud
+blog](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing),
+[MarkTechPost
+summary](https://www.marktechpost.com/2026/06/16/google-cloud-introduces-open-knowledge-format-okf-a-vendor-neutral-markdown-spec-for-giving-ai-agents-curated-context/).
 
 ---
 
