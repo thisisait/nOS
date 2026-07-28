@@ -351,6 +351,18 @@ the corpus size it was measured at.
 
 ### S4 — Readers and writers move
 
+`tools/workflows/cortex-s4-readers-writers.js` (written 2026-07-28). Ordering,
+preconditions and the scope boundary against the release lane live in
+`docs/plans/cortex-s3-s4-workflow-set.md`.
+
+**The workflow stops itself before Move if `/agent/v1` lacks a verb an inventoried
+consumer needs.** A reader moved onto an incomplete API fails loudly; a *writer*
+moved onto one silently drops a field, and a corpus is not restorable from a
+rerun. The Contract phase is therefore a gate, not a survey.
+
+**It does not move the ~47 KEAP UI routes**, so exit criterion 1 stays open when it
+finishes. The workflow is instructed to report that rather than declare S4 done.
+
 Pulse jobs, Wing AgentKit and the curator/librarian agents repoint at the organ.
 Then the KEAP UI's ~47 corpus routes (S0-measured; was ~33). Per §3's doctrine line, everything goes over
 `/agent/v1` — no in-process shortcut even once colocated.
@@ -447,6 +459,13 @@ store rather than a row. Copy Bone's layout; do not copy its enforcement. Tracke
 as `hidden_fees/13`.
 
 ### `ent:` resolves against DataTables
+
+**And it cannot yet, because DataTables has no join.** Measured 2026-07-28: of the
+eleven column kinds in `shared/contracts/table.ts`, `taxonomyRef` and `objectRef`
+anchor a row into the universe, but **no kind points at another row** — an invoice
+cannot reference its customer. The registry this section adopts is one column kind
+short of being one. Design, including why the existing `relations` table must not
+be overloaded to fill the gap: `docs/plans/datatables-relations.md`.
 
 `ent:` was blocked on `object_type_definitions` — created by migration 001,
 touched by zero lines of code, never a row. The registry it needed already exists
