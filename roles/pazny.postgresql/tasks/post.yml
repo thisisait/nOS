@@ -156,12 +156,38 @@
     }}
   loop_control:
     label: "USER: {{ item.user }}"
-  no_log: true
+  register: _pg_user_sync
+  no_log: true      # justified: item.pass is interpolated into the SQL
   changed_when: false
+  # Tolerant on purpose — one unreachable role must not abort the infra stack.
+  # But tolerance without a report is how a password that never synced becomes a
+  # service that "cannot connect to its database" three tasks later. The task
+  # below turns the silence into a named list. See the Nextcloud/OnlyOffice
+  # incident (2026-07-28): no_log + changed_when:false + failed_when:false left a
+  # write path that could not report its own failure by construction.
   failed_when: false
   when:
     - _pg_ready.rc | default(1) == 0
     - not ansible_check_mode
+
+# Passwords are NOT in this output — only role names and psql's stderr, which
+# names the role but not the credential.
+- name: "[PostgreSQL] Report any user whose password did not sync"
+  ansible.builtin.debug:
+    msg: >-
+      PostgreSQL role sync FAILED for: {{ _failed_pg_users | join(', ') }}.
+      These services will fail to connect. Re-run with -vv on the sync task, and
+      check for an apostrophe in the credential — the password is interpolated
+      into the SQL as a single-quoted literal, so a quote inside it breaks the
+      statement (the role is then left at its previous password, silently).
+  vars:
+    _failed_pg_users: >-
+      {{ (_pg_user_sync.results | default([]))
+         | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0)
+         | map(attribute='item.user') | list }}
+  when:
+    - _pg_user_sync is defined
+    - _failed_pg_users | length > 0
 
 - name: "[PostgreSQL] Enable pgcrypto in each service database"
   ansible.builtin.command: >
