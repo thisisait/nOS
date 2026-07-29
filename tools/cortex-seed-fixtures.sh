@@ -51,6 +51,40 @@ KEAP_URL="${KEAP_API_URL:-http://127.0.0.1:8091}"
 USERS_ROOT="${DATA_ROOT}/tenants/${TENANT}/users"
 TARGET="${USERS_ROOT}/${UID_DIR}/documents/cortex-fixtures"
 
+WING_DB="${WING_DB:-$HOME/wing/app/data/wing.db}"
+
+# ── Job env comes from the rendered Pulse catalog, not from your shell ───────
+# Every feeder needs tokens (and keap-consolidate needs the MariaDB root
+# password besides). Ansible pre-renders those into wing.db's `pulse_jobs`
+# rows, which is what the nightly actually executes with — so reading them
+# back is the only way a manual run measures the SAME conditions as a night
+# rather than an approximation of one. Exporting them by hand invites a
+# diagnostic that fails on auth and reads as a corpus disagreement.
+job_env () {
+  python3 - "$WING_DB" "$1" <<'PY'
+import json, sqlite3, sys, shlex
+db, job = sys.argv[1], sys.argv[2]
+try:
+    c = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    row = c.execute(
+        "select env_json from pulse_jobs where job_name=? and removed_at is null", (job,)
+    ).fetchone()
+except sqlite3.Error as e:
+    print(f"# wing.db unreadable: {e}", file=sys.stderr)
+    sys.exit(1)
+if not row:
+    print(f"# no pulse_jobs row for {job}", file=sys.stderr)
+    sys.exit(1)
+for k, v in sorted(json.loads(row[0] or "{}").items()):
+    print(f"export {k}={shlex.quote(str(v))}")
+PY
+}
+
+# Best-effort: the seed step only needs KEAP's RW token to kick fs-sync.
+if [ -z "${KEAP_AGENT_TOKEN_RW:-}" ]; then
+  eval "$(job_env keap-embed-sync 2>/dev/null | grep '^export KEAP_AGENT_TOKEN_RW=' || true)"
+fi
+
 MODE="seed"
 case "${1:-}" in
   --purge) MODE="purge" ;;
@@ -482,16 +516,26 @@ if [ -n "${KEAP_AGENT_TOKEN_RW:-}" ]; then
   curl -fsS -X POST -H "Authorization: Bearer ${KEAP_AGENT_TOKEN_RW}" \
     "${KEAP_URL}/agent/v1/fs/sync" | head -c 400; echo
 else
-  echo "NOTE: KEAP_AGENT_TOKEN_RW unset — fs-sync not kicked; the 300 s interval will pick it up."
+  echo "NOTE: no KEAP RW token (neither exported nor in ${WING_DB}) — fs-sync not kicked;"
+  echo "      the 300 s interval will pick the files up regardless."
 fi
 
 # ── Optional: measure it now, WITHOUT recording a night ──────────────────────
 if [ "$MODE" = "check" ]; then
   echo
-  echo "── running the feeders, then the diff with --no-ledger ──"
-  "${REPO_ROOT}/files/anatomy/scripts/keap-consolidate.py"  || echo "consolidate: non-zero (see output above)"
-  "${REPO_ROOT}/files/anatomy/scripts/keap-embed-sync.py"   || echo "embed-sync: non-zero (see output above)"
-  "${REPO_ROOT}/files/anatomy/scripts/cortex-corpus-diff.py" --no-ledger
+  echo "── running the feeders in the nightly's own order, each with its own env ──"
+  # 04:15 consolidate → 04:30 cortex-fs-sync → 04:45 embed-sync → 05:30 diff.
+  # The order is the contract: the diff is scheduled after embed-sync has run
+  # BOTH passes precisely so it sees two settled corpora, not a mid-embed one.
+  for job in keap-consolidate cortex-fs-sync keap-embed-sync; do
+    echo "── ${job}"
+    env_lines="$(job_env "$job")" || { echo "   SKIPPED — no rendered env (has the playbook run?)"; continue; }
+    ( eval "$env_lines"; "${REPO_ROOT}/files/anatomy/scripts/${job}.py" ) \
+      || echo "   ${job}: non-zero — read the output above before trusting the diff"
+  done
+  echo "── cortex-corpus-diff (--no-ledger)"
+  env_lines="$(job_env cortex-corpus-diff)" || { echo "no rendered env for the diff — aborting"; exit 1; }
+  ( eval "$env_lines"; "${REPO_ROOT}/files/anatomy/scripts/cortex-corpus-diff.py" --no-ledger )
   echo
   echo "The line above is a DIAGNOSTIC. --no-ledger means agreeStreak is untouched:"
   echo "  AGREES     -> leave the fixtures in place; tonight's night measures a real denominator."
