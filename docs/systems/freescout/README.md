@@ -11,7 +11,7 @@
 | **Stack** | `b2b` |
 | **Toggle** | `install_freescout: true` |
 | **Compose** | `~/stacks/b2b/docker-compose.yml` (role fragment: `~/stacks/b2b/overrides/freescout.yml`) |
-| **Image** | `nfrastack/freescout:2.1.3-php8.3` (`freescout_version`) |
+| **Image** | `nfrastack/freescout:2.1.5-php8.3` (`freescout_version`; bundles FreeScout 1.8.231) |
 | **Data** | `{{ nos_data_root }}/platform/services/freescout/data` (default `~/nos/platform/services/freescout/data`) → `/data` |
 | **Mem / CPU** | `freescout_mem_limit` (default `512m`) / `freescout_cpus` (default `0.5`) |
 
