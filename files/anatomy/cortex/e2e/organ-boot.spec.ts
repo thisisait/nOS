@@ -160,11 +160,28 @@ test.describe('organ boot', () => {
     }
   });
 
+  test('the ported corpus reader IS mounted', async ({ request }) => {
+    // `/agent/v1/objects` was ported onto the organ deliberately (b93cba92,
+    // "port fs-sync into the organ as a host reader"): it is how
+    // files/anatomy/scripts/cortex-corpus-diff.py reads the organ's corpus —
+    // both bases, same verb, same MAX_LIMIT, which is the whole reason the two
+    // corpora are comparable at all. Asserted positively here so the boundary
+    // test below cannot silently absorb it back into the 404 list.
+    const res = await request.get('/agent/v1/objects?limit=1', {
+      headers: { Authorization: 'Bearer e2e-ro' },
+    });
+    expect(res.status()).toBe(200);
+    const json = (await res.json()) as { success: boolean; data: { total: number } };
+    expect(json.success).toBe(true);
+    expect(typeof json.data.total).toBe('number');
+  });
+
   test('nothing else is mounted: an unported KEAP path is a 404 in the envelope', async ({ request }) => {
-    // The organ serves the cortex surface and stops there. A caller that wandered
-    // over from KEAP's `/agent/v1` should get a fact, not express's default HTML
-    // and not something that reads like a server fault.
-    for (const p of ['/agent/v1/taxonomy/search?q=physics', '/agent/v1/objects', '/agent/v1/openapi.json', '/api/health']) {
+    // The organ serves the cortex surface plus the ported corpus reader, and
+    // stops there. A caller that wandered over from KEAP's `/agent/v1` should
+    // get a fact, not express's default HTML and not something that reads like
+    // a server fault.
+    for (const p of ['/agent/v1/taxonomy/search?q=physics', '/agent/v1/openapi.json', '/api/health']) {
       const res = await request.get(p, { headers: { Authorization: 'Bearer e2e-ro' } });
       expect(res.status(), p).toBe(404);
       const json = (await res.json()) as { success: boolean; error: string };
