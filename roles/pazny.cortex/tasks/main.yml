@@ -62,7 +62,7 @@
 
 - name: "[pazny.cortex] npm ci (when package-lock.json changed)"
   ansible.builtin.shell: |
-    set -e
+    set -euo pipefail
     cd "{{ cortex_src_dir }}"
     LOCK_SHA=$(shasum -a 256 package-lock.json | cut -d' ' -f1)
     STAMP=node_modules/.nos-lock-sha
@@ -145,9 +145,11 @@
   # Homebrew's `duf`, which has no -P and exits non-zero. The command must not
   # depend on which shims happen to be ahead of /bin on a given host.
   ansible.builtin.shell:
-    cmd: >-
-      /usr/sbin/diskutil info -plist
-      "$(/bin/df -P {{ nos_data_root | quote }} | tail -1 | awk '{ print $NF }')"
+    cmd: |
+      set -o pipefail
+      /usr/sbin/diskutil info -plist \
+        "$(/bin/df -P {{ nos_data_root | quote }} | tail -1 | awk '{ print $NF }')"
+    executable: /bin/bash
   register: _cortex_diskutil
   changed_when: false
   failed_when: false
