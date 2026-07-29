@@ -6,24 +6,24 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-07-22 • v0.9-beta docs complete, pre-flight + ci-local green;
-> tag pending operator gate.
+> Last updated: 2026-07-29 • v0.10-beta release lane, night 3 of 3 pending;
+> CI on `dev` green again, estate not yet converged.
 
 ## Now (current track)
 
-**v0.9-beta release cut — READY, operator gate next (2026-07-22).** 228 commits since
-`v0.8-beta`, TWO arcs. (1) 07-13→20: nOS face as a real WM + native apps over Bone's VFS ·
-KEAP self-model + git-SoT ingest + semantic lens · `docs/doctrine/` constitution +
-`nos_data_root` resolver · healthcheck coverage gate · **security 0 CRITICAL pending**.
-(2) 07-20→22: **`nos` CLI + removal ladder** (`remove=none|data|deep|all` + `--leave`,
-dry-run unless confirmed, single-source removal set, post-removal absence assert) ·
-**KEAP self-model contract v1** (slug ids, golden fixture, symmetric cross-repo gates,
-pins v1.19→v1.24) · `docs/hidden_fees/` ledger. RELEASE.md `## v0.9-beta` + devlogs
-`2026-07-20-release-v0-9-beta` and `2026-07-22-nos-cli-and-removal-ladder`.
-`tools/devlog-release.sh v0.9-beta` and `tools/ci-local.sh` both GREEN.
-KEAP converged and verified live at **v1.25.0** (pin == running image).
-**NEXT (operator):** `dev→master` PR → `gh pr merge --rebase --admin` → tag →
-`gh release create` (memory `nos-release-flow`).
+**v0.10-beta release lane — A4 is the last gate (2026-07-29).** Order of operations:
+[`cortex-s3-s4-workflow-set.md`](plans/cortex-s3-s4-workflow-set.md) · doctrine:
+[`cortex-self-core.md`](plans/cortex-self-core.md). `agreeStreak: 2` (nights 07-28 + 07-29,
+six clauses each); **A4 fires 07-30 05:30 UTC** and is the first night at a real
+denominator — `tools/cortex-seed-fixtures.sh` seeded 26 markdown notes, so `realUserDocs`
+went **2 → 28**, `knowledge_objects[fs:]` reads 317/317 exact, and the 07-29 `--no-ledger`
+dry run already returned AGREE there. **CI on `dev` is green again** after two reds hiding
+behind each other: `risky-shell-pipe` in `pazny.cortex` (sole red since 07-26), then a stale
+E2E expecting `/agent/v1/objects` to 404 on the organ — it is ported deliberately and the
+corpus diff reads both bases through it. **NEXT (operator):** verify A4 landed → converge
+(gitea upgrade recipe FIRST, then a plain run — 7 image pins are ahead of the estate, incl.
+REM-137 CRITICAL) → A5 docs review → KEAP tag (rowRef + the row-`slug` bug) + pin bump + one
+night → `dev→master` → tag. Release wording is fixed in plan §5, denominator footnote and all.
 
 **Blank/uninstall drift → managed-resource manifest (VALIDATED, P1.5 remains).**
 `_blank_dirs` is a hand-maintained allowlist rather than a reconciliation. Plan:

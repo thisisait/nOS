@@ -32,10 +32,10 @@ therefore tracked separately and merged only at §5.
 | --- | --- | --- | --- |
 | A1 | Referee agrees on all six clauses | manual verification | **done** 2026-07-27 |
 | A2 | Night 1 — first honest `cortex-corpus-diff` | `AGREES: true` | **done** 2026-07-28 05:34 UTC, all six clauses, `agreeStreak: 1` |
-| A3 | Night 2 | `AGREES: true` | 2026-07-29 |
-| A4 | Night 3 | `AGREES: true` | 2026-07-30 |
+| A3 | Night 2 | `AGREES: true` | **done** 2026-07-29 05:32 UTC, all six clauses, `agreeStreak: 2` |
+| A4 | Night 3 | `AGREES: true` | 2026-07-30 05:30 UTC — **first night at a real denominator** |
 | A5 | Docs review | operator-requested, pre-tag | not started |
-| A6 | `dev → master` PR, tag `v0.10-beta` | CI green, `RELEASE.md` written | blocked on A4 |
+| A6 | `dev → master` PR, tag `v0.10-beta` | CI green, `RELEASE.md` written | blocked on A4; CI green since 2026-07-29 |
 
 **The streak's denominator, quoted from the harness itself.** Night 1 passed all
 six clauses and the report still closed with:
@@ -53,6 +53,27 @@ non-ASCII paths. Three green nights therefore license exactly one sentence:
 The harness disclaiming itself is the feature. It is also the argument for §3's
 ordering: real user documents arrive with the operator's business data, so the
 floor is crossed by doing the work, not by waiting.
+
+**The denominator was crossed on 2026-07-29, between night 2 and night 3.**
+`tools/cortex-seed-fixtures.sh` seeded 26 well-behaved Markdown notes into
+`akadmin`'s tree: `realUserDocs` **2 → 28**, above the disclosure floor of 25.
+The two pre-existing "real user docs" were *both binaries* (a PNG and a PDF), so
+until this landed no user-side text had ever exercised body hashing, `BODY_CAP`
+or embedding — those clauses were carried entirely by the `nos-docs` self-model
+tree. A `--no-ledger` run immediately afterwards returned **AGREE** with
+`knowledge_objects[fs:]` at 317/317 exact, so night 3 is expected to agree at the
+new denominator rather than the old one.
+
+This is a change of *input*, not of harness, so the streak legitimately continued
+at 2 rather than restarting — the rule below is about the harness. But it does
+make the streak **heterogeneous**, and §5's wording is written to say so rather
+than to imply three nights of equal weight.
+
+One consequence to expect in the report and not to misread: every DataTable is a
+KEAP-only `knowledge_objects` row (`type: table`, no `fs:` id), classified
+`not-a-mirror-row` and withdrawn from the fs clause. There were four; seeding
+added a fifth. The count grows with each table created until S4 moves them, and
+`knowledge_objects` will read DIFFER for that reason alone.
 
 **A2–A4 are wall-clock, not work.** Nothing accelerates them; a manual run is a
 diagnostic, not a night. That is the whole reason the clock had to start before
@@ -171,9 +192,18 @@ The release ships on Lane A. Lane B lands after the tag, in the order B1 → B2,
 with B3 developed in parallel and pinned post-A4.
 
 The honest description of `v0.10-beta` is therefore: **the corpus is measurably
-one corpus, verified by three consecutive independent nights.** Not "the organ is
-the source" — that is S4 — and not "the second brain reasons over it" — that is
-S6 and the executor.
+one corpus, verified by three consecutive independent nights — the last of which
+was the first measured above the disclosure floor (28 user documents against 2
+for the two before it).** Not "the organ is the source" — that is S4 — and not
+"the second brain reasons over it" — that is S6 and the executor.
+
+The footnote is not decoration. Nights 2 and 3 measured two near-empty corpora
+agreeing; night 4 measured a populated one. Dropping the clause would let a
+reader take all three as equivalent evidence, which is exactly the overstatement
+this document exists to prevent. Decided 2026-07-29 (operator): take the streak
+as it stands with the denominator stated, rather than restart for three nights at
+28 — the three-night rule tests stability over time, not a constant denominator,
+and the evidence improves monotonically across the three.
 
 Writing the claim down now is the point. It is much harder to overstate a release
 whose exact wording was fixed before the tag existed.
