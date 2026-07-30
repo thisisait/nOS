@@ -6,34 +6,36 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-07-29 • v0.10-beta release lane, night 3 of 3 pending;
-> CI on `dev` green again, estate not yet converged.
+> Last updated: 2026-07-30 • v0.10-beta gate MET; a CRITICAL landed the same night
+> and is fixed in code; estate not yet converged.
 
 ## Now (current track)
 
-**v0.10-beta release lane — A4 is the last gate (2026-07-29).** Order of operations:
+**A4 landed — the release gate is MET (2026-07-30).** Ledger night `05:31Z`:
+**`agreeStreak: 3`**, six clauses AGREE, `realUserDocs: 28`, `knowledge_objects[fs:]`
+**317/317 exact**. Order of operations:
 [`cortex-s3-s4-workflow-set.md`](plans/cortex-s3-s4-workflow-set.md) · doctrine:
-[`cortex-self-core.md`](plans/cortex-self-core.md). `agreeStreak: 2` (nights 07-28 + 07-29,
-six clauses each); **A4 fires 07-30 05:30 UTC** and is the first night at a real
-denominator — `tools/cortex-seed-fixtures.sh` seeded 26 markdown notes, so `realUserDocs`
-went **2 → 28**, `knowledge_objects[fs:]` reads 317/317 exact, and the 07-29 `--no-ledger`
-dry run already returned AGREE there. **CI on `dev` is green again** after two reds hiding
-behind each other: `risky-shell-pipe` in `pazny.cortex` (sole red since 07-26), then a stale
-E2E expecting `/agent/v1/objects` to 404 on the organ — it is ported deliberately and the
-corpus diff reads both bases through it. **NEXT (operator):** verify A4 landed → converge
-(gitea upgrade recipe FIRST, then a plain run — 7 image pins are ahead of the estate, incl.
-REM-137 CRITICAL) → A5 docs review → KEAP tag (rowRef + the row-`slug` bug) + pin bump + one
-night → `dev→master` → tag. Release wording is fixed in plan §5, denominator footnote and all.
+[`cortex-self-core.md`](plans/cortex-self-core.md).
+
+**The same night found REM-144 (CRITICAL, live-confirmed).** Traefik's dashboard/API was
+anonymously reachable at the edge and `/api/http/middlewares` served both SEC-6 edge
+tokens verbatim — `X-Face-Edge-Token` was `{prefix}_pw_face_edge`, so the leak was the
+**global password prefix**. Fixed in `67792f0c` (route removed, token off the prefix and
+persisted, REM-145 → v3.6.24, plus a gate that makes an ungated route carry a
+justification *field*). **NEXT (operator):** converge — gitea upgrade recipe FIRST, then a
+plain run (7 pins ahead, incl. REM-137 CRITICAL) → verify the edge 404s → A5 docs review →
+KEAP tag (rowRef + row-`slug`) + pin bump + one night → `dev→master` → tag.
+**Open question the fix cannot answer: was 443 reachable from outside this host?** If yes,
+treat the prefix as disclosed. Structural follow-up:
+[`nos-genome-and-organelles.md`](plans/nos-genome-and-organelles.md).
 
 **Blank/uninstall drift → managed-resource manifest (VALIDATED, P1.5 remains).**
-`_blank_dirs` is a hand-maintained allowlist rather than a reconciliation. Plan:
-[`docs/plans/blank-uninstall-managed-resources.md`](plans/blank-uninstall-managed-resources.md).
-**Shipped:** uid stability · derived KEAP `/data` wipe · `uninstall` → the `remove=` ladder ·
-R5 post-removal absence assert. **The supervised end-to-end validation run HAPPENED
-2026-07-22** (`--remove=data`, then `--remove=all --leave`, then a clean all-on install:
-1531 tasks, `failed=0`, 63 containers, 0 unhealthy) — and it found four defects design +
-review had missed (`hidden_fees/06`, `07`). **Remaining: P1.5 managed-resource manifest**
-(disabled-legacy-dir gap — a removal set still cannot answer "what did we ever create?").
+Plan: [`blank-uninstall-managed-resources.md`](plans/blank-uninstall-managed-resources.md).
+Shipped: uid stability · derived KEAP `/data` wipe · `uninstall` → the `remove=` ladder ·
+R5 absence assert. The supervised end-to-end run happened 2026-07-22 (`ok=1531 failed=0`,
+63 containers) and found four defects design + review had missed (`hidden_fees/06`, `07`).
+**Remaining: P1.5 managed-resource manifest** — `_blank_dirs` is a hand-kept allowlist,
+not a reconciliation, so a removal still cannot answer "what did we ever create?".
 
 ## Open follow-ups
 
@@ -82,14 +84,14 @@ review had missed (`hidden_fees/06`, `07`). **Remaining: P1.5 managed-resource m
 - **FS doctrine P3** — AgentKit tool-layer FS path-scoping (`docs/plans/fs-doctrine.md`).
   P1/P1b shipped this cycle (`nos_data_root` resolver + per-user tree); the plan header
   still says "DESIGN (P0) — we are here" and is stale.
-- **Version-pin drift wave (post-Gitea):** ~13 pending, 0 CRITICAL (REM-002
-  Woodpecker resolved). Gitea (REM-099) closed first via the agentic recipe path — the
+- **Version-pin drift wave (post-Gitea):** ~15 pending, **1 CRITICAL** (REM-137 gitea;
+  REM-144 closed 07-30). The "0 CRITICAL" carried here for two weeks was stale —
+  nobody re-derived it. Gitea (REM-099) closed via the agentic recipe path — the
   template for the rest (GitLab REM-016 → 18.11.7, etc.). Mechanical same-org bumps.
-- **Migration severity-enum drift:** `validate_record` lacks `security` (schema
-  has it); Gitea was filed as `minor` as a workaround. Add it to `_SEVERITY_VALUES`.
-- **PG 16→17 cutover** — pg17 verified live beside pg16 on the coexistence
-  track; queued by upgrade-advisor this session (`coexistence_planned`); the actual
-  cutover (logical dump/restore + atomic switch) is still operator-gated.
+- **Migration severity-enum drift:** `validate_record` lacks `security` (schema has
+  it); Gitea filed as `minor` to work around. Add it to `_SEVERITY_VALUES`.
+- **PG 16→17 cutover** — pg17 verified live beside pg16 on the coexistence track,
+  queued (`coexistence_planned`); the cutover itself is still operator-gated.
 - **Security backlog:** ~13 pending / 104 resolved / 4 vendor-blocked / 1 wontfix
   (`docs/llm/security/remediation-queue.json`); dominated by the pin wave above.
   Phase C hardening + Phase D architectural remain.
@@ -99,15 +101,13 @@ review had missed (`hidden_fees/06`, `07`). **Remaining: P1.5 managed-resource m
 
 ## Operator to-dos
 
-- **Hidden fees backlog** — [`docs/hidden_fees/`](hidden_fees/), 7 entries.
-  **Open:** 01 disabled-service overrides · 02 DB-blind healthchecks (closed for
-  miniflux only, the class is not) · 03 leading-digit slugs · 04 `docs/systems`
-  drift · **07 messages that outlive their mode** (4 instances paid, class unpaid;
-  carries an UNDETERMINED mechanism — a TASK banner logged 5 min after the task
-  provably started — recorded deliberately without a guessed remedy).
-  **Closed:** 05 (2026-07-21, on its own written trigger) · 06 (2026-07-22, removal
-  guard vs deploy gate + parity gate). Not urgent by construction — but 07 grew a
-  third branch this cycle: anything that runs silent for minutes must say so first.
+- **Hidden fees backlog** — [`docs/hidden_fees/`](hidden_fees/), 7 entries; 05 + 06
+  closed. **Open:** 01 disabled-service overrides · 02 DB-blind healthchecks (closed
+  for miniflux only, not the class) · 03 leading-digit slugs · 04 `docs/systems` drift ·
+  **07 messages that outlive their mode** (4 instances paid, class unpaid; carries an
+  UNDETERMINED mechanism, recorded deliberately without a guessed remedy). 07 now owns
+  a wider rule too: *a step that cannot do its job must not exit 0* — three instances
+  (drift hook parsing nothing · its POST 401ing · Linux wet-test `0/0 ready`).
 - **TCC grant for /Volumes/SSD1TB** — restic off-site leg fails `operation not
   permitted`; blocks the backup DR round-trip verify (S4 leftover).
 - Optional: fire the uptime-kuma 2.2.1 upgrade recipe (D3; breaking schema,
@@ -132,11 +132,11 @@ review had missed (`hidden_fees/06`, `07`). **Remaining: P1.5 managed-resource m
 
 | Surface | State |
 |---|---|
-| Release | `v0.9-beta` docs complete on `dev`; pre-flight + `ci-local` GREEN; tag pending operator |
+| Release | `v0.10-beta` gate MET (`agreeStreak: 3`); converge + tag pending operator |
 | Last verified | clean all-on install `ok=1531 failed=0`, 63 containers / 0 unhealthy (2026-07-22) |
-| Suites | anatomy **1887 passed / 5 skipped**; `test_hub_render_smoke` fails live-host only (nos-face hub, paused epic) |
+| Suites | anatomy **2102 passed / 5 skipped**; `test_hub_render_smoke` fails live-host only (nos-face hub, paused epic) |
 | Estate | `nos_data_root` = `/Volumes/SSD1TB/nOS/data` (one lever; NOT `configure_external_storage`) |
-| CI | green after clearing **6 pre-existing reds** on dev (the prior "all jobs green" snapshot was wrong): woodpecker gate matched a pre-`84649c17` URL · vaultwarden dead pin · tileserver/spacetimedb allowlist rot · archive link rot · `meta: end_play` `\| bool` filter trap |
+| CI | green on `dev` since 07-29 (lint + a stale organ E2E, two reds hiding behind each other) |
 | Authentik | engine=tofu; self-reconcile preflight = idempotent non-blank converge |
 | Upgrades | Gitea 1.26.4 armed (agent-authored recipe+migration); PG17 coexistence queued |
 | Remediation queue | ~13 pending / 104 resolved / 4 vendor-blocked / 1 wontfix (pin wave dominant) |
