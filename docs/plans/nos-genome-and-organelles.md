@@ -90,13 +90,144 @@ declaring a real ping entrypoint makes the container unhealthy and the STRICT ga
 then fails the whole converge. Routing is the correct lever here; a declared ping
 entrypoint plus `insecure: false` is a follow-up, not part of this.
 
-**Rotation, honestly.** Both edge tokens regenerate in place. The **global password
-prefix cannot rotate without a blank** — every service DB password derives from it.
-Fix 2 removes the prefix from the edge surface going forward. Whether the already-
-exposed prefix warrants a blank turns on one question I cannot answer from here:
-**was 443 reachable from outside this host?** I probed via `--resolve …:127.0.0.1`.
-If `pazny.eu` resolves here for anyone but us — Cloudflare origin, LAN, Tailscale —
-treat the prefix as disclosed.
+**Rotation.** Both edge tokens regenerate in place. The **global password prefix
+cannot rotate without a blank** — every service DB password derives from it.
+
+### 0.1a The open question got answered: yes, it was public
+
+Measured 2026-07-30 ~22:40, while the remediation converge was still in its host
+phase — i.e. against the pre-fix estate.
+
+Public DNS puts every estate hostname on Cloudflare (`188.114.96.9` / `.97.9`).
+Requesting the API **through the Cloudflare edge**, from nothing but the hostname:
+
+```
+--resolve traefik.pazny.eu:443:188.114.96.9   /api/version          → 200
+--resolve traefik.pazny.eu:443:188.114.97.9   /api/version          → 200
+--resolve traefik.pazny.eu:443:188.114.96.9   /api/http/middlewares → 200, 4971 B
+      face-edge@file → X-Face-Edge-Token  (len 26)   PUBLICLY READABLE
+      wing-edge@file → X-Wing-Edge-Token  (len 64)   PUBLICLY READABLE
+```
+
+A first attempt without `--resolve` returned `200` from `192.168.1.64` — the host's
+own dnsmasq override answering for `pazny.eu`. That was not the internet test, but it
+established a second fact worth keeping: the API was also readable by **any device on
+the LAN**, not merely from loopback.
+
+So the disposition is settled. **Treat the global password prefix as disclosed.** The
+blank is not optional, and it is the only way to rotate the prefix.
+
+**Exposure windows, from `git log -S`:**
+
+| since | what was public | ends |
+|---|---|---|
+| **2026-04-27** (`553a2587`, Traefik cutover) | `/api/rawdata` — full edge topology: every router rule, internal backend URL and port | this converge |
+| **2026-05-23** (`5f919db0`, SEC-6) | `X-Wing-Edge-Token` — random 64-hex, but forging it makes Wing trust attacker-supplied `X-Authentik-*` headers | this converge; rotate |
+| **2026-07-18** (`430e94ce`, face) | `X-Face-Edge-Token` = `{prefix}_pw_face_edge` → **the global password prefix** | this converge; needs the blank |
+
+The prefix leg is therefore **12 days**, not three months — the face landed the
+prefix-derived token into an API that had already been open for three months. Neither
+half is a defect on its own; the composition is.
+
+**Stated plainly: exposure is proven, exploitation is not.**
+
+### 0.1c The access log says nobody else came
+
+`~/stacks/infra/traefik/log/access.log` — 50 960 lines, JSON. Filtering
+`RequestHost` to `traefik.*` returns **32 requests, and every one is accounted for**:
+
+| when (UTC) | what | who |
+|---|---|---|
+| 07-24 21:16, 22:11 · 07-27 07:42, 08:45, 10:58, 15:46 | `/` → `/dashboard/` | operator, browsing |
+| **07-30 02:07** | `/api/version`, `/dashboard/`, `/api/overview`, `/api/rawdata`, `/api/http/middlewares` ×2 | the nightly `vulnerability-scan` — this is REM-144 being found |
+| 07-30 18:15 | `/api/version`, `/api/http/middlewares` → **404** | my first probe, against `dev.local` |
+| 07-30 18:16 · 20:32–20:33 | `/api/version`, `/api/rawdata`, `/api/http/middlewares` | my probes, loopback then via Cloudflare |
+
+No scan patterns, no unknown paths, no bursts, nothing at an odd hour. **Zero
+unexplained requests.**
+
+Two honest limits on that:
+
+1. **The log covers 6 days** — first entry `2026-07-24T20:37Z`, no rotated copies; it
+   begins with the current container and everything older died with the previous one.
+   The prefix leg opened 07-18, so **6 of its 12 days are observable and clean; the
+   first 6 are unobservable.** The topology leg (since 04-27) is almost entirely dark.
+2. **`ClientHost` is not usable for attribution here.** One address accounts for
+   46 549 of ~51 000 entries across the whole log — a NAT/proxy artifact, not a
+   client. The evidence above is the *timeline*, not the source address.
+
+### 0.1d Recalibration — what this actually is
+
+The operator's context changes the grading, and it should: **this is a test machine,
+it holds no real personal data, and the password prefix is not reused anywhere else.**
+
+So the correct reading is: a real and publicly-reachable credential exposure, in a
+system where those credentials protect nothing of third-party value, with no evidence
+of access in the window we can see. It is a **hygiene and process failure**, not an
+incident. Concretely:
+
+- **Not** grounds for treating this as a compromise. Nothing suggests one.
+- **Still** grounds for the blank — but as planned rotation, not emergency response.
+  It was already scheduled for tomorrow; nothing needs to move.
+- The lasting value is the *class*: five declarations of "how is this exposed", none
+  compared, and a comment that was false for three months. That is Part 1's case, and
+  it does not depend on how bad this particular instance turned out to be.
+
+### 0.1e File it as non-reportable, for the exercise
+
+`files/anatomy/wing/bin/breach-file.php` writes `gdpr_breaches` (Art 33/34 + NIS2),
+`BreachDeadlines` runs the 24h/72h/1-month clocks, and `breach-deadline-scan` fires
+hourly. **No personal data was exposed, so the honest status is `non-reportable`** —
+but filing it puts the first real record through a compliance path that has never held
+one, which is worth more than the record itself.
+
+**Operator runs it** (a `wing.db` write is not an agent's to make):
+
+```
+php files/anatomy/wing/bin/breach-file.php --json=- <<'JSON'
+{
+  "detected_at": "2026-07-30T02:07:15Z",
+  "aware_at": "2026-07-30T02:07:15Z",
+  "nature": "Traefik dashboard/API anonymously reachable from the public internet; SEC-6 edge-trust tokens and the global password prefix readable",
+  "status": "non-reportable",
+  "risk_level": "low",
+  "affected_subjects": 0,
+  "affected_records": 0,
+  "data_categories": "No personal data. Authentication secrets only: X-Wing-Edge-Token, X-Face-Edge-Token (= global password prefix), plus the full edge topology.",
+  "likely_consequences": "Had it been exploited: forging X-Face-Edge-Token makes the face BFF trust attacker-supplied X-Authentik-* identity headers; the prefix derives every {prefix}_pw_* credential. Test estate, no real personal data, prefix not reused elsewhere.",
+  "measures_taken": "2026-07-30: route removed (traefik_skip_ids), face_edge_token moved off the prefix and persisted, traefik v3.6.24, exposure-justification gate (67792f0c). Prefix rotation via the scheduled blank.",
+  "notes": "Non-reportable: no personal data in scope. Exposure proven through the Cloudflare edge; access log shows 32 requests to the host over 6 days, ALL attributable (operator browsing, the nightly scan, remediation probes) — no evidence of third-party access. Log covers 6 of the 12 prefix-exposure days; earlier is unobservable. Windows: topology 2026-04-27, wing token 2026-05-23, prefix 2026-07-18."
+}
+JSON
+```
+
+### 0.1b File it — the estate has the machinery
+
+`files/anatomy/wing/bin/breach-file.php` writes `gdpr_breaches` (Art 33/34 + NIS2),
+`BreachDeadlines` runs the 24h/72h/1-month clocks, and `breach-deadline-scan` already
+fires hourly. This is exactly the event that machinery exists for, and using it also
+exercises a compliance path that has never had a real record in it.
+
+**Operator runs it** (a `wing.db` write is not an agent's to make):
+
+```
+php files/anatomy/wing/bin/breach-file.php --json=- <<'JSON'
+{
+  "detected_at": "2026-07-30T02:00:50Z",
+  "aware_at": "2026-07-30T02:00:50Z",
+  "nature": "Traefik dashboard/API anonymously reachable from the public internet; SEC-6 edge-trust tokens and the global password prefix disclosed",
+  "status": "detected",
+  "risk_level": "high",
+  "data_categories": "No personal data read directly. Authentication secrets: X-Wing-Edge-Token, X-Face-Edge-Token (= global password prefix), plus full edge topology.",
+  "likely_consequences": "Forging X-Face-Edge-Token makes the face BFF trust attacker-supplied X-Authentik-* identity headers, i.e. impersonation of any user; X-Wing-Edge-Token gives the same against Wing. The prefix derives every {prefix}_pw_* credential in the estate.",
+  "measures_taken": "2026-07-30: route removed (traefik_skip_ids), face_edge_token moved off the prefix and persisted, traefik v3.6.24, exposure-justification gate added (67792f0c). PENDING: prefix rotation via blank; both edge tokens regenerate on the same run.",
+  "notes": "Exposure proven by request through the Cloudflare edge; exploitation NOT evidenced. Windows: topology since 2026-04-27, wing token since 2026-05-23, prefix since 2026-07-18."
+}
+JSON
+```
+
+`affected_subjects` / `affected_records` are deliberately omitted rather than guessed —
+fill them from the Authentik user count if the record is ever escalated.
 
 ### 0.2 The converge
 
@@ -117,6 +248,82 @@ kill a GUI app and take the controlling session with it).
 `127.0.0.1:8082/ping` still `200` and the container healthy; `traefik.pazny.eu` absent
 from `/api/rawdata`'s router list (fetched from loopback); `face_edge_token` in
 `~/.nos/secrets.yml` no longer matches `_pw_` and is ≥ 32 chars.
+
+### 0.2a STOP — the brain is not backed up, and a blank is scheduled
+
+Found while checking backup/reload before tomorrow. This outranks REM-144.
+
+**Every backup source on the external disk fails. Every source elsewhere succeeds.
+7 / 7 and 7 / 7, no exceptions.**
+
+| result | sources |
+|---|---|
+| **FAIL** | `dir-gitea`, `dir-gitlab`, `dir-gitlab-config`, `dir-vaultwarden`, `dir-nodered`, `dir-authentik`, **`keap-db`** — all under `/Volumes/SSD1TB/nOS/data/...` |
+| ok | `mariadb`, `postgres` (via `docker exec`), `dir-n8n` (`/Users/pazny/n8n`), `wing-db`, `nos-state`, `tofu-state`, `authentik-blueprints` — none on the external disk |
+
+Cause, from `~/.nos/backup.log`, identical every night since at least 07-26:
+
+```
+keap-db: sqlite3 .backup of /Volumes/SSD1TB/.../keap/data/keap.db
+Error: unable to open database "...": authorization denied
+```
+
+**TCC.** Not file permissions — this session's shell reads the same file fine. The
+*launchd* context lacks Full Disk Access for `/Volumes`. It is the **same root cause**
+as the restic off-site failure already tracked in `active-work.md` under "TCC grant for
+/Volumes/SSD1TB", which was filed as a backup-DR-verify nuisance. It is not a nuisance:
+`nos_data_root` **is** `/Volumes/SSD1TB/nOS/data`, so "the paths that fail" is very
+nearly "the estate".
+
+**The brain, measured** — `/data/keap.db`, **703 MB**, 52 tables:
+`relations` 5 084 · `concept_relations` 4 643 · `node_descriptions` 2 500 ·
+`node_features` 2 500 · `taxonomy_layout` 2 500 · `taxonomy_nodes_ext` 1 710 ·
+`taxonomy_metadata` 1 216 · `knowledge_objects` 322 · `knowledge_imports` 130 ·
+`data_tables` 5 · `table_rows` 21 · plus the FTS and vector shadow tables.
+
+Taxonomy and descriptions regenerate from `knowledge/canonical/` via `ingest.mjs`;
+embeddings recompute. **The DataTables rows, the import provenance, the review/moderation
+history and anything agent-authored since the last KEAP tag do not.** Exact
+survives/destroyed classification is being finished separately — do not blank until it
+is in hand.
+
+**And the system told us. Six times. At HIGH.**
+
+```
+notifications: "Backup FAILED for 7 source(s): dir-gitea, dir-gitlab, ..."
+  2026-07-25 · 26 · 27 · 28 · 29 · 30    severity=high
+  ntfy_dispatched_at: NULL   mail_dispatched_at: NULL   wing_inbox_read_at: NULL
+  total 6, unread 6
+```
+
+`backup.sh`'s `notify_result()` works — `notify: HTTP 200` every night. The message
+died one hop later, and the reason is exact: it posts `origin_plugin: "backup"`, and
+**there is no `backup` entry in the A9 routing table**, so it fell back to
+`wing-inbox` alone. All **56** registered plugins route `on_high → [wing-inbox, ntfy]`,
+including `backrest-base`, which declares exactly that at `plugin.yml:57`. The host
+backup role has no plugin manifest, so its origin string matches nothing, and an
+unrouted origin silently loses every channel but the inbox nobody opens.
+
+**Actions, in order, before any blank:**
+
+1. **Snapshot the brain now, out of band.** This shell can read the file, so TCC is not
+   in the way here. `VACUUM INTO` gives an online, consistent, compact copy — no stop,
+   no WAL surprise — to a destination *outside* the wipe scope. Do it after the running
+   converge settles.
+2. **Fix the routing origin** — give `roles/pazny.backup` a routing entry (or emit
+   `backrest-base` as the origin) so a failed backup reaches ntfy like all 56 others.
+3. **Fix the TCC context** — grant Full Disk Access to whatever the launchd job
+   executes, or move the host-path sources to a `docker exec` path the way `mariadb`
+   and `postgres` already work (which is *why* those two are the only DB sources that
+   never failed).
+4. **Then** blank.
+
+**The pattern, third instance tonight.** The drift hook parsed nothing and exited 0;
+its notification 401'd and it exited 0; the backup failed 7/7 and reported success at
+the process level while its alarm went to a room with no one in it. Thread D's rule —
+*a step that cannot do its job must not exit 0* — now needs a second clause: **and the
+alarm must reach somebody.** A HIGH that only ever lands in an unread inbox is not an
+alarm, it is a log line.
 
 ### 0.3 Also today, no code
 
