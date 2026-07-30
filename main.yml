@@ -1325,6 +1325,11 @@
         bone_secret: "{% if '_pw_' in (bone_secret | default('')) or (bone_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ bone_secret }}{% endif %}"
         nos_deploy_hmac_secret: "{% if '_pw_' in (nos_deploy_hmac_secret | default('')) or (nos_deploy_hmac_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ nos_deploy_hmac_secret }}{% endif %}"
         wing_edge_token: "{% if '_pw_' in (wing_edge_token | default('')) or (wing_edge_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ wing_edge_token }}{% endif %}"
+        # REM-144: face_edge_token was the only edge secret NOT in this group, so
+        # it stayed at its `{{ global_password_prefix }}_pw_face_edge` template —
+        # and Traefik's anonymous /api/http/middlewares served it verbatim, which
+        # disclosed the PREFIX, not just the token. Same guard as its neighbours.
+        face_edge_token: "{% if '_pw_' in (face_edge_token | default('')) or (face_edge_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ face_edge_token }}{% endif %}"
         # Authentik admin API token (identifier nos-api). Generated HERE and
         # pinned as the token's `key:` in the 00-admin-groups blueprint, so
         # Wing's AUTHENTIK_BOOTSTRAP_TOKEN is known on a SINGLE blank run —

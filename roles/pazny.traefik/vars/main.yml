@@ -41,7 +41,12 @@ traefik_auth_modes:
   rustfs: none              # S3 API, own credentials
   onlyoffice: none          # DocServer for collab (JWT-secured)
   spacetimedb: none         # binary protocol
-  traefik: none             # own dashboard (LAN-only via 127.0.0.1 bind)
+  # REM-144: this said "LAN-only via 127.0.0.1 bind" and was FALSE from batch-21
+  # until 2026-07-30. The bind is real; it was also irrelevant, because the
+  # manifest entry auto-derived an edge router that proxied around it. The id is
+  # in traefik_skip_ids now, so no router is rendered and this entry is unreached
+  # — kept only so the manifest↔auth-mode gate has something to read.
+  traefik: none             # dashboard is NOT routed; see traefik_skip_ids
   offline_maps: none        # public tile server (no Authentik provider entry exists)
 
   # ── Native OIDC (Authentik OAuth2 provider) ────────────────────────────────
@@ -112,6 +117,32 @@ traefik_auth_modes:
   # Everything else falls through to 'proxy' as a safe default — but the
   # explicit catalog above should already cover every manifest entry.
 
+# REM-144: a routed service with auth_mode 'none' is anonymously reachable at the
+# edge. Until this map existed, the ONLY thing standing behind such a decision was
+# an inline comment — and `traefik: none  # LAN-only via 127.0.0.1 bind` was false
+# for months with nothing comparing it to the router actually rendered.
+#
+# The rule (tests/anatomy/test_traefik_exposure_justified.py): every manifest entry
+# with domain_var + port_var that is NOT in traefik_skip_ids and resolves to 'none'
+# MUST appear here. A comment is not a justification; this is.
+#
+# Deliberately absent: traefik itself. It is in traefik_skip_ids, and if anyone
+# removes it from there the gate fails — which is the whole point.
+traefik_auth_none_justification:
+  authentik: >-
+    IS the auth provider. Gating Authentik behind Authentik is a bootstrap
+    deadlock; it ships its own login flow, MFA policy and RBAC.
+  onlyoffice: >-
+    DocServer is called by Nextcloud/BookStack/Outline server-side and secured by
+    a shared JWT (onlyoffice_jwt_secret); a browser session gate would break the
+    editor iframe without adding a check the JWT does not already make.
+  rustfs: >-
+    S3 API with its own signed-request credentials. A forward-auth gate cannot be
+    satisfied by an S3 client and would break every backup target.
+  offline_maps: >-
+    Public tile server by design — read-only, no user data, no Authentik provider
+    entry exists for it.
+
 # Service ids to skip even if their install flag is on (no Traefik router).
 # These either expose a non-HTTP protocol or are intentionally LAN-only.
 # Keep in mind: removing entries here exposes services on Traefik routes —
@@ -119,6 +150,15 @@ traefik_auth_modes:
 traefik_skip_ids:
   - bone             # Bone is on host; published only on 127.0.0.1; reach via Wing UI
   - cortex           # Reasoning organ: pure loopback by design (no route unless explicitly opted in)
+  # REM-144 (CRITICAL, live-confirmed 2026-07-30): Traefik's own dashboard/API.
+  # state/manifest.yml gives this id domain_var + port_var, so services.yml.j2
+  # auto-derived a websecure router with NO authentik@file, upstream = the Docker
+  # host-gateway — i.e. Traefik proxied around the 127.0.0.1:8082 bind that was
+  # supposed to protect it. api.insecure:true then made the ENTIRE API anonymous
+  # over 443, and /api/http/middlewares serves rendered customRequestHeaders
+  # verbatim: both SEC-6 edge tokens, one of which carries the password prefix.
+  # Reach the dashboard at http://127.0.0.1:{{ traefik_dashboard_port }} instead.
+  - traefik
 
 # Service ids whose host-loopback bind is HTTPS (not HTTP). Traefik upstream
 # URL gets the https:// prefix and `serversTransport: noverify` so the
