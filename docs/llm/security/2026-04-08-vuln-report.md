@@ -1,3 +1,110 @@
+# nOS Vulnerability Scan Addendum — 2026-07-30 (Cycle 17, batch-38)
+
+**Batch:** woodpecker, jellyfin, traefik, uptime_kuma, calibreweb · **Probe:** `version_header_leakage` (**first run of this probe type**)
+**Outcome:** 5 queue items added (**REM-144 traefik CRITICAL**, REM-145 traefik HIGH, REM-146 woodpecker LOW, REM-147 jellyfin LOW, REM-148 uptime_kuma MEDIUM); calibreweb clean/re-verified. All five components were **live on the host**, so this batch is evidence-based rather than config-inferred — every claim below came from an actual unauthenticated HTTP request.
+
+The probe went looking for leaked version strings. It found leaked **credentials**.
+
+### 🔴 CRITICAL — [REM-144, no CVE — configuration] Traefik dashboard/API anonymously reachable at the edge, disclosing both SEC-6 edge-trust tokens and `global_password_prefix`
+
+- **Component:** traefik (infra stack, `traefik:v3.6.23`; `roles/pazny.traefik/vars/main.yml`, `templates/traefik.yml.j2`, `state/manifest.yml:145-153`; `install_traefik` default-**on**)
+- **Status:** live-confirmed, unauthenticated, **anonymous from LAN/Tailscale**. Internet reach *unverified* — see honesty note below.
+
+**This overturns a disposition carried since batch-21.** Every prior traefik note recorded the API as safe because the dashboard is *"bound `127.0.0.1:8080` loopback"*. The bind is real. It is also irrelevant.
+
+`state/manifest.yml` gives the `traefik` entry both `domain_var` and `port_var`, so `templates/dynamic/services.yml.j2` auto-derives a file-provider router for it — and `vars/main.yml` sets `traefik_auth_modes.traefik: none`, annotated with the now-false comment *"own dashboard (LAN-only via 127.0.0.1 bind)"*. The router as actually rendered:
+
+```json
+"traefik@file": {"entryPoints":["websecure"], "rule":"Host(`traefik.<tld>`)",
+                 "middlewares":["security-headers@file","compress@file"],
+                 "service":"traefik"}
+"traefik@file" service -> {"url":"http://192.168.65.254:8082"}
+```
+
+No `authentik@file` in that chain, and the backend is the **Docker host-gateway address** — Traefik proxies *around* the loopback bind it was supposed to be protected by. Combined with `api.insecure: true` + `api.dashboard: true` in `traefik.yml.j2`, the entire Traefik API is anonymous over `:443`.
+
+**Live evidence** (unauthenticated GET, Host header only, no cookie or token):
+
+| Endpoint | Result |
+|---|---|
+| `/api/version` | `200` → `{"Version":"3.6.23","Codename":"ramequin"}` |
+| `/dashboard/` | `200` |
+| `/api/overview` | `200` — 54 routers / 52 services / 13 middlewares |
+| `/api/rawdata` | `200`, **35 670 bytes** — complete edge topology: every router rule, internal backend URL, port, middleware |
+| `/api/http/middlewares` | `200`, 4 971 bytes — **the credential leak** |
+
+**The critical leg is secret disclosure, not version disclosure.** `/api/http/middlewares` serves rendered `headers.customRequestHeaders` maps *verbatim*, handing an anonymous client both SEC-6 edge-trust tokens:
+
+```
+face-edge@file  -> X-Face-Edge-Token: <global_password_prefix>_pw_face_edge
+wing-edge@file  -> X-Wing-Edge-Token: <64-hex>
+```
+
+Both tokens exist solely on a premise stated in `middlewares.yml.j2` itself — *"only Traefik (which holds the token) can present it"*, and `customRequestHeaders` REPLACES any client-sent value so *"a peer on `gated_net` cannot pre-poison it."* That premise is now false at the **front** of the proxy rather than behind it:
+
+- **`X-Face-Edge-Token`** is precisely the condition under which the nOS face BFF (`src/hooks.server.ts`) trusts attacker-supplied `X-Authentik-*` identity headers → forge the pair and impersonate **any user, including `nos-admins`**.
+- **`X-Wing-Edge-Token`** defeats Wing's `BasePresenter::startup()` edge gate — the second half of the SEC-6 defence-in-depth pair whose first half (the `127.0.0.1` Caddyfile bind) is bypassable the same way.
+
+**Worst leg — prefix disclosure.** `default.credentials.yml:421` defines `face_edge_token` as the literal template `{{ global_password_prefix }}_pw_face_edge`. The leaked header therefore discloses **`global_password_prefix` in cleartext** (recovered verbatim from the anonymous response on the live host). That single string seeds every unset credential in the `{global_password_prefix}_pw_{service}` family — `woodpecker_agent_secret`, the DB passwords, `mysqld_exporter_password`, `akadmin_password`, the `authentik_oidc_*_client_secret` seed twins. An anonymous reader can **derive** them with no further interaction. This converts an information-disclosure bug into tenant-wide credential compromise.
+
+**Reachability — stated honestly, not overclaimed.** Confirmed anonymous over HTTPS from the **LAN/Tailscale** surface: Traefik binds `0.0.0.0:443` and the only precondition is reaching the host on 443 with the right `Host` header. The hostname *is* publicly resolvable (`dig @1.1.1.1` → Cloudflare `188.114.96.9/97.9`), but **internet reachability could not be verified from inside the LAN**: split-horizon dnsmasq resolves the name to the host's own LAN address, so this batch's "public" curl provably transited the LAN (`remote_ip` was the `192.168.x` host), *not* the Cloudflare edge. Whether CF proxies through to this origin must be checked from an off-net vantage point before rating internet exposure.
+
+**Action** — any one closes the anonymous leg; do at least (1) and (3):
+
+1. Set `traefik_auth_modes.traefik: 'proxy'` so `authentik@file` gates the router, or add `traefik` to `traefik_skip_ids` so no edge router is derived. This is a Tier-1 admin surface; `none` was never defensible for it.
+2. Set `api.insecure: false` in `traefik.yml.j2` — defence in depth even after (1).
+3. **Independently of the routing fix, treat the exposed values as burned:** rotate `global_password_prefix`, `wing_edge_token`, `face_edge_token`. Stop deriving edge tokens from the prefix — `default.credentials.yml:420-421` already carries an `openssl rand -hex 32` comment that `wing_edge_token` honours (it rendered as 64-hex) and `face_edge_token` does **not** (it rendered as the prefix template). Making it independently generated removes the prefix-disclosure leg even if a header leaks again.
+4. Consider a repo gate asserting no manifest entry with a `domain_var` maps to auth mode `none` without an explicit allowlist.
+
+**General lesson — the sharper mirror of batch-34's.** Batch-34 established that `traefik_auth_modes: 'oidc'` means *the edge is open and the app's own login is the only gate*. This batch establishes the harder form: **`'none'` means the edge is open and there is no gate at all** — which, for an infrastructure surface with no login of its own, is simply an anonymous admin API.
+
+### 🟠 HIGH — [REM-145, GHSA-3ccp-42pg-hgv6, no CVE assigned] Traefik — unauthenticated cross-user response poisoning via proxied CONNECT
+
+Published **2026-07-27**, twelve days after the last traefik look and three days after the fix releases. CVSS 4.0 **7.0** (`AV:N/AC:L/AT:P/PR:N/UI:N/VC:N/VI:N/VA:N/SC:H/SI:H/SA:N`), CWE-444. Affects v2.x ≤ 2.11.52 (fix 2.11.53), **v3.6 ≤ 3.6.23 (fix 3.6.24)**, v3.7 ≤ 3.7.8 (fix 3.7.9) — all shipped 2026-07-24. The pinned `v3.6.23` is the **top** of the affected v3.6 range.
+
+`httputil.ReverseProxy` forwards a client `CONNECT` — with a live body stream — to an HTTP/1.1 upstream instead of rejecting it. If the upstream answers a keep-alive **non-2xx without draining the body**, the desynchronised socket returns to Traefik's **shared** connection pool, and the next client to draw it receives responses queued from the attacker's smuggled requests. With a bounded pool, one desync can poison an entire response queue.
+
+Both preconditions were **verified live, not assumed**:
+- **Frontend must be HTTP/2 or HTTP/3** — every edge probe in this batch returned literal `HTTP/2 200` (TLS on `websecure`, h2 via ALPN). HTTP/1.1 frontends are unaffected.
+- **Backend must answer keep-alive non-2xx without draining** — the advisory names Go `net/http` and gunicorn/Flask as still exploitable, and nOS's upstream fleet is full of both: woodpecker-server is Go `net/http`, calibre-web is Flask/Werkzeug (live-confirmed `302 FOUND`).
+
+The default `sanitizePath` is only an **incomplete** mitigation. Not provider-specific.
+
+**Action:** bump `v3.6.23` → `v3.6.24` in `default.config.yml:1869` **and** `roles/pazny.traefik/defaults/main.yml:16` together. Patch-level, no config change. If deferred: `maxIdleConnsPerHost: -1` (disables backend pooling) or the experimental FastProxy implementation.
+
+*N/A this batch:* GHSA-8rxv-jg7p-wvg3 (HIGH, 2026-07-16, Ingress-NGINX RewriteTarget auth bypass) is the **Kubernetes** Ingress-NGINX provider only; nOS runs the Docker + file providers.
+
+### 🟡 MEDIUM — [REM-148, CVE-2026-45618] Uptime Kuma — LiquidJS RCE in notification templates *(and the REM-073 bump silently broke the service)*
+
+The CVE is the smaller half. `CVE-2026-45618` / `GHSA-gf2q-c269-pqgc` is a LiquidJS RCE (`1|valueOf` → `this` filter escape) affecting `liquidjs < 10.26.0`; Uptime Kuma uses LiquidJS for notification templates and shipped the dependency fix in **2.4.0** under an explicit *"Security Fixes"* heading, qualified upstream as *(Admin only/Authenticated only)*. There is **no louislam/uptime-kuma GHSA** for it — release-note-only, invisible to version-keyed scanners, the same detection gap batch-37 recorded for freescout. The pin `2.2.1` predates 2.4.0.
+
+**The operational finding is more urgent than the CVE.** REM-073's `1.23.13 → 2.2.1` major bump (applied 2026-07-24) did close the SSTI — and left the service dead. The container has sat in the 2.x first-run setup wizard for six days: `GET /` → `302 /setup-database`, log ending `2026-07-24T20:49:45Z` with *"db-config.json is not found or invalid: ENOENT … Waiting for user action…"*, and a **zero-byte `kuma.db`** in the data volume. The 1.x database did not survive the major bump.
+
+1. **Uptime monitoring — itself a security control, and the substrate A9 notification fanout leans on — has been dark since 2026-07-24**, uncaught because the container reports *running* and *healthy*.
+2. The instance sits in an **uninitialised setup window** — structurally the Portainer `CVE-2026-55761` class from batch-35, differing only in that Authentik gates the route. Not anonymous, but any authenticated Tier-3 SSO user who browses there can complete the wizard and take the instance as admin.
+
+**Action:** restore the service first (complete/automate `setup-database`, re-provision monitors) and add a probe that **fails** on a `302 → /setup-database`, so a dark monitor stack cannot pass as healthy again. Then bump `2.2.1 → 2.4.0` and re-sync `roles/pazny.uptime_kuma/defaults/main.yml:16` off its stale `"1"` track.
+
+### 🔵 LOW — [REM-146 woodpecker, REM-147 jellyfin] The probe's nominal quarry
+
+Both are anonymous **version oracles at the edge**, and both are anonymous for the same structural reason: `traefik_auth_modes` `'oidc'` attaches no edge middleware.
+
+- **woodpecker** — `GET https://ci.<tld>/version` → `200 {"version":"3.14.1"}`; `/` → `200` SPA shell. No version-bearing *header* (Go `net/http` emits none), so this is body-level. CVE leg clean: OSV for `woodpecker/v3@3.14.1` returns only GHSA-qf34-295c-26v8 (CVE-2026-61549), **Kubernetes-backend-only** and N/A since `WOODPECKER_BACKEND=docker`.
+  **Disposition correction, worth more than the finding:** batch-16, batch-28 *and* the CLAUDE.md SSO trichotomy all record woodpecker as `forward_auth`/route-gated. It is not — `traefik_auth_modes.woodpecker: 'oidc'`, deliberately (a forward-auth gate would be the documented double-login anti-pattern and would 302 the playbook's own Woodpecker API post-wiring). The recorded mitigation was materially false.
+- **jellyfin** — the clearest textbook case, leaking on **both** channels: header `Server: Kestrel`, and `GET /System/Info/Public` → `200` with exact `Version`, container hostname as `ServerName`, and a stable 32-hex server `Id`. Reachable by a **second independent path**: `jellyfin_lan_access` defaults `true`, so the container publishes `0.0.0.0:8096` and the SSO-Auth plugin does not gate the raw port. CVE leg clean at `10.11.10` — every repo advisory re-pulled with fix versions sits at or below the pin. *(v12.0 is at rc3 — pre-release, do not move to it.)*
+
+Filed as LOW because both are pure information disclosure — but an exact-version oracle at an internet-facing edge is what makes the *next* unauth advisory instantly targetable. Note also that `security-headers@file` **strips nothing**: it only adds HSTS/nosniff/XSS/referrer, so any upstream `Server` or `X-Powered-By` passes through the edge untouched.
+
+### ✅ Clean / re-verified — calibreweb
+
+The best-behaved service in the batch, and the control case that makes the pattern legible. `0.6.26` is still the newest janeczku release (previous: 0.6.25, Aug-2025), the repo has **zero** published GitHub advisories, and OSV returns nothing for `calibreweb@0.6.26`. REM-074 and REM-120 stay resolved via the SEC-02 architectural mitigation. *(CVE-2026-25635 and CVE-2026-27810 are upstream **Calibre**, not calibre-web — ruled out again.)*
+
+Probe result **fully mitigated**, both paths: anonymous edge `GET` → `HTTP/2 302` to Authentik (`authentik@file` fires before the app); on the direct loopback port the app leaks no version and **no `Server` header at all**, and sets CSP + `X-Content-Type-Options` + `X-Frame-Options` + HSTS unprompted. `127.0.0.1:8083` + `gated_net` only.
+
+**Standing note, no queue item yet — it deserves one.** The compose template loads `DOCKER_MODS=linuxserver/mods:universal-calibre`, installing the upstream **Calibre binaries inside this image** for ebook conversion. That is an untracked version surface: upstream Calibre CVEs land in this container via the conversion path even though they are not calibre-web bugs, and neither `versions.json` nor any pin covers the mod.
+
+---
+
 # nOS Vulnerability Scan Addendum — 2026-07-29 (Cycle 16, batch-37)
 
 **Batch:** paperclip, tileserver, superset, outline, freescout · **Probe:** unauthenticated_endpoint_scan
