@@ -724,6 +724,28 @@ does exactly this for three other artifacts. No new CI infrastructure. Cross-rep
 symmetry per `cross-repo-contracts.md`: golden fixture in nOS, consumer gate in KEAP,
 version handshake via `/agent/v1/health` `contracts.entity: 1`.
 
+**B2 is now the highest-value item in Thread B, and the reason is a live
+workflow, not an argument.**
+
+The operator's `TechNosIdeas` table (created 2026-07-31) is the intended capture
+surface for exactly the loop this whole estate exists to serve: jot an idea or a
+link in the face, have an agent research it, integrate the result. Its `status`
+column is a full pipeline — `new → unchecked → checked → planned → solved →
+applied → refused` — so it is a workflow, not a scratchpad. *"tuto workflow
+budeme využívat dost… k tomu je nos/face/cortex."*
+
+**The first link of that loop is broken today.** The cortex holds ONE object for
+that table (`table-d237570c-…`, type `table`) and knows nothing about its six
+rows; the table's `graph` metadata is `null`, so nothing materialises. An agent
+searching the cortex for "GeoLibre" or "secrets store" finds nothing. I only read
+those rows because the operator said the table existed and I opened SQLite
+directly — which is the "vibing on the OS, not on nOS" path the estate's own
+doctrine forbids, and the exact thing `syncRows()` exists to make unnecessary.
+
+So B2 is not "materialise rows so Grafana looks nicer". It is the difference
+between the capture workflow working and not working. It moves ahead of B3's
+remaining half.
+
 **B2. `syncRows()` — the first organelle, and it is already designed.**
 `table-graph-metadata-spec.md` §3.1 carries ratified decision **D3 = materialised**;
 `graphMetaSchema` (`shared/contracts/table.ts:291-337`) already accepts
