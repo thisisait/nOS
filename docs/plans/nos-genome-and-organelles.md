@@ -304,19 +304,94 @@ including `backrest-base`, which declares exactly that at `plugin.yml:57`. The h
 backup role has no plugin manifest, so its origin string matches nothing, and an
 unrouted origin silently loses every channel but the inbox nobody opens.
 
+**Cause confirmed by experiment, not inference.** The backup runs under launchd
+(`eu.thisisait.nos.backup.rustfs.plist` → `~/agents/backup-run.sh`). A competing theory
+was that host `sqlite3` cannot open a libSQL store at all — KEAP's own
+`~/keap/src/knowledge/dump.mjs:11-12` warns *"NEVER host sqlite3, which corrupts the
+live libSQL DB"*. **Disproved:** the exact failing operation, run from this session,
+
+```
+sqlite3 <keap.db> ".backup /Volumes/SSD1TB/nos-preblank-20260731/keap.db"
+   → 704 MB in 2.2 s, no error
+```
+
+and `tar` over the failing `dir-authentik` path also succeeds here. Same paths, same
+binaries, same file — different execution context. It is **Full Disk Access on the
+launchd context**, exactly as the `/Volumes`-vs-not split predicted.
+
+### 0.2b The rescue set — taken 2026-07-31, before any blank
+
+`/Volumes/SSD1TB/nos-preblank-20260731/` — a sibling of `nOS/data`, outside every
+entry in `_blank_dirs` *and* outside `_uninstall_source`, so it survives even
+`remove=all`. Carries `README.md` + `SHA256SUMS`.
+
+| file | size | why it was at risk |
+|---|---|---|
+| `keap.db` | 704 MB | destroyed by blank; the `keap-db` source has **never once** succeeded |
+| `wing.db` | 91 MB | `~/wing/app` is in `_blank_dirs`; nightly backup works but is 03:00-old |
+| `openclaw.tar.gz` | 53 KB | `~/.openclaw` — identity, state, attestations; in **no** backup list at all |
+| `nextcloud-data.tar.gz` | 145 MB | `tenants/pazny/shared/nextcloud/data`; destroyed, and deliberately excluded from backup |
+
+**Verified:** all **49** non-vector tables compared live-vs-snapshot, **0 mismatches**
+(`relations` 5 084 · `concept_relations` 4 643 · `node_descriptions` 2 500 ·
+`knowledge_objects` 322 · `data_tables` 5 · `table_rows` 21 · `promotions` ·
+`lint_findings` · `curator_runs` · `curator_visits` · `knowledge_imports`).
+`wing.db`: `events` 40 334 · `remediation_items` 143 · `notifications` 25.
+
+**Caveat, stated rather than buried:** `pragma integrity_check` cannot complete under
+stock sqlite3 — `unknown function: libsql_vector_idx()`. Full structural validation
+needs a libSQL-aware tool. `.backup` copies at page level and every row count matches
+exactly, so the data is believed faithful; the vector index regenerates via
+`keap-embed-sync` in any case. **The restore path has never been exercised.**
+
+### 0.2c What a blank actually destroys — read before running it
+
+`remove=data` deletes `_blank_dirs` (`tasks/removal-set.yml:74-231`). Five things in
+that map are not what one would assume:
+
+1. **`~/.nos` is NOT deleted** — only `secrets.yml` (`blank-reset.yml:290-293`).
+   `state.yml`, `events-fallback.db`, `keap-consolidate-state.json` and **the
+   `cortex-corpus-diff.json` agreement ledger** all survive. That is the failure mode
+   the harness documents against itself at `cortex-corpus-diff.py:1273-1311`: *"the
+   store was REBUILT under a surviving ledger"* → `feeder-ledger-ahead-of-store`.
+   **Expect the streak to void and a night or two of noisy findings.** Not a defect —
+   but decide deliberately whether to reset the ledger with the store.
+2. **wing.db is destroyed, audit chain and all.** `blank-reset.yml:69-70` states
+   *"Audit-log rows in wing.db are NEVER cleared (regulatory requirement, enforced
+   inside the loader)"* — true of the **plugin post_blank hook**, and then
+   `wing_app_dir` is deleted wholesale at `removal-set.yml:229`. The guarantee holds
+   at the layer that states it and is silently void one layer down. A hash chain
+   cannot be recomputed; this contradicts a shipped gov-compliance control and belongs
+   in `hidden_fees`.
+3. **DataTables come back empty even of demo content.** `deploy/seed-fixtures.mjs` is
+   marker-gated on `~/keap/.fixtures-seeded`, which **survives** the blank, so the
+   re-seed is skipped.
+4. **`tenants/pazny/shared/nextcloud/data` (148 MB) is destroyed.** The "user files
+   survive a blank" doctrine covers `tenants/<slug>/users/**`, not `shared/**` —
+   `nextcloud`, `kiwix`, `maps` and `jellyfin` are all in `_blank_dirs`.
+5. **Changing the password prefix at the prompt auto-promotes `destroy_state: true`**
+   (`main.yml:1124-1131`), regenerating APP_KEYs, encryption keys and JWT secrets
+   alongside the passwords. The Bluesky PLC rotation key is preserved regardless. This
+   is *intended* and announced — and it is precisely what a REM-144 prefix rotation
+   wants. Just know that pressing a new prefix does more than change passwords.
+
+And one that makes the whole thing worse: **the pre-wipe backup prints a green banner
+whether or not it worked.** `tasks/pre-wipe-backup.yml` runs `~/.nos/backup.sh`, whose
+`run_keap_db` returns 0 on failure, so *"✓ copy #1 refreshed"* and *"✓ off-site
+snapshot committed"* appear over a bucket containing no KEAP data. Fourth instance of
+the class tonight, in the most dangerous possible place.
+
 **Actions, in order, before any blank:**
 
-1. **Snapshot the brain now, out of band.** This shell can read the file, so TCC is not
-   in the way here. `VACUUM INTO` gives an online, consistent, compact copy — no stop,
-   no WAL surprise — to a destination *outside* the wipe scope. Do it after the running
-   converge settles.
-2. **Fix the routing origin** — give `roles/pazny.backup` a routing entry (or emit
-   `backrest-base` as the origin) so a failed backup reaches ntfy like all 56 others.
-3. **Fix the TCC context** — grant Full Disk Access to whatever the launchd job
-   executes, or move the host-path sources to a `docker exec` path the way `mariadb`
-   and `postgres` already work (which is *why* those two are the only DB sources that
-   never failed).
-4. **Then** blank.
+1. ~~Snapshot the brain~~ — **DONE**, §0.2b.
+2. **Fix the routing origin** — `roles/pazny.backup` has no plugin manifest, so its
+   `origin_plugin: "backup"` matches nothing and A9 falls back to inbox-only. Give it
+   an entry (or emit `backrest-base`) so a failed backup reaches ntfy like all 56.
+3. **Fix the launchd context** — grant Full Disk Access to `~/agents/backup-run.sh`'s
+   interpreter, or move host-path sources onto the `docker exec` path that is *why*
+   `mariadb` and `postgres` are the only DB sources that never failed.
+4. **Make `run_keap_db` propagate its failure** so the pre-wipe banner can go red.
+5. **Then** blank.
 
 **The pattern, third instance tonight.** The drift hook parsed nothing and exited 0;
 its notification 401'd and it exited 0; the backup failed 7/7 and reported success at
