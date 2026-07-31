@@ -31,9 +31,12 @@ services:
       # role's compose template; this placeholder env var is harmless +
       # surfaces the plugin's identity in `docker inspect grafana`.
       _NOS_PLUGIN: "grafana-base"
-{% if install_wing | default(install_php | default(true)) %}
+{% if (install_wing | default(install_php | default(true))) or (install_keap | default(false)) %}
       # frser-sqlite-datasource backs the Wing SQLite datasource (uid
-      # wing_sqlite) provisioned by the grafana-wing composition plugin.
+      # wing_sqlite, grafana-wing) AND the KEAP cortex store (uid keap_sqlite,
+      # grafana-keap). Gate covers BOTH: a keap-without-wing host still needs
+      # the plugin, and the prior install_wing-only gate would have left the
+      # cortex datasource provisioned against an uninstalled plugin.
       # Gated on the SAME install_wing condition as the datasource + the
       # wing.db bind-mount (roles/pazny.grafana) so plugin + datasource +
       # dashboards always provision together. The prior grafana_dashboards-

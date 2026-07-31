@@ -46,6 +46,16 @@ services:
       # ingest on api.dev.local/api/v1/events).
       - {{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}:/var/lib/grafana/wing:ro
 {% endif %}
+{% if install_keap | default(false) %}
+      # KEAP cortex store — read-only mount of the data/ dir (.db + -wal + -shm)
+      # so frser-sqlite-datasource can query taxonomy_nodes_ext, relations,
+      # knowledge_objects and the DataTables rows for the cortex dashboards.
+      # Same mode=ro discipline as wing: the KEAP container is a live writer.
+      # NOTE: this is a libSQL store. Plain tables read fine; the vector index
+      # is a virtual table stock SQLite cannot open, so dashboards must not
+      # SELECT from embeddings_vec_idx_shadow.
+      - {{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}:/var/lib/grafana/keap:ro
+{% endif %}
     environment:
       # Install-internal env (admin password, server domain, anti-telemetry).
       GF_SECURITY_ADMIN_USER: "{{ grafana_admin_user | default('admin') }}"

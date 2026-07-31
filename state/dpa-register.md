@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 75 (71 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (69)
+- **Processing activities:** 76 (72 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (70)
 - **Transfers outside the EU:** 0 activities
 - **Activities engaging a third-party processor:** 0
 
@@ -1019,6 +1019,22 @@ paths, source IPs); durable retention is owned by Loki, not this agent.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Grafana Keap — `svc_grafana-keap`
+- **Purpose:** Composition wiring that provisions the keap.db SQLite datasource into
+Grafana so operators can observe the knowledge layer — taxonomy size and
+shape, typed relations, corpus objects, DataTables row counts — alongside
+the operational Wing dashboards (legitimate interest in service operation,
+Art. 6(1)(f)). It stores nothing itself; the retention horizon is owned by
+keap-base. Read-only, admin-tier access.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`, `tenant_users`
+- **Data categories:** `knowledge_taxonomy`, `knowledge_corpus_metadata`, `datatable_rows`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
