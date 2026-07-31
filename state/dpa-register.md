@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 74 (70 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (68)
+- **Processing activities:** 75 (71 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (69)
 - **Transfers outside the EU:** 0 activities
 - **Activities engaging a third-party processor:** 0
 
@@ -881,6 +881,22 @@ the backups it manages and its own operation logs.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** transient (not persisted)
+- **Storage:** 'host' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
+#### Backup — `svc_backup`
+- **Purpose:** Nightly operational backup (copy #1). Takes logical dumps of MariaDB and
+PostgreSQL, online copies of the Wing and KEAP SQLite stores, tar archives
+of host service data dirs, and ~/.nos state; encrypts them (AES-256-CBC,
+pbkdf2) and writes them to the local RustFS bucket. Exists for disaster
+recovery and for the pre-wipe safety copy taken before a removal. It is
+machinery, not a service: no data subject ever interacts with it.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`, `tenant_users`
+- **Data categories:** `database_dumps`, `service_data_directories`, `operational_state`, `backup_operation_metadata`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 30 days
 - **Storage:** 'host' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 

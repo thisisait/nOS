@@ -446,6 +446,48 @@ block (whether a provider exists to attach), and `authentik_app_tiers` (who may 
 Nothing compares them. For `traefik` they disagreed, and the only thing tying them
 together was a comment that had been wrong for months.
 
+### Corollary: what is not an organelle is not wired — silently
+
+*"backup je taky samozřejmě organella."* Correct, and the reason REM-144's sibling
+defect happened at all.
+
+Every wiring channel in the estate is driven by plugin manifests: A9 notification
+routing, the GDPR Art-30 register, Loki labels, Traefik exposure, the tier ladder,
+Pulse job registration. A component **with** a manifest gets wired. A component
+**without** one does not get *wrong* wiring — it gets **no** wiring, and the fallback
+looks exactly like a decision somebody made.
+
+`roles/pazny.backup` had no manifest. So `origin_plugin: "backup"` matched nothing,
+A9 fell through to inbox-only, and six nights of `Backup FAILED` at severity=high
+went unread while all 56 manifest-carrying components routed the same severity to
+ntfy. Nobody chose that. It was the shape of the hole.
+
+**Measured coverage: 58 of 75 `pazny.*` roles carry a manifest. Seventeen do not** —
+and the list is not the harmless tail one would hope for:
+
+| no manifest | why it matters |
+|---|---|
+| **`bone`** | the organ that **receives** every notification, and cannot declare its own |
+| **`pulse`** | the daemon that **runs** every scheduled job, itself unscheduled and unrouted |
+| `state_manager`, `apps_runner`, `acme`, `iiab_terminal`, `opencode` | runtime components with real surface and real failure modes |
+| `_common_tasks`, `dotfiles`, `mac.*` (3), `linux.*` (5) | installers — arguably out of scope, but that should be a *declared* exemption, not an absence |
+
+Bone and Pulse being outside the model is the sharpest version of the problem: the
+notification bus and the scheduler are the two things everything else reports
+*through*, and neither is describable in the language the estate uses to describe
+everything else.
+
+This is why the genome's organ layer (§Layer 2) is not optional polish. Until every
+runtime component is in the model, "wired correctly" is unfalsifiable — you cannot
+audit a set you cannot enumerate. **A gate belongs here too:** a `pazny.*` role with
+runtime surface must either carry a manifest or appear on an explicit, justified
+exemption list — the same shape as `traefik_auth_none_justification` in Part 0.4,
+for the same reason.
+
+`backup-base` is the first one written back (2026-07-31), and it is a good template
+precisely because backup has no port, no UI and no OIDC: what it declares is the
+irreducible core — an owner, a severity contract, a schedule, and a blast radius.
+
 ### What the common denominator has to do
 
 Not "be one language" — the estate is deliberately polyglot and will get more so:
