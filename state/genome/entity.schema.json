@@ -1,0 +1,236 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://thisisait.eu/nos/schema/entity.schema.json",
+  "title": "nOS entity — the base every organelle inherits",
+  "description": "The abstract nOS entity. It carries the harness every data node needs — compliance, access, cortex indexing, face rendering — as DATA, so a specific organelle inherits it by `allOf` instead of restating it. What may ACT on an entity is deliberately absent: `nos-cortex-lang.md` §2 and the Wing executor §2 both require that a capability must not be addable by data, so opcodes and handlers stay code, per runtime, hash-compared.\n\nDIALECT: draft-07 with `definitions`, matching 6 of the 7 existing schemas in state/schema/. The estate already uses `$ref` 18 times — but every one is intra-file. Nothing here is a new idiom; this is the same factoring applied one level up, across a file boundary, which is the thing that has never been done.\n\nEVIDENCE: the required core is not invented. All 72 plugin manifests declare name, version, description, type, requires and gdpr — measured, not assumed.",
+  "definitions": {
+    "identity": {
+      "type": "object",
+      "description": "Who this entity is. Empirically universal: 72/72 manifests carry all four.",
+      "required": [
+        "name",
+        "version",
+        "description",
+        "kind"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,62}[a-z0-9]$",
+          "description": "Lower-kebab. Same charset as the agent-name rule in agent.schema.yaml, so one identifier style spans the estate."
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "description": "Which organelle this is. Open on purpose: the base must not need editing to admit a new kind.",
+          "minLength": 1
+        },
+        "taxonomy_anchor": {
+          "type": "string",
+          "description": "Cortex node this entity hangs from, e.g. `tax:02.02.11`. Optional today; it is what makes `ent:` addressable from cortex-lang once the registry lands (cortex-self-core.md §6b)."
+        }
+      }
+    },
+    "compliance": {
+      "type": "object",
+      "description": "GDPR Article 30 register row. ONE spelling — this supersedes the split between plugin.schema.json (5 required keys, `eu_residency`) and app.schema.json (7 required, `transfers_outside_eu`), which is the divergence `nos_gdpr.py` exists to paper over.",
+      "required": [
+        "purpose",
+        "legal_basis",
+        "data_categories",
+        "data_subjects",
+        "retention_days",
+        "processors"
+      ],
+      "properties": {
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "legal_basis": {
+          "type": "string",
+          "enum": [
+            "consent",
+            "contract",
+            "legal_obligation",
+            "vital_interests",
+            "public_task",
+            "legitimate_interests"
+          ]
+        },
+        "data_categories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "data_subjects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "retention_days": {
+          "type": "integer",
+          "minimum": -1,
+          "description": "Days. 0 = stores nothing itself (the horizon is owned by whatever it wires into). -1 = indefinite / no automatic horizon — 12 manifests use it and plugin.schema.json already allows it, so the genome does too. A schema that rejected live values would be a redesign wearing a schema's clothes."
+        },
+        "processors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "eu_residency": {
+          "type": "boolean",
+          "description": "CANONICAL residency field, and intended to become required. NOT required yet: 3 of 72 manifests (hermes-base, openclaw-base, vaultwarden-base) declare residency ONLY via the deprecated inverse `transfers_outside_eu: false`. That is a rename to make, not missing data — which is exactly the kind of distinction the split spelling was hiding. test_genome_contract.py pins the list so it can only shrink."
+        },
+        "transfers_outside_eu": {
+          "type": "boolean",
+          "description": "DEPRECATED alias — the logical inverse of eu_residency. Retained so the 22 manifests that carry it keep validating; consistency between the two is asserted by the validator, not expressible here. New entities declare eu_residency only."
+        }
+      }
+    },
+    "access": {
+      "type": "object",
+      "description": "Reachability and gating as ONE fact. Today this is split across five uncoordinated declarations — state/manifest.yml (a router exists), traefik_auth_modes (what attaches), traefik_skip_ids (whether to route), the plugin's authentik block (whether a provider exists to attach), and authentik_app_tiers (who may pass). Nothing compares them, and for `traefik` they disagreed: that is REM-144, a publicly reachable API whose only justification was a prose comment that had been false for three months.",
+      "required": [
+        "routed",
+        "gate"
+      ],
+      "properties": {
+        "routed": {
+          "type": "boolean",
+          "description": "Whether an edge router is rendered for this entity at all."
+        },
+        "gate": {
+          "type": "string",
+          "enum": [
+            "none",
+            "forward_auth",
+            "oidc",
+            "header_oidc"
+          ],
+          "description": "What stands in front of it. Mirrors the SSO trichotomy in CLAUDE.md plus the ungated case."
+        },
+        "justification": {
+          "type": "string",
+          "minLength": 40,
+          "description": "Why an ungated route is acceptable. A FIELD, not a comment — the whole point of REM-144 is that a comment cannot be checked and rots silently."
+        },
+        "tier": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "description": "RBAC tier: 1 admin, 2 manager, 3 user, 4 guest."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "routed": {
+                "const": true
+              },
+              "gate": {
+                "const": "none"
+              }
+            },
+            "required": [
+              "routed",
+              "gate"
+            ]
+          },
+          "then": {
+            "required": [
+              "justification"
+            ],
+            "description": "A routed entity with no gate is anonymously reachable. It must say why, in a field a test can read. This clause IS the REM-144 gate, expressed as schema instead of as a hand-written pytest."
+          }
+        }
+      ]
+    },
+    "cortex": {
+      "type": "object",
+      "description": "How the knowledge layer sees this entity.",
+      "properties": {
+        "indexed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the entity is materialised as a cortex object (and therefore embedded, searchable, and visible in /explore)."
+        },
+        "body_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Which fields form the embedded body. Order is significant — it is what the router answers from."
+        },
+        "excluded_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Fields that must never reach an embedding or an index. This is where the boolean the first draft wanted to bolt on actually belongs: as one facet field, scoped, rather than a loose column flag."
+        }
+      }
+    },
+    "face": {
+      "type": "object",
+      "description": "Render hints for the web desktop. Today these are scattered across hub_card, table defs and Wing columns, hand-mirrored between face and KEAP with no gate — and already drifted (face has 11 ColumnKinds to KEAP's 12).",
+      "properties": {
+        "icon": {
+          "type": "string"
+        },
+        "surface": {
+          "type": "string",
+          "enum": [
+            "window",
+            "panel",
+            "embed",
+            "hidden"
+          ],
+          "default": "window"
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    },
+    "entity": {
+      "type": "object",
+      "description": "The base. An organelle composes this with `allOf` and adds its own kind-specific properties.",
+      "required": [
+        "identity",
+        "compliance"
+      ],
+      "properties": {
+        "identity": {
+          "$ref": "#/definitions/identity"
+        },
+        "compliance": {
+          "$ref": "#/definitions/compliance"
+        },
+        "access": {
+          "$ref": "#/definitions/access"
+        },
+        "cortex": {
+          "$ref": "#/definitions/cortex"
+        },
+        "face": {
+          "$ref": "#/definitions/face"
+        }
+      }
+    }
+  },
+  "$ref": "#/definitions/entity"
+}

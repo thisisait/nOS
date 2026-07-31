@@ -297,6 +297,13 @@ jobs:
           php files/anatomy/wing/bin/export-schema.php \
             --output=/tmp/contracts-rebuild/wing.db-schema.sql
 
+      - name: Check genome artifacts are current.
+        # The genome (state/genome/entity.schema.json) is one declaration emitted
+        # into every runtime that needs it. --check diffs in place and exits 1 on
+        # drift, so a hand-edited generated file goes red here rather than
+        # surviving as a fifth uncoordinated copy of the same law.
+        run: python3 tools/genome-codegen.py --check
+
       - name: Diff against committed artifacts.
         run: |
           set -e

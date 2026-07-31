@@ -435,9 +435,27 @@ denominator, and the same law is restated by hand in every organ that needs it:
 | face ↔ KEAP contracts | hand-mirrored, **no gate at all** | already drifted: face has 11 `ColumnKind`s to KEAP's 12, every constraint dropped |
 | **exposure / gating** | **5 places** | **REM-144** |
 
-Across all eight files in `state/schema/` there is **not one `$ref`, `allOf` or
-`$defs`.** Zero composition. The first draft of this plan proposed adding a
-`sensitive` boolean — a fifth uncoordinated copy of the same law. Rejected, correctly.
+**Correction to an earlier draft of this section.** It claimed there was "not one
+`$ref`, `allOf` or `$defs`" in `state/schema/` — that was wrong, and it was cited as
+evidence, so it gets fixed rather than quietly dropped. Measured:
+
+| | count |
+|---|---|
+| `$ref`, intra-file (`#/definitions/…`) | **18**, across `manifest`, `migration`, `upgrade` |
+| `$ref`, **cross-file** | **0** |
+| `allOf` | **0** |
+| `$defs` | 0 (draft-07 `definitions` is the idiom here) |
+
+The real gap is narrower and the argument is better for it: **the estate already knows
+how to factor a shape and `$ref` it — it has simply never done so across a file
+boundary.** `migration.schema.json` reuses `predicate` eleven times inside itself and
+shares nothing with `upgrade.schema.json`, which defines its own `step`. No schema
+composes another; there is no base anything inherits from.
+
+So the genome is not introducing an unfamiliar idiom. It is taking the one already in
+use and applying it one level up. The first draft of this plan proposed adding a
+`sensitive` boolean instead — a fifth uncoordinated copy of the same law. Rejected,
+correctly.
 
 The exposure row is the one that just cost us. "How is service X reached and what
 gates it" is declared in `state/manifest.yml` (a router exists), `traefik_auth_modes`

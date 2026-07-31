@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://thisisait.eu/nos/schema/organelle/data-table.schema.json",
+  "title": "data-table organelle — a KEAP DataTable as an nOS entity",
+
+  "description": "The first organelle, and the one the whole arc started from: table rows are invisible to the cortex, and the operator's next task is filling business data into exactly that blind spot.\n\nIt is deliberately the FIRST because it is the hardest honest case. A DataTable is not a service — it has no port, no container, no OIDC client — so nothing about the base can be satisfied by accident. What it inherits is the part that actually matters everywhere: who may see it, what compliance claims hold over it, whether the cortex indexes it, how the face draws it.\n\nCOMPOSITION: `allOf` [ base entity, this kind's own properties ]. That is the mechanism the estate has never used across a file boundary, and this file is the proof it works.",
+
+  "allOf": [
+    { "$ref": "../entity.schema.json#/definitions/entity" },
+    {
+      "type": "object",
+      "required": ["table"],
+      "properties": {
+        "identity": {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "data-table" }
+          }
+        },
+        "table": {
+          "type": "object",
+          "description": "The DataTable this entity describes.",
+          "required": ["slug", "visibility"],
+          "properties": {
+            "slug": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "description": "KEAP table slug."
+            },
+            "visibility": {
+              "type": "string",
+              "enum": ["public", "user", "manager", "admin"],
+              "description": "Tier visibility. Today state/keap-tables/*.table.yml carries this as a bare YAML string with NO validation — test_face_datatable_defs.py checks only that the key is present, never that the value is legal. Being an enum here is the entire point."
+            },
+            "label_column": {
+              "type": "string",
+              "description": "Column whose value titles a materialised row object (syncRows, roadmap B2)."
+            },
+            "row_objects": {
+              "type": "boolean",
+              "default": false,
+              "description": "Whether rows materialise as individual cortex objects. Ratified decision D3 in docs/specs/table-graph-metadata-spec.md; the contract ships and syncRows() is unbuilt."
+            },
+            "row_object_cap": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 500,
+              "description": "Reject at enable time above this rather than truncating silently. The spec proposes 500 (D5, unratified)."
+            }
+          }
+        }
+      }
+    }
+  ]
+}
