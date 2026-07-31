@@ -294,6 +294,32 @@ def _new_uuid4() -> str:
 _VALID_SEVERITIES = {"critical", "high", "medium", "low", "info"}
 _VALID_CHANNELS = {"wing-inbox", "ntfy", "mail"}
 
+# Fallback routing for an origin with NO entry in the aggregator sidecar.
+#
+# This used to be a flat ["wing-inbox"] for every severity, and that is how six
+# consecutive nights of `Backup FAILED for 7 source(s)` at severity=high reached
+# nobody (2026-07-25..30, all six still unread). `~/.nos/backup.sh` posts
+# `origin_plugin: "backup"`, and roles/pazny.backup is a host role with no
+# plugin manifest — so it matched nothing and silently lost every channel but an
+# inbox no one opens.
+#
+# An origin we cannot resolve is exactly the case where we know least, so it is
+# the worst possible one to route quietly. These values mirror what all 56
+# registered plugins already declare, so an unrouted HIGH now behaves like a
+# routed HIGH instead of worse than one.
+_DEFAULT_CHANNELS_BY_SEVERITY = {
+    "critical": ["wing-inbox", "ntfy"],
+    "high": ["wing-inbox", "ntfy"],
+    "medium": ["wing-inbox"],
+    "low": ["wing-inbox"],
+    "info": ["wing-inbox"],
+}
+
+
+def _default_channels(severity: str) -> list[str]:
+    """Channels for an origin the routing sidecar does not know."""
+    return list(_DEFAULT_CHANNELS_BY_SEVERITY.get(severity, ["wing-inbox"]))
+
 
 def _routing_path() -> Path:
     """Sidecar location for the plugin-aggregator-rendered routing map."""
@@ -304,7 +330,7 @@ def _load_routing() -> dict[str, dict[str, list[str]]]:
     """Read the routing sidecar produced by wing-base post_compose.
 
     Returns a dict keyed by plugin slug; missing file = empty map (callers
-    fall through to the default ["wing-inbox"] channel).
+    fall through to _default_channels(severity)).
     """
     p = _routing_path()
     if not p.is_file():
@@ -320,7 +346,8 @@ def _load_routing() -> dict[str, dict[str, list[str]]]:
 
 def _lookup_channels(origin_plugin: str | None, origin_agent: str | None, severity: str) -> list[str] | None:
     """Look up channel routing for (origin, severity). Returns None when
-    no entry matches — caller falls back to ["wing-inbox"].
+    no entry matches — caller falls back to _default_channels(severity),
+    which keeps ntfy for critical/high rather than dropping to inbox-only.
     """
     key = None
     if origin_plugin:
@@ -393,7 +420,8 @@ def insert_notification(payload: dict[str, Any]) -> tuple[int, str]:
       1. Explicit ``channels:`` in payload (always wins)
       2. Aggregator-rendered routing for the emitter's origin_plugin /
          origin_agent + severity (read from notification-routing.json)
-      3. Default ["wing-inbox"]
+      3. _default_channels(severity) — inbox for medium/low/info,
+         inbox + ntfy for critical/high (an unrouted alarm must still land)
 
     Title/body resolution order (2026-05-17):
       1. Explicit ``title`` + ``body`` in payload (literal strings)
@@ -447,10 +475,10 @@ def insert_notification(payload: dict[str, Any]) -> tuple[int, str]:
             payload.get("origin_agent"),
             severity,
         )
-        channels = routed if routed else ["wing-inbox"]
+        channels = routed if routed else _default_channels(severity)
 
     if not isinstance(channels, list) or not channels:
-        channels = ["wing-inbox"]
+        channels = _default_channels(severity)
     channels = list(dict.fromkeys(channels))  # de-dupe preserving order
     for ch in channels:
         if ch not in _VALID_CHANNELS:

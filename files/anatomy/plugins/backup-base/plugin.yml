@@ -1,0 +1,132 @@
+# =============================================================================
+# backup-base — organelle for the pazny.backup HOST role (copy #1, logical).
+#
+# WHY THIS FILE EXISTS (2026-07-30)
+# ---------------------------------
+# `~/.nos/backup.sh` posts its nightly result to Bone with
+# `origin_plugin: "backup"`. Nothing in the estate owned that name: pazny.backup
+# is a host role, and only plugins get harvested into the A9 routing sidecar. So
+# the lookup matched nothing, and an unmatched origin fell through to
+# ["wing-inbox"] alone.
+#
+# The consequence was not theoretical. From 2026-07-25 to 2026-07-30, every
+# night, the backup correctly detected that 7 of its 14 sources had failed —
+# including keap.db, the entire cortex knowledge store — raised it at
+# severity=high, and delivered it to an inbox nobody opens. Six notifications,
+# six unread, `ntfy_dispatched_at` NULL on all of them. The estate knew and
+# could not say so.
+#
+# Bone now has a severity-aware fallback (an unrouted critical/high still gets
+# ntfy), but that is the safety net. THIS is the fix: backup is an organelle
+# like everything else, it declares its own routing, and it stops being the one
+# component that reports into a void.
+#
+# No compose_extension, no authentik block: pazny.backup renders a launchd job
+# and a shell script. It has no surface, no port, and nothing to gate. What it
+# has — and what an organelle is for — is a severity contract, an owner, a
+# schedule, and a stated blast radius.
+# =============================================================================
+
+name: backup-base
+version: 0.1.0
+description: |
+  nOS nightly backup (copy #1) — logical dumps of MariaDB/PostgreSQL, the Wing
+  and KEAP SQLite stores, host service dirs and ~/.nos state, encrypted into the
+  RustFS bucket. Sibling of backrest-base, which owns copy #2 (off-site restic)
+  and the restore UI. This manifest carries the wiring: A9 severity routing for
+  nightly results and for the restore drill.
+license: GPL-3.0  # plugin manifest is repo-licensed
+
+type:
+  - scheduled-job
+
+_NOS_PLUGIN: "backup-base"
+
+requires:
+  role: pazny.backup
+  feature_flag: configure_backup
+
+# =============================================================================
+# NOTIFICATION — A9 canonical severity routing
+#
+# Emitters carrying `origin_plugin: "backup"`:
+#   ~/.nos/backup.sh          nightly result   info | high (any source failed)
+#   ~/.nos/backup-verify.sh   restore drill    info | high (an artifact would
+#                                              not restore)
+#
+# `on_high` MUST keep ntfy. A backup failure that only reaches the Wing inbox is
+# indistinguishable from no backup failure at all — that is the exact shape of
+# the 2026-07-25..30 miss, and tests/anatomy/test_backup_reaches_the_brain.py
+# pins it from the Bone side.
+# =============================================================================
+notification:
+  on_critical: [wing-inbox, ntfy, mail]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+# =============================================================================
+# PULSE — the restore drill
+#
+# The nightly backup proves a script ran. This proves the RESULT is restorable:
+# it pulls the newest objects out of the bucket, decrypts, decompresses, opens
+# them and asserts the contents are usable. Weekly, because it moves ~1 GB.
+#
+# docs/backup-architecture.md carried the DR round-trip as "never verified" for
+# months. It stays never-verified until something verifies it on a schedule —
+# an operator intending to test restores is not a control.
+# =============================================================================
+pulse:
+  jobs:
+    - name: backup-restore-drill
+      runner: subprocess
+      # Absolute path, /Users/ prefix — inside PulsePresenter's SEC-8 allowlist,
+      # and the basename is not a shell interpreter (BANNED_BASENAMES).
+      command: "{{ backup_verify_command }}"
+      schedule: "30 7 * * 0"     # Sun 07:30 UTC — clear of the 01:00 backup and the 04:15-05:30 KEAP chain
+      jitter_min: 15
+      max_runtime_s: 1800        # fetch + gunzip of a ~700 MB store, with headroom
+      max_concurrent: 1
+
+# =============================================================================
+# OBSERVABILITY — Loki labels
+# =============================================================================
+observability:
+  loki:
+    labels:
+      app: backup
+      stack: host
+      tier: "1"
+
+# =============================================================================
+# GDPR — Article 30 register row
+#
+# This organelle is unusual and the register should say so plainly: backup does
+# not collect anything of its own, it makes a SECOND COPY of everything every
+# other service holds. Its data categories are therefore the union of the
+# estate's, and its retention is the one that actually bounds how long personal
+# data survives an erasure request — an Art-17 deletion in a service is not
+# complete while last night's dump still carries the row.
+# =============================================================================
+gdpr:
+  purpose: |
+    Nightly operational backup (copy #1). Takes logical dumps of MariaDB and
+    PostgreSQL, online copies of the Wing and KEAP SQLite stores, tar archives
+    of host service data dirs, and ~/.nos state; encrypts them (AES-256-CBC,
+    pbkdf2) and writes them to the local RustFS bucket. Exists for disaster
+    recovery and for the pre-wipe safety copy taken before a removal. It is
+    machinery, not a service: no data subject ever interacts with it.
+  legal_basis: legitimate_interests
+  data_categories:
+    - database_dumps             # union of every service's categories
+    - service_data_directories
+    - operational_state          # ~/.nos secrets + state, tofu state
+    - backup_operation_metadata  # per-source status, sizes, timings
+  data_subjects:
+    - operators
+    - tenant_users
+  retention_days: 30             # rotate(): daily/weekly/monthly classes, oldest daily horizon
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false    # local bucket; copy #2 off-site is backrest's row

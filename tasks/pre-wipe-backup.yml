@@ -34,6 +34,24 @@
   when: _prewipe_backup_sh.stat.exists
   tags: ['blank', 'reset']
 
+# Name the casualties. "returned non-zero" sends the operator to a 47 MB log at
+# the exact moment they are least able to read one; WHICH source died is the
+# whole decision. Reads the status file backup.sh just finalized.
+- name: "[Pre-wipe] Read which backup sources failed"
+  ansible.builtin.slurp:
+    src: "{{ ansible_facts['env']['HOME'] }}/.nos/backup-status.json"
+  register: _prewipe_status_raw
+  failed_when: false
+  tags: ['blank', 'reset']
+
+- name: "[Pre-wipe] Resolve the failed-source list"
+  ansible.builtin.set_fact:
+    _prewipe_failed_sources: >-
+      {{ ((_prewipe_status_raw.content | default('') | b64decode | from_json).sources | default([]))
+         | rejectattr('success') | map(attribute='name') | list }}
+  failed_when: false
+  tags: ['blank', 'reset']
+
 - name: "[Pre-wipe] Probe restic (synchronous off-site — no async race with the wipe)"
   ansible.builtin.command: restic version
   register: _prewipe_restic
@@ -91,9 +109,12 @@
       {% if not _prewipe_backup_sh.stat.exists %}
       ⚠ backup.sh not yet rendered (first run) — copy #1 NOT refreshed.
       {% elif (_prewipe_copy1.rc | default(1)) != 0 %}
-      ⚠ backup.sh returned non-zero — copy #1 may be stale (see ~/.nos/backup.log).
+      ⚠ backup.sh FAILED for: {{ (_prewipe_failed_sources | default([])) | join(', ') | default('see ~/.nos/backup.log', true) }}
+        Those sources are NOT in copy #1 and therefore NOT in the off-site
+        snapshot either. If any of them is data you cannot rebuild, ABORT at the
+        next interactive pause (Ctrl-C).
       {% else %}
-      ✓ copy #1 refreshed (full backup → RustFS bucket).
+      ✓ copy #1 refreshed (full backup → RustFS bucket), all sources OK.
       {% endif %}
       {% if (_prewipe_restic.rc | default(1)) != 0 %}
       ⚠ restic NOT on PATH — NO synchronous off-site snapshot taken. The captures

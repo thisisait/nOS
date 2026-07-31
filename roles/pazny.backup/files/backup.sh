@@ -49,6 +49,8 @@ DO_WING="{{ 'true' if backup_wing_db else 'false' }}"
 # libsql_vector_idx() which a plain `.dump`/replay cannot reconstruct on host
 # sqlite3. A binary page copy sidesteps that and stays crash-consistent.
 KEAP_DB_PATH="{{ backup_keap_db_path }}"
+KEAP_CONTAINER="{{ backup_keap_container }}"
+KEAP_DB_IN_CONTAINER="{{ backup_keap_db_container_path }}"
 DO_KEAP="{{ 'true' if backup_keap_db else 'false' }}"
 
 # Runtime state side-car: ~/.nos/{secrets,state}.yml (encryption keys, tokens,
@@ -478,19 +480,39 @@ run_wing_db() {
     fi
 }
 
+# The online-backup program, run INSIDE the KEAP container.
+#
+# Why not `VACUUM INTO`: it rebuilds every object, including the libSQL vector
+# index, and stock SQLite has no `libsql_vector_idx()` — it aborts with "SQL
+# logic error". `backup()` is the page-level API; it copies pages and never
+# parses the schema, so the vector index rides along untouched. Verified on the
+# live store: 171 821 pages, 49/49 tables identical to the source.
+keap_backup_js() {
+    cat <<'KEAPJS'
+const { DatabaseSync, backup } = require("node:sqlite");
+const fs = require("fs");
+const src = process.argv[2];
+const dst = process.argv[3];
+try { fs.unlinkSync(dst); } catch (e) { /* first run */ }
+const db = new DatabaseSync(src, { readOnly: true });
+backup(db, dst)
+  .then(function (pages) {
+    db.close();
+    const size = fs.statSync(dst).size;
+    if (size === 0) { process.stderr.write("backup produced 0 bytes\n"); process.exit(1); }
+    process.stderr.write("pages=" + pages + " bytes=" + size + "\n");
+  })
+  .catch(function (e) {
+    process.stderr.write("backup failed: " + e.message + "\n");
+    process.exit(1);
+  });
+KEAPJS
+}
+
 run_keap_db() {
     [[ "${DO_KEAP}" != "true" ]] && return 0
-    if ! command -v sqlite3 >/dev/null 2>&1; then
-        log "keap-db: sqlite3 not on PATH — skipping (install sqlite3 to back up keap.db)"
-        status_append "keap-db" 0 0 0
-        return 0
-    fi
-    if [[ ! -f "${KEAP_DB_PATH}" ]]; then
-        log "keap-db: ${KEAP_DB_PATH} not found — skipping"
-        return 0
-    fi
 
-    local date_str key start dur rc size tmp
+    local date_str key start dur rc size ctmp cjs
     date_str="$(date -u +%Y-%m-%d)"
     key="${date_str}/keap-db.gz${ENC_SUFFIX}"
 
@@ -500,15 +522,80 @@ run_keap_db() {
         return 0
     fi
 
-    # Online backup to a temp file (WAL-consistent, vector-index-safe), then
-    # gzip+encrypt+upload the binary DB.
-    log "keap-db: sqlite3 .backup of ${KEAP_DB_PATH}"
     start=$(now_ms)
+    ctmp="/tmp/nos-keap-backup.$$.db"
+    cjs="/tmp/nos-keap-backup.$$.js"
+
+    # PRIMARY PATH — inside the container.
+    #
+    # This is not a stylistic choice. backup.sh runs from launchd, whose context
+    # has no Full Disk Access for /Volumes, so a host-side read of a store under
+    # nos_data_root fails with `authorization denied`. That is why this source
+    # reported success=false every single night from 2026-07-25 to 2026-07-30
+    # and never once produced an object. Docker Desktop holds the grant and the
+    # container reads the bind mount it already owns, so the whole class of
+    # failure disappears rather than being worked around.
+    if docker exec "${KEAP_CONTAINER}" true >/dev/null 2>&1; then
+        log "keap-db: online backup inside ${KEAP_CONTAINER} (node:sqlite backup())"
+        keap_backup_js \
+          | docker exec -i "${KEAP_CONTAINER}" \
+              sh -c "cat > ${cjs} && node --no-warnings ${cjs} '${KEAP_DB_IN_CONTAINER}' '${ctmp}'" 2>&1 \
+          | while IFS= read -r l; do log "keap-db: ${l}"; done
+
+        # The snapshot either exists and is non-empty, or it does not. That is
+        # the only claim worth branching on — the pipeline above reports rc for
+        # the `while`, not for node.
+        if docker exec "${KEAP_CONTAINER}" test -s "${ctmp}" 2>/dev/null; then
+            docker exec "${KEAP_CONTAINER}" cat "${ctmp}" \
+              | gzip -c \
+              | encrypt_stream \
+              | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
+            rc=$?
+            docker exec "${KEAP_CONTAINER}" rm -f "${ctmp}" "${cjs}" >/dev/null 2>&1 || true
+            dur=$(( $(now_ms) - start ))
+            if [[ "${rc}" -eq 0 ]]; then
+                size=$(s3_size "${key}")
+                log "keap-db: OK (${size} bytes in ${dur}ms) → s3://${S3_BUCKET}/${key}"
+                status_append "keap-db" "${size}" "${dur}" 1
+                return 0
+            fi
+            log "keap-db: upload FAILED (rc=${rc}) — falling back to host sqlite3"
+        else
+            docker exec "${KEAP_CONTAINER}" rm -f "${ctmp}" "${cjs}" >/dev/null 2>&1 || true
+            log "keap-db: in-container backup produced nothing — falling back to host sqlite3"
+        fi
+    else
+        log "keap-db: container ${KEAP_CONTAINER} not available — falling back to host sqlite3"
+    fi
+
+    # FALLBACK — host sqlite3. Correct, and it works when the process running
+    # this script HAS Full Disk Access (an interactive Terminal.app does). Kept
+    # so a stopped container degrades instead of losing the source outright.
+    if ! command -v sqlite3 >/dev/null 2>&1; then
+        log "keap-db: FAILED — no container and sqlite3 not on PATH"
+        status_append "keap-db" 0 "$(( $(now_ms) - start ))" 0
+        return 0
+    fi
+    if [[ ! -f "${KEAP_DB_PATH}" ]]; then
+        log "keap-db: FAILED — ${KEAP_DB_PATH} not found"
+        status_append "keap-db" 0 "$(( $(now_ms) - start ))" 0
+        return 0
+    fi
+
+    local tmp err
+    log "keap-db: sqlite3 .backup of ${KEAP_DB_PATH}"
     tmp="$(mktemp -t nos-keap-XXXXXX)"
-    if ! sqlite3 "${KEAP_DB_PATH}" ".backup '${tmp}'"; then
+    if ! err="$(sqlite3 "${KEAP_DB_PATH}" ".backup '${tmp}'" 2>&1)"; then
         rm -f "${tmp}"
         dur=$(( $(now_ms) - start ))
-        log "keap-db: FAILED (.backup rc!=0)"
+        log "keap-db: FAILED (.backup rc!=0): ${err}"
+        case "${err}" in
+            *"authorization denied"*|*"operation not permitted"*)
+                log "keap-db: ^ this is macOS TCC. The launchd context running this script"
+                log "keap-db:   has no Full Disk Access for /Volumes. Grant it, or keep the"
+                log "keap-db:   KEAP container running so the primary path is used."
+                ;;
+        esac
         status_append "keap-db" 0 "${dur}" 0
         return 0
     fi
@@ -521,7 +608,7 @@ run_keap_db() {
 
     if [[ "${rc}" -eq 0 ]]; then
         size=$(s3_size "${key}")
-        log "keap-db: OK (${size} bytes in ${dur}ms)"
+        log "keap-db: OK via host fallback (${size} bytes in ${dur}ms)"
         status_append "keap-db" "${size}" "${dur}" 1
     else
         log "keap-db: FAILED (rc=${rc})"
@@ -760,7 +847,35 @@ main() {
 
     status_finalize
     notify_result
+
+    # Exit non-zero if ANY source failed.
+    #
+    # Every run_* deliberately returns 0 so one broken source cannot abort the
+    # others — but that made the script as a whole indistinguishable from a
+    # clean run. tasks/pre-wipe-backup.yml checks only this rc, so on
+    # 2026-07-25..30 it printed "✓ copy #1 refreshed" over a bucket holding no
+    # KEAP data at all, every night, while `keap-db` reported success=false in
+    # the very status file this function reads. A pre-wipe gate that cannot go
+    # red is not a gate.
+    local failed
+    failed="$(python3 - <<PY
+import json, os
+try:
+    with open(os.path.expanduser("${STATUS_FILE}")) as f:
+        s = json.load(f)
+except Exception:
+    print("")
+else:
+    print(",".join(x.get("name", "?") for x in s.get("sources", []) if not x.get("success")))
+PY
+)"
+
+    if [[ -n "${failed}" ]]; then
+        log "==== nOS backup done WITH FAILURES: ${failed} ===="
+        return 1
+    fi
     log "==== nOS backup done ===="
+    return 0
 }
 
 main "$@"

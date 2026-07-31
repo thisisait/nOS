@@ -168,6 +168,7 @@ def test_real_plugin_manifests_pass_validator():
 				cmd
 				.replace("{{ playbook_dir }}", "/Users/pazny/projects/nOS")
 				.replace("{{ wing_app_dir }}", "/Users/pazny/wing/app")
+				.replace("{{ backup_verify_command }}", "/Users/pazny/.nos/backup-verify.sh")
 			)
 			# Manual prefix check (mirrors PHP).
 			allowed = (

@@ -38,6 +38,14 @@ backup_wing_db: "{{ install_wing | default(true) }}"
 backup_wing_db_path: "{{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}/wing.db"
 backup_keap_db: "{{ install_keap | default(false) }}"
 backup_keap_db_path: "{{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}/keap.db"
+# Container that already has keap.db bind-mounted. The backup runs INSIDE it
+# (node:sqlite `backup()`), which is what makes the source work at all: the
+# launchd context that runs backup.sh has no Full Disk Access for /Volumes, so
+# every host-path read under nos_data_root fails with "authorization denied".
+# Docker Desktop does have the grant, and the container reads its own mount.
+# `keap_db_container_path` is where the store lives INSIDE that container.
+backup_keap_container: "{{ keap_container_name | default('iiab-keap-1') }}"
+backup_keap_db_container_path: "/data/keap.db"
 
 # Runtime state side-car: ~/.nos/{secrets,state}.yml → nos-state.tar.gz.
 # Restore of this is GATED behind restore_state=true (it can clobber a NEWER
@@ -98,6 +106,14 @@ backup_home_dir: "{{ ansible_facts['env']['HOME'] }}/.nos"
 backup_status_file: "{{ backup_home_dir }}/backup-status.json"
 backup_log_file: "{{ backup_home_dir }}/backup.log"
 backup_script_path: "{{ backup_home_dir }}/backup.sh"
+
+# ── Restore drill (backup-verify.sh) ──────────────────────────────────────
+# A backup nobody has restored is a hypothesis. The drill fetches the newest
+# objects from the bucket, decrypts + decompresses them, opens them and asserts
+# the contents are usable — never touching live data.
+backup_verify_script_path: "{{ backup_home_dir }}/backup-verify.sh"
+backup_verify_log: "{{ backup_home_dir }}/backup-verify.log"
+backup_verify_result: "{{ backup_home_dir }}/backup-verify.json"
 # RustFS (on-host copy #1) agent label. Was "eu.thisisait.nos.backup" — COLLIDED
 # with the Restic off-site path (tasks/backup.yml), which wrote the SAME plist
 # path/Label, so enabling both silently clobbered one. Now ".rustfs" vs the

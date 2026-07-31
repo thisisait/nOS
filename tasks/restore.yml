@@ -539,7 +539,7 @@
              | map(attribute='file') | list | last }}
 
     - name: "[Restore][keap-db] Stop keap container (frees the WAL lock)"
-      ansible.builtin.command: "{{ docker_bin | default('docker') }} stop iiab-keap-1"
+      ansible.builtin.command: "{{ docker_bin | default('docker') }} stop {{ backup_keap_container | default('iiab-keap-1') }}"
       changed_when: true
       failed_when: false
 
@@ -586,7 +586,7 @@
           keap container is being restarted. Pick a different restore_date, then retry.
   always:
     - name: "[Restore][keap-db] Ensure keap container is restarted"
-      ansible.builtin.command: "{{ docker_bin | default('docker') }} start iiab-keap-1"
+      ansible.builtin.command: "{{ docker_bin | default('docker') }} start {{ backup_keap_container | default('iiab-keap-1') }}"
       changed_when: true
       failed_when: false
 

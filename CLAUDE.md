@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~50 Docker services organized into 74 Ansible roles under the `pazny.*` namespace, 70 anatomy plugins for cross-service wiring, SSO (Authentik), secrets vault (Infisical), a unified web-desktop (nOS face), AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `nos --remove=data --confirm` (legacy `blank=true`) wipes everything and reinstalls from scratch.
+**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~50 Docker services organized into 74 Ansible roles under the `pazny.*` namespace, 71 anatomy plugins for cross-service wiring, SSO (Authentik), secrets vault (Infisical), a unified web-desktop (nOS face), AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `nos --remove=data --confirm` (legacy `blank=true`) wipes everything and reinstalls from scratch.
 
 `nOS` is the open-source reference implementation behind [**This is AIT — Agentic IT**](https://thisisait.eu). Forked from geerlingguy/mac-dev-playbook → roles renamed under the `pazny.*` namespace.
 

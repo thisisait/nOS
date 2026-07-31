@@ -2746,6 +2746,13 @@ vaultwarden_sso_only: false
 # See docs/backup-architecture.md + roles/pazny.backup/README.md + docs/restore-runbook.md.
 # ==============================================================================
 
+# Restore-drill entrypoint. Defined HERE, not in the role, because the
+# backup-base plugin manifest registers it as a Pulse command and the plugin
+# loader runs during core-up — before any role default is in scope. Stock Jinja
+# only (subscripting, no filters): this value lands in the `{{ vars }}` namespace
+# the loader eagerly resolves.
+backup_verify_command: "{{ ansible_facts['env']['HOME'] }}/.nos/backup-verify.sh"
+
 backup_schedule_hour: 3                          # local-time 03:00 (off-site Restic staggered to 04:00)
 backup_schedule_minute: 0
 backup_target_bucket: "backups"

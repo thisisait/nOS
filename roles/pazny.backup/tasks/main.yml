@@ -27,6 +27,16 @@
   # lint-friendly and executable stand-alone for debugging). `template:`
   # accepts any source path, so reading from files/ is fine.
 
+- name: "[backup] Render backup-verify.sh (restore drill)"
+  ansible.builtin.template:
+    src: "{{ role_path }}/files/backup-verify.sh"
+    dest: "{{ backup_verify_script_path }}"
+    mode: '0700'
+  # The drill pulls what is ACTUALLY in the bucket, decrypts it, opens it and
+  # asserts the contents are usable. Without it, "we have backups" is a claim
+  # about a script's exit code rather than about restorable data — which is how
+  # keap.db went 6+ nights with zero successful backups and nobody noticed.
+
 - name: "[backup] Ensure status file exists (empty skeleton)"
   ansible.builtin.copy:
     dest: "{{ backup_status_file }}"
