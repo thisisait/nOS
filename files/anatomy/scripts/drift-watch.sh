@@ -16,7 +16,7 @@
 # Env (Pulse job provides):
 #   NOS_REPO                  repo root (default: derived from script path)
 #   WING_EVENTS_HMAC_SECRET   Bone HMAC seed; unset → metric-only, no notify
-#   BONE_API_URL              default http://127.0.0.1:9000
+#   BONE_API_URL              default http://127.0.0.1:8099 (Bone; 9000 is Wing)
 #   DRIFT_STALE_HOURS         staleness threshold (default 336 = 14 days)
 # Exit 0 always (a watcher must not fail the Pulse runner).
 # =============================================================================
@@ -25,7 +25,7 @@ set -uo pipefail
 
 NOS_REPO="${NOS_REPO:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 HOOK="${NOS_REPO}/hooks/playbook-end.d/20-cve-drift-check.sh"
-BONE_URL="${BONE_API_URL:-http://127.0.0.1:9000}"
+BONE_URL="${BONE_API_URL:-http://127.0.0.1:8099}"
 STALE_H="${DRIFT_STALE_HOURS:-336}"
 
 if ! command -v jq >/dev/null 2>&1; then

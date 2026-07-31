@@ -15,7 +15,7 @@
 #   NOS_TOFU_DIR            — terraform/authentik dir (default: repo root via $0)
 #   WING_EVENTS_HMAC_SECRET — HMAC secret for Bone /api/v1/notifications
 #                             (optional; unset = plan + log only, no notify)
-#   BONE_API_URL            — Bone base URL (default: http://127.0.0.1:9000)
+#   BONE_API_URL            — Bone base URL (default: http://127.0.0.1:8099)
 #   TOFU_PLAN_TIMEOUT_S     — internal plan watchdog (default: 540; kept BELOW
 #                             the job's max_runtime_s=600 so the error-notify
 #                             path fires before Pulse SIGKILLs the run)

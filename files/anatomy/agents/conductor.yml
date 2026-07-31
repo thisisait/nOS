@@ -119,7 +119,13 @@ pulse:
       max_concurrent: 1
       env:
         NOS_REPO: "{{ playbook_dir }}"
-        BONE_API_URL: "http://127.0.0.1:9000"
+        # 9000 is WING. Bone (bone_port, 8099) is what verifies the HMAC on
+        # /api/v1/notifications, so a signed POST to 9000 lands on a service
+        # with no verifier and 401s. Third occurrence of this exact defect —
+        # gitleaks and authentik-tofu-drift were both fixed on 2026-07-08 and
+        # the gitleaks comment claimed it was "the sole outlier". It was not,
+        # and nothing checked. Now pinned by test_bone_port_never_hardcoded.py.
+        BONE_API_URL: "http://127.0.0.1:{{ bone_port }}"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
         DRIFT_STALE_HOURS: "336"
 

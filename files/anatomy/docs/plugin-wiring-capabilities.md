@@ -24,7 +24,7 @@ gaps and the high-signal metadata, and deliberately left the rest.
 | `notification` | `wing-base` aggregator → routing sidecar → Bone fallback | Severity→channel routing. **Canonical shape only** (see below). |
 | `pulse` | `pulse-base` aggregator | Registers scheduled jobs. |
 | `observability` | `_plugin_stack` reads `loki.labels.stack`; DAG edge on `scrape` | `metrics`/`dashboard` are **metadata** today (no aggregator). Stack label is optional — unresolved stack just means "never stack-filtered out". |
-| `ui-extension.hub_card` | *(none yet)* | **Forward-ready metadata.** Wing /hub harvest is pending; cards are authored ahead of it. |
+| `ui-extension.hub_card` | `wing-base` harvest → `data/hub-cards.json` → `HubCardRepository` | **LIVE.** Recorded here as *"(none yet) — harvest is pending"* until 2026-07-31, while `wing-base/plugin.yml` was already harvesting it into `hub_cards`, rendering the sidecar, and `app/Model/HubCardRepository.php` reading it. The one document whose whole job is live-vs-forward truth was wrong on this row — in the safe direction, which is why nobody chased it. |
 
 ## Canonical notification shape (A9)
 

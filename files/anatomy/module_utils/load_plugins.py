@@ -182,9 +182,11 @@ def topological_order(plugins: list[Plugin]) -> list[Plugin]:
     Implicit edges (added automatically):
       * every plugin with an ``authentik:`` block → ``authentik-base``
         (when authentik-base is present in the loaded set)
-      * every plugin with ``observability.scrape:`` → ``prometheus-base``
-        (post-Q1; today the edge is recorded but no-op since prometheus-base
-        isn't loaded yet)
+      * every plugin declaring a Prometheus scrape → ``prometheus-base``.
+        Accepts ``observability.scrape`` and ``observability.prometheus.scrape``;
+        the nested form is the one manifests actually use. (Still a no-op while
+        prometheus-base is not in the loaded set — but now it is a no-op for a
+        stated reason rather than because it never matched anything.)
 
     Cycles raise ValidationError with the offending plugin names.
     """
@@ -200,8 +202,18 @@ def topological_order(plugins: list[Plugin]) -> list[Plugin]:
                 and p.name != "authentik-base":
             edges[p.name].add("authentik-base")
         # implicit edge: scrape declarers wait for prometheus-base
+        #
+        # Read BOTH shapes. This looked only at a top-level `observability.scrape`,
+        # but no manifest has ever used that spelling — the one declarer
+        # (qdrant-base) nests it as `observability.prometheus.scrape`, which is
+        # also the path its own lifecycle hook names
+        # (`register_prometheus_scrape: observability.prometheus.scrape`). So the
+        # edge fired for 0 of 41 observability-declaring plugins: dead code that
+        # read like a working dependency.
         obs = p.manifest.get("observability") or {}
-        if obs.get("scrape") and "prometheus-base" in by_name \
+        prom = obs.get("prometheus") or {}
+        declares_scrape = bool(obs.get("scrape") or prom.get("scrape"))
+        if declares_scrape and "prometheus-base" in by_name \
                 and p.name != "prometheus-base":
             edges[p.name].add("prometheus-base")
 
