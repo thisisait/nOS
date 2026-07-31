@@ -524,6 +524,38 @@ And a fourth that cuts across all three: **everything gets a taxonomy anchor**, 
 organ, an entity kind and a service are all addressable from cortex-lang. That is what
 turns "plugin-like wiring between all services" from a metaphor into an address space.
 
+### The pattern has a name, and the operator already wrote it down
+
+From the operator's own `TechNosIdeas` table (2026-07-31), before reading any of
+this: *"nos-ecs hydrator — Entity-Component-System hydrator … obecně potřebujeme
+hydrátory entit z ext. systémů na naše entity."*
+
+That is the design, named better than this document had named it:
+
+| this plan says | ECS says | which is clearer because |
+|---|---|---|
+| base entity + facets | **entity + components** | components compose; "facets" sounds like views of one object |
+| organelle | **archetype** (a fixed component set) | says outright that the kind IS its component set |
+| "organelle through a gate" for external systems | **hydrator** | names the missing verb: how foreign data BECOMES an nOS entity |
+
+The third row is the one worth stealing. This plan kept saying "core generated,
+edge through a gate" without naming what happens at the gate. It is hydration:
+an external record arrives, a hydrator maps it onto the entity's components, and
+from that point it is an nOS entity like any other — indexed by the cortex,
+governed by the compliance component, gated by the access component.
+
+That also answers the two-languages question more cleanly than "no transpiler"
+did. A hydrator is written in the FOREIGN system's language, because that is
+where the foreign shape is understood; what crosses the boundary is a hydrated
+entity validated against the genome. Nothing needs to be transpiled because
+nothing foreign crosses — only entities do.
+
+**No renaming yet.** `ent:` is already scheduled at S5 and the word "organelle"
+is the operator's; this records that ECS is the same shape under a
+better-established name, so the vocabulary can converge deliberately rather than
+by accident. The `hydrator` concept, though, should be adopted now — it is the
+name for a piece that currently has none.
+
 ### The organ boundary
 
 An organ declares:

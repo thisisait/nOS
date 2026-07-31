@@ -49,6 +49,16 @@
     cmd: "{{ pulse_venv }}/bin/pip install --quiet --disable-pip-version-check --upgrade {{ playbook_dir }}/files/anatomy/pulse"
   register: _pulse_pip_install
   changed_when: _pulse_pip_install.stdout | trim != ""
+  # Only the plist render notified the reload, so a change to the DAEMON SOURCE
+  # landed on disk and the running process kept executing the old code from
+  # memory. Measured 2026-07-31: `2704f4c4 fix(pulse): a job outliving one tick
+  # fired twice` shipped on 07-28, the venv copy had it, and the daemon had been
+  # running since 07-27 12:58 — four converges later it was still double-firing
+  # vulnerability-scan every night, exactly as the fix describes.
+  # pazny.bone already does this correctly (its source sync notifies Restart
+  # bone); pulse was the outlier. `--quiet` prints nothing on a no-op install, so
+  # changed_when above keeps this from restarting the daemon every run.
+  notify: Reload pulse launchd
 
 # ── Service manager: launchd (macOS) | systemd --user (Linux) ─────────────────
 # Linux sibling of the launchd path; env mirrors pulse.plist.j2. Gated on
