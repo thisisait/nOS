@@ -1,3 +1,86 @@
+# nOS Vulnerability Scan Addendum — 2026-07-31 (Cycle 18, batch-39)
+
+**Batch:** kiwix, authentik, grafana, nextcloud, loki · **Probe:** `default_credentials_test` (**first run of this probe type**)
+**Outcome:** 3 queue items added (**REM-151 HIGH** — the probe's finding of record, REM-150 HIGH, REM-149 MEDIUM); kiwix and loki clean/re-verified. **No CRITICAL this batch** — REM-137 (gitea 1.27.0) remains the only pending CRITICAL. All five components were **live on the host**, so versions below are `docker ps` / `occ status` facts rather than pin assumptions.
+
+The probe went looking for vendor default logins. It found that **nOS ships its own**.
+
+### 🟠 HIGH — [REM-151, no CVE — configuration] `global_password_prefix` defaults to `changeme`, and the guard that would catch it is switched off on the default tenant
+
+- **Component:** authentik (+ grafana, nextcloud, mcp_gateway — anything prefix-derived)
+- **Status:** config-derived, **high confidence**, reproducible from a clean clone. **This host is *not* affected** — see below.
+
+Every nOS admin credential is a pure function of one shared string. That is documented and deliberate. What this probe establishes is that the string has a **committed default**, and that the assert meant to reject it **does not run on the default install**.
+
+Four links, each verified independently:
+
+| # | Link | Evidence |
+|---|---|---|
+| 1 | The default prefix is a committed literal | `default.config.yml:8` → `global_password_prefix: "changeme"` |
+| 2 | A fresh clone has no override | `credentials.yml` is ignored at `.gitignore:12`, and `git ls-files` returns nothing → **not tracked** |
+| 3 | The weak-prefix assert is skipped | `main.yml:1257` is gated `when: not (tenant_domain_is_local ...)`; `default.config.yml:131` derives that flag from a `.local/.lan/.test` suffix — and the default `tenant_domain` **is `dev.local`** |
+| 4 | Nothing ever prompts | The prefix prompt (`main.yml:1058`) fires **only** on a confirmed removal; a plain first `ansible-playbook main.yml` never asks, and bare ENTER re-accepts the current value anyway |
+
+So the default path is silent: no prompt, no assert, no warning. What a fresh install then stands up:
+
+```
+authentik   akadmin / changeme_pw_authentik_admin     <- IdP SUPERUSER
+grafana     admin   / changeme_pw_grafana
+nextcloud   admin   / changeme_pw_nextcloud_admin
+mcpo        api-key   changeme_pw_mcpo
+authentik   db pass   changeme_pw_authentik_db
+```
+
+The username halves are shipped literals too (`admin`, `akadmin`). `default.credentials.yml:65` even spells the Nextcloud pair out in a comment as the "Default login".
+
+**Reachability.** Services bind `127.0.0.1` (`services_lan_access: false`), but **Traefik binds `0.0.0.0:443`** and routes all three. `traefik_auth_modes` is `oidc` for grafana and nextcloud and `none` for authentik (it *is* the auth provider), so each router answers `200` anonymously and serves **the service's own login form**. Native OIDC *adds* a "Sign in with Authentik" button — it does not remove local password auth. From LAN/Tailscale, the local-credential path is live for all three.
+
+Second-order effect worth naming: a local admin login **bypasses the Authentik MFA posture entirely**, because MFA is enforced inside the Authentik flow that the local form never enters.
+
+**Verified *not* affected — the one that is handled correctly.** `authentik_secret_key` is declared prefix-derived at `default.credentials.yml:313`, but `main.yml:1299` lazy-regenerates any value containing `_pw_` into `openssl rand -hex 50` and persists it to `~/.nos/secrets.yml`. The Django `SECRET_KEY` that signs authentik session cookies is therefore **not** derivable from the prefix, and the cookie-forgery path that would have made this unconditionally critical **does not exist**. Rated HIGH rather than CRITICAL for that reason plus the operator-inaction precondition; the *impact* if triggered is full-tenant compromise.
+
+**This host is not exploitable.** The operator's untracked `credentials.yml:11` carries a non-default 13-character prefix. REM-151 is about what a **fresh install of this playbook provisions by default** — precisely the probe's remit.
+
+**Relationship to REM-144** (resolved 2026-07-30): complementary, not duplicate. REM-144 was the prefix being *disclosed* through the Traefik API. REM-151 is the prefix being *guessable in the first place*. Both converge on the same root weakness: one shared string, no per-service entropy.
+
+**Action**, in order of preference: (a) generate a random prefix on first run when none is supplied — mirrors the `main.yml:1299` pattern already proven for `secret_key`, and removes the failure mode instead of warning about it; (b) at minimum drop the `not tenant_domain_is_local` condition so the assert also fires on `dev.local`, keeping the documented `-e allow_weak_prefix=true` escape for throwaway boxes; (c) give admin passwords their own per-service generation. Pin with a `tests/anatomy/` gate so `changeme` cannot survive a default-tenant run.
+
+### 🟠 HIGH — [REM-150 / CVE-2026-15583] Unauthenticated SSRF in the `mcp-grafana` sidecar exfiltrates its Grafana service-account token
+
+- **Component:** mcp_gateway — `iiab-mcp-grafana-1`, `mcp/grafana:latest` @ `sha256:9362bcf…`, **built 2026-07-08**
+- **Status:** version-confirmed by build date; **mitigated** to container-adjacent, *not* anonymous remote
+
+**This corrects a standing note.** Previous grafana entries recorded "no separate Grafana component deployed", grep-confirmed against `grafana-image-renderer`. That check was aimed at the wrong sidecar — `docker ps` shows `mcp-grafana` running, rendered by `roles/pazny.mcp_gateway/templates/compose.yml.j2:66-81`.
+
+CVE-2026-15583 (published 2026-07-15, **CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:N/A:N — 8.6**): a confused-deputy SSRF where the attacker-supplied `X-Grafana-URL` header overrides the configured Grafana base URL, so mcp-grafana issues its outbound call — **carrying its environment-configured service-account token** — to an attacker-chosen destination. `PR:N`: no authentication to mcp-grafana required. Fixed in **0.17.1**.
+
+The token is real, not a placeholder: `compose.yml.j2:71` sets `GRAFANA_SERVICE_ACCOUNT_TOKEN`, populated by `tasks/post.yml:108`.
+
+**Why the pin is the bug.** `mcp_grafana_version` defaults to `latest`. The resident image was built **2026-07-08 — seven days before the fix** — and has never been re-pulled. The binary self-reports `(devel)` with no semver, so neither a human nor a version-keyed scanner can read the version off the image; the build date is the only evidence, and it points the wrong way.
+
+**Reachability — mitigated, stated honestly.** `docker port` returns `8000/tcp -> null` (no host publish); it is absent from `state/manifest.yml`, so no Traefik router is derived; the fronting `mcpo` is *both* forward-auth gated (`traefik_auth_modes.mcp_gateway: proxy`) and `--api-key` protected, and opens its own SSE session from static config rather than proxying client headers. I did **not** test mcpo's header handling, so treat edge→SSRF injection as *unverified* rather than ruled out. The realistic path is a foothold in any other container on `iiab_net` or the flat `shared_net` — lateral movement plus credential theft, which is why this is HIGH and not CRITICAL despite the `PR:N` 8.6.
+
+**Action:** pin `mcp_grafana_version` to an explicit `>= 0.17.1` tag instead of `latest`, re-pull and recreate, then **rotate the Grafana service-account token** (a `--tags mcp_gateway` run re-provisions it).
+
+### 🟡 MEDIUM — [REM-149] authentik `2026.5.2` sits inside the 2026-07-15 five-advisory wave's affected range
+
+A five-advisory wave published **2026-07-15** declares affected `<= 2026.5.4` / `<= 2026.2.5`, fixed **2026.5.5 / 2026.2.6**. The pin `2026.5.2` is inside every range: CVE-2026-61574 (HIGH 8.8, RAC endpoints + stored credentials exposed to any authenticated user), CVE-2026-57580 (HIGH 8.7, SAML NameID XML-comment truncation → account takeover), CVE-2026-54730 (HIGH 8.6, Chrome device-trust stage advances without attestation), CVE-2026-55106 (MED 5.3, **unauthenticated** LDAP Source diagnostic endpoint), GHSA-hmrg-vpp4-gj88 (MED 5.4, SSF stream management).
+
+**All five are N/A at today's configuration**, each checked rather than assumed: three are **enterprise-only** features (RAC, Chrome device trust, Shared Signals Framework) and nOS runs CE; the SAML leg needs an inbound SAML **Source** in non-default matching mode and nOS declares none (authentik is the *Provider*, explicitly exempted); the unauth LDAP leg needs a configured LDAP Source and nOS configures none.
+
+So this is **version drift, not live exposure** — but the defence is *which features nOS declines to use*, and it expires silently the day an operator adds an LDAP or SAML Source. Bump `2026.5.2 → 2026.5.6` in `default.config.yml:2232` **and** `roles/pazny.authentik/defaults/main.yml:13`.
+
+> **⚠ Methodology note — this wave was missed for 16 days, and would be missed again.** The authentik entry showed `last_checked: 2026-07-16` but its notes were verbatim the **2026-07-06** batch-22 text: the timestamp had been advanced without a re-read, and the wave landed in that gap. Compounding it, **authentik's advisories are repo-level only** — published at `api.github.com/repos/goauthentik/authentik/security-advisories`, **not** mirrored into GitHub's global advisory database (`GET /advisories/<ghsa>` → **404**), and **OSV has zero records** for the authentik package in any ecosystem. A version-keyed scanner querying OSV or the global GHSA API reports authentik CLEAN and is **wrong**. Query the repo endpoint or miss everything.
+
+### Clean / re-verified
+
+- **kiwix** — `3.8.2` live, and still upstream head (no 3.8.3/3.9.x); **zero** advisories in `kiwix/kiwix-tools` *and* `kiwix/libkiwix`. Probe: **no credential surface exists** — kiwix-serve ships no auth layer, no admin account, no login form, and the compose template passes no credential env at all. The only component in this batch the `changeme` chain does not reach.
+- **loki** — `3.7.2` live. New in window: **CVE-2026-21729** (detected_fields unbounded memory allocation → OOM, CVSS 7.5) affects **all versions prior to 3.7.0**; the pin is above the fix floor → **not affected**. Worth recording because that phrasing would flag the 3.6.x line this deployment sat on before the 3.7 move. Probe: no credential surface (`auth_enabled` is a multi-tenancy header switch, not a login); loopback-only, no Traefik router. `3.7.4` available — bug fixes only, no security section.
+- **grafana core** — `12.4.4` live, CVE-clean. The new **CVE-2026-21723** (< 12.3.3) and **CVE-2026-21724** (< 12.3.6) both fix on branches *below* the 12.4 line, which was never in range. `12.4.6` available as a freshness bump only.
+- **nextcloud** — floating tag `33`; `occ status` reports **33.0.6** while upstream shipped **33.0.7** on 2026-07-23, so the tag has not re-pulled. No advisory published against 33.0.6 → freshness, not exposure. Same floating-tag defect class as REM-150: the resident image can sit arbitrarily far behind the tag with nothing in the repo to show it.
+
+---
+
 # nOS Vulnerability Scan Addendum — 2026-07-30 (Cycle 17, batch-38)
 
 **Batch:** woodpecker, jellyfin, traefik, uptime_kuma, calibreweb · **Probe:** `version_header_leakage` (**first run of this probe type**)
