@@ -74,6 +74,13 @@
     timeout: 10
   when:
     - _jf_startup.status | default(0) == 200
+    # Gate on the USER creation, not merely on the wizard being open. The POST
+    # above accepts 400 and 500 as success, and completing the wizard SEALS a
+    # one-shot window: every later converge then takes the 403 branch into
+    # "DRIFT — manual reset required". Sealing it over a failed admin POST is
+    # the one defect in this file the playbook cannot repair on a re-run, so an
+    # OPEN wizard is strictly better — it stays retryable.
+    - _jf_user.status | default(0) in [200, 204]
   failed_when: false
 
 - name: "[pazny.jellyfin Post] Startup wizard result"

@@ -35,12 +35,16 @@
     {{ docker_bin }} compose -p b2b
     exec -T freescout
     php artisan tinker --execute="echo App\User::where('email','{{ freescout_admin_email }}')->count();"
-    2>/dev/null || echo "0"
+    2>/dev/null
   register: _fs_user_check
   changed_when: false
   failed_when: false
   check_mode: false
   when: _fs_ready.status | default(0) in [200, 302, 500]
+  # The `|| echo "0"` that used to close this line collapsed the probe's OWN
+  # failure into the answer "no admin exists" — two states that mean opposite
+  # things (create one / we do not know). rc is now the discriminator, and the
+  # create below requires rc == 0.
 
 - name: "[pazny.freescout Post] Create admin user via Artisan (first-run only)"
   ansible.builtin.shell: >
@@ -52,11 +56,14 @@
     --lastName="{{ freescout_admin_last_name }}"
     --email="{{ freescout_admin_email }}"
     --password="{{ freescout_admin_password }}"
-    2>&1 || true
+    2>&1
+  register: _fs_user_create
   when:
     - _fs_ready.status | default(0) in [200, 302, 500]
-    - (_fs_user_check.stdout | default('0') | trim) == '0'
-  changed_when: true
+    # rc == 0 means the probe ANSWERED; only then does '0' mean "no admin".
+    - _fs_user_check.rc | default(1) == 0
+    - (_fs_user_check.stdout | default('') | trim) == '0'
+  changed_when: _fs_user_create.rc | default(1) == 0
   failed_when: false
   check_mode: false
   no_log: true
@@ -70,12 +77,47 @@
       php artisan tinker --execute="\$u=App\User::where('email','{{ freescout_admin_email }}')->first(); if(\$u){\$u->password=bcrypt('{{ freescout_admin_password }}'); \$u->save(); echo 'UPDATED';}"
   when:
     - _fs_ready.status | default(0) in [200, 302, 500]
-    - (_fs_user_check.stdout | default('0') | trim) != '0'
+    # Same rc discriminator as the create: with the `|| echo "0"` sentinel gone,
+    # a failed probe yields an EMPTY stdout, which is != '0' and would otherwise
+    # send this branch at a FreeScout we could not read.
+    - _fs_user_check.rc | default(1) == 0
+    - (_fs_user_check.stdout | default('') | trim) != '0'
   register: _fs_pw_update
   changed_when: "'UPDATED' in (_fs_pw_update.stdout | default(''))"
   failed_when: false
   check_mode: false
   no_log: true
+
+# ── The reader: does the owner actually exist now? ────────────────────────
+# Every task above swallows its failure by design (one broken step must not
+# abort the rest), which is exactly why NOTHING above can tell a seeded admin
+# from a green converge over an ownerless helpdesk. This is the one place that
+# observes the EFFECT rather than trusting an attempt, and it is loud — an
+# unowned FreeScout is a service anyone reaching it can claim.
+- name: "[pazny.freescout Post] VERIFY the admin account exists"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p b2b
+    exec -T freescout
+    php artisan tinker --execute="echo App\User::where('email','{{ freescout_admin_email }}')->count();"
+    2>/dev/null
+  register: _fs_owner_verify
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _fs_ready.status | default(0) in [200, 302, 500]
+
+- name: "[pazny.freescout Post] Refuse an ownerless FreeScout"
+  ansible.builtin.fail:
+    msg: |
+      FreeScout answered on its port but has NO account for
+      {{ freescout_admin_email }} (probe rc={{ _fs_owner_verify.rc | default('n/a') }},
+      count={{ _fs_owner_verify.stdout | default('') | trim | default('<empty>', true) }}).
+      The create and password steps above swallow their own failures on purpose,
+      so this is the only signal that the seed did not take. Diagnose with:
+        docker compose -p b2b exec -T freescout php artisan tinker
+  when:
+    - _fs_ready.status | default(0) in [200, 302, 500]
+    - (_fs_owner_verify.rc | default(1) != 0) or ((_fs_owner_verify.stdout | default('') | trim) in ['', '0'])
 
 # ──────────────────────────────────────────────────────────────────────────
 # Native OIDC wiring via the `freescout-oauth` community module

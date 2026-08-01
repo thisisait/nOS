@@ -128,9 +128,13 @@
     - _gitea_container.stdout | default('') | length > 0
     - install_authentik | default(false) | bool
     - (sso_autologin_gitea | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool
+    # `_gitea_idp_guard` is registered from ansible.builtin.command, which has
+    # NO .status and NO .json. Two HTTP-era conditions survived the migration
+    # from the old `uri` probe to the CLI (see the comment above), and
+    # `.status | default(0) == 200` evaluates 0 == 200 → False on every run —
+    # so this guard, one of only TWO fail: statements in all 31 post.yml files,
+    # could never fire. Removed 2026-08-01; stdout is the only real signal.
     - "'authentik' not in (_gitea_idp_guard.stdout | default(''))"
-    - _gitea_idp_guard.status | default(0) == 200
-    - (_gitea_idp_guard.json | default([]) | selectattr('name', 'equalto', 'authentik') | list | length) == 0
 
 # ── A16 (2026-05-17): autowire nOS repo + GitHub pull-mirror ──────────────
 - name: "[pazny.gitea Post] Wire nOS repo + GitHub pull-mirror"
