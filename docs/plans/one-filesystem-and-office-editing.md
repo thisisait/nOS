@@ -36,6 +36,47 @@ one-way ingest into a knowledge index — not a file mirror.
 it:** code-server can only edit its own workspace, and so can Nextcloud, and so
 can face. Three editors, three disjoint worlds.
 
+## 1b. Corrections from the deeper pass, measured
+
+Two claims in the first draft were checked against the live estate. One was
+wrong, and the other turned out to be bigger than a caveat.
+
+### `files_external` is shipped but **DISABLED**
+
+`occ app:list` lists it under `Disabled:`, and the `files_external` command
+namespace does not exist until it is enabled — `occ files_external:list` answers
+*"There are no commands defined in the files_external namespace."* The design
+survives (one `occ app:enable files_external`), but the provisioning task must
+enable it and **read back** that the namespace answers, rather than assume.
+
+### The uid mismatch is real, and it is bigger than this feature
+
+Measured on the live Nextcloud:
+
+```
+user_id      eb2dd86eab913e84f0d2e198af6c9c64af4e3b159d8b0eea2768a95bdd77ebf8
+display_name nOS Admin
+email        admin@pazny.eu
+```
+
+Nextcloud's `user_oidc` keys the account on a **hash of the OIDC subject**. face
+does the opposite on purpose: `src/lib/security/uid.ts` records that
+`X-Authentik-uid` "is a RANDOM hash regenerated whenever the user is
+re-provisioned — e.g. every blank wipes Authentik's DB, so the same person logs
+back in under a NEW uid", and therefore derives a **stable slug from the
+username**: `slugifyUid('Pázny') → 'pazny'`.
+
+The two identities differ **by construction**, and Nextcloud uses precisely the
+unstable kind face rejected. Two consequences:
+
+1. A per-user mount cannot be provisioned by "use the uid" — there is no single
+   uid. Something has to map one to the other, or they have to be made one.
+2. **Nextcloud carries the orphan-on-blank defect face already fixed.** Its user
+   id derives from a value a blank regenerates, so after a blank the same person
+   is a new Nextcloud user and the old files are orphaned under the old hash —
+   the failure `blank-uninstall-managed-resources.md` §2c describes. **That is
+   true today, with or without this feature.**
+
 ## 2. Why the obvious route was wrong
 
 ONLYOFFICE does not open a URL. It needs an editor page carrying a config whose
@@ -64,7 +105,8 @@ because face's uid never reaches Nextcloud.
 
 ## 3. The route that does work
 
-**`files_external` is installed and enabled in the live Nextcloud (`1.25.1`).**
+**`files_external` ships with the live Nextcloud (`1.25.1`) — but it is DISABLED**
+(see §1b). Enabling it is one `occ app:enable`; it is a step, not a given.
 
 Mount each user's VFS subtree into Nextcloud as a per-user **Local** external
 storage. Then:
@@ -116,9 +158,8 @@ Bone VFS  {NOS_DATA_ROOT}/n/{tenant}/users/{uid}/          ← THE source of tru
   external storage has no inotify. Either a Pulse job scans the changed subtree,
   or the operator refreshes and waits. **This is the honest cost of the design**
   and it must be measured, not assumed away.
-- **uid ↔ Nextcloud username must be the same string.** They come from the same
-  Authentik identity, but that is an assumption to *verify* on a live user before
-  building on it.
+- **uid ↔ Nextcloud username are NOT the same string** — verified, not assumed;
+  see §1b. This is decision B below, and it is the load-bearing one.
 - **VirtioFS.** A large per-user tree mounted into a container on macOS is the
   same substrate that made `restic`-in-container unusable (memory
   `backrest-spike-virtiofs-blocker`). Scan performance is a real risk to measure
@@ -132,15 +173,98 @@ Bone VFS  {NOS_DATA_ROOT}/n/{tenant}/users/{uid}/          ← THE source of tru
   own workspace, and the docs should say so instead of implying it edits "the"
   filesystem.**
 
-## 5. Open decisions for the operator
+## 5. The three architectural decisions, explained
 
-1. **Scan cadence** — a Pulse job on a fixed cadence, or on-demand from face when
-   a directory is opened? On-demand is fresher and costs a round-trip.
-2. **Mount scope** — the whole user tree, or only `documents`? Narrow is safer
-   and hides `agents/` from the Files UI.
-3. **Does the operator want the Nextcloud folder writable from the Nextcloud
-   side?** RW makes it a real editor; RO makes Nextcloud a viewer and keeps every
-   write going through Bone (one writer, simpler invariants).
+These were posed as one-line questions and that was not enough to decide on.
+Here is what each one actually trades, with what the research settled.
+
+### Decision A — how does Nextcloud learn about a file it did not write?
+
+**The problem.** An agent, or face, writes `report.docx` into the VFS. Nextcloud
+did not do the write, so its file cache does not know the file exists. Until
+something tells it, the file is invisible in the Files UI — and therefore
+un-openable in ONLYOFFICE.
+
+**What the research settled.** Local external storage has no inotify. Nextcloud's
+own admin manual is explicit: for non-SMB storages, *"set up a cron job to
+periodically rescan the external storage using `occ files_external:scan
+<mount_id>`, with a typical interval of 15 minutes to balance freshness and
+server load."* There is also a global `filesystem_check_changes` setting: `0`
+(the default, and what this estate runs) never checks; `1` checks on every direct
+access — fresher, and it costs a `stat` on every directory listing.
+
+**The three options:**
+
+| | freshness | cost | fails how |
+| --- | --- | --- | --- |
+| **A1 periodic scan** (Pulse job, 15 min) | up to 15 min stale | one scan per interval, whether or not anything changed | a file written at 12:01 is invisible until 12:15 — the operator thinks the write failed |
+| **A2 `filesystem_check_changes = 1`** | immediate on access | a stat per listing, on VirtioFS, forever | slow browsing everywhere in Nextcloud, not just on this mount |
+| **A3 on-demand scan** — face asks Bone/Nextcloud to scan the directory it just wrote to | immediate, targeted | one call per write | a write that bypasses face (an agent) is still invisible until something scans |
+
+**Recommendation: A1 + A3.** The targeted scan makes the interactive path feel
+instant (you wrote it, you see it), and the periodic scan is the floor that
+catches every writer that is not face. A2 pays a permanent cost across the whole
+of Nextcloud to fix a problem confined to one mount.
+
+### Decision B — which identity owns the mount? (the load-bearing one)
+
+**The problem.** `files_external:create … --user <X>` needs a Nextcloud user id.
+The VFS directory is named after face's stable slug. Today those are different
+strings, and Nextcloud's is unstable across a blank (§1b).
+
+| | what it means | cost |
+| --- | --- | --- |
+| **B1 align Nextcloud onto the stable slug** — configure `user_oidc` to key the account on the same username-derived value face uses | one identity end to end; the mount is `--user pazny` and the directory is `users/pazny`; **Nextcloud stops orphaning its own data on a blank** | touches SSO for a live service; existing Nextcloud accounts keep the old hash id and need a migration or a re-blank |
+| **B2 keep both, maintain a mapping** — a table from Nextcloud hash → face slug, consulted at provisioning | no SSO change | a second source of truth for identity, which is the exact class of defect the genome work exists to remove; and it does nothing about the orphan-on-blank |
+
+**Recommendation: B1**, and it is worth doing *even if the office feature is
+dropped*, because the orphan defect is real today. B2 buys a smaller change now
+and a permanent mapping to maintain.
+
+### Decision C — may Nextcloud write into the VFS?
+
+**The problem.** If the mount is read-write, two systems write the same tree:
+Bone (with its realpath-in-scope guard, uid pinning and filename hardening) and
+Nextcloud (with its own rules). If it is read-only, ONLYOFFICE can open a
+document but cannot save it — "otevírání" works, "editace" does not.
+
+| | what you get | what you give up |
+| --- | --- | --- |
+| **C1 read-write** | real editing: ONLYOFFICE saves through Nextcloud straight into the VFS, author correct | two writers on one tree. Bone's guards are bypassed on the Nextcloud path, so the invariants Bone enforces (`G1` filename/UTF-8 hardening, realpath scope) must be re-established or accepted as not applying |
+| **C2 read-only** | one writer (Bone), every invariant holds, no new failure mode | view-only. The stated goal — "otevírání a editaci" — is half met |
+
+**Recommendation: start C2, and treat C1 as a separate decision with its own
+verification.** It matches the operator's own sequencing ("začneme otevřením v
+nové záložce"), it is reversible, and it lets the mount + scan + identity work be
+proven before a second writer is introduced. Moving to C1 later is a config
+change on one mount, not a redesign.
+
+**The dependency worth naming:** C1 without B1 is the worst cell in the matrix —
+a second writer whose identity is unstable across a blank.
+
+## 6. Is this an organelle, and what does it declare?
+
+Yes, and naming it that is not decoration — it is what stops this becoming six
+hand-wired tasks nobody can reconcile later.
+
+An `office-bridge-base` plugin declares:
+
+- **`requires.plugin`**: `nextcloud-base`, `onlyoffice-base` — the bridge is
+  meaningless without both, and the loader's DAG already refuses a plugin whose
+  requirement is absent.
+- **`lifecycle`**: enable `files_external`, create the per-user mount, and
+  **read back** `files_external:list --user <uid>` — the audits' rule, applied
+  before the code exists rather than after an incident.
+- **`pulse.jobs`**: the periodic `files_external:scan` from decision A1, with its
+  interval as a declared var rather than a cron string nobody can find.
+- **`notification`**: the scan job's failure at `on_high` — a scan that stops
+  running is a filesystem that silently stops updating, which is exactly the
+  silent class the two audits were about.
+- **`gdpr`**: mandatory. The bridge gives a second service access to a user's
+  documents; Article 30 wants that written down.
+- **`access`**: unchanged — and stating `route: none` explicitly is what proves
+  the bridge added no new surface, which was the whole reason for choosing it
+  over plan B.
 
 ---
 
