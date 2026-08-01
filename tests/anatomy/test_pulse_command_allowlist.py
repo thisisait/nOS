@@ -25,6 +25,29 @@ import re
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PRESENTER = REPO / "files/anatomy/wing/app/Presenters/Api/PulsePresenter.php"
+CATALOG = REPO / "files/anatomy/scripts/discover-pulse-catalog.py"
+
+
+def _catalog_substitutions() -> dict[str, str]:
+	"""The REAL token→value map, imported from the catalog script.
+
+	Imported rather than mirrored on purpose: a mirrored list is a second
+	source of truth that drifts, and when it drifts the test is the thing
+	that goes green while production breaks.
+	"""
+	import importlib.util
+	import os
+
+	spec = importlib.util.spec_from_file_location("_pulse_catalog", CATALOG)
+	mod = importlib.util.module_from_spec(spec)
+	os.environ.setdefault("NOS_PLAYBOOK_DIR", str(REPO))
+	spec.loader.exec_module(mod)
+	subs = getattr(mod, "_build_substitutions", None)
+	assert callable(subs), (
+		f"{CATALOG.name} no longer exposes `_build_substitutions` — the map was "
+		"renamed and this gate silently stopped covering the real thing"
+	)
+	return subs()
 
 
 def test_pulse_presenter_has_validate_command():
@@ -162,14 +185,20 @@ def test_real_plugin_manifests_pass_validator():
 		# Iterate over each command line.
 		for m in re.finditer(r"command:\s*[\"']?([^\"'\n]+)[\"']?", src):
 			cmd = m.group(1).strip()
-			# Replace Jinja templates with realistic post-render values
-			# so the validator's prefix check passes.
-			cmd_rendered = (
-				cmd
-				.replace("{{ playbook_dir }}", "/Users/pazny/projects/nOS")
-				.replace("{{ wing_app_dir }}", "/Users/pazny/wing/app")
-				.replace("{{ backup_verify_command }}", "/Users/pazny/.nos/backup-verify.sh")
-			)
+			# Substitute the way PRODUCTION does — from the catalog's own map
+			# (see test_catalog_renders_every_token, which pins the same thing
+			# end-to-end).
+			#
+			# This used to be a hand-kept list of .replace() calls, and on
+			# 2026-08-01 that cost a failed converge: backup-base shipped
+			# `{{ backup_verify_command }}` — a var defined NOWHERE — and the
+			# fix applied here was to teach THIS TEST to render it. The gate
+			# went green by being told an answer production did not have; the
+			# catalog passed the literal braces through and Wing 400'd the
+			# upsert. A gate you can satisfy by editing the gate is not one.
+			cmd_rendered = cmd
+			for token, value in _catalog_substitutions().items():
+				cmd_rendered = cmd_rendered.replace(token, value or "/Users/pazny/x")
 			# Manual prefix check (mirrors PHP).
 			allowed = (
 				cmd_rendered.startswith("/opt/homebrew/bin/")

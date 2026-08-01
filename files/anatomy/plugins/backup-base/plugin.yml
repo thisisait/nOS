@@ -83,7 +83,13 @@ pulse:
       runner: subprocess
       # Absolute path, /Users/ prefix — inside PulsePresenter's SEC-8 allowlist,
       # and the basename is not a shell interpreter (BANNED_BASENAMES).
-      command: "{{ backup_verify_command }}"
+      # The token MUST be a name the catalog's substitution map knows
+      # (discover-pulse-catalog.py `_subs`, fed NOS_BACKUP_VERIFY_SCRIPT from
+      # pazny.wing/tasks/post.yml). The map does a literal str.replace, NOT a
+      # Jinja render — an invented token name passes through verbatim and Wing
+      # 400s the upsert, which is exactly how this shipped the first time
+      # (`{{ backup_verify_command }}`, a var that exists nowhere).
+      command: "{{ backup_verify_script_path }}"
       schedule: "30 7 * * 0"     # Sun 07:30 UTC — clear of the 01:00 backup and the 04:15-05:30 KEAP chain
       jitter_min: 15
       max_runtime_s: 1800        # fetch + gunzip of a ~700 MB store, with headroom

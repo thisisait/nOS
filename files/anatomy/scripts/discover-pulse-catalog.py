@@ -103,8 +103,16 @@ def _build_substitutions() -> dict[str, str]:
         "{{ keap_agent_token_rw }}":      _env("NOS_KEAP_AGENT_TOKEN_RW"),
         "{{ keap_agent_token_ro }}":      _env("NOS_KEAP_AGENT_TOKEN_RO"),
         "{{ librarian_wing_api_token }}": _env("NOS_LIBRARIAN_WING_API_TOKEN"),
+        # curator-sweep shipped 2026-07-14 with this token in its env and no
+        # entry here, so Pulse stored the literal braces as the bearer. env is
+        # not covered by the SEC-8 command validator, so it never 400'd — the
+        # agent would simply have 401'd against Wing at run time, silently.
+        # Found 2026-08-01 by test_pulse_catalog_renders_every_token.
+        "{{ curator_wing_api_token }}":   _env("NOS_CURATOR_WING_API_TOKEN"),
         "{{ keap_agent_token_capture }}": _env("NOS_KEAP_AGENT_TOKEN_CAPTURE"),
         "{{ mariadb_root_password }}":    _env("NOS_MARIADB_ROOT_PASSWORD"),
+        # backup-restore-drill (2026-08-01): the weekly DR round-trip.
+        "{{ backup_verify_script_path }}": _env("NOS_BACKUP_VERIFY_SCRIPT"),
         "{{ consolidate_fs_roots }}":     _env("NOS_CONSOLIDATE_FS_ROOTS"),
         "{{ consolidate_db_exclude }}":   _env("NOS_CONSOLIDATE_DB_EXCLUDE"),
         # S2 corpus-in-parallel (docs/plans/cortex-corpus-parallel.md): the two
