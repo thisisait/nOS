@@ -398,7 +398,7 @@ run_volumes() {
 
 run_authentik() {
     [[ "${DO_AUTHENTIK}" != "true" ]] && return 0
-    [[ -z "${AUTHENTIK_TOKEN}" ]] && { log "authentik: no token — skipping"; return 0; }
+    [[ -z "${AUTHENTIK_TOKEN}" ]] && { log "authentik: no token — recording as FAILED"; status_append "authentik-blueprints" 0 0 0; return 0; }
 
     local date_str key start dur rc size tmp
     date_str="$(date -u +%Y-%m-%d)"
@@ -447,7 +447,15 @@ run_wing_db() {
         return 0
     fi
     if [[ ! -f "${WING_DB_PATH}" ]]; then
-        log "wing-db: ${WING_DB_PATH} not found — skipping"
+        # ABSENT IS A FAILURE, NOT A SKIP. The branch four lines above (sqlite3
+        # missing) already records one; this one did not, two lines apart, and
+        # that asymmetry is the whole defect: notify_result derives severity
+        # from the recorded set, so a source that never calls status_append is
+        # neither failed nor absent-of-all and lands in the `info` branch —
+        # "Backup OK - N sources". A DISABLED source (DO_WING != true) still
+        # returns silently above, which is correct: nobody asked for it.
+        log "wing-db: ${WING_DB_PATH} not found — recording as FAILED"
+        status_append "wing-db" 0 0 0
         return 0
     fi
 
@@ -618,7 +626,7 @@ run_keap_db() {
 
 run_nos_state() {
     [[ "${DO_STATE}" != "true" ]] && return 0
-    [[ -d "${NOS_STATE_DIR}" ]] || { log "nos-state: ${NOS_STATE_DIR} missing — skipping"; return 0; }
+    [[ -d "${NOS_STATE_DIR}" ]] || { log "nos-state: ${NOS_STATE_DIR} missing — recording as FAILED"; status_append "nos-state" 0 0 0; return 0; }
 
     local date_str key start dur rc size
     date_str="$(date -u +%Y-%m-%d)"
@@ -662,7 +670,7 @@ run_nos_state() {
 
 run_tofu_state() {
     [[ "${DO_TOFU_STATE}" != "true" ]] && return 0
-    [[ -d "${TOFU_STATE_DIR}" ]] || { log "tofu-state: ${TOFU_STATE_DIR} missing — skipping"; return 0; }
+    [[ -d "${TOFU_STATE_DIR}" ]] || { log "tofu-state: ${TOFU_STATE_DIR} missing — recording as FAILED"; status_append "tofu-state" 0 0 0; return 0; }
 
     local date_str key start dur rc size
     date_str="$(date -u +%Y-%m-%d)"
@@ -717,7 +725,11 @@ run_dirs() {
         path="${DIR_PATHS[$i]}"
         [[ -z "${name}" || -z "${path}" ]] && continue
         if [[ ! -d "${path}" ]]; then
-            log "dir/${name}: ${path} not found — skipping"
+            # Enabled but absent = FAILED, never a silent skip. An unmounted SSD
+            # or a moved nos_data_root would otherwise drop gitea/gitlab out of
+            # the nightly set while A9 still reported "Backup OK - N sources".
+            log "dir/${name}: ${path} not found — recording as FAILED"
+            status_append "dir-${name}" 0 0 0
             continue
         fi
         key="${date_str}/dir-${name}.tar.gz${ENC_SUFFIX}"

@@ -159,3 +159,71 @@ def test_no_caller_hardcodes_the_inbox_only_fallback():
         'an "else [\\"wing-inbox\\"]" fallback is back in the channel resolution '
         "path — use _default_channels(severity)"
     )
+
+
+# ── Absent is a failure, not a skip ─────────────────────────────────────────
+#
+# Measured 2026-08-01. `notify_result` derives severity purely from the recorded
+# set: `failed = [x for x in sources if not x.get("success")]`, then
+# `elif not sources: high`, `else: info; "Backup OK - N sources"`. A source that
+# is ENABLED but whose data is ABSENT used to `continue`/`return 0` WITHOUT
+# calling status_append — so it was neither failed nor absent-of-all, and landed
+# in the info branch. An unmounted SSD or a moved nos_data_root dropped gitea,
+# gitlab, wing.db (the audit hash-chain), ~/.nos secrets and the tofu tfstate
+# out of the nightly set while the operator's inbox said "Backup OK".
+#
+# The asymmetry was visible in one function: run_wing_db recorded a failure when
+# `sqlite3` was missing and returned silently when the DATABASE was missing, two
+# lines apart.
+#
+# The rule: `DO_X != true` (deliberately disabled) may return silently — nobody
+# asked for it. "Enabled but not there" must record success=0.
+
+
+def _absent_source_branches() -> list[tuple[int, str]]:
+    """Lines where an ENABLED source bails out because its data is not there.
+
+    Keyed off the LOG line rather than the control-flow keyword: the one-liner
+    guards (`|| { log ...; return 0; }`) and the multi-line `if` blocks put the
+    bail-out and the message on different lines, and an earlier version of this
+    matched only the one-liners — finding 3 of 5 and passing.
+    """
+    out = []
+    for i, line in enumerate(BACKUP_SH.read_text().splitlines(), 1):
+        s = line.strip()
+        if s.startswith("#"):
+            continue
+        # A disabled-toggle guard is the legitimate silent return; nobody asked
+        # for that source, so its absence is not a failure.
+        if re.search(r'\[\[\s*"\$\{DO_\w+\}"\s*!=\s*"true"\s*\]\]', s):
+            continue
+        if "log " not in s:
+            continue
+        if re.search(r"(not found|missing|no token)", s):
+            out.append((i, s))
+    return out
+
+
+def test_absent_source_branches_exist_at_all():
+    """Guard the guard: if the detection regex stops matching, every assertion
+    below passes by finding nothing."""
+    assert len(_absent_source_branches()) >= 4, (
+        "found almost no absent-source branches in backup.sh — the shapes "
+        "changed and this gate silently stopped covering them"
+    )
+
+
+def test_an_absent_source_is_recorded_as_failed():
+    src = BACKUP_SH.read_text().splitlines()
+    offenders = []
+    for lineno, stmt in _absent_source_branches():
+        # The status_append may be on this line (one-liner guard) or within the
+        # next few lines of an if-block.
+        window = "\n".join(src[lineno - 1 : lineno + 4])
+        if "status_append" not in window:
+            offenders.append(f"backup.sh:{lineno}: {stmt[:100]}")
+    assert not offenders, (
+        "these bail out of an ENABLED source without recording anything, so "
+        "notify_result counts them as neither failed nor missing and reports "
+        '"Backup OK":\n  ' + "\n  ".join(offenders)
+    )

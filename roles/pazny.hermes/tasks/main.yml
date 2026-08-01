@@ -79,6 +79,13 @@
   failed_when:
     - _hermes_install.rc != 0
     - "'Requirement already satisfied' not in (_hermes_install.stdout | default(''))"
+  # Was missing until 2026-08-01: the config renders below all notify, but the
+  # task that installs the AGENT'S OWN CODE did not — so a hermes source change
+  # landed in the venv and the running daemon kept executing the old module from
+  # memory, with nothing red. Identical to the pulse defect measured the same
+  # week. Unlike pulse's, this install is not `--quiet`, so changed_when has a
+  # real signal to key on.
+  notify: Restart hermes
 
 # ── 5. Config render (.env + cli-config.yaml) ───────────────────────────────
 # Hermes hleda tyto soubory v ~/.hermes/:

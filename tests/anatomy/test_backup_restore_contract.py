@@ -231,7 +231,7 @@ def test_status_names_match_canonical_stems():
     """status_append names feed backup-status.json / alert $labels.source — keep them
     equal to the canonical restore stems (postgres / volume-<v> / dir-<n> / authentik-blueprints)."""
     text = BACKUP_SH.read_text()
-    bad = re.findall(r'status_append "(postgresql|volume:[^"]*|dir:[^"]*|authentik)"', text)
+    bad = re.findall(r'status_append "(postgresql|volume[:/][^"]*|dir[:/][^"]*|authentik)"', text)
     assert not bad, f"status_append uses non-canonical (drifted) source names: {bad}"
 
 

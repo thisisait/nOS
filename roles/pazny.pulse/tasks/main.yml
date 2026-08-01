@@ -56,9 +56,46 @@
   # running since 07-27 12:58 — four converges later it was still double-firing
   # vulnerability-scan every night, exactly as the fix describes.
   # pazny.bone already does this correctly (its source sync notifies Restart
-  # bone); pulse was the outlier. `--quiet` prints nothing on a no-op install, so
-  # changed_when above keeps this from restarting the daemon every run.
+  # bone); pulse was the outlier.
+  #
+  # THIS NOTIFY IS A BACKSTOP AND CANNOT BE TRUSTED ALONE — measured 2026-08-01.
+  # `--quiet` prints nothing on ANY install, not just a no-op, so the
+  # `changed_when` above is ALWAYS false and this notify has never once fired:
+  # the handler ran twice in the estate's whole history, last at 2026-07-27
+  # 12:58:28, which is exactly the running daemon's start time. Three converges
+  # rewrote site-packages/pulse/*.py while the process kept executing 07-27 code.
+  # The real signal is the staleness probe below, which reads the EFFECT (is the
+  # running process older than the code?) instead of trusting the installer's
+  # own account of whether it did anything.
   notify: Reload pulse launchd
+
+# Observe the effect, do not trust the attempt.
+#
+# A `notify` fires on the installer's self-report, and a self-report can be
+# structurally incapable of being true (see above). This compares two facts
+# neither of which the installing task authored: when the daemon actually
+# started, and how new the code on disk actually is. It also REPAIRS existing
+# drift, which a change-triggered notify never can — a daemon already running
+# stale code emits no change event, so nothing would ever restart it.
+- name: "[pazny.pulse] Detect a daemon older than the code it runs"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    PID=$(launchctl print "gui/$(id -u)/{{ pulse_launchd_label }}" 2>/dev/null | awk '/pid = /{print $3}')
+    # Not running at all: the bootstrap task below starts it with current code.
+    [ -n "${PID:-}" ] || { echo FRESH; exit 0; }
+    STARTED=$(ps -o lstart= -p "$PID" | sed 's/^ *//' \
+      | xargs -I{} date -j -f "%a %b %d %T %Y" "{}" +%s 2>/dev/null || echo 0)
+    NEWEST=$(find {{ pulse_venv }}/lib/*/site-packages/pulse -name '*.py' \
+      -exec stat -f %m {} \; 2>/dev/null | sort -rn | head -1)
+    # Unparseable start time (0) must not read as "daemon is ancient, restart
+    # every run" — it reads as unknown, and unknown is not a reason to bounce
+    # a live daemon on every converge.
+    [ "${STARTED:-0}" -gt 0 ] || { echo FRESH; exit 0; }
+    if [ "${NEWEST:-0}" -gt "$STARTED" ]; then echo STALE; else echo FRESH; fi
+  register: _pulse_staleness
+  changed_when: "'STALE' in _pulse_staleness.stdout"
+  notify: Reload pulse launchd
+  when: (nos_service_manager | default('launchd')) == 'launchd'
 
 # ── Service manager: launchd (macOS) | systemd --user (Linux) ─────────────────
 # Linux sibling of the launchd path; env mirrors pulse.plist.j2. Gated on
