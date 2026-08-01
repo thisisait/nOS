@@ -1,3 +1,123 @@
+# nOS Vulnerability Scan Addendum — 2026-08-01 (Cycle 19, batch-40)
+
+**Batch:** dnsmasq, n8n, metabase, tempo, alloy · **Probe:** `ssrf_vector_analysis`
+**Outcome:** 3 queue items added (**REM-153 CRITICAL**, **REM-152 HIGH** — the probe's finding of record, **REM-154 MEDIUM**); REM-106 reconciled and live-verified resolved; tempo and alloy clean. Pending CRITICAL goes **1 → 2**.
+
+Two of the five components were declared **CLEAN on 2026-07-18**. Both statements were **false when written**. Neither was a judgement error — both were the same structural blind spot, and it is now the third batch in a row to hit it.
+
+> **The methodology finding, stated once for the whole queue.** n8n and Metabase publish **repo-level advisories with no CVE IDs assigned**. Metabase's last ten advisories include six with `cve_id: null`; **all 25** n8n advisories below have `cve_id: null`. Batch-29 searched CVE-keyed sources (`community.n8n.io`, OpenCVE, CCCS, NVD) and truthfully found nothing — because there is nothing CVE-keyed to find. This is identical to the authentik finding in batch-39. **"No new CVE" is evidence of nothing.** Query `api.github.com/repos/<owner>/<repo>/security-advisories`; for npm/Go projects a version-aware OSV query is the cheapest single check (`n8n@2.28.1` → **29 vulns**).
+
+---
+
+### 🔴 CRITICAL — [REM-153, no CVE] Metabase ships an arbitrary file read/write primitive, enabled by default
+
+- **Component:** metabase — `metabase/metabase:v0.61.2.6`, live as `data-metabase-1`
+- **Advisory:** [GHSA-cwxq-fmxq-jv8h](https://github.com/metabase/metabase/security/advisories/GHSA-cwxq-fmxq-jv8h), published **2026-07-12** — *six days before the scan that called this component clean*
+- **Status:** version-confirmed, **high confidence**. Authenticated, **not** anonymous.
+
+Metabase left the H2 built-ins `FILE_READ`, `FILE_WRITE`, `CSVREAD`, `CSVWRITE` and `LINK_SCHEMA` unrestricted. Anyone who can run a native query or action against an H2 source can read arbitrary files off the container, write files to it, and open connections to other databases.
+
+**Version mapping matters here.** Metabase numbers OSS as `v0.X.Y` and the Enterprise build as `v1.X.Y` from one source tree, and advisories are written against the 1.x numbers. The pin `v0.61.2.6` reads as **1.61.2.6**:
+
+| Affected range | Patched | Our pin |
+|---|---|---|
+| `>= 1.55.0, < 1.58.16` | 1.58.16 | — |
+| `>= 1.59.0, < 1.59.13` | 1.59.13 | — |
+| `>= 1.60.0, < 1.60.9` | 1.60.9 | — |
+| **`>= 1.61.0, < 1.61.4`** | **1.61.4** | **1.61.2.6 → AFFECTED** |
+
+Upstream patched *"and matching 0.x releases"* — so the OSS line is in scope. This is **not** one of the Enterprise-only H2 items: `CVE-2026-33725`, correctly dismissed as EE-only in batch-29, is a different bug, and that dismissal must not be read across.
+
+**Why CRITICAL.** The bundled **sample database is H2**. No operator has to attach an H2 source for the primitive to exist — it ships attached, so every principal with query permission holds it.
+
+**Who holds that permission, stated plainly.** Metabase OSS has no OIDC, so per `docs/sso-and-attribution.md` it runs as a Traefik `forward_auth` gate (`traefik_auth_modes.metabase='proxy'`) in front of a **shared account**. Every tenant user who clears the Authentik wall lands on the *same* query-capable identity. There is no per-user Metabase authorization underneath the gate, and no per-user attribution in the audit trail either.
+
+**The SSRF leg** — why this surfaced under this probe and not a version sweep: `LINK_SCHEMA` opens connections to attacker-named databases *from inside the container*. That is an outbound-connection primitive with no allow-list — an SSRF, though the advisory never uses the word. The container holds `data_net` **and** the flat `shared_net`, so it reaches `postgresql`, `redis`, `mariadb` and every peer by container name; `FILE_READ` additionally discloses the container's own `MB_DB_PASS` from the environment.
+
+**Action.** Bump `v0.61.2.6 → v0.61.9` in `default.config.yml:2066` **and** `roles/pazny.metabase/defaults/main.yml:10` together (version-pin shadow: `default.config.yml` wins). v0.61.9 (2026-07-28) is ≥ the 0.61.4 floor and **stays on the 0.61 line** — a patch move, no Flyway major migration. Do *not* jump to v0.62.7 in the same step; that is a minor-line move on a service whose first boot already needs a 300s `start_period`.
+
+**Re-checked and still covered at the pin** (each range checked, not assumed): CVE-2026-59827 (CRIT 9.9) fixes at 1.61.1.4 — `1.61.2.6 > 1.61.1.4`, not affected. CVE-2026-59826 (CRIT 9.1) fixes at 1.61.2 — not affected. CVE-2026-50148 (CRIT 10.0 Snowflake JDBC RCE), CVE-2026-50147 (HIGH 7.6) and the 2026-05-27 MEDIUM cluster (including the only unauthenticated one, GHSA-rxq7-9vqf-q9g8) declare **no 1.61 range at all** — not affected.
+
+---
+
+### 🟠 HIGH — [REM-152, no CVEs] n8n is two advisory waves behind, and four of them bypass the SSRF control we installed
+
+- **Component:** n8n — `n8nio/n8n:2.28.1`, live as `iiab-n8n-1`
+- **Status:** version-confirmed, **high confidence**. Authenticated (workflow seat).
+
+**This is the probe's finding of record.** REM-043 closed n8n's SSRF by enabling the built-in guard `N8N_SSRF_PROTECTION_ENABLED="true"` via the `n8n-base` plugin. Upstream has since shipped nodes that **route around it**.
+
+[GHSA-vhf8-cg2h-cg3p](https://github.com/n8n-io/n8n/security/advisories/GHSA-vhf8-cg2h-cg3p) is the direct hit — the MCP Client node *"sends requests to user-supplied endpoints without routing them through SSRF protection and without pinning the resolved address."*
+`CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:H/SI:H/SA:L` = **6.4**. `PR:L` = *"an authenticated user who could create or edit a workflow"* — the **default** `workflow:create` permission. The guard is simply not consulted.
+
+Three more, independently:
+
+| Advisory | Sev | What it bypasses |
+|---|---|---|
+| `GHSA-64xh-79j6-r5v8` | HIGH 7.1 | the "Allowed HTTP Request Domains" credential allow-list, across the AI/LLM nodes |
+| `GHSA-2x35-3fw4-9jr4` | HIGH 8.2 | SSRF **+ arbitrary file read** via nodemailer content-object type confusion |
+| `GHSA-9w78-79q7-r4fp` | MED 6.3 | internal network reach via the dynamic node-parameters endpoints |
+
+**REM-043's full impact is restored.** n8n holds `iiab_net` **and** the flat `shared_net`, so the primitive reaches `postgresql`, `redis`, `mariadb`, `prometheus` and `portainer` by container name. **SEC-02 does not cover this** — SEC-02 moved the *header-trust* backends onto gated nets; n8n was never one of them.
+
+**Do not reopen REM-043.** Its control is correct and still blocks the HTTP Request node. The durable lesson is different: **an in-app SSRF allow-list is a per-node property and regresses silently every time upstream ships a new node.** It cannot be the only layer.
+
+**The two missed waves.** Wave A (2026-07-08, 11 advisories, fixed 2.29.8/2.30.1) — ceiling `GHSA-pm35-fqvh-cq5g` **8.9**, authenticated code execution via legacy-expression sanitizer bypass; also `GHSA-35q8-9mj6-wjmf` (7.7) SSO instance-role provisioning → privilege escalation to instance owner, directly relevant since nOS wires n8n to Authentik native OIDC. Wave B (2026-07-22, 15 advisories, fixed 2.31.5/2.32.1) — `GHSA-8342-988q-86cr` (8.9) account takeover via unverified email claim, `GHSA-gv7g-jm28-cr3m` (8.7) expression sandbox escape → command execution, `GHSA-rcv6-pvrj-4xcg` (8.7) code execution in the Git node. Only `GHSA-33q9-f52j-gc75` is already covered at 2.28.1.
+
+**Filed HIGH, deliberately not CRITICAL.** The ceiling across all 25 is 8.9 and GitHub labels every one High or Moderate — none is a CRITICAL, none is unauthenticated RCE. Escalating the aggregate would misrepresent the sources. What makes it urgent is *breadth* — four independent sandbox-escape/code-execution paths and two 8.9 takeover-class items — plus the SSRF cluster above.
+
+**Action.** Bump `2.28.1 → 2.32.7` (the current `stable` tag, 2026-07-31; ≥ the 2.32.1 floor, clears both waves) in `default.config.yml:1475` **and** `roles/pazny.n8n/defaults/main.yml:10` together. Same-major migrate-on-start, no coexistence track. Interim mitigation if the bump must wait: `NODES_EXCLUDE` the MCP Client node — upstream's own workaround, recommended precisely because the in-app guard is the thing that failed.
+
+---
+
+### 🟡 MEDIUM — [REM-154, no CVE — configuration] dnsmasq relays DNS-rebinding answers
+
+- **Component:** dnsmasq — host Homebrew package **2.93**
+- **Status:** **live-confirmed**, high confidence. Scoped — see below.
+
+The Ansible-managed block in `tasks/dnsmasq.yml` emits `address=`, `listen-address=`, `bind-interfaces`, `local=/<tenant_domain>/` and `cache-size` — but **not `stop-dns-rebind`**, and dnsmasq's rebind filter is off by default. Because `local=` scopes authority to the tenant domain only, every other name is forwarded upstream and the answer returned verbatim, including answers pointing into `127.0.0.0/8` or RFC-1918.
+
+```
+$ dig +short @127.0.0.1 localtest.me A     → 127.0.0.1     # via dnsmasq: relayed, not filtered
+$ dig +short @1.1.1.1   localtest.me A     → 127.0.0.1     # control: the answer is genuinely upstream's
+```
+
+`localtest.me` is a public name whose authoritative answer *is* `127.0.0.1` — a safe, non-destructive stand-in for an attacker-controlled rebinding domain. With `stop-dns-rebind` set, dnsmasq would have filtered it. The effective `dnsmasq.conf` contains no `stop-dns-rebind` / `rebind-domain-ok` / `rebind-localhost-ok` anywhere.
+
+**Scope, stated honestly — the obvious over-claim is wrong.** dnsmasq binds `127.0.0.1` *and* the en0 LAN address (`dnsmasq_lan_access` defaults **true**), so it is an unauthenticated forwarding resolver for any LAN/Tailscale client pointed at it — the documented purpose of that flag. For that population the relay is real. It does **not** chain into this batch's container SSRF findings: containers resolve via Docker's embedded DNS (`127.0.0.11`) → Docker Desktop VM upstream, and on the host `/etc/resolver/<tenant_domain>` is **domain-scoped**, so mDNSResponder consults dnsmasq only for the tenant domain. dnsmasq is therefore *not* in the resolution path an n8n or Metabase rebinding attack would need. Rated **exploitable** for LAN-resolver clients, **theoretical** as a container-SSRF amplifier — filed because it becomes load-bearing the moment anything is pointed at dnsmasq as a general resolver.
+
+**Action.** Add `stop-dns-rebind` — and **`rebind-localhost-ok` alongside it, which is required, not optional**: on a local-TLD install the tenant domain is itself answered as `127.0.0.1`, so a bare `stop-dns-rebind` would filter nOS's own `*.dev.local` answers and break the platform by name. Exempt any legitimate private-address domain with `rebind-domain-ok=/<domain>/` rather than dropping the guard.
+
+---
+
+### ✅ Resolved / clean
+
+**REM-106 (dnsmasq) — reconciled and live-verified.** The queue had it resolved on **2026-07-16 with no justification recorded**, while `scan-state.json` still read *"REM-106 stays PENDING"* — and carried batch-21 (2026-07-05) prose under a 2026-07-16 timestamp, the same "timestamp advanced without a re-read" defect batch-39 named for authentik. Both files are reconciled; the original `resolved_at` was **preserved, not rewritten**. The resolution is correct on evidence: `brew list --versions dnsmasq` → **2.93**, upstream's full fix release for the May-2026 CERT/CC cluster (VU#471747), clearing CVE-2026-2291 and CVE-2026-5172. No repo change was needed — `state: present` tracked upstream on its own. *Housekeeping:* `default.config.yml:1720` still says `dnsmasq_version: "2.91"` — doc-only, but it is the repo's only dnsmasq version string and now under-reports the host by two releases.
+
+**tempo — clean at 2.10.3.** Both OSV records are covered: `GO-2026-5359` (CVE-2026-28377) is fixed *at* 2.10.3, and `GO-2026-5528` is fixed at 2.10.2. **Correction to a standing note:** batch-29 recorded the OOM item as *"CVE-2026-27878 … fixed Tempo 2.8/2.9"*; OSV's authoritative alias is **CVE-2026-21728** and the real 2.10-line fix point is **2.10.2**. The conclusion was right, but the margin is one patch release, not a minor line. Also note `GO-2026-5359` carries an unmapped `SEMVER {introduced: 0}` range with no `fixed` event and is flagged `UNREVIEWED` — read the ECOSYSTEM `custom_ranges`, or it reads as a false positive forever. All three ports live-confirmed loopback-bound; no Traefik router.
+
+**alloy — clean at 1.18.0**, exactly current with upstream (v1.18.0, 2026-07-20). Verified through *both* channels this batch proved necessary: OSV returns an empty result, and the repo advisory endpoint returns **zero** — so Alloy has no hidden CVE-less channel, and this "clean" is evidence-backed rather than an absence-of-CVE inference. REM-107 live-verified: 4317, 4318 and 12345 all bound `127.0.0.1`. *Disposed:* `CVE-2025-68156` appears against a `grafana-alloy 1.12.1-r1` package build, but the CVE is `expr-lang/expr` — a transitive Go dependency, not Alloy code, and a distro-packaging record rather than a Grafana advisory.
+
+---
+
+### Probe verdict — `ssrf_vector_analysis`
+
+| Vector | Rating |
+|---|---|
+| n8n MCP Client node — bypasses `N8N_SSRF_PROTECTION_ENABLED` (GHSA-vhf8) | **exploitable** (auth, default perm) |
+| n8n AI/LLM nodes — bypass "Allowed HTTP Request Domains" (GHSA-64xh) | **exploitable** (auth) |
+| n8n Send Email node — SSRF + arbitrary file read (GHSA-2x35) | **exploitable** (auth) |
+| n8n dynamic node parameters — internal network reach (GHSA-9w78) | **exploitable** (auth) |
+| Metabase `LINK_SCHEMA` — attacker-directed outbound DB connection (GHSA-cwxq) | **exploitable** (auth, shared account) |
+| dnsmasq rebinding relay — LAN-resolver clients | **exploitable** (unauth, scoped population) |
+| dnsmasq rebinding — as a container-SSRF amplifier | **theoretical** (not in the resolution path) |
+| Alloy OTLP receiver as SSRF target | **mitigated** (loopback, REM-107) |
+| Tempo `/status/config` + TraceQL | **mitigated** (loopback, no router) |
+
+**The structural result.** nOS's SSRF posture rests on **in-application allow-lists** — n8n's SSRF guard, Metabase's driver restrictions — which are *per-node* and *per-function* properties that regress silently whenever upstream ships a new node or forgets a builtin. Meanwhile the **blast radius** is set by flat `shared_net` membership, which both n8n and Metabase still hold and which SEC-02 never covered for them. Patching the two version pins closes today's instances; extending the SEC-02 gated-net treatment to the two SSRF-capable workload services is the durable fix.
+
+---
+
 # nOS Vulnerability Scan Addendum — 2026-07-31 (Cycle 18, batch-39)
 
 **Batch:** kiwix, authentik, grafana, nextcloud, loki · **Probe:** `default_credentials_test` (**first run of this probe type**)
