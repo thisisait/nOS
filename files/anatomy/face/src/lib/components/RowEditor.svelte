@@ -13,6 +13,7 @@
 	let {
 		table,
 		row = null,
+		bodyColumn = undefined,
 		submitting = false,
 		error = '',
 		onsubmit,
@@ -20,6 +21,11 @@
 	}: {
 		table: DataTable;
 		row?: DataTableRow | null;
+		/** The column the table's view block calls its long-form body. It gets a
+		 *  prose textarea instead of a one-line input — editing three paragraphs
+		 *  through a 13px single-line field is the same defect as rendering them
+		 *  in a nowrap grid cell, one step earlier. */
+		bodyColumn?: string;
 		submitting?: boolean;
 		error?: string;
 		onsubmit: (row: Record<string, unknown>) => void;
@@ -97,6 +103,9 @@
 					</select>
 				{:else if col.kind === 'json'}
 					<textarea rows="4" spellcheck="false" placeholder="JSON" bind:value={values[col.key]}
+					></textarea>
+				{:else if col.key === bodyColumn && col.kind === 'text'}
+					<textarea class="prose" rows="10" spellcheck="true" bind:value={values[col.key]}
 					></textarea>
 				{:else}
 					<input
@@ -197,6 +206,14 @@
 	textarea {
 		resize: vertical;
 		font-family: ui-monospace, monospace;
+	}
+	/* The body field is PROSE, not a payload: readable face, generous leading,
+	   and it wraps. The monospace default is right for JSON and wrong here. */
+	textarea.prose {
+		font-family: inherit;
+		font-size: 13.5px;
+		line-height: 1.6;
+		min-height: 180px;
 	}
 	.err {
 		color: #ff8080;

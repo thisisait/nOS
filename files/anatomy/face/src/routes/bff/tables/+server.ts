@@ -179,8 +179,12 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			table.source = 'keap';
 			// Best-effort column enrichment from the table def (non-fatal on failure).
 			try {
-				const cols = mapColumns(unwrap(await keapTableDef(slug)));
+				const def = unwrap<{ view?: DataTable['view'] }>(await keapTableDef(slug));
+				const cols = mapColumns(def);
 				if (cols.length > 0) table.columns = cols;
+				// The render style rides the same def fetch — one call, and a
+				// table that declares no style simply has no key.
+				if (def && typeof def === 'object' && def.view) table.view = def.view;
 			} catch {
 				/* keep fallback columns */
 			}

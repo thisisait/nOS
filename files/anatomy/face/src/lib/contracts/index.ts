@@ -171,6 +171,23 @@ export interface DataTable {
 	 *  token is configured)? Drives whether the editor shows Add/Edit. Never trust
 	 *  a client-set value — this is set by the BFF from the edge-trusted identity. */
 	canWrite?: boolean;
+	/** How the table asks to be rendered (KEAP `view` block). Absent = grid,
+	 *  byte-identical to before this existed. Declared ON THE TABLE because
+	 *  "spreadsheet or article list" is a property of the data, not of this
+	 *  client — a `research` column holding paragraphs is unreadable in a
+	 *  nowrap grid, and that is knowable once rather than per surface. */
+	view?: TableView;
+}
+
+/** Render style + the columns each one needs. Mirrors KEAP's `viewMetaSchema`
+ *  (shared/contracts/table.ts) — KEAP validates, this only renders. */
+export interface TableView {
+	style: 'grid' | 'blog' | 'timeline' | 'tiles';
+	titleColumn?: string;
+	bodyColumn?: string;
+	dateColumn?: string;
+	mediaColumn?: string;
+	metaColumns?: string[];
 }
 
 // ── Catalog (Wing /hub/systems) ───────────────────────────────────────────────
