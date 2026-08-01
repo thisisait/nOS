@@ -437,15 +437,34 @@ means a kernel per user, memory is not pre-committed, and each container is
 individually addressable. That is a narrow, well-matched use — which is the shape
 this whole thread has been converging on.
 
-### One measurement I could not explain
+### The unexplained measurement, explained — by the operator
 
 Two intermediate runs reported `TIMEOUT` against a published port that was
-demonstrably listening, while the container served fine internally; the same
-curl then returned 302 in 9.6 ms a minute later. The clean re-run measured 2.1 s.
-**I do not know what the first two runs hit** — the numbers above come from the
-clean run, and this is recorded rather than smoothed over because an
-intermittently unreachable published port would matter enormously to a
-Traefik-routed per-user design. **Reproduce before building on it.**
+demonstrably listening, while the container served fine internally. The clean
+re-run measured 2.1 s and the same curl returned 302 in 9.6 ms.
+
+**The operator supplied the missing fact: macOS had prompted for permission, and
+they approved it between the failing runs and the clean one.**
+
+That is not a footnote. It means:
+
+- `container`'s published ports are gated behind the macOS **Local Network**
+  privacy permission, and until a human clicks Allow, **host → container traffic
+  is dropped while the listener still binds**. The failure presents as a timeout
+  against a socket that `lsof` shows in LISTEN — which is why it read as a
+  runtime defect rather than a permission.
+- **It cannot be granted from a playbook.** Every other first-run requirement in
+  this estate is automatable; this one needs a GUI click on the machine. A
+  provisioning run that assumes it will hang or silently fail exactly the way
+  these two measurements did.
+- So a per-user design on `apple/container` acquires a **one-time manual step per
+  machine**, and the failure mode when it is missed is the worst kind: a
+  listening port that answers nothing.
+
+**This belongs in the design as a named prerequisite with a read-back**, not as
+an install note — the same rule the audits produced. It is also a good argument
+for measuring on a second machine before committing: a prompt the operator
+already dismissed once will not reappear here.
 
 ## Part 3 — what I would do next, in order
 
