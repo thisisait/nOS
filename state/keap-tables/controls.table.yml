@@ -28,24 +28,24 @@ anchors: ["nos.face"]
 schema:
   columns:
     # ── identity ─────────────────────────────────────────────────────────────
-    - { key: name,        label: "Name",        kind: text,    role: dimension, required: true }
-    - { key: slug,        label: "Slug",        kind: text,    role: dimension, required: true }
-    - { key: icon,        label: "Icon",        kind: text,    role: attribute }
-    - { key: description, label: "Description",  kind: text,    role: attribute }
+    - { key: name,        label: "Name",        kind: text,    role: dimension, required: true, concept: identity.name }
+    - { key: slug,        label: "Slug",        kind: text,    role: dimension, required: true, concept: identity.slug }
+    - { key: icon,        label: "Icon",        kind: text,    role: attribute, concept: ui.icon }
+    - { key: description, label: "Description",  kind: text,    role: attribute, concept: identity.description }
 
     # ── surface routing ───────────────────────────────────────────────────────
     # Which surface the opened window hosts: a known editor key, or a raw table.
-    - { key: surface,     label: "Surface",     kind: select,  role: dimension,
+    - { key: surface,     label: "Surface",     kind: select,  role: dimension, concept: ui.surface,
         options: ["wallpaper", "layouts", "identity", "storage", "rawDataTable"] }
     # For surface=rawDataTable: the DataTable slug the window renders.
-    - { key: table,       label: "Table",       kind: text,    role: attribute }
+    - { key: table,       label: "Table",       kind: text,    role: attribute, concept: ref.table }
 
     # ── lifecycle & provenance (consistent with apps/systems) ────────────────
-    - { key: system,      label: "System",      kind: boolean, role: dimension }
-    - { key: status,      label: "Status",      kind: select,  role: dimension,
+    - { key: system,      label: "System",      kind: boolean, role: dimension, concept: prov.system }
+    - { key: status,      label: "Status",      kind: select,  role: dimension, concept: lifecycle.status,
         options: ["enabled", "disabled"] }
-    - { key: sort,        label: "Sort",        kind: number,  role: measure }
-    - { key: owner,       label: "Owner",       kind: user,    role: attribute }
+    - { key: sort,        label: "Sort",        kind: number,  role: measure, concept: ui.sort }
+    - { key: owner,       label: "Owner",       kind: user,    role: attribute, concept: access.owner }
 
     # ── universe anchor ───────────────────────────────────────────────────────
-    - { key: taxonomy_ref, label: "Anchor",     kind: taxonomyRef, role: attribute }
+    - { key: taxonomy_ref, label: "Anchor",     kind: taxonomyRef, role: attribute, concept: graph.anchor }

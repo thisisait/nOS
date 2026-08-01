@@ -597,6 +597,71 @@ conformance gate on **both** ends. Per `docs/doctrine/cross-repo-contracts.md`:
 *"Symmetry is the whole design. A gate on one side only makes that side the authority
 and the other side the supplicant."*
 
+### L1 shipped first — the research verdict, and what it cost to widen
+
+Ordering research (2026-08-01) asked which of the three layers to build first.
+**Verdict: L1**, and the adversarial pass did not shake it — *"I found no evidence L2
+or L3 first is better, and the primary rationale survives intact."*
+
+The rationale is asymmetric recoverability. Machine re-processing is automatic and
+bounded: `pendingEmbeddings` diffs `contentHash`, so anything embedded re-embeds itself
+without a human. **The human declaration of what a column MEANS has no such path** —
+nobody re-derives it later, and every row captured before it is captured without it.
+Only L1 carries a cost that delay destroys. L2's and L3's proposed first moves both
+force a full corpus re-embed and buy nothing that waiting loses.
+
+**What the adversarial pass DID kill was the first commit as scoped, for a reason
+neither side had seen: a table's columns were immutable for its lifetime.**
+`data_tables.schema_json` had exactly one writer — the INSERT in `createTable` — and no
+`UPDATE` of it anywhere; `PATCH /api/tables/:id` handled visibility only, and
+`POST /agent/v1/tables` early-returned on an existing slug. The only change path was
+DELETE → `dropTable`, which deletes `table_rows` **and** `table_row_history`.
+
+So the originally-scoped commit — add `concept:` to the ~76 columns in
+`state/keap-tables/*.table.yml` — would have been a **no-op on every converged
+install**. Git changes, the offline gate goes green, the database keeps the
+concept-less schema, and nothing anywhere is red. That is the fourth instance in two
+days of the same class: a gate that passes while delivering nothing.
+
+The commit was widened accordingly, and the widening is the substance:
+
+- **`updateTableSchema()`** — the reconcile write path that did not exist. Additive and
+  relabel only; a dropped column or a changed `kind` is refused, because rows already
+  hold those values. Re-renders the card and the projected row objects, so the corpus
+  cannot go on describing the old columns.
+- **The agent create reconciles** instead of early-returning "exists", and the nOS
+  seeder lost its `when: probe.status == 404` gate. A 409 now fails the converge with
+  the authoring diagnosis rather than passing silently.
+- **The `onto1:` digest change was dropped from this commit.** Adding a `c\t` line kind
+  would have put the runtime out of agreement with a normative reference
+  implementation, six fixtures and a conformance runner while the digest still read
+  `onto1:` — the spec's own §0 calls that failure *"silent, total, and indistinguishable
+  from a genuine ontology change."* It is a contract revision, and it will be done as
+  one or not at all.
+
+**One honesty correction, stated so it is not quietly inherited.** The row body renders
+`Label [concept]: value`, and that does **not** make embeddings concept-aware: one
+vector covers the whole body, which is truncated before embedding, so a shared bracket
+token among thousands of characters is diluted to nothing. Two rows in different
+languages sharing a concept stay as far apart as before. What the token actually buys is
+the **lexical** leg — `lifecycle.status` is a literal FTS/BM25 term, so "which rows
+anywhere carry a lifecycle status" becomes answerable across tables that label the same
+meaning five different ways — plus the membership gate that keeps the vocabulary closed.
+The vectorial complaint is **not** addressed here; it is what L2's per-concept slots are
+for.
+
+**The ordering trap, confirmed.** L2 adds slots per column and L3 adds
+`foreign_field → (slot, concept)` per column — both through the same write-once channel.
+Before `updateTableSchema` existed, rows captured between layers would have had to be
+**destroyed and re-entered** to be re-declared, not merely re-processed. The reconcile
+path is what makes the remaining two layers additive instead.
+
+**The vocabulary earned its keep on first contact.** Mapping the 76 live columns hit two
+collisions under the one-concept-per-table rule: `entry_url` vs `repo_url`, and `organs`
+vs `data_stores`. Both were real — "where it runs" is not "where its source lives" —
+and produced `net.repo` and `graph.stores`. A free-text column would have absorbed both
+silently.
+
 ### Why not protobuf / an IDL, and why not a transpiler
 
 An IDL would give real cross-language codegen, and it is the obvious answer. It is

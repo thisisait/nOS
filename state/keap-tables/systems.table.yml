@@ -24,45 +24,45 @@ anchors: ["nos.systems"]
 schema:
   columns:
     # ── identity ─────────────────────────────────────────────────────────────
-    - { key: name,        label: "Name",              kind: text,   role: dimension, required: true }
-    - { key: slug,        label: "Slug",              kind: text,   role: dimension, required: true }
-    - { key: description, label: "Description",       kind: text,   role: attribute }
-    - { key: embedding,   label: "Embedding",         kind: vector, role: attribute, dim: 768 }
+    - { key: name,        label: "Name",              kind: text,   role: dimension, required: true, concept: identity.name }
+    - { key: slug,        label: "Slug",              kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: description, label: "Description",       kind: text,   role: attribute, concept: identity.description }
+    - { key: embedding,   label: "Embedding",         kind: vector, role: attribute, dim: 768, concept: machine.embedding }
 
     # ── classification (LeanIX dimensions) ────────────────────────────────────
-    - { key: category,    label: "Category",          kind: text,   role: dimension }
-    - { key: stack,       label: "Stack",             kind: select, role: dimension,
+    - { key: category,    label: "Category",          kind: text,   role: dimension, concept: class.category }
+    - { key: stack,       label: "Stack",             kind: select, role: dimension, concept: class.group,
         options: ["infra", "observability", "iiab", "apps", "devops", "b2b", "voip", "engineering", "data"] }
-    - { key: kind,        label: "Kind",              kind: select, role: dimension,
+    - { key: kind,        label: "Kind",              kind: select, role: dimension, concept: class.kind,
         options: ["service", "backend", "host_daemon"] }
-    - { key: rbac_tier,   label: "RBAC tier",         kind: select, role: dimension,
+    - { key: rbac_tier,   label: "RBAC tier",         kind: select, role: dimension, concept: access.tier,
         options: ["tier-1", "tier-2", "tier-3", "tier-4"] }
     # β1.A SSO trichotomy (docs/sso-and-attribution.md).
-    - { key: sso_mode,    label: "SSO mode",          kind: select, role: dimension,
+    - { key: sso_mode,    label: "SSO mode",          kind: select, role: dimension, concept: access.sso_mode,
         options: ["native_oidc", "header_oidc", "forward_auth", "none"] }
 
     # ── lifecycle & health ────────────────────────────────────────────────────
-    - { key: status,      label: "Status",            kind: select, role: dimension,
+    - { key: status,      label: "Status",            kind: select, role: dimension, concept: lifecycle.status,
         options: ["active", "degraded", "down", "planned", "retired"] }
-    - { key: lifecycle,   label: "Lifecycle",         kind: select, role: dimension,
+    - { key: lifecycle,   label: "Lifecycle",         kind: select, role: dimension, concept: lifecycle.stage,
         options: ["plan", "phase_in", "active", "phase_out", "end_of_life"] }
-    - { key: business_criticality, label: "Criticality", kind: select, role: dimension,
+    - { key: business_criticality, label: "Criticality", kind: select, role: dimension, concept: lifecycle.criticality,
         options: ["low", "medium", "high", "mission_critical"] }
 
     # ── runtime coordinates ───────────────────────────────────────────────────
-    - { key: domain,      label: "Domain",            kind: text,   role: attribute }
-    - { key: port,        label: "Port",              kind: number, role: attribute }
-    - { key: version,     label: "Version",           kind: text,   role: attribute }
-    - { key: image,       label: "Image",             kind: text,   role: attribute }
+    - { key: domain,      label: "Domain",            kind: text,   role: attribute, concept: net.domain }
+    - { key: port,        label: "Port",              kind: number, role: attribute, concept: net.port }
+    - { key: version,     label: "Version",           kind: text,   role: attribute, concept: identity.version }
+    - { key: image,       label: "Image",             kind: text,   role: attribute, concept: deploy.image }
     # Operator-declared iframe embeddability — the nOS-face "Systems" launcher
     # renders embed=true inline; embed=false opens the service in a new tab
     # (X-Frame-Options / frame-ancestors 'self' refuses cross-subdomain framing).
-    - { key: embed,       label: "Embeddable",        kind: boolean, role: attribute }
-    - { key: icon,        label: "Icon",              kind: text,   role: attribute }
-    - { key: owner,       label: "Owner",             kind: user,   role: attribute }
+    - { key: embed,       label: "Embeddable",        kind: boolean, role: attribute, concept: ui.embeddable }
+    - { key: icon,        label: "Icon",              kind: text,   role: attribute, concept: ui.icon }
+    - { key: owner,       label: "Owner",             kind: user,   role: attribute, concept: access.owner }
 
     # ── relationships (LeanIX graph) ──────────────────────────────────────────
-    - { key: depends_on,  label: "Depends on",        kind: json,   role: attribute }
+    - { key: depends_on,  label: "Depends on",        kind: json,   role: attribute, concept: graph.depends_on }
 
     # ── universe anchor ───────────────────────────────────────────────────────
-    - { key: taxonomy_ref, label: "Anchor",           kind: taxonomyRef, role: attribute }
+    - { key: taxonomy_ref, label: "Anchor",           kind: taxonomyRef, role: attribute, concept: graph.anchor }

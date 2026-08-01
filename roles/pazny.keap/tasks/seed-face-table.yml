@@ -21,7 +21,16 @@
   changed_when: false
   failed_when: false
 
-- name: "[pazny.keap] Create DataTable {{ _face_tbl.slug }} (only when missing)"
+# RECONCILE, not create-if-missing. This task used to carry
+# `when: _face_tbl_probe.status == 404`, which made the whole definition file
+# write-once: KEAP's POST /agent/v1/tables early-returned "already exists" and
+# there was no UPDATE of data_tables.schema_json anywhere, so a column added or
+# given an L1 `concept:` in state/keap-tables/*.table.yml landed in git, went
+# green in every offline gate, and never touched a converged install. Nothing
+# was red — the change simply had no effect. KEAP now reconciles on re-POST
+# (additive + relabel only; a drop or kind change comes back 409), so this runs
+# unconditionally and `changed_when` keys off the response instead of the probe.
+- name: "[pazny.keap] Reconcile DataTable {{ _face_tbl.slug }} (create or align columns)"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ keap_port | default(8091) }}/agent/v1/tables"
     method: POST
@@ -37,11 +46,28 @@
       visibility: "{{ _face_tbl.def.visibility | default('tier-users') }}"
       anchors: "{{ _face_tbl.def.anchors | default([]) }}"
       columns: "{{ _face_tbl.def.schema.columns }}"
-    status_code: [200, 201, 404]
+    # 409 = the definition asks for something destructive (a dropped column or a
+    # changed kind). That is an AUTHORING error in the .table.yml, not a
+    # transient — it is surfaced by the next task rather than silently tolerated.
+    status_code: [200, 201, 404, 409]
   register: _face_tbl_create
   no_log: true   # Bearer keap_agent_token_rw in header
+  # A reconcile that changed nothing still answers 200, so this reports changed
+  # on every run for an existing table. Accepted deliberately: the alternative
+  # is diffing the live schema here, which re-implements KEAP's own comparison
+  # in Jinja and would drift from it. Idempotence of EFFECT is asserted by
+  # KEAP's table-schema-reconcile.test.ts.
   changed_when: _face_tbl_create.status | default(0) in [200, 201]
-  when: _face_tbl_probe.status | default(0) == 404
+
+- name: "[pazny.keap] Fail when the DataTable definition asks for a destructive change"
+  ansible.builtin.fail:
+    msg: >-
+      KEAP refused the schema for {{ _face_tbl.slug }} (409). The definition in
+      state/keap-tables/{{ _face_tbl.slug }}.table.yml drops a column or changes
+      a column's kind, and rows already hold those values. Add columns and
+      relabel freely; to remove or re-type one, drop and recreate the table
+      deliberately.
+  when: _face_tbl_create.status | default(0) == 409
 
 - name: "[pazny.keap] Warn if the KEAP DataTable route is not live yet ({{ _face_tbl.slug }})"
   ansible.builtin.debug:
@@ -49,9 +75,9 @@
       KEAP /agent/v1/tables did not accept the create for {{ _face_tbl.slug }}
       (status={{ _face_tbl_create.status | default('n/a') }}). The face BFF will
       serve the vendored repo defaults until the DataTable agent route lands.
-  when:
-    - _face_tbl_create is not skipped
-    - _face_tbl_create.status | default(0) not in [200, 201]
+  # 404 only: the route itself is absent (a KEAP build predating it). 409 is a
+  # definition error and already failed above; 200/201 succeeded.
+  when: _face_tbl_create.status | default(0) == 404
 
 - name: "[pazny.keap] Fetch existing rows of {{ _face_tbl.slug }} (idempotency WHERE-guard)"
   ansible.builtin.uri:
