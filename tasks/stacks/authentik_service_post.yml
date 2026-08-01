@@ -265,6 +265,7 @@
     --mapping-uid=preferred_username
     --mapping-email=email
     --mapping-display-name=name
+    --unique-uid=0
   register: _nc_oidc_create
   when:
     - install_nextcloud | default(false)
@@ -291,6 +292,7 @@
     --mapping-uid=preferred_username
     --mapping-email=email
     --mapping-display-name=name
+    --unique-uid=0
   register: _nc_oidc_update
   when:
     - install_nextcloud | default(false)
@@ -307,6 +309,48 @@
 # `--mapping-display-name` rename in user_oidc 8.x hid behind exactly that for
 # weeks. Re-list providers (no secret in output) and fail LOUD if Authentik
 # still isn't registered. SSO is mandatory (memory sso-mandatory-never-local-form).
+# S-0 identity: the uid must be the CANONICAL one, not a hash of it.
+#
+# Measured 2026-08-01 on the live estate: `mapping-uid` was already
+# `preferred_username`, and Nextcloud STILL keyed the account on
+# `eb2dd86eab913e84f0d2e198af6c9c64af4e3b159d8b0eea2768a95bdd77ebf8`. The hash
+# comes from a SECOND setting — `uniqueUid`, which defaults to 1 and hashes
+# whatever the mapping produced. So the mapping looked right and the result was
+# wrong, which is why nobody caught it by reading the config.
+#
+# Why it matters beyond tidiness: face derives its per-user file tree from
+# `slugifyUid(username)` precisely BECAUSE Authentik's own uid regenerates on
+# every blank (face/src/lib/security/uid.ts). Nextcloud keyed on a hash has the
+# orphan-on-blank defect face already fixed — same person, new id, old files
+# stranded. Authentik, face and KEAP all already agree on the username;
+# Nextcloud was the single outlier.
+#
+# This reads back the EFFECT rather than trusting the flag: an id that is 64 hex
+# characters is a hash, whatever the provider table claims.
+- name: "[Authentik->Nextcloud] VERIFY the uid is canonical, not hashed"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud
+    php occ user:list
+  register: _nc_uid_shape
+  when:
+    - install_nextcloud | default(false)
+    - _nc_running.stdout | default('') | trim == 'true'
+  changed_when: false
+  failed_when: false
+
+- name: "[Authentik->Nextcloud] Warn when a legacy hashed account is still present"
+  ansible.builtin.debug:
+    msg: |
+      Nextcloud still holds an OIDC account keyed on a HASH:
+      {{ (_nc_uid_shape.stdout_lines | default([]) | select('search', '^  - [0-9a-f]{64}:') | list) | join('\n') }}
+      The provider now sets --unique-uid=0, so the NEXT login creates the account
+      under the canonical username instead. The hashed account keeps its files and
+      is not migrated — on a system with real data, move them with
+      `occ files:transfer-ownership <old> <new>` BEFORE deleting it.
+  when:
+    - _nc_uid_shape is not skipped
+    - (_nc_uid_shape.stdout_lines | default([]) | select('search', '^  - [0-9a-f]{64}:') | list) | length > 0
+
 - name: "[Authentik->Nextcloud] Verify OIDC provider is registered"
   ansible.builtin.command: >
     {{ docker_bin }} compose -p iiab exec -T -u www-data nextcloud

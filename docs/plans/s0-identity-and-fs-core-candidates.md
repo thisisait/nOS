@@ -135,6 +135,81 @@ daemon, WebDAV, OIDC, and C1 reachable through the ONLYOFFICE we already run.
 Point 2 is the one that could invalidate the whole direction, so it is the first
 thing to measure, not the last.
 
+## Part 2b — Apple's `container`, and the custom-distro idea
+
+Researched 2026-08-01 on operator suggestion. The estate runs **macOS 26.5.1**
+(measured), which is exactly what `apple/container` requires — *"`container` is
+supported on macOS 26, since it takes advantage of new features and enhancements
+to virtualization and networking in this release"*. It is **not installed here**.
+
+### What it is, and what it changes
+
+VM-per-container: each container gets its own lightweight VM and its own kernel,
+instead of Docker Desktop's one shared VM. Swift, open source, Apple-silicon
+only. Better isolation, and on macOS 26 container-to-container networking works
+(on macOS 15 the vmnet framework isolated them from each other entirely).
+
+### The fact that decides whether it helps US — and it is NOT settled
+
+**Apple's own docs do not say how host directories are shared.** The technical
+overview says only *"you mount only necessary data into each VM"*. Secondary
+sources state it is **virtiofs** — the same mechanism Docker Desktop uses.
+
+If that is right, then **switching runtimes does not fix anything we care about**:
+ownership still remaps, and the substrate that blocked `restic` and forced the
+`keap.db` backup container-side is unchanged. The isolation and startup wins are
+real; the filesystem story is the same story.
+
+**This is the single measurement worth taking**, and it is cheap: install
+`container`, mount a directory, `stat` a file inside and outside, write as the
+container user and read the owner from macOS. One afternoon answers whether any
+of the rest is worth designing.
+
+### The custom-distro idea, taken seriously
+
+> *a lightweight distro that handles communication between the OS and the Docker
+> stacks*
+
+VM-per-container makes this more coherent than it sounds: one VM whose job is to
+**own the filesystem on a real Linux block device** — not a virtiofs share — and
+serve it to everything else. Inside that VM, `chown`/`chmod`/groups are real,
+because it is a real Linux filesystem with one uid namespace. That is the
+user/group/permission model the operator asked for, actually enforced.
+
+**But it collides with the other requirement, and the collision is the point:**
+
+> *soubory bych samozřejmě rád procházel i klasicky přes `ls`*
+
+These two pull apart:
+
+| store | real POSIX semantics | `ls` from macOS |
+| --- | --- | --- |
+| APFS directory + virtiofs (today, and `container` too) | **no** — ownership remapped, uid per container | **yes** |
+| Linux block device inside a VM | **yes** | **no** — macOS cannot read ext4/xfs |
+| Linux VM + NFS/SMB export back to macOS | **yes**, inside | **yes**, over a network mount |
+
+So the idea *can* have both — but only through the third row, which puts a
+network filesystem in the path and makes the VM a hard dependency for `ls`. That
+is a real cost, and it is the honest shape of the trade rather than a reason to
+drop it.
+
+### Where this lands
+
+Ranked by what each actually buys:
+
+1. **The host-daemon fs core (Part 2) does not need any of this.** A Go binary on
+   macOS reads APFS natively — no virtiofs, no VM, and containers already reach
+   the host in this estate. It gets the performance and the loopback visibility
+   *without* the runtime change. **It remains the recommendation.**
+2. **`apple/container` is worth measuring on its own merits** — VM-per-container
+   isolation and startup are genuine — but as a **Docker Desktop replacement**,
+   not as a filesystem fix. Those are separate decisions and should not be
+   bundled.
+3. **The custom distro is the most interesting and the least urgent.** It is the
+   only option that makes `chmod` real, and the only one that needs a network
+   filesystem to stay `ls`-able. Worth a design once the fs core question is
+   settled — not before, because the fs core answer may make it unnecessary.
+
 ## Part 3 — what I would do next, in order
 
 1. **Land the identity fix** — `--unique-uid=0` as a playbook task with a
@@ -161,3 +236,7 @@ week it waits the cost grows.
 - [5 ownCloud alternatives, 2026](https://sliplane.io/blog/5-awesome-owncloud-alternatives)
 - [Nextcloud vs ownCloud vs Seafile](https://massivegrid.com/blog/nextcloud-vs-owncloud-vs-seafile-enterprise-comparison/)
 - [Best self-hosted cloud storage, 2026](https://talos.tools/blog/best-self-hosted-cloud-storage-2026)
+- [apple/container — README (macOS 26 requirement)](https://github.com/apple/container)
+- [apple/container — technical overview](https://github.com/apple/container/blob/main/docs/technical-overview.md)
+- [Apple Containers on macOS: a technical comparison with Docker](https://thenewstack.io/apple-containers-on-macos-a-technical-comparison-with-docker/)
+- [Apple Container vs. Docker Desktop](https://4sysops.com/archives/apple-container-vs-docker-desktop/)
