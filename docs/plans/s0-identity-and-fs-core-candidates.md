@@ -285,6 +285,91 @@ by uid, started on demand. It answers the memory question, the routing question
 and the lifecycle question at once — and if it works, the fs-core shortlist gets
 shorter rather than longer.
 
+## Part 2d — the spike, RUN (2026-08-01, measured on this machine)
+
+`brew install container` → 1.2.0, Apache-2.0, a launch **agent** (so
+`container system stop` + `brew uninstall` is a clean exit). Docker Desktop was
+untouched throughout: **63 containers up before, during and after.**
+
+### Measurement 1 — the filesystem question, settled
+
+This is the cheap measurement Part 2b said would decide whether the runtime
+change helps. It does not.
+
+```
+$ container run --rm -v $D:/probe alpine sh -c 'stat -c "%u:%g mode=%a" /probe/host.txt; mount | grep probe'
+0:0 mode=640
+virtiofs on /probe type virtiofs (rw,relatime)
+```
+
+| | macOS sees | container sees |
+| --- | --- | --- |
+| host-written file | `pazny:staff` mode 640 | **`0:0`** mode 640 |
+| container-written file | `pazny:staff` mode 644 | `0:0` mode 644 |
+
+**`apple/container` shares host directories over virtiofs** — the same mechanism
+as Docker Desktop, confirmed directly rather than from a secondary source. Mode
+bits survive; **ownership is squashed to root in both directions**. And
+`chown 1000:1000` inside the container **succeeded and did nothing** — no error,
+no effect: a silent no-op, the same class this estate spent the day hunting.
+
+**Conclusion: `apple/container` is a Docker Desktop alternative, not a filesystem
+fix.** The chmod/ownership problem is a property of the host-sharing mechanism,
+not of the runtime, and both runtimes use the same one. Part 2's host-daemon
+recommendation stands unchanged.
+
+### Measurement 2 — container-per-user, and the numbers are good
+
+Two user trees, one container each, mounting only its own subtree:
+
+```
+sees own:      akadmin private notes
+sees sarka:    can't open '/home/../sarka/documents/secret.txt': No such file or directory
+traversal:     can't open '/../sarka/documents/secret.txt': No such file or directory
+```
+
+**The isolation is structural, as predicted.** Not a guard that can be bypassed —
+the bytes are not in the VM.
+
+| | measured |
+| --- | --- |
+| start, image local | **0.65 – 0.73 s** per user |
+| host RSS per running VM | **~26 MB** (21 MB at `--memory 256m`) |
+| network | each container gets **its own IP** (`192.168.64.5/.6/.7`) |
+
+The `MEMORY` column reports the VM's *allocation* (default 1024 MB, and the
+`container system config` tutorial is exactly how to lower that default). The
+host RSS shows it is **lazily allocated, not reserved** — ~26 MB actual for an
+idle container, and dropping the allocation to 256 MB barely moved it.
+
+**All three unknowns from Part 2c came back favourable:**
+
+- **memory** — 26 MB per idle user is affordable; ten users is a rounding error
+  next to the 63 Docker containers already running;
+- **start** — 0.7 s is inside the window where on-demand start is invisible
+  behind a page load;
+- **routing** — a per-container IP means Traefik has something concrete to route
+  a uid-keyed request *to*, rather than needing a new addressing scheme.
+
+### What this changes
+
+Container-per-user is now the **best-evidenced** of the three ideas, and the only
+one whose numbers were measured rather than argued. It also does not depend on
+`apple/container`: the isolation and the economics would look similar under
+Docker, and the VM-per-container kernel separation is a bonus rather than the
+mechanism.
+
+**It remains true that per-user is right for a handful of interactive surfaces
+and wrong for the infrastructure tier** — that boundary rule (per-user when it
+holds per-user state or mounts per-user bytes) is unaffected by these numbers.
+
+### Not yet measured
+
+- A **realistic image**. Alpine is 8 MB; code-server is ~1 GB and will start far
+  slower than 0.7 s cold. The start-time number is a floor, not a promise.
+- **Lifecycle** — nothing here started or reaped a container on demand.
+- **Traefik uid-keyed routing** — feasible-looking, untried.
+
 ## Part 3 — what I would do next, in order
 
 1. **Land the identity fix** — `--unique-uid=0` as a playbook task with a
