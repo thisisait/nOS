@@ -34,8 +34,7 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p b2b
     exec -T freescout
-    php artisan tinker --execute="echo App\User::where('email','{{ freescout_admin_email }}')->count();"
-    2>/dev/null
+    sh -c 'cd /www/html && echo "echo \"NOSCOUNT:\".App\\User::where(\"email\",\"{{ freescout_admin_email }}\")->count();" | php artisan tinker 2>/dev/null'
   register: _fs_user_check
   changed_when: false
   failed_when: false
@@ -49,7 +48,7 @@
 - name: "[pazny.freescout Post] Create admin user via Artisan (first-run only)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p b2b
-    exec -T freescout
+    exec -T -w /www/html freescout
     php artisan freescout:create-user
     --role=admin
     --firstName="{{ freescout_admin_first_name }}"
@@ -62,7 +61,7 @@
     - _fs_ready.status | default(0) in [200, 302, 500]
     # rc == 0 means the probe ANSWERED; only then does '0' mean "no admin".
     - _fs_user_check.rc | default(1) == 0
-    - (_fs_user_check.stdout | default('') | trim) == '0'
+    - "'NOSCOUNT:0' in (_fs_user_check.stdout | default(''))"
   changed_when: _fs_user_create.rc | default(1) == 0
   failed_when: false
   check_mode: false
@@ -73,15 +72,15 @@
 # with App\User::where->update to work for existing users.
 - name: "[pazny.freescout Post] Reconverge admin password (tinker UPDATE)"
   ansible.builtin.shell: |
-    {{ docker_bin }} compose -p b2b exec -T freescout \
-      php artisan tinker --execute="\$u=App\User::where('email','{{ freescout_admin_email }}')->first(); if(\$u){\$u->password=bcrypt('{{ freescout_admin_password }}'); \$u->save(); echo 'UPDATED';}"
+    {{ docker_bin }} compose -p b2b exec -T freescout sh -c 'cd /www/html && echo "\$u=App\\User::where(\"email\",\"{{ freescout_admin_email }}\")->first(); if(\$u){\$u->password=bcrypt(\"{{ freescout_admin_password }}\"); \$u->save(); echo \"UPDATED\";}" | php artisan tinker 2>/dev/null' 
   when:
     - _fs_ready.status | default(0) in [200, 302, 500]
     # Same rc discriminator as the create: with the `|| echo "0"` sentinel gone,
     # a failed probe yields an EMPTY stdout, which is != '0' and would otherwise
     # send this branch at a FreeScout we could not read.
     - _fs_user_check.rc | default(1) == 0
-    - (_fs_user_check.stdout | default('') | trim) != '0'
+    - "'NOSCOUNT:' in (_fs_user_check.stdout | default(''))"
+    - "'NOSCOUNT:0' not in (_fs_user_check.stdout | default(''))"
   register: _fs_pw_update
   changed_when: "'UPDATED' in (_fs_pw_update.stdout | default(''))"
   failed_when: false
@@ -98,8 +97,7 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p b2b
     exec -T freescout
-    php artisan tinker --execute="echo App\User::where('email','{{ freescout_admin_email }}')->count();"
-    2>/dev/null
+    sh -c 'cd /www/html && echo "echo \"NOSCOUNT:\".App\\User::where(\"email\",\"{{ freescout_admin_email }}\")->count();" | php artisan tinker 2>/dev/null'
   register: _fs_owner_verify
   changed_when: false
   failed_when: false
@@ -110,14 +108,22 @@
   ansible.builtin.fail:
     msg: |
       FreeScout answered on its port but has NO account for
-      {{ freescout_admin_email }} (probe rc={{ _fs_owner_verify.rc | default('n/a') }},
-      count={{ _fs_owner_verify.stdout | default('') | trim | default('<empty>', true) }}).
+      {{ freescout_admin_email }} — or the PROBE ITSELF FAILED, which this message
+      cannot tell apart. rc={{ _fs_owner_verify.rc | default('n/a') }}, marker="{{
+      (_fs_owner_verify.stdout | default('')).split('NOSCOUNT:')[1][:4] if 'NOSCOUNT:' in (_fs_owner_verify.stdout | default('')) else 'ABSENT — the probe did not run' }}".
       The create and password steps above swallow their own failures on purpose,
       so this is the only signal that the seed did not take. Diagnose with:
         docker compose -p b2b exec -T freescout php artisan tinker
   when:
     - _fs_ready.status | default(0) in [200, 302, 500]
-    - (_fs_owner_verify.rc | default(1) != 0) or ((_fs_owner_verify.stdout | default('') | trim) in ['', '0'])
+    # Read the MARKER, never bare stdout: tinker prints a Psy Shell banner and a
+    # trailing prompt line, so `stdout == '0'` could never have matched anything.
+    # A missing marker means the PROBE failed, which is not the same as "no
+    # admin" — and conflating those is what fired this gate against a FreeScout
+    # that had its admin all along (2026-08-01).
+    - (_fs_owner_verify.rc | default(1) != 0)
+      or ('NOSCOUNT:' not in (_fs_owner_verify.stdout | default('')))
+      or ('NOSCOUNT:0' in (_fs_owner_verify.stdout | default('')))
 
 # ──────────────────────────────────────────────────────────────────────────
 # Native OIDC wiring via the `freescout-oauth` community module
