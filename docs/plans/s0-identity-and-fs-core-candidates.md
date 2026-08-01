@@ -210,6 +210,81 @@ Ranked by what each actually buys:
    filesystem to stay `ls`-able. Worth a design once the fs core question is
    settled — not before, because the fs core answer may make it unnecessary.
 
+## Part 2c — container-per-user
+
+Operator idea, 2026-08-01. It is the strongest of the three, because it does not
+compete with the fs-core question — it **changes what that question is asking**.
+
+### What it fixes that nothing else did
+
+Part 1 of the companion spec recorded code-server as unfixable: one container,
+one workspace, behind a forward-auth gate. Mounting every user's tree into it
+would hand anyone who reaches it everyone's files, *"which is precisely the
+partition the VFS exists to enforce"*. Per-user instances are the answer that was
+sitting right there — each one mounts `users/{uid}` and nothing else.
+
+And it generalises. Today the per-user boundary is enforced **in code**: Bone's
+realpath-in-scope guard, face's uid pinning from forward-auth headers, KEAP's
+tier ladder. Good code, and all of it is one bug away from a leak. With a
+container per user, the boundary is enforced **by the mount** — a container
+cannot leak bytes that were never mounted into it. The guard becomes
+defence-in-depth instead of the only defence.
+
+### Why it reframes the fs-core choice
+
+Nextcloud, oCIS and Seafile are all being evaluated partly for something a
+container boundary would provide for free: **multi-tenancy**. If each user's
+editor and file browser run in their own container over their own subtree, the
+store no longer has to know about users at all.
+
+That admits much smaller tools — a plain WebDAV server, a file browser, even
+`dufs` — where today the shortlist is dominated by applications whose main
+complexity *is* the multi-tenant layer. **Worth deciding before the oCIS spike,
+because it changes what the spike is testing for.**
+
+### Where it fits the substrate
+
+`apple/container` is a better match for this than Docker Desktop, and for once
+the reason is architectural rather than benchmarks: VM-per-container means each
+user's editor has **its own kernel**, and fast start is exactly the property an
+on-demand per-user container needs. The two ideas were raised separately and
+reinforce each other.
+
+### The costs, and they are real
+
+- **Multiplication.** N users × M per-user apps. Memory is the binding constraint
+  on a Mac already running ~50 services. This is right for a *handful* of
+  interactive surfaces — editor, file browser, terminal — and wrong for the
+  infrastructure tier. **Naming which apps go per-user is the first design step,
+  not an implementation detail.**
+- **Lifecycle.** Something must start a user's container on first access and reap
+  it when idle. That is new orchestration — and it is precisely the
+  "pulse-driven organelle shots" shape already proposed, so it has a home.
+- **Routing.** Traefik must send a request to *that user's* backend. Authentik
+  forward-auth already puts the uid at the edge, so a uid-keyed router is
+  feasible — but it is new machinery on the path everything else depends on.
+- **Cold start** on first access after idle.
+
+### The boundary, stated
+
+Not everything should be per-user, and ONLYOFFICE is the clean counter-example:
+it is **stateless** — it fetches a document, edits it, posts it back. A per-user
+document server would multiply memory for no isolation gain, because it holds
+nothing between sessions. The rule that falls out:
+
+> **Per-user when the container holds per-user state or mounts per-user bytes.
+> Shared when it is a stateless function over a document.**
+
+That single line decides most cases without further argument, and it is worth
+writing into the anatomy doctrine regardless of whether this gets built.
+
+### What it would take to know
+
+A one-user spike: one code-server container mounting only `users/akadmin`, routed
+by uid, started on demand. It answers the memory question, the routing question
+and the lifecycle question at once — and if it works, the fs-core shortlist gets
+shorter rather than longer.
+
 ## Part 3 — what I would do next, in order
 
 1. **Land the identity fix** — `--unique-uid=0` as a playbook task with a
