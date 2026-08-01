@@ -39,6 +39,23 @@ final class NotificationRepository
 	 *
 	 * @param array<string,mixed> $payload
 	 */
+	/**
+	 * Severity → channels when the caller did not say. Byte-mirrors Bone's
+	 * `_DEFAULT_CHANNELS_BY_SEVERITY` (files/anatomy/bone/clients/wing.py) —
+	 * the two paths insert into the SAME table, so a caller reaching Wing
+	 * directly must not get a quieter default than one reaching it via Bone.
+	 * Pinned by tests/anatomy/test_backup_reaches_the_brain.py.
+	 *
+	 * @return list<string>
+	 */
+	public static function defaultChannelsFor(string $severity): array
+	{
+		return match ($severity) {
+			'critical', 'high' => ['wing-inbox', 'ntfy'],
+			default            => ['wing-inbox'],
+		};
+	}
+
 	public function insert(array $payload): int
 	{
 		$severity = (string) ($payload['severity'] ?? 'info');
@@ -46,9 +63,23 @@ final class NotificationRepository
 			throw new \InvalidArgumentException("invalid severity: {$severity}");
 		}
 
-		$channels = $payload['channels'] ?? ['wing-inbox'];
+		// An omitted `channels` defaults BY SEVERITY, not to inbox-only.
+		//
+		// Measured 2026-08-01: PulsePresenter::emitRunStateChangeNotification —
+		// "THE single choke point that sees EVERY run result", by its own
+		// docblock — inserts a severity=high "Pulse job X failing" payload with
+		// no channels key. Inbox-only meant no push, no mail, and repeat
+		// failures after the first are suppressed by design, so a broken job's
+		// entire footprint was one unread row in a web inbox.
+		//
+		// Bone's Python path was fixed on exactly this ground after six nights
+		// of "Backup FAILED" at high reached nobody (clients/wing.py
+		// _DEFAULT_CHANNELS_BY_SEVERITY); this is the PHP twin, and it lives in
+		// the repository rather than at the call site so the next caller that
+		// omits channels inherits the fix instead of repeating the bug.
+		$channels = $payload['channels'] ?? self::defaultChannelsFor($severity);
 		if (!is_array($channels) || $channels === []) {
-			$channels = ['wing-inbox'];
+			$channels = self::defaultChannelsFor($severity);
 		}
 		foreach ($channels as $ch) {
 			if (!in_array($ch, self::VALID_CHANNELS, true)) {

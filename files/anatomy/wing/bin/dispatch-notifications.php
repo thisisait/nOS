@@ -32,8 +32,15 @@ declare(strict_types=1);
  * Exit codes:
  *   0  — clean run (zero or more deliveries, no fatal errors)
  *   1  — fatal: schema missing, DB unreadable
- *   2  — partial: at least one delivery failed (notification stamped with
- *        error, but the run completed — Pulse re-tries on next tick)
+ *   2  — partial: at least one delivery failed. The row keeps its NULL
+ *        dispatched_at and is re-fetched on the next tick, up to
+ *        DISPATCH_MAX_ATTEMPTS; only then is it stamped, with the error kept.
+ *
+ * This docblock promised that retry from the day it was written, and until
+ * 2026-08-01 it was false: mark_dispatched() stamped the timestamp in BOTH
+ * branches, and fetch_pending() selects `WHERE {$col} IS NULL` — so a failed
+ * send was excluded from every subsequent run and looked, in the database,
+ * exactly like a delivered one.
  */
 
 $wingDb = getenv('WING_DB_PATH') ?: ($_SERVER['HOME'] . '/wing/app/data/wing.db');
@@ -123,16 +130,38 @@ function fetch_pending(SQLite3 $db, string $channel, int $limit): array
 	return $rows;
 }
 
+/**
+ * Maximum delivery attempts per channel before a row is stamped anyway.
+ *
+ * A minute apart, so this is ~10 minutes of transient-outage tolerance. The
+ * point is not to retry forever — it is that a row must not be marked delivered
+ * because we TRIED to deliver it.
+ */
+const DISPATCH_MAX_ATTEMPTS = 10;
+
 function mark_dispatched(SQLite3 $db, string $uuid, string $channel, ?string $error): void
 {
 	$tsCol  = $channel === 'ntfy' ? 'ntfy_dispatched_at' : 'mail_dispatched_at';
 	$errCol = $channel === 'ntfy' ? 'ntfy_error'         : 'mail_error';
+	$atCol  = $channel === 'ntfy' ? 'ntfy_attempts'      : 'mail_attempts';
 	$now = gmdate('c');
 	if ($error === null || $error === '') {
-		$stmt = $db->prepare("UPDATE notifications SET {$tsCol} = :ts WHERE uuid = :uuid");
+		$stmt = $db->prepare("UPDATE notifications SET {$tsCol} = :ts, {$errCol} = NULL WHERE uuid = :uuid");
 		$stmt->bindValue(':ts', $now, SQLITE3_TEXT);
 	} else {
-		$stmt = $db->prepare("UPDATE notifications SET {$tsCol} = :ts, {$errCol} = :err WHERE uuid = :uuid");
+		// FAILURE. Do NOT stamp the timestamp — fetch_pending selects on
+		// `{$tsCol} IS NULL`, so stamping here is what made a failed send
+		// permanently unretryable AND indistinguishable from a delivered one.
+		// Count the attempt instead, and only give up (stamp) at the budget,
+		// where the surviving error column says what happened.
+		$stmt = $db->prepare(
+			"UPDATE notifications
+			    SET {$errCol} = :err,
+			        {$atCol}  = {$atCol} + 1,
+			        {$tsCol}  = CASE WHEN {$atCol} + 1 >= :max THEN :ts ELSE NULL END
+			  WHERE uuid = :uuid"
+		);
+		$stmt->bindValue(':max', DISPATCH_MAX_ATTEMPTS, SQLITE3_INTEGER);
 		$stmt->bindValue(':ts', $now, SQLITE3_TEXT);
 		$stmt->bindValue(':err', substr($error, 0, 500), SQLITE3_TEXT);
 	}

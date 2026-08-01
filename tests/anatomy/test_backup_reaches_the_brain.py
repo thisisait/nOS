@@ -227,3 +227,75 @@ def test_an_absent_source_is_recorded_as_failed():
         "notify_result counts them as neither failed nor missing and reports "
         '"Backup OK":\n  ' + "\n  ".join(offenders)
     )
+
+
+# ── A failed send is not a delivered one ───────────────────────────────────
+#
+# Measured 2026-08-01, and it is the same disease as everything above: the
+# sender wrote its own delivery record. `mark_dispatched()` stamped
+# `{ntfy,mail}_dispatched_at` in BOTH branches, and `fetch_pending()` selects
+# `WHERE {col} IS NULL` — so one unreachable moment for ntfy or the SMTP host
+# excluded that row from every subsequent run, permanently, while leaving it
+# indistinguishable in the database from a delivered one. The file's own
+# docblock promised "Pulse re-tries on next tick"; the retry it promised could
+# not happen.
+#
+# The alarm self-healed too: the failing run exits 2 → one "job failing" row;
+# the next minute the row is already stamped, the run is clean → "job
+# recovered". The operator sees a resolved blip and never sees the message.
+
+DISPATCH_PHP = REPO / "files" / "anatomy" / "wing" / "bin" / "dispatch-notifications.php"
+
+
+def test_a_failed_delivery_leaves_the_row_pending():
+    src = DISPATCH_PHP.read_text()
+    fn = src[src.index("function mark_dispatched"):]
+    fn = fn[: fn.index("\n}\n")]
+    # The success branch stamps; the failure branch must not stamp
+    # unconditionally. A CASE guarded by the attempt budget is the only
+    # stamping allowed on the error path.
+    assert "CASE WHEN" in fn and "DISPATCH_MAX_ATTEMPTS" in fn, (
+        "mark_dispatched no longer bounds its stamping by an attempt budget — if "
+        "it stamps dispatched_at on failure, fetch_pending (WHERE col IS NULL) "
+        "will never see the row again and a lost message reads as delivered"
+    )
+    error_branch = fn[fn.index("} else {"):]
+    assert "= :ts," not in error_branch.split("CASE WHEN")[0].split("SET")[-1], (
+        "the error branch assigns the timestamp directly again"
+    )
+
+
+def test_the_attempt_counters_exist_on_both_fresh_and_existing_dbs():
+    """A column only in schema-extensions.sql never appears on an install that
+    already ran: CREATE TABLE IF NOT EXISTS is a no-op there. It must ALSO be in
+    init-db.php's idempotent ALTER sweep."""
+    schema = (REPO / "files" / "anatomy" / "wing" / "db" / "schema-extensions.sql").read_text()
+    initdb = (REPO / "files" / "anatomy" / "wing" / "bin" / "init-db.php").read_text()
+    for col in ("ntfy_attempts", "mail_attempts"):
+        assert col in schema, f"{col} missing from schema-extensions.sql (fresh installs)"
+        assert col in initdb, (
+            f"{col} missing from init-db.php's addMissingColumns sweep — every "
+            f"EXISTING wing.db would lack it and the UPDATE would fail at runtime"
+        )
+
+
+def test_the_php_insert_path_defaults_by_severity_too():
+    """Bone and Wing insert into the SAME notifications table.
+
+    Bone's Python path learned this after six nights of 'Backup FAILED' at
+    severity=high reached nobody. The PHP path kept `?? ['wing-inbox']`, so
+    PulsePresenter's high-severity 'Pulse job X failing' — the single choke
+    point that sees every run result — never reached a phone either, and repeat
+    failures are suppressed by design, making one unread row the whole footprint
+    of a permanently broken job.
+    """
+    repo = (REPO / "files" / "anatomy" / "wing" / "app" / "Model" / "NotificationRepository.php").read_text()
+    assert "defaultChannelsFor" in repo, (
+        "NotificationRepository lost its severity-aware default; an omitted "
+        "`channels` is back to inbox-only at every severity"
+    )
+    m = re.search(r"function defaultChannelsFor.*?\}\s*\n\s*\}", repo, re.S)
+    assert m and "'critical', 'high' => ['wing-inbox', 'ntfy']" in m.group(0), (
+        "critical/high no longer default to ntfy in the PHP path, while Bone's "
+        "Python twin still does — same table, two different loudness levels"
+    )

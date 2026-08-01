@@ -160,14 +160,42 @@ emit_event "scan.batch_started" "$(jq -nc \
 log "Dispatching Claude Code scan..."
 SCAN_STARTED_AT=$(date +%s)
 
+SCAN_RC=0
 claude --dangerously-skip-permissions -p - < "$PROMPT_FILE" \
     --output-format text \
-    2>>"$LOG_FILE" || {
-    log "WARN: Claude Code scan returned non-zero exit"
-}
+    2>>"$LOG_FILE" || SCAN_RC=$?
 rm -f "$PROMPT_FILE"
 
 # ── Update scan state ─────────────────────────────────────────────────────────
+#
+# ONLY on a scan that actually ran. Until 2026-08-01 the non-zero exit was
+# swallowed into a WARN line and the loop below stamped last_checked,
+# last_cve_scan, last_attack_probe and status="scanned" for every component
+# regardless — so a scan that never happened (claude rate-limited, out of
+# session, crashed, refusing) left scan-state.json claiming all five components
+# had just been CVE-scanned and attack-probed, with no new queue rows and a
+# Pulse run recorded as exit 0.
+#
+# The freshness it fabricated was not merely cosmetic: drift-watch.sh reads
+# last_full_scan_age_hours, so the fake timestamp is exactly what keeps the
+# staleness branch quiet. The watcher built to make scan rot loud was being fed
+# the value that hid it. (Its pending_critical branch still fires independently
+# — what the fake freshness defeats is the "the pipeline stopped producing
+# findings at all" signal, which is the one nothing else can raise.)
+if [ "$SCAN_RC" -ne 0 ]; then
+    log "ERROR: Claude Code scan exited $SCAN_RC — NOT stamping components as scanned"
+    for COMPONENT in $BATCH; do
+        jq --arg comp "$COMPONENT" --arg ts "$TIMESTAMP" '
+          .components[$comp].status = "scan_failed"
+          | .components[$comp].last_scan_attempt = $ts
+        ' "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
+    done
+    emit_event "scan.batch_failed" "$(jq -nc \
+        --argjson components "$BATCH_JSON" --argjson rc "$SCAN_RC" \
+        '{components:$components, exit_code:$rc}')" >> "$LOG_FILE"
+    log "=== NOS Vulnerability Scan FAILED ==="
+    exit 1
+fi
 
 log "Updating scan state..."
 

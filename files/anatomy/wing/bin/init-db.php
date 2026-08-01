@@ -363,6 +363,15 @@ $addMissingColumns($db, 'systems', [
 	'health_url' => 'TEXT',
 ]);
 
+// notifications.{ntfy,mail}_attempts — delivery retry counters (2026-08-01).
+// Existing DBs pick them up here; every legacy row starts at 0, which is
+// correct: an already-stamped row is never re-fetched, and an unstamped one
+// deserves its full retry budget.
+$addMissingColumns($db, 'notifications', [
+	'ntfy_attempts' => 'INTEGER NOT NULL DEFAULT 0',
+	'mail_attempts' => 'INTEGER NOT NULL DEFAULT 0',
+]);
+
 // events.patch_id — correlate events with apply-patches runs.
 $addMissingColumns($db, 'events', [
 	'patch_id' => 'TEXT',
