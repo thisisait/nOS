@@ -1,4 +1,4 @@
-/* Vendored from thisisait/nos-keap @ 5b0db4f shared/contracts/field-concepts.ts — organ-side copy.
+/* Vendored from thisisait/nos-keap @ v1.37.0 shared/contracts/field-concepts.ts — organ-side copy.
  * DO NOT EDIT HERE. Edit the original in the KEAP repo and re-vendor, or the
  * change dies at the next re-vendor while every gate stays green. */
 /**
