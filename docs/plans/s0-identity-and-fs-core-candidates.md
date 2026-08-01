@@ -370,6 +370,83 @@ holds per-user state or mounts per-user bytes) is unaffected by these numbers.
 - **Lifecycle** — nothing here started or reaped a container on demand.
 - **Traefik uid-keyed routing** — feasible-looking, untried.
 
+## Part 2e — PoC on a REAL image: apple/container vs Docker
+
+`lscr.io/linuxserver/code-server:4.115.0-ls332` (1.09 GB) — the image the estate
+actually runs — under both runtimes, same mount, same `--memory 1024m --cpus 2`,
+timed from `run` to the first HTTP 302 on a published port.
+
+| | apple/container 1.2.0 | Docker Desktop |
+| --- | --- | --- |
+| image pull (cold) | 28.5 s | already local |
+| **start → HTTP ready** | **2.1 s** | **2.4 s** |
+| 800 small-file writes | **195 ms** | 273 ms |
+| 800 small-file reads | **125 ms** | 141 ms |
+| `ls -la` of 800 entries | 63 ms | **7 ms** |
+| host RSS, all helper procs | **71 MB** (4 procs, 1 container) | **6 036 MB** (one VM, 64 containers) |
+
+### Reading these numbers honestly
+
+**Start time is a wash.** 2.1 s vs 2.4 s on a 1 GB image is within noise, and
+both are fast enough for on-demand per-user start. The earlier "0.7 s" figure was
+alpine — a floor, as flagged, and the real image is 3× that. Still fine.
+
+**The filesystem is a genuine surprise: apple/container is FASTER on bulk I/O**
+(~30 % on writes) and **9× slower on directory stat**. Both use virtiofs, so this
+is implementation, not mechanism. For an editor the mix matters: opening a large
+project is stat-heavy (bad for apple), saving files is write-heavy (good for
+apple). **Neither is disqualifying, and neither is a reason to switch on its own.**
+
+**The memory comparison is the one that must not be misread.** 71 MB vs 6 036 MB
+is NOT apple/container winning by 85×. Docker's 6 GB is **one VM shared by 64
+containers** — the whole estate. apple/container's 71 MB is **four helper
+processes for one container**. The honest comparison is *marginal* cost:
+
+- Docker: a 65th container adds ~83 MB **inside the existing VM** (measured by
+  `docker stats`), against that VM's fixed budget.
+- apple/container: an extra container adds ~20-26 MB of **host** RSS plus its own
+  guest memory, lazily allocated.
+
+They are the same order of magnitude per container. **The architectural
+difference is not the per-container cost — it is that Docker's is drawn from one
+pre-committed pool, and apple/container's is not committed until used.**
+
+### And that is exactly the operator's point
+
+> *"Málokdy se asi stane, že na jednom stroji bude online 50 uživatelů a budou
+> mít otevřené všechny apps"*
+
+This is the right reframing and the numbers support it. Per-user containers are
+priced by **concurrent** users, not registered ones, because an idle user's
+container can be reaped and re-started in ~2 s. Ten concurrent users each with an
+editor is ~200-800 MB — a fraction of what Docker Desktop has already
+pre-committed for the estate. **The multiplication objection in Part 2c was
+overstated: it multiplies concurrency, not headcount**, and lazily-allocated
+per-container VMs are the shape that makes that distinction real.
+
+### Verdict on the runtime question
+
+**apple/container is a credible Docker Desktop alternative and not obviously
+better or worse.** It wins bulk I/O, loses stat, matches on start, and prices
+memory on demand instead of up front. Nothing here justifies migrating the
+existing 63-container estate.
+
+**But for per-user, on-demand, data-sensitive containers it is the better fit**,
+for reasons that are architectural rather than benchmark: a VM per container
+means a kernel per user, memory is not pre-committed, and each container is
+individually addressable. That is a narrow, well-matched use — which is the shape
+this whole thread has been converging on.
+
+### One measurement I could not explain
+
+Two intermediate runs reported `TIMEOUT` against a published port that was
+demonstrably listening, while the container served fine internally; the same
+curl then returned 302 in 9.6 ms a minute later. The clean re-run measured 2.1 s.
+**I do not know what the first two runs hit** — the numbers above come from the
+clean run, and this is recorded rather than smoothed over because an
+intermittently unreachable published port would matter enormously to a
+Traefik-routed per-user design. **Reproduce before building on it.**
+
 ## Part 3 — what I would do next, in order
 
 1. **Land the identity fix** — `--unique-uid=0` as a playbook task with a
