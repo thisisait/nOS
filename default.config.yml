@@ -2063,7 +2063,7 @@ qgis_version: "latest"                 # WARNING: amd64 only (runs via Rosetta e
 
 metabase_domain: "bi{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 metabase_port: 3002
-metabase_version: "v0.61.2.6"   # synced to role default (cleared version-pin shadow)
+metabase_version: "v0.61.9"      # REM-153 CRITICAL GHSA-cwxq-fmxq-jv8h (no CVE id — a CVE-only scan cannot see it)
 metabase_db_name: "metabase"
 metabase_db_user: "metabase"
 metabase_db_password: "{{ global_password_prefix }}_pw_metabase"

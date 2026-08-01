@@ -939,6 +939,64 @@ The curator agent does **not** do this — P0 emits `desc`-kind proposals only;
 `node-edit`/`node-delete`/`relation` kinds are unbuilt (`promotions.ts` `decide()`
 dispatches only `node`, `desc`, `brief`).
 
+### Thread D.0 — the general fix the two audits converged on (2026-08-01)
+
+Both sweeps ended at one sentence: **a step records its own outcome as the fact of
+having attempted, and the record is written by the attempting code.** `dispatched_at`
+stamped by the sender. `status=scanned` stamped by the scan runner. `status_append`
+skipped by the source that vanished. The GREEN verdict printed by the script that
+invoked the agent. Backfilling a gate's expected value in the same commit as the code
+is the degenerate case, and it cost a converge on 2026-08-01.
+
+**175 sites cannot each grow an assert.** The one change that makes the family
+impossible:
+
+1. **Success markers are written by a READER that observes the effect** — the ntfy
+   2xx, the provider actually returned by a `GET`, the admin row actually present —
+   never by the code that attempted the work.
+2. **Absence must be representable.** Nearly every finding is a *missing row* reading
+   identically to a *never-configured* row. An expected-set derived from the same
+   declaration the work is derived from turns silence into a diff.
+
+**Shape, and the engine already exists.** `files/anatomy/module_utils/load_plugins.py`
+carries `_replay_api_sequence`, `_http_call` with `expect_status`, `_docker_exec`,
+`_docker_inspect` with `expect_state`, `expect_substring`. That is the whole reader
+vocabulary the five hand-written loud verifies use today. What is missing is that it
+**cannot fail**: `_replay_api_calls` records ERRORS only on a raised exception and
+`_docker_exec` returns `rc` into a dict nothing inspects — so a hook step returning
+rc=1 is indistinguishable from success, the same defect one level down.
+
+- `files/anatomy/plugins/<svc>-base/hooks/verify.yml`, same schema as `post_compose`,
+  with one added semantic: **every step is an assertion**; a mismatch appends to
+  ERRORS and exits non-zero. No `no_log` permitted in this file.
+- ~40 LOC in the loader, which also un-swallows the EXISTING hook steps (e.g.
+  `nextcloud-base/hooks/post_compose.yml:64`'s `allow_local_idp`).
+- `tasks/stacks/verify-effects.yml`, tagged `['verify', 'always']`, so
+  `--tags verify` runs against a live host in ~20 s without a converge.
+  `-e nos_verify_soft=true` downgrades to warnings for a deliberately-degraded host.
+
+**The expected set comes from declarations that already exist** — `authentik.mode`,
+`authentik.post_setup`, `requires.variables` containing `*_admin_user`,
+`manifest.oidc` — so nobody maintains a second list; the SSO/admin declarations that
+already drive the blueprint render now also drive their own proof.
+
+**Order by consequence, not count:** Gitea first (a missing admin does not stop at
+Gitea — `pazny.woodpecker/tasks/post-oauth.yml` authenticates with the same password
+and swallows the 401, so CI's OAuth app is silently never created, and the whole
+local-first git topology hangs off that account). Then Nextcloud (the only service
+holding real user data, and the only one where a green loud verify is *already*
+wrong: the provider row is asserted, the discovery unblock that makes it usable is
+not). Then Jellyfin — chosen for irreversibility, not frequency.
+
+**The division of labour is the load-bearing part.** `pytest` owns the SHAPE (no
+stale namespaces, no self-reporting writers, no unconsumed tolerances, a verify block
+wherever an existing declaration demands one — `test_post_wiring_is_not_self_reporting.py`).
+`--tags verify` owns the EFFECT. `nos-smoke --strict` with the ephemeral tester
+identity owns END-TO-END truth. **Do not lean on the manifest-derived smoke probe for
+any of this**: it auto-imports a front-page `GET /` per entry, and a Superset with no
+admin and a FreeScout with no owner both return 200 on their login page. It answers
+"is the web tier alive", never "is it owned and wired".
+
 ### Thread D — pulse and scheduled jobs, a full revision
 
 Documented now, planned now, executed as its own arc. The trigger:

@@ -2,7 +2,114 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.8-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.9-beta`.
+
+---
+
+## v0.10-beta (2026-08-01)
+
+> **The estate stops believing its own success reports.** 165 commits since
+> `v0.9-beta`, and the through-line is one sentence that turned out to describe
+> a whole family of defects: *a step recorded its own outcome as the fact of
+> having attempted, and the record was written by the attempting code.* Three
+> arcs — the cortex agreement harness reaching parity, the genome's first layer,
+> and two adversarial audits of the layers nobody had read — all converge on it.
+
+### The cortex corpus agrees with itself, measurably
+
+- **Parity `PINNED`, verdict `AGREE`, six clauses.** KEAP and the vendored organ
+  both carry all 2 403 nodes of the pinned canonical tree; `knowledge_objects[fs:]`
+  matched 317/317 on the gate night at `agreeStreak: 3`.
+- **The harness stopped inventing divergence it could not see.** The denominator
+  was seeded, the capture queue made enumerable, the vendored knowledge tree
+  caught lagging the pin by ten nodes, and the organ's corpus reader identified
+  as a port rather than a stray.
+- Asymmetries are now *named* rather than counted as drift: the estate's own
+  1 088 doc nodes (`organ-docs-corpus`), the 97 nodes outside the referee's
+  jurisdiction, and the KEAP-only table cards.
+
+### The genome — L1, and the write path it needed
+
+- **`state/genome/entity.schema.json`** — a base entity with `identity` /
+  `compliance` / `access` / `cortex` / `face` facets, composed by `$ref` +
+  `allOf`. The first cross-file `$ref` in the estate; `tools/genome-codegen.py`
+  emits the Python and TypeScript mirrors and `--check` fails CI on drift.
+- **The `access` facet reconciled five separate declarations** of "how is this
+  service reached and what gates it" — the split that produced REM-144.
+- **L1 field concepts: every column says what it MEANS.** A closed, git-owned
+  vocabulary with a membership gate; all 76 columns of the five seeded
+  DataTables now carry a `concept:`, and they reach the database rather than
+  only git — because the same change added the write path `data_tables.schema_json`
+  never had. Until then a table's columns were immutable for its lifetime, so a
+  changed definition was a **no-op on every converged install**, silently.
+  Mapping the live columns forced two vocabulary splits the one-concept-per-table
+  rule refused to absorb (`net.url` vs `net.repo`, `graph.uses` vs `graph.stores`).
+- **Honest scope:** the concept token in a row body buys the *lexical* retrieval
+  leg. It does not make embeddings concept-aware — one vector, truncated body.
+  That is L2's job and is not claimed here.
+
+### Backup is an organelle, and the drill proves it
+
+- The nightly set reaches **the brain**: `keap.db` is copied container-side with
+  the page-level `backup()` API (`VACUUM INTO` cannot rebuild a libSQL vector
+  index, and failed silently when it tried), sidestepping the launchd context's
+  missing disk access for `/Volumes`.
+- **`backup-verify.sh`** — a weekly restore drill that fetches, decrypts and
+  opens the newest objects, registered as a Pulse job by the new `backup-base`
+  plugin. `"Restore drill checked NOTHING"` is a HIGH, not a silence.
+- **Absent is a failure, not a skip.** An enabled source whose data was missing
+  used to record nothing at all, so the nightly notification said *"Backup OK — N
+  sources"* with `wing.db`, the gitea repos and the tofu state quietly outside
+  the set.
+
+### REM-144 — the dashboard was on the edge
+
+- Traefik's API answered unauthenticated at the edge, and `/api/http/middlewares`
+  served both SEC-6 edge tokens verbatim. One of them was
+  `{prefix}_pw_face_edge`, so the disclosure was **the global password prefix**,
+  from which every credential in the estate derives.
+- Fixed by routing (`traefik_skip_ids`), by minting `face_edge_token` off the
+  prefix and persisting it, and by a gate that makes an ungated route carry a
+  **justification field** rather than a comment nothing compares. REM-145 rode
+  along as v3.6.24. Public exposure was proven, and the access log showed zero
+  unexplained requests across the six days it covers.
+
+### Two audits of the layers nobody had read
+
+26 agents across two adversarial sweeps; 27 findings survived refutation and ~20
+were killed on review — most of them because the service is off by default.
+
+- **Delivery**: `mark_dispatched()` stamped `dispatched_at` on *failure* too, and
+  the pending query selects on that column — so one unreachable moment for ntfy
+  or SMTP lost the message permanently and left the row indistinguishable from a
+  delivered one. GDPR breach alerts included. Now: attempt counters, stamp on
+  success or budget.
+- **The scan that never ran** stamped `status=scanned` with fresh timestamps —
+  and that fabricated freshness is exactly what the drift watcher reads for
+  staleness, so the alarm built to make scan rot loud was fed the value that
+  silenced it.
+- **A daemon older than its own code**: pulse ran 07-27 code through four
+  converges because `pip --quiet` prints nothing and `changed_when` keyed on
+  stdout. The role now *observes the effect* — comparing the running process
+  against the code on disk — which also repairs drift that already happened.
+- **The wiring layer**: 175 `failed_when: false` against 2 asserts. Gitea's
+  SSO-lockout guard, one of those two, tested `.status` on a `command` result and
+  could never fire. Jellyfin sealed a one-shot setup wizard over an admin POST
+  that admits 400 and 500. FreeScout read its own probe failure as "no admin
+  exists". All three fixed, plus a gate over the four statically-decidable shapes.
+
+### Security
+
+**0 pending CRITICAL** — and this time the number is re-derived from the running
+estate rather than inherited: six queue items were already live at their fix
+version and had simply never been reconciled. REM-137 (Gitea 1.27.0, 36 CVEs) is
+live; REM-153 (Metabase, `GHSA-cwxq-fmxq-jv8h`) is pinned to v0.61.9 and marked
+*not yet live-verified* until the next converge recreates the container. Live
+queue: **12 pending — 5 HIGH / 4 MEDIUM / 3 LOW**, 128 resolved.
+
+The three sharpest findings of the cycle share one methodological cause: **a
+GHSA with no CVE id**. A scan phrased as "no new *CVE* past the pin" was
+literally true and wrong by six days.
 
 ---
 

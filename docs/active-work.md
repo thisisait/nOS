@@ -6,36 +6,34 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-07-30 • v0.10-beta gate MET; a CRITICAL landed the same night
-> and is fixed in code; estate not yet converged.
+> Last updated: 2026-08-01 • v0.10-beta ready to cut: parity PINNED + AGREE,
+> 0 pending CRITICAL (re-derived from live), estate converged.
 
 ## Now (current track)
 
-**A4 landed — the release gate is MET (2026-07-30).** Ledger night `05:31Z`:
-**`agreeStreak: 3`**, six clauses AGREE, `realUserDocs: 28`, `knowledge_objects[fs:]`
-**317/317 exact**. Order of operations:
-[`cortex-s3-s4-workflow-set.md`](plans/cortex-s3-s4-workflow-set.md) · doctrine:
-[`cortex-self-core.md`](plans/cortex-self-core.md).
+**Cut v0.10-beta.** Gate met and re-verified after today's converge: corpus parity
+**PINNED**, verdict **AGREE** on all six clauses; estate on `keap v1.37.0` with the
+L1 concepts **in the database** (face-controls 11 / layouts 10 / wallpapers 11
+columns carrying a `concept:`); **0 pending CRITICAL**, derived from `docker ps`
+rather than inherited — six queue items were already live and unreconciled.
+`RELEASE.md` carries the full section.
 
-**The same night found REM-144 (CRITICAL, live-confirmed).** Traefik's dashboard/API was
-anonymously reachable at the edge and `/api/http/middlewares` served both SEC-6 edge
-tokens verbatim — `X-Face-Edge-Token` was `{prefix}_pw_face_edge`, so the leak was the
-**global password prefix**. Fixed in `67792f0c` (route removed, token off the prefix and
-persisted, REM-145 → v3.6.24, plus a gate that makes an ungated route carry a
-justification *field*). **NEXT (operator):** converge — gitea upgrade recipe FIRST, then a
-plain run (7 pins ahead, incl. REM-137 CRITICAL) → verify the edge 404s → A5 docs review →
-KEAP tag (rowRef + row-`slug`) + pin bump + one night → `dev→master` → tag.
-**Open question the fix cannot answer: was 443 reachable from outside this host?** If yes,
-treat the prefix as disclosed. Structural follow-up:
-[`nos-genome-and-organelles.md`](plans/nos-genome-and-organelles.md).
+**Remaining, in order:** devlog entry for the arc → `dev → master` PR
+(`gh pr merge --rebase --admin`, see memory `nos-release-flow`) → tag `v0.10-beta`
+→ re-sync `dev` to `master`.
 
-**Blank/uninstall drift → managed-resource manifest (VALIDATED, P1.5 remains).**
-Plan: [`blank-uninstall-managed-resources.md`](plans/blank-uninstall-managed-resources.md).
-Shipped: uid stability · derived KEAP `/data` wipe · `uninstall` → the `remove=` ladder ·
-R5 absence assert. The supervised end-to-end run happened 2026-07-22 (`ok=1531 failed=0`,
-63 containers) and found four defects design + review had missed (`hidden_fees/06`, `07`).
-**Remaining: P1.5 managed-resource manifest** — `_blank_dirs` is a hand-kept allowlist,
-not a reconciliation, so a removal still cannot answer "what did we ever create?".
+**One thing the tag does not include, deliberately.** REM-153's pin and today's
+post-audit fixes (gitea guard, jellyfin wizard, freescout reader, the pulse
+staleness probe) are in code but not yet on the host — the converge that applies
+them is the *first run after* the tag. The queue says so per item; do not read
+"resolved" as "live" without `docker ps`.
+
+## Carried forward from the audits
+
+Two adversarial sweeps (26 agents) produced 27 surviving findings; the three
+sharpest are fixed. The rest, and the **general fix** — a per-service
+`verify.yml` hook plus the loader change that lets it fail — are specified in
+[`nos-genome-and-organelles.md`](plans/nos-genome-and-organelles.md) §Thread D.
 
 ## Open follow-ups
 
