@@ -116,6 +116,48 @@ def test_declared_concepts_exist_in_the_vendored_vocabulary():
     )
 
 
+# Definitions that exist but are deliberately NOT seeded, with the reason.
+# Measured live 2026-08-01: GET /agent/v1/tables/face-{apps,systems} both 404,
+# while controls/layouts/wallpapers are 200. So 44 of the 76 columns annotated
+# with an L1 concept belong to tables that do not exist on a converged host.
+#
+# That is not an oversight to paper over: both catalogs are fed from elsewhere
+# (the service registry, the app generator), and seeding them here would create
+# two empty tables whose rows another writer then has to reconcile against.
+# Wiring them is a decision, not a fix. What this allowlist buys is that the
+# NEXT definition to drift out of the seeder is caught the day it happens
+# instead of being found by hand a release later.
+UNSEEDED = {
+    "apps": "fed by the app generator, not the playbook seeder — wiring it is a decision",
+    "systems": "fed by the service registry — same",
+}
+
+
+def test_every_definition_is_either_seeded_or_explicitly_excused():
+    src = (REPO / "roles" / "pazny.keap" / "tasks" / "seed-face-tables.yml").read_text()
+    orphans = sorted(
+        name
+        for name, _ in _definitions()
+        if f'slug: "face-{name}"' not in src and name not in UNSEEDED
+    )
+    assert not orphans, (
+        "table definitions no seeder entry references — they carry concepts, "
+        "columns and GDPR intent for a table that never exists:\n  "
+        + "\n  ".join(orphans)
+        + "\nAdd a seeder entry, or add it to UNSEEDED with the reason."
+    )
+
+
+def test_the_excuse_list_does_not_outlive_its_reason():
+    """An allowlist nobody prunes becomes a permanent blind spot."""
+    src = (REPO / "roles" / "pazny.keap" / "tasks" / "seed-face-tables.yml").read_text()
+    stale = sorted(n for n in UNSEEDED if f'slug: "face-{n}"' in src)
+    assert not stale, (
+        "these are seeded now — drop them from UNSEEDED so the gate covers them: "
+        + ", ".join(stale)
+    )
+
+
 def test_keap_table_seeder_reconciles():
     """The load-bearing one: the seeder must not gate its create on a 404.
 
