@@ -6,14 +6,15 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.9-
 
 ---
 
-## v0.10-beta (2026-08-01)
+## v0.10-beta (2026-08-02)
 
-> **The estate stops believing its own success reports.** 165 commits since
+> **The estate stops believing its own success reports.** 179 commits since
 > `v0.9-beta`, and the through-line is one sentence that turned out to describe
 > a whole family of defects: *a step recorded its own outcome as the fact of
-> having attempted, and the record was written by the attempting code.* Three
+> having attempted, and the record was written by the attempting code.* Four
 > arcs — the cortex agreement harness reaching parity, the genome's first layer,
-> and two adversarial audits of the layers nobody had read — all converge on it.
+> two adversarial audits of the layers nobody had read, and the beginning of one
+> filesystem — all converge on it.
 
 ### The cortex corpus agrees with itself, measurably
 
@@ -47,6 +48,24 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.9-
 - **Honest scope:** the concept token in a row body buys the *lexical* retrieval
   leg. It does not make embeddings concept-aware — one vector, truncated body.
   That is L2's job and is not claimed here.
+
+### face and explore — four ways to read a table, and a core you can navigate
+
+- **Per-table render style.** A DataTable now declares how it wants to be read —
+  `grid`, `blog`, `timeline` or `tiles` — persisted in the card's frontmatter
+  beside the existing `graph` block, with a prose editor for the body column.
+  Declaring a style the data cannot support **degrades and says so** rather than
+  rendering an empty frame.
+- **`/explore` core mode clusters by type**, with θ frozen by hash so a node
+  keeps its position between sessions — spatial memory was the point of the view,
+  and rehashing on every load destroyed it.
+- **LOD opens much earlier** (apparent-size thresholds cut ~2.5×) and labels
+  appear on hover rather than only at point-blank range. The reported "skills
+  appear twice, red and green" was chased to ground and **disproven at three
+  levels** — object identity, graph payload ids, and the placement branches,
+  which are mutually exclusive. What looked like duplication was two cluster
+  envelopes drawn over one set of nodes.
+- Shipped as KEAP **v1.37.0** (the schema write path) and **v1.38.0**.
 
 ### Backup is an organelle, and the drill proves it
 
@@ -98,18 +117,87 @@ were killed on review — most of them because the service is off by default.
   that admits 400 and 500. FreeScout read its own probe failure as "no admin
   exists". All three fixed, plus a gate over the four statically-decidable shapes.
 
+### Then the converge audited the audit
+
+Three defects surfaced only by running the fixed playbook against a live estate,
+and all three are the same shape one level up — **a check that had never once
+executed the branch it claimed to cover.**
+
+- **The FreeScout ownerless-gate fired against a FreeScout that had its admin all
+  along.** The probe behind it had never worked: wrong working directory, *and*
+  an `--execute` flag that tinker does not have. It had been returning empty
+  stdout, which the old logic read as the string `0` — "no admin exists". The
+  gate was right to be loud and wrong about what it was reading; it now keys on
+  a printed marker and cannot confuse *"no admin"* with *"the probe failed"*.
+- **Metabase had never run its setup task against a configured Metabase.**
+  `setup-token` comes back as JSON `null` once setup completes, and one-arg
+  `default('')` substitutes only *undefined* — so the None reached `| length`
+  and aborted the whole run. Two more instances of the same filter mistake were
+  found and fixed with it.
+- The gate written for that last one **caught its own unsoundness**: the real
+  defect spans two lines — the `default()` in a `set_fact`, the `| length` in a
+  later `when:` over a renamed fact — so a single-expression scanner would have
+  shipped green against the very bug it was written for. It now follows the
+  laundered fact through the file.
+
+### One filesystem — measured, not yet built
+
+The estate can hold the same document in three disjoint places and has no answer
+to *"where does this file live"*. This release does not fix that; it establishes
+what is true, which is the part that was missing.
+
+- **S-0 identity, first cut.** Nextcloud was the single service keying accounts
+  on a **hash** of the canonical uid — `user_oidc`'s `uniqueUid` defaults to on
+  and hashes whatever the mapping produced, so the configuration read correctly
+  while the result did not. `--unique-uid=0` on both provider paths, plus a
+  read-back that verifies the **effect** (a 64-hex id is a hash whatever the
+  provider table says). **Honest scope: this fixes the next login.** The existing
+  hashed account is still present, is not migrated, and the converge says so by
+  name — moving it needs `occ files:transfer-ownership` before any deletion.
+- **Three candidate architectures written down and one rejected on the record**
+  (`docs/plans/one-filesystem-architecture.md`), including the finding that POSIX
+  mode bits are *decorative* on this estate: VirtioFS remaps ownership and every
+  container runs as a different uid, so a design depending on `chmod` would work
+  on Linux and be theatre on the operator's Mac.
+- **apple/container measured against Docker** on a real 1.09 GB image rather than
+  a toy: start time is a tie (2.1 s vs 2.4 s), bulk I/O favours apple by ~30 %,
+  `stat` favours Docker by 9×, and the memory figures are **not** the 85× they
+  appear to be — that is one container against a whole estate's shared VM. The
+  measurement that decides adoption has a blocker no playbook can clear: macOS
+  gates published ports behind the **Local Network** privacy permission, whose
+  failure mode is a listening socket that silently drops traffic.
+- Sequenced as its own roadmap (`docs/plans/per-user-container-roadmap.md`),
+  explicitly **after** this tag.
+
 ### Security
 
 **0 pending CRITICAL** — and this time the number is re-derived from the running
 estate rather than inherited: six queue items were already live at their fix
-version and had simply never been reconciled. REM-137 (Gitea 1.27.0, 36 CVEs) is
-live; REM-153 (Metabase, `GHSA-cwxq-fmxq-jv8h`) is pinned to v0.61.9 and marked
-*not yet live-verified* until the next converge recreates the container. Live
-queue: **12 pending — 5 HIGH / 4 MEDIUM / 3 LOW**, 128 resolved.
+version and had simply never been reconciled. Both former CRITICALs are now
+**live-verified against `docker ps`**, not merely pinned — Gitea `1.27.0`
+(REM-137, a 36-CVE cluster) and Metabase `v0.61.9` (REM-153,
+`GHSA-cwxq-fmxq-jv8h`), the latter confirmed after the release converge
+recreated the container.
+
+Queue at cut, cycle-21: **152 items — 128 resolved, 15 pending (5 HIGH /
+6 MEDIUM / 4 LOW), 5 vendor-blocked, 3 wontfix, 1 obsolete.**
 
 The three sharpest findings of the cycle share one methodological cause: **a
 GHSA with no CVE id**. A scan phrased as "no new *CVE* past the pin" was
 literally true and wrong by six days.
+
+**Cycle-21 ran unattended** at 02:14 on the release morning — the nightly Pulse
+scan, whose verdict pipeline had never once produced output until it was fixed
+earlier in this cycle. It is worth naming the two open items it raised that a
+reader should weigh before deploying:
+
+- **REM-151 (HIGH)** — `global_password_prefix` still defaults to `changeme`,
+  and the weak-prefix assert does not cover local tenants. Given that REM-144
+  was a *disclosure of the prefix*, this is the other half of the same surface.
+  Open, and the fix (random prefix on first run, or extend the assert) is not in
+  this tag.
+- **REM-152 (HIGH)** — n8n `2.28.1` against a 17-GHSA advisory wave fixed in
+  `2.32.7`. Another advisory-feed finding with no CVE id.
 
 ---
 

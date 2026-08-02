@@ -6,27 +6,27 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-08-01 • v0.10-beta ready to cut: parity PINNED + AGREE,
-> 0 pending CRITICAL (re-derived from live), estate converged.
+> Last updated: 2026-08-02 • v0.10-beta ready to cut: parity PINNED + AGREE,
+> 0 pending CRITICAL (re-derived from live), estate converged `failed=0`.
 
 ## Now (current track)
 
-**Cut v0.10-beta.** Gate met and re-verified after today's converge: corpus parity
-**PINNED**, verdict **AGREE** on all six clauses; estate on `keap v1.37.0` with the
-L1 concepts **in the database** (face-controls 11 / layouts 10 / wallpapers 11
-columns carrying a `concept:`); **0 pending CRITICAL**, derived from `docker ps`
-rather than inherited — six queue items were already live and unreconciled.
-`RELEASE.md` carries the full section.
+**Cut v0.10-beta.** Gate met and re-verified after the 08-02 converge
+(`ok=1431 failed=0`): corpus parity **PINNED**, verdict **AGREE** on all six
+clauses; estate on `keap v1.38.0` with the L1 concepts **in the database**;
+**0 pending CRITICAL**, derived from `docker ps` rather than inherited — gitea
+`1.27.0` and metabase `v0.61.9` both confirmed live. `RELEASE.md` + devlog
+`2026-08-02-release-v0-10-beta` carry the narrative.
 
-**Remaining, in order:** devlog entry for the arc → `dev → master` PR
-(`gh pr merge --rebase --admin`, see memory `nos-release-flow`) → tag `v0.10-beta`
-→ re-sync `dev` to `master`.
+**Remaining, in order:** `dev → master` PR (`gh pr merge --rebase --admin`, see
+memory `nos-release-flow`) → tag `v0.10-beta` → re-sync `dev` to `master`.
 
-**One thing the tag does not include, deliberately.** REM-153's pin and today's
-post-audit fixes (gitea guard, jellyfin wizard, freescout reader, the pulse
-staleness probe) are in code but not yet on the host — the converge that applies
-them is the *first run after* the tag. The queue says so per item; do not read
-"resolved" as "live" without `docker ps`.
+**What the tag does NOT include, deliberately.** The S-0 Nextcloud uid fix
+applies to the *next login* — the existing hashed account is live, unmigrated,
+and the converge names it. Cycle-21's two HIGHs (REM-151 `changeme` prefix
+unguarded on local tenants; REM-152 n8n 17-GHSA wave) are open. Per-user
+containers and the rest of the one-filesystem arc are sequenced *after* the tag
+(`plans/per-user-container-roadmap.md`).
 
 ## Carried forward from the audits
 
