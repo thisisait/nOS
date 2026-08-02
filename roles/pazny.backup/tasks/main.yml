@@ -27,19 +27,58 @@
     state: present
   when: nos_pkg_manager | default('homebrew') == 'homebrew'
 
-- name: "[backup] Ensure aws-cli is installed (RustFS S3 client) — Linux apt"
-  ansible.builtin.apt:
-    name: awscli
-    state: present
-  become: true
-  when: nos_pkg_manager | default('homebrew') == 'apt'
+# Linux goes to the VENDOR installer, not to a distro package. `apt awscli` was
+# the obvious first guess and it is wrong on the target: Ubuntu dropped `awscli`
+# from the archive after 22.04, so noble answers "No package matching 'awscli'"
+# (measured on the 24.04 runner, 2026-08-02). Fedora ships `awscli2` under a
+# different name again. One vendor path is fewer moving parts than a per-distro
+# name table, and it is the same shape pazny.opencode already uses.
+#
+# Skipped entirely when `aws` is already on PATH, so a re-run is changed=0 and
+# an operator who installed it their own way is left alone.
+- name: "[backup] (Linux) Check for an existing aws CLI"
+  ansible.builtin.command: command -v aws
+  register: _backup_aws_present
+  changed_when: false
+  failed_when: false
+  when: nos_pkg_manager | default('homebrew') != 'homebrew'
 
-- name: "[backup] Ensure aws-cli is installed (RustFS S3 client) — Linux dnf"
-  ansible.builtin.dnf:
-    name: awscli
-    state: present
+- name: "[backup] (Linux) Install AWS CLI v2 from the vendor installer"
+  when:
+    - nos_pkg_manager | default('homebrew') != 'homebrew'
+    - _backup_aws_present.rc | default(1) != 0
   become: true
-  when: nos_pkg_manager | default('homebrew') == 'dnf'
+  block:
+    - name: "[backup] (Linux) Ensure unzip + curl are present"
+      ansible.builtin.package:
+        name:
+          - unzip
+          - curl
+        state: present
+
+    - name: "[backup] (Linux) Fetch and install awscli v2"
+      ansible.builtin.shell: |
+        set -o pipefail
+        # The vendor publishes exactly two Linux assets, keyed on `uname -m`:
+        # awscli-exe-linux-x86_64.zip and awscli-exe-linux-aarch64.zip.
+        arch="$(uname -m)"
+        tmp="$(mktemp -d)"
+        trap 'rm -rf "$tmp"' EXIT
+        curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-${arch}.zip" -o "$tmp/awscliv2.zip"
+        unzip -q "$tmp/awscliv2.zip" -d "$tmp"
+        # --update makes this idempotent if a partial install is already there.
+        "$tmp/aws/install" --update
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: "[backup] (Linux) VERIFY aws is now callable"
+      ansible.builtin.command: aws --version
+      register: _backup_aws_verify
+      changed_when: false
+      # Loud on purpose: without the client the nightly upload leg cannot work,
+      # and a backup that cannot upload must not report itself as provisioned.
+      failed_when: _backup_aws_verify.rc != 0
 
 - name: "[backup] Render backup.sh entrypoint"
   ansible.builtin.template:
