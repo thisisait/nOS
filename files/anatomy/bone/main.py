@@ -310,6 +310,20 @@ except Exception as _loop_err:  # noqa: BLE001
     _LOOP_READER_READY = False
     _LOOP_READER_IMPORT_ERROR = str(_loop_err)
 
+# ---- Agentic loop: judge / ledger / budget — separate import on purpose ----
+# The weakness READER above is a pure projection over files and stays available
+# even if the judge side cannot load. These routes can run subprocesses and
+# write the ledger, so they carry more ways to fail at import (sqlite, the judge
+# registry, the budget rules) and must not take the reader down with them.
+try:  # noqa: SIM105
+    import looproutes as _nos_looproutes  # type: ignore
+
+    app.include_router(_nos_looproutes.router)
+    _LOOP_ENGINE_READY = True
+except Exception as _loop_engine_err:  # noqa: BLE001
+    _LOOP_ENGINE_READY = False
+    _LOOP_ENGINE_IMPORT_ERROR = str(_loop_engine_err)
+
 
 def _require_framework() -> None:
     if not _FRAMEWORK_READY:
