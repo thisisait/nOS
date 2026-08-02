@@ -1244,20 +1244,30 @@
     # HMAC/data keys but those classes still ride the prefix — so a weak prefix
     # on a PUBLIC tenant ships guessable confidential secrets fleet-wide. Fail
     # closed for public TLDs; lenient for local dev.local; explicit bypass.
-    - name: "[Security] Refuse a weak password prefix on a public tenant"
+    # REM-151 (2026-08-02): the `tenant_domain_is_local` carve-out is REMOVED.
+    # It rested on "local dev is not exposed", which REM-144 disproved on this
+    # very estate — an unauthenticated Traefik API served the prefix from a
+    # *local* install. And the prefix is not one secret: 88 credentials derive
+    # from it at runtime, including the backup key, so a weak prefix is a weak
+    # estate whatever the TLD says. The explicit `-e allow_weak_prefix=true`
+    # bypass stays for throwaway sandboxes — an operator opting in knowingly is
+    # a different thing from a default that opts in silently.
+    - name: "[Security] Refuse a weak password prefix"
       ansible.builtin.assert:
         that:
           - global_password_prefix not in ['changeme', '']
           - (global_password_prefix | length) >= 12
         fail_msg: >-
-          global_password_prefix is weak. Every prefix-derived secret (DB roots,
-          OIDC + agent client secrets, admin passwords) inherits its entropy. Set
-          a strong prefix (>= 12 chars, not 'changeme') in credentials.yml. For a
-          local dev.local install bypass with -e allow_weak_prefix=true.
+          global_password_prefix is weak, and it is not one secret: 88
+          credentials derive from it at runtime — DB roots, OIDC + agent client
+          secrets, admin passwords, AND the backup encryption key, which keys an
+          archive containing ~/.nos/secrets.yml. Set a strong prefix (>= 12
+          chars, not 'changeme') in credentials.yml, or let a blank run mint one.
+          Throwaway sandbox only: -e allow_weak_prefix=true.
+          See docs/plans/secret-blast-radius.md.
         quiet: true
       when:
         - not (allow_weak_prefix | default(false) | bool)
-        - not (tenant_domain_is_local | default(true) | bool)
       tags: ['always']
 
     # NOTE: the former "Auto-regenerate stateless secrets (every run — safe

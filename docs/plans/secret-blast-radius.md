@@ -32,21 +32,27 @@ The gov batch's "AES-256 backup encryption" is, today, as strong as `changeme`.
 **Measured, not estimated** (2026-08-02, over `default.credentials.yml`,
 `default.config.yml` and every `roles/*/defaults/main.yml`):
 
-- **103 unique credential names** derive from `global_password_prefix`, across
-  **157 derivation sites**. The audit that raised this said 108; the real figure
-  is higher, and counting it was one command.
-- Three of the 103 are **crown-jewel keys**, and the third was not in the
-  original finding:
+- **103 credential names are DECLARED** as `{{ prefix }}_pw_x`, across 157 sites.
+- **15 of them are rescued at runtime** by `main.yml`'s lazy-regenerate group,
+  which replaces the template with `openssl rand` output on first run and
+  persists it. So the **true runtime blast radius is 88**.
+- **Two crown-jewel keys remain truly derived** — what they protect *contains*
+  other credentials:
 
-  | credential | what it protects |
-  |---|---|
-  | `backup_encryption_passphrase` | the nightly archive |
-  | `restic_password` | the off-site repo |
-  | **`infisical_encryption_key`** | **the vault itself** |
+  | credential | what it protects | runtime |
+  |---|---|---|
+  | `backup_encryption_passphrase` | the nightly archive | **derived** |
+  | `restic_password` | the off-site repo | **derived** |
+  | `infisical_encryption_key` | the vault itself | randomised — safe |
 
-  Infisical is documented as *"the central vault for infra secrets"*. Its own
-  encryption key is derivable from the same leaked string as everything it was
-  meant to protect. The vault is inside its own blast radius.
+> **A correction, recorded rather than quietly fixed.** The first draft of this
+> document listed `infisical_encryption_key` as derived and called the vault
+> "inside its own blast radius". That was wrong: it is in the lazy-regenerate
+> group, and the live value is 32 hex with no `_pw_`. The error came from
+> counting *declaration sites* instead of *runtime values* — reading the shape
+> instead of the effect, which is the exact defect v0.10-beta is named after.
+> The gate now parses the lazy-regenerate list out of `main.yml` rather than
+> trusting the defaults.
 
 ## 1. The defect is NOT where secrets are stored
 
@@ -78,7 +84,7 @@ middleware, a compose env block, a container's `/proc/1/environ`, a debug line.
 
 | | requirement | today |
 |---|---|---|
-| R1 | knowing one credential yields exactly one credential | **fails — yields 103** |
+| R1 | knowing one credential yields exactly one credential | **fails — yields 88** |
 | R2 | rotating one credential does not require a blank | fails |
 | R3 | the backup key is not derivable from anything inside the estate | **fails** |
 | R4 | the operator does not hand-manage N secrets | holds |
@@ -120,6 +126,56 @@ already has reconcile paths for several (metabase, freescout, portainer,
 nextcloud). This does not make master-rotation free — it makes *per-credential*
 rotation possible, which is the case that actually occurs.
 
+**And on this estate the cost is near zero, today.** There is exactly ONE user
+(`akadmin`), and the operator has already recorded that nobody depends on the
+system yet, so no migration has to be written: P1 can land as a **blank-time
+change**. That window closes the moment a second person has data. It is the
+cheapest this fix will ever be.
+
+#### P1b — the scope dimension, so per-user VMs are correct by construction
+
+Adding this later would mean re-deriving every user's secrets. Adding it now
+costs one extra HKDF step, so it goes in with P1 even though nothing consumes it
+yet.
+
+```
+master                                        # 32 bytes, host-only, never rendered
+├── estate secrets
+│     secret(service, purpose)
+│       = HKDF(master, salt="estate|"+service_id, info=purpose)
+│
+└── per-user subtree
+      user_master(uid)
+        = HKDF(master, salt="user|"+uid, info="user-root")
+      secret(uid, service, purpose)
+        = HKDF(user_master(uid), salt=service_id, info=purpose)
+```
+
+Why this shape matters for the per-user-container roadmap
+(`per-user-container-roadmap.md`):
+
+- **A compromised user container yields that user and nothing else.** It holds
+  `user_master(uid)` at most. HKDF is one-way, so it cannot walk back to
+  `master`, and it cannot reach a sibling `user_master` or any estate secret.
+  Without the scope split, a per-user VM would need estate-derived credentials
+  and every user container would be a full-estate compromise waiting to happen —
+  which would make per-user *isolation* actively worse than today's shared model.
+- **Per-user rotation becomes real.** Rotating one user = re-derive one subtree.
+  That is R2 at the granularity where it is actually needed (a person leaves, a
+  laptop is lost) rather than at estate granularity where it is impractical.
+- **`uid` is already settled.** The canonical id is `slugifyUid(username)`
+  (`face/src/lib/security/uid.ts`), chosen precisely because Authentik's own uid
+  regenerates on every blank. The S-0 work made Nextcloud agree with it. Salting
+  on a value that churns would silently orphan every user secret on a blank, so
+  this depends on S-0 having been done — it has.
+- **The container never gets `master`.** The host derives, and hands the
+  container only the leaves it needs. `user_master` enters a container only if
+  that container must derive at runtime; prefer leaves.
+
+**One user today is the reason to do this now, not the reason to skip it.** The
+whole subtree currently has one member, so getting the shape wrong costs nothing
+to fix — and getting it right costs one function.
+
 ### P2 — the backup key leaves the estate's derivation entirely (~2 h)
 
 The backup is the crown jewel: it contains the file holding every non-derived
@@ -134,6 +190,29 @@ secret. It must not be derivable from anything an attacker can reach.
 
 This is the single highest-value hour in the whole plan, because it breaks the
 chain at its most damaging link even if nothing else ships.
+
+**HAZARD — do not ship P2 as a straight key swap.** `backup.sh:78` uses one
+`ENC_PASSPHRASE` for `openssl enc -aes-256-cbc`, and `backup-verify.sh:34` reads
+the same single value to decrypt. Minting a new key therefore makes **every
+existing archive undecryptable**. The restore drill would go red — correctly —
+but "we closed a leak and lost every backup" is a worse outcome than the leak.
+
+So P2 is a **key ring**, not a key swap:
+
+- `backup_encryption_key` — current, random, persisted. Used for **writing**.
+- `backup_encryption_keys_previous[]` — every superseded key, kept forever.
+  Used for **reading** only.
+- `backup-verify.sh` tries the current key, then each previous key in turn, and
+  reports **which** key opened the archive. An archive that only opens with a
+  previous key is a signal, not a failure — it means it predates the rotation.
+- The drill fails only when **no** key opens it.
+
+That also makes future rotation a normal operation rather than a one-off, which
+is R2 for the one credential where rotation currently means "abandon the past".
+
+Sequencing note: seed `previous[0]` with the *derived* value on the same run
+that mints the new key — computed once, from the prefix, before anything stops
+deriving it. Miss that and the existing archives are orphaned silently.
 
 ### P3 — a canary that makes a leak observable (~2 h)
 
@@ -163,7 +242,7 @@ credentials do they now hold?"*
 - Assert **max blast radius == 1**, with an explicit, justified allowlist for any
   exception.
 
-Run it against today's tree first: it must report **103** and go red. A gate that
+Run it against today's tree first: it must report **88** and hold the ratchet. A gate that
 cannot fail against the defect it names is not a gate — the estate has paid for
 that lesson twice this release.
 
@@ -182,7 +261,7 @@ TTY, no `SECURITYSESSIONID`).
 
 So the sequencing is not "keychain first because security". It is:
 
-> **Fix derivation and the keychain problem shrinks from 103 items to 1.**
+> **Fix derivation and the keychain problem shrinks from 88 items to 1.**
 
 Linux equivalent: `systemd-creds` (LGPL-2.1+) with the same single-item shape.
 
@@ -196,6 +275,34 @@ Linux equivalent: `systemd-creds` (LGPL-2.1+) with the same single-item shape.
 4. **P4 — the blast-radius gate.** Written to go red against the pre-P1 tree.
 5. **P3 — canary.**
 6. **P5 — keychain for the master.**
+
+## 4b. Then test the flow that mints a user
+
+Once P1b exists, the user-creation path is the thing that proves it, and it is
+currently the least-exercised flow in the estate: exactly one user has ever gone
+through it, and that user is the bootstrap admin — which is not the same path a
+real invitee takes.
+
+What to exercise end-to-end (A18 "Cesta B", `docs/invite-provisioning.md`):
+
+1. Wing `/users` mints an Authentik invitation.
+2. Per-user credentials are provisioned into Infisical under `/users/<name>/`.
+3. A Stalwart mailbox is created via JMAP.
+4. The user logs in through Authentik and lands in each `header_oidc` service.
+5. Their VFS tree appears at `users/<slugifyUid(username)>/`.
+6. **New, and the point of the test:** their secrets derive from
+   `user_master(uid)` and from nothing else.
+
+The assertion that matters is negative and is the one to write first: **given
+user A's leaves, nothing about user B or the estate is derivable.** With one user
+that is untestable by inspection — so the test needs a *second, disposable* user,
+which is also the only honest way to find out whether the invite flow works at
+all for someone who is not the admin.
+
+Worth stating as a risk: S-0 fixed Nextcloud's uid *going forward*, and the
+legacy hashed account is still present, unmigrated. A second user is what will
+reveal whether that fix actually holds for a fresh person, rather than only in
+the provider config.
 
 ## 5. What this does not fix, stated plainly
 
