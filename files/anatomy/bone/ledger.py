@@ -13,12 +13,27 @@ Constraint A: the judge is code, the proposer is a model, and they never share
 an identity. That is enforced here in five layers, weakest claim last, so the
 guarantee can be audited rather than believed:
 
-  1. **No API surface accepts a result.** `ProposerLedger` has no method that
-     writes to `loop_verdicts`, and `EvaluatorLedger.seal_verdict()` takes no
-     `result` parameter — the result is DERIVED from stored `loop_judge_runs`
-     rows, which are themselves derived from a subprocess's raw exit code and
-     stdout. There is no field, anywhere, that influences a verdict's value.
+  1. **No API surface accepts a result, OR SELECTS THE EVIDENCE FOR ONE.**
+     `ProposerLedger` has no method that writes to `loop_verdicts`, and
+     `EvaluatorLedger.seal_verdict()` takes no `result` parameter — the result
+     is DERIVED from stored `loop_judge_runs` rows, which are themselves derived
+     from a subprocess's raw exit code and stdout.
      (§3.1 DECISION 3: `POST /v1/verdicts` is deleted from the design.)
+
+     "No result parameter" was necessary and NOT sufficient, and an adversarial
+     review proved it end to end: seal_verdict used to take `run_uuids` and
+     `expected_judges` as caller-supplied lists and validate neither against the
+     registry, the proposal, or each other. With one PASS run and one FAIL run
+     persisted against the SAME proposal, `run_uuids=[the pass]` +
+     `expected_judges=[]` sealed `result='pass'` and `verify_chain()` said ok —
+     the FAIL sat in `loop_judge_runs` while the hash-chained verdict said pass.
+     A `fast` run of one proposal could also be re-attached to a different
+     proposal, a different gate set and a different `tree_sha`. Selection is
+     forgery: you do not need to invent a value if you can choose which facts
+     the aggregator is shown. So this module now supplies its own evidence —
+     `gate_set` + `proposal_uuid` in, every unsealed run row on record for that
+     pair out, membership read from `judges.load_registry()`, and `tree_sha`
+     read off the runs rather than typed by the caller.
   2. **The connection refuses it.** Each role opens wing.db behind an sqlite3
      authorizer with a per-role writable-table set. A proposer holding its own
      connection object — encapsulation already broken — still gets
@@ -77,6 +92,7 @@ import uuid as _uuid
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Sequence
 
+import budget  # §5 — the path budget, computed from the gate set
 import judges  # THE derivation site: adapters, work counts, aggregation (§2.2)
 from clients import wing as _wing  # single wing.db seam (constraint H)
 
@@ -137,7 +153,14 @@ class ProposalRefused(LedgerError):
       fingerprint-exhausted — attempts exhausted (last verdict pass/indeterminate)
       attempt-pending     — a prior attempt has no verdict yet
       unknown-intent      — intent_class outside the closed enum
+      unknown-weakness    — §4: weakness_id is not reported by any source, so
+                            there is no evidence hash to key the ceiling on
       bad-path            — absolute path or `..` escape in target_paths
+      budget-violation    — §5: a target path the gate set forbids, including
+                            the oracle of a judge that will grade it, a path the
+                            DIFF touches but the proposal did not declare, or
+                            either of those spelled in a different case
+      unknown-gate-set    — §5: no budget can be computed, so nothing is allowed
     """
 
     status = 409
@@ -199,6 +222,10 @@ CREATE TABLE IF NOT EXISTS loop_judge_runs (
     work_count   INTEGER,
     min_work     INTEGER,
     outcome      TEXT CHECK (outcome IN ('pass','fail','indeterminate')),
+    -- The commit THIS judge observed, read out of its sandbox by
+    -- `judges.git_worktree_sandbox` and persisted by the exit reader. The
+    -- verdict's tree_sha is derived from these; it is not a caller's label.
+    tree_sha     TEXT,
     stdout_sha   TEXT,
     stdout_head  TEXT,
     -- §2.4 DECISION 2b, as a STORAGE constraint: a PASS that cannot show its
@@ -262,10 +289,23 @@ BEGIN SELECT RAISE(ABORT, 'loop_judge_runs WORM: evidence is append-only'); END;
 """
 
 
+#: Columns added after the first cut of `_DDL`. `CREATE TABLE IF NOT EXISTS`
+#: is a no-op on a database that already has the table, so a column added later
+#: needs its own idempotent sweep — the same discipline as the Wing `/events`
+#: schema (P1). Kept as data so the gate can read it.
+_ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
+    ("loop_judge_runs", "tree_sha", "TEXT"),
+)
+
+
 def ensure_schema(conn: sqlite3.Connection) -> None:
     """Idempotent DDL. Runs on a bootstrap connection BEFORE the authorizer is
-    installed — every role connection denies CREATE/DROP afterwards."""
+    installed — every role connection denies CREATE/DROP/ALTER afterwards."""
     conn.executescript(_DDL)
+    for table, column, decl in _ADDED_COLUMNS:
+        have = {r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        if column not in have:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
     conn.commit()
 
 
@@ -444,17 +484,54 @@ def _connect(role: str) -> sqlite3.Connection:
     return conn
 
 
-def open_ledger(role: str):
+def default_weakness_index() -> dict[str, str]:
+    """`{weakness_id: evidence_sha}`, from the reader that DERIVES both.
+
+    §4 lifts a fingerprint block when "the weakness's own evidence hash
+    changes". That hash has exactly one authoritative derivation —
+    `weaknesses.Weakness.evidence_sha` — and until now the ledger never
+    consulted it: `weakness_evidence_sha` arrived as a proposer-supplied string
+    and `weakness_id` was hashed verbatim. MEASURED: four proposals identical in
+    every substantive field, each sealed FAIL, each carrying a fresh nonce
+    ('sha-0'…'sha-3') — all four ACCEPTED, against a control that refuses the
+    third. Varying `weakness_id` alone did the same. The retry ceiling is the
+    only defence against grinding a non-deterministic judge (`nos-smoke` and
+    `cortex-corpus-diff` are declared `deterministic: false`) until it comes
+    back green, and it was keyed on two fields the grinder writes.
+
+    Imported lazily so importing the ledger does not drag in the reader's
+    FastAPI router; the reader is READ-ONLY and holds no opinion (its own
+    docstring), which is why it is safe for the ledger to depend on it.
+    """
+    import weaknesses as _weaknesses  # noqa: PLC0415 — see the docstring
+
+    return {
+        w.weakness_id: w.evidence_sha
+        for report in _weaknesses.collect()
+        for w in report.weaknesses
+    }
+
+
+def open_ledger(role: str, *, registry: Any = None,
+                weakness_index: Any = None):
     """Factory. `role` picks the CLASS, and the class's method set IS the
     capability — there is no runtime `if role == …` branch guarding a shared
-    verdict writer, because there is no shared verdict writer."""
+    verdict writer, because there is no shared verdict writer.
+
+    `registry` and `weakness_index` are CONSTRUCTION-time dependencies with real
+    defaults (the committed `state/judge-sets.yml` and the live weakness
+    reader), deliberately not per-call parameters. That distinction is the whole
+    point: `loop.py` builds the ledger, so nothing in a request BODY can reach
+    either — which is exactly how `expected_judges` and `weakness_evidence_sha`
+    used to be reachable.
+    """
     cls = {
         "proposer": ProposerLedger,
         "evaluator": EvaluatorLedger,
         "operator": OperatorLedger,
         "reader": ReaderLedger,
     }[role]
-    return cls(_connect(role))
+    return cls(_connect(role), registry=registry, weakness_index=weakness_index)
 
 
 # ── Ledgers ───────────────────────────────────────────────────────────────
@@ -476,6 +553,7 @@ def _as_judge_run(row: dict[str, Any]) -> "judges.JudgeRun":
         work=row["work_count"],
         min_work=row["min_work"] or 0,
         stdout_sha=row["stdout_sha"],
+        tree_sha=row["tree_sha"],
     )
 
 
@@ -486,13 +564,47 @@ class Decision:
     attempt_n: int
     prior_attempts: list[dict[str, Any]] = field(default_factory=list)
     requires_operator: bool = False
+    #: §5 — every budget violation, each naming the path and the judge that
+    #: claims it. Populated only when `reason == 'budget-violation'`.
+    violations: list[Any] = field(default_factory=list)
 
 
 class ReaderLedger:
     """Read-only surface. Shared by every role — reads are not the risk."""
 
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection, *, registry: Any = None,
+                 weakness_index: Any = None):
         self.__conn = conn
+        self.__registry = registry
+        self.__weakness_index = weakness_index
+        self.__weakness_cache: dict[str, str] | None = None
+
+    # ── derived dependencies (see `open_ledger`) ──
+    def _registry(self) -> "judges.Registry":
+        """The committed registry, unless one was injected at construction."""
+        if self.__registry is None:
+            self.__registry = judges.load_registry()
+        return self.__registry
+
+    def _weakness_evidence_sha(self, weakness_id: str) -> str:
+        """§4's lift key, LOOKED UP rather than accepted.
+
+        An unknown `weakness_id` has no sha to look up, which is what closes the
+        second nonce variant: a grinder cannot mint a fresh identity by
+        inventing a weakness that no source reports.
+        """
+        if self.__weakness_cache is None:
+            src = self.__weakness_index or default_weakness_index
+            self.__weakness_cache = dict(src() if callable(src) else src)
+        try:
+            return self.__weakness_cache[str(weakness_id)]
+        except KeyError:
+            raise ProposalRefused(
+                "unknown-weakness",
+                f"{weakness_id} is not reported by any weakness source; §4 keys "
+                f"the retry ceiling on the SOURCE's evidence hash, so a weakness "
+                f"the reader has never seen has no evidence to change",
+            ) from None
 
     # Deliberately name-mangled: a subclass cannot hand the raw connection to a
     # caller by accident. `_q` is the only read path.
@@ -550,6 +662,7 @@ class ReaderLedger:
                     "judge_name": r["judge_name"], "argv": json.loads(r["argv"]),
                     "exit_code": r["exit_code"], "work_count": r["work_count"],
                     "stdout_sha": r["stdout_sha"], "outcome": r["outcome"],
+                    "tree_sha": r["tree_sha"],
                 }
                 for r in runs if r
             ],
@@ -580,17 +693,39 @@ class ProposerLedger(ReaderLedger):
 
     def check(self, *, weakness_id: str, target_paths: Iterable[str],
               intent_class: str, gate_set: str, content_fp: str | None = None,
-              weakness_evidence_sha: str | None = None,
+              diff_text: str | None = None,
               max_attempts: int = DEFAULT_MAX_ATTEMPTS) -> Decision:
         """§4 — the "already failed, refuse WITHOUT running" path.
 
         Called before any judge is triggered, and it is the only thing standing
         between an unattended loop and burning 190 s of pytest on a patch the
         estate has already judged.
+
+        Note the signature: there is no `weakness_evidence_sha`. The value that
+        LIFTS the ceiling is looked up from the weakness reader, because a lift
+        the blocked party can assert is not a ceiling (see
+        `_weakness_evidence_sha`).
         """
         fp = fingerprint(weakness_id, target_paths, intent_class, gate_set)
-        priors = self._live_priors(fp, weakness_evidence_sha)
+        priors = self._live_priors(fp, self._weakness_evidence_sha(weakness_id))
         requires_op = intent_class in OPERATOR_REQUIRED_INTENTS
+
+        # §5 FIRST, before any history is consulted. A proposal that edits the
+        # gate set it will be judged by is refused on its shape alone — it must
+        # not be able to consume an attempt, and it must not depend on what the
+        # ledger happens to remember. Deny beats allow, so a gate set with no
+        # computable budget denies everything rather than nothing.
+        try:
+            bud = budget.budget_for(gate_set)
+        except judges.ConfigError:
+            return Decision(False, "unknown-gate-set", len(priors) + 1,
+                            priors, requires_op)
+        violations = budget.check_paths(
+            target_paths, intent_class=intent_class, gate_set=gate_set,
+            budget=bud, diff_text=diff_text)
+        if violations:
+            return Decision(False, "budget-violation", len(priors) + 1,
+                            priors, requires_op, violations)
 
         if content_fp:
             same = [p for p in priors if p.get("content_fp") == content_fp]
@@ -608,43 +743,54 @@ class ProposerLedger(ReaderLedger):
 
         return Decision(True, None, len(priors) + 1, priors, requires_op)
 
-    def _live_priors(self, fp: str, weakness_evidence_sha: str | None) -> list[dict[str, Any]]:
+    def _live_priors(self, fp: str, weakness_evidence_sha: str) -> list[dict[str, Any]]:
         """Prior attempts that still count. §4 — the block LIFTS when the
         weakness's evidence changes or an operator forgets the fingerprint,
-        or the ledger becomes a permanent scar."""
+        or the ledger becomes a permanent scar.
+
+        `weakness_evidence_sha` reaches here from `_weakness_evidence_sha`, i.e.
+        from the source that DERIVES it. It is not optional and it is not the
+        caller's: an optional lift key is a lift key the blocked party can omit.
+        """
         rows = self._q(
             "SELECT COALESCE(MAX(through_proposal_id), 0) AS cut "
             "FROM loop_forgets WHERE fingerprint = ?", (fp,))
         cut = rows[0]["cut"] if rows else 0
         priors = [p for p in self.history(fp) if p["id"] > cut]
-        if weakness_evidence_sha is not None:
-            priors = [p for p in priors
-                      if (p.get("weakness_evidence_sha") or "") == weakness_evidence_sha]
-        return priors
+        return [p for p in priors
+                if (p.get("weakness_evidence_sha") or "") == weakness_evidence_sha]
 
     def record_proposal(self, *, weakness_id: str, target_paths: Iterable[str],
                         intent_class: str, gate_set: str, tree_sha: str,
                         proposer_id: str, diff_text: str | None = None,
                         proposer_model: str | None = None,
-                        weakness_evidence_sha: str | None = None,
                         max_attempts: int = DEFAULT_MAX_ATTEMPTS) -> dict[str, Any]:
         """201 on acceptance; raises ProposalRefused (409) otherwise.
 
         Note the signature: no `result`, no `verdict`, no `status`. A proposal
-        is an intent, and nothing here says whether it is any good.
+        is an intent, and nothing here says whether it is any good. And no
+        `weakness_evidence_sha`: §4's lift key is derived, for the same reason
+        `requires_operator` is (§5a) — a field the proposer supplies is a field
+        the proposer optimises.
         """
         paths = normalize_paths(target_paths)
         fp = fingerprint(weakness_id, paths, intent_class, gate_set)
         cfp = content_fingerprint(diff_text) if diff_text else None
+        weakness_evidence_sha = self._weakness_evidence_sha(weakness_id)
 
         decision = self.check(
             weakness_id=weakness_id, target_paths=paths, intent_class=intent_class,
-            gate_set=gate_set, content_fp=cfp,
-            weakness_evidence_sha=weakness_evidence_sha, max_attempts=max_attempts)
+            gate_set=gate_set, content_fp=cfp, diff_text=diff_text,
+            max_attempts=max_attempts)
         if not decision.allowed:
+            detail = f"fingerprint {fp[:12]} attempt {decision.attempt_n}"
+            if decision.violations:
+                # §5 — the 409 names the offending path AND the judge that
+                # claims it. A refusal a proposer cannot act on produces a
+                # retry, and a retry is what the fingerprint ceiling spends.
+                detail = "; ".join(str(v) for v in decision.violations)
             raise ProposalRefused(
-                decision.reason or "refused",
-                f"fingerprint {fp[:12]} attempt {decision.attempt_n}",
+                decision.reason or "refused", detail,
                 prior=[p["uuid"] for p in decision.prior_attempts])
 
         u = str(_uuid.uuid4())
@@ -704,9 +850,10 @@ class EvaluatorLedger(ReaderLedger):
         status = run.status if run.status != "running" else "crashed"
         cur = self._w(
             "UPDATE loop_judge_runs SET status=?, finished_at=datetime('now'), "
-            "exit_code=?, work_count=?, min_work=?, outcome=?, stdout_sha=?, stdout_head=? "
+            "exit_code=?, work_count=?, min_work=?, outcome=?, tree_sha=?, "
+            "stdout_sha=?, stdout_head=? "
             "WHERE uuid=? AND status='running'",
-            (status, run.exit_code, run.work, run.min_work, outcome,
+            (status, run.exit_code, run.work, run.min_work, outcome, run.tree_sha,
              run.stdout_sha, (run.stdout_head or "")[:_STDOUT_HEAD_MAX], run_uuid))
         if cur.rowcount != 1:
             # The `status='running'` guard is what stops a swept ('crashed') run
@@ -728,31 +875,53 @@ class EvaluatorLedger(ReaderLedger):
             "outcome='indeterminate' WHERE status='running'")
         return cur.rowcount
 
-    def seal_verdict(self, *, gate_set: str, tree_sha: str,
-                     run_uuids: Sequence[str], expected_judges: Sequence[str],
+    def _sealed_run_uuids(self) -> set[str]:
+        """Run uuids already folded into a verdict.
+
+        Evidence is consumed exactly once. Without this the "every run on record
+        for this pair" rule below would re-seal an earlier attempt's runs; with
+        it, a FAIL that has already produced a verdict is on record as a
+        verdict, which `check()` reads as `already-failed`. Either way the FAIL
+        cannot be made to disappear.
+        """
+        used: set[str] = set()
+        for row in self._q("SELECT evidence FROM loop_verdicts"):
+            try:
+                used.update(json.loads(row["evidence"]).get("judge_runs", []))
+            except (TypeError, ValueError):
+                continue
+        return used
+
+    def seal_verdict(self, *, gate_set: str,
                      proposal_uuid: str | None = None) -> dict[str, Any]:
         """The single verdict writer.
 
-        There is no `result` parameter, and there never will be: the result is
-        `judges.aggregate()` over the PERSISTED run rows — read back out of
-        SQLite, not carried in memory, so the verdict describes what is on
-        record. The signature is the guarantee: you cannot forge a value you
-        are never asked to supply.
+        THE SIGNATURE IS THE GUARANTEE, and it is now the whole guarantee. There
+        is no `result` parameter and there never will be. There is also no
+        `run_uuids`, no `expected_judges` and no `tree_sha`, because an
+        adversarial review showed that supplying the SELECTION is as good as
+        supplying the value: a cherry-picked `run_uuids` sealed a PASS while a
+        FAIL for the same proposal sat in `loop_judge_runs`, `expected_judges=[]`
+        made the missing-judge guard vacuous, and an unrelated proposal's runs
+        could be re-attached to any gate set and any tree.
 
-        `expected_judges` is the gate set's declared membership. A judge that
-        never reported at all cannot be seen by `judges.aggregate` (it only
-        receives the runs that happened), so absence is caught HERE — the last
-        place it could still read as success.
+        What this method is given: a gate set name and (optionally) a proposal.
+        What it derives:
+
+          * membership — `judges.load_registry().gate_set(gate_set).judges`, the
+            committed file that is itself inside the §5.2 deny list;
+          * evidence — EVERY run row on record for `(proposal_id, gate_set)`
+            that no earlier verdict has consumed. A caller cannot omit one,
+            because a caller does not name them;
+          * the tree — read off those rows, which got it from the sandbox they
+            ran in. Judges that disagree about which tree they judged cannot
+            produce a PASS, and neither can judges that cannot say.
+
+        `judges.aggregate` still computes the value, over rows that survived the
+        schema's §2.4 CHECK. Absence is caught here, the last place it could
+        still read as success.
         """
-        rows = [self.judge_run(u) for u in run_uuids]
-        rows = [r for r in rows if r]
-        verdict = judges.aggregate([_as_judge_run(r) for r in rows], gate_set)
-        result = verdict.result.value
-
-        missing = [n for n in expected_judges
-                   if n not in {r["judge_name"] for r in rows}]
-        if missing and result != "fail":
-            result = "indeterminate"
+        expected = list(self._registry().gate_set(gate_set).judges)
 
         proposal_id = None
         if proposal_uuid is not None:
@@ -760,6 +929,34 @@ class EvaluatorLedger(ReaderLedger):
             if prop is None:
                 raise LedgerError(f"no such proposal: {proposal_uuid}")
             proposal_id = prop["id"]
+
+        # `IS ?` rather than `= ?` so the unattached (NULL) case is a real
+        # match instead of silently matching nothing.
+        consumed = self._sealed_run_uuids()
+        rows = [r for r in self._q(
+            "SELECT * FROM loop_judge_runs WHERE gate_set = ? AND proposal_id IS ? "
+            "ORDER BY id", (gate_set, proposal_id))
+            if r["uuid"] not in consumed]
+
+        verdict = judges.aggregate([_as_judge_run(r) for r in rows], gate_set)
+        result = verdict.result.value
+
+        missing = [n for n in expected
+                   if n not in {r["judge_name"] for r in rows}]
+        if missing and result != "fail":
+            result = "indeterminate"
+
+        # §2.5 at the ledger layer: a verdict names ONE tree or it is not a
+        # verdict. A FAIL still stands — a red is a red whatever tree it is on.
+        trees = sorted({r["tree_sha"] for r in rows if r["tree_sha"]})
+        tree_reason = ""
+        if len(trees) > 1:
+            tree_reason = f"judges observed {len(trees)} different trees: {trees}"
+        elif not trees and rows:
+            tree_reason = "no judge recorded the tree it judged"
+        if tree_reason and result != "fail":
+            result = "indeterminate"
+        tree_sha = trees[0] if len(trees) == 1 else ""
 
         prev_row = self._q(
             "SELECT row_hash FROM loop_verdicts WHERE row_hash IS NOT NULL "
@@ -775,9 +972,11 @@ class EvaluatorLedger(ReaderLedger):
             "tree_sha": tree_sha,
             "evidence": _canonical_json({
                 "judge_runs": [r["uuid"] for r in rows],
-                "expected_judges": list(expected_judges),
+                "expected_judges": expected,
                 "missing_judges": missing,
                 "outcomes": {r["judge_name"]: r["outcome"] for r in rows},
+                "trees": trees,
+                "tree_note": tree_reason,
                 "reason": verdict.reason,
             }),
             # Materialized, not defaulted: the chain hashes exactly what is stored.

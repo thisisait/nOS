@@ -149,9 +149,19 @@ class JudgeSpec:
     work_json_field: str | None = None
     json_field: str | None = None
     min_work: int = 1
+    #: Declares that this judge WRITES tracked files. Since §2.5 was actually
+    #: enforced, every judge is sandboxed, so this no longer selects behaviour —
+    #: it stays as the committed reason the sandbox exists at all, and as the
+    #: pairing with `exclusive_resource` (two writers of `nos_entity.py`).
     mutates_worktree: bool = False
     requires: tuple[str, ...] = ()
     exclusive_resource: str | None = None
+    #: §5.1 — the paths that ARE this judge's oracle. The budget forbids them
+    #: for any gate set this judge is a member of, which is why they live on the
+    #: judge and not in a constant: a set that does not run pytest-anatomy has
+    #: no business claiming `tests/anatomy/**`, and a set that does must.
+    #: Required by `load_registry` — see the ConfigError there.
+    oracle_paths: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -214,6 +224,17 @@ def load_registry(repo_root: str | os.PathLike[str] | None = None) -> Registry:
                 f"judge {name!r} has unknown adapter {adapter!r}; "
                 f"known: {sorted(ADAPTERS)}"
             )
+        # §5.1, fail-closed: a judge that declares no oracle is a judge whose
+        # own source the loop may edit while being graded by it. An omission
+        # must therefore be LOUD at load time — the alternative is a budget
+        # that silently shrinks, which is `min_work`'s failure mode moved one
+        # layer out.
+        oracles = body.get("oracle_paths")
+        if not oracles or not isinstance(oracles, list):
+            raise ConfigError(
+                f"judge {name!r} declares no oracle_paths; §5.1 requires them "
+                "so the budget can forbid the judge's own source"
+            )
         judges[name] = JudgeSpec(
             name=name,
             argv=tuple(str(a) for a in argv),
@@ -232,6 +253,7 @@ def load_registry(repo_root: str | os.PathLike[str] | None = None) -> Registry:
             mutates_worktree=bool(body.get("mutates_worktree", False)),
             requires=tuple(body.get("requires") or ()),
             exclusive_resource=body.get("exclusive_resource"),
+            oracle_paths=tuple(str(p) for p in oracles),
         )
 
     gate_sets: dict[str, GateSetSpec] = {}
@@ -389,6 +411,17 @@ def _adapt_pytest_summary(spec: JudgeSpec, done: Completed) -> tuple[Result, str
     SKIPPED IS NOT WORK. That single decision is what closes the measured false
     green where `HOME=/tmp/emptyhome pytest test_hub_url_audit.py` reports
     "2 skipped" and exits 0.
+
+    AND THE EXIT CODE STILL GATES THE PASS. MEASURED on this tree: SIGINT to the
+    pytest child 20 s in prints `!!!! KeyboardInterrupt !!!!` and then a
+    well-formed `454 passed in 19.94s`, exiting **2** — 454 of 2432 tests, a 20%
+    run, with a pass-shaped summary. An adapter that read only the summary
+    called that a PASS, and the work ratchet could not see it either (454 was
+    above the old floor). pytest's own codes are the vocabulary: 0 = all ran and
+    all passed, 1 = tests failed, 2 = INTERRUPTED, 3 = internal error, 4 = usage
+    error, 5 = nothing collected. Only 0 may reach PASS. A summary reporting
+    failures is still a FAIL whatever the code — a red is a red, and downgrading
+    it to INDETERMINATE would hide it (the ordering rule of DECISION 2b).
     """
     counts = _pytest_counts(done.output)
     if counts is None:
@@ -396,6 +429,13 @@ def _adapt_pytest_summary(spec: JudgeSpec, done: Completed) -> tuple[Result, str
     failed = counts.get("failed", 0) + counts.get("error", 0) + counts.get("errors", 0)
     if failed:
         return Result.FAIL, f"{failed} failing test(s)"
+    if done.exit_code != 0:
+        return Result.INDETERMINATE, (
+            f"the summary reports no failures but pytest exited {done.exit_code} "
+            f"(0 is the only code that means 'the whole run completed'; 2 is an "
+            f"interrupt, which prints a pass-shaped partial summary) — a run that "
+            f"did not finish has not shown it passed"
+        )
     return Result.PASS, f"{counts.get('passed', 0)} passed, {counts.get('skipped', 0)} skipped"
 
 
@@ -582,12 +622,25 @@ class SandboxError(Exception):
     pass
 
 
-def git_worktree_sandbox(repo_root: Path) -> tuple[Path, Callable[[], None]]:
-    """Create an ephemeral detached git worktree. Returns (path, cleanup).
+def git_worktree_sandbox(repo_root: Path) -> tuple[Path, str, Callable[[], None]]:
+    """Create an ephemeral detached git worktree. Returns (path, tree_sha, cleanup).
 
-    DECISION 2d — pytest-anatomy runs here ALWAYS, attended and unattended
-    alike, because a killed run otherwise leaves a TRACKED source file
-    corrupted, and being killed is an unattended loop's normal failure mode.
+    DECISION 2d / §2.5 — EVERY judge of a set runs here, attended and unattended
+    alike. Two reasons, and the second is why this moved out of `_run_one`:
+
+      * a killed run otherwise leaves a TRACKED source file corrupted
+        (test_genome_contract.py appends HAND_EDITED and restores in a
+        `finally`), and being killed is an unattended loop's normal failure mode;
+      * MEASURED defect this closes: with only `mutates_worktree` judges
+        sandboxed, gate set `repo` ran ansible-lint and genome-codegen against
+        the LIVE, possibly dirty tree while pytest-anatomy ran against HEAD, and
+        aggregated the two as if they described one thing. An uncommitted edit
+        to `.ansible-lint` — no proposal, no fingerprint, no diff — silenced a
+        judge in every set containing it. §2.5 says the engine enforces one
+        tree; it did not, so now it does.
+
+    The sha is READ BACK OUT of the created tree rather than assumed, because
+    the identity of what was judged is evidence and evidence is measured.
     """
     tmp = Path(tempfile.mkdtemp(prefix="nos-loop-sandbox-"))
     target = tmp / "tree"
@@ -614,7 +667,22 @@ def git_worktree_sandbox(repo_root: Path) -> tuple[Path, Callable[[], None]]:
         )
         shutil.rmtree(tmp, ignore_errors=True)
 
-    return target, cleanup
+    head = subprocess.run(  # noqa: S603
+        ["git", "rev-parse", "HEAD"],
+        cwd=str(target),
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    sha = head.stdout.strip()
+    if head.returncode != 0 or not sha:
+        cleanup()
+        raise SandboxError(
+            "the sandbox exists but will not name its own commit — a verdict "
+            "that cannot say which tree it judged is a claim"
+        )
+    return target, sha, cleanup
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -643,6 +711,11 @@ class JudgeRun:
     stdout_sha: str | None = None
     stdout_head: str = ""
     sandbox_path: str | None = None
+    #: The commit this judge actually observed, read out of the sandbox by
+    #: `git_worktree_sandbox`. NOT a caller's label: §11 makes replay the
+    #: guarantee ("re-run the recorded argv against the recorded tree"), and a
+    #: run that cannot name its tree cannot be replayed against it.
+    tree_sha: str | None = None
     started_at: float | None = None
     finished_at: float | None = None
 
@@ -650,8 +723,9 @@ class JudgeRun:
         """The part of the record that a rerun on the same tree must reproduce.
 
         Excludes wall-clock times and the sandbox path — both vary run to run
-        and neither is evidence. This is what makes the digest meaningful
-        instead of merely stable.
+        and neither is evidence. `tree_sha` is the opposite of both: it is
+        constant for a given commit and it is the single most load-bearing piece
+        of evidence a verdict carries.
         """
         return {
             "judge": self.judge_name,
@@ -662,6 +736,7 @@ class JudgeRun:
             "work": self.work,
             "min_work": self.min_work,
             "stdout_sha": self.stdout_sha,
+            "tree_sha": self.tree_sha,
         }
 
 
@@ -758,7 +833,7 @@ def run_gate_set(
     repo_root: str | os.PathLike[str] | None = None,
     spawn: Callable[[Sequence[str], str, int], Completed] | None = None,
     probe: Callable[[str], bool] | None = None,
-    sandbox_factory: Callable[[Path], tuple[Path, Callable[[], None]]] | None = None,
+    sandbox_factory: Callable[[Path], tuple[Path, str, Callable[[], None]]] | None = None,
     lock_dir: str | os.PathLike[str] | None = None,
 ) -> GateSetVerdict:
     """Run a named gate set and return a structured, three-valued verdict.
@@ -766,7 +841,16 @@ def run_gate_set(
     THE ONLY INPUT THAT SELECTS WORK IS ``gate_set`` — a name. Nothing in this
     signature supplies, hints at or overrides a result (constraint A). ``spawn``
     replaces the process; the adapters still compute the verdict from what that
-    process returned.
+    process returned. ``sandbox_factory`` replaces THE TREE, not the judgment,
+    and it must still hand back the sha of whatever it produced — there is no
+    seam that yields a tree with no identity.
+
+    ONE SET, ONE TREE (§2.5). The sandbox is created HERE, once, and every judge
+    of the set runs inside it. Per-judge sandboxing (the previous shape, keyed on
+    ``mutates_worktree``) meant a set could aggregate judges that had observed
+    two different trees; see `git_worktree_sandbox`. If the sandbox cannot be
+    created, no judge runs and the set is INDETERMINATE — never a fallback to
+    the live tree.
 
     Raises ConfigError for an unknown gate set — never a verdict, because a typo
     must not be reportable as either "the tree is bad" or "the tree is fine".
@@ -778,20 +862,39 @@ def run_gate_set(
     do_probe = probe or default_requirement_probe
     locks = Path(lock_dir) if lock_dir else Path(tempfile.gettempdir())
 
-    runs: list[JudgeRun] = []
-    for judge_name in spec_set.judges:
-        spec = reg.judges[judge_name]
-        runs.append(
-            _run_one(
-                spec,
-                gate_set=gate_set,
-                repo_root=root,
-                spawn=do_spawn,
-                probe=do_probe,
-                sandbox_factory=sandbox_factory or git_worktree_sandbox,
-                lock_dir=locks,
-            )
+    if not spec_set.judges:
+        # `all([])` is True; an empty set gets no sandbox and no benefit of the
+        # doubt. `aggregate` states the rule.
+        return aggregate([], gate_set)
+
+    try:
+        cwd, tree_sha, cleanup = (sandbox_factory or git_worktree_sandbox)(root)
+    except Exception as exc:  # noqa: BLE001 — any sandbox failure is INDETERMINATE
+        why = (
+            f"sandbox could not be created ({exc}) — refusing to run against the "
+            f"live tree"
         )
+        return aggregate(
+            [_skipped(reg.judges[n], gate_set, why) for n in spec_set.judges], gate_set
+        )
+
+    try:
+        runs: list[JudgeRun] = []
+        for judge_name in spec_set.judges:
+            spec = reg.judges[judge_name]
+            runs.append(
+                _run_one(
+                    spec,
+                    gate_set=gate_set,
+                    sandbox=Path(cwd),
+                    tree_sha=tree_sha,
+                    spawn=do_spawn,
+                    probe=do_probe,
+                    lock_dir=locks,
+                )
+            )
+    finally:
+        cleanup()
     return aggregate(runs, gate_set)
 
 
@@ -817,10 +920,10 @@ def _run_one(
     spec: JudgeSpec,
     *,
     gate_set: str,
-    repo_root: Path,
+    sandbox: Path,
+    tree_sha: str,
     spawn: Callable[[Sequence[str], str, int], Completed],
     probe: Callable[[str], bool],
-    sandbox_factory: Callable[[Path], tuple[Path, Callable[[], None]]],
     lock_dir: Path,
 ) -> JudgeRun:
     # ── Pre-flight: never run degraded (DECISION 2c) ────────────────────────
@@ -830,52 +933,34 @@ def _run_one(
             spec, gate_set, f"requirement(s) absent: {', '.join(missing)} — not run"
         )
 
-    why = _executable_present(spec, repo_root)
+    # Resolved against the SANDBOX, not the live tree: the judge's script is
+    # part of the tree under judgment, so "is it present" must be asked of the
+    # same tree that will run it.
+    why = _executable_present(spec, sandbox)
     if why:
         return _skipped(spec, gate_set, f"{why} — not run")
 
-    # ── Sandbox (DECISION 2d) ───────────────────────────────────────────────
-    cleanup: Callable[[], None] | None = None
-    cwd = repo_root
-    if spec.mutates_worktree:
+    # ── Exclusive resource (M7) ─────────────────────────────────────────────
+    if spec.exclusive_resource:
         try:
-            cwd, cleanup = sandbox_factory(repo_root)
-        except Exception as exc:  # noqa: BLE001 — any sandbox failure is INDETERMINATE
+            with _FileLock(spec.exclusive_resource, lock_dir):
+                return _spawn_and_read(spec, gate_set, sandbox, tree_sha, spawn)
+        except _ResourceBusy as exc:
             return _skipped(
                 spec,
                 gate_set,
-                f"sandbox could not be created ({exc}) — refusing to run against "
-                f"the live tree",
+                f"{exc} — {spec.exclusive_resource} is mutated by another "
+                f"judge and there is no lock upstream",
             )
-
-    try:
-        # ── Exclusive resource (M7) ─────────────────────────────────────────
-        if spec.exclusive_resource:
-            try:
-                with _FileLock(spec.exclusive_resource, lock_dir):
-                    return _spawn_and_read(
-                        spec, gate_set, cwd, spawn, sandbox=cleanup is not None
-                    )
-            except _ResourceBusy as exc:
-                return _skipped(
-                    spec,
-                    gate_set,
-                    f"{exc} — {spec.exclusive_resource} is mutated by another "
-                    f"judge and there is no lock upstream",
-                )
-        return _spawn_and_read(spec, gate_set, cwd, spawn, sandbox=cleanup is not None)
-    finally:
-        if cleanup is not None:
-            cleanup()
+    return _spawn_and_read(spec, gate_set, sandbox, tree_sha, spawn)
 
 
 def _spawn_and_read(
     spec: JudgeSpec,
     gate_set: str,
     cwd: Path,
+    tree_sha: str,
     spawn: Callable[[Sequence[str], str, int], Completed],
-    *,
-    sandbox: bool,
 ) -> JudgeRun:
     """CONSTRAINT B, in code.
 
@@ -890,7 +975,8 @@ def _spawn_and_read(
         status="running",
         result=None,
         min_work=spec.min_work,
-        sandbox_path=str(cwd) if sandbox else None,
+        sandbox_path=str(cwd),
+        tree_sha=tree_sha,
         started_at=time.time(),
     )
 

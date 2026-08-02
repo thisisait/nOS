@@ -50,6 +50,12 @@ judges:
     min_work: 1400
     mutates_worktree: false
     requires: []
+    # §5.1 — this judge's oracle. Forbidden to any proposal judged by a set
+    # containing ansible-lint: the rules ARE the verdict, and a proposal that
+    # relaxes them passes by construction.
+    oracle_paths:
+      - ".ansible-lint"
+      - ".yamllint"
 
   # ── genome-codegen --check ──────────────────────────────────────────────
   # The one judge whose failure branch has actually been observed (contract
@@ -67,6 +73,14 @@ judges:
     min_work: 2
     mutates_worktree: false
     requires: []
+    # §5.1 — the generator, the genome it reads, and BOTH generated targets.
+    # A proposal that edits a generated file makes --check red; a proposal that
+    # edits the generator makes --check green about the wrong thing.
+    oracle_paths:
+      - "tools/genome-codegen.py"
+      - "state/genome/**"
+      - "files/anatomy/module_utils/nos_entity.py"
+      - "files/anatomy/face/src/lib/contracts/entity.gen.ts"
     # M7: this WRITES files/anatomy/module_utils/nos_entity.py, the same file
     # test_genome_contract.py mutates. The two judges corrupt each other if
     # they overlap, and there is no lock upstream.
@@ -83,7 +97,15 @@ judges:
     runtime_s_p95: 190
     timeout_s: 900
     work_field: tests_executed
-    min_work: 200
+    # RATCHET. MEASURED 2026-08-02 on this tree: "2456 passed, 4 skipped in
+    # 194.76s". It was 200 — 12x below reality — which is not a ratchet, it is
+    # the absence of one: a run that lost 91% of its collection still cleared
+    # it. That is exactly what let a SIGINT'd pytest read as a pass at 454 of
+    # 2432. The 28-test margin below the measurement absorbs host-conditional
+    # skips (skipped is not executed work); it is deliberately small, and the
+    # gate test_the_ratchets_match_measured_reality pins BOTH numbers so the
+    # margin cannot quietly grow back into a 12x gap.
+    min_work: 2400
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,
@@ -91,6 +113,16 @@ judges:
     mutates_worktree: true
     requires: []
     exclusive_resource: nos_entity
+    # §5.1 — the gate bodies AND the harness that decides which of them run.
+    # The `gate-add` carve-out (§5a) re-opens `tests/anatomy/**` and NOTHING
+    # else here: conftest.py and pytest.ini configure collection, so a proposal
+    # editing them is not adding a gate, it is choosing which gates exist.
+    # pytest.ini does not exist today; it is listed so the loop cannot CREATE
+    # one and set `testpaths` away from the gates it is being judged by.
+    oracle_paths:
+      - "tests/anatomy/**"
+      - "tests/conftest.py"
+      - "pytest.ini"
 
   # ── nos-smoke ───────────────────────────────────────────────────────────
   # Exit IS the failure count, capped at 127 — not a boolean.
@@ -106,9 +138,21 @@ judges:
     work_field: probes_run
     work_regex: "(\\d+)\\s*/\\s*(\\d+)\\s+OK"
     work_regex_group: 2
-    min_work: 1
+    # RATCHET = the committed catalog's own entry count. At 1 the M2 shape was
+    # only half closed: literal zero was caught, and a catalog that shrank to a
+    # single probe passed. The runner layers the manifest auto-import on top of
+    # these (live runs measure ~48), so this is a floor on the curated part
+    # only — the part a proposal could delete. Pinned against
+    # state/smoke-catalog.yml by test_the_ratchets_match_measured_reality;
+    # that catalog is this judge's own oracle, so the loop cannot lower both.
+    min_work: 9
     mutates_worktree: false
     requires: ["live_estate"]
+    # §5.1 — the prober and the catalog it reads. Removing an entry from the
+    # catalog is the M2 false green (zero entries, EXIT=0) authored on purpose.
+    oracle_paths:
+      - "tools/nos-smoke.py"
+      - "state/smoke-catalog.yml"
 
   # ── cortex-corpus-diff ──────────────────────────────────────────────────
   # THE EXIT CODE IS NOT THE VERDICT: under --no-ledger it returns
@@ -133,6 +177,11 @@ judges:
     min_work: 1
     mutates_worktree: false
     requires: ["keap_token_ro", "cortex_token_ro"]
+    # §5.1 — the differ itself. Its own --halt-cmd / A9 wiring is why it may
+    # only ever run with --no-ledger --json (DECISION 2e), and a proposal that
+    # edits the script could restore either.
+    oracle_paths:
+      - "files/anatomy/scripts/cortex-corpus-diff.py"
 
 # keap-lint is DELIBERATELY ABSENT (DECISION 2f). It needs a RW token, POSTs
 # /agent/v1/lint/run which reconciles state, fans results into A9, and its

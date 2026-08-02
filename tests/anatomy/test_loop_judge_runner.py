@@ -323,11 +323,83 @@ def test_pytest_all_skipped_is_not_a_pass(summary):
         repo_root=REPO,
         spawn=_fake_spawn(**{"pytest": J.Completed(exit_code=0, stdout=summary)}),
         probe=_always_true,
-        sandbox_factory=lambda root: (root, lambda: None),
+        sandbox_factory=lambda root: (root, "sha-fake", lambda: None),
     )
     assert verdict.result is not J.Result.PASS
     assert verdict.result is J.Result.INDETERMINATE
     assert verdict.runs[0].work == 0, "skipped tests were counted as executed work"
+
+
+#: MEASURED on this tree: `python3 -m pytest tests/anatomy -q`, SIGINT to the
+#: child 20 s in. pytest prints its interrupt banner and THEN a well-formed,
+#: entirely pass-shaped summary, and exits 2.
+INTERRUPTED_PYTEST = J.Completed(
+    exit_code=2,
+    stdout=(
+        "\n!!!!!!!!!!!!!!!!!!!!!!!!!! KeyboardInterrupt !!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+        "/opt/homebrew/lib/python3.13/site-packages/_pytest/runner.py:341: "
+        "KeyboardInterrupt\n(to show a full traceback on KeyboardInterrupt use "
+        "--full-trace)\n454 passed in 19.94s\n"
+    ),
+)
+
+
+def test_an_interrupted_pytest_is_not_a_pass():
+    """A judge killed 20% of the way through read PASS.
+
+    `_adapt_pytest_summary` never looked at `done.exit_code`; it parsed the
+    summary line, saw no failures, and returned PASS. 454 of 2432 tests, exit 2,
+    reported green — and the work ratchet could not catch it either, because 454
+    was above the old min_work of 200. The signal decided the verdict: SIGTERM
+    (no summary) was INDETERMINATE while SIGINT (a partial summary) was a pass.
+
+    Reachable without any parent involvement: a supervisor signalling the child
+    pid alone, `pytest.exit()`, or a plugin/fixture raising KeyboardInterrupt.
+    """
+    verdict = J.run_gate_set(
+        "repo",
+        registry=_one_judge_registry("pytest-anatomy", "repo"),
+        repo_root=REPO,
+        spawn=_fake_spawn(**{"pytest": INTERRUPTED_PYTEST}),
+        probe=_always_true,
+        sandbox_factory=lambda root: (root, "sha-fake", lambda: None),
+    )
+    assert verdict.result is not J.Result.PASS
+    assert verdict.result is J.Result.INDETERMINATE
+    assert "exited 2" in verdict.reason, verdict.reason
+
+    # The adapter is where it must hold — via the registry's real spec, so this
+    # is not a claim about a hand-built one.
+    result, reason = J.ADAPTERS["pytest_summary"](_spec("pytest-anatomy"), INTERRUPTED_PYTEST)
+    assert result is J.Result.INDETERMINATE, reason
+
+
+def test_a_completed_pytest_run_still_passes():
+    """The counterweight: exit 0 with a real summary is a real PASS. Without
+    this, an adapter hard-wired to INDETERMINATE would satisfy the test above."""
+    verdict = J.run_gate_set(
+        "repo",
+        registry=_one_judge_registry("pytest-anatomy", "repo"),
+        repo_root=REPO,
+        spawn=_fake_spawn(
+            **{"pytest": J.Completed(exit_code=0, stdout="2428 passed, 4 skipped in 185.93s\n")}
+        ),
+        probe=_always_true,
+        sandbox_factory=lambda root: (root, "sha-fake", lambda: None),
+    )
+    assert verdict.result is J.Result.PASS, verdict.reason
+    assert verdict.runs[0].work == 2428
+
+
+def test_an_interrupted_pytest_that_did_fail_is_still_a_fail():
+    """Ordering, and it is deliberate (DECISION 2b): a red is a red. Downgrading
+    a real failure to INDETERMINATE because the run was cut short would hide
+    it, and INDETERMINATE means "we do not know", not "we know it is broken"."""
+    result, _ = J.ADAPTERS["pytest_summary"](
+        _spec("pytest-anatomy"),
+        J.Completed(exit_code=2, stdout="KeyboardInterrupt\n3 failed, 451 passed in 20s\n"),
+    )
+    assert result is J.Result.FAIL
 
 
 def test_work_below_the_ratchet_is_not_a_pass():
@@ -666,7 +738,7 @@ def test_pytest_never_runs_against_the_live_tree():
 
     def spy(argv, cwd, timeout_s):
         seen_cwd.append(cwd)
-        return J.Completed(exit_code=0, stdout="250 passed in 190.00s\n")
+        return J.Completed(exit_code=0, stdout="2500 passed in 190.00s\n")
 
     sandbox = REPO.parent / "fake-sandbox"
     verdict = J.run_gate_set(
@@ -675,11 +747,85 @@ def test_pytest_never_runs_against_the_live_tree():
         repo_root=REPO,
         spawn=spy,
         probe=_always_true,
-        sandbox_factory=lambda root: (sandbox, lambda: None),
+        sandbox_factory=lambda root: (sandbox, "sha-fake", lambda: None),
     )
     assert verdict.result is J.Result.PASS
     assert seen_cwd == [str(sandbox)]
     assert str(REPO) not in seen_cwd, "pytest was run against the operator's live tree"
+
+
+def test_every_judge_in_a_set_observes_exactly_one_tree():
+    """§2.5, against the REAL `repo` set — which is where the defect lived.
+
+    The test above uses a ONE-JUDGE registry, so it could never see the shape it
+    was named for: with only `mutates_worktree` judges sandboxed, `repo` linted
+    the operator's live (possibly dirty) tree with ansible-lint and
+    genome-codegen while pytest-anatomy tested HEAD, and aggregated the two as
+    if they described one thing. An uncommitted `.ansible-lint` edit — no
+    proposal, no fingerprint, no diff — then turned that judge green everywhere,
+    and the sealed verdict named whatever `tree_sha` the caller typed.
+
+    Three judges, one cwd, one recorded sha, and the live tree in neither.
+    """
+    seen_cwd: list[str] = []
+
+    def spy(argv, cwd, timeout_s):
+        seen_cwd.append(cwd)
+        return {
+            "ansible-lint": GREEN_ANSIBLE_LINT,
+            "genome-codegen": GREEN_GENOME,
+            "pytest": J.Completed(exit_code=0, stdout="2500 passed in 190.00s\n"),
+        }[_argv_key(argv)]
+
+    sandbox = REPO.parent / "one-tree-sandbox"
+    verdict = J.run_gate_set(
+        "repo",
+        registry=_registry(),
+        repo_root=REPO,
+        spawn=spy,
+        probe=_always_true,
+        sandbox_factory=lambda root: (sandbox, "0123456789abcdef", lambda: None),
+    )
+    assert len(verdict.runs) == 3, verdict.runs
+    assert set(seen_cwd) == {str(sandbox)}, f"the set observed >1 tree: {set(seen_cwd)}"
+    assert str(REPO) not in seen_cwd, "a judge graded the operator's working copy"
+    assert {r.tree_sha for r in verdict.runs} == {"0123456789abcdef"}
+
+
+def test_a_run_records_the_tree_it_judged_and_the_digest_covers_it():
+    """§11 makes replay the guarantee — "re-run the recorded argv against the
+    recorded tree". Nothing recorded the tree, at any layer: judges.py had no
+    `rev-parse`, `JudgeRun.identity()` excluded the sandbox on purpose, and the
+    ledger took `tree_sha` as a caller-supplied string. A verdict that cannot
+    say what it judged is a claim."""
+    registry = _one_judge_registry("genome-codegen", "fast")
+    verdict = J.run_gate_set(
+        "fast", registry=registry, repo_root=REPO, probe=_always_true,
+        spawn=_fake_spawn(**{"genome-codegen": GREEN_GENOME}),
+    )
+    sha = verdict.runs[0].tree_sha
+    assert sha and len(sha) == 40, f"the sandbox did not name its commit: {sha!r}"
+    assert "tree_sha" in verdict.runs[0].identity()
+    assert sha in str(verdict.identity())
+
+
+def test_a_sandbox_that_will_not_name_its_commit_is_not_a_tree():
+    """The real factory reads the sha back OUT of the created worktree. If that
+    read fails the sandbox is torn down and the set is INDETERMINATE — a tree
+    with no identity is worth less than no tree, because judges would still run
+    in it."""
+    import subprocess as _sp
+
+    real = J.git_worktree_sandbox
+    path, sha, cleanup = real(REPO)
+    try:
+        assert sha == _sp.run(
+            ["git", "rev-parse", "HEAD"], cwd=str(REPO),
+            capture_output=True, text=True, check=True).stdout.strip()
+        assert (path / ".git").exists()
+    finally:
+        cleanup()
+    assert not path.exists(), "the sandbox outlived its cleanup"
 
 
 def test_a_sandbox_that_cannot_be_created_is_indeterminate_not_a_pass():
@@ -711,7 +857,7 @@ def test_the_sandbox_is_cleaned_up_even_when_the_judge_fails():
     cleaned: list[str] = []
 
     def sandbox(root):
-        return REPO, lambda: cleaned.append("cleaned")
+        return REPO, "sha-fake", lambda: cleaned.append("cleaned")
 
     J.run_gate_set(
         "repo",
@@ -761,11 +907,57 @@ def test_every_judge_that_mutates_the_worktree_says_so():
     assert reg.judges["genome-codegen"].exclusive_resource == "nos_entity"
 
 
+#: MEASURED, and every entry has a transcript. The gate that carried this claim
+#: asserted two of five and skipped the one that did not hold — pytest-anatomy
+#: sat at min_work 200 against 2428 executed tests, 12x below reality, unable to
+#: notice a 91% scope loss. A ratchet nobody checks is a comment.
+#:
+#:   ansible-lint    "in 1400 files processed of 2979 encountered"   EXIT=0
+#:   genome-codegen  "genome artifacts current (2 checked)"          EXIT=0
+#:   pytest-anatomy  "2456 passed, 4 skipped in 194.76s"   (2026-08-02, this tree)
+#:   nos-smoke       len(state/smoke-catalog.yml: smoke_endpoints)   — see below
+#:   corpus-diff     one table compared is the floor for a diff
+MEASURED_WORK = {
+    "ansible-lint": 1400,
+    "genome-codegen": 2,
+    "pytest-anatomy": 2456,
+    "cortex-corpus-diff": 1,
+}
+
+
 def test_the_ratchets_match_measured_reality():
-    """The ratchet records TODAY's scope so tomorrow's cannot silently shrink."""
+    """The ratchet records TODAY's scope so tomorrow's cannot silently shrink.
+
+    Every judge is asserted, not a chosen subset: the one this gate used to skip
+    is the one that was wrong. The floor may sit at or just below the
+    measurement (host-conditional skips are real); it may not sit an order of
+    magnitude below it, which is what "cannot silently shrink" means.
+    """
     reg = _registry()
-    assert reg.judges["ansible-lint"].min_work == 1400
-    assert reg.judges["genome-codegen"].min_work == 2
+    assert set(MEASURED_WORK) | {"nos-smoke"} == set(reg.judges), (
+        "a judge was added or removed without re-measuring its ratchet: "
+        f"{set(reg.judges) ^ (set(MEASURED_WORK) | {'nos-smoke'})}"
+    )
+    for name, measured in MEASURED_WORK.items():
+        floor = reg.judges[name].min_work
+        assert floor <= measured, f"{name}: min_work {floor} exceeds measured {measured}"
+        assert floor >= measured * 0.95, (
+            f"{name}: min_work {floor} is {measured / max(floor, 1):.1f}x below the "
+            f"measured {measured} — that gap is the ratchet's own scope loss"
+        )
+
+    # nos-smoke's floor is DERIVED from its catalog rather than transcribed, so
+    # the two cannot drift apart. That catalog is this judge's own oracle (§5.1),
+    # so a proposal cannot lower the floor by emptying the catalog.
+    catalog = yaml.safe_load(
+        (REPO / "state" / "smoke-catalog.yml").read_text(encoding="utf-8"))
+    entries = len(catalog["smoke_endpoints"])
+    assert reg.judges["nos-smoke"].min_work == entries, (
+        f"nos-smoke min_work={reg.judges['nos-smoke'].min_work} but the committed "
+        f"catalog declares {entries} probes — at 1, the catalog could shrink to a "
+        f"single probe and still read PASS (only literal zero was caught)"
+    )
+
     assert all(j.min_work >= 1 for j in reg.judges.values()), (
         "a min_work of 0 disables the ratchet and re-opens the zero-work false green"
     )

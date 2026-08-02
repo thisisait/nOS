@@ -73,18 +73,44 @@ CODEGEN_OK = "genome artifacts current (2 checked)"
 CODEGEN_STALE = "STALE generated artifacts: files/anatomy/module_utils/nos_entity.py"
 
 
-def derive(judge: judges.JudgeSpec, exit_code, stdout: str = "", stderr: str = "") -> judges.JudgeRun:
+#: The sha the fake sandbox reports. `judges` reads this out of a real git
+#: worktree in production; here it is a constant so these tests stay hermetic.
+TREE = "a" * 40
+
+#: The gate sets these tests seal, and their membership — the shape
+#: `judges.load_registry()` returns, injected at ledger construction so the
+#: suite does not depend on the committed registry's current contents.
+TEST_REGISTRY = judges.Registry(
+    judges={},
+    gate_sets={
+        "fast": judges.GateSetSpec(name="fast", judges=("ansible-lint", "genome-codegen")),
+        "solo": judges.GateSetSpec(name="solo", judges=("ansible-lint",)),
+        "probe": judges.GateSetSpec(name="probe", judges=()),
+    },
+)
+
+#: `{weakness_id: evidence_sha}` as the weakness READER would return it. The
+#: ledger looks the sha up here; nothing in a proposal can supply one.
+WEAKNESS_INDEX = {"hidden-fee:08": "sha-08", "REM-137": "sha-137"}
+
+
+def derive(judge: judges.JudgeSpec, exit_code, stdout: str = "", stderr: str = "",
+           tree_sha: str = TREE) -> judges.JudgeRun:
     """Drive the REAL judge pipeline with only the subprocess faked.
 
     `run_gate_set`'s `spawn` seam is the sibling module's own injection point,
     so the adapters, the work parser and the §2.4 ratchet all execute exactly
     as they would in production — the bytes on the pipe are simply supplied.
+    The sandbox is faked too (this file makes no subprocess at all); it hands
+    back a tree sha exactly as the real one does, because there is no seam that
+    yields a tree with no identity.
     """
     reg = judges.Registry(
         judges={judge.name: judge},
         gate_sets={"probe": judges.GateSetSpec(name="probe", judges=(judge.name,))})
     verdict = judges.run_gate_set(
         "probe", registry=reg, repo_root=REPO, probe=lambda r: True,
+        sandbox_factory=lambda root: (root, tree_sha, lambda: None),
         spawn=lambda argv, cwd, t: judges.Completed(
             exit_code=exit_code, stdout=stdout, stderr=stderr))
     return verdict.runs[0]
@@ -100,16 +126,20 @@ def db(tmp_path, monkeypatch):
     return path
 
 
+def _open(role: str):
+    return ledger.open_ledger(role, registry=TEST_REGISTRY, weakness_index=WEAKNESS_INDEX)
+
+
 @pytest.fixture()
 def proposer(db):
-    led = ledger.open_ledger("proposer")
+    led = _open("proposer")
     yield led
     led.close()
 
 
 @pytest.fixture()
 def evaluator(db):
-    led = ledger.open_ledger("evaluator")
+    led = _open("evaluator")
     yield led
     led.close()
 
@@ -130,18 +160,24 @@ def propose(led, **over):
     return led.record_proposal(**kw)
 
 
-def judge_set(ev, runs, *, gate_set="fast", proposal_uuid=None, tree_sha="a" * 40):
-    """Drive a full set: begin → finish → seal. `runs` is [(spec, exit, stdout)]."""
-    uuids = []
+def judge_set(ev, runs, *, gate_set=None, proposal_uuid=None, tree_sha=TREE):
+    """Drive a full set: begin → finish → seal. `runs` is [(spec, exit, stdout)].
+
+    `gate_set` defaults to an ad-hoc set whose declared membership IS the judges
+    being driven — because `seal_verdict` reads membership from the registry now
+    and refuses to be told what it should have expected.
+    """
+    names = tuple(j.name for j, _, _ in runs)
+    if gate_set is None:
+        gate_set = "gs:" + ",".join(names)
+        TEST_REGISTRY.gate_sets[gate_set] = judges.GateSetSpec(  # type: ignore[index]
+            name=gate_set, judges=names)
     for judge, code, out in runs:
-        run = derive(judge, code, out)
+        run = derive(judge, code, out, tree_sha=tree_sha)
         u = ev.begin_judge_run(gate_set=gate_set, judge_name=judge.name,
                                argv=run.argv, proposal_uuid=proposal_uuid)
         ev.finish_judge_run(u, run=run)
-        uuids.append(u)
-    return ev.seal_verdict(gate_set=gate_set, tree_sha=tree_sha, run_uuids=uuids,
-                           expected_judges=[j.name for j, _, _ in runs],
-                           proposal_uuid=proposal_uuid)
+    return ev.seal_verdict(gate_set=gate_set, proposal_uuid=proposal_uuid)
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -160,6 +196,26 @@ def test_seal_verdict_takes_no_result_parameter():
     assert not (params & forbidden), (
         f"seal_verdict accepts a caller-supplied result: {sorted(params & forbidden)}. "
         "The result must be derived from persisted judge-run rows.")
+
+
+def test_seal_verdict_does_not_let_its_caller_choose_the_evidence():
+    """The half "no result parameter" does not cover, and the half that broke.
+
+    Selection IS forgery. A caller that names WHICH runs count can assemble a
+    PASS out of a green subset while a FAIL for the same proposal sits in
+    `loop_judge_runs`; a caller that supplies `expected_judges` can make the
+    missing-judge guard vacuous by passing `[]`; a caller that types `tree_sha`
+    can seal a verdict about a tree nothing was judged on. All three were
+    reachable, and all three are parameters, so this gate is a signature gate.
+    """
+    params = set(inspect.signature(ledger.EvaluatorLedger.seal_verdict).parameters)
+    forbidden = {"run_uuids", "runs", "evidence", "expected_judges", "judges",
+                 "tree_sha", "registry"}
+    assert not (params & forbidden), (
+        f"seal_verdict lets its caller select its own evidence: "
+        f"{sorted(params & forbidden)}. Membership comes from the registry, the "
+        f"runs come from the ledger, the tree comes off the runs.")
+    assert params == {"self", "gate_set", "proposal_uuid"}, sorted(params)
 
 
 def test_proposer_has_no_method_that_writes_a_verdict():
@@ -409,11 +465,10 @@ def test_run_row_exists_before_any_outcome_does(db, evaluator):
 def test_killed_run_sweeps_to_crashed_and_can_never_pass(db, evaluator):
     """The normal failure mode of an unattended loop: the process dies, the
     exit reader never returns. The row must not stay claimable."""
-    u = evaluator.begin_judge_run(gate_set="fast", judge_name="ansible-lint", argv=["x"])
+    u = evaluator.begin_judge_run(gate_set="solo", judge_name="ansible-lint", argv=["x"])
     assert evaluator.sweep_crashed() == 1
     assert evaluator.judge_run(u)["outcome"] == "indeterminate"
-    v = evaluator.seal_verdict(gate_set="fast", tree_sha="a" * 40, run_uuids=[u],
-                               expected_judges=["ansible-lint"])
+    v = evaluator.seal_verdict(gate_set="solo")
     assert v["result"] == "indeterminate"
 
 
@@ -530,16 +585,119 @@ def test_a_judge_that_never_reported_makes_the_set_indeterminate(db, evaluator):
     judge out of an expected two is not a green set."""
     u = evaluator.begin_judge_run(gate_set="fast", judge_name="ansible-lint", argv=["x"])
     evaluator.finish_judge_run(u, run=derive(LINT, 0, LINT_OK))
-    v = evaluator.seal_verdict(gate_set="fast", tree_sha="a" * 40, run_uuids=[u],
-                               expected_judges=["ansible-lint", "genome-codegen"])
+    v = evaluator.seal_verdict(gate_set="fast")
     assert v["result"] == "indeterminate"
+    assert json.loads(v["evidence"])["missing_judges"] == ["genome-codegen"]
 
 
 def test_an_empty_set_is_indeterminate_never_pass(db, evaluator):
     """hidden_fees/08 in one line: `0/0 ready` must not be green."""
-    v = evaluator.seal_verdict(gate_set="fast", tree_sha="a" * 40, run_uuids=[],
-                               expected_judges=[])
+    v = evaluator.seal_verdict(gate_set="probe")
     assert v["result"] == "indeterminate"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# §2.4, one layer up — a SELECTED absence, which the empty-set rule misses
+# ══════════════════════════════════════════════════════════════════════════
+
+def test_ADVERSARIAL_a_fail_on_record_cannot_be_left_out_of_the_verdict(db, proposer, evaluator):
+    """MEASURED against the previous code: one PASS run and one FAIL run
+    persisted against the SAME proposal, sealed with `run_uuids=[the pass]` and
+    `expected_judges=[]`, produced `result='pass'` — and `verify_chain()` said
+    ok, because nothing was tampered with. The verdict came through the front
+    door.
+
+    `aggregate` refuses an EMPTY set (absence is never success). This is the
+    same rule one layer up: a SELECTED absence. The FAIL is not missing from the
+    database, it is missing from the caller's list — so the caller no longer has
+    a list.
+    """
+    p = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    for judge, code, out in ((LINT, 0, LINT_OK), (CODEGEN, 1, CODEGEN_STALE)):
+        run = derive(judge, code, out)
+        u = evaluator.begin_judge_run(gate_set="fast", judge_name=judge.name,
+                                      argv=run.argv, proposal_uuid=p["uuid"])
+        evaluator.finish_judge_run(u, run=run)
+
+    v = evaluator.seal_verdict(gate_set="fast", proposal_uuid=p["uuid"])
+    assert v["result"] == "fail", (
+        "a PASS was assembled while a FAIL for the same proposal was on record")
+    assert set(json.loads(v["evidence"])["outcomes"]) == {"ansible-lint", "genome-codegen"}
+
+
+def test_ADVERSARIAL_a_green_run_cannot_be_reattached_to_another_proposal(db, proposer, evaluator):
+    """The second measured shape: a `fast` run of proposal A, re-offered as the
+    evidence for proposal B on gate set `full` at tree 'zzz', sealed 'pass'.
+
+    Rows were fetched by uuid with no filter on proposal_id or gate_set, so a
+    green run was portable across every axis a verdict is supposed to be about.
+    Here B is sealed while A's green run exists, and B must find nothing of its
+    own — an empty set, which is INDETERMINATE.
+    """
+    a = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    # DELIBERATELY LEFT UNSEALED. Sealing A first would put its run in the
+    # consumed set, and the consumed-once rule would then hide whether the
+    # proposal filter works at all — the mutation harness caught exactly that:
+    # this gate stayed GREEN with the proposal filter removed.
+    run = derive(LINT, 0, LINT_OK)
+    ua = evaluator.begin_judge_run(gate_set="solo", judge_name=LINT.name,
+                                   argv=run.argv, proposal_uuid=a["uuid"])
+    evaluator.finish_judge_run(ua, run=run)
+
+    b = propose(proposer, weakness_id="REM-137",
+                target_paths=["roles/pazny.n8n/defaults/main.yml"],
+                diff_text="@@ -1 +1 @@\n-x\n+y\n")
+    v = evaluator.seal_verdict(gate_set="solo", proposal_uuid=b["uuid"])
+    assert v["result"] == "indeterminate", "another proposal's green run sealed this one"
+    assert json.loads(v["evidence"])["judge_runs"] == []
+    # …and A's run is still unspent, so it was filtered out rather than consumed.
+    assert evaluator.seal_verdict(
+        gate_set="solo", proposal_uuid=a["uuid"])["result"] == "pass"
+
+
+def test_ADVERSARIAL_judges_that_saw_two_trees_cannot_pass(db, proposer, evaluator):
+    """§2.5 at the ledger layer.
+
+    `judges.py` now runs a whole set in ONE sandbox, so this shape should be
+    unreachable from the runner. It is pinned here anyway because the ledger is
+    the last reader before the hash chain closes over the row: a verdict that
+    names one `tree_sha` while its evidence names two is a verdict about nothing.
+    """
+    p = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    for judge, sha in ((LINT, "a" * 40), (CODEGEN, "b" * 40)):
+        out = LINT_OK if judge is LINT else CODEGEN_OK
+        run = derive(judge, 0, out, tree_sha=sha)
+        u = evaluator.begin_judge_run(gate_set="fast", judge_name=judge.name,
+                                      argv=run.argv, proposal_uuid=p["uuid"])
+        evaluator.finish_judge_run(u, run=run)
+
+    v = evaluator.seal_verdict(gate_set="fast", proposal_uuid=p["uuid"])
+    assert v["result"] == "indeterminate"
+    assert v["tree_sha"] == "", "a verdict named one tree while its judges saw two"
+    assert json.loads(v["evidence"])["trees"] == ["a" * 40, "b" * 40]
+
+
+def test_a_verdict_names_the_tree_its_judges_read_out_of_the_sandbox(db, proposer, evaluator):
+    """The control for the two tests above: agreement seals cleanly, and the
+    sha on the row is the one the RUNS carry — never a caller's label."""
+    p = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    v = judge_set(evaluator, [(LINT, 0, LINT_OK), (CODEGEN, 0, CODEGEN_OK)],
+                  gate_set="fast", proposal_uuid=p["uuid"], tree_sha="d" * 40)
+    assert v["result"] == "pass"
+    assert v["tree_sha"] == "d" * 40
+    assert evaluator.replay_record(v["uuid"])["runs"][0]["tree_sha"] == "d" * 40
+
+
+def test_ADVERSARIAL_the_same_run_cannot_be_sealed_twice(db, proposer, evaluator):
+    """Evidence is consumed once, or "every run on record" would re-seal an
+    earlier attempt's greens into a later attempt's verdict."""
+    p = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    first = judge_set(evaluator, [(LINT, 0, LINT_OK)], gate_set="solo",
+                      proposal_uuid=p["uuid"])
+    assert first["result"] == "pass"
+    second = evaluator.seal_verdict(gate_set="solo", proposal_uuid=p["uuid"])
+    assert second["result"] == "indeterminate"
+    assert json.loads(second["evidence"])["judge_runs"] == []
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -594,8 +752,8 @@ def test_paths_that_escape_the_repo_are_refused():
 # §4 — "ALREADY FAILED, REFUSE WITHOUT RUNNING"
 # ══════════════════════════════════════════════════════════════════════════
 
-def _fail_one_attempt(prop, ev, diff: str, evidence: str | None = None):
-    p = propose(prop, diff_text=diff, weakness_evidence_sha=evidence)
+def _fail_one_attempt(prop, ev, diff: str):
+    p = propose(prop, diff_text=diff)
     judge_set(ev, [(LINT, 2, LINT_OK)], proposal_uuid=p["uuid"])
     return p
 
@@ -650,14 +808,92 @@ def test_an_unjudged_attempt_blocks_the_next_one(db, proposer):
 
 def test_the_block_lifts_when_the_weakness_evidence_changes(db, proposer, evaluator):
     """§4 — "or the ledger becomes a permanent scar". The remediation item's
-    fix_version moved; this is a different world and deserves a new attempt."""
-    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+b\n", evidence="sha-old")
-    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+c\n", evidence="sha-old")
-    with pytest.raises(ledger.ProposalRefused):
-        propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+d\n", weakness_evidence_sha="sha-old")
+    fix_version moved; this is a different world and deserves a new attempt.
 
-    ok = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+d\n", weakness_evidence_sha="sha-NEW")
+    THE LIFT IS DRIVEN FROM THE SOURCE, not from the proposal. The earlier
+    version of this test passed a literal `weakness_evidence_sha="sha-NEW"` and
+    so encoded the lift without encoding WHO may assert it — which is precisely
+    the defect: four attempts at the same substantive change were all accepted
+    by supplying a fresh nonce. Here the SOURCE's evidence changes (the reader's
+    index moves) and the proposal says nothing about it.
+    """
+    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+b\n")
+    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+c\n")
+    with pytest.raises(ledger.ProposalRefused):
+        propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+d\n")
+
+    index = dict(WEAKNESS_INDEX, **{"hidden-fee:08": "sha-08-MOVED"})
+    lifted = ledger.open_ledger("proposer", registry=TEST_REGISTRY, weakness_index=index)
+    try:
+        ok = propose(lifted, diff_text="@@ -1 +1 @@\n-a\n+d\n")
+    finally:
+        lifted.close()
     assert ok["attempt_n"] == 1
+
+
+def test_ADVERSARIAL_a_fresh_nonce_does_not_buy_a_fresh_attempt(db, proposer, evaluator):
+    """§4's ceiling is the only defence against grinding a flaky judge green.
+
+    MEASURED against the previous code: four proposals identical in
+    weakness_id / paths / intent / gate_set, each sealed FAIL, each supplying a
+    fresh `weakness_evidence_sha` — 4/4 ACCEPTED. Varying `weakness_id` instead:
+    also 4/4. `state/judge-sets.yml` declares `nos-smoke` and
+    `cortex-corpus-diff` `deterministic: false`, so an unattended proposer that
+    re-offers the same change under a new nonce until one comes back green has
+    captured the verdict without touching a gate.
+
+    Neither field is a parameter any more, so the grind has nothing to vary —
+    and `record_proposal`'s signature is the assertion.
+    """
+    params = set(inspect.signature(ledger.ProposerLedger.record_proposal).parameters)
+    assert "weakness_evidence_sha" not in params, (
+        "the lift key is caller-supplied again; a lift the blocked party asserts "
+        "is not a ceiling")
+    assert "weakness_evidence_sha" not in set(
+        inspect.signature(ledger.ProposerLedger.check).parameters)
+
+    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+b\n")
+    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+c\n")
+    with pytest.raises(ledger.ProposalRefused) as e:
+        propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+d\n")
+    assert e.value.reason == "already-failed"
+
+
+def test_ADVERSARIAL_an_invented_weakness_id_is_refused_not_treated_as_new(db, proposer):
+    """The second nonce variant, closed by the same lookup.
+
+    `fingerprint()` hashes `weakness_id` verbatim, so inventing one produced a
+    brand-new fingerprint and a fresh ceiling. A weakness no source reports has
+    no evidence hash to key the ceiling on, so it cannot be proposed against at
+    all — which is the honest answer, not a refinement of the hash.
+    """
+    with pytest.raises(ledger.ProposalRefused) as e:
+        propose(proposer, weakness_id="hidden-fee:08-nonce-7")
+    assert e.value.reason == "unknown-weakness"
+    assert raw(db).execute("SELECT COUNT(*) FROM loop_proposals").fetchone()[0] == 0
+
+
+def test_the_evidence_sha_on_the_row_is_the_readers_not_the_proposals(db, proposer):
+    """Constraint B in miniature: the field that records why an attempt was
+    allowed must not be written by the party the attempt belongs to."""
+    p = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    stored = raw(db).execute(
+        "SELECT weakness_evidence_sha FROM loop_proposals WHERE uuid=?",
+        (p["uuid"],)).fetchone()[0]
+    assert stored == WEAKNESS_INDEX["hidden-fee:08"]
+
+
+def test_the_default_weakness_index_reads_the_weakness_reader(db):
+    """The injected index above is a TEST double; production must resolve
+    through `weaknesses`, the module that DERIVES `evidence_sha`. A gate that
+    only ever saw the double would pin the double."""
+    import weaknesses
+
+    index = ledger.default_weakness_index()
+    live = {w.weakness_id: w.evidence_sha
+            for r in weaknesses.collect() for w in r.weaknesses}
+    assert index == live
+    assert index, "the reader reported no weaknesses at all — nothing measured"
 
 
 def test_the_block_lifts_on_an_operator_forget(db, proposer, evaluator):
@@ -667,7 +903,7 @@ def test_the_block_lifts_on_an_operator_forget(db, proposer, evaluator):
     with pytest.raises(ledger.ProposalRefused):
         propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+d\n")
 
-    op = ledger.open_ledger("operator")
+    op = _open("operator")
     try:
         cut = op.forget(raw(db).execute(
             "SELECT fingerprint FROM loop_proposals WHERE uuid=?", (p2["uuid"],)).fetchone()[0])
