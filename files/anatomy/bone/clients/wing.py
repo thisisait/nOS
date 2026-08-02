@@ -87,6 +87,20 @@ def _open() -> sqlite3.Connection:
     return sqlite3.connect(str(db))
 
 
+def open_connection() -> sqlite3.Connection:
+    """Public handle on the single wing.db seam.
+
+    Added for ``bone/ledger.py`` (agentic-loop ledger, docs/idea/
+    11-agentic-loop-contract.md §3): the ledger owns three more tables in the
+    same database and must NOT grow a second ``sqlite3.connect(... wing.db)``
+    — the P0.1b lint in tests/callback/test_bone_insert_event.py forbids it,
+    and the point of that lint is that a future transport swap edits ONE file.
+    Callers get the raw connection and are expected to install their own
+    authorizer / row_factory on top.
+    """
+    return _open()
+
+
 # ── Writes ────────────────────────────────────────────────────────────
 
 

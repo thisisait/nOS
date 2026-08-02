@@ -1,0 +1,155 @@
+# state/judge-sets.yml — the judge registry and the named gate sets.
+#
+# Contract: docs/idea/11-agentic-loop-contract.md §2.1 (DECISION 2).
+# Committed to the repo on purpose: a gate set must mean the same thing in CI,
+# on the operator's Mac, and in a 03:00 Pulse job. A set defined in runtime
+# state drifts per host. This file is itself inside the budget's deny list
+# (§5.2) — the loop may not edit its own oracle.
+#
+# NO JINJA IN THIS FILE — not even inside a comment. It is read by judges.py
+# with yaml.safe_load and is not an Ansible vars file; keeping it literal means
+# it can never break the play-var eager-resolve path (constraint G).
+# A brace-brace or brace-percent sequence is a template expression to Jinja
+# WHEREVER it appears: Jinja does not respect YAML comments, so writing one in a
+# comment does not make it inert. Same shape as the shell-brace trap in
+# constraint F. The gate test_the_registry_is_literal_yaml_with_no_jinja caught
+# exactly this sequence in an earlier draft of this header.
+#
+# EVERY FIELD HERE IS MEASURED, NOT ASSUMED. The measurement transcripts live
+# in the contract §0 and were re-run at build time:
+#   ansible-lint  → "Passed: 0 failure(s), 0 warning(s) in 1400 files processed
+#                    of 2979 encountered."  EXIT=0   (on STDERR, not stdout)
+#   genome-codegen → "genome artifacts current (2 checked)"  EXIT=0
+#   nos-smoke      → "smoke catalog yielded zero entries"    EXIT=0  ← false green
+#   corpus-diff    → returns `3 if removalShaped else 0` under --no-ledger, so
+#                    EXIT=0 is reachable while the report says DISAGREE.
+
+version: 1
+
+judges:
+
+  # ── ansible-lint ────────────────────────────────────────────────────────
+  # Failure code is 2, NOT 1. A naive `!= 0` check is right by accident; a
+  # naive `== 1` check is wrong. Hence pass_exit/fail_exit are explicit and
+  # anything outside both lists is INDETERMINATE rather than guessed at.
+  ansible-lint:
+    argv: ["ansible-lint"]
+    adapter: exit_zero
+    pass_exit: [0]
+    fail_exit: [2]
+    deterministic: true
+    runtime_s_p95: 55
+    timeout_s: 600
+    # The terminal line is written to STDERR. work_regex is matched against
+    # stdout and stderr combined for exactly this reason.
+    work_field: files_processed
+    work_regex: "in\\s+(\\d+)\\s+files processed"
+    # RATCHET, in the style of BLAST_RADIUS_CEILING: 1400 of 2979 encountered
+    # files are actually processed today, and nothing else pins that ratio.
+    # Silent scope loss would otherwise read as green.
+    min_work: 1400
+    mutates_worktree: false
+    requires: []
+
+  # ── genome-codegen --check ──────────────────────────────────────────────
+  # The one judge whose failure branch has actually been observed (contract
+  # §8.1, re-run at build time in this session).
+  genome-codegen:
+    argv: ["python3", "tools/genome-codegen.py", "--check"]
+    adapter: exit_zero
+    pass_exit: [0]
+    fail_exit: [1]
+    deterministic: true
+    runtime_s_p95: 2
+    timeout_s: 120
+    work_field: artifacts_checked
+    work_regex: "\\((\\d+) checked\\)"
+    min_work: 2
+    mutates_worktree: false
+    requires: []
+    # M7: this WRITES files/anatomy/module_utils/nos_entity.py, the same file
+    # test_genome_contract.py mutates. The two judges corrupt each other if
+    # they overlap, and there is no lock upstream.
+    exclusive_resource: nos_entity
+
+  # ── pytest-anatomy ──────────────────────────────────────────────────────
+  # Exit 0 covers "all skipped" (M3, re-confirmed at build time:
+  # HOME=/tmp/emptyhome … → "2 skipped" EXIT=0). Work is passed+failed;
+  # SKIPPED IS NOT WORK, which is what closes that false green.
+  pytest-anatomy:
+    argv: ["python3", "-m", "pytest", "tests/anatomy", "-q"]
+    adapter: pytest_summary
+    deterministic: true
+    runtime_s_p95: 190
+    timeout_s: 900
+    work_field: tests_executed
+    min_work: 200
+    # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
+    # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
+    # restores it in a `finally` — a killed run leaves the source corrupted,
+    # and being killed is an unattended loop's normal failure mode.
+    mutates_worktree: true
+    requires: []
+    exclusive_resource: nos_entity
+
+  # ── nos-smoke ───────────────────────────────────────────────────────────
+  # Exit IS the failure count, capped at 127 — not a boolean.
+  # --no-jsonl is part of the committed argv (DECISION 2e): without it the run
+  # appends to ~/.nos/events/smoke.jsonl, OUTSIDE the repo, where `git status`
+  # can never reveal it.
+  nos-smoke:
+    argv: ["python3", "tools/nos-smoke.py", "--no-jsonl"]
+    adapter: exit_count
+    deterministic: false
+    runtime_s_p95: 3
+    timeout_s: 300
+    work_field: probes_run
+    work_regex: "(\\d+)\\s*/\\s*(\\d+)\\s+OK"
+    work_regex_group: 2
+    min_work: 1
+    mutates_worktree: false
+    requires: ["live_estate"]
+
+  # ── cortex-corpus-diff ──────────────────────────────────────────────────
+  # THE EXIT CODE IS NOT THE VERDICT: under --no-ledger it returns
+  # `3 if removalShaped else 0`, so a DISAGREE report exits 0. The verdict is
+  # the .agrees field of the JSON report.
+  # --no-ledger --json are part of the committed argv (DECISION 2e): without
+  # them the run advances or zeroes agreeStreak, may page the operator via A9,
+  # and may run --halt-cmd, stopping the organ's fs-sync. A judge that can page
+  # the operator and halt an organ is not a judge.
+  # On the "cortex unreachable" path it prints NO json and returns 0 — the
+  # json_field adapter finds nothing to read and reports INDETERMINATE, which
+  # is what corrects the script's own `night VOID → 0`.
+  cortex-corpus-diff:
+    argv: ["python3", "files/anatomy/scripts/cortex-corpus-diff.py", "--no-ledger", "--json"]
+    adapter: json_field
+    json_field: agrees
+    deterministic: false
+    runtime_s_p95: 3
+    timeout_s: 300
+    work_field: tables_compared
+    work_json_field: tables
+    min_work: 1
+    mutates_worktree: false
+    requires: ["keap_token_ro", "cortex_token_ro"]
+
+# keap-lint is DELIBERATELY ABSENT (DECISION 2f). It needs a RW token, POSTs
+# /agent/v1/lint/run which reconciles state, fans results into A9, and its
+# exit 0 means "ran", not "clean". That is a scheduled maintenance job with an
+# alerting side effect, not a deterministic oracle. Admitting it would give the
+# loop a judge that mutates the thing being measured.
+
+gate_sets:
+  fast:
+    judges: ["ansible-lint", "genome-codegen"]
+    unattended: true
+  repo:
+    judges: ["ansible-lint", "genome-codegen", "pytest-anatomy"]
+    unattended: true
+  live:
+    judges: ["nos-smoke", "cortex-corpus-diff"]
+    unattended: true
+  full:
+    judges: ["ansible-lint", "genome-codegen", "pytest-anatomy", "nos-smoke", "cortex-corpus-diff"]
+    unattended: false

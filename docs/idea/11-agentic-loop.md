@@ -115,7 +115,7 @@ ported zero times.
 ## 4. The plugin — thin on purpose
 
 ```
-plugins/nos-loop/
+.claude/plugins/nos-loop/
   .claude-plugin/plugin.json
   skills/
     weakness-scan/SKILL.md     # ask the engine what is wrong, rank it

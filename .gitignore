@@ -21,10 +21,14 @@ vision.md
 _credentials.yml
 .ansible-prefix-state
 .nos/
-# .claude is session-local EXCEPT skills/ (committed — the /devlog skill
-# is part of the devlog platform contract, test_devlog_skill_contract.py).
+# .claude is session-local EXCEPT skills/ and plugins/ (committed — the /devlog
+# skill is part of the devlog platform contract, test_devlog_skill_contract.py;
+# the nos-loop plugin must be in the repo for the same reason its gate sets are:
+# a client that lives in per-host runtime state drifts per host, and Hermes/CI
+# would never see it. test_loop_plugin_is_thin.py pins that it stays tracked.
 .claude/*
 !.claude/skills/
+!.claude/plugins/
 __pycache__/
 *.pyc
 tools/social-poster/index.html

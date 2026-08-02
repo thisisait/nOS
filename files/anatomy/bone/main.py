@@ -291,6 +291,26 @@ except Exception as _userstate_err:  # noqa: BLE001
     _USERSTATE_IMPORT_ERROR = str(_userstate_err)
 
 
+# ---- Agentic loop: the weakness reader — isolated deferred import ----------
+# docs/idea/11-agentic-loop-contract.md build step 3. READ-ONLY: it reads
+# sources that already exist (the git working tree, the security remediation
+# queue, scan freshness, the hidden-fees ledger, the corpus-diff ledger) and
+# returns them ranked. It writes nothing, judges nothing, and accepts no input
+# that can influence a weakness's severity — only filters.
+#
+# Auth is loopauth.py's third channel (loopback + static bearer), NOT JWT: the
+# loop must answer at 03:00 during a blank and on a host where Authentik is
+# down, which is the same bootstrap argument that keeps /api/v1/events on HMAC.
+try:  # noqa: SIM105
+    import weaknesses as _nos_weaknesses  # type: ignore
+
+    app.include_router(_nos_weaknesses.router)
+    _LOOP_READER_READY = True
+except Exception as _loop_err:  # noqa: BLE001
+    _LOOP_READER_READY = False
+    _LOOP_READER_IMPORT_ERROR = str(_loop_err)
+
+
 def _require_framework() -> None:
     if not _FRAMEWORK_READY:
         raise HTTPException(

@@ -1351,6 +1351,13 @@
         # and Traefik's anonymous /api/http/middlewares served it verbatim, which
         # disclosed the PREFIX, not just the token. Same guard as its neighbours.
         face_edge_token: "{% if '_pw_' in (face_edge_token | default('')) or (face_edge_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ face_edge_token }}{% endif %}"
+        # Agentic loop (contract §3.4/§8.2). Two identities, two tokens, minted
+        # random from the start — the loop must never add a name to the
+        # prefix-derived set the blast-radius ratchet is driving to 1. Bone
+        # ALSO refuses a `_pw_`-shaped value at runtime, so restoring a derived
+        # default here fails twice rather than once.
+        loop_propose_token: "{% if '_pw_' in (loop_propose_token | default('')) or (loop_propose_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ loop_propose_token }}{% endif %}"
+        loop_judge_token: "{% if '_pw_' in (loop_judge_token | default('')) or (loop_judge_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ loop_judge_token }}{% endif %}"
         # Authentik admin API token (identifier nos-api). Generated HERE and
         # pinned as the token's `key:` in the 00-admin-groups blueprint, so
         # Wing's AUTHENTIK_BOOTSTRAP_TOKEN is known on a SINGLE blank run —

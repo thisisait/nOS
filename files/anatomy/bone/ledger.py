@@ -1,0 +1,813 @@
+"""Agentic-loop ledger — schema, fingerprints, and the ONLY verdict writer.
+
+Contract: docs/idea/11-agentic-loop-contract.md §3 (the ledger), §4
+(fingerprinting), §2.4 (absence is never success). This module is build-order
+item 2: it mounts no routes and spawns no process of its own. `judges.py`
+(build-order item 1) is the derivation site — adapters, work counts, the §2.4
+ratchet, the sandbox — and this module persists what its exit reader produced.
+`loop.py` (routes) lands separately and calls both.
+
+WHY A PROPOSER STRUCTURALLY CANNOT WRITE A VERDICT
+--------------------------------------------------
+Constraint A: the judge is code, the proposer is a model, and they never share
+an identity. That is enforced here in five layers, weakest claim last, so the
+guarantee can be audited rather than believed:
+
+  1. **No API surface accepts a result.** `ProposerLedger` has no method that
+     writes to `loop_verdicts`, and `EvaluatorLedger.seal_verdict()` takes no
+     `result` parameter — the result is DERIVED from stored `loop_judge_runs`
+     rows, which are themselves derived from a subprocess's raw exit code and
+     stdout. There is no field, anywhere, that influences a verdict's value.
+     (§3.1 DECISION 3: `POST /v1/verdicts` is deleted from the design.)
+  2. **The connection refuses it.** Each role opens wing.db behind an sqlite3
+     authorizer with a per-role writable-table set. A proposer holding its own
+     connection object — encapsulation already broken — still gets
+     `sqlite3.DatabaseError: not authorized` on `INSERT INTO loop_verdicts`,
+     on `DROP TRIGGER`, and on `ATTACH`.
+  3. **The schema refuses it.** `CHECK (actor = 'engine:judge-runner')` rejects
+     any insert naming another writer, on any connection.
+  4. **The WORM triggers refuse edits.** A chained verdict row cannot be
+     UPDATEd or DELETEd; a finished judge run cannot have its exit code
+     rewritten.
+  5. **The chain makes offline tampering evident.** Not prevented — the
+     estate's own `test_audit_chain.py:188` drops a WORM trigger to simulate an
+     offline attacker (M6), and on a single-UID host that is possible here too.
+     `verify_chain()` reports BROKEN, mirroring `verify-audit-chain.php`.
+
+  NOT CLAIMED: filesystem separation between proposer and judge. §3.3 is
+  explicit about this, and the real guarantee is replay — every verdict stores
+  `tree_sha`, `argv`, `exit_code`, `work_count` and `stdout_sha`.
+
+CONSTRAINT B — no step records its own success
+----------------------------------------------
+`begin_judge_run()` writes `status='running'` BEFORE the subprocess starts.
+`finish_judge_run()` persists the record built by `judges._spawn_and_read` —
+the code that READ the exit — and refuses (rather than shrugging) when the row
+it meant to complete is no longer 'running'. A killed run stays 'running' until
+`sweep_crashed()` marks it 'crashed', which aggregates to INDETERMINATE, never
+PASS. And `loop_judge_runs` carries a CHECK that refuses to STORE a PASS whose
+work count is missing or below its ratchet: §2.4 as a storage constraint, so a
+future runner that forgets the rule cannot record a green anyway.
+
+CONSTRAINT D — no new credential. This module mints nothing and reads no
+password prefix. The chain key reuses the EXISTING `WING_EVENTS_HMAC_SECRET`
+when present and falls back to plain sha256 (the shape §3.2 specifies), so the
+runtime blast radius does not move.
+
+CONSTRAINT H — reuse. wing.db is opened through `clients/wing.py`, the single
+seam pinned by `tests/callback/test_bone_insert_event.py`. The hash-chain
+discipline is `App\\Model\\AuditChain`'s. `agent_iterations` is NOT touched:
+that table owns the per-SESSION loop; this ledger is strictly BETWEEN sessions.
+
+SCHEMA HOME: the DDL below is the single declaration site for `loop_*`. It is
+deliberately NOT duplicated into `files/anatomy/wing/db/schema-extensions.sql`
+— a twin would drift, and Bone is the only writer. Pinned by
+`test_loop_ledger.py::test_loop_schema_is_declared_in_exactly_one_place`.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import hmac
+import json
+import os
+import re
+import sqlite3
+import uuid as _uuid
+from dataclasses import dataclass, field
+from typing import Any, Iterable, Sequence
+
+import judges  # THE derivation site: adapters, work counts, aggregation (§2.2)
+from clients import wing as _wing  # single wing.db seam (constraint H)
+
+# ── Vocabulary ────────────────────────────────────────────────────────────
+
+#: The only value `loop_verdicts.actor` may hold. Enforced by a CHECK, not prose.
+ENGINE_ACTOR = "engine:judge-runner"
+
+#: §4 — closed enum; an unknown intent_class is refused at propose time.
+INTENT_CLASSES = frozenset({
+    "version-pin-bump", "config-fix", "render-fix",
+    "wiring-fix", "gate-add", "dependency-bump",
+})
+
+#: §5a — `gate-add` writes the oracle's own directory, so it is never
+#: auto-accepted. Set by the ledger from intent_class; NOT caller-supplied.
+OPERATOR_REQUIRED_INTENTS = frozenset({"gate-add"})
+
+#: Three-valued, deliberately. `judges.Result` is the enum; this is the SQL
+#: vocabulary the CHECK constraints pin, kept as data so a test can read it.
+RESULTS = ("pass", "fail", "indeterminate")
+
+#: §4 — default retry ceiling on one (weakness, paths, intent, gate_set).
+DEFAULT_MAX_ATTEMPTS = 2
+
+#: Per-role writable tables. Everything else is denied by the authorizer.
+_ROLE_WRITES: dict[str, frozenset[str]] = {
+    "proposer": frozenset({"loop_proposals"}),
+    "evaluator": frozenset({"loop_judge_runs", "loop_verdicts"}),
+    "operator": frozenset({"loop_forgets"}),
+    "reader": frozenset(),
+}
+
+_CHAIN_LABEL = b"nos-loop-verdicts-chain-v1"
+_GENESIS = "nos-loop-ledger-genesis-v1"
+_VERDICT_CANON_FIELDS = (
+    "uuid", "proposal_id", "gate_set", "result", "actor",
+    "tree_sha", "evidence", "created_at",
+)
+
+_STDOUT_HEAD_MAX = 2000
+
+
+# ── Errors ────────────────────────────────────────────────────────────────
+
+class LedgerError(Exception):
+    """Base class; carries the HTTP status `loop.py` should surface."""
+
+    status = 500
+
+
+class ProposalRefused(LedgerError):
+    """Budget/fingerprint refusal — §5/§4. Surfaces as 409.
+
+    `reason` is a stable machine code, never free text:
+      content-fp-repeat   — byte-identical patch already offered
+      already-failed      — attempts exhausted and the last verdict was fail
+      fingerprint-exhausted — attempts exhausted (last verdict pass/indeterminate)
+      attempt-pending     — a prior attempt has no verdict yet
+      unknown-intent      — intent_class outside the closed enum
+      bad-path            — absolute path or `..` escape in target_paths
+    """
+
+    status = 409
+
+    def __init__(self, reason: str, detail: str = "", *, prior: Sequence[Any] = ()):
+        super().__init__(f"{reason}: {detail}" if detail else reason)
+        self.reason = reason
+        self.detail = detail
+        self.prior = list(prior)
+
+
+class NotAuthorised(LedgerError):
+    status = 403
+
+
+# ── Schema ────────────────────────────────────────────────────────────────
+
+# NOTE vs contract §3.2: two columns are added that §4/§5a require but the
+# section's SQL block omits — `loop_proposals.weakness_evidence_sha` (the block
+# lifts when the weakness's evidence changes) and `loop_proposals.
+# requires_operator` (§5a gate-add). `loop_judge_runs.outcome` is added so
+# seal_verdict aggregates from PERSISTED rows rather than in-memory state,
+# which is what makes a verdict replayable.
+_DDL = """
+CREATE TABLE IF NOT EXISTS loop_proposals (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid                  TEXT NOT NULL UNIQUE,
+    fingerprint           TEXT NOT NULL,
+    content_fp            TEXT,
+    weakness_id           TEXT NOT NULL,
+    weakness_evidence_sha TEXT,
+    intent_class          TEXT NOT NULL CHECK (intent_class IN (
+                              'version-pin-bump','config-fix','render-fix',
+                              'wiring-fix','gate-add','dependency-bump')),
+    gate_set              TEXT NOT NULL,
+    target_paths          TEXT NOT NULL,
+    tree_sha              TEXT NOT NULL,
+    proposer_id           TEXT NOT NULL,
+    proposer_model        TEXT,
+    attempt_n             INTEGER NOT NULL DEFAULT 1,
+    requires_operator     INTEGER NOT NULL DEFAULT 0,
+    created_at            TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_loop_prop_fp     ON loop_proposals (fingerprint);
+CREATE INDEX IF NOT EXISTS idx_loop_prop_weak   ON loop_proposals (weakness_id);
+
+CREATE TABLE IF NOT EXISTS loop_judge_runs (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid         TEXT NOT NULL UNIQUE,
+    proposal_id  INTEGER,
+    gate_set     TEXT NOT NULL,
+    judge_name   TEXT NOT NULL,
+    argv         TEXT NOT NULL,
+    sandbox_path TEXT,
+    status       TEXT NOT NULL CHECK (status IN ('running','exited','crashed','skipped')),
+    started_at   TEXT NOT NULL,
+    finished_at  TEXT,
+    exit_code    INTEGER,
+    work_count   INTEGER,
+    min_work     INTEGER,
+    outcome      TEXT CHECK (outcome IN ('pass','fail','indeterminate')),
+    stdout_sha   TEXT,
+    stdout_head  TEXT,
+    -- §2.4 DECISION 2b, as a STORAGE constraint: a PASS that cannot show its
+    -- work is not storable. Closes M2 (nos-smoke "zero entries", exit 0) and
+    -- M3 (pytest "2 skipped", exit 0) at a layer no runner can forget.
+    CHECK (outcome IS NULL OR outcome <> 'pass' OR (
+              status = 'exited' AND work_count IS NOT NULL
+              AND min_work IS NOT NULL AND work_count >= min_work))
+);
+CREATE INDEX IF NOT EXISTS idx_loop_runs_prop ON loop_judge_runs (proposal_id);
+
+CREATE TABLE IF NOT EXISTS loop_verdicts (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid         TEXT NOT NULL UNIQUE,
+    proposal_id  INTEGER,
+    gate_set     TEXT NOT NULL,
+    result       TEXT NOT NULL CHECK (result IN ('pass','fail','indeterminate')),
+    actor        TEXT NOT NULL CHECK (actor = 'engine:judge-runner'),
+    tree_sha     TEXT NOT NULL,
+    evidence     TEXT NOT NULL,
+    prev_hash    TEXT,
+    row_hash     TEXT,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_loop_verdicts_prop ON loop_verdicts (proposal_id);
+
+-- §4 "the block lifts" — operator-only. CHECK pins the writer identity the
+-- same way loop_verdicts does; the authorizer denies this table to every
+-- other role.
+CREATE TABLE IF NOT EXISTS loop_forgets (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    fingerprint          TEXT NOT NULL,
+    through_proposal_id  INTEGER NOT NULL,
+    actor                TEXT NOT NULL CHECK (actor = 'operator'),
+    created_at           TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_loop_forgets_fp ON loop_forgets (fingerprint);
+
+-- WORM. Modelled on events_worm_update/_delete (init-db.php:401) but STRICTER:
+-- CREATE ... IF NOT EXISTS, never DROP-then-CREATE. init-db.php drops first
+-- because it must UPDATE a definition on a pre-existing wing.db; these tables
+-- are new, so a drop would only open a window in which a concurrent connection
+-- sees the table unprotected.
+-- a chained verdict row has no mutable column at all, and a finished judge run
+-- may not have its exit code rewritten after the fact (constraint B).
+CREATE TRIGGER IF NOT EXISTS loop_verdicts_worm_update BEFORE UPDATE ON loop_verdicts
+FOR EACH ROW WHEN OLD.row_hash IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'loop_verdicts WORM: verdict rows are append-only'); END;
+
+CREATE TRIGGER IF NOT EXISTS loop_verdicts_worm_delete BEFORE DELETE ON loop_verdicts
+FOR EACH ROW WHEN OLD.row_hash IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'loop_verdicts WORM: verdict rows are append-only'); END;
+
+CREATE TRIGGER IF NOT EXISTS loop_judge_runs_worm_update BEFORE UPDATE ON loop_judge_runs
+FOR EACH ROW WHEN OLD.status <> 'running'
+BEGIN SELECT RAISE(ABORT, 'loop_judge_runs WORM: a finished run is immutable'); END;
+
+CREATE TRIGGER IF NOT EXISTS loop_judge_runs_worm_delete BEFORE DELETE ON loop_judge_runs
+FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'loop_judge_runs WORM: evidence is append-only'); END;
+"""
+
+
+def ensure_schema(conn: sqlite3.Connection) -> None:
+    """Idempotent DDL. Runs on a bootstrap connection BEFORE the authorizer is
+    installed — every role connection denies CREATE/DROP afterwards."""
+    conn.executescript(_DDL)
+    conn.commit()
+
+
+# ── Fingerprints (§4) ─────────────────────────────────────────────────────
+
+def _canonical_json(obj: Any) -> str:
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def normalize_paths(paths: Iterable[str]) -> list[str]:
+    """Repo-relative, de-duplicated, sorted. Refuses escapes.
+
+    Not the budget (§5, budget.py) — just the canonical form the fingerprint
+    hashes, so `["b","a"]` and `["a","b","a"]` are the same attempt.
+    """
+    out: set[str] = set()
+    for raw in paths:
+        p = str(raw).strip().replace("\\", "/")
+        while p.startswith("./"):
+            p = p[2:]
+        if not p:
+            continue
+        if p.startswith("/") or p.startswith("~"):
+            raise ProposalRefused("bad-path", f"not repo-relative: {raw}")
+        if ".." in p.split("/"):
+            raise ProposalRefused("bad-path", f"escapes the repo root: {raw}")
+        out.add(p)
+    if not out:
+        raise ProposalRefused("bad-path", "no target paths")
+    return sorted(out)
+
+
+def fingerprint(weakness_id: str, target_paths: Iterable[str],
+                intent_class: str, gate_set: str) -> str:
+    """"The same attempt at the same thing."
+
+    §4, verbatim on the exclusions: the diff text, the prose rationale, the
+    model name and the timestamp are DELIBERATELY out. If the diff were in this
+    hash a proposer would retry forever by perturbing whitespace — the retry
+    loop would optimise against the deduplicator, which is §2's failure mode
+    one level down.
+    """
+    if intent_class not in INTENT_CLASSES:
+        raise ProposalRefused("unknown-intent", intent_class)
+    payload = {
+        "weakness_id": str(weakness_id),
+        "target_paths": normalize_paths(target_paths),
+        "intent_class": intent_class,
+        "gate_set": str(gate_set),
+    }
+    return hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()
+
+
+_HUNK_RE = re.compile(r"^@@[^@]*@@")
+_INDEX_RE = re.compile(r"^index [0-9a-f]+\.\.[0-9a-f]+")
+
+
+def normalize_diff(diff_text: str) -> str:
+    """Strip what is incidental to a patch's content: hunk offsets, blob
+    indices, ---/+++ header timestamps, CRLF, trailing whitespace."""
+    lines: list[str] = []
+    for raw in diff_text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        line = raw.rstrip()
+        if _INDEX_RE.match(line):
+            continue
+        if line.startswith("@@"):
+            line = _HUNK_RE.sub("@@", line).rstrip()
+        elif line.startswith("--- ") or line.startswith("+++ "):
+            line = line.split("\t")[0].rstrip()
+        lines.append(line)
+    while lines and not lines[-1]:
+        lines.pop()
+    return "\n".join(lines)
+
+
+def content_fingerprint(diff_text: str) -> str:
+    """"The byte-identical patch, re-offered." Refused at any attempt: a no-op
+    retry carries no new information."""
+    return hashlib.sha256(normalize_diff(diff_text).encode("utf-8")).hexdigest()
+
+
+# ── Where derivation lives, and why not here (constraint H) ───────────────
+#
+# An earlier draft of this module carried its own JudgeSpec, its own adapter
+# table and its own work-count parser. That was a SECOND implementation of the
+# one rule the loop cannot afford to have two of — "what does this exit code
+# mean" — and the two would have drifted on their first disagreement. Worse,
+# the copy was already wrong: it read work counts from stdout, and ansible-lint
+# writes its work line to STDERR, so every green ansible-lint run would have
+# been recorded INDETERMINATE.
+#
+# `judges.py` owns derivation: `ADAPTERS` construct the Result, `work_count()`
+# reads the subprocess's own output, and `_spawn_and_read` applies the §2.4
+# ratchet to a PASS. The ledger PERSISTS what the exit reader produced and
+# re-derives nothing.
+#
+# What the ledger does add is an INDEPENDENT check, in the schema rather than
+# in code: `loop_judge_runs` has a CHECK that refuses to STORE a PASS whose
+# work count is missing or below its ratchet. That is not a duplicate of the
+# adapter (it knows nothing about exit codes); it is the one invariant of §2.4
+# expressed where no code path can bypass it — including a future runner that
+# forgets to apply it.
+
+
+# ── Chain (§3.2) ──────────────────────────────────────────────────────────
+
+def _chain_key() -> str | None:
+    """Reuses the EXISTING events HMAC secret under a distinct label. Mints
+    nothing (constraint D)."""
+    s = os.getenv("WING_EVENTS_HMAC_SECRET", "")
+    if not s:
+        return None
+    return hmac.new(s.encode(), _CHAIN_LABEL, hashlib.sha256).hexdigest()
+
+
+def _verdict_canonical(values: dict[str, Any]) -> str:
+    ordered = {f: values.get(f) for f in _VERDICT_CANON_FIELDS}
+    return json.dumps(ordered, separators=(",", ":"), ensure_ascii=False)
+
+
+def chain_hash(prev: str, values: dict[str, Any]) -> str:
+    """sha256(prev ‖ canonical_row) — HMAC-keyed when a secret exists.
+
+    Unlike `events`, the loop chain is ALWAYS on: these tables are new, so
+    there are no legacy unchained rows for the WORM triggers to be dormant
+    over, and a verdict is the one row in the estate whose value is the reward
+    signal for the next modification.
+    """
+    key = _chain_key()
+    msg = (prev + _verdict_canonical(values)).encode("utf-8")
+    if key:
+        return hmac.new(key.encode(), msg, hashlib.sha256).hexdigest()
+    return hashlib.sha256(msg).hexdigest()
+
+
+# ── Connections ───────────────────────────────────────────────────────────
+
+_WRITE_ACTIONS = (sqlite3.SQLITE_INSERT, sqlite3.SQLITE_UPDATE, sqlite3.SQLITE_DELETE)
+_SCHEMA_ACTIONS = (
+    sqlite3.SQLITE_DROP_TABLE, sqlite3.SQLITE_DROP_TRIGGER,
+    sqlite3.SQLITE_DROP_INDEX, sqlite3.SQLITE_ALTER_TABLE,
+    sqlite3.SQLITE_CREATE_TRIGGER, sqlite3.SQLITE_CREATE_TABLE,
+    sqlite3.SQLITE_CREATE_INDEX,
+)
+
+
+def _authorizer_for(role: str):
+    writable = _ROLE_WRITES[role]
+
+    def _auth(action: int, arg1: Any, arg2: Any, dbname: Any, source: Any) -> int:
+        # DROP TRIGGER is exactly the M6 bypass (test_audit_chain.py:188 does it
+        # to simulate an offline attacker). It is denied on every role
+        # connection — an attacker must go around this module, not through it.
+        if action in _SCHEMA_ACTIONS:
+            return sqlite3.SQLITE_DENY
+        # ATTACH would re-open the same file under a name whose table checks
+        # this callback never sees.
+        if action in (sqlite3.SQLITE_ATTACH, sqlite3.SQLITE_DETACH):
+            return sqlite3.SQLITE_DENY
+        if action in _WRITE_ACTIONS:
+            table = arg1 or ""
+            if table not in writable:
+                return sqlite3.SQLITE_DENY
+        return sqlite3.SQLITE_OK
+
+    return _auth
+
+
+def _connect(role: str) -> sqlite3.Connection:
+    if role not in _ROLE_WRITES:
+        raise LedgerError(f"unknown ledger role: {role}")
+    conn = _wing.open_connection()        # single seam (constraint H)
+    conn.row_factory = sqlite3.Row
+    ensure_schema(conn)                   # before the authorizer: DDL is denied after
+    conn.set_authorizer(_authorizer_for(role))
+    return conn
+
+
+def open_ledger(role: str):
+    """Factory. `role` picks the CLASS, and the class's method set IS the
+    capability — there is no runtime `if role == …` branch guarding a shared
+    verdict writer, because there is no shared verdict writer."""
+    cls = {
+        "proposer": ProposerLedger,
+        "evaluator": EvaluatorLedger,
+        "operator": OperatorLedger,
+        "reader": ReaderLedger,
+    }[role]
+    return cls(_connect(role))
+
+
+# ── Ledgers ───────────────────────────────────────────────────────────────
+
+def _as_judge_run(row: dict[str, Any]) -> "judges.JudgeRun":
+    """A persisted row, back into the shape `judges.aggregate` reasons over.
+
+    One aggregation rule in the estate, applied to rows that survived the
+    schema's CHECKs — rather than a second rule here that could disagree with
+    the first.
+    """
+    return judges.JudgeRun(
+        judge_name=row["judge_name"],
+        gate_set=row["gate_set"],
+        argv=tuple(json.loads(row["argv"])),
+        status=row["status"],
+        result=judges.Result(row["outcome"]) if row["outcome"] else None,
+        exit_code=row["exit_code"],
+        work=row["work_count"],
+        min_work=row["min_work"] or 0,
+        stdout_sha=row["stdout_sha"],
+    )
+
+
+@dataclass
+class Decision:
+    allowed: bool
+    reason: str | None
+    attempt_n: int
+    prior_attempts: list[dict[str, Any]] = field(default_factory=list)
+    requires_operator: bool = False
+
+
+class ReaderLedger:
+    """Read-only surface. Shared by every role — reads are not the risk."""
+
+    def __init__(self, conn: sqlite3.Connection):
+        self.__conn = conn
+
+    # Deliberately name-mangled: a subclass cannot hand the raw connection to a
+    # caller by accident. `_q` is the only read path.
+    def _q(self, sql: str, params: Sequence[Any] = ()) -> list[dict[str, Any]]:
+        return [dict(r) for r in self.__conn.execute(sql, tuple(params)).fetchall()]
+
+    def _w(self, sql: str, params: Sequence[Any] = ()) -> sqlite3.Cursor:
+        cur = self.__conn.execute(sql, tuple(params))
+        self.__conn.commit()
+        return cur
+
+    def close(self) -> None:
+        self.__conn.close()
+
+    # ── reads ──
+    def proposal(self, uuid: str) -> dict[str, Any] | None:
+        rows = self._q("SELECT * FROM loop_proposals WHERE uuid = ?", (uuid,))
+        return rows[0] if rows else None
+
+    def history(self, fingerprint_: str) -> list[dict[str, Any]]:
+        """§6.1 GET /loop/history — prior attempts and their verdicts."""
+        out = self._q(
+            "SELECT * FROM loop_proposals WHERE fingerprint = ? ORDER BY id", (fingerprint_,))
+        for p in out:
+            p["verdicts"] = self._q(
+                "SELECT uuid, result, gate_set, tree_sha, created_at "
+                "FROM loop_verdicts WHERE proposal_id = ? ORDER BY id", (p["id"],))
+            p["judge_runs"] = self._q(
+                "SELECT uuid, judge_name, status, exit_code, work_count, outcome "
+                "FROM loop_judge_runs WHERE proposal_id = ? ORDER BY id", (p["id"],))
+        return out
+
+    def judge_run(self, run_uuid: str) -> dict[str, Any] | None:
+        rows = self._q("SELECT * FROM loop_judge_runs WHERE uuid = ?", (run_uuid,))
+        return rows[0] if rows else None
+
+    def verdict(self, verdict_uuid: str) -> dict[str, Any] | None:
+        rows = self._q("SELECT * FROM loop_verdicts WHERE uuid = ?", (verdict_uuid,))
+        return rows[0] if rows else None
+
+    def replay_record(self, verdict_uuid: str) -> dict[str, Any] | None:
+        """§11 — everything `nos-loop verdict --replay` needs: the recorded
+        tree_sha and, per judge, the exact argv + exit_code + work_count +
+        stdout_sha to reproduce. A verdict that cannot be replayed is a claim."""
+        v = self.verdict(verdict_uuid)
+        if v is None:
+            return None
+        run_uuids = json.loads(v["evidence"]).get("judge_runs", [])
+        runs = [self.judge_run(u) for u in run_uuids]
+        return {
+            "verdict": v,
+            "tree_sha": v["tree_sha"],
+            "runs": [
+                {
+                    "judge_name": r["judge_name"], "argv": json.loads(r["argv"]),
+                    "exit_code": r["exit_code"], "work_count": r["work_count"],
+                    "stdout_sha": r["stdout_sha"], "outcome": r["outcome"],
+                }
+                for r in runs if r
+            ],
+        }
+
+    def verify_chain(self) -> dict[str, Any]:
+        """§3.3(3) — offline tampering is DETECTED, not prevented. Mirrors
+        verify-audit-chain.php: ok=False + the first broken uuid."""
+        prev = _GENESIS
+        checked = 0
+        for row in self._q("SELECT * FROM loop_verdicts ORDER BY id"):
+            expect = chain_hash(prev, row)
+            if row["prev_hash"] != prev or row["row_hash"] != expect:
+                return {"ok": False, "checked": checked, "broken_uuid": row["uuid"]}
+            prev = row["row_hash"]
+            checked += 1
+        return {"ok": True, "checked": checked, "broken_uuid": None}
+
+
+class ProposerLedger(ReaderLedger):
+    """The model's surface.
+
+    Every public method here is read-or-propose. There is NO method that
+    writes, computes, influences or hints at a verdict — and the connection
+    underneath denies `loop_verdicts` and `loop_judge_runs` outright, so the
+    absence is structural rather than editorial.
+    """
+
+    def check(self, *, weakness_id: str, target_paths: Iterable[str],
+              intent_class: str, gate_set: str, content_fp: str | None = None,
+              weakness_evidence_sha: str | None = None,
+              max_attempts: int = DEFAULT_MAX_ATTEMPTS) -> Decision:
+        """§4 — the "already failed, refuse WITHOUT running" path.
+
+        Called before any judge is triggered, and it is the only thing standing
+        between an unattended loop and burning 190 s of pytest on a patch the
+        estate has already judged.
+        """
+        fp = fingerprint(weakness_id, target_paths, intent_class, gate_set)
+        priors = self._live_priors(fp, weakness_evidence_sha)
+        requires_op = intent_class in OPERATOR_REQUIRED_INTENTS
+
+        if content_fp:
+            same = [p for p in priors if p.get("content_fp") == content_fp]
+            if same:
+                return Decision(False, "content-fp-repeat", len(priors) + 1, same, requires_op)
+
+        pending = [p for p in priors if not p["verdicts"]]
+        if pending:
+            return Decision(False, "attempt-pending", len(priors) + 1, pending, requires_op)
+
+        if len(priors) >= max_attempts:
+            last = priors[-1]["verdicts"][-1]
+            reason = "already-failed" if last["result"] == "fail" else "fingerprint-exhausted"
+            return Decision(False, reason, len(priors) + 1, priors, requires_op)
+
+        return Decision(True, None, len(priors) + 1, priors, requires_op)
+
+    def _live_priors(self, fp: str, weakness_evidence_sha: str | None) -> list[dict[str, Any]]:
+        """Prior attempts that still count. §4 — the block LIFTS when the
+        weakness's evidence changes or an operator forgets the fingerprint,
+        or the ledger becomes a permanent scar."""
+        rows = self._q(
+            "SELECT COALESCE(MAX(through_proposal_id), 0) AS cut "
+            "FROM loop_forgets WHERE fingerprint = ?", (fp,))
+        cut = rows[0]["cut"] if rows else 0
+        priors = [p for p in self.history(fp) if p["id"] > cut]
+        if weakness_evidence_sha is not None:
+            priors = [p for p in priors
+                      if (p.get("weakness_evidence_sha") or "") == weakness_evidence_sha]
+        return priors
+
+    def record_proposal(self, *, weakness_id: str, target_paths: Iterable[str],
+                        intent_class: str, gate_set: str, tree_sha: str,
+                        proposer_id: str, diff_text: str | None = None,
+                        proposer_model: str | None = None,
+                        weakness_evidence_sha: str | None = None,
+                        max_attempts: int = DEFAULT_MAX_ATTEMPTS) -> dict[str, Any]:
+        """201 on acceptance; raises ProposalRefused (409) otherwise.
+
+        Note the signature: no `result`, no `verdict`, no `status`. A proposal
+        is an intent, and nothing here says whether it is any good.
+        """
+        paths = normalize_paths(target_paths)
+        fp = fingerprint(weakness_id, paths, intent_class, gate_set)
+        cfp = content_fingerprint(diff_text) if diff_text else None
+
+        decision = self.check(
+            weakness_id=weakness_id, target_paths=paths, intent_class=intent_class,
+            gate_set=gate_set, content_fp=cfp,
+            weakness_evidence_sha=weakness_evidence_sha, max_attempts=max_attempts)
+        if not decision.allowed:
+            raise ProposalRefused(
+                decision.reason or "refused",
+                f"fingerprint {fp[:12]} attempt {decision.attempt_n}",
+                prior=[p["uuid"] for p in decision.prior_attempts])
+
+        u = str(_uuid.uuid4())
+        self._w(
+            "INSERT INTO loop_proposals "
+            "(uuid, fingerprint, content_fp, weakness_id, weakness_evidence_sha, "
+            " intent_class, gate_set, target_paths, tree_sha, proposer_id, "
+            " proposer_model, attempt_n, requires_operator) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (u, fp, cfp, weakness_id, weakness_evidence_sha, intent_class, gate_set,
+             _canonical_json(paths), tree_sha, proposer_id, proposer_model,
+             decision.attempt_n,
+             # §5a — derived from intent_class by the ledger, never accepted
+             # from the caller: a proposer cannot mark its own gate-add
+             # auto-acceptable.
+             1 if intent_class in OPERATOR_REQUIRED_INTENTS else 0))
+        return {"uuid": u, "fingerprint": fp, "content_fp": cfp,
+                "attempt_n": decision.attempt_n,
+                "requires_operator": decision.requires_operator}
+
+
+class EvaluatorLedger(ReaderLedger):
+    """The judge runner's surface — the ONLY writer of `loop_verdicts`."""
+
+    def begin_judge_run(self, *, gate_set: str, judge_name: str,
+                        argv: Sequence[str], proposal_uuid: str | None = None,
+                        sandbox_path: str | None = None) -> str:
+        """Constraint B — written BEFORE the subprocess starts, with
+        status='running'. Nothing about the outcome exists yet, because nothing
+        about the outcome is known yet."""
+        proposal_id = None
+        if proposal_uuid is not None:
+            prop = self.proposal(proposal_uuid)
+            if prop is None:
+                # A refused proposal has no row, so its judges cannot run.
+                raise LedgerError(f"no such proposal: {proposal_uuid}")
+            proposal_id = prop["id"]
+        u = str(_uuid.uuid4())
+        self._w(
+            "INSERT INTO loop_judge_runs "
+            "(uuid, proposal_id, gate_set, judge_name, argv, sandbox_path, status, started_at) "
+            "VALUES (?,?,?,?,?,?, 'running', datetime('now'))",
+            (u, proposal_id, gate_set, judge_name, _canonical_json(list(argv)), sandbox_path))
+        return u
+
+    def finish_judge_run(self, run_uuid: str, *, run: "judges.JudgeRun") -> dict[str, Any]:
+        """Persist the record the EXIT READER produced (`judges._spawn_and_read`).
+
+        `run` is not a claim from a caller: nothing HTTP-reachable constructs a
+        JudgeRun. `POST /api/v1/loop/judge` takes a gate-set NAME, and
+        `judges.run_gate_set()` builds these from the subprocess's own exit code
+        and output. The ledger re-derives nothing (one derivation site) and
+        instead re-checks the one §2.4 invariant in SQL, so a runner that
+        someday forgets the ratchet cannot store its PASS.
+        """
+        outcome = run.result.value if run.result is not None else None
+        status = run.status if run.status != "running" else "crashed"
+        cur = self._w(
+            "UPDATE loop_judge_runs SET status=?, finished_at=datetime('now'), "
+            "exit_code=?, work_count=?, min_work=?, outcome=?, stdout_sha=?, stdout_head=? "
+            "WHERE uuid=? AND status='running'",
+            (status, run.exit_code, run.work, run.min_work, outcome,
+             run.stdout_sha, (run.stdout_head or "")[:_STDOUT_HEAD_MAX], run_uuid))
+        if cur.rowcount != 1:
+            # The `status='running'` guard is what stops a swept ('crashed') run
+            # being resurrected as a pass. But a no-op UPDATE that still RETURNED
+            # an outcome would be the exact defect this ledger exists to catch:
+            # a step reporting a success it did not record. Raise instead.
+            raise LedgerError(
+                f"judge run {run_uuid} is not 'running' — refusing to report an "
+                f"outcome that was not persisted")
+        return {"uuid": run_uuid, "outcome": outcome, "status": status,
+                "work_count": run.work, "exit_code": run.exit_code}
+
+    def sweep_crashed(self) -> int:
+        """Constraint B, the killed-process half: a run whose reader never
+        returned stays 'running' forever. At next boot it becomes 'crashed',
+        which aggregates to INDETERMINATE — never PASS."""
+        cur = self._w(
+            "UPDATE loop_judge_runs SET status='crashed', finished_at=datetime('now'), "
+            "outcome='indeterminate' WHERE status='running'")
+        return cur.rowcount
+
+    def seal_verdict(self, *, gate_set: str, tree_sha: str,
+                     run_uuids: Sequence[str], expected_judges: Sequence[str],
+                     proposal_uuid: str | None = None) -> dict[str, Any]:
+        """The single verdict writer.
+
+        There is no `result` parameter, and there never will be: the result is
+        `judges.aggregate()` over the PERSISTED run rows — read back out of
+        SQLite, not carried in memory, so the verdict describes what is on
+        record. The signature is the guarantee: you cannot forge a value you
+        are never asked to supply.
+
+        `expected_judges` is the gate set's declared membership. A judge that
+        never reported at all cannot be seen by `judges.aggregate` (it only
+        receives the runs that happened), so absence is caught HERE — the last
+        place it could still read as success.
+        """
+        rows = [self.judge_run(u) for u in run_uuids]
+        rows = [r for r in rows if r]
+        verdict = judges.aggregate([_as_judge_run(r) for r in rows], gate_set)
+        result = verdict.result.value
+
+        missing = [n for n in expected_judges
+                   if n not in {r["judge_name"] for r in rows}]
+        if missing and result != "fail":
+            result = "indeterminate"
+
+        proposal_id = None
+        if proposal_uuid is not None:
+            prop = self.proposal(proposal_uuid)
+            if prop is None:
+                raise LedgerError(f"no such proposal: {proposal_uuid}")
+            proposal_id = prop["id"]
+
+        prev_row = self._q(
+            "SELECT row_hash FROM loop_verdicts WHERE row_hash IS NOT NULL "
+            "ORDER BY id DESC LIMIT 1")
+        prev = prev_row[0]["row_hash"] if prev_row else _GENESIS
+
+        values = {
+            "uuid": str(_uuid.uuid4()),
+            "proposal_id": proposal_id,
+            "gate_set": gate_set,
+            "result": result,
+            "actor": ENGINE_ACTOR,
+            "tree_sha": tree_sha,
+            "evidence": _canonical_json({
+                "judge_runs": [r["uuid"] for r in rows],
+                "expected_judges": list(expected_judges),
+                "missing_judges": missing,
+                "outcomes": {r["judge_name"]: r["outcome"] for r in rows},
+                "reason": verdict.reason,
+            }),
+            # Materialized, not defaulted: the chain hashes exactly what is stored.
+            "created_at": self._q("SELECT datetime('now') AS t")[0]["t"],
+        }
+        values["prev_hash"] = prev
+        values["row_hash"] = chain_hash(prev, values)
+
+        self._w(
+            "INSERT INTO loop_verdicts "
+            "(uuid, proposal_id, gate_set, result, actor, tree_sha, evidence, "
+            " prev_hash, row_hash, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (values["uuid"], values["proposal_id"], values["gate_set"], values["result"],
+             values["actor"], values["tree_sha"], values["evidence"],
+             values["prev_hash"], values["row_hash"], values["created_at"]))
+        return values
+
+
+class OperatorLedger(ReaderLedger):
+    """Operator identity only (§4, §6.2 `nos-loop forget`)."""
+
+    def forget(self, fingerprint_: str) -> dict[str, Any]:
+        """Lift the block on a fingerprint. Records the cut-off by proposal id
+        rather than timestamp so two attempts in the same second cannot make
+        the lift ambiguous."""
+        rows = self._q(
+            "SELECT COALESCE(MAX(id), 0) AS mx FROM loop_proposals WHERE fingerprint = ?",
+            (fingerprint_,))
+        through = rows[0]["mx"] if rows else 0
+        self._w(
+            "INSERT INTO loop_forgets (fingerprint, through_proposal_id, actor) "
+            "VALUES (?,?, 'operator')", (fingerprint_, through))
+        return {"fingerprint": fingerprint_, "through_proposal_id": through}

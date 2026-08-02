@@ -1,0 +1,14 @@
+{
+  "name": "nos-loop",
+  "description": "Thin client over the nOS agentic-loop engine in Bone. Four skills — weakness-scan, propose, judge, loop — that call loopback HTTP and hold no rules of their own. The engine decides; the plugin addresses it.",
+  "version": "0.1.0",
+  "author": {
+    "name": "nOS"
+  },
+  "keywords": [
+    "nos",
+    "agentic-loop",
+    "bone",
+    "deterministic-judge"
+  ]
+}

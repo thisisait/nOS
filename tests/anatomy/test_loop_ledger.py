@@ -1,0 +1,795 @@
+"""Anatomy gate — the agentic-loop ledger, and the one thing it must guarantee.
+
+Contract: docs/idea/11-agentic-loop-contract.md (§2.4, §3, §4, §5a).
+Subject:  files/anatomy/bone/ledger.py
+
+THE REQUIREMENT THAT MATTERS: **a proposer must be structurally unable to write
+a verdict.** In a self-improvement loop the verdict IS the reward signal for the
+next modification, so a proposer that can influence its verdict does not merely
+lie — it optimises against the lie.
+
+This file is therefore built around the ADVERSARIAL case, not the happy path.
+Every layer of §3.3's claim is attacked here, in the order the contract makes
+it, and the last one is attacked to show it FAILS (offline tampering is
+detected, not prevented — claiming otherwise would be decoration):
+
+  layer 1  no API surface accepts a result  → test_seal_verdict_takes_no_result_parameter
+                                              test_proposer_has_no_method_that_writes_a_verdict
+  layer 2  the connection refuses it        → test_ADVERSARIAL_*  (four of them)
+  layer 3  the schema refuses it            → test_ADVERSARIAL_schema_refuses_a_non_engine_actor
+  layer 4  WORM refuses edits               → test_ADVERSARIAL_worm_refuses_*
+  layer 5  the chain makes it EVIDENT       → test_ADVERSARIAL_offline_forgery_is_detected_not_prevented
+
+Constraint B (a step may not record its own success) is attacked separately:
+the run row exists before any outcome does, the outcome is derived from raw
+process facts, a killed run can never become PASS, and a finished run is
+immutable.
+
+CI-safe: pure sqlite3 in a tmp dir. No live estate, no subprocess, no network.
+"""
+
+from __future__ import annotations
+
+import ast
+import inspect
+import json
+import re
+import sqlite3
+import sys
+from pathlib import Path
+
+import pytest
+
+REPO = Path(__file__).resolve().parents[2]
+BONE = REPO / "files/anatomy/bone"
+if str(BONE) not in sys.path:
+    sys.path.insert(0, str(BONE))
+
+import judges  # noqa: E402  — the derivation site the ledger persists for
+import ledger  # noqa: E402  — after sys.path setup, same pattern as tests/callback/
+
+
+# ── Judge specs mirroring the five REAL judges (§2.2) ─────────────────────
+# argv[0] is `python3` so `judges._executable_present` is satisfied; the
+# process itself is always faked, so nothing on this machine is actually run.
+# These are `judges.JudgeSpec` — the ledger deliberately has no spec type of
+# its own (constraint H: one derivation site, not two).
+
+def spec(name: str, **kw) -> judges.JudgeSpec:
+    return judges.JudgeSpec(name=name, argv=("python3", "--version"), **kw)
+
+
+LINT = spec("ansible-lint", adapter="exit_zero", pass_exit=(0,), fail_exit=(2,),
+            min_work=1400, work_regex=r"(\d+) files processed")
+CODEGEN = spec("genome-codegen", adapter="exit_zero", pass_exit=(0,), fail_exit=(1,),
+               min_work=2, work_regex=r"genome artifacts current \((\d+) checked\)")
+SMOKE = spec("nos-smoke", adapter="exit_count", min_work=1, work_regex=r"(\d+) entries")
+PYTEST_J = spec("pytest-anatomy", adapter="pytest_summary", min_work=1)
+CORPUS = spec("cortex-corpus-diff", adapter="json_field", json_field="agrees",
+              min_work=1, work_json_field="nodes")
+
+LINT_OK = "1500 files processed"                       # >= min_work
+CODEGEN_OK = "genome artifacts current (2 checked)"
+CODEGEN_STALE = "STALE generated artifacts: files/anatomy/module_utils/nos_entity.py"
+
+
+def derive(judge: judges.JudgeSpec, exit_code, stdout: str = "", stderr: str = "") -> judges.JudgeRun:
+    """Drive the REAL judge pipeline with only the subprocess faked.
+
+    `run_gate_set`'s `spawn` seam is the sibling module's own injection point,
+    so the adapters, the work parser and the §2.4 ratchet all execute exactly
+    as they would in production — the bytes on the pipe are simply supplied.
+    """
+    reg = judges.Registry(
+        judges={judge.name: judge},
+        gate_sets={"probe": judges.GateSetSpec(name="probe", judges=(judge.name,))})
+    verdict = judges.run_gate_set(
+        "probe", registry=reg, repo_root=REPO, probe=lambda r: True,
+        spawn=lambda argv, cwd, t: judges.Completed(
+            exit_code=exit_code, stdout=stdout, stderr=stderr))
+    return verdict.runs[0]
+
+
+@pytest.fixture()
+def db(tmp_path, monkeypatch):
+    """A tmp wing.db. `clients/wing.py::_open` requires the file to exist."""
+    path = tmp_path / "wing.db"
+    sqlite3.connect(str(path)).close()
+    monkeypatch.setenv("WING_DB_PATH", str(path))
+    monkeypatch.setenv("WING_EVENTS_HMAC_SECRET", "loop-ledger-test-secret")
+    return path
+
+
+@pytest.fixture()
+def proposer(db):
+    led = ledger.open_ledger("proposer")
+    yield led
+    led.close()
+
+
+@pytest.fixture()
+def evaluator(db):
+    led = ledger.open_ledger("evaluator")
+    yield led
+    led.close()
+
+
+def raw(db) -> sqlite3.Connection:
+    """A connection with NO authorizer — the "stray SQL client" of §3.3(2), and
+    the shell-holding attacker of §3.3(3)."""
+    c = sqlite3.connect(str(db))
+    c.row_factory = sqlite3.Row
+    return c
+
+
+def propose(led, **over):
+    kw = dict(weakness_id="hidden-fee:08", target_paths=["roles/pazny.gitea/defaults/main.yml"],
+              intent_class="version-pin-bump", gate_set="fast", tree_sha="a" * 40,
+              proposer_id="agent:remediator", proposer_model="anthropic-claude-opus-5")
+    kw.update(over)
+    return led.record_proposal(**kw)
+
+
+def judge_set(ev, runs, *, gate_set="fast", proposal_uuid=None, tree_sha="a" * 40):
+    """Drive a full set: begin → finish → seal. `runs` is [(spec, exit, stdout)]."""
+    uuids = []
+    for judge, code, out in runs:
+        run = derive(judge, code, out)
+        u = ev.begin_judge_run(gate_set=gate_set, judge_name=judge.name,
+                               argv=run.argv, proposal_uuid=proposal_uuid)
+        ev.finish_judge_run(u, run=run)
+        uuids.append(u)
+    return ev.seal_verdict(gate_set=gate_set, tree_sha=tree_sha, run_uuids=uuids,
+                           expected_judges=[j.name for j, _, _ in runs],
+                           proposal_uuid=proposal_uuid)
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# LAYER 1 — no API surface accepts a result
+# ══════════════════════════════════════════════════════════════════════════
+
+def test_seal_verdict_takes_no_result_parameter():
+    """You cannot forge a value you are never asked to supply (§3.1).
+
+    Goes red the moment someone adds `result=` (or `status=`, or `passed=`) to
+    the only verdict writer — which is precisely how the parent's deleted
+    `POST /v1/verdicts` would creep back in.
+    """
+    params = set(inspect.signature(ledger.EvaluatorLedger.seal_verdict).parameters)
+    forbidden = {"result", "verdict", "status", "outcome", "passed", "ok", "score"}
+    assert not (params & forbidden), (
+        f"seal_verdict accepts a caller-supplied result: {sorted(params & forbidden)}. "
+        "The result must be derived from persisted judge-run rows.")
+
+
+def test_proposer_has_no_method_that_writes_a_verdict():
+    """The proposer's PUBLIC surface is read-or-propose, exhaustively."""
+    public = {n for n in dir(ledger.ProposerLedger) if not n.startswith("_")}
+    assert public == {"check", "record_proposal", "close", "proposal", "history",
+                      "judge_run", "verdict", "replay_record", "verify_chain"}, public
+    for name in public:
+        src = inspect.getsource(getattr(ledger.ProposerLedger, name))
+        assert not re.search(r"INSERT\s+INTO\s+loop_verdicts", src, re.I), name
+
+
+def code_of(path: Path) -> str:
+    """Source with docstrings and `#` comments removed.
+
+    A gate that greps raw text cannot tell an INSERT from a sentence ABOUT an
+    INSERT, so it goes red when someone documents the rule — and the cheapest
+    way to fix that gate is to stop documenting the rule. Parse instead.
+    """
+    src = path.read_text(encoding="utf-8", errors="replace")
+    drop: set[int] = set()
+    for node in ast.walk(ast.parse(src)):
+        if not isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        body = getattr(node, "body", None)
+        if not body or not isinstance(body[0], ast.Expr):
+            continue
+        val = body[0].value
+        if isinstance(val, ast.Constant) and isinstance(val.value, str):
+            drop.update(range(val.lineno, (val.end_lineno or val.lineno) + 1))
+    keep = [line for i, line in enumerate(src.splitlines(), 1)
+            if i not in drop and not line.strip().startswith("#")]
+    return "\n".join(keep)
+
+
+def test_only_one_place_in_the_estate_inserts_a_verdict():
+    """§8.1's `test_loop_verdict_writer_is_singular` — a second INSERT anywhere
+    is a second writer, and a second writer is a second identity."""
+    hits = []
+    for py in (REPO / "files/anatomy").rglob("*.py"):
+        if "__pycache__" in py.parts:
+            continue
+        if re.search(r"INSERT\s+INTO\s+loop_verdicts", code_of(py), re.I):
+            hits.append(str(py.relative_to(REPO)))
+    assert hits == ["files/anatomy/bone/ledger.py"], hits
+    assert len(re.findall(r"INSERT\s+INTO\s+loop_verdicts",
+                          code_of(BONE / "ledger.py"), re.I)) == 1
+
+
+def test_the_single_verdict_insert_lives_inside_seal_verdict():
+    src = inspect.getsource(ledger.EvaluatorLedger.seal_verdict)
+    assert re.search(r"INSERT\s+INTO\s+loop_verdicts", src, re.I)
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# LAYER 2 — the connection refuses it  (THE ADVERSARIAL CASE)
+# ══════════════════════════════════════════════════════════════════════════
+
+VERDICT_FORGERY = (
+    "INSERT INTO loop_verdicts "
+    "(uuid, gate_set, result, actor, tree_sha, evidence) "
+    "VALUES ('forged','fast','pass',?,'aaaa','{}')"
+)
+
+
+def test_ADVERSARIAL_proposer_write_helper_cannot_insert_a_verdict(proposer):
+    """Attempt a verdict THROUGH the proposer path. It must be refused.
+
+    `_w` is the proposer's own write helper — the same call `record_proposal`
+    uses successfully. Pointed at `loop_verdicts` it is denied by the sqlite3
+    authorizer bound to the proposer's connection, so the refusal does not
+    depend on anyone remembering not to call it.
+    """
+    with pytest.raises(sqlite3.DatabaseError) as e:
+        proposer._w(VERDICT_FORGERY, (ledger.ENGINE_ACTOR,))
+    assert "not authorized" in str(e.value)
+
+
+def test_ADVERSARIAL_proposer_raw_connection_cannot_insert_a_verdict(proposer, db):
+    """Encapsulation already broken — the attacker holds the proposer's OWN
+    connection object — and the write is STILL refused. This is the difference
+    between a convention and a mechanism."""
+    conn = proposer._ReaderLedger__conn          # name mangling deliberately defeated
+    with pytest.raises(sqlite3.DatabaseError) as e:
+        conn.execute(VERDICT_FORGERY, (ledger.ENGINE_ACTOR,))
+    assert "not authorized" in str(e.value)
+    assert raw(db).execute("SELECT COUNT(*) FROM loop_verdicts").fetchone()[0] == 0
+
+
+def test_ADVERSARIAL_proposer_cannot_fabricate_judge_run_evidence(proposer):
+    """A verdict is derived from `loop_judge_runs`. Denying only the verdict
+    table while leaving its INPUT writable would move the forgery one table
+    left, not prevent it."""
+    with pytest.raises(sqlite3.DatabaseError) as e:
+        proposer._w(
+            "INSERT INTO loop_judge_runs (uuid, gate_set, judge_name, argv, status, "
+            "started_at, exit_code, work_count, outcome) "
+            "VALUES ('f','fast','ansible-lint','[]','exited','now',0,99999,'pass')")
+    assert "not authorized" in str(e.value)
+
+
+def test_ADVERSARIAL_proposer_cannot_drop_the_worm_triggers(proposer):
+    """M6 — `test_audit_chain.py:188` drops a WORM trigger to simulate an
+    offline attacker. Through this module's connections that route is closed;
+    an attacker must go AROUND the ledger, where the chain records the fact."""
+    for sql in ("DROP TRIGGER loop_verdicts_worm_update",
+                "DROP TABLE loop_verdicts",
+                "ALTER TABLE loop_verdicts RENAME TO x"):
+        with pytest.raises(sqlite3.DatabaseError) as e:
+            proposer._w(sql)
+        assert "not authorized" in str(e.value), sql
+
+
+def test_ADVERSARIAL_proposer_cannot_attach_a_second_handle_to_the_same_file(proposer, db):
+    """ATTACH would re-open the same file under a schema name the authorizer's
+    table checks never see."""
+    with pytest.raises(sqlite3.DatabaseError) as e:
+        proposer._w(f"ATTACH DATABASE '{db}' AS side")
+    assert "not authorized" in str(e.value)
+
+
+def test_role_write_matrix_is_exhaustive(db):
+    """Each role writes exactly its own tables. Any cell flipping to ALLOWED is
+    a capability nobody asked for."""
+    tables = {
+        "loop_proposals": "INSERT INTO loop_proposals (uuid,fingerprint,weakness_id,"
+                          "intent_class,gate_set,target_paths,tree_sha,proposer_id) "
+                          "VALUES ('u','f','w','config-fix','fast','[]','t','p')",
+        "loop_judge_runs": "INSERT INTO loop_judge_runs (uuid,gate_set,judge_name,argv,"
+                           "status,started_at) VALUES ('u','fast','j','[]','running','n')",
+        "loop_verdicts": VERDICT_FORGERY.replace("?", "'engine:judge-runner'"),
+        "loop_forgets": "INSERT INTO loop_forgets (fingerprint,through_proposal_id,actor) "
+                        "VALUES ('f',0,'operator')",
+    }
+    expected = {
+        "proposer": {"loop_proposals"},
+        "evaluator": {"loop_judge_runs", "loop_verdicts"},
+        "operator": {"loop_forgets"},
+        "reader": set(),
+    }
+    for role, allowed in expected.items():
+        led = ledger.open_ledger(role)
+        try:
+            for table, sql in tables.items():
+                if table in allowed:
+                    led._w(sql)                      # must succeed
+                else:
+                    with pytest.raises(sqlite3.DatabaseError) as e:
+                        led._w(sql)
+                    assert "not authorized" in str(e.value), (role, table)
+        finally:
+            led.close()
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# LAYER 3 — the schema refuses it
+# ══════════════════════════════════════════════════════════════════════════
+
+def test_ADVERSARIAL_schema_refuses_a_non_engine_actor(db):
+    """§3.3(2) — even on an UNRESTRICTED connection, a verdict naming another
+    writer is rejected by `CHECK (actor = 'engine:judge-runner')`."""
+    ledger.ensure_schema(raw(db))
+    conn = raw(db)
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute(VERDICT_FORGERY, ("agent:remediator",))
+    conn.execute(VERDICT_FORGERY, (ledger.ENGINE_ACTOR,))   # control: the CHECK is real
+    assert conn.execute("SELECT COUNT(*) FROM loop_verdicts").fetchone()[0] == 1
+
+
+def test_result_column_admits_exactly_the_three_declared_values(db):
+    assert set(ledger.RESULTS) == {r.value for r in judges.Result}
+
+
+def test_result_column_rejects_a_fourth_value(db):
+    ledger.ensure_schema(raw(db))
+    conn = raw(db)
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute(
+            "INSERT INTO loop_verdicts (uuid,gate_set,result,actor,tree_sha,evidence) "
+            "VALUES ('x','fast','mostly-green',?,'t','{}')", (ledger.ENGINE_ACTOR,))
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# LAYER 4 — WORM refuses edits
+# ══════════════════════════════════════════════════════════════════════════
+
+def test_ADVERSARIAL_worm_refuses_rewriting_a_verdict(db, evaluator):
+    v = judge_set(evaluator, [(LINT, 2, LINT_OK)])
+    assert v["result"] == "fail"
+    conn = raw(db)
+    with pytest.raises(sqlite3.IntegrityError) as e:
+        conn.execute("UPDATE loop_verdicts SET result='pass' WHERE uuid=?", (v["uuid"],))
+    assert "append-only" in str(e.value)
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute("DELETE FROM loop_verdicts WHERE uuid=?", (v["uuid"],))
+    assert raw(db).execute("SELECT result FROM loop_verdicts").fetchone()[0] == "fail"
+
+
+def test_ADVERSARIAL_worm_refuses_rewriting_a_finished_run(db, evaluator):
+    """Constraint B's other half: an exit code that has been read cannot be
+    re-written afterwards, so a losing run cannot be edited into a winning one
+    and re-sealed."""
+    u = evaluator.begin_judge_run(gate_set="fast", judge_name="ansible-lint", argv=["x"])
+    evaluator.finish_judge_run(u, run=derive(LINT, 2, LINT_OK))
+    with pytest.raises(sqlite3.IntegrityError) as e:
+        raw(db).execute("UPDATE loop_judge_runs SET exit_code=0, outcome='pass' WHERE uuid=?", (u,))
+    assert "immutable" in str(e.value)
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# LAYER 5 — honest ceiling: detected, NOT prevented
+# ══════════════════════════════════════════════════════════════════════════
+
+def test_ADVERSARIAL_offline_forgery_is_detected_not_prevented(db, evaluator):
+    """The claim §3.3(3) actually makes, proved in both directions.
+
+    An attacker with the DB file drops the trigger (M6) and inserts a green
+    verdict naming the engine. The INSERT SUCCEEDS — pretending otherwise would
+    be the decorative gate constraint C forbids — and `verify_chain()` reports
+    BROKEN, which is the guarantee that was on offer.
+    """
+    judge_set(evaluator, [(LINT, 0, LINT_OK)])
+    assert evaluator.verify_chain()["ok"] is True
+
+    conn = raw(db)
+    conn.execute("DROP TRIGGER loop_verdicts_worm_update")     # the M6 bypass
+    conn.execute(
+        "INSERT INTO loop_verdicts (uuid,gate_set,result,actor,tree_sha,evidence,row_hash) "
+        "VALUES ('forged','fast','pass',?,'aaaa','{}','deadbeef')", (ledger.ENGINE_ACTOR,))
+    conn.commit()
+
+    report = evaluator.verify_chain()
+    assert report["ok"] is False and report["broken_uuid"] == "forged"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# CONSTRAINT B — derived from the effect, never asserted by the actor
+# ══════════════════════════════════════════════════════════════════════════
+
+def test_run_row_exists_before_any_outcome_does(db, evaluator):
+    u = evaluator.begin_judge_run(gate_set="fast", judge_name="ansible-lint", argv=["x"])
+    row = evaluator.judge_run(u)
+    assert row["status"] == "running"
+    assert row["outcome"] is None and row["exit_code"] is None and row["finished_at"] is None
+
+
+def test_killed_run_sweeps_to_crashed_and_can_never_pass(db, evaluator):
+    """The normal failure mode of an unattended loop: the process dies, the
+    exit reader never returns. The row must not stay claimable."""
+    u = evaluator.begin_judge_run(gate_set="fast", judge_name="ansible-lint", argv=["x"])
+    assert evaluator.sweep_crashed() == 1
+    assert evaluator.judge_run(u)["outcome"] == "indeterminate"
+    v = evaluator.seal_verdict(gate_set="fast", tree_sha="a" * 40, run_uuids=[u],
+                               expected_judges=["ansible-lint"])
+    assert v["result"] == "indeterminate"
+
+
+def test_a_swept_run_cannot_be_finished_afterwards(db, evaluator):
+    """The subtle half, and this test found it: the `status='running'` guard
+    made the resurrecting UPDATE a NO-OP — while `finish_judge_run` still
+    RETURNED `outcome='pass'` to its caller. A step reporting a success it did
+    not record is precisely the v0.10-beta defect, reproduced inside the engine
+    built to detect it. It must raise, not shrug."""
+    u = evaluator.begin_judge_run(gate_set="fast", judge_name="ansible-lint", argv=["x"])
+    evaluator.sweep_crashed()
+    with pytest.raises(ledger.LedgerError) as e:
+        evaluator.finish_judge_run(u, run=derive(LINT, 0, LINT_OK))
+    assert "not persisted" in str(e.value)
+    assert evaluator.judge_run(u)["outcome"] == "indeterminate"
+
+
+# ── §2.4: absence is never success (M2 / M3 / corpus-diff) ────────────────
+#
+# The DERIVATION lives in judges.py and is pinned by its own suite. What is
+# pinned HERE is the ledger's independent half: that these shapes reach the
+# database as INDETERMINATE, and that a PASS which cannot show its work is not
+# storable at all — even if a future runner forgets the rule.
+
+def test_zero_work_with_exit_zero_reaches_the_ledger_as_indeterminate(db, evaluator):
+    """M2 — `nos-smoke --include zzz-nonexistent-service` prints "smoke catalog
+    yielded zero entries" and exits 0. The loop's own judges carry the exact
+    defect the loop exists to detect."""
+    v = judge_set(evaluator, [(SMOKE, 0, "smoke catalog yielded zero entries")])
+    assert v["result"] == "indeterminate"
+    assert raw(db).execute("SELECT outcome FROM loop_judge_runs").fetchone()[0] == "indeterminate"
+
+
+def test_pytest_all_skipped_reaches_the_ledger_as_indeterminate(db, evaluator):
+    """M3 — `2 skipped`, exit 0, on a host with no WING_API_TOKEN."""
+    assert judge_set(evaluator, [(PYTEST_J, 0, "2 skipped in 0.22s")])["result"] == "indeterminate"
+    assert judge_set(evaluator, [(PYTEST_J, 0, "41 passed, 2 skipped in 9.1s")])["result"] == "pass"
+
+
+def test_scope_loss_below_the_ratchet_is_indeterminate(db, evaluator):
+    """§2.1 — ansible-lint processing 12 files instead of 1400 is silent scope
+    loss that would otherwise read green."""
+    assert judge_set(evaluator, [(LINT, 0, "12 files processed")])["result"] == "indeterminate"
+    assert judge_set(evaluator, [(LINT, 0, LINT_OK)])["result"] == "pass"
+
+
+def test_ADVERSARIAL_a_pass_that_did_no_work_cannot_BE_STORED(db):
+    """The ledger's own contribution to §2.4, and the reason it is not merely a
+    duplicate of the adapter: the invariant is a CHECK, so it holds for rows
+    written by a runner that never applied the ratchet — or by an attacker with
+    a SQL client and no authorizer."""
+    ledger.ensure_schema(raw(db))
+    conn = raw(db)
+    insert = ("INSERT INTO loop_judge_runs (uuid,gate_set,judge_name,argv,status,"
+              "started_at,exit_code,work_count,min_work,outcome) VALUES "
+              "('u','fast','ansible-lint','[]','exited','now',0,?,1400,'pass')")
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute(insert, (None,))          # cannot show its work
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute(insert, (12,))            # work below the ratchet
+    conn.execute(insert, (1500,))              # control: a real pass stores fine
+
+
+def test_ADVERSARIAL_a_crashed_run_cannot_be_stored_as_a_pass(db):
+    ledger.ensure_schema(raw(db))
+    with pytest.raises(sqlite3.IntegrityError):
+        raw(db).execute(
+            "INSERT INTO loop_judge_runs (uuid,gate_set,judge_name,argv,status,"
+            "started_at,exit_code,work_count,min_work,outcome) VALUES "
+            "('u','fast','ansible-lint','[]','crashed','now',0,9999,1,'pass')")
+
+
+def test_ansible_lint_work_line_on_stderr_still_counts(db, evaluator):
+    """MEASURED by judges.py: ansible-lint writes "… 1400 files processed" to
+    STDERR. A ledger that had kept its own stdout-only parser would have
+    recorded every green ansible-lint run as INDETERMINATE — which is exactly
+    the drift a second implementation buys."""
+    run = derive(LINT, 0, stdout="", stderr="Passed: 0 failure(s) in 1500 files processed")
+    u = evaluator.begin_judge_run(gate_set="fast", judge_name=LINT.name, argv=run.argv)
+    evaluator.finish_judge_run(u, run=run)
+    assert evaluator.judge_run(u)["outcome"] == "pass"
+
+
+def test_corpus_diff_disagrees_while_exiting_zero(db, evaluator):
+    """§2.2 — exit 0 while the report says DISAGREE."""
+    agree = '{"agrees": true, "nodes": 790}'
+    assert judge_set(evaluator, [(CORPUS, 0, '{"agrees": false, "nodes": 790}')])["result"] == "fail"
+    assert judge_set(evaluator, [(CORPUS, 0, agree)])["result"] == "pass"
+    # organ down → prints nothing, still exits 0 → never a pass
+    assert judge_set(evaluator, [(CORPUS, 0, "night VOID")])["result"] == "indeterminate"
+
+
+def test_ansible_lint_fails_with_2_and_1_is_indeterminate(db, evaluator):
+    """§2.2 — a naive `!= 0` is right by accident, a naive `== 1` is wrong."""
+    assert judge_set(evaluator, [(LINT, 2, LINT_OK)])["result"] == "fail"
+    assert judge_set(evaluator, [(LINT, 1, LINT_OK)])["result"] == "indeterminate"
+
+
+def test_smoke_exit_code_is_a_failure_count_not_a_boolean(db, evaluator):
+    assert judge_set(evaluator, [(SMOKE, 3, "48 entries")])["result"] == "fail"
+    assert judge_set(evaluator, [(SMOKE, 0, "48 entries")])["result"] == "pass"
+
+
+def test_a_set_passes_only_if_every_expected_judge_passed(db, evaluator):
+    """§2.3 DECISION 2a — no majority, no weighting, no "mostly green"."""
+    v = judge_set(evaluator, [(LINT, 0, LINT_OK), (CODEGEN, 0, CODEGEN_OK)])
+    assert v["result"] == "pass"
+    v = judge_set(evaluator, [(LINT, 0, LINT_OK), (CODEGEN, 1, CODEGEN_STALE)])
+    assert v["result"] == "fail"
+
+
+def test_a_judge_that_never_reported_makes_the_set_indeterminate(db, evaluator):
+    """Absence at the AGGREGATION layer, not just the adapter layer: one green
+    judge out of an expected two is not a green set."""
+    u = evaluator.begin_judge_run(gate_set="fast", judge_name="ansible-lint", argv=["x"])
+    evaluator.finish_judge_run(u, run=derive(LINT, 0, LINT_OK))
+    v = evaluator.seal_verdict(gate_set="fast", tree_sha="a" * 40, run_uuids=[u],
+                               expected_judges=["ansible-lint", "genome-codegen"])
+    assert v["result"] == "indeterminate"
+
+
+def test_an_empty_set_is_indeterminate_never_pass(db, evaluator):
+    """hidden_fees/08 in one line: `0/0 ready` must not be green."""
+    v = evaluator.seal_verdict(gate_set="fast", tree_sha="a" * 40, run_uuids=[],
+                               expected_judges=[])
+    assert v["result"] == "indeterminate"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# §4 — FINGERPRINTING
+# ══════════════════════════════════════════════════════════════════════════
+
+def test_fingerprint_ignores_the_diff_entirely():
+    """The load-bearing exclusion. If the diff were in this hash a proposer
+    would defeat dedup by perturbing whitespace — the retry loop would optimise
+    against the deduplicator, which is §2's failure mode one level down."""
+    args = ("REM-137", ["roles/pazny.gitea/defaults/main.yml"], "version-pin-bump", "repo")
+    assert ledger.fingerprint(*args) == ledger.fingerprint(*args)
+    assert "diff" not in inspect.signature(ledger.fingerprint).parameters
+
+
+def test_fingerprint_is_stable_under_path_order_and_duplication():
+    a = ledger.fingerprint("w", ["b.yml", "a.yml"], "config-fix", "fast")
+    b = ledger.fingerprint("w", ["./a.yml", "b.yml", "a.yml"], "config-fix", "fast")
+    assert a == b
+
+
+def test_fingerprint_changes_with_gate_set_so_the_block_lifts():
+    """§4 — "the gate set changes, which changes the fingerprint by
+    construction"."""
+    a = ledger.fingerprint("w", ["a.yml"], "config-fix", "fast")
+    b = ledger.fingerprint("w", ["a.yml"], "config-fix", "repo")
+    assert a != b
+
+
+def test_content_fp_ignores_hunk_offsets_but_not_content():
+    d1 = "--- a/x.yml\t2026-08-02\n+++ b/x.yml\t2026-08-02\n@@ -1,3 +1,3 @@\n-a\n+b\n"
+    d2 = "--- a/x.yml\t2026-09-09\n+++ b/x.yml\t2026-09-09\n@@ -40,3 +40,3 @@\n-a\n+b\n"
+    d3 = "--- a/x.yml\n+++ b/x.yml\n@@ -1,3 +1,3 @@\n-a\n+c\n"
+    assert ledger.content_fingerprint(d1) == ledger.content_fingerprint(d2)
+    assert ledger.content_fingerprint(d1) != ledger.content_fingerprint(d3)
+
+
+def test_unknown_intent_class_is_refused():
+    with pytest.raises(ledger.ProposalRefused) as e:
+        ledger.fingerprint("w", ["a.yml"], "rewrite-everything", "fast")
+    assert e.value.reason == "unknown-intent"
+
+
+def test_paths_that_escape_the_repo_are_refused():
+    for bad in ["/etc/passwd", "../../.ssh/id_rsa", "~/.nos/secrets.yml"]:
+        with pytest.raises(ledger.ProposalRefused) as e:
+            ledger.fingerprint("w", [bad], "config-fix", "fast")
+        assert e.value.reason == "bad-path", bad
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# §4 — "ALREADY FAILED, REFUSE WITHOUT RUNNING"
+# ══════════════════════════════════════════════════════════════════════════
+
+def _fail_one_attempt(prop, ev, diff: str, evidence: str | None = None):
+    p = propose(prop, diff_text=diff, weakness_evidence_sha=evidence)
+    judge_set(ev, [(LINT, 2, LINT_OK)], proposal_uuid=p["uuid"])
+    return p
+
+
+def test_exhausted_fingerprint_is_refused_without_running_a_judge(db, proposer, evaluator):
+    """THE path this ledger exists for: two attempts at the same weakness, in
+    the same place, with the same intent, both judged FAIL. The third is
+    refused BEFORE anything runs — no sandbox, no 190 s of pytest, no run row.
+    """
+    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+b\n")
+    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+c\n")
+
+    runs_before = raw(db).execute("SELECT COUNT(*) FROM loop_judge_runs").fetchone()[0]
+    props_before = raw(db).execute("SELECT COUNT(*) FROM loop_proposals").fetchone()[0]
+
+    with pytest.raises(ledger.ProposalRefused) as e:
+        propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+d\n")
+    assert e.value.reason == "already-failed"
+    assert e.value.status == 409
+
+    after = raw(db)
+    assert after.execute("SELECT COUNT(*) FROM loop_judge_runs").fetchone()[0] == runs_before
+    assert after.execute("SELECT COUNT(*) FROM loop_proposals").fetchone()[0] == props_before
+
+
+def test_a_refused_proposal_has_no_uuid_so_no_judge_can_be_run_for_it(db, proposer, evaluator):
+    """The refusal is not advisory. There is no proposal row, and
+    `begin_judge_run` will not attach a run to a proposal that does not
+    exist — so a caller that ignores the 409 still cannot spend the budget."""
+    with pytest.raises(ledger.LedgerError):
+        evaluator.begin_judge_run(gate_set="fast", judge_name="ansible-lint",
+                                  argv=["x"], proposal_uuid="never-issued-uuid")
+
+
+def test_byte_identical_patch_is_refused_even_on_attempt_one(db, proposer, evaluator):
+    """A no-op retry carries no new information, whatever the attempt count."""
+    diff = "@@ -1 +1 @@\n-a\n+b\n"
+    _fail_one_attempt(proposer, evaluator, diff)
+    with pytest.raises(ledger.ProposalRefused) as e:
+        propose(proposer, diff_text="@@ -99 +99 @@\n-a\n+b\n")   # same content, new offsets
+    assert e.value.reason == "content-fp-repeat"
+
+
+def test_an_unjudged_attempt_blocks_the_next_one(db, proposer):
+    """§5.4 — one proposal per cycle. An attempt with no verdict yet is not a
+    licence to open a second."""
+    propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    with pytest.raises(ledger.ProposalRefused) as e:
+        propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+c\n")
+    assert e.value.reason == "attempt-pending"
+
+
+def test_the_block_lifts_when_the_weakness_evidence_changes(db, proposer, evaluator):
+    """§4 — "or the ledger becomes a permanent scar". The remediation item's
+    fix_version moved; this is a different world and deserves a new attempt."""
+    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+b\n", evidence="sha-old")
+    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+c\n", evidence="sha-old")
+    with pytest.raises(ledger.ProposalRefused):
+        propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+d\n", weakness_evidence_sha="sha-old")
+
+    ok = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+d\n", weakness_evidence_sha="sha-NEW")
+    assert ok["attempt_n"] == 1
+
+
+def test_the_block_lifts_on_an_operator_forget(db, proposer, evaluator):
+    """`nos-loop forget <fp>` — operator identity only (§6.2)."""
+    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+b\n")
+    p2 = _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+c\n")
+    with pytest.raises(ledger.ProposalRefused):
+        propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+d\n")
+
+    op = ledger.open_ledger("operator")
+    try:
+        cut = op.forget(raw(db).execute(
+            "SELECT fingerprint FROM loop_proposals WHERE uuid=?", (p2["uuid"],)).fetchone()[0])
+    finally:
+        op.close()
+    assert cut["through_proposal_id"] == 2
+    assert propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+d\n")["attempt_n"] == 1
+
+
+def test_forget_is_denied_to_the_proposer_and_the_evaluator(db, proposer, evaluator):
+    """A loop that can lift its own blocks has no blocks."""
+    for led in (proposer, evaluator):
+        assert not hasattr(led, "forget")
+        with pytest.raises(sqlite3.DatabaseError):
+            led._w("INSERT INTO loop_forgets (fingerprint,through_proposal_id,actor) "
+                   "VALUES ('f',0,'operator')")
+
+
+def test_forgets_table_admits_only_the_operator(db):
+    ledger.ensure_schema(raw(db))
+    with pytest.raises(sqlite3.IntegrityError):
+        raw(db).execute("INSERT INTO loop_forgets (fingerprint,through_proposal_id,actor) "
+                        "VALUES ('f',0,'agent:remediator')")
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# §5a — gate-add, and other things the ledger derives rather than accepts
+# ══════════════════════════════════════════════════════════════════════════
+
+def test_gate_add_is_flagged_requires_operator_by_the_ledger(db, proposer):
+    """§5a — a proposal that writes `tests/anatomy/**` is never auto-accepted,
+    and the flag is derived from intent_class so the proposer cannot clear it.
+    `record_proposal` has no parameter through which it could."""
+    p = propose(proposer, intent_class="gate-add",
+                target_paths=["tests/anatomy/test_new_thing.py"])
+    assert p["requires_operator"] is True
+    row = raw(db).execute("SELECT requires_operator FROM loop_proposals").fetchone()[0]
+    assert row == 1
+    assert "requires_operator" not in inspect.signature(
+        ledger.ProposerLedger.record_proposal).parameters
+
+
+def test_attempt_number_is_derived_not_supplied(db, proposer, evaluator):
+    p1 = _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+b\n")
+    p2 = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+c\n")
+    assert (p1["attempt_n"], p2["attempt_n"]) == (1, 2)
+    assert "attempt_n" not in inspect.signature(
+        ledger.ProposerLedger.record_proposal).parameters
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# §11 — a verdict that cannot be replayed is a claim
+# ══════════════════════════════════════════════════════════════════════════
+
+def test_a_verdict_carries_everything_needed_to_replay_it(db, proposer, evaluator):
+    p = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    v = judge_set(evaluator, [(LINT, 0, LINT_OK), (CODEGEN, 0, CODEGEN_OK)],
+                  proposal_uuid=p["uuid"], tree_sha="c" * 40)
+    assert v["result"] == "pass"
+
+    rec = evaluator.replay_record(v["uuid"])
+    assert rec["tree_sha"] == "c" * 40
+    assert {r["judge_name"] for r in rec["runs"]} == {"ansible-lint", "genome-codegen"}
+    for r in rec["runs"]:
+        assert r["argv"] and r["exit_code"] == 0 and r["stdout_sha"]
+    assert evaluator.verify_chain() == {"ok": True, "checked": 1, "broken_uuid": None}
+
+
+def test_history_shows_prior_attempts_and_their_verdicts(db, proposer, evaluator):
+    p = _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+b\n")
+    fp = raw(db).execute("SELECT fingerprint FROM loop_proposals WHERE uuid=?",
+                         (p["uuid"],)).fetchone()[0]
+    hist = evaluator.history(fp)
+    assert len(hist) == 1
+    assert [v["result"] for v in hist[0]["verdicts"]] == ["fail"]
+    assert json.loads(hist[0]["target_paths"]) == ["roles/pazny.gitea/defaults/main.yml"]
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# CONSTRAINTS D / E / H — hygiene the ledger must not break
+# ══════════════════════════════════════════════════════════════════════════
+
+LEDGER_SRC = (BONE / "ledger.py").read_text(encoding="utf-8")
+
+
+
+def test_ledger_mints_no_prefix_derived_credential():
+    """Constraint D — the runtime blast radius is 86 and ratcheted. The chain
+    key reuses the EXISTING events HMAC secret; nothing new is minted here."""
+    for forbidden in ("global_password_prefix", "_pw_"):
+        assert forbidden not in LEDGER_SRC, forbidden
+
+
+def test_ledger_does_not_open_wing_db_directly():
+    """Constraint H — the P0.1b single seam. A second connect() is a second
+    copy of the path default, which is how drift starts."""
+    assert not re.search(r"sqlite3\.connect", code_of(BONE / "ledger.py"))
+    assert "from clients import wing" in LEDGER_SRC
+
+
+def test_ledger_opens_no_socket_and_runs_no_subprocess():
+    """Constraint E — this module adds no listener and therefore no edge
+    surface; and it is not the judge runner, so it shells out to nothing."""
+    code = code_of(BONE / "ledger.py")
+    for forbidden in ("subprocess", "socket", "uvicorn", "FastAPI", "APIRouter"):
+        assert forbidden not in code, forbidden
+
+
+def test_loop_schema_is_declared_in_exactly_one_place():
+    """A twin schema drifts. Bone owns these tables; Wing reads them."""
+    hits = []
+    for f in list((REPO / "files").rglob("*.sql")) + list((REPO / "files").rglob("*.php")):
+        if re.search(r"CREATE TABLE[^;]*loop_verdicts", f.read_text(errors="replace"), re.I):
+            hits.append(str(f.relative_to(REPO)))
+    assert hits == [], f"loop_* declared outside bone/ledger.py: {hits}"
+    assert LEDGER_SRC.count("CREATE TABLE IF NOT EXISTS loop_verdicts") == 1
+
+
+def test_worm_triggers_are_created_never_dropped_and_recreated():
+    """DROP-then-CREATE (init-db.php's pattern for PRE-EXISTING tables) would
+    leave a window in which a concurrent connection sees the verdict table
+    unprotected. These tables are new, so IF NOT EXISTS suffices."""
+    code = code_of(BONE / "ledger.py")
+    assert "DROP TRIGGER" not in code
+    assert code.count("CREATE TRIGGER IF NOT EXISTS loop_") == 4

@@ -68,6 +68,17 @@
         <key>BONE_VFS_TOKEN</key>
         <string>{{ face_vfs_token | default('') }}</string>
 
+        <!-- Agentic loop (docs/idea/11-agentic-loop-contract.md). Two tokens,
+             two identities: the proposer may read + propose, the evaluator may
+             read + judge. Bone treats an empty OR `_pw_`-derived value as
+             UNCONFIGURED and answers 503, so a half-wired host is loud rather
+             than quietly open. NOS_LOOP_REPO_ROOT is PLAYBOOK_DIR above; the
+             reader needs no further paths. -->
+        <key>BONE_LOOP_PROPOSE_TOKEN</key>
+        <string>{{ loop_propose_token | default('') }}</string>
+        <key>BONE_LOOP_JUDGE_TOKEN</key>
+        <string>{{ loop_judge_token | default('') }}</string>
+
         {% if install_authentik | default(false) %}
         <!-- Track B JWT auth: Bone validates incoming tokens against Authentik. -->
         <!-- In host mode, Bone reaches Authentik via the public Traefik path -->

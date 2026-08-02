@@ -210,6 +210,8 @@
           'WING_DB_PATH': bone_wing_db_dir ~ '/wing.db',
           'QDRANT_URL': (qdrant_url | default('http://127.0.0.1:' ~ (qdrant_port | default(6333) | string)) if (install_qdrant | default(false)) else ''),
           'QDRANT_API_KEY': qdrant_api_key | default(''),
+          'BONE_LOOP_PROPOSE_TOKEN': loop_propose_token | default(''),
+          'BONE_LOOP_JUDGE_TOKEN': loop_judge_token | default(''),
           'BONE_REQUIRE_JWT_AUTH': (install_authentik | default(false)) | ternary('1', '0'),
         } | combine(
           {
