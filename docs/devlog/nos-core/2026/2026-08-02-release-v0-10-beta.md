@@ -205,6 +205,31 @@ GHSA with no CVE id.** A scan phrased as *"no new CVE past the pin"* was
 literally true and wrong by six days. Scan the vendor's advisory endpoint, not
 the CVE feed.
 
+## And then the CI wet-test did it too
+
+The last instance arrived after the release PR was already open, which is the
+best possible time to be told something.
+
+`integration-linux` only runs on a **non-draft pull request** (or a schedule, or
+a push to a non-`dev` ref) — so it had not executed since `pazny.cortex` was
+Ansible-ized during this very cycle. On the release PR it ran, got **226 tasks
+deep**, and stopped on a real defect: the cortex mount sentinel hard-failed on
+*any* absent `nos_data_root`, conflating two states that mean opposite things —
+"a removable volume is not mounted" (fatal, and the whole reason the sentinel
+exists) with "an ordinary directory nobody has created yet" (routine, and the
+default, since nothing in the playbook creates it).
+
+So **every default-config install failed there**, Linux and macOS alike. It had
+looked green for one reason only: the operator's `nos_data_root` was long ago
+redirected onto an external disk that exists. A live converge and a CI wet-test
+had been agreeing on a false negative, each for its own reason.
+
+This retires a standing claim of ours. `docs/hidden_fees/08` says the Linux job
+passes an empty stack as `0/0 ready` and therefore proves nothing — the first
+half is still true and still open, but the conclusion was too pessimistic and is
+withdrawn. A gate that gets 226 tasks in and finds a defect nobody else could
+see is not proving nothing.
+
 ---
 
 The theme of `v0.9-beta` was *nOS can show you itself*. The theme of this one is

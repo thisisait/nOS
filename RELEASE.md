@@ -167,9 +167,17 @@ Named here because v0.9-beta named its red and this one owes the same.
   three are fixed to observe effects and to say so out loud; **no replacement
   module source is invented**, because guessing one is how a second silent
   failure gets stacked on the first.
-- **`stack-health-probe.py` passes an empty stack as `0/0 ready`**, which is why
-  the Linux wet-test has been green without rendering `infra`. Unchanged since
-  2026-05-23; `docs/hidden_fees/08` remains `OPEN`.
+- **`stack-health-probe.py` passes an empty stack as `0/0 ready`** — unchanged
+  since 2026-05-23; `docs/hidden_fees/08` remains `OPEN`. But the standing claim
+  that the Linux wet-test therefore "proves nothing" is now **too pessimistic
+  and is withdrawn**: on the release PR — the first non-draft PR since
+  `pazny.cortex` was Ansible-ized, and the only trigger shape that actually runs
+  the job — it got 226 tasks deep and stopped on a real defect. The cortex mount
+  sentinel hard-failed on *any* absent `nos_data_root`, conflating "removable
+  volume not mounted" with "ordinary directory nobody has created", so **every
+  default-config install (`$HOME/nos`) failed there**, on Linux and macOS alike.
+  It looked green only because the operator's `nos_data_root` had long been
+  redirected to an external disk that exists. Fixed, and gated.
 - **REM-151 / REM-152** (above) are open HIGHs.
 - The **v0.9-beta GitHub Release was never published** — only the tag exists.
 
