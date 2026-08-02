@@ -84,9 +84,10 @@ laundered fact through the file, and found three more instances immediately.
 
 ## The cortex corpus agrees with itself, measurably
 
-Parity **`PINNED`**, verdict **`AGREE`**, six clauses. KEAP and the vendored
-organ both carry all 2 403 nodes of the pinned canonical tree, and
-`knowledge_objects[fs:]` matched 317/317 at `agreeStreak: 3`.
+Verdict **`AGREE`** on all six clauses, `agreeStreak: **6**` — read from the
+ledger on release morning rather than quoted from the gate night. KEAP and the
+vendored organ each carry **2 500** taxonomy nodes with zero on either side
+alone; `knowledge_objects[fs:]` **317/317**, `relations` **1 438/1 438**.
 
 Getting there was mostly teaching the harness to stop inventing divergence it
 could not see: the denominator was seeded, the capture queue made enumerable,

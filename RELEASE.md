@@ -18,9 +18,10 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.9-
 
 ### The cortex corpus agrees with itself, measurably
 
-- **Parity `PINNED`, verdict `AGREE`, six clauses.** KEAP and the vendored organ
-  both carry all 2 403 nodes of the pinned canonical tree; `knowledge_objects[fs:]`
-  matched 317/317 on the gate night at `agreeStreak: 3`.
+- **Verdict `AGREE`, all six clauses, `agreeStreak: 6`** — read from the ledger
+  on release morning, not from the gate night. KEAP and the vendored organ each
+  carry **2 500** taxonomy nodes with zero on either side alone;
+  `knowledge_objects[fs:]` **317/317**, `relations` **1 438/1 438**.
 - **The harness stopped inventing divergence it could not see.** The denominator
   was seeded, the capture queue made enumerable, the vendored knowledge tree
   caught lagging the pin by ten nodes, and the organ's corpus reader identified
