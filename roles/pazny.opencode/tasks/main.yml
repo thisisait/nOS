@@ -19,7 +19,14 @@
   community.general.homebrew:
     name: opencode
     state: present
-  when: not _opencode_brew.stat.exists
+  when:
+    - not _opencode_brew.stat.exists
+    # Linuxbrew is on $PATH, so an ungated brew call RUNS on Linux instead of
+    # skipping (the class the wet-test proved at pazny.backup, 2026-08-02).
+    # Skipping here is safe and complete: the curl-installer fallback below
+    # triggers on the binary's ABSENCE, not on brew's outcome, so Linux simply
+    # takes the upstream install path.
+    - nos_pkg_manager | default('homebrew') == 'homebrew'
   register: _opencode_brew_install
   failed_when: false
 

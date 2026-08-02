@@ -224,11 +224,25 @@ looked green for one reason only: the operator's `nos_data_root` was long ago
 redirected onto an external disk that exists. A live converge and a CI wet-test
 had been agreeing on a false negative, each for its own reason.
 
+Fixing that let it run further, and it immediately found a second one — better,
+a whole class. **An ungated Homebrew call does not skip on Linux.** We had a
+doctrine that every brew install is gated on `nos_pkg_manager == 'homebrew'`,
+and an unexamined assumption underneath it: that a brew module simply no-ops off
+a Mac. It does not. Linux runners carry Linuxbrew on `$PATH`, so
+`community.general.homebrew` cheerfully built `awscli` from a Linux formula and
+crashed inside Homebrew's own post-install.
+
+Two faults stacked — an upstream Homebrew-on-Linux bug, and our gate not being
+applied. Only the second was ours, and applying it removes the first from the
+path entirely. Writing the gate for the class then turned up **six** instances,
+two of them in files that default to *enabled* — reachable on any real Linux
+install, not merely in CI.
+
 This retires a standing claim of ours. `docs/hidden_fees/08` says the Linux job
 passes an empty stack as `0/0 ready` and therefore proves nothing — the first
 half is still true and still open, but the conclusion was too pessimistic and is
-withdrawn. A gate that gets 226 tasks in and finds a defect nobody else could
-see is not proving nothing.
+withdrawn. A gate that gets 226 tasks in and finds two real defect classes
+nobody else could see is not proving nothing.
 
 ---
 

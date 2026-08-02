@@ -13,10 +13,33 @@
     state: directory
     mode: '0700'
 
-- name: "[backup] Ensure aws-cli is installed (RustFS S3 client)"
+# Platform-split, because this was an UNGATED brew call and Linux has Linuxbrew
+# on $PATH — so `community.general.homebrew` did not skip, it ran, and the estate
+# built awscli from a Linuxbrew formula whose post-install crashed inside
+# Homebrew itself ("unknown install step: run"). Two faults stacked: an upstream
+# Homebrew-on-Linux bug, and our own doctrine that every brew call is gated on
+# `nos_pkg_manager == 'homebrew'` simply not applied here. Only the second is
+# ours to fix, and fixing it removes the first from the path entirely.
+# Found 2026-08-02 by the Linux wet-test, at pazny.backup.
+- name: "[backup] Ensure aws-cli is installed (RustFS S3 client) — macOS"
   community.general.homebrew:
     name: awscli
     state: present
+  when: nos_pkg_manager | default('homebrew') == 'homebrew'
+
+- name: "[backup] Ensure aws-cli is installed (RustFS S3 client) — Linux apt"
+  ansible.builtin.apt:
+    name: awscli
+    state: present
+  become: true
+  when: nos_pkg_manager | default('homebrew') == 'apt'
+
+- name: "[backup] Ensure aws-cli is installed (RustFS S3 client) — Linux dnf"
+  ansible.builtin.dnf:
+    name: awscli
+    state: present
+  become: true
+  when: nos_pkg_manager | default('homebrew') == 'dnf'
 
 - name: "[backup] Render backup.sh entrypoint"
   ansible.builtin.template:

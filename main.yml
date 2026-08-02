@@ -1507,9 +1507,14 @@
     - name: "ACME — Let's Encrypt wildcard cert"
       ansible.builtin.include_role:
         name: pazny.acme
+      # Darwin-only: brew-installed acme.sh + a launchd plist for the renewal
+      # job. Ungated, the brew call would run against Linuxbrew rather than
+      # skip (the class the Linux wet-test proved at pazny.backup, 2026-08-02).
+      # Linux port needs an apt/curl acme.sh branch + a systemd --user timer.
       when:
         - install_acme | default(false) | bool
         - not (tenant_domain_is_local | default(true) | bool)
+        - ansible_os_family == 'Darwin'
       tags: ['acme', 'tls', 'cert']
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -1639,8 +1644,16 @@
     # ──────────────────────────────────────────────────────────────────────────
     # Network - Tailscale + dnsmasq
     # ──────────────────────────────────────────────────────────────────────────
+    # Darwin-only: the install is a Homebrew CASK (a GUI app bundle) and the
+    # rest of the file follows macOS conventions. The flag defaults to TRUE, so
+    # before this gate a Linux run reached an ungated brew call — Linuxbrew is
+    # on $PATH, so it RUNS rather than skipping (2026-08-02; the class the wet
+    # test proved at pazny.backup). Linux port = apt repo + systemd tailscaled,
+    # deferred in docs/linux-port.md.
     - import_tasks: tasks/tailscale.yml
-      when: install_tailscale | default(true)
+      when:
+        - install_tailscale | default(true)
+        - ansible_os_family == 'Darwin'
       tags: ['tailscale', 'network', 'vpn']
 
     # dnsmasq runs for local TLDs (*.local / .lan / .test) by default, OR for
@@ -1762,8 +1775,18 @@
     # ──────────────────────────────────────────────────────────────────────────
     # Observability – Grafana + Prometheus + Loki + Tempo + Alloy
     # ──────────────────────────────────────────────────────────────────────────
+    # Darwin-only, and narrower than it looks: this file is the HOST-SIDE half
+    # only — the grafana tap, the brew-installed Alloy agent, and `brew-svc.sh`
+    # cleanup of services since migrated to Docker. Grafana / Prometheus / Loki
+    # / Tempo themselves come up in the observability STACK via core-up.yml and
+    # are unaffected on Linux; only the host Alloy agent is skipped.
+    # The flag defaults to TRUE, so before this gate a Linux run hit an ungated
+    # brew tap + install (Linuxbrew is on $PATH and does not skip). Linux port =
+    # apt grafana repo + a systemd --user alloy unit, deferred.
     - import_tasks: tasks/observability.yml
-      when: install_observability | default(true)
+      when:
+        - install_observability | default(true)
+        - ansible_os_family == 'Darwin'
       tags: ['observability', 'grafana', 'prometheus', 'loki', 'tempo', 'alloy']
 
     # ──────────────────────────────────────────────────────────────────────────

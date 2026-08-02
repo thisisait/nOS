@@ -28,6 +28,10 @@
     - (acme_cloudflare_api_token | default('') | length) == 0
 
 # ── 1. Install acme.sh via Homebrew ─────────────────────────────────────────
+# This role is Darwin-only and is gated as such at its include site in main.yml
+# — brew here AND a launchd plist for the renewal job (step 5), so gating only
+# the brew call would let the rest run on Linux and fail further in. A Linux
+# port needs an apt/curl acme.sh branch plus a systemd --user timer.
 - name: "[ACME] Install acme.sh via Homebrew"
   community.general.homebrew:
     name: "{{ acme_brew_pkg }}"

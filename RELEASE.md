@@ -178,6 +178,18 @@ Named here because v0.9-beta named its red and this one owes the same.
   default-config install (`$HOME/nos`) failed there**, on Linux and macOS alike.
   It looked green only because the operator's `nos_data_root` had long been
   redirected to an external disk that exists. Fixed, and gated.
+- **Ungated Homebrew calls do not skip on Linux — Linuxbrew runs them.** The
+  next thing the wet-test found: `pazny.backup` brew-installed `awscli` on
+  Ubuntu and died inside Homebrew's own post-install. The doctrine that every
+  brew call is gated on `nos_pkg_manager` was simply not applied in six places.
+  All six fixed — `backup` and `opencode` gained a platform split, `acme`,
+  `tasks/tailscale.yml` and `tasks/observability.yml` are Darwin-gated at their
+  include sites — and pinned by a gate that understands both role and
+  `import_tasks` include sites. Two of those files default to **enabled**, so
+  this was reachable on any real Linux install, not just CI.
+- **Linux port scope, stated plainly:** host-side Grafana Alloy and Tailscale
+  are macOS-only. The observability *stack* (Grafana/Prometheus/Loki/Tempo) is
+  Docker and unaffected; only the host agent is skipped.
 - **REM-151 / REM-152** (above) are open HIGHs.
 - The **v0.9-beta GitHub Release was never published** — only the tag exists.
 
