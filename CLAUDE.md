@@ -32,7 +32,19 @@ The `master` protection above is **not** a workflow file — it is a GitHub repo
 
 **Gitea mirror (local):** Repo → Settings → Branches → Branch Protection → `master`: enable "Block force push" + "Require pull requests" so the mirror lock matches GitHub.
 
-Verify after setup: `gh api repos/:owner/:repo/branches/master/protection` returns the rule (404 ⇒ unprotected — fix before the next release). `git push origin master` from a non-fast-forward state must be refused.
+**Verify with the RULESETS endpoint, not the branch-protection one (corrected 2026-08-02).** This repo's `master` is guarded by a **repository ruleset** (`Master protection`, created 2026-05-17: `deletion`, `non_fast_forward`, `required_linear_history`, `pull_request` ≥1 approval, `required_signatures`; bypass `OrganizationAdmin: always`). Classic branch protection is NOT configured, so `gh api repos/:owner/:repo/branches/master/protection` returns **404 while the branch is fully protected** — the old instruction here read that 404 as "unprotected, fix before the next release" and would send an operator to fix something that is not broken. Use:
+
+```bash
+gh api repos/:owner/:repo/rulesets                 # expect an active ruleset targeting ~DEFAULT_BRANCH
+gh api repos/:owner/:repo/rulesets/<id>            # expect the five rules above
+```
+
+`git push origin master` from a non-fast-forward state must still be refused.
+
+**Two release-flow facts learned cutting v0.10-beta:**
+
+1. **`gh pr merge --rebase` fails on a release-sized PR.** 188 commits / 626 files / 133k additions → `rebaseable: false` with `mergeable: true`, error *"This branch can't be rebased"*. Not merge commits, not empty commits, not mixed authors, not signatures (v0.8/v0.9 were unsigned too and merged) — GitHub's rebase engine simply gives up at that size. `squash` is disabled repo-wide and `required_linear_history` forbids a merge commit, so **no PR merge method works** at release scale. When `merge-base(master, dev) == master tip` — always true for this flow — a rebase-merge IS a fast-forward, so `git push origin origin/dev:master` produces byte-identical history. That is the release-scale path; verify the merge-base equality first.
+2. **Every commit is unsigned and the ruleset requires signatures.** The admin bypass logs `Found 188 violations` and lets it through, which means the signature rule has never once been satisfied — it is bypassed, not met. Either turn on commit signing (`commit.gpgsign`) or drop the rule; leaving it is a gate that only ever reports its own defeat.
 
 ## Commit Convention
 
