@@ -11,32 +11,34 @@
 
 ## Now (current track)
 
-**Cut v0.10-beta.** Gate met and re-verified after the 08-02 converge
-(`ok=1431 failed=0`): corpus parity **PINNED**, verdict **AGREE** on all six
-clauses; estate on `keap v1.38.0` with the L1 concepts **in the database**;
-**0 pending CRITICAL**, derived from `docker ps` rather than inherited — gitea
-`1.27.0` and metabase `v0.61.9` both confirmed live. `RELEASE.md` + devlog
-`2026-08-02-release-v0-10-beta` carry the narrative.
+**Cut v0.10-beta.** Gate met after the 08-02 converge (`ok=1431 failed=0`):
+verdict **AGREE** on all six clauses (`agreeStreak: 6`), estate on
+`keap v1.38.0`, **0 pending CRITICAL** derived from `docker ps`. `RELEASE.md` +
+devlog `2026-08-02-release-v0-10-beta` carry the narrative.
 
-**Remaining, in order:** `dev → master` PR (`gh pr merge --rebase --admin`, see
-memory `nos-release-flow`) → tag `v0.10-beta` → re-sync `dev` to `master`.
+**Remaining:** `dev → master` PR (`gh pr merge --rebase --admin`, memory
+`nos-release-flow`) → tag `v0.10-beta` → re-sync `dev`.
 
-**What the tag does NOT include, deliberately.** The S-0 Nextcloud uid fix
-applies to the *next login* — the existing hashed account is live, unmigrated,
-and the converge names it. Cycle-21's two HIGHs (REM-151 `changeme` prefix
-unguarded on local tenants; REM-152 n8n 17-GHSA wave) are open. Per-user
-containers and the rest of the one-filesystem arc are sequenced *after* the tag
-(`plans/per-user-container-roadmap.md`).
-
-## Carried forward from the audits
-
-Two adversarial sweeps (26 agents) produced 27 surviving findings; the three
-sharpest are fixed. The rest, and the **general fix** — a per-service
-`verify.yml` hook plus the loader change that lets it fail — are specified in
-[`nos-genome-and-organelles.md`](plans/nos-genome-and-organelles.md) §Thread D.
+**Known open at the tag** (all named in RELEASE.md): S-0's Nextcloud uid fix
+applies to the *next login* only — the hashed account is live and unmigrated;
+**32 of the 76 L1 columns reach the DB**, the other 44 belong to `apps`/`systems`
+which no task seeds; FreeScout has no SSO; REM-151/152 HIGH open.
 
 ## Open follow-ups
 
+Two adversarial sweeps (26 agents) + a pre-tag promise survey; sharpest findings
+fixed. The **general fix** — a per-service `verify.yml` hook plus the loader
+change that lets it fail — is in
+[`nos-genome-and-organelles.md`](plans/nos-genome-and-organelles.md) §Thread D.
+
+
+- **FreeScout has no SSO** (survey, 08-02): both `freescout-oauth` sources 404,
+  so the `FREESCOUT_OIDC_*` env is inert and `/login` is local-form-only. Tasks
+  now report it instead of claiming `changed`. Open: find a reachable module
+  source, or reclassify FreeScout as forward_auth.
+- **`drift-watch.sh` still `exit 0`s regardless of the Bone POST** and swallows
+  a CRITICAL when the HMAC secret is unset — same shape as the 07-28 fix, one
+  level up. **`genome-codegen.py` emits 2 of B1's 4 targets.**
 - **Infisical MTI render fix (S-track):** the aggregator still emits an oauth2
   identity for infisical, so the orphan OAuth2Provider sharing the Provider
   base row with the ProxyProvider reappears on apply; deleting it cascades the
@@ -90,8 +92,7 @@ sharpest are fixed. The rest, and the **general fix** — a per-service
   it); Gitea filed as `minor` to work around. Add it to `_SEVERITY_VALUES`.
 - **PG 16→17 cutover** — pg17 verified live beside pg16 on the coexistence track,
   queued (`coexistence_planned`); the cutover itself is still operator-gated.
-- **Security backlog:** ~13 pending / 104 resolved / 4 vendor-blocked / 1 wontfix
-  (`docs/llm/security/remediation-queue.json`); dominated by the pin wave above.
+- **Security backlog:** counts live in Snapshot below (re-derive, never inherit);
   Phase C hardening + Phase D architectural remain.
 - **Gov P0 (profile-gated, not blocking non-gov):** ISDS + NIA/eIDAS federation
   (greenfield), retention enforcement (metadata only today) —
@@ -130,14 +131,14 @@ sharpest are fixed. The rest, and the **general fix** — a per-service
 
 | Surface | State |
 |---|---|
-| Release | `v0.10-beta` gate MET (`agreeStreak: 3`); converge + tag pending operator |
-| Last verified | clean all-on install `ok=1531 failed=0`, 63 containers / 0 unhealthy (2026-07-22) |
-| Suites | anatomy **2102 passed / 5 skipped**; `test_hub_render_smoke` fails live-host only (nos-face hub, paused epic) |
+| Release | `v0.10-beta` gate MET (`agreeStreak: 6`, six clauses); tag pending operator |
+| Last verified | converge 2026-08-02 `ok=1431 failed=0`; gitea `1.27.0` + metabase `v0.61.9` live |
+| Suites | anatomy **2164 passed / 4 skipped**; face 143 passed, 0 type errors |
 | Estate | `nos_data_root` = `/Volumes/SSD1TB/nOS/data` (one lever; NOT `configure_external_storage`) |
-| CI | green on `dev` since 07-29 (lint + a stale organ E2E, two reds hiding behind each other) |
+| CI | was RED on `dev` (lint / face / contracts-drift / pytest); all four fixed 08-02, re-run pending |
 | Authentik | engine=tofu; self-reconcile preflight = idempotent non-blank converge |
-| Upgrades | Gitea 1.26.4 armed (agent-authored recipe+migration); PG17 coexistence queued |
-| Remediation queue | ~13 pending / 104 resolved / 4 vendor-blocked / 1 wontfix (pin wave dominant) |
+| Upgrades | PG17 coexistence queued |
+| Remediation queue | cycle-21: 15 pending / 128 resolved / 5 vendor-blocked / 3 wontfix / 1 obsolete of 152 |
 
 ## Update protocol
 

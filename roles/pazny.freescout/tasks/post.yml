@@ -31,10 +31,16 @@
   failed_when: false
 
 - name: "[pazny.freescout Post] Check if admin user exists"
-  ansible.builtin.shell: >
-    {{ docker_bin }} compose -p b2b
-    exec -T freescout
-    sh -c 'cd /www/html && echo "echo \"NOSCOUNT:\".App\\User::where(\"email\",\"{{ freescout_admin_email }}\")->count();" | php artisan tinker 2>/dev/null'
+  # pipefail twice, on purpose: the INNER one is the real fix — the pipe lives in
+  # the container, so only a container-side shell can protect it (verified: the
+  # image has bash, and rc is unchanged on the happy path). The OUTER one makes
+  # the same property true of the shell ansible-lint actually inspects.
+  ansible.builtin.shell: |
+    set -o pipefail
+    {{ docker_bin }} compose -p b2b exec -T freescout \
+      bash -c 'set -o pipefail; cd /www/html && echo "echo \"NOSCOUNT:\".App\\User::where(\"email\",\"{{ freescout_admin_email }}\")->count();" | php artisan tinker 2>/dev/null'
+  args:
+    executable: /bin/bash
   register: _fs_user_check
   changed_when: false
   failed_when: false
@@ -72,7 +78,11 @@
 # with App\User::where->update to work for existing users.
 - name: "[pazny.freescout Post] Reconverge admin password (tinker UPDATE)"
   ansible.builtin.shell: |
-    {{ docker_bin }} compose -p b2b exec -T freescout sh -c 'cd /www/html && echo "\$u=App\\User::where(\"email\",\"{{ freescout_admin_email }}\")->first(); if(\$u){\$u->password=bcrypt(\"{{ freescout_admin_password }}\"); \$u->save(); echo \"UPDATED\";}" | php artisan tinker 2>/dev/null' 
+    set -o pipefail
+    {{ docker_bin }} compose -p b2b exec -T freescout \
+      bash -c 'set -o pipefail; cd /www/html && echo "\$u=App\\User::where(\"email\",\"{{ freescout_admin_email }}\")->first(); if(\$u){\$u->password=bcrypt(\"{{ freescout_admin_password }}\"); \$u->save(); echo \"UPDATED\";}" | php artisan tinker 2>/dev/null'
+  args:
+    executable: /bin/bash
   when:
     - _fs_ready.status | default(0) in [200, 302, 500]
     # Same rc discriminator as the create: with the `|| echo "0"` sentinel gone,
@@ -94,10 +104,12 @@
 # observes the EFFECT rather than trusting an attempt, and it is loud — an
 # unowned FreeScout is a service anyone reaching it can claim.
 - name: "[pazny.freescout Post] VERIFY the admin account exists"
-  ansible.builtin.shell: >
-    {{ docker_bin }} compose -p b2b
-    exec -T freescout
-    sh -c 'cd /www/html && echo "echo \"NOSCOUNT:\".App\\User::where(\"email\",\"{{ freescout_admin_email }}\")->count();" | php artisan tinker 2>/dev/null'
+  ansible.builtin.shell: |
+    set -o pipefail
+    {{ docker_bin }} compose -p b2b exec -T freescout \
+      bash -c 'set -o pipefail; cd /www/html && echo "echo \"NOSCOUNT:\".App\\User::where(\"email\",\"{{ freescout_admin_email }}\")->count();" | php artisan tinker 2>/dev/null'
+  args:
+    executable: /bin/bash
   register: _fs_owner_verify
   changed_when: false
   failed_when: false
@@ -127,10 +139,34 @@
 
 # ──────────────────────────────────────────────────────────────────────────
 # Native OIDC wiring via the `freescout-oauth` community module
-# Source: https://github.com/freescout-help-desk/oauth
-# The module is dropped into /data/Modules/OAuth (persistent bind mount) and
-# enabled via Artisan. Config is persisted in the `oauth_module` options table
-# so it survives container restarts and does not require UI clicks.
+#
+# STATUS 2026-08-02: THIS PATH HAS NEVER SUCCEEDED, and until today it said the
+# opposite on every converge. Measured on the live estate:
+#
+#   * both source repos are HTTP 404 — `freescout-help-desk/oauth` and the
+#     `tiredofit/freescout-module-oauth` fallback. git therefore falls through
+#     to an interactive credential prompt and dies with
+#     "could not read Username for 'https://github.com'".
+#   * git prints "Cloning into '...'" BEFORE it fails, and the clone task's
+#     `changed_when` matched exactly that string — so a failed clone reported
+#     `changed: [127.0.0.1]`, every run, for as long as this has existed. Same
+#     defect family as the rest of this release: the record of success was
+#     written by the code that was attempting, from a string that means
+#     "starting", not "done".
+#   * consequence: /data/Modules is empty, the FREESCOUT_OIDC_* env block the
+#     plugin renders is inert (the MODULE is what consumes it), and
+#     https://<freescout>/login offers only the local form — no "Sign in with
+#     Authentik" button. FreeScout's `native_oidc` classification is therefore
+#     ASPIRATIONAL, not live. Tracked as known-open in RELEASE.md.
+#
+# The tasks below are kept and made honest rather than deleted: the wiring is
+# correct and would work the moment a reachable module source exists. What is
+# NOT done here is inventing a replacement URL — the module appears to have
+# moved behind FreeScout's paid module marketplace, and guessing at a source is
+# how you ship a second silent failure on top of the first.
+#
+# `/www/html/Modules` is a symlink to `/data/Modules` (the persistent bind
+# mount), so the clone target below is correct; only the source is missing.
 # ──────────────────────────────────────────────────────────────────────────
 
 - name: "[pazny.freescout Post][OIDC] Check if OAuth module directory exists"
@@ -142,16 +178,23 @@
 - name: "[pazny.freescout Post][OIDC] Clone freescout-oauth module (first-run only)"
   ansible.builtin.shell: |
     {{ docker_bin }} compose -p b2b exec -T freescout bash -c '
-      set -e
-      cd /var/www/html/Modules 2>/dev/null || cd /data/Modules
+      cd /data/Modules || exit 1
       if [ ! -d OAuth ]; then
-        git clone --depth 1 https://github.com/freescout-help-desk/oauth.git OAuth || \
-        git clone --depth 1 https://github.com/tiredofit/freescout-module-oauth.git OAuth
+        # GIT_TERMINAL_PROMPT=0: without it a 404 repo blocks on an interactive
+        # username prompt instead of failing, which is how this hung the
+        # difference between "no module" and "no answer".
+        GIT_TERMINAL_PROMPT=0 git clone --depth 1 https://github.com/freescout-help-desk/oauth.git OAuth 2>&1 || \
+        GIT_TERMINAL_PROMPT=0 git clone --depth 1 https://github.com/tiredofit/freescout-module-oauth.git OAuth 2>&1 || true
       fi
       chown -R www-data:www-data OAuth 2>/dev/null || true
+      # The marker is the EFFECT: a module.json on disk, not a clone that started.
+      [ -f OAuth/module.json ] && echo NOS_OAUTH_PRESENT || echo NOS_OAUTH_ABSENT
     '
   register: _fs_oauth_clone
-  changed_when: "'Cloning' in (_fs_oauth_clone.stderr | default('')) or 'Cloning' in (_fs_oauth_clone.stdout | default(''))"
+  # Observe the EFFECT, not a progress string. "Cloning into '...'" is what git
+  # prints on the way IN; it survives an authentication failure and is exactly
+  # what made this report `changed` on every failed run.
+  changed_when: "'NOS_OAUTH_PRESENT' in (_fs_oauth_clone.stdout | default(''))"
   failed_when: false
   check_mode: false
   when:
@@ -159,9 +202,34 @@
     - _fs_ready.status | default(0) in [200, 302, 500]
     - not (_fs_oauth_stat.stat.exists | default(false))
 
+# The one place that reads the result. Deliberately NOT a hard fail: FreeScout
+# is fully usable without the module (local admin login works, and the operator
+# may not want the helpdesk gated at all), so an absent module is a documented
+# degradation rather than a broken converge. It must not, however, be SILENT —
+# that is the whole point of this release.
+- name: "[pazny.freescout Post][OIDC] Report that SSO will not render without the module"
+  ansible.builtin.debug:
+    msg: |
+      FreeScout OAuth module is ABSENT — /login will show the local form only,
+      with no "Sign in with Authentik" button, and the FREESCOUT_OIDC_* env
+      block is inert because the module is what consumes it.
+      Both upstream sources are HTTP 404 (freescout-help-desk/oauth,
+      tiredofit/freescout-module-oauth); the module appears to have moved to
+      FreeScout's paid marketplace. Supply a reachable source, or accept that
+      FreeScout is local-auth-only on this estate.
+  when:
+    - install_authentik | default(false)
+    - _fs_ready.status | default(0) in [200, 302, 500]
+    - not (_fs_oauth_stat.stat.exists | default(false))
+    - "'NOS_OAUTH_PRESENT' not in (_fs_oauth_clone.stdout | default(''))"
+
 - name: "[pazny.freescout Post][OIDC] Enable OAuth module + clear cache"
+  # `cd /www/html` for the same reason the admin probes needed it: the image's
+  # default working directory is `/`, where `php artisan` is "Could not open
+  # input file: artisan" — swallowed here by `|| true` since 2026-05.
   ansible.builtin.shell: |
     {{ docker_bin }} compose -p b2b exec -T freescout bash -c '
+      cd /www/html || exit 1
       php artisan module:enable OAuth 2>&1 || true
       php artisan freescout:clear-cache 2>&1 || php artisan cache:clear 2>&1 || true
     '
@@ -172,35 +240,48 @@
   when:
     - install_authentik | default(false)
     - _fs_ready.status | default(0) in [200, 302, 500]
+    # Only meaningful once the module is actually on disk. Running it against a
+    # missing module produced a guaranteed-useless call every converge.
+    - _fs_oauth_stat.stat.exists | default(false) or 'NOS_OAUTH_PRESENT' in (_fs_oauth_clone.stdout | default(''))
 
 # Persist OIDC settings into the options table. The freescout-oauth module
 # reads keys prefixed `oauth.*`; we upsert via tinker for idempotency so the
 # values always match the freescout-base plugin's authentik: block + the
 # credentials.yml state.
+# `tinker --execute=` DOES NOT EXIST on this image's tinker — the flag was
+# silently unknown, so this task has never written a single option. Same
+# discovery as the admin probes (2026-08-01), missed here because the whole
+# block is `failed_when: false`.
+#
+# Fed over STDIN via the module's own `stdin:` arg rather than a shell pipe:
+# the PHP is full of single quotes, which cannot survive a `bash -c '…'`
+# wrapper, and this form also removes the pipe entirely (nothing to pipefail).
+# `-w /www/html` supplies the working directory artisan needs.
 - name: "[pazny.freescout Post][OIDC] Persist OIDC config (tinker UPSERT)"
-  ansible.builtin.shell: |
-    {{ docker_bin }} compose -p b2b exec -T freescout \
-      php artisan tinker --execute="
-        \$cfg=[
-          'oauth.provider'=>'oidc',
-          'oauth.enabled'=>'1',
-          'oauth.client_id'=>'{{ authentik_oidc_freescout_client_id }}',
-          'oauth.client_secret'=>'{{ authentik_oidc_freescout_client_secret }}',
-          'oauth.authorize_url'=>'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/',
-          'oauth.token_url'=>'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/',
-          'oauth.userinfo_url'=>'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo/',
-          'oauth.logout_url'=>'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/freescout/end-session/',
-          'oauth.discovery_url'=>'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/freescout/.well-known/openid-configuration',
-          'oauth.redirect_uri'=>'https://{{ freescout_domain }}/oauth/callback',
-          'oauth.scopes'=>'openid profile email',
-          'oauth.display_name'=>'Authentik',
-          'oauth.auto_create_user'=>'1',
-          'oauth.email_claim'=>'email',
-          'oauth.name_claim'=>'name',
-        ];
-        foreach(\$cfg as \$k=>\$v){ \\Option::set(\$k,\$v); }
-        echo 'OIDC_PERSISTED';
-      "
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p b2b exec -T -w /www/html freescout
+    php artisan tinker
+  args:
+    stdin: |
+      $cfg=[
+        'oauth.provider'=>'oidc',
+        'oauth.enabled'=>'1',
+        'oauth.client_id'=>'{{ authentik_oidc_freescout_client_id }}',
+        'oauth.client_secret'=>'{{ authentik_oidc_freescout_client_secret }}',
+        'oauth.authorize_url'=>'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/',
+        'oauth.token_url'=>'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/',
+        'oauth.userinfo_url'=>'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo/',
+        'oauth.logout_url'=>'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/freescout/end-session/',
+        'oauth.discovery_url'=>'https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/freescout/.well-known/openid-configuration',
+        'oauth.redirect_uri'=>'https://{{ freescout_domain }}/oauth/callback',
+        'oauth.scopes'=>'openid profile email',
+        'oauth.display_name'=>'Authentik',
+        'oauth.auto_create_user'=>'1',
+        'oauth.email_claim'=>'email',
+        'oauth.name_claim'=>'name',
+      ];
+      foreach($cfg as $k=>$v){ \Option::set($k,$v); }
+      echo 'OIDC_PERSISTED';
   register: _fs_oidc_persist
   changed_when: "'OIDC_PERSISTED' in (_fs_oidc_persist.stdout | default(''))"
   failed_when: false

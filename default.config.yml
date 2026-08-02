@@ -1197,21 +1197,18 @@ wordpress_db_host: "127.0.0.1"          # ignored if install_mariadb=true (uses 
 wordpress_table_prefix: "wp_"
 wordpress_version: "6.9.4"              # PINNED BY AN IMAGE LAG, NOT BY CHOICE — see the wp2shell note below.
 # ── wp2shell (CVE-2026-63030 + CVE-2026-60137), disclosed 2026-07-17 ──────────
-# Unauth RCE: a REST batch-route confusion chained with a core SQLi. Upstream
-# fixed it the same day in 6.8.6 / 6.9.5 / 7.0.2 — and as of 2026-07-20 the
-# Docker official image ships NONE of those three. Every pullable tag is
-# vulnerable, so we stay on 6.9.4 and neutralise the vector in-app.
+# Unauth RCE via /wp-json/batch/v1/: a REST batch-route confusion chained with
+# a core SQLi. Upstream fixed it the same day in 6.8.6 / 6.9.5 / 7.0.2 — but as
+# of 2026-07-20 the Docker official image ships NONE of those three, so every
+# pullable tag is vulnerable. We stay on 6.9.4 and neutralise the vector with a
+# mu-plugin that unregisters the batch endpoint (wordpress_cve_63030_mitigate).
 #
-# ⚠️ DO NOT "upgrade" to 7.0.1 (or 7.0.0). They are newer than 6.9.4 and ARE
-# published, so a mechanical pin-wave bump looks like progress — but the CVE
-# range is 6.9.0-6.9.4 AND 7.0.0-7.0.1. Bumping there is a lateral move into the
-# same hole. Only 6.8.6 / 6.9.5 / 7.0.2 are safe; verify the exact tag exists on
-# Docker Hub before bumping, then set wordpress_cve_63030_mitigate=false and
-# delete roles/pazny.wordpress/files/cve-2026-63030-batch-block.php.
-# CVE-2026-63030 (wp2shell, unauth RCE via /wp-json/batch/v1/): while pinned to
-# the vulnerable core 6.9.4, a mu-plugin unregisters the batch endpoint. Set false
-# (and remove roles/pazny.wordpress/files/cve-2026-63030-batch-block.php) once
-# wordpress_version reaches a patched, dockerized release.
+# ⚠️ DO NOT "upgrade" to 7.0.1 (or 7.0.0) — newer than 6.9.4 and published, so
+# a mechanical pin-wave bump looks like progress, but the vulnerable range is
+# 6.9.0-6.9.4 AND 7.0.0-7.0.1: a lateral move into the same hole. Only 6.8.6 /
+# 6.9.5 / 7.0.2 are safe; verify the exact tag exists on Docker Hub before
+# bumping, then set wordpress_cve_63030_mitigate=false and delete
+# roles/pazny.wordpress/files/cve-2026-63030-batch-block.php.
 wordpress_cve_63030_mitigate: true
 wordpress_harden_unauth_surface: true   # REM-114: mu-plugin disables XML-RPC + blocks REST user enum + author enumeration (defense-in-depth; 6.9.4 core is CVE-clean)
 wordpress_port: 8084                    # Local container port (nginx proxy)

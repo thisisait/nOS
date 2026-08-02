@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~50 Docker services organized into 74 Ansible roles under the `pazny.*` namespace, 72 anatomy plugins for cross-service wiring, SSO (Authentik), secrets vault (Infisical), a unified web-desktop (nOS face), AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `nos --remove=data --confirm` (legacy `blank=true`) wipes everything and reinstalls from scratch.
+**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~50 Docker services organized into 75 Ansible roles under the `pazny.*` namespace, 72 anatomy plugins for cross-service wiring, SSO (Authentik), secrets vault (Infisical), a unified web-desktop (nOS face), AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `nos --remove=data --confirm` (legacy `blank=true`) wipes everything and reinstalls from scratch.
 
 `nOS` is the open-source reference implementation behind [**This is AIT — Agentic IT**](https://thisisait.eu). Forked from geerlingguy/mac-dev-playbook → roles renamed under the `pazny.*` namespace.
 
@@ -106,7 +106,7 @@ The core of nOS is the **anatomy** — a layered metaphor for how the platform i
 
 When working within the anatomy use **surgeon-like commit messages**: name the exact tendon / vein / bone touched, the symptom that surfaced the issue, the structural change that closes it, and the test that pins it. See P0.x commit series (`12a7828..ca26bd7`) for examples.
 
-### Role-based service delivery (74 roles under `pazny.*`)
+### Role-based service delivery (75 roles under `pazny.*`)
 
 Every Docker service is owned by an Ansible role in `roles/pazny.<service>/`. Each role follows the **compose-override pattern**:
 
@@ -200,7 +200,8 @@ Central SSO via Authentik at `auth.<tld>` (default `auth.dev.local`). OIDC provi
 **β1.A (2026-05-05) doctrine — three SSO buckets, not two:**
 
 - **`native_oidc`** — service consumes OIDC at app level. Operator clicks "Sign in with Authentik" inside the service. Per-user identity flows into the service.
-  - **env-driven:** Grafana, Outline, Open WebUI, n8n, GitLab (omniauth), Vaultwarden, WordPress, FreeScout, Infisical, Miniflux, HedgeDoc, BookStack, Node-RED (β1.B passport-openidconnect)
+  - **env-driven:** Grafana, Outline, Open WebUI, n8n, GitLab (omniauth), Vaultwarden, WordPress, Infisical, Miniflux, HedgeDoc, BookStack, Node-RED (β1.B passport-openidconnect)
+  - **FreeScout — ASPIRATIONAL, not live (measured 2026-08-02).** The `FREESCOUT_OIDC_*` env block renders, but it is consumed by the `freescout-oauth` **module**, and both upstream sources are HTTP 404 — so `/data/Modules` is empty and `/login` shows the local form with no Authentik button. The clone task reported `changed` on every converge by matching git's `"Cloning into…"`, which prints before the failure. Do **not** count FreeScout as native_oidc until a reachable module source exists; see `roles/pazny.freescout/tasks/post.yml` header and RELEASE.md v0.10-beta §Known open.
   - **file/API-driven:** Gitea (Admin API), Nextcloud (`occ`), Portainer (`PUT /api/settings`), ERPNext (Frappe Social Login Key via bench), Home Assistant (auth_oidc HACS plugin), Jellyfin (SSO-Auth server plugin), Superset (`OAUTH_PROVIDERS` in superset_config.py)
 
 - **`header_oidc`** — Authentik proxy outpost forwards `Remote-User` / `Remote-Email` headers; service auto-creates the local user from headers. True SSO from the user POV (no service-side login screen) but no per-app OIDC client.

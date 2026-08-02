@@ -278,19 +278,14 @@ def test_a_widened_status_code_must_be_branched_on():
                     f"even register the result"
                 )
                 continue
-            # Consumed = it decides something. A mention inside a `debug: msg`
-            # is NOT consumption, and counting it is how the first draft of this
-            # rule missed its own headline case: pre-fix Jellyfin referenced
-            # `_jf_user` in a summary string, so a widened 400/500 looked
-            # branched-on while /Startup/Complete was in fact gated on a
-            # different variable and sealed the wizard anyway.
-            # Everything in another task EXCEPT a human-readable message: a
-            # `set_fact` deriving a decision counts (gitlab post-forge:46 does
-            # exactly that), a `debug: msg` mentioning the variable does not.
-            # Counting the message is how the first draft missed its own
-            # headline case: pre-fix Jellyfin named `_jf_user` in a summary
-            # string while /Startup/Complete was gated on a different variable
-            # and sealed the one-shot wizard anyway.
+            # Consumed = it decides something: everything in another task
+            # EXCEPT a human-readable message (a `set_fact` deriving a
+            # decision counts, e.g. gitlab post-forge:46; a `debug: msg`
+            # mentioning the variable does not). Counting the message is how
+            # the first draft of this rule missed its own headline case:
+            # pre-fix Jellyfin named `_jf_user` in a summary string while
+            # /Startup/Complete was in fact gated on a different variable and
+            # sealed the one-shot wizard anyway.
             def _decisive(o: dict) -> str:
                 if "ansible.builtin.debug" in o or "debug" in o:
                     return ""

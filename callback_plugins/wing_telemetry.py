@@ -607,19 +607,14 @@ class CallbackModule(CallbackBase):
         # the explicit env var instead.
         if not env_url and _pv_url and "{{" not in _pv_url:
             self._url = _pv_url
-        # Late SECRET resolution mirroring URL: if the operator set
-        # wing_events_hmac_secret at play scope (typical now that the
-        # 2026-05-03 fix removed it from ~/.nos/secrets.yml — its
-        # canonical home is default.config.yml as `{{ bone_secret }}`),
-        # prefer that over whatever __init__'s env-only fallback found.
-        # Env var WING_EVENTS_HMAC_SECRET still wins because it's the
-        # most explicit signal. Without this play-vars fallback the
-        # callback was POSTing to Bone with NO HMAC headers, Bone was
-        # rejecting with `missing HMAC headers`, and every per-task
-        # event was silently being captured only by the JSONL fallback
-        # while events.db saw zero rows from telemetry (only
-        # apps_runner's explicit HMAC POST landed). Surfaced 2026-05-04
-        # during sanity check after the live Qdrant verification.
+        # Late SECRET resolution mirroring URL: prefer play-scope
+        # wing_events_hmac_secret (canonical home default.config.yml as
+        # `{{ bone_secret }}` since the 2026-05-03 fix removed it from
+        # ~/.nos/secrets.yml) over __init__'s env-only fallback. Env var
+        # WING_EVENTS_HMAC_SECRET still wins. Without this, telemetry POSTed
+        # with no HMAC headers, Bone rejected `missing HMAC headers`, and
+        # events.db saw zero rows from telemetry (JSONL fallback only) —
+        # surfaced 2026-05-04 during the live Qdrant verification.
         env_secret = os.environ.get("WING_EVENTS_HMAC_SECRET", "")
         _pv_secret = play_vars.get("wing_events_hmac_secret") if play_vars else None
         # Never sign with an un-rendered template — a literal "{{ … }}" secret

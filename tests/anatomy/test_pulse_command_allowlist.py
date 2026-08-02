@@ -28,6 +28,33 @@ PRESENTER = REPO / "files/anatomy/wing/app/Presenters/Api/PulsePresenter.php"
 CATALOG = REPO / "files/anatomy/scripts/discover-pulse-catalog.py"
 
 
+def _allowed_prefixes() -> tuple[str, ...]:
+	"""The REAL prefix allowlist, parsed out of the PHP presenter.
+
+	Same reasoning as `_catalog_substitutions` below, and the same mistake made
+	twice in one file: `test_real_plugin_manifests_pass_validator` used to
+	hand-mirror this list as three literals and omitted `/home/`. Production
+	(`PulsePresenter::ALLOWED_COMMAND_PREFIXES` and
+	`pulse/runners/subprocess.py::_ALLOWED_PREFIXES`) has carried four since the
+	Linux port, and `test_pulse_command_requires_absolute_path` in THIS FILE
+	asserts all four — so the file simultaneously required `/home/` of
+	production and rejected it on the estate's behalf. It passed on macOS by
+	accident of `/Users/` and went red the moment CI ran on a Linux runner,
+	whose playbook_dir is `/home/runner/...` (2026-08-02).
+	"""
+	src = PRESENTER.read_text()
+	block = re.search(
+		r"ALLOWED_COMMAND_PREFIXES\s*=\s*\[(.*?)\];", src, re.DOTALL
+	)
+	assert block, (
+		"PulsePresenter::ALLOWED_COMMAND_PREFIXES not found — it was renamed or "
+		"restructured, and this gate silently stopped covering the real thing"
+	)
+	prefixes = tuple(re.findall(r"'([^']+)'", block.group(1)))
+	assert prefixes, "ALLOWED_COMMAND_PREFIXES parsed as empty"
+	return prefixes
+
+
 def _catalog_substitutions() -> dict[str, str]:
 	"""The REAL token→value map, imported from the catalog script.
 
@@ -199,12 +226,9 @@ def test_real_plugin_manifests_pass_validator():
 			cmd_rendered = cmd
 			for token, value in _catalog_substitutions().items():
 				cmd_rendered = cmd_rendered.replace(token, value or "/Users/pazny/x")
-			# Manual prefix check (mirrors PHP).
-			allowed = (
-				cmd_rendered.startswith("/opt/homebrew/bin/")
-				or cmd_rendered.startswith("/usr/local/bin/")
-				or cmd_rendered.startswith("/Users/")
-			)
+			# Prefix check, PARSED from the PHP rather than mirrored — see
+			# _allowed_prefixes() for what mirroring it cost.
+			allowed = cmd_rendered.startswith(_allowed_prefixes())
 			assert allowed, (
 				f"Live plugin manifest {path.relative_to(REPO)} declares "
 				f"command={cmd_rendered!r} which would be REJECTED by "

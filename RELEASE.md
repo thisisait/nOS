@@ -39,13 +39,22 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.9-
 - **The `access` facet reconciled five separate declarations** of "how is this
   service reached and what gates it" — the split that produced REM-144.
 - **L1 field concepts: every column says what it MEANS.** A closed, git-owned
-  vocabulary with a membership gate; all 76 columns of the five seeded
-  DataTables now carry a `concept:`, and they reach the database rather than
-  only git — because the same change added the write path `data_tables.schema_json`
-  never had. Until then a table's columns were immutable for its lifetime, so a
-  changed definition was a **no-op on every converged install**, silently.
-  Mapping the live columns forced two vocabulary splits the one-concept-per-table
-  rule refused to absorb (`net.url` vs `net.repo`, `graph.uses` vs `graph.stores`).
+  vocabulary with a membership gate; all **76** columns across the five table
+  definitions carry a `concept:`. Mapping the live columns forced two vocabulary
+  splits the one-concept-per-table rule refused to absorb (`net.url` vs
+  `net.repo`, `graph.uses` vs `graph.stores`).
+- **The write path `data_tables.schema_json` never had.** Until this change a
+  table's columns were immutable for its lifetime, so a changed definition was a
+  silent **no-op on every converged install**.
+- **How far into the database they actually reach — 32 of 76, not 76.** The
+  seeder (`roles/pazny.keap/tasks/seed-face-tables.yml`) enumerates exactly
+  three slugs — `face-layouts`, `face-wallpapers`, `face-controls` — so the 44
+  columns belonging to `apps` (23) and `systems` (21) are annotated in git and
+  belong to tables that **do not exist on a converged host**. The repo's own
+  gate says so in `tests/anatomy/test_keap_table_concepts.py`; an earlier draft
+  of these notes did not, which is a fair sample of the defect this release is
+  named after. `keap_nos_full_catalog` — the flag that reads as if it seeds
+  the rest — is declared and set by `profiles/all-on.yml` but **read by nothing**.
 - **Honest scope:** the concept token in a row body buys the *lexical* retrieval
   leg. It does not make embeddings concept-aware — one vector, truncated body.
   That is L2's job and is not claimed here.
@@ -140,6 +149,29 @@ executed the branch it claimed to cover.**
   later `when:` over a renamed fact — so a single-expression scanner would have
   shipped green against the very bug it was written for. It now follows the
   laundered fact through the file.
+
+### Known open at cut time
+
+Named here because v0.9-beta named its red and this one owes the same.
+
+- **FreeScout is local-auth-only; its `native_oidc` classification is
+  aspirational.** Measured on the live estate during the release survey: both
+  sources for the `freescout-oauth` module are HTTP 404, so `/data/Modules` is
+  empty, the rendered `FREESCOUT_OIDC_*` env block is inert (the module is what
+  consumes it), and `/login` offers no "Sign in with Authentik" button. The
+  clone task reported `changed` on every converge because its `changed_when`
+  matched `"Cloning into…"` — a string git prints *before* it fails. Two further
+  tasks in the same block could never have worked either: `module:enable` ran
+  from `/` where `php artisan` is "Could not open input file", and the config
+  writer used `tinker --execute=`, a flag this image's tinker does not have. All
+  three are fixed to observe effects and to say so out loud; **no replacement
+  module source is invented**, because guessing one is how a second silent
+  failure gets stacked on the first.
+- **`stack-health-probe.py` passes an empty stack as `0/0 ready`**, which is why
+  the Linux wet-test has been green without rendering `infra`. Unchanged since
+  2026-05-23; `docs/hidden_fees/08` remains `OPEN`.
+- **REM-151 / REM-152** (above) are open HIGHs.
+- The **v0.9-beta GitHub Release was never published** — only the tag exists.
 
 ### One filesystem — measured, not yet built
 

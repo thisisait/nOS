@@ -109,15 +109,26 @@ service reached and what gates it"* — the exact split that produced REM-144, a
 unauthenticated Traefik dashboard on the edge leaking the global password prefix.
 
 Then **L1 field concepts**: a closed, git-owned vocabulary so that every column
-says what it *means*. All 76 columns across the five seeded DataTables carry a
-`concept:` — and, crucially, they reach the **database** rather than only git,
-because the same change added the write path `data_tables.schema_json` had never
-had. Until then a table's columns were immutable for its lifetime: a changed
-definition was a **silent no-op on every converged install**.
+says what it *means*. All 76 columns across the five table definitions carry a
+`concept:`, and the same change added the write path `data_tables.schema_json`
+had never had — until then a table's columns were immutable for its lifetime, so
+a changed definition was a **silent no-op on every converged install**.
 
-Honest scope, stated in the notes because it is easy to overclaim: the concept
-token in a row body buys the *lexical* retrieval leg. It does not make embeddings
-concept-aware. That is L2's job and is not claimed here.
+And here the release ate its own cooking, which is worth telling rather than
+quietly correcting. The first draft of these notes said the 76 columns *"reach
+the database rather than only git."* **They don't — 32 do.** The seeder
+enumerates exactly three slugs, so the 44 columns of `apps` and `systems` are
+annotated in git and belong to tables that do not exist on a converged host. The
+repo's own gate had measured this and written it down; the release notes,
+written later, claimed the tidier thing. A survey run specifically to look for
+unfinished promises is what caught it — three commits before the tag.
+
+That is the theme arriving on schedule: **the record was written by the party
+with an interest in the outcome**, and it took an adversarial reader to notice.
+
+Honest scope on the rest: the concept token in a row body buys the *lexical*
+retrieval leg. It does not make embeddings concept-aware. That is L2's job and
+is not claimed here.
 
 ## face — four ways to read a table
 

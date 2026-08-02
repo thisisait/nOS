@@ -536,13 +536,12 @@ run_keap_db() {
 
     # PRIMARY PATH — inside the container.
     #
-    # This is not a stylistic choice. backup.sh runs from launchd, whose context
-    # has no Full Disk Access for /Volumes, so a host-side read of a store under
-    # nos_data_root fails with `authorization denied`. That is why this source
-    # reported success=false every single night from 2026-07-25 to 2026-07-30
-    # and never once produced an object. Docker Desktop holds the grant and the
-    # container reads the bind mount it already owns, so the whole class of
-    # failure disappears rather than being worked around.
+    # Not a stylistic choice: backup.sh runs from launchd, which has no Full
+    # Disk Access for /Volumes, so a host-side read under nos_data_root fails
+    # with `authorization denied` — this source reported success=false every
+    # night from 2026-07-25 to 2026-07-30 and never produced an object. Docker
+    # Desktop holds the grant, so reading via the container's own bind mount
+    # removes the whole failure class rather than working around it.
     if docker exec "${KEAP_CONTAINER}" true >/dev/null 2>&1; then
         log "keap-db: online backup inside ${KEAP_CONTAINER} (node:sqlite backup())"
         keap_backup_js \

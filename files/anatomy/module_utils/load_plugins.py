@@ -447,15 +447,13 @@ def run_hook(name: str, plugins: list[Plugin],
         raise ValueError(f"unknown hook: {name!r}")
 
     # Anatomy P0.9 (2026-05-04): fail-loudly preflight on the host Python
-    # interpreter's missing-deps surface. The blank that surfaced this
-    # silently degraded all 5 render-doing plugins (authentik-base /
-    # grafana-base / loki-base / prometheus-base / tempo-base) with
-    # `No module named 'jinja2'`, then Docker compose mounted the missing
-    # config files as DIRECTORIES (bind-mount race), then tempo / loki /
-    # prometheus crashed at startup. Operator only saw `failed=1` for an
-    # unrelated wing post-task and had to dig 30 minutes into docker logs
-    # to find the root cause. Failing hard here means the next operator
-    # gets `Module nos_plugin_loader failed: jinja2 is required` upfront.
+    # interpreter's missing-deps surface. A silent `No module named 'jinja2'`
+    # here degrades all 5 render-doing plugins (authentik-base / grafana-base
+    # / loki-base / prometheus-base / tempo-base), cascading into bind-mounted
+    # config directories and tempo/loki/prometheus crashing at startup — while
+    # the operator only sees `failed=1` on an unrelated task. Failing hard
+    # here surfaces `Module nos_plugin_loader failed: jinja2 is required`
+    # upfront instead.
     try:
         import jinja2 as _check_jinja2  # noqa: F401
     except ImportError as e:

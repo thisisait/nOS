@@ -296,17 +296,14 @@ _VALID_CHANNELS = {"wing-inbox", "ntfy", "mail"}
 
 # Fallback routing for an origin with NO entry in the aggregator sidecar.
 #
-# This used to be a flat ["wing-inbox"] for every severity, and that is how six
-# consecutive nights of `Backup FAILED for 7 source(s)` at severity=high reached
-# nobody (2026-07-25..30, all six still unread). `~/.nos/backup.sh` posts
-# `origin_plugin: "backup"`, and roles/pazny.backup is a host role with no
-# plugin manifest — so it matched nothing and silently lost every channel but an
-# inbox no one opens.
-#
-# An origin we cannot resolve is exactly the case where we know least, so it is
-# the worst possible one to route quietly. These values mirror what all 56
-# registered plugins already declare, so an unrouted HIGH now behaves like a
-# routed HIGH instead of worse than one.
+# Used to be a flat ["wing-inbox"] for every severity — that's how six
+# consecutive nights of `Backup FAILED for 7 source(s)` at severity=high
+# reached nobody (2026-07-25..30, all six unread): `~/.nos/backup.sh` posts
+# `origin_plugin: "backup"`, but roles/pazny.backup is a host role with no
+# plugin manifest, so it matched nothing and silently lost every channel but
+# an inbox no one opens. An unresolved origin is the case where we know
+# least, so these values mirror what all 56 registered plugins already
+# declare — an unrouted HIGH now behaves like a routed HIGH, not worse.
 _DEFAULT_CHANNELS_BY_SEVERITY = {
     "critical": ["wing-inbox", "ntfy"],
     "high": ["wing-inbox", "ntfy"],

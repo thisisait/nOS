@@ -134,7 +134,6 @@ trap '_release_agent_lock' EXIT
 # raw here is verified as \uXXXX there and the HMAC cannot match. On a
 # Czech-operated estate that is every title with diacritics. Sorting alone
 # was the 2026-05-17 lesson; encoding is the 2026-07-27 one.
-# form (see agent_run_start / agent_run_end builders below).
 _post_wing_event() {
     local body="$1"
     local ts

@@ -15,22 +15,19 @@
   failed_when: false
 
 # ── KMS self-heal block ─────────────────────────────────────────────────────
-# Symptom (2026-05-11): on the very first blank=true run, Infisical can
-# end up with a `kms_root_config` row whose `encryptedRootKey` is NOT
-# decryptable by the current ENCRYPTION_KEY. Manual openssl brute-force
-# against six derivation candidates (utf-8, hex, padded placeholder,
-# SHA-256 variants) all FAIL — proving the seed used yet-another value
-# we can't reconstruct from current state. Without intervention the
-# container restart-loops forever with `Decipheriv.final` raising
-# "Unsupported state or unable to authenticate data".
+# Symptom (2026-05-11): on the very first blank=true run, Infisical can end up
+# with a `kms_root_config` row whose `encryptedRootKey` is NOT decryptable by
+# the current ENCRYPTION_KEY (a brute-force of six plausible derivations all
+# failed, so the seed value can't be reconstructed). Without intervention the
+# container restart-loops forever with `Decipheriv.final` raising "Unsupported
+# state or unable to authenticate data".
 #
 # Self-heal contract: when the initial readiness probe failed AND the
-# container logs contain the KMS decrypt signature, drop the orphaned
-# row, restart the container, re-probe. KMS root has no user data
-# (it's the wrapping key for everything else; on a fresh install only
-# Infisical's seed migration has touched it). Drop is therefore safe
-# pre-first-user. After truncate, Infisical's startup re-seeds with
-# the current ENCRYPTION_KEY → decrypt works.
+# container logs contain the KMS decrypt signature, drop the orphaned row,
+# restart the container, re-probe. Safe pre-first-user: KMS root has no user
+# data (it's the wrapping key for everything else, untouched except by
+# Infisical's own seed migration on a fresh install). After truncate,
+# Infisical's startup re-seeds with the current ENCRYPTION_KEY → decrypt works.
 - name: "[pazny.infisical Post] Self-heal — fetch container logs to detect KMS decrypt failure"
   ansible.builtin.shell: |
     set -o pipefail

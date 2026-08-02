@@ -5,8 +5,16 @@ Authored 2026-07-30, out of the morning review of the 07-30 pulse night. Compani
 (the v0.10 release lane). Where those disagree with this file, they win and this is
 stale.
 
-**Status.** Part 0 code has LANDED (`67792f0c`); its converge is pending. Parts 1–2
-are the arc and have not started — nothing in them begins without a separate go.
+**Status (revised 2026-08-02).** Part 0 code LANDED (`67792f0c`) and has converged.
+**Part 1 B1 + B3 also shipped** in `4e5e10fc` (the entity/organ schemas + generator)
+and `6123c2b8` (L1 field concepts) — the "have not started" line below was written
+by the same commits that landed the code and was wrong for three days.
+
+Scope correction while here: B1's table lists **four** codegen targets;
+`tools/genome-codegen.py` emits **two** (the Python module_utils mirror and the face
+TypeScript contract). The Wing `Entity.php` and the cortex zod contract do not exist.
+Parts of B2/B4/B5 and Threads C/D remain unstarted — nothing in them begins without
+a separate go.
 
 ---
 
