@@ -11,7 +11,7 @@
 | | holds | lives in |
 |---|---|---|
 | `nOS Roadmap` DataTable | dates, statuses, nesting, citations | KEAP, seeded by `tools/roadmap-seed.py` |
-| `docs/idea/` | why, what is true, what is open | git, ten files, hard ceiling |
+| `docs/idea/` | why, what is true, what is open | git, hard ceiling of twenty |
 | `docs/archive/` | what happened and what never did | git |
 
 Duplicating dates or statuses into prose is how the previous surface drifted —
@@ -51,8 +51,9 @@ against this table.
 
 ## The standing constraint
 
-**Ten documents in `docs/idea/`.** An eleventh idea means one absorbs it, or one
-is finished and moves to the archive. The previous surface reached 20 390 lines
+**Twenty documents in `docs/idea/`** (ten until 2026-08-02; raised the same day
+rather than forcing a merge that was not wanted). At the ceiling, one absorbs the
+next or one is finished and moves to the archive. The previous surface reached 20 390 lines
 because nothing ever forced that choice.
 
 **At the next release**, reconcile `docs/archive/` and delete what has no

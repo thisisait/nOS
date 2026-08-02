@@ -4,11 +4,12 @@
 > ran, and the rest overlapped each other. This directory is the living surface;
 > `docs/archive/` holds the detail and the history.
 >
-> **Ceiling: ten documents.** An eleventh idea means one of these absorbs it or
-> one of them is finished. That constraint is the point — the previous surface
-> grew to 20 390 lines because nothing ever forced a merge.
+> **Ceiling: twenty documents** — ten until 2026-08-02, raised the same day the
+> first new idea arrived, because forcing a merge nobody wanted is not what the
+> constraint is for. At the ceiling one absorbs the next or one is finished. The
+> previous surface reached 20 390 lines because nothing ever forced that choice.
 
-## The ten
+## The set
 
 | | idea | status | the one sentence |
 |---|---|---|---|
@@ -20,7 +21,8 @@
 | [06](06-genome.md) | The genome and its organelles | L1 shipped | One declaration the runtimes inherit, instead of the same law restated in five languages. |
 | [07](07-face.md) | face — the desktop and its tables | active | Four render styles ship; the settings surface is the open half. |
 | [08](08-lifecycle.md) | Lifecycle — blank, upgrade, coexist | mid-build | The install↔leave loop closes; the upgrade engine's headline claim is still unexercised. |
-| [09](09-hidden-fees.md) | Hidden fees | a ledger, always open | The costs paid without a decision. Eleven entries; five still unpaid. |
+| [09](09-hidden-fees.md) | Hidden fees | a ledger, always open | The costs paid without a decision. Thirteen entries; two closed. |
+| [11](11-agentic-loop.md) | The agentic loop | design | The propose→judge loop exists per session; nothing carries between them, and no judge is addressable. |
 
 ## How to use this
 
