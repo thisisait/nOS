@@ -25,7 +25,28 @@ backup_retention_monthly: 12
 # suffix; legacy plaintext objects restore unchanged (per-file auto-detect).
 # Turn OFF only for a throw-away dev target where the bucket holds no PII.
 backup_encryption_enabled: true
-backup_encryption_passphrase: "{{ global_password_prefix | default('nos') }}_pw_backup_encryption"
+
+# P2 (2026-08-02) — the archive key is NO LONGER derived from the password
+# prefix. It used to be `{{ global_password_prefix }}_pw_backup_encryption`,
+# which meant: leak the prefix -> decrypt the archive -> read the copy of
+# ~/.nos/secrets.yml inside it (29 keys, 27 credential-shaped) -> hold every
+# secret the estate deliberately RANDOMISED because deriving it was unsafe.
+# REM-144 leaked exactly that prefix. See docs/plans/secret-blast-radius.md.
+#
+# Empty here on purpose: main.yml mints a 256-bit random value on first run and
+# persists it to ~/.nos/secrets.yml, the same lazy-regenerate pattern as
+# bone_secret and authentik_secret_key.
+backup_encryption_passphrase: ""
+
+# KEY RING, not a key swap. Archives already in the bucket were encrypted with
+# the old derived key; minting a new one without keeping the old would make
+# every existing backup undecryptable — closing a leak by destroying the
+# backups is a worse outcome than the leak. So:
+#   * the CURRENT key above writes,
+#   * every superseded key below still READS, forever.
+# main.yml seeds this with the derived value on the same run that mints the
+# replacement, which is the only moment the old value is still computable.
+backup_encryption_keys_previous: []
 
 # -- Sources -------------------------------------------------------------------
 backup_databases_mariadb: true

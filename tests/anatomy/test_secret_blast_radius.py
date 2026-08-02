@@ -5,29 +5,43 @@ credential contains the master in clear, so any single leaked value reveals the
 master by inspection, and the master yields every sibling by construction. That
 is why REM-144 was not "an edge token leaked" but "the estate leaked".
 
-This gate turns blast radius from a claim into a measured number. It is written
-to be RED against the tree that produced it — measured 2026-08-02:
+This gate turns blast radius from a claim into a measured number.
 
-    103 credential names DECLARED as prefix-derived, of which 15 are rescued at
-    runtime by main.yml's lazy-regenerate group → 88 are TRULY derived.
+State after P2 (2026-08-02):
 
-Two of those are crown-jewel keys — what they protect CONTAINS other credentials:
+    101 credential names DECLARED as prefix-derived, of which 17 are rescued at
+    runtime by main.yml's lazy-regenerate group -> 86 are TRULY derived.
 
-    backup_encryption_passphrase  → the nightly archive
-    restic_password               → the off-site repo
+CROWN JEWELS are the keys whose compromise costs more than one service, because
+what they protect CONTAINS other credentials:
 
-`backup_nos_state: true` puts the plaintext `~/.nos/secrets.yml` — 29 keys, 27
-credential-shaped, holding the *randomly generated* secrets — inside the archive
-whose key is derived. That chain is real and is what P2 breaks.
+    backup_encryption_passphrase  -> the nightly archive
+    restic_password               -> the off-site repo
 
-MEASURE THE RUNTIME VALUE, NOT THE DECLARATION. The first version of this gate
-counted declaration sites and reported `infisical_encryption_key` as derived —
-"the vault is inside its own blast radius". That was WRONG. main.yml's
-lazy-regenerate group replaces 15 of the declared-derived defaults with
-`openssl rand` output on first run and persists them, and the vault key is one
-of them (verified live: 32 hex, no `_pw_`). Reading the shape instead of the
-effect is the exact defect this release is named after, and this gate committed
-it before it caught it.
+`backup_nos_state: true` puts the plaintext `~/.nos/secrets.yml` (29 keys, 27
+credential-shaped, holding the RANDOMLY generated secrets) inside that archive.
+While its key was derived, the chain ran
+
+    prefix -> archive key -> the archive -> every random secret
+
+and REM-144 leaked the prefix. P2 broke it: both keys are now minted random and
+persisted, with the outgoing derived key preserved in a read-only key ring so
+archives written before the rotation still open. CROWN_JEWEL_CEILING is 0.
+
+TWO MISTAKES THIS FILE MADE, KEPT AS INSTRUCTIONS:
+
+1. MEASURE THE RUNTIME VALUE, NOT THE DECLARATION. The first version counted
+   declaration sites and reported `infisical_encryption_key` as derived -- "the
+   vault is inside its own blast radius". Wrong: it is in the lazy-regenerate
+   group and the live value is 32 hex with no `_pw_`. Reading the shape instead
+   of the effect is the defect v0.10-beta is named after.
+
+2. ...BUT NOT FOR THE CROWN JEWELS. Applying lesson 1 to them made the crown
+   jewel test VACUOUS -- restoring the derived default left it green, because
+   the key was also in the rescue list. For a key protecting other credentials,
+   "something else randomises it" is a coupling between two files, not safety.
+   That test asserts on the DECLARATION on purpose; both forms were verified by
+   putting the derivation back and watching it go red.
 
 Plan: docs/plans/secret-blast-radius.md
 
@@ -62,9 +76,9 @@ CROWN_JEWELS = {
 }
 
 # ── Ratchets. Lower these as the plan lands; never raise them. ───────────────
-BLAST_RADIUS_CEILING = 88    # runtime, after lazy-regenerate. P1 drives this to 1
-DECLARED_CEILING = 103       # declaration sites; falls as defaults stop being templates
-CROWN_JEWEL_CEILING = 2      # P2 drives this to 0
+BLAST_RADIUS_CEILING = 86    # runtime, after lazy-regenerate. P1 drives this to 1
+DECLARED_CEILING = 101       # declaration sites; falls as defaults stop being templates
+CROWN_JEWEL_CEILING = 0      # P2 landed 2026-08-02 — must never come back
 
 
 def _sources() -> list[Path]:
@@ -128,8 +142,17 @@ def test_crown_jewels_do_not_grow():
     These are the difference between "a service password leaked" and "every
     secret leaked", because what they encrypt contains the rest.
     """
+    # DECLARED, not runtime — deliberately stricter than the blast-radius test.
+    #
+    # A first version of this subtracted the lazy-regenerate rescue here too,
+    # and was VACUOUS: putting the derived default straight back into
+    # roles/pazny.backup/defaults/main.yml left it green, because the key was
+    # also in the rescue list. For a key that protects OTHER credentials,
+    # "something else happens to randomise it" is not safety — it is a coupling
+    # between two files, and deleting one line in the rescue list would re-arm
+    # the derivation silently. The default itself must be safe.
     declared, _, _ = _scan()
-    live = sorted((declared - _lazy_regenerated()) & set(CROWN_JEWELS))
+    live = sorted(declared & set(CROWN_JEWELS))
     assert len(live) <= CROWN_JEWEL_CEILING, (
         "a key protecting OTHER credentials is now derived from the master:\n  "
         + "\n  ".join(f"{k} → {CROWN_JEWELS[k]}" for k in live)

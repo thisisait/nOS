@@ -287,7 +287,11 @@ provider_tailscale_tag: "tag:provider"    # Tailscale ACL tag for the provider
 # ── Backup (Restic) ──────────────────────────────────────────────────────────
 configure_backup: false
 restic_repo: ""                           # "/Volumes/Backup/restic" | "s3:endpoint/bucket" | "sftp:user@host:/path"
-restic_password: "{{ global_password_prefix }}_pw_restic"
+# P2 (2026-08-02): not prefix-derived. Safe to rotate outright today because
+# restic_repo is empty and install_backrest is false — no repository exists to
+# lock out. If a repo is ever created, run `restic key add` BEFORE changing
+# this: restic keys are per-repository and a bare swap locks the repo.
+restic_password: ""
 # Path the restic --exclude-file is deployed to (from files/backup/resticignore).
 # Was referenced in tasks/backup.yml (l.32/74/120) with NO default → a run with
 # configure_backup:true aborted on "restic_excludefile is undefined" (2026-06-09).

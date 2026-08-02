@@ -1279,6 +1279,27 @@
     # persist to ~/.nos/secrets.yml, reuse (mirrors the wing_api_token move).
     # authentik_secret_key was already relocated to the persisted group too.
 
+    # P2 (2026-08-02) — retire the derived archive key WITHOUT orphaning the
+    # archives it already wrote. Two tasks, in this order, because the old value
+    # is only computable while it is still the current one:
+    #   1. capture the derived key into the read-only ring,
+    #   2. mint its replacement (in the lazy-regenerate group below).
+    # Doing it as one set_fact would be a coin-flip on evaluation order, and the
+    # losing side of that flip silently loses every existing backup.
+    - name: "[Security] Preserve the outgoing backup key so old archives stay readable"
+      ansible.builtin.set_fact:
+        backup_encryption_keys_previous: >-
+          {{ (backup_encryption_keys_previous | default([])
+              + [backup_encryption_passphrase])
+             | unique }}
+      when:
+        - (backup_encryption_passphrase | default('')) | length > 0
+        # Only the DERIVED shape needs preserving. A key already minted by the
+        # regenerate step is the current one and belongs in neither branch.
+        - "'_pw_' in (backup_encryption_passphrase | default(''))"
+      no_log: true
+      tags: ['always']
+
     - name: "Lazy-regenerate placeholder APP_KEYs / tokens (first non-blank enable)"
       # UX: user can flip install_firefly: true (or bookstack / onlyoffice /
       # influxdb) in config.yml and run 'ansible-playbook main.yml -K' WITHOUT -e blank=true.
@@ -1337,6 +1358,17 @@
         # (rotatable API token, not data-encrypting) → stays in this group,
         # NOT the destructive one. 64 hex chars matches Authentik's own length.
         authentik_bootstrap_token: "{% if '_pw_' in (authentik_bootstrap_token | default('')) or (authentik_bootstrap_token | default('') | length) < 40 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ authentik_bootstrap_token }}{% endif %}"
+        # P2: the archive key. Its predecessor is already in
+        # backup_encryption_keys_previous by the task above, so rotating here
+        # cannot orphan an existing backup. Empty is the normal first-run state
+        # (the default is "" now, not a template) — both empty and the legacy
+        # `_pw_` shape mint a new one.
+        backup_encryption_passphrase: "{% if '_pw_' in (backup_encryption_passphrase | default('')) or (backup_encryption_passphrase | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ backup_encryption_passphrase }}{% endif %}"
+        # restic: safe to rotate outright TODAY — `restic_repo` is empty and
+        # install_backrest is false, so no repository exists to lock out. If a
+        # repo is ever created, rotating this needs `restic key add` FIRST;
+        # restic keys are per-repository and a bare swap locks the repo.
+        restic_password: "{% if '_pw_' in (restic_password | default('')) or (restic_password | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ restic_password }}{% endif %}"
       tags: ['always']
 
     - name: "Lazy-regenerate Wing events HMAC (mirrors bone_secret unless overridden)"

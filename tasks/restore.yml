@@ -232,14 +232,36 @@
       return 1
     }
     OSSL="$(resolve_openssl)" || { echo "FATAL: no -pbkdf2-capable openssl on PATH" >&2; exit 1; }
-    "$OSSL" enc -d -aes-256-cbc -md sha512 -pbkdf2 -iter 100000 -salt \
-      -pass env:NOS_BACKUP_PASS \
-      -in "{{ restore_workdir }}/{{ item.s3file }}" \
-      -out "{{ restore_workdir }}/{{ item.file }}"
+    # P2 key ring: try the current key, then every retired one. Restoring an
+    # archive written BEFORE a key rotation is the normal case during the first
+    # retention window after P2 lands — a single-key restore would fail on it
+    # and look like backup corruption.
+    # while-read over a here-string, NOT `mapfile`: macOS /bin/bash is 3.2 and
+    # has no mapfile. A here-string keeps this in the current shell, so the
+    # early exit below really exits the task.
+    idx=0
+    while IFS= read -r key; do
+      if [ -n "$key" ] \
+         && NOS_BACKUP_PASS="$key" "$OSSL" enc -d -aes-256-cbc -md sha512 \
+              -pbkdf2 -iter 100000 -salt -pass env:NOS_BACKUP_PASS \
+              -in "{{ restore_workdir }}/{{ item.s3file }}" \
+              -out "{{ restore_workdir }}/{{ item.file }}" 2>/dev/null \
+         && [ -s "{{ restore_workdir }}/{{ item.file }}" ]; then
+        [ "$idx" -ne 0 ] && echo "note: {{ item.s3file }} opened with retired key ${idx}"
+        exit 0
+      fi
+      idx=$((idx + 1))
+    done <<< "${NOS_RESTORE_KEYS_RAW}"
+    echo "FATAL: no key in the ring decrypted {{ item.s3file }}" >&2
+    exit 1
   args:
     executable: /bin/bash
   environment:
-    NOS_BACKUP_PASS: "{{ backup_encryption_passphrase }}"
+    # Newline-separated so the shell can split it without exposing the values
+    # on a command line (they would otherwise show in `ps`).
+    NOS_RESTORE_KEYS_RAW: |-
+      {{ ([backup_encryption_passphrase | default('')]
+          + (backup_encryption_keys_previous | default([]))) | join('\n') }}
   loop: "{{ restore_plan | selectattr('encrypted') | list }}"
   loop_control:
     label: "{{ item.s3file }}"

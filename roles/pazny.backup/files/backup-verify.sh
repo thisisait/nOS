@@ -33,6 +33,21 @@ AWS_OPTS=(--endpoint-url "${S3_ENDPOINT}")
 ENCRYPT="{{ 'true' if backup_encryption_enabled else 'false' }}"
 ENC_PASSPHRASE="{{ backup_encryption_passphrase | default('') }}"
 
+# Key ring (P2, 2026-08-02). The current key is first; every superseded key
+# follows and is read-only. An archive that opens with a LATER entry predates a
+# rotation — that is information, not a failure. Only "no key opened it" fails.
+# NOTE: never use bash array-length syntax in this file — it is a Jinja
+# template, and a dollar-brace-hash sequence opens a Jinja comment that is never
+# closed, so the RENDER fails (memory: jinja-rendered-shell-brace-hash-trap).
+# Writing that sequence inside a comment does NOT make it safe: this very line
+# said it literally, and broke the template on the first parse.
+NOS_BACKUP_KEYS=(
+    "{{ backup_encryption_passphrase | default('') }}"
+{% for _k in backup_encryption_keys_previous | default([]) %}
+    "{{ _k }}"
+{% endfor %}
+)
+
 LOG_FILE="{{ backup_verify_log | default(ansible_facts['env']['HOME'] + '/.nos/backup-verify.log') }}"
 RESULT_FILE="{{ backup_verify_result | default(ansible_facts['env']['HOME'] + '/.nos/backup-verify.json') }}"
 
@@ -63,14 +78,29 @@ record() {
     printf '%s\t%s\t%s\n' "$1" "$2" "$3" >> "${RESULT_TSV}"
 }
 
-# Decrypt if the object carried the .enc suffix; passthrough otherwise.
-decrypt_stream() {
-    if [[ "${ENCRYPT}" == "true" ]]; then
-        openssl enc -d -aes-256-cbc -md sha512 -pbkdf2 -iter 100000 \
-            -salt -pass env:NOS_BACKUP_PASS
-    else
-        cat
+# Decrypt $1 -> $2, trying each key in the ring. Prints the ring position that
+# worked (0 = current) so the caller can report "opened with a RETIRED key",
+# which is the signal that an archive predates a rotation.
+#
+# File-in/file-out rather than a stream: a pipe cannot be rewound, so a
+# multi-key attempt has to have the ciphertext on disk. fetch_object already
+# lands it in WORKDIR, so this costs one extra temp file and no downloads.
+decrypt_file() {
+    local src="$1" dst="$2" idx=0 key
+    if [[ "${ENCRYPT}" != "true" ]]; then
+        cp "${src}" "${dst}"; echo 0; return 0
     fi
+    for key in "${NOS_BACKUP_KEYS[@]+"${NOS_BACKUP_KEYS[@]}"}"; do
+        if [[ -n "${key}" ]] \
+           && NOS_BACKUP_PASS="${key}" openssl enc -d -aes-256-cbc -md sha512 \
+                -pbkdf2 -iter 100000 -salt -pass env:NOS_BACKUP_PASS \
+                -in "${src}" -out "${dst}" 2>/dev/null \
+           && [[ -s "${dst}" ]]; then
+            echo "${idx}"; return 0
+        fi
+        idx=$((idx + 1))
+    done
+    return 1
 }
 
 latest_date() {
@@ -85,8 +115,17 @@ fetch() {
     # $1 = stem (e.g. keap-db.gz) -> writes ${WORKDIR}/$1, returns 1 if absent
     local stem="$1" suffix=""
     [[ "${ENCRYPT}" == "true" ]] && suffix=".enc"
-    aws "${AWS_OPTS[@]}" s3 cp "s3://${S3_BUCKET}/${DATE_STR}/${stem}${suffix}" - 2>/dev/null \
-      | decrypt_stream > "${WORKDIR}/${stem}"
+    aws "${AWS_OPTS[@]}" s3 cp "s3://${S3_BUCKET}/${DATE_STR}/${stem}${suffix}" \
+        "${WORKDIR}/${stem}.raw" >/dev/null 2>&1 || return 1
+    local used
+    used="$(decrypt_file "${WORKDIR}/${stem}.raw" "${WORKDIR}/${stem}")" || {
+        log "decrypt FAILED for ${stem}: no key in the ring opened it"
+        return 1
+    }
+    rm -f "${WORKDIR}/${stem}.raw"
+    if [[ "${used}" != "0" ]]; then
+        log "note: ${stem} opened with RETIRED key #${used} — it predates a key rotation"
+    fi
     [[ -s "${WORKDIR}/${stem}" ]]
 }
 
