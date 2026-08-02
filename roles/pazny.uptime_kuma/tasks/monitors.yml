@@ -89,8 +89,8 @@
       {{ dict(_cards | map(attribute='slug') | zip(_cards | map(attribute='health_check'))) }}
   vars:
     _cards: >-
-      {{ ((_kuma_hubcards_raw.content | default('') | b64decode | from_json).cards | default([]))
-         if (_kuma_hubcards_raw.content is defined) else [] }}
+      {{ ((_kuma_hubcards_raw.content | b64decode | from_json).cards | default([]))
+         if (_kuma_hubcards_raw.content | default('', true) | length > 0) else [] }}
 
 - name: "[pazny.uptime_kuma] Append one HTTP monitor per enabled domain-backed service"
   ansible.builtin.set_fact:

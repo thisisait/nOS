@@ -137,7 +137,10 @@
   when:
     - _infisical_machine_auth is defined
     - _infisical_machine_auth.json is defined
-    - _infisical_machine_auth.json.accessToken | default('') | length > 0
+    # Two-arg default: a JSON `null` is DEFINED, so the one-arg form passes it
+    # through and `| length` aborts the play (same defect as metabase's
+    # setup-token, 2026-08-02).
+    - _infisical_machine_auth.json.accessToken | default('', true) | length > 0
   no_log: true
 
 - name: "[pazny.infisical Post] Warn when stored machine identity is rejected (stale after blank)"

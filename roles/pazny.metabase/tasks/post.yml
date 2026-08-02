@@ -33,9 +33,15 @@
   failed_when: false
   when: _mb_ready.status | default(0) == 200
 
+# `default('')` substitutes UNDEFINED, never None — and Metabase does not drop
+# `setup-token` once setup completes, it returns it as JSON `null`. The key is
+# therefore defined and the filter passes the None straight through, so every
+# `| length` below aborted the run on an already-configured Metabase. The
+# two-arg form is what treats null as empty; the branch semantics are unchanged
+# (empty token == "setup already done").
 - name: "[pazny.metabase Post] Get setup token"
   ansible.builtin.set_fact:
-    _mb_setup_token: "{{ _mb_props.json['setup-token'] | default('') }}"
+    _mb_setup_token: "{{ _mb_props.json['setup-token'] | default('', true) }}"
   when:
     - _mb_props.json is defined
 
@@ -61,7 +67,7 @@
   register: _mb_setup
   when:
     - _mb_ready.status | default(0) == 200
-    - _mb_setup_token | default('') | length > 0
+    - _mb_setup_token | default('', true) | length > 0
   changed_when: (_mb_setup is defined) and (_mb_setup.status | default(0) == 200)
   failed_when: false
   no_log: true
@@ -84,7 +90,7 @@
   register: _mb_session_old
   when:
     - _mb_ready.status | default(0) == 200
-    - _mb_setup_token | default('') | length == 0  # setup already done
+    - _mb_setup_token | default('', true) | length == 0  # setup already done
   changed_when: false
   failed_when: false
   no_log: true
@@ -102,7 +108,7 @@
   register: _mb_session_new
   when:
     - _mb_ready.status | default(0) == 200
-    - _mb_setup_token | default('') | length == 0
+    - _mb_setup_token | default('', true) | length == 0
   changed_when: false
   failed_when: false
   no_log: true
@@ -134,4 +140,4 @@
       {{ 'updated' if (_mb_pw_reset.status | default(0) in [200, 204])
          else ('already converged' if (_mb_session_new.status | default(0) == 200)
                else 'DRIFT — manual reset required (both old and new passwords rejected)') }}
-  when: _mb_ready.status | default(0) == 200 and _mb_setup_token | default('') | length == 0
+  when: _mb_ready.status | default(0) == 200 and _mb_setup_token | default('', true) | length == 0

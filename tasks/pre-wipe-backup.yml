@@ -47,8 +47,9 @@
 - name: "[Pre-wipe] Resolve the failed-source list"
   ansible.builtin.set_fact:
     _prewipe_failed_sources: >-
-      {{ ((_prewipe_status_raw.content | default('') | b64decode | from_json).sources | default([]))
-         | rejectattr('success') | map(attribute='name') | list }}
+      {{ (((_prewipe_status_raw.content | b64decode | from_json).sources | default([]))
+          | rejectattr('success') | map(attribute='name') | list)
+         if (_prewipe_status_raw.content | default('', true) | length > 0) else [] }}
   failed_when: false
   tags: ['blank', 'reset']
 

@@ -165,6 +165,6 @@
 - name: "[mcp_gateway Post] Status"
   ansible.builtin.debug:
     msg: >-
-      mcpo: {{ 'OK (' ~ (_mcpo_health.json.paths | default({}) | length) ~ ' MCP endpoints active)'
+      mcpo: {{ 'OK (' ~ (_mcpo_health.json.paths | default({}, true) | length) ~ ' MCP endpoints active)'
         if _mcpo_health.status | default(0) == 200
         else 'UNAVAILABLE - zkontroluj docker logs iiab-mcpo-1' }}
