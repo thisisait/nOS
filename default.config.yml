@@ -2802,6 +2802,13 @@ backup_nos_state: true                                  # ~/.nos/{secrets,state}
 # dev target with no PII. The passphrase is the ONLY key to every object —
 # credentials.yml MUST survive off-box (see docs/backup-architecture.md custody).
 backup_encryption_enabled: true
+# P2 key ring. Declared HERE, not only in roles/pazny.backup/defaults, because a
+# ROLE DEFAULT does not count as "defined before core-up" — main.yml's
+# key-preserving set_fact runs long before pazny.backup is invoked, and the
+# eager `{{ vars }}` resolution has bitten this repo on exactly that shape
+# before (CLAUDE.md, operator gotchas). The real value arrives later from
+# ~/.nos/secrets.yml, which include_vars loads after this file.
+backup_encryption_keys_previous: []
 backup_alpine_image: "alpine:3.20"               # tar/extract image; MUST match restore_alpine_image
 backup_overwrite_same_day: true
 backup_run_now: false
