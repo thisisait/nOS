@@ -15,7 +15,7 @@
 #
 # Operator-facing pins (domain/port/version) live in default.config.yml —
 # these are fallbacks only (version-pin shadow rule: bump default.config.yml,
-# not here). Design doc: docs/plans/nos-face.md.
+# not here). Design doc: docs/archive/nos-face.md.
 # ==============================================================================
 
 face_home: "{{ ansible_facts['env']['HOME'] }}/face"

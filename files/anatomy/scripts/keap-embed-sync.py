@@ -7,7 +7,7 @@ content_hash diff); this host-side job decides HOW — it calls the
 host-loopback Ollama (a container on gated_net cannot) and POSTs vectors
 back. Idempotent: no pending items -> no-op, exit 0.
 
-── FAN-OUT (S2, docs/plans/cortex-corpus-parallel.md §4) ─────────────────
+── FAN-OUT (S2, docs/archive/cortex-corpus-parallel.md §4) ─────────────────
 Two SEQUENTIAL passes, incumbent first, within one slot. Each pass is
 self-contained: its own /pending diff, its own Ollama calls, its own
 POST-back. The pending sets differ per store by construction, so there is

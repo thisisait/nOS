@@ -1,7 +1,7 @@
 export const meta = {
   name: 'cortex-s0-verify',
   description: 'S0 — re-measure the plan\'s facts and answer its three blocking research questions. READ-ONLY.',
-  whenToUse: 'First. Every later cortex stage assumes docs/plans/cortex-self-core.md §2 is still true; this is what proves it. Blocking: if a fact moved, stop rather than adapt.',
+  whenToUse: 'First. Every later cortex stage assumes docs/archive/cortex-self-core.md §2 is still true; this is what proves it. Blocking: if a fact moved, stop rather than adapt.',
   phases: [
     { title: 'Verify', detail: 're-measure §2 against the live estate' },
     { title: 'Research', detail: 'the three questions that gate S2 and S4' },
@@ -11,7 +11,7 @@ export const meta = {
 
 const NOS = '/Users/pazny/projects/nOS'
 const KEAP = '/Users/pazny/projects/knowledge-explorer-and-preserver'
-const PLAN = `${NOS}/docs/plans/cortex-self-core.md`
+const PLAN = `${NOS}/docs/archive/cortex-self-core.md`
 
 const RULES = `
 HARD CONSTRAINTS — this workflow is READ-ONLY. It measures; it changes nothing.

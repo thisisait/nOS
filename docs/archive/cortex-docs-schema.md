@@ -2,7 +2,7 @@
 
 Status: **design, decided.** Written 2026-07-26 on `feat/cortex-docs-knowledge`.
 This is the Design phase of `cortex-s1-docs-as-knowledge`; Build renders it.
-Read `docs/plans/cortex-self-core.md` §1–§3 and `docs/hidden_fees/04` first —
+Read `docs/archive/cortex-self-core.md` §1–§3 and `docs/hidden_fees/04` first —
 this plan assumes the boundary rule (nOS holds the runtime) and the recall rule
 (*confident wrongness outranks honest thinness*) as settled.
 

@@ -6,7 +6,7 @@ namespace: nos-core
 summary: "nOS grew a constitution layer — docs/doctrine/, terse canonical decisions a contributor or agent can't guess wrong. Three files landed this cycle: filesystem (one nos_data_root, three data classes, real isolation only where UIDs are), observability (telemetry is best-effort and may NEVER slow a run), and secrets (one resolved source, no self-referential templates). Each was written the hard way — a 258 MB /tmp fallback that crawled a release blank, an HMAC secret that desynced across two resolutions, 42 scattered per-service data dirs with zero tenant/user isolation. The constitution is what makes nOS replicable and shippable, not just runnable."
 tags: [doctrine, filesystem, observability, secrets, release, architecture]
 actors: [pazny, claude]
-related: [docs/doctrine/README.md, docs/doctrine/filesystem.md, docs/doctrine/observability.md, docs/doctrine/secrets.md, docs/plans/fs-doctrine.md]
+related: [docs/doctrine/README.md, docs/doctrine/filesystem.md, docs/doctrine/observability.md, docs/doctrine/secrets.md, docs/archive/fs-doctrine.md]
 ---
 ## Why a home lab needs a constitution
 

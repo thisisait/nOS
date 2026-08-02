@@ -7,7 +7,7 @@ summary: "179 commits in the eleven days after v0.9-beta, and one sentence descr
 tags: [release, cortex, genome, backup, security, observability, nos-face, filesystem]
 release: v0.10-beta
 actors: [pazny, claude]
-related: [RELEASE.md, docs/plans/nos-genome-and-organelles.md, docs/plans/one-filesystem-architecture.md, docs/plans/per-user-container-roadmap.md]
+related: [RELEASE.md, docs/archive/nos-genome-and-organelles.md, docs/archive/one-filesystem-architecture.md, docs/archive/per-user-container-roadmap.md]
 ---
 
 `v0.9-beta` gave nOS a face and a self-model. `v0.10-beta` asks a less

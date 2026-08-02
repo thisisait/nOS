@@ -4,7 +4,7 @@
 # Was tasks/uninstall.yml step 2b. Reached only when nos_remove_source
 # (remove=all) AND confirmed (the run-mode dry-run gate ends the play otherwise).
 # GOV NOTE: removes wing.db (tamper-evident audit chain) — export first under a
-# gov/compliance profile. See docs/plans/blank-uninstall-managed-resources.md.
+# gov/compliance profile. See docs/archive/blank-uninstall-managed-resources.md.
 # ==============================================================================
 
 - name: "[Remove:source] Final interactive confirmation"

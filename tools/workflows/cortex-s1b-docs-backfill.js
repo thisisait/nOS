@@ -12,8 +12,8 @@ export const meta = {
 }
 
 const NOS = '/Users/pazny/projects/nOS'
-const PLAN = NOS + '/docs/plans/cortex-self-core.md'
-const SCHEMA = NOS + '/docs/plans/cortex-docs-schema.md'
+const PLAN = NOS + '/docs/archive/cortex-self-core.md'
+const SCHEMA = NOS + '/docs/archive/cortex-docs-schema.md'
 const BRANCH = 'feat/cortex-docs-knowledge'
 
 const RULES = [
@@ -30,10 +30,10 @@ const RULES = [
   '- If you cannot verify a fact from source, OMIT it or mark it TODO — never guess a value and present it as real.',
 ].join('\n')
 
-// The schema contract the generator parses (docs/plans/cortex-docs-schema.md +
+// The schema contract the generator parses (docs/archive/cortex-docs-schema.md +
 // files/anatomy/scripts/keap_docs_gen.py). Passed to every author so the docs ingest.
 const CONTRACT = [
-  'INGESTION CONTRACT (docs/plans/cortex-docs-schema.md; parsed by files/anatomy/scripts/keap_docs_gen.py):',
+  'INGESTION CONTRACT (docs/archive/cortex-docs-schema.md; parsed by files/anatomy/scripts/keap_docs_gen.py):',
   '- Only three filenames ingest: README.md, AGENTS.md, SKILLS.md. Author exactly these under docs/systems/<svc>/.',
   '- Optional leading frontmatter (----fenced flat scalars) with type: skill|hint|note|snippet sets the file default; absent ⇒ note.',
   '- Block level, per heading section, priority Trigger > When/If > fenced-code > file-default:',
@@ -80,7 +80,7 @@ phase('Recheck')
 await agent([RULES, '',
   'Confirm the ground this stage stands on before any authoring:',
   '- You are on ' + BRANCH + ' and ' + SCHEMA + ' exists (S1 Design). Read it.',
-  '- Read ' + NOS + '/docs/archive/cortex-s0-report.md and ' + NOS + '/docs/plans/cortex-s1-report.md (or the S1 workflow result) so you inherit S1 rather than re-derive it.',
+  '- Read ' + NOS + '/docs/archive/cortex-s0-report.md and ' + NOS + '/docs/idea/cortex-s1-report.md (or the S1 workflow result) so you inherit S1 rather than re-derive it.',
   '- Regenerate the TRUE missed-by-name set: run files/anatomy/scripts/keap_docs_gen.py against state/manifest.yml (against a temp/throwaway store or its dry survey mode — do NOT disturb a running organ) and report services_covered / services_missed BY NAME. The plan says 22/62 covered.',
   '- For the six names that did not resolve to a manifest row earlier (code-server, iiab-terminal, mcp-gateway, offline-maps, qgis-server, smtp-stalwart): find their REAL manifest id (id-form may differ, e.g. mcpo, stalwart) OR confirm they are non-docker host organs with no manifest node. State, per name, whether a docs/systems tree will actually ingest, so Author does not write orphans.',
   'Report the corrected group list. If the branch or schema is absent, STOP.',

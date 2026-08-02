@@ -1,6 +1,6 @@
 # nOS-face Doctrine
 
-> Canonical decisions for the nOS face (the web-desktop shell). Detail: `docs/plans/nos-face.md`
+> Canonical decisions for the nOS face (the web-desktop shell). Detail: `docs/archive/nos-face.md`
 > + `docs/archive/nos-face-shell-v2.md`. Companion: `face-app-tiers.md`, `filesystem.md`.
 
 **Vendored, not forked.** The shell source lives IN-REPO at `files/anatomy/face/` (2026-07-18, v0.2),

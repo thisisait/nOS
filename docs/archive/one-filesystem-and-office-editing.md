@@ -273,7 +273,7 @@ An `office-bridge-base` plugin declares:
 Asked the same day, so recorded here rather than lost.
 
 **Not all of them, and the plan says so on purpose.**
-`docs/plans/cortex-s3-s4-workflow-set.md` §0 states it plainly: *"The v0.10-beta
+`docs/archive/cortex-s3-s4-workflow-set.md` §0 states it plainly: *"The v0.10-beta
 release does not require S3 or S4."*
 
 - **S0 — Verify:** DONE 2026-07-26 (`cortex-s0-report.md`), verdict

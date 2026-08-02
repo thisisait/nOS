@@ -4,7 +4,7 @@
  * structural (ontology-free) validation phase.
  *
  * Authorities: docs/specs/cortex-validate.md (this repo, frozen for
- * implementation) and nOS docs/plans/nos-cortex-lang.md §3 (the EBNF).
+ * implementation) and nOS docs/archive/nos-cortex-lang.md §3 (the EBNF).
  *
  * NO database, NO express, NO I/O — everything here is a pure function of the
  * source string plus the frozen registry in ./cortex-opcodes. Operand

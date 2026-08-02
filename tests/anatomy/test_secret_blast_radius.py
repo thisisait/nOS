@@ -43,7 +43,7 @@ TWO MISTAKES THIS FILE MADE, KEPT AS INSTRUCTIONS:
    That test asserts on the DECLARATION on purpose; both forms were verified by
    putting the derivation back and watching it go red.
 
-Plan: docs/plans/secret-blast-radius.md
+Plan: docs/archive/secret-blast-radius.md
 
 The ceilings below are RATCHETS, not targets. They record today's reality so the
 number cannot silently grow, and each phase of the plan lowers them. The end
@@ -130,7 +130,7 @@ def test_blast_radius_does_not_grow():
     assert len(names) <= BLAST_RADIUS_CEILING, (
         f"RUNTIME blast radius GREW to {len(names)} (ceiling {BLAST_RADIUS_CEILING}). "
         f"A new credential was minted by concatenating {MASTER}. Derive it "
-        f"instead — see docs/plans/secret-blast-radius.md P1.\n  "
+        f"instead — see docs/archive/secret-blast-radius.md P1.\n  "
         + "\n  ".join(where)
     )
 
@@ -191,7 +191,7 @@ def test_the_backup_contains_the_secrets_file_it_is_keyed_against():
         "backup_nos_state changed while backup_encryption_passphrase is STILL "
         "derived from the master — if this was meant to break the chain, it "
         "broke the wrong link: the key is the problem, not the payload. "
-        "See docs/plans/secret-blast-radius.md P2."
+        "See docs/archive/secret-blast-radius.md P2."
     )
     assert "_pw_restic" in config or "restic_password" in config, (
         "restic_password vanished from default.config.yml — if the off-site key "

@@ -8,7 +8,7 @@ Ansible role yet (step 9), **nothing deployed**.
 
 Cortex is the nOS reasoning organ — the fourth brain beside Bone (signals), Wing
 (observes) and Pulse (keeps time). It is a **verbatim port** of KEAP v1.27.0's
-`cortex-*` modules. See `docs/plans/nos-cortex-organ-design.md` at the repo root
+`cortex-*` modules. See `docs/archive/nos-cortex-organ-design.md` at the repo root
 for the full design and the 13-step build sequence.
 
 ## The one rule: PORT, NOT REWRITE
@@ -403,7 +403,7 @@ same.
 
 ## Two design-doc intents that are dead
 
-Both are written as live intent in `docs/plans/nos-cortex-organ-design.md` §3/§7 and
+Both are written as live intent in `docs/archive/nos-cortex-organ-design.md` §3/§7 and
 both were overturned by KEAP `docs/specs/cortex-full-scope-decision.md`
 ("Two corrections", vendored here):
 

@@ -1,6 +1,6 @@
 # Cortex S0 — Verification report
 
-Stage: **S0 (Verify, blocking)** for `docs/plans/cortex-self-core.md`.
+Stage: **S0 (Verify, blocking)** for `docs/archive/cortex-self-core.md`.
 Run: 2026-07-26. Mode: **read-only** — nothing in either repo was changed; no
 deploy, no converge, no container writes. Every number below carries the command
 that produced it. Where a thing could not be measured, it says so.
@@ -240,7 +240,7 @@ for `neighbors` or `taxonomy-metadata`.
 
 ---
 
-## AMENDMENTS — proposed edits to `docs/plans/cortex-self-core.md`
+## AMENDMENTS — proposed edits to `docs/archive/cortex-self-core.md`
 
 Each is a proposal only; the plan was not edited. Marked **[blocker]** /
 **[amendment]** / **[note]**.

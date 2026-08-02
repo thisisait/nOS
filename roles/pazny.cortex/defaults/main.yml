@@ -50,7 +50,7 @@ cortex_selfmodel_enabled: true
 cortex_node_bin: ""
 
 # ==============================================================================
-# S2 — the corpus mirror (docs/plans/cortex-corpus-parallel.md)
+# S2 — the corpus mirror (docs/archive/cortex-corpus-parallel.md)
 #
 # The organ reads the SAME host trees KEAP's compose file stacks at /user-files,
 # but as a HOST daemon: no bind mount, no container. Two roots, ordered, each

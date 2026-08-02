@@ -1,6 +1,6 @@
 # Filesystem Doctrine
 
-> Canonical decisions. Detail + phasing: [`docs/plans/fs-doctrine.md`](../plans/fs-doctrine.md).
+> Canonical decisions. Detail + phasing: [`docs/archive/fs-doctrine.md`](../archive/fs-doctrine.md).
 
 **One root.** All persistent data lives under a single absolute `nos_data_root`
 (default `~/nos`, works out-of-the-box; point it at an SSD by setting one var). `~/.nos/`
@@ -36,7 +36,7 @@ sets that one var, not 47 per-service paths.
    how much it looks like a file manager — the class-3 document producer feeding KEAP must
    be a real-file service (Nextcloud). This rule was established by the 2026-07-18 Puter
    investigation and outlived the service: Puter was removed 2026-07-20. See
-   `docs/archive/puter-and-document-flow.md` + `docs/plans/nos-face.md`.
+   `docs/archive/puter-and-document-flow.md` + `docs/archive/nos-face.md`.
 
 **Isolation is real only on Linux.** Per-user 0700 needs distinct UIDs. macOS runs every
 container as one user → macOS gets *structure*, not per-user isolation; macOS multi-tenant =

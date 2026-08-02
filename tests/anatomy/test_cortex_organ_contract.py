@@ -118,7 +118,7 @@ def test_plugin_validates_and_stays_loopback_pure():
 
     # The pulse half of this gate used to read "no pulse job before C2 (no embed
     # surface exists)". That premise was spent by S2
-    # (docs/plans/cortex-corpus-parallel.md): the daemon now serves
+    # (docs/archive/cortex-corpus-parallel.md): the daemon now serves
     # /agent/v1/embeddings{,/pending} and /ingest/v1/capture. Rather than delete
     # the assertion, it is narrowed to what still has to be true — because the
     # thing worth preventing was never "a job", it was a job on this plugin

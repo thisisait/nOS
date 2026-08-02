@@ -118,7 +118,7 @@
     (_cortex_materialise.stdout is search('self-model: [1-9][0-9]* domain'))
   notify: Restart cortex
 
-# ── S2: the corpus mirror seam (docs/plans/cortex-corpus-parallel.md) ────────
+# ── S2: the corpus mirror seam (docs/archive/cortex-corpus-parallel.md) ────────
 # Everything here runs BEFORE the plist is rendered and the daemon bootstrapped,
 # because the daemon runs an fs-sync pass at BOOT: a sentinel written afterwards
 # would make the first pass of every fresh converge a refusal.

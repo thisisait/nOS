@@ -15,7 +15,7 @@
 # table is created only when the loopback API reports it absent, and each system
 # row is POSTed only when its slug is not already present. Gated on install_keap;
 # tolerant of the /agent/v1/tables route not being live yet (an open item in
-# docs/plans/keap-datatables-apps-systems.md) — a 404 leaves the converge green
+# docs/archive/keap-datatables-apps-systems.md) — a 404 leaves the converge green
 # and the face BFF falls back to the vendored defaults.
 #
 # Talks to the loopback KEAP API (127.0.0.1:keap_port) with the RW agent token,

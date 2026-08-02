@@ -10,7 +10,7 @@
  *
  * ── Two things this store is NOT ────────────────────────────────────────────
  *
- * Both are written as live intent in `docs/plans/nos-cortex-organ-design.md` and
+ * Both are written as live intent in `docs/archive/nos-cortex-organ-design.md` and
  * both were overturned by `docs/specs/cortex-full-scope-decision.md`
  * ("Two corrections"):
  *

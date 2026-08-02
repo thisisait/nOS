@@ -1,6 +1,6 @@
 # S3 → S4 as a workflow set — the steps to the first "second brain" release
 
-Authored 2026-07-28. Companion to `docs/plans/cortex-self-core.md`, which holds the
+Authored 2026-07-28. Companion to `docs/archive/cortex-self-core.md`, which holds the
 doctrine; this holds the **order of operations**. Where the two disagree, the plan
 wins and this file is stale.
 
@@ -155,7 +155,7 @@ eleven column kinds. Two of them already wire a row into the knowledge graph —
 that points at another row**. So a table can be anchored into the universe but
 cannot be joined to a sibling table: an invoice cannot reference its customer.
 
-Design: `docs/plans/datatables-relations.md`. Summary of the decision it argues:
+Design: `docs/archive/datatables-relations.md`. Summary of the decision it argues:
 
 - **Add a `rowRef` column kind** — the structural join. Declared in the column
   def with its target table, validated on write, rendered as a picker.

@@ -20,7 +20,7 @@
 # 20 000-file cap, EACCES truncation, a second tenant, bodies over BODY_CAP,
 # non-ASCII paths). Those are a DELIBERATE streak restart, not a side effect —
 # run them after the three-night clock finishes. See
-# docs/plans/cortex-s3-s4-workflow-set.md §1.
+# docs/archive/cortex-s3-s4-workflow-set.md §1.
 #
 # WHY YOU RUN IT, NOT AN AGENT
 # ----------------------------

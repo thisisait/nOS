@@ -54,7 +54,7 @@ service id and stack (63 + 9) through the KEAP charset and asserts a valid slug,
 asserts a leading-digit name (`2fauth`, `3d-printer`) raises loudly, and pins the
 pattern + diacritic fold. The silent-drop is now a red CI run.
 
-The Cortex docs schema (`docs/plans/cortex-docs-schema.md` §5) routes every doc
+The Cortex docs schema (`docs/archive/cortex-docs-schema.md` §5) routes every doc
 node id through the same `slug_or_die`, so this gate covers docs too — there is
 no second charset implementation to drift. Re-opens only if a new id-minting path
 bypasses `slug_or_die`; the design forbids that (call the function, do not

@@ -1,6 +1,6 @@
 """keap-consolidate fan-out — the state ledger is where the real bug lives.
 
-S2 (`docs/plans/cortex-corpus-parallel.md` §2.3/§2.4) turns the consolidator
+S2 (`docs/archive/cortex-corpus-parallel.md` §2.3/§2.4) turns the consolidator
 into a sweep-once/feed-N job. Almost all of that is mechanical. ONE part is
 not, and it is a silent data-loss bug if it is got wrong:
 

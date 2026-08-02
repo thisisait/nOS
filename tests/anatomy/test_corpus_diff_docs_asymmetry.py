@@ -4,7 +4,7 @@ WHY. S1 made the organ the estate's self-core: `keap_docs_gen.py` turns every
 `docs/systems/<svc>/{README,AGENTS,SKILLS}.md` into typed nodes hanging off the
 service node they describe. KEAP holds no such nodes and is not supposed to —
 publishable reference data goes to KEAP, the estate's own material stays in nOS
-(`docs/plans/cortex-self-core.md` §3).
+(`docs/archive/cortex-self-core.md` §3).
 
 So this population is permanently organ-only and GROWS every time anyone
 documents a service. Measured on the live estate 2026-07-27: 1088 doc nodes

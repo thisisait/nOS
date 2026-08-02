@@ -1,7 +1,7 @@
 # Agentic upgrade → migration → coexistence — Phase B implementation spec
 
 > **Status:** Phase A design COMPLETE (2026-06-15, multi-agent design workflow `wijo2jzqc`: 5 grounded codebase maps → 4 parallel designs → 1 synthesis). This is the buildable **Phase B** spec.
-> **Vision + the "agents drive, operator supervises" principle:** [agentic-upgrade-migration-coexistence.md](../plans/agentic-upgrade-migration-coexistence.md).
+> **Vision + the "agents drive, operator supervises" principle:** [agentic-upgrade-migration-coexistence.md](../archive/agentic-upgrade-migration-coexistence.md).
 >
 > Produced by 10 subagents that READ the live codebase. The synthesis corrected the proposals against actual code paths (the non-existent `run_engine` → the real `nos_migrate action=apply`; the upgrade-architect profile contradiction; ALTER-sweep vs `CREATE TABLE` discipline; the already-present `nos:coexistence:write` scope). **Every choice EXTENDS live machinery — no rewrite.**
 
@@ -9,7 +9,7 @@
 
 # Phase B Implementation Spec — Agent-Driven recipe → migration → coexistence
 
-**Status:** Phase A synthesis, operator-confirmed vision (`docs/plans/agentic-upgrade-migration-coexistence.md`). Resolves the four parallel proposals into one buildable spec. Every choice EXTENDS live machinery — no rewrite. Grounded against the actual codebase (verified: `nos_coexistence.py` action dispatch, `nos_migrate.py` action enum, `init-db.php` ALTER sweep at L344, `recipe-pr.sh` forge plumbing, `agent.schema.yaml`, `authentik_agent_scopes` already carrying `nos:coexistence:write`, the architect's flat-vs-dir profile contradiction).
+**Status:** Phase A synthesis, operator-confirmed vision (`docs/archive/agentic-upgrade-migration-coexistence.md`). Resolves the four parallel proposals into one buildable spec. Every choice EXTENDS live machinery — no rewrite. Grounded against the actual codebase (verified: `nos_coexistence.py` action dispatch, `nos_migrate.py` action enum, `init-db.php` ALTER sweep at L344, `recipe-pr.sh` forge plumbing, `agent.schema.yaml`, `authentik_agent_scopes` already carrying `nos:coexistence:write`, the architect's flat-vs-dir profile contradiction).
 
 ---
 

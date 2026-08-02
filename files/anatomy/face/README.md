@@ -2,7 +2,7 @@
 
 The "not-quite-OS" web-desktop, **vendored into the nOS monorepo** (2026-07-18, v0.2)
 alongside wing/bone/pulse. `roles/pazny.face` builds this directory with `docker compose`.
-Design: [`docs/plans/nos-face.md`](../../../docs/plans/nos-face.md),
+Design: [`docs/archive/nos-face.md`](../../../docs/archive/nos-face.md),
 [`docs/archive/nos-face-shell-v2.md`](../../../docs/archive/nos-face-shell-v2.md); hard doctrine:
 [`docs/doctrine/face.md`](../../../docs/doctrine/face.md) (Wave-2 G6).
 

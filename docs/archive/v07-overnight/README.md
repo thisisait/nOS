@@ -18,7 +18,7 @@ Anything from this batch that still matters was folded into `docs/idea/` during
 the 2026-08-02 consolidation. Specifically worth knowing:
 
 - **`v07-darwin27-*` (16 docs)** — a macOS 27 "Golden Gate" readiness sweep.
-  The live successor is `docs/plans/macos27-golden-gate-readiness.md`; the
+  The live successor is `docs/archive/macos27-golden-gate-readiness.md`; the
   ansible-core 2.24 item survives in CLAUDE.md's tech-debt list.
 - **`v07-sec-*` (6 docs)** — superseded by the live remediation queue,
   `docs/llm/security/remediation-queue.json`, which is scanner-maintained and

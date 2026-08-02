@@ -12,7 +12,7 @@ export const meta = {
 
 const NOS = '/Users/pazny/projects/nOS'
 const KEAP = '/Users/pazny/projects/knowledge-explorer-and-preserver'
-const PLAN = `${NOS}/docs/plans/cortex-self-core.md`
+const PLAN = `${NOS}/docs/archive/cortex-self-core.md`
 const FEE = `${NOS}/docs/hidden_fees/09-untuned-vector-index.md`
 const BRANCH = 'feat/cortex-index'
 
@@ -123,7 +123,7 @@ Baseline: ${baseline.slice(0, 1500)}
 Variants: ${JSON.stringify(measured.filter(Boolean), null, 1)}
 Scale: ${scale.slice(0, 3000)}
 
-Write ONE recommendation to ${NOS}/docs/plans/cortex-index-decision.md and update ${FEE} to point at
+Write ONE recommendation to ${NOS}/docs/idea/cortex-index-decision.md and update ${FEE} to point at
 it. Required content:
 
 - The chosen parameters, and for EACH knob separately: is this a decision (settled, applies at any

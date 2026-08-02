@@ -56,7 +56,7 @@ import { canonicalUid } from './uid';
 // ── nOS S2 DIFF 1/6 — the roots list + the mount sentinel ───────────────────
 // The ONLY import this file does not share with KEAP's copy. Everything below
 // marked `nOS S2 DIFF` is the upstreamable change described in
-// docs/plans/cortex-corpus-parallel.md §1.4/§1.7 and in server/cortex-fs.ts;
+// docs/archive/cortex-corpus-parallel.md §1.4/§1.7 and in server/cortex-fs.ts;
 // every other line of this module is the ported pass, verbatim.
 import { assertMountSentinel, listUserRoots, type SentinelState, type UserRoot } from './cortex-fs';
 

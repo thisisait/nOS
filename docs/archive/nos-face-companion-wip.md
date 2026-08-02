@@ -7,7 +7,7 @@
 > longer true.
 
 Paused mid-flight to pivot to the blank/uninstall drift epic
-([`blank-uninstall-managed-resources.md`](../plans/blank-uninstall-managed-resources.md)).
+([`blank-uninstall-managed-resources.md`](../archive/blank-uninstall-managed-resources.md)).
 This captures exactly what shipped so the thread resumes cleanly.
 
 ## Shipped this arc (built + gated + LIVE-verified, but **UNCOMMITTED**)

@@ -1,7 +1,7 @@
 # nOS genome — organ boundaries, organelles, and a denser corpus
 
 Authored 2026-07-30, out of the morning review of the 07-30 pulse night. Companion to
-`docs/plans/cortex-self-core.md` (doctrine) and `docs/plans/cortex-s3-s4-workflow-set.md`
+`docs/archive/cortex-self-core.md` (doctrine) and `docs/archive/cortex-s3-s4-workflow-set.md`
 (the v0.10 release lane). Where those disagree with this file, they win and this is
 stale.
 

@@ -969,7 +969,7 @@ def adjudicate_taxonomy(keap: Side, organ: Side, canonical: set[str] | None) -> 
     # docs/systems/<svc>/{README,AGENTS,SKILLS}.md into typed nodes hanging off
     # the service they describe. KEAP has no such pass and is not supposed to —
     # it holds publishable reference data, the organ holds the estate's own
-    # documentation (docs/plans/cortex-self-core.md §3, the publishability rule).
+    # documentation (docs/archive/cortex-self-core.md §3, the publishability rule).
     #
     # So this population is PERMANENTLY organ-only and grows every time anyone
     # documents a service. Left in the diff it makes `taxonomy` false forever,

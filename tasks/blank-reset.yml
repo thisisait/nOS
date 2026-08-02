@@ -14,7 +14,7 @@
 #   - USER SOURCE FILES — ~/nos/tenants/<slug>/users/** (the class-3 Bone VFS
 #     tree). blank = "reset DERIVED state, PRESERVE SOURCE" (operator decision
 #     2026-07-19). Removing user files is `uninstall`, a separate manifest-driven
-#     path — NOT blank. See docs/plans/blank-uninstall-managed-resources.md.
+#     path — NOT blank. See docs/archive/blank-uninstall-managed-resources.md.
 #     (Derived KEAP /data IS wiped above so KEAP re-syncs from the kept source.)
 #   - ~/media/ (movies, series, music) - user data
 #   - ~/calibre/ (library) - user data

@@ -35,7 +35,7 @@ correctly and every gate was green; nothing measured whether the result was
 
 ## What closes it
 
-**S2** in `docs/plans/cortex-self-core.md`: `knowledge_objects`, fs-sync,
+**S2** in `docs/archive/cortex-self-core.md`: `knowledge_objects`, fs-sync,
 captures, embeddings, hybrid search, `/graph`.
 
 Restaged 2026-07-26. This entry originally called it "the real migration, a store

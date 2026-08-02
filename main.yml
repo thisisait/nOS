@@ -1264,7 +1264,7 @@
           archive containing ~/.nos/secrets.yml. Set a strong prefix (>= 12
           chars, not 'changeme') in credentials.yml, or let a blank run mint one.
           Throwaway sandbox only: -e allow_weak_prefix=true.
-          See docs/plans/secret-blast-radius.md.
+          See docs/archive/secret-blast-radius.md.
         quiet: true
       when:
         - not (allow_weak_prefix | default(false) | bool)

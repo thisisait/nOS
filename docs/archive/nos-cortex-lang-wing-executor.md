@@ -23,7 +23,7 @@
 
 ---
 
-Below is the deliverable spec, ready to land as `docs/plans/nos-cortex-lang-wing-executor.md`.
+Below is the deliverable spec, ready to land as `docs/archive/nos-cortex-lang-wing-executor.md`.
 
 ---
 
@@ -459,4 +459,4 @@ Write verbs: `MUTATING_HANDLERS` + `WriteHandlerInterface`, `CortexConfirmGate` 
 ---
 
 ## 9. File anchors verified across the three source maps
-`app/Presenters/Api/BaseApiPresenter.php:68` (`getActorId`, anti-spoof), `app/Model/TokenRepository.php:48` (`create`), `bin/init-db.php:286` (`api_tokens`, no scope column today), `app/Core/RouterFactory.php` (`$api` block; parameterized poll at ~236), `app/Presenters/Api/PulsePresenter.php:267-317` (allowlist discipline to copy), `app/AgentKit/OperatorTrigger.php:64,176` (spawn + `generateUuidV4`, P3), `app/AgentKit/Telemetry/AuditEmitter.php:31,44-45` (`emit`, `actor_action_id` lineage), `app/AgentKit/Tools/McpWingTool.php` (loopback-bearer template), `app/Model/BoneClient.php` (host-bridge template), `app/Model/QdrantClient.php`, `app/config/common.neon:20-22` (Api mapping), `common.neon:137-153` (ToolRegistry factory), `files/anatomy/skills/contracts/wing.db-schema.sql:131`, `state/manifest.yml` + `apps/*.yml` (`svc:` source), `docs/plans/nos-cortex-lang.md`.
+`app/Presenters/Api/BaseApiPresenter.php:68` (`getActorId`, anti-spoof), `app/Model/TokenRepository.php:48` (`create`), `bin/init-db.php:286` (`api_tokens`, no scope column today), `app/Core/RouterFactory.php` (`$api` block; parameterized poll at ~236), `app/Presenters/Api/PulsePresenter.php:267-317` (allowlist discipline to copy), `app/AgentKit/OperatorTrigger.php:64,176` (spawn + `generateUuidV4`, P3), `app/AgentKit/Telemetry/AuditEmitter.php:31,44-45` (`emit`, `actor_action_id` lineage), `app/AgentKit/Tools/McpWingTool.php` (loopback-bearer template), `app/Model/BoneClient.php` (host-bridge template), `app/Model/QdrantClient.php`, `app/config/common.neon:20-22` (Api mapping), `common.neon:137-153` (ToolRegistry factory), `files/anatomy/skills/contracts/wing.db-schema.sql:131`, `state/manifest.yml` + `apps/*.yml` (`svc:` source), `docs/archive/nos-cortex-lang.md`.

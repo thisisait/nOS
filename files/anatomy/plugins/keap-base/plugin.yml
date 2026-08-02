@@ -128,7 +128,7 @@ pulse:
         # is installed, and the job then behaves exactly as it did. Distinct
         # env NAMES holding distinct SECRETS is deliberate — one name meaning
         # two secrets on one host is how a write token reaches the wrong
-        # daemon (docs/plans/cortex-corpus-parallel.md §2.1).
+        # daemon (docs/archive/cortex-corpus-parallel.md §2.1).
         CORTEX_API_URL: "{{ cortex_fanout_url }}"
         CORTEX_AGENT_TOKEN_RW: "{{ cortex_rw_token }}"
 

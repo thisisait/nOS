@@ -1,7 +1,7 @@
 """KEAP docs-as-knowledge generator — contract gate (offline, fast).
 
 Pins `files/anatomy/scripts/keap_docs_gen.py`, the companion that walks
-`docs/systems/` prose into typed KEAP nodes (`docs/plans/cortex-docs-schema.md`).
+`docs/systems/` prose into typed KEAP nodes (`docs/archive/cortex-docs-schema.md`).
 It asserts the six decisions where they are checkable in the producer:
 
   §1/§2  the four kinds are DECLARED from block signals, not inferred from topic

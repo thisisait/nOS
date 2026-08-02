@@ -22,7 +22,7 @@ is at **v0.9-beta, four days old**, `dev` is **117 commits ahead** and a **stric
 descendant** (`git rev-list --count dev..origin/master` → `0`), and the executing subset of that
 diff is **49 files**, not 514. That is an afternoon of review plus a CI cycle. The single thing most
 likely to slip v0.10 is the operator's own release condition: *"the cortex organ is genuinely
-finished."* Measured against the organ's own roadmap in `docs/plans/cortex-self-core.md`, **S0 is
+finished."* Measured against the organ's own roadmap in `docs/archive/cortex-self-core.md`, **S0 is
 done, S1 and S2 are built and merged into `dev`, S2's exit criterion is not met, and S3–S6 are not
 started — S4, S5 and S6 do not even have workflow definitions written**, deliberately, because their
 shape depends on S3's findings. S5 is "KEAP's server and UI are deleted and nOS serves the explorer
@@ -113,7 +113,7 @@ against KEAP's 2403 — S3's gate would measure the taxonomy delta and attribute
 *This is the step that makes interim KEAP tags valuable rather than noise (§5).*
 
 **Step 6 — the organ is "finished" under an explicitly written definition.**
-TRUE at end: `docs/plans/cortex-self-core.md` states which of S3/S4/S5/S6 v0.10 requires and which
+TRUE at end: `docs/archive/cortex-self-core.md` states which of S3/S4/S5/S6 v0.10 requires and which
 ship as debt, and the stated scope is met. **This is the release-date decision.** Cheapest honest
 line: v0.10 requires S3 (index decided on the gate) and S4 (readers/writers repoint at the organ),
 and discloses S5/S6 as the named forward arc. S5 deletes a running service's server and UI; S6 needs
@@ -125,7 +125,7 @@ The language itself is **built and tested**: `files/anatomy/cortex/server/cortex
 lines with 855 lines of tests and **84 test cases**
 (`grep -c "it(\|test(" server/cortex-lang.test.ts` → `84`), zero TODO/FIXME/stub markers
 (awk scan, binary-safe per the documented `grep` trap → `count=0`), and the ledger records it as
-*"landed through KEAP v1.27.0."* **Its dispatch half is not built.** `docs/plans/cortex-specs-ledger.md`
+*"landed through KEAP v1.27.0."* **Its dispatch half is not built.** `docs/archive/cortex-specs-ledger.md`
 marks `nos-cortex-lang-wing-executor.md` as **"forward design, not built"**, and the Wing tree
 confirms it: `grep -rl cortex files/anatomy/wing/app/` returns exactly one file,
 `app/AgentKit/Tools/McpKeapTool.php` — no executor, no `Cortex*` class. So "cortex-lang is finished"
@@ -408,8 +408,8 @@ a plainer statement than a beta does.** Suggested section: `### What v0.10 does 
 
 | # | Debt | The line RELEASE.md owes |
 |---|---|---|
-| 1 | **Cortex S3–S6 unstarted** | *"The cortex organ ships at S2: its corpus is built in parallel with KEAP's and diffed nightly. The tuned index (S3), consumer cutover (S4), KEAP's reduction to data (S5) and trained weights (S6) are the named forward arc, tracked in `docs/plans/cortex-self-core.md`."* |
-| 2 | **cortex-lang has no executor** | *"The cortex language is implemented and tested (84 cases); its Wing dispatch half is forward design, not built — `docs/plans/nos-cortex-lang-wing-executor.md`."* |
+| 1 | **Cortex S3–S6 unstarted** | *"The cortex organ ships at S2: its corpus is built in parallel with KEAP's and diffed nightly. The tuned index (S3), consumer cutover (S4), KEAP's reduction to data (S5) and trained weights (S6) are the named forward arc, tracked in `docs/archive/cortex-self-core.md`."* |
+| 2 | **cortex-lang has no executor** | *"The cortex language is implemented and tested (84 cases); its Wing dispatch half is forward design, not built — `docs/archive/nos-cortex-lang-wing-executor.md`."* |
 | 3 | **S2 exit not met at cut** | *"The organ/KEAP corpus diff agreed exactly on its first run (167 ids, 0 symmetric difference); the three-consecutive-night criterion had accumulated N of 3 nights at cut time."* — fill N honestly; if it is 3, say so and delete the caveat. |
 | 4 | **Empty stack reads as ready** (§3.1, if unfixed) | *"A stack whose bring-up fails with zero containers is still reported ready by the STRICT health probe (`docs/hidden_fees/08`). A failed observability bring-up can therefore complete a run with `failed=0`."* — **this one is a poor fit for a non-beta.** Prefer fixing it. |
 | 5 | **Integration wet-test red / non-proving** | *"`Integration (ubuntu-24.04)` was RED at cut; its infra stack does not render on Linux (cause identified: duplicated enable-gates in `core-up.yml`). The Linux job does not currently prove a deploy."* |
@@ -441,7 +441,7 @@ interop probe against a moving taxonomy. Two constraints on it:
 2. **`hidden_fees/12` — "keap image tag is not a version" — is open** and is about exactly this
    surface. Worth reading before the next bump rather than after.
 
-**What v2 means later — and it is explicitly not urgent.** Per `docs/plans/cortex-specs-ledger.md`,
+**What v2 means later — and it is explicitly not urgent.** Per `docs/archive/cortex-specs-ledger.md`,
 KEAP v2 is the **S5** end-state: *"KEAP repo contains no runnable server; nOS serves the explorer
 natively; one implementation of onto1 remains."* KEAP's release train becomes **dataset versioning**,
 and its documentation becomes documentation *about the dataset* — taxonomy coverage, ontology
@@ -472,7 +472,7 @@ Starting points, so tomorrow's review starts warm. This review did **not** perfo
 4. **`docs/archive/cortex-s0-report.md`'s pending item resolved the wrong way** — `keap-features-sync`
    fired and returned exit 3 (§3.6). The report's "success pending the next daily fire" line is now
    answerable and the answer is no.
-5. **`docs/plans/cortex-self-core.md` S2** records "Nights of evidence: ZERO" — that number will have
+5. **`docs/archive/cortex-self-core.md` S2** records "Nights of evidence: ZERO" — that number will have
    moved by the review. Re-measure it from `pulse_runs`, do not trust the prose.
 6. **`docs/active-work.md` is exactly at its 150-line ceiling** (`wc -l` → `150`), enforced by
    `test_active_work_slim.py`. Any v0.10 addition needs a corresponding removal.

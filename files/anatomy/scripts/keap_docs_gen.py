@@ -6,7 +6,7 @@ Companion to `keap_selfmodel_gen.py`. That script emits the estate's SHAPE —
 PROSE — the READMEs, agent briefs and skill sheets under `docs/systems/` — as
 typed child nodes hanging off the very system nodes the self-model already
 placed. It does NOT invent a second tree; it augments the first (design decision
-§3, `docs/plans/cortex-docs-schema.md`).
+§3, `docs/archive/cortex-docs-schema.md`).
 
 WHY A SEPARATE FILE THAT MERGES INTO THE SELF-MODEL'S CANONICAL TREE
     `knowledge/ingest.mjs` owns a domain SUBTREE wipe-then-insert: ingesting a

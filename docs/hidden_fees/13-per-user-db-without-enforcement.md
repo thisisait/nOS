@@ -23,7 +23,7 @@ organisational and the token is the only real control, which is coherent.
 coexist — but the first person who is not supposed to read the other's data. At
 that moment every holder of one shared token is every user at once.
 
-It compounds with the cortex plan (`docs/plans/cortex-self-core.md` §6b), which
+It compounds with the cortex plan (`docs/archive/cortex-self-core.md` §6b), which
 adopts this same per-user-store pattern for the knowledge corpus. Per-user stores
 move the access decision **from a `WHERE` clause into a file path**: get a filter
 wrong and one row leaks; get a path wrong and a whole store does. The pattern is

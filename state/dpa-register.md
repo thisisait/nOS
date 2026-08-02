@@ -907,7 +907,7 @@ vocabulary, and reports the ontology/opcode/database drift axes on
 /health. Its store is materialised from the repository (spine + canonical
 tree + the generated nOS self-model).
 
-SINCE S2 (docs/plans/cortex-corpus-parallel.md) it ALSO mirrors the
+SINCE S2 (docs/archive/cortex-corpus-parallel.md) it ALSO mirrors the
 per-user filesystem tree — {{ nos_data_root }}/tenants/<slug>/users/<uid>/
 {documents,library,inbox} — as owner-scoped knowledge objects, and accepts
 consolidator datapoints on /ingest/v1/capture. The previous row said this

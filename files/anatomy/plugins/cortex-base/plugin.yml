@@ -3,14 +3,14 @@
 #
 # Cortex (the reasoning organ) is a native host Node daemon on loopback :8098 —
 # NOT a container, and unlike backrest it has NO route and NO Authentik
-# provider AT ALL: design §5 (docs/plans/nos-cortex-organ-design.md) makes pure
+# provider AT ALL: design §5 (docs/archive/nos-cortex-organ-design.md) makes pure
 # loopback the default, and the id sits in traefik_skip_ids. Its callers are
 # Wing's executor, host AgentKit and (later) Pulse — all on the host, all
 # presenting the scope-split bearer tokens the role provisions. A public
 # /agent route stays UNBUILT until a caller outside that set appears
 # (design §7 Q5).
 #
-# S2 UPDATE (docs/plans/cortex-corpus-parallel.md). The note that used to stand
+# S2 UPDATE (docs/archive/cortex-corpus-parallel.md). The note that used to stand
 # here — "NO pulse job, the C1 daemon exposes no embed surface to sync against"
 # — was correct and is now spent: the organ serves /agent/v1/embeddings{,/pending}
 # and /ingest/v1/capture, and keap-base's two feeders FAN OUT to it rather than
@@ -78,7 +78,7 @@ gdpr:
     /health. Its store is materialised from the repository (spine + canonical
     tree + the generated nOS self-model).
 
-    SINCE S2 (docs/plans/cortex-corpus-parallel.md) it ALSO mirrors the
+    SINCE S2 (docs/archive/cortex-corpus-parallel.md) it ALSO mirrors the
     per-user filesystem tree — {{ nos_data_root }}/tenants/<slug>/users/<uid>/
     {documents,library,inbox} — as owner-scoped knowledge objects, and accepts
     consolidator datapoints on /ingest/v1/capture. The previous row said this

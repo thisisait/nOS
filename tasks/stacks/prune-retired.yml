@@ -25,7 +25,7 @@
 #
 # A service that is merely DISABLED (install_* false) is NOT retired and is not
 # handled here — that is the wider managed-resource manifest still owed by
-# docs/plans/blank-uninstall-managed-resources.md.
+# docs/archive/blank-uninstall-managed-resources.md.
 # ==============================================================================
 
 - name: "[Stacks] Find compose overrides of retired services"

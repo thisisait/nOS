@@ -1,6 +1,6 @@
 /**
  * The Cortex organ's filesystem seam — LOCALLY AUTHORED (not a port).
- * S2 step 2 + step 3 (`docs/plans/cortex-corpus-parallel.md` §1.4, §1.7).
+ * S2 step 2 + step 3 (`docs/archive/cortex-corpus-parallel.md` §1.4, §1.7).
  *
  * Two things live here, and they are the only two things `server/fs-sync.ts`
  * needed that KEAP's copy does not have. Everything else in that file is the

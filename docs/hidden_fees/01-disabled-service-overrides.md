@@ -38,7 +38,7 @@ was never reported by anything.
 ## What closes it
 
 The managed-resource manifest in
-[`docs/plans/blank-uninstall-managed-resources.md`](../plans/blank-uninstall-managed-resources.md)
+[`docs/archive/blank-uninstall-managed-resources.md`](../archive/blank-uninstall-managed-resources.md)
 (P1.5): a declared inventory of what a service owns — override fragments, data
 dirs, routes, Authentik objects — so disable and remove both become
 *reconciliation* rather than "stop writing new files".

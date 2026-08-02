@@ -1,6 +1,6 @@
 # S2 — Corpus in parallel: the design
 
-Stage **S2** of `docs/plans/cortex-self-core.md` §6. Written 2026-07-26 on
+Stage **S2** of `docs/archive/cortex-self-core.md` §6. Written 2026-07-26 on
 `feat/cortex-corpus-parallel`. Design only — nothing was built, deployed or
 mutated; the live KEAP store was not touched, the user tree was read and never
 written.

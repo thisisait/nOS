@@ -3,7 +3,7 @@
 > Design + definitions, 2026-07-18. The catalog substrate for nOS-face and the
 > **first real test of the app-gen agent**. Table definitions (SoT in code):
 > `state/keap-tables/{apps,systems}.table.yml`. Companion: `docs/doctrine/face-app-tiers.md`
-> (the app tiers), `docs/plans/nos-face.md` (the shell).
+> (the app tiers), `docs/archive/nos-face.md` (the shell).
 
 ## Why KEAP DataTable
 

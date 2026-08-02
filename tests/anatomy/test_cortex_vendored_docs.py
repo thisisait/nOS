@@ -10,7 +10,7 @@ must be able to see that it IS a copy, and of what. Without the header the
 failure mode is someone editing the copy, believing they fixed the spec, and
 losing the change at the next re-vendor.
 
-The ledger (`docs/plans/cortex-specs-ledger.md`) claimed all eight carried a
+The ledger (`docs/archive/cortex-specs-ledger.md`) claimed all eight carried a
 header on 2026-07-25. Three did. This test is why that cannot happen again.
 """
 

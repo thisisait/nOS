@@ -7,7 +7,7 @@
  * (`tenants/<slug>/users/<uid>/…`) + user-state DB on that random uid therefore
  * ORPHANS all their data on every blank (the tree survives under the old uid;
  * the new uid sees an empty tree; KEAP's whole-tree mirror re-surfaces the
- * orphan). See docs/plans/blank-uninstall-managed-resources.md §2c.
+ * orphan). See docs/archive/blank-uninstall-managed-resources.md §2c.
  *
  * Fix: derive a STABLE uid from the username (then email local-part), which
  * forward-auth already provides and which survives re-provisioning. Pure + no

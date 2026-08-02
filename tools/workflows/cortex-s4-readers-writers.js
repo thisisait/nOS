@@ -12,8 +12,8 @@ export const meta = {
 
 const NOS = '/Users/pazny/projects/nOS'
 const KEAP = '/Users/pazny/projects/knowledge-explorer-and-preserver'
-const PLAN = NOS + '/docs/plans/cortex-self-core.md'
-const SET = NOS + '/docs/plans/cortex-s3-s4-workflow-set.md'
+const PLAN = NOS + '/docs/archive/cortex-self-core.md'
+const SET = NOS + '/docs/archive/cortex-s3-s4-workflow-set.md'
 const BRANCH = 'feat/cortex-s4'
 
 const RULES = [
@@ -148,7 +148,7 @@ const proof = await agent(RULES + '\n\n' +
   'Inventory: ' + JSON.stringify(inventory, null, 1).slice(0, 4000) + '\n' +
   'Gaps: ' + JSON.stringify(gaps, null, 1).slice(0, 3000) + '\n' +
   'Move results: ' + JSON.stringify(moved.filter(Boolean), null, 1).slice(0, 8000) + '\n\n' +
-  'Write the S4 outcome to ' + NOS + '/docs/plans/cortex-s4-outcome.md and amend ' + PLAN + ' S4.\n\n' +
+  'Write the S4 outcome to ' + NOS + '/docs/idea/cortex-s4-outcome.md and amend ' + PLAN + ' S4.\n\n' +
   'The plan states two exit criteria. Answer each with evidence, not with a summary:\n' +
   '  1. NO consumer reaches KEAP corpus. Prove it the hard way: a negative search across the estate for\n' +
   '     every call shape the inventory found, plus the KEAP UI routes, which this workflow does NOT move\n' +

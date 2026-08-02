@@ -5,7 +5,7 @@ NOT a fixture yet, and the reason is worth knowing: the L1 concept vocabulary
 has no concept that accepts `kind: date` (verified 2026-08-02 — none of the 36
 do), so a timeline table cannot live in state/keap-tables/ until
 `time.occurred_at` is added to KEAP + the vendored copy. See
-docs/plans/roadmap-table.md §2.
+docs/archive/roadmap-table.md §2.
 
 Until then THIS script is the reproducible path: idempotent on the table (it
 refuses to create a second one) and additive on rows.
@@ -56,7 +56,7 @@ row("v0-10-linux","Linux wet-test reaches ok=550","2026-08-02","shipped","platfo
 
 # ── SECURITY — the active epic ──────────────────────────────────────────────
 row("sec","Secrets — kill the blast radius","2026-08-02","active","security",
-    refs="docs/plans/secret-blast-radius.md", release="v0.11",
+    refs="docs/archive/secret-blast-radius.md", release="v0.11",
     body="One leaked string yielded 103 credentials. REM-144 leaked exactly that string. Operator priority: highest.")
 row("sec-p4","P4 — blast radius becomes a measured number","2026-08-02","shipped","security",parent="sec",
     refs="tests/anatomy/test_secret_blast_radius.py",
@@ -79,7 +79,7 @@ row("sec-rem","Open HIGHs — REM-152 n8n 17-GHSA wave","2026-08-02","queued","s
 
 # ── FILESYSTEM ─────────────────────────────────────────────────────────────
 row("fs","One filesystem","2026-08-01","active","filesystem",
-    refs="docs/plans/one-filesystem-architecture.md",
+    refs="docs/archive/one-filesystem-architecture.md",
     body="The estate can hold one document in three disjoint places. Measured, not built.")
 row("fs-s0","S-0 — one canonical identity","2026-08-01","active","filesystem",parent="fs",
     refs="tasks/stacks/authentik_service_post.yml",
@@ -87,12 +87,12 @@ row("fs-s0","S-0 — one canonical identity","2026-08-01","active","filesystem",
 row("fs-s1","S-1 — Nextcloud mounts the VFS tree RW","2026-08-05","queued","filesystem",parent="fs",
     refs="one-filesystem-architecture.md S-1", body="The testable thing: open a .docx in ONLYOFFICE, save, verify the bytes changed in the VFS tree.")
 row("fs-peruser","Per-user containers","2026-08-10","queued","filesystem",parent="fs",
-    refs="docs/plans/per-user-container-roadmap.md",
+    refs="docs/archive/per-user-container-roadmap.md",
     body="Measured: apple/container start 2.1s vs Docker 2.4s; per-user prices CONCURRENCY, not headcount. Blocker: macOS Local Network permission cannot be granted from a playbook.")
 
 # ── CORTEX ─────────────────────────────────────────────────────────────────
 row("cortex","Cortex integration — the next major arc","2026-08-03","next","cortex",
-    refs="docs/plans/nos-cortex-lang.md · cortex-self-core.md", body="Operator's stated next direction after the v0.10 release.")
+    refs="docs/archive/nos-cortex-lang.md · cortex-self-core.md", body="Operator's stated next direction after the v0.10 release.")
 row("cortex-lang","nos-cortex-lang — ontology-typed pipeline IR","2026-08-05","queued","cortex",parent="cortex",
     refs="nos-cortex-lang.md · nos-cortex-lang-wing-executor.md",
     body="WrenAI independently converged on the same validate/execute split and hashed contract — external evidence the design is right. Their enumeration-oracle error is the thing to NOT copy.")
@@ -122,7 +122,7 @@ row("plat-ollama","Ollama 0.30.7 -> 0.32.5, drop the local tap","2026-08-03","ne
     refs="technosideas/swama.md",
     body="homebrew-core now builds AND tests llama-server; the tap's reason is gone. Consumers: hermes, openclaw, open-webui, keap embeddings, face ask, opencode. n8n's credentials live in its own DB and the playbook cannot see them.")
 row("plat-v07","38 v0.7 plan docs, none implemented","2026-07-09","parked","platform",parent="plat",
-    refs="docs/plans/v07-*.md",
+    refs="docs/archive/v07-overnight/",
     body="All target branch feat/v0.7-overnight, which has ZERO commits not already in master. Either fold the live ones into the backlog or archive them; leaving 38 'PLAN (not implemented)' docs is noise that looks like a plan.")
 row("plat-signing","Commit signing is required and never satisfied","2026-08-02","queued","platform",parent="plat",
     refs="CLAUDE.md git workflow",

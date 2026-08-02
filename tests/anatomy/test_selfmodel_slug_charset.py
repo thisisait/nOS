@@ -11,7 +11,7 @@ nobody named a service after a number recently" (fee 03). This pins it:
   2. a leading-digit id (2fauth, 3d-printer) raises loudly, not silently;
   3. the diacritic fold and the pattern itself are what we think they are.
 
-The Cortex docs schema (docs/plans/cortex-docs-schema.md §5) routes every doc
+The Cortex docs schema (docs/archive/cortex-docs-schema.md §5) routes every doc
 node id through this SAME `slug_or_die`, so this gate pins docs too — there is
 no second charset to drift.
 """

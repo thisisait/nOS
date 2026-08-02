@@ -13,7 +13,7 @@ export const meta = {
 
 const NOS = '/Users/pazny/projects/nOS'
 const KEAP = '/Users/pazny/projects/knowledge-explorer-and-preserver'
-const PLAN = `${NOS}/docs/plans/cortex-self-core.md`
+const PLAN = `${NOS}/docs/archive/cortex-self-core.md`
 const BRANCH = 'feat/cortex-corpus-parallel'
 // S2 branches off the S1 line, NOT off dev: the docs/pulse/generator work
 // (S1, S1b, S1c, S1d) is unmerged, and the organ store this stage builds on
@@ -114,7 +114,7 @@ Decide, with reasons:
 5. **How long does parallel run?** The exit criterion is three consecutive nights of agreement. What
    happens on night 2 if they disagree — halt, or log and continue? Decide now, not during.
 
-Write to ${NOS}/docs/plans/cortex-corpus-parallel.md.`,
+Write to ${NOS}/docs/archive/cortex-corpus-parallel.md.`,
   { label: 'design', phase: 'Design', schema: DESIGN, effort: 'high' })
 
 phase('Build')
@@ -153,7 +153,7 @@ phase('Verify')
 const LENSES = [
   { key: 'user-data', prompt: `Attack anything that touches the real host user tree. This is the highest-stakes lens: those are the operator's actual files. START HERE: the tree is on a REMOVABLE volume (nos_data_root = /Volumes/SSD1TB/nOS/data) and the estate's only mount preflight — tasks/stacks/docker-external-mount-preflight.yml — guards CONTAINERS, not host daemons. A host reader goes nowhere near it. Hunt every path where an unmounted or half-mounted volume is indistinguishable from an empty tree. Then: any write, move, rename, chmod or delete path; any prune that could fire on an unmounted or transiently-empty tree; any symlink-following walk that could escape the root; any path built by concatenation that a crafted filename could traverse. A false positive here is cheap and a false negative destroys data.` },
   { key: 'two-writer', prompt: `Attack the claim that two stores fed from one source is safe. Hunt: a shared file or lock either side could touch; a feeder that reports success after only one target accepted; ordering assumptions between the two ingests; the organ and KEAP racing on the same host file while it is being written; anything that would make the diff harness report agreement when the two stores actually diverged.` },
-  { key: 'derivability', prompt: `Attack the property the organ store must keep: EVERYTHING in it is derivable from git or a host source. Hunt for any row this stage introduces that would not come back after a wipe-and-rebuild — a generated id that is not deterministic, a timestamp that becomes semantic, state accumulated across runs. If the store stops being derivable, docs/plans/nos-cortex-organ-design.md open question 6 (no backup, deliberately) becomes wrong and nobody will notice.` },
+  { key: 'derivability', prompt: `Attack the property the organ store must keep: EVERYTHING in it is derivable from git or a host source. Hunt for any row this stage introduces that would not come back after a wipe-and-rebuild — a generated id that is not deterministic, a timestamp that becomes semantic, state accumulated across runs. If the store stops being derivable, docs/archive/nos-cortex-organ-design.md open question 6 (no backup, deliberately) becomes wrong and nobody will notice.` },
 ]
 const verified = await pipeline(
   LENSES,

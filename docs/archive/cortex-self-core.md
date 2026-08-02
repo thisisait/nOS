@@ -262,7 +262,7 @@ composition is reproduced*, for three consecutive nights.
 
 **BUILT 2026-07-27 — exit criterion NOT yet met, by construction.** Branch
 `feat/cortex-corpus-parallel` (off the unmerged S1 line at `3aa6c7d3`); design at
-`docs/plans/cortex-corpus-parallel.md`. What is true today:
+`docs/archive/cortex-corpus-parallel.md`. What is true today:
 
 - **The composition is reproduced.** `fs-roots.ts` generalises the single
   `USER_FILES_DIR` into an ordered roots list with a per-root uid mode
@@ -353,7 +353,7 @@ the corpus size it was measured at.
 
 `tools/workflows/cortex-s4-readers-writers.js` (written 2026-07-28). Ordering,
 preconditions and the scope boundary against the release lane live in
-`docs/plans/cortex-s3-s4-workflow-set.md`.
+`docs/archive/cortex-s3-s4-workflow-set.md`.
 
 **The workflow stops itself before Move if `/agent/v1` lacks a verb an inventoried
 consumer needs.** A reader moved onto an incomplete API fails loudly; a *writer*
@@ -465,7 +465,7 @@ eleven column kinds in `shared/contracts/table.ts`, `taxonomyRef` and `objectRef
 anchor a row into the universe, but **no kind points at another row** — an invoice
 cannot reference its customer. The registry this section adopts is one column kind
 short of being one. Design, including why the existing `relations` table must not
-be overloaded to fill the gap: `docs/plans/datatables-relations.md`.
+be overloaded to fill the gap: `docs/archive/datatables-relations.md`.
 
 `ent:` was blocked on `object_type_definitions` — created by migration 001,
 touched by zero lines of code, never a row. The registry it needed already exists

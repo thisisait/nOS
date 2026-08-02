@@ -281,7 +281,7 @@ surfaces nOS already owns (Authentik header-SSO = zero forced accounts, Wing `/h
 apps_runner, the real per-user FS tree). Replaces **Puter as the face** (Puter's DB+blob VFS
 can't be a real file browser or the KEAP bridge). Build-fresh SvelteKit in its own repo
 `thisisait/nos-face` + `roles/pazny.face` (KEAP clone-build pattern). Authoritative:
-`docs/plans/nos-face.md`; app-build doctrine: `docs/doctrine/face-app-tiers.md`.
+`docs/archive/nos-face.md`; app-build doctrine: `docs/doctrine/face-app-tiers.md`.
 
 - **Shipped (M0–M2b):** liquid-glass shell (WM/dock/menubar), zero-login identity + edge-trust,
   `/hub`-driven dock, iframe app windows, **Bone VFS** (real files, realpath-contained, 22 tests),
@@ -300,7 +300,7 @@ can't be a real file browser or the KEAP bridge). Build-fresh SvelteKit in its o
 - **KEAP catalog DataTables (NEW 2026-07-18):** "Apps" (agent-generated) + "Systems" (from
   `manifest.yml` SoT) as LeanIX-style KEAP DataTables (libsql), anchored into the self-model
   universe + brain-embedded. Defs `state/keap-tables/*.table.yml`; design
-  `docs/plans/keap-datatables-apps-systems.md`. nOS-face "Apps" icon (enable/disable, on-desktop,
+  `docs/archive/keap-datatables-apps-systems.md`. nOS-face "Apps" icon (enable/disable, on-desktop,
   edit-description) + "Systems" folder. Seeders: Systems = install-gated playbook task
   (`keap_nos_full_catalog` toggle); Apps = `McpKeapTool` upsert (the AgentKit harness). Needs an
   `/agent/v1/tables` route in nos-keap. **First real test of the app-gen agent.**
@@ -315,7 +315,7 @@ can't be a real file browser or the KEAP bridge). Build-fresh SvelteKit in its o
 ## Backlog
 
 ### P0 — FS doctrine epic (NEW 2026-07-16, foundational — blocks release-green + euro-office)
-- **[L] Filesystem doctrine** — `docs/plans/fs-doctrine.md` (DESIGN, review-gated). The
+- **[L] Filesystem doctrine** — `docs/archive/fs-doctrine.md` (DESIGN, review-gated). The
   layout is 42 scattered `~/<service>` data dirs with zero tenant/user/agent isolation;
   this blocks (a) multi-tenant/user/multi-agent-per-user security isolation, (b) the
   calibre-web→Autocaliweb fix REM-074 (needs a doctrine-conformant library volume, not an
@@ -396,7 +396,7 @@ can't be a real file browser or the KEAP bridge). Build-fresh SvelteKit in its o
   this session), but the pattern is a class-risk: consolidate the ~6 scattered VirtioFS
   workarounds behind a doctrine doc + pytest gate + greppable `# VFS-DOCTRINE:` markers
   so a Darwin-27 bind-semantics tightening is detectable, not silent. See
-  `docs/plans/v07-darwin27-virtiofs-filesystem-workaround.md`.
+  `docs/archive/v07-overnight/v07-darwin27-virtiofs-filesystem-workaround.md`.
 - **[M] Healthcheck coverage** for the health-blind containers (freescout, calibre-web,
   homeassistant, nextcloud, wordpress, infisical, portainer, …) so STRICT
   wait-stacks-healthy actually gates them (this session, freescout/qgis/puter/gitlab
@@ -439,7 +439,7 @@ can't be a real file browser or the KEAP bridge). Build-fresh SvelteKit in its o
   (below). Remaining: **add a machine-checkable active-work freshness gate** (the 150-line
   ceiling is pinned but nothing pins freshness — which is why it drifted 3+ weeks).
 - **[M] macOS 27 forward-compat hardening** — one epic folding the 14 `v07-darwin27-*`
-  notes. **Readiness research (2026-07-18): `docs/plans/macos27-golden-gate-readiness.md`**
+  notes. **Readiness research (2026-07-18): `docs/archive/macos27-golden-gate-readiness.md`**
   — macOS 27 "Golden Gate" (GA ~Sep 2026, ASi-only); TOP risk is Docker Desktop (no
   Golden-Gate support declared yet → the VirtioFS bind-mount regression class); TLS
   clampdown targets Apple/MDM procs not Docker/curl (mkcert likely fine); **launchctl
@@ -628,7 +628,7 @@ can't be a real file browser or the KEAP bridge). Build-fresh SvelteKit in its o
   reset-scope / Phase-4 / the security batch).
 - `docs/archive/macos-as-managed-upgrade-target.md` header — ✅ 2026-07-14: reframed to
   "SHIPPED, Inc 1-3c live-validated; Inc 4 open".
-- `docs/plans/agentic-upgrade-migration-coexistence.md` header — ✅ 2026-07-14: reframed
+- `docs/archive/agentic-upgrade-migration-coexistence.md` header — ✅ 2026-07-14: reframed
   "VISION/DESIGN-FIRST" → "MID-BUILD Phase B; B7 pg16→17 open" (memory still to update).
 - `docs/sso-autologin-plan.md` + memory — flip from greenfield to shipped-on-dev.
 - `docs/sso-and-attribution.md` — stale "not running on schedule"; only inspektor +

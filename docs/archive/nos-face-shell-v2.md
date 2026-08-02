@@ -3,8 +3,8 @@
 > Design captured from operator feedback 2026-07-18. The shell's chrome, layouts,
 > wallpapers, control panel, and window positions all become **dataTable-driven**:
 > repo carries the defaults (SoC), a DataTable is the runtime catalog (user-addable),
-> and per-user state persists (survives restart). Companion: `docs/plans/nos-face.md`,
-> `docs/plans/keap-datatables-apps-systems.md` (the DataTable substrate).
+> and per-user state persists (survives restart). Companion: `docs/archive/nos-face.md`,
+> `docs/archive/keap-datatables-apps-systems.md` (the DataTable substrate).
 
 ## Status — shell v0.3 (2026-07-18, live)
 
@@ -39,7 +39,7 @@ gaps. Fixed/shipped (vendored `files/anatomy/face`, `VERSION` 0.3.0):
 - **Palette command-exec** behind a gated/audited Bone allowlist surface.
 - **KEAP config DataTables** live-wiring — blocked on a KEAP `/agent/v1/tables`
   bearer write route (the seeder no-ops until then; shell runs on repo defaults +
-  user-state). See `docs/plans/keap-datatables-apps-systems.md`.
+  user-state). See `docs/archive/keap-datatables-apps-systems.md`.
 
 ## The SoC → dataTable → user-state pattern (load-bearing)
 

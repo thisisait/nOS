@@ -231,7 +231,7 @@ what is true, which is the part that was missing.
   hashed account is still present, is not migrated, and the converge says so by
   name — moving it needs `occ files:transfer-ownership` before any deletion.
 - **Three candidate architectures written down and one rejected on the record**
-  (`docs/plans/one-filesystem-architecture.md`), including the finding that POSIX
+  (`docs/archive/one-filesystem-architecture.md`), including the finding that POSIX
   mode bits are *decorative* on this estate: VirtioFS remaps ownership and every
   container runs as a different uid, so a design depending on `chmod` would work
   on Linux and be theatre on the operator's Mac.
@@ -242,7 +242,7 @@ what is true, which is the part that was missing.
   measurement that decides adoption has a blocker no playbook can clear: macOS
   gates published ports behind the **Local Network** privacy permission, whose
   failure mode is a listening socket that silently drops traffic.
-- Sequenced as its own roadmap (`docs/plans/per-user-container-roadmap.md`),
+- Sequenced as its own roadmap (`docs/archive/per-user-container-roadmap.md`),
   explicitly **after** this tag.
 
 ### Security

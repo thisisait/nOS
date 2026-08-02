@@ -9,7 +9,7 @@
  *   POST /agent/v1/validate          agentAuth('ro') — typecheck a program, zero side effects
  *   GET  /agent/v1/validate/opcodes  agentAuth('ro') — the published registry Wing gates against
  *
- * and — since S2 (`docs/plans/cortex-corpus-parallel.md`) — the INGESTION half,
+ * and — since S2 (`docs/archive/cortex-corpus-parallel.md`) — the INGESTION half,
  * which exists so the organ can be fed the same corpus KEAP is fed, from the
  * same host sources, and the two can then be compared:
  *

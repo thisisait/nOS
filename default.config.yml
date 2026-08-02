@@ -1816,7 +1816,7 @@ stack_wait_tick_interval: 15
 # `up -d --remove-orphans` then drops the container on the same run.
 # Append when a service is removed; entries are cheap and never expire. A merely
 # DISABLED service (install_* false) does NOT belong here — that is the wider
-# managed-resource manifest (docs/plans/blank-uninstall-managed-resources.md).
+# managed-resource manifest (docs/archive/blank-uninstall-managed-resources.md).
 nos_retired_services:
   - puter
 
@@ -2118,7 +2118,7 @@ bluesky_pds_email_from: ""             # Email sender (default: noreply@<bluesky
 # syncs it into the build dir and `docker compose` builds nos/face from there
 # (keap build-from-source precedent). forward_auth SSO; the shell composes
 # the Wing catalog + Bone VFS + KEAP config DataTables. install_face ON by
-# default. Design doc: docs/plans/nos-face.md, docs/archive/nos-face-shell-v2.md.
+# default. Design doc: docs/archive/nos-face.md, docs/archive/nos-face-shell-v2.md.
 # ==============================================================================
 
 # os.<tld> — inherited from Puter, which owned it until its removal (2026-07-20).
@@ -2151,7 +2151,7 @@ keap_version: "1.38.0"                          # nos/keap image tag
 # file); the seed is idempotent. Set false to keep a pristine empty install.
 keap_seed_fixtures: true
 # nOS catalog DataTables ("Apps" + "Systems", LeanIX-style — state/keap-tables/,
-# docs/plans/keap-datatables-apps-systems.md). The Systems seeder is idempotent
+# docs/archive/keap-datatables-apps-systems.md). The Systems seeder is idempotent
 # and by default writes ONLY installed systems (install_* true) into KEAP. Flip
 # keap_nos_full_catalog=true to always mirror the ENTIRE nOS self-model (every
 # system regardless of install state) — profiles/all-on.yml sets it true.

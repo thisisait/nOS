@@ -33,7 +33,7 @@ nOS has been bitten by both:
 
 - **The upgrade engine's dry-run was a false-positive verify** — it short-circuits
   before handlers, so the apply path had never actually run while reporting
-  success (`docs/plans/…`, memory `upgrade-engine-apply-path`).
+  success (`docs/idea/…`, memory `upgrade-engine-apply-path`).
 - **A DB-blind healthcheck certified miniflux healthy for 19 hours** while every
   request 500'd; the STRICT bring-up gate passed it. Green ≠ working
   ([`hidden_fees/02`](../hidden_fees/02-db-blind-healthchecks.md)).

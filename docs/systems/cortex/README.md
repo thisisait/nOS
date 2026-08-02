@@ -21,7 +21,7 @@ The daemon runs in-place from the playbook tree deliberately: its self-model hal
 
 ## Routing
 
-Cortex has **no Traefik route and no Authentik provider at all** — by design (`docs/plans/nos-cortex-organ-design.md` §5, pure loopback default). Its id is in `traefik_skip_ids` ("Reasoning organ: pure loopback by design"). `cortex_domain` (`cortex.<tenant_domain>`) exists in defaults only for the day a route becomes an explicit opt-in — it is not wired today. Callers are host-side: Wing's executor, host AgentKit, and (later) Pulse.
+Cortex has **no Traefik route and no Authentik provider at all** — by design (`docs/archive/nos-cortex-organ-design.md` §5, pure loopback default). Its id is in `traefik_skip_ids` ("Reasoning organ: pure loopback by design"). `cortex_domain` (`cortex.<tenant_domain>`) exists in defaults only for the day a route becomes an explicit opt-in — it is not wired today. Callers are host-side: Wing's executor, host AgentKit, and (later) Pulse.
 
 ## Authentication
 

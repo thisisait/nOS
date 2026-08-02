@@ -11,7 +11,7 @@ export const meta = {
 }
 
 const NOS = '/Users/pazny/projects/nOS'
-const SCHEMA = NOS + '/docs/plans/cortex-docs-schema.md'
+const SCHEMA = NOS + '/docs/archive/cortex-docs-schema.md'
 const BRANCH = 'feat/cortex-docs-knowledge'
 
 const RULES = [

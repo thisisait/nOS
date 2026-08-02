@@ -9,7 +9,7 @@
  *
  * ── The store filename is `keap.db`, and that is deliberate ──────────────────
  *
- * `docs/plans/nos-cortex-organ-design.md` §3 wrote the store as
+ * `docs/archive/nos-cortex-organ-design.md` §3 wrote the store as
  * `~/cortex/data/cortex.db`. It is `~/cortex/data/keap.db`, because TWO vendored
  * files independently derive the basename from a directory env var:
  *
@@ -132,7 +132,7 @@ export interface CortexStoreConfig {
    * The docs-as-knowledge generator (`keap_docs_gen.py`). It runs AFTER
    * `selfmodelGen` and merges the estate's prose — the `docs/systems/<svc>/`
    * READMEs, agent briefs and skill sheets — into the self-model's per-stack
-   * canonical files as typed child nodes (`docs/plans/cortex-docs-schema.md`).
+   * canonical files as typed child nodes (`docs/archive/cortex-docs-schema.md`).
    *
    * It is a second script rather than a flag on the first because the two
    * describe different things (SHAPE vs PROSE) and fail for different reasons —

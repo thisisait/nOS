@@ -7,7 +7,7 @@
 > **Scope:** `POST /agent/v1/validate` — tokenize → parse → typecheck against the
 > live ontology → **AST or typed errors**. Zero side effects, zero writes, no LLM
 > in the container.
-> **Authorities:** the nOS plan `docs/plans/nos-cortex-lang.md` (frozen P0) and
+> **Authorities:** the nOS plan `docs/archive/nos-cortex-lang.md` (frozen P0) and
 > this repo's `docs/specs/nos-cortex-lang-review-02.md` (which is the source of
 > the plan's §4–§6). Where this spec departs from the plan it says so, in a box,
 > with the reason.

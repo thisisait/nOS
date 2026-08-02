@@ -115,7 +115,7 @@ def _build_substitutions() -> dict[str, str]:
         "{{ backup_verify_script_path }}": _env("NOS_BACKUP_VERIFY_SCRIPT"),
         "{{ consolidate_fs_roots }}":     _env("NOS_CONSOLIDATE_FS_ROOTS"),
         "{{ consolidate_db_exclude }}":   _env("NOS_CONSOLIDATE_DB_EXCLUDE"),
-        # S2 corpus-in-parallel (docs/plans/cortex-corpus-parallel.md): the two
+        # S2 corpus-in-parallel (docs/archive/cortex-corpus-parallel.md): the two
         # keap-base feeders FAN OUT to the cortex organ, and cortex-base adds the
         # agreement harness. The URL is Ansible-rendered to "" when the organ is
         # not installed, which is what makes the fan-out degrade to exactly the

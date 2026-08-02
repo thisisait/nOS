@@ -29,7 +29,7 @@ which no task seeds; FreeScout has no SSO; REM-151/152 HIGH open.
 Two adversarial sweeps (26 agents) + a pre-tag promise survey; sharpest findings
 fixed. The **general fix** — a per-service `verify.yml` hook plus the loader
 change that lets it fail — is in
-[`nos-genome-and-organelles.md`](plans/nos-genome-and-organelles.md) §Thread D.
+[`nos-genome-and-organelles.md`](archive/nos-genome-and-organelles.md) §Thread D.
 
 
 - **FreeScout has no SSO** (survey, 08-02): both `freescout-oauth` sources 404,
@@ -81,7 +81,7 @@ change that lets it fail — is in
   `failed_when: false` (e.g. `/etc/resolver/dev.local`) can survive a removal
   silently; the absence assert only stats the path set. Documented in
   `docs/nos-cli.md`, unbuilt.
-- **FS doctrine P3** — AgentKit tool-layer FS path-scoping (`docs/plans/fs-doctrine.md`).
+- **FS doctrine P3** — AgentKit tool-layer FS path-scoping (`docs/archive/fs-doctrine.md`).
   P1/P1b shipped this cycle (`nos_data_root` resolver + per-user tree); the plan header
   still says "DESIGN (P0) — we are here" and is stale.
 - **Version-pin drift wave (post-Gitea):** ~15 pending, **1 CRITICAL** (REM-137 gitea;

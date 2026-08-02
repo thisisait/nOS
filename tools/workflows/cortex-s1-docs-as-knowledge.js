@@ -12,7 +12,7 @@ export const meta = {
 }
 
 const NOS = '/Users/pazny/projects/nOS'
-const PLAN = `${NOS}/docs/plans/cortex-self-core.md`
+const PLAN = `${NOS}/docs/archive/cortex-self-core.md`
 const BRANCH = 'feat/cortex-docs-knowledge'
 
 const RULES = `
@@ -58,7 +58,7 @@ Inventory every documentation source in ${NOS} that should become knowledge, and
 is wrong with it:
   - docs/systems/<svc>/{README,SKILLS,AGENTS}.md — the intended routing corpus. SKILLS.md carries
     named actions with "Trigger:" phrases; the recall gate's 261 cases are generated from them.
-  - docs/doctrine/, docs/hidden_fees/, docs/plans/ — decisions, debts, intentions.
+  - docs/doctrine/, docs/hidden_fees/, docs/idea/ — decisions, debts, intentions.
   - files/anatomy/skills/, files/anatomy/agents/ — what the agents already know.
   - role README/defaults comments — often the only place a variable's WHY is written.
 
@@ -101,14 +101,14 @@ Decide and justify:
    conditional relations, real data, animated over time. You are not building that here — but the
    shape you choose either allows it later or forecloses it. Say which choices are load-bearing.
 
-Write it to ${NOS}/docs/plans/cortex-docs-schema.md. Short and decisive; no options-list where a
+Write it to ${NOS}/docs/archive/cortex-docs-schema.md. Short and decisive; no options-list where a
 decision belongs.`,
   { label: 'design', phase: 'Design', effort: 'high' })
 
 phase('Build')
 const build = await agent(`${RULES}
 
-Implement the design at ${NOS}/docs/plans/cortex-docs-schema.md:
+Implement the design at ${NOS}/docs/archive/cortex-docs-schema.md:
 ${design.slice(0, 3000)}
 
 Build:

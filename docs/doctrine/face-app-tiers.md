@@ -1,7 +1,7 @@
 # nOS-app tiers — the face-to-nOS complexity doctrine
 
 > Canonical decisions for how apps attach to nOS through the **nOS face** and how an
-> agent picks the right build recipe. Companion to `docs/plans/nos-face.md` (the face
+> agent picks the right build recipe. Companion to `docs/archive/nos-face.md` (the face
 > epic) and `docs/doctrine/filesystem.md` (the data classes). Crystallized while building
 > the first face-native utils (Sticky Notes + personalization), 2026-07-18.
 

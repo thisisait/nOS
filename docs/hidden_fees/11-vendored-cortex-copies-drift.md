@@ -31,7 +31,7 @@ KEAP surfaced the migrations.ts line skew.
 ## What closes it
 
 Deleting one of the two implementations. That is **S5** in
-`docs/plans/cortex-self-core.md`, and it is the only real answer; everything
+`docs/archive/cortex-self-core.md`, and it is the only real answer; everything
 before it is mitigation.
 
 One mitigation landed 2026-07-26: `tests/anatomy/test_cortex_vendored_docs.py`

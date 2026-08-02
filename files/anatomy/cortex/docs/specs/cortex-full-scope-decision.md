@@ -2,7 +2,7 @@
 
 > Vendored from thisisait/nos-keap @ v1.29.0 docs/specs/cortex-full-scope-decision.md — organ-side copy, vendored with the P-4 code port 2026-07-25. The KEAP original remains authoritative until the post-C4 docs cleanup; line-number citations here track the ORGAN tree, which is why they can differ from the original.
 
-Status: **superseded on scope**, 2026-07-26, by nOS `docs/plans/cortex-self-core.md`.
+Status: **superseded on scope**, 2026-07-26, by nOS `docs/archive/cortex-self-core.md`.
 Reduced from 117 lines to what is still true and still cited by code.
 
 ## What was overturned

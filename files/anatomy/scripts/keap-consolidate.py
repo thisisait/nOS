@@ -11,7 +11,7 @@ them vectors (semantic findability), keap-lint candidates duplicates and
 deserts, and the librarian judges. Consolidation NEVER writes the curated
 layer — datapoints land in the review queue like every other capture.
 
-── FAN-OUT (S2, docs/plans/cortex-corpus-parallel.md §2) ─────────────────
+── FAN-OUT (S2, docs/archive/cortex-corpus-parallel.md §2) ─────────────────
 Sweep ONCE, feed N targets. `keap` is the incumbent and is always first;
 `cortex` is the parallel organ, added when CORTEX_API_URL + its own
 capture token are set. Absent those, this file behaves exactly as it did.
