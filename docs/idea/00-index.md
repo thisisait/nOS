@@ -22,6 +22,7 @@
 | [07](07-face.md) | face — the desktop and its tables | active | Four render styles ship; the settings surface is the open half. |
 | [08](08-lifecycle.md) | Lifecycle — blank, upgrade, coexist | mid-build | The install↔leave loop closes; the upgrade engine's headline claim is still unexercised. |
 | [09](09-hidden-fees.md) | Hidden fees | a ledger, always open | The costs paid without a decision. Thirteen entries; two closed. |
+| [12](12-state-surface.md) | The state surface | design | One artifact every model reads first — and 81 058 of 81 098 events have no actor, which is the real gap behind "show the session in Wing". |
 | [11](11-agentic-loop.md) | The agentic loop | design | The propose→judge loop exists per session; nothing carries between them, and no judge is addressable. |
 
 ## How to use this
