@@ -50,7 +50,7 @@ const VERDICT = { type: 'object', additionalProperties: false, required: ['real'
 phase('Recheck')
 await agent(`${RULES}
 
-Read ${NOS}/docs/plans/cortex-s0-report.md. Two things gate this stage and both must be re-confirmed
+Read ${NOS}/docs/archive/cortex-s0-report.md. Two things gate this stage and both must be re-confirmed
 TODAY, not taken from the report:
 
 1. ZERO corpus rows lack an external source. If that has changed — a device capture arrived, someone

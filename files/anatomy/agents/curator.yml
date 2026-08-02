@@ -12,7 +12,7 @@
 # STATUS: P0 read-only pilot. Emits desc-kind proposals only, through the
 # existing describe seam — zero new proposal seams. node-edit / node-delete /
 # relation (incl. cross-domain bridges) + anchor-edit / self-tuning land in
-# P1-P3 (docs/plans/keap-curator-agent.md).
+# P1-P3 (docs/archive/keap-curator-agent.md).
 #
 # Read by pulse-run-agent.sh (env NOS_AGENT_PROFILE=this file).
 # AgentKit (A14) counterpart lives at files/anatomy/agents/curator/.

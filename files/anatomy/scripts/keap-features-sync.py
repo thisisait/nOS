@@ -10,7 +10,7 @@ Pipeline (Option B — reuse the validated numpy compute, keep vectors host-side
   4. POST /agent/v1/features             — upsert node_features (GraphCanvas reads)
 
 Positions are NEVER touched — features drive appearance only (U1 layout intact).
-Design + validation: docs/plans/keap-semantic-lens.md.
+Design + validation: docs/archive/keap-semantic-lens.md.
 
 Env (Pulse-rendered):
   KEAP_API_URL        default http://127.0.0.1:8091

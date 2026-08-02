@@ -136,7 +136,7 @@ pulse:
     # projects each node's embedding onto the exemplar-difference axes +
     # centrality + k-means, upserts node_features (GraphCanvas colour/size/
     # texture channels). Appearance only — never touches the baked U1 positions.
-    # Idempotent; no embeddings yet -> no-op. See docs/plans/keap-semantic-lens.md.
+    # Idempotent; no embeddings yet -> no-op. See docs/archive/keap-semantic-lens.md.
     - name: keap-features-sync
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/scripts/keap-features-sync.py"

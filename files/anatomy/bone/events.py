@@ -133,7 +133,7 @@ VALID_TYPES = {
     # ── Agentic upgrade→migration→coexistence epic — the 8 NEW types (B1) ───
     # Twin rule (NON-NEGOTIABLE, one commit): every type here MUST also be in
     # Wing's EventRepository::VALID_TYPES or an agent's Bone-proxied POST 400s.
-    # See docs/plans/agentic-upgrade-migration-coexistence-design.md §2.6 for
+    # See docs/archive/agentic-upgrade-migration-coexistence-design.md §2.6 for
     # the emitter / FK-column / result_json contract of each.
     #   plan_choice_recorded — UpgradesPresenter::actionPlanChoice; uses upgrade_id;
     #     result_json {service, recipe_id, plan_mode, coexistence_planned_id?,

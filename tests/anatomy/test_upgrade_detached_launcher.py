@@ -20,7 +20,7 @@ the contract that makes that work and keeps the launcher host-quiet:
 
 If this gate FAILS the launcher cannot safely carry a session-risk upgrade —
 that is a real finding, not a flaky test. See
-docs/plans/upgrade-reset-scope-and-session-safety.md §"Execution side".
+docs/archive/upgrade-reset-scope-and-session-safety.md §"Execution side".
 """
 
 from __future__ import annotations

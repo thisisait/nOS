@@ -5,7 +5,7 @@ Status: SHIPPED — Increments 1-3c all landed + **live-validated on a real
 `main.yml`. OPEN: **Increment 4** — a first-class `upgrades/macos.yml`
 `host_reboot` recipe (resolve the reboot-spanning recipe-modeling question first).
 An extension of the reset-scope / `host_reboot` machinery
-([upgrade-reset-scope-and-session-safety.md](upgrade-reset-scope-and-session-safety.md)).
+([upgrade-reset-scope-and-session-safety.md](../archive/upgrade-reset-scope-and-session-safety.md)).
 
 ## Why
 

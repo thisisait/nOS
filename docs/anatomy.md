@@ -213,6 +213,6 @@ region links to its docs page and its Wing dashboard view.
 ## See also
 
 - [`integration-map.md`](integration-map.md) — suite-by-suite data flow.
-- [`framework-plan.md`](framework-plan.md) — framework design narrative.
-- [`framework-overview.md`](framework-overview.md) — reader's introduction.
+- [`framework-plan.md`](../files/anatomy/docs/framework-plan.md) — framework design narrative.
+- [`framework-overview.md`](../files/anatomy/docs/framework-overview.md) — reader's introduction.
 - https://thisisait.eu — public manifesto.

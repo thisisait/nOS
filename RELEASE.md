@@ -580,7 +580,7 @@ proved the SSO layer healthy and surfaced the real, recurring bugs:
 - **Working-as-designed, documented:** forward_auth services have no in-app SSO
   button by design; the XOAUTH2-via-forward_auth webmail SSO is architecturally
   impossible (the proxy forwards no token) — the master-user path is scoped as a
-  deferred greenfield epic (`docs/plans/v07-webmail-stalwart-oidc-single-login.md`).
+  deferred greenfield epic (`docs/archive/v07-overnight/v07-webmail-stalwart-oidc-single-login.md`).
 
 ### Security / CVE sweep (overnight review)
 

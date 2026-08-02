@@ -248,7 +248,7 @@ log('judge: ' + confirmed.length + ' blockers survived, ' + demoted.length + ' d
 phase('Report')
 
 const report = await agent([RULES, '',
-  'Write the readiness review to ' + NOS + '/docs/plans/release-readiness-v010.md.',
+  'Write the readiness review to ' + NOS + '/docs/archive/release-readiness-v010.md.',
   'This ONE file write is permitted; nothing else.',
   '',
   'Survey (six dimensions):',

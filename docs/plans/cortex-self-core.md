@@ -208,7 +208,7 @@ its predecessor's report exists.
 Re-measure §2. Confirm zero corpus rows lack an external source. Confirm the
 organ still reports `onto1:5d9bef3706a3c8ac`, or explain the delta.
 
-**DONE 2026-07-26 — verdict YES-with-amendments** (`docs/plans/cortex-s0-report.md`).
+**DONE 2026-07-26 — verdict YES-with-amendments** (`docs/archive/cortex-s0-report.md`).
 0-orphan-source STOP condition holds; digest reproduced from a **store copy** (the
 daemon is not running — no launchd plist, nothing on 8098). Note the two-digest
 split: conformance/port-fidelity gate = `onto1:76d1f3ad728b382b` (materialise=false,

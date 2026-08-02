@@ -1,7 +1,7 @@
 # keap-semantic-lens — PoC tooling for the semantic-lens feature
 
 Validates the difference-vector semantic axes on the live KEAP embedding corpus.
-Design + results: `docs/plans/keap-semantic-lens.md`.
+Design + results: `docs/archive/keap-semantic-lens.md`.
 
 ## Run the PoC
 1. Dump node embeddings from the container (libSQL vector_extract):

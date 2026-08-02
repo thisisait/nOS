@@ -8,7 +8,7 @@
 ## Problem / why
 
 The wet-test runbook
-([`docs/tier2-wet-test-checklist.md`](../tier2-wet-test-checklist.md) §12,
+([`docs/tier2-wet-test-checklist.md`](../../tier2-wet-test-checklist.md) §12,
 lines 320-327) tells the operator that a manifest fix re-applied **without a
 blank** converges in place:
 

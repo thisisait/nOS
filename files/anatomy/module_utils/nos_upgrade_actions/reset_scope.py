@@ -15,7 +15,7 @@ reset_scope`` / ``module_utils.nos_upgrade_actions.reset_scope``) by the upgrade
 engine and the schema gate — it is NOT part of the ``merged_handlers`` dispatch
 table, so ``__init__.py`` needs no change.
 
-Spec reference: docs/plans/upgrade-reset-scope-and-session-safety.md.
+Spec reference: docs/archive/upgrade-reset-scope-and-session-safety.md.
 """
 
 from __future__ import absolute_import, division, print_function

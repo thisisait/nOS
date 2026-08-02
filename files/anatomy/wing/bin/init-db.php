@@ -582,7 +582,7 @@ $addMissingColumns($db, 'coexistence_planned', [
 // schema-extensions.sql CREATE TABLE IF NOT EXISTS is a no-op on a pre-existing
 // wing.db; ALTER is the migration vehicle). The migrations_authored TABLE is
 // NEW so it lives in schema-extensions.sql, NOT here. Types/defaults documented
-// in docs/plans/agentic-upgrade-migration-coexistence-design.md §2.2-2.4.
+// in docs/archive/agentic-upgrade-migration-coexistence-design.md §2.2-2.4.
 
 // coexistence_tracks — human-facing reversible primary/secondary state machine.
 // `role`/`lifecycle` are the new state; the legacy `active 0/1` stays the live-

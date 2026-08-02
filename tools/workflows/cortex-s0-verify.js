@@ -195,7 +195,7 @@ phase('Report')
 
 const report = await agent(`${RULES}
 
-Write the S0 verification report to ${NOS}/docs/plans/cortex-s0-report.md (this ONE file write is
+Write the S0 verification report to ${NOS}/docs/archive/cortex-s0-report.md (this ONE file write is
 permitted; nothing else).
 
 Measured facts:

@@ -10,7 +10,7 @@ Pins the pure derive-floor helper
     (authored may never lower the derived floor) + emits reset_floor_raised
   * session_risk is derived from the resolved scope, not authored
 
-Spec: docs/plans/upgrade-reset-scope-and-session-safety.md.
+Spec: docs/archive/upgrade-reset-scope-and-session-safety.md.
 """
 
 from __future__ import annotations

@@ -8,7 +8,7 @@
  * optionally, KEAP. Un-skip (or gate on FACE_E2E=1) once a face fixture is wired
  * into global-setup with an authenticated context. Companion: face-snap.spec.ts.
  *
- * These pin the v0.2 headline features end-to-end (docs/plans/nos-face-shell-v2.md):
+ * These pin the v0.2 headline features end-to-end (docs/archive/nos-face-shell-v2.md):
  *   A. Wallpaper — open Control Panel → Wallpaper; add a gradient row; it appears
  *      in the picker; selecting it changes the desktop background AND persists
  *      (reload → still applied) via Bone user-state ns `face.desktop`.

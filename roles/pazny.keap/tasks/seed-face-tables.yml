@@ -4,7 +4,7 @@
 #
 # Creates the three shell config DataTables in KEAP and upserts their built-in
 # `system` rows, idempotently. This is the SoC → runtime-DataTable half of the
-# nOS-face pattern (docs/plans/nos-face-shell-v2.md): the table DEFINITIONS are
+# nOS-face pattern (docs/archive/nos-face-shell-v2.md): the table DEFINITIONS are
 # the source of truth in state/keap-tables/{layouts,wallpapers,controls}.table.yml
 # (parsed here, never hand-duplicated), and the built-in system rows mirror the
 # vendored SoC defaults the face BFF also serves as its KEAP-down fallback

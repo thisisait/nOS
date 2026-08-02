@@ -194,7 +194,7 @@ require_disk_encryption: false
 # ── macOS-as-managed-upgrade: cross-reboot continuation agent ────────────────
 # Installs the resume LaunchAgent (macOS-only) that settles nOS automatically
 # after an operator-triggered macOS update + restart. A no-op unless an update
-# is armed (tools/nos-os-update-arm.sh). See docs/plans/macos-as-managed-upgrade-target.md.
+# is armed (tools/nos-os-update-arm.sh). See docs/archive/macos-as-managed-upgrade-target.md.
 install_os_resume: true
 
 # ── Fleet / Heartbeat ────────────────────────────────────────────────────────
@@ -2118,7 +2118,7 @@ bluesky_pds_email_from: ""             # Email sender (default: noreply@<bluesky
 # syncs it into the build dir and `docker compose` builds nos/face from there
 # (keap build-from-source precedent). forward_auth SSO; the shell composes
 # the Wing catalog + Bone VFS + KEAP config DataTables. install_face ON by
-# default. Design doc: docs/plans/nos-face.md, docs/plans/nos-face-shell-v2.md.
+# default. Design doc: docs/plans/nos-face.md, docs/archive/nos-face-shell-v2.md.
 # ==============================================================================
 
 # os.<tld> — inherited from Puter, which owned it until its removal (2026-07-20).

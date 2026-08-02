@@ -80,7 +80,7 @@ phase('Recheck')
 await agent([RULES, '',
   'Confirm the ground this stage stands on before any authoring:',
   '- You are on ' + BRANCH + ' and ' + SCHEMA + ' exists (S1 Design). Read it.',
-  '- Read ' + NOS + '/docs/plans/cortex-s0-report.md and ' + NOS + '/docs/plans/cortex-s1-report.md (or the S1 workflow result) so you inherit S1 rather than re-derive it.',
+  '- Read ' + NOS + '/docs/archive/cortex-s0-report.md and ' + NOS + '/docs/plans/cortex-s1-report.md (or the S1 workflow result) so you inherit S1 rather than re-derive it.',
   '- Regenerate the TRUE missed-by-name set: run files/anatomy/scripts/keap_docs_gen.py against state/manifest.yml (against a temp/throwaway store or its dry survey mode — do NOT disturb a running organ) and report services_covered / services_missed BY NAME. The plan says 22/62 covered.',
   '- For the six names that did not resolve to a manifest row earlier (code-server, iiab-terminal, mcp-gateway, offline-maps, qgis-server, smtp-stalwart): find their REAL manifest id (id-form may differ, e.g. mcpo, stalwart) OR confirm they are non-docker host organs with no manifest node. State, per name, whether a docs/systems tree will actually ingest, so Author does not write orphans.',
   'Report the corrected group list. If the branch or schema is absent, STOP.',

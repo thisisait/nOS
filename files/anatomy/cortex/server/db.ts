@@ -224,7 +224,7 @@ const SCHEMA = [
    )`,
 
   // Curator work-log — the recursive-reconciler agent's cursor + progress
-  // (docs/plans/keap-curator-agent.md §9). curator_runs is one row per overnight
+  // (docs/archive/keap-curator-agent.md §9). curator_runs is one row per overnight
   // sweep; curator_visits is one row per (node, run) so a kill/OOM resumes from
   // the max cursor and the frontier orders staleness-first (never-visited, then
   // oldest visited_at). content_hash lets a re-run skip an unchanged node inside
@@ -275,7 +275,7 @@ const SCHEMA = [
   // to /agent/v1/features; GraphCanvas maps these to colour/size/texture behind
   // the "semantic lens" toggle. Positions stay tree-baked — features never move a
   // star. axis_json holds all axis projections {name: score}; the fixed columns
-  // are convenience mirrors of the canonical four. See docs/plans/keap-semantic-lens.md.
+  // are convenience mirrors of the canonical four. See docs/archive/keap-semantic-lens.md.
   `CREATE TABLE IF NOT EXISTS node_features (
      node_id TEXT PRIMARY KEY,
      abstractness REAL,
@@ -2860,7 +2860,7 @@ export function nearCrossKindPairs(
   }>;
 }
 
-// ── Curator work-log (docs/plans/keap-curator-agent.md §9) ──────────────────
+// ── Curator work-log (docs/archive/keap-curator-agent.md §9) ──────────────────
 export interface CuratorVisit {
   visitedAt: number;
   contentHash: string | null;

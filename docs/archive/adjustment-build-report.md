@@ -2,7 +2,7 @@
 
 > **Honest, read-only verification report (2026-06-16, refreshed).** Verifies the adjustment-round
 > work (A1–A5) on `feat/migration-author-agentkit` (off `dev`) against the spec
-> `docs/plans/agentic-upgrade-migration-coexistence-design.md` (§7-RESOLVED). No live apply was
+> `docs/archive/agentic-upgrade-migration-coexistence-design.md` (§7-RESOLVED). No live apply was
 > performed: only `--syntax-check`, the offline pytest suites, and the frozen-venv
 > `tools/ci-local.sh` read-only gate. The entire deliverable is code on this branch + the existing
 > review-gated MR #3 to the local GitLab forge (`root/nOS → dev`). Nothing deploys.

@@ -69,7 +69,7 @@ content links).
 
 ```diff
 -- [`docs/agent-operable-nos.md`](agent-operable-nos.md) — strategic vision (Spine, Eye, Ear, Hand anatomy extensions)
-++ [`docs/ait-runtime-architecture.md`](ait-runtime-architecture.md) — AgentKit runtime (the live successor to the retired Spine/Eye/Ear/Hand `agent-operable-nos.md` vision; A8 conductor → A14 AgentKit)
+++ [`docs/ait-runtime-architecture.md`](../../ait-runtime-architecture.md) — AgentKit runtime (the live successor to the retired Spine/Eye/Ear/Hand `agent-operable-nos.md` vision; A8 conductor → A14 AgentKit)
 ```
 
 Rationale for the target choice: the deletion commit names

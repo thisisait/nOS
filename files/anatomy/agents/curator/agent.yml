@@ -19,7 +19,7 @@ description: |
   only, through the existing describe seam — zero new app-side proposal
   seams. node-edit / node-delete / relation (incl. cross-domain bridges)
   and the anchor-edit / self-tuning loops land in P1-P3 (see
-  docs/plans/keap-curator-agent.md). The Authentik client `nos-curator`
+  docs/archive/keap-curator-agent.md). The Authentik client `nos-curator`
   is provisioned alongside `nos-librarian`.
 
 model:
@@ -65,7 +65,7 @@ metadata:
   ait_phase: curator-P0-pilot
   ceremony_role: taxonomy-reconcile
   runner_status: on-demand
-  plan_ref: docs/plans/keap-curator-agent.md
+  plan_ref: docs/archive/keap-curator-agent.md
   deferred_reason: >-
     P0 pilot live 2026-07-14 (flat profile files/anatomy/agents/curator.yml,
     Pulse job curator:curator-sweep paused per on-demand doctrine;

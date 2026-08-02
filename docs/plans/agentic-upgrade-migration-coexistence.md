@@ -121,6 +121,6 @@ the live host. Claude Code supervises + reviews; the operator approves the merge
 - The architect's round-1 drafts were only hollow forward-coverage re-pins
   (gitlab/grafana, `to=installed`) — NOT committed (no tested transition = no value).
 - Webmail SSO is a separate deferred greenfield epic
-  (`docs/plans/v07-webmail-stalwart-oidc-single-login.md`).
+  (`docs/archive/v07-overnight/v07-webmail-stalwart-oidc-single-login.md`).
 - My manual coexistence-queue + dry-run nginx-vhost artifacts were cleaned up
   2026-06-15 (queue empty, no stray pg17) — the proper flow starts from clean.

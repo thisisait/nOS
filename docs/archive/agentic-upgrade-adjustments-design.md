@@ -1,6 +1,6 @@
 # Agentic Upgrade / Migration / Coexistence — Adjustments Design (round 2)
 
-> **Lead-architect synthesis.** Merges the three adjustment-round design proposals (AgentKit write tool + button, manual copy-data + undo B5, TTL + rollback) into ONE buildable spec. Charter: `feat/migration-author-agentkit` (off `dev`). **EXTEND the overnight B-build — do not rewrite.** Review-gated MR only (local GitLab forge), no live apply, read-only against the host. Source of truth for the four deviations: `docs/plans/agentic-upgrade-migration-coexistence-design.md` §7-RESOLVED (operator decisions, 2026-06-16).
+> **Lead-architect synthesis.** Merges the three adjustment-round design proposals (AgentKit write tool + button, manual copy-data + undo B5, TTL + rollback) into ONE buildable spec. Charter: `feat/migration-author-agentkit` (off `dev`). **EXTEND the overnight B-build — do not rewrite.** Review-gated MR only (local GitLab forge), no live apply, read-only against the host. Source of truth for the four deviations: `docs/archive/agentic-upgrade-migration-coexistence-design.md` §7-RESOLVED (operator decisions, 2026-06-16).
 
 ---
 
@@ -339,7 +339,7 @@ The `coexist_svc` FK col already exists; `EventRepository::insert` already maps 
 
 ### 5.6 Doc reconciliation
 
-`docs/plans/agentic-upgrade-migration-coexistence-design.md` §8 pg16→17 walkthrough: split "Toggle v17 primary — cutover RUNS the migration" into step 6 = **Copy data** (operator clicks → pg_dumpall into v17's cluster → `data_copied_at` → `coexistence_copy_data`; re-runnable) + step 7 = **Toggle v17 primary** (pure pointer flip, `coexistence_promote`). Renumber downstream. Add the §2.5 state-machine diagram node `COPY-DATA (re-runnable)` between PROVISION and PROMOTE.
+`docs/archive/agentic-upgrade-migration-coexistence-design.md` §8 pg16→17 walkthrough: split "Toggle v17 primary — cutover RUNS the migration" into step 6 = **Copy data** (operator clicks → pg_dumpall into v17's cluster → `data_copied_at` → `coexistence_copy_data`; re-runnable) + step 7 = **Toggle v17 primary** (pure pointer flip, `coexistence_promote`). Renumber downstream. Add the §2.5 state-machine diagram node `COPY-DATA (re-runnable)` between PROVISION and PROMOTE.
 
 ---
 
@@ -454,7 +454,7 @@ A1 is the prerequisite that unblocks A2 (write tool before native run); A3 depen
 | **A5.2** | Task fallback swap (promote L51 + cutover L111) | `tasks/coexistence-promote.yml`, `tasks/coexistence-cutover.yml` | `test_coexistence_state_machine.py` (configured-TTL-applied) |
 | **A5.3** | Stamp/clear `demoted_from_primary_at` in `action_promote_track` | `files/anatomy/library/nos_coexistence.py` | `test_coexistence_state_machine.py` (stamp/clear) |
 | **A5.4** | Presenter flag + template split + one-click `onRollback` JS | `CoexistencePresenter.php`, `Coexistence/default.latte`, `widget-cutover-confirm.js` (+ `coexistence.css` cosmetic) | `test_coexistence_presenter_tier1.py` (flag + split + one-click-vs-typed) |
-| **A6** | Doc reconciliation (§8 walkthrough split, §2.5 diagram) | `docs/plans/agentic-upgrade-migration-coexistence-design.md` | — |
+| **A6** | Doc reconciliation (§8 walkthrough split, §2.5 diagram) | `docs/archive/agentic-upgrade-migration-coexistence-design.md` | — |
 | **A7** | Validate (read-only): `python3 -m pytest tests/anatomy/test_security_agentkit_filewrite.py test_agentkit_naming.py test_agent_schema.py test_coexistence_state_machine.py test_coexistence_presenter_tier1.py test_devlog_event_types.py test_config_stock_jinja_only.py`; `ansible-playbook main.yml --syntax-check`. **No `--tags`, no docker, no live run.** | — | — |
 
 ---

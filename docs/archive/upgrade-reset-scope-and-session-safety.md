@@ -3,7 +3,7 @@
 Status: PHASES 0–4 BUILT (Phase 4: 2026-07-07). The macOS-update continuity flow
 is live-validated; the reset-scope blank wet-test is still owed. A
 discrete extension of the
-[agentic upgrade → migration → coexistence epic](agentic-upgrade-migration-coexistence.md);
+[agentic upgrade → migration → coexistence epic](../plans/agentic-upgrade-migration-coexistence.md);
 read that first for the layered RECIPE → MIGRATION → COEXISTENCE model and the
 "agents drive, operator supervises" principle this inherits.
 

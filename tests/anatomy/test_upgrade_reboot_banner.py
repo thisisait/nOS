@@ -1,6 +1,6 @@
 """Anatomy gate: the Phase-3 host_reboot-pending banner on Wing /upgrades.
 
-Spec: docs/plans/upgrade-reset-scope-and-session-safety.md §"Execution side"
+Spec: docs/archive/upgrade-reset-scope-and-session-safety.md §"Execution side"
 ("reboot_required surfacing") + §"Run mode" (host_reboot = stage, never auto-reboot).
 
 The upgrade-engine writes ~/.nos/reboot-required.json after a successful

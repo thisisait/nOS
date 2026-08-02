@@ -100,13 +100,13 @@ announcing `BLANK RESET COMPLETE … Playbook now continues with clean
 installation`. The confirmation box listed `~/nos/tenants/**` under *"Will
 remain"* during the one level that deletes it. The sudo prompt promised that
 pressing Enter would make root tasks "fall back to manual mode"; they hard-fail,
-and it cost a live install. These are now [`hidden_fees/07`](../../hidden_fees/07-messages-that-outlive-their-mode.md):
+and it cost a live install. These are now [`hidden_fees/07`](../../../hidden_fees/07-messages-that-outlive-their-mode.md):
 text is a claim about the current run, and if its truth depends on a flag it
 must read that flag.
 
 ## The gates were the subject
 
-The pattern under all of it is in [`docs/doctrine/gates.md`](../../doctrine/gates.md),
+The pattern under all of it is in [`docs/doctrine/gates.md`](../../../doctrine/gates.md),
 and this arc kept proving it in new ways:
 
 - The confirmation gate pinned the **literal** string `remove=deep`. A
@@ -127,7 +127,7 @@ In parallel, the self-model contract with KEAP was negotiated to **v1** and
 flipped live: slug taxonomy ids (`nos`, `nos.infra.postgresql`), a canonical
 knowledge format, a producer-owned golden fixture, and **symmetric** gates —
 each repo pins the other's half. The protocol is written down in
-[`docs/doctrine/cross-repo-contracts.md`](../../doctrine/cross-repo-contracts.md),
+[`docs/doctrine/cross-repo-contracts.md`](../../../doctrine/cross-repo-contracts.md),
 including the rule that made it work: no hierarchy between the agents, and an
 objection blocks a version bump. Both halves of the contract failed on their own
 scaffolding before they ever failed on data — nOS's producer gate never passed
@@ -147,7 +147,7 @@ unhealthy**.
 
 ## Still owed
 
-[`docs/hidden_fees/`](../../hidden_fees/README.md) is the ledger, and it is
+[`docs/hidden_fees/`](../../../hidden_fees/README.md) is the ledger, and it is
 honest about being unpaid: disabled-service overrides still linger, the
 DB-blind-healthcheck class is closed for one service out of many, `docs/systems/`
 covers a third of the estate. Fee 07 has a mechanism nobody has explained yet —

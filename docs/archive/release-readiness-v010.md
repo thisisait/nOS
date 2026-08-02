@@ -469,7 +469,7 @@ Starting points, so tomorrow's review starts warm. This review did **not** perfo
 3. **`docs/hidden_fees/08` item 3 says "undiagnosed — do not guess."** It is diagnosed (§3.3). The
    ledger entry needs updating, and the fee's paydown items 1, 2 and 5 are verifiably unimplemented —
    check whether the entry still describes reality.
-4. **`docs/plans/cortex-s0-report.md`'s pending item resolved the wrong way** — `keap-features-sync`
+4. **`docs/archive/cortex-s0-report.md`'s pending item resolved the wrong way** — `keap-features-sync`
    fired and returned exit 3 (§3.6). The report's "success pending the next daily fire" line is now
    answerable and the answer is no.
 5. **`docs/plans/cortex-self-core.md` S2** records "Nights of evidence: ZERO" — that number will have

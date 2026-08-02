@@ -1,7 +1,7 @@
 """Anatomy gate: the Phase-3 session-risk pre-apply pause can NEVER hang a
 non-interactive / detached / CI upgrade run, and it gates on the right signal.
 
-Spec: docs/plans/upgrade-reset-scope-and-session-safety.md §"Execution side".
+Spec: docs/archive/upgrade-reset-scope-and-session-safety.md §"Execution side".
 
 A session_risk upgrade (resolved scope host_app|host_reboot) may restart a host
 app or reboot the machine and drop the controlling session. The upgrade engine

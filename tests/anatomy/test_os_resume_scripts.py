@@ -1,6 +1,6 @@
 """Anatomy gate — macOS-as-managed-upgrade continuation scripts (Increment 1).
 
-Spec: docs/plans/macos-as-managed-upgrade-target.md. The operator triggers the
+Spec: docs/archive/macos-as-managed-upgrade-target.md. The operator triggers the
 macOS update; nOS owns the PRE (arm) + POST (resume→settle) across the reboot it
 cannot survive. These gates pin the load-bearing contracts structurally (the
 runtime behaviour is smoke-tested separately + by the real update):

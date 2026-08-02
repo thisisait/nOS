@@ -9,7 +9,7 @@
  * so a window can be opened and dragged. Remove `.skip` (or gate on a
  * `FACE_SNAP_E2E=1` env) once a face fixture is wired into global-setup.
  *
- * The flow under test (see docs/plans/nos-face-shell-v2.md §1):
+ * The flow under test (see docs/archive/nos-face-shell-v2.md §1):
  *   1. Load the desktop; `initWindowManager()` has registered the SnapEngine and
  *      loaded `face.layouts` (or the built-in fallback set).
  *   2. Launch an app from the dock → a Window appears (WM v1 chrome).

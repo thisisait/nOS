@@ -1,6 +1,6 @@
 ---
 # macOS-as-managed-upgrade: install the cross-reboot continuation login agent.
-# Spec: docs/plans/macos-as-managed-upgrade-target.md (Increment 2).
+# Spec: docs/archive/macos-as-managed-upgrade-target.md (Increment 2).
 #
 # macOS-only by design: a macOS update is a macOS concept, and the resume agent
 # is a launchd LaunchAgent. The whole file is gated on the launchd service

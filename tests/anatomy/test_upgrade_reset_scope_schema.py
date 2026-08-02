@@ -1,7 +1,7 @@
 """Anatomy CI gate — the optional `reset` block on upgrade recipes (and the
 mirror block on migration records) carries a valid blast-radius `scope`.
 
-Phase 1 of docs/plans/upgrade-reset-scope-and-session-safety.md. The engine
+Phase 1 of docs/archive/upgrade-reset-scope-and-session-safety.md. The engine
 DERIVES a floor from the step/action types and ESCALATES the authored scope to
 it (authored may only raise the floor, never lower it). This gate pins the
 static contract that the schema layer owns:

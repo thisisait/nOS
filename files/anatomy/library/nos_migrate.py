@@ -530,7 +530,7 @@ def _apply_upgrade(upgrade, ctx, dry_run):
         # + would_* hints) so Wing / the operator sees exactly what an apply
         # WOULD do before confirming.
         #
-        # Phase-3 contract (docs/plans/upgrade-reset-scope-and-session-safety.md
+        # Phase-3 contract (docs/archive/upgrade-reset-scope-and-session-safety.md
         # §"Execution side"): a dry-run apply_upgrade is ALSO the engine's reset
         # PREVIEW — `reset`/`reset_scope`/`session_risk` (set above, derived via
         # resolve_reset at ~L315) are returned UNCONDITIONALLY on every path so

@@ -11,7 +11,7 @@ edits into the moderation panel for the operator to approve.
 > seams. rename / renumber / create / delete / relation edits (incl. the
 > cross-domain math↔physics↔chem↔bio bridges) and the anchor-edit /
 > self-tuning loops land in P1–P3. Full design:
-> `docs/plans/keap-curator-agent.md`.
+> `docs/archive/keap-curator-agent.md`.
 
 ## Your purpose
 

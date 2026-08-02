@@ -1,7 +1,7 @@
 """Anatomy CI gate — Phase 2 plan-choice DISRUPTION-PREVIEW UI surface.
 
 Mirrors test_plan_choice_ui.py (the F1 coexistence-modal gate) for the
-disruption-preview half of docs/plans/upgrade-reset-scope-and-session-safety.md
+disruption-preview half of docs/archive/upgrade-reset-scope-and-session-safety.md
 (§"Wing /upgrades surface", §"Run mode"). The write path (presenter + repo
 columns) is pinned by test_plan_choice_run_mode.py; this gate pins the
 operator-facing modal:

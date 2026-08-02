@@ -28,7 +28,7 @@ DEVLOG_TYPES = (
 # Same twin-parity contract as DEVLOG_TYPES: every type below MUST appear in
 # BOTH Bone's events.py VALID_TYPES and Wing's EventRepository::VALID_TYPES, or
 # an agent's Bone-proxied POST silently 400s (the 2026-05-17 remediator_report
-# incident). See docs/plans/agentic-upgrade-migration-coexistence-design.md §2.6.
+# incident). See docs/archive/agentic-upgrade-migration-coexistence-design.md §2.6.
 UPGRADE_COEXIST_B1_TYPES = (
     "plan_choice_recorded",
     "migration_authored",

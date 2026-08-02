@@ -626,7 +626,7 @@ can't be a real file browser or the KEAP bridge). Build-fresh SvelteKit in its o
   (role is PARKED, not flaky-with-retry).
 - **RELEASE.md** — cut the v0.7-beta tag or demote; add a July section (os-resume /
   reset-scope / Phase-4 / the security batch).
-- `docs/plans/macos-as-managed-upgrade-target.md` header — ✅ 2026-07-14: reframed to
+- `docs/archive/macos-as-managed-upgrade-target.md` header — ✅ 2026-07-14: reframed to
   "SHIPPED, Inc 1-3c live-validated; Inc 4 open".
 - `docs/plans/agentic-upgrade-migration-coexistence.md` header — ✅ 2026-07-14: reframed
   "VISION/DESIGN-FIRST" → "MID-BUILD Phase B; B7 pg16→17 open" (memory still to update).

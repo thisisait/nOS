@@ -2,7 +2,7 @@
 (Phase B / B1 schema, B3 repos+API).
 
 Pins the B1 data-model surface from
-docs/plans/agentic-upgrade-migration-coexistence-design.md §2:
+docs/archive/agentic-upgrade-migration-coexistence-design.md §2:
 
   - NEW table `migrations_authored` lives in schema-extensions.sql
     (CREATE TABLE IF NOT EXISTS — a new table, NOT a column on an existing one).

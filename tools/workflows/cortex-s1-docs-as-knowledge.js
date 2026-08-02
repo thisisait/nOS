@@ -44,7 +44,7 @@ const VERDICT = { type: 'object', additionalProperties: false, required: ['real'
 phase('Recheck')
 await agent(`${RULES}
 
-Read ${NOS}/docs/plans/cortex-s0-report.md and confirm its verdict permits this stage. Then re-verify
+Read ${NOS}/docs/archive/cortex-s0-report.md and confirm its verdict permits this stage. Then re-verify
 ONLY the facts S1 depends on: docs/systems coverage (plan says 22 of ~60 services), the organ's store
 materialises and reports its digest, and the recall gate still runs.
 

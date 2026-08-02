@@ -181,7 +181,7 @@
 # ------------------------------------------------------------------------------
 # Reset-scope PREVIEW pass + session-risk pre-apply gate (Phase 3)
 # ------------------------------------------------------------------------------
-# Spec: docs/plans/upgrade-reset-scope-and-session-safety.md §"Execution side".
+# Spec: docs/archive/upgrade-reset-scope-and-session-safety.md §"Execution side".
 #
 # Before ANY mutation we run apply_upgrade with dry_run:true over every eligible
 # recipe. That call mutates nothing (backup dir + state writes are gated on

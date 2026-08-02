@@ -1,7 +1,7 @@
 # Agentic upgrade → migration → coexistence — Phase B implementation spec
 
 > **Status:** Phase A design COMPLETE (2026-06-15, multi-agent design workflow `wijo2jzqc`: 5 grounded codebase maps → 4 parallel designs → 1 synthesis). This is the buildable **Phase B** spec.
-> **Vision + the "agents drive, operator supervises" principle:** [agentic-upgrade-migration-coexistence.md](agentic-upgrade-migration-coexistence.md).
+> **Vision + the "agents drive, operator supervises" principle:** [agentic-upgrade-migration-coexistence.md](../plans/agentic-upgrade-migration-coexistence.md).
 >
 > Produced by 10 subagents that READ the live codebase. The synthesis corrected the proposals against actual code paths (the non-existent `run_engine` → the real `nos_migrate action=apply`; the upgrade-architect profile contradiction; ALTER-sweep vs `CREATE TABLE` discipline; the already-present `nos:coexistence:write` scope). **Every choice EXTENDS live machinery — no rewrite.**
 

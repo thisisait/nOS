@@ -4,7 +4,7 @@ The shell's chrome (layouts / wallpapers / control-panel entries) is DataTable-
 driven: repo defaults (SoC) + KEAP rows + per-user state. The three config table
 defs in state/keap-tables/ must mirror the apps/systems DataTable shape and each
 must be paired with a seeder so a def can't ship without landing in KEAP.
-Doctrine: docs/doctrine/face.md, docs/plans/nos-face-shell-v2.md.
+Doctrine: docs/doctrine/face.md, docs/archive/nos-face-shell-v2.md.
 """
 
 from __future__ import annotations

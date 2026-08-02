@@ -1,6 +1,6 @@
 """Anatomy CI gate — Phase 2 plan-choice run_mode + reset-scope persistence.
 
-Pins the write path from docs/plans/upgrade-reset-scope-and-session-safety.md
+Pins the write path from docs/archive/upgrade-reset-scope-and-session-safety.md
 (§"Wing /upgrades surface", §"Run mode"):
 
   - UpgradeRepository::planUpgradeWithMode accepts a $runMode param, validates it

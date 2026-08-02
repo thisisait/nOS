@@ -24,7 +24,7 @@ sshd kickstart is a handler, so tag isolation *should* already exclude them from
      a Docker-Desktop quit/restart, `reboot`/`shutdown`/`softwareupdate -i`).
 
 If this gate FAILS the upgrade tag is NOT host-quiet — that is a real finding,
-not a flaky test. See docs/plans/upgrade-reset-scope-and-session-safety.md
+not a flaky test. See docs/archive/upgrade-reset-scope-and-session-safety.md
 §"Run-hardening".
 """
 
