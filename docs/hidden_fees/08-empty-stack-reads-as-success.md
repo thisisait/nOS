@@ -87,3 +87,34 @@ e.g. *"a service the manifest says is enabled must answer, tolerance or not."*
 
 Related: [`07`](07-messages-that-outlive-their-mode.md) is the same family from
 the text side — this one is the machine saying "ready" about nothing at all.
+
+---
+
+## Update 2026-08-02 (v0.10-beta release PR) — the fee is now VISIBLE, still unpaid
+
+Still **OPEN**, but the shape has changed and item (3) is no longer where the
+run stops. The job had not executed since `pazny.cortex` was Ansible-ized, and
+on the release PR it ran four times, each surfacing one real defect:
+
+1. `ok=226` — the cortex mount sentinel hard-failed on any absent
+   `nos_data_root`, conflating "removable volume not mounted" with "ordinary
+   directory nobody created". Fixed + gated
+   (`test_data_root_absent_means_two_things.py`).
+2. `pazny.backup` — an **ungated brew call does not skip on Linux**; Linuxbrew
+   is on `$PATH` and ran the formula. Six instances, fixed + gated
+   (`test_brew_calls_are_platform_gated.py`).
+3. `pazny.backup` again — the apt branch written for (2) guessed a package that
+   Ubuntu dropped after 22.04. Replaced with the vendor installer.
+4. **`ok=550 changed=141 failed=1`** — the playbook now runs END TO END and
+   fails at the smoke gate: `Infra: FAILED`, apps stack-up `rc != 0`,
+   **1 / 8 probes OK**.
+
+So the wet-test no longer passes an empty estate; it completes the playbook and
+**reports that the estate is not serving**. That is this fee being charged out
+loud for the first time.
+
+One claim in this document is now too strong and is withdrawn: *"it is the
+reason the wet-test never tested what it claimed."* It tested very little
+because the run died early, not only because of the probe's tolerance. Getting
+226 → 550 tasks turned it into an instrument that finds real defects. The probe
+weakness (items 1, 2, 5) is unchanged and still needs paying.

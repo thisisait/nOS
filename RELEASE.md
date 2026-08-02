@@ -150,6 +150,29 @@ executed the branch it claimed to cover.**
   shipped green against the very bug it was written for. It now follows the
   laundered fact through the file.
 
+### The red we are shipping with — `Integration (ubuntu-24.04)`
+
+**This job is red at the tag, and it should be.** It is the standing Linux
+acceptance gate, it runs only on non-draft PRs, and it had not executed since
+`pazny.cortex` was Ansible-ized *during this cycle*. On the release PR it ran
+four times and walked forward one real defect per run:
+
+| run | reached | stopped on |
+|---|---|---|
+| 1 | `ok=226` | cortex mount sentinel: "volume not mounted" conflated with "directory does not exist" |
+| 2 | `pazny.backup` | ungated brew — Linuxbrew *ran* the formula and crashed in its own post-install |
+| 3 | `pazny.backup` | our apt branch — `awscli` is not in the Ubuntu 24.04 archive |
+| 4 | **`ok=550 changed=141 failed=1`** | the final smoke gate: `Infra: FAILED`, apps stack-up `rc != 0`, **1 / 8 probes OK** |
+
+Runs 1–3 were defects and are fixed. **Run 4 is the Linux port itself**: the
+playbook now completes end-to-end and the estate does not come up, which is the
+pre-existing gap of `docs/hidden_fees/08` finally being *reported* instead of
+passing as `0/0 ready`. Nothing in this release regressed it; this release is
+what made it visible.
+
+The supported platform is unaffected — the macOS estate converges
+`ok=1431 failed=0`, and every blocking non-integration job is green.
+
 ### Known open at cut time
 
 Named here because v0.9-beta named its red and this one owes the same.
