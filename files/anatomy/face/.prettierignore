@@ -1,0 +1,15 @@
+# Generated artifacts have exactly one authority, and it is the generator.
+#
+# `src/lib/contracts/*.gen.ts` is emitted by `tools/genome-codegen.py` from
+# `state/genome/entity.schema.json` and gated by `genome-codegen.py --check` in
+# the contracts-drift CI job. Letting prettier also own the file gives it two
+# owners: `prettier --write` reformats it, the next `--check` reports drift, and
+# whichever job runs last decides. That is the same "N uncoordinated copies of
+# one law" shape the genome exists to remove.
+src/lib/contracts/*.gen.ts
+
+# Build output and dependencies.
+build/
+.svelte-kit/
+node_modules/
+package-lock.json

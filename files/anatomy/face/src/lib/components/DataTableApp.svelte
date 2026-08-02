@@ -146,7 +146,9 @@
 								{/each}
 								{#if data.canWrite}
 									<td class="edit-col">
-										<button class="edit" aria-label="Edit row" onclick={() => open(row)}>edit</button>
+										<button class="edit" aria-label="Edit row" onclick={() => open(row)}
+											>edit</button
+										>
 									</td>
 								{/if}
 							</tr>

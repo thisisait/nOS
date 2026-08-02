@@ -393,10 +393,20 @@ CREATE TABLE notifications (
     source_event_id     INTEGER,                        -- soft FK events.id for audit deep-link
     channels_json       TEXT NOT NULL DEFAULT '["wing-inbox"]',  -- JSON array: subset of [wing-inbox, ntfy, mail]
     wing_inbox_read_at  TEXT,                           -- NULL = unread; mark-read action sets this
-    ntfy_dispatched_at  TEXT,                           -- NULL = pending (only meaningful if "ntfy" in channels)
+    -- *_dispatched_at means DELIVERED, never merely ATTEMPTED (2026-08-01).
+    -- It used to be stamped in BOTH branches of mark_dispatched(), so a failed
+    -- send was permanently excluded from fetch_pending (WHERE … IS NULL) and
+    -- was indistinguishable in the DB from a delivered one. A momentarily
+    -- unreachable ntfy or SMTP host lost the message for good — including the
+    -- CRITICAL "GDPR breach OVERDUE" rows — and the failing run's own alarm
+    -- self-healed the next minute, because by then the row was stamped.
+    -- The attempt counters below are what allows giving up without lying.
+    ntfy_dispatched_at  TEXT,                           -- NULL = still pending (only meaningful if "ntfy" in channels)
     ntfy_error          TEXT,
+    ntfy_attempts       INTEGER NOT NULL DEFAULT 0,
     mail_dispatched_at  TEXT,
     mail_error          TEXT,
+    mail_attempts       INTEGER NOT NULL DEFAULT 0,
     -- A9 daily-digest mail (2026-05-17): when the per-minute worker decides
     -- a row belongs in the digest queue (severity ≤ DISPATCH_MAIL_DIGEST_FLOOR
     -- AND `mail` ∈ channels), it stamps this column with the queue-entry time

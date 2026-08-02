@@ -75,7 +75,7 @@ export function resolveView(table: DataTable): ResolvedView {
 		date,
 		media,
 		meta,
-		...(degraded ? { degradedFrom: degraded } : {}),
+		...(degraded ? { degradedFrom: degraded } : {})
 	};
 }
 

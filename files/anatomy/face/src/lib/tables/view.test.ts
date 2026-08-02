@@ -16,7 +16,14 @@ const col = (key: string, kind: string, label = key): ColumnSpec =>
 	({ key, label, kind }) as ColumnSpec;
 
 const table = (columns: ColumnSpec[], view?: DataTable['view']): DataTable =>
-	({ slug: 't', title: 'T', columns, rows: [], source: 'keap', ...(view ? { view } : {}) }) as DataTable;
+	({
+		slug: 't',
+		title: 'T',
+		columns,
+		rows: [],
+		source: 'keap',
+		...(view ? { view } : {})
+	}) as DataTable;
 
 const COLS = [
 	col('title', 'text', 'Title'),
@@ -35,7 +42,14 @@ describe('resolveView', () => {
 	});
 
 	it('honours a fully-declared blog', () => {
-		const r = resolveView(table(COLS, { style: 'blog', titleColumn: 'title', bodyColumn: 'research', metaColumns: ['status'] }));
+		const r = resolveView(
+			table(COLS, {
+				style: 'blog',
+				titleColumn: 'title',
+				bodyColumn: 'research',
+				metaColumns: ['status']
+			})
+		);
 		expect(r.style).toBe('blog');
 		expect(r.body?.key).toBe('research');
 		expect(r.meta.map((m) => m.key)).toEqual(['status']);
