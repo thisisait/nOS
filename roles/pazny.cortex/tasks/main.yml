@@ -192,15 +192,49 @@
   register: _cortex_data_root
   when: cortex_fs_enabled | bool
 
-- name: "[pazny.cortex] Fail when the data root is absent — the sentinel must not be written into a phantom"
+# "Absent" means two different things and this guard used to conflate them.
+#
+#   * nos_data_root under /Volumes/ is a REMOVABLE volume. Absent = NOT MOUNTED,
+#     and creating the path would produce the exact phantom the sentinel exists
+#     to prevent. Hard fail — that is the whole point.
+#   * nos_data_root anywhere else is an ORDINARY directory on the boot volume
+#     (the default is `$HOME/nos`). It cannot be "unmounted"; absent just means
+#     nothing has created it yet, and nothing does — service data dirs are made
+#     individually, deeper, and later.
+#
+# Conflating them meant a DEFAULT-config install failed here, on Linux and on
+# macOS alike; it only ever passed for operators who had already redirected
+# nos_data_root onto an existing external disk. Caught 2026-08-02 by the Linux
+# wet-test, on the first non-draft PR after this role was Ansible-ized.
+#
+# The /Volumes discriminator is not invented here — it is the same test
+# `tasks/stacks/docker-external-mount-preflight.yml` already arms on.
+- name: "[pazny.cortex] Resolve whether the data root is a removable volume"
+  ansible.builtin.set_fact:
+    _cortex_root_is_removable: "{{ (nos_data_root | default('')) is match('^/Volumes/') }}"
+  when: cortex_fs_enabled | bool
+
+- name: "[pazny.cortex] Fail when a REMOVABLE data root is not mounted"
   ansible.builtin.fail:
     msg: >-
-      {{ nos_data_root }} is not a directory. Writing the mount sentinel here would
-      create it on the boot volume UNDER an empty mountpoint, and the organ would then
-      happily walk an empty tree while believing the disk was present — which is the
-      exact failure the sentinel exists to prevent. Mount the volume and re-run.
+      {{ nos_data_root }} is not a directory, and it is on /Volumes — i.e. a removable
+      disk that is NOT MOUNTED. Writing the mount sentinel here would create it on the
+      boot volume UNDER an empty mountpoint, and the organ would then happily walk an
+      empty tree while believing the disk was present — which is the exact failure the
+      sentinel exists to prevent. Mount the volume and re-run.
   when:
     - cortex_fs_enabled | bool
+    - _cortex_root_is_removable | bool
+    - not (_cortex_data_root.stat.isdir | default(false))
+
+- name: "[pazny.cortex] Create an ordinary (non-removable) data root"
+  ansible.builtin.file:
+    path: "{{ nos_data_root }}"
+    state: directory
+    mode: '0755'
+  when:
+    - cortex_fs_enabled | bool
+    - not (_cortex_root_is_removable | bool)
     - not (_cortex_data_root.stat.isdir | default(false))
 
 - name: "[pazny.cortex] Write the mount sentinel"
