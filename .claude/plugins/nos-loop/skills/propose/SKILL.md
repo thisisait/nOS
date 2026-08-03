@@ -46,8 +46,10 @@ curl -sS -X POST -H "Authorization: Bearer $(tok loop_propose_token)" \
      "$BASE/api/v1/loop/proposals"
 ```
 
-`tree_sha` is `git rev-parse HEAD` — the tree the proposal was written against,
-so a verdict can be tied to a state of the repo. `proposer_id` names who is
+`tree_sha` is `git rev-parse HEAD` — the tree the proposal was written against.
+It is context, not control: when the proposal is judged, the engine applies the
+stored diff at a base IT chooses (the repo's HEAD at judge time), so a declared
+tree_sha never selects the tree a verdict is about. `proposer_id` names who is
 proposing (`agent:claude-code`). The diff field is `diff_text`; it was written
 here as `diff`, and together with the two missing fields that made every
 documented proposal a 422 — the skill described a call that could not be made.
@@ -85,10 +87,14 @@ changes, the gate set changes, or an operator forgets the fingerprint.
 
 ## After 201
 
-Make the change. Exactly the declared paths, nothing else, one change per cycle —
+**Do not apply the change yourself.** The `diff_text` you just recorded IS the
+change: the engine applies that stored diff inside its own sandbox when the
+proposal is judged, so the verdict is on the proposed tree — edits you make to
+the working copy are invisible to the judges, and a diff that exists only as
+working-copy edits is a proposal that was never recorded. One change per cycle —
 two changes under one verdict teach nothing about either.
 
-Then **stop and hand the proposal uuid to the `judge` skill.** Do not fetch the
+**Stop and hand the proposal uuid to the `judge` skill.** Do not fetch the
 evaluator's token. Do not run a judge command to "check first". If you want to
 know whether it holds, that is what judgment is for, and it must be triggered by
 an identity that is not yours.

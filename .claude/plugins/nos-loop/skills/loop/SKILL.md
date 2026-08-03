@@ -17,11 +17,14 @@ Hermes will not have.
 2. **Pick one item.** The top item you can actually act on. If the list came back
    incomplete or degraded, say so before choosing; a partial list is a partial
    choice.
-3. **`propose`** — record the change *before* making it. If it is refused, the
-   cycle ends there; report the engine's reason.
-4. **Make the change.** Exactly the declared paths. Exactly one change.
-5. **`judge`** — trigger the gate set and wait for the verdict.
-6. **Report.** The verdict, verbatim, with its run id and per-judge evidence.
+3. **`propose`** — record the change as a diff, *without applying it anywhere*.
+   The recorded diff IS the change. If it is refused, the cycle ends there;
+   report the engine's reason.
+4. **`judge`** — trigger the gate set and wait for the verdict. The engine
+   applies the recorded diff itself, in a sandbox, at a base it chooses — the
+   verdict is on the proposed tree, never on the working copy, so there is
+   nothing to stage, edit or commit between these two steps.
+5. **Report.** The verdict, verbatim, with its run id and per-judge evidence.
 
 Then **stop.** One weakness, one change, one verdict. Two changes under one
 verdict teach nothing about either, and a cycle that keeps going until it finds a

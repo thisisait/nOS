@@ -247,10 +247,16 @@ CREATE TABLE IF NOT EXISTS loop_judge_runs (
     work_count   INTEGER,
     min_work     INTEGER,
     outcome      TEXT CHECK (outcome IN ('pass','fail','indeterminate')),
-    -- The commit THIS judge observed, read out of its sandbox by
-    -- `judges.git_worktree_sandbox` and persisted by the exit reader. The
+    -- The tree THIS judge observed, read out of its sandbox by
+    -- `judges.git_worktree_sandbox` — or, for an attached run, the
+    -- `git write-tree` id of base + the proposal's stored diff (A1). The
     -- verdict's tree_sha is derived from these; it is not a caller's label.
     tree_sha     TEXT,
+    -- The ENGINE-chosen base the diff was applied to: the repo's HEAD at run
+    -- time, never the proposer's declared tree_sha. Equal to tree_sha on
+    -- baseline runs. Without it a replay cannot reconstruct the judged tree
+    -- from the stored diff.
+    base_sha     TEXT,
     stdout_sha   TEXT,
     stdout_head  TEXT,
     -- WHY a judge reached its outcome, and the only field that makes a SKIP
@@ -350,6 +356,7 @@ _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("loop_judge_runs", "reason", "TEXT"),
     ("loop_judge_runs", "resolved_argv0", "TEXT"),
     ("loop_judge_runs", "interpreter", "TEXT"),
+    ("loop_judge_runs", "base_sha", "TEXT"),
     ("loop_proposals", "diff_text", "TEXT"),
 )
 
@@ -625,6 +632,7 @@ def _as_judge_run(row: dict[str, Any]) -> "judges.JudgeRun":
         min_work=row["min_work"] or 0,
         stdout_sha=row["stdout_sha"],
         tree_sha=row["tree_sha"],
+        base_sha=row["base_sha"] if "base_sha" in row.keys() else None,
         reason=row["reason"] if "reason" in row.keys() else "",
         resolved_argv0=row["resolved_argv0"] if "resolved_argv0" in row.keys() else None,
         interpreter=row["interpreter"] if "interpreter" in row.keys() else None,
@@ -726,17 +734,24 @@ class ReaderLedger:
         v = self.verdict(verdict_uuid)
         if v is None:
             return None
-        run_uuids = json.loads(v["evidence"]).get("judge_runs", [])
+        evidence = json.loads(v["evidence"])
+        run_uuids = evidence.get("judge_runs", [])
+        bases = evidence.get("bases", [])
         runs = [self.judge_run(u) for u in run_uuids]
         return {
             "verdict": v,
             "tree_sha": v["tree_sha"],
+            # A1 — the engine base the stored diff was applied to. With the
+            # proposal's diff_text this reconstructs the judged tree byte for
+            # byte (`git apply --index` + `git write-tree` is deterministic).
+            "base_sha": bases[0] if len(bases) == 1 else None,
             "runs": [
                 {
                     "judge_name": r["judge_name"], "argv": json.loads(r["argv"]),
                     "exit_code": r["exit_code"], "work_count": r["work_count"],
                     "stdout_sha": r["stdout_sha"], "outcome": r["outcome"],
                     "tree_sha": r["tree_sha"],
+                    "base_sha": r["base_sha"] if "base_sha" in r.keys() else None,
                     # A4: a replay must run the interpreter the record ran, not
                     # merely the same literal argv — see judges.JudgeRun.identity.
                     "resolved_argv0": r["resolved_argv0"] if "resolved_argv0" in r.keys() else None,
@@ -986,11 +1001,12 @@ class EvaluatorLedger(ReaderLedger):
         cur = self._w(
             "UPDATE loop_judge_runs SET status=?, finished_at=datetime('now'), "
             "exit_code=?, work_count=?, min_work=?, outcome=?, tree_sha=?, "
-            "stdout_sha=?, stdout_head=?, reason=?, resolved_argv0=?, "
-            "interpreter=? "
+            "base_sha=?, stdout_sha=?, stdout_head=?, reason=?, "
+            "resolved_argv0=?, interpreter=? "
             "WHERE uuid=? AND status='running'",
             (status, run.exit_code, run.work, run.min_work, outcome, run.tree_sha,
-             run.stdout_sha, (run.stdout_head or "")[:_STDOUT_HEAD_MAX],
+             run.base_sha, run.stdout_sha,
+             (run.stdout_head or "")[:_STDOUT_HEAD_MAX],
              run.reason or "", run.resolved_argv0, run.interpreter, run_uuid))
         if cur.rowcount != 1:
             # The `status='running'` guard is what stops a swept ('crashed') run
@@ -1095,6 +1111,12 @@ class EvaluatorLedger(ReaderLedger):
             result = "indeterminate"
         tree_sha = trees[0] if len(trees) == 1 else ""
 
+        # A1's lineage half: the ENGINE-chosen base each judge's tree was built
+        # from. tree_sha alone names WHAT was judged; base + the proposal's
+        # stored diff is HOW to rebuild it, which is what §11 replay needs.
+        bases = sorted({r["base_sha"] for r in rows
+                        if "base_sha" in r.keys() and r["base_sha"]})
+
         prev_row = self._q(
             "SELECT row_hash FROM loop_verdicts WHERE row_hash IS NOT NULL "
             "ORDER BY id DESC LIMIT 1")
@@ -1113,6 +1135,7 @@ class EvaluatorLedger(ReaderLedger):
                 "missing_judges": missing,
                 "outcomes": {r["judge_name"]: r["outcome"] for r in rows},
                 "trees": trees,
+                "bases": bases,
                 "tree_note": tree_reason,
                 "reason": verdict.reason,
             }),

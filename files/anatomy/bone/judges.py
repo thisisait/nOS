@@ -89,6 +89,7 @@ __all__ = [
     "ConfigError",
     "load_registry",
     "run_gate_set",
+    "apply_proposal_diff",
     "judge_spawn_env",
     "probe_interpreter",
     "CLI_EXIT",
@@ -840,6 +841,54 @@ def git_worktree_sandbox(repo_root: Path) -> tuple[Path, str, Callable[[], None]
     return target, sha, cleanup
 
 
+def apply_proposal_diff(sandbox: Path, diff_text: str) -> str:
+    """Apply a proposal's STORED diff inside the sandbox; return the judged
+    tree's own name (`git write-tree`).
+
+    A1, the review's headline finding: an attached verdict was a verdict on
+    unmodified HEAD — `run_gate_set` never saw the proposal, so the ceremony
+    judged nothing, permanently (the skills forbid committing, and the sandbox
+    checks out HEAD). This is the missing step: `git apply --index` stages the
+    diff into the sandbox's index AND worktree, and `git write-tree` reads the
+    resulting tree id back OUT of git — a replayable identity (same diff on the
+    same base always writes the same tree), measured rather than claimed, and
+    necessarily different from the base commit whenever the diff changes bytes.
+
+    Raises SandboxError on any failure. The caller must treat that as
+    INDETERMINATE for the whole set — NEVER as licence to judge unpatched HEAD,
+    which would attach a verdict to a change no judge ever saw.
+    """
+    proc = subprocess.run(  # noqa: S603 — the diff arrives via stdin, not argv
+        ["git", "apply", "--index", "--whitespace=nowarn", "-"],
+        cwd=str(sandbox),
+        input=diff_text,
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise SandboxError(
+            f"diff does not apply at engine base: {proc.stderr.strip()[:400]}"
+        )
+    wt = subprocess.run(  # noqa: S603
+        ["git", "write-tree"],
+        cwd=str(sandbox),
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    tree_id = wt.stdout.strip()
+    if wt.returncode != 0 or not tree_id:
+        raise SandboxError(
+            "the diff applied but the tree will not name itself "
+            f"(git write-tree: {wt.stderr.strip()[:200]}) — an unnameable tree "
+            "cannot be replayed, so it cannot be judged"
+        )
+    return tree_id
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Run records (constraint B) and the verdict
 # ─────────────────────────────────────────────────────────────────────────────
@@ -873,11 +922,16 @@ class JudgeRun:
     #: different interpreter than the record. Both are measured, never claimed.
     resolved_argv0: str | None = None
     interpreter: str | None = None
-    #: The commit this judge actually observed, read out of the sandbox by
-    #: `git_worktree_sandbox`. NOT a caller's label: §11 makes replay the
-    #: guarantee ("re-run the recorded argv against the recorded tree"), and a
-    #: run that cannot name its tree cannot be replayed against it.
+    #: The tree this judge actually observed. For a baseline run it is the
+    #: sandbox commit read out by `git_worktree_sandbox`; for an ATTACHED run it
+    #: is the `git write-tree` id of base + the proposal's stored diff
+    #: (`apply_proposal_diff`) — read out of git, never a caller's label. §11
+    #: makes replay the guarantee, and a run that cannot name its tree cannot
+    #: be replayed against it.
     tree_sha: str | None = None
+    #: The ENGINE-chosen base the diff was applied to (A1): current HEAD, never
+    #: the proposer's declared tree_sha. Equal to `tree_sha` on baseline runs.
+    base_sha: str | None = None
     started_at: float | None = None
     finished_at: float | None = None
 
@@ -905,6 +959,7 @@ class JudgeRun:
             "min_work": self.min_work,
             "stdout_sha": self.stdout_sha,
             "tree_sha": self.tree_sha,
+            "base_sha": self.base_sha,
         }
 
 
@@ -1004,6 +1059,7 @@ def run_gate_set(
     sandbox_factory: Callable[[Path], tuple[Path, str, Callable[[], None]]] | None = None,
     lock_dir: str | os.PathLike[str] | None = None,
     judge_env: Mapping[str, str] | None = None,
+    proposal_diff: str | None = None,
 ) -> GateSetVerdict:
     """Run a named gate set and return a structured, three-valued verdict.
 
@@ -1016,6 +1072,19 @@ def run_gate_set(
     environment (a test hands in a PATH); it is ALWAYS passed through
     ``judge_spawn_env``, so no seam can smuggle the daemon's private venv back
     onto a judge's PATH.
+
+    ``proposal_diff`` is the ARTIFACT UNDER JUDGMENT, not a hint at a result
+    (A1). When set, the STORED diff — the routes read it off the proposal row,
+    never a request body, so it is the same bytes the budget checked and the
+    content fingerprint deduplicated — is applied inside the sandbox at an
+    ENGINE-chosen base: the repo's current HEAD, never the proposer's declared
+    tree_sha. `git apply --index` + `git write-tree` give the judged tree a
+    replayable identity, recorded on every run as `tree_sha` with the base as
+    `base_sha`. A diff that does not apply is INDETERMINATE for the whole set
+    — never a fallback to unpatched HEAD, never a pass — because a verdict on
+    HEAD attached to a proposal is a verdict on a change no judge ever saw,
+    which is exactly what every attached verdict was before this parameter
+    existed. ``None`` means a deliberate unattached baseline of HEAD itself.
 
     ONE SET, ONE TREE (§2.5). The sandbox is created HERE, once, and every judge
     of the set runs inside it. Per-judge sandboxing (the previous shape, keyed on
@@ -1045,7 +1114,7 @@ def run_gate_set(
         return aggregate([], gate_set)
 
     try:
-        cwd, tree_sha, cleanup = (sandbox_factory or git_worktree_sandbox)(root)
+        cwd, base_sha, cleanup = (sandbox_factory or git_worktree_sandbox)(root)
     except Exception as exc:  # noqa: BLE001 — any sandbox failure is INDETERMINATE
         why = (
             f"sandbox could not be created ({exc}) — refusing to run against the "
@@ -1056,6 +1125,34 @@ def run_gate_set(
         )
 
     try:
+        # A1 — an attached run judges base + diff, and NOTHING ELSE. The judged
+        # tree's identity is read back out of git; a failure here ends the set
+        # before any judge runs, because the only tree left to run them on is
+        # the one the proposal is not.
+        judged_tree = base_sha
+        if proposal_diff is not None:
+            if not proposal_diff.strip():
+                why = (
+                    "attached proposal has no stored diff — nothing to apply, and "
+                    "judging unmodified HEAD instead would attach a verdict to a "
+                    "change no judge ever saw"
+                )
+                return aggregate(
+                    [_skipped(reg.judges[n], gate_set, why) for n in spec_set.judges],
+                    gate_set,
+                )
+            try:
+                judged_tree = apply_proposal_diff(Path(cwd), proposal_diff)
+            except SandboxError as exc:
+                why = (
+                    f"{exc} (engine base {base_sha}) — the proposal was not "
+                    f"judged; refusing to fall back to unpatched HEAD"
+                )
+                return aggregate(
+                    [_skipped(reg.judges[n], gate_set, why) for n in spec_set.judges],
+                    gate_set,
+                )
+
         runs: list[JudgeRun] = []
         for judge_name in spec_set.judges:
             spec = reg.judges[judge_name]
@@ -1064,7 +1161,8 @@ def run_gate_set(
                     spec,
                     gate_set=gate_set,
                     sandbox=Path(cwd),
-                    tree_sha=tree_sha,
+                    tree_sha=judged_tree,
+                    base_sha=base_sha,
                     spawn=do_spawn,
                     probe=do_probe,
                     lock_dir=locks,
@@ -1100,6 +1198,7 @@ def _run_one(
     gate_set: str,
     sandbox: Path,
     tree_sha: str,
+    base_sha: str | None,
     spawn: Callable[[Sequence[str], str, int], Completed],
     probe: Callable[[str], bool],
     lock_dir: Path,
@@ -1130,6 +1229,7 @@ def _run_one(
             with _FileLock(spec.exclusive_resource, lock_dir):
                 return _spawn_and_read(
                     spec, gate_set, sandbox, tree_sha, spawn,
+                    base_sha=base_sha,
                     resolved_argv0=resolved, interpreter=interpreter,
                 )
         except _ResourceBusy as exc:
@@ -1141,6 +1241,7 @@ def _run_one(
             )
     return _spawn_and_read(
         spec, gate_set, sandbox, tree_sha, spawn,
+        base_sha=base_sha,
         resolved_argv0=resolved, interpreter=interpreter,
     )
 
@@ -1152,6 +1253,7 @@ def _spawn_and_read(
     tree_sha: str,
     spawn: Callable[[Sequence[str], str, int], Completed],
     *,
+    base_sha: str | None = None,
     resolved_argv0: str | None = None,
     interpreter: str | None = None,
 ) -> JudgeRun:
@@ -1172,6 +1274,7 @@ def _spawn_and_read(
         min_work=spec.min_work,
         sandbox_path=str(cwd),
         tree_sha=tree_sha,
+        base_sha=base_sha,
         resolved_argv0=resolved_argv0,
         interpreter=interpreter,
         started_at=time.time(),

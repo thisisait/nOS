@@ -35,6 +35,12 @@ now answers 422 instead of doing something else quietly.
 `202` returns a `run_id`. The call is asynchronous because one gate set runs for
 minutes; that is expected, not a hang.
 
+An attached run judges the proposal's STORED diff: the engine applies it in a
+sandbox at a base it chooses and the verdict names both the base and the judged
+tree. There is no way to send a different diff here — what gets judged is what
+was proposed. If the diff no longer applies, the verdict is `indeterminate`
+with that reason; the engine never falls back to judging the unpatched repo.
+
 ## Wait
 
 ```bash
@@ -82,6 +88,7 @@ and the run id. A verdict without its evidence is a claim.
 ## Checking a verdict
 
 Do not re-judge to double-check — replay. The engine stored the exact argv, the
-tree sha, the exit code, the work count and a stdout hash for exactly this. A
+judged tree's id and the base it was built from, the exit code, the work count
+and a stdout hash for exactly this. A
 verdict that cannot be replayed is a claim, and this estate spent a release
 learning what claims are worth.

@@ -220,7 +220,22 @@ def _execute(job_id: str, gate_set: str, proposal_uuid: str | None) -> None:
     # rather than papered over.
     led = ledger.open_ledger(_EVALUATOR)
     try:
-        verdict = judges.run_gate_set(gate_set)
+        # A1 — an attached job judges the PROPOSAL, not unmodified HEAD. The
+        # diff comes off the STORED row (recorded at propose time, checked by
+        # the budget, deduplicated by content_fp), never from this request:
+        # JudgeIn carries no diff field, so what gets judged is what was
+        # proposed. The engine applies it at ITS OWN base (current HEAD —
+        # never the proposer's declared tree_sha) and a diff that does not
+        # apply is INDETERMINATE, not a silent baseline of HEAD.
+        proposal_diff = None
+        if proposal_uuid is not None:
+            prop = led.proposal(proposal_uuid)
+            if prop is None:
+                raise ledger.LedgerError(f"no such proposal: {proposal_uuid}")
+            # "" (a legacy pre-diff row) fails closed inside run_gate_set:
+            # attached-with-nothing-to-apply is INDETERMINATE, never HEAD.
+            proposal_diff = prop["diff_text"] or ""
+        verdict = judges.run_gate_set(gate_set, proposal_diff=proposal_diff)
         for run in verdict.runs:
             run_uuid = led.begin_judge_run(
                 gate_set=gate_set, judge_name=run.judge_name,
