@@ -38,6 +38,7 @@ CI-safe: text + YAML + JSON parsing only.
 """
 from __future__ import annotations
 
+import ast
 import json
 import pathlib
 import re
@@ -46,6 +47,7 @@ import subprocess
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+BONE = REPO / "files" / "anatomy" / "bone"
 PLUGIN = REPO / ".claude" / "plugins" / "nos-loop"
 CONTRACT = REPO / "docs" / "idea" / "11-agentic-loop-contract.md"
 
@@ -183,11 +185,50 @@ def test_the_command_declares_a_description():
 _ROUTE_RE = re.compile(r"/api/v1/loop/([A-Za-z0-9_-]+)")
 
 
-def _contract_routes() -> set[str]:
-    """Route names the contract declares as EXISTING.
+def _engine_routes() -> set[str]:
+    """The routes that ACTUALLY EXIST, read from the engine's decorators.
 
-    A line that says the route does not exist contributes nothing — that is how
-    `verdicts` stays out of the allowlist without being special-cased here.
+    THIS FUNCTION REPLACED A DOC-DERIVED ALLOWLIST, and the reason is the whole
+    subject of this repository. The previous version read the contract PROSE and
+    compared it to the plugin PROSE — two files a proposal may edit — while the
+    engine, the only thing that actually serves a request, was never consulted.
+    An adversarial review (2026-08-03) caught it on the commit that added
+    `/forget`: the route and its row in the contract's endpoint table landed
+    together, so the gate was satisfied by the same change it was meant to
+    judge. A gate you can satisfy by editing the gate is not one.
+
+    Read from the AST, never a substring: a decorator inside a docstring or a
+    commented-out route would otherwise count as a live endpoint.
+    """
+    routes: set[str] = set()
+    for src in (BONE / "looproutes.py", BONE / "weaknesses.py"):
+        tree = ast.parse(src.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            # BOTH forms. `async def` is `AsyncFunctionDef`, a separate node
+            # type, and the weakness reader's route is one — checking only
+            # FunctionDef silently dropped a live endpoint from the allowlist.
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for dec in node.decorator_list:
+                if not (isinstance(dec, ast.Call) and isinstance(dec.func, ast.Attribute)):
+                    continue
+                if not (isinstance(dec.func.value, ast.Name) and dec.func.value.id == "router"):
+                    continue
+                for arg in dec.args:
+                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                        routes.update(_ROUTE_RE.findall("/api/v1/loop" + arg.value))
+                        # `/judge/{job_id}` and `/judge` are one name here.
+                        head = arg.value.strip("/").split("/")[0]
+                        if head:
+                            routes.add(head)
+    return routes
+
+
+def _contract_routes() -> set[str]:
+    """Route names the contract PROSE declares as existing.
+
+    No longer the allowlist — now the thing checked AGAINST the engine, so doc
+    drift is caught in both directions rather than being the authority.
     """
     routes: set[str] = set()
     for line in CONTRACT.read_text().splitlines():
@@ -197,8 +238,36 @@ def _contract_routes() -> set[str]:
     return routes
 
 
-def test_the_plugin_addresses_only_routes_the_contract_declares():
-    declared = _contract_routes()
+def test_the_contract_prose_matches_the_engine():
+    """Doc drift, both directions, with the CODE as the authority.
+
+    A route the prose describes and the engine does not serve sends a model
+    into a 404 it will read as "not built yet"; a route the engine serves and
+    the prose omits is an undocumented surface. Neither is caught by comparing
+    prose to prose.
+    """
+    engine, declared = _engine_routes(), _contract_routes()
+    assert "verdicts" not in engine, (
+        "the engine now serves a verdicts route. §3.1 deleted it on purpose: a "
+        "route that accepts a result and tells writers apart by credential is a "
+        "lock whose key is a header. Removing the input surface removes the class."
+    )
+    phantom = sorted(declared - engine)
+    assert not phantom, (
+        "the contract declares routes the engine does not serve: "
+        + ", ".join(phantom)
+        + ". Prose is not a surface; add the route or stop promising it."
+    )
+    undocumented = sorted(engine - declared)
+    assert not undocumented, (
+        "the engine serves routes the contract never mentions: "
+        + ", ".join(undocumented)
+        + ". §6.1's table is the operator-facing inventory of the loop's surface."
+    )
+
+
+def test_the_plugin_addresses_only_routes_the_engine_serves():
+    declared = _engine_routes()
     assert {"weaknesses", "budget", "proposals", "judge"} <= declared, (
         "the contract's endpoint table moved; re-derive this gate from "
         "docs/idea/11-agentic-loop-contract.md §6.1"
