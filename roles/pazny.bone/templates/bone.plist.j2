@@ -36,8 +36,17 @@
            The shim directory is stable across interpreter versions; the
            versioned `versions/*/bin` deliberately is not listed.
            Same class as `resolve_openssl` in the backup script, which the
-           estate already solved once for exactly this reason. #}
-        <string>{{ bone_venv }}/bin:{{ ansible_facts['env']['HOME'] }}/.pyenv/shims:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+           estate already solved once for exactly this reason.
+
+           ORDER IS LOAD-BEARING, and venv-first was measured wrong (2026-08-03,
+           the second real turn): with the daemon's venv bin FIRST, the judges'
+           committed `python3 -m pytest` resolved to {{ bone_venv }}/bin/python3
+           — which has no pytest ("No module named pytest") — so gate sets
+           `repo` and `full` could never reach a verdict. The venv bin stays
+           LAST, only for the daemon's own tooling; judges.judge_spawn_env
+           additionally filters it out engine-side, so the engine does not
+           depend on this ordering. #}
+        <string>{{ ansible_facts['env']['HOME'] }}/.pyenv/shims:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:{{ bone_venv }}/bin</string>
 
         <!-- Bone-specific config (matches container env from Track A) -->
         {# SEC L-BONE2 (2026-05-24): BONE_SECRET (legacy API-key channel) is

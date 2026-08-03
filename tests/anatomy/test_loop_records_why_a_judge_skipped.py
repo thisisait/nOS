@@ -112,10 +112,17 @@ def test_the_judge_binary_is_reachable_from_the_daemon():
         "the set aggregates to INDETERMINATE, and no proposal can ever be "
         "accepted or rejected — the loop runs and decides nothing."
     )
-    # Ordering matters: the engine's own venv must still win for `python3`,
-    # so a judge spawned by Bone runs under the interpreter Bone was built with
-    # rather than whatever the shim resolves to today.
-    assert path.index("bone") < path.index(".pyenv/shims") if "bone" in path else True, (
-        "the shim directory now precedes Bone's venv, so `python3` resolves to "
-        "the shim instead of the engine's own interpreter"
-    )
+    # Ordering matters, and THIS assertion used to pin the defect: it demanded
+    # the venv bin FIRST "so a judge runs under the interpreter Bone was built
+    # with" — but Bone's venv has no pytest (MEASURED 2026-08-03: `python3 -m
+    # pytest` under the daemon → "No module named pytest"), so venv-first made
+    # gate sets `repo` and `full` permanently unable to reach a verdict (A3).
+    # Judges must resolve against the ESTATE's toolchain; the daemon's private
+    # venv comes last (kept only for the daemon's own tooling) and
+    # judges.judge_spawn_env filters it out engine-side regardless.
+    if "bone" in path:
+        assert path.index(".pyenv/shims") < path.index("bone"), (
+            "Bone's venv bin precedes the pyenv shims again, so the judges' "
+            "`python3` resolves to the daemon's pytest-less interpreter and "
+            "`repo`/`full` can never verdict (A3)"
+        )

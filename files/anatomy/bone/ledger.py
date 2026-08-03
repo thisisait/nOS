@@ -236,6 +236,15 @@ CREATE TABLE IF NOT EXISTS loop_judge_runs (
     -- PATH. A record that loses the actionable half is the defect this ledger
     -- exists to catch, one level in.
     reason       TEXT,
+    -- WHAT actually ran (A4): argv[0] as resolved under the judge env, and
+    -- that binary's `--version` line, both measured by the engine. The
+    -- literal argv ("python3") named the dev pyenv AND Bone's pytest-less
+    -- venv with one identity, so a §11 replay could not tell "same result"
+    -- from "same mistake". Persisted for the same reason `reason` is: a
+    -- field computed in judges.py and dropped at this boundary is how the
+    -- skip reason was lost the first time.
+    resolved_argv0 TEXT,
+    interpreter    TEXT,
     -- §2.4 DECISION 2b, as a STORAGE constraint: a PASS that cannot show its
     -- work is not storable. Closes M2 (nos-smoke "zero entries", exit 0) and
     -- M3 (pytest "2 skipped", exit 0) at a layer no runner can forget.
@@ -314,6 +323,8 @@ BEGIN SELECT RAISE(ABORT, 'loop_judge_runs WORM: evidence is append-only'); END;
 _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("loop_judge_runs", "tree_sha", "TEXT"),
     ("loop_judge_runs", "reason", "TEXT"),
+    ("loop_judge_runs", "resolved_argv0", "TEXT"),
+    ("loop_judge_runs", "interpreter", "TEXT"),
 )
 
 
@@ -574,6 +585,8 @@ def _as_judge_run(row: dict[str, Any]) -> "judges.JudgeRun":
         stdout_sha=row["stdout_sha"],
         tree_sha=row["tree_sha"],
         reason=row["reason"] if "reason" in row.keys() else "",
+        resolved_argv0=row["resolved_argv0"] if "resolved_argv0" in row.keys() else None,
+        interpreter=row["interpreter"] if "interpreter" in row.keys() else None,
     )
 
 
@@ -683,6 +696,10 @@ class ReaderLedger:
                     "exit_code": r["exit_code"], "work_count": r["work_count"],
                     "stdout_sha": r["stdout_sha"], "outcome": r["outcome"],
                     "tree_sha": r["tree_sha"],
+                    # A4: a replay must run the interpreter the record ran, not
+                    # merely the same literal argv — see judges.JudgeRun.identity.
+                    "resolved_argv0": r["resolved_argv0"] if "resolved_argv0" in r.keys() else None,
+                    "interpreter": r["interpreter"] if "interpreter" in r.keys() else None,
                 }
                 for r in runs if r
             ],
@@ -887,11 +904,12 @@ class EvaluatorLedger(ReaderLedger):
         cur = self._w(
             "UPDATE loop_judge_runs SET status=?, finished_at=datetime('now'), "
             "exit_code=?, work_count=?, min_work=?, outcome=?, tree_sha=?, "
-            "stdout_sha=?, stdout_head=?, reason=? "
+            "stdout_sha=?, stdout_head=?, reason=?, resolved_argv0=?, "
+            "interpreter=? "
             "WHERE uuid=? AND status='running'",
             (status, run.exit_code, run.work, run.min_work, outcome, run.tree_sha,
              run.stdout_sha, (run.stdout_head or "")[:_STDOUT_HEAD_MAX],
-             run.reason or "", run_uuid))
+             run.reason or "", run.resolved_argv0, run.interpreter, run_uuid))
         if cur.rowcount != 1:
             # The `status='running'` guard is what stops a swept ('crashed') run
             # being resurrected as a pass. But a no-op UPDATE that still RETURNED

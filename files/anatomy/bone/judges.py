@@ -89,6 +89,8 @@ __all__ = [
     "ConfigError",
     "load_registry",
     "run_gate_set",
+    "judge_spawn_env",
+    "probe_interpreter",
     "CLI_EXIT",
 ]
 
@@ -356,8 +358,65 @@ class ExecutableMissing(Exception):
     """argv[0] (or the script it names) is not present. A requirement, absent."""
 
 
-def real_spawn(argv: Sequence[str], cwd: str, timeout_s: int) -> Completed:
-    """The production process boundary. No shell, ever."""
+def _private_interpreter_bins() -> frozenset[str]:
+    """The bin dirs of THIS process's interpreter — but only if it is a venv.
+
+    A virtualenv is a private, purpose-built environment (Bone's exact shape:
+    the daemon runs from ~/bone/venv); it is never the estate's toolchain. A
+    system, pyenv or CI-toolcache interpreter (sys.prefix == sys.base_prefix)
+    IS the toolchain the judges are supposed to resolve against, so it is
+    never filtered — filtering it would orphan every judge in CI.
+    """
+    if sys.prefix == sys.base_prefix:
+        return frozenset()
+    bins = {os.path.realpath(os.path.dirname(sys.executable))}
+    for prefix in (sys.prefix, sys.exec_prefix):
+        bins.add(os.path.realpath(os.path.join(prefix, "bin")))
+    return frozenset(bins)
+
+
+def judge_spawn_env(base: Mapping[str, str] | None = None) -> dict[str, str]:
+    """The environment every judge subprocess runs under.
+
+    MEASURED on the first real `repo` turn against the deployed daemon
+    (2026-08-03): Bone's launchd PATH put the daemon's own venv bin first, so
+    the committed argv `python3 -m pytest` resolved to ~/bone/venv/bin/python3
+    — an interpreter with NO pytest ("No module named pytest") — and every gate
+    set containing pytest-anatomy was permanently INDETERMINATE. The daemon's
+    PRIVATE interpreter is not the estate's toolchain, so its bin dirs are
+    filtered out of the judges' PATH HERE, in the engine, regardless of how any
+    deployment ordered its PATH (the plist reorder ships as belt-and-braces;
+    the engine must not depend on deployment).
+
+    `VIRTUAL_ENV` is dropped for the same reason: it advertises the daemon's
+    venv to child launchers that consult it.
+    """
+    env = dict(os.environ if base is None else base)
+    env.pop("VIRTUAL_ENV", None)
+    own = _private_interpreter_bins()
+    if own:
+        kept = [
+            p for p in env.get("PATH", "").split(os.pathsep)
+            if p and os.path.realpath(p) not in own
+        ]
+        env["PATH"] = os.pathsep.join(kept) or os.defpath
+    return env
+
+
+def real_spawn(
+    argv: Sequence[str],
+    cwd: str,
+    timeout_s: int,
+    env: Mapping[str, str] | None = None,
+) -> Completed:
+    """The production process boundary. No shell, ever.
+
+    `env=None` inherits the caller's environment; the runner always passes the
+    filtered `judge_spawn_env()` so a judge never resolves its tools inside the
+    daemon's private venv. POSIX resolution of a bare argv[0] uses the PATH of
+    the env PASSED here (verified empirically), so the filter reaches the
+    exec itself, not just `shutil.which` bookkeeping.
+    """
     try:
         proc = subprocess.run(  # noqa: S603 — argv is committed data, never user text
             list(argv),
@@ -366,6 +425,7 @@ def real_spawn(argv: Sequence[str], cwd: str, timeout_s: int) -> Completed:
             text=True,
             timeout=timeout_s,
             check=False,
+            env=dict(env) if env is not None else None,
         )
     except FileNotFoundError as exc:
         raise ExecutableMissing(str(exc)) from None
@@ -602,22 +662,75 @@ def default_requirement_probe(requirement: str) -> bool:
     return False
 
 
-def _executable_present(spec: JudgeSpec, repo_root: Path) -> str | None:
-    """Return a human reason if the judge cannot possibly run, else None."""
+def _executable_present(
+    spec: JudgeSpec, repo_root: Path, env: Mapping[str, str] | None = None
+) -> tuple[str | None, str | None]:
+    """Resolve argv[0] under the JUDGE env and say why it cannot run, if so.
+
+    Returns ``(resolved_path, reason)`` — exactly one is None. Resolution is
+    against the env the judge will actually be spawned with, NOT the daemon's:
+    resolving against the daemon's PATH and spawning with the filtered one
+    would answer "is it present" about a different world than the one that
+    runs (A4's defect shape, one step earlier).
+    """
     exe = spec.argv[0]
-    resolved = exe if os.path.isabs(exe) else shutil.which(exe)
-    if resolved is None:
-        return f"executable {exe!r} not found on PATH"
+    search = (env or os.environ).get("PATH", os.defpath)
+    resolved = exe if os.path.isabs(exe) else shutil.which(exe, path=search)
+    if resolved is None or not os.path.isfile(resolved):
+        return None, f"executable {exe!r} not found on PATH"
     # `python3 tools/x.py` — the script itself is the real requirement.
     for arg in spec.argv[1:]:
         if arg.endswith(".py"):
             if not (repo_root / arg).is_file() and not Path(arg).is_file():
-                return f"script {arg!r} not found under {repo_root}"
+                return None, f"script {arg!r} not found under {repo_root}"
             break
         if arg.startswith("-"):
             continue
         break
-    return None
+    return os.path.realpath(resolved), None
+
+
+#: `<resolved> --version` is stable for a given binary within a process
+#: lifetime, and ansible-lint's answer takes seconds — cache it. CEILING,
+#: stated: a pyenv SHIM's version can depend on env/cwd, so the cache key is
+#: the resolved path only; two judge envs resolving to the SAME shim would
+#: share one probe. Today's filter changes WHICH path resolves, not what a
+#: fixed path answers, so the key is honest for every measured case.
+_VERSION_CACHE: dict[str, str | None] = {}
+
+
+def probe_interpreter(resolved: str, env: Mapping[str, str]) -> str | None:
+    """What `<resolved> --version` says, probed from a REAL subprocess.
+
+    A4's defect: `identity()` recorded the LITERAL argv ("python3"), so the
+    record could not distinguish the dev pyenv interpreter (2488 tests
+    collected) from Bone's pytest-less venv ("No module named pytest") — the
+    same argv, the same tree_sha, two different worlds, one identity. The
+    probe is evidence read out of a subprocess, never a caller's claim
+    (constraint B); a tool that does not speak `--version` records None,
+    honestly, rather than a guess.
+    """
+    if resolved in _VERSION_CACHE:
+        return _VERSION_CACHE[resolved]
+    try:
+        proc = subprocess.run(  # noqa: S603 — resolved from committed argv
+            [resolved, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+            env=dict(env),
+        )
+        lines = [
+            ln.strip()
+            for ln in f"{proc.stdout}\n{proc.stderr}".splitlines()
+            if ln.strip()
+        ]
+        value = lines[0] if proc.returncode == 0 and lines else None
+    except (OSError, subprocess.SubprocessError):
+        value = None
+    _VERSION_CACHE[resolved] = value
+    return value
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -753,6 +866,13 @@ class JudgeRun:
     stdout_sha: str | None = None
     stdout_head: str = ""
     sandbox_path: str | None = None
+    #: What argv[0] RESOLVED to under the judge env, and what that binary said
+    #: to `--version`. A4: the literal argv ("python3") named two different
+    #: worlds — the dev pyenv (pytest present) and Bone's venv (pytest absent)
+    #: — with one identity, so §11 replay could not detect that a rerun ran a
+    #: different interpreter than the record. Both are measured, never claimed.
+    resolved_argv0: str | None = None
+    interpreter: str | None = None
     #: The commit this judge actually observed, read out of the sandbox by
     #: `git_worktree_sandbox`. NOT a caller's label: §11 makes replay the
     #: guarantee ("re-run the recorded argv against the recorded tree"), and a
@@ -767,11 +887,17 @@ class JudgeRun:
         Excludes wall-clock times and the sandbox path — both vary run to run
         and neither is evidence. `tree_sha` is the opposite of both: it is
         constant for a given commit and it is the single most load-bearing piece
-        of evidence a verdict carries.
+        of evidence a verdict carries. `resolved_argv0` + `interpreter` are in
+        for the same reason: the same LITERAL argv on the same tree yielded
+        "2488 tests collected" under the dev pyenv and "No module named pytest"
+        under Bone's venv — a replay that cannot see which interpreter ran is
+        comparing two different measurements under one name.
         """
         return {
             "judge": self.judge_name,
             "argv": list(self.argv),
+            "resolved_argv0": self.resolved_argv0,
+            "interpreter": self.interpreter,
             "status": self.status,
             "result": self.result.value if self.result else None,
             "exit_code": self.exit_code,
@@ -877,6 +1003,7 @@ def run_gate_set(
     probe: Callable[[str], bool] | None = None,
     sandbox_factory: Callable[[Path], tuple[Path, str, Callable[[], None]]] | None = None,
     lock_dir: str | os.PathLike[str] | None = None,
+    judge_env: Mapping[str, str] | None = None,
 ) -> GateSetVerdict:
     """Run a named gate set and return a structured, three-valued verdict.
 
@@ -885,7 +1012,10 @@ def run_gate_set(
     replaces the process; the adapters still compute the verdict from what that
     process returned. ``sandbox_factory`` replaces THE TREE, not the judgment,
     and it must still hand back the sha of whatever it produced — there is no
-    seam that yields a tree with no identity.
+    seam that yields a tree with no identity. ``judge_env`` replaces the BASE
+    environment (a test hands in a PATH); it is ALWAYS passed through
+    ``judge_spawn_env``, so no seam can smuggle the daemon's private venv back
+    onto a judge's PATH.
 
     ONE SET, ONE TREE (§2.5). The sandbox is created HERE, once, and every judge
     of the set runs inside it. Per-judge sandboxing (the previous shape, keyed on
@@ -900,7 +1030,12 @@ def run_gate_set(
     root = Path(repo_root) if repo_root else _default_repo_root()
     reg = registry or load_registry(root)
     spec_set = reg.gate_set(gate_set)
-    do_spawn = spawn or real_spawn
+    jenv = judge_spawn_env(base=judge_env)
+    if spawn is not None:
+        do_spawn = spawn
+    else:
+        def do_spawn(argv: Sequence[str], cwd: str, timeout_s: int) -> Completed:
+            return real_spawn(argv, cwd, timeout_s, env=jenv)
     do_probe = probe or default_requirement_probe
     locks = Path(lock_dir) if lock_dir else Path(tempfile.gettempdir())
 
@@ -933,6 +1068,7 @@ def run_gate_set(
                     spawn=do_spawn,
                     probe=do_probe,
                     lock_dir=locks,
+                    env=jenv,
                 )
             )
     finally:
@@ -967,6 +1103,7 @@ def _run_one(
     spawn: Callable[[Sequence[str], str, int], Completed],
     probe: Callable[[str], bool],
     lock_dir: Path,
+    env: Mapping[str, str],
 ) -> JudgeRun:
     # ── Pre-flight: never run degraded (DECISION 2c) ────────────────────────
     missing = [r for r in spec.requires if not probe(r)]
@@ -977,16 +1114,24 @@ def _run_one(
 
     # Resolved against the SANDBOX, not the live tree: the judge's script is
     # part of the tree under judgment, so "is it present" must be asked of the
-    # same tree that will run it.
-    why = _executable_present(spec, sandbox)
+    # same tree that will run it. And against the JUDGE env, not the daemon's:
+    # the answer must describe the world the subprocess will actually run in.
+    resolved, why = _executable_present(spec, sandbox, env)
     if why:
         return _skipped(spec, gate_set, f"{why} — not run")
+
+    # Evidence about WHAT will run, measured before it runs (A4). The probe is
+    # a real subprocess of the resolved binary, never a caller's claim.
+    interpreter = probe_interpreter(resolved, env) if resolved else None
 
     # ── Exclusive resource (M7) ─────────────────────────────────────────────
     if spec.exclusive_resource:
         try:
             with _FileLock(spec.exclusive_resource, lock_dir):
-                return _spawn_and_read(spec, gate_set, sandbox, tree_sha, spawn)
+                return _spawn_and_read(
+                    spec, gate_set, sandbox, tree_sha, spawn,
+                    resolved_argv0=resolved, interpreter=interpreter,
+                )
         except _ResourceBusy as exc:
             return _skipped(
                 spec,
@@ -994,7 +1139,10 @@ def _run_one(
                 f"{exc} — {spec.exclusive_resource} is mutated by another "
                 f"judge and there is no lock upstream",
             )
-    return _spawn_and_read(spec, gate_set, sandbox, tree_sha, spawn)
+    return _spawn_and_read(
+        spec, gate_set, sandbox, tree_sha, spawn,
+        resolved_argv0=resolved, interpreter=interpreter,
+    )
 
 
 def _spawn_and_read(
@@ -1003,12 +1151,17 @@ def _spawn_and_read(
     cwd: Path,
     tree_sha: str,
     spawn: Callable[[Sequence[str], str, int], Completed],
+    *,
+    resolved_argv0: str | None = None,
+    interpreter: str | None = None,
 ) -> JudgeRun:
     """CONSTRAINT B, in code.
 
     The record is opened as ``running`` BEFORE the process exists, and every
     field below is written by THIS function — the exit reader — from what the
     process produced. The judge contributes bytes on a pipe and nothing else.
+    (`resolved_argv0`/`interpreter` were measured by `_run_one` a moment
+    earlier — from `shutil.which` and a `--version` subprocess, not a caller.)
     """
     run = JudgeRun(
         judge_name=spec.name,
@@ -1019,6 +1172,8 @@ def _spawn_and_read(
         min_work=spec.min_work,
         sandbox_path=str(cwd),
         tree_sha=tree_sha,
+        resolved_argv0=resolved_argv0,
+        interpreter=interpreter,
         started_at=time.time(),
     )
 
