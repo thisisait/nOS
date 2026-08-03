@@ -670,16 +670,32 @@ class ReaderLedger:
 
     def verify_chain(self) -> dict[str, Any]:
         """§3.3(3) — offline tampering is DETECTED, not prevented. Mirrors
-        verify-audit-chain.php: ok=False + the first broken uuid."""
+        verify-audit-chain.php: ok=False + the first broken uuid.
+
+        `keyed` IS PART OF THE ANSWER, not a detail. Without
+        WING_EVENTS_HMAC_SECRET the chain is a plain sha256 of the rows, and
+        anyone able to WRITE a row can recompute it — so an unkeyed `ok: True`
+        means "these rows are self-consistent", never "nobody altered them".
+        Returning the same shape for both would be a degraded mode wearing the
+        working mode's clothes, which is the defect class this engine exists to
+        remove (2026-08-03; the ninth surviving finding of the build review).
+        """
+        keyed = _chain_key() is not None
         prev = _GENESIS
         checked = 0
         for row in self._q("SELECT * FROM loop_verdicts ORDER BY id"):
             expect = chain_hash(prev, row)
             if row["prev_hash"] != prev or row["row_hash"] != expect:
-                return {"ok": False, "checked": checked, "broken_uuid": row["uuid"]}
+                return {"ok": False, "keyed": keyed, "checked": checked,
+                        "broken_uuid": row["uuid"]}
             prev = row["row_hash"]
             checked += 1
-        return {"ok": True, "checked": checked, "broken_uuid": None}
+        return {
+            "ok": True, "keyed": keyed, "checked": checked, "broken_uuid": None,
+            **({} if keyed else {"caveat":
+                "UNKEYED: WING_EVENTS_HMAC_SECRET is unset, so this proves "
+                "internal consistency only — a writer can forge the chain"}),
+        }
 
 
 class ProposerLedger(ReaderLedger):

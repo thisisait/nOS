@@ -969,7 +969,17 @@ def test_a_verdict_carries_everything_needed_to_replay_it(db, proposer, evaluato
     assert {r["judge_name"] for r in rec["runs"]} == {"ansible-lint", "genome-codegen"}
     for r in rec["runs"]:
         assert r["argv"] and r["exit_code"] == 0 and r["stdout_sha"]
-    assert evaluator.verify_chain() == {"ok": True, "checked": 1, "broken_uuid": None}
+    chain = evaluator.verify_chain()
+    # `keyed` is environment-dependent (WING_EVENTS_HMAC_SECRET), so it is
+    # asserted as a REPORTED FACT rather than pinned to a value — pinning it
+    # would make this test pass or fail on the shell that ran it. What is
+    # pinned: the mode is always stated, and an unkeyed chain always carries
+    # its caveat, because an unkeyed `ok: True` proves consistency and not
+    # integrity.
+    assert isinstance(chain.pop("keyed"), bool), "verify_chain must report its mode"
+    caveat = chain.pop("caveat", None)
+    assert chain == {"ok": True, "checked": 1, "broken_uuid": None}
+    assert (caveat is None) or ("UNKEYED" in caveat)
 
 
 def test_history_shows_prior_attempts_and_their_verdicts(db, proposer, evaluator):
