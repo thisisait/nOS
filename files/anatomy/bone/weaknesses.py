@@ -93,6 +93,11 @@ from typing import Any, Callable
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+# Flat import, matching budget.py and ledger.py — Bone runs with its own
+# directory on sys.path. Imported for ONE symbol: the repo-root resolver, so
+# the reader and the judges cannot disagree about where the repo is again.
+import judges
+
 try:  # normal import (bone dir on sys.path)
     from loopauth import require_loop_scope
 except ImportError:  # pragma: no cover — test loader path
@@ -230,12 +235,15 @@ class SourceReport:
 
 
 def repo_root() -> Path:
-    """Repo the reader reads. PLAYBOOK_DIR is Bone's existing convention."""
-    return Path(
-        os.environ.get("NOS_LOOP_REPO_ROOT")
-        or os.environ.get("PLAYBOOK_DIR")
-        or os.getcwd()
-    ).expanduser()
+    """Repo the reader reads — delegated, so there is ONE answer.
+
+    This module had the resolution right and `judges` inferred it from
+    `__file__`; the two disagreed in the deployed daemon and the judge half was
+    dead for it. Rather than keep two correct-looking copies, the resolver has
+    one owner (`judges`, which budget and ledger already import) and this is a
+    delegation. See `judges._default_repo_root`.
+    """
+    return judges._default_repo_root()
 
 
 def state_dir() -> Path:

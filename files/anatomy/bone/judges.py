@@ -276,8 +276,50 @@ def load_registry(repo_root: str | os.PathLike[str] | None = None) -> Registry:
 
 
 def _default_repo_root() -> Path:
-    # files/anatomy/bone/judges.py → repo root is four parents up.
-    return Path(__file__).resolve().parents[3]
+    """Where the repo is — ASKED of the environment, never inferred from here.
+
+    Was `Path(__file__).resolve().parents[3]`, which holds in the checkout and
+    is false in the estate. Bone is DEPLOYED to a flat `~/bone/`, so those four
+    parents resolve to `/` and every judge run inside the daemon died on
+
+        unknown gate set: judge registry not found: /state/judge-sets.yml
+
+    The reader half of the same engine never had the bug, because it asks
+    `PLAYBOOK_DIR` — which the launchd plist sets to the checkout. Two modules,
+    one fact, two answers; the module that inferred was the one that was wrong.
+
+    NO TEST COULD HAVE CAUGHT IT AS WRITTEN: `load_registry()` takes the root as
+    a PARAMETER and every harness passes it explicitly, so this default is
+    reached only in production. That is why `test_loop_repo_root_is_asked.py`
+    tests the resolver itself rather than a run that supplies its own answer.
+
+    THE ORDER IS LOAD-BEARING, and the first repair got it wrong by falling
+    back to `os.getcwd()` — which the determinism gate forbids for a good
+    reason: resolving the registry against the CALLER's directory hands "a gate
+    set means one thing in CI, on the Mac and at 03:00" back to whoever invoked
+    the judge. So:
+
+        1. NOS_LOOP_REPO_ROOT  — explicit override, wins
+        2. PLAYBOOK_DIR        — Bone's convention; the launchd plist sets it
+        3. the source location — VALIDATED by finding the registry there, which
+           is true in a checkout and false once deployed, so it cannot silently
+           return `/` the way the original did
+        4. nothing             — a named failure, never the caller's cwd
+    """
+    for name in ("NOS_LOOP_REPO_ROOT", "PLAYBOOK_DIR"):
+        value = os.environ.get(name)
+        if value:
+            return Path(value).expanduser()
+    from_source = Path(__file__).resolve().parents[3]
+    if (from_source / REGISTRY_RELPATH).is_file():
+        return from_source
+    raise ConfigError(
+        "cannot locate the repo: NOS_LOOP_REPO_ROOT and PLAYBOOK_DIR are both "
+        f"unset, and {from_source / REGISTRY_RELPATH} does not exist. This "
+        "module is running from a DEPLOYED copy (Bone installs to a flat "
+        "~/bone/), where its own location says nothing about where the repo is. "
+        "Set PLAYBOOK_DIR — the launchd plist already does."
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
