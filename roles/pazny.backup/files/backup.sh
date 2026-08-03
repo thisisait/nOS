@@ -752,9 +752,17 @@ run_dirs() {
         # empty object is already published — a 10 KB artifact that lists like a
         # backup. Check the SOURCE before writing anything, because there is no
         # taking the object back afterwards.
-        src_entries=$(ls -A "${path}" 2>/dev/null | wc -l | tr -d ' ')
-        if [[ "${src_entries}" -eq 0 ]]; then
-            log "dir/${name}: ${path} reads as EMPTY (permissions, or an unmounted volume) — recording as FAILED, uploading nothing"
+        # Counted from INSIDE, because the host is the one that cannot read
+        # these paths. Measured 2026-08-03 on gitea's data dir:
+        #     host  `tar -C path .`  ->  1 member,  10 KB, rc=1 "not permitted"
+        #     alpine -v path:/data   ->  94 members, 12.4 MB
+        # Docker Desktop's VM reaches the external volume through VirtioFS
+        # without the host's TCC grant, which is why the SERVICES have worked
+        # from these dirs all along while the backup silently did not.
+        src_entries=$(docker run --rm -v "${path}:/data:ro" "${ALPINE_IMAGE}" \
+                        sh -c 'ls -A /data 2>/dev/null | wc -l' 2>/dev/null | tr -d ' ')
+        if [[ -z "${src_entries}" || "${src_entries}" -eq 0 ]]; then
+            log "dir/${name}: ${path} reads as EMPTY from a container too — recording as FAILED, uploading nothing"
             status_append "dir-${name}" 0 0 0
             continue
         fi
@@ -771,17 +779,25 @@ run_dirs() {
         # into the target path without a doubled component.
         log "dir/${name}: tar-gz of ${path}"
         start=$(now_ms)
-        # `-v` so the member list lands on stderr and can be COUNTED. Size is
-        # not a usable signal here: tar pads every archive to a 10240-byte
-        # minimum, so an empty one and one holding three small files measure
-        # the same. A size floor would therefore withdraw real backups — it was
-        # written, caught, and replaced by this before it shipped.
+        # Same sidecar shape as run_volumes(), and deliberately the SAME
+        # ALPINE_IMAGE — the restore extractor pins that tag, so a divergence
+        # here is a latent restore drift.
+        #
+        # `-v` puts the member list on stderr so it can be COUNTED. Size is not
+        # a usable signal: tar pads every archive to a 10240-byte minimum, so
+        # an empty one and one holding three small files weigh the same, and a
+        # size floor would withdraw REAL backups. That version was written,
+        # caught, and replaced before it shipped.
+        #
+        # Count only lines the tar itself wrote (`./...`); docker's own stderr
+        # would otherwise inflate an empty archive past the threshold.
         tar_list="$(mktemp -t nosbackup)"
-        tar -czvf - -C "${path}" . 2>"${tar_list}" \
+        docker run --rm -v "${path}:/data:ro" "${ALPINE_IMAGE}" \
+            sh -c 'cd /data && tar -czvf - .' 2>"${tar_list}" \
           | encrypt_stream \
           | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
         rc=$?
-        tar_members=$(wc -l <"${tar_list}" | tr -d ' ')
+        tar_members=$(grep -c '^\./' "${tar_list}" 2>/dev/null || echo 0)
         rm -f "${tar_list}"
         dur=$(( $(now_ms) - start ))
 

@@ -81,6 +81,43 @@ def test_an_empty_archive_is_withdrawn_rather_than_reported():
     )
 
 
+def test_the_directory_is_read_from_inside_a_container():
+    """The actual repair. Measured on gitea's data dir, 2026-08-03:
+
+        host   `tar -C path .`      ->   1 member,  10 KB, rc=1 not permitted
+        alpine `-v path:/data:ro`   ->  94 members, 12.4 MB
+
+    Docker Desktop's VM reaches `/Volumes/SSD1TB` over VirtioFS without the
+    host's Full Disk Access grant — which is why the SERVICES ran from these
+    directories the whole time the backup of them was empty.
+
+    A 2026-07-24 spike had measured restic failing to read these same mounts
+    from a container and concluded, in its one-line summary, that in-container
+    host-path backup was dead on macOS. The detailed note was careful — it said
+    "restic-specific over VirtioFS" — but the SUMMARY generalised, and the
+    summary is what gets read. Plain tar works; it was restic's readdir, not
+    the mount. Both have been corrected.
+
+    Reverting to a host tar restores the silent-empty defect exactly, so this
+    clause is the one that matters most in this file.
+    """
+    fn = _run_dirs()
+    assert re.search(r'docker run --rm -v "\$\{path\}:/data:ro"', fn), (
+        "the directory tar is no longer taken from inside a container. The "
+        "host cannot read anything under nos_data_root, and it fails by "
+        "producing an EMPTY archive rather than an error the pipeline sees."
+    )
+    assert "ALPINE_IMAGE" in fn, (
+        "the sidecar no longer uses ALPINE_IMAGE — the restore extractor pins "
+        "that same tag, and a divergence is a latent restore drift"
+    )
+    assert re.search(r"grep -c '\^\\\\\./'", fn) or "grep -c '^\\./'" in fn, (
+        "the member count no longer filters for tar's own `./...` lines. "
+        "Docker writes to the same stderr, so an unfiltered count would let an "
+        "empty archive past the threshold on any run that emitted a warning."
+    )
+
+
 def test_the_absent_case_it_was_one_step_short_of_stays_covered():
     """The neighbouring guard that got this right, pinned so it cannot regress."""
     fn = _run_dirs()
