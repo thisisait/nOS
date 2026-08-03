@@ -1115,6 +1115,26 @@ def run_gate_set(
 
     try:
         cwd, base_sha, cleanup = (sandbox_factory or git_worktree_sandbox)(root)
+        # THE SANDBOX MUST ALSO BE THE ANSWER TO "WHERE IS THE REPO".
+        #
+        # Measured 2026-08-03, on the first `repo` set that reached a verdict.
+        # `_default_repo_root()` was changed that morning to ask the environment
+        # first — necessary, because the deployed daemon cannot infer the repo
+        # from its own flat install directory. But a judge is a SUBPROCESS OF
+        # THAT DAEMON and inherits its environment, in which PLAYBOOK_DIR names
+        # the operator's checkout. So anything inside the sandbox that asked
+        # where the repo was got told: somewhere else.
+        #
+        # That is the sandbox's whole purpose defeated from inside. One judge
+        # noticed (the determinism gate, which exists for exactly this) and
+        # failed; nothing else would have said a word.
+        #
+        # The fix belongs here rather than in judge_spawn_env, because the
+        # sandbox path is not known until this line. Both names are set: the
+        # explicit override AND Bone's general convention, so no consumer
+        # reading either one is left pointing outside the tree under judgment.
+        jenv["NOS_LOOP_REPO_ROOT"] = str(cwd)
+        jenv["PLAYBOOK_DIR"] = str(cwd)
     except Exception as exc:  # noqa: BLE001 — any sandbox failure is INDETERMINATE
         why = (
             f"sandbox could not be created ({exc}) — refusing to run against the "

@@ -135,6 +135,27 @@ _VERDICT_CANON_FIELDS = (
 
 _STDOUT_HEAD_MAX = 2000
 
+# HEAD ALONE THREW AWAY THE ANSWER. A `repo` gate set sealed FAIL on
+# 2026-08-03 with eighteen pytest failures, and the stored excerpt was 2000
+# characters of progress dots — pytest, like most runners, puts its summary and
+# the names of what failed at the END. The one field an operator would read to
+# learn WHICH test failed held the least informative part of the output.
+#
+# So: head for the start-of-run context (which interpreter, which warnings) and
+# TAIL for the verdict's actual reasons. Split rather than doubled, so the row
+# does not grow.
+_STDOUT_TAIL_MAX = 2000
+
+
+def _stdout_excerpt(text: str) -> str:
+    """Both ends of a judge's output, with the middle named rather than dropped."""
+    if len(text) <= _STDOUT_HEAD_MAX + _STDOUT_TAIL_MAX:
+        return text
+    dropped = len(text) - _STDOUT_HEAD_MAX - _STDOUT_TAIL_MAX
+    return (text[:_STDOUT_HEAD_MAX]
+            + f"\n\n[... {dropped} characters elided ...]\n\n"
+            + text[-_STDOUT_TAIL_MAX:])
+
 
 # ── Errors ────────────────────────────────────────────────────────────────
 
@@ -1006,7 +1027,7 @@ class EvaluatorLedger(ReaderLedger):
             "WHERE uuid=? AND status='running'",
             (status, run.exit_code, run.work, run.min_work, outcome, run.tree_sha,
              run.base_sha, run.stdout_sha,
-             (run.stdout_head or "")[:_STDOUT_HEAD_MAX],
+             _stdout_excerpt(run.stdout_head or ""),
              run.reason or "", run.resolved_argv0, run.interpreter, run_uuid))
         if cur.rowcount != 1:
             # The `status='running'` guard is what stops a swept ('crashed') run
