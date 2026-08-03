@@ -11,18 +11,13 @@
 
 ## Now (current track)
 
-**Cut v0.10-beta.** Gate met after the 08-02 converge (`ok=1431 failed=0`):
-verdict **AGREE** on all six clauses (`agreeStreak: 6`), estate on
-`keap v1.38.0`, **0 pending CRITICAL** derived from `docker ps`. `RELEASE.md` +
-devlog `2026-08-02-release-v0-10-beta` carry the narrative.
+**v0.10-beta SHIPPED** (2026-08-02) — tag, GitHub Release and devlog Pages all
+published; v0.9-beta's missing release backfilled. Narrative in `RELEASE.md`.
 
-**Remaining:** `dev → master` PR (`gh pr merge --rebase --admin`, memory
-`nos-release-flow`) → tag `v0.10-beta` → re-sync `dev`.
-
-**Known open at the tag** (all named in RELEASE.md): S-0's Nextcloud uid fix
-applies to the *next login* only — the hashed account is live and unmigrated;
-**32 of the 76 L1 columns reach the DB**, the other 44 belong to `apps`/`systems`
-which no task seeds; FreeScout has no SSO; REM-151/152 HIGH open.
+**Now: the agentic loop.** Engine callable in Bone (`/api/v1/loop/*`); secrets
+P0/P2/P4 shipped, P1 written and NOT run (needs a blank). Known open at the
+tag is listed in RELEASE.md §Known open — S-0 applies to the next login only,
+32 of 76 L1 columns reach the DB, FreeScout has no SSO, REM-151/152 HIGH.
 
 ## Open follow-ups
 
@@ -84,10 +79,8 @@ change that lets it fail — is in
 - **FS doctrine P3** — AgentKit tool-layer FS path-scoping (`docs/archive/fs-doctrine.md`).
   P1/P1b shipped this cycle (`nos_data_root` resolver + per-user tree); the plan header
   still says "DESIGN (P0) — we are here" and is stale.
-- **Version-pin drift wave (post-Gitea):** ~15 pending, **1 CRITICAL** (REM-137 gitea;
-  REM-144 closed 07-30). The "0 CRITICAL" carried here for two weeks was stale —
-  nobody re-derived it. Gitea (REM-099) closed via the agentic recipe path — the
-  template for the rest (GitLab REM-016 → 18.11.7, etc.). Mechanical same-org bumps.
+- **Version-pin drift wave:** counts in Snapshot (re-derive, never inherit).
+  Gitea closed via the agentic recipe path — the template for the rest.
 - **Migration severity-enum drift:** `validate_record` lacks `security` (schema has
   it); Gitea filed as `minor` to work around. Add it to `_SEVERITY_VALUES`.
 - **PG 16→17 cutover** — pg17 verified live beside pg16 on the coexistence track,
@@ -107,6 +100,13 @@ change that lets it fail — is in
   UNDETERMINED mechanism, recorded deliberately without a guessed remedy). 07 now owns
   a wider rule too: *a step that cannot do its job must not exit 0* — three instances
   (drift hook parsing nothing · its POST 401ing · Linux wet-test `0/0 ready`).
+- **Rotate `restic_password` (needs Full Disk Access).** P2 stopped deriving it,
+  but the repo at `/Volumes/SSD1TB/nos-restic` already held the derived key, so
+  the converge failed `wrong password or no key found`. It is persisted at the
+  OLD derived value now — the repo works, and it is still the one crown jewel
+  P2 did not actually free. Rotate deliberately, from a terminal WITH FDA:
+  `restic -r … key add` under the old password, then persist the new one.
+  A bare swap locks every existing snapshot.
 - **TCC grant for /Volumes/SSD1TB** — restic off-site leg fails `operation not
   permitted`; blocks the backup DR round-trip verify (S4 leftover).
 - Optional: fire the uptime-kuma 2.2.1 upgrade recipe (D3; breaking schema,
