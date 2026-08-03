@@ -1,13 +1,27 @@
 #!/usr/bin/env python3
 """Create + seed the nOS Roadmap DataTable in KEAP.
 
-NOT a fixture yet, and the reason is worth knowing: the L1 concept vocabulary
-has no concept that accepts `kind: date` (verified 2026-08-02 — none of the 36
-do), so a timeline table cannot live in state/keap-tables/ until
-`time.occurred_at` is added to KEAP + the vendored copy. See
-docs/archive/roadmap-table.md §2.
+THE BLOCKER THIS FILE CARRIED IS CLEARED (2026-08-03). It read: "the L1 concept
+vocabulary has no concept that accepts `kind: date` (verified 2026-08-02 — none
+of the 36 do), so a timeline table cannot live in state/keap-tables/ until
+`time.occurred_at` is added to KEAP + the vendored copy." KEAP v1.39.0 adds
+`time.target`, `time.occurred_at` and `time.verified_at`, and the copy is
+re-vendored — so `state/keap-tables/roadmap.table.yml` now exists.
 
-Until then THIS script is the reproducible path: idempotent on the table (it
+WHAT THAT DOES AND DOES NOT CHANGE. The definition is git-owned from here on.
+The ROWS still come from this script, the same split as apps (app generator) and
+systems (service registry); it is recorded in the seeder gate's UNSEEDED list
+with that reason rather than left as an orphan.
+
+ONE MIGRATION IS OWED AND NOT DONE HERE. This script writes a single `when` per
+row, which the new definition splits into `target` (an intention) and
+`occurred_at` (a fact) — precisely so the table can answer "did this land when
+we said it would", which one column cannot. Shipped rows should migrate to
+`occurred_at`, queued rows to `target`. Doing it silently inside a seeding pass
+would rewrite history no one asked to have rewritten, so it waits for a
+deliberate run.
+
+This script remains the reproducible path for rows: idempotent on the table (it
 refuses to create a second one) and additive on rows.
 
 Usage:  python3 tools/roadmap-seed.py [--dry-run]

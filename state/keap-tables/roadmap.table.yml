@@ -1,0 +1,117 @@
+# =============================================================================
+# KEAP DataTable definition — "nOS Roadmap" (the one place work is tracked)
+#
+# THIS FILE EXISTS BECAUSE ITS BLOCKER CLEARED. `tools/roadmap-seed.py` has
+# carried the reason since 2026-08-02: "the L1 concept vocabulary has no concept
+# that accepts kind: date (verified — none of the 36 do), so a timeline table
+# cannot live in state/keap-tables/ until time.occurred_at is added to KEAP +
+# the vendored copy". KEAP v1.39.0 adds `time.target`, `time.occurred_at` and
+# `time.verified_at` — the first three concepts in that vocabulary that bind to
+# a date — so the table can now be declared where every other one is.
+#
+# WHY IT IS NOT A SECOND TABLE. Work was tracked in six places on 2026-08-03:
+# remediation-queue.json (152 rows), active-work.md (149 lines under a 150
+# ceiling), docs/hidden_fees/, docs/idea/, the loop ledger, and three empty
+# issue trackers. A seventh copy is the worst available answer — "the same law
+# restated in N places" is the genome plan's whole diagnosis. So the roadmap
+# table, which already exists and already self-nests, becomes the one that wins,
+# and the board is a VIEW over it rather than a new store.
+#
+# THE COLUMN PAIR THAT MATTERS
+# ----------------------------
+#   status    — what someone CLAIMS. Written by whoever files or does the work.
+#   verified  — what a PROBE OBSERVED. Written only by an independent check.
+#
+# They are separate because conflating them is this estate's most expensive
+# recurring defect, measured repeatedly: a security queue reporting fifteen
+# items pending while six were already live at their fixed version; a backup
+# reporting success for six services whose archives were empty for weeks; a
+# container healthy for nine days inside a setup wizard. In every case the
+# success marker was written by the code that attempted the work.
+#
+# A row whose `status` says done and whose `verified` says contradicted is the
+# most useful row this table can hold, and it is unreachable in any design where
+# one writer owns both.
+#
+# `target` and `occurred_at` are split for the same reason one level down: the
+# live table has a single `when`, which cannot answer "did this land when we
+# said it would". The seeder migrates by status — shipped rows carry
+# occurred_at, queued rows carry target — and no row should carry both without
+# the pair being meant.
+#
+# SEEDING. The definition is git-owned; the ROWS come from
+# `tools/roadmap-seed.py`, not the playbook seeder — the same split as `apps`
+# (app generator) and `systems` (service registry), and it is recorded in that
+# gate's UNSEEDED list for the same reason.
+#
+# RENDERED BY the nOS-face Planner app: board (lanes = status), tree (nesting =
+# parent), timeline (target / occurred_at). Three readings, one table.
+#
+# KNOWN GAP, unchanged by this file: `parent` should be a typed row reference.
+# KEAP has no `rowRef` kind, so it is a slug and integrity is seed-gated rather
+# than schema-enforced. It becomes `objectRef` the day `syncRows()` lands
+# (spec D3, ratified, unbuilt) and a row is addressable as a graph object.
+# =============================================================================
+
+title: "nOS Roadmap"
+description: >-
+  The single work surface for nOS — releases, epics, tasks, fees and confirmed
+  observations, self-nesting via parent. Claimed status and observed
+  verification are separate columns on purpose.
+driver: libsql
+visibility: tier-managers
+anchors: ["nos.roadmap"]
+
+schema:
+  columns:
+    # ── identity ─────────────────────────────────────────────────────────────
+    - { key: title,       label: "Title",        kind: text,   role: dimension, required: true, concept: identity.name }
+    - { key: slug,        label: "Slug",         kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: body,        label: "Detail",       kind: text,   role: attribute, concept: identity.description }
+    # Indexed so an agent can ask "has anyone planned this already?" before
+    # filing a duplicate — the cheapest defence against a seventh pile.
+    - { key: embedding,   label: "Embedding",    kind: vector, role: attribute, dim: 768, concept: machine.embedding }
+
+    # ── structure ────────────────────────────────────────────────────────────
+    - { key: parent,      label: "Parent",       kind: text,   role: dimension, concept: graph.parent }
+    - { key: ordinal,     label: "Order",        kind: number, role: attribute, concept: ui.sort }
+    - { key: kind,        label: "Kind",         kind: select, role: dimension, concept: class.kind,
+        options: ["release", "epic", "feature", "task", "fee", "weakness", "decision"] }
+    - { key: track,       label: "Track",        kind: text,   role: dimension, concept: class.group }
+
+    # ── the board ────────────────────────────────────────────────────────────
+    # `inbox` is where an agent-filed observation lands before a human has read
+    # it. Nothing reaches `doing` without passing `triaged`, so an agent cannot
+    # start work simply by filing it.
+    - { key: status,      label: "Status",       kind: select, role: dimension, required: true, concept: lifecycle.status,
+        options: ["inbox", "triaged", "queued", "doing", "blocked", "review", "shipped", "dropped"] }
+    - { key: owner,       label: "Owner",        kind: text,   role: dimension, concept: access.owner }
+    - { key: effort,      label: "Effort",       kind: select, role: attribute, concept: class.complexity,
+        options: ["small", "medium", "large"] }
+    - { key: severity,    label: "Severity",     kind: select, role: dimension, concept: lifecycle.criticality,
+        options: ["critical", "high", "medium", "low", "info"] }
+
+    # ── doneness, in columns that are allowed to disagree ────────────────────
+    - { key: verified,    label: "Verified",     kind: select, role: dimension, concept: evidence.verification,
+        options: ["unverified", "confirmed", "contradicted", "unverifiable"] }
+    - { key: verified_by, label: "Verified by",  kind: text,   role: attribute, concept: evidence.method }
+    - { key: verified_at, label: "Verified at",  kind: date,   role: attribute, concept: time.verified_at }
+    - { key: evidence,    label: "Evidence",     kind: json,   role: attribute, concept: evidence.observation }
+
+    # ── time ─────────────────────────────────────────────────────────────────
+    - { key: target,      label: "Target",       kind: date,   role: attribute, concept: time.target }
+    - { key: occurred_at, label: "Landed",       kind: date,   role: attribute, concept: time.occurred_at }
+
+    # ── provenance ───────────────────────────────────────────────────────────
+    # Not decoration: an `agent-observation` row is held to a corroboration
+    # requirement the others are not — it may not leave `inbox` until an
+    # independent probe has reproduced it. That is what stops the loop's
+    # observation channel from becoming a way to mint work for itself.
+    - { key: source,      label: "Source",       kind: select, role: dimension, concept: prov.source,
+        options: ["operator", "agent-observation", "security-scan", "loop-ledger", "hidden-fee", "review"] }
+    - { key: source_ref,  label: "Source ref",   kind: text,   role: attribute, concept: prov.ref }
+    - { key: refs,        label: "References",   kind: json,   role: attribute, concept: prov.references }
+    - { key: release,     label: "Release",      kind: text,   role: attribute, concept: identity.version }
+
+    # ── the cortex ───────────────────────────────────────────────────────────
+    - { key: anchor,      label: "Anchor",       kind: taxonomyRef, role: dimension, concept: graph.anchor }
