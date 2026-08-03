@@ -41,9 +41,16 @@ do not carry it between sessions.
 curl -sS -X POST -H "Authorization: Bearer $(tok loop_propose_token)" \
      -H 'Content-Type: application/json' \
      -d '{"weakness_id":"…","intent_class":"…","target_paths":["…"],
-          "gate_set":"…","diff":"…"}' \
+          "gate_set":"…","tree_sha":"<git-rev-parse-HEAD>",
+          "proposer_id":"agent:claude-code","diff_text":"…"}' \
      "$BASE/api/v1/loop/proposals"
 ```
+
+`tree_sha` is `git rev-parse HEAD` — the tree the proposal was written against,
+so a verdict can be tied to a state of the repo. `proposer_id` names who is
+proposing (`agent:claude-code`). The diff field is `diff_text`; it was written
+here as `diff`, and together with the two missing fields that made every
+documented proposal a 422 — the skill described a call that could not be made.
 
 `weakness_id` comes from `weakness-scan`, unedited. `target_paths` are exactly
 the files you intend to change — declaring a path you do not touch is as wrong as

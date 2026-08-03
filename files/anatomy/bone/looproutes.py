@@ -40,6 +40,19 @@ from loopauth import require_loop_scope
 
 router = APIRouter(prefix="/api/v1/loop", tags=["loop"])
 
+# The ledger's OWN role names. This module used to pass "agent:proposer" and
+# "engine:evaluator" — the actor_id spellings used elsewhere in the estate —
+# into `open_ledger`, whose authorizer map is keyed on the bare role
+# (`ledger._ROLE_WRITES`). Every call raised KeyError, so POST /proposals,
+# GET /history and POST /judge answered 500 and the wire had NEVER carried a
+# proposal. Bound to the map here so a rename breaks at import, not at 3am.
+_PROPOSER = "proposer"
+_EVALUATOR = "evaluator"
+assert _PROPOSER in ledger._ROLE_WRITES and _EVALUATOR in ledger._ROLE_WRITES, (
+    "the ledger's role names changed under this module — the routes would "
+    f"500 again. Known roles: {sorted(ledger._ROLE_WRITES)}"
+)
+
 
 # ── In-flight judge runs ────────────────────────────────────────────────────
 # A gate set can take minutes (pytest-anatomy measured at ~190 s), so POST is
@@ -55,7 +68,21 @@ _JOBS: dict[str, dict[str, Any]] = {}
 _JOBS_LOCK = threading.Lock()
 
 
+# `extra="forbid"` on BOTH bodies. Pydantic's default is to DROP an unknown
+# key silently, and the plugin's own judge skill documents `{"proposal": ...}`
+# where the engine names the field `proposal_uuid`. That call returned 202, ran
+# the gate set as an UNATTACHED baseline, sealed a verdict against no proposal,
+# and left the proposal with zero verdicts — which `ledger` then reads as
+# `attempt-pending` and refuses forever. A documented-as-correct call both
+# fabricated an attributed pass and permanently wedged the fingerprint.
+#
+# A misspelt field must be a 422, not a different operation performed quietly.
+_STRICT = {"extra": "forbid"}
+
+
 class ProposalIn(BaseModel):
+    model_config = _STRICT
+
     weakness_id: str = Field(..., min_length=1)
     target_paths: list[str] = Field(..., min_length=1)
     intent_class: str = Field(..., min_length=1)
@@ -67,6 +94,8 @@ class ProposalIn(BaseModel):
 
 
 class JudgeIn(BaseModel):
+    model_config = _STRICT
+
     gate_set: str = Field(..., min_length=1)
     # A proposal to attach the verdict to. Optional: a gate set may be run to
     # establish a baseline with nothing proposed.
@@ -86,14 +115,12 @@ def get_budget(gate_set: str = Query(..., min_length=1),
         b = budget.budget_for(gate_set)
     except Exception as exc:
         raise HTTPException(status_code=404, detail=f"unknown gate set: {exc}") from exc
-    return {
-        "gate_set": gate_set,
-        "allowed_roots": sorted(b.allowed_roots),
-        "denied": sorted(b.denied),
-        "oracle_paths": sorted(b.oracle_paths),
-        "max_files": b.max_files,
-        "max_diff_lines": b.max_diff_lines,
-    }
+    # `b.to_dict()` — the serializer budget.py already defines and tests. This
+    # route hand-rolled its own and named two fields the Budget does not have
+    # (`denied`, `oracle_paths`; they are `forbidden` and `oracle_rules()`), so
+    # every call raised AttributeError. Nothing caught it: there is no route
+    # test, and the one correct serializer went unused beside the broken copy.
+    return {"gate_set": gate_set, **b.to_dict()}
 
 
 @router.post("/proposals", status_code=201)
@@ -105,7 +132,7 @@ def post_proposal(body: ProposalIn,
     failed is rejected WITHOUT running the judges, which is what stops the loop
     re-proposing the same change forever.
     """
-    led = ledger.open_ledger("agent:proposer")
+    led = ledger.open_ledger(_PROPOSER)
     try:
         return led.record_proposal(
             weakness_id=body.weakness_id,
@@ -130,7 +157,7 @@ def post_proposal(body: ProposalIn,
 def get_history(fingerprint: str = Query(..., min_length=8),
                 _caller=Depends(require_loop_scope("read"))) -> dict[str, Any]:
     """Has this been tried, and what happened?"""
-    led = ledger.open_ledger("agent:proposer")
+    led = ledger.open_ledger(_PROPOSER)
     try:
         return {"fingerprint": fingerprint, "attempts": led.history(fingerprint)}
     finally:
@@ -154,7 +181,7 @@ def _execute(job_id: str, gate_set: str, proposal_uuid: str | None) -> None:
     # but it is a real gap and `run_gate_set` has no ledger seam to close it
     # without threading persistence through the judge runner. Recorded here
     # rather than papered over.
-    led = ledger.open_ledger("engine:evaluator")
+    led = ledger.open_ledger(_EVALUATOR)
     try:
         verdict = judges.run_gate_set(gate_set)
         for run in verdict.runs:
@@ -188,6 +215,30 @@ def post_judge(body: JudgeIn,
         judges.load_registry().gate_set(body.gate_set)
     except Exception as exc:
         raise HTTPException(status_code=404, detail=f"unknown gate set: {exc}") from exc
+
+    # A verdict must come from the set the PROPOSAL declared and the budget was
+    # computed against. Without this, a proposal vetted under `repo` (which
+    # includes pytest-anatomy) could be sealed `pass` by `fast` (lint only) —
+    # and `check()` reads the verdict's result without ever asking which set
+    # produced it. The evaluator token would be the only thing standing between
+    # a cheap set and an expensive claim, and the caller chooses both.
+    if body.proposal_uuid:
+        led = ledger.open_ledger(_PROPOSER)
+        try:
+            prop = led.proposal(body.proposal_uuid)
+        finally:
+            led.close()
+        if prop is None:
+            raise HTTPException(status_code=404, detail=f"no such proposal: {body.proposal_uuid}")
+        declared = prop.get("gate_set")
+        if declared != body.gate_set:
+            raise HTTPException(status_code=409, detail={
+                "reason": "gate-set-mismatch",
+                "detail": (f"proposal {body.proposal_uuid} declared gate set "
+                           f"{declared!r}; judging it with {body.gate_set!r} would "
+                           f"seal a verdict the budget was never computed for"),
+                "declared": declared, "requested": body.gate_set,
+            })
 
     job_id = str(uuid.uuid4())
     with _JOBS_LOCK:

@@ -20,9 +20,16 @@ You hold `loop_judge_token`: `read` and `judge`, no `propose`.
 ```bash
 curl -sS -X POST -H "Authorization: Bearer $(tok loop_judge_token)" \
      -H 'Content-Type: application/json' \
-     -d '{"gate_set":"<set>","proposal":"<uuid-or-omit>"}' \
+     -d '{"gate_set":"<set>","proposal_uuid":"<uuid-or-omit>"}' \
      "$BASE/api/v1/loop/judge"
 ```
+
+The field is `proposal_uuid`, not `proposal`. It was `proposal` here until
+2026-08-03, and the engine dropped the unknown key silently: the set ran as an
+unattached BASELINE, a verdict sealed against no proposal, and that proposal —
+left with zero verdicts — wedged as `attempt-pending` with no route to lift it.
+Omit the key entirely for a deliberate baseline; never misspell it. The engine
+now answers 422 instead of doing something else quietly.
 
 `202` returns a `run_id`. The call is asynchronous because one gate set runs for
 minutes; that is expected, not a hang.

@@ -319,6 +319,27 @@ try:  # noqa: SIM105
     import looproutes as _nos_looproutes  # type: ignore
 
     app.include_router(_nos_looproutes.router)
+
+    # THE BOOT SWEEP. `sweep_crashed()` is documented in two places as the thing
+    # that reconciles a run whose reader never returned — and it had no caller
+    # anywhere in the repo, so a run killed mid-subprocess stayed 'running'
+    # forever and nothing ever aggregated it to INDETERMINATE. A promise made in
+    # a docstring is not a mechanism; this is the line that makes it one.
+    #
+    # Swallowed deliberately: a sweep that cannot run must not stop Bone from
+    # serving. It is logged as a degraded start, never as a clean one.
+    try:
+        import ledger as _nos_ledger  # type: ignore
+
+        _sweep_led = _nos_ledger.open_ledger("evaluator")
+        try:
+            _LOOP_SWEPT_AT_BOOT = _sweep_led.sweep_crashed()
+        finally:
+            _sweep_led.close()
+    except Exception as _sweep_err:  # noqa: BLE001
+        _LOOP_SWEPT_AT_BOOT = -1
+        _LOOP_SWEEP_ERROR = str(_sweep_err)
+
     _LOOP_ENGINE_READY = True
 except Exception as _loop_engine_err:  # noqa: BLE001
     _LOOP_ENGINE_READY = False
