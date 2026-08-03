@@ -6,8 +6,8 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-08-02 • v0.10-beta ready to cut: parity PINNED + AGREE,
-> 0 pending CRITICAL (re-derived from live), estate converged `failed=0`.
+> Last updated: 2026-08-03 • v0.10-beta shipped; estate converged `failed=0`.
+> One night of archives lost to an unpersisted key — see Operator to-dos.
 
 ## Now (current track)
 
@@ -47,15 +47,11 @@ change that lets it fail — is in
 - **D1 `{{ vars }}` retirement flip** — design LOCKED (O25, generated-namespace
   plan + `tools/loader-vars-report.py`); the flip needs a dedicated pre-2.24
   wet-test lane. Hard-breaks on ansible-core 2.24.
-- **Linux wet-test proves nothing yet — `hidden_fees/08` (HIGH, found in the
-  v0.9-beta PR).** `stacks/infra/docker-compose.yml` is not rendered on Linux →
-  `compose up infra` rc=1 → the STRICT probe passes `0/0 ready (stack empty)` →
-  the run provisions for 8 more minutes on an estate with no MariaDB/PG/
-  Authentik/Traefik. It had been GREEN this way for weeks; only the smoke
-  noticed, and its 0.5 tolerance hid that until the probe count grew. Three
-  pieces: render the infra compose on Linux (cause undiagnosed — do not guess),
-  make the probe read the bring-up rc, give the smoke a manifest-enabled floor.
-  CLAUDE.md's "it proves the playbook" claim is corrected until then.
+- **Linux wet-test proves nothing yet — `hidden_fees/08` (HIGH).** Infra compose
+  is not rendered on Linux → `up infra` rc=1 → the STRICT probe passes
+  `0/0 ready (stack empty)`, green for weeks on an estate with no DB at all.
+  Three pieces: render it (cause undiagnosed — do not guess), make the probe read
+  the bring-up rc, give the smoke a manifest-enabled floor.
 - **KEAP contract v2 proposal — typed skill→service relations (2026-07-22, undecided).**
   KEAP asks why skills carry no typed edges to their services (today: tree +
   `[[anchor]]` rays only). Proposed shape: a `relations:` list in card frontmatter
@@ -100,17 +96,21 @@ change that lets it fail — is in
   UNDETERMINED mechanism, recorded deliberately without a guessed remedy). 07 now owns
   a wider rule too: *a step that cannot do its job must not exit 0* — three instances
   (drift hook parsing nothing · its POST 401ing · Linux wet-test `0/0 ready`).
-- **Rotate `restic_password` (needs Full Disk Access).** P2 stopped deriving it,
-  but the repo at `/Volumes/SSD1TB/nos-restic` already held the derived key, so
-  the converge failed `wrong password or no key found`. It is persisted at the
-  OLD derived value now — the repo works, and it is still the one crown jewel
-  P2 did not actually free. Rotate deliberately, from a terminal WITH FDA:
-  `restic -r … key add` under the old password, then persist the new one.
-  A bare swap locks every existing snapshot.
+- **Rotate `restic_password` (needs Full Disk Access).** A restic key is
+  per-repository, so P2 could not mint one without locking `/Volumes/SSD1TB/
+  nos-restic`; it stays at the OLD derived value — the last unfreed crown jewel.
+  `restic key add` under the old password FIRST, then persist the new one.
 - **TCC grant for /Volumes/SSD1TB** — restic off-site leg fails `operation not
   permitted`; blocks the backup DR round-trip verify (S4 leftover).
-- Optional: fire the uptime-kuma 2.2.1 upgrade recipe (D3; breaking schema,
-  recipe shipped, apply stays operator-gated).
+- **Uptime Kuma has been in its setup wizard since 2026-07-24** — the 1→2 upgrade
+  ran, `/api/entry-page` says `setup-database`, and the container reported
+  `healthy` for 9 days because the healthcheck is a TCP connect. Finish the wizard
+  at `127.0.0.1:3001`, then `--tags uptime_kuma`. No uptime alerting until then.
+- **`s3://backups/2026-08-03/` (14 objects, 351 MB) opens with no key** — written
+  by the one nightly that ran under the minted-but-unpersisted archive key.
+  Decide whether to delete: unreadable ciphertext reads as a backup. 07-26..08-02
+  (86 objects) still open with `{prefix}_pw_backup_encryption`; the ring that
+  serves them fills on the NEXT converge (`7f4907ac`).
 - One-time (Phase C of devlog epic): repo Settings → Pages → Source = GitHub
   Actions.
 
@@ -132,7 +132,7 @@ change that lets it fail — is in
 | Surface | State |
 |---|---|
 | Release | `v0.10-beta` gate MET (`agreeStreak: 6`, six clauses); tag pending operator |
-| Last verified | converge 2026-08-02 `ok=1431 failed=0`; gitea `1.27.0` + metabase `v0.61.9` live |
+| Last verified | converge 2026-08-03 `ok=1445 failed=0`; archive key minted+persisted, ring fills next run |
 | Suites | anatomy **2164 passed / 4 skipped**; face 143 passed, 0 type errors |
 | Estate | `nos_data_root` = `/Volumes/SSD1TB/nOS/data` (one lever; NOT `configure_external_storage`) |
 | CI | was RED on `dev` (lint / face / contracts-drift / pytest); all four fixed 08-02, re-run pending |
