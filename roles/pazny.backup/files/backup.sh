@@ -69,6 +69,14 @@ DO_TOFU_STATE="{{ 'true' if backup_tofu_state else 'false' }}"
 # (a tag mismatch is a latent restore-extract drift). Single source: backup_alpine_image.
 ALPINE_IMAGE="{{ backup_alpine_image }}"
 
+# `tar -C path .` always emits `./` as its first member, so an archive with
+# one member captured nothing. Measured 2026-08-03: six sources under
+# nos_data_root produced exactly this, every night, for the life of the bucket.
+# Deliberately a MEMBER count, not a byte size — tar pads to a 10240-byte
+# minimum, so an empty archive and a three-small-file archive weigh the same
+# and a size floor would withdraw real backups.
+EMPTY_ARCHIVE_MEMBERS=1
+
 RETAIN_DAILY={{ backup_retention_daily }}
 RETAIN_WEEKLY={{ backup_retention_weekly }}
 RETAIN_MONTHLY={{ backup_retention_monthly }}
@@ -717,7 +725,7 @@ run_tofu_state() {
 run_dirs() {
     # ${!arr[@]} index form is empty-safe under set -u in bash 3.2 (verified) —
     # no array-length form here (its brace-hash would break the Jinja render).
-    local date_str key start dur rc size i name path
+    local date_str key start dur rc size i name path src_entries tar_list tar_members
     date_str="$(date -u +%Y-%m-%d)"
     for i in "${!DIR_NAMES[@]}"; do
         name="${DIR_NAMES[$i]}"
@@ -731,6 +739,26 @@ run_dirs() {
             status_append "dir-${name}" 0 0 0
             continue
         fi
+        # ...and READABLE-BUT-EMPTY is the third case, measured 2026-08-03 and
+        # the reason six services had no backup at all for the life of the
+        # bucket. Every dir under nos_data_root (/Volumes/SSD1TB) tarred to an
+        # archive containing exactly one entry, `./` — gitea, gitlab,
+        # gitlab-config, authentik, vaultwarden, nodered. dir-n8n ($HOME/n8n)
+        # was fine, which is the whole discriminator: the host tar below cannot
+        # read the external volume, while `-d` above still passes because the
+        # mount point itself is visible.
+        #
+        # The stream goes STRAIGHT to S3, so by the time tar's rc is known the
+        # empty object is already published — a 10 KB artifact that lists like a
+        # backup. Check the SOURCE before writing anything, because there is no
+        # taking the object back afterwards.
+        src_entries=$(ls -A "${path}" 2>/dev/null | wc -l | tr -d ' ')
+        if [[ "${src_entries}" -eq 0 ]]; then
+            log "dir/${name}: ${path} reads as EMPTY (permissions, or an unmounted volume) — recording as FAILED, uploading nothing"
+            status_append "dir-${name}" 0 0 0
+            continue
+        fi
+
         key="${date_str}/dir-${name}.tar.gz${ENC_SUFFIX}"
 
         if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/dir-${name}.tar.gz"; then
@@ -743,16 +771,34 @@ run_dirs() {
         # into the target path without a doubled component.
         log "dir/${name}: tar-gz of ${path}"
         start=$(now_ms)
-        tar -czf - -C "${path}" . \
+        # `-v` so the member list lands on stderr and can be COUNTED. Size is
+        # not a usable signal here: tar pads every archive to a 10240-byte
+        # minimum, so an empty one and one holding three small files measure
+        # the same. A size floor would therefore withdraw real backups — it was
+        # written, caught, and replaced by this before it shipped.
+        tar_list="$(mktemp -t nosbackup)"
+        tar -czvf - -C "${path}" . 2>"${tar_list}" \
           | encrypt_stream \
           | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
         rc=$?
+        tar_members=$(wc -l <"${tar_list}" | tr -d ' ')
+        rm -f "${tar_list}"
         dur=$(( $(now_ms) - start ))
 
         if [[ "${rc}" -eq 0 ]]; then
             size=$(s3_size "${key}")
-            log "dir/${name}: OK (${size} bytes in ${dur}ms)"
-            status_append "dir-${name}" "${size}" "${dur}" 1
+            # Belt to the pre-flight's braces. A source can list entries and
+            # STILL tar to nothing — a per-subdirectory permission failure that
+            # tar reports as a delayed error. `./` alone is one member, so an
+            # archive at or under that captured no content whatever its size.
+            if [[ "${tar_members}" -le "${EMPTY_ARCHIVE_MEMBERS}" ]]; then
+                log "dir/${name}: archive holds ${tar_members} member(s) — nothing was captured. Withdrawing the object and recording as FAILED."
+                aws "${AWS_OPTS[@]}" s3 rm "s3://${S3_BUCKET}/${key}" >/dev/null 2>&1 || true
+                status_append "dir-${name}" 0 "${dur}" 0
+            else
+                log "dir/${name}: OK (${size} bytes in ${dur}ms)"
+                status_append "dir-${name}" "${size}" "${dur}" 1
+            fi
         else
             log "dir/${name}: FAILED (rc=${rc})"
             status_append "dir-${name}" 0 "${dur}" 0
