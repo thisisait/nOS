@@ -245,6 +245,7 @@ CREATE TABLE IF NOT EXISTS loop_judge_runs (
 );
 CREATE INDEX IF NOT EXISTS idx_loop_runs_prop ON loop_judge_runs (proposal_id);
 
+
 CREATE TABLE IF NOT EXISTS loop_verdicts (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     uuid         TEXT NOT NULL UNIQUE,
@@ -258,6 +259,15 @@ CREATE TABLE IF NOT EXISTS loop_verdicts (
     row_hash     TEXT,
     created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
+-- ONE LINK PER PREDECESSOR. seal_verdict reads the tip's row_hash and then
+-- INSERTs; two concurrent seals read the SAME tip and both write, forking the
+-- chain. verify_chain() then reports ok:false forever, because the WORM
+-- triggers refuse DELETE and UPDATE to every role — an ordinary scheduling
+-- race would permanently destroy the tamper-evidence, with no repair path in
+-- any code path that exists. This index makes the second writer FAIL instead,
+-- which is recoverable: it retries and chains onto the new tip.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_loop_verdicts_prev
+    ON loop_verdicts (prev_hash) WHERE prev_hash IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_loop_verdicts_prop ON loop_verdicts (proposal_id);
 
 -- §4 "the block lifts" — operator-only. CHECK pins the writer identity the
@@ -1012,6 +1022,10 @@ class EvaluatorLedger(ReaderLedger):
         values["prev_hash"] = prev
         values["row_hash"] = chain_hash(prev, values)
 
+        # The unique index above is the guarantee; this is the manners. Without
+        # it two seals routinely collide and one dies on a constraint error the
+        # caller must interpret — with it, the loser waits for the writer lock
+        # and reads the new tip on retry.
         self._w(
             "INSERT INTO loop_verdicts "
             "(uuid, proposal_id, gate_set, result, actor, tree_sha, evidence, "
