@@ -103,6 +103,12 @@ def propose(led, **over):
               intent_class="config-fix", gate_set="repo", tree_sha="a" * 40,
               proposer_id="agent:remediator")
     kw.update(over)
+    if "diff_text" not in kw:
+        # diff_text is REQUIRED, and §5 refuses a declaration the diff does not
+        # match — so the default artifact names exactly the declared paths.
+        kw["diff_text"] = "".join(
+            f"--- a/{p}\n+++ b/{p}\n@@ -1 +1 @@\n-a\n+b\n"
+            for p in kw["target_paths"])
     return led.record_proposal(**kw)
 
 

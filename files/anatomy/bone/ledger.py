@@ -148,18 +148,24 @@ class ProposalRefused(LedgerError):
     """Budget/fingerprint refusal — §5/§4. Surfaces as 409.
 
     `reason` is a stable machine code, never free text:
-      content-fp-repeat   — byte-identical patch already offered
+      missing-diff        — no diff_text: a proposal IS its artifact, and
+                            without one neither the budget nor the dedup can
+                            look at what would actually change
+      content-fp-repeat   — byte-identical patch already offered, under ANY
+                            fingerprint (an operator forget lifts it)
       already-failed      — attempts exhausted and the last verdict was fail
       fingerprint-exhausted — attempts exhausted (last verdict pass/indeterminate)
       attempt-pending     — a prior attempt has no verdict yet
       unknown-intent      — intent_class outside the closed enum
-      unknown-weakness    — §4: weakness_id is not reported by any source, so
-                            there is no evidence hash to key the ceiling on
+      unknown-weakness    — §4: weakness_id is not reported by any source from
+                            COMMITTED content, so there is no evidence hash to
+                            key the ceiling on
       bad-path            — absolute path or `..` escape in target_paths
       budget-violation    — §5: a target path the gate set forbids, including
                             the oracle of a judge that will grade it, a path the
-                            DIFF touches but the proposal did not declare, or
-                            either of those spelled in a different case
+                            DIFF touches but the proposal did not declare, a
+                            declared path the diff never touches, or any of
+                            those spelled in a different case
       unknown-gate-set    — §5: no budget can be computed, so nothing is allowed
     """
 
@@ -202,10 +208,15 @@ CREATE TABLE IF NOT EXISTS loop_proposals (
     proposer_model        TEXT,
     attempt_n             INTEGER NOT NULL DEFAULT 1,
     requires_operator     INTEGER NOT NULL DEFAULT 0,
+    -- The artifact itself (A1/A2). content_fp is a hash of this, and a hash
+    -- whose preimage is discarded cannot be audited, replayed, or ever judged:
+    -- the sandbox that will apply a proposal needs the bytes, not the digest.
+    diff_text             TEXT,
     created_at            TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_loop_prop_fp     ON loop_proposals (fingerprint);
 CREATE INDEX IF NOT EXISTS idx_loop_prop_weak   ON loop_proposals (weakness_id);
+CREATE INDEX IF NOT EXISTS idx_loop_prop_cfp    ON loop_proposals (content_fp);
 
 CREATE TABLE IF NOT EXISTS loop_judge_runs (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -325,6 +336,7 @@ _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("loop_judge_runs", "reason", "TEXT"),
     ("loop_judge_runs", "resolved_argv0", "TEXT"),
     ("loop_judge_runs", "interpreter", "TEXT"),
+    ("loop_proposals", "diff_text", "TEXT"),
 )
 
 
@@ -532,6 +544,20 @@ def default_weakness_index() -> dict[str, str]:
     Imported lazily so importing the ledger does not drag in the reader's
     FastAPI router; the reader is READ-ONLY and holds no opinion (its own
     docstring), which is why it is safe for the ledger to depend on it.
+
+    COMMITTED CONTENT ONLY. The reader reads its file ledgers straight off the
+    working tree — deliberately, its job is to see what is there — but §4 keys
+    the retry ceiling on `(weakness_id, evidence_sha)`, and both of those are
+    derived from file CONTENT. MEASURED: one uncommitted row appended to
+    docs/hidden_fees/README.md minted a brand-new `fee:` weakness_id that this
+    index served to the ceiling check, so a proposer with filesystem access
+    could invent lift keys without a commit, a review, or a trace in history.
+    A weakness whose evidence derives from uncommitted content is therefore
+    NOT proposable: `Weakness.evidence_committed` is computed by the source
+    that read the file (it knows every path it touched, including the per-fee
+    body files the index table links to), and this index drops the rest. The
+    weakness still APPEARS in `/weaknesses` — observing is the reader's job —
+    it just cannot key a ceiling until it is committed.
     """
     import weaknesses as _weaknesses  # noqa: PLC0415 — see the docstring
 
@@ -539,6 +565,7 @@ def default_weakness_index() -> dict[str, str]:
         w.weakness_id: w.evidence_sha
         for report in _weaknesses.collect()
         for w in report.weaknesses
+        if w.evidence_committed
     }
 
 
@@ -781,7 +808,15 @@ class ProposerLedger(ReaderLedger):
                             priors, requires_op, violations)
 
         if content_fp:
-            same = [p for p in priors if p.get("content_fp") == content_fp]
+            # GLOBAL, not per-fingerprint. This lookup used to be scoped to
+            # `priors` — the attempts sharing THIS fingerprint — and three of
+            # the fingerprint's four inputs are proposer-chosen, so re-offering
+            # a byte-identical patch under a different intent_class or gate_set
+            # (or, before the declared-path-untouched rule, a padded
+            # target_paths) landed in a scope where the guard could not see it:
+            # same bytes, fresh ceiling, forever. The same-content question has
+            # no fingerprint in it, so neither does the query.
+            same = self._content_fp_priors(content_fp)
             if same:
                 return Decision(False, "content-fp-repeat", len(priors) + 1, same, requires_op)
 
@@ -795,6 +830,23 @@ class ProposerLedger(ReaderLedger):
             return Decision(False, reason, len(priors) + 1, priors, requires_op)
 
         return Decision(True, None, len(priors) + 1, priors, requires_op)
+
+    def _content_fp_priors(self, content_fp: str) -> list[dict[str, Any]]:
+        """Every live prior offer of this normalized patch, under ANY fingerprint.
+
+        An operator forget still lifts it: a forgotten proposal is excluded by
+        the same `through_proposal_id` cut `_live_priors` applies, correlated
+        per row because different fingerprints have different cuts. Deliberately
+        NOT lifted by a weakness-evidence change — new evidence can justify a
+        new attempt at the fingerprint, but a byte-identical patch is the same
+        act whatever the world looks like now; if it deserves a re-run, that is
+        the operator's call (§6.2), not the blocked party's.
+        """
+        return self._q(
+            "SELECT p.* FROM loop_proposals p WHERE p.content_fp = ? AND p.id > ("
+            "  SELECT COALESCE(MAX(f.through_proposal_id), 0) FROM loop_forgets f"
+            "  WHERE f.fingerprint = p.fingerprint) ORDER BY p.id",
+            (content_fp,))
 
     def _live_priors(self, fp: str, weakness_evidence_sha: str) -> list[dict[str, Any]]:
         """Prior attempts that still count. §4 — the block LIFTS when the
@@ -815,7 +867,7 @@ class ProposerLedger(ReaderLedger):
 
     def record_proposal(self, *, weakness_id: str, target_paths: Iterable[str],
                         intent_class: str, gate_set: str, tree_sha: str,
-                        proposer_id: str, diff_text: str | None = None,
+                        proposer_id: str, diff_text: str,
                         proposer_model: str | None = None,
                         max_attempts: int = DEFAULT_MAX_ATTEMPTS) -> dict[str, Any]:
         """201 on acceptance; raises ProposalRefused (409) otherwise.
@@ -825,10 +877,23 @@ class ProposerLedger(ReaderLedger):
         `weakness_evidence_sha`: §4's lift key is derived, for the same reason
         `requires_operator` is (§5a) — a field the proposer supplies is a field
         the proposer optimises.
+
+        `diff_text` is REQUIRED. It used to be Optional, which put every check
+        that reads the artifact at the proposer's discretion: omit the diff and
+        the §5 artifact-vs-declaration comparison, the size cap and the
+        content-fingerprint dedup all silently skipped — the exact
+        gate-that-cannot-fail shape this engine exists to remove. A proposal
+        without its artifact is not a proposal, so it is refused, not defaulted.
         """
+        if not diff_text or not diff_text.strip():
+            raise ProposalRefused(
+                "missing-diff",
+                "a proposal IS its artifact; without diff_text the budget "
+                "cannot see what would change and the content fingerprint "
+                "cannot deduplicate it")
         paths = normalize_paths(target_paths)
         fp = fingerprint(weakness_id, paths, intent_class, gate_set)
-        cfp = content_fingerprint(diff_text) if diff_text else None
+        cfp = content_fingerprint(diff_text)
         weakness_evidence_sha = self._weakness_evidence_sha(weakness_id)
 
         decision = self.check(
@@ -851,15 +916,18 @@ class ProposerLedger(ReaderLedger):
             "INSERT INTO loop_proposals "
             "(uuid, fingerprint, content_fp, weakness_id, weakness_evidence_sha, "
             " intent_class, gate_set, target_paths, tree_sha, proposer_id, "
-            " proposer_model, attempt_n, requires_operator) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " proposer_model, attempt_n, requires_operator, diff_text) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (u, fp, cfp, weakness_id, weakness_evidence_sha, intent_class, gate_set,
              _canonical_json(paths), tree_sha, proposer_id, proposer_model,
              decision.attempt_n,
              # §5a — derived from intent_class by the ledger, never accepted
              # from the caller: a proposer cannot mark its own gate-add
              # auto-acceptable.
-             1 if intent_class in OPERATOR_REQUIRED_INTENTS else 0))
+             1 if intent_class in OPERATOR_REQUIRED_INTENTS else 0,
+             # The artifact, verbatim (A1 needs the bytes to judge; §11 needs
+             # them to replay). The hash alone is a claim with no preimage.
+             diff_text))
         return {"uuid": u, "fingerprint": fp, "content_fp": cfp,
                 "attempt_n": decision.attempt_n,
                 "requires_operator": decision.requires_operator}

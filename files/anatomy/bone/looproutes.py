@@ -89,7 +89,10 @@ class ProposalIn(BaseModel):
     gate_set: str = Field(..., min_length=1)
     tree_sha: str = Field(..., min_length=7)
     proposer_id: str = Field(..., min_length=1)
-    diff_text: str | None = None
+    # REQUIRED — a 422, not a shrug. Optional put the artifact at the caller's
+    # discretion: a diff-less proposal skipped the §5 artifact check, the size
+    # cap and the content-fingerprint dedup, all while returning 201.
+    diff_text: str = Field(..., min_length=1)
     proposer_model: str | None = None
 
 

@@ -184,6 +184,14 @@ class Weakness:
     #: itself. The consumer must be able to see that the alarm and the thing it
     #: watches share an author.
     derived_from_self_report: bool = False
+    #: True only when every REPO file this weakness's `evidence` was read from
+    #: matches HEAD. The ledger keys the §4 retry ceiling on
+    #: `(weakness_id, evidence_sha)`, and both are derived from file content —
+    #: so a weakness minted by an UNCOMMITTED edit is a lift key the proposer
+    #: wrote for itself. Set False by the source that read the file (it alone
+    #: knows every path it touched); the reader still REPORTS the weakness,
+    #: the ledger just refuses to let it key a ceiling (B4).
+    evidence_committed: bool = True
 
     def __post_init__(self) -> None:
         self.severity = normalize_severity(self.severity)
@@ -203,6 +211,7 @@ class Weakness:
             "evidence_sha": self.evidence_sha,
             "observed": self.observed,
             "derived_from_self_report": self.derived_from_self_report,
+            "evidence_committed": self.evidence_committed,
         }
 
 
@@ -219,6 +228,10 @@ class SourceReport:
     weaknesses: list[Weakness] = field(default_factory=list)
     path: str | None = None
     detail: str = ""
+    #: Report-level twin of `Weakness.evidence_committed`, for weaknesses
+    #: derived AFTER the source ran (`_freshness_weakness` reads the report's
+    #: self-reported claim, which came out of the same file).
+    evidence_committed: bool = True
 
     def to_dict(self) -> dict:
         return {
@@ -342,12 +355,18 @@ def _unavailable(
     path: Path | None,
     status: str,
     detail: str,
+    evidence_committed: bool = True,
 ) -> SourceReport:
     """A source that could not be read reports a WEAKNESS, never silence.
 
     `malformed` outranks `unavailable`: a file that is present and unparseable
     is a defect wherever it lives, while an absent optional file may simply mean
     the organ was never installed on this host.
+
+    `evidence_committed=False` when the unreadability itself is an uncommitted
+    state — an in-repo source file DELETED or mangled in the working tree only.
+    Deleting a ledger is as good a mint as appending to one: it produces this
+    very `source:<name>:<status>` weakness, which must not key a retry ceiling.
     """
     if status == STATUS_MALFORMED:
         severity = "high"
@@ -360,6 +379,7 @@ def _unavailable(
         status=status,
         path=str(path) if path else None,
         detail=detail,
+        evidence_committed=evidence_committed,
         freshness=Freshness(
             basis=BASIS_NONE,
             note="source did not report; no freshness signal available",
@@ -383,6 +403,7 @@ def _unavailable(
                         "from the list; absence here is not evidence of health"
                     )
                 },
+                evidence_committed=evidence_committed,
             )
         ],
     )
@@ -509,12 +530,18 @@ def _source_git_worktree() -> tuple[SourceReport, set[str]]:
             tracked.append((path, xy))
 
     # ── requirement 1: one weakness PER machine-written path, named writer ──
+    # Every weakness of this source carries evidence_committed=False: its
+    # evidence IS the uncommitted state of the tree, i.e. exactly the thing a
+    # proposer can change at will with one `touch`. Reporting it is this
+    # source's whole job; letting it key a §4 retry ceiling would hand the
+    # blocked party a self-service lift key (B4).
     for path, xy, writer in machine:
         weaknesses.append(
             Weakness(
                 weakness_id=f"git:uncommitted:{path}",
                 source=name,
                 severity="high",
+                evidence_committed=False,
                 title=(
                     f"{path} was written by {writer} and is not committed — "
                     "every consumer that reads HEAD sees the older file"
@@ -542,6 +569,7 @@ def _source_git_worktree() -> tuple[SourceReport, set[str]]:
                 weakness_id="git:uncommitted-tracked",
                 source=name,
                 severity="medium",
+                evidence_committed=False,
                 title=f"{len(tracked)} tracked file(s) modified but not committed",
                 evidence={
                     "count": len(tracked),
@@ -558,6 +586,7 @@ def _source_git_worktree() -> tuple[SourceReport, set[str]]:
                 weakness_id="git:untracked",
                 source=name,
                 severity="low",
+                evidence_committed=False,
                 title=f"{len(untracked)} untracked file(s) in the working tree",
                 evidence={
                     "count": len(untracked),
@@ -580,6 +609,7 @@ def _source_git_worktree() -> tuple[SourceReport, set[str]]:
             ),
             weaknesses=weaknesses,
             detail=f"{len(entries)} changed path(s)",
+            evidence_committed=False,  # this source reports the worktree itself
         ),
         dirty,
     )
@@ -641,6 +671,7 @@ REMEDIATION_REL = "docs/llm/security/remediation-queue.json"
 def _source_remediation_queue(dirty: set[str]) -> SourceReport:
     name = "remediation-queue"
     path = repo_root() / REMEDIATION_REL
+    committed = REMEDIATION_REL not in dirty
     status, data, detail = _read_json(path)
     if status != STATUS_OK or not isinstance(data, dict):
         return _unavailable(
@@ -649,6 +680,7 @@ def _source_remediation_queue(dirty: set[str]) -> SourceReport:
             path=path,
             status=status if status != STATUS_OK else STATUS_MALFORMED,
             detail=detail or "top level is not an object",
+            evidence_committed=committed,
         )
 
     items = data.get("items")
@@ -656,6 +688,7 @@ def _source_remediation_queue(dirty: set[str]) -> SourceReport:
         return _unavailable(
             name, required=True, path=path, status=STATUS_MALFORMED,
             detail="items[] missing or not a list",
+            evidence_committed=committed,
         )
 
     git_state = _git_state(REMEDIATION_REL, dirty)
@@ -690,6 +723,7 @@ def _source_remediation_queue(dirty: set[str]) -> SourceReport:
                     "file": REMEDIATION_REL,
                 },
                 observed={"file_git_state": git_state},
+                evidence_committed=committed,
             )
         )
 
@@ -729,6 +763,7 @@ def _source_remediation_queue(dirty: set[str]) -> SourceReport:
                     "file_git_state": git_state,
                     "rule": "derive counts from items[], never from summary",
                 },
+                evidence_committed=committed,
             )
         )
 
@@ -739,6 +774,7 @@ def _source_remediation_queue(dirty: set[str]) -> SourceReport:
         name=name,
         status=STATUS_OK,
         path=str(path),
+        evidence_committed=committed,
         detail=f"{len(items)} items, {len([w for w in weaknesses if w.weakness_id.startswith('rem:REM-')])} pending",
         freshness=Freshness(
             basis=BASIS_SELF_REPORTED,
@@ -772,6 +808,7 @@ def _source_scan_state(dirty: set[str]) -> SourceReport:
     """
     name = "scan-state"
     path = repo_root() / SCAN_STATE_REL
+    committed = SCAN_STATE_REL not in dirty
     status, data, detail = _read_json(path)
     if status != STATUS_OK or not isinstance(data, dict):
         return _unavailable(
@@ -780,6 +817,7 @@ def _source_scan_state(dirty: set[str]) -> SourceReport:
             path=path,
             status=status if status != STATUS_OK else STATUS_MALFORMED,
             detail=detail or "top level is not an object",
+            evidence_committed=committed,
         )
 
     git_state = _git_state(SCAN_STATE_REL, dirty)
@@ -806,6 +844,7 @@ def _source_scan_state(dirty: set[str]) -> SourceReport:
                         "accepts only one produces no verdict at all, at exit 0"
                     ),
                 },
+                evidence_committed=committed,
             )
         )
     elif age is not None and age > SCAN_STALE_DAYS:
@@ -839,6 +878,7 @@ def _source_scan_state(dirty: set[str]) -> SourceReport:
                         "share an author"
                     ),
                 },
+                evidence_committed=committed,
             )
         )
 
@@ -868,6 +908,7 @@ def _source_scan_state(dirty: set[str]) -> SourceReport:
                     "truncated": len(never) > _MAX_LIST,
                 },
                 observed={"file_git_state": git_state},
+                evidence_committed=committed,
             )
         )
 
@@ -875,6 +916,7 @@ def _source_scan_state(dirty: set[str]) -> SourceReport:
         name=name,
         status=STATUS_OK,
         path=str(path),
+        evidence_committed=committed,
         detail=f"cycle {data.get('scan_cycle')}, {len(components)} components",
         freshness=Freshness(
             basis=BASIS_SELF_REPORTED,
@@ -959,10 +1001,12 @@ def _source_hidden_fees(dirty: set[str]) -> SourceReport:
     name = "hidden-fees"
     root = repo_root()
     path = root / FEES_REL
+    index_committed = FEES_REL not in dirty
     if not path.is_file():
         return _unavailable(
             name, required=True, path=path, status=STATUS_UNAVAILABLE,
             detail=f"{path} does not exist",
+            evidence_committed=index_committed,
         )
     try:
         text = path.read_text(encoding="utf-8")
@@ -970,6 +1014,7 @@ def _source_hidden_fees(dirty: set[str]) -> SourceReport:
         return _unavailable(
             name, required=True, path=path, status=STATUS_MALFORMED,
             detail=f"{type(exc).__name__}: {exc}",
+            evidence_committed=index_committed,
         )
 
     rows = [m for m in (_FEE_ROW.match(ln) for ln in text.splitlines()) if m]
@@ -979,6 +1024,7 @@ def _source_hidden_fees(dirty: set[str]) -> SourceReport:
         return _unavailable(
             name, required=True, path=path, status=STATUS_MALFORMED,
             detail="index table parsed to zero rows — format drift",
+            evidence_committed=index_committed,
         )
 
     git_state = _git_state(FEES_REL, dirty)
@@ -996,12 +1042,17 @@ def _source_hidden_fees(dirty: set[str]) -> SourceReport:
         bill = _clean_cell(m.group("bill"))
         status_cell = _clean_cell(m.group("status"))
         fee_path = f"docs/hidden_fees/{rel_file}"
+        # Evidence is read from TWO files: the index row and the fee file's
+        # own "## The fee" body. Either one edited uncommitted can mint a new
+        # weakness_id or move `evidence_sha` — both are §4 ceiling keys.
+        fee_committed = index_committed and fee_path not in dirty
         weaknesses.append(
             Weakness(
                 weakness_id=f"fee:{num}",
                 source=name,
                 severity=_fee_severity(state, bill, status_cell),
                 title=fee,
+                evidence_committed=fee_committed,
                 evidence={
                     "number": num,
                     "file": fee_path,
@@ -1026,6 +1077,7 @@ def _source_hidden_fees(dirty: set[str]) -> SourceReport:
                     weakness_id=f"fee:{num}:status-disagrees",
                     source=name,
                     severity="medium",
+                    evidence_committed=fee_committed,
                     title=f"hidden fee {num}: the file's Status disagrees with the index",
                     evidence={
                         "number": num,
@@ -1041,6 +1093,7 @@ def _source_hidden_fees(dirty: set[str]) -> SourceReport:
         name=name,
         status=STATUS_OK,
         path=str(path),
+        evidence_committed=index_committed,
         detail=f"{len(rows)} rows, {open_count} not closed",
         freshness=Freshness(
             basis=BASIS_SELF_REPORTED,
@@ -1219,6 +1272,9 @@ def _freshness_weakness(report: SourceReport) -> Weakness | None:
             f"{f.corroborator}"
         ),
         derived_from_self_report=True,
+        # The claim side of this disagreement came out of the source's file,
+        # so it is committed exactly when that file is.
+        evidence_committed=report.evidence_committed,
         evidence={
             "source": report.name,
             "path": report.path,

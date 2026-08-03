@@ -377,10 +377,11 @@ def check_paths(paths: Iterable[str], *, intent_class: str, gate_set: str,
 
     Order of judgement, deny beats allow:
       1. a path the DIFF touches but the proposal did not declare → `undeclared-path`
-      2. outside the repo root at all              → `outside-repo`
-      3. claimed by a rule (oracle or §5.2)        → that rule's reason
-      4. not under an allowed root                 → `not-in-allowed-roots`
-      5. size caps                                 → `too-many-files` / `diff-too-large`
+      2. a path the proposal declares but the diff never edits → `declared-path-untouched`
+      3. outside the repo root at all              → `outside-repo`
+      4. claimed by a rule (oracle or §5.2)        → that rule's reason
+      5. not under an allowed root                 → `not-in-allowed-roots`
+      6. size caps                                 → `too-many-files` / `diff-too-large`
 
     THE DIFF IS CHECKED, NOT ONLY THE DECLARATION. Every rule below used to be
     applied to `paths` alone — a list the proposer writes — while `diff_text`
@@ -406,6 +407,25 @@ def check_paths(paths: Iterable[str], *, intent_class: str, gate_set: str,
             path, "undeclared-path", "§5",
             "the diff edits a path target_paths does not declare; §5 judges the "
             "artifact, not the claim"))
+
+    # THE DECLARATION MUST MATCH THE ARTIFACT IN BOTH DIRECTIONS. The check
+    # above catches a diff that touches more than it declared; this one catches
+    # a declaration that claims more than the diff touches. That direction
+    # looked harmless — an over-broad claim edits nothing — until the §4
+    # fingerprint is read next to it: `target_paths` is one of the four hash
+    # inputs, so PADDING the declaration with any allowed path mints a brand-new
+    # fingerprint (and with it a fresh attempt ceiling) for a byte-identical
+    # patch. Refusing the pad makes target_paths derived data: the only
+    # declaration that survives is the one equal to what the diff itself says.
+    if diff_text:
+        diff_keys = {_fold(p) for p in from_diff}
+        for raw in declared:
+            if not _escapes_repo(raw) and _fold(raw) not in diff_keys:
+                out.append(Violation(
+                    str(raw), "declared-path-untouched", "§5",
+                    "target_paths declares a path the diff never edits; §4 "
+                    "hashes the declaration, so a padded path is a freshly "
+                    "minted attempt ceiling for an unchanged patch"))
 
     # The union is what gets rule-checked and size-capped: a file the diff
     # touches is a file the proposal edits, whoever wrote it down.

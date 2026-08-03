@@ -152,11 +152,29 @@ def raw(db) -> sqlite3.Connection:
     return c
 
 
+DEFAULT_TARGET = "roles/pazny.gitea/defaults/main.yml"
+
+
+def mkdiff(new: str = "b", path: str = DEFAULT_TARGET, at: int = 1) -> str:
+    """A minimal diff whose headers NAME the path it claims to edit.
+
+    §5 now reads the artifact in both directions — a diff that touches an
+    undeclared path is refused, and so is a declared path the diff never
+    touches — so a headerless hunk (this file's old fixture) no longer
+    represents a valid proposal.
+    """
+    return f"--- a/{path}\n+++ b/{path}\n@@ -{at} +{at} @@\n-a\n+{new}\n"
+
+
 def propose(led, **over):
-    kw = dict(weakness_id="hidden-fee:08", target_paths=["roles/pazny.gitea/defaults/main.yml"],
+    kw = dict(weakness_id="hidden-fee:08", target_paths=[DEFAULT_TARGET],
               intent_class="version-pin-bump", gate_set="fast", tree_sha="a" * 40,
               proposer_id="agent:remediator", proposer_model="anthropic-claude-opus-5")
     kw.update(over)
+    # diff_text is REQUIRED now; default to a diff that matches the declaration
+    # so each test states only what it is about.
+    if "diff_text" not in kw:
+        kw["diff_text"] = "".join(mkdiff(path=p) for p in kw["target_paths"])
     return led.record_proposal(**kw)
 
 
@@ -612,7 +630,7 @@ def test_ADVERSARIAL_a_fail_on_record_cannot_be_left_out_of_the_verdict(db, prop
     database, it is missing from the caller's list — so the caller no longer has
     a list.
     """
-    p = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    p = propose(proposer, diff_text=mkdiff("b"))
     for judge, code, out in ((LINT, 0, LINT_OK), (CODEGEN, 1, CODEGEN_STALE)):
         run = derive(judge, code, out)
         u = evaluator.begin_judge_run(gate_set="fast", judge_name=judge.name,
@@ -634,7 +652,7 @@ def test_ADVERSARIAL_a_green_run_cannot_be_reattached_to_another_proposal(db, pr
     Here B is sealed while A's green run exists, and B must find nothing of its
     own — an empty set, which is INDETERMINATE.
     """
-    a = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    a = propose(proposer, diff_text=mkdiff("b"))
     # DELIBERATELY LEFT UNSEALED. Sealing A first would put its run in the
     # consumed set, and the consumed-once rule would then hide whether the
     # proposal filter works at all — the mutation harness caught exactly that:
@@ -646,7 +664,7 @@ def test_ADVERSARIAL_a_green_run_cannot_be_reattached_to_another_proposal(db, pr
 
     b = propose(proposer, weakness_id="REM-137",
                 target_paths=["roles/pazny.n8n/defaults/main.yml"],
-                diff_text="@@ -1 +1 @@\n-x\n+y\n")
+                diff_text=mkdiff("y", path="roles/pazny.n8n/defaults/main.yml"))
     v = evaluator.seal_verdict(gate_set="solo", proposal_uuid=b["uuid"])
     assert v["result"] == "indeterminate", "another proposal's green run sealed this one"
     assert json.loads(v["evidence"])["judge_runs"] == []
@@ -663,7 +681,7 @@ def test_ADVERSARIAL_judges_that_saw_two_trees_cannot_pass(db, proposer, evaluat
     the last reader before the hash chain closes over the row: a verdict that
     names one `tree_sha` while its evidence names two is a verdict about nothing.
     """
-    p = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    p = propose(proposer, diff_text=mkdiff("b"))
     for judge, sha in ((LINT, "a" * 40), (CODEGEN, "b" * 40)):
         out = LINT_OK if judge is LINT else CODEGEN_OK
         run = derive(judge, 0, out, tree_sha=sha)
@@ -680,7 +698,7 @@ def test_ADVERSARIAL_judges_that_saw_two_trees_cannot_pass(db, proposer, evaluat
 def test_a_verdict_names_the_tree_its_judges_read_out_of_the_sandbox(db, proposer, evaluator):
     """The control for the two tests above: agreement seals cleanly, and the
     sha on the row is the one the RUNS carry — never a caller's label."""
-    p = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    p = propose(proposer, diff_text=mkdiff("b"))
     v = judge_set(evaluator, [(LINT, 0, LINT_OK), (CODEGEN, 0, CODEGEN_OK)],
                   gate_set="fast", proposal_uuid=p["uuid"], tree_sha="d" * 40)
     assert v["result"] == "pass"
@@ -691,7 +709,7 @@ def test_a_verdict_names_the_tree_its_judges_read_out_of_the_sandbox(db, propose
 def test_ADVERSARIAL_the_same_run_cannot_be_sealed_twice(db, proposer, evaluator):
     """Evidence is consumed once, or "every run on record" would re-seal an
     earlier attempt's greens into a later attempt's verdict."""
-    p = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    p = propose(proposer, diff_text=mkdiff("b"))
     first = judge_set(evaluator, [(LINT, 0, LINT_OK)], gate_set="solo",
                       proposal_uuid=p["uuid"])
     assert first["result"] == "pass"
@@ -763,14 +781,14 @@ def test_exhausted_fingerprint_is_refused_without_running_a_judge(db, proposer, 
     the same place, with the same intent, both judged FAIL. The third is
     refused BEFORE anything runs — no sandbox, no 190 s of pytest, no run row.
     """
-    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+b\n")
-    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+c\n")
+    _fail_one_attempt(proposer, evaluator, mkdiff("b"))
+    _fail_one_attempt(proposer, evaluator, mkdiff("c"))
 
     runs_before = raw(db).execute("SELECT COUNT(*) FROM loop_judge_runs").fetchone()[0]
     props_before = raw(db).execute("SELECT COUNT(*) FROM loop_proposals").fetchone()[0]
 
     with pytest.raises(ledger.ProposalRefused) as e:
-        propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+d\n")
+        propose(proposer, diff_text=mkdiff("d"))
     assert e.value.reason == "already-failed"
     assert e.value.status == 409
 
@@ -790,19 +808,18 @@ def test_a_refused_proposal_has_no_uuid_so_no_judge_can_be_run_for_it(db, propos
 
 def test_byte_identical_patch_is_refused_even_on_attempt_one(db, proposer, evaluator):
     """A no-op retry carries no new information, whatever the attempt count."""
-    diff = "@@ -1 +1 @@\n-a\n+b\n"
-    _fail_one_attempt(proposer, evaluator, diff)
+    _fail_one_attempt(proposer, evaluator, mkdiff("b"))
     with pytest.raises(ledger.ProposalRefused) as e:
-        propose(proposer, diff_text="@@ -99 +99 @@\n-a\n+b\n")   # same content, new offsets
+        propose(proposer, diff_text=mkdiff("b", at=99))   # same content, new offsets
     assert e.value.reason == "content-fp-repeat"
 
 
 def test_an_unjudged_attempt_blocks_the_next_one(db, proposer):
     """§5.4 — one proposal per cycle. An attempt with no verdict yet is not a
     licence to open a second."""
-    propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    propose(proposer, diff_text=mkdiff("b"))
     with pytest.raises(ledger.ProposalRefused) as e:
-        propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+c\n")
+        propose(proposer, diff_text=mkdiff("c"))
     assert e.value.reason == "attempt-pending"
 
 
@@ -817,15 +834,15 @@ def test_the_block_lifts_when_the_weakness_evidence_changes(db, proposer, evalua
     by supplying a fresh nonce. Here the SOURCE's evidence changes (the reader's
     index moves) and the proposal says nothing about it.
     """
-    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+b\n")
-    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+c\n")
+    _fail_one_attempt(proposer, evaluator, mkdiff("b"))
+    _fail_one_attempt(proposer, evaluator, mkdiff("c"))
     with pytest.raises(ledger.ProposalRefused):
-        propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+d\n")
+        propose(proposer, diff_text=mkdiff("d"))
 
     index = dict(WEAKNESS_INDEX, **{"hidden-fee:08": "sha-08-MOVED"})
     lifted = ledger.open_ledger("proposer", registry=TEST_REGISTRY, weakness_index=index)
     try:
-        ok = propose(lifted, diff_text="@@ -1 +1 @@\n-a\n+d\n")
+        ok = propose(lifted, diff_text=mkdiff("d"))
     finally:
         lifted.close()
     assert ok["attempt_n"] == 1
@@ -852,10 +869,10 @@ def test_ADVERSARIAL_a_fresh_nonce_does_not_buy_a_fresh_attempt(db, proposer, ev
     assert "weakness_evidence_sha" not in set(
         inspect.signature(ledger.ProposerLedger.check).parameters)
 
-    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+b\n")
-    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+c\n")
+    _fail_one_attempt(proposer, evaluator, mkdiff("b"))
+    _fail_one_attempt(proposer, evaluator, mkdiff("c"))
     with pytest.raises(ledger.ProposalRefused) as e:
-        propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+d\n")
+        propose(proposer, diff_text=mkdiff("d"))
     assert e.value.reason == "already-failed"
 
 
@@ -876,7 +893,7 @@ def test_ADVERSARIAL_an_invented_weakness_id_is_refused_not_treated_as_new(db, p
 def test_the_evidence_sha_on_the_row_is_the_readers_not_the_proposals(db, proposer):
     """Constraint B in miniature: the field that records why an attempt was
     allowed must not be written by the party the attempt belongs to."""
-    p = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    p = propose(proposer, diff_text=mkdiff("b"))
     stored = raw(db).execute(
         "SELECT weakness_evidence_sha FROM loop_proposals WHERE uuid=?",
         (p["uuid"],)).fetchone()[0]
@@ -886,22 +903,32 @@ def test_the_evidence_sha_on_the_row_is_the_readers_not_the_proposals(db, propos
 def test_the_default_weakness_index_reads_the_weakness_reader(db):
     """The injected index above is a TEST double; production must resolve
     through `weaknesses`, the module that DERIVES `evidence_sha`. A gate that
-    only ever saw the double would pin the double."""
+    only ever saw the double would pin the double.
+
+    COMMITTED weaknesses only (B4): the reader deliberately sees uncommitted
+    content — observing is its job — but a ceiling key derived from it would be
+    proposer-mintable, so the index drops every weakness whose
+    `evidence_committed` is False. The full adversarial proof (an uncommitted
+    README edit minting a fee) lives in
+    test_loop_ratchet_inputs_are_derived.py; what is pinned here is that the
+    production index is exactly the reader's committed subset, not a copy that
+    could drift."""
     import weaknesses
 
     index = ledger.default_weakness_index()
-    live = {w.weakness_id: w.evidence_sha
-            for r in weaknesses.collect() for w in r.weaknesses}
-    assert index == live
+    reports = weaknesses.collect()
+    committed = {w.weakness_id: w.evidence_sha
+                 for r in reports for w in r.weaknesses if w.evidence_committed}
+    assert index == committed
     assert index, "the reader reported no weaknesses at all — nothing measured"
 
 
 def test_the_block_lifts_on_an_operator_forget(db, proposer, evaluator):
     """`nos-loop forget <fp>` — operator identity only (§6.2)."""
-    _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+b\n")
-    p2 = _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+c\n")
+    _fail_one_attempt(proposer, evaluator, mkdiff("b"))
+    p2 = _fail_one_attempt(proposer, evaluator, mkdiff("c"))
     with pytest.raises(ledger.ProposalRefused):
-        propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+d\n")
+        propose(proposer, diff_text=mkdiff("d"))
 
     op = _open("operator")
     try:
@@ -910,7 +937,7 @@ def test_the_block_lifts_on_an_operator_forget(db, proposer, evaluator):
     finally:
         op.close()
     assert cut["through_proposal_id"] == 2
-    assert propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+d\n")["attempt_n"] == 1
+    assert propose(proposer, diff_text=mkdiff("d"))["attempt_n"] == 1
 
 
 def test_forget_is_denied_to_the_proposer_and_the_evaluator(db, proposer, evaluator):
@@ -947,8 +974,8 @@ def test_gate_add_is_flagged_requires_operator_by_the_ledger(db, proposer):
 
 
 def test_attempt_number_is_derived_not_supplied(db, proposer, evaluator):
-    p1 = _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+b\n")
-    p2 = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+c\n")
+    p1 = _fail_one_attempt(proposer, evaluator, mkdiff("b"))
+    p2 = propose(proposer, diff_text=mkdiff("c"))
     assert (p1["attempt_n"], p2["attempt_n"]) == (1, 2)
     assert "attempt_n" not in inspect.signature(
         ledger.ProposerLedger.record_proposal).parameters
@@ -959,7 +986,7 @@ def test_attempt_number_is_derived_not_supplied(db, proposer, evaluator):
 # ══════════════════════════════════════════════════════════════════════════
 
 def test_a_verdict_carries_everything_needed_to_replay_it(db, proposer, evaluator):
-    p = propose(proposer, diff_text="@@ -1 +1 @@\n-a\n+b\n")
+    p = propose(proposer, diff_text=mkdiff("b"))
     v = judge_set(evaluator, [(LINT, 0, LINT_OK), (CODEGEN, 0, CODEGEN_OK)],
                   proposal_uuid=p["uuid"], tree_sha="c" * 40)
     assert v["result"] == "pass"
@@ -983,7 +1010,7 @@ def test_a_verdict_carries_everything_needed_to_replay_it(db, proposer, evaluato
 
 
 def test_history_shows_prior_attempts_and_their_verdicts(db, proposer, evaluator):
-    p = _fail_one_attempt(proposer, evaluator, "@@ -1 +1 @@\n-a\n+b\n")
+    p = _fail_one_attempt(proposer, evaluator, mkdiff("b"))
     fp = raw(db).execute("SELECT fingerprint FROM loop_proposals WHERE uuid=?",
                          (p["uuid"],)).fetchone()[0]
     hist = evaluator.history(fp)
