@@ -228,6 +228,14 @@ CREATE TABLE IF NOT EXISTS loop_judge_runs (
     tree_sha     TEXT,
     stdout_sha   TEXT,
     stdout_head  TEXT,
+    -- WHY a judge reached its outcome, and the only field that makes a SKIP
+    -- actionable. It was computed by `judges._executable_present`, carried on
+    -- the in-memory JudgeRun, and dropped here: the first real turn of the loop
+    -- (2026-08-03) sealed `reason: "ansible-lint: "` — it knew WHICH judge had
+    -- not run and could not say that the binary was missing from the daemon's
+    -- PATH. A record that loses the actionable half is the defect this ledger
+    -- exists to catch, one level in.
+    reason       TEXT,
     -- §2.4 DECISION 2b, as a STORAGE constraint: a PASS that cannot show its
     -- work is not storable. Closes M2 (nos-smoke "zero entries", exit 0) and
     -- M3 (pytest "2 skipped", exit 0) at a layer no runner can forget.
@@ -295,6 +303,7 @@ BEGIN SELECT RAISE(ABORT, 'loop_judge_runs WORM: evidence is append-only'); END;
 #: schema (P1). Kept as data so the gate can read it.
 _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("loop_judge_runs", "tree_sha", "TEXT"),
+    ("loop_judge_runs", "reason", "TEXT"),
 )
 
 
@@ -554,6 +563,7 @@ def _as_judge_run(row: dict[str, Any]) -> "judges.JudgeRun":
         min_work=row["min_work"] or 0,
         stdout_sha=row["stdout_sha"],
         tree_sha=row["tree_sha"],
+        reason=row["reason"] if "reason" in row.keys() else "",
     )
 
 
@@ -867,10 +877,11 @@ class EvaluatorLedger(ReaderLedger):
         cur = self._w(
             "UPDATE loop_judge_runs SET status=?, finished_at=datetime('now'), "
             "exit_code=?, work_count=?, min_work=?, outcome=?, tree_sha=?, "
-            "stdout_sha=?, stdout_head=? "
+            "stdout_sha=?, stdout_head=?, reason=? "
             "WHERE uuid=? AND status='running'",
             (status, run.exit_code, run.work, run.min_work, outcome, run.tree_sha,
-             run.stdout_sha, (run.stdout_head or "")[:_STDOUT_HEAD_MAX], run_uuid))
+             run.stdout_sha, (run.stdout_head or "")[:_STDOUT_HEAD_MAX],
+             run.reason or "", run_uuid))
         if cur.rowcount != 1:
             # The `status='running'` guard is what stops a swept ('crashed') run
             # being resurrected as a pass. But a no-op UPDATE that still RETURNED

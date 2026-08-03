@@ -28,7 +28,16 @@
         <key>HOME</key>
         <string>{{ ansible_facts['env']['HOME'] }}</string>
         <key>PATH</key>
-        <string>{{ bone_venv }}/bin:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        {# The pyenv shim dir is here for the LOOP'S JUDGES. Measured on the
+           first real turn (2026-08-03): `ansible-lint` lives only at
+           ~/.pyenv/shims/ansible-lint, launchd hands the daemon a bare PATH,
+           and the judge was therefore SKIPPED — correctly INDETERMINATE, never
+           a pass, but a gate set that can never reach a verdict is not a gate.
+           The shim directory is stable across interpreter versions; the
+           versioned `versions/*/bin` deliberately is not listed.
+           Same class as `resolve_openssl` in the backup script, which the
+           estate already solved once for exactly this reason. #}
+        <string>{{ bone_venv }}/bin:{{ ansible_facts['env']['HOME'] }}/.pyenv/shims:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
 
         <!-- Bone-specific config (matches container env from Track A) -->
         {# SEC L-BONE2 (2026-05-24): BONE_SECRET (legacy API-key channel) is
