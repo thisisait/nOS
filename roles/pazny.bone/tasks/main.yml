@@ -212,6 +212,7 @@
           'QDRANT_API_KEY': qdrant_api_key | default(''),
           'BONE_LOOP_PROPOSE_TOKEN': loop_propose_token | default(''),
           'BONE_LOOP_JUDGE_TOKEN': loop_judge_token | default(''),
+          'BONE_LOOP_OPERATOR_TOKEN': loop_operator_token | default(''),
           'BONE_REQUIRE_JWT_AUTH': (install_authentik | default(false)) | ternary('1', '0'),
         } | combine(
           {

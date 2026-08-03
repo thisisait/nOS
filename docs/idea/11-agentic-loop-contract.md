@@ -518,6 +518,7 @@ Three runtimes exist (Claude Code, Hermes, AgentKit/PHP) and a fourth is planned
 | `POST /api/v1/loop/judge` | **`loop:judge`** | `202` + `run_id` (async — pytest is 190 s) |
 | `GET /api/v1/loop/judge/{run_id}` | `loop:read` | `running` \| verdict + per-judge evidence |
 | `GET /api/v1/loop/history?fingerprint=` | `loop:read` | prior attempts and their verdicts |
+| `POST /api/v1/loop/forget` | **`loop:forget`** | `200` cut record · `404` nothing to forget — **operator identity only** (§4 "the block lifts", §6.2) |
 | `POST /api/v1/loop/verdicts` | — | **does not exist** (§3.1) |
 
 ### 6.2 CLI — `nos-loop`

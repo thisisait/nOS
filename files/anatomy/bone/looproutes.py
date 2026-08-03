@@ -48,7 +48,8 @@ router = APIRouter(prefix="/api/v1/loop", tags=["loop"])
 # proposal. Bound to the map here so a rename breaks at import, not at 3am.
 _PROPOSER = "proposer"
 _EVALUATOR = "evaluator"
-assert _PROPOSER in ledger._ROLE_WRITES and _EVALUATOR in ledger._ROLE_WRITES, (
+_OPERATOR = "operator"
+assert all(r in ledger._ROLE_WRITES for r in (_PROPOSER, _EVALUATOR, _OPERATOR)), (
     "the ledger's role names changed under this module — the routes would "
     f"500 again. Known roles: {sorted(ledger._ROLE_WRITES)}"
 )
@@ -103,6 +104,12 @@ class JudgeIn(BaseModel):
     # A proposal to attach the verdict to. Optional: a gate set may be run to
     # establish a baseline with nothing proposed.
     proposal_uuid: str | None = None
+
+
+class ForgetIn(BaseModel):
+    model_config = _STRICT
+
+    fingerprint: str = Field(..., min_length=8)
 
 
 @router.get("/budget")
@@ -163,6 +170,33 @@ def get_history(fingerprint: str = Query(..., min_length=8),
     led = ledger.open_ledger(_PROPOSER)
     try:
         return {"fingerprint": fingerprint, "attempts": led.history(fingerprint)}
+    finally:
+        led.close()
+
+
+@router.post("/forget")
+def post_forget(body: ForgetIn,
+                _caller=Depends(require_loop_scope("forget"))) -> dict[str, Any]:
+    """§4 "the block lifts" / §6.2 `nos-loop forget` — the operator's exit from
+    a wedged fingerprint.
+
+    Until this route existed the wedge was PERMANENT in practice: a crashed
+    judge job leaves a proposal with zero verdicts, `check()` reads that as
+    `attempt-pending` forever, and `OperatorLedger.forget` — tested, documented
+    — had no route, no CLI and no caller. A lift key nobody can turn is
+    decoration.
+
+    The scope is `forget`, held ONLY by the operator identity
+    (BONE_LOOP_OPERATOR_TOKEN): the proposer resetting its own ceiling is the
+    grinder §4 exists to stop, and the evaluator resetting it would let a judge
+    schedule its own re-runs. 404 when nothing carries the fingerprint — a
+    forget that cuts nothing must not read as a lift that happened.
+    """
+    led = ledger.open_ledger(_OPERATOR)
+    try:
+        return led.forget(body.fingerprint)
+    except ledger.NothingToForget as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
     finally:
         led.close()
 

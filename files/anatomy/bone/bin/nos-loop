@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+"""nos-loop — thin HTTP client over Bone's loop API (contract §6.2, DECISION 6).
+
+HTTP is the ONLY implementation of the loop; this file holds no rule, no
+schema knowledge beyond the request bodies, and imports NOTHING from the
+engine (pinned by tests/anatomy/test_loop_forget_and_gate_add_adds.py, parsed
+with ast). Three other runtimes (Hermes, AgentKit, the planned Rust brain)
+speak to the same endpoints; a shared library would be ported four times and
+drift four ways.
+
+First verb shipped: `forget` — the operator's exit from a wedged fingerprint
+(§4 "the block lifts"). It exists because the 2026-08-03 review found the lift
+key had no route, no CLI and no caller: a crashed judge job wedged its
+fingerprint as attempt-pending FOREVER, with the exit written down nowhere an
+operator could run it. The remaining §6.2 verbs are added as they are needed;
+each is a request, a status code, and an exit code — nothing else.
+
+Exit codes are DECISION 6a's fixed enum, never a count:
+    0 success · 1 FAIL · 2 INDETERMINATE · 3 refused · 4 config error
+
+The operator token comes from BONE_LOOP_OPERATOR_TOKEN or ~/.nos/secrets.yml
+(`loop_operator_token`), the same file every other Bone credential lives in.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+import urllib.error
+import urllib.request
+
+EXIT_OK = 0
+EXIT_FAIL = 1
+EXIT_INDETERMINATE = 2
+EXIT_REFUSED = 3
+EXIT_CONFIG = 4
+
+#: Bone's loopback address (constraint E). 8099 is bone_port's default; a
+#: non-default deployment sets NOS_LOOP_URL from the same var that renders
+#: the plist.
+BASE_URL = os.environ.get("NOS_LOOP_URL", "http://127.0.0.1:8099")
+
+SECRETS_PATH = os.path.expanduser(
+    os.environ.get("NOS_SECRETS_PATH", "~/.nos/secrets.yml"))
+
+
+def _secret(env_var: str, key: str) -> str:
+    """Env first (what the daemon itself uses), then ~/.nos/secrets.yml.
+
+    The YAML read is a line match, not a YAML parser: the file is flat
+    `key: "value"` pairs written by templates/secrets.yml.j2, and a stdlib-only
+    client must not grow a dependency for one lookup.
+    """
+    value = os.environ.get(env_var, "").strip()
+    if value:
+        return value
+    try:
+        text = open(SECRETS_PATH, encoding="utf-8").read()
+    except OSError:
+        return ""
+    m = re.search(rf'^{re.escape(key)}:\s*"?([^"\n]*)"?\s*$', text, re.MULTILINE)
+    return m.group(1).strip() if m else ""
+
+
+def _post(path: str, token: str, body: dict) -> tuple[int, dict]:
+    req = urllib.request.Request(
+        BASE_URL + path,
+        method="POST",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Authorization": f"Bearer {token}",
+                 "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return resp.status, json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        try:
+            payload = json.loads(exc.read().decode("utf-8"))
+        except Exception:
+            payload = {"detail": str(exc)}
+        return exc.code, payload
+
+
+def cmd_forget(args: argparse.Namespace) -> int:
+    token = _secret("BONE_LOOP_OPERATOR_TOKEN", "loop_operator_token")
+    if not token:
+        print("nos-loop: no operator token — set BONE_LOOP_OPERATOR_TOKEN or "
+              f"add loop_operator_token to {SECRETS_PATH}", file=sys.stderr)
+        return EXIT_CONFIG
+
+    try:
+        status, payload = _post("/api/v1/loop/forget", token,
+                                {"fingerprint": args.fingerprint})
+    except (urllib.error.URLError, OSError) as exc:
+        print(f"nos-loop: cannot reach {BASE_URL}: {exc}", file=sys.stderr)
+        return EXIT_CONFIG
+
+    print(json.dumps(payload, sort_keys=True))
+    if status == 200:
+        return EXIT_OK
+    if status in (404, 409):
+        # nothing to forget / a ledger refusal: the request was understood and
+        # the answer is no — DECISION 6a's "refused", distinct from both a
+        # failure verdict and a misconfiguration.
+        return EXIT_REFUSED
+    return EXIT_CONFIG
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="nos-loop",
+        description="thin HTTP client for Bone's agentic-loop API (§6.2)")
+    sub = parser.add_subparsers(dest="verb", required=True)
+
+    forget = sub.add_parser(
+        "forget",
+        help="operator-only: lift the retry block on a wedged fingerprint")
+    forget.add_argument("fingerprint", help="the §4 fingerprint to forget")
+    forget.set_defaults(fn=cmd_forget)
+
+    args = parser.parse_args(argv)
+    return args.fn(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -964,8 +964,14 @@ def test_gate_add_is_flagged_requires_operator_by_the_ledger(db, proposer):
     """§5a — a proposal that writes `tests/anatomy/**` is never auto-accepted,
     and the flag is derived from intent_class so the proposer cannot clear it.
     `record_proposal` has no parameter through which it could."""
-    p = propose(proposer, intent_class="gate-add",
-                target_paths=["tests/anatomy/test_new_thing.py"])
+    # an ADD-only artifact: §5a grants the carve-out to a creation only, so
+    # the default modify-shaped mkdiff() would be refused before the flag is
+    # ever computed (gate-add-rewrites-gate; test_loop_forget_and_gate_add_adds)
+    path = "tests/anatomy/test_new_thing.py"
+    p = propose(proposer, intent_class="gate-add", target_paths=[path],
+                diff_text=(f"diff --git a/{path} b/{path}\n"
+                           f"new file mode 100644\n--- /dev/null\n+++ b/{path}\n"
+                           "@@ -0,0 +1 @@\n+def test(): pass\n"))
     assert p["requires_operator"] is True
     row = raw(db).execute("SELECT requires_operator FROM loop_proposals").fetchone()[0]
     assert row == 1

@@ -12,17 +12,21 @@ The loop has identical bootstrap properties: it must answer at 03:00 during a
 blank, in CI, and on a host where Authentik is down. A reader that depends on
 the stack it reads is not a reader.
 
-TWO IDENTITIES, NEVER ONE (contract §3.4). Constraint A says the proposer and
-the evaluator never share an identity; this file is that sentence at the
-credential level rather than in prose:
+THREE IDENTITIES, NEVER ONE (contract §3.4, §6.2). Constraint A says the
+proposer and the evaluator never share an identity; this file is that sentence
+at the credential level rather than in prose:
 
-    proposer  (the model)          BONE_LOOP_PROPOSE_TOKEN  -> {read, propose}
-    evaluator (Pulse / operator)   BONE_LOOP_JUDGE_TOKEN    -> {read, judge}
+    proposer  (the model)          BONE_LOOP_PROPOSE_TOKEN   -> {read, propose}
+    evaluator (Pulse / operator)   BONE_LOOP_JUDGE_TOKEN     -> {read, judge}
+    operator  (the human, §6.2)    BONE_LOOP_OPERATOR_TOKEN  -> {read, forget}
 
-Both may read. Neither may do the other's job. The weakness reader needs only
-`read`, so it accepts either — but the scope split is built in NOW, because
-retrofitting an identity boundary after the routes exist is how the boundary
-ends up decorative.
+All may read. None may do another's job. `forget` is the §4 lift — it resets
+the retry ceiling the proposer is optimising against, so it belongs to the ONE
+party with no stake in the verdict: the blocked party asserting its own lift
+is B1's grinder wearing a different hat, and the evaluator resetting ceilings
+would let a judge schedule its own re-runs. The scope split is built in NOW,
+because retrofitting an identity boundary after the routes exist is how the
+boundary ends up decorative.
 
 TWO RUNTIME REFUSALS, both of which are constraints made executable:
 
@@ -50,12 +54,16 @@ from fastapi import Header, HTTPException, Request
 
 #: Every scope the loop will ever mint. `judge` is unused by the reader and is
 #: declared here on purpose — the boundary is cheaper to build than to retrofit.
-LOOP_SCOPES = frozenset({"read", "propose", "judge"})
+LOOP_SCOPES = frozenset({"read", "propose", "judge", "forget"})
 
 #: identity -> (env var holding its token, scopes it carries)
 IDENTITIES: dict[str, tuple[str, frozenset[str]]] = {
     "agent:proposer": ("BONE_LOOP_PROPOSE_TOKEN", frozenset({"read", "propose"})),
     "engine:evaluator": ("BONE_LOOP_JUDGE_TOKEN", frozenset({"read", "judge"})),
+    # The §6.2 exit from a wedged fingerprint. Deliberately NOT a scope grafted
+    # onto either existing token: a lift key held by the blocked party is not a
+    # ceiling, and one held by the judge is a judge scheduling its own re-runs.
+    "operator": ("BONE_LOOP_OPERATOR_TOKEN", frozenset({"read", "forget"})),
 }
 
 #: Shortest token accepted. `openssl rand -hex 32` yields 64; anything under
@@ -129,8 +137,9 @@ def require_loop_scope(scope: str):
                 status_code=503,
                 detail=(
                     "loop API not configured: set BONE_LOOP_PROPOSE_TOKEN / "
-                    "BONE_LOOP_JUDGE_TOKEN to a random value of at least "
-                    f"{MIN_TOKEN_LEN} chars that is not '{DERIVED_MARKER}'-derived"
+                    "BONE_LOOP_JUDGE_TOKEN / BONE_LOOP_OPERATOR_TOKEN to a "
+                    f"random value of at least {MIN_TOKEN_LEN} chars that is "
+                    f"not '{DERIVED_MARKER}'-derived"
                 ),
             )
 

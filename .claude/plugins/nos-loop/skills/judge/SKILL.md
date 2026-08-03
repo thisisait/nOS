@@ -27,7 +27,8 @@ curl -sS -X POST -H "Authorization: Bearer $(tok loop_judge_token)" \
 The field is `proposal_uuid`, not `proposal`. It was `proposal` here until
 2026-08-03, and the engine dropped the unknown key silently: the set ran as an
 unattached BASELINE, a verdict sealed against no proposal, and that proposal —
-left with zero verdicts — wedged as `attempt-pending` with no route to lift it.
+left with zero verdicts — wedged as `attempt-pending` until an operator lifts
+it (`POST /api/v1/loop/forget`, operator identity only — not yours).
 Omit the key entirely for a deliberate baseline; never misspell it. The engine
 now answers 422 instead of doing something else quietly.
 

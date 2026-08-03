@@ -45,7 +45,7 @@ BONE_TASKS = REPO / "roles" / "pazny.bone" / "tasks" / "main.yml"
 MANIFEST = REPO / "state" / "manifest.yml"
 TRAEFIK_VARS = REPO / "roles" / "pazny.traefik" / "vars" / "main.yml"
 
-LOOP_TOKENS = ("loop_propose_token", "loop_judge_token")
+LOOP_TOKENS = ("loop_propose_token", "loop_judge_token", "loop_operator_token")
 
 
 @pytest.fixture(scope="module")
@@ -156,7 +156,7 @@ def test_no_route_parameter_can_influence_a_weakness(reader_src):
     )
 
 
-# ── 4. constraint D: the two tokens ─────────────────────────────────────────
+# ── 4. constraint D: the loop tokens (three since the §6.2 operator exit) ───
 
 
 def test_loop_tokens_are_not_prefix_derived():
@@ -204,6 +204,7 @@ def test_loop_tokens_reach_both_service_managers():
     for env_var, token in (
         ("BONE_LOOP_PROPOSE_TOKEN", "loop_propose_token"),
         ("BONE_LOOP_JUDGE_TOKEN", "loop_judge_token"),
+        ("BONE_LOOP_OPERATOR_TOKEN", "loop_operator_token"),
     ):
         assert re.search(rf"<key>{env_var}</key>\s*<string>\{{\{{\s*{token}\b", plist), (
             f"bone.plist.j2 must render <key>{env_var}</key> from {{{{ {token} }}}}"

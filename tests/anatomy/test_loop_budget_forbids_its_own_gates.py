@@ -372,10 +372,17 @@ def test_an_unknown_gate_set_denies_rather_than_permits(proposer):
 
 def test_gate_add_may_write_a_gate(registry):
     """Forbidding `tests/anatomy/**` outright would mean the loop can never add
-    a gate, which is among the most valuable things it could do."""
-    assert budget.check_paths(["tests/anatomy/test_new_thing.py"],
-                              intent_class="gate-add", gate_set="repo",
-                              registry=registry) == []
+    a gate, which is among the most valuable things it could do.
+
+    The diff is a pure ADDITION (old side /dev/null) because §5a's grant is
+    read off the artifact: a gate-add that MODIFIES an existing gate is refused
+    (test_loop_forget_and_gate_add_adds.py), and with no diff at all there is
+    no proof of addition, so nothing is exempt."""
+    path = "tests/anatomy/test_new_thing.py"
+    diff = (f"diff --git a/{path} b/{path}\nnew file mode 100644\n"
+            f"--- /dev/null\n+++ b/{path}\n@@ -0,0 +1 @@\n+def test(): pass\n")
+    assert budget.check_paths([path], intent_class="gate-add", gate_set="repo",
+                              registry=registry, diff_text=diff) == []
 
 
 @pytest.mark.parametrize("path", [
@@ -404,8 +411,14 @@ def test_the_carve_out_only_exists_where_an_operator_must_review(proposer):
     modules, so the coupling is asserted rather than assumed: every intent the
     budget exempts is an intent the ledger stamps `requires_operator`."""
     assert budget.GATE_ADD_INTENTS <= ledger.OPERATOR_REQUIRED_INTENTS
+    # an ADD-only artifact — §5a grants the carve-out to a creation, never to
+    # an edit of an existing gate (the propose() default diff is a modify)
+    path = "tests/anatomy/test_new_thing.py"
     p = propose(proposer, intent_class="gate-add", gate_set="repo",
-                target_paths=["tests/anatomy/test_new_thing.py"])
+                target_paths=[path],
+                diff_text=(f"diff --git a/{path} b/{path}\n"
+                           f"new file mode 100644\n--- /dev/null\n+++ b/{path}\n"
+                           "@@ -0,0 +1 @@\n+def test(): pass\n"))
     assert p["requires_operator"] is True
 
 

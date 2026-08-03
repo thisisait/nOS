@@ -164,8 +164,10 @@ class ProposalRefused(LedgerError):
       budget-violation    — §5: a target path the gate set forbids, including
                             the oracle of a judge that will grade it, a path the
                             DIFF touches but the proposal did not declare, a
-                            declared path the diff never touches, or any of
-                            those spelled in a different case
+                            declared path the diff never touches, a gate-add
+                            whose diff modifies (rather than creates) a file
+                            under tests/anatomy/, or any of those spelled in a
+                            different case
       unknown-gate-set    — §5: no budget can be computed, so nothing is allowed
     """
 
@@ -180,6 +182,18 @@ class ProposalRefused(LedgerError):
 
 class NotAuthorised(LedgerError):
     status = 403
+
+
+class NothingToForget(LedgerError):
+    """`forget` named a fingerprint no proposal carries — 404.
+
+    A forget that 'succeeds' by cutting nothing is a success marker written
+    over a typo: the operator walks away believing the wedge is lifted while
+    the real fingerprint stays blocked. Refusing is the honest answer, and it
+    is also what keeps `loop_forgets` an audit trail of lifts that HAPPENED
+    rather than lifts that were attempted."""
+
+    status = 404
 
 
 # ── Schema ────────────────────────────────────────────────────────────────
@@ -1128,11 +1142,19 @@ class OperatorLedger(ReaderLedger):
     def forget(self, fingerprint_: str) -> dict[str, Any]:
         """Lift the block on a fingerprint. Records the cut-off by proposal id
         rather than timestamp so two attempts in the same second cannot make
-        the lift ambiguous."""
+        the lift ambiguous.
+
+        Raises `NothingToForget` (404) when no proposal carries the
+        fingerprint: a cut at 0 excludes nothing, so recording it would be
+        reporting a success that did no work."""
         rows = self._q(
             "SELECT COALESCE(MAX(id), 0) AS mx FROM loop_proposals WHERE fingerprint = ?",
             (fingerprint_,))
         through = rows[0]["mx"] if rows else 0
+        if not through:
+            raise NothingToForget(
+                f"no proposal carries fingerprint {fingerprint_[:12]}… — "
+                "nothing is blocked, so there is nothing to lift")
         self._w(
             "INSERT INTO loop_forgets (fingerprint, through_proposal_id, actor) "
             "VALUES (?,?, 'operator')", (fingerprint_, through))

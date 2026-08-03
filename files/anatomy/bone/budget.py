@@ -55,6 +55,7 @@ __all__ = [
     "Violation",
     "budget_for",
     "check_paths",
+    "diff_added_paths",
     "diff_paths",
     "ALLOWED_ROOTS",
     "ALWAYS_FORBIDDEN",
@@ -90,6 +91,8 @@ ALLOWED_ROOTS: tuple[str, ...] = (
 # carve-out is deliberately NARROW:
 #   * only `tests/anatomy/**`, never the harness files inside it;
 #   * never another judge's oracle (a gate-add may not touch genome-codegen);
+#   * only paths the diff CREATES (`diff_added_paths`) — modifying, renaming
+#     or deleting an existing gate is refused whatever the intent claims;
 #   * and the ledger independently stamps `requires_operator` for this intent,
 #     so nothing in this carve-out is auto-acceptable. The coupling is pinned
 #     by the gate: GATE_ADD_INTENTS must be a subset of the ledger's
@@ -191,6 +194,9 @@ class Budget:
                 "root": _GATE_ADD_ROOT,
                 "never": sorted(_GATE_ADD_NEVER_BASENAMES),
                 "requires_operator": True,
+                # §5a means ADD: only paths the diff structurally creates
+                # (old side /dev/null) receive the exemption.
+                "adds_only": True,
             },
         }
 
@@ -289,7 +295,10 @@ def _in_allowed_root(path: str) -> bool:
 
 
 def _gate_add_exempt(path: str, intent_class: str) -> bool:
-    """§5a — narrow by construction. See GATE_ADD_INTENTS."""
+    """§5a — the DECLARATION half of the carve-out: right intent, right root,
+    not a harness basename. The ARTIFACT half — the path must be a pure
+    addition in the diff — is applied at the one place the diff exists,
+    inside `check_paths`. See GATE_ADD_INTENTS."""
     if intent_class not in GATE_ADD_INTENTS:
         return False
     folded = _fold(path)
@@ -365,6 +374,80 @@ def diff_paths(diff_text: str) -> list[str]:
     return ordered
 
 
+def _is_dev_null(token: str) -> bool:
+    tok = token.strip().split("\t")[0].strip()
+    if tok.startswith('"') and tok.endswith('"') and len(tok) > 1:
+        tok = tok[1:-1]
+    return tok == "/dev/null"
+
+
+def _diff_blocks(diff_text: str) -> list[dict[str, Any]]:
+    """The diff as per-file STRUCTURE: one dict per file block, carrying the
+    old/new header tokens, the `diff --git` pair, and the mode/rename markers.
+
+    This is the §5a discriminator's input, and it is deliberately structural:
+    a gate that greps a diff for the string `/dev/null` would be satisfied by
+    a diff whose added CONTENT mentions /dev/null — the artifact would grade
+    itself with its own prose, constraint C one level down."""
+    blocks: list[dict[str, Any]] = []
+    cur: dict[str, Any] | None = None
+    for raw in (diff_text or "").replace("\r\n", "\n").split("\n"):
+        line = raw.rstrip("\n")
+        m = _DIFF_GIT_RE.match(line)
+        if m:
+            cur = {"git": m.groups()}
+            blocks.append(cur)
+            continue
+        if line.startswith("--- "):
+            if cur is None or "old" in cur:
+                # a bare unified diff (no `diff --git`), or a stray header-shaped
+                # line inside a hunk: open a fresh block. The stray case can only
+                # DEMOTE a path from "added" to "touched" — fail-closed.
+                cur = {}
+                blocks.append(cur)
+            cur["old"] = line[4:]
+            continue
+        if cur is None:
+            continue
+        if line.startswith("+++ "):
+            cur["new"] = line[4:]
+        elif line.startswith("new file mode "):
+            cur["new_file"] = True
+        elif line.startswith(("rename from ", "rename to ",
+                              "copy from ", "copy to ")):
+            cur["moved"] = True
+    return blocks
+
+
+def diff_added_paths(diff_text: str) -> set[str]:
+    """Case-folded keys of paths the patch CREATES — and creates only.
+
+    A block is an addition iff its old side is /dev/null or it carries
+    `new file mode`, and it is not a rename/copy (moved content is existing
+    content wearing a new path). A path named by any non-addition block is
+    excluded even if another block adds it: one diff must not launder a rewrite
+    of an existing file behind a genuinely new sibling.
+    """
+    added: set[str] = set()
+    touched: set[str] = set()
+    for block in _diff_blocks(diff_text):
+        names: set[str] = set()
+        for token in (block.get("old"), block.get("new"), *block.get("git", ())):
+            if token is None:
+                continue
+            p = _strip_ab(token)
+            if p:
+                names.add(_fold(p))
+        old = block.get("old")
+        is_add = (bool(block.get("new_file"))
+                  or (old is not None and _is_dev_null(old)))
+        if is_add and not block.get("moved"):
+            added |= names
+        else:
+            touched |= names
+    return added - touched
+
+
 # ── the check ─────────────────────────────────────────────────────────────
 
 def check_paths(paths: Iterable[str], *, intent_class: str, gate_set: str,
@@ -431,6 +514,19 @@ def check_paths(paths: Iterable[str], *, intent_class: str, gate_set: str,
     # touches is a file the proposal edits, whoever wrote it down.
     raw_paths: Sequence[str] = declared + undeclared
 
+    # §5a MEANS ADD. The carve-out's grant is read off the ARTIFACT: only a
+    # path the diff structurally CREATES (old side /dev/null, no rename) keeps
+    # the exemption. `_gate_add_exempt` used to look at the path alone, so a
+    # gate-add could MODIFY any existing file under tests/anatomy/ except three
+    # basenames — including this loop's own gates — and under gate set `fast`
+    # no judge in the set would ever execute the file it changed. With no diff
+    # there is no proof of addition, so nothing is added and nothing is exempt.
+    gate_add_added: set[str] = set()
+    gate_add_diff_keys: set[str] = set()
+    if intent_class in GATE_ADD_INTENTS and diff_text:
+        gate_add_added = diff_added_paths(diff_text)
+        gate_add_diff_keys = {_fold(p) for p in from_diff}
+
     for raw in raw_paths:
         if _escapes_repo(raw):
             out.append(Violation(str(raw), "outside-repo", "§5.2",
@@ -439,6 +535,18 @@ def check_paths(paths: Iterable[str], *, intent_class: str, gate_set: str,
 
         path = _normalize(raw)
         exempt = _gate_add_exempt(path, intent_class)
+        if exempt and _fold(path) not in gate_add_added:
+            exempt = False
+            if _fold(path) in gate_add_diff_keys:
+                # The diff DOES touch it — as a modify, rename or delete of an
+                # existing gate. Name the refusal so the 409 is actionable
+                # rather than a misleading `oracle`/`not-in-allowed-roots`.
+                out.append(Violation(
+                    path, "gate-add-rewrites-gate", "§5a",
+                    "gate-add may only CREATE files under tests/anatomy/ "
+                    "(old side /dev/null in the diff); rewriting or removing "
+                    "an existing gate is not the addition of one"))
+                continue
 
         hit = None
         for rule in bud.forbidden:
