@@ -1375,7 +1375,21 @@
         # install_backrest is false, so no repository exists to lock out. If a
         # repo is ever created, rotating this needs `restic key add` FIRST;
         # restic keys are per-repository and a bare swap locks the repo.
-        restic_password: "{% if '_pw_' in (restic_password | default('')) or (restic_password | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ restic_password }}{% endif %}"
+        # restic_password is DELIBERATELY NOT MINTED. It was, for one day, and
+        # that broke the off-site repo twice: the repository at
+        # `/Volumes/SSD1TB/nos-restic` was created under the DERIVED key, and a
+        # restic key is per-repository — minting a new one does not rotate the
+        # repo, it locks it (`Fatal: wrong password or no key found`).
+        #
+        # The rotation is real work and it needs the operator: `restic key add`
+        # under the old password from a shell with Full Disk Access, THEN the
+        # new value here. Until that happens, minting is not a fix in progress,
+        # it is a nightly outage. So the value comes from default.config.yml /
+        # credentials.yml and is persisted unchanged.
+        #
+        # This is the one crown jewel P2 did NOT free, and saying so is the
+        # point: `docs/idea/01-secrets.md` claims two were freed. Two were.
+        # This is the third, and it is blocked, not done.
       tags: ['always']
 
     - name: "Lazy-regenerate Wing events HMAC (mirrors bone_secret unless overridden)"

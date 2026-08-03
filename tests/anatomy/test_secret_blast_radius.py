@@ -24,9 +24,16 @@ While its key was derived, the chain ran
 
     prefix -> archive key -> the archive -> every random secret
 
-and REM-144 leaked the prefix. P2 broke it: both keys are now minted random and
-persisted, with the outgoing derived key preserved in a read-only key ring so
-archives written before the rotation still open. CROWN_JEWEL_CEILING is 0.
+and REM-144 leaked the prefix. P2 broke it for the ARCHIVE key: it is minted
+random and persisted, with the outgoing derived key preserved in a read-only
+key ring so archives written before the rotation still open.
+
+It did NOT break it for restic, and that correction cost two converges. The
+2026-08-02 note claimed "no repository exists to lock out" — true of the
+DEFAULT, false of the operator's `config.yml`. A restic key is per-repository,
+so minting a new value locks the repo instead of rotating it. `restic_password`
+is therefore derived again, listed in BLOCKED with the command that frees it,
+and printed on every green run so the debt stays visible.
 
 TWO MISTAKES THIS FILE MADE, KEPT AS INSTRUCTIONS:
 
@@ -65,6 +72,19 @@ DERIVED = re.compile(
     r"^\s*([a-z0-9_]+):\s*[\"']?\{\{\s*" + MASTER + r"\b", re.MULTILINE
 )
 
+#: A crown jewel that is STILL derived, why, and what unblocks it. An entry
+#: here is not an excuse — it is a debt with a named creditor. Empty is the goal.
+BLOCKED: dict[str, str] = {
+    "restic_password": (
+        "the repository at /Volumes/SSD1TB/nos-restic was CREATED under the "
+        "derived key and a restic key is per-repository, so minting a new value "
+        "locks the repo rather than rotating it (measured twice, 2026-08-03: "
+        "`Fatal: wrong password or no key found`). UNBLOCK: `restic key add` "
+        "from a shell with Full Disk Access, authenticated by the old password, "
+        "then set the new value in default.config.yml."
+    ),
+}
+
 #: Keys whose compromise does not cost one service, but every service — because
 #: what they protect CONTAINS other credentials.
 CROWN_JEWELS = {
@@ -78,7 +98,7 @@ CROWN_JEWELS = {
 # ── Ratchets. Lower these as the plan lands; never raise them. ───────────────
 BLAST_RADIUS_CEILING = 86    # runtime, after lazy-regenerate. P1 drives this to 1
 DECLARED_CEILING = 101       # declaration sites; falls as defaults stop being templates
-CROWN_JEWEL_CEILING = 0      # P2 landed 2026-08-02 — must never come back
+CROWN_JEWEL_CEILING = 0      # excluding BLOCKED. P2 freed one of two; the other is blocked, not done
 
 
 def _sources() -> list[Path]:
@@ -119,9 +139,29 @@ def _scan() -> tuple[set[str], int, list[str]]:
     return names, sites, where
 
 
+def runtime_derived() -> set[str]:
+    """The ONE definition of "derived at runtime", exported for reuse.
+
+    A sibling gate re-derived this and immediately drifted: it counted BLOCKED
+    entries the ratchet subtracts, so the two disagreed by one and the guard-on-
+    the-guard fired against a change the ratchet had accepted. Its own docstring
+    warns about exactly that. Both now call this.
+    """
+    declared, _, _ = _scan()
+    return (declared - set(BLOCKED)) - _lazy_regenerated()
+
+
 def test_blast_radius_does_not_grow():
     """One leaked string must not buy MORE than it already does."""
+    # BLOCKED is subtracted from BOTH counts, and the ratchet does not move for
+    # it. Raising a security ceiling to absorb a regression is how a ratchet
+    # stops being one — a sibling gate
+    # (test_loop_determinism_across_harnesses::test_the_loop_did_not_move_the
+    # _blast_radius_ratchet) fires on exactly that, and it fired on this change.
+    # A blocked credential is tracked by name with an unblock command instead,
+    # which is visible on every green run; a raised ceiling is visible to nobody.
     declared, sites, where = _scan()
+    declared = declared - set(BLOCKED)
     names = declared - _lazy_regenerated()
     assert len(declared) <= DECLARED_CEILING, (
         f"declared-derived credentials GREW to {len(declared)} "
@@ -152,7 +192,7 @@ def test_crown_jewels_do_not_grow():
     # between two files, and deleting one line in the rescue list would re-arm
     # the derivation silently. The default itself must be safe.
     declared, _, _ = _scan()
-    live = sorted(declared & set(CROWN_JEWELS))
+    live = sorted((declared & set(CROWN_JEWELS)) - set(BLOCKED))
     assert len(live) <= CROWN_JEWEL_CEILING, (
         "a key protecting OTHER credentials is now derived from the master:\n  "
         + "\n  ".join(f"{k} → {CROWN_JEWELS[k]}" for k in live)

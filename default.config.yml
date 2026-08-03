@@ -287,11 +287,25 @@ provider_tailscale_tag: "tag:provider"    # Tailscale ACL tag for the provider
 # ── Backup (Restic) ──────────────────────────────────────────────────────────
 configure_backup: false
 restic_repo: ""                           # "/Volumes/Backup/restic" | "s3:endpoint/bucket" | "sftp:user@host:/path"
-# P2 (2026-08-02): not prefix-derived. Safe to rotate outright today because
-# restic_repo is empty and install_backrest is false — no repository exists to
-# lock out. If a repo is ever created, run `restic key add` BEFORE changing
-# this: restic keys are per-repository and a bare swap locks the repo.
-restic_password: ""
+# P2 REVERTED FOR RESTIC, 2026-08-03, and the reason is worth reading before
+# anyone "fixes" this back.
+#
+# The 2026-08-02 note below was wrong on its own premise: it said "restic_repo
+# is empty … no repository exists to lock out". That was the DEFAULT. The
+# operator's config.yml sets `restic_repo: /Volumes/SSD1TB/nos-restic` and
+# `configure_backup: true`, and that repository exists, created under the
+# DERIVED key. Only the default was checked (the version-pin shadow class,
+# docs/doctrine/four-trees.md R4).
+#
+# Emptying this cost two converges: `Fatal: wrong password or no key found`.
+# A restic key is PER-REPOSITORY — minting a new value does not rotate the
+# repo, it locks it.
+#
+# UNBLOCK CONDITION, and it needs a human: from a shell with Full Disk Access,
+#   restic -r <repo> key add          # authenticated by the OLD password
+# then set the new value here. Until then this stays derived, and the
+# blast-radius gate names it as the one crown jewel P2 did not free.
+restic_password: "{{ global_password_prefix }}_pw_restic"
 # Path the restic --exclude-file is deployed to (from files/backup/resticignore).
 # Was referenced in tasks/backup.yml (l.32/74/120) with NO default → a run with
 # configure_backup:true aborted on "restic_excludefile is undefined" (2026-06-09).

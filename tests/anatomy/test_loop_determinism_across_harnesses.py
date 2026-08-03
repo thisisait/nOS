@@ -864,9 +864,17 @@ def test_the_loop_did_not_move_the_blast_radius_ratchet():
         f"the runtime blast-radius ceiling was RAISED to "
         f"{blast.BLAST_RADIUS_CEILING}; the loop must add no derived credential"
     )
-    declared, _, _ = blast._scan()
-    runtime = declared - blast._lazy_regenerated()
-    assert len(runtime) <= blast.BLAST_RADIUS_CEILING
+    # Call the ratchet's OWN definition rather than re-deriving it. This block
+    # DID re-derive it, and drifted by one the moment the ratchet started
+    # subtracting BLOCKED entries — so the guard-on-the-guard fired against a
+    # change the ratchet itself had accepted (2026-08-03). A second
+    # implementation of "what counts as derived" is the drift this file argues
+    # against two sections up.
+    runtime = blast.runtime_derived()
+    assert len(runtime) <= blast.BLAST_RADIUS_CEILING, (
+        f"{len(runtime)} credentials derive at runtime against a ceiling of "
+        f"{blast.BLAST_RADIUS_CEILING}"
+    )
 
 
 if __name__ == "__main__":  # H3 — the same code, in another process
