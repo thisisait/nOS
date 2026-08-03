@@ -1286,17 +1286,24 @@
     #   2. mint its replacement (in the lazy-regenerate group below).
     # Doing it as one set_fact would be a coin-flip on evaluation order, and the
     # losing side of that flip silently loses every existing backup.
-    - name: "[Security] Preserve the outgoing backup key so old archives stay readable"
+    # CORRECTED 2026-08-03, measured against the live bucket. The first version
+    # read `backup_encryption_passphrase` and kept it when it still contained
+    # `_pw_` — but the SAME commit set that default to "" (roles/pazny.backup/
+    # defaults/main.yml), so the value it was written to capture no longer
+    # existed at the moment it ran. The condition could never be true; the ring
+    # stayed [] on a host with 86 archives encrypted under the retired key.
+    #
+    # THE RULE, and it is general: A ROTATION CANNOT COMPUTE THE OUTGOING KEY
+    # FROM THE VARIABLE IT IS REPLACING. The old value has to come from a source
+    # the rotation does not touch — here, the prefix plus the historical suffix,
+    # which is a constant of this host's past and stays derivable forever.
+    - name: "[Security] Seed the key ring with the retired derived archive key"
       ansible.builtin.set_fact:
         backup_encryption_keys_previous: >-
           {{ (backup_encryption_keys_previous | default([])
-              + [backup_encryption_passphrase])
+              + [(global_password_prefix | default('nos')) ~ '_pw_backup_encryption'])
              | unique }}
-      when:
-        - (backup_encryption_passphrase | default('')) | length > 0
-        # Only the DERIVED shape needs preserving. A key already minted by the
-        # regenerate step is the current one and belongs in neither branch.
-        - "'_pw_' in (backup_encryption_passphrase | default(''))"
+      when: (global_password_prefix | default('')) | length > 0
       no_log: true
       tags: ['always']
 

@@ -39,6 +39,45 @@
   delay: 10
   failed_when: false
 
+# "Ready" above means the HTTP server answered. Kuma's SETUP WIZARD answers 200
+# on every route, so a container that has never been configured passes that
+# probe — and on 2026-08-03 one had, for nine days, `healthy` the whole time,
+# while every converge burned the monitor-setup retry budget against a service
+# with no database. `/api/entry-page` is the deterministic discriminator:
+# {"type":"setup-database"} until the wizard is completed.
+- name: "[pazny.uptime_kuma] Distinguish 'server answers' from 'app configured'"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ uptime_kuma_port | default(3001) }}/api/entry-page"
+    method: GET
+    timeout: 5
+    return_content: true
+  register: _kuma_entry
+  failed_when: false
+  changed_when: false
+  when: _kuma_ready.status | default(0) | int in [200, 301, 302]
+
+- name: "[pazny.uptime_kuma] Note the setup state"
+  ansible.builtin.set_fact:
+    # `default({}, true)` — the two-arg form. The one-arg form substitutes only
+    # UNDEFINED, so a JSON `null` body would pass straight through and `.get`
+    # would abort the play. That is the metabase defect this repo shipped a
+    # gate for on 2026-08-02 (test_json_default_is_null_safe.py).
+    _kuma_needs_setup: >-
+      {{ ((_kuma_entry | default({}, true)).json | default({}, true)).get('type', '') == 'setup-database' }}
+
+# Loud on purpose. The API-login tasks below SKIP in this state rather than
+# retry into it, so without this line the converge would be green and silent
+# about a monitoring stack that monitors nothing.
+- name: "[pazny.uptime_kuma] Report that Kuma is waiting on its setup wizard"
+  ansible.builtin.debug:
+    msg: >-
+      Uptime Kuma has never completed its database setup and is sitting in the
+      wizard, so no monitors can be created. Finish it at
+      http://127.0.0.1:{{ uptime_kuma_port | default(3001) }} (set the admin
+      user to '{{ uptime_kuma_admin_user | default('admin') }}'), then re-run
+      with --tags uptime_kuma. Until then this estate has no uptime alerting.
+  when: _kuma_needs_setup | bool
+
 # Is Kuma's internal login already disabled (the Authentik forward_auth gate is
 # the single SSO)? Read it early so the API-login-based password reconverge +
 # monitor setup below SKIP when auth is off — their login() would just fail
@@ -259,6 +298,7 @@
   when:
     - not (_kuma_pip.failed | default(false))
     - _kuma_ready.status | default(0) | int in [200, 301, 302]
+    - not (_kuma_needs_setup | default(false) | bool)
     - not (_kuma_auth_disabled | default(false))   # login() is moot once auth is off
 
 - name: "[pazny.uptime_kuma] Auto-create monitors / notifications / status page"
@@ -297,6 +337,7 @@
   when:
     - not (_kuma_pip.failed | default(false))
     - _kuma_ready.status | default(0) | int in [200, 301, 302]
+    - not (_kuma_needs_setup | default(false) | bool)
     - uptime_kuma_auto_monitors | default(true)
     - not (_kuma_auth_disabled | default(false))   # API login() fails once auth is off
 
@@ -355,3 +396,4 @@
     - uptime_kuma_disable_internal_auth | default(true)
     - not (_kuma_auth_disabled | default(false))
     - _kuma_ready.status | default(0) | int in [200, 301, 302]
+    - not (_kuma_needs_setup | default(false) | bool)
