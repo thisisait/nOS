@@ -386,6 +386,13 @@ install_hardening: true           # Linux: ANSSI baseline (ufw + fail2ban + sysc
 # through Wing.
 install_php: false                # PHP 8.x + PHP-FPM + Composer (host) — Track A makes this superfluous
 install_node: true                # Node.js + NVM + global npm packages
+# Claude CLI as a NATIVE build outside NVM (tasks/claude-cli.yml). Separate
+# from install_node because that is the whole point: a node version migration
+# must not be able to reinstall the tool the operator is holding. Turning this
+# off leaves the CLI wherever NVM put it — which is the arrangement that broke
+# live sessions with EACCES several times a day (measured 2026-08-04).
+install_claude_cli: true
+claude_cli_channel: "stable"      # stable | latest | an exact version
 install_bun: true                 # Bun JavaScript runtime / bundler
 install_python: true              # Python + pyenv + pip packages
 install_golang: true              # Go language + gopls, golangci-lint, air

@@ -1,0 +1,193 @@
+---
+# ==============================================================================
+# Claude Code CLI — installed as a NATIVE build, deliberately outside NVM.
+#
+# WHY THIS FILE EXISTS, measured 2026-08-04
+# -----------------------------------------
+# The operator's interactive session was dying several times a day with:
+#
+#   Couldn't restart the background service — spawn background service:
+#   EACCES: permission denied, posix_spawn
+#   '/Users/…/.nvm/versions/node/v24.18.0/lib/node_modules/@anthropic-ai/claude-code/…'
+#
+# The chain, end to end:
+#
+#   1. `node_nvm_version` is `lts/*` — a FLOATING pin. Every converge runs
+#      `nvm install lts/*` + `nvm alias default lts/*`, so a new upstream LTS
+#      silently creates a whole new node tree under the operator. Six had
+#      accumulated; v24.19.0 was created at 19:16 DURING that day's converge.
+#
+#   2. tasks/node.yml then re-pointed {{ homebrew_prefix }}/bin/claude
+#      (`state: link, force: true`) at whatever `nvm use default` resolved to.
+#      That bridge exists for a real reason — launchd starts Pulse and Bone
+#      with a minimal PATH, and `command -v claude` failed there in 2026-05-07,
+#      which is why it was added. But it made the bridge FOLLOW the float.
+#
+#   3. So the estate ended up with FIVE claude-code installs (211–270 MB each),
+#      one per node version, each with its own auto-updater. Two were rewritten
+#      on the same day, 35 minutes apart.
+#
+#   4. The interactive session executes an absolute path (CLAUDE_CODE_EXECPATH).
+#      When an updater rewrote THAT 270 MB file underneath the running session,
+#      any spawn landing in the window before the final chmod got EACCES.
+#
+# THE FIX IS TO REMOVE THE COUPLING, not to guard the window. A developer tool
+# the operator is holding has no business being reinstalled by a Node runtime
+# migration. `claude install` ships a native build that does not live in any
+# node_modules tree, so nvm can churn as much as it likes.
+#
+# HONEST LIMIT: the EACCES event itself was never captured — nothing on the host
+# records it. The mechanism fits the error text and the timestamps line up, but
+# it is inference. What is NOT inference: five installs, the float, the bridge
+# following it, and the running session's own binary rewritten under it.
+#
+# NOT DONE HERE, on purpose: `node_nvm_version` stays `lts/*`. The operator's
+# position (2026-08-04) is that a floating pin is wrong for a deterministic
+# harness and that version moves belong to the agents via wing/upgrades — a
+# broader change than one line, tracked separately. This file only stops that
+# float from reaching the CLI.
+# ==============================================================================
+
+- name: "[claude-cli] Where a native build lives"
+  ansible.builtin.set_fact:
+    _claude_native_bin: "{{ ansible_facts['env']['HOME'] }}/.local/bin/claude"
+  tags: ['claude-cli', 'node']
+
+- name: "[claude-cli] Is the native build already installed?"
+  ansible.builtin.stat:
+    path: "{{ _claude_native_bin }}"
+  register: _claude_native
+  tags: ['claude-cli', 'node']
+
+# Runs the CLI's own installer rather than curl-piping a script: it is the
+# supported path (`claude install [stable|latest|<version>]`) and it is
+# ADDITIVE — it writes a separate native build and does not touch the npm tree,
+# so this is safe to run while the operator is inside a session.
+#
+# `stable`, not `latest`, and that is the same argument the operator makes
+# about pins: a deterministic harness should not take whatever shipped today
+# just because it shipped today.
+- name: "[claude-cli] Install the native build"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm use default >/dev/null 2>&1 || true
+    claude install '{{ claude_cli_channel | default("stable") }}'
+  args:
+    executable: /bin/bash
+  register: _claude_install
+  changed_when: "'installed' in (_claude_install.stdout | default('') | lower)"
+  failed_when: false
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - not (_claude_native.stat.exists | default(false))
+  tags: ['claude-cli', 'node']
+
+- name: "[claude-cli] Re-stat after install"
+  ansible.builtin.stat:
+    path: "{{ _claude_native_bin }}"
+  register: _claude_native_after
+  tags: ['claude-cli', 'node']
+
+# ── The launchd PATH bridge, now pointed at something that does not move ────
+# Same purpose as the old task in tasks/node.yml (Pulse forks
+# pulse-run-agent.sh under launchd's minimal PATH; `command -v claude` has to
+# resolve). Different target: a path no node upgrade can invalidate.
+- name: "[claude-cli] Bridge the native build into the homebrew PATH"
+  ansible.builtin.file:
+    src: "{{ _claude_native_bin }}"
+    dest: "{{ homebrew_prefix }}/bin/claude"
+    state: link
+    force: true
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - _claude_native_after.stat.exists | default(false)
+  tags: ['claude-cli', 'node']
+
+# ~/.local/bin is NOT on this operator's PATH (measured 2026-08-04), so without
+# this the shell would keep resolving the nvm copy and the whole exercise would
+# be decorative. Prepended so it wins over any surviving nvm shim.
+- name: "[claude-cli] Put ~/.local/bin ahead of NVM in the shell profile"
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
+    marker: "# {mark} CLAUDE CLI - ANSIBLE MANAGED"
+    block: |
+      # The Claude CLI is a native build outside NVM on purpose — a node
+      # version migration must not be able to reinstall the tool the operator
+      # is holding. See tasks/claude-cli.yml.
+      export PATH="$HOME/.local/bin:$PATH"
+    create: true
+    mode: '0644'
+  when: nos_pkg_manager == 'homebrew'
+  tags: ['claude-cli', 'node']
+
+# ── The duplicate copies NVM accumulated ───────────────────────────────────
+# Each one carries its own auto-updater, so each is another chance to rewrite a
+# 270 MB file while a session is holding it. Removing them is the cleanup half
+# of this fix.
+#
+# REPORTS BY DEFAULT, REMOVES ONLY ON REQUEST — and that is not timidity, it is
+# the specific failure this would otherwise cause. Deleting the copy that a
+# LIVE session is executing does not kill the process (macOS keeps the inode),
+# it makes the next background-service spawn fail with ENOENT instead of
+# EACCES. Strictly worse: the same crash, now with a path that does not exist.
+# So the removal additionally refuses while any claude process is running.
+- name: "[claude-cli] Find the claude-code copies NVM is carrying"
+  ansible.builtin.find:
+    paths: "{{ ansible_facts['env']['HOME'] }}/.nvm/versions/node"
+    patterns: 'claude-code'
+    file_type: directory
+    recurse: true
+    depth: 4
+  register: _claude_nvm_copies
+  changed_when: false
+  tags: ['claude-cli', 'node']
+
+- name: "[claude-cli] Is a session holding one of them right now?"
+  # `pgrep` exits 1 when nothing matches, which under `pipefail` fails the whole
+  # pipeline — and "no claude is running" is the ANSWER here, not an error. The
+  # `|| n=0` branch is therefore the no-match case, not a swallowed failure.
+  ansible.builtin.shell: |
+    set -o pipefail
+    n=$(pgrep -f 'claude-code/bin/claude.exe' | wc -l | tr -d ' ') || n=0
+    echo "${n:-0}"
+  args:
+    executable: /bin/bash
+  register: _claude_running
+  changed_when: false
+  failed_when: false
+  tags: ['claude-cli', 'node']
+
+- name: "[claude-cli] Report the duplicates"
+  ansible.builtin.debug:
+    msg: >-
+      {{ _claude_nvm_copies.files | default([]) | length }} claude-code copies
+      under NVM{{ ' — ' ~ (_claude_nvm_copies.files | map(attribute='path') | join(', ')) if (_claude_nvm_copies.files | default([]) | length) > 0 else '' }}.
+      {{ 'Set claude_cli_prune_nvm_copies=true to remove them.'
+         if (_claude_running.stdout | default('0') | int) == 0
+         else (_claude_running.stdout ~ ' claude process(es) are running — removal is refused while one holds a copy.') }}
+  when: (_claude_nvm_copies.files | default([]) | length) > 0
+  tags: ['claude-cli', 'node']
+
+- name: "[claude-cli] Remove the duplicate NVM copies"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ _claude_nvm_copies.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when:
+    - claude_cli_prune_nvm_copies | default(false)
+    - _claude_native_after.stat.exists | default(false)   # never leave zero CLIs
+    - (_claude_running.stdout | default('1') | int) == 0
+  tags: ['claude-cli', 'node']
+
+- name: "[claude-cli] Report which build the estate will resolve"
+  ansible.builtin.debug:
+    msg: >-
+      claude resolves to {{ _claude_native_bin }}
+      {{ '(installed)' if (_claude_native_after.stat.exists | default(false)) else '(NOT installed — the nvm copy is still in use)' }}.
+      Open a NEW shell for the PATH change; a session started before this run
+      keeps executing the binary it was launched with.
+  tags: ['claude-cli', 'node']

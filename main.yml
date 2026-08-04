@@ -1600,6 +1600,13 @@
       when: install_node | default(true)
       tags: ['node', 'nodejs']
 
+    # AFTER node.yml on purpose: the native installer is invoked through the
+    # NVM-provided `claude` on first run, so node has to exist. Everything it
+    # sets up afterwards is deliberately independent of which node that was.
+    - import_tasks: tasks/claude-cli.yml
+      when: install_claude_cli | default(true)
+      tags: ['claude-cli', 'node', 'nodejs']
+
     - import_tasks: tasks/bun.yml
       when: install_bun | default(true)
       tags: ['bun']

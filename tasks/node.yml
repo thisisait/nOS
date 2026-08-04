@@ -71,37 +71,26 @@
   when: nos_pkg_manager == 'homebrew'
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Bridge NVM-installed CLIs into the homebrew-prefix PATH so launchd daemons
-# (Bone, Pulse, Wing, OpenClaw) — which start without the operator's shell
-# config — can resolve them. Surfaced live 2026-05-07 when Pulse subprocess-
-# forked pulse-run-agent.sh under launchd's minimal PATH and `command -v
-# claude` failed → runner exited rc=2 before any Wing event landed.
+# The claude PATH-bridge USED TO LIVE HERE. Moved to tasks/claude-cli.yml on
+# 2026-08-04, and the move is the point rather than tidying.
 #
-# We symlink only the small set of CLIs that get invoked from launchd
-# subprocess context — claude is the canonical case (conductor agent).
-# Keep the list short on purpose; everything else stays NVM-isolated.
+# The original task was right about the problem: launchd starts Pulse and Bone
+# with a minimal PATH, so `command -v claude` failed inside pulse-run-agent.sh
+# (found live 2026-05-07, runner exited rc=2 before any Wing event landed) and
+# a symlink into the homebrew prefix fixed it.
+#
+# What it got wrong was the TARGET. It resolved `claude` under `nvm use
+# default`, and `node_nvm_version` is `lts/*` — floating. So every converge
+# re-pointed the bridge at whatever node version upstream had released, and the
+# estate accumulated five separate claude-code installs (211–270 MB each), each
+# auto-updating itself. When one of those updaters rewrote the 270 MB binary
+# that the operator's LIVE session was executing, spawning the background
+# service failed with EACCES, several times a day.
+#
+# A developer tool the operator is holding must not be reinstallable by a Node
+# runtime migration. claude-cli.yml installs a native build outside NVM and
+# bridges THAT, so this file no longer has an opinion about the CLI.
+#
+# Anything else that genuinely needs an NVM-installed CLI on the launchd PATH
+# belongs here — but read the above before adding a second floating target.
 # ──────────────────────────────────────────────────────────────────────────────
-- name: Detect NVM-installed claude CLI path
-  ansible.builtin.shell: |
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
-    nvm use default >/dev/null 2>&1
-    command -v claude || true
-  args:
-    executable: /bin/bash
-  environment:
-    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
-  register: _claude_path
-  changed_when: false
-  check_mode: false
-  when: nos_pkg_manager == 'homebrew'
-
-- name: Symlink claude into homebrew_prefix/bin (PATH-bridge for launchd)
-  ansible.builtin.file:
-    src: "{{ _claude_path.stdout | trim }}"
-    dest: "{{ homebrew_prefix }}/bin/claude"
-    state: link
-    force: true
-  when:
-    - nos_pkg_manager == 'homebrew'
-    - _claude_path.stdout | default('') | trim | length > 0
