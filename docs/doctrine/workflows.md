@@ -66,7 +66,21 @@ worktree → branch → `dev` → estate → data → irreversible. Deterministi
 clean trajectories and history outrank confidence. **Do not automate the
 irreversible.**
 
-## 6. Recursion
+## 6. Two loops, and the gate between them
+
+**Discovery** files work. **Implementation** changes the estate. They fail in
+opposite ways — discovery by noise and silence, implementation by blast radius
+— so they need different gates and must not share one.
+
+**The transition requires something discovery cannot do**, so it is not a
+status: a status is data, and any lane discovery can write it can promote
+itself into. A roadmap row is a **proposal**; a **committed** workflow spec
+naming it (`meta.implements: '<slug>'`) is the **authorisation**. Discovery
+POSTs rows over HTTP and has no path into git — which is why
+`.claude/workflows/` is versioned. Review workflows carry no `implements`; they
+change nothing. Gate: `tests/anatomy/test_triage_gate_is_a_commit.py`.
+
+## 7. Recursion
 
 1. **Asymmetric judgement.** A change to a judge is evaluated by the *previous*
    version of that judge, or the shortest path to passing is rewriting the test.

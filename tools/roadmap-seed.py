@@ -142,6 +142,16 @@ row("plat-signing","Commit signing is required and never satisfied","2026-08-02"
     refs="CLAUDE.md git workflow",
     body="The master ruleset requires signatures; the v0.10 push logged 'Found 188 violations' and admin-bypassed. Either enable commit.gpgsign or drop the rule.")
 
+# ── Anatomy app — the row the three view workflows implement ───────────────
+row("face-anatomy", "Anatomy app — one window, three read-only views", "2026-08-04",
+    "queued", "face", parent="face",
+    refs=".claude/workflows/anatomy-view-{pulse,bone,wing}.js",
+    body="Wing / Pulse / Bone as three views of ONE app, not three apps: a pulse run, a "
+         "wing event and a bone action share an actor_action_id and are one story, which "
+         "three windows lose. Read-only for now; actions stay in Wing UI where the tier "
+         "gates already are. Each view has a committed workflow spec — that commit IS the "
+         "triage gate, see docs/doctrine/workflows.md.")
+
 # ── Local-LLM cortex pipeline — filed 2026-08-04, DESIGNED NOT DECIDED ──────
 #
 # Filed here rather than in a doc so the planner can revise it and the operator

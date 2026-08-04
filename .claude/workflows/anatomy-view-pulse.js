@@ -1,5 +1,10 @@
 export const meta = {
   name: 'anatomy-view-pulse',
+  // TRIAGE GATE. This workflow implements roadmap row `face-anatomy`, and the fact
+  // that this line is COMMITTED is the gate itself. Discovery writes roadmap
+  // rows over HTTP and has no path into git, so it cannot promote its own
+  // finding to implementable — see docs/doctrine/workflows.md.
+  implements: 'face-anatomy',
   description:
     'The Pulse view of the face Anatomy app — every scheduled job, its run history, and an honest account of the ones that are not running',
   whenToUse:

@@ -22,7 +22,7 @@ the doctrine file.
 | [face.md](face.md) | nOS-face: vendored-in-repo, edge-token identity, SoC→DataTable→user-state, native-over-iframe, XSS/filename/UTF-8 safety, the enforcement triplet | ✅ v1 |
 | [gates.md](gates.md) | a gate that can pass without checking is worse than none; missing evidence = FAIL, and a green check pointed at a stale artifact is the same defect from the other side; assert on substance, never on silence | ✅ v1 |
 | [cross-repo-contracts.md](cross-repo-contracts.md) | shared surfaces with a sibling repo: one spec, a producer-owned fixture, **symmetric** gates; peer rules (no hierarchy, objections block a version bump); identity/visibility/removal invariants | ✅ v1 |
-| [workflows.md](workflows.md) | multi-agent fan-out must be **union** or **veto** (selection banned); a chain is not a fan-out; the gate reads evidence, not model trust; recursion needs asymmetric judgement + a retro-red ratchet | ✅ v1 |
+| [workflows.md](workflows.md) | multi-agent fan-out must be **union** or **veto** (selection banned); a chain is not a fan-out; the gate reads evidence, not model trust; discovery files / implementation authorises via a COMMITTED spec, never a status; recursion needs asymmetric judgement + a retro-red ratchet | ✅ v1 |
 | [four-trees.md](four-trees.md) | branch vs checkout vs worktree vs estate: nothing propagates on its own; `config.yml` is a fifth surface that outranks the defaults and is not in git | ✅ v1 |
 | table-naming.md | DB table / column naming conventions | planned |
 | taxonomy.md | taxonomy / ontology term definitions (L0–L4, node/pillar/block, relations) | planned |

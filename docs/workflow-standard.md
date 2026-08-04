@@ -206,7 +206,31 @@ Commits, subject ≤ 50 chars, body bullets ≤ 6 lines, no `Co-Authored-By`.
 
 ---
 
-## 8. Recursion
+## 8. Two loops, and why the gate is a commit
+
+Discovery files work; implementation changes the estate. Keeping them separate
+is only real if the crossing costs something discovery cannot pay.
+
+A **status column is the wrong gate** because it is data, and discovery's whole
+job is writing data — it POSTs roadmap rows to KEAP over HTTP. Any lane it can
+write, it can promote itself into, so the gate would hold by convention only. A
+hallucinated finding would walk into a merged change and the two loops would be
+one loop wearing a costume.
+
+A **committed workflow spec** is on the far side of a boundary discovery has no
+route across: it speaks HTTP to a table and cannot author, commit or push a
+file. `meta.implements: '<slug>'` carries the binding, and it is the presence
+of that line IN GIT that authorises — not its value.
+
+What this cannot check: whether whoever committed the spec actually read the
+row. Nothing static can. It checks that the crossing left a trace somewhere
+discovery cannot reach, which is the property the split needs.
+
+Operator-filed items lose nothing — a human writing the spec IS the triage.
+Review and analysis workflows carry no `implements` because they change
+nothing.
+
+## 9. Recursion
 
 The point of all of the above is a system that can improve *itself*. Three
 invariants make self-modification monotone instead of degenerate:

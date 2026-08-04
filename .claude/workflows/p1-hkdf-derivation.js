@@ -1,5 +1,10 @@
 export const meta = {
   name: 'p1-hkdf-derivation',
+  // TRIAGE GATE. This workflow implements roadmap row `sec-p1`, and the fact
+  // that this line is COMMITTED is the gate itself. Discovery writes roadmap
+  // rows over HTTP and has no path into git, so it cannot promote its own
+  // finding to implementable — see docs/doctrine/workflows.md.
+  implements: 'sec-p1',
   description:
     'Secrets P1 — replace {prefix}_pw_x concatenation with one-way HKDF derivation (estate + per-user scopes), so one leaked credential yields exactly one credential',
   whenToUse:
