@@ -26,9 +26,15 @@ _credentials.yml
 # the nos-loop plugin must be in the repo for the same reason its gate sets are:
 # a client that lives in per-host runtime state drifts per host, and Hermes/CI
 # would never see it. test_loop_plugin_is_thin.py pins that it stays tracked.
+# Workflow definitions are tracked for the reason above AND one that is specific
+# to them: a recursive self-enhancing loop cannot propose a change to a file that
+# is not in the repository, and a judge cannot be retro-red against a version
+# that was never committed. An untracked workflow is a decision nobody can review
+# and an improvement nobody can prove. docs/doctrine/workflow-standard.md §8.
 .claude/*
 !.claude/skills/
 !.claude/plugins/
+!.claude/workflows/
 __pycache__/
 *.pyc
 tools/social-poster/index.html
