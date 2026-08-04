@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 77 (73 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (71)
+- **Processing activities:** 78 (74 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (72)
 - **Transfers outside the EU:** 0 activities
 - **Activities engaging a third-party processor:** 0
 
@@ -994,6 +994,17 @@ paths, source IPs); durable retention is owned by Loki, not this agent.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `iam_configuration_metadata`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 365 days (~1y)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Discovery — `svc_discovery`
+- **Purpose:** Consistency checking between declared configuration and observed runtime state
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `software_inventory`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)

@@ -50,6 +50,11 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 WORKFLOWS = REPO / ".claude/workflows"
 SEEDER = REPO / "tools/roadmap-seed.py"
+# Every tool that FILES roadmap rows must sit on discovery's side of the
+# boundary. discovery-scan.py is the loop that actually files findings, so it
+# is the one that matters most: if it could author a workflow spec it could
+# authorise its own observation, and the two loops would be one.
+ROW_WRITERS = [SEEDER, REPO / "tools/discovery-scan.py"]
 
 _IMPLEMENTS = re.compile(r"^\s*implements:\s*'([a-z0-9-]+)'", re.MULTILINE)
 # The seeder declares rows two ways: row("slug", …) and release tuples.
@@ -128,14 +133,17 @@ def test_no_two_workflows_claim_the_same_row():
         )
 
 
-def test_the_roadmap_writer_cannot_write_workflow_specs():
+@pytest.mark.parametrize("writer", ROW_WRITERS, ids=lambda p: p.name)
+def test_the_roadmap_writer_cannot_write_workflow_specs(writer):
     """The asymmetry itself, as the thing that must stay true.
 
     Discovery's write path is HTTP to KEAP. If the same tool could also author
     files under .claude/workflows/, the gate would be one refactor away from
     being self-serviceable.
     """
-    src = SEEDER.read_text(encoding="utf-8")
+    if not writer.is_file():
+        pytest.skip(f"{writer.name} not present")
+    src = writer.read_text(encoding="utf-8")
 
     # NOT "does the string appear" — the first version of this assertion
     # forbade `.claude/workflows` anywhere in the file and immediately tripped
@@ -155,12 +163,12 @@ def test_the_roadmap_writer_cannot_write_workflow_specs():
                           r"\bshutil\.")
               if re.search(v, src)]
     assert not writes, (
-        f"tools/roadmap-seed.py performs filesystem writes ({writes}). The tool "
+        f"{writer.name} performs filesystem writes ({writes}). The tool "
         f"that FILES roadmap rows must not be able to author the specs that "
         f"AUTHORISE them — its only output should be HTTP POSTs to the table, "
         f"or discovery can promote its own findings."
     )
     assert "urllib" in src, (
-        "the seeder no longer talks HTTP at all — if row filing moved to a "
+        f"{writer.name} no longer talks HTTP at all — if row filing moved to a "
         "different mechanism, this gate is checking a path nobody uses"
     )

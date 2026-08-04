@@ -1,0 +1,131 @@
+# =============================================================================
+# discovery — the loop that FILES work, and cannot authorise it
+#
+# The estate runs two loops with opposite failure modes. DISCOVERY finds
+# contradictions and files them; it fails by noise and by silence.
+# IMPLEMENTATION changes things; it fails by blast radius. They are only safe
+# as two loops if the crossing between them costs something discovery cannot
+# pay — so a roadmap row is a PROPOSAL, and a committed workflow spec naming
+# it is the AUTHORISATION. This plugin owns the first half only.
+#
+# WHY A CONTRADICTION FINDER, measured rather than chosen. On 2026-08-04 this
+# estate found eight real defects in one day and every one of them had the same
+# shape: two representations of one fact, in different places, that nothing
+# compared. A role default against default.config.yml. A security queue row
+# against a running image. A backup's "success" against an archive with zero
+# members. Docker's `healthy` against a service serving its own installer.
+#
+# Not one of the eight was found by a gate. Each was found by someone noticing
+# an inconsistency and chasing it — so the loop's job is to notice, and the
+# niche that pytest cannot reach is the pair where one side is the LIVE ESTATE.
+#
+# Not a Docker service — a host-side Python script, same shape as gitleaks.
+# =============================================================================
+
+name: discovery
+version: 0.1.0
+description: |
+  Compares declared facts against observed ones and files the disagreements as
+  roadmap rows. Two probes today: what the estate is PINNED to versus what it
+  is RUNNING, and what the security queue CLAIMS versus what is running.
+
+  Precision over coverage, deliberately. Both sides must be machine-readable
+  and the disagreement exact; ambiguous comparisons are SKIPPED and counted
+  rather than guessed. A noisy detector gets muted, and a muted detector is
+  worse than none — this estate already ran a nightly drift watcher that
+  produced no verdict at all for months without anyone noticing.
+
+license: MIT
+
+type:
+  - skill
+  - scheduled-job
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  variables:
+    - playbook_dir         # repo root → tools/discovery-scan.py
+
+# =============================================================================
+# PULSE JOB
+#
+# The verdict is `pulse_runs.exit_code`, written by the scanner after reading
+# both sides:
+#   0  compared; nothing disagreed
+#   1  at least one contradiction, filed as a roadmap row
+#   2  the live estate could not be read — NOTHING WAS COMPARED
+#
+# Exit 2 exists because one side of every comparison is the running estate. A
+# scan that cannot reach it has proven nothing, and reporting that as "no
+# contradictions" would be the exact defect the whole plugin exists to find.
+#
+# `--file` is passed on purpose: an unattended run that only printed would put
+# its findings where nobody looks. Filing is safe precisely because filing is
+# NOT promoting — implementation still needs a committed spec.
+#
+# 06:40 UTC: after the nightly security scan (02:00), the npm IOC scan (04:20)
+# and the KEAP feeder chain, so it compares against a settled estate rather
+# than one mid-converge.
+# =============================================================================
+
+pulse:
+  jobs:
+    - name: contradiction-scan
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/discovery-scan.py"
+      args: ["--file"]
+      schedule: "40 6 * * *"
+      jitter_min: 5
+      max_runtime_s: 300
+      max_concurrent: 1
+      env: {}
+
+# =============================================================================
+# NOTIFICATION (A9 canonical severity shape)
+#
+# A contradiction is `medium` by default: it is a disagreement, not yet a
+# diagnosis, and one of the two sides may simply be stale. Escalation belongs
+# to triage, which is a human writing a spec.
+#
+# KNOWN GAP, stated rather than implied: the scanner records its verdict in
+# pulse_runs and files rows, but does not itself POST to Bone's notification
+# endpoint, so these routes are declared and not yet exercised. Do not read
+# this block as evidence a message would arrive.
+# =============================================================================
+
+notification:
+  on_critical: [wing-inbox, ntfy, mail]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+  templates:
+    contradiction_found:
+      title: "$count contradiction(s) between what is declared and what runs"
+      body: |
+        $findings_md
+
+        Filed as roadmap rows with the `obs-` prefix. Nothing is authorised by
+        this: implementation requires a committed workflow spec naming the row.
+    scan_blocked:
+      title: "Discovery could not read the estate"
+      body: |
+        The scanner exited 2 — one side of every comparison is the live estate
+        and it was unreachable, so NOTHING was compared. $detail
+
+# =============================================================================
+# GDPR
+# =============================================================================
+
+gdpr:
+  purpose: "Consistency checking between declared configuration and observed runtime state"
+  legal_basis: legitimate_interests
+  data_categories:
+    - software_inventory      # image tags, version pins, container names
+  data_subjects: [operators]
+  retention_days: 365
+  processors: []              # local only; reads the Docker socket and repo files
+  eu_residency: true
