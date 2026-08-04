@@ -6,15 +6,31 @@
 # Does not declare top-level networks: — iiab_net is defined in the base
 # templates/stacks/iiab/docker-compose.yml.j2.
 #
-# SSO: no OIDC env vars — Uptime Kuma v1.x doesn't support native OIDC.
-# Auth is gated at the Nginx layer via the Authentik forward_auth outpost.
-# Revisit when Uptime Kuma v2.x ships stable OIDC.
+# SSO: no OIDC env vars — Uptime Kuma has no native OIDC on the 2.2.x line
+# either (measured 2026-08-04: no oidc/openid socket handler in /app/server).
+# Auth is gated at the edge via the Authentik forward_auth outpost.
 # =============================================================================
 
 services:
   uptime-kuma:
     image: louislam/uptime-kuma:{{ uptime_kuma_version | default('1') }}
     restart: unless-stopped
+    environment:
+      # THE 2.x SETUP STEP THAT v1 DID NOT HAVE, and the reason this estate
+      # monitored nothing for ten days.
+      #
+      # Kuma 2 asks which DATABASE to use before it will create one. Until that
+      # is answered it runs `setup-database.js` instead of the app: it serves
+      # the wizard on every route, answers 200 on `/`, and reports `healthy` to
+      # Docker — so every signal we own reads green while nothing is behind it.
+      # REM-073 moved the pin 1.23.13 → 2.2.1 on 2026-07-24 to close CVE-2026-
+      # 33130; the container has been an installer since 20:49 that evening.
+      #
+      # setup-database.js:96 — `if (process.env.UPTIME_KUMA_DB_TYPE) {
+      # this.needSetup = false; ... Database.writeDBConfig(dbConfig); }` — so
+      # declaring it here is the whole fix, and it is declarative rather than a
+      # one-time hand-click, which is what makes a blank reproduce.
+      UPTIME_KUMA_DB_TYPE: "sqlite"
     ports:
       - "127.0.0.1:{{ uptime_kuma_port | default(3001) }}:3001"
     volumes:

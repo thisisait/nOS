@@ -6,22 +6,42 @@
 # and are prefix-rotated. Auto-monitors derive from install_* flags in
 # default.config.yml — the monitor list lives in tasks/monitors.yml.
 #
-# SSO: Uptime Kuma v1.x has no native OIDC support. Access is gated via
-# the Authentik forward_auth outpost (proxy auth), and Kuma's OWN internal
-# login is DISABLED (uptime_kuma_disable_internal_auth) so the Authentik gate
-# is the single sign-in — no pointless second password behind the gate. Native
-# OIDC will be revisited when Uptime Kuma v2.x ships stable OIDC.
+# SSO: Uptime Kuma has no native OIDC on the 2.2.x line either — measured
+# 2026-08-04, no oidc/openid socket handler in the deployed /app/server. Access
+# is gated via the Authentik forward_auth outpost, and Kuma's OWN internal login
+# is DISABLED (uptime_kuma_disable_internal_auth) so the Authentik gate is the
+# single sign-in. The long-standing "revisit when v2.x ships OIDC" note is
+# retired: v2.x shipped, OIDC did not.
 # ==============================================================================
 
-uptime_kuma_version: "1"                            # major-locked v1.x (last stable line).; default.config.yml is source of truth (config-wins is intentional; tag convention differs)
-# NOTE (C1 2026-05-25): v1.x is EOL upstream; only v2.x gets updates. v2.x is a
-# breaking major (data migration + native OIDC). Staying on "1" (functional,
-# forward_auth-gated) is a deliberate decision — migrating to v2.x is a separate
-# operator call, not a mechanical pin. "1" stays in v1.x; never jumps to v2.x.
+# ── THE EFFECTIVE PIN IS 2.2.1, NOT "1" ──────────────────────────────────────
+# default.config.yml wins over this file, and it reads 2.2.1 (REM-073, applied
+# 2026-07-24 to close CVE-2026-33130). This default is the SHADOW half of the
+# pin pair recorded in memory `version-pins-default-config-shadow`; bumping it
+# alone changes nothing, and reading it alone tells you the wrong version.
+#
+# The comment that used to sit here said the opposite, and said it after the
+# fact: "migrating to v2.x is a separate operator call, not a mechanical pin.
+# '1' stays in v1.x; never jumps to v2.x." The upgrade engine jumped it
+# mechanically five weeks later and nothing compared the two statements. What
+# followed is on the record — Kuma 2 asks for a database type that the role did
+# not know to answer, so the container served its installer for ten days while
+# reporting `healthy`.
+#
+# The rule that survives is narrower and enforceable: a MAJOR move here must be
+# accompanied by a re-reading of the post-start automation, because that
+# automation is version-shaped. tests/anatomy/test_kuma_pin_matches_automation.py
+# now fails when the pinned major outruns it.
+uptime_kuma_version: "1"                            # shadow default; default.config.yml is the effective pin (2.2.1)
 uptime_kuma_port: 3001
 uptime_kuma_domain: "uptime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 uptime_kuma_admin_user: "admin"
 uptime_kuma_auto_monitors: true                     # Automatically create monitors for all install_* services
+# Stop the converge when Kuma is reachable but holds no database (the 2.x
+# setup-database state). Default true because the alternative — the debug line
+# this replaced — is how ten days of blind monitoring stayed green. Set false
+# only if you deliberately run an unconfigured Kuma.
+uptime_kuma_fail_on_unconfigured: true
 # Disable Kuma's internal login so the Authentik forward_auth gate is the SINGLE
 # sign-in (Kuma v1 has no OIDC; its own login behind the gate = double login).
 # Applied only when install_authentik is on — never leave Kuma open without the

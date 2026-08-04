@@ -14,14 +14,20 @@
 #   7. verify monitor count
 # ==============================================================================
 
-- name: "[pazny.uptime_kuma] Install uptime-kuma-api + PyYAML"
+- name: "[pazny.uptime_kuma] Install the Socket.IO client + PyYAML"
   # ansible.builtin.pip imports `packaging` controller-side; that fails
   # on PEP-668 Homebrew Python 3.14. Shell out to pip directly with
   # --break-system-packages so --user installs land cleanly. The
   # downstream setup-monitors.py invocation runs under the same
   # interpreter so the packages resolve.
+  #
+  # WAS `uptime-kuma-api`, dropped 2026-08-04. That library supports Uptime
+  # Kuma 1.21.3 – 1.23.2 and has shipped nothing since; REM-073 moved the pin
+  # to 2.2.1 on 2026-07-24 and every call went out of range in one step.
+  # files/kuma2.py speaks to the same Socket.IO handlers directly, so the
+  # dependency is now the plain transport the library was built on.
   ansible.builtin.command:
-    cmd: "{{ ansible_python_interpreter | default('python3') }} -m pip install --quiet --disable-pip-version-check --user --break-system-packages uptime-kuma-api PyYAML"
+    cmd: "{{ ansible_python_interpreter | default('python3') }} -m pip install --quiet --disable-pip-version-check --user --break-system-packages python-socketio websocket-client PyYAML"
   register: _kuma_pip
   failed_when: false
   changed_when: "'Successfully installed' in (_kuma_pip.stdout | default(''))"
@@ -65,26 +71,61 @@
     _kuma_needs_setup: >-
       {{ ((_kuma_entry | default({}, true)).json | default({}, true)).get('type', '') == 'setup-database' }}
 
-# Loud on purpose. The API-login tasks below SKIP in this state rather than
-# retry into it, so without this line the converge would be green and silent
-# about a monitoring stack that monitors nothing.
-- name: "[pazny.uptime_kuma] Report that Kuma is waiting on its setup wizard"
-  ansible.builtin.debug:
+# FAILS, and the earlier version of this task is why it has to.
+#
+# Yesterday this was a `debug:` telling the operator to go and finish the
+# wizard by hand. That was wrong twice over. It asked a human to do what the
+# compose file can declare (UPTIME_KUMA_DB_TYPE, added 2026-08-04), and it left
+# the converge GREEN — so the advice scrolled past in a 50-service run and the
+# estate went on reporting success while monitoring nothing.
+#
+# The estate's own rule, from docs/hidden_fees and the 2026-08-01 audit: a step
+# that cannot do its job must not exit 0. Kuma sitting in setup after the env
+# var exists means the container was never recreated to pick it up, and that is
+# a real, actionable, converge-stopping fact — not a note.
+- name: "[pazny.uptime_kuma] FAIL — Kuma is serving its setup wizard, not the app"
+  ansible.builtin.fail:
     msg: >-
-      Uptime Kuma has never completed its database setup and is sitting in the
-      wizard, so no monitors can be created. Finish it at
-      http://127.0.0.1:{{ uptime_kuma_port | default(3001) }} (set the admin
-      user to '{{ uptime_kuma_admin_user | default('admin') }}'), then re-run
-      with --tags uptime_kuma. Until then this estate has no uptime alerting.
-  when: _kuma_needs_setup | bool
+      Uptime Kuma is running `setup-database.js`, not the application: it
+      answers 200 on every route and reports `healthy` to Docker while holding
+      no database. Nothing is being monitored.
+
+      Expected cause: the container predates the `UPTIME_KUMA_DB_TYPE=sqlite`
+      env var (roles/pazny.uptime_kuma/templates/compose.yml.j2) and was not
+      recreated. Fix with `ansible-playbook main.yml --tags uptime_kuma`, which
+      re-renders the override and recreates the container in one pass.
+
+      If it persists AFTER a recreate, check `docker exec iiab-uptime-kuma-1
+      env | grep UPTIME_KUMA_DB_TYPE` — an empty result means the override did
+      not merge, not that Kuma refused it.
+  when:
+    - _kuma_needs_setup | bool
+    - uptime_kuma_auto_monitors | default(true)
+    - uptime_kuma_fail_on_unconfigured | default(true)
 
 # Is Kuma's internal login already disabled (the Authentik forward_auth gate is
 # the single SSO)? Read it early so the API-login-based password reconverge +
 # monitor setup below SKIP when auth is off — their login() would just fail
 # against a disableAuth=true Kuma and burn the retry budget for nothing.
+# Deployed FIRST because the disableAuth read below needs it. This reader used
+# to be an inline `sqlite3 /app/data/kuma.db "SELECT …"`, which CREATES the
+# database file when it is missing — and did, leaving a 0-byte kuma.db that
+# Kuma 2's setup-database.js then reads as an existing database.
+- name: "[pazny.uptime_kuma] Deploy the setting reader"
+  ansible.builtin.copy:
+    src: read-setting.sh
+    dest: "{{ uptime_kuma_data_dir }}/read-setting.sh"
+    mode: '0755'
+
 - name: "[pazny.uptime_kuma] Read current disableAuth setting"
   ansible.builtin.command:
-    cmd: "{{ docker_bin | default('docker') }} exec iiab-uptime-kuma-1 sqlite3 /app/data/kuma.db \"SELECT value FROM setting WHERE key='disableAuth';\""
+    argv:
+      - "{{ docker_bin | default('docker') }}"
+      - exec
+      - iiab-uptime-kuma-1
+      - /app/data/read-setting.sh
+      - /app/data/kuma.db
+      - disableAuth
   register: _kuma_disableauth_cur
   changed_when: false
   failed_when: false
@@ -270,6 +311,10 @@
   loop:
     - setup-monitors.py
     - reset-password.py
+    # The transport setup-monitors.py imports. It must land in the SAME
+    # directory: Python puts the script's own directory on sys.path[0], which
+    # is the entire import mechanism here — there is no package install.
+    - kuma2.py
 
 - name: "[pazny.uptime_kuma] Write spec file (JSON) for setup-monitors.py"
   ansible.builtin.copy:
@@ -364,6 +409,44 @@
       {%- set _done = (_kuma_result.stdout_lines | default([]) | select('match', '^Done:') | list) -%}
       {{ _done[0] if _done | length > 0 else '(skipped or no Done: line in setup-monitors output)' }}
   when: _kuma_result is defined
+
+# ── The verification that is allowed to say no ─────────────────────────────
+# Everything above this line is `failed_when: false`, which is right for the
+# retry loop and wrong as a final answer: it is how a monitoring stack that
+# monitored nothing stayed green for ten days.
+#
+# The claim under test is narrow and checkable — "the spec asked for N monitors
+# and Kuma now tracks N". It reads the number setup-monitors.py printed AFTER
+# talking to the server, not a flag set by the code that intended to do the
+# work. That distinction is the estate's most expensive recurring lesson
+# (docs/hidden_fees, the 2026-08-01 audit): a success marker must be written by
+# a reader, never by the attempting code.
+- name: "[pazny.uptime_kuma] Read back how many monitors Kuma actually tracks"
+  ansible.builtin.set_fact:
+    _kuma_tracked: >-
+      {{ ((_kuma_result.stdout | default('')
+           | regex_search('Monitors tracked: (\d+)', '\1') | default(['-1'], true)) | first) | int }}
+  when:
+    - _kuma_result is defined
+    - not (_kuma_result.skipped | default(false))
+
+- name: "[pazny.uptime_kuma] FAIL — the spec asked for monitors and none exist"
+  ansible.builtin.fail:
+    msg: >-
+      setup-monitors.py finished but Kuma tracks {{ _kuma_tracked }} monitors
+      while the spec declared {{ _kuma_spec.monitors | length }}. Nothing is
+      being watched, so nothing can alert.
+
+      Read the task output above for the per-monitor reason. A `SKIP:` line
+      means the transport could not be imported (kuma2.py must land in the same
+      directory as setup-monitors.py); an authentication failure means the
+      admin password and Kuma's stored one have diverged.
+  when:
+    - _kuma_tracked is defined
+    - _kuma_tracked | int <= 0
+    - _kuma_spec.monitors | length > 0
+    - uptime_kuma_auto_monitors | default(true)
+    - uptime_kuma_fail_on_unconfigured | default(true)
 
 - name: "[pazny.uptime_kuma] WARN: pip install failed"
   ansible.builtin.debug:

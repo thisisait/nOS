@@ -6,8 +6,8 @@
 # creates the data dir, renders the compose override fragment to
 # {{ stacks_dir }}/iiab/overrides/uptime-kuma.yml.
 #
-# Post-start (monitors setup + password reconverge) je v tasks/monitors.yml —
-# called AFTER `docker compose up iiab --wait`.
+# Post-start (monitor setup + password reconverge) lives in tasks/monitors.yml,
+# called AFTER `docker compose up iiab`.
 # ==============================================================================
 
 - name: "[pazny.uptime_kuma] Ensure data and log directories exist"
@@ -24,4 +24,35 @@
     src: compose.yml.j2
     dest: "{{ stacks_dir }}/iiab/overrides/uptime-kuma.yml"
     mode: '0600'
+  notify: Restart uptime_kuma
+
+# ── Drift repair: a zero-byte kuma.db this playbook created by reading it ────
+# `sqlite3 <path> "SELECT …"` CREATES <path> when it does not exist. The
+# disableAuth probe in monitors.yml used to do exactly that, and left a 0-byte
+# /app/data/kuma.db on the live estate (measured 2026-08-04, dated 80 minutes
+# after the container booted — written by us, not by Kuma).
+#
+# It is not inert: Kuma 2's setup-database.js branches on whether kuma.db is
+# FOUND, so a file left behind by a reader becomes an input to the code being
+# read. Removed here — BEFORE compose-up — so Kuma's own init path runs on a
+# clean directory.
+#
+# `-size 0` is the entire safety argument: a zero-byte file cannot hold a
+# monitor, a heartbeat, or a password, so there is no state to weigh against
+# deleting it. This deliberately does NOT reach for a byte threshold. The same
+# temptation showed up in the backup work two days ago — a size floor there
+# would have deleted real archives, and the fix was to count members instead of
+# weighing bytes. Zero is the one size that needs no judgement.
+- name: "[pazny.uptime_kuma] Stat kuma.db"
+  ansible.builtin.stat:
+    path: "{{ uptime_kuma_data_dir }}/kuma.db"
+  register: _kuma_db_stat
+
+- name: "[pazny.uptime_kuma] Remove the empty kuma.db so Kuma can create a real one"
+  ansible.builtin.file:
+    path: "{{ uptime_kuma_data_dir }}/kuma.db"
+    state: absent
+  when:
+    - _kuma_db_stat.stat.exists | default(false)
+    - (_kuma_db_stat.stat.size | default(1)) == 0
   notify: Restart uptime_kuma

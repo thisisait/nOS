@@ -19,7 +19,7 @@ Usage
 
 Exit codes
 ----------
-  0   success (or uptime_kuma_api not installed — we soft-skip)
+  0   success (or the kuma2 transport is unimportable — we soft-skip)
   1   hard failure (login + setup both failed)
 """
 
@@ -91,7 +91,7 @@ def hmac_signature(secret: str, body: bytes) -> Optional[str]:
 # ---------------------------------------------------------------------------
 
 class KumaClient:
-    """Thin wrapper over uptime_kuma_api.UptimeKumaApi.
+    """Spec-driven configuration over the kuma2 Socket.IO transport.
 
     Responsibilities:
       - login (or initial setup if fresh install)
@@ -106,128 +106,105 @@ class KumaClient:
         self.user = user
         self.password = password
         self.dry_run = dry_run
-        # uptime-kuma-api waits this long for each server-pushed event
+        # How long to wait for each acknowledgement or pushed list
         # (Event.INFO / Event.MONITOR_LIST). The lib default (10s) is too short
         # when the host is under load during a blank run — Kuma's event delivery
         # is starved and EVERY op times out (48 monitors × timeout ≈ a 30-min
         # hang). A larger budget tolerates the load; fail-fast (in _modern_run)
         # caps the worst case if the API is genuinely unresponsive.
         self.timeout = timeout
-        self._api = None
-        self._monitor_types = None
+        self._sock = None
+        self._KumaSocketError = Exception
 
     # ----- connect ---------------------------------------------------------
 
     def connect(self) -> bool:
+        """Open the socket and reach an authenticated state.
+
+        TRANSPORT NOTE (2026-08-04). This used `uptime-kuma-api`, which
+        supports Uptime Kuma 1.21.3 – 1.23.2 and nothing since. REM-073 moved
+        the pin to 2.2.1 on 2026-07-24 and put every call out of range in one
+        step; measured against a 2.2.1 container, `setup()` and `get_monitors()`
+        both time out. `kuma2.Kuma2Socket` talks to the same Socket.IO handlers
+        directly — see its module docstring for why that is smaller, not larger.
+
+        `needSetup` is asked rather than inferred. The old code called `setup()`
+        and treated ANY exception as "already set up, try logging in" — so a
+        genuine setup failure and an already-configured server were the same
+        observation, and the difference only showed up later as a login error
+        with no explanation attached.
+        """
         try:
-            from uptime_kuma_api import UptimeKumaApi, MonitorType, NotificationType
-        except ImportError:
-            log("SKIP: uptime-kuma-api not installed (pip install uptime-kuma-api)")
+            from kuma2 import Kuma2Socket, KumaSocketError
+        except ImportError as e:
+            log(f"SKIP: kuma2 transport not importable ({e}). "
+                f"It ships beside this script in the role's files/.")
             return False
 
-        self._MonitorType = MonitorType
-        self._NotificationType = NotificationType
-        self._api = UptimeKumaApi(self.url, timeout=self.timeout)
+        self._KumaSocketError = KumaSocketError
+        self._sock = Kuma2Socket(self.url, timeout=self.timeout)
         try:
-            self._api.setup(self.user, self.password)
-            log(f"[+] Initial setup complete (user: {self.user})")
-        except Exception:
-            try:
-                self._api.login(self.user, self.password)
-                log(f"[+] Logged in as {self.user}")
-            except Exception as e:
-                log(f"[-] Login failed: {e}")
-                return False
+            self._sock.connect()
+        except Exception as e:
+            log(f"[-] Cannot reach Kuma at {self.url}: {e}")
+            return False
+
+        try:
+            if self._sock.needs_setup():
+                self._sock.setup(self.user, self.password)
+                log(f"[+] Created the first user unattended (user: {self.user})")
+            self._sock.login(self.user, self.password)
+            log(f"[+] Logged in as {self.user}")
+        except Exception as e:
+            log(f"[-] Authentication failed: {e}")
+            return False
         return True
 
     def disconnect(self) -> None:
-        if self._api is not None:
-            try:
-                self._api.disconnect()
-            except Exception:
-                pass
+        if self._sock is not None:
+            self._sock.disconnect()
 
     # ----- monitors --------------------------------------------------------
 
     def list_monitors(self) -> Dict[str, Dict[str, Any]]:
-        try:
-            mons = self._api.get_monitors()
-        except Exception as e:
-            log(f"[-] get_monitors failed: {e}")
-            return {}
-        return {m["name"]: m for m in mons}
+        """The monitor list is PUSHED after login, not fetched.
 
-    def _monitor_type_enum(self, kind: str):
-        """Translate string → MonitorType enum, tolerating missing symbols."""
-        mapping = {
-            "http": "HTTP",
-            "tcp": "PORT",          # uptime-kuma-api calls TCP "PORT"
-            "keyword": "KEYWORD",
-            "docker": "DOCKER",
-            "ping": "PING",
-        }
-        key = mapping.get(kind, kind.upper())
-        return getattr(self._MonitorType, key, None)
+        Kuma has no `getMonitors` acknowledgement to call; the server sends
+        `monitorList` unprompted. Kuma2Socket keeps the latest copy, which
+        matters after a mutation — a stale list is how an idempotent run
+        decides to create something that already exists.
+        """
+        return self._sock.monitors_by_name()
 
     def upsert_monitor(self, spec: Dict[str, Any],
                        existing: Dict[str, Dict[str, Any]]) -> Tuple[str, Optional[int]]:
         """Create or update a single monitor. Returns (action, monitor_id)."""
+        from kuma2 import monitor_payload
+
         name = spec["name"]
-        kind = spec.get("type", "http")
-        mt = self._monitor_type_enum(kind)
-        if mt is None:
-            log(f"[-] Unsupported monitor type '{kind}' for {name}")
-            return ("skip", None)
-
-        base_kwargs: Dict[str, Any] = {
-            "type": mt,
-            "name": name,
-            "interval": spec.get("interval", 60),
-            "maxretries": spec.get("maxretries", 2),
-            "retryInterval": spec.get("retry_interval", 60),
-        }
-
-        if kind == "http":
-            base_kwargs["url"] = spec["url"]
-            base_kwargs["accepted_statuscodes"] = spec.get(
-                "accepted_statuscodes", ["200-299", "301", "302", "401", "403"])
-            base_kwargs["ignoreTls"] = bool(spec.get("ignore_tls", True))
-            if spec.get("keyword"):
-                base_kwargs["keyword"] = spec["keyword"]
-        elif kind == "tcp":
-            base_kwargs["hostname"] = spec.get("hostname", "127.0.0.1")
-            base_kwargs["port"] = int(spec["port"])
-        elif kind == "keyword":
-            base_kwargs["url"] = spec["url"]
-            base_kwargs["keyword"] = spec["keyword"]
-            base_kwargs["ignoreTls"] = bool(spec.get("ignore_tls", True))
-        elif kind == "docker":
-            base_kwargs["docker_container"] = spec["docker_container"]
-            base_kwargs["docker_host"] = spec.get("docker_host", 1)
-        elif kind == "ping":
-            base_kwargs["hostname"] = spec.get("hostname", "127.0.0.1")
-
-        # Optional: TLS cert-expiry threshold (HTTP monitors only).
-        if kind == "http" and spec.get("expiry_notification"):
-            base_kwargs["expiryNotification"] = True
+        payload = monitor_payload(spec)
 
         if self.dry_run:
-            log(f"[dry] upsert monitor {name} ({kind}) → {base_kwargs}")
+            log(f"[dry] upsert monitor {name} ({payload['type']}) → {payload}")
             return ("dry", None)
 
         if name in existing:
-            mon_id = existing[name]["id"]
+            current = existing[name]
+            mon_id = current.get("id")
+            # 2.x `editMonitor` takes the WHOLE monitor, not a patch: it writes
+            # back every field it receives, so sending only the changed keys
+            # would blank the rest. Merge onto the row the server pushed.
+            merged = {**current, **payload, "id": mon_id}
             try:
-                self._api.edit_monitor(mon_id, **base_kwargs)
+                self._sock.call_ok("editMonitor", merged)
                 vlog(f"[=] Updated {name} (id={mon_id})")
                 return ("updated", mon_id)
             except Exception as e:
-                # Some fields aren't editable via edit_monitor on older versions.
                 log(f"[!] edit failed for {name}: {e}")
                 return ("error", mon_id)
         try:
-            resp = self._api.add_monitor(**base_kwargs)
-            mon_id = resp.get("monitorID") if isinstance(resp, dict) else None
+            resp = self._sock.call_ok("add", payload)
+            mon_id = resp.get("monitorID")
             log(f"[+] Created {name} (id={mon_id})")
             return ("created", mon_id)
         except Exception as e:
@@ -237,56 +214,53 @@ class KumaClient:
     # ----- notifications ---------------------------------------------------
 
     def list_notifications(self) -> Dict[str, Dict[str, Any]]:
+        """Also a push (`notificationList`), same as the monitor list."""
+        return self._sock.notifications_by_name()
+
+    def _upsert_notification(self, name: str, args: Dict[str, Any],
+                             existing: Dict[str, Dict[str, Any]],
+                             label: str) -> Optional[int]:
+        """One event does both jobs.
+
+        `addNotification(notification, notificationID)` CREATES when the id is
+        null and EDITS when it is not — there is no separate edit event. The
+        old code called a library `edit_notification` that wrapped this exact
+        call, so the two paths only ever looked different from the outside.
+        """
+        if self.dry_run:
+            log(f"[dry] upsert {label} notification {name}")
+            return None
+        nid = existing.get(name, {}).get("id")
         try:
-            nots = self._api.get_notifications()
+            resp = self._sock.call_ok("addNotification", args, nid)
+            new_id = resp.get("id", nid)
+            if nid:
+                vlog(f"[=] Updated {label} notification {name} (id={new_id})")
+            else:
+                log(f"[+] Created {label} notification {name} (id={new_id})")
+            return new_id
         except Exception as e:
-            log(f"[-] get_notifications failed: {e}")
-            return {}
-        return {n["name"]: n for n in nots}
+            log(f"[-] {label} notification upsert failed: {e}")
+            return nid
 
     def upsert_ntfy(self, name: str, server_url: str, topic: str,
                     existing: Dict[str, Dict[str, Any]],
                     is_default: bool = True) -> Optional[int]:
-        NT = self._NotificationType
-        if not hasattr(NT, "NTFY"):
-            log("[-] uptime-kuma-api build has no NTFY notification type")
-            return None
-        args = {
-            "type": NT.NTFY,
+        return self._upsert_notification(name, {
+            "type": "ntfy",
             "name": name,
             "isDefault": is_default,
             "applyExisting": True,
             "ntfyserverurl": server_url,
             "ntfytopic": topic,
-            "ntfyPriority": 4,  # Kuma's ntfy priority field (was the bogus
-                                # 'ntfyPriorityNotification' → "unknown argument")
-        }
-        if self.dry_run:
-            log(f"[dry] upsert ntfy notification {name} → {server_url}/{topic}")
-            return None
-        try:
-            if name in existing:
-                nid = existing[name]["id"]
-                self._api.edit_notification(nid, **args)
-                vlog(f"[=] Updated ntfy notification {name} (id={nid})")
-                return nid
-            resp = self._api.add_notification(**args)
-            nid = resp.get("id") if isinstance(resp, dict) else None
-            log(f"[+] Created ntfy notification {name} (id={nid})")
-            return nid
-        except Exception as e:
-            log(f"[-] ntfy notification upsert failed: {e}")
-            return None
+            "ntfyPriority": 4,
+            "ntfyAuthenticationMethod": "none",
+        }, existing, "ntfy")
 
     def upsert_webhook(self, name: str, url: str, body_template: Dict[str, Any],
                        hmac_secret: Optional[str],
                        existing: Dict[str, Dict[str, Any]],
                        is_default: bool = True) -> Optional[int]:
-        NT = self._NotificationType
-        if not hasattr(NT, "WEBHOOK"):
-            log("[-] uptime-kuma-api build has no WEBHOOK notification type")
-            return None
-
         # Uptime Kuma sends its own payload. We wrap it in a Bone-compatible
         # envelope using Kuma's custom body feature (contentType=json).
         body_json = json.dumps(body_template, separators=(",", ":"))
@@ -301,36 +275,16 @@ class KumaClient:
                 extra_headers["X-Wing-Signature"] = sig
                 extra_headers["X-Wing-Source"] = "uptime-kuma"
 
-        args = {
-            "type": NT.WEBHOOK,
+        return self._upsert_notification(name, {
+            "type": "webhook",
             "name": name,
             "isDefault": is_default,
             "applyExisting": True,
             "webhookURL": url,
-            "webhookContentType": "json",
+            "webhookContentType": "custom",
             "webhookCustomBody": body_json,
             "webhookAdditionalHeaders": json.dumps(extra_headers) if extra_headers else "",
-        }
-        if self.dry_run:
-            log(f"[dry] upsert webhook notification {name} → {url}")
-            return None
-        try:
-            if name in existing:
-                nid = existing[name]["id"]
-                try:
-                    self._api.edit_notification(nid, **args)
-                    vlog(f"[=] Updated webhook notification {name} (id={nid})")
-                    return nid
-                except Exception as e:
-                    log(f"[!] webhook edit failed ({e}); leaving as-is")
-                    return nid
-            resp = self._api.add_notification(**args)
-            nid = resp.get("id") if isinstance(resp, dict) else None
-            log(f"[+] Created webhook notification {name} (id={nid})")
-            return nid
-        except Exception as e:
-            log(f"[-] webhook notification upsert failed: {e}")
-            return None
+        }, existing, "webhook")
 
     # ----- status page -----------------------------------------------------
 
@@ -343,12 +297,14 @@ class KumaClient:
                 f"monitors={len(monitor_ids)}")
             return True
 
-        # Try create; if it exists, fall back to save_status_page.
-        try:
-            self._api.add_status_page(slug=slug, title=title)
-            log(f"[+] Created status page /{slug}")
-        except Exception as e:
-            vlog(f"[=] status page /{slug} exists or add failed: {e}")
+        from kuma2 import status_page_config
+
+        if slug not in self._sock.status_page_slugs():
+            try:
+                self._sock.call_ok("addStatusPage", title, slug)
+                log(f"[+] Created status page /{slug}")
+            except Exception as e:
+                vlog(f"[=] addStatusPage /{slug}: {e}")
 
         # Group all monitors under a single public list.
         public_group = [{
@@ -358,18 +314,20 @@ class KumaClient:
         }]
 
         try:
-            self._api.save_status_page(
-                slug=slug,
-                title=title,
-                description=description,
-                publicGroupList=public_group,
-                theme="auto",
-                showTags=True,
+            # saveStatusPage(slug, config, imgDataUrl, publicGroupList).
+            # imgDataUrl must be a STRING — the handler calls .startsWith on it,
+            # so passing null fails with "Cannot read properties of null".
+            self._sock.call_ok(
+                "saveStatusPage",
+                slug,
+                status_page_config(slug, title, description),
+                "/icon.svg",
+                public_group,
             )
             log(f"[+] Saved status page /{slug} with {len(monitor_ids)} monitors")
             return True
         except Exception as e:
-            log(f"[-] save_status_page failed: {e}")
+            log(f"[-] saveStatusPage failed: {e}")
             return False
 
 
