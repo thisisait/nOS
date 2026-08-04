@@ -67,7 +67,7 @@
     LOCK_SHA=$(shasum -a 256 package-lock.json | cut -d' ' -f1)
     STAMP=node_modules/.nos-lock-sha
     if [ ! -d node_modules ] || [ "$(cat "$STAMP" 2>/dev/null)" != "$LOCK_SHA" ]; then
-      "{{ _cortex_node_bin | dirname }}/npm" ci --no-audit --no-fund
+      "{{ _cortex_node_bin | dirname }}/npm" ci --no-audit --no-fund {{ '--ignore-scripts' if (npm_ignore_scripts | default(true)) else '' }}
       echo "$LOCK_SHA" > "$STAMP"
       echo NOS_CHANGED
     fi

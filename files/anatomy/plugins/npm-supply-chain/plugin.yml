@@ -1,0 +1,136 @@
+# =============================================================================
+# npm-supply-chain — daily IOC cross-check of every installed npm package
+#
+# BORN 2026-08-04, the day the ChainDrop worm ran. It compromised 443 packages
+# and 2 235 versions in under four hours, starting from keyv@6.0.0 (153.7M
+# weekly downloads) and spreading via harvested GitHub maintainer credentials.
+# The payload harvests npm, GitHub, AWS, Vault, Kubernetes and SSH credentials
+# — and specifically `.claude/credentials.json` — then plants persistence in
+# `.claude/settings.json` SessionStart hooks and `.vscode/tasks.json`.
+#
+# This estate was NOT hit. Measured that evening: 6 315 package.json scanned,
+# 0 of 2 235 malicious versions present, because eslint pins keyv, flat-cache
+# and file-entry-cache below the poisoned majors. That is semver luck, and the
+# whole reason this job exists is that luck does not repeat on request.
+#
+# WHY PROVENANCE DID NOT HELP, which is the part worth remembering: the
+# malicious releases carried VALID SLSA attestations. The attacker pushed
+# poisoned commits to a maintainer's repo and let the project's own release
+# automation cryptographically sign the malware. Provenance proves where a
+# build came from; it cannot prove the source was authorised. So "verify the
+# signature" would have passed this, and a name@version cross-check would not.
+#
+# Not a Docker service — a host-side Python script, same shape as gitleaks.
+# =============================================================================
+
+name: npm-supply-chain
+version: 0.1.0
+description: |
+  Cross-checks every installed npm package against a published compromised-
+  package list (Wiz Research IOCs). Answers exactly one question: is a known-
+  bad name@version installed here?
+
+  It does NOT detect an unknown compromise, a poisoned version not yet
+  published to the list, or a payload that already ran and cleaned up. A clean
+  run therefore reports "no listed indicator present", never "clean" — the
+  difference is the lesson of 2026-08-04, when a container reported healthy for
+  ten days while serving its own installer.
+
+upstream: https://github.com/wiz-sec-public/wiz-research-iocs
+license: MIT
+
+type:
+  - skill
+  - scheduled-job
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  variables:
+    - playbook_dir         # repo root → tools/npm-ioc-scan.py
+
+# =============================================================================
+# PULSE JOB
+#
+# The verdict lives in `pulse_runs.exit_code`, written by the scanner itself:
+#   0  scanned, no listed indicator present
+#   1  a compromised name@version IS installed
+#   2  the IOC list could not be fetched — NOTHING WAS CHECKED
+#
+# Exit 2 is the one that matters most and it is why the list is fetched rather
+# than vendored. A vendored snapshot is what was known on the day it was
+# committed, and this list grew while the worm was still running; a stale list
+# reporting "no indicators" is worse than no scan. So an unreachable list is an
+# ERROR, never a silent pass. That rule is the estate's standing one — a step
+# that cannot do its job must not exit 0 — applied where it is cheapest to get
+# wrong.
+#
+# 04:20 UTC: after the nightly gitleaks scan (03:00) and before the KEAP
+# feeder chain (04:15+), so a compromised-dependency finding lands before
+# anything downstream starts pulling from the same trees.
+# =============================================================================
+
+pulse:
+  jobs:
+    - name: daily-ioc-scan
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/npm-ioc-scan.py"
+      schedule: "20 4 * * *"
+      jitter_min: 7
+      max_runtime_s: 900        # walking every node_modules tree is I/O-bound
+      max_concurrent: 1
+      env: {}
+
+# =============================================================================
+# NOTIFICATION (A9 canonical severity shape)
+#
+# A compromised package present is CRITICAL by construction: the ChainDrop
+# payload exfiltrates every credential it can reach, and this estate derives
+# every service password from one global prefix — one theft is total.
+#
+# KNOWN GAP, stated rather than hidden: the scanner records its verdict in
+# pulse_runs but does not itself POST to Bone's /api/v1/notifications, so these
+# routes are declared and not yet exercised. Until a wrapper emits them, the
+# operator-visible signal is the non-zero exit in the Pulse view. Do not read
+# the presence of this block as proof that a message would arrive — that is
+# exactly the class of assumption this estate keeps finding false.
+# =============================================================================
+
+notification:
+  on_critical: [wing-inbox, ntfy, mail]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+  templates:
+    compromised_package:
+      title: "Compromised npm package installed"
+      body: |
+        $count compromised package(s) found on this host.
+
+        $packages_md
+
+        Rotate every credential reachable from this machine BEFORE removing
+        the package: the worm plants a token-revocation trigger that fires
+        payloads when stolen tokens are revoked.
+    scan_blocked:
+      title: "npm IOC scan could not run"
+      body: |
+        The scanner exited 2 — the IOC list could not be fetched, so NOTHING
+        was checked. This is not a clean result. $detail
+
+# =============================================================================
+# GDPR
+# =============================================================================
+
+gdpr:
+  purpose: "Supply-chain integrity checking of installed npm dependencies"
+  legal_basis: legitimate_interests
+  data_categories:
+    - software_inventory      # package names, versions and install paths only
+  data_subjects: [operators]
+  retention_days: 365
+  processors: []              # list fetched read-only; nothing is sent outbound
+  eu_residency: true

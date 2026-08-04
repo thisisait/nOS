@@ -27,7 +27,7 @@
     export NVM_DIR="$HOME/.nvm"
     [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
     nvm use default
-    npm install -g @mariozechner/pi-coding-agent
+    npm install -g {{ '--ignore-scripts' if (npm_ignore_scripts | default(true)) else '' }} @mariozechner/pi-coding-agent
   args:
     executable: /bin/zsh
   environment:

@@ -871,18 +871,57 @@ wing_audit_chain_enabled: false
 
 node_nvm_version: "lts/*"   # or specific: "22", "20"
 
+# ── npm supply-chain posture ────────────────────────────────────────────────
+# `--ignore-scripts` on every npm install this playbook performs.
+#
+# WHY, measured 2026-08-04 — the day the ChainDrop worm ran. It compromised 443
+# packages and 2 235 versions in under four hours starting from keyv@6.0.0
+# (153.7M weekly downloads), and its dropper executes as an INSTALL LIFECYCLE
+# SCRIPT: `setup.mjs` fetches the Bun runtime, then a 727KB payload harvests
+# credentials across 140+ paths — npm and GitHub tokens, AWS, Vault, k8s, SSH
+# keys, and specifically `.claude/credentials.json` — and plants persistence in
+# `.claude/settings.json` SessionStart hooks and `.vscode/tasks.json`.
+#
+# This estate was NOT hit: 6 315 package.json scanned, 0 of 2 235 malicious
+# versions present, because eslint pins keyv/flat-cache/file-entry-cache below
+# the poisoned majors. That is semver luck. `--ignore-scripts` is the same
+# outcome on purpose — a poisoned tarball that cannot run code at install time
+# has to wait to be imported, which is a far smaller and more observable window.
+#
+# HONEST LIMIT: a package that genuinely needs a postinstall (native builds via
+# node-gyp) installs incomplete and SILENTLY. That is why the install tasks
+# verify the CLI actually runs afterwards instead of trusting npm's exit code —
+# the reader writes the success marker, not the code that attempted the work.
+npm_ignore_scripts: true
+
+# EXACT PINS, not bare names. A bare name resolves to whatever was published
+# minutes ago, which is precisely the window ChainDrop lived in; StepSecurity's
+# own recommendation is a minimum release age of 3-7 days. Pinning is how you
+# get that for free, and it matches the operator's standing rule that a version
+# move is a proposal an agent makes, never something a converge does blindly.
+# Versions below are what this host ran on 2026-08-04, all pre-worm-clean.
 node_global_packages:
-  - yarn
-  - pnpm
-  - typescript
-  - ts-node
-  - tsx
-  - nodemon
-  - pm2
-  - eslint
-  - prettier
-  - "@anthropic-ai/sdk"          # Claude API SDK
-  - "@anthropic-ai/claude-code"  # Claude Code CLI (this tool)
+  - yarn@1.22.22
+  - pnpm@11.20.0
+  - typescript@7.0.2
+  - ts-node@10.9.2
+  - tsx@4.23.5
+  - nodemon@3.1.14
+  - pm2@7.0.3
+  - eslint@10.8.0
+  - prettier@3.9.6
+  - "@anthropic-ai/sdk@0.115.0"   # Claude API SDK
+# `@anthropic-ai/claude-code` USED TO BE HERE and its removal is the other half
+# of the 2026-08-04 EACCES fix. tasks/claude-cli.yml installs the CLI as a
+# NATIVE build outside NVM precisely so a node-version migration cannot
+# reinstall the tool the operator is holding — but leaving it in this list
+# defeated that entirely: every converge would put a fresh copy back into
+# whatever node `nvm use default` resolved to, which is how five installs and
+# five independent auto-updaters accumulated in the first place.
+#
+# It was also the only unpinned entry left, i.e. the one package here that
+# resolved to whatever had been published minutes earlier — on the exact day a
+# worm compromised 443 packages in four hours. Both reasons point the same way.
 
 npm_packages: []
 # - name: webpack

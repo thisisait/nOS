@@ -47,7 +47,7 @@
 # boot with "Cannot find module 'passport-openidconnect'".
 - name: "[pazny.nodered] Pre-install OIDC npm deps into data dir (host npm)"
   ansible.builtin.command:
-    cmd: npm install --prefer-offline
+    cmd: npm install --prefer-offline {{ '--ignore-scripts' if (npm_ignore_scripts | default(true)) else '' }}
     chdir: "{{ nodered_data_dir }}"
   environment:
     PATH: "{{ homebrew_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"

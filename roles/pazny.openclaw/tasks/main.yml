@@ -153,7 +153,7 @@
     export NVM_DIR="$HOME/.nvm"
     [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
     nvm use default
-    npm install -g openclaw
+    npm install -g {{ '--ignore-scripts' if (npm_ignore_scripts | default(true)) else '' }} openclaw
   args:
     executable: /bin/zsh
   environment:

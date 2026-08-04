@@ -47,7 +47,7 @@
     export NVM_DIR="$HOME/.nvm"
     [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
     nvm use default
-    npm install -g {{ item }}
+    npm install -g {{ '--ignore-scripts' if (npm_ignore_scripts | default(true)) else '' }} {{ item }}
   args:
     executable: /bin/bash
   loop: "{{ node_global_packages | default([]) }}"
@@ -56,12 +56,40 @@
     NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
   when: nos_pkg_manager == 'homebrew'
 
+# `--ignore-scripts` has one real failure mode: a package that genuinely needs
+# a postinstall (native builds via node-gyp) installs INCOMPLETE and npm still
+# exits 0. That is a success marker written by the code that attempted the work
+# — the exact shape this estate spent 2026-08-04 removing from four other
+# places. So a reader checks the result instead: does the binary actually run?
+- name: Verify each global CLI actually runs after an ignore-scripts install
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm use default >/dev/null 2>&1
+    broken=""
+    for spec in {{ node_global_packages | default([]) | map('regex_replace', '@[^@]*$', '') | join(' ') }}; do
+      bin="${spec##*/}"                     # @scope/name -> name
+      command -v "$bin" >/dev/null 2>&1 || continue   # not every package ships a CLI
+      "$bin" --version >/dev/null 2>&1 || broken="$broken $bin"
+    done
+    [ -z "$broken" ] && echo "ALL-CLIS-OK" || echo "BROKEN:$broken"
+  args:
+    executable: /bin/bash
+  register: _npm_cli_check
+  changed_when: false
+  failed_when: "'BROKEN:' in (_npm_cli_check.stdout | default(''))"
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - npm_ignore_scripts | default(true)
+
 - name: Install extra npm packages from config
   ansible.builtin.shell: |
     export NVM_DIR="$HOME/.nvm"
     [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
     nvm use default
-    npm install -g {% if item.version is defined %}{{ item.name }}@{{ item.version }}{% else %}{{ item.name }}{% endif %}
+    npm install -g {{ '--ignore-scripts' if (npm_ignore_scripts | default(true)) else '' }} {% if item.version is defined %}{{ item.name }}@{{ item.version }}{% else %}{{ item.name }}{% endif %}
   args:
     executable: /bin/bash
   loop: "{{ npm_packages | default([]) }}"
@@ -69,6 +97,59 @@
   environment:
     NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
   when: nos_pkg_manager == 'homebrew'
+
+# ── Duplicate NVM node trees: report always, prune only on request ──────────
+# `node_nvm_version: lts/*` floats, so every converge can install a new LTS and
+# leave the old tree behind. Six had accumulated by 2026-08-04, each carrying a
+# full global package set — five copies of eslint, and therefore five copies of
+# keyv / flat-cache / file-entry-cache, the three packages ChainDrop poisoned
+# that same day. Duplicate trees are not just disk: each one is an independent
+# dependency surface that no single audit covers.
+#
+# REPORTS BY DEFAULT. Removal is opt-in AND refuses to touch the default alias
+# or the tree the running node came from — deleting the interpreter underneath
+# a live process is a worse failure than the disk it reclaims.
+- name: "[node] Inventory NVM node trees"
+  ansible.builtin.shell: |
+    set -o pipefail
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    default_ver=$(nvm version default 2>/dev/null || echo "")
+    running=$(node -v 2>/dev/null || echo "")
+    keep="${default_ver} ${running}"
+    for d in "$HOME/.nvm/versions/node"/*/; do
+      v=$(basename "$d")
+      case " $keep " in *" $v "*) echo "KEEP $v" ;; *) echo "STALE $v" ;; esac
+    done
+  args:
+    executable: /bin/bash
+  register: _node_trees
+  changed_when: false
+  failed_when: false
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+  when: nos_pkg_manager == 'homebrew'
+
+- name: "[node] Report duplicate node trees"
+  ansible.builtin.debug:
+    msg: >-
+      NVM trees: {{ (_node_trees.stdout_lines | default([]) | select('match', '^STALE') | list) | length }}
+      stale, {{ (_node_trees.stdout_lines | default([]) | select('match', '^KEEP') | list) | length }} kept.
+      {{ (_node_trees.stdout_lines | default([]) | select('match', '^STALE') | list) | join(', ') }}
+      {{ 'Set node_prune_stale_versions=true to remove them.'
+         if (_node_trees.stdout_lines | default([]) | select('match', '^STALE') | list | length) > 0 else '' }}
+  when: _node_trees is defined and not (_node_trees.skipped | default(false))
+
+- name: "[node] Remove stale node trees"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.nvm/versions/node/{{ item.split(' ')[1] }}"
+    state: absent
+  loop: "{{ _node_trees.stdout_lines | default([]) | select('match', '^STALE') | list }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - node_prune_stale_versions | default(false)
+    - _node_trees is defined and not (_node_trees.skipped | default(false))
 
 # ──────────────────────────────────────────────────────────────────────────────
 # The claude PATH-bridge USED TO LIVE HERE. Moved to tasks/claude-cli.yml on

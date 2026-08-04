@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 76 (72 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (70)
+- **Processing activities:** 77 (73 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (71)
 - **Transfers outside the EU:** 0 activities
 - **Activities engaging a third-party processor:** 0
 
@@ -1140,6 +1140,17 @@ dashboard / collection metadata, query history, user accounts.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `dashboard_definitions`, `query_history`, `user_accounts`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 365 days (~1y)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Npm Supply Chain — `svc_npm-supply-chain`
+- **Purpose:** Supply-chain integrity checking of installed npm dependencies
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `software_inventory`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
