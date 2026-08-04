@@ -142,6 +142,71 @@ row("plat-signing","Commit signing is required and never satisfied","2026-08-02"
     refs="CLAUDE.md git workflow",
     body="The master ruleset requires signatures; the v0.10 push logged 'Found 188 violations' and admin-bypassed. Either enable commit.gpgsign or drop the rule.")
 
+# ── Local-LLM cortex pipeline — filed 2026-08-04, DESIGNED NOT DECIDED ──────
+#
+# Filed here rather than in a doc so the planner can revise it and the operator
+# can approve implementation from the UI instead of from a conversation.
+#
+# THE DATES ARE FILING DATES, NOT TARGETS. `when` is one column that the
+# git-owned definition already splits into `target` (an intention) and
+# `occurred_at` (a fact) — the migration this file's docstring says is owed and
+# deliberately not done. Until it lands there is nowhere honest to put "no
+# target set", so these carry the day they were filed and say so.
+#
+# WHAT IS ALREADY BUILT, so nobody re-plans it: the cortex language, parser,
+# resolver, opcode registry and a four-phase validator all exist and are tested
+# (files/anatomy/cortex/server/cortex-{lang,validate,resolve,opcodes}.ts).
+# cortex-validate reports `authorizes: false` as a LITERAL CONSTANT so that no
+# consumer can read `valid: true` as permission — that distinction is the spine
+# of the whole plan below.
+_FILED = "2026-08-04"
+
+row("local-llm", "Local LLM proposes cortex chains, code validates", _FILED,
+    "queued", "cortex", refs="cortex-validate.ts · nos-cortex-lang",
+    body="A user says 'založ nového obchodního partnera'; a SMALL local model emits a "
+         "cortex-lang chain; deterministic code decides whether it is a valid program and "
+         "whether it may run; a LARGE model is asked only whether the chain matches the "
+         "INTENT. Motivation is measured: on 2026-08-04, 90% of multi-agent spend was "
+         "context, not product — a model that holds the API surface in its weights pays no "
+         "orientation tax. Rejected framing: 'the big model validates the call'. Validity is "
+         "a type-check (free, built) and authorisation is RBAC (free, code); neither needs "
+         "an LLM. Only intent does.")
+
+row("local-llm-executor", "Wing executor — authorisation + execution (phase 2)", _FILED,
+    "queued", "cortex", parent="local-llm",
+    body="THE PREREQUISITE. KEAP owns phase 1 (parse, structure, resolution) and explicitly "
+         "does not authorise. Nothing executes a validated chain yet, so everything below is "
+         "theory until this exists. Scoped tokens on three axes (verbs / namespaces / "
+         "tenants) per the executor design; read-only chains run freely, effectful ones need "
+         "the confirm gate the estate already uses for destructive operations.")
+
+row("local-llm-corpus", "Corpus generator: opcodes + validator as a free oracle", _FILED,
+    "queued", "cortex", parent="local-llm",
+    body="Synthesise chains from the opcode registry, run them through cortex-validate, keep "
+         "the valid ones, and have a large model back-translate each into the sentence a user "
+         "would have said. Distillation where the teacher runs once and the correctness "
+         "filter is code. This is an unusually good starting position — most fine-tuning "
+         "projects have no oracle to filter on. Do this SECOND: it also measures how large "
+         "the space actually is, which decides whether a small model is worth training.")
+
+row("local-llm-model", "The small local model", _FILED,
+    "queued", "agents", parent="local-llm",
+    body="Ollama MLX, local, free at inference. Train only after the corpus exists and its "
+         "size is known. NOT to be trained on loop verdicts or judge outcomes — a model that "
+         "learns to please the judge is reward hacking with an extra step, and the "
+         "proposer/judge asymmetry exists to prevent exactly that. The task here is narrow "
+         "and well-posed (natural language -> constrained typed IR), which is the case where "
+         "fine-tuning genuinely beats prompting.")
+
+row("local-llm-intent", "Intent grading — effectful chains only", _FILED,
+    "queued", "agents", parent="local-llm",
+    body="A chain can be valid, authorised, and still not be what was asked: 'create a "
+         "partner' emitting a well-typed chain that UPDATES one type-checks perfectly. No "
+         "checker catches that, so a large model grades how precisely the chain fulfils the "
+         "request. Reserved for effectful chains — read-only ones do not earn the cost — and "
+         "phrased as 'say in plain language what this will do' for the operator, rather than "
+         "as a score, because a score is a comfortable place for a model to hide.")
+
 print(f"prepared {len(R)} rows")
 
 # ── Orphan gate: KEAP cannot enforce this, so the seeder must ───────────────
@@ -154,9 +219,41 @@ if dupes:
     sys.exit(f"REFUSING: duplicate slugs: {dupes}")
 print("orphan check: OK · duplicate check: OK")
 
-for r in R:
+# ── Two defects, both found by running this file on 2026-08-04 ─────────────
+#
+# 1. `--dry-run` was in the usage line and NOWHERE ELSE. There was no argv
+#    handling at all, so a run intended as a rehearsal wrote 43 rows to the
+#    live table. A documented flag that does nothing is the estate's signature
+#    defect wearing a new hat, and this one bit the person documenting it.
+#
+# 2. "additive on rows" meant literally additive: a second run POSTed every
+#    row again, duplicating 38 slugs. The orphan/duplicate gate above checks
+#    the rows this script PREPARES against each other, and never against what
+#    the table already holds — so it passed while producing duplicates.
+#
+# Both are fixed here: the flag is real, and seeding reads existing slugs first
+# and skips them. Deleting or updating an existing row is still deliberately
+# out of scope — this script adds, and a change to a filed row belongs to the
+# planner, not to a re-seed.
+DRY_RUN = "--dry-run" in sys.argv
+
+existing = {
+    r["values"].get("slug")
+    for r in req("GET", BASE + "/rows?limit=500")["data"]["rows"]
+}
+fresh = [r for r in R if r["slug"] not in existing]
+skipped = len(R) - len(fresh)
+print(f"already present: {skipped} · to insert: {len(fresh)}")
+
+if DRY_RUN:
+    for r in fresh:
+        print(f"  [dry] would insert {r['slug']:<24} {r['title'][:60]}")
+    print(f"DRY RUN — nothing was written. {len(fresh)} row(s) would be inserted.")
+    sys.exit(0)
+
+for r in fresh:
     req("POST", BASE + "/rows", {"values": r})
 
-after = req("GET", BASE + "/rows")["data"]["rows"]
+after = req("GET", BASE + "/rows?limit=500")["data"]["rows"]
 tops = [x for x in after if not x["values"].get("parent")]
 print(f"seeded: {len(after)} rows | top-level {len(tops)} | nested {len(after)-len(tops)}")
