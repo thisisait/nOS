@@ -287,7 +287,25 @@ final class Runner
 	 * @param array<int, ToolInterface> $tools
 	 * @param array<int, Message> $conversation
 	 * @param array<int, Span> &$spans
-	 * @return array{stop_reason: string, tokens_input: int, tokens_output: int, final_text: string}
+	 * @return array{stop_reason: string, tokens_input: int, tokens_output: int, final_text: string, conversation: array<int, Message>}
+	 *
+	 * `conversation` is RETURNED, and that is the fix for a defect this method
+	 * carried from the start (found 2026-08-04). `$conversation` is taken BY
+	 * VALUE — deliberately, so each outcome iteration restarts from prompt +
+	 * feedback — which means every assistant reply and every tool result the
+	 * agent produced died with the local copy when this returned. The caller
+	 * then built the grader's transcript from the OUTER conversation, so on
+	 * iteration 0 the grader was handed nothing but the original prompt.
+	 *
+	 * The Grader's own system prompt promises otherwise: "You CANNOT see the
+	 * agent's reasoning, only the artifact + its conversation transcript." The
+	 * transcript was the half that never arrived, so the outcome loop was
+	 * grading a blank page and its verdicts meant nothing.
+	 *
+	 * Returned rather than passed by reference on purpose: `&$conversation`
+	 * would ALSO carry the inner messages into the next iteration and silently
+	 * change the iteration contract (and its cost). That is a separate
+	 * decision, not a bug fix — see the note at the call site.
 	 */
 	private function runToolUseLoop(
 		Agent $agent,
@@ -456,6 +474,8 @@ final class Runner
 			'tokens_input' => $totalIn,
 			'tokens_output' => $totalOut,
 			'final_text' => $finalText,
+			// The work itself. Without this the grader sees only the prompt.
+			'conversation' => $conversation,
 		];
 	}
 
@@ -479,7 +499,20 @@ final class Runner
 		string $actorId,
 		array &$spans,
 	): array {
-		$grader = new Grader($llm); // grader uses the same LLM family
+		// The judge and the proposer must not share an identity. Bone's loop
+		// engine states it outright ("The judge is code. The proposer is a
+		// model."); this layer said the opposite in a trailing comment — "grader
+		// uses the same LLM family" — and meant it literally: the same client
+		// instance graded the work it had just produced.
+		//
+		// `model.grader` in agent.yml splits them. When it is absent the old
+		// behaviour stands, because forcing a second model on every agent would
+		// change cost for agents whose grade gates nothing; but the sharing is now
+		// a declared choice per agent instead of a property of the code.
+		$graderLlm = $agent->modelGraderUri !== null
+			? $this->llmFactory->fromUri($agent->modelGraderUri)
+			: $llm;
+		$grader = new Grader($graderLlm);
 		$totalIn = 0;
 		$totalOut = 0;
 		$result = 'failed';
@@ -504,8 +537,18 @@ final class Runner
 			$totalOut += $loopOut['tokens_output'];
 			$finalText = $loopOut['final_text'];
 
-			// Build transcript for grader
-			$transcript = $this->summariseConversation($conversation);
+			// Build transcript for grader — from the conversation the tool-use
+			// loop ACTUALLY had, not the outer one it was handed. Passing
+			// `$conversation` here was the defect: the outer array never
+			// receives the inner assistant/tool messages, so on iteration 0 it
+			// is literally just the prompt.
+			//
+			// NOT CHANGED, and it is a live question rather than an oversight:
+			// the next iteration still restarts from prompt + feedback, so the
+			// agent does not see its own previous attempt. That is arguably
+			// wrong too, but changing it alters what an iteration costs and
+			// means, so it belongs to whoever decides what this loop is FOR.
+			$transcript = $this->summariseConversation($loopOut['conversation'] ?? $conversation);
 			$gradeStart = self::now();
 			$gradeSpanId = TraceContext::newSpanId();
 			$gradeSpan = new Span(

@@ -42,6 +42,8 @@ final class Agent
 		public readonly string $description,
 		public readonly string $modelPrimaryUri,
 		public readonly ?string $modelFallbackUri,
+		/** Optional separate model for the outcome Grader; null = share the agent's. */
+		public readonly ?string $modelGraderUri,
 		public readonly ?string $systemPrompt,
 		public readonly array $tools,
 		public readonly string $multiagentType,

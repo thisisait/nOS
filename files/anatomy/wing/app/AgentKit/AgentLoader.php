@@ -200,6 +200,7 @@ final class AgentLoader
 			description: (string) $raw['description'],
 			modelPrimaryUri: $primary,
 			modelFallbackUri: $fallback,
+			modelGraderUri: isset($raw['model']['grader']) ? (string) $raw['model']['grader'] : null,
 			systemPrompt: $systemPrompt,
 			tools: $tools,
 			multiagentType: $mType,
