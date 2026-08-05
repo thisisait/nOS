@@ -186,11 +186,16 @@ class PulseDaemon:
             # headers from HTTP-client tracebacks, and gitleaks
             # captured-secret previews. Without this, those values
             # persist into wing.db.events + /audit + launchd.err.log.
+            # duration_ms is reported ONLY here, by the branch that ran the
+            # subprocess and timed it. The dry-run and daemon-exception calls
+            # below deliberately omit it: neither measured anything, and a 0
+            # would read as an instant run rather than an absent one.
             self.wing.post_run_finish(
                 run_id, finished_at_iso=_now_iso(),
                 exit_code=result.exit_code,
                 stdout_tail=redact.scrub_text(result.stdout_tail),
                 stderr_tail=redact.scrub_text(result.stderr_tail),
+                duration_ms=round(result.duration_s * 1000),
             )
         except Exception as e:  # noqa: BLE001 — broad catch on purpose; logged
             log.exception("job %s fatal: %s", job_id, e)

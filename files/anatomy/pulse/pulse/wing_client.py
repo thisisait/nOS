@@ -89,18 +89,36 @@ class WingClient:
 
     def post_run_finish(self, run_id: str, *, finished_at_iso: str,
                         exit_code: int, stdout_tail: str = "",
-                        stderr_tail: str = "") -> bool:
+                        stderr_tail: str = "",
+                        duration_ms: int | None = None) -> bool:
         # Wing PulsePresenter::actionRunFinish takes the run_id in the
         # URL path, not the body: POST /pulse_runs/<run_id>/finish. This
         # is also the call that triggers Wing's recordFinish() to advance
         # pulse_jobs.next_fire_at — so the URL drift was double-bad: 0
         # finish rows AND 0 cron advancement (jobs stayed NULL → "due").
-        return self._post(f"/api/v1/pulse_runs/{run_id}/finish", {
+        #
+        # duration_ms was MISSING from this payload until 2026-08-05, and the
+        # measurement had existed the whole time: the subprocess runner times
+        # every path it can take (success, timeout, not-found, allowlist
+        # refusal) and returns `duration_s`. This function simply had no
+        # parameter for it. Wing's recordFinish() persists the field, the
+        # schema documents it, and the operator's /pulse page SELECTs it — so
+        # across 17,254 runs the column was NULL and the UI rendered a blank
+        # column beside every job. Measured, transported nowhere.
+        #
+        # OMITTED, NOT ZEROED, when it is unknown. A dry run executed nothing
+        # and the daemon-exception path may have run for any length; sending 0
+        # would put a number where there is no measurement, which is how "we
+        # did not look" comes to read as "it was instant".
+        body = {
             "finished_at": finished_at_iso,
             "exit_code": exit_code,
             "stdout_tail": stdout_tail[-2000:],
             "stderr_tail": stderr_tail[-2000:],
-        })
+        }
+        if duration_ms is not None:
+            body["duration_ms"] = int(duration_ms)
+        return self._post(f"/api/v1/pulse_runs/{run_id}/finish", body)
 
     # ── internal ────────────────────────────────────────────────────────
 
