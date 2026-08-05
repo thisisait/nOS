@@ -62,6 +62,18 @@ import sys
 import tempfile
 from pathlib import Path
 
+# The checkout whose files are recorded. Defaults to the one this tool lives
+# in; `--repo` points it elsewhere.
+#
+# The flag is not a convenience. The scan runs from `playbook_dir` — the
+# operator's main checkout — while an agent doing repository work sits in a
+# worktree, and the tool only exists on the branch that worktree is on. On
+# 2026-08-05 that produced exactly the deadlock it was written to prevent: the
+# recorder could not be run from the checkout that had the data, and could not
+# read the data from the checkout that had the recorder. Worktrees share one
+# object store and one ref namespace, so recording ACROSS them is correct and
+# lands on the same branch either way; only the file content has to come from
+# the right tree.
 REPO = Path(__file__).resolve().parents[1]
 BRANCH = "scan-data"
 
@@ -173,8 +185,12 @@ def promote(branch: str) -> int:
 
 
 def main() -> int:
+    global REPO
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--branch", default=BRANCH)
+    ap.add_argument("--repo", metavar="PATH",
+                    help="record this checkout's files instead of the tool's own "
+                         "(worktrees share the ref, so the branch is the same)")
     ap.add_argument("--promote", action="store_true",
                     help="copy the branch's state into the working tree (no staging)")
     ap.add_argument("--dry-run", action="store_true",
@@ -182,6 +198,12 @@ def main() -> int:
     ap.add_argument("--push", metavar="REMOTE",
                     help="push the branch after recording (opt-in: this leaves the machine)")
     args = ap.parse_args()
+
+    if args.repo:
+        REPO = Path(args.repo).resolve()
+        if not (REPO / ".git").exists():
+            print(f"[-] {REPO} is not a git checkout", file=sys.stderr)
+            return 2
 
     if args.promote:
         return promote(args.branch)
