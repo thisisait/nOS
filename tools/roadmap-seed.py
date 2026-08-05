@@ -229,6 +229,102 @@ row("local-llm-intent", "Intent grading — effectful chains only", _FILED,
          "phrased as 'say in plain language what this will do' for the operator, rather than "
          "as a score, because a score is a comfortable place for a model to hide.")
 
+# ── SERE — the environment the loop needs before it can be autonomous ───────
+#
+# Named by the operator 2026-08-05: Self Enhancing Recursive Environment. The
+# name matters because "dreaming" was the first candidate and is already taken —
+# `AgentKit/Memory/Dreamer.php` + `agent_memory_stores` are cross-session memory
+# consolidation. One word for two things is the defect this estate spent the
+# month removing from its own code; it should not be introduced into its
+# vocabulary on purpose.
+#
+# THE ARGUMENT, in one line: a loop that modifies the estate cannot be verified
+# against the estate it modifies.
+
+_SERE = "2026-08-05"
+
+row("sere", "SERE — an environment the loop can develop in", _SERE,
+    "queued", "platform",
+    refs="docs/doctrine/workflows.md §5 · tools/worktree-lease.py · nos_coexistence",
+    body="Isolation for an autonomous loop, in three tiers, of which only two parallelise. "
+         "Almost every part already exists and was built for another purpose — worktrees, "
+         "the shape lease, the coexistence framework, tools/ci-local.sh, nos-stacks.sh, "
+         "profiles/all-on.yml. SERE is composition, not greenfield; the one genuinely "
+         "missing piece is a wet-test that does not pass an empty estate.")
+
+row("sere-a", "Tier A — verification without an estate", _SERE,
+    "next", "platform", parent="sere",
+    refs="tests/anatomy · files/anatomy/face vitest · tools/ci-local.sh",
+    body="pytest + vitest + syntax-check + the frozen CI venv. No containers, no shared "
+         "resource, so it parallelises without a lock and 90% of loop iterations should "
+         "never leave it. This tier is DONE — 2778 tests today — and enabling the loop "
+         "against it costs nothing. Start here rather than waiting for the rest.")
+
+row("sere-b", "Tier B — an ephemeral estate that actually serves", _SERE,
+    "blocked", "platform", parent="sere",
+    refs="docs/hidden_fees/08 · plat-linux",
+    body="Build an estate from nothing, verify, discard. CI does this on Ubuntu and it "
+         "proves nothing: infra does not render, `docker compose up infra` returns rc=1, and "
+         "the STRICT probe reports the empty result as `0/0 ready`. It was green for weeks "
+         "with no containers at all. THIS IS SERE'S PREREQUISITE, not a detail — a loop "
+         "whose test environment can pass empty is not autonomous, it is blind. Blocked on "
+         "plat-linux; do not duplicate that work here.")
+
+row("sere-c", "Tier C — the live estate is a mutex, not a test bed", _SERE,
+    "queued", "platform", parent="sere",
+    refs="files/anatomy/scripts/pulse-run-agent.sh · tools/worktree-lease.py",
+    body="One Mac, one Docker daemon, one Traefik on :443, one Authentik: two estates do not "
+         "fit on one machine, and coexistence provisions ONE service on a shifted port, not "
+         "a parallel estate. So Tier C is a scarce serialised resource and needs a MUTEX, "
+         "not a lease — the distinction is already drawn in-repo: worktree-lease.py guards a "
+         "worktree's SHAPE (paths immutable, content free) while pulse-run-agent.sh takes an "
+         "atomic mkdir lock because concurrent agent runs crashed every participant. A "
+         "converge belongs to the second kind. SERE asks the operator for this key; it does "
+         "not hold it.")
+
+row("sere-hosts", "Linux and a VPS, with Macs as the fallback", _SERE,
+    "queued", "platform", parent="sere",
+    refs="docs/linux-port.md · .github/workflows/ci.yml",
+    body="Operator's direction, 2026-08-05: multiple Macs would work but Linux plus a VPS is "
+         "the right target and is wanted soon. It is also the cheaper answer — Tier B needs "
+         "a host that can be created and destroyed, which a Mac cannot be, and v0.4-beta "
+         "already provisions Ubuntu 24.04 end-to-end. Parallelism then comes from hosts "
+         "rather than from contention on one daemon. Sequence it after sere-b: a second host "
+         "running the same blind wet-test buys two blind wet-tests.")
+
+# ── The loop's own gaps, distinct from the environment ──────────────────────
+
+row("loop-operator-model", "The operator's five steps, written down", _SERE,
+    "queued", "agents", parent="sere",
+    body="Stated 2026-08-05, recorded so it does not live only in a conversation: (1) promote "
+         "an idea from the planner to a plan; (2) review proposed plans and promote to a "
+         "workflow; (3) release it — cron, or a manual run; (4) file ideas and plans through "
+         "a channel OUTSIDE the master session (claw / hermes / a separate session); (5) "
+         "manual testing, to be replaced by a real Playwright e2e suite. Step 4 is the "
+         "riskiest, not the easiest: several channels writing ideas without dedup fills the "
+         "planner with near-duplicates, and discovery already needs an `obs-` prefix and a "
+         "slug-skip for exactly that reason.")
+
+row("loop-driver", "The loop engine has no driver", _SERE,
+    "queued", "agents", parent="sere",
+    refs="files/anatomy/bone/{judges,ledger,budget,looproutes}.py",
+    body="The engine is real — proposer/evaluator role split, and no endpoint accepts a "
+         "verdict at all (removing the input surface removes the class, rather than checking "
+         "who calls). But nothing schedules it: 9 proposals, all from 2026-08-02, and no "
+         "pulse job. It is a substrate awaiting a motor. The motor is also what closes the "
+         "operator's five steps, which describe the way IN and not how iteration N+1 learns "
+         "from N: a run must produce evidence, a judge read it, the ledger record it. "
+         "budget.py exists and is unused, which matters to an operator who has measured what "
+         "multi-agent runs cost.")
+
+row("loop-forget", "Nothing records what was already tried", _SERE,
+    "queued", "agents", parent="sere",
+    refs="wing.db loop_forgets (0 rows)",
+    body="An idea that was attempted and failed must be recorded AS attempted, or the planner "
+         "proposes it again — and keeps proposing it. The table exists and is empty. This is "
+         "the failure mode that makes a self-improving loop feel busy while going in circles, "
+         "and it is cheap to close before there is a driver rather than after.")
+
 print(f"prepared {len(R)} rows")
 
 # ── Orphan gate: KEAP cannot enforce this, so the seeder must ───────────────
