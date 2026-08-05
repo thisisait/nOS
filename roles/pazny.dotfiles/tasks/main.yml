@@ -6,6 +6,14 @@
     version: "{{ dotfiles_repo_version }}"
     accept_hostkey: "{{ dotfiles_repo_accept_hostkey }}"
   become: false
+  # RETRY (2026-08-05): a GitHub 429 on an unrelated clone killed a converge at
+  # task 605 of an hour-long run, and no clone in the estate had a retry. 30s,
+  # because a rate-limit is a cooldown rather than a blip — reasoning in
+  # roles/pazny.hermes/tasks/main.yml.
+  register: _dotfiles_clone
+  until: _dotfiles_clone is succeeded
+  retries: 5
+  delay: 30
 
 - name: Ensure all configured dotfiles are links.
   command: "ls -F {{ dotfiles_home }}/{{ item }}"

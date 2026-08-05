@@ -73,6 +73,16 @@
   # fetch-failure path calls fail_json WITHOUT rc — so an unfetchable/unpushed
   # ref was reclassified as ok and the PREVIOUS checkout got built under the
   # NEW image tag. Let the module's own failure signal through.
+  #
+  # RETRY (2026-08-05): a GitHub 429 on the hermes clone killed a converge at
+  # task 605. No clone in the estate had one. 30s delay because a rate-limit is
+  # a cooldown, not a blip — see roles/pazny.hermes/tasks/main.yml for the full
+  # reasoning. This still fails loudly on a bad ref: `until … is succeeded`
+  # respects the module's own failure signal, so five retries of an unfetchable
+  # ref end in the same refusal, just later.
+  until: _keap_clone is succeeded
+  retries: 5
+  delay: 30
   notify: Restart keap
 
 - name: "[pazny.keap] Render compose override fragment"

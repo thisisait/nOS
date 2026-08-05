@@ -49,6 +49,21 @@
     force: false
     depth: 1
   register: _hermes_clone
+  # RETRY, added 2026-08-05 after a GitHub HTTP 429 killed a converge at task
+  # 605 of an hour-long run. Not one `ansible.builtin.git` clone in this estate
+  # had a retry, while the Galaxy install has had a 6× loop for the same class
+  # of transient since the macOS runner started 504-ing. The lesson existed and
+  # was applied to one surface.
+  #
+  # THE DELAY IS 30s AND THAT IS THE POINT. A rate-limit is a COOLDOWN, not a
+  # blip: retrying after five seconds spends another token of the same exhausted
+  # bucket and fails identically, five times, faster. Match the delay to the
+  # kind of transient — a reset connection wants a short retry, a 429 wants a
+  # long one. 5 × 30s ≈ 2.5 minutes, which is a sane ceiling inside a converge
+  # and long enough for GitHub's unauthenticated window to reopen.
+  until: _hermes_clone is succeeded
+  retries: 5
+  delay: 30
   failed_when:
     - _hermes_clone.rc is defined
     - _hermes_clone.rc | default(0) != 0

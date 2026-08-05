@@ -59,6 +59,14 @@
   become: true
   become_user: "{{ homebrew_user }}"
   when: not pre_installed_brew.stat.exists
+  # RETRY (2026-08-05): fires only on a machine with no Homebrew, i.e. the very
+  # first run — the one place where a transient network failure is most
+  # expensive, because nothing after it can proceed. 30s delay: a rate-limit is
+  # a cooldown, not a blip (see roles/pazny.hermes/tasks/main.yml).
+  register: _brew_clone
+  until: _brew_clone is succeeded
+  retries: 5
+  delay: 30
 
 # Adjust Homebrew permissions.
 - name: Ensure proper permissions and ownership on homebrew_brew_bin_path dirs.
