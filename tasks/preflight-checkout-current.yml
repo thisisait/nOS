@@ -29,7 +29,11 @@
 # in a detached HEAD — none of those is drift, and refusing to run on them would
 # be this gate inventing a problem.
 
-- name: "[preflight] Refresh the remote-tracking ref (best effort, short timeout)"
+# ansible.builtin.git is a checkout module: its idempotence contract is "this
+# working tree is at this ref", and reaching it means it may reset or update the
+# tree. This task must do the opposite — look, never touch, and never move the
+# operator's checkout on its way to reporting that the checkout is stale.
+- name: "[preflight] Refresh the remote-tracking ref (best effort, short timeout)"  # noqa: command-instead-of-module
   ansible.builtin.command:
     cmd: git -c fetch.parallel=1 fetch --quiet origin
     chdir: "{{ playbook_dir }}"
