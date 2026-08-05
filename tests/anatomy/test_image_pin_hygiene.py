@@ -38,12 +38,11 @@ EXCEPTIONS = {
     ("default.config.yml", "dotfiles_repo_version"): "git repo branch ref (dotfiles), not a Docker image tag",
     ("default.config.yml", "freepbx_version"): "excluded service (abandoned image, unfixable CVEs)",
     ("default.config.yml", "face_version"): "nos/face is built locally from the vendored tree; the tag names a local build, not a registry pull",
-    # NOT a decision — drift that this gate could not see until it started
-    # reading the file that wins. kartoza/qgis-server DOES publish versioned
-    # tags, so this one is pinnable and should be pinned; it is listed rather
-    # than fixed here because changing a running service's image tag is a
-    # converge, not a test edit. Tracked as sec-qgis-floating-tag.
-    ("default.config.yml", "qgis_version"): "UNPINNED, newly visible 2026-08-05 — live container runs kartoza/qgis-server:latest; pin it on the next supervised converge",
+    # qgis_version LEFT this list the same day it joined it. It was listed as
+    # "UNPINNED, pin it on a supervised converge" and then digest-pinned to the
+    # image the host was already running — `latest@sha256:f825a561…` — which
+    # freezes it without changing what runs. This gate going red on the removal
+    # is the gate working.
     # mcp_grafana_version LEFT this list 2026-08-05. The exception said "pin
     # once confirmed"; confirming it showed there is no versioned tag to pin to
     # — mcp/grafana publishes only `latest`, last pushed 2026-07-08, seven days

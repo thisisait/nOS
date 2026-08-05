@@ -2115,7 +2115,7 @@ freepbx_timezone: "Europe/Prague"
 
 qgis_domain: "gis{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 qgis_port: 8071
-qgis_version: "latest"                 # WARNING: amd64 only (runs via Rosetta emulation on ARM64)
+qgis_version: "latest@sha256:f825a56109bea5a9b7bee50d43bdec472aa614276ea2fbd44e570e8bff8f74af"   # WARNING: amd64 only (Rosetta on ARM64). DIGEST-pinned 2026-08-05 to the image THIS host already runs, so the pin freezes rather than changes it (mcp_grafana_version precedent). It read a bare `latest` while the image-pin gate scanned only role defaults, where it read "LTR" — the gate certified a tag the estate has never run. Re-pin to a semver tag on a supervised converge.
 
 # ==============================================================================
 # DATA – METABASE (BI dashboards)
