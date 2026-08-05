@@ -56,6 +56,16 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 CONFIG = REPO / "default.config.yml"
 QUEUE = REPO / "docs/llm/security/remediation-queue.json"
+CLAUDE_MD = REPO / "CLAUDE.md"
+
+# Repo files that a NIGHTLY JOB writes and no job commits. Every one of these is
+# a fact the estate produced about itself, living in a working tree that git
+# considers dirty — one `git checkout` from gone, and invisible to anyone
+# reading the branch.
+HOST_WRITTEN = [
+    "docs/llm/security/remediation-queue.json",
+    "docs/llm/security/scan-state.json",
+]
 
 TABLE = "2d498264-bc9a-4324-9935-489e5e4d92f3"
 BASE = f"http://127.0.0.1:8091/api/tables/{TABLE}"
@@ -145,6 +155,26 @@ def image_tag(image: str) -> str | None:
     return tag if tag and "/" not in tag else None
 
 
+def queue_items() -> list[dict]:
+    data = json.loads(QUEUE.read_text(encoding="utf-8"))
+    if isinstance(data, list):
+        return data
+    return data.get("items", data.get("remediations", []))
+
+
+def at_head(relpath: str) -> str | None:
+    """The file's content as the CURRENT BRANCH holds it, or None.
+
+    None means "git could not answer" — a new file, a detached state, no git at
+    all. Every one of those is a reason to skip rather than to claim drift.
+    """
+    out = subprocess.run(
+        ["git", "-C", str(REPO), "show", f"HEAD:{relpath}"],
+        capture_output=True, text=True, timeout=30,
+    )
+    return out.stdout if out.returncode == 0 else None
+
+
 def numeric(v: str) -> tuple[int, ...] | None:
     """Only a WHOLE dotted-numeric version compares. Anything else skips.
 
@@ -222,11 +252,7 @@ def probe_queue_vs_running(images: dict[str, str], res: ScanResult) -> None:
     items sat `pending` while already live at their fix) is caught in the same
     comparison.
     """
-    data = json.loads(QUEUE.read_text(encoding="utf-8"))
-    items = data if isinstance(data, list) else data.get(
-        "items", data.get("remediations", []))
-
-    for item in items:
+    for item in queue_items():
         status = item.get("status")
         component, fix = item.get("component"), item.get("fix_version")
         if status not in ("resolved", "pending") or not component or not fix:
@@ -278,6 +304,148 @@ def probe_queue_vs_running(images: dict[str, str], res: ScanResult) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Probe C — what a nightly job WROTE vs what the branch HOLDS
+# ---------------------------------------------------------------------------
+
+def probe_artefact_vs_repo(res: ScanResult) -> None:
+    """A finding that exists only in a working tree has not been recorded.
+
+    The nightly security scan writes its results INTO the repository —
+    remediation-queue.json and scan-state.json — and nothing commits them. So
+    the estate's own knowledge of its exposure accumulates as an uncommitted
+    diff in whichever checkout the scan happened to run from. It is invisible
+    to anyone reading the branch, it does not reach CI, and a single
+    `git checkout` erases weeks of scanning.
+
+    This is not hypothetical. On 2026-08-05 the main checkout carried 165 rows
+    while `origin/dev` carried 152: thirteen findings, including two HIGH, that
+    only one directory on one machine knew about. A worktree opened from that
+    same repo read the 152-row copy and compared the WRONG SIDE — this scanner
+    included.
+
+    The pair is the file on disk against the file at HEAD. Byte equality is the
+    whole comparison, so there is nothing to guess.
+    """
+    for rel in HOST_WRITTEN:
+        path = REPO / rel
+        if not path.is_file():
+            res.skip("host-written artefact absent from this checkout")
+            continue
+        committed = at_head(rel)
+        if committed is None:
+            res.skip("artefact not tracked at HEAD")
+            continue
+        live = path.read_text(encoding="utf-8")
+        res.compared += 1
+        if live == committed:
+            continue
+
+        # A row-count delta when both sides parse; the divergence stands on its
+        # own either way, so a parse failure must not suppress the finding.
+        detail = ""
+        try:
+            def _n(text: str) -> int:
+                d = json.loads(text)
+                return len(d if isinstance(d, list) else d.get("items", []))
+            detail = f" ({_n(live)} rows on disk, {_n(committed)} at HEAD)"
+        except Exception:
+            pass
+
+        res.findings.append(Finding(
+            slug=f"{OBS_PREFIX}uncommitted-{Path(rel).stem}",
+            title=f"{Path(rel).name} on disk differs from the branch{detail}",
+            track="security",
+            refs=f"{rel} · git show HEAD:{rel}",
+            body=(
+                f"A nightly job writes {rel} and no job commits it, so its "
+                f"content{detail} exists only in this working tree. That has "
+                f"three consequences, and the third is the one that bites: it "
+                f"is invisible on the branch; it never reaches CI; and any "
+                f"OTHER checkout — a worktree, a fresh clone, this scanner — "
+                f"reads the stale committed copy and compares against it "
+                f"without knowing. Commit the artefact, or make the writing job "
+                f"commit it. Until then the estate's record of its own exposure "
+                f"is one `git checkout` from gone."
+            ),
+        ))
+
+
+# ---------------------------------------------------------------------------
+# Probe D — what the DOCUMENTATION claims vs what the file says
+# ---------------------------------------------------------------------------
+
+# The tally line names five statuses and a total, in a fixed order:
+#   **15 pending / 128 resolved / 5 vendor-blocked / 3 wontfix / 1 obsolete** of 152
+_TALLY = re.compile(
+    r"\*\*(\d+) pending / (\d+) resolved / (\d+) vendor-blocked / "
+    r"(\d+) wontfix / (\d+) obsolete\*\* of (\d+)"
+)
+
+
+def probe_doc_claim_vs_queue(res: ScanResult) -> None:
+    """CLAUDE.md quotes the backlog. The file is the backlog.
+
+    CLAUDE.md carries the counts inline and warns, in its own words, that "this
+    line has been wrong twice by inheritance" — a number copied forward from an
+    earlier session that nobody re-derived. That warning is the strongest
+    possible argument for the check: a document that knows it drifts, and asks
+    to be re-derived, is asking for exactly this comparison.
+
+    Both sides are machine-readable and the disagreement is arithmetic, so this
+    stays inside the precision rule. If the sentence is ever rephrased the
+    pattern stops matching and the probe SKIPS — silently agreeing would be the
+    worse failure, so the skip is counted and printed like every other.
+    """
+    if not CLAUDE_MD.is_file():
+        res.skip("CLAUDE.md absent")
+        return
+    m = _TALLY.search(CLAUDE_MD.read_text(encoding="utf-8"))
+    if m is None:
+        res.skip("CLAUDE.md tally sentence did not match its pattern")
+        return
+
+    claimed = {
+        "pending": int(m.group(1)), "resolved": int(m.group(2)),
+        "vendor-blocked": int(m.group(3)), "wontfix": int(m.group(4)),
+        "obsolete": int(m.group(5)),
+    }
+    claimed_total = int(m.group(6))
+
+    items = queue_items()
+    actual = {k: 0 for k in claimed}
+    for it in items:
+        s = it.get("status")
+        if s in actual:
+            actual[s] += 1
+    res.compared += 1
+
+    deltas = [f"{k}: doc {claimed[k]} vs file {actual[k]}"
+              for k in claimed if claimed[k] != actual[k]]
+    if claimed_total != len(items):
+        deltas.append(f"total: doc {claimed_total} vs file {len(items)}")
+    if not deltas:
+        return
+
+    res.findings.append(Finding(
+        slug=f"{OBS_PREFIX}claude-md-backlog-tally",
+        title=f"CLAUDE.md's backlog tally disagrees with the queue ({len(deltas)} field(s))",
+        track="platform",
+        refs="CLAUDE.md 'Security remediation backlog' · "
+             "docs/llm/security/remediation-queue.json",
+        body=(
+            "CLAUDE.md quotes the remediation backlog inline and the numbers no "
+            "longer match the file it names as authoritative:\n\n"
+            + "\n".join(f"  - {d}" for d in deltas)
+            + "\n\nThe document already warns that this line 'has been wrong "
+            "twice by inheritance'. A quoted count is a copy, and a copy with "
+            "no comparator drifts — which is the same defect the rest of this "
+            "scanner looks for, in prose. Re-derive from the file, or stop "
+            "quoting the numbers and point at it."
+        ),
+    ))
+
+
+# ---------------------------------------------------------------------------
 
 def file_rows(findings: list[Finding]) -> int:
     """POST rows the table does not already hold. HTTP only — no file writes."""
@@ -322,6 +490,8 @@ def main() -> int:
 
     probe_pin_vs_running(images, res)
     probe_queue_vs_running(images, res)
+    probe_artefact_vs_repo(res)
+    probe_doc_claim_vs_queue(res)
 
     if args.json:
         print(json.dumps({

@@ -26,8 +26,17 @@ name: discovery
 version: 0.1.0
 description: |
   Compares declared facts against observed ones and files the disagreements as
-  roadmap rows. Two probes today: what the estate is PINNED to versus what it
-  is RUNNING, and what the security queue CLAIMS versus what is running.
+  roadmap rows. Four probes today, in two families.
+
+  Against the LIVE ESTATE: what the estate is PINNED to versus what it is
+  RUNNING, and what the security queue CLAIMS versus what is running.
+
+  Against the REPOSITORY: what a nightly job WROTE versus what the branch
+  holds — the security scan writes its results into the repo and nothing
+  commits them, so weeks of findings can live as an uncommitted diff in one
+  directory — and what CLAUDE.md QUOTES about the backlog versus what the
+  queue file contains, a line the document itself warns "has been wrong twice
+  by inheritance".
 
   Precision over coverage, deliberately. Both sides must be machine-readable
   and the disagreement exact; ambiguous comparisons are SKIPPED and counted
