@@ -25,7 +25,7 @@
     that:
       - coexist_service is defined
       - coexist_tag is defined
-  tags: ['coexist-cleanup']
+  tags: ['coexist-cleanup', 'never']
 
 - name: "[coexistence_cleanup] Remove track {{ coexist_service }}/{{ coexist_tag }}"
   nos_coexistence:
@@ -41,7 +41,7 @@
     respect_ttl: "{{ coexist_respect_ttl | default(true) | bool }}"
     dry_run: "{{ coexist_dry_run | default(false) | bool }}"
   register: _coexist_cleanup_result
-  tags: ['coexist-cleanup']
+  tags: ['coexist-cleanup', 'never']
 
 - name: "[coexistence_cleanup] Summary"
   ansible.builtin.debug:
@@ -50,7 +50,7 @@
       - compose override: {{ _coexist_cleanup_result.result.compose_override }}
       - data backed up to: {{ _coexist_cleanup_result.result.backed_up_to | default('<n/a>') }}
       - nginx vhost: {{ _coexist_cleanup_result.result.nginx_vhost | default('<removed>') }}
-  tags: ['coexist-cleanup']
+  tags: ['coexist-cleanup', 'never']
 
 - name: "[coexistence_cleanup] Reload nginx"
   ansible.builtin.command: "{{ homebrew_prefix }}/bin/brew services reload nginx"
@@ -61,4 +61,4 @@
   when:
     - not (coexist_dry_run | default(false) | bool)
     - _coexist_cleanup_result.changed | default(false) | bool
-  tags: ['coexist-cleanup']
+  tags: ['coexist-cleanup', 'never']

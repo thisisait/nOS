@@ -1024,6 +1024,28 @@
       ansible.builtin.import_tasks: tasks/coexistence-deactivate.yml
       tags: ['coexist-deactivate', 'never']
 
+    # ── The three that were written but never wired ─────────────────────────
+    # provision / cutover / cleanup: task files complete, tagged, documented in
+    # four places (their own headers, framework-plan.md, coexistence-playbook.md,
+    # Wing's /coexistence empty state) — and imported by nothing. Bone calls all
+    # three (files/anatomy/bone/coexistence.py invoke_playbook), so every
+    # POST /api/v1/coexistence/{provision,cutover,cleanup} ran a playbook whose
+    # tag matched no task and came back rc=0. A tag is an entry point only if
+    # something imports it; the three siblings above are what that looks like.
+    #   ansible-playbook main.yml --tags coexist-provision \
+    #     -e coexist_service=grafana -e coexist_tag=new -e coexist_version=12.0.0
+    - name: "[Coexistence] Provision a track (opt-in)"
+      ansible.builtin.import_tasks: tasks/coexistence-provision.yml
+      tags: ['coexist-provision', 'never']
+
+    - name: "[Coexistence] Cut over to a track (opt-in)"
+      ansible.builtin.import_tasks: tasks/coexistence-cutover.yml
+      tags: ['coexist-cutover', 'never']
+
+    - name: "[Coexistence] Clean up a retired track (opt-in)"
+      ansible.builtin.import_tasks: tasks/coexistence-cleanup.yml
+      tags: ['coexist-cleanup', 'never']
+
     # ── Coexistence copy-data (A4 / Q3) — the relocated B5 data move ─────────
     # Manual, re-runnable "Copy data": run the secondary track's recorded
     # migration data-transform (pg_dumpall → restore) into its empty cluster,

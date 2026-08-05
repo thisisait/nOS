@@ -408,6 +408,15 @@
 - { name: "[Stacks] pazny.keap post", ansible.builtin.include_role: { name: pazny.keap, tasks_from: post.yml, apply: { tags: ['keap'] } }, when: "install_keap | default(false)", tags: ['keap'] }
 - { name: "[Stacks] pazny.ntfy post", ansible.builtin.include_role: { name: pazny.ntfy, tasks_from: post.yml, apply: { tags: ['ntfy'] } }, when: "install_ntfy | default(false)", tags: ['ntfy'] }
 - { name: "[Stacks] pazny.wing post", ansible.builtin.include_role: { name: pazny.wing, tasks_from: post.yml, apply: { tags: ['wing', 'security'] } }, when: "install_wing | default(true) and 'iiab' in (_remaining_stacks | default([]))", tags: ['wing', 'security'] }
+# Kuma's monitors are Tier-1 state derived from state/manifest.yml, but until
+# now their ONLY caller was the Tier-2 apps hook in apps_runner/tasks/post.yml,
+# four gates deep (a manifest rendered, compose rc=0, reconverge enabled). So an
+# estate with Tier-2 disabled monitored nothing, and `--tags uptime-kuma` — a tag
+# that task declares — could not reach it, because the parent include carries
+# only ['apps','tier2','apps-runner']. Tier-1 gets its own call site here; the
+# apps hook stays as the Tier-2 extension. setup-monitors.py upserts and never
+# prunes, so running it twice appends rather than churns.
+- { name: "[Stacks] pazny.uptime_kuma monitors (Tier-1)", ansible.builtin.include_role: { name: pazny.uptime_kuma, tasks_from: monitors.yml, apply: { tags: ['uptime-kuma'] } }, when: "install_uptime_kuma | default(false) and 'iiab' in (_remaining_stacks | default([]))", tags: ['uptime-kuma'] }
 # DevOps post-start
 - { name: "[Stacks] pazny.gitea post", ansible.builtin.include_role: { name: pazny.gitea, tasks_from: post.yml, apply: { tags: ['gitea'] } }, when: "install_gitea | default(false)", tags: ['gitea'] }
 - { name: "[Stacks] pazny.woodpecker post", ansible.builtin.include_role: { name: pazny.woodpecker, tasks_from: post.yml, apply: { tags: ['woodpecker'] } }, when: "install_woodpecker | default(false)", tags: ['woodpecker'] }

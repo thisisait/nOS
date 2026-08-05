@@ -46,7 +46,7 @@
     fail_msg: |
       tasks/coexistence-provision.yml requires coexist_service, coexist_tag
       and coexist_version (pass them via -e).
-  tags: ['coexist-provision']
+  tags: ['coexist-provision', 'never']
 
 - name: "[coexistence_provision] Provision track {{ coexist_service }}/{{ coexist_tag }}"
   nos_coexistence:
@@ -76,7 +76,7 @@
     web_service: "{{ coexist_web_service | default(true) | bool }}"
     dry_run: "{{ coexist_dry_run | default(false) | bool }}"
   register: _coexist_provision_result
-  tags: ['coexist-provision']
+  tags: ['coexist-provision', 'never']
 
 - name: "[coexistence_provision] Summary"
   ansible.builtin.debug:
@@ -88,7 +88,7 @@
       {% if _coexist_provision_result.result.clone is not none %}
       - clone: {{ _coexist_provision_result.result.clone.method }} ({{ 'ok' if _coexist_provision_result.result.clone.success else 'failed' }})
       {% endif %}
-  tags: ['coexist-provision']
+  tags: ['coexist-provision', 'never']
 
 # Only reload nginx when it's the active edge (install_nginx). On a Traefik-
 # primary install (the default) nginx isn't installed, so `brew services reload
@@ -107,4 +107,4 @@
     - not (coexist_dry_run | default(false) | bool)
     - install_nginx | default(false) | bool
     - _coexist_provision_result.changed | default(false) | bool
-  tags: ['coexist-provision']
+  tags: ['coexist-provision', 'never']

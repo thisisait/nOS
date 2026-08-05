@@ -129,7 +129,13 @@
         - apps_runner_reconverge_blueprints | default(true) | bool
         - install_authentik | default(false) | bool
         - _apps_has_authentik_consumers | bool
-      tags: ['authentik', 'iam', 'apps']
+      # Task-level tags here are only ever the reachable ones. This file is
+      # entered through the include in apps-up.yml, which carries
+      # ['apps','tier2','apps-runner'] — a dynamic include is itself
+      # tag-filtered, so `--tags authentik` never gets in and a tag declared
+      # here that the parent does not admit is a lie. The `apply:` block above
+      # is different: it scopes tasks INSIDE pazny.authentik and is correct.
+      tags: ['apps']
 
     # Force the "Reapply authentik blueprints" handler (play-level, in
     # main.yml) to fire RIGHT NOW so providers are live before Bone
@@ -145,7 +151,7 @@
         - apps_runner_reconverge_blueprints | default(true) in [true, 'true', 'True', 'yes', 'y', '1', 1]
         - install_authentik | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
         - _apps_has_authentik_consumers
-      tags: ['authentik', 'iam', 'apps']
+      tags: ['apps']
 
     # ── Hook 4: Bone HMAC-signed app.deployed events ────────────────────────
     # The Bone /api/v1/events endpoint accepts batch payloads {events: [...]},
@@ -369,11 +375,15 @@
       when:
         - install_portainer | default(false) | bool
         - portainer_register_apps_endpoint | default(false) | bool
-      tags: ['portainer', 'infra', 'apps']
+      tags: ['apps']
 
-    # ── Hook 6: Uptime Kuma — extend monitors with Tier-2 apps ──────────────
-    # _kuma_manifest_apps gets consumed by the new clause in
-    # roles/pazny.uptime_kuma/tasks/monitors.yml (added in this commit).
+    # ── Hook 6: Uptime Kuma — EXTEND monitors with Tier-2 apps ──────────────
+    # Extend, not provision. Tier-1 monitors come from the call site in
+    # tasks/stacks/stack-up.yml; until 2026-08-05 this was monitors.yml's ONLY
+    # caller, so an estate without Tier-2 apps monitored nothing at all.
+    # _kuma_manifest_apps is what this hook adds; monitors.yml defaults it to []
+    # so the Tier-1 call is complete on its own, and setup-monitors.py upserts
+    # without pruning, so running it twice appends.
     - name: "[Apps Post] Set _kuma_manifest_apps fact for uptime_kuma reconverge"
       ansible.builtin.set_fact:
         _kuma_manifest_apps: >-
@@ -388,7 +398,7 @@
       when:
         - apps_runner_reconverge_blueprints | default(true) | bool
         - install_uptime_kuma | default(false) | bool
-      tags: ['uptime-kuma', 'apps']
+      tags: ['apps']
 
     # ── Hook 7: GDPR Article 30 register — upsert one row per app ───────────
     # Each apps/<name>.yml passes the parser only if it contains a complete
