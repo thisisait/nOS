@@ -177,6 +177,26 @@ def test_the_bone_canary_compares_the_plist_to_the_running_job():
     )
 
 
+def test_nos_loop_is_put_somewhere_an_operator_can_type():
+    """The verbs exist; the command has to be reachable to matter.
+
+    It deployed to ~/bone/bin/nos-loop, which is on nobody's PATH, while every
+    §6.2 recipe in the contract is written as `nos-loop …`. Same defect as the
+    one this file is about, one layer down: capability present, invocation
+    absent. A symlink rather than a copy, so the command and the daemon cannot
+    become two versions of each other.
+    """
+    tasks = BONE_TASKS.read_text(encoding="utf-8")
+    assert "nos_cli_install_dir" in tasks and "nos-loop" in tasks, (
+        "the bone role no longer places nos-loop on PATH, so the contract's "
+        "recipes cannot be typed as written"
+    )
+    assert re.search(r"state:\s*link", tasks), (
+        "nos-loop is copied rather than linked — a second copy of the client "
+        "that drifts from the synced one"
+    )
+
+
 @pytest.mark.parametrize("verb", ["weaknesses", "budget", "propose", "judge", "history", "forget"])
 def test_each_shipped_verb_has_a_handler(verb):
     """argparse registering a name is not the same as a function existing."""

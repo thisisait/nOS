@@ -41,3 +41,8 @@ bone_wing_db_dir:  "{{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/
 bone_image_tag: "local"
 bone_image: "nos-bone:{{ bone_image_tag }}"
 bone_mem_limit: "512m"  # was a container limit; informational in host mode
+
+# Symlink ~/bone/bin/nos-loop into nos_cli_install_dir so the contract's §6.2
+# recipes can be typed as written. Off only for an operator who manages their
+# own PATH and does not want the role writing into it.
+bone_install_cli: true

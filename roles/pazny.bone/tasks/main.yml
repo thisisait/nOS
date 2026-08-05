@@ -108,6 +108,23 @@
       - "--exclude=Dockerfile"        # not needed at runtime in host mode
   notify: Restart bone
 
+# `nos-loop` is the operator's whole interface to the loop engine — the
+# weakness list, the budget, propose, judge, the wedge exit — and it landed at
+# ~/bone/bin/nos-loop, which is on nobody's PATH. A tool that has to be typed by
+# absolute path is one an operator reaches for once; the §6.2 recipes in the
+# contract all read `nos-loop …` and none of them would have run as written.
+#
+# A SYMLINK, not a copy, and that is the point: the target is the file rsync
+# just refreshed, so the command and the daemon can never be two versions of
+# each other. A second copy is a second thing to forget.
+- name: "[pazny.bone] Put nos-loop on PATH (symlink to the synced runtime copy)"
+  ansible.builtin.file:
+    src: "{{ bone_runtime_dir }}/bin/nos-loop"
+    dest: "{{ nos_cli_install_dir }}/nos-loop"
+    state: link
+    force: true
+  when: bone_install_cli | default(true) | bool
+
 # ── Service manager: launchd (macOS) | systemd --user (Linux) ─────────────────
 # Anatomy A3a put Bone on host launchd. The Linux sibling (2026-05-25 pilot)
 # renders a systemd --user unit via pazny.linux.systemd_user::ensure_unit. Both
