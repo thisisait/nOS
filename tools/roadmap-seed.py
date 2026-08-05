@@ -164,6 +164,24 @@ row("sec-pulse-env", "The job catalog handed out 57 live credentials", "2026-08-
          "the same env blocks sit in cleartext in wing.db, which the nightly backup ships to "
          "RustFS; the API is the reachable surface, the store is the durable one.")
 
+row("sec-queue-authorship", "The scan overwrites what a human wrote in the queue", "2026-08-05",
+    "queued", "security", parent="sec",
+    refs="docs/llm/security/remediation-queue.json · tools/scan-state-snapshot.py",
+    body="remediation-queue.json is TWO records in one file — the scanner's findings and the "
+         "operator's dispositions — and the scanner rewrites the whole file every night. "
+         "MEASURED 2026-08-05: REM-144's resolved_by and resolved_detail, which carried the "
+         "live-verification evidence for the Traefik prefix leak, were both null in the "
+         "working copy and intact in the committed one. The scanner did not merge; it "
+         "regenerated, and the fields it does not model went to null. Nothing noticed for a "
+         "day, and the reconciliation was a two-way merge rather than the copy it looks like. "
+         "Note also that the two sides spell the same fact differently — the scanner writes "
+         "`resolution`, the human wrote `resolved_by`/`resolved_detail` — which is the usual "
+         "shape one layer down. THE FIX IS NOT 'be careful': either the scanner reads the "
+         "committed file and preserves unmodelled fields, or dispositions move out of the "
+         "generated artifact entirely. FOUND BY THE LOOP, and that is the part worth keeping: "
+         "the ledger refused to key a retry ceiling on uncommitted evidence, which is what "
+         "made anyone look at the file at all.")
+
 # ── Local-LLM cortex pipeline — filed 2026-08-04, DESIGNED NOT DECIDED ──────
 #
 # Filed here rather than in a doc so the planner can revise it and the operator
