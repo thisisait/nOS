@@ -11,7 +11,7 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { StatusNote } from '$lib/components/ui';
+	import { StatusNote, Panel } from '$lib/components/ui';
 
 	let url = $state<string | null>(null);
 	let ready = $state(false);
@@ -38,12 +38,11 @@
 	{#if !ready}
 		<StatusNote kind="loading">loading…</StatusNote>
 	{:else if !url}
-		<div class="card">
-			<p>KEAP explore is not configured.</p>
-			<p class="muted">
+		<Panel variant="message">
+			<StatusNote kind="unwired" title="KEAP explore is not configured">
 				Set <code>face_keap_explore_url</code> (or enable KEAP) to link the graph.
-			</p>
-		</div>
+			</StatusNote>
+		</Panel>
 	{:else if inline}
 		<iframe
 			title="KEAP Explore"
@@ -53,8 +52,7 @@
 		></iframe>
 		<button class="link back" onclick={() => (inline = false)}>← back</button>
 	{:else}
-		<div class="card">
-			<h3>KEAP Explore</h3>
+		<Panel variant="message" title="KEAP Explore">
 			<p class="muted">The knowledge graph opens in KEAP as your signed-in user.</p>
 			<button class="cta" onclick={openTab}>Open KEAP Explore ↗</button>
 			<p class="note muted">
@@ -62,7 +60,7 @@
 				<code>frame-ancestors</code> header.
 				<button class="link" onclick={() => (inline = true)}>Try inline anyway</button>
 			</p>
-		</div>
+		</Panel>
 	{/if}
 </div>
 
@@ -81,18 +79,8 @@
 		border-radius: 8px;
 		background: #0b0d12;
 	}
-	.card {
-		margin: auto;
-		text-align: center;
-		max-width: 420px;
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
-		padding: 24px;
-	}
-	.card h3 {
-		margin: 0;
-	}
+	/* .card removed 2026-08-05 — byte-identical to ServiceFrame's. Both are
+	   <Panel variant="message"> now. */
 	.cta {
 		align-self: center;
 		background: var(--accent, #5a96ff);

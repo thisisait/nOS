@@ -16,7 +16,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { loadWing, type WingResponse } from '$lib/api/pulse';
 	import { isContested, type WingEventView, type WingNotificationView } from '$lib/anatomy/wing';
-	import { StatusNote, Badge, StateDot, severityTone } from '$lib/components/ui';
+	import { StatusNote, Badge, StateDot, Panel, severityTone } from '$lib/components/ui';
 
 	interface Props {
 		/** actor_action_id to narrow to, set by the shell when the operator
@@ -85,13 +85,10 @@
 		{/if}
 
 		<div class="cols">
-			<section>
-				<h3>
-					Events
-					<span class="of">
-						{events.length} shown of {data?.eventsTotal ?? 0} recorded
-					</span>
-				</h3>
+			<Panel title="Events">
+				{#snippet aside()}
+					<span class="of">{events.length} shown of {data?.eventsTotal ?? 0} recorded</span>
+				{/snippet}
 				{#if events.length === 0}
 					<StatusNote kind="empty" title="No events match">
 						{thread
@@ -117,17 +114,16 @@
 						{/each}
 					</ul>
 				{/if}
-			</section>
+			</Panel>
 
-			<section>
-				<h3>
-					Inbox
+			<Panel title="Inbox">
+				{#snippet aside()}
 					{#if (data?.contestedDeliveries ?? 0) > 0}
 						<Badge tone="bad" count={data?.contestedDeliveries}>
 							&nbsp;claimed sent with an error
 						</Badge>
 					{/if}
-				</h3>
+				{/snippet}
 				{#if notifications.length === 0}
 					<StatusNote kind="empty" title="No notifications">
 						Nothing has been raised{thread ? ' under this thread' : ''}.
@@ -164,7 +160,7 @@
 						{/each}
 					</ul>
 				{/if}
-			</section>
+			</Panel>
 		</div>
 	{/if}
 </div>
@@ -206,21 +202,11 @@
 			grid-template-columns: 1fr;
 		}
 	}
-	h3 {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		margin: 0 0 8px;
-		font-size: 12px;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		color: var(--muted, #9aa4b2);
-		font-weight: 600;
-	}
+	/* h3 removed 2026-08-05 — the section heading treatment is <Panel>'s now,
+	   in one place instead of four. */
 	.of {
-		text-transform: none;
-		letter-spacing: 0;
-		font-weight: 400;
+		font-size: 11px;
+		color: var(--muted, #9aa4b2);
 		opacity: 0.8;
 	}
 	ul {

@@ -13,6 +13,8 @@
   renders as an escaped attribute — never {@html}.
 -->
 <script lang="ts">
+	import Panel from './ui/Panel.svelte';
+
 	let { url, title, embed }: { url: string; title: string; embed?: boolean } = $props();
 
 	const valid = $derived(/^https?:\/\//.test(url));
@@ -54,8 +56,7 @@
 				></iframe>
 			{/key}
 		{:else}
-			<div class="card">
-				<h3>{title}</h3>
+			<Panel variant="message" {title}>
 				<p class="muted">Opens as your signed-in user (Authentik-gated).</p>
 				<button class="cta" onclick={openTab}>Open {title} ↗</button>
 				<p class="note muted">
@@ -63,7 +64,7 @@
 					<button class="link inlinebtn" onclick={() => (override = true)}>Try inline anyway</button
 					>
 				</p>
-			</div>
+			</Panel>
 		{/if}
 	{/if}
 </div>
@@ -99,21 +100,8 @@
 		border-radius: 8px;
 		background: #0b0d12;
 	}
-	.card {
-		margin: auto;
-		text-align: center;
-		max-width: 420px;
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
-		padding: 24px;
-	}
-	.card h3 {
-		margin: 0;
-	}
-	.center {
-		margin: auto;
-	}
+	/* .card removed 2026-08-05 — it was byte-identical to KeapExploreApp's, a
+	   literal copy-paste. Both are <Panel variant="message"> now. */
 	.cta {
 		align-self: center;
 		background: var(--accent, #5a96ff);

@@ -17,6 +17,7 @@
 	import { isControlPanelWindow } from '$lib/apps/control-panel/surfaces';
 	import { toPng } from 'html-to-image';
 	import type { WindowModel } from '$lib/contracts';
+	import Icon from './ui/Icon.svelte';
 
 	export interface DockApp {
 		/** Matches WindowModel.app (or, for Control Panel, use `isControlPanel`). */
@@ -110,7 +111,11 @@
 			onmouseleave={scheduleClose}
 		>
 			<span class="ico">
-				{app.icon.slice(0, 2)}
+				<!-- Was `app.icon.slice(0, 2)`. slice() counts UTF-16 code units, so a
+				     two-emoji icon like "⚡🔥" was cut mid-surrogate and rendered "⚡�".
+				     Reachable: hub icons come from an operator-authored hub_card glyph
+				     that the BFF passes through untouched. -->
+				<Icon icon={app.icon} title={app.title} size={22} labelled={false} />
 				{#if n > 0}<span class="badge">{n}</span>{/if}
 			</span>
 			<span class="lbl">{app.title}</span>

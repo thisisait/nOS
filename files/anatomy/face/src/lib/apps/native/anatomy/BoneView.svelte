@@ -16,7 +16,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { loadBone, type BoneResponse } from '$lib/api/pulse';
 	import { humanUptime, type BoneGap } from '$lib/anatomy/bone';
-	import { StatusNote, Badge, StateDot } from '$lib/components/ui';
+	import { StatusNote, Badge, StateDot, Panel } from '$lib/components/ui';
 
 	let data = $state<BoneResponse | null>(null);
 	let err = $state('');
@@ -52,8 +52,7 @@
 		<StatusNote kind="error" title="The face BFF did not answer">{err}</StatusNote>
 	{:else if data}
 		<div class="cards">
-			<section class="card">
-				<h3>Daemon</h3>
+			<Panel title="Daemon">
 				{#if data.alive}
 					<p class="line">
 						<StateDot tone="ok" label="responding" />
@@ -82,10 +81,9 @@
 						{data.error || 'no response'}
 					</StatusNote>
 				{/if}
-			</section>
+			</Panel>
 
-			<section class="card">
-				<h3>Vein · face → Bone VFS</h3>
+			<Panel title="Vein · face → Bone VFS">
 				<p class="line">
 					<StateDot tone={data.vfs?.ok ? 'ok' : 'bad'} label={data.vfs?.ok ? 'carrying' : 'not carrying'} />
 					<span>{data.vfs?.ok ? 'carrying traffic' : 'not carrying'}</span>
@@ -97,11 +95,11 @@
 						<code>NOS_VFS_API_TOKEN</code> breaks the vein, not the organ.
 					</StatusNote>
 				{/if}
-			</section>
+			</Panel>
 		</div>
 
-		<section class="card gaps">
-			<h3>Not visible from here</h3>
+		<div class="gaps">
+		<Panel title="Not visible from here">
 			<p class="intro">
 				These are read surfaces this view is not credentialed for. They are listed
 				rather than omitted: a panel that shows nothing where it cannot look
@@ -119,7 +117,8 @@
 				mint a face client with the <code>nos:state:read</code> scope, or have Bone
 				expose an ungated summary. Until then this view is honest about its reach.
 			</StatusNote>
-		</section>
+		</Panel>
+		</div>
 	{/if}
 </div>
 
@@ -141,22 +140,8 @@
 			grid-template-columns: 1fr;
 		}
 	}
-	.card {
-		padding: 12px;
-		border-radius: 10px;
-		background: rgba(255, 255, 255, 0.03);
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-	h3 {
-		margin: 0;
-		font-size: 12px;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		color: var(--muted, #9aa4b2);
-		font-weight: 600;
-	}
+	/* .card and h3 removed 2026-08-05 — both are <Panel> now, which is also
+	   where the uppercase heading treatment lives. */
 	.line {
 		display: flex;
 		align-items: center;

@@ -15,9 +15,22 @@
 	import { CANCELLED } from './types';
 	import { vfsList, vfsUpload, type VfsEntry } from '$lib/api/vfs';
 	import { crumbs, joinPath, basename } from '../paths';
+	import { Tabs, StatusNote, type TabSpec } from '$lib/components/ui';
 
 	let req = $state<PickerRequest | null>(null);
 	let mode = $state<'nos' | 'device'>('nos');
+
+	// "From device" only exists when the caller allows an upload, so the tab
+	// list is derived rather than fixed — <Tabs> arrow-keys over whatever it is
+	// given, so a two-item and a one-item strip both behave correctly.
+	const sourceTabs = $derived<TabSpec[]>(
+		req?.opts.allowUpload
+			? [
+					{ key: 'nos', label: 'From nOS' },
+					{ key: 'device', label: 'From device' }
+				]
+			: [{ key: 'nos', label: 'From nOS' }]
+	);
 	let cwd = $state('documents');
 	let entries = $state<VfsEntry[]>([]);
 	let selected = $state<VfsEntry | null>(null);
@@ -127,16 +140,11 @@
 				<button class="x" aria-label="Cancel" onclick={cancel}>✕</button>
 			</header>
 
-			<nav class="tabs">
-				<button class:active={mode === 'nos'} onclick={() => (mode = 'nos')}>From nOS</button>
-				{#if req.opts.allowUpload}
-					<button class:active={mode === 'device'} onclick={() => (mode = 'device')}
-						>From device</button
-					>
-				{/if}
-			</nav>
+			<div class="tabwrap">
+				<Tabs tabs={sourceTabs} bind:active={mode} label="File source" />
+			</div>
 
-			{#if err}<p class="err">{err}</p>{/if}
+			{#if err}<StatusNote kind="error" block={false}>{err}</StatusNote>{/if}
 
 			{#if mode === 'nos'}
 				<div class="crumbs">
@@ -228,23 +236,11 @@
 		color: var(--muted);
 		cursor: pointer;
 	}
-	.tabs {
-		display: flex;
-		gap: 6px;
+	/* The private tab strip is gone — it was a row of buttons with no ARIA at
+	   all, so assistive tech saw two unrelated controls and the keyboard needed
+	   a Tab press per source. <Tabs> is the real pattern. */
+	.tabwrap {
 		padding: 10px 14px 0;
-	}
-	.tabs button {
-		background: rgba(255, 255, 255, 0.06);
-		border: none;
-		color: var(--muted);
-		padding: 6px 12px;
-		border-radius: 8px 8px 0 0;
-		cursor: pointer;
-		font-size: 12px;
-	}
-	.tabs button.active {
-		background: rgba(255, 255, 255, 0.14);
-		color: var(--fg);
 	}
 	.crumbs {
 		display: flex;
@@ -350,9 +346,5 @@
 	.muted {
 		color: var(--muted);
 	}
-	.err {
-		color: #ff8080;
-		padding: 6px 14px;
-		font-size: 12px;
-	}
+	/* .err removed — the third private shade of red in the shell, now StatusNote. */
 </style>

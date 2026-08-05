@@ -16,15 +16,9 @@
 	import PulseView from './PulseView.svelte';
 	import WingView from './WingView.svelte';
 	import BoneView from './BoneView.svelte';
-	import { Badge } from '$lib/components/ui';
+	import { Tabs, type TabSpec } from '$lib/components/ui';
 
 	type ViewKey = 'pulse' | 'wing' | 'bone';
-
-	const VIEWS: Array<{ key: ViewKey; label: string; icon: string }> = [
-		{ key: 'pulse', label: 'Pulse', icon: '⏱' },
-		{ key: 'wing', label: 'Wing', icon: '🪶' },
-		{ key: 'bone', label: 'Bone', icon: '🦴' }
-	];
 
 	let active = $state<ViewKey>('pulse');
 
@@ -37,26 +31,20 @@
 		thread = actionId;
 		active = 'wing';
 	}
+
+	// The badge is derived, so the tab strip shows a thread is pinned even when
+	// the operator has switched away from Wing to check something else.
+	const tabs = $derived<TabSpec[]>([
+		{ key: 'pulse', label: 'Pulse', icon: '⏱' },
+		{ key: 'wing', label: 'Wing', icon: '🪶', badge: thread ? 'thread' : undefined },
+		{ key: 'bone', label: 'Bone', icon: '🦴' }
+	]);
 </script>
 
 <div class="anatomy">
-	<nav class="tabs" aria-label="Anatomy views">
-		{#each VIEWS as v (v.key)}
-			<button
-				class="tab"
-				class:on={active === v.key}
-				aria-current={active === v.key ? 'page' : undefined}
-				onclick={() => (active = v.key)}
-			>
-				<span class="ic" aria-hidden="true">{v.icon}</span>{v.label}
-				{#if v.key === 'wing' && thread}
-					<Badge tone="info" outline>thread</Badge>
-				{/if}
-			</button>
-		{/each}
-	</nav>
+	<Tabs {tabs} bind:active label="Anatomy views" />
 
-	<div class="body">
+	<div class="body" role="tabpanel" id="panel-{active}" aria-labelledby="tab-{active}">
 		{#if active === 'pulse'}
 			<PulseView onfollowthread={follow} />
 		{:else if active === 'wing'}
@@ -74,35 +62,9 @@
 		height: 100%;
 		min-height: 0;
 	}
-	.tabs {
-		display: flex;
-		gap: 4px;
-		padding-bottom: 8px;
-		border-bottom: 1px solid var(--glass-brd, rgba(255, 255, 255, 0.1));
-		flex-shrink: 0;
-	}
-	.tab {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		background: none;
-		border: none;
-		color: var(--muted, #9aa4b2);
-		padding: 6px 12px;
-		border-radius: 8px;
-		font-size: 13px;
-		cursor: pointer;
-	}
-	.tab:hover {
-		background: rgba(255, 255, 255, 0.06);
-	}
-	.tab.on {
-		background: rgba(255, 255, 255, 0.1);
-		color: var(--fg, #e8ecf3);
-	}
-	.ic {
-		font-size: 14px;
-	}
+	/* The tab strip's rules moved to $lib/components/ui/Tabs.svelte, which is
+	   also where it became an actual ARIA tablist — this one used
+	   aria-current="page", the attribute for navigation links. */
 	.body {
 		flex: 1;
 		min-height: 0;
