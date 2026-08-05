@@ -17,8 +17,9 @@
 	import WingView from './WingView.svelte';
 	import BoneView from './BoneView.svelte';
 	import { Tabs, type TabSpec } from '$lib/components/ui';
+	import { anatomyFocus, type AnatomyView } from '$lib/anatomy/focus';
 
-	type ViewKey = 'pulse' | 'wing' | 'bone';
+	type ViewKey = AnatomyView;
 
 	let active = $state<ViewKey>('pulse');
 
@@ -31,6 +32,16 @@
 		thread = actionId;
 		active = 'wing';
 	}
+
+	// A request from outside the window — the menubar asking for a view. It is
+	// consumed and cleared, so clicking the same chip twice fires twice.
+	$effect(() => {
+		const req = $anatomyFocus;
+		if (!req) return;
+		active = req.view;
+		if (req.thread !== undefined) thread = req.thread;
+		anatomyFocus.set(null);
+	});
 
 	// The badge is derived, so the tab strip shows a thread is pinned even when
 	// the operator has switched away from Wing to check something else.

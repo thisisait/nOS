@@ -148,12 +148,47 @@ def test_no_component_defines_a_private_card(path):
 # ── The bar on the shared layer ─────────────────────────────────────────────
 
 
-def test_the_primitives_layer_stays_a_vocabulary_not_a_library():
-    components = sorted(p.name for p in UI.glob("*.svelte"))
-    assert components, "no primitives at all — this gate is checking an empty directory"
-    assert len(components) <= 8, (
-        f"the primitives layer has grown to {len(components)} components "
-        f"({components}). index.ts's bar is three divergent copies before "
-        f"something is extracted; past eight this is a component library, which "
-        f"is a different and much larger commitment."
+# The count cap that used to live here is GONE, on the operator's call
+# (2026-08-05): more native apps are coming and a small library is the expected
+# outcome, so a number was going to be an obstacle rather than a guardrail.
+#
+# It is replaced by the property the cap was a crude proxy for: a shared layer
+# is only shared while it stays LOWER than everything that uses it. A count
+# never checked that — eight components each reaching up into an app would have
+# passed. These two checks fail on exactly the thing that turns a vocabulary
+# into a tangle.
+
+
+def test_every_primitive_is_exported_from_the_index():
+    """An unexported primitive gets imported by deep path, and a deep path is
+    how two callers end up on two different versions of the same idea."""
+    index = (UI / "index.ts").read_text(encoding="utf-8")
+    for comp in sorted(UI.glob("*.svelte")):
+        assert comp.stem in index, (
+            f"{comp.name} is not exported from $lib/components/ui/index.ts. "
+            f"Callers will reach it by deep path, which is exactly how the "
+            f"shell ended up with divergent copies of one idea before."
+        )
+
+
+@pytest.mark.parametrize(
+    "primitive", sorted(UI.glob("*.svelte")) + sorted(UI.glob("*.ts")),
+    ids=lambda p: p.name,
+)
+def test_a_primitive_never_imports_from_an_app(primitive):
+    """The layering rule, and the only one this layer needs.
+
+    A primitive that imports from `$lib/apps/**` or `$lib/anatomy/**` is no
+    longer a primitive — it is a feature component that happens to live in the
+    shared folder, and every app that imports it now depends on that feature.
+    That is the failure mode a component count cannot see and this one can.
+    """
+    if primitive.name.endswith(".test.ts"):
+        pytest.skip("a test may import anything it likes")
+    src = primitive.read_text(encoding="utf-8")
+    bad = re.findall(r"from\s+['\"](\$lib/(?:apps|anatomy)/[^'\"]+)['\"]", src)
+    assert not bad, (
+        f"{primitive.name} imports from {bad}. A shared primitive must sit "
+        f"BELOW everything that uses it; importing an app or a domain module "
+        f"inverts that and drags a feature into every consumer."
     )

@@ -10,6 +10,12 @@
 	} from '$lib/stores/desktop';
 	import type { Snippet } from 'svelte';
 	import { beginWindowDrag, updateWindowDrag, endWindowDrag } from '$lib/wm/drag'; // G3
+	import { scale } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
+	// ORIENTATION motion: where did this window come from, where did it go.
+	// 160ms, and 0 under prefers-reduced-motion — see ui/motion.ts for why the
+	// shell grows its own 40 lines here instead of taking a WebGL dependency.
+	import { duration } from './ui/motion';
 
 	let { win, children }: { win: WindowModel; children?: Snippet } = $props();
 
@@ -71,6 +77,7 @@
 	<!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
 	<section
 		class="win glass"
+		transition:scale={{ duration: duration('orient'), start: 0.96, opacity: 0, easing: cubicOut }}
 		style="left:{win.max ? 0 : win.x}px; top:{win.max ? 28 : win.y}px; width:{win.max
 			? '100vw'
 			: win.w + 'px'}; height:{win.max ? 'calc(100vh - 28px)' : win.h + 'px'}; z-index:{win.z};"

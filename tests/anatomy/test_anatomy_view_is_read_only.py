@@ -180,17 +180,13 @@ def test_anatomy_views_use_the_shared_status_component(view):
     )
 
 
-def test_the_ui_primitives_are_present_and_small():
-    """Small on purpose. A shared layer that grows without a bar becomes a
-    component library nobody wants to maintain — the rule in index.ts is that
-    something earns a place after three divergent copies exist."""
+def test_the_ui_primitives_are_present():
+    """Presence only. The layer's health is checked by layering, not by size —
+    see test_face_shell_vocabulary.py, where the count cap was replaced by the
+    property it was a crude proxy for."""
     assert UI.is_dir(), "$lib/components/ui is gone; the shared vocabulary went with it"
-    components = sorted(p.name for p in UI.glob("*.svelte"))
-    assert components, "no primitives at all — this gate is checking an empty directory"
-    assert len(components) <= 8, (
-        f"the primitives layer has grown to {len(components)} components "
-        f"({components}). That is a component library, not a shared vocabulary; "
-        f"re-read index.ts's bar before adding another."
+    assert sorted(UI.glob("*.svelte")), (
+        "no primitives at all — this gate is checking an empty directory"
     )
 
 

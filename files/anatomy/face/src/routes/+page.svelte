@@ -28,6 +28,10 @@
 		initFilePickerBridge
 	} from '$lib/apps/native'; // G5
 	import FilePicker from '$lib/apps/native/file-picker/FilePicker.svelte'; // G5
+	import MenubarStatus from '$lib/components/MenubarStatus.svelte';
+	import Clock from '$lib/components/Clock.svelte';
+	import { initShortcuts, SHORTCUTS, run as runShortcut } from '$lib/wm/shortcuts';
+	import { requestAnatomy, type AnatomyView } from '$lib/anatomy/focus';
 
 	let { data }: { data: PageData } = $props();
 	let apps = $state<HubApp[]>([]);
@@ -43,6 +47,9 @@
 		initWindowCache(); // G4: usePersistence + restore geometry for this viewport
 		// G5: postMessage file-picker bridge (origin allowlist hardened in G6/G7).
 		const stopBridge = initFilePickerBridge({ allowedOrigins: [] });
+		// Window keyboard control. Bindings avoid the browser's own (Cmd+W is
+		// tab-close) and bail inside text fields — see wm/shortcuts.ts.
+		const stopKeys = initShortcuts();
 
 		void (async () => {
 			try {
@@ -52,8 +59,17 @@
 			}
 		})();
 
-		return () => stopBridge?.();
+		return () => {
+			stopBridge?.();
+			stopKeys();
+		};
 	});
+
+	/** Menubar chip → open Anatomy on the view that answers it. */
+	function openAnatomy(view: AnatomyView) {
+		requestAnatomy(view);
+		launchNativeApp('anatomy');
+	}
 
 	// Singleton launch: focus an already-open window for this app instead of
 	// spawning an unbounded stack of duplicates (the "every link = new window" bug).
@@ -137,7 +153,16 @@
 			icon: '⊞',
 			run: () => applyTiling('2x2')
 		},
-		{ id: 'act:untile', title: 'Leave tiling', hint: 'window', icon: '◫', run: () => clearTiling() }
+		{ id: 'act:untile', title: 'Leave tiling', hint: 'window', icon: '◫', run: () => clearTiling() },
+		// The shortcuts are discoverable here rather than only in a source file.
+		// Selecting one performs it, so the palette doubles as the help sheet.
+		...SHORTCUTS.map((s, i) => ({
+			id: `key:${i}`,
+			title: s.what,
+			hint: s.chord,
+			icon: '⌨',
+			run: () => void runShortcut(s.action)
+		}))
 	]);
 </script>
 
@@ -147,11 +172,16 @@
 	     top-LEFT controls stay visible AND draggable underneath the bar. -->
 	<header class="menubar">
 		<strong>nOS</strong>
+		<span class="spacer"></span>
+		<!-- Ambient system awareness. Tier-1 only; everyone else sees nothing,
+		     which is deliberate — job failures are operator information. -->
+		<MenubarStatus onopen={openAnatomy} />
 		{#if data.identity.authenticated}
 			<span class="user">{data.identity.username}</span>
 		{:else}
 			<span class="user muted">not signed in</span>
 		{/if}
+		<Clock />
 	</header>
 
 	{#each $windows as win (win.id)}
@@ -201,13 +231,15 @@
 		height: 28px;
 		display: flex;
 		align-items: center;
-		justify-content: flex-end;
 		gap: 12px;
 		padding: 0 14px;
 		font-size: 13px;
 		z-index: 100000;
 		background: transparent; /* macOS-style: no fill */
 		pointer-events: none; /* click-through — window titlebars underneath stay live */
+	}
+	.spacer {
+		flex: 1;
 	}
 	.user {
 		color: var(--fg);
