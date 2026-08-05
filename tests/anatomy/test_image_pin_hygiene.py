@@ -20,7 +20,12 @@ VERSION_KEY_SUFFIXES = ("_version", "_image_version", "_tag")
 
 # (role, var) -> reason. Each is a DELIBERATE non-pin, not drift.
 EXCEPTIONS = {
-    ("pazny.mcp_gateway", "mcp_grafana_version"): "upstream tag UNVERIFIED at C1; minor MCP sidecar — pin once confirmed",
+    # mcp_grafana_version LEFT this list 2026-08-05. The exception said "pin
+    # once confirmed"; confirming it showed there is no versioned tag to pin to
+    # — mcp/grafana publishes only `latest`, last pushed 2026-07-08, seven days
+    # before the 0.17.1 fix REM-150 wants. So it is digest-pinned instead:
+    # `latest@sha256:9362bcf…`, which freezes the resident image without
+    # changing it. This gate going red on the removal is the gate working.
     ("pazny.mcp_gateway", "mcpo_version"): "ghcr.io/open-webui/mcpo publishes only main/latest — no semver tag exists",
     ("pazny.paperclip", "paperclip_version"): "ghcr.io/paperclipai/paperclip publishes only latest — no fixed tag exists",
     ("pazny.freepbx", "freepbx_version"): "excluded service (abandoned image, unfixable CVEs)",

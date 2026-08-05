@@ -51,7 +51,29 @@ mcp_postgres_database: "postgres"                       # default DB s read-only
 # Grafana service account token (created automatically in post.yml)
 mcp_grafana_url: "http://grafana:3000"                  # internal Docker service name
 mcp_grafana_image: "mcp/grafana"
-mcp_grafana_version: "latest"
+# DIGEST-PINNED, 2026-08-05. Not a version bump — there is nothing to bump TO.
+#
+# REM-150 (HIGH, CVE-2026-15583: the X-Grafana-URL header overrides the
+# configured base URL, so the sidecar forwards its GRAFANA_SERVICE_ACCOUNT_TOKEN
+# to an attacker-chosen host; fixed upstream in 0.17.1) recorded the action as
+# "pin the tag". Measured against the registry today, that action is a no-op:
+# `mcp/grafana` publishes ONLY `latest`, and its single tag was last pushed
+# 2026-07-08 — seven days BEFORE the fix. There is no 0.17.1 image, and the
+# floating tag has not moved, so a `docker pull` changes nothing.
+#
+# What the digest does buy is honesty. A floating tag means the resident image
+# can drift arbitrarily far from anything the repo records, with nothing to
+# show it — the same class as nextcloud's floating major tag, and the reason a
+# version-keyed scan calls this component "unknown" rather than "vulnerable".
+# Pinning the digest freezes what is already running (zero converge change:
+# this IS the resident image) and makes the exposure a stated fact instead of
+# an unmeasurable one. Re-check the registry when REM-150 is next reviewed; the
+# moment a versioned or rebuilt image appears, this becomes a real bump.
+#
+# Mitigations unchanged and load-bearing meanwhile: no host port published,
+# absent from state/manifest.yml so no Traefik router is derived, and fronting
+# mcpo is forward-auth gated plus --api-key protected.
+mcp_grafana_version: "latest@sha256:9362bcf6aa0e44e61f645b905cec03fb346a946a34a4dafecd7f3e28d3724014"
 mcp_grafana_port: 8765                                  # internal SSE port
 
 # ── OpenWebUI Anthropic connector ─────────────────────────────────────────────

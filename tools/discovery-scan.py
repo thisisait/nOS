@@ -135,14 +135,33 @@ def running_images() -> dict[str, str]:
     return images
 
 
+def _flat(s: str) -> str:
+    """Separator-insensitive key: `open-webui`, `open_webui`, `openwebui` → one."""
+    return s.replace("-", "").replace("_", "").lower()
+
+
 def container_for(service: str, images: dict[str, str]) -> tuple[str, str] | None:
-    """`<stack>-<service>-1` is the naming convention; match on the middle."""
-    want = service.replace("_", "-")
+    """`<stack>-<service>-1` is the naming convention; match on the middle.
+
+    Matching is SEPARATOR-INSENSITIVE, and that is not cosmetic. The security
+    queue writes `openwebui` and `calibreweb`; Docker names the containers
+    `iiab-open-webui-1` and `iiab-calibre-web-1`. An exact match skipped all
+    nine of those rows — including REM-138, which asks for Open WebUI 0.10.2
+    while the estate has been RUNNING 0.10.2. A stale `pending` row is exactly
+    what probe B exists to find, and the finder was blind to it because of a
+    hyphen.
+
+    The residual risk is a false match between two services whose names differ
+    only by separators. There is no such pair in this estate today, and if one
+    ever appears the comparison it produces is version-vs-version, which will
+    disagree loudly rather than silently.
+    """
+    want = _flat(service)
     for name, image in images.items():
         parts = name.split("-")
         # strip the leading stack and the trailing replica index
         middle = "-".join(parts[1:-1]) if len(parts) > 2 else name
-        if middle == want:
+        if _flat(middle) == want:
             return name, image
     return None
 
