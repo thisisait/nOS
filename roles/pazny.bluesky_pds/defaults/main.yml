@@ -12,7 +12,6 @@
 # not role-owned.
 # ==============================================================================
 
-bluesky_pds_version: "0.4"                          # aligned with default.config.yml; ghcr.io/bluesky-social/pds has no semver tags, 0.4 tracks current
 # AT Protocol forbids .local TLD. On dev (tenant_domain=dev.local) we fall back
 # to .dev.lan; on a real public TLD we use bsky.<tenant_domain> directly.
 # Federation only works on the public-TLD path (needs DNS + LE cert).

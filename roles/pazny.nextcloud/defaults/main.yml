@@ -15,7 +15,6 @@
 # Bumping the major on an EXISTING install: set this to your CURRENT data major
 # first, then step up ONE major per run (there is no upgrades/nextcloud.yml
 # recipe yet). Fresh blanks are unaffected — any value reinitializes cleanly.
-nextcloud_version: "33"                             # aligned with default.config.yml (source of truth — bump there too)
 nextcloud_port: 8085
 nextcloud_domain: "cloud{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 nextcloud_dir: "{{ ansible_facts['env']['HOME'] }}/projects/nextcloud"

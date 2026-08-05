@@ -6,7 +6,6 @@
 # Rosetta emulaci (`platform: linux/amd64`).
 # ==============================================================================
 
-qgis_version: "LTR"                                 # default.config.yml is source of truth (config-wins is intentional; tag convention differs)
 qgis_port: 8071
 qgis_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 qgis_cpus: "{{ docker_cpus_light | default('0.5') }}"

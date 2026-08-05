@@ -8,7 +8,6 @@
 # (vars_files > role defaults).
 # ==============================================================================
 
-postgresql_version: "16.14-alpine"                      # CVE-2026-6479 (SSL/GSS DoS) + 16.13 CVE-2026-2005/2006/2007 pin; aligned with default.config.yml (source of truth — bump there too)
 postgresql_port: 5432
 postgresql_root_user: "postgres"
 

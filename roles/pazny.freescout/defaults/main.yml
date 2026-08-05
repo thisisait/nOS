@@ -6,7 +6,6 @@
 # default.credentials.yml — centralized for prefix rotation.
 # ==============================================================================
 
-freescout_version: "2.1.5-php8.3"            # nfrastack img (tiredofit EOL @1.17.999); bundles FreeScout 1.8.231 (REM-142, 7 GHSA fixes); aligned with default.config.yml (source of truth — bump there too)
 freescout_domain: "helpdesk{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 freescout_port: 8090
 freescout_db_name: "freescout"

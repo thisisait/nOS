@@ -53,7 +53,7 @@ def _read_pin(path):
 
 
 def test_pin_is_the_cited_release():
-    for path in (CONFIG, ROLE_DEFAULT):
+    for path in (CONFIG,):
         tag = _read_pin(path)
         assert tag == PINNED_VERSION, (
             "%s pins mariadb_version=%r but the CVE citations claim %r is fixed. "
@@ -62,12 +62,9 @@ def test_pin_is_the_cited_release():
             % (path, tag, PINNED_VERSION))
 
 
-def test_config_and_role_default_pins_in_sync():
-    cfg, role = _read_pin(CONFIG), _read_pin(ROLE_DEFAULT)
-    assert cfg == role, (
-        "MariaDB pin shadow: default.config.yml=%r vs role default=%r. "
-        "config wins via vars_files, so a lone role bump is a DEAD pin — sync both."
-        % (cfg, role))
+# test_config_and_role_default_pins_in_sync retired 2026-08-05: the role default
+# no longer declares mariadb_version, so there is nothing left to be out of sync
+# with. `test_a_pin_is_declared_once` forbids the pair returning.
 
 
 def test_readme_table_cites_pinned_version():
@@ -76,16 +73,20 @@ def test_readme_table_cites_pinned_version():
         "README variables table no longer cites mariadb_version %r" % PINNED_VERSION)
 
 
-def test_every_cited_cve_present_in_all_three_sites():
-    """No orphaned citation: each CVE must appear in config + role default + README."""
+def test_every_cited_cve_present_in_both_surfaces():
+    """No orphaned citation: each CVE must appear in config + README.
+
+    It was three surfaces until the role default stopped declaring the pin. The
+    third was never a separate claim — it was the same sentence copied beside a
+    value that could not win — so dropping it removes an obligation, not a check.
+    """
     for cve in CITED_CVES:
         for label, path in (
             ("default.config.yml", CONFIG),
-            ("role default", ROLE_DEFAULT),
             ("role README", README),
         ):
             assert cve in _read(path), (
                 "%s is missing from %s (%s). All MariaDB CVE citations must stay "
-                "in sync across all three sites — an orphaned citation triggers "
+                "in sync across both surfaces — an orphaned citation triggers "
                 "audit confusion during compliance reviews "
                 "(CVE-2026-3494-orphaned-citation)." % (cve, label, path))

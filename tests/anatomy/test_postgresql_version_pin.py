@@ -43,17 +43,10 @@ def test_config_pin_at_or_above_floor():
         "(stale patch line, SSL/GSS DoS CVE-2026-6479)" % (tag, MIN_MINOR))
 
 
-def test_role_default_pin_at_or_above_floor():
-    major, minor, tag = _read_pin(ROLE_DEFAULT)
-    assert major == MAJOR, "PostgreSQL role-default major changed (%s)" % tag
-    assert minor >= MIN_MINOR, (
-        "role default postgresql_version=%s is behind the REM-088 floor 16.%d" % (tag, MIN_MINOR))
-
-
-def test_both_pins_in_sync():
-    _, _, cfg_tag = _read_pin(CONFIG)
-    _, _, role_tag = _read_pin(ROLE_DEFAULT)
-    assert cfg_tag == role_tag, (
-        "PostgreSQL pin shadow: default.config.yml=%r vs role default=%r. "
-        "config wins via vars_files, so a lone role bump is a DEAD pin — sync both."
-        % (cfg_tag, role_tag))
+# test_role_default_pin_at_or_above_floor and test_both_pins_in_sync lived here
+# until 2026-08-05. Both read roles/pazny.postgresql/defaults/main.yml, which no
+# longer declares the pin: `default.config.yml` outranks it, so the role default
+# was a line that could be edited without effect. Keeping a floor check on an
+# unreachable value would have been a gate certifying a version nothing runs,
+# and the sync check has nothing left to compare — one declaration cannot
+# disagree with itself. `test_a_pin_is_declared_once` now forbids the pair.

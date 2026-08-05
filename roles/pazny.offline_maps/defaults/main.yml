@@ -11,7 +11,6 @@
 # render, blank-reset path resolver).
 # ==============================================================================
 
-maps_tileserver_version: "v5.6.0"                   # default.config.yml is source of truth (config-wins is intentional; tag convention differs)
 maps_port: 8070                                     # Docker host port (compose template default)
 maps_domain: "maps{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 

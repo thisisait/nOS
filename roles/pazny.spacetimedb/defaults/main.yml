@@ -24,7 +24,6 @@
 # NOT enabled to keep port 5432 free for pazny.postgresql.
 # ==============================================================================
 
-spacetimedb_version: "v2.7.0-hotfix3"                    # default.config.yml is source of truth; pinned from latest (reproducibility)
 spacetimedb_port: 3030                           # host port → container 3000 (HTTP + WebSocket)
 spacetimedb_domain: "spacetime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 spacetimedb_mem_limit: "{{ docker_mem_limit_standard | default('2g') }}"

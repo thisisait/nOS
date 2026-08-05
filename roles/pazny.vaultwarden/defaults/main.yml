@@ -6,7 +6,6 @@
 # and are prefix-rotated. OIDC/SSO integration is optional (install_authentik).
 # ==============================================================================
 
-vaultwarden_version: "1.37.0"                       # CVE pins + S2 freshness 2026-06-10; aligned with default.config.yml (source of truth — bump there too)
 vaultwarden_port: 8062
 vaultwarden_domain: "pass{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 vaultwarden_signups_allowed: false                  # Admin creates accounts

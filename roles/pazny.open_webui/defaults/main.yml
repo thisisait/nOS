@@ -10,7 +10,6 @@
 # uses a hyphen (`open-webui`) — matches the existing convention.
 # ==============================================================================
 
-openwebui_version: "0.10.2"                         # Native MCP + function calling + code exec (0.8.x); aligned with default.config.yml (source of truth — bump there too)
 openwebui_port: 3004                                # Container 8080 → host 3004
 openwebui_domain: "ai{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 openwebui_enable_signup: true                       # false = admin manually adds users

@@ -14,25 +14,23 @@
 # retired: v2.x shipped, OIDC did not.
 # ==============================================================================
 
-# ── THE EFFECTIVE PIN IS 2.2.1, NOT "1" ──────────────────────────────────────
-# default.config.yml wins over this file, and it reads 2.2.1 (REM-073, applied
-# 2026-07-24 to close CVE-2026-33130). This default is the SHADOW half of the
-# pin pair recorded in memory `version-pins-default-config-shadow`; bumping it
-# alone changes nothing, and reading it alone tells you the wrong version.
+# ── THE PIN LIVES IN default.config.yml ──────────────────────────────────────
+# It read "1" here while the config read 2.2.1, and the config won every time.
+# The shadow line was deleted 2026-08-05 with the other 37; the history it
+# carried is worth keeping, because it is the reason the surviving rule exists.
 #
-# The comment that used to sit here said the opposite, and said it after the
-# fact: "migrating to v2.x is a separate operator call, not a mechanical pin.
-# '1' stays in v1.x; never jumps to v2.x." The upgrade engine jumped it
-# mechanically five weeks later and nothing compared the two statements. What
-# followed is on the record — Kuma 2 asks for a database type that the role did
-# not know to answer, so the container served its installer for ten days while
-# reporting `healthy`.
+# The comment that used to sit beside that dead line said: "migrating to v2.x is
+# a separate operator call, not a mechanical pin. '1' stays in v1.x; never jumps
+# to v2.x." The upgrade engine jumped it mechanically five weeks later and
+# nothing compared the two statements — a prose prohibition beside an
+# unreachable value. Kuma 2 then asked for a database type the role did not know
+# to answer, so the container served its installer for ten days while reporting
+# `healthy`.
 #
-# The rule that survives is narrower and enforceable: a MAJOR move here must be
+# The rule that survives is narrower and enforceable: a MAJOR move must be
 # accompanied by a re-reading of the post-start automation, because that
 # automation is version-shaped. tests/anatomy/test_kuma_pin_matches_automation.py
-# now fails when the pinned major outruns it.
-uptime_kuma_version: "1"                            # shadow default; default.config.yml is the effective pin (2.2.1)
+# fails when the pinned major outruns it.
 uptime_kuma_port: 3001
 uptime_kuma_domain: "uptime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 uptime_kuma_admin_user: "admin"

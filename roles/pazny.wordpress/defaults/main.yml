@@ -8,7 +8,6 @@
 # Ansible var precedence (vars_files > role defaults).
 # ==============================================================================
 
-wordpress_version: "6.9.4-php8.3-apache"            # default.config.yml wins. CVE-2026-63030 fix (6.9.5) not yet dockerized; see the config note.
 wordpress_port: 8084
 wordpress_domain: "wordpress{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 wordpress_dir: "{{ ansible_facts['env']['HOME'] }}/projects/wordpress"
