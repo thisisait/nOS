@@ -14,6 +14,7 @@
 	import type { DataTable } from '$lib/contracts';
 	import DataTableApp from '$lib/components/DataTableApp.svelte';
 	import CreateTableModal from '$lib/components/CreateTableModal.svelte';
+	import { StatusNote } from '$lib/components/ui';
 
 	let tables = $state<TableSummary[]>([]);
 	let loadingList = $state(true);
@@ -77,11 +78,11 @@
 			{/if}
 		</div>
 		{#if loadingList}
-			<p class="muted">loading…</p>
+			<StatusNote kind="loading" block={false}>loading…</StatusNote>
 		{:else if listErr}
-			<p class="err">{listErr}</p>
+			<StatusNote kind="error" block={false}>{listErr}</StatusNote>
 		{:else if tables.length === 0}
-			<p class="muted">No tables in KEAP yet.</p>
+			<StatusNote kind="empty" block={false}>No tables in KEAP yet.</StatusNote>
 		{:else}
 			<ul>
 				{#each tables as t (t.slug)}
@@ -98,9 +99,9 @@
 
 	<section class="main">
 		{#if loadingTable}
-			<p class="muted">loading table…</p>
+			<StatusNote kind="loading">loading table…</StatusNote>
 		{:else if tableErr}
-			<p class="err">{tableErr}</p>
+			<StatusNote kind="error">{tableErr}</StatusNote>
 		{:else if table}
 			{#key table.slug}
 				<DataTableApp {table} />
@@ -199,8 +200,6 @@
 		color: var(--muted, #9aa4b2);
 		font-size: 13px;
 	}
-	.err {
-		color: #ff8080;
-		font-size: 12px;
-	}
+	/* .err removed 2026-08-05 — errors are StatusNote now, so this app no
+	   longer has its own shade of red. */
 </style>

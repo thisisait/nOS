@@ -228,6 +228,61 @@ export async function pulseRuns(jobId?: string, limit = 50): Promise<unknown> {
 	return wingGet('/pulse_runs', p);
 }
 
+/** Recent events — the audit spine. `actor_action_id` is the thread that ties
+ *  a Pulse run to the events it produced, which is why Anatomy is one app. */
+export async function wingEvents(params: Record<string, string> = {}): Promise<unknown> {
+	return wingGet('/events', { limit: '60', ...params });
+}
+
+/** Notification inbox with its per-channel dispatch stamps. */
+export async function wingNotifications(params: Record<string, string> = {}): Promise<unknown> {
+	return wingGet('/notifications', { limit: '40', ...params });
+}
+
+// ── Bone (host daemon) ───────────────────────────────────────────────────────
+//
+// HONEST CREDENTIAL NOTE, measured 2026-08-05. The face holds BONE_VFS_TOKEN, a
+// STATIC bearer that `vfs.py::require_vfs_token` accepts for the /api/v1/vfs
+// router and nothing else. Bone's other read surfaces — /api/status,
+// /api/services, /api/health/aggregate — are `require_scope("nos:state:read")`
+// and want an Authentik-issued JWT; presenting the VFS token returns
+// `401 invalid JWT header: Not enough segments`, verified.
+//
+// So the Bone view reads what the face can actually reach and SAYS SO about the
+// rest. Rendering an empty services list because of a missing scope would be
+// the ten-days-healthy defect with a different cause.
+
+const BONE_BASE = () =>
+	(env.NOS_VFS_API_URL ?? 'http://host.docker.internal:8099/api/v1/vfs').replace(
+		/\/api\/v1\/vfs$/,
+		''
+	);
+
+/** Liveness — the ONE ungated Bone endpoint. No token, by design: it answers
+ *  "is Bone itself responding", which smoke probes and healthchecks need. */
+export async function boneHealth(): Promise<unknown> {
+	return asJson(await fetch(BONE_BASE() + '/api/health'));
+}
+
+/**
+ * Prove the vein the face actually depends on carries traffic.
+ *
+ * Bone being alive does not mean the face can talk to it — the VFS token could
+ * be unset or stale, and the file browser would then degrade quietly. One
+ * `stat` of the caller's own root answers that, and it is the only Bone surface
+ * the face is credentialed for.
+ */
+export async function boneVfsProbe(uid: string): Promise<{ ok: boolean; detail: string }> {
+	if (!VFS_TOKEN()) return { ok: false, detail: 'NOS_VFS_API_TOKEN is not set on the face container' };
+	try {
+		await vfs.stat(uid, '/');
+		return { ok: true, detail: 'stat / succeeded with the face VFS bearer' };
+	} catch (e) {
+		const msg = e instanceof UpstreamError ? `${e.status} ${e.message}` : String(e);
+		return { ok: false, detail: msg.slice(0, 300) };
+	}
+}
+
 // ── KEAP DataTables (config catalog SoT; G2 fleshes out the row shape) ────────
 
 export async function keapTableRows(slug: string, uid: string): Promise<unknown> {

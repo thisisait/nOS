@@ -19,6 +19,7 @@
 	import { ApiError } from '$lib/api/client';
 	import RowEditor from './RowEditor.svelte';
 	import { resolveView, orderRows, formatWhen } from '$lib/tables/view';
+	import { StatusNote, Badge } from './ui';
 
 	let { table }: { table: DataTable | null } = $props();
 
@@ -100,22 +101,28 @@
 </script>
 
 {#if !data || !view}
-	<p class="muted">No table.</p>
+	<StatusNote kind="empty">No table.</StatusNote>
 {:else}
 	<div class="dt">
 		<header class="dt-head">
 			<strong>{data.title}</strong>
 			{#if data.source === 'fallback'}
-				<span class="badge" title="KEAP unreachable — showing repo defaults">offline defaults</span>
+				<!-- `warn`, not neutral: repo defaults are not the live catalog, and
+				     a quiet marker is how that difference stops being noticed. -->
+				<Badge tone="warn" outline title="KEAP unreachable — showing repo defaults">
+					offline defaults
+				</Badge>
 			{/if}
 			{#if view.degradedFrom}
 				<!-- Say it, rather than rendering an empty article list that looks
 				     like the style is working. -->
-				<span
-					class="badge warn"
+				<Badge
+					tone="warn"
+					outline
 					title="The declared {view.degradedFrom} view needs a column this table no longer has — showing the grid."
-					>{view.degradedFrom} view unavailable</span
 				>
+					{view.degradedFrom} view unavailable
+				</Badge>
 			{/if}
 			<span class="spacer"></span>
 			{#if data.canWrite}
@@ -124,7 +131,7 @@
 		</header>
 
 		{#if rows.length === 0}
-			<p class="muted">No rows.</p>
+			<StatusNote kind="empty">No rows.</StatusNote>
 
 			<!-- ── GRID ─────────────────────────────────────────────────────── -->
 		{:else if view.style === 'grid'}
@@ -287,17 +294,9 @@
 	.edit-col {
 		text-align: right;
 	}
-	.badge {
-		font-size: 11px;
-		padding: 1px 7px;
-		border-radius: 999px;
-		background: rgba(255, 200, 90, 0.16);
-		color: #ffcf7a;
-	}
-	.badge.warn {
-		background: rgba(255, 120, 120, 0.16);
-		color: #ff9a9a;
-	}
+	/* .badge / .badge.warn / .muted removed 2026-08-05 — they are
+	   $lib/components/ui now, so this component's "offline defaults" marker no
+	   longer has its own private amber. */
 	.scroll {
 		overflow-x: auto;
 	}
@@ -315,9 +314,6 @@
 	th {
 		color: var(--muted, #9aa4b2);
 		font-weight: 600;
-	}
-	.muted {
-		color: var(--muted, #9aa4b2);
 	}
 
 	/* ── shared card furniture ─────────────────────────────────────────── */

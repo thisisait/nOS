@@ -3,6 +3,8 @@
  *  gates already are. */
 import { bffGet } from './client';
 import type { PulseSnapshot } from '$lib/anatomy/pulse';
+import type { WingSnapshot } from '$lib/anatomy/wing';
+import type { BoneSnapshot } from '$lib/anatomy/bone';
 
 /** The snapshot, plus the two ways it can be unavailable. `configured: false`
  *  means the token is not wired; `error` means Wing answered badly. Neither is
@@ -38,4 +40,28 @@ export async function loadRuns(
 		job_id: jobId
 	});
 	return { runs: r.runs ?? [], error: r.error };
+}
+
+// ── Wing + Bone (the other two Anatomy views) ────────────────────────────────
+
+export type WingResponse = Partial<WingSnapshot> & {
+	configured: boolean;
+	thread?: string;
+	note?: string;
+	error?: string;
+};
+
+/** `thread` is an `actor_action_id` — the value a Pulse run and the events it
+ *  produced share. Passing it is what makes the three views one story. */
+export async function loadWing(thread = '', type = ''): Promise<WingResponse> {
+	const params: Record<string, string> = {};
+	if (thread) params.thread = thread;
+	if (type) params.type = type;
+	return bffGet<WingResponse>('/bff/wing', params);
+}
+
+export type BoneResponse = Partial<BoneSnapshot> & { configured: boolean };
+
+export async function loadBone(): Promise<BoneResponse> {
+	return bffGet<BoneResponse>('/bff/bone');
 }

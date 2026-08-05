@@ -30,6 +30,7 @@
 		type VfsEntry
 	} from '$lib/api/vfs';
 	import { crumbs, joinPath } from './paths';
+	import { StatusNote } from '$lib/components/ui';
 
 	let cwd = $state('documents');
 	let entries = $state<VfsEntry[]>([]);
@@ -161,9 +162,9 @@
 	<div class="split">
 		<ul class="list">
 			{#if loading}
-				<li class="muted">loading…</li>
+				<li><StatusNote kind="loading" block={false}>loading…</StatusNote></li>
 			{:else if entries.length === 0}
-				<li class="muted">empty folder</li>
+				<li><StatusNote kind="empty" block={false}>empty folder</StatusNote></li>
 			{/if}
 			{#each entries as entry (entry.path)}
 				<li>

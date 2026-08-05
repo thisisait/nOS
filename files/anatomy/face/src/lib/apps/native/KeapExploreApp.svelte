@@ -11,6 +11,7 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { StatusNote } from '$lib/components/ui';
 
 	let url = $state<string | null>(null);
 	let ready = $state(false);
@@ -35,7 +36,7 @@
 
 <div class="explore">
 	{#if !ready}
-		<p class="muted center">loading…</p>
+		<StatusNote kind="loading">loading…</StatusNote>
 	{:else if !url}
 		<div class="card">
 			<p>KEAP explore is not configured.</p>
@@ -91,9 +92,6 @@
 	}
 	.card h3 {
 		margin: 0;
-	}
-	.center {
-		margin: auto;
 	}
 	.cta {
 		align-self: center;

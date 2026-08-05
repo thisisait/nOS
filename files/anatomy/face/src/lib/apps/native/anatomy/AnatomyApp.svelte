@@ -1,29 +1,42 @@
 <!--
   Anatomy — one app, three views of the same organism (Pulse / Wing / Bone).
 
-  ONE app rather than three, decided 2026-08-04: a pulse run, a wing event and a
-  bone action share an `actor_action_id` and are one story. Three windows lose
-  the thread the operator is actually following.
+  ONE app rather than three, decided 2026-08-04: a pulse run, a wing event and
+  a bone action share an `actor_action_id` and are one story. Three windows
+  lose the thread the operator is actually following.
 
-  THE SHELL OWNS: the tab strip, which view is selected, and the convention that
-  an unbuilt view says so. It owns NO data — each view fetches its own. That is
-  what lets the Wing and Bone views be added by dropping a component in beside
-  PulseView and adding a line to VIEWS, without editing anything here.
+  THE SHELL OWNS exactly two things: which view is selected, and the THREAD —
+  an `actor_action_id` a view can hand it, which the Wing view then narrows to.
+  It owns no data; each view fetches its own. That is what keeps a view
+  replaceable without touching this file.
 
-  Read-only. Actions stay in Wing UI, where the RBAC gates already are.
+  Read-only throughout. Actions stay in Wing UI, where the RBAC gates are.
 -->
 <script lang="ts">
 	import PulseView from './PulseView.svelte';
+	import WingView from './WingView.svelte';
+	import BoneView from './BoneView.svelte';
+	import { Badge } from '$lib/components/ui';
 
 	type ViewKey = 'pulse' | 'wing' | 'bone';
 
-	const VIEWS: Array<{ key: ViewKey; label: string; icon: string; built: boolean }> = [
-		{ key: 'pulse', label: 'Pulse', icon: '⏱', built: true },
-		{ key: 'wing', label: 'Wing', icon: '🪶', built: false },
-		{ key: 'bone', label: 'Bone', icon: '🦴', built: false }
+	const VIEWS: Array<{ key: ViewKey; label: string; icon: string }> = [
+		{ key: 'pulse', label: 'Pulse', icon: '⏱' },
+		{ key: 'wing', label: 'Wing', icon: '🪶' },
+		{ key: 'bone', label: 'Bone', icon: '🦴' }
 	];
 
 	let active = $state<ViewKey>('pulse');
+
+	/** The cross-view thread. A run in the Pulse view hands its actor_action_id
+	 *  up; the shell switches to Wing and passes it down. Nothing else in the
+	 *  shell knows what the value means — it is an opaque key here. */
+	let thread = $state('');
+
+	function follow(actionId: string) {
+		thread = actionId;
+		active = 'wing';
+	}
 </script>
 
 <div class="anatomy">
@@ -36,27 +49,20 @@
 				onclick={() => (active = v.key)}
 			>
 				<span class="ic" aria-hidden="true">{v.icon}</span>{v.label}
-				{#if !v.built}<span class="soon">not built</span>{/if}
+				{#if v.key === 'wing' && thread}
+					<Badge tone="info" outline>thread</Badge>
+				{/if}
 			</button>
 		{/each}
 	</nav>
 
 	<div class="body">
 		{#if active === 'pulse'}
-			<PulseView />
+			<PulseView onfollowthread={follow} />
+		{:else if active === 'wing'}
+			<WingView {thread} onclearthread={() => (thread = '')} />
 		{:else}
-			<!--
-				An explicit unbuilt state, NOT an empty panel. A blank pane in an
-				observability app reads as "nothing is happening", which is the exact
-				misreading this whole app exists to prevent.
-			-->
-			<div class="unbuilt">
-				<p class="h">The {VIEWS.find((v) => v.key === active)?.label} view is not built yet.</p>
-				<p>
-					This pane is empty because nobody has written it — not because the organ is idle.
-					Until it exists, use Wing UI for {active === 'wing' ? 'events and the timeline' : 'Bone actions and audit lineage'}.
-				</p>
-			</div>
+			<BoneView />
 		{/if}
 	</div>
 </div>
@@ -97,31 +103,10 @@
 	.ic {
 		font-size: 14px;
 	}
-	.soon {
-		font-size: 9px;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		opacity: 0.6;
-		border: 1px solid currentColor;
-		border-radius: 4px;
-		padding: 0 4px;
-	}
 	.body {
 		flex: 1;
 		min-height: 0;
 		overflow: auto;
 		padding-top: 10px;
-	}
-	.unbuilt {
-		max-width: 46ch;
-		margin: 32px auto;
-		text-align: center;
-		color: var(--muted, #9aa4b2);
-		font-size: 13px;
-		line-height: 1.6;
-	}
-	.unbuilt .h {
-		color: var(--fg, #e8ecf3);
-		font-weight: 600;
 	}
 </style>
