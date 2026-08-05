@@ -88,6 +88,44 @@ def test_an_unrouted_service_declares_a_loopback_probe(sid):
     )
 
 
+def test_the_smoke_catalog_consults_the_unrouted_list():
+    """Kuma was not the only consumer, and finding the second one took a converge.
+
+    `tools/nos-smoke.py` derives its Tier-1 probes from the same manifest and
+    had the same blind spot: `traefik` failed the smoke table on an otherwise
+    green run, correctly reporting a 404 that we had created on purpose. One
+    defect, two consumers — so the check covers both.
+    """
+    src = (REPO / "tools/nos-smoke.py").read_text(encoding="utf-8")
+    assert "traefik_skip_ids" in src, (
+        "nos-smoke.py no longer reads traefik_skip_ids, so it is back to probing "
+        "the edge for services deliberately removed from it."
+    )
+    assert "skip_ids" in src and "derive_from_manifest" in src, (
+        "the unrouted list is read but no longer reaches the catalog builder"
+    )
+
+
+def test_the_loopback_retry_covers_the_tenant_domain():
+    """A public tenant domain must not disable the DNS-blip retry.
+
+    The guard used to allow only .local/.test/.lan, so an operator on a public
+    domain (pazny.eu) got no retry at all: `paperclip` reported DEAD at 10ms on
+    a converge while healthy for 11 days, and `portainer` did the same minutes
+    later with `nodename nor servname provided`. A resolver blip rendered as a
+    dead service is how a smoke table becomes noise.
+    """
+    src = (REPO / "tools/nos-smoke.py").read_text(encoding="utf-8")
+    assert "_TENANT_SUFFIX" in src, (
+        "the loopback retry no longer knows the tenant domain, so every service "
+        "on a public-TLD tenant is one DNS blip away from a false DEAD"
+    )
+    assert "set_tenant_suffix" in src and "set_tenant_suffix(_tenant_domain_raw)" in src, (
+        "the tenant suffix is defined but never set from the resolved domain — "
+        "the retry stays disabled and the gate above passes on a dead letter"
+    )
+
+
 def test_the_monitor_builder_consults_the_unrouted_list():
     """Secondary, and knowingly weak: presence, not effect.
 

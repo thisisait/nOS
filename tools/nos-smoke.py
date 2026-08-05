@@ -146,9 +146,51 @@ def evaluate_when(expr: str | None, vars_dict: dict) -> bool:
 # Catalog assembly
 # ---------------------------------------------------------------------------
 
-def derive_from_manifest(manifest: dict, vars_dict: dict, defaults: dict) -> list[dict]:
+def unrouted_ids(repo: pathlib.Path) -> set:
+    """Service ids for which Traefik renders no router, so the edge 404s.
+
+    Measured 2026-08-05: `traefik` smoked ❌ on a converge that was otherwise
+    green, and it was correct to. REM-144's remediation is "take the dashboard
+    off the edge", so `services.yml.j2` derives no router and
+    `https://traefik.<tld>/` is a 404 BY DESIGN. The probe was asking a question
+    we had already answered by changing the routing, and the same is true of
+    bone and cortex.
+
+    A check that is permanently red is one an operator learns to skip past —
+    and the habit does not distinguish it from the next red thing.
+    """
+    data = load_yaml(repo / "roles/pazny.traefik/vars/main.yml")
+    return set(data.get("traefik_skip_ids") or [])
+
+
+def _loopback_probe(s: dict, vars_dict: dict) -> "tuple[str, list] | None":
+    """The manifest's own answer to 'how do you health-check this service'.
+
+    `health_check.url_template` is authored per service and, for the unrouted
+    ids, points at a loopback endpoint. Only its PATH is taken: the template
+    embeds a Jinja port var that may live in a role default rather than in
+    default.config.yml, and this tool resolves variables from the config layer
+    alone. An unresolvable port returns None and the caller drops the probe —
+    no probe beats a wrong one pointed at `http://127.0.0.1:/health`.
+    """
+    hc = s.get("health_check") or {}
+    tpl = hc.get("url_template") or ""
+    port_var = s.get("port_var")
+    if not tpl or not port_var:
+        return None
+    port = vars_dict.get(port_var)
+    if not port:
+        return None
+    path = tpl.split("}}")[-1] if "}}" in tpl else "/"
+    expect = hc.get("expect_status", 200)
+    return f"http://127.0.0.1:{port}{path}", [expect]
+
+
+def derive_from_manifest(manifest: dict, vars_dict: dict, defaults: dict,
+                         skip_ids: set | None = None) -> list[dict]:
     """Auto-derive one GET / probe per manifest service with domain_var."""
     out = []
+    skip_ids = skip_ids or set()
     for s in manifest.get("services", []):
         if "domain_var" not in s:
             continue
@@ -159,10 +201,21 @@ def derive_from_manifest(manifest: dict, vars_dict: dict, defaults: dict) -> lis
         if not domain:
             continue
         url = f"https://{domain}/"
+        expect_override = None
+        if s["id"] in skip_ids:
+            probe = _loopback_probe(s, vars_dict)
+            if probe is None:
+                # Unrouted AND no authored probe: there is nothing honest to
+                # ask. Dropping it is deliberate — see unrouted_ids().
+                continue
+            url, expect_override = probe
         out.append({
             "id": s["id"],
             "url": url,
-            "expect": defaults.get("expect", [200, 301, 302, 308]),
+            # A loopback health endpoint answers with its declared status or it
+            # has not answered; the edge list keeps 301/302/308 because a
+            # redirect there proves the router is alive, which is the point.
+            "expect": expect_override or defaults.get("expect", [200, 301, 302, 308]),
             "timeout": defaults.get("timeout", 5),
             "tier": 1,
             "note": f"manifest auto: {s.get('category','-')}/{s.get('stack','-')}",
@@ -302,10 +355,43 @@ def _is_name_resolution_error(exc) -> bool:
     )
 
 
+# The tenant's own namespace. Set once from the resolved tenant_domain; the
+# loopback retry below is allowed inside it and nowhere else.
+_TENANT_SUFFIX = ""
+
+
+def set_tenant_suffix(domain: str) -> None:
+    global _TENANT_SUFFIX
+    _TENANT_SUFFIX = (domain or "").strip().lstrip(".").lower()
+
+
 def _loopback_ok(url: str) -> bool:
-    """Only for names we expect the local edge to serve — never public hosts."""
-    host = urllib.parse.urlsplit(url).hostname or ""
-    return host.endswith(".local") or host.endswith(".test") or host.endswith(".lan")
+    """Names we expect the LOCAL EDGE to serve — never an arbitrary public host.
+
+    The original rule was `.local`/`.test`/`.lan`, on the reasoning that a probe
+    for a public name must not be answered by our own loopback and called
+    healthy. That reasoning is right and the rule was too narrow: an operator
+    running a PUBLIC tenant domain (pazny.eu here) serves the entire estate from
+    the local Traefik under that domain, so the retry was disabled for every
+    service on the host.
+
+    The consequence, measured 2026-08-05: a transient DNS failure became a hard
+    `DEAD` with no second look. `paperclip` smoked DEAD at 10ms on the converge
+    while its container was healthy for 11 days and Uptime Kuma had 40
+    consecutive successes — and `portainer` did the identical thing minutes
+    later, `URLError: nodename nor servname provided` at 23ms. That is a
+    resolver blip being reported as a dead service, which is the fastest way to
+    teach an operator that the smoke table is noise.
+
+    So the guard is now the TENANT'S OWN namespace, which is precise: these are
+    the names this host is supposed to serve. Anything outside it still gets no
+    loopback retry.
+    """
+    host = (urllib.parse.urlsplit(url).hostname or "").lower()
+    if host.endswith(".local") or host.endswith(".test") or host.endswith(".lan"):
+        return True
+    return bool(_TENANT_SUFFIX) and (
+        host == _TENANT_SUFFIX or host.endswith("." + _TENANT_SUFFIX))
 
 
 def _probe_via_loopback(url, ctx, timeout, method):
@@ -673,6 +759,9 @@ def main() -> int:
     vars_dict["_host_alias_seg"] = f".{_host_alias_norm}" if _host_alias_norm else ""
 
     _tenant_domain_raw = vars_dict.get("tenant_domain", "dev.local") or "dev.local"
+    # Names under the tenant domain are served by THIS host's edge, so a DNS
+    # blip on one of them earns a loopback retry rather than a DEAD verdict.
+    set_tenant_suffix(_tenant_domain_raw)
     _acme_zone = (
         f"{_host_alias_norm}.{_tenant_domain_raw}" if _host_alias_norm
         else _tenant_domain_raw
@@ -712,7 +801,8 @@ def main() -> int:
         # merge_catalog dedup logic).
         extras = extras + list(runtime_extras)
 
-    manifest_entries = derive_from_manifest(manifest, vars_dict, defaults)
+    manifest_entries = derive_from_manifest(
+        manifest, vars_dict, defaults, skip_ids=unrouted_ids(REPO))
     all_entries = merge_catalog(manifest_entries, extras, defaults, vars_dict)
 
     # ── Filters ────────────────────────────────────────────────────────────
