@@ -166,7 +166,52 @@
     - (nos_service_manager | default('launchd')) == 'launchd'
     - install_face | default(false) | bool
 
-- name: "[pazny.bone] Reload Bone when the canary shows stale code/env"
+# The canary above probes ONE route with ONE token and concludes "env live".
+# MEASURED 2026-08-05, and it had been true for at least two days: the plist
+# declared 22 environment variables, the loaded job carried 21, and the missing
+# one was BONE_LOOP_OPERATOR_TOKEN — the credential behind `nos-loop forget`,
+# which is the operator's ONLY exit from a wedged proposal fingerprint. Every
+# call returned 403 "invalid loop token" and the VFS canary stayed green the
+# whole time, because the variable it happens to read was one of the 21.
+#
+# WHY NO CONVERGE REPAIRED IT. The reload is notify-driven off the plist
+# TEMPLATE: change the file, get a bootout+bootstrap. The file was already
+# correct — a new key had been added and the job had been re-bootstrapped since
+# without it landing (launchd caches the env at load, and an empty value at the
+# moment of that load is dropped rather than carried). So the template was
+# idempotent, the handler never fired again, and the daemon stayed one variable
+# behind FOREVER. A gate comparing the template to the file cannot see this;
+# only one comparing the file to the RUNNING PROCESS can.
+#
+# Empty-valued keys are excluded on purpose: launchd does not surface them, so
+# including them would make this canary permanently red on any optional secret.
+- name: "[pazny.bone] Canary — every env key the plist declares is live in the loaded job"
+  ansible.builtin.shell: |
+    set -o pipefail
+    LABEL="{{ bone_launchd_label }}"
+    UID_NUM=$(id -u)
+    PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
+    if [ ! -f "$PLIST" ]; then echo "OK no-plist"; exit 0; fi
+    READ_KEYS='import json,sys;e=json.load(sys.stdin).get("EnvironmentVariables") or {};print(chr(10).join(sorted(k for k,v in e.items() if str(v).strip())))'
+    DECLARED=$(plutil -convert json -o - "$PLIST" 2>/dev/null | python3 -c "$READ_KEYS")
+    LIVE=$(launchctl print "gui/${UID_NUM}/${LABEL}" 2>/dev/null \
+      | sed -n 's/^[[:space:]]*\([A-Z][A-Z0-9_]*\) => .*/\1/p' | sort -u)
+    if [ -z "$DECLARED" ]; then echo "OK no-env"; exit 0; fi
+    MISSING=$(comm -23 <(printf '%s\n' "$DECLARED") <(printf '%s\n' "$LIVE"))
+    if [ -n "$MISSING" ]; then
+      echo "MISSING $(printf '%s ' $MISSING)"
+    else
+      echo "OK"
+    fi
+  args:
+    executable: /bin/bash
+  register: _bone_env_canary
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+- name: "[pazny.bone] Reload Bone when a canary shows stale code/env"
   ansible.builtin.shell: |
     LABEL="{{ bone_launchd_label }}"; UID_NUM=$(id -u)
     launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
@@ -176,8 +221,8 @@
   changed_when: true
   when:
     - (nos_service_manager | default('launchd')) == 'launchd'
-    - install_face | default(false) | bool
-    - (_bone_canary.status | default(0)) != 200
+    - (install_face | default(false) | bool and (_bone_canary.status | default(0)) != 200)
+      or ('MISSING' in (_bone_env_canary.stdout | default('')))
 
 - name: "[pazny.bone] Wait for Bone to recover after a stale-reload"
   ansible.builtin.uri:
