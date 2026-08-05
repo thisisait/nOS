@@ -67,10 +67,23 @@ class TestTwoIdentitiesNeverOne:
         assert _get(scoped_app, "/propose", PROPOSE_TOKEN).status_code == 200
         assert _get(scoped_app, "/judge", JUDGE_TOKEN).status_code == 200
 
-    def test_the_two_tokens_are_distinct_env_vars(self, loopauth):
-        env_vars = {v[0] for v in loopauth.IDENTITIES.values()}
-        assert len(env_vars) == len(loopauth.IDENTITIES) == 2, (
-            "one env var for both identities is one identity wearing two names"
+    def test_every_identity_has_an_env_var_of_its_own(self, loopauth):
+        """The law is one credential per identity, not a headcount.
+
+        This asserted `== 2` until the `operator` identity landed with the
+        `forget` scope, and then failed for saying something it never meant —
+        a third identity is exactly what the split is FOR. What must not
+        happen is two identities reading the same variable, because then the
+        scope split is decoration and one bearer holds both.
+        """
+        env_vars = [v[0] for v in loopauth.IDENTITIES.values()]
+        assert len(set(env_vars)) == len(loopauth.IDENTITIES), (
+            f"identities share an env var, so one token carries several scopes: "
+            f"{sorted(loopauth.IDENTITIES.items())}"
+        )
+        assert {"agent:proposer", "engine:evaluator"} <= set(loopauth.IDENTITIES), (
+            "the proposer/evaluator pair is Constraint A itself and may not be "
+            "renamed away"
         )
 
     def test_scope_resolution_never_returns_the_token(self, loopauth, tokens):
