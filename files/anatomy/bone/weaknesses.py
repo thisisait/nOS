@@ -85,7 +85,9 @@ import hashlib
 import json
 import os
 import re
+import sqlite3
 import subprocess
+import urllib.request
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -1213,6 +1215,180 @@ def _source_corpus_diff(dirty: set[str]) -> SourceReport:
 
 # ── Registry + ranking ──────────────────────────────────────────────────────
 
+# ── Source 6: Prometheus firing alerts ──────────────────────────────────────
+#
+# THE ONLY LIVE SIGNAL IN THIS READER, and it was missing until 2026-08-05.
+# Every source above reads a file, which makes them reproducible and makes this
+# reader blind to anything the estate notices at runtime. Measured that day:
+# five `NosWarningServiceDegraded` alerts had been firing since 2026-07-26 and
+# appeared in no queue, no fee, and no ledger.
+#
+# EVIDENCE IS THE IDENTITY, NOT THE READING. `evidence` holds only the alert
+# name and its labels, so the hash is stable while the alert keeps firing. The
+# value, the state and `activeAt` go in `observed`, which is never hashed. An
+# alert whose evidence changed every scrape would mint a fresh §4 retry-ceiling
+# key on every poll, which is the grinding this engine exists to prevent.
+#
+# NOT COMMITTABLE, AND THAT IS THE POINT. `evidence_committed=False`: there is
+# no repo file behind a live alert, so the ledger will REPORT it and refuse to
+# let it key a ceiling. Observable, not proposable — stated here rather than
+# discovered later by a proposer whose 201 turns into a 409.
+
+_PROM_SEVERITY = {
+    "critical": "critical", "high": "high", "error": "high",
+    "warning": "medium", "medium": "medium",
+    "info": "info", "low": "low",
+}
+
+
+def _source_prometheus_alerts(dirty: set[str]) -> SourceReport:
+    name = "prometheus-alerts"
+    base = os.environ.get("PROMETHEUS_URL", "http://127.0.0.1:9090").rstrip("/")
+    try:
+        req = urllib.request.Request(f"{base}/api/v1/alerts",
+                                     headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except Exception as exc:  # noqa: BLE001 — unreachable is a legitimate host state
+        return _unavailable(
+            name, required=False, path=None, status=STATUS_UNAVAILABLE,
+            detail=f"{base} not reachable: {type(exc).__name__}: {exc}",
+            evidence_committed=False,
+        )
+    if payload.get("status") != "success":
+        return _unavailable(
+            name, required=False, path=None, status=STATUS_MALFORMED,
+            detail=f"prometheus returned status={payload.get('status')!r}",
+            evidence_committed=False,
+        )
+
+    alerts = payload.get("data", {}).get("alerts", []) or []
+    firing = [a for a in alerts if a.get("state") == "firing"]
+    weaknesses: list[Weakness] = []
+    for alert in firing:
+        labels = alert.get("labels", {}) or {}
+        ann = alert.get("annotations", {}) or {}
+        alertname = str(labels.get("alertname") or "UnnamedAlert")
+        ident = hashlib.sha256(
+            json.dumps(labels, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()[:8]
+        target = labels.get("service") or labels.get("instance") or labels.get("job") or ""
+        weaknesses.append(Weakness(
+            weakness_id=f"alert:{alertname}:{ident}",
+            source=name,
+            severity=_PROM_SEVERITY.get(str(labels.get("severity", "")).lower(), "medium"),
+            title=f"{alertname} firing{f' — {target}' if target else ''}",
+            evidence={"alertname": alertname, "labels": labels},
+            observed={
+                "active_at": alert.get("activeAt"),
+                "value": alert.get("value"),
+                "summary": _clip(ann.get("summary") or ann.get("description")),
+                "runbook_url": ann.get("runbook_url"),
+            },
+            evidence_committed=False,
+        ))
+
+    return SourceReport(
+        name=name,
+        status=STATUS_OK,
+        # `observed`: this reader queried the server itself just now. No
+        # self-report to distrust, and nothing to corroborate it against.
+        freshness=Freshness(basis=BASIS_OBSERVED, value=_now().isoformat(),
+                            note=f"{len(alerts)} alert(s) known, {len(firing)} firing"),
+        weaknesses=weaknesses,
+        path=f"{base}/api/v1/alerts",
+        evidence_committed=False,
+    )
+
+
+# ── Source 7: pulse runs that failed ────────────────────────────────────────
+#
+# The scheduler records every run's exit code and nothing reads them for defect
+# purposes. Measured 2026-08-05: gitleaks and keap-features-sync had each
+# failed 3 times in the preceding fortnight and the tofu drift plan once —
+# visible only to an operator running SQL by hand.
+#
+# LATEST RUN ONLY, plus the streak. A job that failed a week ago and has
+# succeeded nightly since is not a present defect; reporting it would fill the
+# list with history and teach a reader to skim it.
+
+_PULSE_STREAK_DEPTH = 20
+
+
+def _source_pulse_runs(dirty: set[str]) -> SourceReport:
+    name = "pulse-runs"
+    db_path = Path(os.environ.get(
+        "WING_DB_PATH", os.path.expanduser("~/wing/app/data/wing.db")))
+    if not db_path.is_file():
+        return _unavailable(
+            name, required=False, path=db_path, status=STATUS_UNAVAILABLE,
+            detail="wing.db not present — Wing has not been provisioned here",
+            evidence_committed=False,
+        )
+    try:
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
+        conn.row_factory = sqlite3.Row
+        try:
+            rows = conn.execute(
+                """
+                SELECT job_id, exit_code, fired_at, stderr_tail
+                  FROM (SELECT job_id, exit_code, fired_at, stderr_tail,
+                               ROW_NUMBER() OVER (PARTITION BY job_id
+                                                  ORDER BY fired_at DESC) AS rn
+                          FROM pulse_runs)
+                 WHERE rn = 1 AND exit_code IS NOT NULL AND exit_code <> 0
+                """
+            ).fetchall()
+            streaks = {}
+            for row in rows:
+                recent = conn.execute(
+                    "SELECT exit_code FROM pulse_runs WHERE job_id = ? "
+                    "ORDER BY fired_at DESC LIMIT ?",
+                    (row["job_id"], _PULSE_STREAK_DEPTH),
+                ).fetchall()
+                streak = 0
+                for r in recent:
+                    if r["exit_code"] is None or r["exit_code"] == 0:
+                        break
+                    streak += 1
+                streaks[row["job_id"]] = streak
+        finally:
+            conn.close()
+    except sqlite3.Error as exc:
+        return _unavailable(
+            name, required=False, path=db_path, status=STATUS_MALFORMED,
+            detail=f"wing.db read failed: {exc}", evidence_committed=False,
+        )
+
+    weaknesses = []
+    for row in rows:
+        streak = streaks.get(row["job_id"], 1)
+        weaknesses.append(Weakness(
+            weakness_id=f"pulse:{row['job_id']}",
+            source=name,
+            # A single red run is a blip worth seeing; a streak is a job that
+            # has stopped working and nobody noticed.
+            severity="high" if streak >= 3 else "medium",
+            title=f"pulse job {row['job_id']} last exited {row['exit_code']}"
+                  + (f" ({streak} consecutive failures)" if streak > 1 else ""),
+            evidence={"job_id": row["job_id"], "exit_code": row["exit_code"],
+                      "consecutive_failures": streak},
+            observed={"fired_at": row["fired_at"],
+                      "stderr_tail": _clip(row["stderr_tail"], 400)},
+            evidence_committed=False,
+        ))
+
+    return SourceReport(
+        name=name,
+        status=STATUS_OK,
+        freshness=Freshness(basis=BASIS_OBSERVED, value=_now().isoformat(),
+                            note=f"{len(weaknesses)} job(s) whose latest run failed"),
+        weaknesses=weaknesses,
+        path=str(db_path),
+        evidence_committed=False,
+    )
+
+
 #: Source order IS the primary ranking key. Contract §9.1 leaves the ranking
 #: FUNCTION deliberately undecided ("v1 groups by source and sorts by severity
 #: within it"), so this is v1, stated as data rather than emerging from dict
@@ -1225,6 +1401,15 @@ SOURCE_ORDER: tuple[str, ...] = (
     "scan-state",
     "hidden-fees",
     "corpus-diff",
+    # Added 2026-08-05 after a survey found this reader — the estate's ONE
+    # component designed to answer "what is wrong here" — blind to both of its
+    # live defect signals. Five Prometheus alerts had been firing for ten days
+    # and three pulse jobs had failed, and neither appeared in `/weaknesses`
+    # because every source above reads a FILE. They rank last on purpose: a
+    # file-backed finding is reproducible from the repo, a live one is a
+    # snapshot of this host at this second.
+    "prometheus-alerts",
+    "pulse-runs",
 )
 
 #: name -> required. A required source's absence is a defect; an optional
@@ -1236,6 +1421,11 @@ SOURCE_REQUIRED: dict[str, bool] = {
     "scan-state": True,
     "hidden-fees": True,
     "corpus-diff": False,
+    # Optional: a host without observability, or one whose Wing DB has not been
+    # created yet, is not a defective host. Absence still speaks — it becomes an
+    # `unavailable` report rather than nothing.
+    "prometheus-alerts": False,
+    "pulse-runs": False,
 }
 
 
@@ -1305,6 +1495,8 @@ def collect() -> list[SourceReport]:
         "scan-state": _source_scan_state,
         "hidden-fees": _source_hidden_fees,
         "corpus-diff": _source_corpus_diff,
+        "prometheus-alerts": _source_prometheus_alerts,
+        "pulse-runs": _source_pulse_runs,
     }
     reports = [git_report]
     for name in SOURCE_ORDER[1:]:

@@ -28,6 +28,7 @@ CI-safe: text + YAML parsing only.
 from __future__ import annotations
 
 import pathlib
+import ast
 import re
 
 import pytest
@@ -280,11 +281,23 @@ def test_every_machine_written_path_still_exists(reader_src):
 
 
 def test_the_declared_sources_match_the_readers(reader_src):
-    order = re.search(r"SOURCE_ORDER: tuple\[str, \.\.\.\] = \(([^)]*)\)", reader_src)
-    required = re.search(r"SOURCE_REQUIRED: dict\[str, bool\] = \{([^}]*)\}", reader_src)
-    assert order and required
-    names = set(re.findall(r'"([^"]+)"', order.group(1)))
-    req_names = set(re.findall(r'"([^"]+)":', required.group(1)))
+    """AST, not a regex over the literal's body.
+
+    It was a regex until 2026-08-05, and a COMMENT inside SOURCE_ORDER that
+    happened to quote a phrase was read as a source name — the gate failed
+    against correct code and named a source that does not exist. A comment is
+    not data; parse the value, not the text around it.
+    """
+    module = ast.parse(reader_src)
+    names, req_names = set(), set()
+    for node in ast.walk(module):
+        if not isinstance(node, ast.AnnAssign) or not isinstance(node.target, ast.Name):
+            continue
+        if node.target.id == "SOURCE_ORDER":
+            names = set(ast.literal_eval(node.value))
+        elif node.target.id == "SOURCE_REQUIRED":
+            req_names = set(ast.literal_eval(node.value))
+    assert names and req_names, "SOURCE_ORDER / SOURCE_REQUIRED no longer parse"
     assert names == req_names, (
         f"SOURCE_ORDER and SOURCE_REQUIRED disagree: {names ^ req_names}. A source "
         "with no required-flag would decide its own absence severity."
@@ -296,7 +309,11 @@ def test_every_source_declares_a_freshness_basis(reader_src):
     """A source that returned a report without a basis could not be marked
     self-reported, which is requirement 2."""
     readers = re.findall(r"^def (_source_\w+)\(", reader_src, re.MULTILINE)
-    assert len(readers) == 5, f"expected 5 source readers, found {readers}"
+    # The law is "every reader declares a basis", not "there are exactly five".
+    # It read `== 5` and went red when the two live sources landed — a headcount
+    # standing in for a property, the same shape as the loop-identity gate that
+    # counted two tokens instead of comparing them.
+    assert len(readers) >= 5, f"source readers vanished: {readers}"
     for fn in readers:
         body = reader_src.split(f"def {fn}(", 1)[1].split("\n# ──", 1)[0]
         assert "Freshness(" in body and "basis=" in body, (
