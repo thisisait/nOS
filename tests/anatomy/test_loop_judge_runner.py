@@ -38,6 +38,8 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+import re
+import subprocess
 import sys
 
 import pytest
@@ -382,13 +384,13 @@ def test_a_completed_pytest_run_still_passes():
         registry=_one_judge_registry("pytest-anatomy", "repo"),
         repo_root=REPO,
         spawn=_fake_spawn(
-            **{"pytest": J.Completed(exit_code=0, stdout="2428 passed, 4 skipped in 185.93s\n")}
+            **{"pytest": J.Completed(exit_code=0, stdout="2788 passed, 25 skipped in 228.85s\n")}
         ),
         probe=_always_true,
         sandbox_factory=lambda root: (root, "sha-fake", lambda: None),
     )
     assert verdict.result is J.Result.PASS, verdict.reason
-    assert verdict.runs[0].work == 2428
+    assert verdict.runs[0].work == 2788
 
 
 def test_an_interrupted_pytest_that_did_fail_is_still_a_fail():
@@ -738,7 +740,7 @@ def test_pytest_never_runs_against_the_live_tree():
 
     def spy(argv, cwd, timeout_s):
         seen_cwd.append(cwd)
-        return J.Completed(exit_code=0, stdout="2500 passed in 190.00s\n")
+        return J.Completed(exit_code=0, stdout="2800 passed in 230.00s\n")
 
     sandbox = REPO.parent / "fake-sandbox"
     verdict = J.run_gate_set(
@@ -774,7 +776,7 @@ def test_every_judge_in_a_set_observes_exactly_one_tree():
         return {
             "ansible-lint": GREEN_ANSIBLE_LINT,
             "genome-codegen": GREEN_GENOME,
-            "pytest": J.Completed(exit_code=0, stdout="2500 passed in 190.00s\n"),
+            "pytest": J.Completed(exit_code=0, stdout="2800 passed in 230.00s\n"),
         }[_argv_key(argv)]
 
     sandbox = REPO.parent / "one-tree-sandbox"
@@ -917,10 +919,12 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 #:   pytest-anatomy  "2456 passed, 4 skipped in 194.76s"   (2026-08-02, this tree)
 #:   nos-smoke       len(state/smoke-catalog.yml: smoke_endpoints)   — see below
 #:   corpus-diff     one table compared is the floor for a diff
+#: RE-MEASURED 2026-08-05: ansible-lint "in 1463 files processed of 3133
+#: encountered" EXIT=0; pytest-anatomy "2788 passed, 25 skipped in 228.85s".
 MEASURED_WORK = {
-    "ansible-lint": 1400,
+    "ansible-lint": 1463,
     "genome-codegen": 2,
-    "pytest-anatomy": 2456,
+    "pytest-anatomy": 2788,
     "cortex-corpus-diff": 1,
 }
 
@@ -960,6 +964,50 @@ def test_the_ratchets_match_measured_reality():
 
     assert all(j.min_work >= 1 for j in reg.judges.values()), (
         "a min_work of 0 disables the ratchet and re-opens the zero-work false green"
+    )
+
+
+def test_the_pytest_ratchet_is_remeasured_against_collection():
+    """A ratchet that only compares committed numbers decays as the suite grows.
+
+    The gate above pins `min_work` to `MEASURED_WORK`, and both live in this
+    repo. That catches a floor set too low against the measurement of the day.
+    It cannot catch the other direction, and the other direction is what
+    happened: floor 2400, measurement 2456 from 2026-08-02, real suite 2788 by
+    2026-08-05. Neither number moved, both still agreed with each other, and a
+    run that had lost 14% of its collection cleared the floor. Same defect as
+    the 12x gap the comment in judge-sets.yml warns about — reached by growth
+    rather than by a guess, which is why nothing noticed.
+
+    So this one asks the suite instead of the file. `--collect-only` is the
+    cheap question (~7s, no test bodies run) and counts skips, which executed
+    work does not — hence the 5% allowance rather than equality.
+
+    nos-smoke does not need this: its floor is DERIVED from its catalog, so the
+    two cannot drift apart in either direction. That is the better shape, and
+    pytest cannot have it directly — collection is not a committed artifact —
+    but it can be forced to re-derive.
+    """
+    proc = subprocess.run(
+        [sys.executable, "-m", "pytest", "tests/anatomy", "--collect-only", "-q"],
+        cwd=REPO, capture_output=True, text=True, timeout=600,
+    )
+    match = re.search(r"(\d+)\s+tests? collected", proc.stdout)
+    assert match, (
+        "could not read a collection count from pytest; this gate has gone "
+        f"blind rather than green.\nstdout tail: {proc.stdout[-500:]}"
+    )
+    collected = int(match.group(1))
+    assert collected > 1000, f"collection returned {collected} — the run is broken, not the ratchet"
+
+    recorded = MEASURED_WORK["pytest-anatomy"]
+    assert recorded >= collected * 0.95, (
+        f"tests/anatomy now collects {collected} tests but the recorded "
+        f"measurement is {recorded}, a {1 - recorded / collected:.0%} gap. The "
+        f"ratchet has decayed by growth: re-run `pytest tests/anatomy -q`, put "
+        f"the passed count here, and raise min_work in state/judge-sets.yml to "
+        f"just below it. Leaving it is how a judge comes to certify a fraction "
+        f"of the suite it names."
     )
 
 

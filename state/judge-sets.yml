@@ -97,15 +97,24 @@ judges:
     runtime_s_p95: 190
     timeout_s: 900
     work_field: tests_executed
-    # RATCHET. MEASURED 2026-08-02 on this tree: "2456 passed, 4 skipped in
-    # 194.76s". It was 200 — 12x below reality — which is not a ratchet, it is
+    # RATCHET. MEASURED 2026-08-05 on this tree: "2788 passed, 25 skipped in
+    # 228.85s". It was 200 — 12x below reality — which is not a ratchet, it is
     # the absence of one: a run that lost 91% of its collection still cleared
     # it. That is exactly what let a SIGINT'd pytest read as a pass at 454 of
-    # 2432. The 28-test margin below the measurement absorbs host-conditional
-    # skips (skipped is not executed work); it is deliberately small, and the
-    # gate test_the_ratchets_match_measured_reality pins BOTH numbers so the
-    # margin cannot quietly grow back into a 12x gap.
-    min_work: 2400
+    # 2432. The margin below the measurement absorbs host-conditional skips
+    # (skipped is not executed work); it is deliberately small.
+    #
+    # RE-MEASURED because the ratchet had decayed the other way. The floor was
+    # 2400 against a 2026-08-02 measurement of 2456, and the suite grew to 2788
+    # without either number moving: a run that lost 14% of its collection
+    # cleared the floor, which is the same defect the 12x gap was, arrived at by
+    # growth instead of by a guess. The gate that was supposed to hold this
+    # compared the two COMMITTED numbers to each other, so it could not see
+    # reality move past both. It now re-measures collection
+    # (test_the_pytest_ratchet_is_remeasured_against_collection) and goes red
+    # when the record falls behind, which forces this line to be re-derived
+    # rather than left to age.
+    min_work: 2700
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,

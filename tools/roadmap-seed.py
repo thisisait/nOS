@@ -257,8 +257,14 @@ row("sere-a", "Tier A — verification without an estate", _SERE,
     refs="tests/anatomy · files/anatomy/face vitest · tools/ci-local.sh",
     body="pytest + vitest + syntax-check + the frozen CI venv. No containers, no shared "
          "resource, so it parallelises without a lock and 90% of loop iterations should "
-         "never leave it. This tier is DONE — 2778 tests today — and enabling the loop "
-         "against it costs nothing. Start here rather than waiting for the rest.")
+         "never leave it. This tier is DONE — 2788 tests today — and enabling the loop "
+         "against it costs nothing. Start here rather than waiting for the rest. "
+         "SAY WHICH SETS THOUGH (review 2026-08-05): three of the five judges are "
+         "estate-free, so Tier A unlocks the `fast` and `repo` sets and neither of the two "
+         "that contain nos-smoke. `live` declares requires: live_estate and `full` is "
+         "unattended: false — so until sere-c exists, an autonomous loop's best available "
+         "verdict comes from 3 of 5 judges, and no unattended configuration ever runs all "
+         "five. That is what makes sere-c a prerequisite rather than an upgrade.")
 
 row("sere-b", "Tier B — an ephemeral estate that actually serves", _SERE,
     "blocked", "platform", parent="sere",
@@ -308,14 +314,33 @@ row("loop-operator-model", "The operator's five steps, written down", _SERE,
 row("loop-driver", "The loop engine has no driver", _SERE,
     "queued", "agents", parent="sere",
     refs="files/anatomy/bone/{judges,ledger,budget,looproutes}.py",
-    body="The engine is real — proposer/evaluator role split, and no endpoint accepts a "
-         "verdict at all (removing the input surface removes the class, rather than checking "
-         "who calls). But nothing schedules it: 9 proposals, all from 2026-08-02, and no "
-         "pulse job. It is a substrate awaiting a motor. The motor is also what closes the "
-         "operator's five steps, which describe the way IN and not how iteration N+1 learns "
-         "from N: a run must produce evidence, a judge read it, the ledger record it. "
-         "budget.py exists and is unused, which matters to an operator who has measured what "
-         "multi-agent runs cost.")
+    body="The engine is real: the proposer and the evaluator hold different bearer tokens, and "
+         "no route lets a caller submit a verdict of its own — the input surface is absent "
+         "rather than guarded, which is why there is nothing to bypass. But nothing schedules "
+         "it: 9 proposals and 19 judge runs, all 2026-08-02/03, and no pulse job. It is a "
+         "substrate awaiting a motor. The motor is also what closes the operator's five steps, "
+         "which describe the way IN and not how iteration N+1 learns from N: a run must "
+         "produce evidence, a judge read it, the ledger record it. "
+         "CORRECTED 2026-08-05 (review): this row said budget.py was unused. It is not — "
+         "looproutes.py imports it, serves it at GET /loop/budget, and enforces it on both the "
+         "proposal and the seal. The live KEAP row still carries the wrong sentence; the "
+         "seeder is additive and will not rewrite it.")
+
+row("loop-reach", "What the loop may touch vs where the bugs are", "2026-08-05",
+    "queued", "agents", parent="sere",
+    refs="files/anatomy/bone/budget.py ALLOWED_ROOTS (§5.3)",
+    body="§5.3 is a positive whitelist — roles/, files/anatomy/plugins/, tasks/, apps/, "
+         "upgrades/, default.config.yml — and everything outside it is denied whether or not "
+         "a rule names it. That is the right shape. The question the review raises is whether "
+         "the shape matches where defects actually are, and the honest answer today is "
+         "PARTLY. Measured against the four fixes of 2026-08-05: two sat in tasks/ and roles/ "
+         "and were inside the loop's reach; two were not. tools/nos-smoke.py is outside "
+         "(tools/ is not a root), and main.yml is outside (it is not listed) — so the orphaned "
+         "coexist-provision/cutover/cleanup entry points, a defect discovery is well shaped to "
+         "FIND, needed a fix the loop may not WRITE. Do not widen the list reflexively: "
+         "main.yml is the orchestrator and default-denying it is defensible. The work is to "
+         "decide deliberately, per root, and to record the reason — a proposer that keeps "
+         "hitting a wall it cannot see is a proposer that learns to propose nothing.")
 
 row("loop-forget", "Nothing records what was already tried", _SERE,
     "queued", "agents", parent="sere",
