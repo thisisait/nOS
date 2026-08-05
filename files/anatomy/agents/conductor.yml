@@ -129,6 +129,36 @@ pulse:
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
         DRIFT_STALE_HOURS: "336"
 
+    # 2026-08-05: record the scan's output, because until now nothing did.
+    #
+    # scan-runner.sh writes remediation-queue.json + scan-state.json into the
+    # repository and never mentions git, so months of findings accumulated as an
+    # uncommitted diff in one checkout. Measured that day: the main checkout
+    # carried 165 rows, origin/dev carried 152 — thirteen findings, two HIGH,
+    # that only one directory on one machine knew about, and one `git checkout`
+    # from gone.
+    #
+    # A SEPARATE JOB rather than a line at the end of scan-runner, for two
+    # reasons: a broken recorder must not be able to fail the scan, and the
+    # queue has other writers (an agent flipping a status, an operator adding a
+    # rationale) whose edits deserve recording just as much.
+    #
+    # 03:30 — after the 02:00 scan's 1800s ceiling has expired, so it records a
+    # settled file rather than one being written.
+    #
+    # It moves ONE ref and touches no working tree; the paths it may commit are
+    # a hardcoded allow-list, so it cannot pick up the operator's in-flight work.
+    # See the tool's header for the plumbing and for why `git commit` in a live
+    # tree was the wrong answer.
+    - name: scan-state-record
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/scan-state-snapshot.py"
+      schedule: "30 3 * * *"         # 03:30 UTC daily
+      jitter_min: 5
+      max_runtime_s: 120
+      max_concurrent: 1
+      env: {}
+
     # Nervy (2026-05-25): autonomous vulnerability scan — the LLM scan-REFRESH
     # half. Migrated from the launchd eu.thisisait.nos.vulnscan job to unified
     # Pulse scheduling (alongside gitleaks + conductor), per tasks/vulnerability-
