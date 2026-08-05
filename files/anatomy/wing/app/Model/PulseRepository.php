@@ -322,6 +322,137 @@ final class PulseRepository
 		);
 	}
 
+	// ── Run history, read-only (face Anatomy view, 2026-08-05) ──────────
+	//
+	// Until now `pulse_runs` had exactly one reader: getRun($runId), the
+	// poll-after-trigger path. There was NO way to ask "what has this job been
+	// doing" over the API — the 16 753 rows in the table were reachable only by
+	// opening the SQLite file by hand. That is why nobody noticed that nine of
+	// twenty-five jobs have never fired at all.
+	//
+	// Read-only by construction: these methods only SELECT.
+
+	/** How far back a run must be, at most, to count toward a summary window. */
+	private const SUMMARY_WINDOW_HOURS = 24;
+
+	/**
+	 * How many recent runs per job are examined for the consecutive-failure
+	 * streak. Bounded on purpose — an unbounded scan of a per-minute job's
+	 * history would read thousands of rows to answer a question that is
+	 * interesting only at small numbers.
+	 */
+	private const STREAK_DEPTH = 20;
+
+	/**
+	 * Recent runs, newest first. `$jobId` narrows to one job.
+	 *
+	 * @return list<array<string, mixed>>
+	 */
+	public function listRuns(?string $jobId = null, int $limit = 50, bool $failedOnly = false): array
+	{
+		$sel = $this->db->table('pulse_runs')->order('fired_at DESC')->limit(max(1, min(500, $limit)));
+		if ($jobId !== null && $jobId !== '') {
+			$sel->where('job_id', $jobId);
+		}
+		if ($failedOnly) {
+			// IS NOT NULL matters: an unfinished run has a NULL exit_code and
+			// is neither a success nor a failure. Counting it as either would
+			// be inventing a result the daemon never reported.
+			$sel->where('exit_code IS NOT NULL AND exit_code != 0');
+		}
+		return array_map(fn($r) => $r->toArray(), iterator_to_array($sel->fetchAll()));
+	}
+
+	/**
+	 * One summary row per job that has EVER run, keyed by job_id.
+	 *
+	 * Deliberately keyed only by jobs with runs: a job with no entry here has
+	 * never fired, and the caller must render that as its own state rather
+	 * than as "zero failures". Absence and success are different facts and the
+	 * shape of this return value keeps them apart.
+	 *
+	 * @return array<string, array<string, mixed>>
+	 */
+	public function runSummaries(): array
+	{
+		$since = date('c', time() - self::SUMMARY_WINDOW_HOURS * 3600);
+		$out = [];
+
+		// Latest run per job. MAX(fired_at) can tie for a job fired twice in
+		// the same second; MAX(run_id) breaks it deterministically.
+		$latest = $this->db->query(
+			'SELECT r.* FROM pulse_runs r
+			 JOIN (SELECT job_id, MAX(fired_at) AS f FROM pulse_runs GROUP BY job_id) m
+			   ON r.job_id = m.job_id AND r.fired_at = m.f
+			 GROUP BY r.job_id
+			 HAVING r.run_id = MAX(r.run_id)',
+		);
+		foreach ($latest as $row) {
+			$a = (array) $row;
+			$out[(string) $a['job_id']] = [
+				'last_run_id'      => $a['run_id'],
+				'last_fired_at'    => $a['fired_at'],
+				'last_finished_at' => $a['finished_at'],
+				'last_exit_code'   => $a['exit_code'] === null ? null : (int) $a['exit_code'],
+				'last_duration_ms' => $a['duration_ms'] === null ? null : (int) $a['duration_ms'],
+				'last_stderr_tail' => $a['stderr_tail'],
+				'runs_window'      => 0,
+				'fails_window'     => 0,
+				'consecutive_failures' => 0,
+				'window_hours'     => self::SUMMARY_WINDOW_HOURS,
+			];
+		}
+
+		// Counts over the window.
+		$counts = $this->db->query(
+			'SELECT job_id, COUNT(*) AS runs,
+			        SUM(CASE WHEN exit_code IS NOT NULL AND exit_code != 0 THEN 1 ELSE 0 END) AS fails
+			   FROM pulse_runs WHERE fired_at >= ? GROUP BY job_id',
+			$since,
+		);
+		foreach ($counts as $row) {
+			$id = (string) $row->job_id;
+			if (!isset($out[$id])) {
+				continue;
+			}
+			$out[$id]['runs_window']  = (int) $row->runs;
+			$out[$id]['fails_window'] = (int) $row->fails;
+		}
+
+		// Consecutive failures, newest-first until the first success. An
+		// unfinished run (NULL exit_code) BREAKS the streak rather than
+		// extending it — it has not reported a result, so claiming it as a
+		// failure would be a marker written by something other than a reader.
+		$recent = $this->db->query(
+			'SELECT job_id, exit_code, rn FROM (
+			   SELECT job_id, exit_code,
+			          ROW_NUMBER() OVER (PARTITION BY job_id ORDER BY fired_at DESC) AS rn
+			     FROM pulse_runs
+			 ) WHERE rn <= ? ORDER BY job_id, rn',
+			self::STREAK_DEPTH,
+		);
+		$streak = [];
+		$closed = [];
+		foreach ($recent as $row) {
+			$id = (string) $row->job_id;
+			if (($closed[$id] ?? false) === true) {
+				continue;
+			}
+			if ($row->exit_code === null || (int) $row->exit_code === 0) {
+				$closed[$id] = true;
+				continue;
+			}
+			$streak[$id] = ($streak[$id] ?? 0) + 1;
+		}
+		foreach ($streak as $id => $n) {
+			if (isset($out[$id])) {
+				$out[$id]['consecutive_failures'] = $n;
+			}
+		}
+
+		return $out;
+	}
+
 	// ── Emergency halt (A12 — /admin big-red-button, 2026-05-07) ─────────
 	//
 	// Sentinel prefix in pulse_jobs.paused_reason — operator-set "manual:*"

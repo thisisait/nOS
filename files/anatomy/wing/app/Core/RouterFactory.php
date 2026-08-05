@@ -109,6 +109,9 @@ final class RouterFactory
 		$api->addRoute('api/v1/pulse_jobs/due', 'Pulse:jobsDue');
 		$api->addRoute('api/v1/pulse_jobs[/<id>]', 'Pulse:jobs');         // A7: POST = upsert (loader), GET = list/get
 		$api->addRoute('api/v1/pulse_runs/<id>/finish', 'Pulse:runFinish');
+		// Same first-match-wins reason: without this line "summary" would be
+		// captured as an <id> and answer 404 for a run that does not exist.
+		$api->addRoute('api/v1/pulse_runs/summary', 'Pulse:runSummary');
 		$api->addRoute('api/v1/pulse_runs[/<id>]', 'Pulse:runs');
 
 		// Gitleaks findings (Anatomy A7, 2026-05-06).

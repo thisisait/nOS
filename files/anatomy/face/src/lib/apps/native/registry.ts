@@ -122,6 +122,17 @@ export function registerBuiltinNativeApps(): void {
 		apiScopes: ['tables'],
 		stateNamespace: 'app.tables'
 	});
+	// Anatomy — Pulse / Wing / Bone as three views of ONE app. Tier-1 only;
+	// the BFF re-enforces that, so a non-admin who launches it gets a 403 in
+	// the view rather than a silently empty screen.
+	registerNativeApp({
+		slug: 'anatomy',
+		title: 'Anatomy',
+		icon: '🫀',
+		component: () => import('./anatomy/AnatomyApp.svelte'),
+		defaultSize: { w: 980, h: 660 },
+		apiScopes: ['pulse']
+	});
 	registerNativeApp({
 		slug: 'keap-explore',
 		title: 'Explore',

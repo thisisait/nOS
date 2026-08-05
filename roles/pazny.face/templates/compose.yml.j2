@@ -39,6 +39,13 @@ services:
       # edge token too in case the API path enforces it.
       NOS_HUB_API_URL: "http://host.docker.internal:{{ wing_port | default(9000) }}/api/v1/hub/systems"
       WING_EDGE_TOKEN: "{{ wing_edge_token | default('') }}"
+      # Wing API (bearer) — the Anatomy app's READ-ONLY Pulse view. Separate from
+      # the hub URL above because these endpoints authenticate with the API token,
+      # not the edge token. The BFF projects the responses onto an allow-list
+      # before they reach a browser: `GET /pulse_jobs` returns each job's env
+      # block verbatim, credentials included.
+      NOS_WING_API_URL: "http://host.docker.internal:{{ wing_port | default(9000) }}/api/v1"
+      NOS_WING_API_TOKEN: "{{ wing_api_token | default('') }}"
       # Bone VFS (host daemon) — the real per-user tree. Endpoint lands in M2;
       # until then the file browser degrades gracefully (shows "unreachable").
       NOS_VFS_API_URL: "http://host.docker.internal:{{ bone_port | default(8099) }}/api/v1/vfs"

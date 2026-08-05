@@ -45,7 +45,7 @@ final class PulsePresenter extends BaseApiPresenter
 			if (!$job) {
 				$this->sendError('Job not found', 404);
 			}
-			$this->sendSuccess($job);
+			$this->sendSuccess(self::withoutSecrets($job));
 			return;
 		}
 
@@ -76,8 +76,40 @@ final class PulsePresenter extends BaseApiPresenter
 		$this->requireMethod('GET');
 		$this->sendSuccess([
 			'generated_at' => gmdate('c'),
-			'jobs'         => $this->pulse->listJobs(),
+			'jobs'         => array_map(self::withoutSecrets(...), $this->pulse->listJobs()),
 		]);
+	}
+
+	/**
+	 * Strip a job's env VALUES, keep its env KEY NAMES.
+	 *
+	 * Measured 2026-08-05, while building the face Anatomy view: this endpoint
+	 * was returning `env_json` verbatim, and across 23 of the 25 registered
+	 * jobs that is 57 live credential values — WING_EVENTS_HMAC_SECRET (Bone's
+	 * event-signing key) fifteen times, WING_API_TOKEN eleven,
+	 * NOS_AGENT_CLIENT_SECRET ten, plus the KEAP agent tokens,
+	 * NOS_MARIADB_ROOT_PASSWORD and MAIL_PASSWORD. Any holder of any Wing API
+	 * token could read all of them from a catalog listing, and the listing's
+	 * own docblock calls itself "admin/debug" — nobody meant it as a secret
+	 * distribution channel.
+	 *
+	 * The KEY NAMES stay because they are the useful half: "this job is handed
+	 * a Wing API token" is exactly what an operator auditing the job catalog
+	 * needs to know, and a name is not a credential.
+	 *
+	 * NOT applied to listDue(): the Pulse daemon needs the real environment to
+	 * execute the job, and that endpoint is the daemon's. This is the catalog
+	 * view, whose only readers are humans and the face BFF.
+	 *
+	 * @param  array<string, mixed> $job
+	 * @return array<string, mixed>
+	 */
+	private static function withoutSecrets(array $job): array
+	{
+		$env = json_decode((string) ($job['env_json'] ?? '{}'), true);
+		$job['env_keys'] = is_array($env) ? array_keys($env) : [];
+		unset($job['env_json']);
+		return $job;
 	}
 
 	/**
@@ -103,6 +135,14 @@ final class PulsePresenter extends BaseApiPresenter
 	public function actionRuns(?string $id = null): void
 	{
 		if ($id === null) {
+			// GET added 2026-08-05 for the face Anatomy view. Before it, the
+			// ONLY reader of pulse_runs was getRun($id) — 16k rows of run
+			// history with no way to ask "what has this job been doing", which
+			// is how nine never-fired jobs went unnoticed. POST is unchanged.
+			if ($this->getMethod() === 'GET') {
+				$this->listRuns();
+				return;
+			}
 			$this->requireMethod('POST');
 			$this->createRun();
 			return;
@@ -190,6 +230,45 @@ final class PulsePresenter extends BaseApiPresenter
 			// Best-effort only — log via error_log, never break the API.
 			error_log('pulse run-finish notification emit failed: ' . $e->getMessage());
 		}
+	}
+
+	/**
+	 * GET /api/v1/pulse_runs
+	 *   ?job_id=<plugin:job>  narrow to one job
+	 *   ?limit=<1..500>       default 50
+	 *   ?failed=1             only runs that reported a non-zero exit
+	 */
+	private function listRuns(): void
+	{
+		$jobId = $this->getParameter('job_id');
+		$limit = max(1, min(500, (int) ($this->getParameter('limit') ?? 50)));
+		$failed = in_array((string) ($this->getParameter('failed') ?? ''), ['1', 'true'], true);
+		$this->sendSuccess([
+			'generated_at' => gmdate('c'),
+			'runs'         => $this->pulse->listRuns(
+				$jobId !== null ? (string) $jobId : null,
+				$limit,
+				$failed,
+			),
+		]);
+	}
+
+	/**
+	 * GET /api/v1/pulse_runs/summary — one entry per job that has EVER run.
+	 *
+	 * A job absent from `summaries` has never fired. That is a fact the caller
+	 * must be able to see, so it is encoded as absence rather than as a row of
+	 * zeroes: "never ran" and "ran, nothing failed" are different states and a
+	 * shape that conflates them invites a UI that renders both as calm.
+	 */
+	public function actionRunSummary(): void
+	{
+		$this->requireMethod('GET');
+		$this->sendSuccess([
+			'generated_at'  => gmdate('c'),
+			'window_hours'  => 24,
+			'summaries'     => $this->pulse->runSummaries(),
+		]);
 	}
 
 	private function createRun(): void

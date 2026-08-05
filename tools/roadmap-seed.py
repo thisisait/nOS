@@ -151,6 +151,18 @@ row("face-anatomy", "Anatomy app — one window, three read-only views", "2026-0
          "three windows lose. Read-only for now; actions stay in Wing UI where the tier "
          "gates already are. Each view has a committed workflow spec — that commit IS the "
          "triage gate, see docs/doctrine/workflows.md.")
+row("sec-pulse-env", "The job catalog handed out 57 live credentials", "2026-08-05",
+    "shipped", "security", parent="sec",
+    refs="files/anatomy/wing/app/Presenters/Api/PulsePresenter.php withoutSecrets()",
+    body="Found while grounding the face Anatomy view: GET /api/v1/pulse_jobs returned each "
+         "job's env_json verbatim — 57 live values across 23 of 25 jobs, incl. Bone's HMAC "
+         "secret x15, the Wing API token x11, agent client secrets x10, MariaDB root and "
+         "MAIL_PASSWORD. Any Wing API token could read them from a listing whose own docblock "
+         "calls it 'admin/debug'. Fixed at the source: values stripped, KEY NAMES kept (a name "
+         "is not a credential, and it is the half an auditor needs). /pulse_jobs/due is "
+         "untouched — the daemon needs the real env to run the job. Open question for triage: "
+         "the same env blocks sit in cleartext in wing.db, which the nightly backup ships to "
+         "RustFS; the API is the reachable surface, the store is the durable one.")
 
 # ── Local-LLM cortex pipeline — filed 2026-08-04, DESIGNED NOT DECIDED ──────
 #

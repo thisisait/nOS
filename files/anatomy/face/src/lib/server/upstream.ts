@@ -183,6 +183,51 @@ export async function hubSystems(): Promise<unknown> {
 	return asJson(await fetch(HUB_URL(), { headers: h }));
 }
 
+// ── Wing Pulse API (Anatomy view — READ ONLY) ────────────────────────────────
+//
+// Bearer-authenticated, unlike the hub catalog above. The token is the Wing API
+// token; it never leaves the server, and neither does most of what it fetches:
+// `GET /api/v1/pulse_jobs` returns each job's `env_json` VERBATIM, and on this
+// estate that is 57 live credential values across 23 of 25 jobs — Bone's HMAC
+// secret, the Wing API token itself, agent client secrets, the MariaDB root
+// password. The BFF therefore PROJECTS these responses onto an explicit
+// allow-list of fields; nothing here may be proxied to a browser as-is.
+
+const WING_API = () => env.NOS_WING_API_URL ?? 'http://host.docker.internal:9000/api/v1';
+const WING_API_TOKEN = () => env.NOS_WING_API_TOKEN || process.env.NOS_WING_API_TOKEN || '';
+
+/** True when the Wing API token is wired. A missing token is a CONFIGURATION
+ *  fact the view must state, not an empty list it should render as calm. */
+export function wingApiConfigured(): boolean {
+	return Boolean(WING_API_TOKEN());
+}
+
+async function wingGet(path: string, params?: Record<string, string>): Promise<unknown> {
+	const u = new URL(WING_API() + path);
+	for (const [k, v] of Object.entries(params ?? {})) u.searchParams.set(k, v);
+	const h: Record<string, string> = { authorization: `Bearer ${WING_API_TOKEN()}` };
+	if (WING_EDGE()) h['x-wing-edge-token'] = WING_EDGE();
+	return asJson(await fetch(u, { headers: h }));
+}
+
+/** Every registered Pulse job. Wing returns `jobs` as a MAP keyed by id — not
+ *  an array; a caller that iterates it as one silently renders nothing. */
+export async function pulseJobs(): Promise<unknown> {
+	return wingGet('/pulse_jobs');
+}
+
+/** Per-job run aggregates. A job ABSENT from `summaries` has never fired. */
+export async function pulseRunSummary(): Promise<unknown> {
+	return wingGet('/pulse_runs/summary');
+}
+
+/** Recent runs, newest first. */
+export async function pulseRuns(jobId?: string, limit = 50): Promise<unknown> {
+	const p: Record<string, string> = { limit: String(limit) };
+	if (jobId) p.job_id = jobId;
+	return wingGet('/pulse_runs', p);
+}
+
 // ── KEAP DataTables (config catalog SoT; G2 fleshes out the row shape) ────────
 
 export async function keapTableRows(slug: string, uid: string): Promise<unknown> {
