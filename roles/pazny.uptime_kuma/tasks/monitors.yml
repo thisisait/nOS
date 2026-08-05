@@ -152,6 +152,30 @@
   ansible.builtin.set_fact:
     _kuma_spec_monitors: []
 
+# ── Services deliberately taken off the edge (2026-08-05) ───────────────────
+#
+# A monitor must ask a question whose answer we have not already decided.
+#
+# `traefik_skip_ids` lists services for which services.yml.j2 renders NO router,
+# so `https://<domain>/` is a 404 by design. The monitor builder below derived
+# its URL from `domain_var` alone and never consulted that list, so every
+# service removed from the edge got a permanently-red monitor. Measured on the
+# live estate the day this was written: traefik, bone and cortex — all three
+# 404, all three healthy, all three unrouted on purpose. REM-144's remediation
+# pattern is "take it off the edge", so the class grows every time we apply it.
+#
+# A monitor that is always red is a monitor an operator learns to ignore, which
+# is worse than not having it: it trains the habit that will one day be applied
+# to a real failure.
+#
+# Read from the file rather than relying on the traefik role's vars being in
+# scope — same idiom as the manifest lookup below, and ordering-independent.
+- name: "[pazny.uptime_kuma] Read the ids Traefik does not route"
+  ansible.builtin.set_fact:
+    _kuma_unrouted: >-
+      {{ (lookup('file', playbook_dir ~ '/roles/pazny.traefik/vars/main.yml')
+          | from_yaml).traefik_skip_ids | default([]) }}
+
 # P1b (2026-05-29): probe the service's declared health endpoint instead of the
 # bare root. The plugin-harvested hub-cards.json (wing-base) carries each
 # service's ui-extension.hub_card.health_check; build a slug→path map so the
@@ -185,20 +209,46 @@
     # or absent health_checks keep the bare-root probe). Join by hyphenated slug.
     _hc: "{{ _kuma_health_paths[svc.id | replace('_', '-')] | default('') }}"
     _hc_path: "{{ _hc if _hc.startswith('/') else '' }}"
+    # ── Unrouted services probe the loopback the manifest already declares ──
+    # `health_check.url_template` is the AUTHORED answer to "how do you check
+    # this service", and for the three unrouted ids it is a loopback endpoint.
+    # Only the path is taken from it: the template embeds Jinja for a port var
+    # that may be a ROLE default (cortex_port lives in the cortex role, not in
+    # default.config.yml), and rendering another role's default from here is the
+    # eager-resolution trap CLAUDE.md documents. `vars[...]` with a default is
+    # the safe read, and an unresolvable port SKIPS the monitor rather than
+    # emitting `http://127.0.0.1:/health`.
+    _unrouted: "{{ svc.id in (_kuma_unrouted | default([])) }}"
+    _tpl: "{{ (svc.health_check | default({})).url_template | default('') }}"
+    _tpl_path: "{{ _tpl.split('}}')[-1] if _tpl else '' }}"
+    _port: "{{ vars[svc.port_var] | default('') if svc.port_var is defined else '' }}"
     _m:
       name: "{{ svc.id | replace('_', ' ') | title }}"
       type: "http"
-      url: "https://{{ _domain }}{{ _hc_path }}"
+      url: >-
+        {{ 'http://127.0.0.1:' ~ _port ~ _tpl_path
+           if _unrouted else 'https://' ~ _domain ~ _hc_path }}
       interval: 60
       maxretries: 2
       ignore_tls: true
-      accepted_statuscodes: ["200-299", "301", "302", "401", "403"]
-      expiry_notification: "{{ uptime_kuma_tls_expiry_monitors | default(true) }}"
+      # A loopback health endpoint that answers 401/403 has NOT answered. The
+      # edge list keeps them because an auth-gated 401 there proves the router
+      # and the gate are both alive, which is the thing being tested.
+      accepted_statuscodes: >-
+        {{ ['200-299'] if _unrouted
+           else ['200-299', '301', '302', '401', '403'] }}
+      expiry_notification: "{{ false if _unrouted else (uptime_kuma_tls_expiry_monitors | default(true)) }}"
       tags: ["{{ svc.stack | default('host') }}", "{{ svc.category | default('service') }}"]
   when:
     - svc.install_flag in vars
     - vars[svc.install_flag] | default(false)
     - vars[svc.domain_var] | default('') | length > 0
+    # An unrouted service needs BOTH a declared path and a resolvable port, or
+    # there is no honest probe to build and no monitor is better than a wrong one.
+    - (svc.id not in (_kuma_unrouted | default([]))) or
+      ((svc.health_check | default({})).url_template is defined
+       and (svc.port_var is defined)
+       and (vars[svc.port_var] | default('') | string | length > 0))
 
 # ── Tier-2 (apps_runner) — runtime-derived monitors ─────────────────────────
 # `_kuma_manifest_apps` is set by roles/pazny.apps_runner/tasks/post.yml from
