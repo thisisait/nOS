@@ -81,6 +81,13 @@
     wing_events_hmac_secret: "{{ wing_events_hmac_secret | default(bone_secret | default(global_password_prefix + '_pw_bone')) }}"
 
   pre_tasks:
+    # ── Is this checkout running the code you think it is? ────────────────
+    # FIRST, because it is the cheapest check in the playbook and the one
+    # whose failure is otherwise invisible: a converge from a stale checkout
+    # succeeds at running the wrong code. Cost one hour on 2026-08-05.
+    - import_tasks: tasks/preflight-checkout-current.yml
+      tags: ['always', 'preflight']
+
     # ── Platform detection (Track C, 2026-04-26) ──────────────────────────
     # Resolves nos_* variables (nginx paths, service manager, docker bin)
     # so cross-platform tasks below can use them instead of hardcoded

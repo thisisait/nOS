@@ -1,0 +1,101 @@
+---
+# ── Preflight: is this checkout running the code you think it is? ─────────────
+#
+# THE WASTE THIS EXISTS TO STOP, measured 2026-08-05. An agent committed a day's
+# work in a worktree and pushed it to origin/dev. The operator ran a full
+# converge from the main checkout — also on `dev`, but seventeen commits behind,
+# because nothing had pulled. The run took an hour, finished green, and
+# validated none of it: the new Pulse jobs never registered, the CLI fix never
+# installed, the pin never moved. Everything reported success because everything
+# succeeded — at running the previous week's code.
+#
+# It is the same defect the rest of this estate keeps producing: two
+# representations of one fact — here, "the code" — with nothing comparing them.
+# The playbook is in the best position to compare, and it costs one second at
+# the start of a run that costs an hour.
+#
+# WHY IT FAILS RATHER THAN WARNS. A warning at minute zero of a sixty-minute run
+# is a warning nobody is watching for, and the failure it predicts is silent and
+# total. The cost of a false stop is one flag; the cost of a missed one is the
+# whole run. `-e allow_stale_checkout=true` is the escape, and an intentionally
+# pinned checkout should pass it every time rather than have this be advisory.
+#
+# HONEST ABOUT WHAT IT COMPARES. `git fetch` runs first with a short timeout so
+# the remote-tracking ref is fresh; if the network is down the fetch fails
+# quietly and the comparison falls back to whatever git last saw. That is a
+# weaker claim, and the task says so instead of pretending otherwise.
+#
+# Skipped entirely when the checkout is not a git repo, has no upstream, or is
+# in a detached HEAD — none of those is drift, and refusing to run on them would
+# be this gate inventing a problem.
+
+- name: "[preflight] Refresh the remote-tracking ref (best effort, short timeout)"
+  ansible.builtin.command:
+    cmd: git -c fetch.parallel=1 fetch --quiet origin
+    chdir: "{{ playbook_dir }}"
+  register: _ckt_fetch
+  changed_when: false
+  failed_when: false
+  timeout: 20
+  tags: ['always', 'preflight']
+
+- name: "[preflight] Read this checkout's position against its upstream"
+  ansible.builtin.shell: |
+    set -o pipefail
+    cd {{ playbook_dir | quote }}
+    git rev-parse --git-dir >/dev/null 2>&1 || { echo "NOGIT"; exit 0; }
+    branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null) || { echo "DETACHED"; exit 0; }
+    up=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null) || { echo "NOUPSTREAM"; exit 0; }
+    behind=$(git rev-list --count "HEAD..$up" 2>/dev/null || echo 0)
+    ahead=$(git rev-list --count "$up..HEAD" 2>/dev/null || echo 0)
+    echo "OK ${branch} ${up} ${behind} ${ahead}"
+  args:
+    executable: /bin/bash
+  register: _ckt_state
+  changed_when: false
+  failed_when: false
+  tags: ['always', 'preflight']
+
+- name: "[preflight] Parse the checkout state"
+  ansible.builtin.set_fact:
+    _ckt: "{{ (_ckt_state.stdout | default('NOGIT')).split() }}"
+  tags: ['always', 'preflight']
+
+- name: "[preflight] REFUSE: this checkout is behind its upstream"
+  ansible.builtin.fail:
+    msg: |
+      This checkout is {{ _ckt[3] }} commit(s) BEHIND {{ _ckt[2] }}.
+
+      Converging now would run code that is not the code you pushed. On
+      2026-08-05 exactly this cost a full run: seventeen commits behind, an hour
+      spent, everything green, nothing of the work validated.
+
+        cd {{ playbook_dir }} && git pull --ff-only
+
+      {% if _ckt[4] | int > 0 %}
+      NOTE: you are also {{ _ckt[4] }} commit(s) AHEAD, so `--ff-only` will
+      refuse. Push or rebase first — do not merge blindly into a converge.
+      {% endif %}
+      {% if _ckt_fetch.rc | default(1) != 0 %}
+      NOTE: `git fetch` did not succeed ({{ _ckt_fetch.rc | default('n/a') }}),
+      so this compares against whatever git last saw. The real gap may be larger.
+      {% endif %}
+      Override for a deliberately pinned checkout:  -e allow_stale_checkout=true
+  when:
+    - _ckt[0] | default('') == 'OK'
+    - (_ckt[3] | default('0') | int) > 0
+    - not (allow_stale_checkout | default(false) | bool)
+  tags: ['always', 'preflight']
+
+- name: "[preflight] Checkout position"
+  ansible.builtin.debug:
+    msg: >-
+      {% if _ckt[0] | default('') == 'OK' %}
+      {{ _ckt[1] }} is level with {{ _ckt[2] }}
+      {%- if (_ckt[4] | default('0') | int) > 0 %} ({{ _ckt[4] }} unpushed){% endif %}
+      {%- if _ckt_fetch.rc | default(1) != 0 %} — WARNING: fetch failed, this is
+      a comparison against a stale remote-tracking ref{% endif %}
+      {% else %}
+      not compared ({{ _ckt[0] | default('unknown') }}) — no upstream to be behind
+      {% endif %}
+  tags: ['always', 'preflight']
