@@ -8,18 +8,42 @@ with ast). Three other runtimes (Hermes, AgentKit, the planned Rust brain)
 speak to the same endpoints; a shared library would be ported four times and
 drift four ways.
 
-First verb shipped: `forget` — the operator's exit from a wedged fingerprint
-(§4 "the block lifts"). It exists because the 2026-08-03 review found the lift
-key had no route, no CLI and no caller: a crashed judge job wedged its
-fingerprint as attempt-pending FOREVER, with the exit written down nowhere an
-operator could run it. The remaining §6.2 verbs are added as they are needed;
-each is a request, a status code, and an exit code — nothing else.
+The first verb shipped was `forget` — the operator's exit from a wedged
+fingerprint (§4 "the block lifts"). It existed alone because the 2026-08-03
+review found the lift key had no route, no CLI and no caller: a crashed judge
+job wedged its fingerprint as attempt-pending FOREVER, with the exit written
+down nowhere an operator could run it.
+
+THE REST OF §6.2 IS HERE NOW (2026-08-05), and the reason is the same shape one
+level up. Steps 1–4 of §10's build order are complete — five judges, the
+ledger, the weakness reader, the budget and the refusals — and then the ledger
+stopped moving: 9 proposals and 19 judge runs, every one of them dated
+2026-08-02/03. Not because anything was broken, but because an ATTENDED cycle
+(§7.2's precondition for ever shipping the one Pulse job) had no way to be run.
+The engine was reachable only by hand-written curl with the right bearer token
+of three. A capability nobody can invoke is indistinguishable from one that is
+absent, and the ledger's flat line is what that looks like from outside.
+
+STILL NOT SHIPPED, deliberately: `verdict --replay`. §11 names replay as the
+proof the whole engine works — re-run the recorded argv against the recorded
+tree_sha and reproduce exit_code, work_count and stdout_sha — and there is no
+endpoint behind it. A CLI verb cannot invent one without importing the engine,
+which DECISION 6 forbids. It is the next route, not a missing flag here.
+
+ONE TOKEN PER VERB, NOT ONE TOKEN PER CLI. `propose` sends the proposer's
+credential and `judge` sends the evaluator's, because Constraint A is a
+statement about credentials and a client that authenticated everything with a
+single bearer would dissolve it at the terminal — the one place a human is
+holding all three. Reads use the operator identity: the person at the prompt is
+the operator, and naming that in the request is more honest than reaching for
+whichever token happens to be set.
 
 Exit codes are DECISION 6a's fixed enum, never a count:
     0 success · 1 FAIL · 2 INDETERMINATE · 3 refused · 4 config error
 
-The operator token comes from BONE_LOOP_OPERATOR_TOKEN or ~/.nos/secrets.yml
-(`loop_operator_token`), the same file every other Bone credential lives in.
+Tokens come from BONE_LOOP_{OPERATOR,PROPOSE,JUDGE}_TOKEN or, failing that,
+~/.nos/secrets.yml (`loop_*_token`), the same file every other Bone credential
+lives in.
 """
 
 from __future__ import annotations
@@ -28,8 +52,11 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
+import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 EXIT_OK = 0
@@ -65,6 +92,51 @@ def _secret(env_var: str, key: str) -> str:
     return m.group(1).strip() if m else ""
 
 
+#: verb → (env var, secrets key, the identity that verb speaks as). The map is
+#: explicit rather than "use whatever token is set": a client that silently
+#: fell back to another credential would make the §3.4 split a naming
+#: convention. A missing token for a verb is a config error, not a downgrade.
+IDENTITY = {
+    "read": ("BONE_LOOP_OPERATOR_TOKEN", "loop_operator_token", "operator"),
+    "propose": ("BONE_LOOP_PROPOSE_TOKEN", "loop_propose_token", "agent:proposer"),
+    "judge": ("BONE_LOOP_JUDGE_TOKEN", "loop_judge_token", "engine:evaluator"),
+}
+
+
+def _token_or_exit(scope: str) -> str:
+    env_var, key, identity = IDENTITY[scope]
+    token = _secret(env_var, key)
+    if not token:
+        print(f"nos-loop: no {identity} token for scope {scope!r} — set "
+              f"{env_var} or add {key} to {SECRETS_PATH}", file=sys.stderr)
+        raise SystemExit(EXIT_CONFIG)
+    return token
+
+
+def _get(path: str, token: str, params: dict | None = None) -> tuple[int, object]:
+    url = BASE_URL + path
+    if params:
+        # doseq: `source` is a repeated query parameter, not a comma list.
+        url += "?" + urllib.parse.urlencode(
+            {k: v for k, v in params.items() if v is not None}, doseq=True)
+    req = urllib.request.Request(
+        url, method="GET", headers={"Authorization": f"Bearer {token}"})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return resp.status, json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        try:
+            payload = json.loads(exc.read().decode("utf-8"))
+        except Exception:
+            payload = {"detail": str(exc)}
+        return exc.code, payload
+
+
+def _unreachable(exc: Exception) -> int:
+    print(f"nos-loop: cannot reach {BASE_URL}: {exc}", file=sys.stderr)
+    return EXIT_CONFIG
+
+
 def _post(path: str, token: str, body: dict) -> tuple[int, dict]:
     req = urllib.request.Request(
         BASE_URL + path,
@@ -83,12 +155,230 @@ def _post(path: str, token: str, body: dict) -> tuple[int, dict]:
         return exc.code, payload
 
 
-def cmd_forget(args: argparse.Namespace) -> int:
-    token = _secret("BONE_LOOP_OPERATOR_TOKEN", "loop_operator_token")
-    if not token:
-        print("nos-loop: no operator token — set BONE_LOOP_OPERATOR_TOKEN or "
-              f"add loop_operator_token to {SECRETS_PATH}", file=sys.stderr)
+def _emit(payload: object, as_json: bool, lines: list[str]) -> None:
+    """One rule for output: --json is the payload, plain is a summary.
+
+    The summary never invents a field. Everything it prints came out of the
+    response, so an operator reading the short form and an operator reading
+    --json are reading the same run.
+    """
+    if as_json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        print("\n".join(lines))
+
+
+def cmd_weaknesses(args: argparse.Namespace) -> int:
+    token = _token_or_exit("read")
+    try:
+        status, payload = _get("/api/v1/loop/weaknesses", token, {
+            "top": args.top, "min_severity": args.min_severity,
+            "source": args.source or None})
+    except (urllib.error.URLError, OSError) as exc:
+        return _unreachable(exc)
+    if status != 200:
+        print(json.dumps(payload, sort_keys=True), file=sys.stderr)
+        return EXIT_REFUSED if status in (400, 403, 404) else EXIT_CONFIG
+
+    items = payload.get("weaknesses", []) if isinstance(payload, dict) else []
+    lines = [f"{i.get('severity', '?'):<8} {i.get('weakness_id', '?'):<28} "
+             f"{str(i.get('title', ''))[:80]}" for i in items]
+    # A reader must be able to tell "nothing is wrong" from "nothing was read".
+    # The route reports per-source availability precisely so absence cannot
+    # read as health, and dropping that on the floor here would undo it.
+    degraded = [s.get("name") for s in (payload.get("sources") or [])
+                if isinstance(s, dict) and s.get("status") not in (None, "ok")]
+    if degraded:
+        lines.append(f"({len(degraded)} source(s) unavailable: {', '.join(map(str, degraded))} "
+                     f"— this list is INCOMPLETE, not clean)")
+    elif not items:
+        lines.append("(no weaknesses, and every source answered)")
+    _emit(payload, args.json, lines)
+    return EXIT_OK
+
+
+def cmd_budget(args: argparse.Namespace) -> int:
+    token = _token_or_exit("read")
+    try:
+        status, payload = _get("/api/v1/loop/budget", token, {"gate_set": args.gate_set})
+    except (urllib.error.URLError, OSError) as exc:
+        return _unreachable(exc)
+    if status == 404:
+        print(json.dumps(payload, sort_keys=True), file=sys.stderr)
         return EXIT_CONFIG
+    if status != 200:
+        print(json.dumps(payload, sort_keys=True), file=sys.stderr)
+        return EXIT_CONFIG
+
+    lines = [
+        f"gate set  {payload.get('gate_set')}  judges: {', '.join(payload.get('judges', []))}",
+        f"may touch {', '.join(payload.get('allowed_roots', []))}",
+        f"caps      {payload.get('max_files')} files / {payload.get('max_diff_lines')} diff lines",
+        f"forbidden {len(payload.get('forbidden', []))} rules "
+        f"({sum(1 for r in payload.get('forbidden', []) if r.get('reason') == 'oracle')} "
+        f"of them this set's own oracles)",
+    ]
+    _emit(payload, args.json, lines)
+    return EXIT_OK
+
+
+def _tree_sha() -> str:
+    """HEAD, read with git rather than imported from the engine.
+
+    A subprocess is not an import: DECISION 6 forbids this file from knowing the
+    engine's rules, not from knowing where it is standing.
+    """
+    try:
+        out = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
+                             text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return out.stdout.strip() if out.returncode == 0 else ""
+
+
+def cmd_propose(args: argparse.Namespace) -> int:
+    token = _token_or_exit("propose")
+
+    diff = sys.stdin.read() if args.diff == "-" else args.diff
+    if not (diff or "").strip():
+        print("nos-loop: empty diff. The endpoint requires the artifact — a "
+              "proposal without one skips the size cap, the budget's path check "
+              "and the content dedup, which is how a diff-less 201 happened.",
+              file=sys.stderr)
+        return EXIT_CONFIG
+
+    tree_sha = args.tree_sha or _tree_sha()
+    if len(tree_sha) < 7:
+        print("nos-loop: could not read HEAD; pass --tree-sha explicitly",
+              file=sys.stderr)
+        return EXIT_CONFIG
+
+    try:
+        status, payload = _post("/api/v1/loop/proposals", token, {
+            "weakness_id": args.weakness,
+            "target_paths": [p.strip() for p in args.paths.split(",") if p.strip()],
+            "intent_class": args.intent,
+            "gate_set": args.gate_set,
+            "tree_sha": tree_sha,
+            "proposer_id": args.proposer_id,
+            "proposer_model": args.proposer_model,
+            "diff_text": diff,
+        })
+    except (urllib.error.URLError, OSError) as exc:
+        return _unreachable(exc)
+
+    if status == 201:
+        _emit(payload, args.json, [
+            f"proposal {payload.get('uuid')}",
+            f"fingerprint {payload.get('fingerprint')} attempt {payload.get('attempt_n')}",
+            ("REQUIRES OPERATOR — a gate-add is never sealed unattended"
+             if payload.get("requires_operator") else
+             f"judge it with: nos-loop judge --gate-set {args.gate_set} "
+             f"--proposal {payload.get('uuid')} --wait"),
+        ])
+        return EXIT_OK
+    print(json.dumps(payload, sort_keys=True), file=sys.stderr)
+    # 409 is the engine working, not failing: a budget violation or a
+    # fingerprint that already lost. DECISION 6a keeps that distinct from a
+    # failing verdict, so a wrapper cannot collapse "refused" into "red".
+    return EXIT_REFUSED if status == 409 else EXIT_CONFIG
+
+
+#: verdict result → process exit. INDETERMINATE is NOT a failure and not a
+#: pass: §2.4's whole point is that absence never launders into success.
+_VERDICT_EXIT = {"pass": EXIT_OK, "fail": EXIT_FAIL, "indeterminate": EXIT_INDETERMINATE}
+
+
+def cmd_judge(args: argparse.Namespace) -> int:
+    token = _token_or_exit("judge")
+    try:
+        status, payload = _post("/api/v1/loop/judge", token, {
+            "gate_set": args.gate_set, "proposal_uuid": args.proposal})
+    except (urllib.error.URLError, OSError) as exc:
+        return _unreachable(exc)
+
+    if status != 202:
+        print(json.dumps(payload, sort_keys=True), file=sys.stderr)
+        return EXIT_REFUSED if status in (404, 409) else EXIT_CONFIG
+
+    job_id = payload.get("job_id")
+    if not args.wait:
+        _emit(payload, args.json, [f"job {job_id} running ({args.gate_set})",
+                                   f"poll: nos-loop judge-status {job_id}"])
+        return EXIT_OK
+
+    read_token = _token_or_exit("read")
+    deadline = time.monotonic() + args.timeout
+    while time.monotonic() < deadline:
+        time.sleep(args.poll)
+        try:
+            status, job = _get(f"/api/v1/loop/judge/{job_id}", read_token)
+        except (urllib.error.URLError, OSError) as exc:
+            return _unreachable(exc)
+        if status != 200:
+            print(json.dumps(job, sort_keys=True), file=sys.stderr)
+            return EXIT_INDETERMINATE
+        state = job.get("state")
+        if state == "running":
+            continue
+        if state == "done":
+            verdict = job.get("verdict") or {}
+            _emit(job, args.json, [
+                f"{verdict.get('result', 'unknown')}  {args.gate_set}"
+                + (f"  proposal {args.proposal}" if args.proposal else "  (baseline)"),
+                f"verdict {verdict.get('uuid')} tree {str(verdict.get('tree_sha'))[:12]}",
+            ])
+            return _VERDICT_EXIT.get(str(verdict.get("result")), EXIT_INDETERMINATE)
+        # "error" or anything else: a failure to REACH a verdict is not a
+        # verdict, and must not exit 1 as though a judge had said no.
+        print(json.dumps(job, sort_keys=True), file=sys.stderr)
+        return EXIT_INDETERMINATE
+
+    print(f"nos-loop: judge job {job_id} still running after {args.timeout}s — "
+          f"it is not lost, the verdict seals into the ledger either way; "
+          f"poll with `nos-loop judge-status {job_id}`", file=sys.stderr)
+    return EXIT_INDETERMINATE
+
+
+def cmd_judge_status(args: argparse.Namespace) -> int:
+    token = _token_or_exit("read")
+    try:
+        status, job = _get(f"/api/v1/loop/judge/{args.job_id}", token)
+    except (urllib.error.URLError, OSError) as exc:
+        return _unreachable(exc)
+    print(json.dumps(job, indent=2, sort_keys=True))
+    if status != 200:
+        # 404 here means "this process never heard of that job" — a Bone
+        # restart, not a red verdict.
+        return EXIT_INDETERMINATE
+    if job.get("state") == "done":
+        return _VERDICT_EXIT.get(str((job.get("verdict") or {}).get("result")),
+                                 EXIT_INDETERMINATE)
+    return EXIT_INDETERMINATE
+
+
+def cmd_history(args: argparse.Namespace) -> int:
+    token = _token_or_exit("read")
+    try:
+        status, payload = _get("/api/v1/loop/history", token,
+                               {"fingerprint": args.fingerprint})
+    except (urllib.error.URLError, OSError) as exc:
+        return _unreachable(exc)
+    if status != 200:
+        print(json.dumps(payload, sort_keys=True), file=sys.stderr)
+        return EXIT_CONFIG
+    attempts = payload.get("attempts") or []
+    lines = [f"{a.get('created_at', '?')}  {a.get('result', a.get('status', '?')):<14} "
+             f"{str(a.get('uuid', ''))[:8]}" for a in attempts]
+    _emit(payload, args.json,
+          lines or ["(no attempts — this fingerprint has never been proposed)"])
+    return EXIT_OK
+
+
+def cmd_forget(args: argparse.Namespace) -> int:
+    # `forget` is the one verb whose scope is not `read`, and the operator
+    # identity is the only one that holds it.
+    token = _token_or_exit("read")
 
     try:
         status, payload = _post("/api/v1/loop/forget", token,
@@ -114,6 +404,60 @@ def main(argv: list[str] | None = None) -> int:
         description="thin HTTP client for Bone's agentic-loop API (§6.2)")
     sub = parser.add_subparsers(dest="verb", required=True)
 
+    def _json_flag(p):
+        p.add_argument("--json", action="store_true",
+                       help="print the response instead of a summary")
+        return p
+
+    weak = _json_flag(sub.add_parser(
+        "weaknesses", help="ranked findings, each with a stable weakness_id"))
+    weak.add_argument("--top", type=int, default=None)
+    weak.add_argument("--min-severity", default=None,
+                      choices=["critical", "high", "medium", "low", "info"])
+    weak.add_argument("--source", action="append", default=None,
+                      help="restrict to a source; repeatable")
+    weak.set_defaults(fn=cmd_weaknesses)
+
+    bud = _json_flag(sub.add_parser(
+        "budget", help="what a proposal judged by this set may touch"))
+    bud.add_argument("--gate-set", required=True)
+    bud.set_defaults(fn=cmd_budget)
+
+    prop = _json_flag(sub.add_parser(
+        "propose", help="record an intent; says nothing about whether it is good"))
+    prop.add_argument("--weakness", required=True, help="weakness_id it addresses")
+    prop.add_argument("--intent", required=True, help="intent class (the engine validates it)")
+    prop.add_argument("--paths", required=True, help="comma-separated target paths")
+    prop.add_argument("--gate-set", required=True)
+    prop.add_argument("--diff", required=True,
+                      help="unified diff, or - to read stdin")
+    prop.add_argument("--tree-sha", default=None, help="default: git rev-parse HEAD")
+    prop.add_argument("--proposer-id", default=f"operator:{os.environ.get('USER', 'unknown')}",
+                      help="who authored the diff. The default says the human at "
+                           "this terminal did; pass the agent's id when it did not")
+    prop.add_argument("--proposer-model", default=None)
+    prop.set_defaults(fn=cmd_propose)
+
+    jud = _json_flag(sub.add_parser(
+        "judge", help="run a gate set; 202 + a job id, or --wait for the verdict"))
+    jud.add_argument("--gate-set", required=True)
+    jud.add_argument("--proposal", default=None,
+                     help="attach the verdict to this proposal; omit for a baseline")
+    jud.add_argument("--wait", action="store_true")
+    jud.add_argument("--timeout", type=int, default=1800,
+                     help="seconds to wait (default 1800: the repo set runs pytest)")
+    jud.add_argument("--poll", type=int, default=5)
+    jud.set_defaults(fn=cmd_judge)
+
+    stat = sub.add_parser("judge-status", help="poll a job started without --wait")
+    stat.add_argument("job_id")
+    stat.set_defaults(fn=cmd_judge_status)
+
+    hist = _json_flag(sub.add_parser(
+        "history", help="has this been tried, and what happened?"))
+    hist.add_argument("--fingerprint", required=True)
+    hist.set_defaults(fn=cmd_history)
+
     forget = sub.add_parser(
         "forget",
         help="operator-only: lift the retry block on a wedged fingerprint")
@@ -121,7 +465,10 @@ def main(argv: list[str] | None = None) -> int:
     forget.set_defaults(fn=cmd_forget)
 
     args = parser.parse_args(argv)
-    return args.fn(args)
+    try:
+        return args.fn(args)
+    except SystemExit as exc:  # _token_or_exit
+        return int(exc.code or EXIT_CONFIG)
 
 
 if __name__ == "__main__":
