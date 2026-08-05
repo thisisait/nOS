@@ -413,6 +413,10 @@
     NOS_MIGRATION_AUTHOR_WING_API_TOKEN: "{{ migration_author_wing_api_token | default('') }}"
     NOS_BONE_SECRET: "{{ bone_secret | default('') }}"
     NOS_BONE_PORT: "{{ bone_port | default(8099) }}"
+    # alert-relay-base polls Prometheus for firing alerts (2026-08-05). Same
+    # reason bone_port is here: so a manifest declares the port instead of
+    # hardcoding it and drifting from default.config.yml.
+    NOS_PROMETHEUS_PORT: "{{ prometheus_port | default(9090) }}"
     # A9.4-fixup (2026-05-17): wing-base Pulse jobs reference {{ wing_home }}
     # in args[] and env values. Without the substitution, Pulse would
     # fork `/opt/homebrew/bin/php "{{ wing_home }}/bin/..."` and crash

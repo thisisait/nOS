@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 78 (74 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (72)
+- **Processing activities:** 79 (75 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (73)
 - **Transfers outside the EU:** 0 activities
 - **Activities engaging a third-party processor:** 0
 
@@ -941,6 +941,17 @@ Authentik-authenticated principals reach the service.
 - **Security measures:** platform baseline (see above)
 
 ### host / non-stack
+
+#### Alert Relay — `svc_alert-relay`
+- **Purpose:** Deliver Prometheus firing alerts to the operator via the A9 notification spine, so a rule that evaluates is a rule someone reads
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `service_health_metadata`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 365 days (~1y)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
 
 #### Alloy Docker Metrics — `svc_alloy-docker-metrics`
 - **Purpose:** Scrapes per-container Docker infrastructure metrics (CPU, memory,

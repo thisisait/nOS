@@ -144,6 +144,22 @@
 
 # ── Scheduled backup via launchd ─────────────────────────────────────────────
 
+# MEASURED 2026-08-05: the wrapper below was rendered 0755 with
+# `export RESTIC_PASSWORD="…"` inline — the key that decrypts the entire
+# off-site mirror, world-readable to every local process. `no_log: true` kept
+# it out of Ansible's output and then wrote it to disk for anyone to read.
+# Split: the secret goes to a 0600 env file, the script to 0700.
+- name: "[Backup] Deploy the off-site restic credentials (0600, not in the script)"
+  ansible.builtin.copy:
+    content: |
+      # Managed by Ansible — off-site restic credentials. Sourced by
+      # ~/agents/backup-run.sh. 0600 on purpose: this is copy #2's decryption key.
+      export RESTIC_PASSWORD={{ restic_password | quote }}
+      export RESTIC_REPOSITORY={{ restic_repo | quote }}
+    dest: "{{ ansible_facts['env']['HOME'] }}/.nos/restic.env"
+    mode: '0600'
+  no_log: true
+
 - name: "[Backup] Deploy backup-run.sh wrapper script (off-site mirror)"
   ansible.builtin.copy:
     content: |
@@ -152,25 +168,42 @@
       # Mirrors the RustFS bucket dir (copy #1) to the off-site repo (copy #2).
       set -euo pipefail
       export PATH="{{ homebrew_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"
-      export RESTIC_PASSWORD="{{ restic_password }}"
-      export RESTIC_REPOSITORY="{{ restic_repo }}"
       LOG_DIR="{{ ansible_facts['env']['HOME'] }}/backups"
       LOG_FILE="${LOG_DIR}/backup.log"
       mkdir -p "$LOG_DIR"
       exec >> "$LOG_FILE" 2>&1
+      # Copy #2 was the only backup leg with NO notification path: a failed or
+      # corrupt mirror was discoverable at restore time and nowhere earlier.
+      # The trap fires on any un-guarded non-zero under `set -e`.
+      notify_fail() {
+        "{{ playbook_dir }}/files/anatomy/scripts/nos-notify.sh" high \
+          "Off-site mirror FAILED" \
+          "restic exited non-zero. Tail of ${LOG_FILE}:
+      $(tail -n 20 "${LOG_FILE}" 2>/dev/null)" || true
+      }
+      trap notify_fail ERR
+      . "{{ ansible_facts['env']['HOME'] }}/.nos/restic.env"
       echo "=== Off-site mirror started: $(date -Iseconds) ==="
       restic backup \
         --exclude-file="{{ restic_excludefile }}" \
         {{ restic_backup_paths | join(' ') }}
       restic unlock || true
+      # Retention failing is NOT the backup failing — the snapshot is already
+      # written — so this stays guarded. It notifies rather than only echoing,
+      # because a WARN in a log nobody tails is the silence this file is fixing.
       restic forget \
         --keep-daily {{ restic_keep_daily }} \
         --keep-weekly {{ restic_keep_weekly }} \
         --keep-monthly {{ restic_keep_monthly }} \
-        --prune || echo "WARN: restic prune failed — backup snapshot is safe, retention skipped"
+        --prune || {
+          echo "WARN: restic prune failed — backup snapshot is safe, retention skipped"
+          "{{ playbook_dir }}/files/anatomy/scripts/nos-notify.sh" medium \
+            "Off-site retention skipped" \
+            "restic forget --prune failed; the snapshot is safe, old ones were not pruned." || true
+        }
       echo "=== Off-site mirror finished: $(date -Iseconds) ==="
     dest: "{{ ansible_facts['env']['HOME'] }}/agents/backup-run.sh"
-    mode: '0755'
+    mode: '0700'
   no_log: true
 
 # De-collision: the legacy Restic plist shared the label/path

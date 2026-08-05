@@ -43,7 +43,12 @@ UNDELIVERED_METRICS = (
     "paperclip_queue_depth",
     "nos_upgrade_available",
     "nos_migration_pending",
-    "nos_cve_open",
+    # nos_cve_open LEFT this list 2026-08-05. It never had a producer and the
+    # rules honestly said so — and the CRITICAL alert therefore could not fire
+    # during the REM-137 window when pending_critical was 1. A producer had
+    # existed the whole time under another name: 20-cve-drift-check.sh emits
+    # nos_security_pending_total, into a directory that did not exist. Both ends
+    # now agree, so those two alerts are live and are no longer deferred.
     "nos_vaultwarden_admin_token_age_seconds",
     "probe_dns_lookup_time_seconds",
 )
@@ -102,8 +107,12 @@ def test_undelivered_metric_alerts_are_marked_deferred():
     assert offenders == [], "\n".join(offenders)
     # Sanity: the set is non-empty — guards against a regex/path typo that would
     # make this test vacuously pass.
-    assert matched >= 10, (
-        f"expected >=10 deferred-metric alerts, matched {matched} — "
+    # Vacuity guard, not a target. It read >=10 until the two CVE alerts were
+    # connected to a real metric on 2026-08-05 — a floor on the COUNT OF
+    # DEFERRALS goes red when a deferral is honoured, which is backwards. It
+    # exists only to catch a regex or path typo that would match nothing.
+    assert matched >= 8, (
+        f"expected >=8 deferred-metric alerts, matched {matched} — "
         "did the rule files move or get gutted?"
     )
 

@@ -10,41 +10,51 @@ groups:
   - name: nos_security_cve
     interval: 5m
     rules:
-      # DEFERRED: Wing was to push `nos_cve_open{severity=...,cve=...,service=...}`
-      # via a pushgateway, but neither the pushgateway nor the producer has
-      # shipped (Wing /metrics emits only nos_e2e_journey_* + nos_pulse_jobs) —
-      # `nos_cve_open` has no producer, so these CVE alerts never fire.
-      # nos_status=deferred marks them dormant until the pushgateway lands.
+      # WAS `nos_cve_open{severity="HIGH"|"CRITICAL"}` — a metric a Wing
+      # pushgateway was supposed to produce and never did, which the rules
+      # themselves said out loud ("no producer, so these CVE alerts never
+      # fire") and marked nos_status=deferred. Honest, and still an alert that
+      # could not fire during the REM-137 window when pending_critical was 1.
+      #
+      # A producer had existed the whole time and was pointed at the wrong
+      # address: hooks/playbook-end.d/20-cve-drift-check.sh writes
+      # `nos_security_pending_total{severity="critical"|"high"|"medium"}` from
+      # the real remediation queue. It defaulted TEXTFILE_DIR to a Linux
+      # node_exporter path absent on this host, and its own `[[ -d && -w ]]`
+      # guard skipped the write in silence. Both ends are now the same metric.
+      #
+      # THE LABELS CHANGED SHAPE and the text follows. The deferred metric was
+      # per-CVE (`cve`, `service`); this one is a COUNT by severity, so the
+      # alert names a number and sends the reader to the queue for identity.
+      # Keeping `{{ $labels.cve }}` here would have rendered an empty string
+      # forever — the alert firing and saying nothing.
       - alert: NosCriticalCveFoundHigh
-        expr: nos_cve_open{severity="HIGH"} > 0
+        expr: nos_security_pending_total{severity="high"} > 0
         for: 1h
         labels:
-          severity: critical
+          severity: high
           nos_domain: security
-          nos_status: deferred
         annotations:
-          deferred_dependency: "Wing CVE pushgateway (nos_cve_open — no producer)"
-          summary: "HIGH-severity CVE open: {{ $labels.cve }} ({{ $labels.service }})"
+          summary: "{{ $value }} HIGH-severity remediation item(s) pending"
           description: |
-            Wing reports {{ $value }} open HIGH-severity CVE(s) affecting
-            {{ $labels.service }} (example: {{ $labels.cve }}). Patch window
-            should be prioritized within the next sprint.
+            docs/llm/security/remediation-queue.json holds {{ $value }} pending
+            HIGH item(s). Identity is in the queue; this gauge is the count.
+            Emitted by hooks/playbook-end.d/20-cve-drift-check.sh, refreshed at
+            end of every playbook run and by conductor:security-drift-watch.
           runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalCveFoundHigh.md"
 
       - alert: NosCriticalCveFoundCritical
-        expr: nos_cve_open{severity="CRITICAL"} > 0
+        expr: nos_security_pending_total{severity="critical"} > 0
         for: 10m
         labels:
           severity: critical
           nos_domain: security
-          nos_status: deferred
         annotations:
-          deferred_dependency: "Wing CVE pushgateway (nos_cve_open — no producer)"
-          summary: "CRITICAL CVE open: {{ $labels.cve }} ({{ $labels.service }})"
+          summary: "{{ $value }} CRITICAL remediation item(s) pending"
           description: |
-            Wing reports {{ $value }} open CRITICAL CVE(s) affecting
-            {{ $labels.service }} (example: {{ $labels.cve }}). Patch immediately
-            — consider taking the service offline until remediated.
+            docs/llm/security/remediation-queue.json holds {{ $value }} pending
+            CRITICAL item(s). Patch immediately — consider taking the affected
+            service offline until remediated. Identity is in the queue.
           runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosCriticalCveFoundCritical.md"
 
   - name: nos_security_secrets

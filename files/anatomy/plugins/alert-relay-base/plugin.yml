@@ -1,0 +1,117 @@
+# =============================================================================
+# alert-relay-base — the last link of the alert chain
+#
+# MEASURED 2026-08-05: five NosWarningServiceDegraded alerts (qdrant, gitea,
+# firefly, nginx-exporter, phpfpm-exporter) had been FIRING since 2026-07-26 —
+# ten days — and reached nobody. `GET /api/v1/status/config` on Prometheus has
+# no `alerting:` block, so there is no Alertmanager and nothing downstream of
+# rule evaluation. Six rule files with runbook_url annotations, evaluating on
+# schedule, terminating in a void.
+#
+# This plugin registers the poller that closes it: Prometheus /api/v1/alerts →
+# Bone /api/v1/notifications → the A9 severity ladder the estate already has.
+#
+# WHY NOT ALERTMANAGER. It is the right tool for silences, grouping and paging
+# rotations, and it would be a SECOND answer to "where do alerts go" beside a
+# notification spine that already exists and that an operator already reads.
+# Two answers to one question is the defect the 2026-08-05 survey was hunting.
+# When silences or inhibition become necessary, adopt Alertmanager properly and
+# retire this file — do not grow it.
+#
+# type: scheduled-job (composition) — no Docker service, no compose extension.
+#
+# INERT WHEN PROMETHEUS IS ABSENT: the script exits 1 with a legible "cannot
+# poll" line rather than pretending, and Pulse records the non-zero exit. That
+# is deliberate — see the exit-code note in the script header. A relay that
+# cannot reach its source must not report success.
+# =============================================================================
+
+name: alert-relay-base
+version: "0.1.0"
+description: >
+  Polls Prometheus for firing alerts every 15 minutes and delivers each new one
+  to Bone's notification spine exactly once, mapping the Prometheus severity
+  label onto the A9 ladder. Emits a RESOLVED note when an alert stops firing.
+  Delivery is recorded only after Bone answers 2xx, so a failed POST retries.
+upstream: https://prometheus.io/docs/prometheus/latest/querying/api/
+license: Apache-2.0
+
+type:
+  - composition
+  - scheduled-job
+
+requires:
+  # Wing/Bone substrate: Pulse registration + the A9 notification endpoint.
+  role: pazny.wing
+  plugin:
+    - prometheus-base
+
+# =============================================================================
+# PULSE JOB — harvested by files/anatomy/scripts/discover-pulse-catalog.py.
+# Job id becomes `alert-relay:relay-firing` (the harvester strips `-base`).
+# =============================================================================
+
+pulse:
+  jobs:
+    - name: relay-firing
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/scripts/prometheus-alert-relay.py"
+      # Every 15 minutes. Alerts here carry `for:` clauses of 10m-1h, so the
+      # rules already decide what is urgent; this cadence only bounds how long
+      # an already-urgent alert waits for a courier.
+      schedule: "*/15 * * * *"
+      jitter_min: 2
+      max_runtime_s: 120
+      max_concurrent: 1
+      env:
+        # BARE tokens (no `| default`) — discover-pulse-catalog.py does a
+        # LITERAL string replace keyed on "{{ playbook_dir }}"; the filter form
+        # never matches (gitleaks WING_EVENTS_HMAC_SECRET precedent).
+        PROMETHEUS_URL: "http://127.0.0.1:{{ prometheus_port }}"
+        # 8099 is Bone (HMAC verifier); 9000 is WING (Bearer). Three manifests
+        # have had this wrong, two of them fixed on the same day and the third
+        # written after the comment that called itself the sole outlier.
+        BONE_API_URL: "http://127.0.0.1:{{ bone_port }}"
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
+        # ALERT_RELAY_STATE is deliberately NOT declared here. The catalog does
+        # a literal str.replace over a fixed token map, so `{{ ansible_facts
+        # ['env']['HOME'] }}` would reach Wing verbatim and 400 the converge —
+        # test_pulse_catalog_renders_every_token.py caught exactly that on this
+        # manifest's first draft. HOME is already in the forked process's
+        # environment, so the script's own default (~/.nos/prom-alerts-seen.json)
+        # resolves it correctly with nothing to keep in sync.
+
+# =============================================================================
+# NOTIFICATIONS — canonical A9 severity routing.
+#
+# `on_info` is NOT empty here, and that is the point: the RESOLVED note is
+# emitted at info, and routing it to [] would rebuild the exact silence this
+# plugin exists to remove — an operator would learn that something broke and
+# never that it recovered.
+# =============================================================================
+
+notification:
+  on_critical: [wing-inbox, ntfy, mail]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      [wing-inbox]
+  on_info:     [wing-inbox]
+
+# =============================================================================
+# GDPR Article 30 — mandatory for every manifest, and honest here rather than
+# boilerplate: the relay forwards ALERT text, which carries service names,
+# instances and rule annotations. No personal data flows through it, but a
+# `runbook_url` and a hostname are still processing metadata about a system an
+# operator is identified with, so the block declares that rather than claiming
+# the category is empty.
+# =============================================================================
+
+gdpr:
+  purpose: "Deliver Prometheus firing alerts to the operator via the A9 notification spine, so a rule that evaluates is a rule someone reads"
+  legal_basis: legitimate_interests
+  data_categories:
+    - service_health_metadata       # alert name, labels (service/instance/job), rule annotations
+  data_subjects: [operators]
+  retention_days: 365               # matches the wing.db notifications retention
+  processors: []                    # loopback only: Prometheus :9090 → Bone :8099, no external transfer
+  eu_residency: true

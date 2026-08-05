@@ -75,6 +75,8 @@ def _build_substitutions() -> dict[str, str]:
         # Bone's port, so a manifest need not hardcode 8099 (the gitleaks
         # notification hardcoded 9000 — Wing's — and 401ed nightly).
         "{{ bone_port }}":                _env("NOS_BONE_PORT"),
+        # alert-relay-base (2026-08-05) polls Prometheus for firing alerts.
+        "{{ prometheus_port }}":          _env("NOS_PROMETHEUS_PORT"),
         # A9.4-fixup (2026-05-17): wing-base dispatch jobs reference
         # {{ wing_home }} in env (WING_DB_PATH) and {{ wing_app_dir }}
         # in args[] (dispatch-notifications.php lives under app/bin/,
