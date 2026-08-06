@@ -45,11 +45,64 @@ final class AuditChain
     /**
      * Derive the chain key from WING_EVENTS_HMAC_SECRET. Returns null when the
      * secret is unset — callers then take the unsigned (chain-off) path.
+     *
+     * THE WRITER'S KEY, always the current one. Rotation never changes how a
+     * row is signed; it changes which key VERIFIES which segment. See
+     * chainKeys().
      */
     public static function chainKey(): ?string
     {
         $s = (string) (getenv('WING_EVENTS_HMAC_SECRET') ?: '');
         return $s === '' ? null : hash_hmac('sha256', self::CHAIN_LABEL, $s);
+    }
+
+    /**
+     * The verifier's key ring: current first, then retired, newest retired
+     * first. Empty when no secret is configured at all.
+     *
+     * WHY THIS EXISTS (2026-08-06). The chain key derives from
+     * WING_EVENTS_HMAC_SECRET, so rotating that secret used to invalidate every
+     * row ever signed — 140,758 of them on this estate. That made the secret
+     * effectively unrotatable, which is a bad property for a credential and an
+     * actively dangerous one after the value leaked into a public commit.
+     *
+     * A KEY RING, NOT A SWAP — the same shape the backup crypto took: the
+     * current key writes, retired keys still read. What stops a retired key
+     * from being used to forge NEW history is not the ring, it is where a key
+     * change is allowed to happen: only at a recorded segment anchor
+     * (bin/verify-audit-chain.php). Within a segment one key must verify every
+     * row, so a suffix re-signed with a leaked retired key breaks at the row
+     * where the key changes without an anchor.
+     *
+     * This does NOT strengthen the threat model in the class docblock — an
+     * attacker who can write wing.db AND read the current secret can still
+     * recompute everything, and can write an anchor too. It restores
+     * verifiability across a rotation, which is what was lost.
+     *
+     * Separator is a comma; whitespace around entries is ignored so the
+     * rendered env var stays readable.
+     *
+     * @return string[]
+     */
+    public static function chainKeys(): array
+    {
+        $keys = [];
+        $current = self::chainKey();
+        if ($current !== null) {
+            $keys[] = $current;
+        }
+        $retired = (string) (getenv('WING_EVENTS_HMAC_SECRET_RETIRED') ?: '');
+        foreach (explode(',', $retired) as $secret) {
+            $secret = trim($secret);
+            if ($secret === '') {
+                continue;
+            }
+            $derived = hash_hmac('sha256', self::CHAIN_LABEL, $secret);
+            if (!in_array($derived, $keys, true)) {
+                $keys[] = $derived;
+            }
+        }
+        return $keys;
     }
 
     /**

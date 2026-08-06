@@ -40,11 +40,17 @@ if (!is_file($db)) {
     fwrite(STDERR, "DB not found: {$db}\n");
     exit(3);
 }
-$key = \App\Model\AuditChain::chainKey();
-if ($key === null) {
+// The key RING, not one key (2026-08-06). Current first, then retired. A
+// segment is verified by whichever ring member matches its FIRST row, and that
+// member must then verify every remaining row of the segment — so a key change
+// is possible only where a new segment is possible, i.e. at a recorded anchor.
+// Without that constraint a leaked retired key could re-sign a suffix.
+$keyRing = \App\Model\AuditChain::chainKeys();
+if ($keyRing === []) {
     fwrite(STDERR, "WING_EVENTS_HMAC_SECRET not set\n");
     exit(3);
 }
+$key = $keyRing[0];
 
 $s = new SQLite3($db, SQLITE3_OPEN_READONLY);
 $s->enableExceptions(true);
@@ -76,14 +82,41 @@ while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
         $skipped++;
         continue;
     }
+    // A key may be re-elected at exactly two places: the first row of a
+    // segment, and any row whose prev_hash is a recorded anchor.
+    //
+    // THE SECOND CLAUSE IS LOAD-BEARING and the first draft omitted it. A
+    // rotation on a LIVE chain produces no gap — the next row's prev_hash is
+    // simply the sealed head — so `!$segmentOpen` never fires again and the
+    // ring was never consulted. Measured: the very first post-rotation row
+    // failed as "content tampered". An anchor is the authorization to change
+    // keys; whether a row happens to also start a segment is incidental.
+    $atAnchor = isset($anchors[(string) $row['prev_hash']]);
     if (!$segmentOpen) {                  // first chained row of a (possibly new) segment
-        $p = (string) $row['prev_hash'];
-        if (!isset($anchors[$p])) {
+        if (!$atAnchor) {
             $break = ['id' => $row['id'], 'why' => 'segment start prev_hash neither genesis nor recorded anchor'];
             break;
         }
-        $prev = $p;
+        $prev = (string) $row['prev_hash'];
         $segmentOpen = true;
+    }
+    if ($atAnchor || $key === null) {
+        // Elect the ring member that verifies THIS row. Between anchors the
+        // elected key is the only one accepted, so a suffix re-signed with a
+        // leaked retired key breaks at the row where the key changes.
+        $elected = null;
+        foreach ($keyRing as $candidate) {
+            $probe = \App\Model\AuditChain::rowHash((string) $prev, $row, $candidate);
+            if (hash_equals($probe, (string) $row['row_hash'])) {
+                $elected = $candidate;
+                break;
+            }
+        }
+        if ($elected === null) {
+            $break = ['id' => $row['id'], 'why' => 'row at key-rotation point verifies under no key in the ring'];
+            break;
+        }
+        $key = $elected;
     }
     if (!hash_equals((string) $prev, (string) $row['prev_hash'])) {
         $break = ['id' => $row['id'], 'why' => 'prev_hash break'];
