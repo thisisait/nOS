@@ -29,7 +29,7 @@ Two invocation modes from `tasks/stacks/stack-up.yml`:
 
 | Variable | Default | Description |
 |---|---|---|
-| `n8n_version` | `2.14.1` | Pinned for CVE-2026-33660/33696/33663/33713 |
+| `n8n_version` | see `default.config.yml` | The pin is declared ONCE, there. This column named `2.14.1` long after the estate had moved twice past it — a second place to keep a version in step is a second place to get it wrong, which is why the role default was deleted (gate `test_a_pin_is_declared_once`). |
 | `n8n_port` | `5678` | Exposed on `127.0.0.1` only |
 | `n8n_domain` | `n8n.dev.local` | Public URL |
 | `n8n_data_dir` | `~/n8n` | Host bind mount for `/home/node/.n8n` |

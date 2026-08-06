@@ -1541,7 +1541,15 @@ grafana_dashboards:
 
 n8n_domain: "n8n{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 n8n_port: 5678
-n8n_version: "2.28.1"      # REM-109: Jun-24-2026 advisory cluster (4 HIGH, CVSS 7.1-7.6) fixed 2.28.1; prior 2.26.2 CVE-2026-4478x; same-major migrate-on-start
+# REM-152. MEASURED 2026-08-06 over the COMPLETE GitHub advisory set for npm
+# n8n (157 advisories, 2023-05-10..2026-07-22, cursor-paginated — the `page`
+# parameter is ignored by that endpoint and returns the same 100 forever, which
+# is how a partial sweep passes for a full one): 32 advisories affect 2.28.1
+# (19 high, 13 medium) and the lowest 2.x clearing every one is 2.31.5.
+# 2.32.7 is the queue's number and sits above that floor, with six days of soak;
+# 2.34.2 shipped today and buys nothing — no advisory has been published since
+# 2026-07-22. Same-major, migrate-on-start. arm64 tag confirmed on the registry.
+n8n_version: "2.32.7"
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
 n8n_admin_email: "{{ default_admin_email }}"
