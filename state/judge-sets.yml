@@ -47,7 +47,7 @@ judges:
     # RATCHET, in the style of BLAST_RADIUS_CEILING: 1400 of 2979 encountered
     # files are actually processed today, and nothing else pins that ratio.
     # Silent scope loss would otherwise read as green.
-    min_work: 1400
+    min_work: 1450
     mutates_worktree: false
     requires: []
     # §5.1 — this judge's oracle. Forbidden to any proposal judged by a set
@@ -114,7 +114,12 @@ judges:
     # (test_the_pytest_ratchet_is_remeasured_against_collection) and goes red
     # when the record falls behind, which forces this line to be re-derived
     # rather than left to age.
-    min_work: 2700
+    #
+    # RE-DERIVED AGAIN 2026-08-06 (2911 passed, 25 skipped): the gate that
+    # forces this re-derivation fired for the first time, at 2936 collected
+    # against a 2788 record. It works, and it will keep firing as the suite
+    # grows — which is the intended cost of not letting a floor age.
+    min_work: 2850
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,

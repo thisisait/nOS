@@ -131,8 +131,8 @@ GREEN_ANSIBLE_LINT = J.Completed(
     # NOTE: this line really is on STDERR. A stdout-only parser reads no work
     # count and turns every green ansible-lint run INDETERMINATE.
     stderr=(
-        "Passed: 0 failure(s), 0 warning(s) in 1400 files processed "
-        "of 2979 encountered. Last profile that met the validation criteria "
+        "Passed: 0 failure(s), 0 warning(s) in 1475 files processed "
+        "of 3147 encountered. Last profile that met the validation criteria "
         "was 'production'."
     ),
 )
@@ -174,7 +174,7 @@ def test_a_green_fast_set_really_does_pass():
     assert verdict.result is J.Result.PASS, verdict.reason
     assert verdict.passed is True
     assert not verdict.blocks_acceptance
-    assert [r.work for r in verdict.runs] == [1400, 2]
+    assert [r.work for r in verdict.runs] == [1475, 2]
 
 
 # ── 1. A FAILING judge produces a FAILING verdict ──────────────────────────
@@ -384,13 +384,13 @@ def test_a_completed_pytest_run_still_passes():
         registry=_one_judge_registry("pytest-anatomy", "repo"),
         repo_root=REPO,
         spawn=_fake_spawn(
-            **{"pytest": J.Completed(exit_code=0, stdout="2788 passed, 25 skipped in 228.85s\n")}
+            **{"pytest": J.Completed(exit_code=0, stdout="2911 passed, 25 skipped in 236.69s\n")}
         ),
         probe=_always_true,
         sandbox_factory=lambda root: (root, "sha-fake", lambda: None),
     )
     assert verdict.result is J.Result.PASS, verdict.reason
-    assert verdict.runs[0].work == 2788
+    assert verdict.runs[0].work == 2911
 
 
 def test_an_interrupted_pytest_that_did_fail_is_still_a_fail():
@@ -407,7 +407,7 @@ def test_an_interrupted_pytest_that_did_fail_is_still_a_fail():
 def test_work_below_the_ratchet_is_not_a_pass():
     """min_work is a BLAST_RADIUS_CEILING-style ratchet.
 
-    ansible-lint processes 1400 of 2979 encountered files and nothing else pins
+    ansible-lint processes 1475 of 3147 encountered files and nothing else pins
     that ratio, so silent scope loss would read as green. A run that suddenly
     processes 12 files is not a smaller success, it is an unexplained one.
     """
@@ -627,7 +627,7 @@ def test_the_digest_ignores_wall_clock_but_not_evidence():
     ).identity()
     blob = str(identity)
     assert "started_at" not in blob and "sandbox_path" not in blob
-    assert "1400" in blob and "stdout_sha" in blob
+    assert "1475" in blob and "stdout_sha" in blob
 
 
 def test_a_different_outcome_changes_the_digest():
@@ -721,7 +721,7 @@ def test_work_count_is_parsed_from_the_process_not_supplied():
     params = set(inspect.signature(J.work_count).parameters)
     assert params == {"spec", "done"}, params
     spec = _spec("ansible-lint")
-    assert J.work_count(spec, GREEN_ANSIBLE_LINT) == 1400
+    assert J.work_count(spec, GREEN_ANSIBLE_LINT) == 1475
     assert J.work_count(spec, J.Completed(exit_code=0, stdout="nothing useful")) is None
 
 
@@ -740,7 +740,7 @@ def test_pytest_never_runs_against_the_live_tree():
 
     def spy(argv, cwd, timeout_s):
         seen_cwd.append(cwd)
-        return J.Completed(exit_code=0, stdout="2800 passed in 230.00s\n")
+        return J.Completed(exit_code=0, stdout="2900 passed in 236.00s\n")
 
     sandbox = REPO.parent / "fake-sandbox"
     verdict = J.run_gate_set(
@@ -776,7 +776,7 @@ def test_every_judge_in_a_set_observes_exactly_one_tree():
         return {
             "ansible-lint": GREEN_ANSIBLE_LINT,
             "genome-codegen": GREEN_GENOME,
-            "pytest": J.Completed(exit_code=0, stdout="2800 passed in 230.00s\n"),
+            "pytest": J.Completed(exit_code=0, stdout="2900 passed in 236.00s\n"),
         }[_argv_key(argv)]
 
     sandbox = REPO.parent / "one-tree-sandbox"
@@ -914,17 +914,24 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 #: sat at min_work 200 against 2428 executed tests, 12x below reality, unable to
 #: notice a 91% scope loss. A ratchet nobody checks is a comment.
 #:
-#:   ansible-lint    "in 1400 files processed of 2979 encountered"   EXIT=0
+#:   ansible-lint    "in 1475 files processed of 3147 encountered"   EXIT=0
 #:   genome-codegen  "genome artifacts current (2 checked)"          EXIT=0
 #:   pytest-anatomy  "2456 passed, 4 skipped in 194.76s"   (2026-08-02, this tree)
 #:   nos-smoke       len(state/smoke-catalog.yml: smoke_endpoints)   — see below
 #:   corpus-diff     one table compared is the floor for a diff
 #: RE-MEASURED 2026-08-05: ansible-lint "in 1463 files processed of 3133
 #: encountered" EXIT=0; pytest-anatomy "2788 passed, 25 skipped in 228.85s".
+#: Re-measured 2026-08-06 on this tree, both by running the tools:
+#:   pytest tests/anatomy -q  → "2911 passed, 25 skipped"
+#:   ansible-lint             → "0 failure(s) ... in 1475 files processed of 3147"
+#: The pytest number moved because the gate below FORCED it: the suite had
+#: grown to 2936 collected against a 2788 record, and a ratchet left behind by
+#: growth certifies a fraction of the suite it names. That is the second way a
+#: ratchet rots and the only one a file-vs-file comparison cannot see.
 MEASURED_WORK = {
-    "ansible-lint": 1463,
+    "ansible-lint": 1475,
     "genome-codegen": 2,
-    "pytest-anatomy": 2788,
+    "pytest-anatomy": 2911,
     "cortex-corpus-diff": 1,
 }
 
