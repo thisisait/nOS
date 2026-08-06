@@ -119,6 +119,21 @@ pulse:
       jitter_min: 10
       max_runtime_s: 900        # first full run embeds ~800 texts (~2 min on MLX); headroom for corpus growth
       max_concurrent: 1
+      # depends_on: consumer-side edge declarations, compiled into
+      # state/anatomy-graph.json (tools/anatomy-graph-gen.py; margins by
+      # tools/anatomy-measure-margins.py). Declaration only — the daemon
+      # still dispatches on cron minutes (Phase 0).
+      depends_on:
+        - upstream: "pulse:cortex:cortex-fs-sync"
+          kind: data
+          via: "settled cortex mirror rows needing vectors (S2 fan-out, GET /agent/v1/embeddings/pending)"
+          expects: succeeded
+          measured: "2026-08-06"
+        - upstream: "pulse:cortex:cortex-fs-sync"
+          kind: temporal
+          margin_min: 15.1          # min over 10 nights to 2026-08-06
+          schedules: ["30 4 * * *", "45 4 * * *"]
+          measured: "2026-08-06"
       env:
         # BARE tokens — the Pulse catalog does a LITERAL replace (gitleaks
         # WING_EVENTS_HMAC_SECRET precedent); Ansible pre-renders the values.
@@ -146,6 +161,17 @@ pulse:
       jitter_min: 5
       max_runtime_s: 600
       max_concurrent: 1
+      depends_on:
+        - upstream: "pulse:keap:keap-embed-sync"
+          kind: data
+          via: "fresh embeddings read via /agent/v1, projected onto exemplar axes"
+          expects: succeeded
+          measured: "2026-08-06"
+        - upstream: "pulse:keap:keap-embed-sync"
+          kind: temporal
+          margin_min: 6.3           # the chain's thinnest; min over 11 nights to 2026-08-06
+          schedules: ["45 4 * * *", "0 5 * * *"]
+          measured: "2026-08-06"
       env:
         KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
         KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
@@ -189,6 +215,17 @@ pulse:
       jitter_min: 5
       max_runtime_s: 300
       max_concurrent: 1
+      depends_on:
+        - upstream: "pulse:keap:keap-embed-sync"
+          kind: data
+          via: "fresh vectors for the container's lint pass (POST /agent/v1/lint/run)"
+          expects: succeeded
+          measured: "2026-08-06"
+        - upstream: "pulse:keap:keap-features-sync"
+          kind: temporal
+          margin_min: 11.1          # min over 11 nights to 2026-08-06
+          schedules: ["0 5 * * *", "15 5 * * *"]
+          measured: "2026-08-06"
       env:
         KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
         KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"

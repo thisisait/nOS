@@ -1,0 +1,1680 @@
+{
+  "version": 1,
+  "generated_by": "tools/anatomy-graph-gen.py",
+  "doctrine": "docs/archive/nos-anatomy-graph.md",
+  "counts": {
+    "nodes": 125,
+    "edges": 90,
+    "nodes_pulse": 29,
+    "nodes_judge": 5,
+    "nodes_gateset": 4,
+    "nodes_weakness": 7,
+    "nodes_daemon": 12,
+    "nodes_service": 63,
+    "nodes_resource": 5,
+    "edges_data": 8,
+    "edges_trigger": 21,
+    "edges_temporal": 5,
+    "edges_mutex": 56
+  },
+  "warnings": [
+    "union-kind cycle (feedback loop, review-not-refuse): pulse:cortex:cortex-fs-sync -> pulse:keap:keap-embed-sync -> pulse:cortex:cortex-corpus-diff -> pulse:cortex:cortex-fs-sync"
+  ],
+  "nodes": {
+    "daemon:eu.thisisait.nos.acme-renew": {
+      "kind": "daemon",
+      "source": "launchd label (role defaults)"
+    },
+    "daemon:eu.thisisait.nos.backrest": {
+      "kind": "daemon",
+      "source": "launchd label (role defaults)"
+    },
+    "daemon:eu.thisisait.nos.backup.exporter": {
+      "kind": "daemon",
+      "source": "launchd label (role defaults)"
+    },
+    "daemon:eu.thisisait.nos.backup.offsite": {
+      "kind": "daemon",
+      "source": "launchd label (role defaults)"
+    },
+    "daemon:eu.thisisait.nos.backup.rustfs": {
+      "kind": "daemon",
+      "source": "launchd label (role defaults)"
+    },
+    "daemon:eu.thisisait.nos.bone": {
+      "kind": "daemon",
+      "source": "launchd label (role defaults)"
+    },
+    "daemon:eu.thisisait.nos.cortex": {
+      "kind": "daemon",
+      "source": "launchd label (role defaults)"
+    },
+    "daemon:eu.thisisait.nos.heartbeat": {
+      "kind": "daemon",
+      "source": "launchd label (role defaults)"
+    },
+    "daemon:eu.thisisait.nos.hermes": {
+      "kind": "daemon",
+      "source": "launchd label (role defaults)"
+    },
+    "daemon:eu.thisisait.nos.pulse": {
+      "kind": "daemon",
+      "source": "launchd label (role defaults)"
+    },
+    "daemon:eu.thisisait.nos.resume": {
+      "kind": "daemon",
+      "source": "launchd label (role defaults)"
+    },
+    "daemon:eu.thisisait.nos.wing": {
+      "kind": "daemon",
+      "source": "launchd label (role defaults)"
+    },
+    "gateset:fast": {
+      "kind": "gateset",
+      "source": "state/judge-sets.yml",
+      "judges": [
+        "ansible-lint",
+        "genome-codegen"
+      ],
+      "unattended": true
+    },
+    "gateset:full": {
+      "kind": "gateset",
+      "source": "state/judge-sets.yml",
+      "judges": [
+        "ansible-lint",
+        "genome-codegen",
+        "pytest-anatomy",
+        "nos-smoke",
+        "cortex-corpus-diff"
+      ],
+      "unattended": false
+    },
+    "gateset:live": {
+      "kind": "gateset",
+      "source": "state/judge-sets.yml",
+      "judges": [
+        "nos-smoke",
+        "cortex-corpus-diff"
+      ],
+      "unattended": true
+    },
+    "gateset:repo": {
+      "kind": "gateset",
+      "source": "state/judge-sets.yml",
+      "judges": [
+        "ansible-lint",
+        "genome-codegen",
+        "pytest-anatomy"
+      ],
+      "unattended": true
+    },
+    "judge:ansible-lint": {
+      "kind": "judge",
+      "source": "state/judge-sets.yml",
+      "deterministic": true,
+      "mutates_worktree": false,
+      "min_work": 1450,
+      "claims": [],
+      "requires": []
+    },
+    "judge:cortex-corpus-diff": {
+      "kind": "judge",
+      "source": "state/judge-sets.yml",
+      "deterministic": false,
+      "mutates_worktree": false,
+      "min_work": 1,
+      "claims": [],
+      "requires": [
+        "keap_token_ro",
+        "cortex_token_ro"
+      ]
+    },
+    "judge:genome-codegen": {
+      "kind": "judge",
+      "source": "state/judge-sets.yml",
+      "deterministic": true,
+      "mutates_worktree": false,
+      "min_work": 2,
+      "claims": [
+        "nos_entity"
+      ],
+      "requires": []
+    },
+    "judge:nos-smoke": {
+      "kind": "judge",
+      "source": "state/judge-sets.yml",
+      "deterministic": false,
+      "mutates_worktree": false,
+      "min_work": 9,
+      "claims": [],
+      "requires": [
+        "live_estate"
+      ]
+    },
+    "judge:pytest-anatomy": {
+      "kind": "judge",
+      "source": "state/judge-sets.yml",
+      "deterministic": true,
+      "mutates_worktree": true,
+      "min_work": 2850,
+      "claims": [
+        "nos_entity"
+      ],
+      "requires": []
+    },
+    "pulse:alert-relay:relay-firing": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/alert-relay-base/plugin.yml",
+      "schedule": "*/15 * * * *",
+      "jitter_min": 2,
+      "max_runtime_s": 120,
+      "category": "platform",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "pulse:authentik-tofu-drift:tofu-drift-plan": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/authentik-tofu-drift-base/plugin.yml",
+      "schedule": "30 5 * * *",
+      "jitter_min": 10,
+      "max_runtime_s": 600,
+      "category": "security",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "pulse:backup:backup-restore-drill": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/backup-base/plugin.yml",
+      "schedule": "30 7 * * 0",
+      "jitter_min": 15,
+      "max_runtime_s": 1800,
+      "category": "platform",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "pulse:conductor:scan-state-record": {
+      "kind": "pulse",
+      "source": "files/anatomy/agents/conductor.yml",
+      "schedule": "30 3 * * *",
+      "jitter_min": 5,
+      "max_runtime_s": 120,
+      "category": "security",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "pulse:conductor:security-drift-watch": {
+      "kind": "pulse",
+      "source": "files/anatomy/agents/conductor.yml",
+      "schedule": "0 6 * * *",
+      "jitter_min": 10,
+      "max_runtime_s": 120,
+      "category": "security",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "pulse:conductor:self-test-001": {
+      "kind": "pulse",
+      "source": "files/anatomy/agents/conductor.yml",
+      "schedule": "0 4 * * 0",
+      "jitter_min": 5,
+      "max_runtime_s": 300,
+      "category": "agents",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": [
+        "agent-run-lock"
+      ]
+    },
+    "pulse:conductor:vulnerability-scan": {
+      "kind": "pulse",
+      "source": "files/anatomy/agents/conductor.yml",
+      "schedule": "0 2 * * *",
+      "jitter_min": 15,
+      "max_runtime_s": 1800,
+      "category": "security",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": [
+        "agent-run-lock"
+      ]
+    },
+    "pulse:cortex:cortex-corpus-diff": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/cortex-base/plugin.yml",
+      "schedule": "30 5 * * *",
+      "jitter_min": 5,
+      "max_runtime_s": 600,
+      "category": "knowledge",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "pulse:cortex:cortex-fs-sync": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/cortex-base/plugin.yml",
+      "schedule": "30 4 * * *",
+      "jitter_min": 2,
+      "max_runtime_s": 900,
+      "category": "knowledge",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "pulse:curator:curator-sweep": {
+      "kind": "pulse",
+      "source": "files/anatomy/agents/curator.yml",
+      "schedule": "30 5 * * *",
+      "jitter_min": 5,
+      "max_runtime_s": 1800,
+      "category": "knowledge",
+      "paused": true,
+      "findings_exit_codes": null,
+      "claims": [
+        "agent-run-lock"
+      ]
+    },
+    "pulse:discovery:contradiction-scan": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/discovery/plugin.yml",
+      "schedule": "40 6 * * *",
+      "jitter_min": 5,
+      "max_runtime_s": 300,
+      "category": "security",
+      "paused": false,
+      "findings_exit_codes": [
+        1
+      ],
+      "claims": []
+    },
+    "pulse:gdpr-breach:breach-deadline-scan": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/gdpr-breach-base/plugin.yml",
+      "schedule": "0 * * * *",
+      "jitter_min": 5,
+      "max_runtime_s": 60,
+      "category": "compliance",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "pulse:gitleaks:nightly-scan": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/gitleaks/plugin.yml",
+      "schedule": "0 3 * * *",
+      "jitter_min": 10,
+      "max_runtime_s": 600,
+      "category": "security",
+      "paused": false,
+      "findings_exit_codes": [
+        1
+      ],
+      "claims": []
+    },
+    "pulse:keap:keap-consolidate": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/keap-base/plugin.yml",
+      "schedule": "15 4 * * *",
+      "jitter_min": 5,
+      "max_runtime_s": 600,
+      "category": "knowledge",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "pulse:keap:keap-embed-sync": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/keap-base/plugin.yml",
+      "schedule": "45 4 * * *",
+      "jitter_min": 10,
+      "max_runtime_s": 900,
+      "category": "knowledge",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "pulse:keap:keap-features-sync": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/keap-base/plugin.yml",
+      "schedule": "0 5 * * *",
+      "jitter_min": 5,
+      "max_runtime_s": 600,
+      "category": "knowledge",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "pulse:keap:keap-lint": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/keap-base/plugin.yml",
+      "schedule": "15 5 * * *",
+      "jitter_min": 5,
+      "max_runtime_s": 300,
+      "category": "knowledge",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "pulse:librarian:brief-taxonomy": {
+      "kind": "pulse",
+      "source": "files/anatomy/agents/librarian.yml",
+      "schedule": "50 6 * * 0",
+      "jitter_min": 5,
+      "max_runtime_s": 900,
+      "category": "knowledge",
+      "paused": true,
+      "findings_exit_codes": null,
+      "claims": [
+        "agent-run-lock"
+      ]
+    },
+    "pulse:librarian:describe-taxonomy": {
+      "kind": "pulse",
+      "source": "files/anatomy/agents/librarian.yml",
+      "schedule": "45 6 * * 0",
+      "jitter_min": 5,
+      "max_runtime_s": 900,
+      "category": "knowledge",
+      "paused": true,
+      "findings_exit_codes": null,
+      "claims": [
+        "agent-run-lock"
+      ]
+    },
+    "pulse:librarian:judge-lint-queue": {
+      "kind": "pulse",
+      "source": "files/anatomy/agents/librarian.yml",
+      "schedule": "30 6 * * 0",
+      "jitter_min": 5,
+      "max_runtime_s": 600,
+      "category": "knowledge",
+      "paused": true,
+      "findings_exit_codes": null,
+      "claims": [
+        "agent-run-lock"
+      ]
+    },
+    "pulse:migration-author:promote-migration": {
+      "kind": "pulse",
+      "source": "files/anatomy/agents/migration-author.yml",
+      "schedule": "0 9 * * 0",
+      "jitter_min": 5,
+      "max_runtime_s": 300,
+      "category": "agents",
+      "paused": true,
+      "findings_exit_codes": null,
+      "claims": [
+        "agent-run-lock"
+      ]
+    },
+    "pulse:npm-supply-chain:daily-ioc-scan": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/npm-supply-chain/plugin.yml",
+      "schedule": "20 4 * * *",
+      "jitter_min": 7,
+      "max_runtime_s": 900,
+      "category": "security",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "pulse:remediator:triage-open-findings": {
+      "kind": "pulse",
+      "source": "files/anatomy/agents/remediator.yml",
+      "schedule": "0 5 * * 0",
+      "jitter_min": 5,
+      "max_runtime_s": 300,
+      "category": "agents",
+      "paused": true,
+      "findings_exit_codes": null,
+      "claims": [
+        "agent-run-lock"
+      ]
+    },
+    "pulse:scout:drift-scan": {
+      "kind": "pulse",
+      "source": "files/anatomy/agents/scout.yml",
+      "schedule": "0 6 * * 0",
+      "jitter_min": 5,
+      "max_runtime_s": 300,
+      "category": "agents",
+      "paused": true,
+      "findings_exit_codes": null,
+      "claims": [
+        "agent-run-lock"
+      ]
+    },
+    "pulse:upgrade-advisor:upgrade-advise": {
+      "kind": "pulse",
+      "source": "files/anatomy/agents/upgrade-advisor.yml",
+      "schedule": "0 7 * * 0",
+      "jitter_min": 5,
+      "max_runtime_s": 300,
+      "category": "agents",
+      "paused": true,
+      "findings_exit_codes": null,
+      "claims": [
+        "agent-run-lock"
+      ]
+    },
+    "pulse:upgrade-architect:recipe-author": {
+      "kind": "pulse",
+      "source": "files/anatomy/agents/upgrade-architect.yml",
+      "schedule": "0 8 * * 0",
+      "jitter_min": 5,
+      "max_runtime_s": 300,
+      "category": "agents",
+      "paused": true,
+      "findings_exit_codes": null,
+      "claims": [
+        "agent-run-lock"
+      ]
+    },
+    "pulse:wing:audit-chain-verify": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/wing-base/plugin.yml",
+      "schedule": "17 4 * * *",
+      "jitter_min": 10,
+      "max_runtime_s": 120,
+      "category": "compliance",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "pulse:wing:dispatch-notifications": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/wing-base/plugin.yml",
+      "schedule": "* * * * *",
+      "jitter_min": 0,
+      "max_runtime_s": 30,
+      "category": "notification",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "pulse:wing:dispatch-notifications-digest": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/wing-base/plugin.yml",
+      "schedule": "{{ mail_digest_cron }}",
+      "jitter_min": 5,
+      "max_runtime_s": 60,
+      "category": "notification",
+      "paused": false,
+      "findings_exit_codes": null,
+      "claims": []
+    },
+    "resource:agent-run-lock": {
+      "kind": "resource",
+      "source": "derived from claims"
+    },
+    "resource:cortex_token_ro": {
+      "kind": "resource",
+      "source": "derived from judge-sets requires"
+    },
+    "resource:keap_token_ro": {
+      "kind": "resource",
+      "source": "derived from judge-sets requires"
+    },
+    "resource:live_estate": {
+      "kind": "resource",
+      "source": "derived from judge-sets requires"
+    },
+    "resource:nos_entity": {
+      "kind": "resource",
+      "source": "derived from claims"
+    },
+    "service:alloy": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": null,
+      "category": "observability",
+      "install_flag": "install_observability"
+    },
+    "service:authentik": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "infra",
+      "category": "identity",
+      "install_flag": "install_authentik"
+    },
+    "service:backrest": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": null,
+      "category": "storage",
+      "install_flag": "install_backrest"
+    },
+    "service:backup": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": null,
+      "category": "security",
+      "install_flag": "install_backup"
+    },
+    "service:bluesky_pds": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "infra",
+      "category": "identity",
+      "install_flag": "install_bluesky_pds"
+    },
+    "service:bone": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": null,
+      "category": "api",
+      "install_flag": "install_bone"
+    },
+    "service:bookstack": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "b2b",
+      "category": "wiki",
+      "install_flag": "install_bookstack"
+    },
+    "service:calibre_web": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "media",
+      "install_flag": "install_calibreweb"
+    },
+    "service:code_server": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "devops",
+      "category": "devops",
+      "install_flag": "install_code_server"
+    },
+    "service:cortex": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": null,
+      "category": "knowledge",
+      "install_flag": "install_cortex"
+    },
+    "service:erpnext": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "b2b",
+      "category": "finance",
+      "install_flag": "install_erpnext"
+    },
+    "service:face": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "desktop",
+      "install_flag": "install_face"
+    },
+    "service:firefly": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "b2b",
+      "category": "finance",
+      "install_flag": "install_firefly"
+    },
+    "service:freepbx": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "voip",
+      "category": "pbx",
+      "install_flag": "install_freepbx"
+    },
+    "service:freescout": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "b2b",
+      "category": "helpdesk",
+      "install_flag": "install_freescout"
+    },
+    "service:gitea": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "devops",
+      "category": "devops",
+      "install_flag": "install_gitea"
+    },
+    "service:gitlab": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "devops",
+      "category": "devops",
+      "install_flag": "install_gitlab"
+    },
+    "service:grafana": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "observability",
+      "category": "observability",
+      "install_flag": "install_observability"
+    },
+    "service:hedgedoc": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "b2b",
+      "category": "wiki",
+      "install_flag": "install_hedgedoc"
+    },
+    "service:hermes": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": null,
+      "category": "messaging",
+      "install_flag": "install_hermes"
+    },
+    "service:homeassistant": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "homeautomation",
+      "install_flag": "install_homeassistant"
+    },
+    "service:iiab_terminal": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": null,
+      "category": "iiab",
+      "install_flag": "install_iiab_terminal"
+    },
+    "service:infisical": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "infra",
+      "category": "vault",
+      "install_flag": "install_infisical"
+    },
+    "service:influxdb": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "data",
+      "category": "data",
+      "install_flag": "install_influxdb"
+    },
+    "service:jellyfin": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "media",
+      "install_flag": "install_jellyfin"
+    },
+    "service:keap": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "knowledge",
+      "install_flag": "install_keap"
+    },
+    "service:kiwix": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "iiab",
+      "install_flag": "install_kiwix"
+    },
+    "service:loki": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "observability",
+      "category": "observability",
+      "install_flag": "install_observability"
+    },
+    "service:mailpit": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "mail",
+      "install_flag": "install_mailpit"
+    },
+    "service:mariadb": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "infra",
+      "category": "database",
+      "install_flag": "install_mariadb"
+    },
+    "service:mcp_gateway": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "ai",
+      "install_flag": "install_mcp_gateway"
+    },
+    "service:metabase": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "data",
+      "category": "data",
+      "install_flag": "install_metabase"
+    },
+    "service:miniflux": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "rss",
+      "install_flag": "install_miniflux"
+    },
+    "service:n8n": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "automation",
+      "install_flag": "install_n8n"
+    },
+    "service:nextcloud": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "collaboration",
+      "install_flag": "install_nextcloud"
+    },
+    "service:nodered": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "automation",
+      "install_flag": "install_nodered"
+    },
+    "service:ntfy": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "notifications",
+      "install_flag": "install_ntfy"
+    },
+    "service:offline_maps": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "gis",
+      "install_flag": "install_offline_maps"
+    },
+    "service:onlyoffice": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "b2b",
+      "category": "collaboration",
+      "install_flag": "install_onlyoffice"
+    },
+    "service:open_webui": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "ai",
+      "install_flag": "install_openwebui"
+    },
+    "service:openclaw": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": null,
+      "category": "agent",
+      "install_flag": "install_openclaw"
+    },
+    "service:opencode": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": null,
+      "category": "ai",
+      "install_flag": "install_opencode"
+    },
+    "service:outline": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "b2b",
+      "category": "wiki",
+      "install_flag": "install_outline"
+    },
+    "service:paperclip": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "devops",
+      "category": "agent",
+      "install_flag": "install_paperclip"
+    },
+    "service:portainer": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "infra",
+      "category": "devops",
+      "install_flag": "install_portainer"
+    },
+    "service:postgresql": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "infra",
+      "category": "database",
+      "install_flag": "install_postgresql"
+    },
+    "service:prometheus": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "observability",
+      "category": "observability",
+      "install_flag": "install_observability"
+    },
+    "service:pulse": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": null,
+      "category": "automation",
+      "install_flag": "install_pulse"
+    },
+    "service:qgis_server": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "engineering",
+      "category": "gis",
+      "install_flag": "install_qgis_server"
+    },
+    "service:redis": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "infra",
+      "category": "cache",
+      "install_flag": "install_redis"
+    },
+    "service:rustfs": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "storage",
+      "install_flag": "install_rustfs"
+    },
+    "service:smtp_stalwart": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "infra",
+      "category": "mail",
+      "install_flag": "install_smtp_stalwart"
+    },
+    "service:snappymail": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "mail",
+      "install_flag": "install_snappymail"
+    },
+    "service:superset": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "data",
+      "category": "data",
+      "install_flag": "install_superset"
+    },
+    "service:tailscale": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": null,
+      "category": "vpn",
+      "install_flag": "install_tailscale"
+    },
+    "service:tempo": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "observability",
+      "category": "observability",
+      "install_flag": "install_observability"
+    },
+    "service:traefik": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "infra",
+      "category": "proxy",
+      "install_flag": "install_traefik"
+    },
+    "service:uptime_kuma": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "observability",
+      "install_flag": "install_uptime_kuma"
+    },
+    "service:vaultwarden": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "vault",
+      "install_flag": "install_vaultwarden"
+    },
+    "service:watchtower": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "monitoring",
+      "install_flag": "install_watchtower"
+    },
+    "service:wing": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": null,
+      "category": "security",
+      "install_flag": "install_wing"
+    },
+    "service:woodpecker": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "devops",
+      "category": "devops",
+      "install_flag": "install_woodpecker"
+    },
+    "service:wordpress": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": "iiab",
+      "category": "cms",
+      "install_flag": "install_wordpress"
+    },
+    "weakness:corpus-diff": {
+      "kind": "weakness",
+      "source": "files/anatomy/bone/weaknesses.py",
+      "required": false
+    },
+    "weakness:git-worktree": {
+      "kind": "weakness",
+      "source": "files/anatomy/bone/weaknesses.py",
+      "required": true
+    },
+    "weakness:hidden-fees": {
+      "kind": "weakness",
+      "source": "files/anatomy/bone/weaknesses.py",
+      "required": true
+    },
+    "weakness:prometheus-alerts": {
+      "kind": "weakness",
+      "source": "files/anatomy/bone/weaknesses.py",
+      "required": false
+    },
+    "weakness:pulse-runs": {
+      "kind": "weakness",
+      "source": "files/anatomy/bone/weaknesses.py",
+      "required": false
+    },
+    "weakness:remediation-queue": {
+      "kind": "weakness",
+      "source": "files/anatomy/bone/weaknesses.py",
+      "required": true
+    },
+    "weakness:scan-state": {
+      "kind": "weakness",
+      "source": "files/anatomy/bone/weaknesses.py",
+      "required": true
+    }
+  },
+  "edges": [
+    {
+      "from": "pulse:cortex:cortex-fs-sync",
+      "to": "pulse:keap:keap-embed-sync",
+      "kind": "data",
+      "measured": "2026-08-06",
+      "via": "settled cortex mirror rows needing vectors (S2 fan-out, GET /agent/v1/embeddings/pending)",
+      "expects": "succeeded"
+    },
+    {
+      "from": "pulse:keap:keap-consolidate",
+      "to": "pulse:cortex:cortex-fs-sync",
+      "kind": "data",
+      "measured": "2026-08-06",
+      "via": "night's new datapoints registered via /agent/v1 capture (keap + cortex mirror)",
+      "expects": "succeeded"
+    },
+    {
+      "from": "pulse:keap:keap-embed-sync",
+      "to": "pulse:cortex:cortex-corpus-diff",
+      "kind": "data",
+      "measured": "2026-08-06",
+      "via": "both corpora in settled state — GET /agent/v1/embeddings/pending drained by the second pass",
+      "expects": "succeeded"
+    },
+    {
+      "from": "pulse:keap:keap-embed-sync",
+      "to": "pulse:keap:keap-features-sync",
+      "kind": "data",
+      "measured": "2026-08-06",
+      "via": "fresh embeddings read via /agent/v1, projected onto exemplar axes",
+      "expects": "succeeded"
+    },
+    {
+      "from": "pulse:keap:keap-embed-sync",
+      "to": "pulse:keap:keap-lint",
+      "kind": "data",
+      "measured": "2026-08-06",
+      "via": "fresh vectors for the container's lint pass (POST /agent/v1/lint/run)",
+      "expects": "succeeded"
+    },
+    {
+      "from": "resource:cortex_token_ro",
+      "to": "judge:cortex-corpus-diff",
+      "kind": "data",
+      "via": "capability requirement (judge-sets requires:) — satisfied or not, never exclusive",
+      "derived": "judge-sets.requires"
+    },
+    {
+      "from": "resource:keap_token_ro",
+      "to": "judge:cortex-corpus-diff",
+      "kind": "data",
+      "via": "capability requirement (judge-sets requires:) — satisfied or not, never exclusive",
+      "derived": "judge-sets.requires"
+    },
+    {
+      "from": "resource:live_estate",
+      "to": "judge:nos-smoke",
+      "kind": "data",
+      "via": "capability requirement (judge-sets requires:) — satisfied or not, never exclusive",
+      "derived": "judge-sets.requires"
+    },
+    {
+      "from": "judge:genome-codegen",
+      "to": "judge:pytest-anatomy",
+      "kind": "mutex",
+      "resource": "nos_entity",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:self-test-001",
+      "to": "pulse:conductor:vulnerability-scan",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:self-test-001",
+      "to": "pulse:curator:curator-sweep",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:self-test-001",
+      "to": "pulse:librarian:brief-taxonomy",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:self-test-001",
+      "to": "pulse:librarian:describe-taxonomy",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:self-test-001",
+      "to": "pulse:librarian:judge-lint-queue",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:self-test-001",
+      "to": "pulse:migration-author:promote-migration",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:self-test-001",
+      "to": "pulse:remediator:triage-open-findings",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:self-test-001",
+      "to": "pulse:scout:drift-scan",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:self-test-001",
+      "to": "pulse:upgrade-advisor:upgrade-advise",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:self-test-001",
+      "to": "pulse:upgrade-architect:recipe-author",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:vulnerability-scan",
+      "to": "pulse:curator:curator-sweep",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:vulnerability-scan",
+      "to": "pulse:librarian:brief-taxonomy",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:vulnerability-scan",
+      "to": "pulse:librarian:describe-taxonomy",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:vulnerability-scan",
+      "to": "pulse:librarian:judge-lint-queue",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:vulnerability-scan",
+      "to": "pulse:migration-author:promote-migration",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:vulnerability-scan",
+      "to": "pulse:remediator:triage-open-findings",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:vulnerability-scan",
+      "to": "pulse:scout:drift-scan",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:vulnerability-scan",
+      "to": "pulse:upgrade-advisor:upgrade-advise",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:conductor:vulnerability-scan",
+      "to": "pulse:upgrade-architect:recipe-author",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:curator:curator-sweep",
+      "to": "pulse:librarian:brief-taxonomy",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:curator:curator-sweep",
+      "to": "pulse:librarian:describe-taxonomy",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:curator:curator-sweep",
+      "to": "pulse:librarian:judge-lint-queue",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:curator:curator-sweep",
+      "to": "pulse:migration-author:promote-migration",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:curator:curator-sweep",
+      "to": "pulse:remediator:triage-open-findings",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:curator:curator-sweep",
+      "to": "pulse:scout:drift-scan",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:curator:curator-sweep",
+      "to": "pulse:upgrade-advisor:upgrade-advise",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:curator:curator-sweep",
+      "to": "pulse:upgrade-architect:recipe-author",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:brief-taxonomy",
+      "to": "pulse:librarian:describe-taxonomy",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:brief-taxonomy",
+      "to": "pulse:librarian:judge-lint-queue",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:brief-taxonomy",
+      "to": "pulse:migration-author:promote-migration",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:brief-taxonomy",
+      "to": "pulse:remediator:triage-open-findings",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:brief-taxonomy",
+      "to": "pulse:scout:drift-scan",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:brief-taxonomy",
+      "to": "pulse:upgrade-advisor:upgrade-advise",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:brief-taxonomy",
+      "to": "pulse:upgrade-architect:recipe-author",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:describe-taxonomy",
+      "to": "pulse:librarian:judge-lint-queue",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:describe-taxonomy",
+      "to": "pulse:migration-author:promote-migration",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:describe-taxonomy",
+      "to": "pulse:remediator:triage-open-findings",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:describe-taxonomy",
+      "to": "pulse:scout:drift-scan",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:describe-taxonomy",
+      "to": "pulse:upgrade-advisor:upgrade-advise",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:describe-taxonomy",
+      "to": "pulse:upgrade-architect:recipe-author",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:judge-lint-queue",
+      "to": "pulse:migration-author:promote-migration",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:judge-lint-queue",
+      "to": "pulse:remediator:triage-open-findings",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:judge-lint-queue",
+      "to": "pulse:scout:drift-scan",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:judge-lint-queue",
+      "to": "pulse:upgrade-advisor:upgrade-advise",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:librarian:judge-lint-queue",
+      "to": "pulse:upgrade-architect:recipe-author",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:migration-author:promote-migration",
+      "to": "pulse:remediator:triage-open-findings",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:migration-author:promote-migration",
+      "to": "pulse:scout:drift-scan",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:migration-author:promote-migration",
+      "to": "pulse:upgrade-advisor:upgrade-advise",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:migration-author:promote-migration",
+      "to": "pulse:upgrade-architect:recipe-author",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:remediator:triage-open-findings",
+      "to": "pulse:scout:drift-scan",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:remediator:triage-open-findings",
+      "to": "pulse:upgrade-advisor:upgrade-advise",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:remediator:triage-open-findings",
+      "to": "pulse:upgrade-architect:recipe-author",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:scout:drift-scan",
+      "to": "pulse:upgrade-advisor:upgrade-advise",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:scout:drift-scan",
+      "to": "pulse:upgrade-architect:recipe-author",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:upgrade-advisor:upgrade-advise",
+      "to": "pulse:upgrade-architect:recipe-author",
+      "kind": "mutex",
+      "resource": "agent-run-lock",
+      "derived": "claims"
+    },
+    {
+      "from": "pulse:cortex:cortex-fs-sync",
+      "to": "pulse:keap:keap-embed-sync",
+      "kind": "temporal",
+      "measured": "2026-08-06",
+      "margin_min": 15.1,
+      "schedules": [
+        "30 4 * * *",
+        "45 4 * * *"
+      ],
+      "gap_min": 15,
+      "declared_margin_min": -2.0,
+      "can_invert": true
+    },
+    {
+      "from": "pulse:keap:keap-consolidate",
+      "to": "pulse:cortex:cortex-fs-sync",
+      "kind": "temporal",
+      "measured": "2026-08-06",
+      "margin_min": 12.1,
+      "schedules": [
+        "15 4 * * *",
+        "30 4 * * *"
+      ],
+      "gap_min": 15,
+      "declared_margin_min": 0.0,
+      "can_invert": true
+    },
+    {
+      "from": "pulse:keap:keap-embed-sync",
+      "to": "pulse:keap:keap-features-sync",
+      "kind": "temporal",
+      "measured": "2026-08-06",
+      "margin_min": 6.3,
+      "schedules": [
+        "45 4 * * *",
+        "0 5 * * *"
+      ],
+      "gap_min": 15,
+      "declared_margin_min": -10.0,
+      "can_invert": true
+    },
+    {
+      "from": "pulse:keap:keap-features-sync",
+      "to": "pulse:keap:keap-lint",
+      "kind": "temporal",
+      "measured": "2026-08-06",
+      "margin_min": 11.1,
+      "schedules": [
+        "0 5 * * *",
+        "15 5 * * *"
+      ],
+      "gap_min": 15,
+      "declared_margin_min": 0.0,
+      "can_invert": true
+    },
+    {
+      "from": "pulse:keap:keap-lint",
+      "to": "pulse:cortex:cortex-corpus-diff",
+      "kind": "temporal",
+      "measured": "2026-08-06",
+      "margin_min": 11.3,
+      "schedules": [
+        "15 5 * * *",
+        "30 5 * * *"
+      ],
+      "gap_min": 15,
+      "declared_margin_min": 5.0,
+      "can_invert": false
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:alert-relay:relay-firing",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:authentik-tofu-drift:tofu-drift-plan",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:backup:backup-restore-drill",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:conductor:scan-state-record",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:conductor:security-drift-watch",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:conductor:self-test-001",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:conductor:vulnerability-scan",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:cortex:cortex-corpus-diff",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:cortex:cortex-fs-sync",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:discovery:contradiction-scan",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:gdpr-breach:breach-deadline-scan",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:gitleaks:nightly-scan",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:keap:keap-consolidate",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:keap:keap-embed-sync",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:keap:keap-features-sync",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:keap:keap-lint",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:npm-supply-chain:daily-ioc-scan",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:wing:audit-chain-verify",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:wing:dispatch-notifications",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:wing:dispatch-notifications-digest",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "pulse:cortex:cortex-corpus-diff",
+      "to": "pulse:cortex:cortex-fs-sync",
+      "kind": "trigger",
+      "measured": "2026-08-06",
+      "via": "night ledger `halted` flag (~/.nos/cortex-corpus-diff.json) — read at start, refuse with exit 4; cleared only by --clear-halt"
+    }
+  ]
+}

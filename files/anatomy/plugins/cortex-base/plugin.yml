@@ -142,6 +142,33 @@ pulse:
       jitter_min: 2
       max_runtime_s: 900
       max_concurrent: 1
+      # depends_on: consumer-side edge declarations (docs/archive/
+      # nos-anatomy-graph.md §2). Compiled into state/anatomy-graph.json by
+      # tools/anatomy-graph-gen.py; margins restamped by
+      # tools/anatomy-measure-margins.py. Nothing schedules off these yet
+      # (Phase 0: declaration + gate + screens); the daemon still dispatches
+      # on cron minutes alone.
+      #
+      # The trigger edge is DECLARABLE ONLY SINCE 2026-08-06: the halt it names
+      # was three pieces of prose and no code until commit 97abdb7c wired the
+      # ledger's `halted` flag into this script (read at start, exit 4).
+      # Repair before declare — the edge exists because the code changed, not
+      # because the standard did.
+      depends_on:
+        - upstream: "pulse:keap:keap-consolidate"
+          kind: data
+          via: "night's new datapoints registered via /agent/v1 capture (keap + cortex mirror)"
+          expects: succeeded
+          measured: "2026-08-06"
+        - upstream: "pulse:keap:keap-consolidate"
+          kind: temporal
+          margin_min: 12.1          # min over 10 nights to 2026-08-06
+          schedules: ["15 4 * * *", "30 4 * * *"]
+          measured: "2026-08-06"
+        - upstream: "pulse:cortex:cortex-corpus-diff"
+          kind: trigger
+          via: "night ledger `halted` flag (~/.nos/cortex-corpus-diff.json) — read at start, refuse with exit 4; cleared only by --clear-halt"
+          measured: "2026-08-06"
       env:
         # rw, not ro: a pass WRITES the corpus (upserts, and — behind five
         # guards and the mount sentinel — prunes).
@@ -165,6 +192,17 @@ pulse:
       jitter_min: 5
       max_runtime_s: 600
       max_concurrent: 1
+      depends_on:
+        - upstream: "pulse:keap:keap-embed-sync"
+          kind: data
+          via: "both corpora in settled state — GET /agent/v1/embeddings/pending drained by the second pass"
+          expects: succeeded
+          measured: "2026-08-06"
+        - upstream: "pulse:keap:keap-lint"
+          kind: temporal
+          margin_min: 11.3          # min over 10 nights to 2026-08-06
+          schedules: ["15 5 * * *", "30 5 * * *"]
+          measured: "2026-08-06"
       env:
         # BARE tokens — the Pulse catalog does a LITERAL replace; Ansible
         # pre-renders the values.
