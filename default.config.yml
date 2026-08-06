@@ -1209,7 +1209,7 @@ mariadb_container_name: "infra-mariadb-1"
 # ==============================================================================
 
 redis_docker: false                    # true = Redis in Docker (for cross-stack access)
-redis_version: "8.6.5"                  # REM-103: re-pin off the EOL 8.0 branch (final 8.0.6) — May-2026 DarkReplica cluster; supersedes 7.4.6 CVE-2025-49844 (RediShell RCE)
+redis_version: "8.10.0"                  # REM-103: re-pin off the EOL 8.0 branch (final 8.0.6) — May-2026 DarkReplica cluster; supersedes 7.4.6 CVE-2025-49844 (RediShell RCE) [swept 8.6.5 2026-08-06]
 redis_container_name: "infra-redis-1"   # live <stack>-<service>-1; used by upgrade recipe docker-exec
 
 # ==============================================================================
@@ -1444,11 +1444,11 @@ observability_hostname: "{{ ansible_facts['hostname'] }}"  # Hostname in Grafana
 
 # ── Docker image versions (observability + devops) ───────────────────────────
 grafana_version: "12.4.4"               # CVE-2026-27876 pin + S2 freshness 2026-06-10 (patch line)
-prometheus_version: "v3.11.3"   # synced to role default (cleared version-pin shadow)
-loki_version: "3.7.2"           # synced to role default (cleared version-pin shadow)
+prometheus_version: "v3.13.2"   # synced to role default (cleared version-pin shadow) [swept v3.11.3 2026-08-06]
+loki_version: "3.7.6"           # synced to role default (cleared version-pin shadow) [swept 3.7.2 2026-08-06]
 
 # Gitea Docker
-gitea_version: "1.27.0"                 # REM-099: 1.25.x EOL — CVE-2026-27771 pkg-registry reads, CVE-2026-22874 SSRF, OAuth2 scope bypass; exactly 1.26.4 (1.26.3 regression). Migration 2026-07-09-gitea-1-25-5-to-1-26-4
+gitea_version: "1.27.1"                 # REM-099: 1.25.x EOL — CVE-2026-27771 pkg-registry reads, CVE-2026-22874 SSRF, OAuth2 scope bypass; exactly 1.26.4 (1.26.3 regression). Migration 2026-07-09-gitea-1-25-5-to-1-26-4 [swept 1.27.0 2026-08-06]
 
 # ── Grafana ───────────────────────────────────────────────────────────────────
 grafana_admin_user: "admin"
@@ -1495,11 +1495,11 @@ redis_exporter_port: 9121          # oliver006/redis_exporter
 cadvisor_port: 8080                # gcr.io/cadvisor/cadvisor — container resource metrics
 blackbox_exporter_port: 9115       # prom/blackbox-exporter — HTTP/TCP probes
 
-postgres_exporter_version: "v0.15.0"
-mysqld_exporter_version: "v0.15.1"
-redis_exporter_version: "v1.58.0"
+postgres_exporter_version: "v0.20.1"  # [swept 2026-08-06]
+mysqld_exporter_version: "v0.19.0"  # [swept 2026-08-06]
+redis_exporter_version: "v1.88.0"  # [swept 2026-08-06]
 cadvisor_version: "v0.49.1"
-blackbox_exporter_version: "v0.25.0"
+blackbox_exporter_version: "v0.28.0"  # [swept 2026-08-06]
 
 alloy_scrape_postgres_exporter: "{{ install_postgresql | default(false) }}"
 alloy_scrape_mysqld_exporter: "{{ install_mariadb | default(false) }}"
@@ -1557,7 +1557,7 @@ n8n_port: 5678
 # 2.32.7 is the queue's number and sits above that floor, with six days of soak;
 # 2.34.2 shipped today and buys nothing — no advisory has been published since
 # 2026-07-22. Same-major, migrate-on-start. arm64 tag confirmed on the registry.
-n8n_version: "2.32.7"
+n8n_version: "2.34.2"  # [swept 2026-08-06]
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
 n8n_admin_email: "{{ default_admin_email }}"
@@ -1634,7 +1634,7 @@ openwebui_admin_password: "{{ global_password_prefix }}_pw_openwebui_admin"
 woodpecker_domain: "ci{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 woodpecker_port: 8060            # Web UI
 woodpecker_grpc_port: 9060       # gRPC for agents (internal)
-woodpecker_version: "v3.14.1"           # REM-105: pin the floating v3 tag — CVE-2026-50141 auth-bypass-by-spoofing (agent_id gRPC metadata forge) fixed v3.14.1
+woodpecker_version: "v3.17.0"           # REM-105: pin the floating v3 tag — CVE-2026-50141 auth-bypass-by-spoofing (agent_id gRPC metadata forge) fixed v3.14.1 [swept v3.14.1 2026-08-06]
 woodpecker_agent_secret: "{{ global_password_prefix }}_pw_woodpecker"
 woodpecker_gitea_client: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
 woodpecker_gitea_secret: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
@@ -1653,7 +1653,7 @@ woodpecker_prom_token: "{{ global_password_prefix }}_pw_wp_prom"
 
 portainer_domain: "portainer{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 portainer_port: 9002                   # 9000/9001 reserved for RustFS (S3 API + console)
-portainer_version: "2.33.8"             # CVE-2025-68121 transitive (Go TLS CVSS 10.0)
+portainer_version: "2.44.0"             # CVE-2025-68121 transitive (Go TLS CVSS 10.0) [swept 2.33.8 2026-08-06]
 portainer_admin_password: "{{ global_password_prefix }}_pw_portainer"
 # Self-heal an admin-password DRIFT (admin exists but neither the current nor
 # previous prefix logs in — left by an interrupted/partial provisioning). true =
@@ -1684,7 +1684,7 @@ spacetimedb_dev_db: "dev"               # logical dev DB name printed in onboard
 
 jellyfin_domain: "media{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 jellyfin_port: 8096
-jellyfin_version: "10.11.10"            # REM-119: CVE-2026-48793 (Jun-2026 advisory); prior 10.11.8 CVE-2025-31499 (FFmpeg arg injection → RCE)
+jellyfin_version: "10.11.11"            # REM-119: CVE-2026-48793 (Jun-2026 advisory); prior 10.11.8 CVE-2025-31499 (FFmpeg arg injection → RCE) [swept 10.11.10 2026-08-06]
 jellyfin_lan_access: true              # true = port reachable from LAN (for TVs, mobile clients)
 jellyfin_cache_dir: "{{ nos_data_root }}/platform/services/jellyfin/cache"
 jellyfin_movies_dir: "{{ ansible_facts['env']['HOME'] }}/media/movies"   # Override to your library
@@ -1697,7 +1697,7 @@ jellyfin_music_dir: "{{ ansible_facts['env']['HOME'] }}/media/music"
 
 uptime_kuma_domain: "uptime{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 uptime_kuma_port: 3001
-uptime_kuma_version: "2.2.1"        # REM-073 applied 2026-07-24 (was 1.23.13; SSTI CVE-2026-33130 full fix). Role default stays "1"-track (intentional shadow).
+uptime_kuma_version: "2.5.0"        # REM-073 applied 2026-07-24 (was 1.23.13; SSTI CVE-2026-33130 full fix). Role default stays "1"-track (intentional shadow). [swept 2.2.1 2026-08-06]
 uptime_kuma_admin_user: "admin"
 uptime_kuma_admin_password: "{{ global_password_prefix }}_pw_uptime_kuma"
 uptime_kuma_auto_monitors: true  # Automatically create monitors for all install_* services
@@ -1951,7 +1951,7 @@ coexistence_secondary_ttl_days: 7
 iiab_compose_dir: "{{ stacks_dir }}/iiab"
 
 # ── Traefik ────────────────────────────────────────────────────────────────────
-traefik_image_version: "v3.6.24"        # REM-145 GHSA-3ccp-42pg-hgv6 (CWE-444 CONNECT response poisoning); REM-127 CVE-2026-54763/54764
+traefik_image_version: "v3.7.10"        # REM-145 GHSA-3ccp-42pg-hgv6 (CWE-444 CONNECT response poisoning); REM-127 CVE-2026-54763/54764 [swept v3.6.24 2026-08-06]
 traefik_http_port: 80
 traefik_https_port: 443
 traefik_dashboard_port: 8082            # 8080=cadvisor, 8081=tileserver, 8090=freescout — 8082 is the first free slot
@@ -2033,7 +2033,7 @@ hermes_web_port: 18790
 mailpit_port: 8025                      # UI port (1025 is SMTP)
 
 # ── Home Assistant ─────────────────────────────────────────────────────────────
-homeassistant_version: "2026.6.0"     # CVE-2026-34205 (CVSS 9.7 Supervisor bypass)
+homeassistant_version: "2026.8.0"     # CVE-2026-34205 (CVSS 9.7 Supervisor bypass) [swept 2026.6.0 2026-08-06]
 homeassistant_port: 8123
 homeassistant_domain: "home{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 homeassistant_timezone: "Europe/Prague"
@@ -2131,7 +2131,7 @@ authentik_oidc_freescout_client_secret: "{{ global_password_prefix }}_pw_oidc_fr
 
 outline_domain: "wiki{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 outline_port: 3005
-outline_version: "1.8.1"      # synced to role default; boots + runs DB migrations (1.6->1.8)
+outline_version: "1.9.2"      # synced to role default; boots + runs DB migrations (1.6->1.8) [swept 1.8.1 2026-08-06]
 outline_db_name: "outline"
 outline_db_user: "outline"
 outline_db_password: "{{ global_password_prefix }}_pw_outline"
@@ -2170,7 +2170,7 @@ qgis_version: "latest@sha256:f825a56109bea5a9b7bee50d43bdec472aa614276ea2fbd44e5
 
 metabase_domain: "bi{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 metabase_port: 3002
-metabase_version: "v0.61.9"      # REM-153 CRITICAL GHSA-cwxq-fmxq-jv8h (no CVE id — a CVE-only scan cannot see it)
+metabase_version: "v0.63.5"      # REM-153 CRITICAL GHSA-cwxq-fmxq-jv8h (no CVE id — a CVE-only scan cannot see it) [swept v0.61.9 2026-08-06]
 metabase_db_name: "metabase"
 metabase_db_user: "metabase"
 metabase_db_password: "{{ global_password_prefix }}_pw_metabase"
@@ -2714,7 +2714,7 @@ authentik_oidc_issuer: "https://{{ authentik_domain | default('auth' ~ (_host_al
 # Central vault for DB passwords, API keys, certificates. E2EE.
 # ==============================================================================
 
-infisical_version: "v0.162.14"   # synced to role default (cleared version-pin shadow)
+infisical_version: "v0.162.16"   # synced to role default (cleared version-pin shadow) [swept v0.162.14 2026-08-06]
 infisical_domain: "vault{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 infisical_port: 8075
 infisical_encryption_key: "{{ global_password_prefix }}_pw_infisical_enc"
@@ -2832,7 +2832,7 @@ nos_infisical_projects:
 # Each nOS tenant has their own vault for personal passwords.
 # ==============================================================================
 
-vaultwarden_version: "1.37.0"            # CVE pins + S2 freshness sweep 2026-06-10 (patch line)
+vaultwarden_version: "1.37.1"            # CVE pins + S2 freshness sweep 2026-06-10 (patch line) [swept 1.37.0 2026-08-06]
 vaultwarden_domain: "pass{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 vaultwarden_port: 8062
 vaultwarden_signups_allowed: false                 # Admin creates accounts
