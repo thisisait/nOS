@@ -44,6 +44,18 @@ scrape_configs:
   # node-exporter removed – metrics come from Alloy (prometheus.exporter.unix)
   # ARM64-safe: cpu, diskstats, filesystem, loadavg, meminfo, netdev, netstat, vmstat
 
+  # BOTH GATED ON install_nginx since 2026-08-06. They were declared
+  # unconditionally while `install_nginx: false` has been the DEFAULT since
+  # Traefik became the primary proxy (C1, 2026-04-29) — so on a stock estate
+  # Prometheus was told to scrape two exporters that are never installed, and
+  # two NosWarningServiceDegraded alerts fired continuously from 2026-07-26
+  # against nothing at all.
+  #
+  # A scrape target is a claim that a thing exists. Declaring one for an
+  # opt-in service and leaving the alert to say so is not monitoring, it is a
+  # standing false positive — and since the Bone alert relay landed the same
+  # morning, these would have been delivered nightly.
+{% if install_nginx | default(false) %}
   - job_name: nginx-exporter
     static_configs:
       - targets: ['host.docker.internal:{{ nginx_exporter_port | default(9113) }}']
@@ -51,3 +63,4 @@ scrape_configs:
   - job_name: phpfpm-exporter
     static_configs:
       - targets: ['host.docker.internal:{{ phpfpm_exporter_port | default(9253) }}']
+{% endif %}

@@ -90,18 +90,20 @@ prometheus.scrape "miniflux" {
 }
 {% endif %}
 
-{% if install_firefly | default(false) %}
-// Firefly III — Laravel/PHP process metrics
-prometheus.scrape "firefly" {
-  targets = [{
-    __address__ = "localhost:{{ firefly_port | default(3014) }}",
-  }]
-  forward_to  = [prometheus.remote_write.default.receiver]
-  job_name    = "firefly"
-  metrics_path = "/metrics"
-  scrape_interval = "60s"
-}
-{% endif %}
+// Firefly III — NO SCRAPE. Removed 2026-08-06.
+//
+// This block claimed "Laravel/PHP process metrics" and scraped
+// localhost:{{ firefly_port | default(3014) }}/metrics every 60 s. Measured
+// that day against the running b2b-firefly-1: HTTP 404. Firefly III ships no
+// Prometheus endpoint at all — the target had never returned a metric, and the
+// only thing it produced was a NosWarningServiceDegraded alert firing
+// continuously since 2026-07-26 against a perfectly healthy container.
+//
+// That alert had been firing into a void until the Bone relay landed the same
+// morning. A channel that has just been unmuted cannot afford five standing
+// false alarms: the first thing they teach an operator is to skim.
+//
+// If Firefly metrics are ever wanted, they need a sidecar exporter, not a path.
 
 {% if install_influxdb | default(false) %}
 // InfluxDB 2.x — internal metrics
@@ -118,13 +120,20 @@ prometheus.scrape "influxdb" {
 
 {% if alloy_scrape_qdrant | default(false) %}
 // Qdrant (Tier-2 vector DB) — collections, query latency, memmap RSS.
-// /metrics is unauthenticated by design (the data API requires the
-// QDRANT__SERVICE__API_KEY; metrics are exempt). Hits the host-bound
-// 127.0.0.1:6333 published by apps/qdrant.yml.
+//
+// /metrics REQUIRES the API key. The comment here said the opposite —
+// "unauthenticated by design ... metrics are exempt" — and the scrape sent no
+// credential, so it collected 401s from 2026-07-26 until 2026-08-06 while
+// asserting in prose that it could not. Measured against the live container:
+// no header 401, `api-key:` 200, `Authorization: Bearer` 200.
+//
+// The READ-ONLY key, not the full one: a scraper reads. Both are minted by
+// apps/qdrant.yml; qdrant_api_key_ro carries the read-only half.
 prometheus.scrape "qdrant" {
   targets = [{
     __address__ = "localhost:{{ qdrant_port | default(6333) }}",
   }]
+  bearer_token = "{{ qdrant_api_key_ro }}"
   forward_to  = [prometheus.remote_write.default.receiver]
   job_name    = "qdrant"
   metrics_path = "/metrics"
@@ -134,13 +143,19 @@ prometheus.scrape "qdrant" {
 
 {% if install_gitea | default(false) %}
 // Gitea — repo / user / org gauges + Go process metrics.
-// Requires GITEA__metrics__ENABLED=true in the gitea compose env. /metrics is
-// unauthenticated unless GITEA__metrics__TOKEN is set (it isn't), so no bearer
-// header. Hits the host-published port (gitea_port → container :3000).
+//
+// "unauthenticated unless GITEA__metrics__TOKEN is set (it isn't), so no
+// bearer header" — that is what this comment said, and the token HAS been set
+// all along: roles/pazny.gitea/templates/compose.yml.j2 renders
+// GITEA__metrics__TOKEN from gitea_metrics_token, and its own comment there
+// says "the scrape block carries the matching gitea_metrics_token". It did
+// not. Two files, each describing the other's behaviour, neither correct, and
+// 401s from 2026-07-26 until 2026-08-06.
 prometheus.scrape "gitea" {
   targets = [{
     __address__ = "localhost:{{ gitea_port | default(3003) }}",
   }]
+  bearer_token = "{{ gitea_metrics_token | default(global_password_prefix + '_pw_gitea_metrics') }}"
   forward_to  = [prometheus.remote_write.default.receiver]
   job_name    = "gitea"
   metrics_path = "/metrics"
