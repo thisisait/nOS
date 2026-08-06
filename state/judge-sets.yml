@@ -127,7 +127,12 @@ judges:
     # anatomy-graph soundness gate added 19). The collection gate stayed
     # green at this delta; the floor moves anyway, because a floor that only
     # moves under compulsion spends its slack as a budget.
-    min_work: 2900
+    #
+    # RE-DERIVED same day, third pass (2974 passed, 27 skipped — the
+    # core-substrate graph gates + the ledger-list gates added 25). Same
+    # rule: the record is known stale, so the floor moves without waiting
+    # for the collection gate to force it.
+    min_work: 2950
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,
