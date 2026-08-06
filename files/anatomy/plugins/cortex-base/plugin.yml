@@ -126,7 +126,14 @@ pulse:
     #
     # 04:30 UTC — after the consolidator (04:15), before keap-embed-sync (04:45),
     # so the night's new mirror rows have vectors by the time the diff reads both
-    # corpora at 05:30. This is also the job §5.3's `--halt-cmd` disables.
+    # corpora at 05:30. This is also the job §5.3's halt stops — by the ledger's
+    # `halted` flag, which this script reads and obeys (exit 4). That sentence
+    # was here from the start and was false until 2026-08-06: the halt's only
+    # mechanism was a `--halt-cmd` this block never set.
+    #
+    # No CORTEX_DIFF_STATE below: both scripts default to the SAME ledger path,
+    # and a token here would be a third place to keep in step. The two defaults
+    # are compared by test_the_halt_can_actually_halt.py.
     - name: cortex-fs-sync
       category: knowledge
       runner: subprocess

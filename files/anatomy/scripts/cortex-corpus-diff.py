@@ -96,9 +96,10 @@ a report either way.
 One class halts immediately: REMOVAL-SHAPED disagreement — the organ
 pruned something the incumbent kept, or refused a prune on a night the
 incumbent's corpus shrank. Removals are the only irreversible direction;
-everything else is additive drift a re-sync repairs. The halt stops the
-organ's fs-sync (`--halt-cmd`) and NEVER the diff: refusing to walk is
-safe, refusing to observe is not.
+everything else is additive drift a re-sync repairs. The halt sets
+`halted` in this ledger; `cortex-fs-sync` reads it and refuses its next
+pass. It stops the organ's fs-sync and NEVER the diff: refusing to walk
+is safe, refusing to observe is not. `--clear-halt` is the way back.
 
 ── What this harness cannot earn ────────────────────────────────────────
 It measures AGREEMENT. It does not measure that ingestion is CORRECT —
@@ -1570,8 +1571,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="S2 corpus agreement harness (read-only)")
     p.add_argument("--json", action="store_true", help="machine-readable report only")
     p.add_argument("--no-ledger", action="store_true", help="do not record a night")
+    # OPTIONAL EXTRA, not the mechanism. The halt is the ledger's `halted`
+    # flag, which cortex-fs-sync reads and obeys; this hook only exists for an
+    # operator who wants something else to happen too. It was the sole
+    # mechanism until 2026-08-06, and the production job set neither the env
+    # nor the flag — so the stop three places announced had never once fired.
     p.add_argument("--halt-cmd", default=os.environ.get("CORTEX_DIFF_HALT_CMD", ""),
-                   help="shell command run on a removal-shaped halt (stops the organ's fs-sync)")
+                   help="extra shell command run on a removal-shaped halt (the halt itself is the ledger flag)")
+    p.add_argument("--clear-halt", action="store_true",
+                   help="clear a recorded halt and exit — the one blessed way to let fs-sync walk again")
     p.add_argument("--canonical-dir", default=None, help="taxonomy referee (pinned canonical tree)")
     p.add_argument("--keap-url", default=os.environ.get("KEAP_API_URL", "http://127.0.0.1:8091"))
     p.add_argument("--cortex-url", default=os.environ.get("CORTEX_API_URL", "http://127.0.0.1:8098"))
@@ -1588,6 +1596,16 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     notify_bin = os.environ.get("NOS_NOTIFY_BIN", "")
     state_path = Path(args.state)
+
+    if args.clear_halt:
+        state = load_state(state_path)
+        if not state.get("halted"):
+            print(f"cortex-corpus-diff: no halt recorded in {state_path}")
+            return 0
+        state["halted"] = False
+        save_state(state_path, state)
+        print(f"cortex-corpus-diff: halt cleared in {state_path} — cortex-fs-sync may walk again")
+        return 0
 
     if not args.keap_token or not args.cortex_token:
         print("cortex-corpus-diff: KEAP_AGENT_TOKEN_RO and CORTEX_AGENT_TOKEN_RO are both required", file=sys.stderr)
@@ -1657,7 +1675,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.halt_cmd:
             subprocess.run(args.halt_cmd, shell=True, check=False, timeout=60)
         notify(notify_bin, "high", "S2 diff: HALT — removal-shaped disagreement",
-               "The cortex organ's fs-sync is stopped and must be looked at before the next pass. The diff keeps "
+               "The flag above stops the organ's fs-sync: it reads this ledger and refuses its next pass (exit 4). "
+               "Clear it with `cortex-corpus-diff.py --clear-halt` once the night has been read. The diff keeps "
                "running: refusing to walk is safe, refusing to observe is not.")
         return 3
 

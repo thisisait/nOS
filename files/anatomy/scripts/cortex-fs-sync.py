@@ -34,13 +34,32 @@ job wanted is running. 500 means the daemon REFUSED the pass — the mount
 sentinel, most likely — and that is a real, notifiable fault, because a
 refused pass is exactly the state that must never look like a quiet night.
 
+── The halt, which until 2026-08-06 was three sentences and no code ─────
+The docstring above says this job "needs something haltable", the harness
+announced "The cortex organ's fs-sync is stopped", and `weaknesses.py`
+raised a CRITICAL saying the same — while the only mechanism, an optional
+`--halt-cmd`, was never set by the production job. Three claims, one
+effect, zero occurrences: the halt had never once been able to fire.
+
+It is real now, and it reads the flag the harness ALREADY writes rather
+than inventing a second one: `halted` in the night ledger
+(`cortex-corpus-diff.py:1652`). One fact, one place, and the harness's
+`--no-ledger` mode still cannot halt anything, which is what keeps it
+usable as a judge.
+
+Nothing clears the flag by itself — that is the point of a removal-shaped
+halt. `cortex-corpus-diff.py --clear-halt` is the one blessed way out, and
+both notifications name it.
+
 Env:
   CORTEX_API_URL          default http://127.0.0.1:8098
   CORTEX_AGENT_TOKEN_RW   required (a pass writes)
+  CORTEX_DIFF_STATE       the night ledger read for `halted`
   NOS_NOTIFY_BIN          nos-notify.sh (optional)
 
 Exit: 0 the pass ran (or one was already in flight), 1 config error,
-2 the organ was unreachable, 3 the organ REFUSED the pass.
+2 the organ was unreachable, 3 the organ REFUSED the pass,
+4 HALTED — the harness stopped this job and it refused to walk.
 """
 from __future__ import annotations
 
@@ -50,11 +69,20 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 BASE = os.environ.get("CORTEX_API_URL", "http://127.0.0.1:8098").rstrip("/")
 TOKEN = os.environ.get("CORTEX_AGENT_TOKEN_RW", "").strip()
 NOTIFY_BIN = os.environ.get("NOS_NOTIFY_BIN", "")
 TIMEOUT_S = int(os.environ.get("CORTEX_FS_SYNC_TIMEOUT_S", "600"))
+
+#: The harness's night ledger. This default is a COPY of the one in
+#: `cortex-corpus-diff.py` (its `--state` argument), and two copies of a path
+#: is how a halt quietly stops being read: the writer would flag one file and
+#: the reader would check another, and both would look fine. The copies are
+#: compared to each other by `test_the_halt_can_actually_halt.py`, so this line
+#: cannot drift away from the writer's in silence.
+LEDGER = Path(os.environ.get("CORTEX_DIFF_STATE", str(Path.home() / ".nos" / "cortex-corpus-diff.json")))
 
 
 def notify(severity: str, title: str, body: str) -> None:
@@ -62,10 +90,35 @@ def notify(severity: str, title: str, body: str) -> None:
         subprocess.run([NOTIFY_BIN, severity, title, body, "wing-inbox"], check=False, timeout=30)
 
 
+def halted() -> bool:
+    """True when the harness recorded a removal-shaped halt.
+
+    A ledger that is missing, empty or unparseable is NOT a halt. That is
+    deliberate and it is the safe direction here: the flag's absence is the
+    estate's normal state (it has never once been set), so treating an
+    unreadable file as "stopped" would take the mirror pass down on the first
+    disk hiccup. The opposite risk — a halt missed because the file broke — is
+    covered by the harness re-raising it every night it re-runs.
+    """
+    try:
+        return bool((json.loads(LEDGER.read_text(encoding="utf-8")) or {}).get("halted"))
+    except (OSError, ValueError):
+        return False
+
+
 def main() -> int:
     if not TOKEN:
         print("cortex-fs-sync: CORTEX_AGENT_TOKEN_RW not set", file=sys.stderr)
         return 1
+
+    if halted():
+        print(f"cortex-fs-sync: HALTED by {LEDGER} — refusing the pass", file=sys.stderr)
+        notify("high", "cortex-fs-sync: refusing the pass — the harness HALTED it",
+               "A removal-shaped disagreement stopped the organ's mirror pass, and it stays stopped until a human "
+               "looks: removals are the only irreversible direction. Read the night in the ledger, then clear it "
+               "with `cortex-corpus-diff.py --clear-halt`. The diff keeps running meanwhile — refusing to walk is "
+               "safe, refusing to observe is not.")
+        return 4
 
     req = urllib.request.Request(f"{BASE}/agent/v1/fs/sync", data=b"{}", method="POST")
     req.add_header("content-type", "application/json")

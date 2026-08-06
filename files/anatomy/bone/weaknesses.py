@@ -1146,7 +1146,13 @@ def _source_corpus_diff(dirty: set[str]) -> SourceReport:
                 weakness_id="corpus:halted",
                 source=name,
                 severity="critical",
-                title="corpus-diff is HALTED — the organ's fs-sync was stopped",
+                # Says "is refusing", not "was stopped". Until 2026-08-06 the
+                # past tense described an act nothing performed: the flag was
+                # set, no halt command was ever configured, and fs-sync walked
+                # on. The present tense is now true of every pass while the
+                # flag stands (cortex-fs-sync.py exits 4), and it stays true
+                # until someone runs --clear-halt.
+                title="corpus-diff is HALTED — the organ's fs-sync is refusing to walk",
                 evidence={"file": str(path), "halted": True},
                 observed={},
             )
