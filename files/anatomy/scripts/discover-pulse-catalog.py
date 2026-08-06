@@ -72,6 +72,11 @@ def _build_substitutions() -> dict[str, str]:
         "{{ upgrade_architect_wing_api_token }}": _env("NOS_UPGRADE_ARCHITECT_WING_API_TOKEN"),
         "{{ migration_author_wing_api_token }}": _env("NOS_MIGRATION_AUTHOR_WING_API_TOKEN"),
         "{{ bone_secret }}":              _env("NOS_BONE_SECRET"),
+        # The audit chain's retired-key ring (2026-08-06). Verify-only, and
+        # legitimately EMPTY until the first rotation — which is why it needs an
+        # entry here rather than being left out: an unknown token would reach
+        # Wing verbatim, and `{{ bone_secret_retired }}` is not a key ring.
+        "{{ bone_secret_retired }}":      _env("NOS_BONE_SECRET_RETIRED"),
         # Bone's port, so a manifest need not hardcode 8099 (the gitleaks
         # notification hardcoded 9000 — Wing's — and 401ed nightly).
         "{{ bone_port }}":                _env("NOS_BONE_PORT"),

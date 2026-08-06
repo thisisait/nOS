@@ -1336,6 +1336,68 @@
       no_log: true
       tags: ['always']
 
+    # ── Chain-key rotation (opt-in) ─────────────────────────────────────────
+    #
+    #   ansible-playbook main.yml -e bone_secret_rotate=true
+    #
+    # bone_secret is the audit hash-chain's key material, so rotating it used
+    # to make every signed row unverifiable. App\Model\AuditChain::chainKeys()
+    # is a RING now: retired keys verify the history they signed, and a key may
+    # only change at a recorded segment anchor.
+    #
+    # THE ORDER BELOW IS THE WHOLE CORRECTNESS ARGUMENT. The anchor must be
+    # sealed at the CURRENT head BEFORE any row is signed with the new key. Do
+    # it after, and the first new row lands mid-segment under a key the elected
+    # one cannot verify — the chain reads as tampered at exactly the row that
+    # proves it was not. So: seal, then mint, then retire. Each step is its own
+    # task and each is skipped in the same breath, so the sequence cannot half-
+    # apply on a failure between them.
+    - name: "[Chain] Seal the current head as a rotation anchor (BEFORE the new key exists)"
+      ansible.builtin.command:
+        argv:
+          # BARE `sqlite3`, PATH-resolved. It is NOT under homebrew_prefix on
+          # this host — macOS ships /usr/bin/sqlite3 and brew installs no
+          # sqlite CLI by default, so the obvious `{{ homebrew_prefix }}/bin/
+          # sqlite3` would have failed the rotation at its first step. Measured
+          # before shipping; `ansible.builtin.command` resolves argv[0] on PATH.
+          - "sqlite3"
+          - "{{ ansible_facts['env']['HOME'] }}/wing/app/data/wing.db"
+          - "INSERT OR REPLACE INTO audit_chain_meta (k, v)
+             SELECT 'chain_segment_anchor_' || row_hash, row_hash
+               FROM events WHERE row_hash IS NOT NULL ORDER BY id DESC LIMIT 1;"
+      register: _chain_anchor
+      changed_when: true
+      when:
+        - bone_secret_rotate | default(false) | bool
+        - (bone_secret | default('') | length) >= 32
+      tags: ['always']
+
+    - name: "[Chain] Retire the outgoing key onto the ring"
+      ansible.builtin.set_fact:
+        # Newest retired first, and the outgoing value is prepended rather than
+        # appended so the ring reads chronologically backwards — the order the
+        # verifier tries them in, which makes a recent rotation the cheap case.
+        bone_secret_retired: >-
+          {{ ([bone_secret] + ((bone_secret_retired | default('')).split(','))) | map('trim')
+             | select('!=', '') | unique | join(',') }}
+        # Consumed by the regeneration guard below: an empty value there forces
+        # a fresh mint without teaching that guard about rotation.
+        _bone_secret_rotating: true
+      when:
+        - bone_secret_rotate | default(false) | bool
+        - (bone_secret | default('') | length) >= 32
+      tags: ['always']
+
+    - name: "[Chain] Rotation summary"
+      ansible.builtin.debug:
+        msg: >-
+          Chain key rotating. Anchor sealed at the current head; the outgoing key
+          joins the ring ({{ (bone_secret_retired | default('')).split(',') | length }}
+          retired). Verify AFTER this run with:
+          php {{ ansible_facts['env']['HOME'] }}/wing/app/bin/verify-audit-chain.php
+      when: _bone_secret_rotating | default(false) | bool
+      tags: ['always']
+
     - name: "Lazy-regenerate placeholder APP_KEYs / tokens (first non-blank enable)"
       # UX: user can flip install_firefly: true (or bookstack / onlyoffice /
       # influxdb) in config.yml and run 'ansible-playbook main.yml -K' WITHOUT -e blank=true.
@@ -1379,7 +1441,11 @@
         # MIRRORS bone_secret (both sides of the same channel must
         # share the key) — but only if bone_secret was the prefix-
         # derived default; if operator overrode, that wins.
-        bone_secret: "{% if '_pw_' in (bone_secret | default('')) or (bone_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ bone_secret }}{% endif %}"
+        # `_bone_secret_rotating` is the third arm: the outgoing value is already
+        # on the ring and the anchor is already sealed, so this must mint. It is
+        # checked FIRST because a rotating secret is by definition long enough
+        # and un-prefixed, so the two existing guards would both decline.
+        bone_secret: "{% if _bone_secret_rotating | default(false) or '_pw_' in (bone_secret | default('')) or (bone_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ bone_secret }}{% endif %}"
         nos_deploy_hmac_secret: "{% if '_pw_' in (nos_deploy_hmac_secret | default('')) or (nos_deploy_hmac_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ nos_deploy_hmac_secret }}{% endif %}"
         wing_edge_token: "{% if '_pw_' in (wing_edge_token | default('')) or (wing_edge_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ wing_edge_token }}{% endif %}"
         # REM-144: face_edge_token was the only edge secret NOT in this group, so

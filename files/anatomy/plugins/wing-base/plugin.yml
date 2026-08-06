@@ -236,6 +236,10 @@ pulse:
       max_concurrent: 1
       env:
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"   # bare token (catalog literal-replace)
+        # The key ring. THIS job is the one that would go red the morning after
+        # a rotation without it — every pre-rotation row unverifiable under the
+        # new key. Verify-only; the writer never reads it.
+        WING_EVENTS_HMAC_SECRET_RETIRED: "{{ bone_secret_retired }}"
 
 # =============================================================================
 # OBSERVABILITY — Loki labels (forward-auth has no /metrics natively)

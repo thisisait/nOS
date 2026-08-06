@@ -92,6 +92,12 @@
              reads this via getenv(). Without it, every /events POST → 500. -->
         <key>WING_EVENTS_HMAC_SECRET</key>
         <string>{{ wing_events_hmac_secret | default(bone_secret) | default('') }}</string>
+        <!-- The audit chain's key RING (2026-08-06). Verify-only: retired keys
+             check the rows they signed and are never used to sign. Empty until
+             the first `-e bone_secret_rotate=true`. Without this, rotating the
+             secret makes every previously signed row read as tampered. -->
+        <key>WING_EVENTS_HMAC_SECRET_RETIRED</key>
+        <string>{{ bone_secret_retired | default('') }}</string>
         <key>WING_AUDIT_CHAIN_ENABLED</key>
         <string>{{ '1' if (wing_audit_chain_enabled | default(false) | bool) else '' }}</string>
 

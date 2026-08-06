@@ -209,6 +209,14 @@ install_bone: true                        # FastAPI management API — required 
 bone_port: 8099
 bone_domain: "api{{ _host_alias_seg }}.{{ tenant_domain }}"
 bone_secret: "{{ global_password_prefix }}_pw_bone"
+# Retired chain keys, comma-separated, newest first. The audit hash-chain's key
+# derives from bone_secret (App\Model\AuditChain::chainKey), so rotating the
+# secret used to invalidate every signed row. The verifier now carries a RING:
+# a key is elected per recorded segment anchor and is the only one accepted
+# until the next, so retired keys verify the history they signed and cannot
+# sign new rows. Empty until the first rotation; main.yml appends the outgoing
+# value when `bone_secret_rotate=true`, and ~/.nos/secrets.yml persists it.
+bone_secret_retired: ""
 # HMAC secret for /api/v1/events ingestion. Both sides (Bone server +
 # apps_runner client + callback_plugins/wing_telemetry.py) MUST share this.
 # Default mirrors bone_secret so the symmetry holds without operator setup.
