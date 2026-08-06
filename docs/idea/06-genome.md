@@ -62,15 +62,20 @@ Across the eight files in `state/schema/` there was **not one `$ref`, `allOf` or
 `time.occurred_at` (small, coordinated, both sides) · `syncRows` · the two
 missing codegen targets · then collapse a second facet, not a fifth copy of one.
 
-**The edges are the next facet, and they are surveyed.**
+**The edges are the next facet, and they are now COMPILED.**
 [`docs/archive/nos-anatomy-graph.md`](../archive/nos-anatomy-graph.md) (2026-08-06)
 inventories what the estate already wires implicitly — 28 data, 38 trigger,
 2 resource claims, 7 temporal — every row cited to `file:line` or to a
-`wing.db` query, and proposes `depends_on` in the manifest beside `category`,
-one kind-prefixed address space, and `state/anatomy-graph.json` compiled by
-regenerate-and-diff. Two findings from it are already fixed: the halt that
-three documents described and no code performed, and the claude mutex that one
-of two spawners took.
+`wing.db` query. Its build order shipped the same week:
+`state/anatomy-graph.json` (regenerate-and-diff via
+`tools/anatomy-graph-gen.py`; 125 nodes, 90 edges), the soundness gate
+`test_anatomy_graph_is_sound.py`, `tools/anatomy-measure-margins.py`, and the
+nightly chain's `depends_on` declared in keap-base/cortex-base — including
+the halt trigger edge, declarable only because `97abdb7c` made the code
+perform it (repair before declare). One divergence from the survey: the edge
+field is `upstream:`, not `on:` — YAML 1.1 parses a bare `on` key as boolean
+True. Screens contract: `files/anatomy/docs/anatomy-graph-screens.md`.
+The claude-mutex finding is also fixed (`ba7a9471`).
 
 Its rule is the one to carry forward: **repair before declare.** A graph that
 records what the code stopped doing is the estate's signature defect with a
