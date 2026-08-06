@@ -352,6 +352,42 @@ keeps it that way.
    items, and 179 review-queue entries per converge is the orphan problem
    with extra steps). Not built in this pass.
 
+## 7b. The constitution layer (operator ask, 2026-08-06 evening)
+
+The doctrine has a taxonomy and an ontology now, in the same address space as
+everything else:
+
+- **`doctrine:<doc>#<section>`** nodes — minted only for paragraphs a graph
+  node's own manifest block actually cites (12 on 2026-08-06); each carries
+  the real heading as its body and anchor `09`, so KEAP scoping works on the
+  law shelf like on everything else. A paragraph invented to give a citation
+  somewhere to point would be the same defect as a picture-filling node —
+  none were.
+- **`governed_by` edges** — node → paragraph, derived by
+  `anatomy-graph-gen.py::derive_doctrine` from `tools/doctrine-cite.py`, the
+  ONE resolver the gate also runs. Attribution is per manifest BLOCK, with
+  the comment-above-the-key convention honoured (the naive ranges handed
+  cortex-corpus-diff's DECISION 2e to nos-smoke — caught and gated by
+  `test_attribution_is_per_block_not_per_file`). 17 edges on 2026-08-06.
+  File-header citations are deliberately NOT edges (they attribute to a
+  file, not a block). Weakness-source attribution (per-function in
+  weaknesses.py) is named, not built — it needs an AST walk.
+- **The resolver** (`tools/doctrine-cite.py`) covers the full estate, not
+  just graph sources. Measured 2026-08-06 after repairs: **1061 citations,
+  929 resolved (87.6%), 124 unqualified (bare § with no declared authority
+  — reported, never guessed), 2 external (RFC), and a 4-item verified
+  residue** (a line-number §205, two cross-repo KEAP spec paths, the phantom
+  REM-088). Nine stale addresses were REPAIRED at the citing site (pointer
+  fixes, no law authored): five citations of framework-plan.md's pre-A1 docs/
+  location now name `files/anatomy/docs/framework-plan.md`,
+  2× the archived adjustments-design, 2× cortex nickname-qualifiers, plus
+  the grafana §6.2/§6.3 conflation qualified to bones-and-wings-refactor.md.
+  Gate: `test_doctrine_citations_resolve.py` — frozen residue (both
+  directions), bare-citation ceiling 124, resolved floor 925.
+- **UI**: doctrine kind + `governed_by` styling in GraphView (`§` nodes, the
+  green dashed edge IS the highlight), and per-gate-set paragraph chips in
+  RunsView's committed-definition block with citing lines in the tooltip.
+
 ## 8. Which converge makes each surface live
 
 | surface | ships in | becomes live when |
@@ -359,11 +395,15 @@ keeps it that way.
 | graph artifact + anchors + new kinds | this commit (repo state) | immediately for repo readers; face copy at next face rebuild |
 | GraphView / RunsView / projections | `files/anatomy/face/` | next converge that runs `roles/pazny.face` (sync + image rebuild) |
 | Bone loop list reads (`/api/v1/loop/*` GET) | `files/anatomy/bone/` | next Bone daemon restart (`launchctl` reload via `roles/pazny.bone`) |
-| `/bff/loop` + `/bff/loop/judge` | face tree | face rebuild — but stays honestly "unwired" until the face container gets `BONE_LOOP_JUDGE_TOKEN` (see below) |
-| face loop credential | **NOT WIRED — written up, deliberately not changed** | `roles/pazny.face/templates/compose.yml.j2` needs `BONE_LOOP_JUDGE_TOKEN: "{{ loop_judge_token \| default('') }}"` beside `NOS_WING_API_TOKEN` (the var already exists — `roles/pazny.bone/tasks/main.yml:276` provisions it into Bone's plist). Until that one-line change converges, the Runs screen renders its unwired StatusNote, which is the designed behaviour, not a defect |
-| Wing `since`/`until` on `GET /api/v1/pulse_runs` | NOT BUILT | named missing — replay beyond 25 runs/job waits on it |
-| Wing `run-now` (§4b) | NOT BUILT | named missing — the §4b design stands as spec |
-| Phase-1 dispatch annotation (survey §2d) | NOT BUILT | replay edge overlay stays "derived, not recorded" and is therefore not drawn |
+| `/bff/loop` + `/bff/loop/judge` | face tree | face rebuild |
+| face loop credential | **WIRED** (`01e44916`, 2026-08-06 evening) | `roles/pazny.face/templates/compose.yml.j2:66` carries `BONE_LOOP_JUDGE_TOKEN`; live after the converge that redeploys the face |
+| Wing `since`/`until` on `GET /api/v1/pulse_runs` | BUILT (`PulsePresenter::timeParam` — canonicalised, garbage → 400; `PulseRepository::listRuns` range on `idx_pulse_runs_fired_at`) | next Wing converge; until then the deployed Wing ignores the params and the face's replay hint says so |
+| Wing `run-now` (§4b) | BUILT to spec (`Pulse:runNow` route; row edit + `pulse_run_requested` event only; 404/409-paused/400-body refusals; gate `test_pulse_run_now_and_window.py` pins "not a spawn path") | next Wing converge |
+| `/bff/pulse/run` + PulseView run-now button | face tree | face rebuild |
+| doctrine layer (nodes + `governed_by` + resolver + gate) | this commit | immediately for repo readers; UI at face rebuild |
+| Phase-1 dispatch annotation (survey §2d) | NOT BUILT — deliberately | it changes the DAEMON's dispatch path, which this pass does not touch (scheduler semantics deserve their own review); replay edge overlay stays "derived, not recorded" and is therefore not drawn |
+| rings 2–3 data (scan batches → findings → spawned rows; weakness sweeps) | NOT BUILT | needs list surfaces over scan batches + weakness runs that do not exist; building the rings against re-derived client-side joins would render claims nothing recorded |
+| night-timeline lanes panel | NOT BUILT | honest only once the DEPLOYED Wing honours `since`/`until` — lanes drawn over the unwindowed 25-run default would draw a lie; build it the converge after Wing redeploys |
 
 ## 9. Build order (updated)
 
