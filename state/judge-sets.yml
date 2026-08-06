@@ -134,13 +134,24 @@ judges:
       - "pytest.ini"
 
   # ── nos-smoke ───────────────────────────────────────────────────────────
-  # Exit IS the failure count, capped at 127 — not a boolean.
+  # Exit is 0 or 1 as of 2026-08-06. This comment said "Exit IS the failure
+  # count, capped at 127 — not a boolean" and was true when written; the line
+  # below it is where that stopped being so.
   # --no-jsonl is part of the committed argv (DECISION 2e): without it the run
   # appends to ~/.nos/events/smoke.jsonl, OUTSIDE the repo, where `git status`
   # can never reveal it.
   nos-smoke:
     argv: ["python3", "tools/nos-smoke.py", "--no-jsonl"]
-    adapter: exit_count
+    # WAS `exit_count`, when the script encoded its failure count in the exit
+    # status. That was the estate's third exit-code convention and it collided
+    # with the Pulse runner's reserved 126/127 — a run with 127 dead probes and
+    # a binary that never started produced the same integer. The script now
+    # answers 0 or 1 and the count is read from stdout by work_regex below,
+    # which is where a magnitude belongs: a number about the ESTATE, not about
+    # the process. Same vocabulary as every other judge here.
+    adapter: exit_zero
+    pass_exit: [0]
+    fail_exit: [1]
     deterministic: false
     runtime_s_p95: 3
     timeout_s: 300

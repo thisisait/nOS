@@ -883,7 +883,20 @@ def main() -> int:
         # failed>0 guard so a clean run is always 0 even at ratio 0.0 (which
         # otherwise means "fail on ANY probe failure" = strict mode).
         return 1 if (failed > 0 and ratio >= args.fail_ratio) else 0
-    return min(failed, 127)  # exit code capped at 127
+    # 0 or 1 — NOT the failure count (2026-08-06).
+    #
+    # The count used to BE the exit code, capped at 127, and that was the
+    # estate's third exit-code convention: Pulse's runner already reserves 126
+    # for an allowlist refusal, 127 for command-not-found and -9 for a timeout
+    # kill, so a smoke run with 127+ dead probes was indistinguishable from a
+    # binary that never started. Two different facts, one integer.
+    #
+    # Nothing needed the number here. `tasks/post-smoke.yml` compares `rc != 0`
+    # and the only reader of the magnitude was state/judge-sets.yml's
+    # `exit_count` adapter, which is now `exit_zero` — it reads the count from
+    # stdout via work_regex ("N / M OK"), where it was all along and where it
+    # is not competing with a signal about the process itself.
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
