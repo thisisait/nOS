@@ -57,6 +57,53 @@ def _docker_ps(project: str) -> list[tuple[str, str]]:
     return rows
 
 
+#: Docker's own words when a healthcheck's binary is missing from the image.
+#: The check never ran, so its verdict is not about the service.
+CANNOT_RUN = ("executable file not found", "no such file or directory",
+              "exec format error", "oci runtime exec failed")
+
+
+def _check_could_not_run(name: str) -> bool:
+    """Did the healthcheck FAIL, or was it unable to execute at all?
+
+    These are different faults and they send an operator to different places.
+    On 2026-08-06 a redis_exporter bump moved upstream's default image to
+    scratch — no wget, no shell, nothing but the binary — so
+    `CMD wget --spider` could not start. Docker marked the container unhealthy;
+    this probe reported `FAILED: redis-exporter-1`; the converge failed after
+    1200 s. The exporter was serving metrics on :9121 the entire time.
+
+    Reported as an annotation, not a new class: the container IS unhealthy and
+    the bring-up SHOULD still fail — a container whose health cannot be
+    established is not a container known to be well. What changes is that the
+    line now says which of the two things broke.
+
+    Only called for containers already classified failed, so the extra inspect
+    costs nothing on a healthy converge.
+    """
+    try:
+        out = subprocess.run(
+            [DOCKER, "inspect", name,
+             "--format", "{{range .State.Health.Log}}{{.ExitCode}}:{{.Output}}{{end}}"],
+            capture_output=True, text=True, timeout=15,
+        )
+    except Exception:
+        return False
+    return blob_says_check_could_not_run(out.stdout or "")
+
+
+def blob_says_check_could_not_run(blob: str) -> bool:
+    """The pure half, so a gate can exercise it without a Docker daemon.
+
+    Fixture that produced these markers, verbatim from the live container on
+    2026-08-06:
+      -1 OCI runtime exec failed: exec failed: unable to start container
+      process: exec: "wget": executable file not found in $PATH
+    """
+    low = blob.lower()
+    return any(marker in low for marker in CANNOT_RUN)
+
+
 def _classify(status: str) -> str:
     """ready | pending | failed, from a `docker ps` Status string."""
     s = status.lower()
@@ -98,7 +145,11 @@ def main(argv: list[str]) -> int:
                 waiting.append(f"{short}[{tag}]")
                 any_pending = True
             else:
-                failed.append(short)
+                if "(unhealthy)" in status.lower() and _check_could_not_run(name):
+                    failed.append(f"{short}[check cannot run — the image ships "
+                                  f"no such binary; the service may be fine]")
+                else:
+                    failed.append(short)
                 any_failed = True
         line = f"{stack}: {ready_n}/{len(rows)} ready"
         if waiting:

@@ -1497,7 +1497,17 @@ blackbox_exporter_port: 9115       # prom/blackbox-exporter — HTTP/TCP probes
 
 postgres_exporter_version: "v0.20.1"  # [swept 2026-08-06]
 mysqld_exporter_version: "v0.19.0"  # [swept 2026-08-06]
-redis_exporter_version: "v1.88.0"  # [swept 2026-08-06]
+# -alpine, and the suffix is load-bearing. Upstream's DEFAULT image is now
+# scratch — no wget, no shell, nothing but the binary — so the compose
+# healthcheck (`CMD wget --spider`) could not EXECUTE and docker reported the
+# container unhealthy while it served metrics on :9121 perfectly well. The
+# v1.58.0 image had shipped a shell; v1.88.0 does not. The estate did not
+# break, the base image did.
+#
+# One declaration, not a hardcoded suffix in the template: pin-latest-scan
+# matches candidate tags by SHAPE, so this keeps tracking the -alpine line
+# rather than drifting back onto scratch at the next sweep.
+redis_exporter_version: "v1.88.0-alpine"  # [swept v1.58.0 2026-08-06]
 cadvisor_version: "v0.49.1"
 blackbox_exporter_version: "v0.28.0"  # [swept 2026-08-06]
 
