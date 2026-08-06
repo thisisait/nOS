@@ -26,7 +26,7 @@ const rawJob = (over: Record<string, unknown> = {}) => ({
 	command: '/Users/pazny/projects/nOS/files/anatomy/plugins/conductor/skills/drift-watch.sh',
 	args_json: '[]',
 	env_json: JSON.stringify({
-		WING_EVENTS_HMAC_SECRET: '0c05d247e394026ab3240c7f11483ed61c426ca6048bc2c9eb6b156a1725c751',
+		WING_EVENTS_HMAC_SECRET: 'FAKE_hmac_secret_for_tests_only_not_a_real_value_0000000000000000',
 		WING_API_TOKEN: 'wing_live_token_value_here_0123456789',
 		NOS_MARIADB_ROOT_PASSWORD: 'hunter2hunter2hunter2'
 	}),
