@@ -103,14 +103,24 @@
   ansible.builtin.file:
     path: "{{ stacks_dir }}/iiab/wordpress/mu-plugins/{{ item.file }}"
     state: absent
+  # `enabled:`, NOT `on:`. YAML 1.1 — which is what PyYAML and Ansible parse —
+  # coerces a bare `on` KEY to the boolean True, so `item.on` looked up an
+  # attribute that did not exist and every loop item failed with "object of
+  # type 'dict' has no attribute 'on'". The item rendered as
+  # `{file: ..., true: true}`, which is the tell.
+  #
+  # This is the second time in one day: the anatomy graph's edge field is
+  # `upstream:` for exactly this reason, and it was reported hours before this
+  # was written. A trap you have been told about and walk into anyway is an
+  # argument for a gate, not for more care — test_no_yaml_key_is_a_boolean.py.
   loop:
-    - { file: devlog-app-passwords.php, on: "{{ wordpress_devlog_enabled | default(true) }}" }
-    - { file: rbac-role-sync.php, on: "{{ install_authentik | default(false) }}" }
-    - { file: cve-2026-63030-batch-block.php, on: "{{ wordpress_cve_63030_mitigate | default(false) }}" }
-    - { file: nos-hardening.php, on: "{{ wordpress_harden_unauth_surface | default(true) }}" }
+    - { file: devlog-app-passwords.php, enabled: "{{ wordpress_devlog_enabled | default(true) }}" }
+    - { file: rbac-role-sync.php, enabled: "{{ install_authentik | default(false) }}" }
+    - { file: cve-2026-63030-batch-block.php, enabled: "{{ wordpress_cve_63030_mitigate | default(false) }}" }
+    - { file: nos-hardening.php, enabled: "{{ wordpress_harden_unauth_surface | default(true) }}" }
   loop_control:
     label: "{{ item.file }}"
-  when: not (item.on | bool)
+  when: not (item.enabled | bool)
   notify: Restart wordpress
 
 - name: "[pazny.wordpress] Render compose override fragment"
