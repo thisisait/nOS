@@ -157,7 +157,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": true,
       "mutates_worktree": true,
-      "min_work": 2850,
+      "min_work": 2900,
       "claims": [
         "nos_entity"
       ],
