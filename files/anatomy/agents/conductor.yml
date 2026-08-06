@@ -160,6 +160,16 @@ pulse:
       jitter_min: 5
       max_runtime_s: 120
       max_concurrent: 1
+      # What this job WRITES (anatomy graph, actor-side declaration). No args
+      # → no `--push`: the ref move is LOCAL. Nothing automated pushes this
+      # branch anywhere; repo:github-origin's automated_writers stays [].
+      writes:
+        - target: "repo:scan-data"
+          via: "moves refs/heads/scan-data to a new commit holding
+            scan-state.json + remediation-queue.json
+            (tools/scan-state-snapshot.py:90 BRANCH, :268 ref update;
+            --push is opt-in at :375 and this job passes no args)"
+          measured: "2026-08-06"
       env: {}
 
     # Nervy (2026-05-25): autonomous vulnerability scan — the LLM scan-REFRESH

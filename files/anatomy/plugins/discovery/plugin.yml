@@ -95,6 +95,16 @@ pulse:
       # first run ever (2026-08-06) found four and filed four roadmap rows —
       # a complete success that the scheduler reported as a failure.
       findings_exit_codes: [1]
+      # What this job WRITES (anatomy graph, actor-side declaration). The edge
+      # holds only while `--file` is in args above — report-only mode files
+      # nothing, and the pin test checks exactly that.
+      writes:
+        - target: "table:roadmap"
+          via: "contradiction rows POSTed to the KEAP roadmap table
+            (tools/discovery-scan.py:70-71 TABLE uuid = roadmap-seed.py:31,
+            :470 file_rows, HTTP only — no filesystem writes). 2026-08-06 run:
+            125 pairs compared, 4 contradictions, 4 rows filed"
+          measured: "2026-08-06"
       env: {}
 
 # =============================================================================

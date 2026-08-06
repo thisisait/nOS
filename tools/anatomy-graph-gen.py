@@ -32,6 +32,22 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
     daemon:<launchd label>  eu.thisisait.nos.* labels from role defaults
     service:<manifest id>   state/manifest.yml services[].id
     resource:<name>         mutex/capability resources (claims + requires)
+    repo:<name>             git surfaces jobs touch (curated, each node pinned
+                            to the code that touches it — see REPO_SURFACES)
+    tofu:<name>             OpenTofu state roots (terraform/<name>/)
+    authentik:<slug>        state/tofu-authentik-services.yml registry rows
+    table:<name>            state/keap-tables/<name>.table.yml definitions
+
+WRITES (the second declared channel)
+------------------------------------
+`depends_on` declares what a job READS (consumer-side, upstream → job).
+`writes:` declares what a job WRITES (actor-side, job → target): the job is
+the one actor that knows its own output, and the target (a repo ref, a KEAP
+table) is passive substrate that cannot declare anything. Same refusals as
+depends_on: the target must resolve, `via:` must name the artifact. Each
+shipped writes edge additionally carries a code pin in
+test_anatomy_graph_is_sound.py (repair before declare — the edge exists only
+while the command it describes still performs the write).
 
 WHAT IS DERIVED, NOT DECLARED
 -----------------------------
@@ -65,11 +81,110 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[1]
 TARGET = REPO / "state" / "anatomy-graph.json"
+#: Byte-identical vendored copy for the face. The face container's build
+#: context is files/anatomy/face/ ONLY (roles/pazny.face synchronize task), so
+#: the definition screen's build-time JSON import cannot reach state/ — the
+#: generator writes both and --check refuses drift between them.
+FACE_TARGET = REPO / "files" / "anatomy" / "face" / "src" / "lib" / "anatomy" / \
+    "anatomy-graph.json"
 
 JOB_SOURCES = ("files/anatomy/plugins/*/plugin.yml", "files/anatomy/agents/*.yml")
 JUDGE_SETS = REPO / "state" / "judge-sets.yml"
 WEAKNESSES = REPO / "files" / "anatomy" / "bone" / "weaknesses.py"
 MANIFEST = REPO / "state" / "manifest.yml"
+TOFU_REGISTRY = REPO / "state" / "tofu-authentik-services.yml"
+KEAP_TABLES = REPO / "state" / "keap-tables"
+
+#: The git surfaces the estate's jobs and operator tools touch (operator ask,
+#: 2026-08-06). Curated because no committed file declares remotes — each node
+#: names the code that is its evidence, and each carries `automated_writers`
+#: so ABSENCE of an automated writer is a stated fact, not an omission:
+#: nothing automated may push the public trunk (promote-public.sh is
+#: gh-auth-gated operator-only, :39-40), and that is doctrine, not a gap.
+REPO_SURFACES: dict[str, dict] = {
+    "github-origin": {
+        "role": "public trunk (github.com/thisisait/nOS)",
+        "automated_writers": [],
+        "operator_tools": ["tools/promote-public.sh", "tools/nos-push"],
+        "evidence": "tools/promote-public.sh:39-40 (gh-auth operator-only gate)",
+    },
+    "gitea-forge": {
+        "role": "local writable forge + Woodpecker CI source (T32.2 Model A)",
+        "hosted_by": "service:gitea",
+        "automated_writers": [],
+        "operator_tools": ["tools/nos-push", "tools/sync-trunk-to-gitea.sh"],
+        "evidence": "tools/sync-trunk-to-gitea.sh:2-8 (operator-host-only, FF-only)",
+    },
+    "gitlab-forge": {
+        "role": "agent forge / MR review surface (T32.2)",
+        "hosted_by": "service:gitlab",
+        "operator_tools": ["tools/migration-pr.sh", "tools/recipe-pr.sh"],
+        "evidence": "default.config.yml nos_agent_forge + tools/migration-pr.sh:19-21",
+    },
+    "scan-data": {
+        "role": "orphan branch — nightly security snapshot ledger (local ref only; "
+                "the recording job passes no --push)",
+        "ref": "refs/heads/scan-data",
+        "evidence": "tools/scan-state-snapshot.py:90 (BRANCH), :237 (moves one ref)",
+    },
+}
+
+TAXONOMY_BUNDLE = REPO / "state" / "fable" / "taxonomy-bundle.json"
+
+#: KEAP taxonomy anchors (ids from state/fable/taxonomy-bundle.json `anchor`,
+#: the committed 362-anchor spine). Every node gets one so a KEAP import is
+#: never 179 `orphan-object` findings — keap-lint measured 26/27 findings as
+#: exactly that against unanchored fixtures ("invisible in the universe").
+#: Per-kind default, refined per category where the branch is unambiguous;
+#: everything else is honestly generic Software Engineering rather than a
+#: guessed leaf. The soundness gate refuses an anchor the bundle does not hold.
+PULSE_ANCHORS = {
+    "security": "02.02.08",       # Computer Security
+    "agents": "02.02.09",         # Artificial Intelligence
+    "knowledge": "09",            # Reference & Documentation
+    "notification": "03.08",      # Telecommunications
+    "compliance": "04.06",        # Law
+    "platform": "02.02.06",       # Operating Systems
+}
+SERVICE_ANCHORS = {
+    "database": "02.02.05", "cache": "02.02.05",
+    "security": "02.02.08", "vault": "02.02.08", "identity": "02.02.08",
+    "ai": "02.02.09", "agent": "02.02.09",
+    "observability": "02.02.06", "monitoring": "02.02.06",
+    "proxy": "02.02.07", "vpn": "02.02.07",
+    "mail": "03.08", "messaging": "03.08", "notifications": "03.08", "pbx": "03.08",
+    "knowledge": "09", "wiki": "09",
+    "storage": "11.04",
+}
+KIND_ANCHORS = {
+    "judge": "02.02.04", "gateset": "02.02.04",
+    "weakness": "02.02.08",
+    "daemon": "02.02.06",
+    "resource": "02.02.06",       # concurrency primitives are an OS concept
+    "repo": "02.02.04",
+    "tofu": "02.02.04",
+    "authentik": "02.02.08",
+    "table": "02.02.05",
+}
+FALLBACK_ANCHOR = "02.02.04"      # Software Engineering
+
+#: What each host daemon IS — curated because launchd labels carry no prose
+#: anywhere in the repo. One line each, estate vocabulary.
+DAEMON_DESC = {
+    "acme-renew": "renews the estate's TLS certificates on schedule",
+    "backrest": "Backrest backup orchestrator (restic UI spike)",
+    "backup.exporter": "exports backup outcome metrics for Prometheus scraping",
+    "backup.offsite": "ships the nightly backup set to the offsite target",
+    "backup.rustfs": "nightly backup of service data into RustFS",
+    "bone": "Bone — the local FastAPI bridge between Ansible runs and Wing's SQLite store",
+    "cortex": "cortex organ server — the KEAP-facing knowledge mirror API",
+    "heartbeat": "host heartbeat — periodic liveness signal into the estate's telemetry",
+    "hermes": "Hermes web-UI daemon (loopback-only, opt-in) — cross-channel agent gateway",
+    "pulse": "Pulse — the host-side scheduled-job runner dispatching every unpaused pulse job",
+    "resume": "post-boot resume hook — re-establishes host state after a reboot",
+    "wing": "Wing — the Nette/FrankenPHP dashboard and state-framework UI",
+}
+
 
 #: Commands that spawn a claude CLI go through the one mkdir mutex
 #: (files/anatomy/scripts/agent-run-lock.sh). Derived, not declared: the claim
@@ -101,7 +216,7 @@ def _owner(doc: dict, path: Path) -> str:
     return re.sub(r"-base$", "", str(doc.get("name") or doc.get("agent_id") or path.stem))
 
 
-def harvest_pulse(nodes: dict, raw_edges: list) -> None:
+def harvest_pulse(nodes: dict, raw_edges: list, raw_writes: list) -> None:
     for pattern in JOB_SOURCES:
         for path in sorted(REPO.glob(pattern)):
             try:
@@ -128,10 +243,15 @@ def harvest_pulse(nodes: dict, raw_edges: list) -> None:
                     "category": job.get("category"),
                     "paused": bool(job.get("paused", False)),
                     "findings_exit_codes": job.get("findings_exit_codes"),
+                    # Basename only — the full path is host layout (the same
+                    # allow-list judgement the face's pulse projection makes).
+                    "command_name": cmd.rsplit("/", 1)[-1] or None,
                     "claims": claims,
                 }
                 for dep in job.get("depends_on") or []:
                     raw_edges.append((nid, dep, str(path.relative_to(REPO))))
+                for w in job.get("writes") or []:
+                    raw_writes.append((nid, w, str(path.relative_to(REPO))))
 
 
 # ── harvest: judges + gate sets ───────────────────────────────────────────
@@ -147,6 +267,7 @@ def harvest_judges(nodes: dict, edges: list) -> None:
             "deterministic": j.get("deterministic"),
             "mutates_worktree": j.get("mutates_worktree"),
             "min_work": j.get("min_work"),
+            "argv": list(j.get("argv") or []),
             "claims": claims,
             "requires": list(j.get("requires") or []),
         }
@@ -165,6 +286,83 @@ def harvest_judges(nodes: dict, edges: list) -> None:
             "judges": list(gs.get("judges") or []),
             "unattended": bool(gs.get("unattended", False)),
         }
+
+
+# ── annotate: taxonomy anchor + one-line description per node ─────────────
+#    (KEAP-import shaping, 2026-08-06: an unanchored object is an
+#    `orphan-object` — invisible to KEAP search and panels — and a body of
+#    `{"kind": "daemon"}` gives hybrid search nothing to embed. The anchor
+#    ids come from the committed taxonomy bundle and the gate refuses one
+#    the bundle does not hold.)
+
+
+def _anchor(nid: str, n: dict) -> str:
+    kind = n["kind"]
+    if kind == "pulse":
+        return PULSE_ANCHORS.get(n.get("category"), FALLBACK_ANCHOR)
+    if kind == "service":
+        return SERVICE_ANCHORS.get(n.get("category"), FALLBACK_ANCHOR)
+    if kind == "daemon" and ".backup." in nid:
+        return "11.04"  # Backup Strategies
+    return KIND_ANCHORS.get(kind, FALLBACK_ANCHOR)
+
+
+def _describe(nid: str, n: dict) -> str:
+    kind, local = n["kind"], nid.split(":", 1)[1]
+    if kind == "pulse":
+        bits = [f"Pulse scheduled job ({n.get('category') or 'uncategorised'}):",
+                f"runs {n.get('command_name') or 'an undeclared command'}",
+                f"on cron `{n.get('schedule')}`"]
+        if n.get("paused"):
+            bits.append("— PAUSED (deliberate operator decision, not a health state)")
+        if n.get("findings_exit_codes"):
+            bits.append(f"— exits {n['findings_exit_codes']} mean findings, not failure")
+        return " ".join(bits)
+    if kind == "judge":
+        return (f"Loop judge: gate command `{' '.join(n.get('argv') or [])}` — "
+                f"work floor min_work={n.get('min_work')}, "
+                f"deterministic={n.get('deterministic')}")
+    if kind == "gateset":
+        u = "may run unattended" if n.get("unattended") else "requires an attended host"
+        return f"Judge gate set over [{', '.join(n.get('judges') or [])}] — {u}"
+    if kind == "weakness":
+        need = "required" if n.get("required") else "optional"
+        return (f"Bone weakness source '{local}' ({need}) — one of the readers whose "
+                f"findings become loop_proposals rows")
+    if kind == "daemon":
+        label = local.removeprefix("eu.thisisait.nos.")
+        what = DAEMON_DESC.get(label, "host daemon")
+        return f"Host launchd daemon {local} — {what}"
+    if kind == "service":
+        return (f"Docker service '{local}' ({n.get('category')}) in the "
+                f"{n.get('stack')} compose stack, toggled by {n.get('install_flag')}")
+    if kind == "resource":
+        if "requires" in str(n.get("source")):
+            return (f"Capability resource '{local}' — required by judges, satisfied "
+                    f"or not, never exclusive")
+        return (f"Exclusion resource '{local}' — nodes claiming it are pairwise "
+                f"mutually exclusive (mutex edges derived from claims)")
+    if kind == "repo":
+        return f"Git surface: {n.get('role')}"
+    if kind == "tofu":
+        return (f"OpenTofu state root {n.get('source')} — the declarative authority "
+                f"over Authentik providers/applications/outposts; plan daily, "
+                f"apply only at converge behind the destroy-guard")
+    if kind == "authentik":
+        svc = (f"gates service:{n['service']}" if n.get("service")
+               else "no manifest service (Tier-2 app or excluded install)")
+        return (f"Authentik {n.get('mode')} client '{n.get('client_id')}' "
+                f"(RBAC tier {n.get('tier')}) — {svc}; provider+application "
+                f"managed by OpenTofu from the committed registry")
+    if kind == "table":
+        return f"KEAP DataTable definition '{n.get('title')}' ({n['source']})"
+    return f"{kind} node {local}"
+
+
+def annotate_nodes(nodes: dict) -> None:
+    for nid, n in nodes.items():
+        n["anchor"] = _anchor(nid, n)
+        n["description"] = _describe(nid, n)
 
 
 # ── harvest: weakness sources (regex over the reader — it declares its own
@@ -219,6 +417,86 @@ def harvest_services(nodes: dict) -> None:
                 "category": svc.get("category"),
                 "install_flag": svc.get("install_flag"),
             }
+
+
+# ── harvest: git surfaces + tofu state (operator ask, 2026-08-06) ─────────
+
+
+def harvest_repos_and_tofu(nodes: dict) -> None:
+    # repo:scan-data exists only while the recorder still writes that branch —
+    # the same repair-before-declare shape as the halt edge, applied at
+    # compile time: the node vanishes with the code, and the writes edge
+    # pointing at it then fails compilation loudly.
+    snapshot = (REPO / "tools" / "scan-state-snapshot.py")
+    scan_data_backed = snapshot.exists() and 'BRANCH = "scan-data"' in snapshot.read_text(
+        encoding="utf-8")
+    for name, facts in REPO_SURFACES.items():
+        if name == "scan-data" and not scan_data_backed:
+            continue
+        nodes[f"repo:{name}"] = {"kind": "repo", "source": "curated (anatomy-graph-gen "
+                                 "REPO_SURFACES)", **facts}
+
+    # The OpenTofu Authentik state root. Guards are converge-time scripts, not
+    # automated actors, so they are FACTS on the node, not edges — the only
+    # scheduled actor touching this state is the plan-only drift job, and that
+    # edge is declared consumer-side in its own manifest.
+    if (REPO / "terraform" / "authentik").is_dir():
+        nodes["tofu:authentik-state"] = {
+            "kind": "tofu",
+            "source": "terraform/authentik/",
+            "engine_flag": "authentik_engine: tofu (default.config.yml)",
+            "guards": [
+                "reconcile-preflight: tools/tofu-authentik-reconcile.sh --preflight "
+                "(identity-only PK re-sync before every plan)",
+                "destroy-guard: tasks/tofu-authentik.yml (refuses DESTROY + dangerous "
+                "in-place UPDATE outside a supervised apply)",
+            ],
+            "registry": "state/tofu-authentik-services.yml "
+                        "(tools/tofu-authentik-gen-registry.py)",
+        }
+
+
+# ── harvest: authentik registry rows (providers/applications, tofu-owned) ──
+
+
+def harvest_authentik(nodes: dict) -> None:
+    doc = yaml.safe_load(TOFU_REGISTRY.read_text(encoding="utf-8"))
+    for row in doc.get("tofu_authentik_services") or []:
+        if not (isinstance(row, dict) and row.get("slug")):
+            continue
+        slug = str(row["slug"])
+        # Registry slugs use dashes; manifest service ids use underscores
+        # (calibre-web → service:calibre_web). Tier-2 apps (documenso, qdrant,
+        # roundcube, …) have no manifest row at all — `service: null` states
+        # that, rather than an edge to a node that does not exist.
+        service = next((c for c in (slug, slug.replace("-", "_"))
+                        if f"service:{c}" in nodes), None)
+        nodes[f"authentik:{slug}"] = {
+            "kind": "authentik",
+            "source": "state/tofu-authentik-services.yml",
+            "mode": row.get("mode"),
+            "tier": row.get("tier"),
+            "client_id": row.get("client_id"),
+            "service": service,
+            "managed_by": "tofu:authentik-state",
+        }
+
+
+# ── harvest: KEAP DataTable definitions ───────────────────────────────────
+
+
+def harvest_tables(nodes: dict) -> None:
+    for path in sorted(KEAP_TABLES.glob("*.table.yml")):
+        try:
+            doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError:
+            continue
+        name = path.name.removesuffix(".table.yml")
+        nodes[f"table:{name}"] = {
+            "kind": "table",
+            "source": str(path.relative_to(REPO)),
+            "title": doc.get("title"),
+        }
 
 
 # ── edges: validate declarations, derive structure ────────────────────────
@@ -296,6 +574,90 @@ def compile_declared(raw_edges: list, nodes: dict) -> list[dict]:
                 edge["declared_margin_min"] = round(declared_margin, 1)
                 edge["can_invert"] = declared_margin <= 0
         edges.append(edge)
+    return edges
+
+
+def compile_writes(raw_writes: list, nodes: dict) -> list[dict]:
+    """Actor-declared output edges (job → repo ref / KEAP table).
+
+    Same refusals as depends_on: the target must resolve against the compiled
+    node set and `via:` must name the artifact. Direction is writer → reader,
+    consistent with every other data edge.
+    """
+    edges = []
+    for actor, w, src in raw_writes:
+        if not isinstance(w, dict):
+            _die(f"{actor} ({src}): writes entry is not a mapping: {w!r}")
+        target = w.get("target")
+        if target not in nodes:
+            _die(f"{actor} ({src}): writes names {target!r}, which resolves to no "
+                 f"declared node — a graph lying at birth")
+        via = str(w.get("via") or "").strip()
+        if not via:
+            _die(f"{actor} ({src}): writes edge to {target} names no artifact (via:)")
+        if not w.get("measured"):
+            _die(f"{actor} ({src}): writes edge to {target} carries no measured: "
+                 f"stamp — nobody verified the code still performs this write")
+        edges.append({
+            "from": actor,
+            "to": target,
+            "kind": "data",
+            "via": via,
+            "measured": _iso(w.get("measured")),
+            "declared": "writes",
+        })
+    return edges
+
+
+def derive_registry_bindings(nodes: dict) -> list[dict]:
+    """authentik:<slug> → service:<id> for every registry row whose slug maps
+    onto a manifest service. The 43 uniform tofu→authentik pairs are NOT
+    emitted — `managed_by` on each node already states that fact once, and 43
+    identical edges would be picture-filling, not wiring."""
+    edges = []
+    for nid in sorted(nodes):
+        n = nodes[nid]
+        if n["kind"] == "authentik" and n.get("service"):
+            edges.append({
+                "from": nid,
+                "to": f"service:{n['service']}",
+                "kind": "data",
+                "via": f"SSO gate (mode={n['mode']}) — provider+application applied "
+                       f"by tofu from the registry row",
+                "derived": "tofu-authentik-registry",
+            })
+    return edges
+
+
+def derive_substrate(nodes: dict) -> list[dict]:
+    """Cross-substrate edges whose evidence is role/task code, each emitted
+    only while the code that backs it still exists (repair before declare,
+    compile-time form)."""
+    edges = []
+    wp = REPO / "roles" / "pazny.woodpecker" / "templates" / "compose.yml.j2"
+    if ("repo:gitea-forge" in nodes and "service:woodpecker" in nodes
+            and wp.exists() and "WOODPECKER_GITEA_URL" in wp.read_text(encoding="utf-8")):
+        edges.append({
+            "from": "repo:gitea-forge",
+            "to": "service:woodpecker",
+            "kind": "data",
+            "via": "CI clone/fetch of pushed branches (WOODPECKER_GITEA_URL, "
+                   "roles/pazny.woodpecker/templates/compose.yml.j2:31-34; "
+                   "Gitea OAuth2 client auto-created, A16/A19)",
+            "derived": "role-config",
+        })
+    if ("tofu:authentik-state" in nodes and "service:authentik" in nodes
+            and (REPO / "tasks" / "tofu-authentik.yml").exists()):
+        edges.append({
+            "from": "tofu:authentik-state",
+            "to": "service:authentik",
+            "kind": "data",
+            "via": "converge-time `tofu apply` writes providers/applications/outpost "
+                   "attachments into the live tenant (tasks/tofu-authentik.yml, "
+                   "destroy-guarded, -parallelism=1); read back daily by the "
+                   "plan-only drift job",
+            "derived": "tofu-apply-path",
+        })
     return edges
 
 
@@ -382,17 +744,27 @@ def find_cycle(edges: list[dict], kinds: set[str]) -> list[str] | None:
 def build() -> dict:
     nodes: dict[str, dict] = {}
     raw: list = []
-    harvest_pulse(nodes, raw)
+    raw_writes: list = []
+    harvest_pulse(nodes, raw, raw_writes)
     harvest_judges(nodes, edges := [])
     harvest_weaknesses(nodes)
     harvest_daemons(nodes)
     harvest_services(nodes)
+    harvest_repos_and_tofu(nodes)
+    harvest_authentik(nodes)   # after services — slug→service binding needs them
+    harvest_tables(nodes)
 
     declared = compile_declared(raw, nodes)
+    writes = compile_writes(raw_writes, nodes)
+    bindings = derive_registry_bindings(nodes)
+    substrate = derive_substrate(nodes)
     structural = derive_structural(nodes)
     mutex = derive_mutex(nodes)
     ensure_capability_resources(nodes, edges)
-    all_edges = declared + edges + structural + mutex
+    # After every node exists (derive_mutex/ensure_capability_resources mint
+    # resource nodes): taxonomy anchor + embeddable one-liner, every node.
+    annotate_nodes(nodes)
+    all_edges = declared + writes + edges + bindings + substrate + structural + mutex
 
     # Per-kind cycles are a compile error (§2c-2): there is no legitimate
     # same-night cycle in a cron estate.
@@ -411,7 +783,8 @@ def build() -> dict:
 
     all_edges.sort(key=lambda e: (e["kind"], e["from"], e["to"]))
     counts = {"nodes": len(nodes), "edges": len(all_edges)}
-    for k in ("pulse", "judge", "gateset", "weakness", "daemon", "service", "resource"):
+    for k in ("pulse", "judge", "gateset", "weakness", "daemon", "service", "resource",
+              "repo", "tofu", "authentik", "table"):
         counts[f"nodes_{k}"] = sum(1 for n in nodes.values() if n["kind"] == k)
     for k in EDGE_KINDS + ("mutex",):
         counts[f"edges_{k}"] = sum(1 for e in all_edges if e["kind"] == k)
@@ -437,17 +810,20 @@ def main() -> int:
     args = ap.parse_args()
     text = render(build())
     if args.check:
-        current = TARGET.read_text(encoding="utf-8") if TARGET.exists() else ""
-        if current != text:
-            print("anatomy-graph: STALE — regenerate with tools/anatomy-graph-gen.py",
-                  file=sys.stderr)
-            return 1
+        for target in (TARGET, FACE_TARGET):
+            current = target.read_text(encoding="utf-8") if target.exists() else ""
+            if current != text:
+                print(f"anatomy-graph: {target.relative_to(REPO)} STALE — "
+                      f"regenerate with tools/anatomy-graph-gen.py", file=sys.stderr)
+                return 1
         print(f"anatomy-graph current ({json.loads(text)['counts']['nodes']} nodes, "
               f"{json.loads(text)['counts']['edges']} edges)")
         return 0
     TARGET.write_text(text, encoding="utf-8")
+    FACE_TARGET.write_text(text, encoding="utf-8")
     c = json.loads(text)["counts"]
-    print(f"wrote {TARGET.relative_to(REPO)} ({c['nodes']} nodes, {c['edges']} edges)")
+    print(f"wrote {TARGET.relative_to(REPO)} + face vendored copy "
+          f"({c['nodes']} nodes, {c['edges']} edges)")
     return 0
 
 

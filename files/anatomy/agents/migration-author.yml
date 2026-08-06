@@ -84,6 +84,16 @@ pulse:
       max_concurrent: 1
       paused: true
       paused_reason: "migration-author is on-demand; tools/run-migration-author.sh fires it"
+      # What this job WRITES (anatomy graph, actor-side declaration): the
+      # agent's task step 5 runs migration-pr.sh --open-pr, which branches +
+      # commits + pushes to the LOCAL forge and opens the MR. Never GitHub,
+      # never a merge, never a force-push (tools/migration-pr.sh:13-15).
+      writes:
+        - target: "repo:gitlab-forge"
+          via: "forge branch + MR via tools/migration-pr.sh --open-pr
+            (NOS_AGENT_TASK step 5 below; forge resolved from nos_agent_forge,
+            default gitlab — default.config.yml + migration-pr.sh:147,215)"
+          measured: "2026-08-06"
       env:
         NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
         # Q8/A1 (2026-06-16): repo working-tree root for MigrationWriteTool.

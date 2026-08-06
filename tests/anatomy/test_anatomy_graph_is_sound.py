@@ -88,6 +88,16 @@ def test_the_graph_is_byte_stable(gen):
     assert gen.render(gen.build()) == gen.render(gen.build())
 
 
+def test_the_face_vendored_copy_is_identical(committed):
+    """The face container's build context is files/anatomy/face/ ONLY
+    (roles/pazny.face synchronize), so the definition screen imports a
+    vendored copy. Two copies of one artifact are tolerable exactly as long
+    as a gate makes divergence impossible."""
+    face = REPO / "files/anatomy/face/src/lib/anatomy/anatomy-graph.json"
+    assert face.exists(), "the face vendored graph copy is missing"
+    assert face.read_text(encoding="utf-8") == GRAPH.read_text(encoding="utf-8")
+
+
 # ── refusal 1: dangling edge ──────────────────────────────────────────────
 
 
@@ -302,7 +312,10 @@ def test_every_edge_endpoint_resolves(committed):
 def test_the_node_counts_are_sane(committed):
     """Positive control with measured floors (2026-08-06: 29 pulse jobs,
     5 judges, 4 gate sets, 7 weakness sources, 12 declared daemon labels,
-    63 services). Floors, not equalities — the estate grows."""
+    63 services; core-substrate extension same day: 4 repo surfaces, 1 tofu
+    state root, 43 authentik registry rows, 6 KEAP tables — no `ideas`
+    table exists, the operator brief's mention of one was stale). Floors,
+    not equalities — the estate grows."""
     c = committed["counts"]
     assert c["nodes_pulse"] >= 25
     assert c["nodes_judge"] >= 5
@@ -310,3 +323,192 @@ def test_the_node_counts_are_sane(committed):
     assert c["nodes_weakness"] >= 7
     assert c["nodes_daemon"] >= 11
     assert c["nodes_service"] >= 60
+    assert c["nodes_repo"] >= 4
+    assert c["nodes_tofu"] >= 1
+    assert c["nodes_authentik"] >= 40
+    assert c["nodes_table"] >= 6
+
+
+# ── KEAP-import shaping: anchor + body per node ───────────────────────────
+#    (2026-08-06: an unanchored KEAP object is an `orphan-object` — measured:
+#    keap-lint reported 26/27 fixture findings as exactly that — and a body of
+#    `{"kind": "daemon"}` gives hybrid search nothing to embed. The anchor is
+#    a REFERENCE, and a dangling reference is already refusal class 1.)
+
+
+def test_every_node_has_a_resolving_anchor_and_a_body(committed):
+    bundle = json.loads(
+        (REPO / "state/fable/taxonomy-bundle.json").read_text(encoding="utf-8"))
+    valid = {a["id"] for a in bundle["anchor"]}
+    assert len(valid) >= 300, "the taxonomy bundle shrank — re-check before trusting it"
+    for nid, n in committed["nodes"].items():
+        assert n.get("anchor") in valid, (
+            f"{nid}: anchor {n.get('anchor')!r} resolves to no taxonomy anchor — "
+            f"an import would file this node as orphan-object, invisible to "
+            f"KEAP search and panels"
+        )
+        desc = str(n.get("description") or "").strip()
+        assert len(desc) >= 20, (
+            f"{nid}: description {desc!r} is not a body worth embedding — "
+            f"semantic scoping over it returns noise"
+        )
+        assert "\n" not in desc, f"{nid}: description must be one line"
+
+
+def test_kind_prefixed_ids_survive(committed):
+    """cortex-corpus-diff.py classifies any object id NOT starting with `fs:`
+    as not-a-mirror-row and withdraws it from the fs clause — so kind-prefixed
+    ids are what keeps an anatomy import from zeroing the agree-streak. Bare
+    ids would have. This pins the property the import depends on."""
+    for nid in committed["nodes"]:
+        kind, _, rest = nid.partition(":")
+        assert kind and rest and not kind.startswith("fs"), nid
+        assert kind == committed["nodes"][nid]["kind"]
+
+
+# ── the writes channel: actor-declared outputs, same refusals ─────────────
+
+
+def test_a_dangling_writes_target_is_refused(gen):
+    nodes = _one_edge_nodes(gen)
+    raw = [("pulse:a:up", {"target": "table:typod", "via": "x",
+                           "measured": "2026-08-06"}, "src")]
+    with pytest.raises(SystemExit):
+        gen.compile_writes(raw, nodes)
+
+
+def test_a_writes_edge_without_an_artifact_is_refused(gen):
+    nodes = _one_edge_nodes(gen)
+    nodes["table:t"] = {"kind": "table"}
+    raw = [("pulse:a:up", {"target": "table:t", "via": "  ",
+                           "measured": "2026-08-06"}, "src")]
+    with pytest.raises(SystemExit):
+        gen.compile_writes(raw, nodes)
+
+
+def test_an_unmeasured_writes_edge_is_refused(gen):
+    nodes = _one_edge_nodes(gen)
+    nodes["table:t"] = {"kind": "table"}
+    raw = [("pulse:a:up", {"target": "table:t", "via": "x"}, "src")]
+    with pytest.raises(SystemExit):
+        gen.compile_writes(raw, nodes)
+
+
+# ── core-substrate positive controls, each with its code pin ──────────────
+#    (repair before declare: every declared write/read edge below is paired
+#    with an assertion that the code still performs the wiring the edge
+#    describes — the halt-edge rule, applied to the 2026-08-06 extension)
+
+
+def _data_edges(committed):
+    return {(e["from"], e["to"]) for e in committed["edges"] if e["kind"] == "data"}
+
+
+def test_scan_data_write_edge_is_backed_by_code(committed):
+    assert ("pulse:conductor:scan-state-record", "repo:scan-data") in _data_edges(committed)
+    tool = (REPO / "tools" / "scan-state-snapshot.py").read_text(encoding="utf-8")
+    assert 'BRANCH = "scan-data"' in tool, (
+        "scan-state-snapshot.py no longer targets the scan-data branch — the "
+        "declared write edge describes wiring the code stopped performing"
+    )
+    # The edge says the ref move is LOCAL. That is true only while the job
+    # passes no --push: the manifest's job entry must carry no args.
+    import yaml
+    doc = yaml.safe_load(
+        (REPO / "files/anatomy/agents/conductor.yml").read_text(encoding="utf-8"))
+    job = next(j for j in doc["pulse"]["jobs"] if j["name"] == "scan-state-record")
+    assert not job.get("args"), (
+        "scan-state-record now passes args — if one of them is --push, the "
+        "edge's 'local ref only' claim and repo:github-origin's empty "
+        "automated_writers list are both stale; re-measure and restamp"
+    )
+
+
+def test_roadmap_write_edge_is_backed_by_code(committed):
+    assert ("pulse:discovery:contradiction-scan", "table:roadmap") in _data_edges(committed)
+    import yaml
+    doc = yaml.safe_load(
+        (REPO / "files/anatomy/plugins/discovery/plugin.yml").read_text(encoding="utf-8"))
+    job = next(j for j in doc["pulse"]["jobs"] if j["name"] == "contradiction-scan")
+    assert "--file" in (job.get("args") or []), (
+        "contradiction-scan no longer passes --file — report-only mode files "
+        "no rows, so the declared roadmap write edge is a lie; delete the "
+        "edge or restore the flag"
+    )
+    # The tool and the roadmap seeder must still address the SAME table.
+    scan = (REPO / "tools" / "discovery-scan.py").read_text(encoding="utf-8")
+    seed = (REPO / "tools" / "roadmap-seed.py").read_text(encoding="utf-8")
+    import re as _re
+    t_scan = _re.search(r'TABLE = "([0-9a-f-]+)"', scan)
+    t_seed = _re.search(r'TABLE = "([0-9a-f-]+)"', seed)
+    assert t_scan and t_seed and t_scan.group(1) == t_seed.group(1), (
+        "discovery-scan.py and roadmap-seed.py address different table uuids — "
+        "the 'table:roadmap' target no longer names where the rows go"
+    )
+
+
+def test_forge_write_edge_is_backed_by_code(committed):
+    assert ("pulse:migration-author:promote-migration", "repo:gitlab-forge") \
+        in _data_edges(committed)
+    task = (REPO / "files/anatomy/agents/migration-author.yml").read_text(encoding="utf-8")
+    assert "migration-pr.sh" in task and "--open-pr" in task, (
+        "migration-author's task no longer runs migration-pr.sh --open-pr — "
+        "the forge write edge describes wiring the agent stopped performing"
+    )
+
+
+def test_tofu_read_edge_is_backed_by_code(committed):
+    assert ("tofu:authentik-state", "pulse:authentik-tofu-drift:tofu-drift-plan") \
+        in _data_edges(committed)
+    script = (REPO / "files/anatomy/plugins/authentik-tofu-drift-base/skills/"
+              "run-tofu-drift.sh").read_text(encoding="utf-8")
+    for needle in ("NOS_TOFU_DIR", "nos.auto.tfvars.json"):
+        assert needle in script, (
+            f"run-tofu-drift.sh no longer contains {needle!r} — the declared "
+            f"read edge describes a plan path the script stopped taking"
+        )
+
+
+def test_github_origin_has_no_automated_writer(committed):
+    """The absence IS the fact: nothing automated may push the public trunk.
+    promote-public.sh is gh-auth-gated operator-only (:39-40). If a job ever
+    gains a push to origin, this list must be updated deliberately — a silent
+    flip from 'no automated writer' to 'one' is exactly what this pins."""
+    node = committed["nodes"].get("repo:github-origin")
+    assert node is not None, "repo:github-origin vanished from the graph"
+    assert node["automated_writers"] == []
+    writers = [f for (f, t) in _data_edges(committed) if t == "repo:github-origin"]
+    assert writers == [], f"automated writers appeared for github-origin: {writers}"
+
+
+def test_every_registry_row_has_a_node_and_bindings_resolve(committed):
+    """43 rows in state/tofu-authentik-services.yml on 2026-08-06. Every slug
+    gets an authentik: node; slugs that map onto a manifest service carry the
+    binding edge; the ones that do not (Tier-2 apps + uninstalled) say
+    `service: null` rather than pointing at nodes that do not exist."""
+    import yaml
+    reg = yaml.safe_load(
+        (REPO / "state/tofu-authentik-services.yml").read_text(encoding="utf-8"))
+    slugs = [r["slug"] for r in reg["tofu_authentik_services"]]
+    assert len(slugs) >= 40
+    data = _data_edges(committed)
+    for slug in slugs:
+        node = committed["nodes"].get(f"authentik:{slug}")
+        assert node is not None, f"registry row {slug} has no authentik: node"
+        if node["service"] is not None:
+            assert (f"authentik:{slug}", f"service:{node['service']}") in data, (
+                f"authentik:{slug} names service {node['service']} but the "
+                f"binding edge is missing"
+            )
+            assert f"service:{node['service']}" in committed["nodes"]
+    unmatched = sorted(s for s in slugs
+                       if committed["nodes"][f"authentik:{s}"]["service"] is None)
+    # Measured 2026-08-06: Tier-2 apps (documenso/qdrant/roundcube/twofauth),
+    # spacetimedb (excluded service). A new unmatched slug is a new gap to
+    # look at, not an error — but shrinkage below the known set means a
+    # binding was lost, which is.
+    for expected in ("documenso", "qdrant", "roundcube", "spacetimedb", "twofauth"):
+        assert expected in unmatched or f"service:{expected}" in committed["nodes"], (
+            f"{expected} was unmatched on 2026-08-06 and is now neither "
+            f"unmatched nor a service node — a binding silently vanished"
+        )
