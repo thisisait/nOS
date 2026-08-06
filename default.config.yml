@@ -1267,21 +1267,29 @@ wordpress_db_user: "wordpress"
 wordpress_db_password: "{{ global_password_prefix }}_pw_wordpress"
 wordpress_db_host: "127.0.0.1"          # ignored if install_mariadb=true (uses 'mariadb' from iiab_net)
 wordpress_table_prefix: "wp_"
-wordpress_version: "6.9.4"              # PINNED BY AN IMAGE LAG, NOT BY CHOICE — see the wp2shell note below.
+wordpress_version: "7.0.2"              # wp2shell fix — the image lag that pinned 6.9.4 is over.
 # ── wp2shell (CVE-2026-63030 + CVE-2026-60137), disclosed 2026-07-17 ──────────
-# Unauth RCE via /wp-json/batch/v1/: a REST batch-route confusion chained with
-# a core SQLi. Upstream fixed it the same day in 6.8.6 / 6.9.5 / 7.0.2 — but as
-# of 2026-07-20 the Docker official image ships NONE of those three, so every
-# pullable tag is vulnerable. We stay on 6.9.4 and neutralise the vector with a
-# mu-plugin that unregisters the batch endpoint (wordpress_cve_63030_mitigate).
+# Unauth RCE via /wp-json/batch/v1/: a REST batch-route confusion chained with a
+# core SQLi. Upstream fixed both the same day in 6.8.6 / 6.9.5 / 7.0.2, and for
+# two weeks the Docker official image published NONE of the three — so the pin
+# sat at 6.9.4 with a mu-plugin unregistering the batch endpoint, which breaks
+# the CHAIN at its entry but never patched the SQLi underneath it.
 #
-# ⚠️ DO NOT "upgrade" to 7.0.1 (or 7.0.0) — newer than 6.9.4 and published, so
-# a mechanical pin-wave bump looks like progress, but the vulnerable range is
-# 6.9.0-6.9.4 AND 7.0.0-7.0.1: a lateral move into the same hole. Only 6.8.6 /
-# 6.9.5 / 7.0.2 are safe; verify the exact tag exists on Docker Hub before
-# bumping, then set wordpress_cve_63030_mitigate=false and delete
-# roles/pazny.wordpress/files/cve-2026-63030-batch-block.php.
-wordpress_cve_63030_mitigate: true
+# LIFTED 2026-08-06. `wordpress:7.0.2` is on Docker Hub (pushed 2026-08-05,
+# arm64 among its architectures — verified against the registry, not inferred
+# from a release note). REM-129 + REM-160 are two rows for this one move: 160
+# is the observation that unblocks 129.
+#
+# ⚠️ 7.0.0 and 7.0.1 REMAIN VULNERABLE. The range is 6.9.0-6.9.4 AND
+# 7.0.0-7.0.1, so a mechanical "bump to the newest 7.0.x" is a lateral move into
+# the same hole. Only 6.8.6 / 6.9.5 / 7.0.2 are safe. Verify the exact tag
+# exists before bumping.
+#
+# The mitigation is now OFF and its mu-plugin is actively REMOVED (a flag that
+# only decides whether to write a file is half a switch — see the removal task
+# in roles/pazny.wordpress/tasks/main.yml). The file itself is kept: a rollback
+# to 6.9.4 is exactly when it is needed again.
+wordpress_cve_63030_mitigate: false
 wordpress_harden_unauth_surface: true   # REM-114: mu-plugin disables XML-RPC + blocks REST user enum + author enumeration (defense-in-depth; 6.9.4 core is CVE-clean)
 wordpress_port: 8084                    # Local container port (nginx proxy)
 wordpress_admin_user: "admin"

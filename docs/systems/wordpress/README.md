@@ -30,11 +30,17 @@ stack-up down with it. The role stages `oidc-bootstrap.php` always, plus the dev
 app-passwords, RBAC role-sync, CVE-2026-63030 batch-block, and unauth-hardening
 mu-plugins conditionally.
 
-**The version pin is a hold, not a preference.** `6.9.4` is inside the wp2shell CVE range
-(CVE-2026-63030 + CVE-2026-60137, unauth RCE); upstream fixed it in 6.8.6 / 6.9.5 / 7.0.2
-and the Docker official image ships none of the three. So the pin stays and
-`wordpress_cve_63030_mitigate: true` unregisters `/wp-json/batch/v1/` via mu-plugin.
-Do **not** bump to 7.0.0/7.0.1 — they are newer but in the same CVE range.
+**The pin was a hold; the hold is over (2026-08-06).** `6.9.4` sat inside the wp2shell
+range (CVE-2026-63030 + CVE-2026-60137, unauth RCE) for two weeks because the Docker
+official image published none of the three fixed cores. `wordpress:7.0.2` is now on the
+registry, so the pin is `7.0.2` and `wordpress_cve_63030_mitigate` is `false` — the
+mu-plugin that unregistered `/wp-json/batch/v1/` is removed rather than merely
+un-staged, because a `when:` that only decides whether to WRITE a file leaves the last
+copy running forever under `mu-plugins/`, which WordPress auto-loads with no activation
+step. The PHP file is kept in the role for a rollback.
+
+Do **not** bump to 7.0.0/7.0.1 — newer than 6.9.4 and in the same CVE range
+(6.9.0-6.9.4 **and** 7.0.0-7.0.1). Only 6.8.6 / 6.9.5 / 7.0.2 are safe.
 
 ## Authentication
 

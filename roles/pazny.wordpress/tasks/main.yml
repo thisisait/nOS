@@ -55,17 +55,24 @@
   notify: Restart wordpress
   when: install_authentik | default(false)
 
-# TEMPORARY (remove when wordpress_version reaches a patched, dockerized release
-# ≥6.9.5/7.0.2): mitigate CVE-2026-63030 (unauth RCE via /wp-json/batch/v1/) by
-# unregistering the batch endpoint. nOS pins core 6.9.4 because the 6.9.5 fix
-# image is not on Docker Hub yet; this neutralises the attack vector meanwhile.
-- name: "[pazny.wordpress] Stage CVE-2026-63030 batch-block mu-plugin (temporary)"
+# CVE-2026-63030 (unauth RCE via /wp-json/batch/v1/). OFF as of 2026-08-06:
+# wordpress_version is 7.0.2, which carries the upstream fix for both halves of
+# wp2shell, so the mu-plugin's job is done and leaving it would keep the batch
+# REST API dead for no reason.
+#
+# The FILE IS KEPT even though it is not staged. The recipe in
+# default.config.yml said to delete it; deleting it is what makes the flag a
+# trap in the other direction — a rollback to 6.9.4 is precisely the moment the
+# mitigation is needed again, and it would have to be recovered from git
+# history under pressure. An unused file costs nothing; a flag that cannot be
+# turned back on costs an incident.
+- name: "[pazny.wordpress] Stage CVE-2026-63030 batch-block mu-plugin"
   ansible.builtin.copy:
     src: cve-2026-63030-batch-block.php
     dest: "{{ stacks_dir }}/iiab/wordpress/mu-plugins/cve-2026-63030-batch-block.php"
     mode: '0644'
   notify: Restart wordpress
-  when: wordpress_cve_63030_mitigate | default(true)
+  when: wordpress_cve_63030_mitigate | default(false)
 
 - name: "[pazny.wordpress] Stage unauth-surface hardening mu-plugin (REM-114)"
   ansible.builtin.copy:
@@ -74,6 +81,37 @@
     mode: '0644'
   notify: Restart wordpress
   when: wordpress_harden_unauth_surface | default(true)
+
+# ── The other half of every `when:` above ────────────────────────────────────
+#
+# A CONDITIONAL COPY IS HALF A SWITCH. Three of the mu-plugins above are staged
+# behind a flag and, until 2026-08-06, not one of them was ever removed when
+# its flag went false: `when:` decided whether to WRITE the file, and nothing
+# decided to delete it. `mu-plugins/` is auto-loaded by WordPress with no
+# activation step, so a staged plugin keeps running forever — flipping
+# wordpress_cve_63030_mitigate to false would have left /wp-json/batch/v1/
+# unregistered indefinitely, and the recipe's advice to delete the source would
+# have removed the only explanation of why.
+#
+# Measured that day: the mu-plugin was live in iiab-wordpress-1 while its
+# reason (an unpatched 6.9.4) had ceased to exist.
+#
+# Same shape as the flag/effect split this repo keeps finding — the flag records
+# an intention, and something else has to carry it out. Pinned by
+# tests/anatomy/test_a_flag_removes_what_it_staged.py.
+- name: "[pazny.wordpress] Remove mu-plugins whose flag is off"
+  ansible.builtin.file:
+    path: "{{ stacks_dir }}/iiab/wordpress/mu-plugins/{{ item.file }}"
+    state: absent
+  loop:
+    - { file: devlog-app-passwords.php, on: "{{ wordpress_devlog_enabled | default(true) }}" }
+    - { file: rbac-role-sync.php, on: "{{ install_authentik | default(false) }}" }
+    - { file: cve-2026-63030-batch-block.php, on: "{{ wordpress_cve_63030_mitigate | default(false) }}" }
+    - { file: nos-hardening.php, on: "{{ wordpress_harden_unauth_surface | default(true) }}" }
+  loop_control:
+    label: "{{ item.file }}"
+  when: not (item.on | bool)
+  notify: Restart wordpress
 
 - name: "[pazny.wordpress] Render compose override fragment"
   ansible.builtin.template:
