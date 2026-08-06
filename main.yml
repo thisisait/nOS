@@ -1271,8 +1271,13 @@
     # (default "changeme") seeds DB roots, admin passwords, and the
     # prefix-derived OIDC/agent client secrets. The SEC-3 sweep randomizes the
     # HMAC/data keys but those classes still ride the prefix — so a weak prefix
-    # on a PUBLIC tenant ships guessable confidential secrets fleet-wide. Fail
-    # closed for public TLDs; lenient for local dev.local; explicit bypass.
+    # ships guessable confidential secrets fleet-wide. Fails closed on EVERY
+    # tenant; the only way past is an explicit bypass.
+    #
+    # (That sentence read "Fail closed for public TLDs; lenient for local
+    # dev.local" until 2026-08-06 — describing the carve-out the paragraph
+    # below had already removed. Two lines apart, contradicting each other,
+    # with nothing comparing them: the shape this repo keeps finding.)
     # REM-151 (2026-08-02): the `tenant_domain_is_local` carve-out is REMOVED.
     # It rested on "local dev is not exposed", which REM-144 disproved on this
     # very estate — an unauthenticated Traefik API served the prefix from a

@@ -2046,6 +2046,28 @@ homeassistant_admin_name: "Admin"
 homeassistant_admin_user: "admin"
 homeassistant_admin_password: "{{ global_password_prefix }}_pw_homeassistant"
 homeassistant_auth_oidc_version: "1.1.1"
+# REM-168. Home Assistant sets ip_ban_enabled=True by default and then never
+# bans anything: login_attempts_threshold defaults to -1, and ban.py returns
+# from process_wrong_login BEFORE incrementing the counter whenever the
+# threshold is < 1. An enabled-looking defence that cannot fire — so the
+# positive number below is what turns it on, not the boolean.
+#
+# WHY IT MATTERS HERE, measured on this host: the router home.<tld> is
+# anonymous by design (native OIDC adds a button to HA's own login page, it
+# does not put a wall in front of it), and every failed login costs a cost-12
+# bcrypt — 207.7 ms, because HA deliberately hashes a dummy for an UNKNOWN
+# username to keep timing constant. The container is capped at 1.0 CPU, so
+# ~4.8 anonymous requests per second saturate it. One client, one thread.
+#
+# 10, not 5: HA writes bans to ip_bans.yaml and they persist until an operator
+# edits that file, so too low a number turns a fat-fingered password into a
+# lockout. Recovery is `docker exec iiab-homeassistant-1 rm /config/ip_bans.yaml`
+# plus a restart. Set 0 to disable the ban entirely (upstream's own -1 shape).
+#
+# HONEST LIMIT: this bounds ONE source. A distributed flood still costs a
+# bcrypt per attempt until it is banned, and the complementary fix is a
+# rateLimit middleware on the router (REM-169), which nothing declares yet.
+homeassistant_login_attempts_threshold: 10
 authentik_oidc_homeassistant_client_id: "nos-homeassistant"
 authentik_oidc_homeassistant_client_secret: "{{ global_password_prefix }}_pw_oidc_homeassistant"
 

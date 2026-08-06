@@ -33,7 +33,12 @@
     mode: '0644'
     force: false
 
-- name: "[pazny.homeassistant] Configure trusted_proxies for nginx reverse proxy"
+# The marker stays `trusted_proxies` even though the block now carries the
+# login-ban keys too. Renaming it would ORPHAN the block already written on
+# every live install — blockinfile would append a second `http:` mapping and
+# Home Assistant would refuse to load a configuration.yaml with a duplicate
+# top-level key. One `http:` block, one marker, whatever the block grew to say.
+- name: "[pazny.homeassistant] Configure http: block (trusted proxies + login ban)"
   ansible.builtin.blockinfile:
     path: "{{ homeassistant_config_dir }}/configuration.yaml"
     marker: "# {mark} ANSIBLE MANAGED - trusted_proxies"
@@ -45,6 +50,13 @@
           - "::1"
           - 172.16.0.0/12
           - 192.168.0.0/16
+      {% if (homeassistant_login_attempts_threshold | default(10) | int) > 0 %}
+        # REM-168: ip_ban_enabled is True upstream ALREADY and bans nothing —
+        # ban.py leaves process_wrong_login before counting whenever the
+        # threshold is < 1. This positive number is the switch.
+        ip_ban_enabled: true
+        login_attempts_threshold: {{ homeassistant_login_attempts_threshold | default(10) | int }}
+      {% endif %}
     create: true
   notify: Restart homeassistant
 

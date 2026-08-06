@@ -17,8 +17,11 @@
 #
 # EVERY FIELD HERE IS MEASURED, NOT ASSUMED. The measurement transcripts live
 # in the contract §0 and were re-run at build time:
-#   ansible-lint  → "Passed: 0 failure(s), 0 warning(s) in 1400 files processed
-#                    of 2979 encountered."  EXIT=0   (on STDERR, not stdout)
+#   ansible-lint  → "Passed: 0 failure(s), 0 warning(s) in 1476 files processed
+#                    of 3148 encountered."  EXIT=0   (on STDERR, not stdout)
+#                    (re-measured 2026-08-06; this header still quoted the
+#                    1400/2979 run after min_work moved to 1450 below — a
+#                    transcript is evidence only while it matches the tool)
 #   genome-codegen → "genome artifacts current (2 checked)"  EXIT=0
 #   nos-smoke      → "smoke catalog yielded zero entries"    EXIT=0  ← false green
 #   corpus-diff    → returns `3 if removalShaped else 0` under --no-ledger, so
@@ -44,7 +47,7 @@ judges:
     # stdout and stderr combined for exactly this reason.
     work_field: files_processed
     work_regex: "in\\s+(\\d+)\\s+files processed"
-    # RATCHET, in the style of BLAST_RADIUS_CEILING: 1400 of 2979 encountered
+    # RATCHET, in the style of BLAST_RADIUS_CEILING: 1476 of 3148 encountered
     # files are actually processed today, and nothing else pins that ratio.
     # Silent scope loss would otherwise read as green.
     min_work: 1450
@@ -119,7 +122,12 @@ judges:
     # forces this re-derivation fired for the first time, at 2936 collected
     # against a 2788 record. It works, and it will keep firing as the suite
     # grows — which is the intended cost of not letting a floor age.
-    min_work: 2850
+    #
+    # RE-DERIVED same day, second pass (2943 passed, 26 skipped — the
+    # anatomy-graph soundness gate added 19). The collection gate stayed
+    # green at this delta; the floor moves anyway, because a floor that only
+    # moves under compulsion spends its slack as a budget.
+    min_work: 2900
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,
