@@ -7,12 +7,17 @@
 	{if $counts['broken'] > 0}<span class="badge" style="font-size:13px; margin-left:4px; background:var(--bad,#b3261e); color:#fff;">{$counts['broken']} broken</span>{/if}
 	{if $counts['stuck'] > 0}<span class="badge" style="font-size:13px; margin-left:4px;">{$counts['stuck']} stuck</span>{/if}
 	{if $counts['failing'] > 0}<span class="badge" style="font-size:13px; margin-left:4px;">{$counts['failing']} failing</span>{/if}
+	{if $counts['overdue'] > 0}<span class="badge" style="font-size:13px; margin-left:4px;">{$counts['overdue']} overdue</span>{/if}
 </h2>
 <div style="color:var(--text2); font-size:13px; margin-bottom:20px;">
 	Scheduled-job health, worst first. <strong>broken</strong> = has run and has
 	never once succeeded · <strong>stuck</strong> = started and never reported
 	back (the daemon died mid-job) · <strong>failing</strong> = last run exited
-	non-zero · <strong>never</strong> = registered but never fired.
+	non-zero · <strong>overdue</strong> = its scheduled time is in the past
+	beyond its own grace window, which is how a STOPPED daemon shows: this page
+	had no such state until 2026-08-07, so a job that ran cleanly for a
+	fortnight and then stopped forever rendered <em>ok</em> ·
+	<strong>never</strong> = registered but never fired.
 </div>
 
 {if $halted}
