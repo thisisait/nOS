@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://thisisait.eu/schemas/nos/migration.schema.json",
   "title": "nOS Migration Record (migrations/<date>-<slug>.yml)",
-  "description": "Declarative migration definition. Executed by nos_migrate (agent 2). See docs/framework-plan.md §3.3. This schema is the contract shared between agent 1 (author / retroactive migration) and agent 2 (engine).",
+  "description": "Declarative migration definition. Executed by nos_migrate (agent 2). See files/anatomy/docs/framework-plan.md §3.3. This schema is the contract shared between agent 1 (author / retroactive migration) and agent 2 (engine).",
   "type": "object",
   "required": ["id", "title", "summary", "severity", "created_at", "applies_if", "steps"],
   "additionalProperties": false,

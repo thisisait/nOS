@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://thisisait.eu/schemas/nos/upgrade.schema.json",
   "title": "nOS Upgrade Recipe File (upgrades/<service>.yml)",
-  "description": "Declarative upgrade recipes for a single service. One file per service. Multiple recipes may match the installed version; the engine applies them in alphabetic id order. See docs/framework-plan.md §3.4.",
+  "description": "Declarative upgrade recipes for a single service. One file per service. Multiple recipes may match the installed version; the engine applies them in alphabetic id order. See files/anatomy/docs/framework-plan.md §3.4.",
   "type": "object",
   "required": ["service", "recipes"],
   "additionalProperties": false,

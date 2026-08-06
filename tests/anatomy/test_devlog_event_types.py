@@ -64,7 +64,7 @@ B1_BACKFILL_TYPES = (
 # (UpgradesPresenter::emitPromoteRequested). Same NON-NEGOTIABLE twin-parity
 # contract: must be in BOTH Bone's events.py VALID_TYPES and Wing's
 # EventRepository::VALID_TYPES, else a Bone-proxied replay/forward of the row
-# 400s. See docs/plans/agentic-upgrade-adjustments-design.md §4.5.
+# 400s. See docs/archive/agentic-upgrade-adjustments-design.md §4.5.
 A3_PROMOTE_BUTTON_TYPES = (
     "migration_promote_requested",
 )
@@ -74,7 +74,7 @@ A3_PROMOTE_BUTTON_TYPES = (
 # only on a committed copy: dry_run=false AND Bone 2xx). Same NON-NEGOTIABLE
 # twin-parity contract: must be in BOTH Bone's events.py VALID_TYPES and Wing's
 # EventRepository::VALID_TYPES, else a Bone-proxied replay/forward of the row
-# 400s. See docs/plans/agentic-upgrade-adjustments-design.md §5.4.
+# 400s. See docs/archive/agentic-upgrade-adjustments-design.md §5.4.
 A4_COPY_DATA_TYPES = (
     "coexistence_copy_data",
 )

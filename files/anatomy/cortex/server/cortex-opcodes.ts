@@ -142,9 +142,10 @@ const GATE_PARAMS = {
 } as const;
 
 /**
- * The P1 opcode set (spec §2.3), derived from plan §3.
+ * The P1 opcode set (spec §2.3), derived from the plan
+ * (docs/archive/nos-cortex-lang.md) §3.
  *
- * `branch` is EXCLUDED: plan §10 keeps the IR flat through P3, and declaring an
+ * `branch` is EXCLUDED: the plan's §10 keeps the IR flat through P3, and declaring an
  * opcode the grammar cannot express is how a deferred decision leaks into
  * training material.
  *

@@ -193,7 +193,8 @@ async function main(): Promise<void> {
 
   const app = express();
   // 2 MB is the TRANSPORT ceiling and is cited as such by
-  // shared/contracts/cortex.ts: §3.6's 4096-char program cap is a SEMANTIC bound
+  // shared/contracts/cortex.ts: the 4096-char program cap of
+  // docs/specs/cortex-validate.md §3.6 (Input bounds) is a SEMANTIC bound
   // reported as a typed `program_too_large` entry inside a 200, and
   // `analyzeCortex` checks the length before tokenizing, so an oversize body is
   // never scanned. Keep the two limits distinct — collapsing them turns a

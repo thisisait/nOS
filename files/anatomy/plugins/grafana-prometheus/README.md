@@ -58,5 +58,6 @@ The filename matches the plugin slug, so ownership is obvious at a glance.
   provisioning index + plugin defaults.
 - `files/anatomy/plugins/prometheus-base/plugin.yml` — owner of
   Prometheus's master config + recording rules.
-- `files/anatomy/docs/plugin-loader-spec.md` §6.2 — composition plugin
-  shape contract.
+- `files/anatomy/docs/plugin-loader-spec.md` (composition-plugin loading) +
+  `docs/bones-and-wings-refactor.md` §6.2 — the plugin-type shape contract.
+  The spec itself is unnumbered; §6.2 was always the refactor doc's number.

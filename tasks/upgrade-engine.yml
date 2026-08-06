@@ -33,7 +33,7 @@
 # ~/.nos/state.yml under upgrades_applied[] by the state_manager role's
 # report phase.
 #
-# Spec reference: docs/framework-plan.md §7.2
+# Spec reference: files/anatomy/docs/framework-plan.md §7.2
 # ==============================================================================
 
 - name: "[Upgrade] Read current state"

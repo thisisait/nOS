@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://thisisait.eu/schemas/nos/manifest.schema.json",
   "title": "nOS Service Manifest (state/manifest.yml)",
-  "description": "Public, committed declaration of the expected shape of the system. Consumed by nos_state introspect. See docs/framework-plan.md §3.1.",
+  "description": "Public, committed declaration of the expected shape of the system. Consumed by nos_state introspect. See files/anatomy/docs/framework-plan.md §3.1.",
   "type": "object",
   "required": ["schema_version", "nos", "services"],
   "additionalProperties": false,

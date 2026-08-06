@@ -2,13 +2,14 @@
 # grafana-base — service plugin (DRAFT, A6.5 PoC artifact)
 #
 # Status: research draft, captured 2026-05-03. NOT loaded by anything.
-# Purpose: prove §1.1 doctrine on Grafana before Phase A6.5 implementation.
+# Purpose: prove docs/bones-and-wings-refactor.md §1.1 doctrine on Grafana
+# before Phase A6.5 implementation.
 #
 # This manifest documents what `pazny.grafana` will look like AFTER it sheds
 # its wiring. Every block here corresponds to a surface inventoried in
 # `files/anatomy/docs/grafana-wiring-inventory.md`.
 #
-# Reading guide:
+# Reading guide (section numbers are docs/bones-and-wings-refactor.md):
 #   - Sections marked SKILL/SCHEDULED-JOB/UI-EXTENSION/NOTIFIER come from the
 #     PoC plugin schema (§6.3).
 #   - Sections marked INFRA/OBSERVABILITY/COMPOSE-EXTENSION are the post-PoC
