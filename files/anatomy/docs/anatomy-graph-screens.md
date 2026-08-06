@@ -1,12 +1,14 @@
 # Anatomy graph screens — definition, run, and the on-demand surfaces
 
-Status: build contract, 2026-08-06. The graph layer it consumes is LIVE in
-this commit (`state/anatomy-graph.json` + `tools/anatomy-graph-gen.py` +
+Status: BUILT (first pass), 2026-08-06 evening. The graph layer is live
+(`state/anatomy-graph.json` + `tools/anatomy-graph-gen.py` +
 `tools/anatomy-measure-margins.py` +
-`tests/anatomy/test_anatomy_graph_is_sound.py`); the screens are specified
-here precisely enough to build and are NOT yet built. Survey + measurement
-this rests on: `docs/archive/nos-anatomy-graph.md` (§1 edges, §2 schema,
-§4 screens).
+`tests/anatomy/test_anatomy_graph_is_sound.py`) and both screens now exist:
+`GraphView.svelte` (definition) + `RunsView.svelte` (runs), tabs 4 and 5 of
+the Anatomy app. Survey + measurement this rests on:
+`docs/archive/nos-anatomy-graph.md` (§1 edges, §2 schema, §4 screens).
+Corrections found while building are marked **[corrected]** inline; the
+per-surface "which converge makes it live" list is §8.
 
 Doctrine constraints that bind everything below:
 
@@ -30,16 +32,40 @@ Compiled by `tools/anatomy-graph-gen.py` (regenerate-and-diff; CI red on
 drift). Byte-stable: no timestamps, sorted keys/edges.
 
 ```
-counts    — node/edge tallies per kind (measured 2026-08-06: 125 nodes, 90 edges)
+counts    — node/edge tallies per kind (2026-08-06 after the core-substrate
+            extension: 179 nodes, 134 edges)
 warnings  — union-kind cycles (real feedback loops, e.g. the corpus-diff halt)
-nodes     — id → {kind, source, …per-kind facts}
+nodes     — id → {kind, source, anchor, description, …per-kind facts}
 edges     — [{from, to, kind, …}] sorted by (kind, from, to)
 ```
 
 Address space (kind-prefixed, local ids verbatim — survey §2b):
 `pulse:<owner>:<job>` (= wing.db `pulse_jobs` id), `judge:<name>`,
 `gateset:<name>`, `weakness:<id>`, `daemon:<launchd label>`,
-`service:<manifest id>`, `resource:<name>`.
+`service:<manifest id>`, `resource:<name>` — plus, since the 2026-08-06
+core-substrate extension (operator ask): `repo:<name>` (the four git surfaces:
+github-origin, gitea-forge, gitlab-forge, scan-data), `tofu:<name>`
+(terraform state roots), `authentik:<slug>` (the 43 registry rows from
+`state/tofu-authentik-services.yml`, each bound to its manifest service where
+one exists), `table:<name>` (the six `state/keap-tables/*.table.yml`
+definitions — **[corrected]** there is no `ideas` table; the brief's mention
+of one was stale).
+
+Two declaration channels now, both consumer/actor-side in the job's own
+manifest: `depends_on:` (what a job READS — upstream → job) and `writes:`
+(what a job WRITES — job → target). A writes edge requires `via:` AND
+`measured:`, its target must resolve, and each shipped one is pinned by a
+code-backed test (scan-state-record → repo:scan-data; contradiction-scan →
+table:roadmap, valid only while `--file` is in its args; promote-migration →
+repo:gitlab-forge). `repo:github-origin` deliberately has NO automated
+writer and a gate asserts the absence — promote-public.sh is gh-auth-gated
+operator-only, and a job silently gaining a push to the public trunk is
+exactly what `test_github_origin_has_no_automated_writer` refuses.
+
+Every node also carries `anchor` (a KEAP taxonomy anchor id, validated
+against `state/fable/taxonomy-bundle.json` — a dangling anchor is refusal
+class 1 applied to the import) and `description` (a one-line body worth
+embedding). See §7 for why.
 
 Edge kinds and their screen glyphs:
 
@@ -64,14 +90,15 @@ tab in `face/src/lib/apps/native/anatomy/AnatomyApp.svelte` (it already owns
 view + thread selection); new `GraphView.svelte` beside
 Pulse/Wing/BoneView.
 
-**Data path: build-time import.** `state/anatomy-graph.json` is repo state;
-`roles/pazny.face` syncs + rebuilds on converge. The view imports the JSON at
-build time (Vite JSON import) — stale between converges, honest and cheap,
-and zero new credential surface. A Wing `GET /api/v1/anatomy/graph` endpoint
-is the fresh alternative and is deliberately NOT chosen for phase 1: the
-graph changes only when the repo changes, and the repo reaches the host by
-converge anyway. Revisit only if the face ever renders on a host without the
-repo.
+**Data path: build-time import — [corrected] via a vendored copy.** The face
+container's build context is `files/anatomy/face/` ONLY (the
+`roles/pazny.face` synchronize task copies just that tree), so an import of
+`state/anatomy-graph.json` cannot resolve in the image build. The generator
+therefore writes a byte-identical second copy to
+`face/src/lib/anatomy/anatomy-graph.json`; `--check` and
+`test_the_face_vendored_copy_is_identical` refuse drift between the two.
+Otherwise as designed: stale between converges, honest and cheap, zero new
+credential surface. A fresh-serving endpoint stays deliberately unbuilt.
 
 **Rendering: hand-rolled inline SVG** (survey §4.0 decision, grounds
 re-verified: face runtime deps = `html-to-image` only; xyops itself ships NO
@@ -108,8 +135,8 @@ terminal aesthetic; reuse `Panel`, `StateDot`, `Badge`, `tone.ts exitTone()`,
 |---|---|---|---|
 | Night timeline — lanes per category, bars fired→finished, exit-tone fill; temporal-edge margins drawn as inter-lane gaps | `pulse_runs` windowed by time | Wing `listRuns` (`PulsePresenter.php:252`) supports `job_id`+`limit≤500`+`failed` — **no time window**; BFF caps 25/job (`bff/pulse/+server.ts:44`) | **Wing**: `since`/`until` params on `GET /api/v1/pulse_runs` (index exists: `idx_pulse_runs_fired_at`). **BFF**: pass-through `?since&until` on `/bff/pulse`, projection stays allow-list. **Face**: timeline component |
 | Live tail — stdout/stderr tails (already redacted daemon-side, `daemon.py:183-198`) | `pulse_runs` tails | exists end-to-end via `/bff/pulse?job_id=` | none |
-| Loop ledger — proposals → judge runs → verdicts | `loop_proposals`, `loop_judge_runs`, `loop_verdicts` | **no Wing read API, no BFF, no projection** (re-verified: zero mentions in `wing/app/Presenters/`) | **Wing**: read-only `GET /api/v1/loop/{proposals,judge_runs,verdicts}`. **BFF**: `/bff/loop`. **Face**: `loop.ts` projection — allow-list EXCLUDES `diff_text` (secrets-adjacent hunks stay server-side) |
-| Judge panel — per gate set: outcome, `work_count` vs `min_work` ratchet | `loop_judge_runs` | same gap | same surfaces |
+| Loop ledger — proposals → judge runs → verdicts | `loop_proposals`, `loop_judge_runs`, `loop_verdicts` | **BUILT — and [corrected]: these are BONE surfaces, not Wing.** The ledger schema lives in `bone/ledger.py` and its auth is the loop's own scope channel (`loopauth.py`), so the reads landed as `GET /api/v1/loop/{proposals,judge_runs,verdicts}` (read scope) with explicit column lists — `diff_text` excluded at the SQL, refused AGAIN by the face projection (two locks). Gate: `test_loop_ledger_lists.py` | live on the next Bone restart (launchd daemon reload), not a Wing converge |
+| Judge panel — per gate set: outcome, `work_count` vs `min_work` ratchet | `loop_judge_runs` | BUILT — the verdict RINGS in `RunsView.svelte` (see the ring note below) | same Bone restart |
 | Thread follow — run → events → notifications | `actor_action_id` | exists: `/bff/wing?thread=` | none |
 | Edge overlay on replay — what the graph said should precede this run vs what did | graph.json × runs window | computable client-side | label honestly **"derived, not recorded"** until Phase-1 dispatch annotation (survey §2d) lands |
 
@@ -122,6 +149,24 @@ with real cost; it stays on the named-missing list, not assumed.
 **Replay** is the same screen with a time cursor over the windowed query —
 the cheaper 80% of "live". Cursor scrubbing re-filters loaded runs
 client-side; no new surface.
+
+**The radial figure (operator refinement, 2026-08-06): spokes are
+EXECUTIONS, not workers, and each finding opens another ring.** Ring 0 the
+run, ring 1 its units (judges in a set / components in a batch), ring 2
+findings, ring 3 what each finding spawned. Measured ring sizes run 5 (gate
+set `full`) to 125 (the contradiction scan's pairs) — both are the same
+component and neither is padded. Model: `face/src/lib/anatomy/rings.ts`,
+with the two invariants enforced in code and tested: (1) the arc count is
+driven by the RECORDED denominator, so 100 skipped pairs render as 100 unlit
+spokes rather than a footer nobody reads; (2) depth is bounded by data —
+`ring()` returns null for an empty level. Three spoke states minimum:
+judged-good, judged-bad, **NOT JUDGED** (hatched, distinct from both — an
+INDETERMINATE judge or an absent container is not a faded pass), plus
+`unaccounted` (declared scope with no row: hollow outline). An unjudged
+spoke with no reason is refused by the model. What is built today renders
+ring 1 (verdict → declared judges); rings 2–3 (findings → spawned rows)
+await list surfaces for scan batches and weakness sweeps and are named
+missing, not simulated.
 
 ---
 
@@ -260,17 +305,82 @@ per pulse job.
 
 ---
 
-## 7. Build order
+## 7. KEAP import shaping — what the artifact now carries, and what must NOT be built yet
 
-1. ✅ graph layer (this commit): generator + artifact + soundness gate +
-   margins tool + nightly chain declared (incl. the halt trigger edge, now
-   backed by code — `97abdb7c`).
-2. Face: `graphLayout.ts` + `GraphView.svelte` (definition screen; no new
-   endpoints needed).
-3. Wing: `since`/`until` on runs list; loop_* read endpoints; `run-now`
-   (§4b). Ships live on the next Wing converge.
-4. BFF: runs window passthrough; `/bff/loop` (read + judge POST); `/bff/pulse/run`.
-5. Face: `RunsView.svelte` (timeline, ledger, judge panel, replay cursor).
-6. Phase-1 dispatch annotation (survey §2d) — turns the replay edge overlay
+Intent (operator, 2026-08-06): the graph should be indexable and renderable
+inside KEAP so custom views can SCOPE it — by service (anchor), by string
+(hybrid/FTS over the body), by entity (kind). Two of those were missing from
+the artifact and are now in it:
+
+- **`anchor` per node** — a KEAP taxonomy anchor id from the committed
+  362-anchor spine (`state/fable/taxonomy-bundle.json`). Without one every
+  imported node is an `orphan-object` — measured: keap-lint reported 26/27
+  fixture findings as exactly that, "invisible in the universe". Per-kind
+  defaults refined per category where the branch is unambiguous
+  (security → 02.02.08, agents → 02.02.09, knowledge → 09, notification →
+  03.08, compliance → 04.06, databases → 02.02.05, …), honestly-generic
+  Software Engineering (02.02.04) otherwise. The soundness gate refuses an
+  anchor the bundle does not hold — a dangling anchor IS a dangling
+  reference.
+- **`description` per node** — a one-line body worth embedding, composed
+  from the node's own facts (and a curated map for the 12 daemon labels,
+  which carry no prose anywhere else in the repo). This doubles as the
+  LLM-readability deliverable; it is one piece of work, not two.
+
+What already worked by luck and is now pinned: kind-prefixed ids.
+`cortex-corpus-diff.py` classifies any object id not starting with `fs:` as
+not-a-mirror-row (withdrawn from the fs clause), so an anatomy import cannot
+zero the agree-streak — bare ids would have. `test_kind_prefixed_ids_survive`
+keeps it that way.
+
+**Preconditions of the actual import — named, deliberately NOT built:**
+
+1. **The nightly-diff fold.** A neutral object still gets its own line in
+   the corpus diff, so 179 nodes means 179 benign findings per night until
+   the harness folds them into a single counted line (the same fold already
+   needed for `table-*` row objects). Harness changes land AFTER a streak
+   completes, never during one. Do not import before the fold exists.
+2. **The route is runtime state, not corpus.** The graph changes every
+   converge; pushing it through the canonical git taxonomy tree would cost a
+   KEAP tag + pin bump + re-vendor + converge per change. Recommended
+   surface: a **KEAP DataTable** (`anatomy-nodes`, one row per node, upserted
+   by a converge-time task the way the `systems` table is fed from the
+   service registry) — cost: one table definition + one idempotent seeder
+   task + the fold above; the anchor column then drives panel placement and
+   the description feeds hybrid search with no /ingest ceremony. `/ingest
+   capture` is the wrong shape (it is for preservation-reviewed corpus
+   items, and 179 review-queue entries per converge is the orphan problem
+   with extra steps). Not built in this pass.
+
+## 8. Which converge makes each surface live
+
+| surface | ships in | becomes live when |
+|---|---|---|
+| graph artifact + anchors + new kinds | this commit (repo state) | immediately for repo readers; face copy at next face rebuild |
+| GraphView / RunsView / projections | `files/anatomy/face/` | next converge that runs `roles/pazny.face` (sync + image rebuild) |
+| Bone loop list reads (`/api/v1/loop/*` GET) | `files/anatomy/bone/` | next Bone daemon restart (`launchctl` reload via `roles/pazny.bone`) |
+| `/bff/loop` + `/bff/loop/judge` | face tree | face rebuild — but stays honestly "unwired" until the face container gets `BONE_LOOP_JUDGE_TOKEN` (see below) |
+| face loop credential | **NOT WIRED — written up, deliberately not changed** | `roles/pazny.face/templates/compose.yml.j2` needs `BONE_LOOP_JUDGE_TOKEN: "{{ loop_judge_token \| default('') }}"` beside `NOS_WING_API_TOKEN` (the var already exists — `roles/pazny.bone/tasks/main.yml:276` provisions it into Bone's plist). Until that one-line change converges, the Runs screen renders its unwired StatusNote, which is the designed behaviour, not a defect |
+| Wing `since`/`until` on `GET /api/v1/pulse_runs` | NOT BUILT | named missing — replay beyond 25 runs/job waits on it |
+| Wing `run-now` (§4b) | NOT BUILT | named missing — the §4b design stands as spec |
+| Phase-1 dispatch annotation (survey §2d) | NOT BUILT | replay edge overlay stays "derived, not recorded" and is therefore not drawn |
+
+## 9. Build order (updated)
+
+1. ✅ graph layer: generator + artifact + soundness gate + margins tool +
+   nightly chain declared (incl. the halt trigger edge — `97abdb7c`).
+2. ✅ core-substrate extension: repo/tofu/authentik/table kinds, `writes:`
+   channel, anchors + descriptions, vendored face copy (2026-08-06 evening).
+3. ✅ Face definition screen: `graph.ts` + `graphLayout.ts` + `GraphView`.
+4. ✅ Bone ledger list reads + `/bff/loop` + `/bff/loop/judge` + `loop.ts`
+   + `rings.ts` + `RunsView` (ring 1).
+5. Face compose env for `BONE_LOOP_JUDGE_TOKEN` (one line, §8) — first
+   converge-facing change on this list.
+6. Wing: `since`/`until` on runs list; `run-now` (§4b).
+7. Phase-1 dispatch annotation (survey §2d) — turns the replay edge overlay
    from "derived" into "recorded". Phase-2 defer stays parked until an
    incident asks for it.
+8. Rings 2–3 data: list surfaces for scan batches (components → findings →
+   REM rows) and weakness sweeps (sources → weaknesses → proposals).
+9. KEAP import: the §7 fold + the `anatomy-nodes` DataTable seeder — only
+   after a streak completes.
