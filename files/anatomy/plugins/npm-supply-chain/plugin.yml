@@ -75,6 +75,7 @@ requires:
 pulse:
   jobs:
     - name: daily-ioc-scan
+      category: security
       runner: subprocess
       command: "{{ playbook_dir }}/tools/npm-ioc-scan.py"
       schedule: "20 4 * * *"

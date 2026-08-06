@@ -110,6 +110,7 @@ lifecycle:
 pulse:
   jobs:
     - name: keap-embed-sync
+      category: knowledge
       runner: subprocess
       # Wing's pulse_jobs API requires an ABSOLUTE command path (no leading
       # interpreter word) — the script is executable with a python3 shebang.
@@ -138,6 +139,7 @@ pulse:
     # texture channels). Appearance only — never touches the baked U1 positions.
     # Idempotent; no embeddings yet -> no-op. See docs/archive/keap-semantic-lens.md.
     - name: keap-features-sync
+      category: knowledge
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/scripts/keap-features-sync.py"
       schedule: "0 5 * * *"     # 05:00 UTC — between embed-sync (04:45) and lint (05:15)
@@ -157,6 +159,7 @@ pulse:
     # consolidator is a FEEDER, it can never read the corpus). Night order:
     # consolidate 04:15 -> embed-sync 04:45 -> lint 05:15 -> librarian.
     - name: keap-consolidate
+      category: knowledge
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/scripts/keap-consolidate.py"
       schedule: "15 4 * * *"
@@ -179,6 +182,7 @@ pulse:
     # embed sync (fresh vectors) and fans NEW findings into A9. Standing
     # findings never re-alert.
     - name: keap-lint
+      category: knowledge
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/scripts/keap-lint.py"
       schedule: "15 5 * * *"    # 05:15 UTC — after keap-embed-sync (04:45+jitter)

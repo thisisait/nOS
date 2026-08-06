@@ -489,6 +489,12 @@
       max_runtime_s: "{{ item.job.max_runtime_s | default(300) }}"
       max_concurrent: "{{ item.job.max_concurrent | default(1) }}"
       env: "{{ item.job.env | default({}) }}"
+      # 2026-08-06. This body is an ALLOW-LIST, so a field a manifest declares
+      # and this block omits is dropped in silence — which is exactly how
+      # args[] went missing in May. `omit` rather than a default: absent must
+      # reach Wing as NULL ("not declared"), not as [] or "" ("declared empty").
+      findings_exit_codes: "{{ item.job.findings_exit_codes | default(omit) }}"
+      category: "{{ item.job.category | default(omit) }}"
       # A9.4 (2026-05-17): args[] propagation. Wing dispatch jobs use
       # `command: php` + `args: [<script>]` shape; previously the
       # POST body dropped args silently and Pulse forked `php` with no

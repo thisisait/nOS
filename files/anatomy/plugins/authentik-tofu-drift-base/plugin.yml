@@ -47,6 +47,7 @@ requires:
 pulse:
   jobs:
     - name: tofu-drift-plan
+      category: security
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/plugins/authentik-tofu-drift-base/skills/run-tofu-drift.sh"
       schedule: "30 5 * * *"    # 05:30 UTC daily; offset from gitleaks' 03:00 slot

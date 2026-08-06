@@ -204,6 +204,7 @@ notification:
 pulse:
   jobs:
     - name: judge-lint-queue
+      category: knowledge
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
       schedule: "30 6 * * 0"               # placeholder — paused by default
@@ -262,6 +263,7 @@ pulse:
     # HISTORY: pilot maxLevel=0 (12 categories) → L0-1 anchor core → L0-2 →
     # now full. The operator moderates each batch in Admin › Moderace.
     - name: brief-taxonomy
+      category: knowledge
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
       schedule: "50 6 * * 0"               # placeholder — paused by default
@@ -308,6 +310,7 @@ pulse:
     # on-demand: tools/run-librarian.sh --describe fires one ~40-node batch;
     # the ~778-node backlog is ~20 supervised runs, not a cron.
     - name: describe-taxonomy
+      category: knowledge
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
       schedule: "45 6 * * 0"               # placeholder — paused by default

@@ -75,6 +75,7 @@ capabilities:
 pulse:
   jobs:
     - name: promote-migration
+      category: agents
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
       schedule: "0 9 * * 0"                # placeholder — paused by default

@@ -80,6 +80,7 @@ notification:
 pulse:
   jobs:
     - name: backup-restore-drill
+      category: platform
       runner: subprocess
       # Absolute path, /Users/ prefix — inside PulsePresenter's SEC-8 allowlist,
       # and the basename is not a shell interpreter (BANNED_BASENAMES).

@@ -78,6 +78,7 @@ capabilities:
 pulse:
   jobs:
     - name: drift-scan
+      category: agents
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
       schedule: "0 6 * * 0"                # placeholder — paused by default

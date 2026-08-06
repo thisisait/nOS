@@ -310,6 +310,22 @@ CREATE TABLE IF NOT EXISTS pulse_jobs (
     jitter_min      INTEGER NOT NULL DEFAULT 0,
     max_runtime_s   INTEGER NOT NULL DEFAULT 300,
     max_concurrent  INTEGER NOT NULL DEFAULT 1,
+    -- Exit codes that mean "this job ran correctly AND found something", as a
+    -- JSON array. NULL/[] keeps the old rule: anything non-zero is a failure.
+    --
+    -- MEASURED 2026-08-06: gitleaks:nightly-scan and discovery:contradiction-scan
+    -- both exit 1 to say "findings present" — their whole purpose — and Wing
+    -- raised a HIGH "job failing" for each. A successful night with findings was
+    -- indistinguishable from a broken job at the scheduler layer, which trains
+    -- an operator to skim exactly the notifications that carry news.
+    -- Vocabulary borrowed from state/judge-sets.yml, which already learned that
+    -- exit codes disagree between tools and must be declared, not guessed.
+    findings_exit_codes TEXT,
+    -- Purpose grouping for the operator-facing catalog (security | compliance |
+    -- knowledge | platform | agents | notification). NULL renders as
+    -- "uncategorised" and is never silently bucketed — an unclassified job is a
+    -- thing to notice, not to hide among the others.
+    category        TEXT,
     paused          INTEGER NOT NULL DEFAULT 0,       -- 0/1; manual operator pause
     paused_reason   TEXT,                             -- nullable
     next_fire_at    TEXT,                             -- ISO-8601; computed Wing-side

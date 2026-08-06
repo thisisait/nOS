@@ -200,9 +200,20 @@ final class PulsePresenter extends BaseApiPresenter
 			if ($jobId === '') {
 				return;
 			}
+			// A job may declare exit codes that mean "ran correctly, found
+			// something". gitleaks:nightly-scan and discovery:contradiction-scan
+			// both exit 1 for exactly that, and both were raising a HIGH "job
+			// failing" on every night that carried news — the notification an
+			// operator most needs, arriving in the shape they learn to ignore.
+			// Declared per job (state/judge-sets.yml's lesson: exit codes
+			// disagree between tools and must be read, not assumed).
+			$findings = $this->pulse->findingsExitCodes($jobId);
+			$isFailure = static fn(?int $code): bool =>
+				$code !== null && $code !== 0 && !in_array($code, $findings, true);
+
 			$prev = $this->pulse->previousExitCode($jobId, $runId);
-			$failedNow = $exit !== 0;
-			$failedBefore = $prev !== null && $prev !== 0;
+			$failedNow = $isFailure($exit);
+			$failedBefore = $isFailure($prev);
 			if ($failedNow === $failedBefore) {
 				return; // steady state (incl. first-ever success) — no emit
 			}

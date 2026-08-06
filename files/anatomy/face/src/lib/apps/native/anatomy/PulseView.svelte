@@ -82,6 +82,7 @@
 		never: 'never ran',
 		overdue: 'overdue',
 		running: 'running',
+		findings: 'found something',
 		ok: 'ok'
 	};
 
@@ -111,11 +112,48 @@
 		never: 'warn',
 		overdue: 'warn',
 		running: 'info',
+		// `warn`, not `bad` and not `ok`. The job worked — colouring it red
+		// would teach the operator to ignore the colour that carries news;
+		// colouring it green would bury the one result they must act on.
+		findings: 'warn',
 		ok: 'ok'
 	};
 
 	const jobs = $derived((data?.jobs ?? []) as PulseJobView[]);
 	const counts = $derived(data?.counts);
+
+	/** Purpose groups, in the order an operator triages them. `uncategorised`
+	 *  is LAST and is never merged into another bucket: a job nobody
+	 *  classified is a thing to notice, and folding it into "platform" would
+	 *  make the omission invisible — the shape this whole view exists to
+	 *  refuse. Groups with no jobs are not rendered. */
+	const GROUP_ORDER = [
+		'security',
+		'compliance',
+		'knowledge',
+		'platform',
+		'notification',
+		'agents',
+		'uncategorised'
+	] as const;
+
+	const GROUP_BLURB: Record<string, string> = {
+		security: 'finds or tracks what is wrong with the estate',
+		compliance: 'records the estate is legally bound to keep',
+		knowledge: 'the cortex corpus and its feeders',
+		platform: 'keeps the estate itself running',
+		notification: 'moves messages; owns no judgement',
+		agents: 'an LLM decides what happens',
+		uncategorised: 'declared no category — classify it in its manifest'
+	};
+
+	const grouped = $derived(
+		GROUP_ORDER.map((name) => ({
+			name,
+			blurb: GROUP_BLURB[name],
+			jobs: jobs.filter((j) => (j.category ?? 'uncategorised') === name)
+		})).filter((g) => g.jobs.length > 0)
+	);
 </script>
 
 <div class="pulse">
@@ -148,8 +186,15 @@
 			</StatusNote>
 		{/if}
 
+		{#each grouped as g (g.name)}
+			<div class="group">
+				<h3 class="group-head">
+					<span class="group-name">{g.name}</span>
+					<span class="group-count">{g.jobs.length}</span>
+					<span class="group-blurb">{g.blurb}</span>
+				</h3>
 		<ul class="rows">
-			{#each jobs as j (j.id)}
+			{#each g.jobs as j (j.id)}
 				<li class="row" class:open={selected === j.id}>
 					<button class="head" onclick={() => void select(j.id)}>
 						<StateDot tone={STATE_TONE[j.state]} label={STATE_LABEL[j.state]} />
@@ -250,6 +295,8 @@
 				</li>
 			{/each}
 		</ul>
+			</div>
+		{/each}
 	{/if}
 </div>
 
@@ -273,6 +320,27 @@
 		font-size: 11px;
 		color: var(--muted, #9aa4b2);
 	}
+	.group { margin-block-start: 1.1rem; }
+	.group:first-of-type { margin-block-start: 0; }
+	.group-head {
+		display: flex; align-items: baseline; gap: 0.5rem;
+		margin: 0 0 0.35rem; padding-block-end: 0.25rem;
+		border-block-end: 1px solid var(--line, rgba(128, 128, 128, 0.25));
+		font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+	.group-name { color: var(--fg, inherit); }
+	.group-count {
+		font-variant-numeric: tabular-nums; font-weight: 500;
+		color: var(--fg-dim, rgba(128, 128, 128, 0.9));
+	}
+	.group-blurb {
+		margin-inline-start: auto; text-transform: none; letter-spacing: 0;
+		font-weight: 400; font-size: 0.72rem;
+		color: var(--fg-dim, rgba(128, 128, 128, 0.9));
+	}
+	@media (max-width: 30rem) { .group-blurb { display: none; } }
+
 	.rows {
 		list-style: none;
 		margin: 0;

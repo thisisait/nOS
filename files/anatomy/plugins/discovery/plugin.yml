@@ -90,6 +90,11 @@ pulse:
       jitter_min: 5
       max_runtime_s: 300
       max_concurrent: 1
+      category: security
+      # Same shape as gitleaks: exit 1 means contradictions were found. Its
+      # first run ever (2026-08-06) found four and filed four roadmap rows —
+      # a complete success that the scheduler reported as a failure.
+      findings_exit_codes: [1]
       env: {}
 
 # =============================================================================

@@ -35,6 +35,7 @@ requires:
 pulse:
   jobs:
     - name: breach-deadline-scan
+      category: compliance
       runner: subprocess
       command: "/opt/homebrew/bin/php"   # allowlisted prefix (SEC-8); wing-base dispatch precedent
       args:

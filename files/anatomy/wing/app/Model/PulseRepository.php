@@ -177,6 +177,32 @@ final class PulseRepository
 	}
 
 	/**
+	 * Exit codes this job declares as "ran correctly, found something".
+	 *
+	 * Empty for a job that declares none, which preserves the original rule —
+	 * every non-zero exit is a failure. The list is per JOB rather than global
+	 * because the codes disagree between tools: gitleaks exits 1 on findings,
+	 * ansible-lint exits 2 on violations and 1 on its own crash, and a single
+	 * estate-wide convention would have to be wrong for one of them.
+	 *
+	 * @return int[]
+	 */
+	public function findingsExitCodes(string $jobId): array
+	{
+		$row = $this->db->table('pulse_jobs')->get($jobId);
+		if ($row === null || ($row->findings_exit_codes ?? null) === null) {
+			return [];
+		}
+		$decoded = json_decode((string) $row->findings_exit_codes, true);
+		if (!is_array($decoded)) {
+			return [];
+		}
+		// 0 is never a "findings" code — it already means success, and letting a
+		// manifest declare it would turn a genuine pass into a special case.
+		return array_values(array_filter(array_map('intval', $decoded), static fn($c) => $c !== 0));
+	}
+
+	/**
 	 * Compute next_fire_at from a 5-field crontab string (minute hour
 	 * day-of-month month day-of-week). Falls back to FALLBACK_ADVANCE_SECONDS
 	 * when the schedule string can't be parsed (so the job doesn't get
@@ -240,6 +266,15 @@ final class PulseRepository
 			'jitter_min'     => (int) ($payload['jitter_min']     ?? 0),
 			'max_runtime_s'  => (int) ($payload['max_runtime_s']  ?? 300),
 			'max_concurrent' => (int) ($payload['max_concurrent'] ?? 1),
+			// Both nullable and both meaning "unspecified", not "empty": a job
+			// that declares neither behaves exactly as it did before they
+			// existed. Storing [] instead of NULL would make "declared no
+			// findings codes" indistinguishable from "never declared".
+			'findings_exit_codes' => isset($payload['findings_exit_codes'])
+				? json_encode(array_values(array_map('intval', (array) $payload['findings_exit_codes'])))
+				: null,
+			'category'       => isset($payload['category']) && $payload['category'] !== ''
+				? (string) $payload['category'] : null,
 			'updated_at'     => $now,
 		];
 

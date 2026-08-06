@@ -54,6 +54,7 @@ requires:
 pulse:
   jobs:
     - name: relay-firing
+      category: platform
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/scripts/prometheus-alert-relay.py"
       # Every 15 minutes. Alerts here carry `for:` clauses of 10m-1h, so the

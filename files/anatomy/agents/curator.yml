@@ -176,6 +176,7 @@ notification:
 pulse:
   jobs:
     - name: curator-sweep
+      category: knowledge
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
       schedule: "30 5 * * *"               # 05:30 — after nightly embed-sync + lint; paused by default

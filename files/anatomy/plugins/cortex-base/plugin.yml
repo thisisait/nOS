@@ -128,6 +128,7 @@ pulse:
     # so the night's new mirror rows have vectors by the time the diff reads both
     # corpora at 05:30. This is also the job §5.3's `--halt-cmd` disables.
     - name: cortex-fs-sync
+      category: knowledge
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/scripts/cortex-fs-sync.py"
       schedule: "30 4 * * *"
@@ -150,6 +151,7 @@ pulse:
     # 05:30 UTC — after keap-embed-sync (04:45) has run BOTH passes, so the diff
     # sees two corpora in their settled state rather than mid-embed.
     - name: cortex-corpus-diff
+      category: knowledge
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/scripts/cortex-corpus-diff.py"
       schedule: "30 5 * * *"

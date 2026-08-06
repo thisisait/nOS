@@ -54,6 +54,15 @@ pulse:
       jitter_min: 10
       max_runtime_s: 600        # gitleaks on a large repo can take a few minutes
       max_concurrent: 1
+      category: security
+      # gitleaks exits 1 when it FINDS something — its whole purpose. Wing
+      # read that as a failing job and raised a HIGH "job failing" on every
+      # night that carried news, so the notification most worth reading
+      # arrived in the shape an operator learns to skim. Verified live
+      # 2026-08-06: rc=1 with "1 new secret finding — operator review
+      # needed", alongside a correct high-severity findings notification the
+      # script had already sent itself.
+      findings_exit_codes: [1]
       env:
         WING_API_URL: "http://127.0.0.1:9000"
         WING_API_TOKEN: "{{ wing_api_token }}"

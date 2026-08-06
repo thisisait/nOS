@@ -62,6 +62,7 @@ export interface PulseJobView {
 	nextFireAt: string | null;
 	lastFiredAt: string | null;
 	state: PulseState;
+	category: string | null;
 	/** Seconds past `next_fire_at`, when overdue; null otherwise. */
 	overdueBySeconds: number | null;
 	lastExitCode: number | null;
@@ -76,7 +77,7 @@ export interface PulseJobView {
 	neverRan: boolean;
 }
 
-export type PulseState = 'never' | 'failing' | 'overdue' | 'running' | 'ok';
+export type PulseState = 'never' | 'failing' | 'overdue' | 'running' | 'findings' | 'ok';
 
 /** Fields upstream sends that must NEVER reach a browser. Named rather than
  *  implied, so the test can assert against the same list the code refuses. */
@@ -109,6 +110,11 @@ interface RawJob {
 	paused_reason?: string | null;
 	next_fire_at?: string | null;
 	last_fired_at?: string | null;
+	/** Exit codes the job declares as "ran correctly, found something". */
+	findings_exit_codes?: number[] | null;
+	/** Purpose group. Absent on any Wing older than 2026-08-06, which is why
+	 *  the projection defaults it to null rather than to a bucket name. */
+	category?: string | null;
 }
 
 interface RawSummary {
@@ -149,6 +155,15 @@ export function projectJob(raw: RawJob, summary: RawSummary | undefined, now: nu
 	const exit = summary?.last_exit_code ?? null;
 	const finished = summary?.last_finished_at ?? null;
 
+	// Exit codes this job DECLARES as "ran correctly, found something".
+	// gitleaks and discovery both exit 1 for that, and reading it as failure is
+	// how a night that carried news looked identical to a broken scanner.
+	// Declared per job because the codes disagree between tools.
+	const findingsCodes = Array.isArray(raw.findings_exit_codes)
+		? raw.findings_exit_codes.map(Number).filter((c: number) => Number.isFinite(c) && c !== 0)
+		: [];
+	const hasFindings = exit !== null && findingsCodes.includes(exit);
+
 	const nextAt = parseTime(raw.next_fire_at);
 	const jitter = num(raw.jitter_min);
 	let overdueBy: number | null = null;
@@ -159,14 +174,20 @@ export function projectJob(raw: RawJob, summary: RawSummary | undefined, now: nu
 		if (late > 0) overdueBy = Math.floor((now - nextAt) / 1000);
 	}
 
+	// `findings` sits between ok and failing on purpose. It is NOT a health
+	// state — the job worked — but rendering it as plain `ok` would bury the
+	// one result an operator has to act on, and rendering it as `failing`
+	// teaches them to ignore the channel. It is the presence counterpart to
+	// this module's rule about absence.
+	const failed = exit !== null && exit !== 0 && !hasFindings;
+
 	let state: PulseState;
 	if (neverRan) state = 'never';
-	else if (exit !== null && exit !== 0) state = 'failing';
+	else if (failed) state = 'failing';
 	else if (overdueBy !== null) state = 'overdue';
 	else if (finished === null) state = 'running';
+	else if (hasFindings) state = 'findings';
 	else state = 'ok';
-
-	const failed = exit !== null && exit !== 0;
 	return {
 		id: String(raw.id ?? ''),
 		plugin: String(raw.plugin_name ?? ''),
@@ -183,6 +204,10 @@ export function projectJob(raw: RawJob, summary: RawSummary | undefined, now: nu
 		nextFireAt: raw.next_fire_at ?? null,
 		lastFiredAt: raw.last_fired_at ?? null,
 		state,
+		/** Purpose grouping, declared per job. `null` renders as its own
+		 *  "uncategorised" group — never folded into another, because a job
+		 *  nobody classified is a thing to notice. */
+		category: raw.category ?? null,
 		overdueBySeconds: overdueBy,
 		lastExitCode: exit,
 		lastFinishedAt: finished,
@@ -235,6 +260,7 @@ export function projectSnapshot(
 		failing: 0,
 		overdue: 0,
 		running: 0,
+		findings: 0,
 		ok: 0,
 		paused: 0,
 		total: jobs.length
@@ -257,6 +283,9 @@ const STATE_ORDER: Record<PulseState, number> = {
 	failing: 0,
 	never: 1,
 	overdue: 2,
-	running: 3,
-	ok: 4
+	// Above `running` and `ok`: a scanner that found something outranks a job
+	// that is merely busy. It is news, and news the operator has to read.
+	findings: 3,
+	running: 4,
+	ok: 5
 };

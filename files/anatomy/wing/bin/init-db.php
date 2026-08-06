@@ -372,6 +372,14 @@ $addMissingColumns($db, 'notifications', [
 	'mail_attempts' => 'INTEGER NOT NULL DEFAULT 0',
 ]);
 
+// pulse_jobs.{findings_exit_codes,category} — 2026-08-06. Existing DBs pick
+// them up here; both are nullable and NULL preserves the old behaviour exactly
+// (every non-zero exit is a failure, every job renders uncategorised).
+$addMissingColumns($db, 'pulse_jobs', [
+	'findings_exit_codes' => 'TEXT',
+	'category'            => 'TEXT',
+]);
+
 // events.patch_id — correlate events with apply-patches runs.
 $addMissingColumns($db, 'events', [
 	'patch_id' => 'TEXT',

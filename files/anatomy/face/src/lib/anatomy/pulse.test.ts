@@ -209,3 +209,55 @@ describe('the snapshot', () => {
 		expect(snap.counts.total).toBe(0);
 	});
 });
+
+describe('a job that found something is not a job that failed', () => {
+	// MEASURED 2026-08-06: gitleaks:nightly-scan exited 1 with "1 new secret
+	// finding — operator review needed", and discovery:contradiction-scan
+	// exited 1 having filed four roadmap rows on its first run ever. Both are
+	// complete successes. Wing raised a HIGH "job failing" for each, so the
+	// night that carried news looked exactly like a broken scanner.
+	const scanner = (exit: number) =>
+		projectJob(
+			rawJob({ id: 'gitleaks:nightly-scan', findings_exit_codes: [1], category: 'security' }),
+			summary({ last_exit_code: exit, last_stderr_tail: 'WARN: 1 new secret finding' }),
+			NOW
+		);
+
+	it('a declared findings code reads as findings, not failing', () => {
+		expect(scanner(1).state).toBe('findings');
+	});
+
+	it('an UNdeclared non-zero code still reads as failing', () => {
+		// The declaration is narrow on purpose: exit 2 from the same job is a
+		// crash, and widening "non-zero is fine" would remove the alarm rather
+		// than sharpen it.
+		expect(scanner(2).state).toBe('failing');
+	});
+
+	it('a job that declares nothing keeps the original rule', () => {
+		const plain = projectJob(rawJob(), summary({ last_exit_code: 1 }), NOW);
+		expect(plain.state).toBe('failing');
+	});
+
+	it('zero is never a findings code even if declared', () => {
+		const view = projectJob(
+			rawJob({ findings_exit_codes: [0, 1] }),
+			summary({ last_exit_code: 0 }),
+			NOW
+		);
+		expect(view.state).toBe('ok');
+	});
+});
+
+describe('jobs carry the purpose their manifest declares', () => {
+	it('a declared category is projected verbatim', () => {
+		expect(projectJob(rawJob({ category: 'security' }), summary(), NOW).category).toBe('security');
+	});
+
+	it('an undeclared category is null, never a guessed bucket', () => {
+		// A Wing older than 2026-08-06 sends no category at all. Defaulting it
+		// to 'platform' would hide the gap in the group it is least likely to
+		// be noticed in; null renders as its own "uncategorised" group.
+		expect(projectJob(rawJob(), summary(), NOW).category).toBeNull();
+	});
+});

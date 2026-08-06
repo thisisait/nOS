@@ -160,6 +160,7 @@ lifecycle:
 pulse:
   jobs:
     - name: dispatch-notifications
+      category: notification
       runner: subprocess
       command: "/opt/homebrew/bin/php"
       args:
@@ -197,6 +198,7 @@ pulse:
     # Set mail_digest_floor: none in operator config to disable; this job
     # then no-ops cleanly when the digest queue is always empty.
     - name: dispatch-notifications-digest
+      category: notification
       runner: subprocess
       command: "/opt/homebrew/bin/php"
       args:
@@ -223,6 +225,7 @@ pulse:
     # when the chain is off (all-unsigned -> ok, badge hidden by its env gate).
     # Needs WING_EVENTS_HMAC_SECRET to compute the key (else exits 3, no write).
     - name: audit-chain-verify
+      category: compliance
       runner: subprocess
       command: "/opt/homebrew/bin/php"
       args:
