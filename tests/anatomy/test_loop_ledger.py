@@ -237,10 +237,17 @@ def test_seal_verdict_does_not_let_its_caller_choose_the_evidence():
 
 
 def test_proposer_has_no_method_that_writes_a_verdict():
-    """The proposer's PUBLIC surface is read-or-propose, exhaustively."""
+    """The proposer's PUBLIC surface is read-or-propose, exhaustively.
+
+    The `list_*` trio landed 2026-08-06 (the run screen's read surface —
+    explicit column lists, `diff_text` excluded; test_loop_ledger_lists.py).
+    They are reads, added HERE deliberately because this set is exhaustive on
+    purpose: a new method must appear in this diff, where its verdict-writing
+    potential gets reviewed, and the INSERT scan below covers it forever."""
     public = {n for n in dir(ledger.ProposerLedger) if not n.startswith("_")}
     assert public == {"check", "record_proposal", "close", "proposal", "history",
-                      "judge_run", "verdict", "replay_record", "verify_chain"}, public
+                      "judge_run", "verdict", "replay_record", "verify_chain",
+                      "list_proposals", "list_judge_runs", "list_verdicts"}, public
     for name in public:
         src = inspect.getsource(getattr(ledger.ProposerLedger, name))
         assert not re.search(r"INSERT\s+INTO\s+loop_verdicts", src, re.I), name

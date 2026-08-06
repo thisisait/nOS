@@ -519,7 +519,10 @@ Three runtimes exist (Claude Code, Hermes, AgentKit/PHP) and a fourth is planned
 | `GET /api/v1/loop/judge/{run_id}` | `loop:read` | `running` \| verdict + per-judge evidence |
 | `GET /api/v1/loop/history?fingerprint=` | `loop:read` | prior attempts and their verdicts |
 | `POST /api/v1/loop/forget` | **`loop:forget`** | `200` cut record · `404` nothing to forget — **operator identity only** (§4 "the block lifts", §6.2) |
-| `POST /api/v1/loop/verdicts` | — | **does not exist** (§3.1) |
+| `GET /api/v1/loop/proposals?limit=` | `loop:read` | ledger list, newest first — `diff_text` excluded at the SQL column list (the run screen's read surface, 2026-08-06) |
+| `GET /api/v1/loop/judge_runs?limit=&gate_set=` | `loop:read` | ledger list — outcome, `work_count` vs `min_work`, `reason` |
+| `GET /api/v1/loop/verdicts?limit=` | `loop:read` | ledger list, incl. `evidence` (the run-uuid JSON that ties a baseline verdict to its judge runs) |
+| `POST /api/v1/loop/verdicts` | — | **does not exist** (§3.1). The GET list above READS sealed rows; §3.1's guarantee — no endpoint that ACCEPTS a verdict — is untouched by a read, and the gate now pins exactly that: no write-method route may ever exist under this name |
 
 ### 6.2 CLI — `nos-loop`
 

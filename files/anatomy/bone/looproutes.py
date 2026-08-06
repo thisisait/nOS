@@ -174,6 +174,45 @@ def get_history(fingerprint: str = Query(..., min_length=8),
         led.close()
 
 
+# ── Ledger lists — the run screen's read surface (2026-08-06) ───────────────
+# Read scope only. The column lists live in ledger.py (`list_*`), where
+# `diff_text` is excluded by construction — see the comment there. These
+# routes exist because the ledger had NO list surface at all: the face's run
+# screen would otherwise re-derive the loop's state from wing.db directly,
+# which is exactly the projection-boundary violation the BFF doctrine refuses.
+
+
+@router.get("/proposals")
+def list_proposals(limit: int = Query(100, ge=1, le=500),
+                   _caller=Depends(require_loop_scope("read"))) -> dict[str, Any]:
+    led = ledger.open_ledger(_PROPOSER)
+    try:
+        return {"proposals": led.list_proposals(limit)}
+    finally:
+        led.close()
+
+
+@router.get("/judge_runs")
+def list_judge_runs(limit: int = Query(200, ge=1, le=1000),
+                    gate_set: str | None = Query(None),
+                    _caller=Depends(require_loop_scope("read"))) -> dict[str, Any]:
+    led = ledger.open_ledger(_PROPOSER)
+    try:
+        return {"judge_runs": led.list_judge_runs(limit, gate_set)}
+    finally:
+        led.close()
+
+
+@router.get("/verdicts")
+def list_verdicts(limit: int = Query(100, ge=1, le=500),
+                  _caller=Depends(require_loop_scope("read"))) -> dict[str, Any]:
+    led = ledger.open_ledger(_PROPOSER)
+    try:
+        return {"verdicts": led.list_verdicts(limit)}
+    finally:
+        led.close()
+
+
 @router.post("/forget")
 def post_forget(body: ForgetIn,
                 _caller=Depends(require_loop_scope("forget"))) -> dict[str, Any]:

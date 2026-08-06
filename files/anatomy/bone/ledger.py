@@ -727,6 +727,45 @@ class ReaderLedger:
         rows = self._q("SELECT * FROM loop_proposals WHERE uuid = ?", (uuid,))
         return rows[0] if rows else None
 
+    # ── ledger lists (the run screen's read surface, 2026-08-06) ──
+    # Explicit column lists, newest first. `diff_text` is EXCLUDED from the
+    # proposals list by construction: the artifact's hunks are secrets-adjacent
+    # (a proposal may touch credential templates) and the browser surface that
+    # consumes these lists must not be one upstream `SELECT *` away from
+    # carrying them. The full row stays reachable via proposal()/history() for
+    # server-side callers that need the bytes.
+
+    def list_proposals(self, limit: int = 100) -> list[dict[str, Any]]:
+        return self._q(
+            "SELECT id, uuid, fingerprint, content_fp, weakness_id, "
+            "weakness_evidence_sha, intent_class, gate_set, target_paths, "
+            "tree_sha, proposer_id, proposer_model, attempt_n, "
+            "requires_operator, created_at "
+            "FROM loop_proposals ORDER BY id DESC LIMIT ?", (int(limit),))
+
+    def list_judge_runs(self, limit: int = 200,
+                        gate_set: str | None = None) -> list[dict[str, Any]]:
+        sql = ("SELECT uuid, proposal_id, gate_set, judge_name, status, "
+               "started_at, finished_at, exit_code, work_count, min_work, "
+               "outcome, reason, tree_sha "
+               "FROM loop_judge_runs")
+        params: list[Any] = []
+        if gate_set:
+            sql += " WHERE gate_set = ?"
+            params.append(gate_set)
+        sql += " ORDER BY id DESC LIMIT ?"
+        params.append(int(limit))
+        return self._q(sql, params)
+
+    def list_verdicts(self, limit: int = 100) -> list[dict[str, Any]]:
+        # `evidence` is included: it is the JSON that names the judge-run uuids
+        # a verdict was sealed from, and without it a client cannot tie a
+        # BASELINE run (proposal_id NULL) to its verdict at all.
+        return self._q(
+            "SELECT uuid, proposal_id, gate_set, result, actor, tree_sha, "
+            "evidence, created_at "
+            "FROM loop_verdicts ORDER BY id DESC LIMIT ?", (int(limit),))
+
     def history(self, fingerprint_: str) -> list[dict[str, Any]]:
         """§6.1 GET /loop/history — prior attempts and their verdicts."""
         out = self._q(

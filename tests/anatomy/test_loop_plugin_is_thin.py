@@ -224,6 +224,36 @@ def _engine_routes() -> set[str]:
     return routes
 
 
+def _engine_write_routes() -> set[str]:
+    """Route names registered with a WRITE method (post/put/patch/delete).
+
+    §3.1's guarantee is not "no route named verdicts" — it is "no endpoint
+    that ACCEPTS a verdict". When the 2026-08-06 ledger LISTS landed
+    (read-scope GET /proposals /judge_runs /verdicts for the run screen), the
+    coarse name-ban here went red against a read — so the ban is now pinned to
+    what the contract actually deletes: any write-method route under the name.
+    Same AST walk as `_engine_routes`, filtered to the method that matters."""
+    writes: set[str] = set()
+    for src in (BONE / "looproutes.py", BONE / "weaknesses.py"):
+        tree = ast.parse(src.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for dec in node.decorator_list:
+                if not (isinstance(dec, ast.Call) and isinstance(dec.func, ast.Attribute)):
+                    continue
+                if not (isinstance(dec.func.value, ast.Name) and dec.func.value.id == "router"):
+                    continue
+                if dec.func.attr not in {"post", "put", "patch", "delete"}:
+                    continue
+                for arg in dec.args:
+                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                        head = arg.value.strip("/").split("/")[0]
+                        if head:
+                            writes.add(head)
+    return writes
+
+
 def _contract_routes() -> set[str]:
     """Route names the contract PROSE declares as existing.
 
@@ -247,10 +277,12 @@ def test_the_contract_prose_matches_the_engine():
     prose to prose.
     """
     engine, declared = _engine_routes(), _contract_routes()
-    assert "verdicts" not in engine, (
-        "the engine now serves a verdicts route. §3.1 deleted it on purpose: a "
-        "route that accepts a result and tells writers apart by credential is a "
-        "lock whose key is a header. Removing the input surface removes the class."
+    assert "verdicts" not in _engine_write_routes(), (
+        "the engine now serves a verdicts route that ACCEPTS input. §3.1 "
+        "deleted it on purpose: a route that accepts a result and tells "
+        "writers apart by credential is a lock whose key is a header. "
+        "Removing the input surface removes the class. (The read-scope GET "
+        "list is not an input surface — see _engine_write_routes.)"
     )
     phantom = sorted(declared - engine)
     assert not phantom, (
@@ -272,10 +304,11 @@ def test_the_plugin_addresses_only_routes_the_engine_serves():
         "the contract's endpoint table moved; re-derive this gate from "
         "docs/idea/11-agentic-loop-contract.md §6.1"
     )
-    assert "verdicts" not in declared, (
-        "the contract now declares a verdicts route as existing. §3.1 deleted it "
-        "on purpose: a route that accepts a result and tells writers apart by "
-        "credential is a lock whose key is a header."
+    assert "verdicts" not in _engine_write_routes(), (
+        "a write-method verdicts route exists. §3.1 deleted it on purpose: a "
+        "route that accepts a result and tells writers apart by credential is "
+        "a lock whose key is a header. The read-only ledger list (GET, "
+        "2026-08-06) is permitted; an input surface under this name never is."
     )
 
     offenders = []
