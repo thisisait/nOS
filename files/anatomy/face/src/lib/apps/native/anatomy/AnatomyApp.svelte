@@ -16,6 +16,8 @@
 	import PulseView from './PulseView.svelte';
 	import WingView from './WingView.svelte';
 	import BoneView from './BoneView.svelte';
+	import GraphView from './GraphView.svelte';
+	import RunsView from './RunsView.svelte';
 	import { Tabs, type TabSpec } from '$lib/components/ui';
 	import { anatomyFocus, type AnatomyView } from '$lib/anatomy/focus';
 
@@ -48,7 +50,9 @@
 	const tabs = $derived<TabSpec[]>([
 		{ key: 'pulse', label: 'Pulse', icon: '⏱' },
 		{ key: 'wing', label: 'Wing', icon: '🪶', badge: thread ? 'thread' : undefined },
-		{ key: 'bone', label: 'Bone', icon: '🦴' }
+		{ key: 'bone', label: 'Bone', icon: '🦴' },
+		{ key: 'graph', label: 'Graph', icon: '🕸' },
+		{ key: 'runs', label: 'Runs', icon: '◎' }
 	]);
 </script>
 
@@ -60,6 +64,10 @@
 			<PulseView onfollowthread={follow} />
 		{:else if active === 'wing'}
 			<WingView {thread} onclearthread={() => (thread = '')} />
+		{:else if active === 'graph'}
+			<GraphView />
+		{:else if active === 'runs'}
+			<RunsView onfollowthread={follow} />
 		{:else}
 			<BoneView />
 		{/if}

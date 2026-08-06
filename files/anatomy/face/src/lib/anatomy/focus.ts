@@ -11,7 +11,7 @@
  */
 import { writable } from 'svelte/store';
 
-export type AnatomyView = 'pulse' | 'wing' | 'bone';
+export type AnatomyView = 'pulse' | 'wing' | 'bone' | 'graph' | 'runs';
 
 export interface AnatomyFocus {
 	view: AnatomyView;

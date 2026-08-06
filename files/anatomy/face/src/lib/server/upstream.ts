@@ -421,3 +421,63 @@ export async function ask(prompt: string): Promise<AskResult> {
 		throw new UpstreamError(502, 'local LLM unreachable');
 	}
 }
+
+// ── Bone loop ledger (the run screen, 2026-08-06) ────────────────────────────
+//
+// Credential: BONE_LOOP_JUDGE_TOKEN — the loop's third channel (loopauth.py),
+// evaluator identity ("Pulse / operator"), scopes {read, judge}. It is the
+// right identity for a browser-triggered gate-set run because the endpoint it
+// unlocks refuses every result-influencing parameter server-side; the face
+// adds its own refusals on top (see /bff/loop/judge). Unset → the run screen
+// says "unwired", never an empty ledger.
+
+const LOOP_TOKEN = () => env.BONE_LOOP_JUDGE_TOKEN ?? '';
+
+export function loopConfigured(): boolean {
+	return LOOP_TOKEN().length >= 32;
+}
+
+function loopHeaders(json = false): Record<string, string> {
+	const h: Record<string, string> = { authorization: `Bearer ${LOOP_TOKEN()}` };
+	if (json) h['content-type'] = 'application/json';
+	return h;
+}
+
+const LOOP_BASE = () => BONE_BASE() + '/api/v1/loop';
+
+export const loop = {
+	async proposals(limit = 100): Promise<unknown> {
+		const u = new URL(LOOP_BASE() + '/proposals');
+		u.searchParams.set('limit', String(limit));
+		return asJson(await fetch(u, { headers: loopHeaders() }));
+	},
+	async judgeRuns(limit = 200, gateSet?: string): Promise<unknown> {
+		const u = new URL(LOOP_BASE() + '/judge_runs');
+		u.searchParams.set('limit', String(limit));
+		if (gateSet) u.searchParams.set('gate_set', gateSet);
+		return asJson(await fetch(u, { headers: loopHeaders() }));
+	},
+	async verdicts(limit = 100): Promise<unknown> {
+		const u = new URL(LOOP_BASE() + '/verdicts');
+		u.searchParams.set('limit', String(limit));
+		return asJson(await fetch(u, { headers: loopHeaders() }));
+	},
+	/** 202 + job id. The ONLY selector is the gate-set NAME — Bone refuses
+	 *  anything that supplies, hints at, or overrides a result. */
+	async judge(gateSet: string): Promise<unknown> {
+		return asJson(
+			await fetch(LOOP_BASE() + '/judge', {
+				method: 'POST',
+				headers: loopHeaders(true),
+				body: JSON.stringify({ gate_set: gateSet })
+			})
+		);
+	},
+	async judgeStatus(jobId: string): Promise<unknown> {
+		return asJson(
+			await fetch(LOOP_BASE() + '/judge/' + encodeURIComponent(jobId), {
+				headers: loopHeaders()
+			})
+		);
+	}
+};
