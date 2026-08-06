@@ -928,10 +928,15 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 #: grown to 2936 collected against a 2788 record, and a ratchet left behind by
 #: growth certifies a fraction of the suite it names. That is the second way a
 #: ratchet rots and the only one a file-vs-file comparison cannot see.
+#: RE-DERIVED 2026-08-06 (second time that day): "2943 passed, 26 skipped" after
+#: the anatomy-graph gate landed (+19 tests, plus unrelated growth). The
+#: collection gate below did NOT fire this time — 2943 against a 2911 record
+#: was inside its 5% allowance — but a record known stale is re-derived anyway:
+#: the allowance is slack for host variance, not a budget to spend.
 MEASURED_WORK = {
     "ansible-lint": 1475,
     "genome-codegen": 2,
-    "pytest-anatomy": 2911,
+    "pytest-anatomy": 2943,
     "cortex-corpus-diff": 1,
 }
 
