@@ -327,6 +327,49 @@ def test_the_node_counts_are_sane(committed):
     assert c["nodes_tofu"] >= 1
     assert c["nodes_authentik"] >= 40
     assert c["nodes_table"] >= 6
+    assert c["nodes_doctrine"] >= 10
+    assert c["edges_governed_by"] >= 15
+
+
+# ── the constitution layer: governed_by edges, per-block attribution ──────
+
+
+def test_governed_by_edges_point_at_real_paragraphs(committed):
+    gb = [e for e in committed["edges"] if e["kind"] == "governed_by"]
+    assert gb, "the doctrine layer produced no edges — derive_doctrine broke"
+    for e in gb:
+        target = committed["nodes"][e["to"]]
+        assert target["kind"] == "doctrine", f"{e['to']} is not a doctrine node"
+        assert e.get("via", "").startswith("cited at "), (
+            f"{e['from']} -> {e['to']}: a governed_by edge must name the "
+            f"citing line — the citation IS the evidence"
+        )
+        assert e.get("citations", 0) >= 1
+
+
+def test_attribution_is_per_block_not_per_file(committed):
+    """The measured case: M7 (the nos_entity collision) is cited inside
+    genome-codegen's block and NOWHERE in ansible-lint's — a file-level smear
+    would hand all five judges every paragraph, which is picture-filling.
+    And the comment-above-the-key convention: DECISION 2e sits ABOVE
+    cortex-corpus-diff's key (judge-sets.yml:194) and belongs to it — the
+    naive ranges handed it to nos-smoke."""
+    gb = {(e["from"], e["to"].split("#")[1])
+          for e in committed["edges"] if e["kind"] == "governed_by"}
+    froms_of = {k: {t for f, t in gb if f == k} for k, _ in gb}
+    assert ("judge:genome-codegen", "M7") in gb
+    assert "M7" not in froms_of.get("judge:ansible-lint", set())
+    assert ("judge:cortex-corpus-diff", "DECISION-2e") in gb
+
+
+def test_doctrine_nodes_carry_the_paragraph(committed):
+    for nid, n in committed["nodes"].items():
+        if n["kind"] != "doctrine":
+            continue
+        assert n["source"].endswith(".md"), f"{nid}: source is not a document"
+        assert n.get("section"), f"{nid}: no section key"
+        # heading may legitimately be empty only for table-row addresses
+        assert "Constitution paragraph" in n["description"]
 
 
 # ── KEAP-import shaping: anchor + body per node ───────────────────────────

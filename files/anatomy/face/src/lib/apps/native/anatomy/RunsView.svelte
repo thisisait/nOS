@@ -27,7 +27,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import graphRaw from '$lib/anatomy/anatomy-graph.json';
-	import { projectGraph } from '$lib/anatomy/graph';
+	import { projectGraph, governingParagraphs } from '$lib/anatomy/graph';
 	import { verdictRing, arcs, arcPath, tally, type Ring } from '$lib/anatomy/rings';
 	import { loadLoop, runGateSet, judgeStatus, type LoopResponse } from '$lib/api/loop';
 	import { loadRuns, type PulseRunRow } from '$lib/api/pulse';
@@ -133,7 +133,11 @@
 		cursor = 1;
 		if (!replayJob) return;
 		try {
-			const r = await loadRuns(replayJob);
+			// Ask for the last 48 h. A deployed Wing that predates the window
+			// params ignores them and answers its default — the hint above and
+			// the loaded-count below state what actually came back.
+			const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
+			const r = await loadRuns(replayJob, since);
 			replayRuns = [...r.runs].sort((a, b) => a.fired_at.localeCompare(b.fired_at));
 			replayErr = r.error ?? '';
 		} catch (e) {
@@ -190,6 +194,10 @@
 				{#each gatesets as gs (gs.id)}
 					{@const name = gs.id.slice('gateset:'.length)}
 					{@const members = (gs.facts.judges as string[] | undefined) ?? []}
+					{@const paragraphs = governingParagraphs(graph, [
+						gs.id,
+						...members.map((j) => `judge:${j}`)
+					])}
 					<div class="gateset">
 						<div class="gshead">
 							<code>{name}</code>
@@ -209,6 +217,22 @@
 									return `${j}: ${argv.join(' ')}  # min_work ${mw}`;
 								})
 								.join('\n')}</pre>
+						{#if paragraphs.length > 0}
+							<!-- The constitution highlight: paragraphs this set's judges
+							     CITE in their own blocks — measured by the resolver, not
+							     curated. Hover a chip for the citing lines. -->
+							<div class="law">
+								{#each paragraphs as p (p.id)}
+									<span
+										class="lawchip"
+										title={`${p.doc} — ${p.heading || p.section}\n` +
+											p.citedBy.map((c) => `${c.node} (${c.via})`).join('\n')}
+									>
+										§{p.section}
+									</span>
+								{/each}
+							</div>
+						{/if}
 					</div>
 				{/each}
 				{#if jobId || jobState}
@@ -314,10 +338,11 @@
 			<div class="col">
 				<h3>Replay</h3>
 				<p class="hint">
-					A time cursor over the loaded window — the last 25 runs of one job
-					(the BFF cap; a wider window needs Wing's <code>since/until</code>
-					params, which do not exist yet and are named missing rather than
-					assumed).
+					A time cursor over the loaded window. Wing's <code>since/until</code>
+					window params exist in the repo as of 2026-08-06 and this screen asks
+					for them — but the DEPLOYED Wing honours them only after its next
+					converge; until then it answers the unwindowed default and the count
+					below is honest about what actually loaded.
 				</p>
 				<select bind:value={replayJob} onchange={() => void loadReplay()}>
 					<option value="">choose a job…</option>
@@ -444,6 +469,22 @@
 	.runmsg {
 		font-size: 11px;
 		margin: 6px 0 0;
+	}
+	.law {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+		margin-top: 4px;
+	}
+	.lawchip {
+		font-size: 10px;
+		font-family: ui-monospace, monospace;
+		padding: 1px 6px;
+		border-radius: 999px;
+		border: 1px solid var(--ok, #4cc38a);
+		color: var(--ok, #4cc38a);
+		opacity: 0.85;
+		cursor: help;
 	}
 	.refusals {
 		margin-top: 8px;

@@ -3,8 +3,8 @@
   "generated_by": "tools/anatomy-graph-gen.py",
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "counts": {
-    "nodes": 179,
-    "edges": 134,
+    "nodes": 191,
+    "edges": 151,
     "nodes_pulse": 29,
     "nodes_judge": 5,
     "nodes_gateset": 4,
@@ -16,10 +16,12 @@
     "nodes_tofu": 1,
     "nodes_authentik": 43,
     "nodes_table": 6,
+    "nodes_doctrine": 12,
     "edges_data": 52,
     "edges_trigger": 21,
     "edges_temporal": 5,
-    "edges_mutex": 56
+    "edges_mutex": 56,
+    "edges_governed_by": 17
   },
   "warnings": [
     "union-kind cycle (feedback loop, review-not-refuse): pulse:cortex:cortex-fs-sync -> pulse:keap:keap-embed-sync -> pulse:cortex:cortex-corpus-diff -> pulse:cortex:cortex-fs-sync"
@@ -570,6 +572,102 @@
       "anchor": "02.02.06",
       "description": "Host launchd daemon eu.thisisait.nos.wing — Wing — the Nette/FrankenPHP dashboard and state-framework UI"
     },
+    "doctrine:docs/archive/cortex-corpus-parallel.md#2.1": {
+      "kind": "doctrine",
+      "source": "docs/archive/cortex-corpus-parallel.md",
+      "section": "2.1",
+      "heading": "Shape",
+      "anchor": "09",
+      "description": "Constitution paragraph 2.1 of docs/archive/cortex-corpus-parallel.md: Shape"
+    },
+    "doctrine:docs/archive/cortex-corpus-parallel.md#5.3": {
+      "kind": "doctrine",
+      "source": "docs/archive/cortex-corpus-parallel.md",
+      "section": "5.3",
+      "heading": "The one thing that halts immediately",
+      "anchor": "09",
+      "description": "Constitution paragraph 5.3 of docs/archive/cortex-corpus-parallel.md: The one thing that halts immediately"
+    },
+    "doctrine:docs/archive/nos-cortex-organ-design.md#2": {
+      "kind": "doctrine",
+      "source": "docs/archive/nos-cortex-organ-design.md",
+      "section": "2",
+      "heading": "Where it sits — anatomy integration",
+      "anchor": "09",
+      "description": "Constitution paragraph 2 of docs/archive/nos-cortex-organ-design.md: Where it sits — anatomy integration"
+    },
+    "doctrine:docs/idea/11-agentic-loop-contract.md#5.1": {
+      "kind": "doctrine",
+      "source": "docs/idea/11-agentic-loop-contract.md",
+      "section": "5.1",
+      "heading": "Computed from the gate set — §5's core rule",
+      "anchor": "09",
+      "description": "Constitution paragraph 5.1 of docs/idea/11-agentic-loop-contract.md: Computed from the gate set — §5's core rule"
+    },
+    "doctrine:docs/idea/11-agentic-loop-contract.md#5a": {
+      "kind": "doctrine",
+      "source": "docs/idea/11-agentic-loop-contract.md",
+      "section": "5a",
+      "heading": "`intent_class: gate-add` proposals are permitted to write",
+      "anchor": "09",
+      "description": "Constitution paragraph 5a of docs/idea/11-agentic-loop-contract.md: `intent_class: gate-add` proposals are permitted to write"
+    },
+    "doctrine:docs/idea/11-agentic-loop-contract.md#8.1": {
+      "kind": "doctrine",
+      "source": "docs/idea/11-agentic-loop-contract.md",
+      "section": "8.1",
+      "heading": "Retro-verification (constraint C)",
+      "anchor": "09",
+      "description": "Constitution paragraph 8.1 of docs/idea/11-agentic-loop-contract.md: Retro-verification (constraint C)"
+    },
+    "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d": {
+      "kind": "doctrine",
+      "source": "docs/idea/11-agentic-loop-contract.md",
+      "section": "DECISION-2d",
+      "heading": "`pytest-anatomy` runs **only** in an ephemeral git-worktree",
+      "anchor": "09",
+      "description": "Constitution paragraph DECISION-2d of docs/idea/11-agentic-loop-contract.md: `pytest-anatomy` runs **only** in an ephemeral git-worktree"
+    },
+    "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e": {
+      "kind": "doctrine",
+      "source": "docs/idea/11-agentic-loop-contract.md",
+      "section": "DECISION-2e",
+      "heading": "Judges are invoked with their side effects suppressed by flag,",
+      "anchor": "09",
+      "description": "Constitution paragraph DECISION-2e of docs/idea/11-agentic-loop-contract.md: Judges are invoked with their side effects suppressed by flag,"
+    },
+    "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2f": {
+      "kind": "doctrine",
+      "source": "docs/idea/11-agentic-loop-contract.md",
+      "section": "DECISION-2f",
+      "heading": "`keap-lint` is **not** in any gate set. It stays a Pulse job.",
+      "anchor": "09",
+      "description": "Constitution paragraph DECISION-2f of docs/idea/11-agentic-loop-contract.md: `keap-lint` is **not** in any gate set. It stays a Pulse job."
+    },
+    "doctrine:docs/idea/11-agentic-loop-contract.md#M2": {
+      "kind": "doctrine",
+      "source": "docs/idea/11-agentic-loop-contract.md",
+      "section": "M2",
+      "heading": "`nos-smoke` reads absence as success",
+      "anchor": "09",
+      "description": "Constitution paragraph M2 of docs/idea/11-agentic-loop-contract.md: `nos-smoke` reads absence as success"
+    },
+    "doctrine:docs/idea/11-agentic-loop-contract.md#M3": {
+      "kind": "doctrine",
+      "source": "docs/idea/11-agentic-loop-contract.md",
+      "section": "M3",
+      "heading": "`pytest-anatomy` reads absence as success",
+      "anchor": "09",
+      "description": "Constitution paragraph M3 of docs/idea/11-agentic-loop-contract.md: `pytest-anatomy` reads absence as success"
+    },
+    "doctrine:docs/idea/11-agentic-loop-contract.md#M7": {
+      "kind": "doctrine",
+      "source": "docs/idea/11-agentic-loop-contract.md",
+      "section": "M7",
+      "heading": "`genome-codegen` and `pytest` collide",
+      "anchor": "09",
+      "description": "Constitution paragraph M7 of docs/idea/11-agentic-loop-contract.md: `genome-codegen` and `pytest` collide"
+    },
     "gateset:fast": {
       "kind": "gateset",
       "source": "state/judge-sets.yml",
@@ -693,7 +791,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": true,
       "mutates_worktree": true,
-      "min_work": 2950,
+      "min_work": 2980,
       "argv": [
         "python3",
         "-m",
@@ -706,7 +804,7 @@
       ],
       "requires": [],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=2950, deterministic=True"
+      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=2980, deterministic=True"
     },
     "pulse:alert-relay:relay-firing": {
       "kind": "pulse",
@@ -2263,6 +2361,142 @@
       "kind": "data",
       "via": "converge-time `tofu apply` writes providers/applications/outpost attachments into the live tenant (tasks/tofu-authentik.yml, destroy-guarded, -parallelism=1); read back daily by the plan-only drift job",
       "derived": "tofu-apply-path"
+    },
+    {
+      "from": "judge:ansible-lint",
+      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
+      "kind": "governed_by",
+      "via": "cited at state/judge-sets.yml:56",
+      "citations": 1,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "judge:cortex-corpus-diff",
+      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
+      "kind": "governed_by",
+      "via": "cited at state/judge-sets.yml:223",
+      "citations": 1,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "judge:cortex-corpus-diff",
+      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e",
+      "kind": "governed_by",
+      "via": "cited at state/judge-sets.yml:204",
+      "citations": 2,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "judge:cortex-corpus-diff",
+      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2f",
+      "kind": "governed_by",
+      "via": "cited at state/judge-sets.yml:229",
+      "citations": 1,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "judge:genome-codegen",
+      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
+      "kind": "governed_by",
+      "via": "cited at state/judge-sets.yml:79",
+      "citations": 1,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "judge:genome-codegen",
+      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#8.1",
+      "kind": "governed_by",
+      "via": "cited at state/judge-sets.yml:65",
+      "citations": 1,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "judge:genome-codegen",
+      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M7",
+      "kind": "governed_by",
+      "via": "cited at state/judge-sets.yml:87",
+      "citations": 1,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "judge:nos-smoke",
+      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
+      "kind": "governed_by",
+      "via": "cited at state/judge-sets.yml:194",
+      "citations": 1,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "judge:nos-smoke",
+      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e",
+      "kind": "governed_by",
+      "via": "cited at state/judge-sets.yml:163",
+      "citations": 1,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "judge:nos-smoke",
+      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M2",
+      "kind": "governed_by",
+      "via": "cited at state/judge-sets.yml:184",
+      "citations": 2,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "judge:pytest-anatomy",
+      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
+      "kind": "governed_by",
+      "via": "cited at state/judge-sets.yml:148",
+      "citations": 1,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "judge:pytest-anatomy",
+      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5a",
+      "kind": "governed_by",
+      "via": "cited at state/judge-sets.yml:149",
+      "citations": 1,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "judge:pytest-anatomy",
+      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d",
+      "kind": "governed_by",
+      "via": "cited at state/judge-sets.yml:141",
+      "citations": 1,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "judge:pytest-anatomy",
+      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M3",
+      "kind": "governed_by",
+      "via": "cited at state/judge-sets.yml:93",
+      "citations": 1,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "pulse:cortex:cortex-fs-sync",
+      "to": "doctrine:docs/archive/cortex-corpus-parallel.md#5.3",
+      "kind": "governed_by",
+      "via": "cited at files/anatomy/plugins/cortex-base/plugin.yml:119",
+      "citations": 2,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "pulse:cortex:cortex-fs-sync",
+      "to": "doctrine:docs/archive/nos-cortex-organ-design.md#2",
+      "kind": "governed_by",
+      "via": "cited at files/anatomy/plugins/cortex-base/plugin.yml:146",
+      "citations": 1,
+      "derived": "doctrine-cite"
+    },
+    {
+      "from": "pulse:keap:keap-embed-sync",
+      "to": "doctrine:docs/archive/cortex-corpus-parallel.md#2.1",
+      "kind": "governed_by",
+      "via": "cited at files/anatomy/plugins/keap-base/plugin.yml:147",
+      "citations": 1,
+      "derived": "doctrine-cite"
     },
     {
       "from": "judge:genome-codegen",

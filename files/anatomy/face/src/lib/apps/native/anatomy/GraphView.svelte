@@ -126,6 +126,7 @@
 		repo: '⎇',
 		tofu: '⬡',
 		table: '▤',
+		doctrine: '§',
 		authentik: '🛡',
 		service: '▣'
 	};
@@ -140,7 +141,14 @@
 	};
 
 	function label(id: string): string {
-		return id.split(':').slice(1).join(':');
+		const local = id.split(':').slice(1).join(':');
+		if (id.startsWith('doctrine:')) {
+			// "docs/idea/11-agentic-loop-contract.md#2.4" → "loop-contract §2.4"
+			const [doc, section] = local.split('#');
+			const base = (doc.split('/').pop() ?? doc).replace(/\.md$/, '');
+			return `${base.replace(/^11-agentic-/, '')} §${section}`;
+		}
+		return local;
 	}
 
 	function edgePath(from: string, to: string): string {
@@ -453,6 +461,12 @@
 		stroke-width: 2.2;
 		stroke-dasharray: 1 4;
 		opacity: 0.25;
+	}
+	/* the constitution: which paragraphs govern this node */
+	.edge.governed_by {
+		stroke: var(--ok, #4cc38a);
+		stroke-dasharray: 4 2;
+		opacity: 0.5;
 	}
 	.marginlabel {
 		font-size: 9px;

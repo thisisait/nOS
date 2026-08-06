@@ -165,6 +165,7 @@ KIND_ANCHORS = {
     "tofu": "02.02.04",
     "authentik": "02.02.08",
     "table": "02.02.05",
+    "doctrine": "09",             # Reference & Documentation — the law shelf
 }
 FALLBACK_ANCHOR = "02.02.04"      # Software Engineering
 
@@ -356,6 +357,10 @@ def _describe(nid: str, n: dict) -> str:
                 f"managed by OpenTofu from the committed registry")
     if kind == "table":
         return f"KEAP DataTable definition '{n.get('title')}' ({n['source']})"
+    if kind == "doctrine":
+        head = n.get("heading") or "(unheaded table-row address)"
+        return (f"Constitution paragraph {n.get('section')} of {n['source']}: "
+                f"{head}")
     return f"{kind} node {local}"
 
 
@@ -609,6 +614,149 @@ def compile_writes(raw_writes: list, nodes: dict) -> list[dict]:
     return edges
 
 
+def _load_doctrine_cite():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "doctrine_cite", REPO / "tools" / "doctrine-cite.py")
+    mod = importlib.util.module_from_spec(spec)
+    # 3.13 dataclasses resolve their module via sys.modules at class creation.
+    sys.modules["doctrine_cite"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _block_ranges_yaml_list(lines: list[str], list_key: str,
+                            item_re: str) -> list[tuple[str, int, int]]:
+    """(name, start, end) line ranges for items of one top-level YAML list —
+    text-scan on purpose: yaml.safe_load has no line numbers, and these two
+    shapes (pulse job entries, judge-sets blocks) are the whole need."""
+    out: list[tuple[str, int, int]] = []
+    in_region = False
+    current: tuple[str, int] | None = None
+    pat = re.compile(item_re)
+    for i, line in enumerate(lines, 1):
+        if re.match(rf"^{list_key}:", line):
+            in_region = True
+            continue
+        if in_region and re.match(r"^[a-zA-Z_-]+:", line):   # next top-level key
+            if current:
+                out.append((current[0], current[1], i - 1))
+                current = None
+            in_region = False
+        if not in_region:
+            continue
+        if m := pat.match(line):
+            if current:
+                out.append((current[0], current[1], i - 1))
+            current = (m.group(1), i)
+    if current:
+        out.append((current[0], current[1], len(lines)))
+    # Comments directly ABOVE an item document THAT item — the universal
+    # convention in these files ("# --no-ledger --json … (DECISION 2e)" sits
+    # above cortex-corpus-diff's key and describes it, and the naive ranges
+    # handed that citation to nos-smoke). Walk each start backward over
+    # comment/blank lines; the previous item's range shrinks to match.
+    adjusted: list[tuple[str, int, int]] = []
+    for i, (name, a, b) in enumerate(out):
+        start = a
+        while start - 2 >= 0 and re.match(r"^\s*(#|$)", lines[start - 2]):
+            start -= 1
+        if adjusted and start <= adjusted[-1][2]:
+            prev = adjusted[-1]
+            adjusted[-1] = (prev[0], prev[1], start - 1)
+        adjusted.append((name, start, b))
+    return adjusted
+
+
+def derive_doctrine(nodes: dict) -> list[dict]:
+    """`governed_by` edges: node → constitution paragraph, from the citations
+    the node's OWN manifest block carries — resolved by tools/doctrine-cite.py
+    (one resolver; the gate and this graph must never disagree on an address).
+
+    Attribution is PER BLOCK, not per file: judge-sets.yml cites M7 inside
+    exactly two judges' comment blocks, and smearing that over all five would
+    be the picture-filling this graph refuses. File-header citations
+    (attributable only to the whole file) are deliberately NOT edges.
+
+    Weakness sources (weaknesses.py function blocks) are named as not done:
+    per-function attribution needs an AST walk this pass does not buy.
+    """
+    dc = _load_doctrine_cite()
+    corpus = dc.build_corpus()
+
+    ranges_by_file: dict[str, list[tuple[str, int, int]]] = {}
+
+    # pulse jobs — the region under `pulse:`, blocks at `- name: <job>`
+    for nid, n in list(nodes.items()):
+        if n["kind"] != "pulse":
+            continue
+        src = n["source"]
+        if src not in ranges_by_file:
+            lines = (REPO / src).read_text(encoding="utf-8").splitlines()
+            # `pulse:` may be nested one level (agents yml: top-level too)
+            ranges_by_file[src] = [
+                (name, a, b) for (name, a, b) in _block_ranges_yaml_list(
+                    lines, "pulse", r"^\s{2,6}- name:\s*([A-Za-z0-9_-]+)")]
+
+    # judges + gate sets — blocks at two-space keys under their region
+    js_lines = JUDGE_SETS.read_text(encoding="utf-8").splitlines()
+    judge_ranges = _block_ranges_yaml_list(js_lines, "judges",
+                                           r"^\s{2}([a-z0-9-]+):")
+    gs_ranges = _block_ranges_yaml_list(js_lines, "gate_sets",
+                                        r"^\s{2}([a-z0-9-]+):")
+
+    def owner_for(src: str, line: int) -> str | None:
+        if src == "state/judge-sets.yml":
+            for name, a, b in judge_ranges:
+                if a <= line <= b and f"judge:{name}" in nodes:
+                    return f"judge:{name}"
+            for name, a, b in gs_ranges:
+                if a <= line <= b and f"gateset:{name}" in nodes:
+                    return f"gateset:{name}"
+            return None
+        for name, a, b in ranges_by_file.get(src, []):
+            if a <= line <= b:
+                owner = next((k for k in nodes
+                              if k.startswith("pulse:") and k.endswith(f":{name}")
+                              and nodes[k]["source"] == src), None)
+                if owner:
+                    return owner
+        return None
+
+    sources = {"state/judge-sets.yml"} | set(ranges_by_file)
+    pairs: dict[tuple[str, str], dict] = {}
+    for src in sorted(sources):
+        cites = dc.harvest_file(REPO / src, src, corpus)
+        dc.resolve(cites, corpus)
+        for c in cites:
+            if c.status not in ("resolved", "moved") or c.shape in ("external", "sec"):
+                continue
+            owner = owner_for(src, c.line)
+            if owner is None:
+                continue   # file-header/prose citation — not a block's edge
+            key = c.key.replace(" ", "-") if c.shape != "constraint" \
+                else f"constraint-{c.key}"
+            target = f"doctrine:{c.doc}#{key}"
+            if target not in nodes:
+                nodes[target] = {
+                    "kind": "doctrine",
+                    "source": c.doc,
+                    "section": key,
+                    "heading": c.heading or None,
+                }
+            pk = (owner, target)
+            if pk not in pairs:
+                pairs[pk] = {
+                    "from": owner, "to": target, "kind": "governed_by",
+                    "via": f"cited at {src}:{c.line}",
+                    "citations": 1,
+                    "derived": "doctrine-cite",
+                }
+            else:
+                pairs[pk]["citations"] += 1
+    return [pairs[k] for k in sorted(pairs)]
+
+
 def derive_registry_bindings(nodes: dict) -> list[dict]:
     """authentik:<slug> → service:<id> for every registry row whose slug maps
     onto a manifest service. The 43 uniform tofu→authentik pairs are NOT
@@ -759,12 +907,14 @@ def build() -> dict:
     bindings = derive_registry_bindings(nodes)
     substrate = derive_substrate(nodes)
     structural = derive_structural(nodes)
+    doctrine = derive_doctrine(nodes)
     mutex = derive_mutex(nodes)
     ensure_capability_resources(nodes, edges)
     # After every node exists (derive_mutex/ensure_capability_resources mint
     # resource nodes): taxonomy anchor + embeddable one-liner, every node.
     annotate_nodes(nodes)
-    all_edges = declared + writes + edges + bindings + substrate + structural + mutex
+    all_edges = (declared + writes + edges + bindings + substrate + structural
+                 + doctrine + mutex)
 
     # Per-kind cycles are a compile error (§2c-2): there is no legitimate
     # same-night cycle in a cron estate.
@@ -784,9 +934,9 @@ def build() -> dict:
     all_edges.sort(key=lambda e: (e["kind"], e["from"], e["to"]))
     counts = {"nodes": len(nodes), "edges": len(all_edges)}
     for k in ("pulse", "judge", "gateset", "weakness", "daemon", "service", "resource",
-              "repo", "tofu", "authentik", "table"):
+              "repo", "tofu", "authentik", "table", "doctrine"):
         counts[f"nodes_{k}"] = sum(1 for n in nodes.values() if n["kind"] == k)
-    for k in EDGE_KINDS + ("mutex",):
+    for k in EDGE_KINDS + ("mutex", "governed_by"):
         counts[f"edges_{k}"] = sum(1 for e in all_edges if e["kind"] == k)
 
     return {
