@@ -157,3 +157,69 @@ def test_promotion_does_not_stage_anything():
         "promote() stages files. It must leave them in the working tree for the "
         "operator to read and commit; staging is the first half of deciding."
     )
+
+
+# ── --status: the answer a blocked `git pull` needs ──────────────────────────
+#
+# Added 2026-08-06, after the operator's `git pull --ff-only` aborted on these
+# two files for the second time and asked whether that was a manual decision
+# step. It is one — the design says promoting into dev stays human — but the
+# operator was given no way to see whether the local copy was precious or
+# already superseded, so the decision was made on a hunch each time.
+#
+# Both of this feature's own first-run defects are pinned below, because each
+# produced a CONFIDENT WRONG ANSWER, which is worse than no feature.
+
+
+def test_status_compares_against_the_upstream_not_the_local_branch():
+    """`--status dev` compared the working tree against the LOCAL `dev` ref,
+    which in a worktree flow trails the remote by however many pushes the agent
+    made with `HEAD:dev`. It then named four findings as carried only by the
+    working tree that the incoming tip already had.
+
+    A pull merges the upstream. Resolving to it is the fix; PRINTING the
+    resolution is what makes the answer auditable.
+    """
+    src = TOOL.read_text(encoding="utf-8")
+    assert "def resolve_base" in src, "the base is no longer resolved before comparing"
+    assert 'f"origin/{base}"' in src, (
+        "--status no longer prefers the remote-tracking ref, so it compares "
+        "against whatever the local branch happens to be"
+    )
+    body = src[src.find("def resolve_base"):src.find("def status(")]
+    assert "print(" in body, (
+        "the resolution is silent — an answer whose input is invisible is how "
+        "the first version of this got it wrong"
+    )
+
+
+def test_status_reads_blob_bytes_not_stripped_output():
+    """`git()` strips its stdout, which is right for a sha and wrong for a
+    file: every JSON here ends in a newline, so a stripped read can never equal
+    the file on disk. The first run reported two byte-identical files as
+    differing because of it."""
+    src = TOOL.read_text(encoding="utf-8")
+    assert "def blob(" in src, "the exact-bytes blob reader is gone"
+    status_body = src[src.find("def status("):src.find("def promote(")]
+    assert 'git("show"' not in status_body, (
+        "--status reads a file through git(), whose .strip() makes every "
+        "comparison against an on-disk file false"
+    )
+
+
+def test_status_never_says_safe_while_rows_exist_only_here():
+    """The one irreversible outcome is discarding a row nothing else holds.
+
+    Exit 0 must mean exactly "the base holds every row you have". A row the
+    base lacks is exit 3 whether or not `scan-data` recorded it — recording
+    changes how bad it is, not whether there is a decision to make.
+    """
+    src = TOOL.read_text(encoding="utf-8")
+    body = src[src.find("def status("):src.find("def promote(")]
+    branch_idx = body.find("if only_live:")
+    assert branch_idx != -1, "the only-in-working-tree branch is gone"
+    guarded = body[branch_idx:branch_idx + 400]
+    assert "at_risk = True" in guarded, (
+        "a row that exists only in the working tree no longer sets at_risk, so "
+        "--status can answer 'safe to discard' over unrecorded findings"
+    )

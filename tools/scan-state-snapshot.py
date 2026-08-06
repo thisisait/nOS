@@ -44,13 +44,25 @@ human decision, because status changes carry rationale that deserves review.
                                                    working tree, then review
                                                    and commit it yourself
 
-Usage:  scan-state-snapshot.py [--branch NAME] [--promote] [--dry-run] [--push REMOTE]
+WHEN `git pull` REFUSES. That the working tree stays dirty is the design, not a
+fault: it holds scan output `dev` has not been given yet, and giving it is a
+human decision. But `--ff-only` then aborts with "your local changes would be
+overwritten", and nothing on hand answers the only question that matters —
+whether those local changes are precious or already superseded. `--status`
+answers it by comparing rows, and refuses to say "safe" on doubt.
+
+    tools/scan-state-snapshot.py --status          # vs dev; exit 0 = discardable
+    tools/scan-state-snapshot.py --status master
+
+Usage:  scan-state-snapshot.py [--branch NAME] [--status BASE] [--promote]
+                               [--dry-run] [--push REMOTE]
 
 Exit codes
 ----------
-  0  recorded, or nothing had changed
+  0  recorded, or nothing had changed, or --status found nothing to lose
   1  refused — the target branch is checked out somewhere
   2  git failed, or a declared file is missing
+  3  --status: the working tree carries rows the base does not
 """
 
 from __future__ import annotations
@@ -165,6 +177,168 @@ def subject(before: dict[str, int], after: dict[str, int]) -> str:
     return f"scan state: {', '.join(deltas) if deltas else 'edits only'} ({total} total)"
 
 
+def blob(rev_path: str) -> str | None:
+    """A blob's EXACT bytes. `git()` strips its output, which is right for a
+    sha and wrong for a file: every JSON here ends in a newline, so a stripped
+    read never compares equal to the file on disk. That bug made this tool's
+    first run report two identical files as differing."""
+    out = subprocess.run(["git", "-C", str(REPO), "show", rev_path],
+                         capture_output=True, text=True)
+    return out.stdout if out.returncode == 0 else None
+
+
+def _rows(text: str) -> dict[str, dict]:
+    """Queue rows by id. An unparseable file yields {} — the caller says so
+    rather than reporting a confident zero."""
+    try:
+        data = json.loads(text)
+        items = data if isinstance(data, list) else data.get("items", [])
+        return {str(it["id"]): it for it in items if isinstance(it, dict) and "id" in it}
+    except Exception:
+        return {}
+
+
+def resolve_base(base: str) -> str:
+    """Resolve what `git pull` would ACTUALLY bring in, and say so.
+
+    THE TRAP THIS EXISTS FOR, caught on its first run. `--status dev` compared
+    against the LOCAL branch `dev`, which in a worktree-driven flow is whatever
+    the operator's checkout last landed on — here five commits behind, because
+    the agent had pushed `HEAD:dev` to the remote without ever moving the local
+    ref. The tool then reported four findings as "carried only by the working
+    tree" that the incoming tip already had, and told the operator not to
+    discard. Confidently, about a ref nobody asked about.
+
+    A pull merges the UPSTREAM. So resolve `<name>` to `origin/<name>` when a
+    remote-tracking ref by that name exists, and print the resolution with its
+    sha, because an answer whose input is invisible is how the first version
+    got it wrong.
+    """
+    explicit_remote = "/" in base
+    candidate = base if explicit_remote else f"origin/{base}"
+    for ref in ([candidate] if explicit_remote else [candidate, base]):
+        sha = git("rev-parse", "-q", "--verify", f"{ref}^{{commit}}", check=False)
+        if sha:
+            if ref != base:
+                print(f"[i] {base} → {ref} ({sha[:8]}): a pull merges the upstream, "
+                      f"not the local branch of the same name")
+            else:
+                print(f"[i] base {ref} ({sha[:8]}) — no remote-tracking ref by that name")
+            return ref
+    print(f"[-] cannot resolve {base} to a commit", file=sys.stderr)
+    raise SystemExit(2)
+
+
+def status(branch: str, base: str) -> int:
+    """Answer the one question a blocked `git pull` asks: does my dirty working
+    tree carry anything the branch I am pulling does not?
+
+    WHY THIS EXISTS. The design is deliberate — the scan writes into the
+    working tree, this tool records that onto `scan-data` by moving one ref,
+    and promoting into `dev` stays a human decision because a status change
+    carries a rationale worth reading. What the design never covered is the
+    moment the operator meets its consequence: `git pull --ff-only` aborts with
+    "your local changes would be overwritten", and nothing on hand says whether
+    those local changes are precious or already superseded.
+
+    On 2026-08-06 the answer was "already superseded" — scan-state.json was
+    byte-identical to the incoming tip and the queue differed by one row the
+    incoming tip had MORE of — but establishing that took a row-by-row
+    comparison by hand. Doing it by hand is how a real finding eventually gets
+    discarded on the assumption that it is noise again.
+
+    Exit 0 = safe to discard the working copy. Exit 3 = it carries rows the
+    base does not; promote or commit them first. Never 0 on doubt.
+    """
+    base = resolve_base(base)
+
+    verdicts: list[str] = []
+    at_risk = False
+
+    for rel in TRACKED:
+        live_path = REPO / rel
+        if not live_path.is_file():
+            print(f"  {rel}: ABSENT from the working tree", file=sys.stderr)
+            at_risk = True
+            continue
+        live = live_path.read_text(encoding="utf-8")
+        incoming = blob(f"{base}:{rel}")
+        if incoming is None:
+            verdicts.append(f"  {rel}: not present at {base} — pulling cannot overwrite it")
+            continue
+
+        if live == incoming:
+            verdicts.append(f"  {rel}: identical to {base} ({len(live)} B) — nothing to lose")
+            continue
+
+        # RECORDED ELSEWHERE IS NOT LOST. The whole point of `scan-data` is that
+        # the working copy is preserved without touching the tree, so a
+        # difference the branch already holds is recoverable and discarding it
+        # is reversible. Only what NOTHING holds is a loss.
+        recorded = blob(f"{branch}:{rel}") == live
+
+        live_rows, incoming_rows = _rows(live), _rows(incoming)
+        if not live_rows or not incoming_rows:
+            # Not row-shaped (scan-state.json), or unparseable — no finer
+            # comparison is available, so the branch is the only assurance.
+            if recorded:
+                verdicts.append(f"  {rel}: differs from {base}, but this exact copy is "
+                                f"recorded on {branch} — discarding is recoverable")
+            else:
+                at_risk = True
+                verdicts.append(f"  {rel}: differs from {base} and is NOT recorded on "
+                                f"{branch} — review by hand")
+            continue
+
+        only_live = sorted(set(live_rows) - set(incoming_rows))
+        changed = sorted(k for k in set(live_rows) & set(incoming_rows)
+                         if live_rows[k] != incoming_rows[k])
+        only_incoming = sorted(set(incoming_rows) - set(live_rows))
+
+        # Both branches below are exit 3: a row the base lacks means the
+        # operator has a decision to make either way. `recorded` changes how
+        # BAD it is, not whether there is work — saying "safe to discard" and
+        # "promote these first" in one breath is the kind of message that
+        # teaches people to skip the output.
+        if only_live:
+            at_risk = True
+            if recorded:
+                verdicts.append(f"  {rel}: {len(only_live)} row(s) {base} lacks. This exact "
+                                f"copy IS recorded on {branch}, so nothing is lost — but "
+                                f"promote them before the working copy goes")
+            else:
+                verdicts.append(f"  {rel}: {len(only_live)} row(s) exist ONLY in the working "
+                                f"tree and are recorded NOWHERE — DO NOT discard")
+        else:
+            verdicts.append(f"  {rel}: {base} holds every row here (+{len(only_incoming)} "
+                            f"it has in addition) — safe to discard the working copy")
+        for k in only_live[:10]:
+            verdicts.append(f"      only here  {k}: {live_rows[k].get('severity','?')} "
+                            f"{live_rows[k].get('status','?')} · {live_rows[k].get('component','?')}")
+        # A differing row is NOT a loss — `base` carries a version of it and the
+        # pull replaces yours with that one. Named anyway, because "replaced by
+        # a version I did not read" is how a rationale quietly disappears.
+        for k in changed[:10]:
+            verdicts.append(f"      replaced   {k}: {live_rows[k].get('status','?')} → "
+                            f"{incoming_rows[k].get('status','?')}")
+
+    print(f"working tree {REPO} vs {base}:")
+    for line in verdicts:
+        print(line)
+
+    if at_risk:
+        print(f"\nThe working tree holds scan output {base} has never seen. Record it, so "
+              f"the copy survives whatever you do next:\n"
+              f"  tools/scan-state-snapshot.py --repo {REPO}   # onto {branch}, no tree touched\n"
+              f"then promote what belongs in {base} — a status change carries a rationale, "
+              f"which is why that stays your call and not this tool's.")
+        return 3
+
+    print(f"\nSafe to discard and pull:\n"
+          f"  git checkout -- {' '.join(TRACKED)} && git pull --ff-only")
+    return 0
+
+
 def promote(branch: str) -> int:
     """Copy the branch's state into the working tree for review.
 
@@ -193,6 +367,9 @@ def main() -> int:
                          "(worktrees share the ref, so the branch is the same)")
     ap.add_argument("--promote", action="store_true",
                     help="copy the branch's state into the working tree (no staging)")
+    ap.add_argument("--status", nargs="?", const="dev", metavar="BASE",
+                    help="does the dirty working tree carry anything BASE (default dev) "
+                         "lacks? exit 0 safe to discard, 3 it does")
     ap.add_argument("--dry-run", action="store_true",
                     help="report what would be recorded; move no ref")
     ap.add_argument("--push", metavar="REMOTE",
@@ -204,6 +381,9 @@ def main() -> int:
         if not (REPO / ".git").exists():
             print(f"[-] {REPO} is not a git checkout", file=sys.stderr)
             return 2
+
+    if args.status:
+        return status(args.branch, args.status)
 
     if args.promote:
         return promote(args.branch)
