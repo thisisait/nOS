@@ -6,7 +6,7 @@
 
 services:
   vaultwarden:
-    image: vaultwarden/server:{{ vaultwarden_version | default('latest') }}
+    image: vaultwarden/server:{{ vaultwarden_version }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}

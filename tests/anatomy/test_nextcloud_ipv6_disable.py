@@ -25,7 +25,15 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 COMPOSE = REPO / "roles/pazny.nextcloud/templates/compose.yml.j2"
 
 # Minimal stub vars so the fragment renders to valid YAML without Ansible.
+#
+# `nextcloud_version` joined this list on 2026-08-06, when the template's
+# `| default('stable')` was removed along with 60 other dead image fallbacks.
+# The stub had been leaning on that fallback: without it the image line renders
+# `image: nextcloud:` and the YAML parse fails with "mapping values are not
+# allowed here". Production always supplies the pin, so the stub must too —
+# a test that only passes because of a fallback is testing the fallback.
 _STUB = {
+    "nextcloud_version": "33",
     "nextcloud_dir": "/data/nextcloud",
     "nextcloud_data_dir": "/data/nextcloud-data",
     "nextcloud_db_name": "nextcloud",

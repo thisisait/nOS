@@ -19,7 +19,7 @@
 
 services:
   tempo:
-    image: grafana/tempo:{{ tempo_version | default('2.10.0') }}
+    image: grafana/tempo:{{ tempo_version }}
     restart: unless-stopped
     command: ["-config.file=/etc/tempo.yaml"]
     ports:

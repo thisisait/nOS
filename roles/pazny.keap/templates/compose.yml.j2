@@ -27,7 +27,7 @@ services:
     build:
       context: {{ keap_src_dir | default(ansible_facts['env']['HOME'] + '/keap/src') }}
       dockerfile: Dockerfile
-    image: nos/keap:{{ keap_version | default('latest') }}
+    image: nos/keap:{{ keap_version }}
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ keap_port | default(8091) }}:8080"

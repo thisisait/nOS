@@ -11,7 +11,7 @@
 
 services:
   mariadb:
-    image: mariadb:{{ mariadb_version | default('lts') }}
+    image: mariadb:{{ mariadb_version }}
     hostname: mariadb
     restart: unless-stopped
     # Performance tuning (safe to keep across volume backends).

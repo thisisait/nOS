@@ -9,7 +9,7 @@
 
 services:
   rustfs:
-    image: rustfs/rustfs:{{ rustfs_version | default('latest') }}
+    image: rustfs/rustfs:{{ rustfs_version }}
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ rustfs_api_port | default(9010) }}:9000"

@@ -10,7 +10,7 @@
 
 services:
   jellyfin:
-    image: jellyfin/jellyfin:{{ jellyfin_version | default('latest') }}
+    image: jellyfin/jellyfin:{{ jellyfin_version }}
     restart: unless-stopped
     ports:
 {% if jellyfin_lan_access | default(false) or services_lan_access | default(false) %}

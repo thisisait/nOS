@@ -12,7 +12,7 @@
 
 services:
   nodered:
-    image: nodered/node-red:{{ nodered_version | default('4.0.9') }}
+    image: nodered/node-red:{{ nodered_version }}
     restart: unless-stopped
     user: "{{ nodered_uid }}:{{ nodered_gid }}"
     ports:

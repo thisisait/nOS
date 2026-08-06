@@ -14,7 +14,7 @@
 
 services:
   prometheus:
-    image: prom/prometheus:{{ prometheus_version | default('latest') }}
+    image: prom/prometheus:{{ prometheus_version }}
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ prometheus_port | default(9090) }}:9090"

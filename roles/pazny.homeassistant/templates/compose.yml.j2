@@ -12,7 +12,7 @@
 
 services:
   homeassistant:
-    image: homeassistant/home-assistant:{{ homeassistant_version | default('stable') }}
+    image: homeassistant/home-assistant:{{ homeassistant_version }}
     restart: unless-stopped
 {% if homeassistant_privileged | default(false) %}
     privileged: true

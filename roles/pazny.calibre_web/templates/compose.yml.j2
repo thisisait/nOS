@@ -16,7 +16,7 @@
 
 services:
   calibre-web:
-    image: lscr.io/linuxserver/calibre-web:{{ calibreweb_version | default('latest') }}
+    image: lscr.io/linuxserver/calibre-web:{{ calibreweb_version }}
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ calibreweb_port | default(8083) }}:8083"

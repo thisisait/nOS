@@ -11,7 +11,7 @@
 
 services:
   redis:
-    image: redis:{{ redis_version | default('7-alpine') }}
+    image: redis:{{ redis_version }}
     hostname: redis
     restart: unless-stopped
     ports:

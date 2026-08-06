@@ -9,7 +9,7 @@
 
 services:
   mcpo:
-    image: {{ mcpo_image }}:{{ mcpo_version | default('v0.0.20') }}
+    image: {{ mcpo_image }}:{{ mcpo_version }}
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ mcpo_port | default(8765) }}:8000"
@@ -64,7 +64,7 @@ services:
 {% if mcp_enable_grafana | default(true) %}
   # Grafana MCP server (SSE transport) — sibling container for mcpo
   mcp-grafana:
-    image: {{ mcp_grafana_image | default('mcp/grafana') }}:{{ mcp_grafana_version | default('latest') }}
+    image: {{ mcp_grafana_image | default('mcp/grafana') }}:{{ mcp_grafana_version }}
     restart: unless-stopped
     environment:
       GRAFANA_URL: "{{ mcp_grafana_url }}"

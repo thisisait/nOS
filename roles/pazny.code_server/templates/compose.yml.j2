@@ -12,7 +12,7 @@
 
 services:
   code-server:
-    image: lscr.io/linuxserver/code-server:{{ code_server_version | default('4.115.0-ls332') }}
+    image: lscr.io/linuxserver/code-server:{{ code_server_version }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}

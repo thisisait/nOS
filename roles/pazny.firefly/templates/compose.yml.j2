@@ -13,7 +13,7 @@
 
 services:
   firefly:
-    image: fireflyiii/core:{{ firefly_version | default('version-6.2.21') }}
+    image: fireflyiii/core:{{ firefly_version }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}

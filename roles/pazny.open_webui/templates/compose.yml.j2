@@ -6,7 +6,7 @@
 
 services:
   open-webui:
-    image: ghcr.io/open-webui/open-webui:{{ openwebui_version | default('main') }}
+    image: ghcr.io/open-webui/open-webui:{{ openwebui_version }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}

@@ -17,7 +17,7 @@ services:
       dockerfile: Dockerfile
       args:
         BASE: "apache/superset:{{ superset_version | default('6.0.0-dev') }}"
-    image: nos/superset:{{ superset_version | default('6.0.0-dev') }}
+    image: nos/superset:{{ superset_version }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}

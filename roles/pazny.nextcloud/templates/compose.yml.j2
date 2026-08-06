@@ -9,7 +9,7 @@
 
 services:
   nextcloud:
-    image: nextcloud:{{ nextcloud_version | default('stable') }}
+    image: nextcloud:{{ nextcloud_version }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}

@@ -10,7 +10,7 @@
 
 services:
   kiwix:
-    image: ghcr.io/kiwix/kiwix-serve:{{ kiwix_version | default('latest') }}
+    image: ghcr.io/kiwix/kiwix-serve:{{ kiwix_version }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}

@@ -6,7 +6,7 @@
 
 services:
   outline:
-    image: outlinewiki/outline:{{ outline_version | default('latest') }}
+    image: outlinewiki/outline:{{ outline_version }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}

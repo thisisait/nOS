@@ -12,7 +12,7 @@
 
 services:
   portainer:
-    image: portainer/portainer-ce:{{ portainer_version | default('latest') }}
+    image: portainer/portainer-ce:{{ portainer_version }}
     restart: unless-stopped
     # --http-enabled: Portainer 2.19+ disables the plain-HTTP listener by
     # default and 303-redirects :9000 → HTTPS. We publish HTTP on 9000 (TLS is

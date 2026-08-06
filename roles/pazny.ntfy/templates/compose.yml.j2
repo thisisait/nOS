@@ -9,7 +9,7 @@
 
 services:
   ntfy:
-    image: binwiederhier/ntfy:{{ ntfy_version | default('v2.21.0') }}
+    image: binwiederhier/ntfy:{{ ntfy_version }}
     restart: unless-stopped
     command: ["serve"]
     ports:

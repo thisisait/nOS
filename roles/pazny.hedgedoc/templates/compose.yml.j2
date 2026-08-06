@@ -6,7 +6,7 @@
 
 services:
   hedgedoc:
-    image: quay.io/hedgedoc/hedgedoc:{{ hedgedoc_version | default('1.10.7') }}
+    image: quay.io/hedgedoc/hedgedoc:{{ hedgedoc_version }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}

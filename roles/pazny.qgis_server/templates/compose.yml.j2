@@ -11,7 +11,7 @@
 
 services:
   qgis-server:
-    image: kartoza/qgis-server:{{ qgis_version | default('latest') }}
+    image: kartoza/qgis-server:{{ qgis_version }}
     platform: linux/amd64    # amd64 only - Docker Desktop emulates via Rosetta
     restart: unless-stopped
     # Restart-loop fix: kartoza's /entrypoint.sh does a non-idempotent

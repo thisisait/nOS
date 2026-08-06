@@ -13,7 +13,7 @@
 
 services:
   influxdb:
-    image: influxdb:{{ influxdb_version | default('2.7.12') }}
+    image: influxdb:{{ influxdb_version }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}

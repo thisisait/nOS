@@ -22,6 +22,7 @@ same shape as a ratchet that stops being re-measured.
 from __future__ import annotations
 
 import pathlib
+import re
 
 import pytest
 import yaml
@@ -113,6 +114,69 @@ def test_exceptions_still_apply():
     floating = {(r, k) for (r, k, _) in _floating_tags()}
     stale = [e for e in EXCEPTIONS if e not in floating]
     assert not stale, f"EXCEPTIONS entries no longer floating (remove them): {stale}"
+
+
+ROLE_TEMPLATES = "roles/pazny.*/templates/compose.yml.j2"
+
+
+def test_no_image_line_carries_its_own_fallback():
+    """REM-174, found by the 2026-08-06 supply-chain probe: this gate scanned
+    three surfaces and none of them was the render path.
+
+    It read variable DECLARATIONS in default.config.yml and role defaults, plus
+    literal `image:` lines in the base stack templates — but not
+    `roles/pazny.*/templates/compose.yml.j2`, which is where every Tier-1
+    service's image tag is actually composed. Sixty-one image lines there
+    carried a Jinja fallback, 27 of them floating (`| default('latest')`,
+    `'stable'`, `'main'`).
+
+    MEASURED BEFORE REMOVING THEM: not one guarded an undeclared variable. All
+    61 were unreachable — 48 declared in default.config.yml, 13 in a role
+    default — so they were a THIRD spelling of a pin, after the config and the
+    role default the shadow sweep had already collapsed to one.
+
+    Unreachable is the good case. The bad case is the day one of those
+    variables goes missing: `| default('latest')` turns a loud undefined-var
+    abort into a silent deploy of whatever `latest` points at that morning.
+    That is the same trade this repo keeps refusing — absence rendering as a
+    value rather than as a stop.
+    """
+    # VERSION variables only. An image-NAME fallback is a different animal and
+    # the bulk removal learned this by breaking one: `{{ onlyoffice_image |
+    # default('onlyoffice/documentserver') }}` is the documented euro-office
+    # flip point, and `watchtower_image` / `mcp_grafana_image` name a registry
+    # path rather than pin a version. A missing name renders a nonsense image
+    # reference that fails at pull; a missing VERSION renders `service:` and
+    # silently means `latest`. Only the second is the defect this gate is for.
+    version_fallback = re.compile(
+        r"\{\{\s*([a-z0-9_]*(?:_version|_image_version|_tag))\s*\|\s*default\(")
+    offenders = []
+    for tpl in sorted(REPO.glob(ROLE_TEMPLATES)):
+        for n, line in enumerate(tpl.read_text(encoding="utf-8").splitlines(), 1):
+            if not line.strip().startswith("image:"):
+                continue
+            for match in version_fallback.finditer(line):
+                offenders.append(
+                    f"  {tpl.relative_to(REPO)}:{n}  {match.group(1)} — {line.strip()[:80]}")
+    assert not offenders, (
+        "an `image:` line guards its VERSION variable with a Jinja fallback. "
+        "The variable is declared elsewhere, so the fallback cannot fire — "
+        "until the declaration disappears, and then it deploys a tag nobody "
+        "chose instead of failing. Drop the `| default(...)`:\n"
+        + "\n".join(offenders)
+    )
+
+
+def test_the_render_path_is_scanned_at_all():
+    """Positive control for REM-174's actual finding — a glob that matches
+    nothing would make the check above vacuous, which is precisely how the
+    render path went unscanned in the first place."""
+    templates = list(REPO.glob(ROLE_TEMPLATES))
+    assert len(templates) > 40, (
+        f"only {len(templates)} role compose templates matched; the render "
+        f"path has stopped being scanned"
+    )
+    assert any("image:" in t.read_text(encoding="utf-8") for t in templates)
 
 
 def test_no_floating_tags_in_base_stack_templates():

@@ -20,7 +20,7 @@
 
 services:
   erpnext-configurator:
-    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    image: frappe/erpnext:{{ erpnext_version }}
     restart: "no"
     entrypoint: ["bash", "-c"]
     command:
@@ -57,7 +57,7 @@ services:
     cpus: {{ docker_cpus_standard | default('1.0') }}
 
   erpnext-backend:
-    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    image: frappe/erpnext:{{ erpnext_version }}
     restart: unless-stopped
     # Wait for one-shot configurator (creates site + bench-config) to exit 0.
     # Without this, `docker compose up --wait` (parallel start) marks the
@@ -105,7 +105,7 @@ services:
     cpus: {{ docker_cpus_standard | default('1.0') }}
 
   erpnext-frontend:
-    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    image: frappe/erpnext:{{ erpnext_version }}
     restart: unless-stopped
     depends_on:
       erpnext-configurator:
@@ -138,7 +138,7 @@ services:
     cpus: {{ docker_cpus_standard | default('1.0') }}
 
   erpnext-queue-short:
-    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    image: frappe/erpnext:{{ erpnext_version }}
     restart: unless-stopped
     depends_on:
       erpnext-configurator:
@@ -165,7 +165,7 @@ services:
     cpus: {{ docker_cpus_standard | default('1.0') }}
 
   erpnext-queue-long:
-    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    image: frappe/erpnext:{{ erpnext_version }}
     restart: unless-stopped
     depends_on:
       erpnext-configurator:
@@ -192,7 +192,7 @@ services:
     cpus: {{ docker_cpus_standard | default('1.0') }}
 
   erpnext-scheduler:
-    image: frappe/erpnext:{{ erpnext_version | default('v15') }}
+    image: frappe/erpnext:{{ erpnext_version }}
     restart: unless-stopped
     depends_on:
       erpnext-configurator:

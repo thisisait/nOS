@@ -9,7 +9,7 @@
 
 services:
   spacetimedb:
-    image: clockworklabs/spacetime:{{ spacetimedb_version | default('latest') }}
+    image: clockworklabs/spacetime:{{ spacetimedb_version }}
     hostname: spacetimedb
     restart: unless-stopped
     # Bind to 127.0.0.1 unless services_lan_access — host CLI talks to localhost,

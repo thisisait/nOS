@@ -6,7 +6,7 @@
 
 services:
   miniflux:
-    image: miniflux/miniflux:{{ miniflux_version | default('2.2.19') }}
+    image: miniflux/miniflux:{{ miniflux_version }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}

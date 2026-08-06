@@ -9,7 +9,7 @@
 
 services:
   gitea:
-    image: gitea/gitea:{{ gitea_version | default('latest') }}
+    image: gitea/gitea:{{ gitea_version }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}

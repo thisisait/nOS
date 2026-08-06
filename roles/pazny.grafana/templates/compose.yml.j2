@@ -25,7 +25,7 @@
 
 services:
   grafana:
-    image: grafana/grafana:{{ grafana_version | default('latest') }}
+    image: grafana/grafana:{{ grafana_version }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}
@@ -101,7 +101,7 @@ services:
 {% if install_postgresql | default(false) %}
   # ── Postgres exporter ────────────────────────────────────────────────────
   postgres-exporter:
-    image: prometheuscommunity/postgres-exporter:{{ postgres_exporter_version | default('v0.15.0') }}
+    image: prometheuscommunity/postgres-exporter:{{ postgres_exporter_version }}
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ postgres_exporter_port | default(9187) }}:9187"
@@ -132,7 +132,7 @@ services:
   # PROCESS, REPLICATION CLIENT, SELECT). Connection string uses the
   # MySQL-compatible DSN (user:pass@(host:port)/).
   mysqld-exporter:
-    image: prom/mysqld-exporter:{{ mysqld_exporter_version | default('v0.15.1') }}
+    image: prom/mysqld-exporter:{{ mysqld_exporter_version }}
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ mysqld_exporter_port | default(9104) }}:9104"
@@ -167,7 +167,7 @@ services:
 {% if redis_docker | default(false) %}
   # ── Redis exporter ───────────────────────────────────────────────────────
   redis-exporter:
-    image: oliver006/redis_exporter:{{ redis_exporter_version | default('v1.58.0') }}
+    image: oliver006/redis_exporter:{{ redis_exporter_version }}
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ redis_exporter_port | default(9121) }}:9121"
@@ -197,7 +197,7 @@ services:
   # root "/" bind is a passthrough to the VM; cAdvisor still reports per-
   # container CPU/RAM/net/fs from /var/lib/docker.
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:{{ cadvisor_version | default('v0.49.1') }}
+    image: gcr.io/cadvisor/cadvisor:{{ cadvisor_version }}
     restart: unless-stopped
     privileged: true
     ports:
@@ -234,7 +234,7 @@ services:
   # files/observability/blackbox/config.yml. Prometheus scrape targets for
   # individual URLs are owned by A2 in the prometheus rules/config dir.
   blackbox-exporter:
-    image: prom/blackbox-exporter:{{ blackbox_exporter_version | default('v0.25.0') }}
+    image: prom/blackbox-exporter:{{ blackbox_exporter_version }}
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ blackbox_exporter_port | default(9115) }}:9115"

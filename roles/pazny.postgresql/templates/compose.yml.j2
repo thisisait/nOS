@@ -11,7 +11,7 @@
 
 services:
   postgresql:
-    image: postgres:{{ postgresql_version | default('16-alpine') }}
+    image: postgres:{{ postgresql_version }}
     hostname: postgresql
     restart: unless-stopped
     ports:

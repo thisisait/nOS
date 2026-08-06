@@ -9,7 +9,7 @@
 
 services:
   metabase:
-    image: metabase/metabase:{{ metabase_version | default('latest') }}
+    image: metabase/metabase:{{ metabase_version }}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}

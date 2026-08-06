@@ -6,7 +6,7 @@
 
 services:
   wordpress:
-    image: wordpress:{{ wordpress_version | default('latest') }}
+    image: wordpress:{{ wordpress_version }}
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ wordpress_port | default(8084) }}:80"

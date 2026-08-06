@@ -9,7 +9,7 @@
 
 services:
   freepbx:
-    image: tiredofit/freepbx:{{ freepbx_version | default('latest') }}
+    image: tiredofit/freepbx:{{ freepbx_version }}
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ freepbx_port | default(8088) }}:80"

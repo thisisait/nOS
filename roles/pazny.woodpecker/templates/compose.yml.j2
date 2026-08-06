@@ -12,7 +12,7 @@
 
 services:
   woodpecker-server:
-    image: woodpeckerci/woodpecker-server:{{ woodpecker_version | default('latest') }}
+    image: woodpeckerci/woodpecker-server:{{ woodpecker_version }}
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ woodpecker_port | default(8060) }}:8000"
@@ -70,7 +70,7 @@ services:
     cpus: {{ docker_cpus_light | default('0.5') }}
 
   woodpecker-agent:
-    image: woodpeckerci/woodpecker-agent:{{ woodpecker_version | default('latest') }}
+    image: woodpeckerci/woodpecker-agent:{{ woodpecker_version }}
     restart: unless-stopped
     depends_on:
       - woodpecker-server

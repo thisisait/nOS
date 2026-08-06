@@ -14,7 +14,7 @@
 
 services:
   loki:
-    image: grafana/loki:{{ loki_version | default('latest') }}
+    image: grafana/loki:{{ loki_version }}
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ loki_port | default(3100) }}:3100"

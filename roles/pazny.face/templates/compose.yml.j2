@@ -22,7 +22,7 @@ services:
     build:
       context: {{ face_src_dir | default(ansible_facts['env']['HOME'] + '/face/src') }}
       dockerfile: Dockerfile
-    image: nos/face:{{ face_version | default('latest') }}
+    image: nos/face:{{ face_version }}
     restart: unless-stopped
     ports:
       # Loopback debug publish only (NOT for Traefik — Traefik reaches the
