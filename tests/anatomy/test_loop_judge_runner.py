@@ -384,13 +384,13 @@ def test_a_completed_pytest_run_still_passes():
         registry=_one_judge_registry("pytest-anatomy", "repo"),
         repo_root=REPO,
         spawn=_fake_spawn(
-            **{"pytest": J.Completed(exit_code=0, stdout="2974 passed, 27 skipped in 249.53s\n")}
+            **{"pytest": J.Completed(exit_code=0, stdout="3003 passed, 27 skipped in 252.00s\n")}
         ),
         probe=_always_true,
         sandbox_factory=lambda root: (root, "sha-fake", lambda: None),
     )
     assert verdict.result is J.Result.PASS, verdict.reason
-    assert verdict.runs[0].work == 2974
+    assert verdict.runs[0].work == 3003
 
 
 def test_an_interrupted_pytest_that_did_fail_is_still_a_fail():
@@ -740,7 +740,7 @@ def test_pytest_never_runs_against_the_live_tree():
 
     def spy(argv, cwd, timeout_s):
         seen_cwd.append(cwd)
-        return J.Completed(exit_code=0, stdout="2974 passed in 249.00s\n")
+        return J.Completed(exit_code=0, stdout="3003 passed in 252.00s\n")
 
     sandbox = REPO.parent / "fake-sandbox"
     verdict = J.run_gate_set(
@@ -776,7 +776,7 @@ def test_every_judge_in_a_set_observes_exactly_one_tree():
         return {
             "ansible-lint": GREEN_ANSIBLE_LINT,
             "genome-codegen": GREEN_GENOME,
-            "pytest": J.Completed(exit_code=0, stdout="2974 passed in 249.00s\n"),
+            "pytest": J.Completed(exit_code=0, stdout="3003 passed in 252.00s\n"),
         }[_argv_key(argv)]
 
     sandbox = REPO.parent / "one-tree-sandbox"
@@ -933,13 +933,13 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 #: collection gate below did NOT fire this time — 2943 against a 2911 record
 #: was inside its 5% allowance — but a record known stale is re-derived anyway:
 #: the allowance is slack for host variance, not a budget to spend.
-#: RE-DERIVED 2026-08-06 (third pass that day), both by running the tools:
-#:   pytest tests/anatomy -q  → "2974 passed, 27 skipped in 249.53s"
-#:   ansible-lint             → "0 failure(s) ... in 1484 files processed of 3183"
+#: RE-DERIVED 2026-08-06 (fourth pass that day), both by running the tools:
+#:   pytest tests/anatomy -q  → "3003 passed, 27 skipped in 252s"
+#:   ansible-lint             → "0 failure(s) ... in 1489 files processed of 3193"
 MEASURED_WORK = {
-    "ansible-lint": 1484,
+    "ansible-lint": 1489,
     "genome-codegen": 2,
-    "pytest-anatomy": 2974,
+    "pytest-anatomy": 3003,
     "cortex-corpus-diff": 1,
 }
 

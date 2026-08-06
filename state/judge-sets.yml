@@ -132,7 +132,12 @@ judges:
     # core-substrate graph gates + the ledger-list gates added 25). Same
     # rule: the record is known stale, so the floor moves without waiting
     # for the collection gate to force it.
-    min_work: 2950
+    #
+    # RE-DERIVED same day, fourth pass (3003 passed, 27 skipped — the
+    # doctrine-citation gate + run-now gate + the parent session's
+    # cannot-run-says-so gates). The cadence is the point: every commit
+    # that grows the suite moves the floor in the same diff.
+    min_work: 2980
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,
