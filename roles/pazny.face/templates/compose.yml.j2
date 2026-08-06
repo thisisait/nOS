@@ -50,6 +50,20 @@ services:
       # until then the file browser degrades gracefully (shows "unreachable").
       NOS_VFS_API_URL: "http://host.docker.internal:{{ bone_port | default(8099) }}/api/v1/vfs"
       NOS_VFS_API_TOKEN: "{{ face_vfs_token | default('') }}"
+      # Bone loop ledger — the Anatomy app's Runs view. The base URL is derived
+      # from NOS_VFS_API_URL above (same daemon), so this token is the only
+      # thing that was missing; without it the screen renders "unwired" rather
+      # than an empty ledger, which is the correct degradation and also why it
+      # is worth wiring: an operator cannot tell a quiet loop from an
+      # unconfigured one by looking at nothing.
+      #
+      # loop_judge_token is the loop's THIRD channel (files/anatomy/bone/
+      # loopauth.py) with scopes {read, judge} — not an admin credential. The
+      # judge endpoint refuses every result-influencing parameter server-side,
+      # and the face BFF allow-lists the POST body to exactly {gate_set} on top
+      # of that. Minted in main.yml, already handed to Bone itself at
+      # roles/pazny.bone/tasks/main.yml:276.
+      BONE_LOOP_JUDGE_TOKEN: "{{ loop_judge_token | default('') }}"
       NOS_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
       # KEAP config-DataTable source of truth (SoT + repo/user-state fallback).
       # Points at the agent-bearer /agent/v1/tables surface (keap ≥ v1.12.0) with
