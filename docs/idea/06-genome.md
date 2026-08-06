@@ -61,3 +61,18 @@ Across the eight files in `state/schema/` there was **not one `$ref`, `allOf` or
 
 `time.occurred_at` (small, coordinated, both sides) · `syncRows` · the two
 missing codegen targets · then collapse a second facet, not a fifth copy of one.
+
+**The edges are the next facet, and they are surveyed.**
+[`docs/archive/nos-anatomy-graph.md`](../archive/nos-anatomy-graph.md) (2026-08-06)
+inventories what the estate already wires implicitly — 28 data, 38 trigger,
+2 resource claims, 7 temporal — every row cited to `file:line` or to a
+`wing.db` query, and proposes `depends_on` in the manifest beside `category`,
+one kind-prefixed address space, and `state/anatomy-graph.json` compiled by
+regenerate-and-diff. Two findings from it are already fixed: the halt that
+three documents described and no code performed, and the claude mutex that one
+of two spawners took.
+
+Its rule is the one to carry forward: **repair before declare.** A graph that
+records what the code stopped doing is the estate's signature defect with a
+schema around it, so every edge carries `measured:` and is authored by a
+measurement pass, not by reading a comment.
