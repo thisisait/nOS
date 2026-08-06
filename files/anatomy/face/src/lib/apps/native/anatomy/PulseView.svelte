@@ -16,7 +16,7 @@
 -->
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { loadPulse, loadRuns, type PulseResponse, type PulseRunRow } from '$lib/api/pulse';
+	import { loadPulse, loadRuns, runJobNow, type PulseResponse, type PulseRunRow } from '$lib/api/pulse';
 	import type { PulseJobView, PulseState } from '$lib/anatomy/pulse';
 	import { StatusNote, Badge, StateDot, exitTone, type Tone } from '$lib/components/ui';
 
@@ -57,7 +57,22 @@
 	});
 	onDestroy(() => clearInterval(timer));
 
+	// §4b run-now. The 202 records the REQUEST; the run row appearing below is
+	// the daemon's statement. One message slot — a second click overwrites it.
+	let runNowMsg = $state('');
+	async function fireRunNow(id: string) {
+		runNowMsg = '';
+		try {
+			const r = await runJobNow(id);
+			runNowMsg = `202 — request recorded (${r.actor_action_id ?? 'no action id'}); the daemon dispatches on its next tick. Watch the runs below.`;
+		} catch (e) {
+			// A 409-paused or 404 is an ANSWER (rendered verbatim), not a fault.
+			runNowMsg = e instanceof Error ? e.message : 'refused';
+		}
+	}
+
 	async function select(id: string) {
+		runNowMsg = '';
 		if (selected === id) {
 			selected = null;
 			return;
@@ -236,6 +251,21 @@
 
 					{#if selected === j.id}
 						<div class="runs">
+							<div class="actions">
+								{#if j.paused}
+									<!-- Stated, not greyed: a disabled button teaches nothing.
+									     Wing answers 409 with the reason; saying it up front
+									     saves the click without hiding the rule. -->
+									<span class="pausednote">paused — run-now does not override a pause{#if j.pausedReason}
+											({j.pausedReason}){/if}</span>
+								{:else}
+									<button class="runnow" onclick={() => void fireRunNow(j.id)}>
+										run now ▸
+									</button>
+									<span class="runnote">edits next_fire_at only — the daemon dispatches with every guard intact</span>
+								{/if}
+							</div>
+							{#if runNowMsg}<p class="runmsg">{runNowMsg}</p>{/if}
 							{#if j.envKeys.length > 0}
 								<!-- Names only. Wing redacts the values at the source; publishing
 								     them would hand every viewer the estate's credentials. -->
@@ -431,6 +461,31 @@
 	}
 	.runs {
 		padding: 4px 10px 10px 28px;
+	}
+	.actions {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 0 0 6px;
+	}
+	.runnow {
+		background: rgba(255, 255, 255, 0.08);
+		border: 1px solid var(--line, rgba(128, 128, 128, 0.4));
+		border-radius: 6px;
+		color: var(--fg, #e8ecf3);
+		font-size: 11px;
+		padding: 2px 8px;
+		cursor: pointer;
+	}
+	.runnote,
+	.pausednote {
+		font-size: 10px;
+		color: var(--muted, #9aa4b2);
+	}
+	.runmsg {
+		margin: 0 0 6px;
+		font-size: 11px;
+		color: var(--info, #6aa2ff);
 	}
 	.envk {
 		margin: 0 0 8px;

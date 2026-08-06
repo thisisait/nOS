@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Presenters\Api;
 
+use App\Model\EventRepository;
 use App\Model\NotificationRepository;
 use App\Model\PulseRepository;
+use Nette\Http\IResponse;
 
 /**
  * GET  /api/v1/pulse_jobs/due            — list jobs whose next_fire_at <= now
@@ -27,6 +29,7 @@ final class PulsePresenter extends BaseApiPresenter
 	public function __construct(
 		private PulseRepository $pulse,
 		private NotificationRepository $notifications,
+		private EventRepository $events,
 	) {
 	}
 
@@ -248,6 +251,8 @@ final class PulsePresenter extends BaseApiPresenter
 	 *   ?job_id=<plugin:job>  narrow to one job
 	 *   ?limit=<1..500>       default 50
 	 *   ?failed=1             only runs that reported a non-zero exit
+	 *   ?since=<iso8601>      fired_at >= since (the run screen's window)
+	 *   ?until=<iso8601>      fired_at <= until
 	 */
 	private function listRuns(): void
 	{
@@ -260,8 +265,87 @@ final class PulsePresenter extends BaseApiPresenter
 				$jobId !== null ? (string) $jobId : null,
 				$limit,
 				$failed,
+				$this->timeParam('since'),
+				$this->timeParam('until'),
 			),
 		]);
+	}
+
+	/**
+	 * A time-window parameter, validated to a canonical ISO-8601 UTC string.
+	 * Garbage is a 400, not an ignored filter: a caller whose window was
+	 * silently dropped would read an unwindowed result as their window.
+	 */
+	private function timeParam(string $name): ?string
+	{
+		$raw = $this->getParameter($name);
+		if ($raw === null || $raw === '') {
+			return null;
+		}
+		$ts = strtotime((string) $raw);
+		if ($ts === false) {
+			$this->sendError("$name is not a parseable timestamp: " . (string) $raw, 400);
+		}
+		// Canonicalised so the SQL string comparison meets fired_at (date('c'))
+		// on equal terms regardless of the caller's offset spelling — the
+		// two-ISO-spellings drift bug (2026-07-28) taught this estate that a
+		// reader must normalise, not hope.
+		return date('c', $ts);
+	}
+
+	/**
+	 * POST /api/v1/pulse_jobs/<id>/run-now — §4b, the pulse half of the run
+	 * screen's on-demand surface. Sets next_fire_at = now and records WHO
+	 * asked; the daemon remains the only executor (next 30 s tick, every
+	 * guard intact). Body is EMPTY by design — a run-now that can alter env
+	 * is remote code execution with extra steps.
+	 *
+	 * Refusals: unknown id → 404; paused job → 409 carrying paused_reason
+	 * (unpausing is a separate deliberate act, not a side effect of
+	 * impatience); non-empty body → 400.
+	 */
+	public function actionRunNow(string $id): void
+	{
+		$this->requireMethod('POST');
+		$raw = trim((string) file_get_contents('php://input'));
+		if ($raw !== '' && $raw !== '{}') {
+			$this->sendError('run-now takes no body — env/command overrides are refused by design', 400);
+		}
+		$job = $this->pulse->getJob($id);
+		if (!$job) {
+			$this->sendError("Unknown pulse job: $id", 404);
+		}
+		if ((int) ($job['paused'] ?? 0) === 1) {
+			$reason = (string) ($job['paused_reason'] ?? '');
+			$this->sendError(
+				"Job is paused" . ($reason !== '' ? " ($reason)" : '')
+				. ' — unpause it deliberately; run-now does not override a pause',
+				409,
+			);
+		}
+		$nextFireAt = $this->pulse->requestRunNow($id);
+		if ($nextFireAt === null) {
+			$this->sendError("Unknown pulse job: $id", 404);
+		}
+		// The REQUEST is recorded by this writer; the RUN is recorded by the
+		// daemon when it actually dispatches (success markers are written by
+		// a reader — the run appearing in pulse_runs is the daemon's
+		// statement, never this endpoint's).
+		$actionId = bin2hex(random_bytes(16));
+		$this->events->insert([
+			'run_id'          => '',
+			'type'            => 'pulse_run_requested',
+			'source'          => 'wing-api',
+			'actor_id'        => $this->getActorId(),
+			'actor_action_id' => $actionId,
+			'result'          => ['job_id' => $id, 'next_fire_at' => $nextFireAt],
+		]);
+		$this->sendSuccess([
+			'job_id'          => $id,
+			'next_fire_at'    => $nextFireAt,
+			'actor_action_id' => $actionId,
+			'note'            => 'request recorded; the daemon dispatches on its next tick with every guard intact',
+		], IResponse::S202_Accepted);
 	}
 
 	/**

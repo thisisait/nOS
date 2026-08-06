@@ -107,6 +107,9 @@ final class RouterFactory
 		// /pulse_jobs/due and /pulse_runs/<id>/finish must come before their
 		// general [/<id>] siblings — Nette is first-match-wins.
 		$api->addRoute('api/v1/pulse_jobs/due', 'Pulse:jobsDue');
+		// §4b run-now (2026-08-06): the request is recorded here; the daemon
+		// stays the only executor. Before the [/<id>] sibling, same reason.
+		$api->addRoute('api/v1/pulse_jobs/<id>/run-now', 'Pulse:runNow');
 		$api->addRoute('api/v1/pulse_jobs[/<id>]', 'Pulse:jobs');         // A7: POST = upsert (loader), GET = list/get
 		$api->addRoute('api/v1/pulse_runs/<id>/finish', 'Pulse:runFinish');
 		// Same first-match-wins reason: without this line "summary" would be

@@ -383,7 +383,13 @@ final class PulseRepository
 	 *
 	 * @return list<array<string, mixed>>
 	 */
-	public function listRuns(?string $jobId = null, int $limit = 50, bool $failedOnly = false): array
+	public function listRuns(
+		?string $jobId = null,
+		int $limit = 50,
+		bool $failedOnly = false,
+		?string $since = null,
+		?string $until = null,
+	): array
 	{
 		$sel = $this->db->table('pulse_runs')->order('fired_at DESC')->limit(max(1, min(500, $limit)));
 		if ($jobId !== null && $jobId !== '') {
@@ -395,7 +401,36 @@ final class PulseRepository
 			// be inventing a result the daemon never reported.
 			$sel->where('exit_code IS NOT NULL AND exit_code != 0');
 		}
+		// Time window (the run screen's replay/timeline, 2026-08-06). String
+		// comparison is correct here: fired_at is ISO-8601 UTC throughout
+		// (recordStart writes date('c')), and idx_pulse_runs_fired_at serves
+		// the range. Validation of the values is the presenter's job.
+		if ($since !== null && $since !== '') {
+			$sel->where('fired_at >= ?', $since);
+		}
+		if ($until !== null && $until !== '') {
+			$sel->where('fired_at <= ?', $until);
+		}
 		return array_map(fn($r) => $r->toArray(), iterator_to_array($sel->fetchAll()));
+	}
+
+	/**
+	 * §4b run-now: pull the job's next fire time to NOW. The daemon remains
+	 * the ONLY executor — this row edit merely makes the job due, so the next
+	 * 30 s tick dispatches it with every existing guard intact (re-entrancy,
+	 * the 4-slot cap, max_concurrent, the agent-run-lock). No spawn happens
+	 * here, which is the property that makes the endpoint safe to expose.
+	 *
+	 * Returns the new next_fire_at, or null when the job does not exist.
+	 */
+	public function requestRunNow(string $id): ?string
+	{
+		$now = date('c');
+		$affected = $this->db->table('pulse_jobs')
+			->where('id', $id)
+			->where('removed_at', null)
+			->update(['next_fire_at' => $now, 'updated_at' => $now]);
+		return $affected > 0 ? $now : null;
 	}
 
 	/**

@@ -222,10 +222,28 @@ export async function pulseRunSummary(): Promise<unknown> {
 }
 
 /** Recent runs, newest first. */
-export async function pulseRuns(jobId?: string, limit = 50): Promise<unknown> {
+export async function pulseRuns(
+	jobId?: string,
+	limit = 50,
+	since?: string,
+	until?: string
+): Promise<unknown> {
 	const p: Record<string, string> = { limit: String(limit) };
 	if (jobId) p.job_id = jobId;
+	if (since) p.since = since;
+	if (until) p.until = until;
 	return wingGet('/pulse_runs', p);
+}
+
+/** §4b run-now: POST with an EMPTY body — Wing refuses anything else, and so
+ *  does the BFF route in front of this. 202 + the recorded request. */
+export async function pulseRunNow(jobId: string): Promise<unknown> {
+	const u = new URL(WING_API() + '/pulse_jobs/' + encodeURIComponent(jobId) + '/run-now');
+	const r = await fetch(u, {
+		method: 'POST',
+		headers: { authorization: `Bearer ${WING_API_TOKEN()}` }
+	});
+	return asJson(r);
 }
 
 /** Recent events — the audit spine. `actor_action_id` is the thread that ties

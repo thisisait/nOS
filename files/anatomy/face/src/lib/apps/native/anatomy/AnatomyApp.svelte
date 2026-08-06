@@ -10,7 +10,11 @@
   It owns no data; each view fetches its own. That is what keeps a view
   replaceable without touching this file.
 
-  Read-only throughout. Actions stay in Wing UI, where the RBAC gates are.
+  Read-only, with exactly two bounded writes (2026-08-06, §4 of the screens
+  contract): run a declared gate set (Runs view) and run a declared pulse job
+  now (Pulse view). Both RUN something already declared and can ALTER nothing
+  — body allow-lists, server-side tier re-checks, and the executor records
+  the outcome, never the button. Everything else stays in Wing UI.
 -->
 <script lang="ts">
 	import PulseView from './PulseView.svelte';

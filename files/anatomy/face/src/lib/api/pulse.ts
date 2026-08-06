@@ -1,7 +1,9 @@
-/** Anatomy → Pulse client. Read-only: there is no write helper here because
- *  the BFF exports no write handler. Actions live in Wing UI, where the tier
- *  gates already are. */
-import { bffGet } from './client';
+/** Anatomy → Pulse client. Reads, plus exactly ONE write: §4b run-now
+ *  (2026-08-06), which RUNS something already declared and can alter nothing
+ *  — body allow-list {job_id}, no env/command override exists on the path,
+ *  and the daemon remains the only executor. Every other action stays in
+ *  Wing UI, where the tier gates already are. */
+import { bffGet, bffPost } from './client';
 import type { PulseSnapshot } from '$lib/anatomy/pulse';
 import type { WingSnapshot } from '$lib/anatomy/wing';
 import type { BoneSnapshot } from '$lib/anatomy/bone';
@@ -34,12 +36,26 @@ export interface PulseRunRow {
 }
 
 export async function loadRuns(
-	jobId: string
+	jobId: string,
+	since?: string,
+	until?: string
 ): Promise<{ runs: PulseRunRow[]; error?: string }> {
-	const r = await bffGet<{ runs?: PulseRunRow[]; error?: string }>('/bff/pulse', {
-		job_id: jobId
-	});
+	const params: Record<string, string> = { job_id: jobId };
+	if (since) params.since = since;
+	if (until) params.until = until;
+	const r = await bffGet<{ runs?: PulseRunRow[]; error?: string }>('/bff/pulse', params);
 	return { runs: r.runs ?? [], error: r.error };
+}
+
+/** §4b run-now. 202 = the REQUEST was recorded; the run itself appears in the
+ *  runs feed when the daemon dispatches it — watch that, not this response. */
+export async function runJobNow(jobId: string): Promise<{
+	job_id?: string;
+	next_fire_at?: string;
+	actor_action_id?: string;
+	note?: string;
+}> {
+	return bffPost('/bff/pulse/run', { job_id: jobId });
 }
 
 // ── Wing + Bone (the other two Anatomy views) ────────────────────────────────

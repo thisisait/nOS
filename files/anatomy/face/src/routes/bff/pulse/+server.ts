@@ -37,12 +37,25 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		});
 	}
 
-	// A single job's run history, for the detail pane.
+	// A single job's run history, for the detail pane / replay. `since`/
+	// `until` pass through to Wing's window params (2026-08-06) — an OLDER
+	// deployed Wing ignores unknown params and answers unwindowed, so the
+	// response echoes the window Wing was ASKED for; the view compares it
+	// against what came back rather than assuming it was honoured.
 	const jobId = url.searchParams.get('job_id');
 	if (jobId) {
+		const since = url.searchParams.get('since') ?? undefined;
+		const until = url.searchParams.get('until') ?? undefined;
 		try {
-			const runs = (await pulseRuns(jobId, 25)) as { runs?: unknown[] };
-			return json({ configured: true, jobId, runs: runs.runs ?? [] });
+			const runs = (await pulseRuns(jobId, since || until ? 200 : 25, since, until)) as {
+				runs?: unknown[];
+			};
+			return json({
+				configured: true,
+				jobId,
+				window: { since: since ?? null, until: until ?? null },
+				runs: runs.runs ?? []
+			});
 		} catch (e) {
 			return json({
 				configured: true,
