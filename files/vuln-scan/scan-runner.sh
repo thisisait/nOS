@@ -156,6 +156,31 @@ emit_event "scan.batch_started" "$(jq -nc \
 )" >> "$LOG_FILE"
 
 # ── Dispatch Claude Code ──────────────────────────────────────────────────────
+#
+# THE AGENT-RUN MUTEX, missing here until 2026-08-06. The LOCK_FILE taken at
+# the top of this script guards against a second SCAN; it says nothing about a
+# second claude. Meanwhile pulse-run-agent.sh described its own mkdir mutex as
+# "the single chokepoint every agent goes through" — and this line was outside
+# it, so a Pulse agent firing near 02:00 could run concurrently with the scan,
+# which is the arrangement that crashed every participant in May.
+#
+# Wait, do not skip: nobody is watching at 02:00, and a scan that silently
+# declined is exactly the absence-reads-as-calm shape this estate keeps
+# finding. 10 minutes, then refuse loudly and let the exit code carry it.
+#
+# The helper installs its own EXIT trap, so the combined trap below is
+# re-armed AFTER acquiring — otherwise this script's LOCK_FILE would leak.
+# Resolved from $0, the way lib-jsonl.sh above is — NOT from REPO_DIR, whose
+# default ($(dirname $0)/..) points at files/, not the repo root, and only
+# works because the launchd job overrides it.
+# shellcheck source=../anatomy/scripts/agent-run-lock.sh
+source "$(dirname "$0")/../anatomy/scripts/agent-run-lock.sh"
+if ! nos_agent_lock_acquire "vulnscan:${SCAN_RUN_ID}" 600; then
+    log "ERROR: another claude-CLI agent holds the agent-run lock — scan not dispatched"
+    emit_event "scan.batch_refused" '{"reason":"agent-run lock held"}' >> "$LOG_FILE"
+    exit 2
+fi
+trap 'nos_agent_lock_release; cleanup' EXIT
 
 log "Dispatching Claude Code scan..."
 SCAN_STARTED_AT=$(date +%s)

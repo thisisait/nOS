@@ -84,37 +84,23 @@ fi
 # ── Sequential run lock (agent-run mutex) ────────────────────────────────────
 # claude-CLI agents MUST run one-at-a-time. Firing several concurrently made
 # all participants die mid-run — only agent_run_start landed, never
-# agent_run_end (2026-05-27; memory agent-two-runtime-session-gap). Until now
-# "run them sequentially" was operator discipline, unenforced in code; this
-# mutex enforces it at the single chokepoint every agent goes through.
+# agent_run_end (2026-05-27; memory agent-two-runtime-session-gap).
 #
-# macOS ships no `flock`, so use an atomic `mkdir` lock (POSIX-atomic on all
-# FS) with a PID-liveness check to reclaim a lock left by a crashed run. The
-# lock is taken AFTER validation (a misconfigured run fails fast without ever
-# holding it) and released on ANY exit via the trap — normal finish, _die, or
-# claude failure all free it for the next agent. Release uses rmdir + rm -f
-# (never `rm -rf`) so a misset NOS_AGENT_LOCK_DIR can't widen the blast radius.
-NOS_AGENT_LOCK="${NOS_AGENT_LOCK_DIR:-${HOME}/.nos/agent-run.lock}"
-_release_agent_lock() {
-    rm -f "$NOS_AGENT_LOCK/owner" 2>/dev/null || true
-    rmdir "$NOS_AGENT_LOCK" 2>/dev/null || true
-}
-mkdir -p "$(dirname "$NOS_AGENT_LOCK")"
-if ! mkdir "$NOS_AGENT_LOCK" 2>/dev/null; then
-    _lock_owner=$(cat "$NOS_AGENT_LOCK/owner" 2>/dev/null || true)
-    _lock_pid="${_lock_owner%% *}"
-    if [[ -n "$_lock_pid" ]] && kill -0 "$_lock_pid" 2>/dev/null; then
-        echo "ERROR: another nOS agent run holds the lock — ${_lock_owner}." >&2
-        echo "       claude-CLI agents must run sequentially (concurrent runs crash mid-run)." >&2
-        echo "       Wait for it to finish, or remove ${NOS_AGENT_LOCK} if it is stale." >&2
-        exit 2
-    fi
-    echo "WARN: reclaiming stale agent lock (owner '${_lock_owner:-none}' not alive)" >&2
-    _release_agent_lock
-    mkdir "$NOS_AGENT_LOCK" 2>/dev/null || _die "could not acquire agent lock at $NOS_AGENT_LOCK"
-fi
-printf '%s %s %s\n' "$$" "$AGENT_NAME" "$(date -u +%FT%TZ)" > "$NOS_AGENT_LOCK/owner"
-trap '_release_agent_lock' EXIT
+# The mutex itself moved to agent-run-lock.sh on 2026-08-06. The comment that
+# used to sit here called this "the single chokepoint every agent goes
+# through" — and scan-runner.sh had been spawning claude outside it the whole
+# time, holding a different lock that guards a different thing. One law with
+# two implementations is how that happens; there is one implementation now.
+#
+# Taken AFTER validation (a misconfigured run fails fast without ever holding
+# it) and released on ANY exit via the trap the helper installs — normal
+# finish, _die, or claude failure all free it for the next agent.
+#
+# Wait 0: an operator-facing run refuses immediately rather than blocking a
+# terminal. The 02:00 scan waits instead, because nobody is watching it.
+# shellcheck source=agent-run-lock.sh
+source "$(dirname "${BASH_SOURCE[0]}")/agent-run-lock.sh"
+nos_agent_lock_acquire "$AGENT_NAME" 0 || exit 2
 
 # ── HMAC helper ───────────────────────────────────────────────────────────────
 
