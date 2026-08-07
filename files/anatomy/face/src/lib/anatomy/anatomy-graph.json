@@ -3,8 +3,8 @@
   "generated_by": "tools/anatomy-graph-gen.py",
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "counts": {
-    "nodes": 191,
-    "edges": 151,
+    "nodes": 196,
+    "edges": 154,
     "nodes_pulse": 29,
     "nodes_judge": 5,
     "nodes_gateset": 4,
@@ -17,8 +17,9 @@
     "nodes_authentik": 43,
     "nodes_table": 6,
     "nodes_doctrine": 12,
-    "edges_data": 52,
-    "edges_trigger": 21,
+    "nodes_faceapp": 5,
+    "edges_data": 54,
+    "edges_trigger": 22,
     "edges_temporal": 5,
     "edges_mutex": 56,
     "edges_governed_by": 17
@@ -668,6 +669,72 @@
       "anchor": "09",
       "description": "Constitution paragraph M7 of docs/idea/11-agentic-loop-contract.md: `genome-codegen` and `pytest` collide"
     },
+    "faceapp:anatomy": {
+      "kind": "faceapp",
+      "source": "files/anatomy/face/src/lib/apps/native/registry.ts",
+      "form": "view",
+      "build": "F3",
+      "title": "Anatomy",
+      "api_scopes": [
+        "pulse"
+      ],
+      "hosted_by": "service:face",
+      "anchor": "02.02.04",
+      "description": "nOS-face app 'Anatomy' — form: view (what it is on screen), build: F3 (what it cost to build, docs/doctrine/face-app-tiers.md); reads pulse"
+    },
+    "faceapp:anatomy-widget": {
+      "kind": "faceapp",
+      "source": "files/anatomy/face/src/lib/apps/native/registry.ts",
+      "form": "widget",
+      "build": "F1",
+      "title": "Anatomy at a glance",
+      "api_scopes": [
+        "pulse"
+      ],
+      "hosted_by": "service:face",
+      "reads_artifact": "src/lib/anatomy/anatomy-graph.json — the byte-identical vendored copy of state/anatomy-graph.json this generator writes; imported at BUILD time, so the surface is as fresh as the converge that built it",
+      "anchor": "02.02.04",
+      "description": "nOS-face app 'Anatomy at a glance' — form: widget (what it is on screen), build: F1 (what it cost to build, docs/doctrine/face-app-tiers.md); reads pulse"
+    },
+    "faceapp:files": {
+      "kind": "faceapp",
+      "source": "files/anatomy/face/src/lib/apps/native/registry.ts",
+      "form": "view",
+      "build": "F1",
+      "title": "Files",
+      "api_scopes": [
+        "vfs"
+      ],
+      "hosted_by": "service:face",
+      "anchor": "02.02.04",
+      "description": "nOS-face app 'Files' — form: view (what it is on screen), build: F1 (what it cost to build, docs/doctrine/face-app-tiers.md); reads vfs"
+    },
+    "faceapp:keap-explore": {
+      "kind": "faceapp",
+      "source": "files/anatomy/face/src/lib/apps/native/registry.ts",
+      "form": "view",
+      "build": "F3",
+      "title": "Explore",
+      "api_scopes": [
+        "config"
+      ],
+      "hosted_by": "service:face",
+      "anchor": "02.02.04",
+      "description": "nOS-face app 'Explore' — form: view (what it is on screen), build: F3 (what it cost to build, docs/doctrine/face-app-tiers.md); reads config"
+    },
+    "faceapp:tables": {
+      "kind": "faceapp",
+      "source": "files/anatomy/face/src/lib/apps/native/registry.ts",
+      "form": "view",
+      "build": "F2",
+      "title": "Tables",
+      "api_scopes": [
+        "tables"
+      ],
+      "hosted_by": "service:face",
+      "anchor": "02.02.04",
+      "description": "nOS-face app 'Tables' — form: view (what it is on screen), build: F2 (what it cost to build, docs/doctrine/face-app-tiers.md); reads tables"
+    },
     "gateset:fast": {
       "kind": "gateset",
       "source": "state/judge-sets.yml",
@@ -791,7 +858,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": true,
       "mutates_worktree": true,
-      "min_work": 2980,
+      "min_work": 3025,
       "argv": [
         "python3",
         "-m",
@@ -804,7 +871,7 @@
       ],
       "requires": [],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=2980, deterministic=True"
+      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=3025, deterministic=True"
     },
     "pulse:alert-relay:relay-firing": {
       "kind": "pulse",
@@ -2256,6 +2323,13 @@
       "derived": "tofu-authentik-registry"
     },
     {
+      "from": "daemon:eu.thisisait.nos.wing",
+      "to": "faceapp:anatomy-widget",
+      "kind": "data",
+      "via": "60 s poll of /bff/pulse, a PROJECTION (never a proxy) of Wing's pulse_jobs + run summary; joined onto the pulse: nodes on screen so a scheduled job's real state colours its dot (src/routes/bff/pulse/+server.ts → $lib/server/upstream.pulseJobs)",
+      "derived": "face-bff-projection"
+    },
+    {
       "from": "pulse:conductor:scan-state-record",
       "to": "repo:scan-data",
       "kind": "data",
@@ -2348,6 +2422,13 @@
       "derived": "judge-sets.requires"
     },
     {
+      "from": "service:face",
+      "to": "faceapp:anatomy-widget",
+      "kind": "data",
+      "via": "mounted at the desktop root — <WidgetLayer /> in src/routes/+page.svelte resolves every form=widget app through the registry seam; unlike a view it is on screen with no user action, which is what form=widget records",
+      "derived": "face-desktop-root"
+    },
+    {
       "from": "tofu:authentik-state",
       "to": "pulse:authentik-tofu-drift:tofu-drift-plan",
       "kind": "data",
@@ -2374,7 +2455,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:223",
+      "via": "cited at state/judge-sets.yml:226",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -2382,7 +2463,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:204",
+      "via": "cited at state/judge-sets.yml:207",
       "citations": 2,
       "derived": "doctrine-cite"
     },
@@ -2390,7 +2471,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2f",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:229",
+      "via": "cited at state/judge-sets.yml:232",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -2422,7 +2503,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:194",
+      "via": "cited at state/judge-sets.yml:197",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -2430,7 +2511,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:163",
+      "via": "cited at state/judge-sets.yml:166",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -2438,7 +2519,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M2",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:184",
+      "via": "cited at state/judge-sets.yml:187",
       "citations": 2,
       "derived": "doctrine-cite"
     },
@@ -2446,7 +2527,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:148",
+      "via": "cited at state/judge-sets.yml:151",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -2454,7 +2535,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5a",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:149",
+      "via": "cited at state/judge-sets.yml:152",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -2462,7 +2543,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:141",
+      "via": "cited at state/judge-sets.yml:144",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -3099,6 +3180,13 @@
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
       "derived": "daemon-dispatch"
+    },
+    {
+      "from": "faceapp:anatomy-widget",
+      "to": "faceapp:anatomy",
+      "kind": "trigger",
+      "via": "click-through: open() calls requestAnatomy('graph', undefined, id) then launchNative('anatomy'), so the Graph view opens with the clicked node already selected (src/lib/apps/widgets/AnatomyWidget.svelte)",
+      "derived": "face-click-through"
     },
     {
       "from": "pulse:cortex:cortex-corpus-diff",

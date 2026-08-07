@@ -37,6 +37,11 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
     tofu:<name>             OpenTofu state roots (terraform/<name>/)
     authentik:<slug>        state/tofu-authentik-services.yml registry rows
     table:<name>            state/keap-tables/<name>.table.yml definitions
+    faceapp:<slug>          nOS-face apps, from the face's own registry — the
+                            `form` axis (view|utility|widget|frame) and the
+                            independent `build` axis (F1–F4/H). Frames are NOT
+                            emitted: a hub service already has a service: node
+                            and a second address for it would be padding.
 
 WRITES (the second declared channel)
 ------------------------------------
@@ -87,6 +92,11 @@ TARGET = REPO / "state" / "anatomy-graph.json"
 #: generator writes both and --check refuses drift between them.
 FACE_TARGET = REPO / "files" / "anatomy" / "face" / "src" / "lib" / "anatomy" / \
     "anatomy-graph.json"
+
+#: The face's app registry — the declaration site of the `form` axis
+#: (view | utility | widget | frame) and the `build` axis (F1–F4/H).
+FACE_REGISTRY = REPO / "files" / "anatomy" / "face" / "src" / "lib" / "apps" / \
+    "native" / "registry.ts"
 
 JOB_SOURCES = ("files/anatomy/plugins/*/plugin.yml", "files/anatomy/agents/*.yml")
 JUDGE_SETS = REPO / "state" / "judge-sets.yml"
@@ -166,6 +176,11 @@ KIND_ANCHORS = {
     "authentik": "02.02.08",
     "table": "02.02.05",
     "doctrine": "09",             # Reference & Documentation — the law shelf
+    # No HCI / user-interface branch exists in the 362-anchor spine (checked
+    # 2026-08-07: only Computer Graphics and Graphic Design come close, and
+    # neither is what a face app is). Honestly generic rather than a guessed
+    # leaf, exactly as this table's header says.
+    "faceapp": "02.02.04",
 }
 FALLBACK_ANCHOR = "02.02.04"      # Software Engineering
 
@@ -355,6 +370,14 @@ def _describe(nid: str, n: dict) -> str:
         return (f"Authentik {n.get('mode')} client '{n.get('client_id')}' "
                 f"(RBAC tier {n.get('tier')}) — {svc}; provider+application "
                 f"managed by OpenTofu from the committed registry")
+    if kind == "faceapp":
+        # Two axes in one line, named as two, because the field they replaced
+        # was one boolean pretending to be both.
+        build = n.get("build") or "no build tier (not an agent-built app)"
+        scopes = ", ".join(n.get("api_scopes") or []) or "no declared BFF scope"
+        return (f"nOS-face app '{n.get('title')}' — form: {n.get('form')} "
+                f"(what it is on screen), build: {build} (what it cost to "
+                f"build, docs/doctrine/face-app-tiers.md); reads {scopes}")
     if kind == "table":
         return f"KEAP DataTable definition '{n.get('title')}' ({n['source']})"
     if kind == "doctrine":
@@ -488,6 +511,52 @@ def harvest_authentik(nodes: dict) -> None:
 
 
 # ── harvest: KEAP DataTable definitions ───────────────────────────────────
+
+
+# ── harvest: face apps (the `form` axis, docs/doctrine/face-app-tiers.md) ──
+#
+#    Regex over the registry module, the same shape as harvest_weaknesses over
+#    weaknesses.py: the declaration lives in TypeScript, this compiler is
+#    Python, and importing a Svelte-flavoured module to read five literals is
+#    not worth a toolchain. If the registry is refactored past this pattern
+#    the harvest DIES LOUDLY (_die below) rather than silently emitting zero
+#    face apps.
+#
+#    ONLY component-backed apps are emitted. The ~37 hub services the shell
+#    renders as `form: frame` are ALREADY nodes — `service:<id>` — and minting
+#    a second address for the same thing would be padding, which is the one
+#    thing this graph refuses. Their form is recorded in the face, where the
+#    render path that establishes it lives.
+
+
+def harvest_faceapps(nodes: dict) -> None:
+    if not FACE_REGISTRY.exists():
+        return
+    text = FACE_REGISTRY.read_text(encoding="utf-8")
+    blocks = re.findall(r"registerNativeApp\(\{(.*?)\n\t\}\);", text, re.S)
+    if not blocks:
+        _die("face registry: no registerNativeApp({…}) blocks matched — the registry "
+             "moved, update harvest_faceapps rather than shipping zero face apps")
+    for body in blocks:
+        def field(name: str) -> str | None:
+            m = re.search(rf"\b{name}:\s*'([^']*)'", body)
+            return m.group(1) if m else None
+
+        slug, form = field("slug"), field("form")
+        if not slug or not form:
+            continue
+        scopes = re.search(r"apiScopes:\s*\[([^\]]*)\]", body)
+        nodes[f"faceapp:{slug}"] = {
+            "kind": "faceapp",
+            "source": str(FACE_REGISTRY.relative_to(REPO)),
+            # The two axes, kept apart on purpose: `form` is what the thing IS,
+            # `build` is what it COST. Neither is derived from the other, here
+            # or in the face.
+            "form": form,
+            "build": field("build"),
+            "title": field("title"),
+            "api_scopes": re.findall(r"'([^']+)'", scopes.group(1)) if scopes else [],
+        }
 
 
 def harvest_tables(nodes: dict) -> None:
@@ -809,6 +878,90 @@ def derive_substrate(nodes: dict) -> list[dict]:
     return edges
 
 
+def derive_face_edges(nodes: dict) -> list[dict]:
+    """Face-app edges, each emitted ONLY while the code that performs it is
+    still there (repair before declare, compile-time form — the same shape as
+    derive_substrate). A comment is not evidence: every edge below names the
+    file whose content was read to justify it, and the read happens here.
+
+    WHAT IS A FACT, NOT AN EDGE. Every face app lives in the face, and every
+    one of the two that read the graph artifact reads the same vendored copy.
+    Uniform relationships are recorded ON the node (`hosted_by`,
+    `reads_artifact`) exactly as `managed_by` is for the 43 authentik rows —
+    43 identical edges were refused there for being picture-filling, and five
+    identical hosting edges would be the same mistake at a smaller scale.
+
+    WHAT IS AN EDGE. Only the relationships that are NOT uniform:
+      * a widget is mounted at the desktop root with no user action — a view
+        exists only once someone launches it. Different code path, different
+        fact.
+      * the widget's click-through into the Anatomy view.
+      * what the widget actually READS at runtime.
+    """
+    face_src = FACE_REGISTRY.parents[3]          # …/face/src
+    page = face_src / "routes" / "+page.svelte"
+    widget = face_src / "lib" / "apps" / "widgets" / "AnatomyWidget.svelte"
+    bff_pulse = face_src / "routes" / "bff" / "pulse" / "+server.ts"
+    page_txt = page.read_text(encoding="utf-8") if page.exists() else ""
+    widget_txt = widget.read_text(encoding="utf-8") if widget.exists() else ""
+    bff_txt = bff_pulse.read_text(encoding="utf-8") if bff_pulse.exists() else ""
+
+    # Uniform facts, stated once per node rather than drawn N times.
+    for nid, n in nodes.items():
+        if n["kind"] != "faceapp":
+            continue
+        n["hosted_by"] = "service:face"
+        if nid == "faceapp:anatomy-widget" and "anatomy-graph.json" in widget_txt:
+            n["reads_artifact"] = (
+                "src/lib/anatomy/anatomy-graph.json — the byte-identical vendored copy "
+                "of state/anatomy-graph.json this generator writes; imported at BUILD "
+                "time, so the surface is as fresh as the converge that built it"
+            )
+
+    edges: list[dict] = []
+    wid = "faceapp:anatomy-widget"
+    if wid not in nodes:
+        return edges
+
+    if "service:face" in nodes and "<WidgetLayer" in page_txt:
+        edges.append({
+            "from": "service:face",
+            "to": wid,
+            "kind": "data",
+            "via": "mounted at the desktop root — <WidgetLayer /> in "
+                   "src/routes/+page.svelte resolves every form=widget app through "
+                   "the registry seam; unlike a view it is on screen with no user "
+                   "action, which is what form=widget records",
+            "derived": "face-desktop-root",
+        })
+    if ("faceapp:anatomy" in nodes
+            and "requestAnatomy('graph'" in widget_txt
+            and "launchNative('anatomy')" in widget_txt):
+        edges.append({
+            "from": wid,
+            "to": "faceapp:anatomy",
+            "kind": "trigger",
+            "via": "click-through: open() calls requestAnatomy('graph', undefined, id) "
+                   "then launchNative('anatomy'), so the Graph view opens with the "
+                   "clicked node already selected "
+                   "(src/lib/apps/widgets/AnatomyWidget.svelte)",
+            "derived": "face-click-through",
+        })
+    if ("daemon:eu.thisisait.nos.wing" in nodes
+            and "loadPulse" in widget_txt and "pulseJobs" in bff_txt):
+        edges.append({
+            "from": "daemon:eu.thisisait.nos.wing",
+            "to": wid,
+            "kind": "data",
+            "via": "60 s poll of /bff/pulse, a PROJECTION (never a proxy) of Wing's "
+                   "pulse_jobs + run summary; joined onto the pulse: nodes on screen "
+                   "so a scheduled job's real state colours its dot "
+                   "(src/routes/bff/pulse/+server.ts → $lib/server/upstream.pulseJobs)",
+            "derived": "face-bff-projection",
+        })
+    return edges
+
+
 def derive_structural(nodes: dict) -> list[dict]:
     edges = []
     pulse_daemon = "daemon:eu.thisisait.nos.pulse"
@@ -901,11 +1054,13 @@ def build() -> dict:
     harvest_repos_and_tofu(nodes)
     harvest_authentik(nodes)   # after services — slug→service binding needs them
     harvest_tables(nodes)
+    harvest_faceapps(nodes)
 
     declared = compile_declared(raw, nodes)
     writes = compile_writes(raw_writes, nodes)
     bindings = derive_registry_bindings(nodes)
     substrate = derive_substrate(nodes)
+    face = derive_face_edges(nodes)
     structural = derive_structural(nodes)
     doctrine = derive_doctrine(nodes)
     mutex = derive_mutex(nodes)
@@ -913,8 +1068,8 @@ def build() -> dict:
     # After every node exists (derive_mutex/ensure_capability_resources mint
     # resource nodes): taxonomy anchor + embeddable one-liner, every node.
     annotate_nodes(nodes)
-    all_edges = (declared + writes + edges + bindings + substrate + structural
-                 + doctrine + mutex)
+    all_edges = (declared + writes + edges + bindings + substrate + face
+                 + structural + doctrine + mutex)
 
     # Per-kind cycles are a compile error (§2c-2): there is no legitimate
     # same-night cycle in a cron estate.
@@ -934,7 +1089,7 @@ def build() -> dict:
     all_edges.sort(key=lambda e: (e["kind"], e["from"], e["to"]))
     counts = {"nodes": len(nodes), "edges": len(all_edges)}
     for k in ("pulse", "judge", "gateset", "weakness", "daemon", "service", "resource",
-              "repo", "tofu", "authentik", "table", "doctrine"):
+              "repo", "tofu", "authentik", "table", "doctrine", "faceapp"):
         counts[f"nodes_{k}"] = sum(1 for n in nodes.values() if n["kind"] == k)
     for k in EDGE_KINDS + ("mutex", "governed_by"):
         counts[f"edges_{k}"] = sum(1 for e in all_edges if e["kind"] == k)

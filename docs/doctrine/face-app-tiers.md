@@ -5,6 +5,45 @@
 > epic) and `docs/doctrine/filesystem.md` (the data classes). Crystallized while building
 > the first face-native utils (Sticky Notes + personalization), 2026-07-18.
 
+## Form — what the thing IS (added 2026-08-07, `docs/idea/13-relations.md` §R3)
+
+This document owns ONE axis — **build**, F1–F4/H, the cost of building an app — and
+this section exists to say what it does *not* own, because it used to be asked both
+questions at once.
+
+**`form`** is the other axis: what an app IS on screen. Exactly one per app.
+
+| form | what it is | population, measured 2026-08-07 |
+|---|---|---|
+| `view` | a full window over estate data | 4 — Anatomy, Tables, Explore, Files |
+| `utility` | a focused tool with its own state | **0** — §Tier F1 below names Sticky Notes as the reference utility, and it is not in this shell's registry (grepped 2026-08-07). The zero is the finding, not a gap in the table |
+| `widget` | a small surface living inside another; **not a window** | 1 — Anatomy at a glance |
+| `frame` | a service rendered in an iframe | the hub catalog, ~37 at runtime |
+
+**The two are independent, and only loosely correlated.** A `frame` is usually the
+cheapest thing to build and a `view` usually is not — but that is a tendency, not a
+definition. The estate already breaks the correlation in both directions: `view` spans
+F1 (Files) to F3 (Anatomy, Explore), and F1 is worn by both a view and a widget. Neither
+field may be derived from the other; `tests/anatomy/test_face_app_form_axis.py` refuses
+a population in which one could be.
+
+**What `form` replaced.** The face recorded one binary — `isNativeApp(slug)`, "a
+nos-native API-calling app rather than an iframe", plus a `HubApp.native?: boolean` that
+had zero producers and zero consumers for its whole life. A binary answers "component or
+iframe" and nothing else, so the first widget — native, component-backed, and not a
+window — had no expressible value. `isNativeApp` is deleted; `appForm(slug)` is the
+successor and returns `null`, never a guessed `frame`, for an unregistered slug.
+
+**Where each is declared.** Both live on the registry entry
+(`files/anatomy/face/src/lib/apps/native/registry.ts`), which is also what
+`tools/anatomy-graph-gen.py` harvests into `faceapp:<slug>` nodes. Frames are NOT
+harvested: a hub service already has a `service:<id>` node, and a second address for the
+same thing is padding.
+
+**A widget is not a window.** It has no titlebar, no z-order, no snap cell and no entry
+in the window store; `launchNative()` refuses to open one. It is mounted by
+`WidgetLayer` at the desktop root, which is the whole distinction the form records.
+
 ## Why tiers
 
 Every nОS-facing app is **agent-built**. The agent has maximal understanding of nOS (docs
@@ -19,7 +58,7 @@ one-shot success and an over- or under-engineered app.
 job / cron) with no UI — it is still an nOS app, and it is still **visible + operable via
 wing-face** (Wing `/pulse`, `/timeline`, `/agents`).
 
-## The tiers
+## The tiers — the `build` axis
 
 | Tier | Name | Data / logic | Organs used | Recipe | Companion app |
 |---|---|---|---|---|---|

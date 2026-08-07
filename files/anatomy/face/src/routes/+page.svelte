@@ -22,12 +22,14 @@
 	import { isControlPanelWindow, CP_GRID_APP } from '$lib/apps/control-panel/surfaces'; // G4
 	import {
 		registerBuiltinNativeApps,
-		nativeApps,
+		registerHubFrames,
+		appsOfForm,
 		launchNative,
-		isNativeApp,
+		appForm,
 		initFilePickerBridge
 	} from '$lib/apps/native'; // G5
 	import FilePicker from '$lib/apps/native/file-picker/FilePicker.svelte'; // G5
+	import WidgetLayer from '$lib/apps/widgets/WidgetLayer.svelte';
 	import MenubarStatus from '$lib/components/MenubarStatus.svelte';
 	import Clock from '$lib/components/Clock.svelte';
 	import { initShortcuts, SHORTCUTS, run as runShortcut } from '$lib/wm/shortcuts';
@@ -36,7 +38,10 @@
 	let { data }: { data: PageData } = $props();
 	let apps = $state<HubApp[]>([]);
 	registerBuiltinNativeApps();
-	const natives = nativeApps();
+	// Dock + palette tiles: the two forms that OPEN A WINDOW. A widget is
+	// mounted by <WidgetLayer /> and a frame is launched from the hub catalog
+	// below, so neither belongs in this list.
+	const natives = appsOfForm('view', 'utility');
 
 	// Reactive desktop background from the active wallpaper (validated).
 	const bg = $derived(safeBackground($activeWallpaper));
@@ -54,6 +59,11 @@
 		void (async () => {
 			try {
 				apps = await hubApps();
+				// Record the catalog on the `form` axis. A hub entry's form is
+				// `frame` because THIS FILE renders it through <ServiceFrame />
+				// below — the fact belongs beside the render path, not in the
+				// catalog, which declares nothing of the sort.
+				registerHubFrames(apps);
 			} catch {
 				apps = [];
 			}
@@ -188,7 +198,11 @@
 		<Window {win}>
 			{#if isControlPanelWindow(win.app)}
 				<ControlPanelSurface {win} />
-			{:else if isNativeApp(win.app)}
+			{:else if appForm(win.app) === 'view' || appForm(win.app) === 'utility'}
+				<!-- The two component-backed window forms. `appForm` returns null
+				     for an unregistered slug — a restored window whose hub entry
+				     has not arrived yet falls through to its own url below,
+				     rather than being guessed into the wrong renderer. -->
 				<NativeHost app={win.app} />
 			{:else if win.url}
 				<ServiceFrame url={win.url} title={win.title} embed={win.embed} />
@@ -209,6 +223,9 @@
 	<TileDivider />
 	<!-- G5: file-picker host (invisible until openFilePicker / the bridge fires) -->
 	<FilePicker />
+
+	<!-- Desktop widgets (form=widget): small surfaces that are not windows. -->
+	<WidgetLayer identity={data.identity} />
 
 	<!-- Ctrl+Space (hold 2s): launcher + actions + local-LLM ask. -->
 	<CommandPalette actions={paletteActions} />

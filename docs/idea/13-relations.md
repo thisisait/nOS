@@ -61,7 +61,7 @@ Split the one overloaded field into two independent ones.
 |---|---|---|
 | `view` | a full window over estate data | Anatomy, Tables, Explore, Files |
 | `utility` | a focused tool with its own state | Sticky Notes; a finder, a planner |
-| `widget` | a small surface that lives inside another | — none yet |
+| `widget` | a small surface that lives inside another | 1 — Anatomy at a glance (2026-08-07) |
 | `frame` | a service rendered in an iframe | ~37 hub services |
 
 **`build`** — how hard it is to build, i.e. which organs and which recipe. This
@@ -73,10 +73,24 @@ usually be the cheapest thing to build, but that is a tendency, not a
 definition — and the moment the estate has one expensive frame or one trivial
 utility, a field that conflated them is wrong about both.
 
-Today the face records only a binary (`isNative`, "a nos-native API-calling app
-rather than an iframe"). `form` replaces it and `widget` is deliberately empty:
-naming a form with no instances is a design target, and the gate must not assert
-membership of an empty set.
+Until 2026-08-07 the face recorded only a binary (`isNative`, "a nos-native
+API-calling app rather than an iframe"; plus a `HubApp.native?: boolean` with
+zero producers and zero consumers). `form` replaced it — `isNativeApp` is
+deleted, `appForm(slug)` is the successor, and the shell's window-body switch
+branches on the form.
+
+**SHIPPED 2026-08-07 — `widget` is no longer empty.** It was written above as a
+design target with the note that a gate must not assert membership of an empty
+set; that is now moot, because the set has one member and it is not a token.
+`faceapp:anatomy-widget` ("Anatomy at a glance") reads the seven highest-degree
+nodes out of the same graph artifact the Anatomy view uses, joins the live Pulse
+state onto them, and opens the Graph view on the node you click. It is itself a
+node — `faceapp:anatomy-widget`, degree 3 — with three edges the code performs:
+`service:face →` it (mounted at the desktop root),
+it `→ faceapp:anatomy` (the click-through), and
+`daemon:eu.thisisait.nos.wing →` it (the /bff/pulse projection it polls).
+Doctrine: `docs/doctrine/face-app-tiers.md` §Form. Gate:
+`tests/anatomy/test_face_app_form_axis.py`.
 
 ## R4 — the ontology
 

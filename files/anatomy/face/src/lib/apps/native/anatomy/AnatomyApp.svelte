@@ -34,18 +34,24 @@
 	 *  shell knows what the value means — it is an opaque key here. */
 	let thread = $state('');
 
+	/** A graph node the caller was already pointing at (the desktop widget).
+	 *  Same shape as `thread`: opaque here, meaningful to one view. */
+	let graphNode = $state('');
+
 	function follow(actionId: string) {
 		thread = actionId;
 		active = 'wing';
 	}
 
-	// A request from outside the window — the menubar asking for a view. It is
-	// consumed and cleared, so clicking the same chip twice fires twice.
+	// A request from outside the window — the menubar or the desktop widget
+	// asking for a view. It is consumed and cleared, so clicking the same chip
+	// twice fires twice.
 	$effect(() => {
 		const req = $anatomyFocus;
 		if (!req) return;
 		active = req.view;
 		if (req.thread !== undefined) thread = req.thread;
+		if (req.node !== undefined) graphNode = req.node;
 		anatomyFocus.set(null);
 	});
 
@@ -69,7 +75,7 @@
 		{:else if active === 'wing'}
 			<WingView {thread} onclearthread={() => (thread = '')} />
 		{:else if active === 'graph'}
-			<GraphView />
+			<GraphView focusNode={graphNode} onclearfocus={() => (graphNode = '')} />
 		{:else if active === 'runs'}
 			<RunsView onfollowthread={follow} />
 		{:else}

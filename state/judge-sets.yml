@@ -137,7 +137,10 @@ judges:
     # doctrine-citation gate + run-now gate + the parent session's
     # cannot-run-says-so gates). The cadence is the point: every commit
     # that grows the suite moves the floor in the same diff.
-    min_work: 2980
+    #
+    # RE-DERIVED 2026-08-07 (3050 passed, 27 skipped — the face form/build
+    # axis gate + the face-app harvest refusal, R3). Same cadence, same diff.
+    min_work: 3025
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,

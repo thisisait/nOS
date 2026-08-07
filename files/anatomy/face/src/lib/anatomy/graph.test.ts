@@ -12,6 +12,8 @@ import {
 	mutexSpokes,
 	filterForCanvas,
 	joinLive,
+	spotlight,
+	nodeLabel,
 	NODE_KINDS,
 	type NodeKind
 } from './graph';
@@ -119,5 +121,84 @@ describe('joinLive', () => {
 		expect(join.unregistered.length).toBe(
 			graph.nodes.filter((n) => n.kind === 'pulse').length
 		);
+	});
+});
+
+describe('spotlight — the widget-sized projection', () => {
+	const spot = spotlight(graph, 7);
+
+	it('returns seven REAL nodes of the artifact, not a fixture', () => {
+		expect(spot.nodes).toHaveLength(7);
+		for (const n of spot.nodes) {
+			expect(graph.byId.get(n.id)).toBe(n);
+			expect(n.anchor).toMatch(/^\d{2}(\.\d{2})*$/);
+			expect(n.description.length).toBeGreaterThanOrEqual(20);
+		}
+	});
+
+	it('ranks by NON-MUTEX degree — a shared lock is not a busy node', () => {
+		const raw = new Map<string, number>();
+		const mutexOnly = new Map<string, number>();
+		for (const e of graph.edges) {
+			for (const end of [e.from, e.to]) {
+				raw.set(end, (raw.get(end) ?? 0) + 1);
+				if (e.kind === 'mutex') mutexOnly.set(end, (mutexOnly.get(end) ?? 0) + 1);
+			}
+		}
+		// The most-locked node shares one mkdir mutex with ten peers. Under a
+		// raw-degree rule it would outrank most of the real wiring — and every
+		// one of its neighbours would too, so the seven would be a clique that
+		// says nothing except "these run one at a time".
+		const [locked, lockDeg] = [...mutexOnly.entries()].sort((a, b) => b[1] - a[1])[0];
+		expect(lockDeg).toBeGreaterThan(3);
+		const lowestChosen = Math.min(...spot.nodes.map((n) => spot.degree.get(n.id) ?? 0));
+		expect(raw.get(locked)!).toBeGreaterThan(lowestChosen);
+		expect(spot.nodes.map((n) => n.id)).not.toContain(locked);
+
+		const degrees = spot.nodes.map((n) => spot.degree.get(n.id) ?? 0);
+		expect([...degrees].sort((a, b) => b - a)).toEqual(degrees); // descending
+	});
+
+	it('is deterministic — same artifact, same seven, same order', () => {
+		expect(spotlight(graph, 7).nodes.map((n) => n.id)).toEqual(spot.nodes.map((n) => n.id));
+	});
+
+	it('breaks degree ties by id so a re-render never reshuffles', () => {
+		const byDeg = new Map<number, string[]>();
+		for (const n of spot.nodes) {
+			const d = spot.degree.get(n.id) ?? 0;
+			(byDeg.get(d) ?? byDeg.set(d, []).get(d)!).push(n.id);
+		}
+		for (const ids of byDeg.values()) expect(ids).toEqual([...ids].sort());
+	});
+
+	it('induces only edges with both endpoints in the seven', () => {
+		const ids = new Set(spot.nodes.map((n) => n.id));
+		for (const e of spot.edges) {
+			expect(ids.has(e.from) && ids.has(e.to)).toBe(true);
+			expect(e.kind).not.toBe('mutex');
+		}
+	});
+
+	it('counts components rather than implying one connected whole', () => {
+		// Measured 2026-08-07: 2. The widget prints this; a sample that looks
+		// like a connected graph when it is two fragments is the lie.
+		expect(spot.components).toBeGreaterThanOrEqual(1);
+		expect(spot.components).toBeLessThanOrEqual(spot.nodes.length);
+		expect(spot.rule).toContain('mutex pairs excluded');
+	});
+
+	it('contains the widget that draws it, so the recursion is checkable', () => {
+		expect(graph.byId.has('faceapp:anatomy-widget')).toBe(true);
+	});
+});
+
+describe('nodeLabel', () => {
+	it('shortens the label, never the address', () => {
+		expect(nodeLabel('daemon:eu.thisisait.nos.pulse')).toBe('pulse');
+		expect(nodeLabel('doctrine:docs/idea/11-agentic-loop-contract.md#5.1')).toBe(
+			'loop-contract §5.1'
+		);
+		expect(nodeLabel('pulse:keap:keap-lint')).toBe('keap:keap-lint');
 	});
 });

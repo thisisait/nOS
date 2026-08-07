@@ -16,7 +16,7 @@
   fact used to live in cron comments nobody could sum.
 -->
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, untrack } from 'svelte';
 	import raw from '$lib/anatomy/anatomy-graph.json';
 	import {
 		projectGraph,
@@ -25,13 +25,16 @@
 		joinLive,
 		mutexSpokes,
 		governingParagraphs,
+		nodeLabel,
+		KIND_GLYPH,
+		STATE_TONE,
 		NODE_KINDS,
 		type NodeKind,
 		type GraphNode
 	} from '$lib/anatomy/graph';
 	import { layout } from '$lib/anatomy/graphLayout';
 	import { loadPulse, type PulseResponse } from '$lib/api/pulse';
-	import { Badge, StatusNote, StateDot, type Tone } from '$lib/components/ui';
+	import { Badge, StatusNote, StateDot } from '$lib/components/ui';
 
 	const graph = projectGraph(raw);
 	const debt = temporalDebt(graph);
@@ -47,6 +50,35 @@
 	);
 	let connectedOnly = $state(true);
 	let selected = $state<GraphNode | null>(null);
+
+	interface Props {
+		/** A node id the caller was already pointing at (the desktop widget's
+		 *  click-through). Empty = no request. */
+		focusNode?: string;
+		/** Fired once the request has been honoured, so a second click on the
+		 *  same node in the widget arrives as a new request rather than being
+		 *  swallowed as "no change". */
+		onclearfocus?: () => void;
+	}
+	let { focusNode = '', onclearfocus }: Props = $props();
+
+	// Honour an inbound node request: select it, and switch its kind on if the
+	// default filter hides it — arriving at a graph that does not contain what
+	// you clicked is worse than not arriving. The body is untracked: it WRITES
+	// `visibleKinds`, and an effect that also read it reactively would re-run
+	// itself forever.
+	$effect(() => {
+		const want = focusNode;
+		if (!want) return;
+		untrack(() => {
+			const node = graph.byId.get(want);
+			if (node) {
+				if (!visibleKinds.has(node.kind)) visibleKinds = new Set(visibleKinds).add(node.kind);
+				selected = node;
+			}
+			onclearfocus?.();
+		});
+	});
 
 	let pulse = $state<PulseResponse | null>(null);
 	const POLL_MS = 60_000;
@@ -120,40 +152,11 @@
 		vb = { x: vb.x + (vb.w - w) / 2, y: vb.y + (vb.h - h) / 2, w, h };
 	}
 
-	const KIND_GLYPH: Record<NodeKind, string> = {
-		pulse: '⏱',
-		daemon: '⚙',
-		judge: '⚖',
-		gateset: '▦',
-		weakness: '⚠',
-		resource: '⛒',
-		repo: '⎇',
-		tofu: '⬡',
-		table: '▤',
-		doctrine: '§',
-		authentik: '🛡',
-		service: '▣'
-	};
-
-	const STATE_TONE: Record<string, Tone> = {
-		failing: 'bad',
-		never: 'warn',
-		overdue: 'warn',
-		running: 'info',
-		findings: 'warn',
-		ok: 'ok'
-	};
-
-	function label(id: string): string {
-		const local = id.split(':').slice(1).join(':');
-		if (id.startsWith('doctrine:')) {
-			// "docs/idea/11-agentic-loop-contract.md#2.4" → "loop-contract §2.4"
-			const [doc, section] = local.split('#');
-			const base = (doc.split('/').pop() ?? doc).replace(/\.md$/, '');
-			return `${base.replace(/^11-agentic-/, '')} §${section}`;
-		}
-		return local;
-	}
+	// KIND_GLYPH / STATE_TONE / nodeLabel moved into $lib/anatomy/graph.ts
+	// (2026-08-07): the desktop widget renders the same node ids on a
+	// different surface, and a second copy of the glyph table is how the same
+	// node ends up wearing two icons.
+	const label = nodeLabel;
 
 	function edgePath(from: string, to: string): string {
 		const a = placed.byId.get(from);
@@ -341,7 +344,7 @@
 							<!--
 							  GOVERNED BY — the written law that applies to this node, with its
 							  heading, not just its number. A citation renders as prose because
-							  "§2.4" tells an operator nothing at 03:00, and because the whole
+							  a bare section number tells an operator nothing at 03:00, and because the whole
 							  point of the doctrine layer is that a rule can be READ where it
 							  binds rather than looked up in a document nobody opens.
 							-->

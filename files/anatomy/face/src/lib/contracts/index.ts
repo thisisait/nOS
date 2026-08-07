@@ -10,6 +10,46 @@
  *   SoC (repo defaults) → runtime DataTable (user-addable) → per-user state.
  */
 
+// ── The two app axes: form (what it IS) and build (what it COSTS) ────────────
+
+/**
+ * What an app IS on screen. Exactly one per app, always declared, never
+ * inferred.
+ *
+ *   view    — a full window over estate data (Anatomy, Tables, Explore, Files)
+ *   utility — a focused tool with its own state (Sticky Notes; a planner)
+ *   widget  — a small surface that lives inside another; NOT a window
+ *   frame   — a service rendered in an iframe (the hub catalog)
+ *
+ * WHY THIS REPLACED A BOOLEAN. The shell used to record one binary —
+ * `isNativeApp(slug)`, "a nos-native API-calling app rather than an iframe" —
+ * and `HubApp.native?: boolean`, a field nothing in this repo ever set or
+ * read (measured 2026-08-07: zero producers, zero consumers). A binary can
+ * answer "does this get a component or an iframe" and nothing else, so the
+ * moment a third kind of surface existed — a widget, which is native AND not
+ * a window — the binary had no value for it. `form` is the axis; the boolean
+ * was a projection of it onto two points.
+ */
+export type AppForm = 'view' | 'utility' | 'widget' | 'frame';
+
+export const APP_FORMS: readonly AppForm[] = ['view', 'utility', 'widget', 'frame'] as const;
+
+/**
+ * What an app COSTS to build — which organs and which agent recipe.
+ * `docs/doctrine/face-app-tiers.md` owns this axis; it is unchanged and keeps
+ * its prefixes.
+ *
+ * INDEPENDENT OF `form`, AND ONLY LOOSELY CORRELATED. A `frame` is usually
+ * the cheapest thing to build and a `view` usually is not, but that is a
+ * tendency, not a definition: one expensive frame or one trivial utility and
+ * a field that conflated them would be wrong about both. Nothing in this
+ * shell derives either axis from the other — pinned by
+ * `tests/anatomy/test_face_app_form_axis.py`.
+ */
+export type AppBuild = 'F1' | 'F2' | 'F3' | 'F4' | 'H';
+
+export const APP_BUILDS: readonly AppBuild[] = ['F1', 'F2', 'F3', 'F4', 'H'] as const;
+
 // ── Identity (BFF-derived, edge-trusted) ─────────────────────────────────────
 
 /** The per-user identity the BFF builds from Authentik forward-auth headers.
@@ -199,8 +239,13 @@ export interface HubApp {
 	url: string;
 	description: string;
 	tier: number;
-	/** true once the app is a nos-native (API-calling) app rather than an iframe. */
-	native?: boolean;
+	/** NO `form` FIELD, deliberately. A hub catalog entry's form is `frame` by
+	 *  construction — the shell renders every one of them through
+	 *  `ServiceFrame` (`src/routes/+page.svelte`) — so the fact is a property
+	 *  of the render path, not something the catalog declares. The shell
+	 *  registers them as frames on load (`registerHubFrames`), which is where
+	 *  the count comes from. The field this replaced (`native?: boolean`) had
+	 *  zero producers and zero consumers for its whole life. */
 	/** Operator-declared embeddability (hub_card). undefined = attempt inline;
 	 *  false = the service sets X-Frame-Options → render an open-↗ card instead. */
 	embed?: boolean;

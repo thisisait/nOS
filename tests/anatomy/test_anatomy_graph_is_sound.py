@@ -328,7 +328,22 @@ def test_the_node_counts_are_sane(committed):
     assert c["nodes_authentik"] >= 40
     assert c["nodes_table"] >= 6
     assert c["nodes_doctrine"] >= 10
+    # face apps (2026-08-07): 4 views + 1 widget from the face's own registry.
+    # Frames are deliberately NOT nodes — a hub service already has a
+    # `service:` address and a second one would be padding.
+    assert c["nodes_faceapp"] >= 5
     assert c["edges_governed_by"] >= 15
+
+
+def test_the_face_app_harvest_dies_rather_than_emitting_nothing(gen, monkeypatch, tmp_path):
+    """Repair before declare, harvest edition. If the registry is refactored
+    past the parse, the compiler must FAIL — a silent zero would delete five
+    nodes and three edges from the address space and nothing would say so."""
+    empty = tmp_path / "registry.ts"
+    empty.write_text("export const nothing = 1;\n", encoding="utf-8")
+    monkeypatch.setattr(gen, "FACE_REGISTRY", empty)
+    with pytest.raises(SystemExit):
+        gen.harvest_faceapps({})
 
 
 # ── the constitution layer: governed_by edges, per-block attribution ──────
