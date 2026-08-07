@@ -59,6 +59,8 @@ def _docker_ps(project: str) -> list[tuple[str, str]]:
 
 #: Docker's own words when a healthcheck's binary is missing from the image.
 #: The check never ran, so its verdict is not about the service.
+#: Doctrine: docs/doctrine/foreign-properties.md §2 (upstream property, no fix
+#: on our side) and §2.2 (this annotation is the performing code).
 CANNOT_RUN = ("executable file not found", "no such file or directory",
               "exec format error", "oci runtime exec failed")
 

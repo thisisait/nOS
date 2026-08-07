@@ -96,6 +96,30 @@ before), or an explicit `-e nos_sudo_password=<real>` (the CLI never clobbers
 an operator-passed one). Without any of these, the playbook's non-interactive
 sudo preflight REFUSES up-front — before any teardown, never mid-wipe.
 
+## Where to run a removal FROM (operator environment)
+
+Run a removal from a terminal **outside the IDE** — Terminal.app, iTerm, or a
+`tmux` session you can detach — never an editor's integrated terminal.
+
+A removal ends in a full bring-up: ~50 containers whose RAM pressure alone can
+make macOS terminate a heavy GUI app. When the editor dies it takes its
+integrated terminal with it, and with it the controlling `ansible-playbook`
+session — leaving a half-applied run. `tmux` also survives the SSH/terminal
+drop, which a removal is long enough to meet.
+
+This is a property of the operator's machine, not of the playbook, so no gate
+can hold it. What the playbook itself does to the host session is bounded and
+measured: the GUI killalls (`killall Dock` / `killall Finder`,
+`tasks/macos-defaults.yml`) and the `sshd` `launchctl kickstart` handler in
+`main.yml`. There is **no `reboot`, no `shutdown`, and no Docker-daemon
+restart** in nOS's own tasks (the vendored `osx-command-line-tools` role's
+`softwareupdate -i` can trigger an OS update, but `--tags upgrade` does not
+reach it). The killalls defer by default (`defer_gui_restarts: true`,
+`default.config.yml`), so a normal or blank run no longer flickers the GUI
+mid-run, and `--tags upgrade` is provably free of all of them — gate
+`tests/anatomy/test_upgrade_tag_host_quiet.py`. Background:
+`docs/archive/upgrade-reset-scope-and-session-safety.md` §Run-hardening.
+
 ## Durable prefix advice
 
 Put `global_password_prefix` in your gitignored `credentials.yml` — that is

@@ -35,6 +35,10 @@ services:
       PROXY_DOMAIN: "{{ code_server_domain | default('code' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       DEFAULT_WORKSPACE: "{{ code_server_default_workspace | default('/config/workspace') }}"
     healthcheck:
+      # The probe is http:// against 8443 on purpose — the LSIO image serves
+      # PLAIN HTTP there unless `--cert` is passed, which we do not pass.
+      # Doctrine: docs/doctrine/foreign-properties.md §3. Consequence for the
+      # edge: code_server must never enter traefik_https_upstream_ids (§3.1).
       test: ["CMD-SHELL", "curl -sf http://localhost:8443/healthz || curl -sf http://localhost:8443/ || exit 1"]
       interval: 30s
       timeout: 5s

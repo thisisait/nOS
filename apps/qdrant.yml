@@ -108,6 +108,8 @@ compose:
         - qdrant_storage:/qdrant/storage
         - qdrant_snapshots:/qdrant/snapshots
       healthcheck:
+        # Doctrine: docs/doctrine/foreign-properties.md §2.1 — probe with what
+        # the image HAS; a check that cannot execute manufactures a verdict.
         # qdrant/qdrant:v1.13.x image has no curl/wget/python — only bash +
         # the qdrant binary. Use bash's built-in /dev/tcp pseudo-device for
         # a TCP-level liveness probe (sufficient since Qdrant only opens

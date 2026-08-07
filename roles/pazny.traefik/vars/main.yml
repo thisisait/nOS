@@ -160,18 +160,21 @@ traefik_skip_ids:
   # Reach the dashboard at http://127.0.0.1:{{ traefik_dashboard_port }} instead.
   - traefik
 
-# Service ids whose host-loopback bind is HTTPS (not HTTP). Traefik upstream
+# Service ids whose CONTAINER listener is HTTPS (not HTTP). Traefik upstream
 # URL gets the https:// prefix and `serversTransport: noverify` so the
 # self-signed dev cert is tolerated.
 #
-# 2026-05-04: code_server REMOVED from this list. The LSIO image
-# (lscr.io/linuxserver/code-server) serves PLAIN HTTP on 8443 unless
-# `--cert` is passed via CLI. We don't pass it, so the upstream is
-# `http://nos-host:3009`, not https. Previous (incorrect) entry caused
-# Traefik to send a TLS handshake that the upstream answered with HTTP,
-# producing `tls_get_more_records: packet length too long` SSL errors
-# and a 502/404 user-visible state. Surfaced 2026-05-04 during operator
-# verification of code.pazny.eu.
+# Doctrine: docs/doctrine/foreign-properties.md §3.1 — an upstream is HTTP until
+# measured otherwise, and a port number is not evidence. §3 records why: the
+# LSIO code-server image serves PLAIN HTTP on 8443 unless `--cert` is passed,
+# which nOS does not; the entry that used to sit here made Traefik open a TLS
+# handshake the upstream answered in HTTP (`tls_get_more_records: packet length
+# too long`, a 502/404 on code.pazny.eu, removed 2026-05-04).
+#
+# EMPTY IS THE CURRENT CORRECT ANSWER, not a gap: every routed upstream in this
+# estate terminates TLS at the edge and speaks HTTP behind it. Adding an id
+# requires measured evidence of an internal TLS listener, registered in
+# tests/anatomy/test_traefik_https_upstream_binds_tls.py.
 traefik_https_upstream_ids: []
 
 # Special-case routes that don't follow the manifest auto-derivation pattern.
