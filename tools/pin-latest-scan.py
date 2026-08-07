@@ -139,6 +139,35 @@ def ghcr_tags(image: str) -> list[str]:
     return (data or {}).get("tags", []) or []
 
 
+def manifest_exists(image: str, tag: str) -> bool:
+    """Does this exact tag resolve? The authoritative question, asked directly.
+
+    A tag listing is a convenience the registry may truncate or filter; a
+    manifest either resolves or it does not. Used only to explain an absence,
+    never to enumerate — probing candidate versions one by one would be a
+    guess wearing a measurement's clothes.
+    """
+    if image.startswith("ghcr.io/"):
+        path = image.split("/", 1)[1]
+        token = _get(f"https://ghcr.io/token?scope=repository:{path}:pull&service=ghcr.io")
+        if not token or "token" not in token:
+            return False
+        url = f"https://ghcr.io/v2/{path}/manifests/{tag}"
+        headers = {
+            "Authorization": f"Bearer {token['token']}",
+            "Accept": "application/vnd.oci.image.index.v1+json, "
+                      "application/vnd.docker.distribution.manifest.list.v2+json",
+        }
+        req = urllib.request.Request(url, headers=headers, method="HEAD")
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as res:
+                return res.status == 200
+        except (urllib.error.URLError, OSError):
+            return False
+    repo = image if "/" in image else f"library/{image}"
+    return _get(f"https://hub.docker.com/v2/repositories/{repo}/tags/{tag}") is not None
+
+
 def registry_tags(image: str, until: str | None = None) -> list[str]:
     if image.startswith("ghcr.io/"):
         return ghcr_tags(image)
@@ -251,8 +280,20 @@ def main() -> int:
                                 f"/tags?page_size=100&name={p[0]}.")
                     tags += [t["name"] for t in (data or {}).get("results", [])]
             if pinned not in tags:
-                row.update(newest=None, klass="unknown",
-                           why=f"the pinned tag is absent from {len(tags)} fetched tags")
+                # DISTINGUISH A MISSING TAG FROM AN INCOMPLETE LISTING. Measured
+                # 2026-08-07: ghcr's /tags/list for open-webui returned 1000
+                # entries containing NEITHER the tag the container is running
+                # (0.10.2) NOR the one that exists upstream (0.11.0). "absent
+                # from 1000 fetched tags" reads as "this tag may not exist",
+                # which sent a reader looking for the wrong problem. A HEAD on
+                # the manifest answers authoritatively, so the message can say
+                # which of the two it is.
+                why = f"the pinned tag is absent from {len(tags)} fetched tags"
+                if manifest_exists(image, pinned):
+                    why = (f"the registry's tag LISTING is incomplete — {pinned} exists "
+                           f"(manifest 200) but is not among the {len(tags)} listed, so "
+                           f"nothing newer can be ruled in or out from the list")
+                row.update(newest=None, klass="unknown", why=why)
             else:
                 newest = best_tag(pinned, tags)
                 row.update(newest=newest, klass=classify(pinned, newest))

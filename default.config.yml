@@ -1624,7 +1624,18 @@ nos_agent_forge: "gitlab"
 
 openwebui_domain: "ai{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 openwebui_port: 3004             # Internal container port 8080 → host 3004
-openwebui_version: "0.10.2"      # 0.8 adds native MCP + function calling + code exec. DB migration ~few min.
+# REM-176, the THIRD consecutive supersession of this component: REM-101 moved
+# it 0.8.12 → 0.9.6, REM-138 0.9.6 → 0.10.2, this one 0.10.2 → 0.11.0. Each was
+# correct when written and stale within weeks, which is the argument for
+# measuring the registry rather than quoting the queue.
+#
+# 0.11.0 verified by MANIFEST, not by a tag listing: ghcr's /tags/list returned
+# 1000 entries containing NEITHER 0.10.2 (which is running) nor 0.11.0 (which
+# exists) — the listing is incomplete for this repository, so a HEAD on the
+# manifest is the only authoritative answer. arm64 present; 0.11.1 is 404, so
+# this is the top of the line as of 2026-08-07. Same-major, DB migration on
+# start (~minutes), and signup stays off per the pure-SSO doctrine.
+openwebui_version: "0.11.0"
 openwebui_secret_key: "{{ global_password_prefix }}_pw_openwebui"
 openwebui_enable_signup: false   # pure-SSO: public local signup OFF (was true →
                                  # public /auth/signup first-admin race). Users
@@ -2099,7 +2110,16 @@ rustfs_secret_key: "{{ global_password_prefix }}_pw_rustfs_secret"
 
 erpnext_domain: "erp{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 erpnext_port: 8087                     # 8082 = Traefik dashboard, 8083-8086 taken
-erpnext_version: "v15.111.0"              # CVE-2026-27471 (CVSS 9.3 unauth doc access)
+# REM-165. v15.119.0 is the TOP of the v15 line — v15.120.0 is 404 — and the
+# bump stays inside v15 deliberately: v16.31.1 exists and the pin scanner offers
+# it, but a Frappe major is a bench migration this estate already treats as
+# unreliable on a cold blank (ERPNext is excluded from profiles/all-on.yml).
+#
+# HONEST LIMIT: erpnext is NOT RUNNING on this host, so unlike every other bump
+# in this wave the result cannot be verified against `docker ps`. The tag and
+# its arm64 manifest are verified against the registry; that the service comes
+# up on it is not. First supervised `-e install_erpnext=true` run is the test.
+erpnext_version: "v15.119.0"              # supersedes CVE-2026-27471 (CVSS 9.3 unauth doc access)
 # erpnext_data_dir: DEPRECATED since P0.1 migration to a named volume. Sites data
 # lives in Docker named volume `b2b_erpnext_sites` (managed for blank-reset
 # via `compose down -v` + `volume prune -f -a`). External storage can be
