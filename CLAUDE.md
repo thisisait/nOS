@@ -102,6 +102,22 @@ tools/ci-local.sh --refresh-lock        # re-resolve ranges → print versions t
 
 ## Architecture
 
+### Vocabulary — `tier` vs `layer`
+
+**`tier` means RBAC and nothing else** (1–4, who may reach a service). The word carried
+four unrelated meanings until 2026-08-07; the axes and the settled rules live in
+[docs/doctrine/layers.md](docs/doctrine/layers.md) — read it before adding a third
+adjective to a service.
+
+- **`layer`** (L0 substrate · L1 platform · L2 application · L3 custom) is the new axis:
+  *what else breaks when this stops*. It is DERIVED from service→service dependency
+  edges, which do not exist in the graph yet — so it is a design target, not an
+  inventory (`layers.md` §4).
+- **`F1`–`F4`/`H`** is face-app build complexity, already prefixed
+  ([docs/doctrine/face-app-tiers.md](docs/doctrine/face-app-tiers.md)).
+- **Delivery tier is retired.** Say **role service** (`roles/pazny.<name>/`) or
+  **manifest app** (`apps/<name>.yml`). No code ever branched on it.
+
 ### Anatomy — the structural backbone
 
 > **Doctrine source:** `docs/bones-and-wings-refactor.md` §1.1 + §6.
@@ -276,7 +292,7 @@ Authentik forward-auth is a file-provider middleware (`authentik@file`), applied
 
 Authoritative guide: [docs/traefik-primary-proxy.md](docs/traefik-primary-proxy.md).
 
-### Tier-2 apps_runner (manifest-driven onboarding)
+### Manifest apps (apps_runner onboarding)
 
 For long-tail self-hosted apps that don't merit a full `pazny.<name>` role, drop a YAML manifest at `apps/<name>.yml` and re-run the playbook. `pazny.apps_runner` discovers manifests, validates them (via `files/anatomy/module_utils/nos_app_parser` — schema + GDPR Article 30 + TLS / SSO / EU-residency gates), resolves magic tokens, renders a single merged compose override, brings the apps stack up, and fires post-hooks (service-registry append, Wing systems ingest, Authentik blueprint reconverge, Bone HMAC `app.deployed` events, Portainer endpoint reg, Kuma monitor extension, GDPR upsert via Wing CLI, smoke catalog runtime extension).
 
@@ -286,7 +302,7 @@ Coolify (Apache-2.0) maintains ~280 compose templates that we can import via `to
 
 Authoritative guides: [docs/tier2-app-onboarding.md](docs/tier2-app-onboarding.md), [docs/coolify-import.md](docs/coolify-import.md).
 
-### Adding a new Docker service (Tier-1)
+### Adding a new Docker service (role service)
 
 **Current pre-Track-Q workflow.** After bones & wings A6.5 + Track Q, the target workflow becomes thin role + `files/anatomy/plugins/<service>-base/plugin.yml`; see `docs/bones-and-wings-refactor.md` §1.1/§13.1 and `files/anatomy/docs/role-thinning-recipe.md`.
 
@@ -296,7 +312,7 @@ Authoritative guides: [docs/tier2-app-onboarding.md](docs/tier2-app-onboarding.m
 4. Add a row to `state/manifest.yml` with `domain_var` + `port_var` so Traefik file-provider auto-routes it.
 5. (Optional, pre-Q only) Add an OIDC entry in `authentik_oidc_apps` + env vars in the compose template. Do not use this pattern for roles already migrated to plugin-based autowiring.
 
-### Adding a new Docker service (Tier-2 — manifest-driven)
+### Adding a new app (manifest app)
 
 ```bash
 cp apps/_template.yml apps/myapp.yml
