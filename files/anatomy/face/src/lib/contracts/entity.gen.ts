@@ -15,6 +15,36 @@ export const ACCESS_GATES = ['none', 'forward_auth', 'oidc', 'header_oidc'] as c
 export type FaceSurface = 'window' | 'panel' | 'embed' | 'hidden';
 export const FACE_SURFACES = ['window', 'panel', 'embed', 'hidden'] as const;
 
+/** The adjective axes. A fourth one is a genome edit, not a fifth file. */
+export const AXES = ['form', 'build', 'layer'] as const;
+
+/** What an app IS on screen — one per app, always declared, never inferred. */
+export type AppForm = 'view' | 'utility' | 'widget' | 'frame';
+export const APP_FORMS = ['view', 'utility', 'widget', 'frame'] as const;
+
+/** What an app COST to build. Independent of `form`; nothing derives either
+ *  from the other. `docs/doctrine/face-app-tiers.md` owns the axis. */
+export type AppBuild = 'F1' | 'F2' | 'F3' | 'F4' | 'H';
+export const APP_BUILDS = ['F1', 'F2', 'F3', 'F4', 'H'] as const;
+
+/** Where a service SITS. DERIVED, never declared. `null` — a service the
+ *  estate refuses to place — is not in this list; it is not a fifth layer. */
+export type ServiceLayer = 'L0' | 'L1' | 'L2' | 'L3';
+export const SERVICE_LAYERS = ['L0', 'L1', 'L2', 'L3'] as const;
+
+export const ANCHOR_PATTERN = /^[0-9]{2}(\.[0-9]{2}){0,2}$/;
+export const LAYER_WITHHELD_MIN_LENGTH = 40;
+
+/** The absence twin of ungatedRouteNeedsJustification: a withheld layer that
+ *  does not say why reads as a default, and a default reads as calm. */
+export function withheldLayerNeedsAReason(axes: {
+  layer?: ServiceLayer | null;
+  layer_withheld?: string;
+}): boolean {
+  if (!('layer' in axes) || axes.layer !== null) return false;
+  return (axes.layer_withheld ?? '').trim().length < LAYER_WITHHELD_MIN_LENGTH;
+}
+
 export const IDENTITY_REQUIRED = ['name', 'version', 'description', 'kind'] as const;
 export const COMPLIANCE_REQUIRED = ['purpose', 'legal_basis', 'data_categories', 'data_subjects', 'retention_days', 'processors'] as const;
 export const ACCESS_REQUIRED = ['routed', 'gate'] as const;

@@ -72,12 +72,36 @@ def required_of(schema: dict, facet_name: str) -> list[str]:
     return list(facet(schema, facet_name).get("required") or [])
 
 
+def axis_names(schema: dict) -> list[str]:
+    """The adjectives, separated from their companion fields — mechanically.
+
+    A companion is a property named `<axis>_<something>`: `layer_withheld` and
+    `layer_basis` belong TO `layer`, they are not axes of their own. Deriving
+    this rather than hard-coding a list is the difference between a rule and a
+    fourth place to remember: a fifth axis with two companions needs no edit
+    here, and a companion promoted to an axis needs no edit either.
+    """
+    props = list(facet(schema, "axes")["properties"])
+    return [p for p in props if not any(p.startswith(f"{o}_") for o in props)]
+
+
 def collect(schema: dict) -> dict:
     """Everything the emitters need, resolved once so they cannot disagree."""
+    layer_enum = enum_of(schema, "axes", "layer")
     return {
         "legal_basis": enum_of(schema, "compliance", "legal_basis"),
         "gate": enum_of(schema, "access", "gate"),
         "surface": enum_of(schema, "face", "surface"),
+        "form": enum_of(schema, "axes", "form"),
+        "build": enum_of(schema, "axes", "build"),
+        # `null` is a legal `layer`, and it is not a member of the vocabulary —
+        # it is the refusal to place a service. Emitting it as the string
+        # "None"/"null" into a runtime constant would make the withholding
+        # look like a fifth layer.
+        "layer": [v for v in layer_enum if v is not None],
+        "axes": axis_names(schema),
+        "layer_withheld_min": facet(schema, "axes")["properties"]["layer_withheld"]["minLength"],
+        "anchor_pattern": facet(schema, "identity")["properties"]["anchor"]["pattern"],
         "compliance_required": required_of(schema, "compliance"),
         "identity_required": required_of(schema, "identity"),
         "access_required": required_of(schema, "access"),
@@ -111,6 +135,30 @@ LEGAL_BASIS = {_py_list(g["legal_basis"])}
 ACCESS_GATES = {_py_list(g["gate"])}
 
 FACE_SURFACES = {_py_list(g["surface"])}
+
+#: The adjective axes. A fourth one is a genome edit, not a fifth file.
+AXES = {_py_list(g["axes"])}
+
+APP_FORMS = {_py_list(g["form"])}
+
+APP_BUILDS = {_py_list(g["build"])}
+
+#: The layers a service can be PLACED at. `None` is legal on an entity and is
+#: deliberately absent here: it is the refusal to place, not a fifth layer.
+SERVICE_LAYERS = {_py_list(g["layer"])}
+
+#: Vocabulary per axis, so a consumer validates by axis NAME and a new axis
+#: reaches every consumer without one of them being edited to notice.
+AXIS_VOCABULARY = {{
+    "form": APP_FORMS,
+    "build": APP_BUILDS,
+    "layer": SERVICE_LAYERS,
+}}
+
+ANCHOR_PATTERN = r"{g["anchor_pattern"]}"
+ANCHOR_RE = re.compile(ANCHOR_PATTERN)
+
+LAYER_WITHHELD_MIN_LENGTH = {g["layer_withheld_min"]}
 
 IDENTITY_REQUIRED = {_py_list(g["identity_required"])}
 
@@ -154,6 +202,36 @@ def ungated_route_needs_justification(access: dict) -> bool:
     if access.get("gate") != "none":
         return False
     return len((access.get("justification") or "").strip()) < JUSTIFICATION_MIN_LENGTH
+
+
+def withheld_layer_needs_a_reason(axes: dict) -> bool:
+    """True when a layer was withheld and the withholding is silent.
+
+    The absence twin of ungated_route_needs_justification, and the reason the
+    `layer` axis is worth having: 38 of 63 services carry no layer today, so a
+    null that rendered as a default would say "application leaf" about a
+    service nobody has read. JSON Schema states this too (axes.allOf); it is
+    restated here because the anatomy compiler stamps the field before any
+    validator sees it, and the refusal has to happen at the stamp.
+    """
+    if "layer" not in axes or axes["layer"] is not None:
+        return False
+    return len((axes.get("layer_withheld") or "").strip()) < LAYER_WITHHELD_MIN_LENGTH
+
+
+def axis_value_is_declared(axis: str, value) -> bool:
+    """False when `value` is outside the genome's vocabulary for `axis`.
+
+    Until 2026-08-07 nothing anywhere ran this check: the face declared the two
+    app vocabularies in TypeScript, the anatomy compiler read the same registry
+    with a regex and accepted whatever string it found, so `form: 'veiw'`
+    became a fourth form in the estate's address space in silence.
+    """
+    if axis not in AXIS_VOCABULARY:
+        return False
+    if axis == "layer" and value is None:
+        return True   # a withholding, checked by withheld_layer_needs_a_reason
+    return value in AXIS_VOCABULARY[axis]
 '''
 
 
@@ -182,6 +260,36 @@ export const ACCESS_GATES = {_ts_arr(g["gate"])};
 
 export type FaceSurface = {_ts_union(g["surface"])};
 export const FACE_SURFACES = {_ts_arr(g["surface"])};
+
+/** The adjective axes. A fourth one is a genome edit, not a fifth file. */
+export const AXES = {_ts_arr(g["axes"])};
+
+/** What an app IS on screen — one per app, always declared, never inferred. */
+export type AppForm = {_ts_union(g["form"])};
+export const APP_FORMS = {_ts_arr(g["form"])};
+
+/** What an app COST to build. Independent of `form`; nothing derives either
+ *  from the other. `docs/doctrine/face-app-tiers.md` owns the axis. */
+export type AppBuild = {_ts_union(g["build"])};
+export const APP_BUILDS = {_ts_arr(g["build"])};
+
+/** Where a service SITS. DERIVED, never declared. `null` — a service the
+ *  estate refuses to place — is not in this list; it is not a fifth layer. */
+export type ServiceLayer = {_ts_union(g["layer"])};
+export const SERVICE_LAYERS = {_ts_arr(g["layer"])};
+
+export const ANCHOR_PATTERN = /{g["anchor_pattern"]}/;
+export const LAYER_WITHHELD_MIN_LENGTH = {g["layer_withheld_min"]};
+
+/** The absence twin of ungatedRouteNeedsJustification: a withheld layer that
+ *  does not say why reads as a default, and a default reads as calm. */
+export function withheldLayerNeedsAReason(axes: {{
+  layer?: ServiceLayer | null;
+  layer_withheld?: string;
+}}): boolean {{
+  if (!('layer' in axes) || axes.layer !== null) return false;
+  return (axes.layer_withheld ?? '').trim().length < LAYER_WITHHELD_MIN_LENGTH;
+}}
 
 export const IDENTITY_REQUIRED = {_ts_arr(g["identity_required"])};
 export const COMPLIANCE_REQUIRED = {_ts_arr(g["compliance_required"])};

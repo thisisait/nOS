@@ -32,9 +32,10 @@
           "description": "Which organelle this is. Open on purpose: the base must not need editing to admit a new kind.",
           "minLength": 1
         },
-        "taxonomy_anchor": {
+        "anchor": {
           "type": "string",
-          "description": "Cortex node this entity hangs from, e.g. `tax:02.02.11`. Optional today; it is what makes `ent:` addressable from cortex-lang once the registry lands (cortex-self-core.md §6b)."
+          "pattern": "^[0-9]{2}(\\.[0-9]{2}){0,2}$",
+          "description": "Cortex node this entity hangs from — an id from the committed 362-anchor spine (state/fable/taxonomy-bundle.json `anchor`), e.g. `02.02.11`. What makes `ent:` addressable from cortex-lang once the registry lands (cortex-self-core.md §6b).\n\nRENAMED from `taxonomy_anchor` on 2026-08-07, and the rename IS the finding. Measured: `taxonomy_anchor` had zero producers and zero consumers for its whole life (one grep, one hit — its own declaration), while 196 anatomy-graph nodes carried the same fact under the name `anchor`, and its example spelling `tax:02.02.11` matched none of the 362 live ids. One fact, two names, the dead one in the genome — which is the exact defect this file exists to end, so it is repaired rather than aliased.\n\nOPTIONAL, not required, and the asymmetry is deliberate: 196/196 graph nodes carry one, 0/1 organelle instances do. The pattern is generated into both runtimes as ANCHOR_PATTERN so a dangling anchor is refused at compile time by whatever stamps it — `tools/anatomy-graph-gen.py` refuses one that fails this pattern, and `tests/anatomy/test_anatomy_graph_is_sound.py` separately refuses one the spine does not hold. Shape and membership are two checks because a well-formed id that names nothing is the failure this estate actually hits."
         }
       }
     },
@@ -206,6 +207,120 @@
         }
       }
     },
+    "axes": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The adjectives. `form` (what a thing IS on screen), `build` (what it COST to build), `layer` (where it SITS in the dependency arithmetic) — one facet, three axes, deliberately.\n\nWHY ONE FACET. Before 2026-08-07 these were three parallel registries with nothing between them: `form` and `build` as TypeScript unions in files/anatomy/face/src/lib/contracts/index.ts, `layer` as four string literals inside tools/anatomy-graph-gen.py::derive_layers plus prose in docs/doctrine/layers.md §3, and the anatomy compiler validating NONE of the three — a typo'd `form: 'veiw'` in the face registry compiled into the address space as a fourth form and no gate could tell. Three axes, three declarations, zero comparison. That is the shape the genome exists to collapse, one level up from where it has already collapsed compliance and access.\n\n`additionalProperties: false` IS the rule the doc asks for: a fourth adjective cannot be added by inventing a fifth file, because an entity carrying one fails validation until the axis is declared HERE and generated into every runtime by the same emitter. The artifact-side twin of that clause is the generated `AXES` tuple, which tools/anatomy-graph-gen.py::stamp_axes refuses to write outside of.\n\nWHAT IS NOT HERE. `tier` (RBAC) lives in `access` and keeps its one surviving meaning; delivery tier is retired. Neither is an adjective about the thing itself — one is a permission, one was a shipping route.",
+      "properties": {
+        "form": {
+          "type": "string",
+          "enum": [
+            "view",
+            "utility",
+            "widget",
+            "frame"
+          ],
+          "description": "What a face app IS on screen. Exactly one per app, always declared, never inferred. Replaced a boolean (`isNativeApp`, plus a dead `HubApp.native`) that could only answer 'component or iframe' and had nothing to say about a widget — native AND not a window. `utility` is an EMPTY SET today (docs/doctrine/face-app-tiers.md names Sticky Notes as its reference and no such app exists in this shell); a zero here is a measurement, not a slot to fill with a token app."
+        },
+        "build": {
+          "type": "string",
+          "enum": [
+            "F1",
+            "F2",
+            "F3",
+            "F4",
+            "H"
+          ],
+          "description": "What a face app COST to build — which organs and which agent recipe (docs/doctrine/face-app-tiers.md owns the axis and keeps its prefixes). INDEPENDENT of `form` and only loosely correlated: a frame is usually cheapest and a view usually is not, but that is a tendency, not a definition, and the field that conflated them was wrong about both. Nothing derives either axis from the other."
+        },
+        "layer": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "L0",
+            "L1",
+            "L2",
+            "L3",
+            null
+          ],
+          "description": "Where a service SITS: L0 substrate · L1 platform · L2 application · L3 custom (docs/doctrine/layers.md §3). DERIVED — longest path over the service projection of the dependency edges — never declared. `layer:` in a plugin manifest or in state/manifest.yml is a gate failure (test_service_layer_is_derived.py). `null` is a first-class value, not a missing one: it means the estate refuses to place this service, and the clause below makes it say why. L3 is in the enum because §3 defines it, and is never emitted, because §3 defines it by DELIVERY — a different axis wearing this one's name."
+        },
+        "layer_withheld": {
+          "type": "string",
+          "minLength": 40,
+          "description": "Why no layer was derived. A FIELD, not an omission — the same shape as `access.justification`, for the same reason: 38 of 63 services are unplaced today, and an absent `layer` that rendered as a default would make 'we have not read this role' indistinguishable from 'this is an application leaf'. Measured with the refusal off, service:traefik derives L2 and service:grafana derives L0 from the identical absence of evidence."
+        },
+        "layer_basis": {
+          "type": "object",
+          "description": "The arithmetic that produced the layer, published beside it. A derived value that does not carry its derivation is an assertion.",
+          "required": [
+            "height",
+            "dependents",
+            "upstreams"
+          ],
+          "properties": {
+            "height": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Longest path from this node to a leaf of the service projection."
+            },
+            "dependents": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "upstreams": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "layer": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "layer"
+            ]
+          },
+          "then": {
+            "required": [
+              "layer_withheld"
+            ],
+            "description": "A withheld layer must state its reason. This clause is the REM-144 clause pointed at absence instead of at exposure: an unmeasured value gets its own visible state, never a default that looks fine."
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "layer": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "layer"
+            ]
+          },
+          "then": {
+            "required": [
+              "layer_basis"
+            ],
+            "not": {
+              "required": [
+                "layer_withheld"
+              ]
+            },
+            "description": "A placed service publishes its arithmetic and withholds nothing. Carrying both a layer and a withholding reason is two answers to one question."
+          }
+        }
+      ]
+    },
     "entity": {
       "type": "object",
       "description": "The base. An organelle composes this with `allOf` and adds its own kind-specific properties.",
@@ -228,6 +343,9 @@
         },
         "face": {
           "$ref": "#/definitions/face"
+        },
+        "axes": {
+          "$ref": "#/definitions/axes"
         }
       }
     }

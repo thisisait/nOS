@@ -6,7 +6,9 @@
 > **R1 closed it on 2026-08-07** and **R2 landed the same day**, after three
 > adversarial reviews took R1 apart: 196 nodes, 232 edges, **35** of them
 > between services, and `layer` derived on 25 of 63 — the other 38 withheld
-> rather than guessed. R3 shipped; R4 stands open.
+> rather than guessed. R3 and R4 shipped the same day: `form`/`build`/`layer`
+> are one genome facet, generated into both runtimes, and a value outside it
+> is now a compile failure rather than a node field.
 
 ## The problem it exists to remove
 
@@ -177,22 +179,55 @@ it `→ faceapp:anatomy` (the click-through), and
 Doctrine: `docs/doctrine/face-app-tiers.md` §Form. Gate:
 `tests/anatomy/test_face_app_form_axis.py`.
 
-## R4 — the ontology
+## R4 — the ontology — **SHIPPED 2026-08-07**
 
 R1–R3 all add facts to nodes. They are only worth the effort if the facts are
 addressable — that is the difference between a graph and a picture.
 
-- **Every node already carries `anchor` + `description`** (shipped 2026-08-06),
-  validated against the 362-anchor spine. New kinds inherit that requirement;
-  the gate refuses a dangling anchor.
-- **`form`, `layer`, `build` are FACETS of one entity**, not three parallel
-  registries. They belong in the genome's entity schema
-  (`docs/idea/06-genome.md`), composed with `allOf`, so a fourth adjective
-  cannot be added by inventing a fifth file.
-- **KEAP import stays blocked on one thing** and it is not effort: a neutral
-  object still gets its own line in the nightly corpus diff, so 191 nodes means
-  191 benign findings a night until the harness folds them into one counted
-  line — and harness changes land after a completed streak, never during one.
+**The three adjectives were three registries.** Measured at `44c90677`: `form`
+and `build` as TypeScript unions in `files/anatomy/face/src/lib/contracts/index.ts`;
+`layer` as four string literals in `tools/anatomy-graph-gen.py::derive_layers`
+plus prose in `layers.md` §3; and the compiler that stamps all three onto nodes
+validating **none of them**. `form: 'veiw'` in the registry compiled into the
+estate's address space as a fourth form — measured by doing it, on a copy of
+`HEAD`, where it produced the node description *"form: veiw (what it is on
+screen)"* and no gate anywhere went red.
+
+They are now one facet — `state/genome/entity.schema.json` `definitions.axes`,
+composed into the base entity — generated into both runtimes by
+`tools/genome-codegen.py` and **consumed** rather than restated:
+
+- `additionalProperties: false` on the facet is the rule stated as schema: an
+  entity carrying a fourth adjective fails validation until the axis is declared
+  there, and declaring it there is what puts it in every runtime.
+- `stamp_axes()` is the compiler's single writer and the artifact-side twin of
+  that clause — it refuses an undeclared axis, a value outside the vocabulary, a
+  withheld `layer` with no reason, and a placed one with no `layer_basis`.
+- Three restatements were repaired, not just forbidden: the counts loop in the
+  compiler, `serviceCoverage()` in `graph.ts` (which summed
+  `services_layer_L0..L3` by hand and would have dropped a fifth layer the
+  compiler counted), and `formCounts()` in the face registry (which seeded its
+  census from four hand-typed names).
+
+**`taxonomy_anchor` was the same defect inside the genome itself.** Zero
+producers, zero consumers, one grep hit — its own declaration — with an example
+spelling (`tax:02.02.11`) matching none of the 362 live ids, while 196 graph
+nodes carried the fact as `anchor`. Renamed to `anchor`, given the spine's shape
+as a pattern, and generated: the compiler now refuses a malformed anchor
+(shape) and the soundness gate still refuses a dangling one (membership) —
+two checks, because a well-formed id that names nothing is the failure this
+estate actually hits.
+
+Gate: `tests/anatomy/test_genome_axes_facet.py` (17 checks, all 17 shown red
+against `HEAD`).
+
+**KEAP import stays blocked on one thing** and it is not effort: a neutral
+object still gets its own line in the nightly corpus diff, so **196** nodes
+means 196 benign findings a night until the harness folds same-shape ids
+(`table-*`, and now `faceapp:*`) into one counted line. **Precondition, written
+down rather than worked around:** that fold is a harness change, and harness
+changes land only *after* a completed agreement streak, never during one. R4
+therefore does not touch the harness, and the import stays queued.
 
 ## R5 — gotchas, triaged
 

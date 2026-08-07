@@ -104,6 +104,16 @@ from pathlib import Path
 import yaml
 
 REPO = Path(__file__).resolve().parents[1]
+
+#: The genome's generated vocabulary — `form`, `build`, `layer`, the anchor
+#: shape. GENERATED from state/genome/entity.schema.json by
+#: tools/genome-codegen.py; this compiler consumes it rather than restating it,
+#: which is R4's whole content. Before 2026-08-07 the two app axes were
+#: TypeScript unions in the face and this file validated neither, so a typo'd
+#: `form:` in the registry compiled into the address space as a new form.
+sys.path.insert(0, str(REPO / "files" / "anatomy"))
+from module_utils import nos_entity  # noqa: E402
+
 TARGET = REPO / "state" / "anatomy-graph.json"
 #: Byte-identical vendored copy for the face. The face container's build
 #: context is files/anatomy/face/ ONLY (roles/pazny.face synchronize task), so
@@ -233,6 +243,52 @@ EDGE_KINDS = ("data", "trigger", "temporal")
 def _die(msg: str) -> None:
     print(f"anatomy-graph-gen: {msg}", file=sys.stderr)
     raise SystemExit(1)
+
+
+def stamp_axes(nid: str, n: dict, **axes) -> None:
+    """The ONLY writer of an adjective onto a node — `form`, `build`, `layer`.
+
+    R4. The three axes are facets of one entity (`state/genome/entity.schema.json`
+    `definitions.axes`), so they get one gate on the way in rather than three
+    conventions. This function refuses:
+
+      * an axis name the genome does not declare — that is what makes a fourth
+        adjective a genome edit instead of a fifth registry. The schema states
+        the same rule for a declared entity (`additionalProperties: false`);
+        this states it for a compiled one, because the artifact is stamped
+        before any validator sees it;
+      * a value outside that axis's vocabulary — until this existed, nothing
+        anywhere ran that check for `form` or `build`;
+      * a withheld `layer` with no reason, or a placed one with no arithmetic.
+        Absence must never render as calm, and 38 of 63 services are absent.
+
+    A companion field (`layer_withheld`, `layer_basis`) travels with its axis
+    and is passed here in the same call, so the pair can never be split.
+    """
+    companions = {"layer_withheld", "layer_basis"}
+    for axis, value in axes.items():
+        if axis in companions:
+            continue
+        if axis not in nos_entity.AXES:
+            _die(f"{nid}: `{axis}` is not a declared axis {nos_entity.AXES} — declare it "
+                 f"in state/genome/entity.schema.json (definitions.axes) and regenerate; "
+                 f"a fourth adjective is a genome edit, not a fifth registry")
+        if not nos_entity.axis_value_is_declared(axis, value):
+            _die(f"{nid}: {axis}={value!r} is outside the genome vocabulary "
+                 f"{nos_entity.AXIS_VOCABULARY[axis]}")
+        n[axis] = value
+    if "layer" in axes:
+        if nos_entity.withheld_layer_needs_a_reason(axes):
+            _die(f"{nid}: layer withheld with no reason — a null layer that does not "
+                 f"say why is indistinguishable from an application leaf")
+        if axes["layer"] is None:
+            n["layer_withheld"] = axes["layer_withheld"]
+        else:
+            basis = axes.get("layer_basis")
+            if not basis or set(basis) != {"height", "dependents", "upstreams"}:
+                _die(f"{nid}: layer={axes['layer']} with no arithmetic — a derived "
+                     f"value that does not carry its derivation is an assertion")
+            n["layer_basis"] = basis
 
 
 def _iso(v) -> str | None:
@@ -391,11 +447,12 @@ def _describe(nid: str, n: dict) -> str:
                 f"managed by OpenTofu from the committed registry")
     if kind == "faceapp":
         # Two axes in one line, named as two, because the field they replaced
-        # was one boolean pretending to be both.
-        build = n.get("build") or "no build tier (not an agent-built app)"
+        # was one boolean pretending to be both. Neither can be missing here:
+        # stamp_axes refuses a face app that does not declare both, so the
+        # old "no build tier" fallback was unreachable and is gone.
         scopes = ", ".join(n.get("api_scopes") or []) or "no declared BFF scope"
-        return (f"nOS-face app '{n.get('title')}' — form: {n.get('form')} "
-                f"(what it is on screen), build: {build} (what it cost to "
+        return (f"nOS-face app '{n['title']}' — form: {n['form']} "
+                f"(what it is on screen), build: {n['build']} (what it cost to "
                 f"build, docs/doctrine/face-app-tiers.md); reads {scopes}")
     if kind == "table":
         return f"KEAP DataTable definition '{n.get('title')}' ({n['source']})"
@@ -407,8 +464,21 @@ def _describe(nid: str, n: dict) -> str:
 
 
 def annotate_nodes(nodes: dict) -> None:
+    """Anchor + one-line body on every node, new kinds included.
+
+    The anchor SHAPE comes from the genome (`identity.anchor`, generated as
+    nos_entity.ANCHOR_RE) and is refused here; MEMBERSHIP in the 362-anchor
+    spine is refused separately by test_anatomy_graph_is_sound.py. Two checks
+    because a well-formed id that names nothing is the failure this estate
+    actually hits — the anchor is a reference, and a dangling reference is
+    refusal class 1.
+    """
     for nid, n in nodes.items():
-        n["anchor"] = _anchor(nid, n)
+        anchor = _anchor(nid, n)
+        if not nos_entity.ANCHOR_RE.fullmatch(anchor):
+            _die(f"{nid}: anchor {anchor!r} does not match the genome's anchor shape "
+                 f"{nos_entity.ANCHOR_PATTERN} — a KEAP import files it as orphan-object")
+        n["anchor"] = anchor
         n["description"] = _describe(nid, n)
 
 
@@ -684,17 +754,19 @@ def harvest_faceapps(nodes: dict) -> None:
         if not slug or not form:
             continue
         scopes = re.search(r"apiScopes:\s*\[([^\]]*)\]", body)
-        nodes[f"faceapp:{slug}"] = {
+        nid = f"faceapp:{slug}"
+        nodes[nid] = {
             "kind": "faceapp",
             "source": str(FACE_REGISTRY.relative_to(REPO)),
-            # The two axes, kept apart on purpose: `form` is what the thing IS,
-            # `build` is what it COST. Neither is derived from the other, here
-            # or in the face.
-            "form": form,
-            "build": field("build"),
             "title": field("title"),
             "api_scopes": re.findall(r"'([^']+)'", scopes.group(1)) if scopes else [],
         }
+        # The two axes, kept apart on purpose: `form` is what the thing IS,
+        # `build` is what it COST. Neither is derived from the other, here or
+        # in the face — and since R4 neither is spelled here either: both
+        # vocabularies come from the genome, and stamp_axes refuses a value
+        # outside them instead of compiling a typo into the address space.
+        stamp_axes(nid, nodes[nid], form=form, build=field("build"))
 
 
 def harvest_tables(nodes: dict) -> None:
@@ -1347,12 +1419,11 @@ def derive_layers(nodes: dict, edges: list[dict]) -> None:
         survey = n.get("dependency_survey")
         dependents, upstreams = len(down.get(nid, ())), len(up.get(nid, ()))
         if survey != "declared":
-            n["layer"] = None
-            n["layer_withheld"] = (
+            stamp_axes(nid, n, layer=None, layer_withheld=(
                 f"dependency_survey={survey} — nobody has read this role's upstreams, "
                 f"and a longest path over edges that were never looked for derives L0 "
                 f"substrate from an absence of evidence"
-            )
+            ))
             continue
         if height[nid] == 0:
             layer = "L2"
@@ -1360,9 +1431,9 @@ def derive_layers(nodes: dict, edges: list[dict]) -> None:
             layer = "L0"
         else:
             layer = "L1"
-        n["layer"] = layer
-        n["layer_basis"] = {"height": height[nid], "dependents": dependents,
-                            "upstreams": upstreams}
+        stamp_axes(nid, n, layer=layer,
+                   layer_basis={"height": height[nid], "dependents": dependents,
+                                "upstreams": upstreams})
 
 
 # ── build ─────────────────────────────────────────────────────────────────
@@ -1436,7 +1507,7 @@ def build() -> dict:
         1 for e in all_edges if "unenforced" in e)
     # R2. `layer_withheld` is counted beside the three layers precisely so the
     # census cannot be read as a complete inventory: today it is the majority.
-    for layer in ("L0", "L1", "L2", "L3"):
+    for layer in nos_entity.SERVICE_LAYERS:
         counts[f"services_layer_{layer}"] = sum(
             1 for n in nodes.values()
             if n["kind"] == "service" and n.get("layer") == layer)

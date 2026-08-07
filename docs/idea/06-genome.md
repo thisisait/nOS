@@ -57,10 +57,35 @@ Across the eight files in `state/schema/` there was **not one `$ref`, `allOf` or
 > What may **act** on an entity → code, per runtime, hash-compared, never
 > inherited from a manifest and never addable by declaring it.
 
+## The second facet, collapsed (R4, 2026-08-07)
+
+`axes` — `form` · `build` · `layer`, the three adjectives R1–R3 produced. Before
+it they were three registries with nothing between them (TypeScript unions in
+the face, string literals in `tools/anatomy-graph-gen.py`, prose in
+`docs/doctrine/layers.md`) and the compiler that stamps all three validated none
+of them: `form: 'veiw'` compiled into the anatomy graph as a fourth form, with
+no gate able to see it.
+
+- `additionalProperties: false` is the rule *a fourth adjective is a genome edit,
+  not a fifth file*, stated as schema rather than as prose.
+- Two clauses make absence visible the way `access.justification` does for
+  exposure: a `layer: null` must carry a written `layer_withheld` reason (38 of
+  63 services do today), and a placed layer must carry the `layer_basis`
+  arithmetic that produced it.
+- The vocabulary is generated into `nos_entity.py` **and** `entity.gen.ts`, and
+  both runtimes now consume it — the face re-exports it from `$lib/contracts`
+  instead of declaring it, and the anatomy compiler refuses an out-of-vocabulary
+  value at the single writer (`stamp_axes`).
+- `identity.taxonomy_anchor` — zero producers, zero consumers, an example
+  spelling matching none of the 362 live ids — is renamed to `anchor`, the name
+  196 graph nodes already used, and patterned against the spine.
+
+Gate: `tests/anatomy/test_genome_axes_facet.py`.
+
 ## Next
 
 `time.occurred_at` (small, coordinated, both sides) · `syncRows` · the two
-missing codegen targets · then collapse a second facet, not a fifth copy of one.
+missing codegen targets · then collapse a third facet, not a fifth copy of one.
 
 **The edges are the next facet, and they are now COMPILED.**
 [`docs/archive/nos-anatomy-graph.md`](../archive/nos-anatomy-graph.md) (2026-08-06)

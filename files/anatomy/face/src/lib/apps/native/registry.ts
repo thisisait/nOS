@@ -32,6 +32,7 @@
  */
 import type { Component } from 'svelte';
 import { openWindow } from '$lib/stores/desktop';
+import { APP_FORMS } from '$lib/contracts';
 import type { AppBuild, AppForm, HubApp } from '$lib/contracts';
 
 /** A lazily-loaded native component (the default export of a `.svelte` file). */
@@ -133,7 +134,10 @@ export function appForm(slug: string): AppForm | null {
  *  the hub catalog resolves, so a `frame: 0` here means "not loaded (or the
  *  catalog failed)", never "there are none" — the caller must say which. */
 export function formCounts(): Record<AppForm, number> {
-	const out: Record<AppForm, number> = { view: 0, utility: 0, widget: 0, frame: 0 };
+	// Seeded from the GENOME's vocabulary rather than from four names typed
+	// here: a fifth form would otherwise be registered by the shell, stamped by
+	// the anatomy compiler, and silently missing from this census.
+	const out = Object.fromEntries(APP_FORMS.map((f) => [f, 0])) as Record<AppForm, number>;
 	for (const a of registry.values()) out[a.form]++;
 	return out;
 }

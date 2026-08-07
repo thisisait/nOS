@@ -946,10 +946,17 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 #: derivation + two compiler refusals, +30 tests), both by running the tools:
 #:   pytest tests/anatomy -q  → "3091 passed, 27 skipped in 250s"
 #:   ansible-lint             → "0 failure(s) ... in 1497 files processed of 3229"
+#: RE-DERIVED 2026-08-07 after R4 (the genome `axes` facet — one declaration for
+#: form/build/layer, +17 tests), both by running the tools:
+#:   pytest tests/anatomy -q  → "3113 passed, 27 skipped in 259s"
+#:   ansible-lint             → "0 failure(s) ... in 1500 files processed of 3232"
+#: ansible-lint moved by 3 and only 1 of those is this diff's new test file:
+#: the two commits after R2 (`654cf3ee`, `44c90677`) grew the tree without
+#: re-deriving, which is the drift this record exists to make visible.
 MEASURED_WORK = {
-    "ansible-lint": 1497,
+    "ansible-lint": 1500,
     "genome-codegen": 2,
-    "pytest-anatomy": 3091,
+    "pytest-anatomy": 3113,
     "cortex-corpus-diff": 1,
 }
 

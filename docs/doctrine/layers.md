@@ -30,7 +30,14 @@ prefixing: **F1–F4**, **H**. This document generalises that precedent.
 - **tier** means **RBAC tier** and nothing else. It is 1–4, it is about access,
   and it is declared as `rbac_tier`.
 - **F1–F4 / H** mean face-app build complexity. Unchanged, already prefixed.
-- **layer** is this document's axis: dependency depth, i.e. blast radius.
+- **layer** is this document's axis: dependency depth, i.e. blast radius. Its
+  four values are not declared in this document — since R4 (2026-08-07) they
+  live in the genome's `axes` facet (`state/genome/entity.schema.json`,
+  `definitions.axes`) beside `form` and `build`, and are generated into both
+  runtimes by `tools/genome-codegen.py`. This section is prose about a
+  vocabulary it does not own; `null` — the refusal to place a service, carried
+  by 38 of 63 today — is a legal value of the axis there, and the schema
+  requires it to travel with a written reason.
 - **Delivery tier is RETIRED.** Say what the thing is: a **role service**
   (`roles/pazny.<name>/`, compose-override) or a **manifest app**
   (`apps/<name>.yml`, apps_runner). Retiring it costs nothing measurable — no

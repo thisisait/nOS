@@ -40,6 +40,18 @@ successor and returns `null`, never a guessed `frame`, for an unregistered slug.
 harvested: a hub service already has a `service:<id>` node, and a second address for the
 same thing is padding.
 
+**Where the VALUES are declared — not here, and not in the face (R4, 2026-08-07).**
+`form` and `build` are two of the three adjectives in the genome's `axes` facet
+(`state/genome/entity.schema.json`, `definitions.axes`; `layer` is the third).
+`tools/genome-codegen.py` emits them into `files/anatomy/module_utils/nos_entity.py`
+and `files/anatomy/face/src/lib/contracts/entity.gen.ts`, and both the face and the
+anatomy compiler consume the generated vocabulary rather than restating it. This
+table is prose about a vocabulary it does not own — adding a fifth form here changes
+nothing until the genome declares it. Before that split, nothing anywhere validated
+either axis: `form: 'veiw'` compiled into the anatomy graph as a fourth form, and
+`formCounts()` seeded its census from four names typed by hand, so a new form would
+have been registered, harvested, and silently missing from the count.
+
 **A widget is not a window.** It has no titlebar, no z-order, no snap cell and no entry
 in the window store; `launchNative()` refuses to open one. It is mounted by
 `WidgetLayer` at the desktop root, which is the whole distinction the form records.

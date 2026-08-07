@@ -146,7 +146,12 @@ judges:
     # enforced_by / misspelled-key refusals). The collection ratchet did NOT
     # fire (3050 → 3091 is inside its 5% allowance); moved anyway, per this
     # file's own rule that a record known to be stale is stale.
-    min_work: 3060
+    #
+    # RE-DERIVED 2026-08-07, R4 (3113 passed, 27 skipped — the genome `axes`
+    # facet: one declaration for form/build/layer, the compiler's stamp_axes
+    # refusals, and the anchor rename). Collection ratchet did not fire again;
+    # moved anyway, same rule, same diff.
+    min_work: 3080
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,

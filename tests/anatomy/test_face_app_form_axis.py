@@ -165,8 +165,19 @@ def test_the_dead_hubapp_native_flag_is_gone():
     assert not re.search(r"^\s*native\??:\s*boolean", text, re.M), (
         "HubApp.native is back — an interface field nothing sets is not a fact"
     )
-    assert "export type AppForm" in text, "the AppForm axis is not declared in the contracts"
-    assert "export type AppBuild" in text, "the AppBuild axis is not declared in the contracts"
+    # Both axes must still be reachable from `$lib/contracts` — the shell's one
+    # import surface. Since R4 (2026-08-07) they are RE-EXPORTED rather than
+    # declared here: the vocabulary lives in state/genome/entity.schema.json and
+    # is generated into ./entity.gen.ts, so this file must name them without
+    # spelling their members. `tests/anatomy/test_genome_axes_facet.py` is what
+    # refuses a second copy of the values.
+    for axis in ("AppForm", "AppBuild"):
+        assert re.search(rf"export type[^;]*\b{axis}\b", text, re.S), (
+            f"the {axis} axis is not exported from the contracts"
+        )
+    assert "./entity.gen" in text, (
+        "the app axes are no longer sourced from the generated genome contract"
+    )
 
 
 def test_the_form_axis_is_the_shells_render_switch():

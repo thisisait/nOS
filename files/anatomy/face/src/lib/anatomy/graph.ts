@@ -22,6 +22,7 @@
  */
 
 import type { Tone } from '$lib/components/ui';
+import { SERVICE_LAYERS, type ServiceLayer } from '$lib/contracts';
 
 export type NodeKind =
 	| 'pulse'
@@ -116,9 +117,13 @@ export interface GraphNode {
 	 *  only canvas that draws this graph a measured root and a node nobody had
 	 *  read were the same rectangle. */
 	dependencySurvey: string | null;
-	/** service only — `L0`|`L1`|`L2`|`L3`, or null where the derivation
-	 *  refused to answer (docs/doctrine/layers.md §4.2). */
-	layer: string | null;
+	/** service only — a `ServiceLayer` from the genome's `axes` facet, or null
+	 *  where the derivation refused to answer (docs/doctrine/layers.md §4.2).
+	 *  The vocabulary is NOT spelled here: `state/genome/entity.schema.json`
+	 *  declares it and `tools/anatomy-graph-gen.py::stamp_axes` refuses a value
+	 *  outside it at compile time, so the cast below is a guarantee the
+	 *  artifact carries rather than an assumption this module makes. */
+	layer: ServiceLayer | null;
 	/** Why `layer` is null. Never empty when `layer` is null. */
 	layerWithheld: string | null;
 	/** Kind-specific facts, rendered verbatim in the inspector. */
@@ -178,7 +183,7 @@ export function projectGraph(raw: unknown): AnatomyGraph {
 		anchor: String(n.anchor ?? ''),
 		source: String(n.source ?? ''),
 		dependencySurvey: n.dependency_survey == null ? null : String(n.dependency_survey),
-		layer: n.layer == null ? null : String(n.layer),
+		layer: n.layer == null ? null : (String(n.layer) as ServiceLayer),
 		layerWithheld: n.layer_withheld == null ? null : String(n.layer_withheld),
 		facts: Object.fromEntries(Object.entries(n).filter(([k]) => !LIFTED.has(k)))
 	}));
@@ -244,8 +249,11 @@ export function serviceCoverage(graph: AnatomyGraph): ServiceCoverage {
 		noManifest: n('services_survey_no_manifest'),
 		dependencyEdges: n('edges_service_dependency'),
 		unenforcedEdges: n('edges_service_dependency_unenforced'),
-		layered: n('services_layer_L0') + n('services_layer_L1') + n('services_layer_L2') +
-			n('services_layer_L3'),
+		// Summed over the GENOME's layer vocabulary, not over four names typed
+		// out here. This line was the fourth place the estate spelled L0…L3
+		// (state/genome/entity.schema.json is now the only one), and a fifth
+		// layer would have been counted by the compiler and dropped by the face.
+		layered: SERVICE_LAYERS.reduce((sum, l) => sum + n(`services_layer_${l}`), 0),
 		withheld: n('services_layer_withheld')
 	};
 	const gap = cov.unsurveyed + cov.noManifest;

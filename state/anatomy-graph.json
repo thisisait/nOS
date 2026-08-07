@@ -683,12 +683,12 @@
     "faceapp:anatomy": {
       "kind": "faceapp",
       "source": "files/anatomy/face/src/lib/apps/native/registry.ts",
-      "form": "view",
-      "build": "F3",
       "title": "Anatomy",
       "api_scopes": [
         "pulse"
       ],
+      "form": "view",
+      "build": "F3",
       "hosted_by": "service:face",
       "anchor": "02.02.04",
       "description": "nOS-face app 'Anatomy' — form: view (what it is on screen), build: F3 (what it cost to build, docs/doctrine/face-app-tiers.md); reads pulse"
@@ -696,12 +696,12 @@
     "faceapp:anatomy-widget": {
       "kind": "faceapp",
       "source": "files/anatomy/face/src/lib/apps/native/registry.ts",
-      "form": "widget",
-      "build": "F1",
       "title": "Anatomy at a glance",
       "api_scopes": [
         "pulse"
       ],
+      "form": "widget",
+      "build": "F1",
       "hosted_by": "service:face",
       "reads_artifact": "src/lib/anatomy/anatomy-graph.json — the byte-identical vendored copy of state/anatomy-graph.json this generator writes; imported at BUILD time, so the surface is as fresh as the converge that built it",
       "anchor": "02.02.04",
@@ -710,12 +710,12 @@
     "faceapp:files": {
       "kind": "faceapp",
       "source": "files/anatomy/face/src/lib/apps/native/registry.ts",
-      "form": "view",
-      "build": "F1",
       "title": "Files",
       "api_scopes": [
         "vfs"
       ],
+      "form": "view",
+      "build": "F1",
       "hosted_by": "service:face",
       "anchor": "02.02.04",
       "description": "nOS-face app 'Files' — form: view (what it is on screen), build: F1 (what it cost to build, docs/doctrine/face-app-tiers.md); reads vfs"
@@ -723,12 +723,12 @@
     "faceapp:keap-explore": {
       "kind": "faceapp",
       "source": "files/anatomy/face/src/lib/apps/native/registry.ts",
-      "form": "view",
-      "build": "F3",
       "title": "Explore",
       "api_scopes": [
         "config"
       ],
+      "form": "view",
+      "build": "F3",
       "hosted_by": "service:face",
       "anchor": "02.02.04",
       "description": "nOS-face app 'Explore' — form: view (what it is on screen), build: F3 (what it cost to build, docs/doctrine/face-app-tiers.md); reads config"
@@ -736,12 +736,12 @@
     "faceapp:tables": {
       "kind": "faceapp",
       "source": "files/anatomy/face/src/lib/apps/native/registry.ts",
-      "form": "view",
-      "build": "F2",
       "title": "Tables",
       "api_scopes": [
         "tables"
       ],
+      "form": "view",
+      "build": "F2",
       "hosted_by": "service:face",
       "anchor": "02.02.04",
       "description": "nOS-face app 'Tables' — form: view (what it is on screen), build: F2 (what it cost to build, docs/doctrine/face-app-tiers.md); reads tables"
@@ -869,7 +869,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": true,
       "mutates_worktree": true,
-      "min_work": 3060,
+      "min_work": 3080,
       "argv": [
         "python3",
         "-m",
@@ -882,7 +882,7 @@
       ],
       "requires": [],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=3060, deterministic=True"
+      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=3080, deterministic=True"
     },
     "pulse:alert-relay:relay-firing": {
       "kind": "pulse",
@@ -3348,7 +3348,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:232",
+      "via": "cited at state/judge-sets.yml:237",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -3356,7 +3356,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:213",
+      "via": "cited at state/judge-sets.yml:218",
       "citations": 2,
       "derived": "doctrine-cite"
     },
@@ -3364,7 +3364,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2f",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:238",
+      "via": "cited at state/judge-sets.yml:243",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -3396,7 +3396,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:203",
+      "via": "cited at state/judge-sets.yml:208",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -3404,7 +3404,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:172",
+      "via": "cited at state/judge-sets.yml:177",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -3412,7 +3412,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M2",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:193",
+      "via": "cited at state/judge-sets.yml:198",
       "citations": 2,
       "derived": "doctrine-cite"
     },
@@ -3420,7 +3420,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:157",
+      "via": "cited at state/judge-sets.yml:162",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -3428,7 +3428,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5a",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:158",
+      "via": "cited at state/judge-sets.yml:163",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -3436,7 +3436,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:150",
+      "via": "cited at state/judge-sets.yml:155",
       "citations": 1,
       "derived": "doctrine-cite"
     },

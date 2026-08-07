@@ -30,6 +30,50 @@ FACE_SURFACES = (
     "hidden",
 )
 
+#: The adjective axes. A fourth one is a genome edit, not a fifth file.
+AXES = (
+    "form",
+    "build",
+    "layer",
+)
+
+APP_FORMS = (
+    "view",
+    "utility",
+    "widget",
+    "frame",
+)
+
+APP_BUILDS = (
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "H",
+)
+
+#: The layers a service can be PLACED at. `None` is legal on an entity and is
+#: deliberately absent here: it is the refusal to place, not a fifth layer.
+SERVICE_LAYERS = (
+    "L0",
+    "L1",
+    "L2",
+    "L3",
+)
+
+#: Vocabulary per axis, so a consumer validates by axis NAME and a new axis
+#: reaches every consumer without one of them being edited to notice.
+AXIS_VOCABULARY = {
+    "form": APP_FORMS,
+    "build": APP_BUILDS,
+    "layer": SERVICE_LAYERS,
+}
+
+ANCHOR_PATTERN = r"^[0-9]{2}(\.[0-9]{2}){0,2}$"
+ANCHOR_RE = re.compile(ANCHOR_PATTERN)
+
+LAYER_WITHHELD_MIN_LENGTH = 40
+
 IDENTITY_REQUIRED = (
     "name",
     "version",
@@ -90,3 +134,33 @@ def ungated_route_needs_justification(access: dict) -> bool:
     if access.get("gate") != "none":
         return False
     return len((access.get("justification") or "").strip()) < JUSTIFICATION_MIN_LENGTH
+
+
+def withheld_layer_needs_a_reason(axes: dict) -> bool:
+    """True when a layer was withheld and the withholding is silent.
+
+    The absence twin of ungated_route_needs_justification, and the reason the
+    `layer` axis is worth having: 38 of 63 services carry no layer today, so a
+    null that rendered as a default would say "application leaf" about a
+    service nobody has read. JSON Schema states this too (axes.allOf); it is
+    restated here because the anatomy compiler stamps the field before any
+    validator sees it, and the refusal has to happen at the stamp.
+    """
+    if "layer" not in axes or axes["layer"] is not None:
+        return False
+    return len((axes.get("layer_withheld") or "").strip()) < LAYER_WITHHELD_MIN_LENGTH
+
+
+def axis_value_is_declared(axis: str, value) -> bool:
+    """False when `value` is outside the genome's vocabulary for `axis`.
+
+    Until 2026-08-07 nothing anywhere ran this check: the face declared the two
+    app vocabularies in TypeScript, the anatomy compiler read the same registry
+    with a regex and accepted whatever string it found, so `form: 'veiw'`
+    became a fourth form in the estate's address space in silence.
+    """
+    if axis not in AXIS_VOCABULARY:
+        return False
+    if axis == "layer" and value is None:
+        return True   # a withholding, checked by withheld_layer_needs_a_reason
+    return value in AXIS_VOCABULARY[axis]

@@ -10,18 +10,30 @@
  *   SoC (repo defaults) → runtime DataTable (user-addable) → per-user state.
  */
 
-// ── The two app axes: form (what it IS) and build (what it COSTS) ────────────
+// ── The app axes: form (what it IS), build (what it COSTS) ───────────────────
 
 /**
- * What an app IS on screen. Exactly one per app, always declared, never
- * inferred.
+ * `form`, `build` and `layer` are FACETS OF ONE ENTITY, and their vocabulary
+ * lives in `state/genome/entity.schema.json` (`definitions.axes`) — generated
+ * into this directory as `entity.gen.ts` and into
+ * `files/anatomy/module_utils/nos_entity.py` by `tools/genome-codegen.py`.
+ * This module re-exports them so `$lib/contracts` stays the shell's one import
+ * surface; it does NOT restate the values, because restating them is the exact
+ * defect R4 closed.
+ *
+ * Until 2026-08-07 the two app axes were TypeScript unions declared here, the
+ * `layer` axis was four string literals inside `tools/anatomy-graph-gen.py`,
+ * and the compiler that harvests this registry validated neither — a typo'd
+ * `form: 'veiw'` became a fourth form in the estate's address space with no
+ * gate able to see it. One declaration, two runtimes, one emitter.
  *
  *   view    — a full window over estate data (Anatomy, Tables, Explore, Files)
- *   utility — a focused tool with its own state (Sticky Notes; a planner)
+ *   utility — a focused tool with its own state (empty set today; the doctrine
+ *             names Sticky Notes and this shell has no such app)
  *   widget  — a small surface that lives inside another; NOT a window
  *   frame   — a service rendered in an iframe (the hub catalog)
  *
- * WHY THIS REPLACED A BOOLEAN. The shell used to record one binary —
+ * WHY `form` REPLACED A BOOLEAN. The shell used to record one binary —
  * `isNativeApp(slug)`, "a nos-native API-calling app rather than an iframe" —
  * and `HubApp.native?: boolean`, a field nothing in this repo ever set or
  * read (measured 2026-08-07: zero producers, zero consumers). A binary can
@@ -29,26 +41,15 @@
  * moment a third kind of surface existed — a widget, which is native AND not
  * a window — the binary had no value for it. `form` is the axis; the boolean
  * was a projection of it onto two points.
- */
-export type AppForm = 'view' | 'utility' | 'widget' | 'frame';
-
-export const APP_FORMS: readonly AppForm[] = ['view', 'utility', 'widget', 'frame'] as const;
-
-/**
- * What an app COSTS to build — which organs and which agent recipe.
- * `docs/doctrine/face-app-tiers.md` owns this axis; it is unchanged and keeps
- * its prefixes.
  *
- * INDEPENDENT OF `form`, AND ONLY LOOSELY CORRELATED. A `frame` is usually
- * the cheapest thing to build and a `view` usually is not, but that is a
- * tendency, not a definition: one expensive frame or one trivial utility and
- * a field that conflated them would be wrong about both. Nothing in this
- * shell derives either axis from the other — pinned by
+ * `build` (F1–F4/H, `docs/doctrine/face-app-tiers.md`) is INDEPENDENT of
+ * `form` and only loosely correlated: a frame is usually the cheapest thing to
+ * build and a view usually is not, but that is a tendency, not a definition.
+ * Nothing in this shell derives either axis from the other — pinned by
  * `tests/anatomy/test_face_app_form_axis.py`.
  */
-export type AppBuild = 'F1' | 'F2' | 'F3' | 'F4' | 'H';
-
-export const APP_BUILDS: readonly AppBuild[] = ['F1', 'F2', 'F3', 'F4', 'H'] as const;
+export type { AppForm, AppBuild, ServiceLayer } from './entity.gen';
+export { APP_FORMS, APP_BUILDS, SERVICE_LAYERS, AXES } from './entity.gen';
 
 // ── Identity (BFF-derived, edge-trusted) ─────────────────────────────────────
 
