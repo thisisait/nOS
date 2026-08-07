@@ -66,6 +66,22 @@ requires:
 # native_oidc later: flip mode/provider_type, add redirect_uris/scopes
 # (miniflux-base shape) and an OIDC client lib in the backend.
 
+# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R2) ──────
+depends_on:
+  - upstream: "service:cortex"
+    kind: data
+    via: >-
+      CORTEX_BACKEND_URL → host.docker.internal:{{ cortex_port }}
+      (roles/pazny.keap/templates/compose.yml.j2:110, with its own token space
+      at :112) — the resolver organ KEAP delegates to once
+      `keap_cortex_cutover` is on
+    measured: "2026-08-07"
+    unenforced: >-
+      No auto-enable block ties install_cortex to install_keap. Rollback is
+      `keap_cortex_cutover: false` + converge, so with the organ absent and the
+      flag on, KEAP serves its own path and the delegation silently never
+      happens.
+
 authentik:
   mode: header_oidc
   provider_type: header_oidc

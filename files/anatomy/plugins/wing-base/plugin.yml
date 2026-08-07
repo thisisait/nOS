@@ -50,6 +50,41 @@ requires:
 # the Traefik layer via the `authentik@file` middleware. RBAC tier
 # determines which Authentik group expression policy applies.
 
+# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R2) ──────
+depends_on:
+  - upstream: "service:bone"
+    kind: data
+    via: >-
+      NOS_BONE_PORT + NOS_BONE_SECRET in the launchd environment
+      (roles/pazny.wing/tasks/post.yml:414-416, rendered into
+      roles/pazny.wing/templates/wing.plist.j2:68) — Bone is the HMAC event
+      vein every Ansible run writes through on its way to wing.db
+    measured: "2026-08-07"
+    unenforced: >-
+      No auto-enable block ties install_bone to install_wing. With Bone down
+      the callback plugin falls back to ~/.nos/events.jsonl, so the estate
+      keeps converging and the timeline quietly stops growing.
+  - upstream: "service:keap"
+    kind: data
+    via: >-
+      NOS_KEAP_PORT / the KEAP agent API base in wing.env.j2:31 and
+      wing.plist.j2:77-82 — Wing's knowledge panels query /agent/v1
+    measured: "2026-08-07"
+    unenforced: >-
+      No auto-enable block ties install_keap to install_wing; the panels render
+      their empty state.
+  - upstream: "service:prometheus"
+    kind: data
+    via: >-
+      NOS_PROMETHEUS_PORT (roles/pazny.wing/tasks/post.yml:420) — the
+      alert-relay-base Pulse job polls Prometheus for firing alerts (2026-08-05)
+    measured: "2026-08-07"
+    unenforced: >-
+      Prometheus rides install_observability, which no block ties to
+      install_wing. With it absent the relay job runs and finds no alerts,
+      which is indistinguishable from a quiet estate — the alert path's own
+      absence-as-calm, recorded here rather than fixed here.
+
 authentik:
   mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
   provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)

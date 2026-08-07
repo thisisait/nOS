@@ -3,8 +3,10 @@
 > The estate declared 191 nodes and 151 edges, and **not one edge between two
 > services**. Everything below follows from that single measurement.
 >
-> **R1 closed it on 2026-08-07:** 196 nodes, 177 edges, 23 of them between
-> services. R2–R4 still stand open.
+> **R1 closed it on 2026-08-07** and **R2 landed the same day**, after three
+> adversarial reviews took R1 apart: 196 nodes, 232 edges, **35** of them
+> between services, and `layer` derived on 25 of 63 — the other 38 withheld
+> rather than guessed. R3 shipped; R4 stands open.
 
 ## The problem it exists to remove
 
@@ -69,21 +71,70 @@ Two things the change deliberately did not do, both §4.1:
   longest path answer a different question.
 
 **Absence is a state, not a gap in the data.** Every service node carries
-`dependency_survey`: `declared` (20 — 16 consumers plus 4 roots that declare
-`depends_on: []`, which is the measurement "looked, no upstreams"),
-`not-surveyed` (39), `no-manifest` (4). The remainder is published in `counts`,
-not rounded away.
+`dependency_survey`: `declared` (25), `not-surveyed` (34), `no-manifest` (4).
+The remainder is published in `counts`, not rounded away.
 
-## R2 — `layer`, derived
+### What three adversarial reviews of R1 changed (2026-08-07)
 
-With R1 in place, `layer` (L0 substrate · L1 platform · L2 application ·
-L3 custom, `docs/doctrine/layers.md` §3) is longest-path over the dependency
-edges — the same arithmetic `graphLayout.ts` already runs for the canvas.
+All three opened on the same measurement and it was correct: **`service:authentik`
+had out-degree 0** while reading `dependency_survey: declared`. Its 38 provider
+objects edged to their services and had no in-edge at all, so the graph — asked
+the question at the top of this document — answered *"nothing depends on
+Authentik"* in the voice of a surveyed node. Fixed by
+`derive_authentik_hosting`: the provider object is an object **inside** the
+service, and now says so.
 
-Emitted as a **derived** fact on each node, never hand-written. Where a
-declaration exists and disagrees with the derivation, the disagreement is the
-finding. Expect Nextcloud to land L2 rather than L1 (`layers.md` §5): it is
-important and has no dependents, and `layer` measures consequence, not stature.
+Four more survived scrutiny and are fixed:
+
+- **The completeness side could not find what `main.yml` had not heard of.** It
+  iterated the three auto-enable blocks, so `mcp_gateway → postgresql` — a
+  rendered DSN plus a live `psql` exec, default-ON — was outside the derivation.
+  It is now a **sweep** over the service registry: 30 undeclared pairs found,
+  **12 declared**, 18 refused by name with reasons.
+- **The reachability probe was a substring grep.** It certified
+  `gitlab → postgresql` on GitLab Omnibus configuring its *own* bundled
+  Postgres, and `onlyoffice → postgresql` on a `/var/lib/postgresql` volume;
+  it never popped the Jinja guard stack on `{% else %}`, so moving a live line
+  into an else-branch produced a **false RED phrased as an outage**; and it read
+  one file per role. Rewritten as `tests/anatomy/service_edge_probe.py` — host
+  positions only, full control-flow walk, manifest `domain_var` aliases, every
+  template plus `tasks/{main,post}.yml`. Its own failure modes are fixture-tested.
+- **23 edges carried identical fields and non-identical backing.**
+  `install_gitea` appears in `main.yml` zero times. The compiler now refuses a
+  service edge that is neither auto-enabled nor carrying an `unenforced:`
+  sentence; 13 of 35 say so.
+- **`gitea-base: depends_on: []` claimed to make the node "a root of the layer
+  derivation"** while the same artifact carried `authentik:gitea → service:gitea`
+  and `roles/pazny.gitea/tasks/post.yml:117-137` guarded the case it calls
+  LOCKOUT. Scoped to *no data upstream*; Gitea derives **L1**.
+
+Two more phantom identifiers the R1 sweep found and its write-up did not name —
+`freepbx_lan_access` and `sso_autologin_min_tier_2` — are now pinned beside
+`install_redis`.
+
+## R2 — `layer`, derived — **SHIPPED 2026-08-07**
+
+`layer` (L0 substrate · L1 platform · L2 application · L3 custom,
+`docs/doctrine/layers.md` §3) is longest path over the **service projection** of
+the dependency edges — the same arithmetic `graphLayout.ts::rankNodes` runs for
+the canvas, with the SSO chain `service:authentik → authentik:<slug> →
+service:<x>` collapsed onto its endpoints.
+
+Emitted as a **derived** fact by `tools/anatomy-graph-gen.py::derive_layers`;
+`layer:` in a plugin manifest or in `state/manifest.yml` is a gate failure.
+
+**Census: L0 3 · L1 4 · L2 18 · L3 0 · withheld 38.** The refusal is the field's
+whole point — a node nobody surveyed contributes nothing to a longest path, and
+the arithmetic answers anyway. Measured with it disabled, `service:traefik`
+derives **L2** ("failure felt where it happens") about the only edge proxy on
+Linux, and `service:grafana` derives **L0 substrate**: same absence of evidence,
+opposite verdicts, both stated calmly. **L3 is never emitted** — §3 defines it by
+delivery, which is a different axis.
+
+Disagreements, reported rather than tuned away: Nextcloud **L2** exactly as
+`layers.md` §5 predicted; **Infisical L2** where §3 lists it L1; **Wing L1**
+where §3 lists it L0. In the last two the honest repair is to declare the
+missing edges, not to overrule the arithmetic — see `layers.md` §5.
 
 ## R3 — face apps: form, not complexity
 

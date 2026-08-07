@@ -2,9 +2,10 @@
   "version": 1,
   "generated_by": "tools/anatomy-graph-gen.py",
   "doctrine": "docs/archive/nos-anatomy-graph.md",
+  "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
     "nodes": 196,
-    "edges": 177,
+    "edges": 232,
     "nodes_pulse": 29,
     "nodes_judge": 5,
     "nodes_gateset": 4,
@@ -18,15 +19,21 @@
     "nodes_table": 6,
     "nodes_doctrine": 12,
     "nodes_faceapp": 5,
-    "edges_data": 77,
+    "edges_data": 132,
     "edges_trigger": 22,
     "edges_temporal": 5,
     "edges_mutex": 56,
     "edges_governed_by": 17,
-    "edges_service_dependency": 23,
-    "services_survey_declared": 20,
-    "services_survey_not_surveyed": 39,
-    "services_survey_no_manifest": 4
+    "edges_service_dependency": 35,
+    "services_survey_declared": 25,
+    "services_survey_not_surveyed": 34,
+    "services_survey_no_manifest": 4,
+    "edges_service_dependency_unenforced": 13,
+    "services_layer_L0": 3,
+    "services_layer_L1": 4,
+    "services_layer_L2": 18,
+    "services_layer_L3": 0,
+    "services_layer_withheld": 38
   },
   "warnings": [
     "union-kind cycle (feedback loop, review-not-refuse): pulse:cortex:cortex-fs-sync -> pulse:keap:keap-embed-sync -> pulse:cortex:cortex-corpus-diff -> pulse:cortex:cortex-fs-sync"
@@ -862,7 +869,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": true,
       "mutates_worktree": true,
-      "min_work": 3025,
+      "min_work": 3060,
       "argv": [
         "python3",
         "-m",
@@ -875,7 +882,7 @@
       ],
       "requires": [],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=3025, deterministic=True"
+      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=3060, deterministic=True"
     },
     "pulse:alert-relay:relay-firing": {
       "kind": "pulse",
@@ -1396,7 +1403,9 @@
       "install_flag": "install_observability",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
-      "description": "Docker service 'alloy' (observability) in the None compose stack, toggled by install_observability"
+      "description": "Docker service 'alloy' (observability) in the None compose stack, toggled by install_observability",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:authentik": {
       "kind": "service",
@@ -1406,7 +1415,13 @@
       "install_flag": "install_authentik",
       "dependency_survey": "declared",
       "anchor": "02.02.08",
-      "description": "Docker service 'authentik' (identity) in the infra compose stack, toggled by install_authentik"
+      "description": "Docker service 'authentik' (identity) in the infra compose stack, toggled by install_authentik",
+      "layer": "L1",
+      "layer_basis": {
+        "height": 3,
+        "dependents": 38,
+        "upstreams": 2
+      }
     },
     "service:backrest": {
       "kind": "service",
@@ -1416,7 +1431,9 @@
       "install_flag": "install_backrest",
       "dependency_survey": "not-surveyed",
       "anchor": "11.04",
-      "description": "Docker service 'backrest' (storage) in the None compose stack, toggled by install_backrest"
+      "description": "Docker service 'backrest' (storage) in the None compose stack, toggled by install_backrest",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:backup": {
       "kind": "service",
@@ -1426,7 +1443,9 @@
       "install_flag": "install_backup",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.08",
-      "description": "Docker service 'backup' (security) in the None compose stack, toggled by install_backup"
+      "description": "Docker service 'backup' (security) in the None compose stack, toggled by install_backup",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:bluesky_pds": {
       "kind": "service",
@@ -1436,7 +1455,9 @@
       "install_flag": "install_bluesky_pds",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.08",
-      "description": "Docker service 'bluesky_pds' (identity) in the infra compose stack, toggled by install_bluesky_pds"
+      "description": "Docker service 'bluesky_pds' (identity) in the infra compose stack, toggled by install_bluesky_pds",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:bone": {
       "kind": "service",
@@ -1446,7 +1467,9 @@
       "install_flag": "install_bone",
       "dependency_survey": "no-manifest",
       "anchor": "02.02.04",
-      "description": "Docker service 'bone' (api) in the None compose stack, toggled by install_bone"
+      "description": "Docker service 'bone' (api) in the None compose stack, toggled by install_bone",
+      "layer": null,
+      "layer_withheld": "dependency_survey=no-manifest — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:bookstack": {
       "kind": "service",
@@ -1456,7 +1479,13 @@
       "install_flag": "install_bookstack",
       "dependency_survey": "declared",
       "anchor": "09",
-      "description": "Docker service 'bookstack' (wiki) in the b2b compose stack, toggled by install_bookstack"
+      "description": "Docker service 'bookstack' (wiki) in the b2b compose stack, toggled by install_bookstack",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 3
+      }
     },
     "service:calibre_web": {
       "kind": "service",
@@ -1466,7 +1495,9 @@
       "install_flag": "install_calibreweb",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
-      "description": "Docker service 'calibre_web' (media) in the iiab compose stack, toggled by install_calibreweb"
+      "description": "Docker service 'calibre_web' (media) in the iiab compose stack, toggled by install_calibreweb",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:code_server": {
       "kind": "service",
@@ -1476,7 +1507,9 @@
       "install_flag": "install_code_server",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
-      "description": "Docker service 'code_server' (devops) in the devops compose stack, toggled by install_code_server"
+      "description": "Docker service 'code_server' (devops) in the devops compose stack, toggled by install_code_server",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:cortex": {
       "kind": "service",
@@ -1486,7 +1519,9 @@
       "install_flag": "install_cortex",
       "dependency_survey": "not-surveyed",
       "anchor": "09",
-      "description": "Docker service 'cortex' (knowledge) in the None compose stack, toggled by install_cortex"
+      "description": "Docker service 'cortex' (knowledge) in the None compose stack, toggled by install_cortex",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:erpnext": {
       "kind": "service",
@@ -1496,7 +1531,13 @@
       "install_flag": "install_erpnext",
       "dependency_survey": "declared",
       "anchor": "02.02.04",
-      "description": "Docker service 'erpnext' (finance) in the b2b compose stack, toggled by install_erpnext"
+      "description": "Docker service 'erpnext' (finance) in the b2b compose stack, toggled by install_erpnext",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 3
+      }
     },
     "service:face": {
       "kind": "service",
@@ -1504,9 +1545,15 @@
       "stack": "iiab",
       "category": "desktop",
       "install_flag": "install_face",
-      "dependency_survey": "not-surveyed",
+      "dependency_survey": "declared",
       "anchor": "02.02.04",
-      "description": "Docker service 'face' (desktop) in the iiab compose stack, toggled by install_face"
+      "description": "Docker service 'face' (desktop) in the iiab compose stack, toggled by install_face",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 3
+      }
     },
     "service:firefly": {
       "kind": "service",
@@ -1516,7 +1563,13 @@
       "install_flag": "install_firefly",
       "dependency_survey": "declared",
       "anchor": "02.02.04",
-      "description": "Docker service 'firefly' (finance) in the b2b compose stack, toggled by install_firefly"
+      "description": "Docker service 'firefly' (finance) in the b2b compose stack, toggled by install_firefly",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 3
+      }
     },
     "service:freepbx": {
       "kind": "service",
@@ -1526,7 +1579,13 @@
       "install_flag": "install_freepbx",
       "dependency_survey": "declared",
       "anchor": "03.08",
-      "description": "Docker service 'freepbx' (pbx) in the voip compose stack, toggled by install_freepbx"
+      "description": "Docker service 'freepbx' (pbx) in the voip compose stack, toggled by install_freepbx",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 1
+      }
     },
     "service:freescout": {
       "kind": "service",
@@ -1536,7 +1595,13 @@
       "install_flag": "install_freescout",
       "dependency_survey": "declared",
       "anchor": "02.02.04",
-      "description": "Docker service 'freescout' (helpdesk) in the b2b compose stack, toggled by install_freescout"
+      "description": "Docker service 'freescout' (helpdesk) in the b2b compose stack, toggled by install_freescout",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 2
+      }
     },
     "service:gitea": {
       "kind": "service",
@@ -1546,7 +1611,13 @@
       "install_flag": "install_gitea",
       "dependency_survey": "declared",
       "anchor": "02.02.04",
-      "description": "Docker service 'gitea' (devops) in the devops compose stack, toggled by install_gitea"
+      "description": "Docker service 'gitea' (devops) in the devops compose stack, toggled by install_gitea",
+      "layer": "L1",
+      "layer_basis": {
+        "height": 1,
+        "dependents": 1,
+        "upstreams": 1
+      }
     },
     "service:gitlab": {
       "kind": "service",
@@ -1556,7 +1627,9 @@
       "install_flag": "install_gitlab",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
-      "description": "Docker service 'gitlab' (devops) in the devops compose stack, toggled by install_gitlab"
+      "description": "Docker service 'gitlab' (devops) in the devops compose stack, toggled by install_gitlab",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:grafana": {
       "kind": "service",
@@ -1566,7 +1639,9 @@
       "install_flag": "install_observability",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
-      "description": "Docker service 'grafana' (observability) in the observability compose stack, toggled by install_observability"
+      "description": "Docker service 'grafana' (observability) in the observability compose stack, toggled by install_observability",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:hedgedoc": {
       "kind": "service",
@@ -1576,7 +1651,13 @@
       "install_flag": "install_hedgedoc",
       "dependency_survey": "declared",
       "anchor": "09",
-      "description": "Docker service 'hedgedoc' (wiki) in the b2b compose stack, toggled by install_hedgedoc"
+      "description": "Docker service 'hedgedoc' (wiki) in the b2b compose stack, toggled by install_hedgedoc",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 2
+      }
     },
     "service:hermes": {
       "kind": "service",
@@ -1586,7 +1667,9 @@
       "install_flag": "install_hermes",
       "dependency_survey": "not-surveyed",
       "anchor": "03.08",
-      "description": "Docker service 'hermes' (messaging) in the None compose stack, toggled by install_hermes"
+      "description": "Docker service 'hermes' (messaging) in the None compose stack, toggled by install_hermes",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:homeassistant": {
       "kind": "service",
@@ -1596,7 +1679,9 @@
       "install_flag": "install_homeassistant",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
-      "description": "Docker service 'homeassistant' (homeautomation) in the iiab compose stack, toggled by install_homeassistant"
+      "description": "Docker service 'homeassistant' (homeautomation) in the iiab compose stack, toggled by install_homeassistant",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:iiab_terminal": {
       "kind": "service",
@@ -1606,7 +1691,9 @@
       "install_flag": "install_iiab_terminal",
       "dependency_survey": "no-manifest",
       "anchor": "02.02.04",
-      "description": "Docker service 'iiab_terminal' (iiab) in the None compose stack, toggled by install_iiab_terminal"
+      "description": "Docker service 'iiab_terminal' (iiab) in the None compose stack, toggled by install_iiab_terminal",
+      "layer": null,
+      "layer_withheld": "dependency_survey=no-manifest — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:infisical": {
       "kind": "service",
@@ -1616,7 +1703,13 @@
       "install_flag": "install_infisical",
       "dependency_survey": "declared",
       "anchor": "02.02.08",
-      "description": "Docker service 'infisical' (vault) in the infra compose stack, toggled by install_infisical"
+      "description": "Docker service 'infisical' (vault) in the infra compose stack, toggled by install_infisical",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 3
+      }
     },
     "service:influxdb": {
       "kind": "service",
@@ -1626,7 +1719,9 @@
       "install_flag": "install_influxdb",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
-      "description": "Docker service 'influxdb' (data) in the data compose stack, toggled by install_influxdb"
+      "description": "Docker service 'influxdb' (data) in the data compose stack, toggled by install_influxdb",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:jellyfin": {
       "kind": "service",
@@ -1636,7 +1731,9 @@
       "install_flag": "install_jellyfin",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
-      "description": "Docker service 'jellyfin' (media) in the iiab compose stack, toggled by install_jellyfin"
+      "description": "Docker service 'jellyfin' (media) in the iiab compose stack, toggled by install_jellyfin",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:keap": {
       "kind": "service",
@@ -1644,9 +1741,15 @@
       "stack": "iiab",
       "category": "knowledge",
       "install_flag": "install_keap",
-      "dependency_survey": "not-surveyed",
+      "dependency_survey": "declared",
       "anchor": "09",
-      "description": "Docker service 'keap' (knowledge) in the iiab compose stack, toggled by install_keap"
+      "description": "Docker service 'keap' (knowledge) in the iiab compose stack, toggled by install_keap",
+      "layer": "L1",
+      "layer_basis": {
+        "height": 2,
+        "dependents": 1,
+        "upstreams": 2
+      }
     },
     "service:kiwix": {
       "kind": "service",
@@ -1656,7 +1759,9 @@
       "install_flag": "install_kiwix",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
-      "description": "Docker service 'kiwix' (iiab) in the iiab compose stack, toggled by install_kiwix"
+      "description": "Docker service 'kiwix' (iiab) in the iiab compose stack, toggled by install_kiwix",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:loki": {
       "kind": "service",
@@ -1666,7 +1771,9 @@
       "install_flag": "install_observability",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
-      "description": "Docker service 'loki' (observability) in the observability compose stack, toggled by install_observability"
+      "description": "Docker service 'loki' (observability) in the observability compose stack, toggled by install_observability",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:mailpit": {
       "kind": "service",
@@ -1676,7 +1783,9 @@
       "install_flag": "install_mailpit",
       "dependency_survey": "not-surveyed",
       "anchor": "03.08",
-      "description": "Docker service 'mailpit' (mail) in the iiab compose stack, toggled by install_mailpit"
+      "description": "Docker service 'mailpit' (mail) in the iiab compose stack, toggled by install_mailpit",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:mariadb": {
       "kind": "service",
@@ -1686,7 +1795,13 @@
       "install_flag": "install_mariadb",
       "dependency_survey": "declared",
       "anchor": "02.02.05",
-      "description": "Docker service 'mariadb' (database) in the infra compose stack, toggled by install_mariadb"
+      "description": "Docker service 'mariadb' (database) in the infra compose stack, toggled by install_mariadb",
+      "layer": "L0",
+      "layer_basis": {
+        "height": 1,
+        "dependents": 7,
+        "upstreams": 0
+      }
     },
     "service:mcp_gateway": {
       "kind": "service",
@@ -1694,9 +1809,15 @@
       "stack": "iiab",
       "category": "ai",
       "install_flag": "install_mcp_gateway",
-      "dependency_survey": "not-surveyed",
+      "dependency_survey": "declared",
       "anchor": "02.02.09",
-      "description": "Docker service 'mcp_gateway' (ai) in the iiab compose stack, toggled by install_mcp_gateway"
+      "description": "Docker service 'mcp_gateway' (ai) in the iiab compose stack, toggled by install_mcp_gateway",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 2
+      }
     },
     "service:metabase": {
       "kind": "service",
@@ -1706,7 +1827,13 @@
       "install_flag": "install_metabase",
       "dependency_survey": "declared",
       "anchor": "02.02.04",
-      "description": "Docker service 'metabase' (data) in the data compose stack, toggled by install_metabase"
+      "description": "Docker service 'metabase' (data) in the data compose stack, toggled by install_metabase",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 2
+      }
     },
     "service:miniflux": {
       "kind": "service",
@@ -1716,7 +1843,13 @@
       "install_flag": "install_miniflux",
       "dependency_survey": "declared",
       "anchor": "02.02.04",
-      "description": "Docker service 'miniflux' (rss) in the iiab compose stack, toggled by install_miniflux"
+      "description": "Docker service 'miniflux' (rss) in the iiab compose stack, toggled by install_miniflux",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 3
+      }
     },
     "service:n8n": {
       "kind": "service",
@@ -1724,9 +1857,15 @@
       "stack": "iiab",
       "category": "automation",
       "install_flag": "install_n8n",
-      "dependency_survey": "not-surveyed",
+      "dependency_survey": "declared",
       "anchor": "02.02.04",
-      "description": "Docker service 'n8n' (automation) in the iiab compose stack, toggled by install_n8n"
+      "description": "Docker service 'n8n' (automation) in the iiab compose stack, toggled by install_n8n",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 2
+      }
     },
     "service:nextcloud": {
       "kind": "service",
@@ -1736,7 +1875,13 @@
       "install_flag": "install_nextcloud",
       "dependency_survey": "declared",
       "anchor": "02.02.04",
-      "description": "Docker service 'nextcloud' (collaboration) in the iiab compose stack, toggled by install_nextcloud"
+      "description": "Docker service 'nextcloud' (collaboration) in the iiab compose stack, toggled by install_nextcloud",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 4
+      }
     },
     "service:nodered": {
       "kind": "service",
@@ -1746,7 +1891,9 @@
       "install_flag": "install_nodered",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
-      "description": "Docker service 'nodered' (automation) in the iiab compose stack, toggled by install_nodered"
+      "description": "Docker service 'nodered' (automation) in the iiab compose stack, toggled by install_nodered",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:ntfy": {
       "kind": "service",
@@ -1756,7 +1903,9 @@
       "install_flag": "install_ntfy",
       "dependency_survey": "not-surveyed",
       "anchor": "03.08",
-      "description": "Docker service 'ntfy' (notifications) in the iiab compose stack, toggled by install_ntfy"
+      "description": "Docker service 'ntfy' (notifications) in the iiab compose stack, toggled by install_ntfy",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:offline_maps": {
       "kind": "service",
@@ -1766,7 +1915,9 @@
       "install_flag": "install_offline_maps",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
-      "description": "Docker service 'offline_maps' (gis) in the iiab compose stack, toggled by install_offline_maps"
+      "description": "Docker service 'offline_maps' (gis) in the iiab compose stack, toggled by install_offline_maps",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:onlyoffice": {
       "kind": "service",
@@ -1776,7 +1927,9 @@
       "install_flag": "install_onlyoffice",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
-      "description": "Docker service 'onlyoffice' (collaboration) in the b2b compose stack, toggled by install_onlyoffice"
+      "description": "Docker service 'onlyoffice' (collaboration) in the b2b compose stack, toggled by install_onlyoffice",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:open_webui": {
       "kind": "service",
@@ -1786,7 +1939,9 @@
       "install_flag": "install_openwebui",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.09",
-      "description": "Docker service 'open_webui' (ai) in the iiab compose stack, toggled by install_openwebui"
+      "description": "Docker service 'open_webui' (ai) in the iiab compose stack, toggled by install_openwebui",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:openclaw": {
       "kind": "service",
@@ -1796,7 +1951,9 @@
       "install_flag": "install_openclaw",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.09",
-      "description": "Docker service 'openclaw' (agent) in the None compose stack, toggled by install_openclaw"
+      "description": "Docker service 'openclaw' (agent) in the None compose stack, toggled by install_openclaw",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:opencode": {
       "kind": "service",
@@ -1806,7 +1963,9 @@
       "install_flag": "install_opencode",
       "dependency_survey": "no-manifest",
       "anchor": "02.02.09",
-      "description": "Docker service 'opencode' (ai) in the None compose stack, toggled by install_opencode"
+      "description": "Docker service 'opencode' (ai) in the None compose stack, toggled by install_opencode",
+      "layer": null,
+      "layer_withheld": "dependency_survey=no-manifest — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:outline": {
       "kind": "service",
@@ -1816,7 +1975,13 @@
       "install_flag": "install_outline",
       "dependency_survey": "declared",
       "anchor": "09",
-      "description": "Docker service 'outline' (wiki) in the b2b compose stack, toggled by install_outline"
+      "description": "Docker service 'outline' (wiki) in the b2b compose stack, toggled by install_outline",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 3
+      }
     },
     "service:paperclip": {
       "kind": "service",
@@ -1826,7 +1991,13 @@
       "install_flag": "install_paperclip",
       "dependency_survey": "declared",
       "anchor": "02.02.09",
-      "description": "Docker service 'paperclip' (agent) in the devops compose stack, toggled by install_paperclip"
+      "description": "Docker service 'paperclip' (agent) in the devops compose stack, toggled by install_paperclip",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 2
+      }
     },
     "service:portainer": {
       "kind": "service",
@@ -1836,7 +2007,9 @@
       "install_flag": "install_portainer",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
-      "description": "Docker service 'portainer' (devops) in the infra compose stack, toggled by install_portainer"
+      "description": "Docker service 'portainer' (devops) in the infra compose stack, toggled by install_portainer",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:postgresql": {
       "kind": "service",
@@ -1846,7 +2019,13 @@
       "install_flag": "install_postgresql",
       "dependency_survey": "declared",
       "anchor": "02.02.05",
-      "description": "Docker service 'postgresql' (database) in the infra compose stack, toggled by install_postgresql"
+      "description": "Docker service 'postgresql' (database) in the infra compose stack, toggled by install_postgresql",
+      "layer": "L0",
+      "layer_basis": {
+        "height": 4,
+        "dependents": 9,
+        "upstreams": 0
+      }
     },
     "service:prometheus": {
       "kind": "service",
@@ -1856,7 +2035,9 @@
       "install_flag": "install_observability",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
-      "description": "Docker service 'prometheus' (observability) in the observability compose stack, toggled by install_observability"
+      "description": "Docker service 'prometheus' (observability) in the observability compose stack, toggled by install_observability",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:pulse": {
       "kind": "service",
@@ -1866,7 +2047,9 @@
       "install_flag": "install_pulse",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
-      "description": "Docker service 'pulse' (automation) in the None compose stack, toggled by install_pulse"
+      "description": "Docker service 'pulse' (automation) in the None compose stack, toggled by install_pulse",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:qgis_server": {
       "kind": "service",
@@ -1876,7 +2059,9 @@
       "install_flag": "install_qgis_server",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
-      "description": "Docker service 'qgis_server' (gis) in the engineering compose stack, toggled by install_qgis_server"
+      "description": "Docker service 'qgis_server' (gis) in the engineering compose stack, toggled by install_qgis_server",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:redis": {
       "kind": "service",
@@ -1886,7 +2071,13 @@
       "install_flag": "install_redis",
       "dependency_survey": "declared",
       "anchor": "02.02.05",
-      "description": "Docker service 'redis' (cache) in the infra compose stack, toggled by install_redis"
+      "description": "Docker service 'redis' (cache) in the infra compose stack, toggled by install_redis",
+      "layer": "L0",
+      "layer_basis": {
+        "height": 4,
+        "dependents": 7,
+        "upstreams": 0
+      }
     },
     "service:rustfs": {
       "kind": "service",
@@ -1896,7 +2087,9 @@
       "install_flag": "install_rustfs",
       "dependency_survey": "not-surveyed",
       "anchor": "11.04",
-      "description": "Docker service 'rustfs' (storage) in the iiab compose stack, toggled by install_rustfs"
+      "description": "Docker service 'rustfs' (storage) in the iiab compose stack, toggled by install_rustfs",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:smtp_stalwart": {
       "kind": "service",
@@ -1906,7 +2099,9 @@
       "install_flag": "install_smtp_stalwart",
       "dependency_survey": "not-surveyed",
       "anchor": "03.08",
-      "description": "Docker service 'smtp_stalwart' (mail) in the infra compose stack, toggled by install_smtp_stalwart"
+      "description": "Docker service 'smtp_stalwart' (mail) in the infra compose stack, toggled by install_smtp_stalwart",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:snappymail": {
       "kind": "service",
@@ -1916,7 +2111,9 @@
       "install_flag": "install_snappymail",
       "dependency_survey": "not-surveyed",
       "anchor": "03.08",
-      "description": "Docker service 'snappymail' (mail) in the iiab compose stack, toggled by install_snappymail"
+      "description": "Docker service 'snappymail' (mail) in the iiab compose stack, toggled by install_snappymail",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:superset": {
       "kind": "service",
@@ -1926,7 +2123,13 @@
       "install_flag": "install_superset",
       "dependency_survey": "declared",
       "anchor": "02.02.04",
-      "description": "Docker service 'superset' (data) in the data compose stack, toggled by install_superset"
+      "description": "Docker service 'superset' (data) in the data compose stack, toggled by install_superset",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 3
+      }
     },
     "service:tailscale": {
       "kind": "service",
@@ -1936,7 +2139,9 @@
       "install_flag": "install_tailscale",
       "dependency_survey": "no-manifest",
       "anchor": "02.02.07",
-      "description": "Docker service 'tailscale' (vpn) in the None compose stack, toggled by install_tailscale"
+      "description": "Docker service 'tailscale' (vpn) in the None compose stack, toggled by install_tailscale",
+      "layer": null,
+      "layer_withheld": "dependency_survey=no-manifest — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:tempo": {
       "kind": "service",
@@ -1946,7 +2151,9 @@
       "install_flag": "install_observability",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
-      "description": "Docker service 'tempo' (observability) in the observability compose stack, toggled by install_observability"
+      "description": "Docker service 'tempo' (observability) in the observability compose stack, toggled by install_observability",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:traefik": {
       "kind": "service",
@@ -1956,7 +2163,9 @@
       "install_flag": "install_traefik",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.07",
-      "description": "Docker service 'traefik' (proxy) in the infra compose stack, toggled by install_traefik"
+      "description": "Docker service 'traefik' (proxy) in the infra compose stack, toggled by install_traefik",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:uptime_kuma": {
       "kind": "service",
@@ -1966,7 +2175,9 @@
       "install_flag": "install_uptime_kuma",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
-      "description": "Docker service 'uptime_kuma' (observability) in the iiab compose stack, toggled by install_uptime_kuma"
+      "description": "Docker service 'uptime_kuma' (observability) in the iiab compose stack, toggled by install_uptime_kuma",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:vaultwarden": {
       "kind": "service",
@@ -1976,7 +2187,9 @@
       "install_flag": "install_vaultwarden",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.08",
-      "description": "Docker service 'vaultwarden' (vault) in the iiab compose stack, toggled by install_vaultwarden"
+      "description": "Docker service 'vaultwarden' (vault) in the iiab compose stack, toggled by install_vaultwarden",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:watchtower": {
       "kind": "service",
@@ -1986,7 +2199,9 @@
       "install_flag": "install_watchtower",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
-      "description": "Docker service 'watchtower' (monitoring) in the iiab compose stack, toggled by install_watchtower"
+      "description": "Docker service 'watchtower' (monitoring) in the iiab compose stack, toggled by install_watchtower",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:wing": {
       "kind": "service",
@@ -1994,9 +2209,15 @@
       "stack": null,
       "category": "security",
       "install_flag": "install_wing",
-      "dependency_survey": "not-surveyed",
+      "dependency_survey": "declared",
       "anchor": "02.02.08",
-      "description": "Docker service 'wing' (security) in the None compose stack, toggled by install_wing"
+      "description": "Docker service 'wing' (security) in the None compose stack, toggled by install_wing",
+      "layer": "L1",
+      "layer_basis": {
+        "height": 1,
+        "dependents": 1,
+        "upstreams": 4
+      }
     },
     "service:woodpecker": {
       "kind": "service",
@@ -2006,7 +2227,13 @@
       "install_flag": "install_woodpecker",
       "dependency_survey": "declared",
       "anchor": "02.02.04",
-      "description": "Docker service 'woodpecker' (devops) in the devops compose stack, toggled by install_woodpecker"
+      "description": "Docker service 'woodpecker' (devops) in the devops compose stack, toggled by install_woodpecker",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 2
+      }
     },
     "service:wordpress": {
       "kind": "service",
@@ -2016,7 +2243,13 @@
       "install_flag": "install_wordpress",
       "dependency_survey": "declared",
       "anchor": "02.02.04",
-      "description": "Docker service 'wordpress' (cms) in the iiab compose stack, toggled by install_wordpress"
+      "description": "Docker service 'wordpress' (cms) in the iiab compose stack, toggled by install_wordpress",
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 2
+      }
     },
     "table:apps": {
       "kind": "table",
@@ -2489,6 +2722,334 @@
       "derived": "judge-sets.requires"
     },
     {
+      "from": "service:authentik",
+      "to": "authentik:bookstack",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:calibre-web",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:code-server",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:documenso",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:erpnext",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:face",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:firefly",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=header_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:freescout",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:gitea",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:gitlab",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:grafana",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:hedgedoc",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:hermes",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:homeassistant",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:infisical",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:influxdb",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:jellyfin",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:keap",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=header_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:kiwix",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:mailpit",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:metabase",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:miniflux",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:n8n",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:nextcloud",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:nodered",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:ntfy",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:onlyoffice",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:open-webui",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:openclaw",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:outline",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:paperclip",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:portainer",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:qdrant",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:roundcube",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:snappymail",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:spacetimedb",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:superset",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:twofauth",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:uptime-kuma",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:vaultwarden",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:wing",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:woodpecker",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:wordpress",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:bone",
+      "to": "service:face",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "NOS_VFS_API_URL → host.docker.internal:{{ bone_port }}/api/v1/vfs (roles/pazny.face/templates/compose.yml.j2:51) — the file browser's real per-user tree",
+      "enforced_by": null,
+      "unenforced": "No auto-enable block ties install_bone to install_face; the file browser degrades to \"unreachable\" rather than failing."
+    },
+    {
+      "from": "service:bone",
+      "to": "service:wing",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "NOS_BONE_PORT + NOS_BONE_SECRET in the launchd environment (roles/pazny.wing/tasks/post.yml:414-416, rendered into roles/pazny.wing/templates/wing.plist.j2:68) — Bone is the HMAC event vein every Ansible run writes through on its way to wing.db",
+      "enforced_by": null,
+      "unenforced": "No auto-enable block ties install_bone to install_wing. With Bone down the callback plugin falls back to ~/.nos/events.jsonl, so the estate keeps converging and the timeline quietly stops growing."
+    },
+    {
+      "from": "service:cortex",
+      "to": "service:keap",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "CORTEX_BACKEND_URL → host.docker.internal:{{ cortex_port }} (roles/pazny.keap/templates/compose.yml.j2:110, with its own token space at :112) — the resolver organ KEAP delegates to once `keap_cortex_cutover` is on",
+      "enforced_by": null,
+      "unenforced": "No auto-enable block ties install_cortex to install_keap. Rollback is `keap_cortex_cutover: false` + converge, so with the organ absent and the flag on, KEAP serves its own path and the delegation silently never happens."
+    },
+    {
       "from": "service:face",
       "to": "faceapp:anatomy-widget",
       "kind": "data",
@@ -2500,161 +3061,266 @@
       "to": "service:woodpecker",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "WOODPECKER_GITEA_URL + WOODPECKER_GITEA_CLIENT/SECRET (roles/pazny.woodpecker/templates/compose.yml.j2:31-34) — Woodpecker has no user store of its own; every login is a Gitea OAuth2 handshake, and the client is auto-created at converge (A16/A19)"
+      "via": "WOODPECKER_GITEA_URL + WOODPECKER_GITEA_CLIENT/SECRET (roles/pazny.woodpecker/templates/compose.yml.j2:31-34) — Woodpecker has no user store of its own; every login is a Gitea OAuth2 handshake, and the client is auto-created at converge (A16/A19)",
+      "enforced_by": null,
+      "unenforced": "`install_gitea` appears in main.yml zero times — no auto-enable block backs this edge, unlike the 22 database ones. `install_woodpecker: true` with `install_gitea: false` brings Woodpecker up pointed at a Gitea URL that resolves to nothing, and roles/pazny.woodpecker/tasks/post.yml:14 then SKIPS the OAuth wiring silently: a healthy container nobody can log into, on a converge that reports failed=0."
+    },
+    {
+      "from": "service:grafana",
+      "to": "service:mcp_gateway",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "the Grafana service account + token minted against the estate's own Grafana at http://127.0.0.1:{{ grafana_port }} (roles/pazny.mcp_gateway/tasks/post.yml:34-90) and handed to the mcp-grafana sidecar as GRAFANA_SERVICE_ACCOUNT_TOKEN (roles/pazny.mcp_gateway/templates/compose.yml.j2:70-71)",
+      "enforced_by": null,
+      "unenforced": "Grafana rides `install_observability`, which no block ties to install_mcp_gateway. The observability stack is brought up first by tasks/stacks/core-up.yml, so in practice it is there — but a bring-up ORDER is not an enable guarantee, and the token task is `failed_when: false` like the psql one."
+    },
+    {
+      "from": "service:keap",
+      "to": "service:wing",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "NOS_KEAP_PORT / the KEAP agent API base in wing.env.j2:31 and wing.plist.j2:77-82 — Wing's knowledge panels query /agent/v1",
+      "enforced_by": null,
+      "unenforced": "No auto-enable block ties install_keap to install_wing; the panels render their empty state."
+    },
+    {
+      "from": "service:mailpit",
+      "to": "service:miniflux",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "SMTP_HOST=\"mailpit\" (roles/pazny.miniflux/templates/compose.yml.j2:31) — the relay every Miniflux notification leaves through",
+      "enforced_by": null,
+      "unenforced": "No auto-enable block turns Mailpit on for Miniflux. With it off, mail fails per-message inside Miniflux; the container stays healthy."
+    },
+    {
+      "from": "service:mailpit",
+      "to": "service:n8n",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "N8N_SMTP_HOST=\"mailpit\" with N8N_EMAIL_MODE=smtp (roles/pazny.n8n/templates/compose.yml.j2:27-29) — n8n's user invitations and workflow-failure alerts leave through it",
+      "enforced_by": null,
+      "unenforced": "No auto-enable block turns Mailpit on for n8n. With it off, SMTP fails per-message inside n8n; the container stays healthy and the converge reports nothing."
+    },
+    {
+      "from": "service:mailpit",
+      "to": "service:nextcloud",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "SMTP_HOST=mailpit (roles/pazny.nextcloud/templates/compose.yml.j2:36) — the only mail path a default install has; share links, password resets and admin alerts all leave through it",
+      "enforced_by": null,
+      "unenforced": "No auto-enable block turns Mailpit on for Nextcloud. With it off the SMTP host resolves to nothing and outbound mail fails per-message, inside Nextcloud's own logs."
     },
     {
       "from": "service:mariadb",
       "to": "service:bookstack",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "DB_HOST=mariadb (roles/pazny.bookstack/templates/compose.yml.j2:26) — schema `bookstack`"
+      "via": "DB_HOST=mariadb (roles/pazny.bookstack/templates/compose.yml.j2:26) — schema `bookstack`",
+      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it"
     },
     {
       "from": "service:mariadb",
       "to": "service:erpnext",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "DB_HOST=mariadb on all five bench containers plus the configurator's `bench new-site --db-root-password` (roles/pazny.erpnext/templates/compose.yml.j2:32,47) — schema `erpnext`"
+      "via": "DB_HOST=mariadb on all five bench containers plus the configurator's `bench new-site --db-root-password` (roles/pazny.erpnext/templates/compose.yml.j2:32,47) — schema `erpnext`",
+      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it"
     },
     {
       "from": "service:mariadb",
       "to": "service:firefly",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "DB_CONNECTION=mysql + DB_HOST=mariadb (roles/pazny.firefly/templates/compose.yml.j2:43-44) — schema `firefly`"
+      "via": "DB_CONNECTION=mysql + DB_HOST=mariadb (roles/pazny.firefly/templates/compose.yml.j2:43-44) — schema `firefly`",
+      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it"
     },
     {
       "from": "service:mariadb",
       "to": "service:freepbx",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "DB_HOST=mariadb (roles/pazny.freepbx/templates/compose.yml.j2:33) — schema `asterisk`, the one whose name does not match its service"
+      "via": "DB_HOST=mariadb (roles/pazny.freepbx/templates/compose.yml.j2:33) — schema `asterisk`, the one whose name does not match its service",
+      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it"
     },
     {
       "from": "service:mariadb",
       "to": "service:freescout",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "DB_HOST=mariadb (roles/pazny.freescout/templates/compose.yml.j2:25) — schema `freescout`"
+      "via": "DB_HOST=mariadb (roles/pazny.freescout/templates/compose.yml.j2:25) — schema `freescout`",
+      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it"
     },
     {
       "from": "service:mariadb",
       "to": "service:nextcloud",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "MYSQL_HOST=mariadb (roles/pazny.nextcloud/templates/compose.yml.j2:24) — schema `nextcloud`, created by mariadb_databases (default.config.yml:1219)"
+      "via": "MYSQL_HOST=mariadb (roles/pazny.nextcloud/templates/compose.yml.j2:24) — schema `nextcloud`, created by mariadb_databases (default.config.yml:1219)",
+      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it"
     },
     {
       "from": "service:mariadb",
       "to": "service:wordpress",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "WORDPRESS_DB_HOST=mariadb (roles/pazny.wordpress/templates/compose.yml.j2:26) — schema `wordpress`, created by mariadb_databases (default.config.yml:1219)"
+      "via": "WORDPRESS_DB_HOST=mariadb (roles/pazny.wordpress/templates/compose.yml.j2:26) — schema `wordpress`, created by mariadb_databases (default.config.yml:1219)",
+      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it"
+    },
+    {
+      "from": "service:onlyoffice",
+      "to": "service:nextcloud",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "`occ app:enable onlyoffice` + DocumentServerInternalUrl / StorageUrl (roles/pazny.nextcloud/tasks/post.yml:283-309) — the in-Nextcloud editor IS the OnlyOffice document server; without it the connector app installs and every document opens read-only",
+      "enforced_by": null,
+      "unenforced": "No `Auto-enable …` block ties install_onlyoffice to install_nextcloud. With OnlyOffice off, the post-start connector wiring is skipped and Nextcloud comes up healthy with a dead Edit button — a degraded feature, not a failed converge, which is why nothing has ever reported it."
     },
     {
       "from": "service:postgresql",
       "to": "service:authentik",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "AUTHENTIK_POSTGRESQL__HOST=postgresql on BOTH the server and the worker (roles/pazny.authentik/templates/compose.yml.j2:36,97) — database `authentik`, created by roles/pazny.postgresql/tasks/post.yml:104-119"
+      "via": "AUTHENTIK_POSTGRESQL__HOST=postgresql on BOTH the server and the worker (roles/pazny.authentik/templates/compose.yml.j2:36,97) — database `authentik`, created by roles/pazny.postgresql/tasks/post.yml:104-119",
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
     },
     {
       "from": "service:postgresql",
       "to": "service:hedgedoc",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "CMD_DB_URL=postgres://…@postgresql:5432 (roles/pazny.hedgedoc/templates/compose.yml.j2:26) — database `hedgedoc`"
+      "via": "CMD_DB_URL=postgres://…@postgresql:5432 (roles/pazny.hedgedoc/templates/compose.yml.j2:26) — database `hedgedoc`",
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
     },
     {
       "from": "service:postgresql",
       "to": "service:infisical",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "DB_CONNECTION_URI=postgresql://…@postgresql:5432 (roles/pazny.infisical/templates/compose.yml.j2:23) — database `infisical`"
+      "via": "DB_CONNECTION_URI=postgresql://…@postgresql:5432 (roles/pazny.infisical/templates/compose.yml.j2:23) — database `infisical`",
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
+    },
+    {
+      "from": "service:postgresql",
+      "to": "service:mcp_gateway",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "the `postgres` MCP server's DSN postgresql://mcp_readonly:…@postgresql:5432 (roles/pazny.mcp_gateway/templates/mcpo-config.json.j2:20, under `mcp_enable_postgres` which defaults TRUE) plus the read-only role the role creates with `docker compose -p infra exec -T postgresql psql` (roles/pazny.mcp_gateway/tasks/post.yml:12-31)",
+      "enforced_by": null,
+      "unenforced": "`install_mcp_gateway` is in NO auto-enable block. With PostgreSQL absent the role reports success anyway — the psql task carries `failed_when: false` + `no_log: true`, and the status line then prints \"mcpo: OK (N MCP endpoints active)\" because /openapi.json serves whether or not the postgres server can reach a database. A success marker written by the attempting code."
     },
     {
       "from": "service:postgresql",
       "to": "service:metabase",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "MB_DB_TYPE=postgres + MB_DB_HOST=postgresql (roles/pazny.metabase/templates/compose.yml.j2:23,28) — database `metabase`"
+      "via": "MB_DB_TYPE=postgres + MB_DB_HOST=postgresql (roles/pazny.metabase/templates/compose.yml.j2:23,28) — database `metabase`",
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
     },
     {
       "from": "service:postgresql",
       "to": "service:miniflux",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "DATABASE_URL=postgres://…@postgresql:5432 (roles/pazny.miniflux/templates/compose.yml.j2:18) — database `miniflux`"
+      "via": "DATABASE_URL=postgres://…@postgresql:5432 (roles/pazny.miniflux/templates/compose.yml.j2:18) — database `miniflux`",
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
     },
     {
       "from": "service:postgresql",
       "to": "service:outline",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "DATABASE_URL=postgres://…@postgresql:5432 (roles/pazny.outline/templates/compose.yml.j2:23) — database `outline`"
+      "via": "DATABASE_URL=postgres://…@postgresql:5432 (roles/pazny.outline/templates/compose.yml.j2:23) — database `outline`",
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
     },
     {
       "from": "service:postgresql",
       "to": "service:paperclip",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "DATABASE_URL=postgresql://…@postgresql:5432 (roles/pazny.paperclip/templates/compose.yml.j2:30) — database `paperclip`"
+      "via": "DATABASE_URL=postgresql://…@postgresql:5432 (roles/pazny.paperclip/templates/compose.yml.j2:30) — database `paperclip`",
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
     },
     {
       "from": "service:postgresql",
       "to": "service:superset",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "DATABASE_HOST=postgresql — Superset's own metadata database (roles/pazny.superset/templates/compose.yml.j2:35), not a chart datasource"
+      "via": "DATABASE_HOST=postgresql — Superset's own metadata database (roles/pazny.superset/templates/compose.yml.j2:35), not a chart datasource",
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
+    },
+    {
+      "from": "service:prometheus",
+      "to": "service:wing",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "NOS_PROMETHEUS_PORT (roles/pazny.wing/tasks/post.yml:420) — the alert-relay-base Pulse job polls Prometheus for firing alerts (2026-08-05)",
+      "enforced_by": null,
+      "unenforced": "Prometheus rides install_observability, which no block ties to install_wing. With it absent the relay job runs and finds no alerts, which is indistinguishable from a quiet estate — the alert path's own absence-as-calm, recorded here rather than fixed here."
     },
     {
       "from": "service:redis",
       "to": "service:authentik",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "AUTHENTIK_REDIS__HOST=redis on both server and worker (roles/pazny.authentik/templates/compose.yml.j2:34,95) — task queue + cache"
+      "via": "AUTHENTIK_REDIS__HOST=redis on both server and worker (roles/pazny.authentik/templates/compose.yml.j2:34,95) — task queue + cache",
+      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it"
     },
     {
       "from": "service:redis",
       "to": "service:bookstack",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "REDIS_SERVERS=redis:6379:0 — session + cache store (roles/pazny.bookstack/templates/compose.yml.j2:35)"
+      "via": "REDIS_SERVERS=redis:6379:0 — session + cache store (roles/pazny.bookstack/templates/compose.yml.j2:35)",
+      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it"
     },
     {
       "from": "service:redis",
       "to": "service:erpnext",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "REDIS_CACHE/REDIS_QUEUE/REDIS_SOCKETIO at redis:6379/{0,1,2}, set both in the configurator and on every worker (roles/pazny.erpnext/templates/compose.yml.j2:34-36,51-52)"
+      "via": "REDIS_CACHE/REDIS_QUEUE/REDIS_SOCKETIO at redis:6379/{0,1,2}, set both in the configurator and on every worker (roles/pazny.erpnext/templates/compose.yml.j2:34-36,51-52)",
+      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it"
     },
     {
       "from": "service:redis",
       "to": "service:firefly",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "REDIS_HOST=redis — cache + session driver (roles/pazny.firefly/templates/compose.yml.j2:53)"
+      "via": "REDIS_HOST=redis — cache + session driver (roles/pazny.firefly/templates/compose.yml.j2:53)",
+      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it"
     },
     {
       "from": "service:redis",
       "to": "service:infisical",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "REDIS_URL=redis://…@redis:6379 (roles/pazny.infisical/templates/compose.yml.j2:24)"
+      "via": "REDIS_URL=redis://…@redis:6379 (roles/pazny.infisical/templates/compose.yml.j2:24)",
+      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it"
     },
     {
       "from": "service:redis",
       "to": "service:outline",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "REDIS_URL=redis://…@redis:6379 — websocket collaboration state (roles/pazny.outline/templates/compose.yml.j2:25)"
+      "via": "REDIS_URL=redis://…@redis:6379 — websocket collaboration state (roles/pazny.outline/templates/compose.yml.j2:25)",
+      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it"
     },
     {
       "from": "service:redis",
       "to": "service:superset",
       "kind": "data",
       "measured": "2026-08-07",
-      "via": "REDIS_HOST=redis — Celery broker + results backend (roles/pazny.superset/templates/compose.yml.j2:40)"
+      "via": "REDIS_HOST=redis — Celery broker + results backend (roles/pazny.superset/templates/compose.yml.j2:40)",
+      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it"
+    },
+    {
+      "from": "service:wing",
+      "to": "service:face",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "NOS_HUB_API_URL + NOS_WING_API_URL → host.docker.internal:{{ wing_port }} (roles/pazny.face/templates/compose.yml.j2:40,47) — the app catalog and the Anatomy view's Pulse/Bone/Wing projections all come from Wing; the BFF is an allow-list projection over these responses",
+      "enforced_by": null,
+      "unenforced": "No auto-enable block ties install_wing to install_face. With Wing down the desktop still boots and every Anatomy panel renders its unreachable state — which is the designed behaviour, and also why nothing fails."
     },
     {
       "from": "tofu:authentik-state",
@@ -2682,7 +3348,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:226",
+      "via": "cited at state/judge-sets.yml:232",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -2690,7 +3356,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:207",
+      "via": "cited at state/judge-sets.yml:213",
       "citations": 2,
       "derived": "doctrine-cite"
     },
@@ -2698,7 +3364,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2f",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:232",
+      "via": "cited at state/judge-sets.yml:238",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -2730,7 +3396,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:197",
+      "via": "cited at state/judge-sets.yml:203",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -2738,7 +3404,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:166",
+      "via": "cited at state/judge-sets.yml:172",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -2746,7 +3412,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M2",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:187",
+      "via": "cited at state/judge-sets.yml:193",
       "citations": 2,
       "derived": "doctrine-cite"
     },
@@ -2754,7 +3420,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:151",
+      "via": "cited at state/judge-sets.yml:157",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -2762,7 +3428,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5a",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:152",
+      "via": "cited at state/judge-sets.yml:158",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -2770,7 +3436,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:144",
+      "via": "cited at state/judge-sets.yml:150",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -2802,7 +3468,7 @@
       "from": "pulse:keap:keap-embed-sync",
       "to": "doctrine:docs/archive/cortex-corpus-parallel.md#2.1",
       "kind": "governed_by",
-      "via": "cited at files/anatomy/plugins/keap-base/plugin.yml:147",
+      "via": "cited at files/anatomy/plugins/keap-base/plugin.yml:163",
       "citations": 1,
       "derived": "doctrine-cite"
     },

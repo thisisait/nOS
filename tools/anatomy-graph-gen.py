@@ -490,6 +490,17 @@ def _consumer_service(doc: dict, path: Path, nodes: dict) -> str | None:
     return None
 
 
+#: Top-level keys a plugin might mean as `depends_on` and spell otherwise.
+#: plugin.schema.json is `additionalProperties: true` at the top level, so
+#: `depends-on:` / `dependsOn:` VALIDATES at converge and is then dropped
+#: silently here, leaving the node reading `not-surveyed` — an absence caused
+#: by a typo, wearing the same face as an absence caused by nobody looking.
+#: Compared against the key with every non-letter stripped, so `depends-on`,
+#: `dependsOn`, `depends_On` and `DEPENDS-ON` all land on `dependson`.
+_DEPENDS_ON_NEAR_MISSES = ("dependson", "dependencies", "dependencyies",
+                           "dependon", "requiresservice", "depends")
+
+
 def harvest_service_deps(nodes: dict, raw_edges: list) -> None:
     """Top-level `depends_on:` on a service plugin → service→service edges.
 
@@ -505,6 +516,13 @@ def harvest_service_deps(nodes: dict, raw_edges: list) -> None:
             continue
         if not isinstance(doc, dict):
             continue
+        for key in doc:
+            if str(key) != "depends_on" and re.sub(
+                    r"[^a-z]", "", str(key).lower()) in _DEPENDS_ON_NEAR_MISSES:
+                _die(f"{path.relative_to(REPO)}: top-level key {key!r} looks like a "
+                     f"misspelling of `depends_on` — the plugin schema accepts unknown "
+                     f"top-level keys, so this would validate at converge and be dropped "
+                     f"here, leaving the service reading 'not-surveyed'")
         consumer = _consumer_service(doc, path, nodes)
         if consumer is None:
             # A composition plugin (alloy-*, grafana-*) or a Tier-2 app plugin
@@ -594,6 +612,42 @@ def harvest_authentik(nodes: dict) -> None:
         }
 
 
+def derive_authentik_hosting(nodes: dict) -> list[dict]:
+    """service:authentik → authentik:<slug>, one per registry row.
+
+    THE MEASUREMENT THAT FORCED THIS, and all three adversarial reviews of R1
+    opened with it: `service:authentik outgoing: []`. The 43 provider objects
+    edged TO their services and had ZERO in-edges, so they were orphan roots
+    rather than objects living inside Authentik — and the graph, asked the
+    question this whole epic exists to answer ("what breaks if I remove X?"),
+    replied "nothing depends on Authentik" about the estate's single most
+    load-bearing service, in the calm voice of a surveyed node.
+
+    An `authentik:<slug>` node is not an actor. It is a provider+application
+    pair INSIDE the Authentik service, applied there by OpenTofu — which is
+    why the node already carried `service:` and `managed_by:` facts and no
+    address for its host. Derived, never declared: the registry row IS the
+    declaration, and a second hand-written one would be the fifth-place
+    problem R1 exists to end.
+    """
+    if "service:authentik" not in nodes:
+        return []
+    out = []
+    for nid, n in sorted(nodes.items()):
+        if n.get("kind") != "authentik":
+            continue
+        out.append({
+            "from": "service:authentik",
+            "to": nid,
+            "kind": "data",
+            "via": f"provider+application object hosted by Authentik "
+                   f"(mode={n.get('mode')}) — applied into the running service by "
+                   f"terraform/authentik from state/tofu-authentik-services.yml",
+            "derived": "authentik-hosting",
+        })
+    return out
+
+
 # ── harvest: KEAP DataTable definitions ───────────────────────────────────
 
 
@@ -667,7 +721,56 @@ def _cron_minute(schedule: str | None) -> int | None:
     return int(parts[1]) * 60 + int(parts[0])
 
 
+#: `set_fact` key → the service that fact turns on, for main.yml's three
+#: `Auto-enable <provider> for services that require it` blocks. `install_redis`
+#: is deliberately absent: the Redis toggle is `redis_docker`, and the manifest
+#: row's `install_flag: install_redis` names a variable no config file defines.
+_AUTO_ENABLE_FACTS = {
+    "install_mariadb": "mariadb",
+    "install_postgresql": "postgresql",
+    "redis_docker": "redis",
+}
+
+
+def auto_enabled_pairs() -> dict[tuple[str, str], str]:
+    """(consumer_flag_service, provider) → the block that guarantees it.
+
+    Parsed from main.yml so the ARTIFACT can say which declared edges the
+    playbook actually backs. Without it all service edges read as one claim
+    with one backing, and they are not: `install_woodpecker: true` with
+    `install_gitea: false` brings Woodpecker up pointed at nothing, and
+    roles/pazny.woodpecker/tasks/post.yml:14 then skips the OAuth wiring in
+    silence. A declaration nothing enforces is an aspiration in a fact's
+    clothes, and the reader must be able to tell which is which.
+    """
+    text = (REPO / "main.yml").read_text(encoding="utf-8")
+    by_flag = {}
+    for svc in (yaml.safe_load(MANIFEST.read_text(encoding="utf-8")).get("services") or []):
+        if isinstance(svc, dict) and svc.get("id") and svc.get("install_flag"):
+            by_flag.setdefault(svc["install_flag"], svc["id"])
+    out: dict[tuple[str, str], str] = {}
+    provider = None
+    block = ""
+    for line in text.splitlines():
+        name = re.match(r"^\s{4}- name:\s*(.+?)\s*$", line)
+        if name:
+            provider, block = None, name.group(1)
+            continue
+        fact = re.match(r"^\s{8}([a-z_]+):\s*true\s*$", line)
+        if fact and fact.group(1) in _AUTO_ENABLE_FACTS:
+            provider = _AUTO_ENABLE_FACTS[fact.group(1)]
+            continue
+        if provider is None:
+            continue
+        for flag in re.findall(r"\(install_([a-z_0-9]+)\s*\|", line):
+            svc = by_flag.get(f"install_{flag}")
+            if svc:
+                out[(svc, provider)] = f"main.yml: {block}"
+    return out
+
+
 def compile_declared(raw_edges: list, nodes: dict) -> list[dict]:
+    enable = auto_enabled_pairs()
     edges = []
     for consumer, dep, src in raw_edges:
         if not isinstance(dep, dict):
@@ -717,6 +820,24 @@ def compile_declared(raw_edges: list, nodes: dict) -> list[dict]:
                 # checked against anything.
                 _die(f"{consumer} ({src}): edge from {on} carries expects/on_findings, "
                      f"which describe a run outcome — only a pulse upstream has runs")
+            if consumer.startswith("service:") and on.startswith("service:"):
+                pair = (consumer.split(":", 1)[1], on.split(":", 1)[1])
+                block = enable.get(pair)
+                reason = str(dep.get("unenforced") or "").strip()
+                if block and reason:
+                    _die(f"{consumer} ({src}): edge from {on} declares `unenforced:` but "
+                         f"{block} DOES enable it — drop the field rather than carry a "
+                         f"disclaimer the playbook contradicts")
+                if not block and not reason:
+                    _die(f"{consumer} ({src}): no `Auto-enable …` block in main.yml turns "
+                         f"{on} on for this consumer, so the playbook can bring the "
+                         f"consumer up with no provider. Say so in `unenforced:` (one "
+                         f"sentence, what happens when it is missing) or add the flag to "
+                         f"the block — silence would make this read like the 22 edges the "
+                         f"playbook does guarantee")
+                edge["enforced_by"] = block
+                if reason:
+                    edge["unenforced"] = reason
         if kind == "temporal":
             for end in (on, consumer):
                 if not nodes[end].get("schedule"):
@@ -1136,6 +1257,114 @@ def find_cycle(edges: list[dict], kinds: set[str]) -> list[str] | None:
     return None
 
 
+# ── R2: layer, DERIVED (docs/doctrine/layers.md §3, docs/idea/13-relations.md) ──
+
+
+#: The one place the layer arithmetic is written down. `graphLayout.ts`
+#: `rankNodes` runs the same longest-path walk for the canvas; this is that
+#: walk restricted to the service projection and mapped onto §3's four names.
+LAYER_BASIS = (
+    "longest path over the service projection of the dependency edges: every "
+    "service→service data edge, plus the SSO chain service:authentik → "
+    "authentik:<slug> → service:<x> collapsed onto its endpoints (an "
+    "authentik:<slug> is an object inside Authentik, not an actor). "
+    "height = longest path to a leaf; L2 = no dependents, L1 = has dependents "
+    "and upstreams, L0 = has dependents and no upstreams."
+)
+
+
+def _service_projection(edges: list[dict]) -> dict[str, set[str]]:
+    """provider service → the services that depend on it, SSO chain collapsed."""
+    out: dict[str, set[str]] = {}
+    hosted: dict[str, str] = {}      # authentik:<slug> → hosting service
+    gated: dict[str, set[str]] = {}  # authentik:<slug> → services it gates
+    for e in edges:
+        if e["kind"] != "data":
+            continue
+        f, t = e["from"], e["to"]
+        if f.startswith("service:") and t.startswith("service:"):
+            out.setdefault(f, set()).add(t)
+        elif f.startswith("service:") and t.startswith("authentik:"):
+            hosted[t] = f
+        elif f.startswith("authentik:") and t.startswith("service:"):
+            gated.setdefault(f, set()).add(t)
+    for provider_node, consumers in gated.items():
+        host = hosted.get(provider_node)
+        if host:
+            out.setdefault(host, set()).update(c for c in consumers if c != host)
+    return out
+
+
+def derive_layers(nodes: dict, edges: list[dict]) -> None:
+    """Stamp `layer` on every service node the estate is entitled to place.
+
+    REFUSAL, and it is the point of the whole field. `layer` is longest path
+    over the DECLARED edges, so a node nobody surveyed contributes exactly what
+    a measured root contributes — nothing — and the arithmetic answers anyway.
+    MEASURED with the refusal disabled: `service:traefik` derives **L2
+    application**, "a leaf whose failure is felt where it happens", about the
+    process that binds 80/443 and is the sole edge proxy on Linux; and
+    `service:grafana`, which nobody surveyed either but which mcp_gateway
+    depends on, derives **L0 substrate**. Same absence of evidence, opposite
+    verdicts, both stated calmly. So a node whose own upstreams were never read
+    gets NO layer and a `layer_withheld` reason instead.
+
+    L3 is NOT derivable here and is never emitted: §3 defines it by DELIVERY
+    ("small per-tenant apps, manifest-shipped"), which is a different axis
+    leaking into this one. The Tier-2 apps have no `service:` node at all.
+    """
+    down = _service_projection(edges)
+    up: dict[str, set[str]] = {}
+    for provider, consumers in down.items():
+        for c in consumers:
+            up.setdefault(c, set()).add(provider)
+
+    height: dict[str, int] = {}
+    stack: set[str] = set()
+
+    def walk(nid: str) -> int:
+        if nid in height:
+            return height[nid]
+        if nid in stack:
+            return 0
+        stack.add(nid)
+        h = 0
+        for nxt in down.get(nid, ()):
+            if nxt in stack:
+                continue
+            h = max(h, walk(nxt) + 1)
+        stack.discard(nid)
+        height[nid] = h
+        return h
+
+    for nid, n in nodes.items():
+        if n.get("kind") == "service":
+            walk(nid)
+
+    for nid, n in sorted(nodes.items()):
+        if n.get("kind") != "service":
+            continue
+        survey = n.get("dependency_survey")
+        dependents, upstreams = len(down.get(nid, ())), len(up.get(nid, ()))
+        if survey != "declared":
+            n["layer"] = None
+            n["layer_withheld"] = (
+                f"dependency_survey={survey} — nobody has read this role's upstreams, "
+                f"and a longest path over edges that were never looked for derives L0 "
+                f"substrate from an absence of evidence"
+            )
+            continue
+        if height[nid] == 0:
+            layer = "L2"
+        elif upstreams == 0:
+            layer = "L0"
+        else:
+            layer = "L1"
+        n["layer"] = layer
+        n["layer_basis"] = {"height": height[nid], "dependents": dependents,
+                            "upstreams": upstreams}
+
+
 # ── build ─────────────────────────────────────────────────────────────────
 
 
@@ -1166,8 +1395,10 @@ def build() -> dict:
     # After every node exists (derive_mutex/ensure_capability_resources mint
     # resource nodes): taxonomy anchor + embeddable one-liner, every node.
     annotate_nodes(nodes)
+    hosting = derive_authentik_hosting(nodes)
     all_edges = (declared + writes + edges + bindings + substrate + face
-                 + structural + doctrine + mutex)
+                 + structural + doctrine + mutex + hosting)
+    derive_layers(nodes, all_edges)
 
     # Per-kind cycles are a compile error (§2c-2): there is no legitimate
     # same-night cycle in a cron estate.
@@ -1201,11 +1432,23 @@ def build() -> dict:
         counts[f"services_survey_{state.replace('-', '_')}"] = sum(
             1 for n in nodes.values()
             if n["kind"] == "service" and n.get("dependency_survey") == state)
+    counts["edges_service_dependency_unenforced"] = sum(
+        1 for e in all_edges if "unenforced" in e)
+    # R2. `layer_withheld` is counted beside the three layers precisely so the
+    # census cannot be read as a complete inventory: today it is the majority.
+    for layer in ("L0", "L1", "L2", "L3"):
+        counts[f"services_layer_{layer}"] = sum(
+            1 for n in nodes.values()
+            if n["kind"] == "service" and n.get("layer") == layer)
+    counts["services_layer_withheld"] = sum(
+        1 for n in nodes.values()
+        if n["kind"] == "service" and n.get("layer") is None)
 
     return {
         "version": 1,
         "generated_by": "tools/anatomy-graph-gen.py",
         "doctrine": "docs/archive/nos-anatomy-graph.md",
+        "layer_basis": LAYER_BASIS,
         "counts": counts,
         "warnings": warnings,
         "nodes": {k: nodes[k] for k in sorted(nodes)},

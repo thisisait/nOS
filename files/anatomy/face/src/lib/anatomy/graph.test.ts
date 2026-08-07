@@ -13,6 +13,7 @@ import {
 	filterForCanvas,
 	joinLive,
 	spotlight,
+	serviceCoverage,
 	nodeLabel,
 	NODE_KINDS,
 	type NodeKind
@@ -49,6 +50,87 @@ describe('projectGraph on the vendored artifact', () => {
 		]) {
 			expect(graph.byId.has(id), `${id} missing`).toBe(true);
 		}
+	});
+});
+
+describe('serviceCoverage — the remainder, rendered', () => {
+	// The artifact published `services_survey_not_surveyed: 39` and
+	// `edges_service_dependency: 23` and NEITHER reached a pixel: the kind chip
+	// read `service 63` beside a canvas drawing 20 of them, and a service
+	// nobody had read was the same rectangle as a measured root. These tests
+	// exist so that cannot happen silently again.
+	it('states the unsurveyed count in words, not just in counts', () => {
+		const c = serviceCoverage(graph);
+		expect(c.services).toBeGreaterThanOrEqual(60);
+		expect(c.unsurveyed).toBeGreaterThan(0);
+		expect(c.sentence).toContain(String(c.services));
+		expect(c.sentence).toContain(String(c.surveyed));
+		expect(c.sentence).toContain('unread');
+	});
+
+	it('names the withheld layers rather than reporting only the derived ones', () => {
+		const c = serviceCoverage(graph);
+		expect(c.withheld).toBeGreaterThan(0);
+		expect(c.layered + c.withheld).toBe(c.services);
+		expect(c.sentence).toContain('WITHHELD');
+	});
+
+	it('says so in words when there is nothing left to survey', () => {
+		// Never falls silent on completion — an empty string would read as
+		// "no problem here" for exactly the same reason a missing field does.
+		const complete = serviceCoverage({
+			...graph,
+			counts: {
+				nodes_service: 2,
+				services_survey_declared: 2,
+				services_survey_not_surveyed: 0,
+				services_survey_no_manifest: 0,
+				edges_service_dependency: 3,
+				edges_service_dependency_unenforced: 1,
+				services_layer_L0: 1,
+				services_layer_L1: 0,
+				services_layer_L2: 1,
+				services_layer_L3: 0,
+				services_layer_withheld: 0
+			}
+		});
+		expect(complete.sentence).toContain('all 2 services surveyed');
+		expect(complete.sentence).not.toContain('WITHHELD');
+	});
+
+	it('reads an empty counts block as UNMEASURED, never as complete', () => {
+		// Found by this test against the first draft, which answered
+		// "all 0 services surveyed" — the exact absence-as-calm failure the
+		// function exists to remove, one level up from where it was fixed.
+		const empty = serviceCoverage({ ...graph, counts: {} });
+		expect(empty.services).toBe(0);
+		expect(empty.sentence).toContain('unmeasured');
+		expect(empty.sentence).not.toContain('all 0 services surveyed');
+	});
+});
+
+describe('projectGraph lifts the two service facts the view renders', () => {
+	it('gives every service a survey state and a layer-or-reason', () => {
+		const services = graph.nodes.filter((n) => n.kind === 'service');
+		expect(services.length).toBeGreaterThan(50);
+		for (const s of services) {
+			expect(['declared', 'not-surveyed', 'no-manifest']).toContain(s.dependencySurvey);
+			if (s.layer === null) expect(s.layerWithheld).toBeTruthy();
+			else expect(['L0', 'L1', 'L2', 'L3']).toContain(s.layer);
+		}
+	});
+
+	it('leaves a non-service node with nulls rather than invented values', () => {
+		const pulse = graph.nodes.find((n) => n.kind === 'pulse');
+		expect(pulse?.dependencySurvey).toBeNull();
+		expect(pulse?.layer).toBeNull();
+	});
+
+	it('does not duplicate the lifted facts back into the inspector dump', () => {
+		const svc = graph.nodes.find((n) => n.id === 'service:nextcloud');
+		expect(svc?.layer).toBe('L2');
+		expect(svc?.facts).not.toHaveProperty('layer');
+		expect(svc?.facts).not.toHaveProperty('dependency_survey');
 	});
 });
 

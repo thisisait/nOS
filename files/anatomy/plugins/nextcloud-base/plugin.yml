@@ -49,6 +49,34 @@ depends_on:
       schema `nextcloud`, created by mariadb_databases
       (default.config.yml:1219)
     measured: "2026-08-07"
+  # Found by the R2 sweep (every manifest service × every manifest service,
+  # tests/anatomy/service_edge_probe.py), which is how the first pass missed
+  # it: that pass iterated main.yml's three auto-enable blocks, and a
+  # dependency those blocks have never heard of was outside the derivation.
+  - upstream: "service:onlyoffice"
+    kind: data
+    via: >-
+      `occ app:enable onlyoffice` + DocumentServerInternalUrl / StorageUrl
+      (roles/pazny.nextcloud/tasks/post.yml:283-309) — the in-Nextcloud editor
+      IS the OnlyOffice document server; without it the connector app installs
+      and every document opens read-only
+    measured: "2026-08-07"
+    unenforced: >-
+      No `Auto-enable …` block ties install_onlyoffice to install_nextcloud.
+      With OnlyOffice off, the post-start connector wiring is skipped and
+      Nextcloud comes up healthy with a dead Edit button — a degraded feature,
+      not a failed converge, which is why nothing has ever reported it.
+  - upstream: "service:mailpit"
+    kind: data
+    via: >-
+      SMTP_HOST=mailpit (roles/pazny.nextcloud/templates/compose.yml.j2:36) —
+      the only mail path a default install has; share links, password resets
+      and admin alerts all leave through it
+    measured: "2026-08-07"
+    unenforced: >-
+      No auto-enable block turns Mailpit on for Nextcloud. With it off the SMTP
+      host resolves to nothing and outbound mail fails per-message, inside
+      Nextcloud's own logs.
 
 # =============================================================================
 # AUTHENTIK — native OIDC client (configured via `occ user_oidc`)

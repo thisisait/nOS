@@ -25,6 +25,7 @@
 		joinLive,
 		mutexSpokes,
 		governingParagraphs,
+		serviceCoverage,
 		nodeLabel,
 		KIND_GLYPH,
 		STATE_TONE,
@@ -38,6 +39,10 @@
 
 	const graph = projectGraph(raw);
 	const debt = temporalDebt(graph);
+	/** What the service layer of this graph does not know. Rendered above the
+	 *  canvas, always — the artifact counted 38 unsurveyed services and 38
+	 *  withheld layers, and until now neither number reached a pixel. */
+	const coverage = serviceCoverage(graph);
 	/** Claim→resource spokes, once: the artifact does not change at runtime. */
 	const spokes = mutexSpokes(graph);
 
@@ -209,6 +214,17 @@
 		</label>
 	</header>
 
+	<!--
+	  The remainder, in words, above the canvas. `service 63` on the chip beside
+	  a canvas drawing 20 of them was the whole problem: the producer published
+	  the unsurveyed count honestly and the rendering dropped it, so a node
+	  nobody had read looked exactly like a measured root.
+	-->
+	<p class="coverage" class:partial={coverage.withheld > 0}>
+		<span class="glyph">{KIND_GLYPH.service}</span>
+		{coverage.sentence}
+	</p>
+
 	{#if graph.warnings.length > 0}
 		<!-- The union-kind feedback loop (the corpus-diff halt) — reviewed, not
 		     refused, and therefore stated out loud here rather than absorbed. -->
@@ -263,10 +279,16 @@
 						<g
 							class="node {n.kind}"
 							class:selected={selected?.id === n.id}
+							class:unsurveyed={n.dependencySurvey != null &&
+								n.dependencySurvey !== 'declared'}
 							transform="translate({p.x},{p.y})"
 							role="button"
 							tabindex="0"
-							aria-label="{n.kind} {label(n.id)}"
+							aria-label="{n.kind} {label(n.id)}{n.layer
+								? ` — ${n.layer}`
+								: n.dependencySurvey && n.dependencySurvey !== 'declared'
+									? ' — layer withheld, upstreams never surveyed'
+									: ''}"
 							onpointerdown={(ev) => ev.stopPropagation()}
 							onclick={() => (selected = selected?.id === n.id ? null : n)}
 							onkeydown={(ev) => {
@@ -490,6 +512,18 @@
 	.toggle input {
 		margin: 0 2px 0 0;
 	}
+	.coverage {
+		margin: 0 0 6px;
+		font-size: 11px;
+		font-family: ui-monospace, monospace;
+		color: var(--muted-ink, rgba(190, 190, 190, 0.75));
+	}
+	.coverage.partial {
+		color: var(--warn-ink, #ffaa3c);
+	}
+	.coverage .glyph {
+		margin-right: 4px;
+	}
 	.warnings {
 		margin: 0 0 6px;
 	}
@@ -565,6 +599,14 @@
 	.node.selected rect {
 		fill: rgba(255, 255, 255, 0.14);
 		stroke: var(--accent, #6aa2ff);
+	}
+	/* A service nobody has surveyed for upstreams is drawn OPEN. It carries no
+	   `layer` — the derivation refuses to answer from an absence of evidence
+	   (docs/doctrine/layers.md §4.2) — and until this outline existed it was
+	   the same solid rectangle as a service that had been measured. */
+	.node.unsurveyed rect {
+		stroke-dasharray: 3 3;
+		fill: none;
 	}
 	/* A claim is warn-toned, not neutral: it is the one node kind that
 	   constrains when other things may run, and the colour says "this is a

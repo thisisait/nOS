@@ -40,6 +40,49 @@ requires:
     - tenant_domain
     - host_alias
 
+# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R2) ──────
+# THE EDGE THE FIRST DERIVATION COULD NOT FIND. Its completeness side iterated
+# main.yml's three auto-enable blocks, so a dependency those blocks had never
+# heard of was outside the derivation entirely — and its reachability probe
+# read exactly one path, roles/pazny.<svc>/templates/compose.yml.j2, while
+# mcpo's DSN lives in mcpo-config.json.j2 and the role's psql exec in post.yml.
+# `performs('mcp_gateway','postgresql')` returned (False, []), reported to the
+# operator as "(no mention at all)". Both holes are closed; this is the edge
+# that fell through them.
+depends_on:
+  - upstream: "service:postgresql"
+    kind: data
+    via: >-
+      the `postgres` MCP server's DSN
+      postgresql://mcp_readonly:…@postgresql:5432
+      (roles/pazny.mcp_gateway/templates/mcpo-config.json.j2:20, under
+      `mcp_enable_postgres` which defaults TRUE) plus the read-only role the
+      role creates with `docker compose -p infra exec -T postgresql psql`
+      (roles/pazny.mcp_gateway/tasks/post.yml:12-31)
+    measured: "2026-08-07"
+    unenforced: >-
+      `install_mcp_gateway` is in NO auto-enable block. With PostgreSQL absent
+      the role reports success anyway — the psql task carries
+      `failed_when: false` + `no_log: true`, and the status line then prints
+      "mcpo: OK (N MCP endpoints active)" because /openapi.json serves whether
+      or not the postgres server can reach a database. A success marker written
+      by the attempting code.
+  - upstream: "service:grafana"
+    kind: data
+    via: >-
+      the Grafana service account + token minted against the estate's own
+      Grafana at http://127.0.0.1:{{ grafana_port }}
+      (roles/pazny.mcp_gateway/tasks/post.yml:34-90) and handed to the
+      mcp-grafana sidecar as GRAFANA_SERVICE_ACCOUNT_TOKEN
+      (roles/pazny.mcp_gateway/templates/compose.yml.j2:70-71)
+    measured: "2026-08-07"
+    unenforced: >-
+      Grafana rides `install_observability`, which no block ties to
+      install_mcp_gateway. The observability stack is brought up first by
+      tasks/stacks/core-up.yml, so in practice it is there — but a bring-up
+      ORDER is not an enable guarantee, and the token task is `failed_when:
+      false` like the psql one.
+
 lifecycle:
   post_compose:
     - wait_health:

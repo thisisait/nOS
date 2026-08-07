@@ -64,6 +64,13 @@ depends_on:
       no user store of its own; every login is a Gitea OAuth2 handshake, and
       the client is auto-created at converge (A16/A19)
     measured: "2026-08-07"
+    unenforced: >-
+      `install_gitea` appears in main.yml zero times — no auto-enable block
+      backs this edge, unlike the 22 database ones. `install_woodpecker: true`
+      with `install_gitea: false` brings Woodpecker up pointed at a Gitea URL
+      that resolves to nothing, and roles/pazny.woodpecker/tasks/post.yml:14
+      then SKIPS the OAuth wiring silently: a healthy container nobody can log
+      into, on a converge that reports failed=0.
 
 # =============================================================================
 # AUTHENTIK — proxy-auth gate (NOT native OIDC)

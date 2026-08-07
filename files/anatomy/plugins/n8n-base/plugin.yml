@@ -31,6 +31,20 @@ requires:
     - host_alias
     - global_password_prefix
 
+# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R2) ──────
+depends_on:
+  - upstream: "service:mailpit"
+    kind: data
+    via: >-
+      N8N_SMTP_HOST="mailpit" with N8N_EMAIL_MODE=smtp
+      (roles/pazny.n8n/templates/compose.yml.j2:27-29) — n8n's user
+      invitations and workflow-failure alerts leave through it
+    measured: "2026-08-07"
+    unenforced: >-
+      No auto-enable block turns Mailpit on for n8n. With it off, SMTP fails
+      per-message inside n8n; the container stays healthy and the converge
+      reports nothing.
+
 # =============================================================================
 # AUTHENTIK — native OIDC client
 # =============================================================================

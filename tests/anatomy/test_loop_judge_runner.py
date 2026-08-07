@@ -384,13 +384,13 @@ def test_a_completed_pytest_run_still_passes():
         registry=_one_judge_registry("pytest-anatomy", "repo"),
         repo_root=REPO,
         spawn=_fake_spawn(
-            **{"pytest": J.Completed(exit_code=0, stdout="3050 passed, 27 skipped in 252.00s\n")}
+            **{"pytest": J.Completed(exit_code=0, stdout="3091 passed, 27 skipped in 250.00s\n")}
         ),
         probe=_always_true,
         sandbox_factory=lambda root: (root, "sha-fake", lambda: None),
     )
     assert verdict.result is J.Result.PASS, verdict.reason
-    assert verdict.runs[0].work == 3050
+    assert verdict.runs[0].work == 3091
 
 
 def test_an_interrupted_pytest_that_did_fail_is_still_a_fail():
@@ -740,7 +740,7 @@ def test_pytest_never_runs_against_the_live_tree():
 
     def spy(argv, cwd, timeout_s):
         seen_cwd.append(cwd)
-        return J.Completed(exit_code=0, stdout="3050 passed in 252.00s\n")
+        return J.Completed(exit_code=0, stdout="3091 passed in 250.00s\n")
 
     sandbox = REPO.parent / "fake-sandbox"
     verdict = J.run_gate_set(
@@ -776,7 +776,7 @@ def test_every_judge_in_a_set_observes_exactly_one_tree():
         return {
             "ansible-lint": GREEN_ANSIBLE_LINT,
             "genome-codegen": GREEN_GENOME,
-            "pytest": J.Completed(exit_code=0, stdout="3050 passed in 252.00s\n"),
+            "pytest": J.Completed(exit_code=0, stdout="3091 passed in 250.00s\n"),
         }[_argv_key(argv)]
 
     sandbox = REPO.parent / "one-tree-sandbox"
@@ -942,10 +942,14 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 #:   ansible-lint             → "0 failure(s) ... in 1495 files processed of 3227"
 #: The collection gate did NOT fire (3050 against 3088 collected is inside its
 #: 5% allowance) — re-derived anyway, because a record known stale is stale.
+#: RE-DERIVED 2026-08-07 after R2 (the probe's fixture gates + the layer
+#: derivation + two compiler refusals, +30 tests), both by running the tools:
+#:   pytest tests/anatomy -q  → "3091 passed, 27 skipped in 250s"
+#:   ansible-lint             → "0 failure(s) ... in 1497 files processed of 3229"
 MEASURED_WORK = {
-    "ansible-lint": 1495,
+    "ansible-lint": 1497,
     "genome-codegen": 2,
-    "pytest-anatomy": 3061,
+    "pytest-anatomy": 3091,
     "cortex-corpus-diff": 1,
 }
 

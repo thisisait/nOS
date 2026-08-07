@@ -57,14 +57,29 @@ consequence, not importance and not privilege.
 This is the part that must not be skipped, and it is why this document does not
 ship a hand-written list of which service sits where.
 
-> **CLOSED 2026-08-07 (R1).** The graph now carries **23 service→service edges**
-> and every service node states its `dependency_survey` — `declared` (20),
-> `not-surveyed` (39), `no-manifest` (4). The derivation has an input; §4.1 below
-> still governs how it may be used, and the *survey is incomplete*, which is why
-> the count of unread services is published rather than rounded to "done".
+> **PARTIAL — 25 of 63 services surveyed (R1 2026-08-07, widened by R2 the same
+> day).** The graph carries **35 service→service edges**, and every service node
+> states its `dependency_survey`: `declared` (25), `not-surveyed` (34),
+> `no-manifest` (4). The derivation has an input and §4.2 governs what it may be
+> spent on. It is NOT an inventory: 38 of 63 services carry no `layer` at all.
 > Declared consumer-side as a top-level `depends_on:` on the service plugin, the
 > same key and shape as a pulse job's; equivalence with the imperative blocks is
 > pinned by `tests/anatomy/test_service_dependency_edges.py`.
+>
+> **The completeness side is derived from the ESTATE, not from a seed.** R1
+> compared the declarations against `main.yml`'s three auto-enable blocks, so a
+> dependency those blocks had never heard of was outside the derivation
+> entirely — which is how `mcp_gateway → postgresql` (a rendered DSN plus a live
+> `psql` exec into the estate's own container, default-ON) stayed invisible.
+> The gate now sweeps every manifest service against every other and requires
+> each performing pair to be *declared or refused by name*: 30 undeclared pairs
+> found, 12 declared, 18 refused with a written reason.
+>
+> **Not every declaration has the same backing, and the artifact now says so.**
+> 22 edges are guaranteed by an `Auto-enable …` block; 13 are not. The compiler
+> refuses a service edge that is neither, so `unenforced:` is a field rather
+> than a thing to notice — `install_woodpecker: true` with `install_gitea:
+> false` is a green converge with a Woodpecker nobody can log into.
 
 **The anatomy graph held zero service→service edges** when this document was
 written. Measured on the 191-node artifact: `pulse→pulse` 66,
@@ -99,16 +114,58 @@ therefore *written up, not declared* — §4.1, exactly.
 
 So the rule, which is this repository's standing one:
 
-> **§4.1 — Repair before declare.** A hand-written layer table is a fifth place
+### 4.1 — Repair before declare
+
+> A hand-written layer table is a fifth place
 > the same fact is written and the first one that nothing compares. Make the
 > service→service edges real first — consumer-side, `measured:`, exactly as
 > `depends_on` was done for Pulse jobs — then DERIVE the layer from them and
 > compare the derivation against the declaration. Where they disagree, that is
 > the finding.
 
-Until the derivation exists, §3 is a **design target**, not an inventory, and no
-gate may assert membership. R1 (2026-08-07) supplied the input; R2 is the
-arithmetic and has not shipped, so that refusal still stands today.
+### 4.2 — What the derivation may be spent on, and what it may not
+
+R2 shipped the arithmetic on 2026-08-07: `layer` is longest path over the
+service projection of the dependency edges, emitted by
+`tools/anatomy-graph-gen.py::derive_layers`, pinned by
+`tests/anatomy/test_service_layer_is_derived.py`. §3 stops being a design
+target for the 25 surveyed services and stays one for the other 38. Three
+standing constraints:
+
+> **§4.2a — A node nobody surveyed gets NO layer.** `layer` runs on edges, and
+> an unsurveyed node contributes exactly what a measured root contributes:
+> nothing. The arithmetic answers anyway, and measured with this refusal
+> disabled it answers wrong in both directions at once — `service:traefik`
+> derives **L2** ("failure felt where it happens") about the process that binds
+> 80/443 and is the only edge proxy on Linux, while `service:grafana`, equally
+> unsurveyed but depended on by `mcp_gateway`, derives **L0 substrate**. Same
+> absence of evidence, opposite verdicts, both stated calmly. Withheld nodes
+> carry `layer: null` plus a `layer_withheld` reason, and the count sits in
+> `counts.services_layer_withheld` beside the three that were derived.
+
+> **§4.2b — The SSO chain is part of the projection.** An `authentik:<slug>`
+> node is a provider+application object living *inside* Authentik, applied
+> there by OpenTofu — not an actor. `service:authentik → authentik:<slug> →
+> service:<x>` therefore collapses onto its endpoints for the arithmetic.
+> Without it, Authentik derived as a **leaf**: its 38 provider objects edged to
+> their services and had no in-edge at all, so the graph answered "nothing
+> depends on Authentik" about the estate's most load-bearing service.
+
+> **§4.2c — L3 is not this axis and is never emitted.** §3 defines it by
+> *delivery* — "small per-tenant apps, manifest-shipped" — which is the retired
+> delivery-tier distinction wearing a layer's name. It is not derivable from
+> dependency depth, the Tier-2 apps have no `service:` node at all, and a
+> guessed value would have made the census look complete. `services_layer_L3`
+> is 0 on purpose.
+
+**The ceiling, published before anything is built on the answer.** The edge set
+answers *which service do I need*, not yet *what breaks when this stops*.
+Reachability dependencies are absent — `service:traefik` carries **zero edges**
+and reads `not-surveyed`, and when Traefik stops every Tier-1 and Tier-2 route
+stops with it. The 18 refused pairs in
+`tests/anatomy/test_service_dependency_edges.py::REFUSED` are the rest of the
+named gap. A longest path over today's edges must not be presented as a blast
+radius.
 
 ## 5. Where the derivation will disagree with intuition, and that is the point
 
@@ -121,6 +178,23 @@ That gap is the reason to derive rather than to declare. `layer` measures blast
 radius, not stature. A service can be the most valuable thing on the box and
 still be a leaf. If the derived answer is unwelcome, the correct response is to
 argue with the edges, not to overrule the arithmetic.
+
+**Measured 2026-08-07 (R2).** The prediction held, and it brought two more with
+it. The census is L0 3 · L1 4 · L2 18 · L3 0 · withheld 38:
+
+| service | §3 says | derives | why |
+|---|---|---|---|
+| Nextcloud | L1 by feel | **L2** | 4 upstreams, 0 dependents — exactly §5's case |
+| Infisical | **L1** (listed) | **L2** | nothing in the estate declares a dependency on it; a leaf that holds secrets |
+| Wing | **L0** (listed) | **L1** | it has 4 upstreams of its own (bone, keap, prometheus, authentik) — something is underneath it |
+| Gitea | (root, by its own `depends_on: []`) | **L1** | `[]` is scoped to *no data upstream*; its auth upstream reaches the arithmetic through the Authentik chain, and `roles/pazny.gitea/tasks/post.yml:117-137` is the guard whose failure message is the word LOCKOUT |
+| Traefik, Grafana, Prometheus, Loki, Jellyfin, KEAP's peers… | L0/L1 by feel | **withheld** | 38 services nobody has surveyed — §4.2a |
+
+The Infisical and Wing rows are the ones to argue with: both have a plausible
+counter-case (services fetch secrets from Infisical at converge; Wing is where
+estate state lives), and in both the honest repair is **to declare the missing
+edges**, not to overrule the arithmetic. `layer` will move when they land, and
+that movement is the finding.
 
 ## 6. What layer is for
 
@@ -142,5 +216,10 @@ argue with the edges, not to overrule the arithmetic.
    auto-enable blocks and `requires`.
 3. Emit `layer` into `state/anatomy-graph.json` as a DERIVED fact, with the
    generator refusing a cycle exactly as it does for the other edge kinds.
+   **Done 2026-08-07 (R2)** — `derive_layers`, and `layer:` is refused in every
+   declaration site by `test_layer_is_absent_from_every_declaration_site`.
 4. Gate the derivation against any declaration, once one exists. Not before:
    with zero edges, a gate would pin an empty answer.
+5. **Survey the remaining 38.** That is the only work that moves a service out
+   of `layer_withheld`, and Traefik is the one to do first: it has zero edges
+   and the largest blast radius on the box.

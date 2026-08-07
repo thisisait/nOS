@@ -48,10 +48,19 @@ requires:
 # ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R1) ──────
 # EMPTY ON PURPOSE, and that is a measurement rather than an omission:
 # Gitea carries its own store — GITEA__database__DB_TYPE=sqlite3
-# (roles/pazny.gitea/templates/compose.yml.j2:38) — so it depends on no estate
-# service, which is why Woodpecker's edge stops here.
-# An absent block reads as "nobody looked"; this one reads as "looked, no
-# upstreams" — which is what makes this node a root of the layer derivation.
+# (roles/pazny.gitea/templates/compose.yml.j2:38) — so it has NO DATA UPSTREAM,
+# which is why Woodpecker's edge stops here.
+#
+# SCOPED 2026-08-07 (R2). This comment used to end "which is what makes this
+# node a root of the layer derivation", and it was contradicted by the same
+# artifact: the graph already carried `authentik:gitea → service:gitea`, and
+# roles/pazny.gitea/tasks/post.yml:117-137 is the one guard in the estate whose
+# failure message is the word LOCKOUT — Gitea's local login form is hidden and
+# registration is external-only (compose.yml.j2:48
+# `gitea_allow_only_external_registration | default(true)`). Gitea is NOT a
+# root. Its auth upstream is declared where it belongs — in the Authentik
+# registry, reached through `service:authentik → authentik:gitea` — and the
+# layer derivation walks that chain, so Gitea derives L1, not L0 substrate.
 depends_on: []
 
 # =============================================================================

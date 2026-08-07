@@ -64,6 +64,34 @@ requires:
 # β1.A trichotomy label is forward_auth (pure gate that also injects headers).
 # The same ProxyProvider object backs it as header_oidc would.
 
+# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R2) ──────
+# The face is a BFF over two host organs. Both are host daemons, not compose
+# services, which is why the first sweep — compose templates only — could not
+# see either.
+depends_on:
+  - upstream: "service:wing"
+    kind: data
+    via: >-
+      NOS_HUB_API_URL + NOS_WING_API_URL → host.docker.internal:{{ wing_port }}
+      (roles/pazny.face/templates/compose.yml.j2:40,47) — the app catalog and
+      the Anatomy view's Pulse/Bone/Wing projections all come from Wing; the
+      BFF is an allow-list projection over these responses
+    measured: "2026-08-07"
+    unenforced: >-
+      No auto-enable block ties install_wing to install_face. With Wing down
+      the desktop still boots and every Anatomy panel renders its unreachable
+      state — which is the designed behaviour, and also why nothing fails.
+  - upstream: "service:bone"
+    kind: data
+    via: >-
+      NOS_VFS_API_URL → host.docker.internal:{{ bone_port }}/api/v1/vfs
+      (roles/pazny.face/templates/compose.yml.j2:51) — the file browser's real
+      per-user tree
+    measured: "2026-08-07"
+    unenforced: >-
+      No auto-enable block ties install_bone to install_face; the file browser
+      degrades to "unreachable" rather than failing.
+
 authentik:
   mode: forward_auth
   provider_type: forward_auth

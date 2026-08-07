@@ -41,6 +41,15 @@ depends_on:
       DATABASE_URL=postgres://…@postgresql:5432
       (roles/pazny.miniflux/templates/compose.yml.j2:18) — database `miniflux`
     measured: "2026-08-07"
+  - upstream: "service:mailpit"
+    kind: data
+    via: >-
+      SMTP_HOST="mailpit" (roles/pazny.miniflux/templates/compose.yml.j2:31) —
+      the relay every Miniflux notification leaves through
+    measured: "2026-08-07"
+    unenforced: >-
+      No auto-enable block turns Mailpit on for Miniflux. With it off, mail
+      fails per-message inside Miniflux; the container stays healthy.
 
 authentik:
   mode: native_oidc

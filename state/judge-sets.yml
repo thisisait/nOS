@@ -140,7 +140,13 @@ judges:
     #
     # RE-DERIVED 2026-08-07 (3050 passed, 27 skipped — the face form/build
     # axis gate + the face-app harvest refusal, R3). Same cadence, same diff.
-    min_work: 3025
+    #
+    # RE-DERIVED 2026-08-07, R2 (3091 passed, 27 skipped — the service-edge
+    # probe's own fixture gates, the layer derivation, and the compiler's
+    # enforced_by / misspelled-key refusals). The collection ratchet did NOT
+    # fire (3050 → 3091 is inside its 5% allowance); moved anyway, per this
+    # file's own rule that a record known to be stale is stale.
+    min_work: 3060
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,

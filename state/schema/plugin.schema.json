@@ -64,7 +64,7 @@
     },
     "depends_on": {
       "type": "array",
-      "description": "Service→service dependency edges, CONSUMER-side (docs/idea/13-relations.md R1). Same key, shape and refusals as a pulse job's depends_on, one level up: what this plugin's service cannot run without. Compiled into state/anatomy-graph.json by tools/anatomy-graph-gen.py and pinned against main.yml's auto-enable blocks by tests/anatomy/test_service_dependency_edges.py. An EMPTY array is a measurement — 'surveyed, no upstreams' — and reads differently from an absent block, which is 'nobody looked'.",
+      "description": "Service→service DATA dependency edges, CONSUMER-side (docs/idea/13-relations.md R1/R2). Same key, shape and refusals as a pulse job's depends_on, one level up: what this plugin's service cannot run without. Compiled into state/anatomy-graph.json by tools/anatomy-graph-gen.py and pinned against BOTH main.yml's auto-enable blocks and a full mechanical sweep of what the code performs, by tests/anatomy/test_service_dependency_edges.py. An EMPTY array is a scoped measurement — 'surveyed, NO DATA UPSTREAM' — and reads differently from an absent block, which is 'nobody looked'. It does NOT mean the node is a root: SSO upstreams reach the graph through service:authentik -> authentik:<slug>, and gitea-base carries [] while deriving L1.",
       "items": {
         "type": "object",
         "required": ["upstream", "kind", "measured"],
@@ -73,7 +73,8 @@
           "upstream": {"type": "string", "pattern": "^service:[a-z0-9_]+$", "description": "Node id of the provider. Spelled `upstream`, never `on`: PyYAML is YAML 1.1, where a bare `on:` key parses as boolean True and the field name vanishes silently."},
           "kind": {"type": "string", "enum": ["data"], "description": "Only `data` today. `temporal` needs two cron schedules and a service has none; `trigger` between services has no consumer yet."},
           "via": {"type": "string", "description": "The artifact that crosses the edge — env var, host, schema. An edge that cannot name one is schedule adjacency with better clothes."},
-          "measured": {"type": "string", "description": "ISO date the `via` was last verified against the code. Repair before declare: this stamp is a claim that someone read the template, not that someone believed a comment."}
+          "measured": {"type": "string", "description": "ISO date the `via` was last verified against the code. Repair before declare: this stamp is a claim that someone read the template, not that someone believed a comment. It never expires and is not trusted to — test_every_declared_edge_is_performed re-derives every edge from the current tree on every CI run, which is the freshness check a date cannot be."},
+          "unenforced": {"type": "string", "description": "REQUIRED when no `Auto-enable <provider> for services that require it` block in main.yml turns the provider on for this consumer, and REFUSED when one does. One sentence: what happens when the provider is absent. Without it the edge reads exactly like the 22 the playbook guarantees — `install_woodpecker: true` with `install_gitea: false` is a green converge with a Woodpecker nobody can log into."}
         }
       }
     },
