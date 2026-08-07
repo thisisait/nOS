@@ -50,6 +50,21 @@ requires:
     - gitea_domain
     - global_password_prefix
 
+# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R1) ──────
+# Transcribed from `requires.peer_service: gitea` above, which
+# state/schema/plugin.schema.json records as "documentation-only today;
+# loader doesn't enforce". Compiled by tools/anatomy-graph-gen.py; pinned by
+# tests/anatomy/test_service_dependency_edges.py.
+depends_on:
+  - upstream: "service:gitea"
+    kind: data
+    via: >-
+      WOODPECKER_GITEA_URL + WOODPECKER_GITEA_CLIENT/SECRET
+      (roles/pazny.woodpecker/templates/compose.yml.j2:31-34) — Woodpecker has
+      no user store of its own; every login is a Gitea OAuth2 handshake, and
+      the client is auto-created at converge (A16/A19)
+    measured: "2026-08-07"
+
 # =============================================================================
 # AUTHENTIK — proxy-auth gate (NOT native OIDC)
 # =============================================================================

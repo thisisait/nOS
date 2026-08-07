@@ -62,6 +62,21 @@
         }
       }
     },
+    "depends_on": {
+      "type": "array",
+      "description": "Service→service dependency edges, CONSUMER-side (docs/idea/13-relations.md R1). Same key, shape and refusals as a pulse job's depends_on, one level up: what this plugin's service cannot run without. Compiled into state/anatomy-graph.json by tools/anatomy-graph-gen.py and pinned against main.yml's auto-enable blocks by tests/anatomy/test_service_dependency_edges.py. An EMPTY array is a measurement — 'surveyed, no upstreams' — and reads differently from an absent block, which is 'nobody looked'.",
+      "items": {
+        "type": "object",
+        "required": ["upstream", "kind", "measured"],
+        "additionalProperties": false,
+        "properties": {
+          "upstream": {"type": "string", "pattern": "^service:[a-z0-9_]+$", "description": "Node id of the provider. Spelled `upstream`, never `on`: PyYAML is YAML 1.1, where a bare `on:` key parses as boolean True and the field name vanishes silently."},
+          "kind": {"type": "string", "enum": ["data"], "description": "Only `data` today. `temporal` needs two cron schedules and a service has none; `trigger` between services has no consumer yet."},
+          "via": {"type": "string", "description": "The artifact that crosses the edge — env var, host, schema. An edge that cannot name one is schedule adjacency with better clothes."},
+          "measured": {"type": "string", "description": "ISO date the `via` was last verified against the code. Repair before declare: this stamp is a claim that someone read the template, not that someone believed a comment."}
+        }
+      }
+    },
     "lifecycle": {
       "type": "object",
       "additionalProperties": false,

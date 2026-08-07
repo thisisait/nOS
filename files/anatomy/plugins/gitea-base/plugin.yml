@@ -45,6 +45,15 @@ requires:
     - host_alias
     - global_password_prefix
 
+# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R1) ──────
+# EMPTY ON PURPOSE, and that is a measurement rather than an omission:
+# Gitea carries its own store — GITEA__database__DB_TYPE=sqlite3
+# (roles/pazny.gitea/templates/compose.yml.j2:38) — so it depends on no estate
+# service, which is why Woodpecker's edge stops here.
+# An absent block reads as "nobody looked"; this one reads as "looked, no
+# upstreams" — which is what makes this node a root of the layer derivation.
+depends_on: []
+
 # =============================================================================
 # AUTHENTIK — native OIDC (Gitea Admin API)
 # =============================================================================

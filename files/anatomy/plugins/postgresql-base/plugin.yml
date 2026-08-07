@@ -33,6 +33,13 @@ requires:
     - postgresql_max_connections
     - global_password_prefix
 
+# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R1) ──────
+# EMPTY ON PURPOSE, and that is a measurement rather than an omission:
+# PostgreSQL is substrate: its compose fragment names no other service.
+# An absent block reads as "nobody looked"; this one reads as "looked, no
+# upstreams" — which is what makes this node a root of the layer derivation.
+depends_on: []
+
 lifecycle:
   # No config-file rendering today — Postgres reads its tuning from the
   # `command:` block in the role's compose.yml.j2. The plugin holds the

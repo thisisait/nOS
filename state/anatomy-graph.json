@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "counts": {
     "nodes": 196,
-    "edges": 154,
+    "edges": 177,
     "nodes_pulse": 29,
     "nodes_judge": 5,
     "nodes_gateset": 4,
@@ -18,11 +18,15 @@
     "nodes_table": 6,
     "nodes_doctrine": 12,
     "nodes_faceapp": 5,
-    "edges_data": 54,
+    "edges_data": 77,
     "edges_trigger": 22,
     "edges_temporal": 5,
     "edges_mutex": 56,
-    "edges_governed_by": 17
+    "edges_governed_by": 17,
+    "edges_service_dependency": 23,
+    "services_survey_declared": 20,
+    "services_survey_not_surveyed": 39,
+    "services_survey_no_manifest": 4
   },
   "warnings": [
     "union-kind cycle (feedback loop, review-not-refuse): pulse:cortex:cortex-fs-sync -> pulse:keap:keap-embed-sync -> pulse:cortex:cortex-corpus-diff -> pulse:cortex:cortex-fs-sync"
@@ -1390,6 +1394,7 @@
       "stack": null,
       "category": "observability",
       "install_flag": "install_observability",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
       "description": "Docker service 'alloy' (observability) in the None compose stack, toggled by install_observability"
     },
@@ -1399,6 +1404,7 @@
       "stack": "infra",
       "category": "identity",
       "install_flag": "install_authentik",
+      "dependency_survey": "declared",
       "anchor": "02.02.08",
       "description": "Docker service 'authentik' (identity) in the infra compose stack, toggled by install_authentik"
     },
@@ -1408,6 +1414,7 @@
       "stack": null,
       "category": "storage",
       "install_flag": "install_backrest",
+      "dependency_survey": "not-surveyed",
       "anchor": "11.04",
       "description": "Docker service 'backrest' (storage) in the None compose stack, toggled by install_backrest"
     },
@@ -1417,6 +1424,7 @@
       "stack": null,
       "category": "security",
       "install_flag": "install_backup",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.08",
       "description": "Docker service 'backup' (security) in the None compose stack, toggled by install_backup"
     },
@@ -1426,6 +1434,7 @@
       "stack": "infra",
       "category": "identity",
       "install_flag": "install_bluesky_pds",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.08",
       "description": "Docker service 'bluesky_pds' (identity) in the infra compose stack, toggled by install_bluesky_pds"
     },
@@ -1435,6 +1444,7 @@
       "stack": null,
       "category": "api",
       "install_flag": "install_bone",
+      "dependency_survey": "no-manifest",
       "anchor": "02.02.04",
       "description": "Docker service 'bone' (api) in the None compose stack, toggled by install_bone"
     },
@@ -1444,6 +1454,7 @@
       "stack": "b2b",
       "category": "wiki",
       "install_flag": "install_bookstack",
+      "dependency_survey": "declared",
       "anchor": "09",
       "description": "Docker service 'bookstack' (wiki) in the b2b compose stack, toggled by install_bookstack"
     },
@@ -1453,6 +1464,7 @@
       "stack": "iiab",
       "category": "media",
       "install_flag": "install_calibreweb",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Docker service 'calibre_web' (media) in the iiab compose stack, toggled by install_calibreweb"
     },
@@ -1462,6 +1474,7 @@
       "stack": "devops",
       "category": "devops",
       "install_flag": "install_code_server",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Docker service 'code_server' (devops) in the devops compose stack, toggled by install_code_server"
     },
@@ -1471,6 +1484,7 @@
       "stack": null,
       "category": "knowledge",
       "install_flag": "install_cortex",
+      "dependency_survey": "not-surveyed",
       "anchor": "09",
       "description": "Docker service 'cortex' (knowledge) in the None compose stack, toggled by install_cortex"
     },
@@ -1480,6 +1494,7 @@
       "stack": "b2b",
       "category": "finance",
       "install_flag": "install_erpnext",
+      "dependency_survey": "declared",
       "anchor": "02.02.04",
       "description": "Docker service 'erpnext' (finance) in the b2b compose stack, toggled by install_erpnext"
     },
@@ -1489,6 +1504,7 @@
       "stack": "iiab",
       "category": "desktop",
       "install_flag": "install_face",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Docker service 'face' (desktop) in the iiab compose stack, toggled by install_face"
     },
@@ -1498,6 +1514,7 @@
       "stack": "b2b",
       "category": "finance",
       "install_flag": "install_firefly",
+      "dependency_survey": "declared",
       "anchor": "02.02.04",
       "description": "Docker service 'firefly' (finance) in the b2b compose stack, toggled by install_firefly"
     },
@@ -1507,6 +1524,7 @@
       "stack": "voip",
       "category": "pbx",
       "install_flag": "install_freepbx",
+      "dependency_survey": "declared",
       "anchor": "03.08",
       "description": "Docker service 'freepbx' (pbx) in the voip compose stack, toggled by install_freepbx"
     },
@@ -1516,6 +1534,7 @@
       "stack": "b2b",
       "category": "helpdesk",
       "install_flag": "install_freescout",
+      "dependency_survey": "declared",
       "anchor": "02.02.04",
       "description": "Docker service 'freescout' (helpdesk) in the b2b compose stack, toggled by install_freescout"
     },
@@ -1525,6 +1544,7 @@
       "stack": "devops",
       "category": "devops",
       "install_flag": "install_gitea",
+      "dependency_survey": "declared",
       "anchor": "02.02.04",
       "description": "Docker service 'gitea' (devops) in the devops compose stack, toggled by install_gitea"
     },
@@ -1534,6 +1554,7 @@
       "stack": "devops",
       "category": "devops",
       "install_flag": "install_gitlab",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Docker service 'gitlab' (devops) in the devops compose stack, toggled by install_gitlab"
     },
@@ -1543,6 +1564,7 @@
       "stack": "observability",
       "category": "observability",
       "install_flag": "install_observability",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
       "description": "Docker service 'grafana' (observability) in the observability compose stack, toggled by install_observability"
     },
@@ -1552,6 +1574,7 @@
       "stack": "b2b",
       "category": "wiki",
       "install_flag": "install_hedgedoc",
+      "dependency_survey": "declared",
       "anchor": "09",
       "description": "Docker service 'hedgedoc' (wiki) in the b2b compose stack, toggled by install_hedgedoc"
     },
@@ -1561,6 +1584,7 @@
       "stack": null,
       "category": "messaging",
       "install_flag": "install_hermes",
+      "dependency_survey": "not-surveyed",
       "anchor": "03.08",
       "description": "Docker service 'hermes' (messaging) in the None compose stack, toggled by install_hermes"
     },
@@ -1570,6 +1594,7 @@
       "stack": "iiab",
       "category": "homeautomation",
       "install_flag": "install_homeassistant",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Docker service 'homeassistant' (homeautomation) in the iiab compose stack, toggled by install_homeassistant"
     },
@@ -1579,6 +1604,7 @@
       "stack": null,
       "category": "iiab",
       "install_flag": "install_iiab_terminal",
+      "dependency_survey": "no-manifest",
       "anchor": "02.02.04",
       "description": "Docker service 'iiab_terminal' (iiab) in the None compose stack, toggled by install_iiab_terminal"
     },
@@ -1588,6 +1614,7 @@
       "stack": "infra",
       "category": "vault",
       "install_flag": "install_infisical",
+      "dependency_survey": "declared",
       "anchor": "02.02.08",
       "description": "Docker service 'infisical' (vault) in the infra compose stack, toggled by install_infisical"
     },
@@ -1597,6 +1624,7 @@
       "stack": "data",
       "category": "data",
       "install_flag": "install_influxdb",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Docker service 'influxdb' (data) in the data compose stack, toggled by install_influxdb"
     },
@@ -1606,6 +1634,7 @@
       "stack": "iiab",
       "category": "media",
       "install_flag": "install_jellyfin",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Docker service 'jellyfin' (media) in the iiab compose stack, toggled by install_jellyfin"
     },
@@ -1615,6 +1644,7 @@
       "stack": "iiab",
       "category": "knowledge",
       "install_flag": "install_keap",
+      "dependency_survey": "not-surveyed",
       "anchor": "09",
       "description": "Docker service 'keap' (knowledge) in the iiab compose stack, toggled by install_keap"
     },
@@ -1624,6 +1654,7 @@
       "stack": "iiab",
       "category": "iiab",
       "install_flag": "install_kiwix",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Docker service 'kiwix' (iiab) in the iiab compose stack, toggled by install_kiwix"
     },
@@ -1633,6 +1664,7 @@
       "stack": "observability",
       "category": "observability",
       "install_flag": "install_observability",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
       "description": "Docker service 'loki' (observability) in the observability compose stack, toggled by install_observability"
     },
@@ -1642,6 +1674,7 @@
       "stack": "iiab",
       "category": "mail",
       "install_flag": "install_mailpit",
+      "dependency_survey": "not-surveyed",
       "anchor": "03.08",
       "description": "Docker service 'mailpit' (mail) in the iiab compose stack, toggled by install_mailpit"
     },
@@ -1651,6 +1684,7 @@
       "stack": "infra",
       "category": "database",
       "install_flag": "install_mariadb",
+      "dependency_survey": "declared",
       "anchor": "02.02.05",
       "description": "Docker service 'mariadb' (database) in the infra compose stack, toggled by install_mariadb"
     },
@@ -1660,6 +1694,7 @@
       "stack": "iiab",
       "category": "ai",
       "install_flag": "install_mcp_gateway",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.09",
       "description": "Docker service 'mcp_gateway' (ai) in the iiab compose stack, toggled by install_mcp_gateway"
     },
@@ -1669,6 +1704,7 @@
       "stack": "data",
       "category": "data",
       "install_flag": "install_metabase",
+      "dependency_survey": "declared",
       "anchor": "02.02.04",
       "description": "Docker service 'metabase' (data) in the data compose stack, toggled by install_metabase"
     },
@@ -1678,6 +1714,7 @@
       "stack": "iiab",
       "category": "rss",
       "install_flag": "install_miniflux",
+      "dependency_survey": "declared",
       "anchor": "02.02.04",
       "description": "Docker service 'miniflux' (rss) in the iiab compose stack, toggled by install_miniflux"
     },
@@ -1687,6 +1724,7 @@
       "stack": "iiab",
       "category": "automation",
       "install_flag": "install_n8n",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Docker service 'n8n' (automation) in the iiab compose stack, toggled by install_n8n"
     },
@@ -1696,6 +1734,7 @@
       "stack": "iiab",
       "category": "collaboration",
       "install_flag": "install_nextcloud",
+      "dependency_survey": "declared",
       "anchor": "02.02.04",
       "description": "Docker service 'nextcloud' (collaboration) in the iiab compose stack, toggled by install_nextcloud"
     },
@@ -1705,6 +1744,7 @@
       "stack": "iiab",
       "category": "automation",
       "install_flag": "install_nodered",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Docker service 'nodered' (automation) in the iiab compose stack, toggled by install_nodered"
     },
@@ -1714,6 +1754,7 @@
       "stack": "iiab",
       "category": "notifications",
       "install_flag": "install_ntfy",
+      "dependency_survey": "not-surveyed",
       "anchor": "03.08",
       "description": "Docker service 'ntfy' (notifications) in the iiab compose stack, toggled by install_ntfy"
     },
@@ -1723,6 +1764,7 @@
       "stack": "iiab",
       "category": "gis",
       "install_flag": "install_offline_maps",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Docker service 'offline_maps' (gis) in the iiab compose stack, toggled by install_offline_maps"
     },
@@ -1732,6 +1774,7 @@
       "stack": "b2b",
       "category": "collaboration",
       "install_flag": "install_onlyoffice",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Docker service 'onlyoffice' (collaboration) in the b2b compose stack, toggled by install_onlyoffice"
     },
@@ -1741,6 +1784,7 @@
       "stack": "iiab",
       "category": "ai",
       "install_flag": "install_openwebui",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.09",
       "description": "Docker service 'open_webui' (ai) in the iiab compose stack, toggled by install_openwebui"
     },
@@ -1750,6 +1794,7 @@
       "stack": null,
       "category": "agent",
       "install_flag": "install_openclaw",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.09",
       "description": "Docker service 'openclaw' (agent) in the None compose stack, toggled by install_openclaw"
     },
@@ -1759,6 +1804,7 @@
       "stack": null,
       "category": "ai",
       "install_flag": "install_opencode",
+      "dependency_survey": "no-manifest",
       "anchor": "02.02.09",
       "description": "Docker service 'opencode' (ai) in the None compose stack, toggled by install_opencode"
     },
@@ -1768,6 +1814,7 @@
       "stack": "b2b",
       "category": "wiki",
       "install_flag": "install_outline",
+      "dependency_survey": "declared",
       "anchor": "09",
       "description": "Docker service 'outline' (wiki) in the b2b compose stack, toggled by install_outline"
     },
@@ -1777,6 +1824,7 @@
       "stack": "devops",
       "category": "agent",
       "install_flag": "install_paperclip",
+      "dependency_survey": "declared",
       "anchor": "02.02.09",
       "description": "Docker service 'paperclip' (agent) in the devops compose stack, toggled by install_paperclip"
     },
@@ -1786,6 +1834,7 @@
       "stack": "infra",
       "category": "devops",
       "install_flag": "install_portainer",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Docker service 'portainer' (devops) in the infra compose stack, toggled by install_portainer"
     },
@@ -1795,6 +1844,7 @@
       "stack": "infra",
       "category": "database",
       "install_flag": "install_postgresql",
+      "dependency_survey": "declared",
       "anchor": "02.02.05",
       "description": "Docker service 'postgresql' (database) in the infra compose stack, toggled by install_postgresql"
     },
@@ -1804,6 +1854,7 @@
       "stack": "observability",
       "category": "observability",
       "install_flag": "install_observability",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
       "description": "Docker service 'prometheus' (observability) in the observability compose stack, toggled by install_observability"
     },
@@ -1813,6 +1864,7 @@
       "stack": null,
       "category": "automation",
       "install_flag": "install_pulse",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Docker service 'pulse' (automation) in the None compose stack, toggled by install_pulse"
     },
@@ -1822,6 +1874,7 @@
       "stack": "engineering",
       "category": "gis",
       "install_flag": "install_qgis_server",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Docker service 'qgis_server' (gis) in the engineering compose stack, toggled by install_qgis_server"
     },
@@ -1831,6 +1884,7 @@
       "stack": "infra",
       "category": "cache",
       "install_flag": "install_redis",
+      "dependency_survey": "declared",
       "anchor": "02.02.05",
       "description": "Docker service 'redis' (cache) in the infra compose stack, toggled by install_redis"
     },
@@ -1840,6 +1894,7 @@
       "stack": "iiab",
       "category": "storage",
       "install_flag": "install_rustfs",
+      "dependency_survey": "not-surveyed",
       "anchor": "11.04",
       "description": "Docker service 'rustfs' (storage) in the iiab compose stack, toggled by install_rustfs"
     },
@@ -1849,6 +1904,7 @@
       "stack": "infra",
       "category": "mail",
       "install_flag": "install_smtp_stalwart",
+      "dependency_survey": "not-surveyed",
       "anchor": "03.08",
       "description": "Docker service 'smtp_stalwart' (mail) in the infra compose stack, toggled by install_smtp_stalwart"
     },
@@ -1858,6 +1914,7 @@
       "stack": "iiab",
       "category": "mail",
       "install_flag": "install_snappymail",
+      "dependency_survey": "not-surveyed",
       "anchor": "03.08",
       "description": "Docker service 'snappymail' (mail) in the iiab compose stack, toggled by install_snappymail"
     },
@@ -1867,6 +1924,7 @@
       "stack": "data",
       "category": "data",
       "install_flag": "install_superset",
+      "dependency_survey": "declared",
       "anchor": "02.02.04",
       "description": "Docker service 'superset' (data) in the data compose stack, toggled by install_superset"
     },
@@ -1876,6 +1934,7 @@
       "stack": null,
       "category": "vpn",
       "install_flag": "install_tailscale",
+      "dependency_survey": "no-manifest",
       "anchor": "02.02.07",
       "description": "Docker service 'tailscale' (vpn) in the None compose stack, toggled by install_tailscale"
     },
@@ -1885,6 +1944,7 @@
       "stack": "observability",
       "category": "observability",
       "install_flag": "install_observability",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
       "description": "Docker service 'tempo' (observability) in the observability compose stack, toggled by install_observability"
     },
@@ -1894,6 +1954,7 @@
       "stack": "infra",
       "category": "proxy",
       "install_flag": "install_traefik",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.07",
       "description": "Docker service 'traefik' (proxy) in the infra compose stack, toggled by install_traefik"
     },
@@ -1903,6 +1964,7 @@
       "stack": "iiab",
       "category": "observability",
       "install_flag": "install_uptime_kuma",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
       "description": "Docker service 'uptime_kuma' (observability) in the iiab compose stack, toggled by install_uptime_kuma"
     },
@@ -1912,6 +1974,7 @@
       "stack": "iiab",
       "category": "vault",
       "install_flag": "install_vaultwarden",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.08",
       "description": "Docker service 'vaultwarden' (vault) in the iiab compose stack, toggled by install_vaultwarden"
     },
@@ -1921,6 +1984,7 @@
       "stack": "iiab",
       "category": "monitoring",
       "install_flag": "install_watchtower",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
       "description": "Docker service 'watchtower' (monitoring) in the iiab compose stack, toggled by install_watchtower"
     },
@@ -1930,6 +1994,7 @@
       "stack": null,
       "category": "security",
       "install_flag": "install_wing",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.08",
       "description": "Docker service 'wing' (security) in the None compose stack, toggled by install_wing"
     },
@@ -1939,6 +2004,7 @@
       "stack": "devops",
       "category": "devops",
       "install_flag": "install_woodpecker",
+      "dependency_survey": "declared",
       "anchor": "02.02.04",
       "description": "Docker service 'woodpecker' (devops) in the devops compose stack, toggled by install_woodpecker"
     },
@@ -1948,6 +2014,7 @@
       "stack": "iiab",
       "category": "cms",
       "install_flag": "install_wordpress",
+      "dependency_survey": "declared",
       "anchor": "02.02.04",
       "description": "Docker service 'wordpress' (cms) in the iiab compose stack, toggled by install_wordpress"
     },
@@ -2429,12 +2496,172 @@
       "derived": "face-desktop-root"
     },
     {
+      "from": "service:gitea",
+      "to": "service:woodpecker",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "WOODPECKER_GITEA_URL + WOODPECKER_GITEA_CLIENT/SECRET (roles/pazny.woodpecker/templates/compose.yml.j2:31-34) — Woodpecker has no user store of its own; every login is a Gitea OAuth2 handshake, and the client is auto-created at converge (A16/A19)"
+    },
+    {
+      "from": "service:mariadb",
+      "to": "service:bookstack",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "DB_HOST=mariadb (roles/pazny.bookstack/templates/compose.yml.j2:26) — schema `bookstack`"
+    },
+    {
+      "from": "service:mariadb",
+      "to": "service:erpnext",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "DB_HOST=mariadb on all five bench containers plus the configurator's `bench new-site --db-root-password` (roles/pazny.erpnext/templates/compose.yml.j2:32,47) — schema `erpnext`"
+    },
+    {
+      "from": "service:mariadb",
+      "to": "service:firefly",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "DB_CONNECTION=mysql + DB_HOST=mariadb (roles/pazny.firefly/templates/compose.yml.j2:43-44) — schema `firefly`"
+    },
+    {
+      "from": "service:mariadb",
+      "to": "service:freepbx",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "DB_HOST=mariadb (roles/pazny.freepbx/templates/compose.yml.j2:33) — schema `asterisk`, the one whose name does not match its service"
+    },
+    {
+      "from": "service:mariadb",
+      "to": "service:freescout",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "DB_HOST=mariadb (roles/pazny.freescout/templates/compose.yml.j2:25) — schema `freescout`"
+    },
+    {
+      "from": "service:mariadb",
+      "to": "service:nextcloud",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "MYSQL_HOST=mariadb (roles/pazny.nextcloud/templates/compose.yml.j2:24) — schema `nextcloud`, created by mariadb_databases (default.config.yml:1219)"
+    },
+    {
+      "from": "service:mariadb",
+      "to": "service:wordpress",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "WORDPRESS_DB_HOST=mariadb (roles/pazny.wordpress/templates/compose.yml.j2:26) — schema `wordpress`, created by mariadb_databases (default.config.yml:1219)"
+    },
+    {
+      "from": "service:postgresql",
+      "to": "service:authentik",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "AUTHENTIK_POSTGRESQL__HOST=postgresql on BOTH the server and the worker (roles/pazny.authentik/templates/compose.yml.j2:36,97) — database `authentik`, created by roles/pazny.postgresql/tasks/post.yml:104-119"
+    },
+    {
+      "from": "service:postgresql",
+      "to": "service:hedgedoc",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "CMD_DB_URL=postgres://…@postgresql:5432 (roles/pazny.hedgedoc/templates/compose.yml.j2:26) — database `hedgedoc`"
+    },
+    {
+      "from": "service:postgresql",
+      "to": "service:infisical",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "DB_CONNECTION_URI=postgresql://…@postgresql:5432 (roles/pazny.infisical/templates/compose.yml.j2:23) — database `infisical`"
+    },
+    {
+      "from": "service:postgresql",
+      "to": "service:metabase",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "MB_DB_TYPE=postgres + MB_DB_HOST=postgresql (roles/pazny.metabase/templates/compose.yml.j2:23,28) — database `metabase`"
+    },
+    {
+      "from": "service:postgresql",
+      "to": "service:miniflux",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "DATABASE_URL=postgres://…@postgresql:5432 (roles/pazny.miniflux/templates/compose.yml.j2:18) — database `miniflux`"
+    },
+    {
+      "from": "service:postgresql",
+      "to": "service:outline",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "DATABASE_URL=postgres://…@postgresql:5432 (roles/pazny.outline/templates/compose.yml.j2:23) — database `outline`"
+    },
+    {
+      "from": "service:postgresql",
+      "to": "service:paperclip",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "DATABASE_URL=postgresql://…@postgresql:5432 (roles/pazny.paperclip/templates/compose.yml.j2:30) — database `paperclip`"
+    },
+    {
+      "from": "service:postgresql",
+      "to": "service:superset",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "DATABASE_HOST=postgresql — Superset's own metadata database (roles/pazny.superset/templates/compose.yml.j2:35), not a chart datasource"
+    },
+    {
+      "from": "service:redis",
+      "to": "service:authentik",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "AUTHENTIK_REDIS__HOST=redis on both server and worker (roles/pazny.authentik/templates/compose.yml.j2:34,95) — task queue + cache"
+    },
+    {
+      "from": "service:redis",
+      "to": "service:bookstack",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "REDIS_SERVERS=redis:6379:0 — session + cache store (roles/pazny.bookstack/templates/compose.yml.j2:35)"
+    },
+    {
+      "from": "service:redis",
+      "to": "service:erpnext",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "REDIS_CACHE/REDIS_QUEUE/REDIS_SOCKETIO at redis:6379/{0,1,2}, set both in the configurator and on every worker (roles/pazny.erpnext/templates/compose.yml.j2:34-36,51-52)"
+    },
+    {
+      "from": "service:redis",
+      "to": "service:firefly",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "REDIS_HOST=redis — cache + session driver (roles/pazny.firefly/templates/compose.yml.j2:53)"
+    },
+    {
+      "from": "service:redis",
+      "to": "service:infisical",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "REDIS_URL=redis://…@redis:6379 (roles/pazny.infisical/templates/compose.yml.j2:24)"
+    },
+    {
+      "from": "service:redis",
+      "to": "service:outline",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "REDIS_URL=redis://…@redis:6379 — websocket collaboration state (roles/pazny.outline/templates/compose.yml.j2:25)"
+    },
+    {
+      "from": "service:redis",
+      "to": "service:superset",
+      "kind": "data",
+      "measured": "2026-08-07",
+      "via": "REDIS_HOST=redis — Celery broker + results backend (roles/pazny.superset/templates/compose.yml.j2:40)"
+    },
+    {
       "from": "tofu:authentik-state",
       "to": "pulse:authentik-tofu-drift:tofu-drift-plan",
       "kind": "data",
       "measured": "2026-08-06",
-      "via": "read-only `tofu plan -detailed-exitcode` over terraform/authentik (skills/run-tofu-drift.sh:36 TOFU_DIR, :67 tfvars gate) — skips cleanly pre-cutover, never applies",
-      "expects": "succeeded"
+      "via": "read-only `tofu plan -detailed-exitcode` over terraform/authentik (skills/run-tofu-drift.sh:36 TOFU_DIR, :67 tfvars gate) — skips cleanly pre-cutover, never applies"
     },
     {
       "from": "tofu:authentik-state",

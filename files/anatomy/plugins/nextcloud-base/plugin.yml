@@ -36,6 +36,20 @@ requires:
     - host_alias
     - global_password_prefix
 
+# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R1) ──────
+# Transcribed from main.yml's `Auto-enable MariaDB for services that require
+# it` — the estate has held this as behaviour since before the graph existed.
+# Compiled by tools/anatomy-graph-gen.py; the equivalence between the two is
+# pinned by tests/anatomy/test_service_dependency_edges.py.
+depends_on:
+  - upstream: "service:mariadb"
+    kind: data
+    via: >-
+      MYSQL_HOST=mariadb (roles/pazny.nextcloud/templates/compose.yml.j2:24) —
+      schema `nextcloud`, created by mariadb_databases
+      (default.config.yml:1219)
+    measured: "2026-08-07"
+
 # =============================================================================
 # AUTHENTIK — native OIDC client (configured via `occ user_oidc`)
 # =============================================================================

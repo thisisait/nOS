@@ -1,7 +1,10 @@
 # 13 — Relations: making the estate's edges real
 
-> The estate declares 191 nodes and 151 edges, and **not one edge between two
+> The estate declared 191 nodes and 151 edges, and **not one edge between two
 > services**. Everything below follows from that single measurement.
+>
+> **R1 closed it on 2026-08-07:** 196 nodes, 177 edges, 23 of them between
+> services. R2–R4 still stand open.
 
 ## The problem it exists to remove
 
@@ -39,6 +42,37 @@ transformation, not an opinion. Then:
 **Refusal:** do not delete the auto-enable blocks in the same change. Two
 representations is the defect, but removing the working one before the declared
 one is load-bearing is how an estate loses a dependency entirely.
+
+**SHIPPED 2026-08-07.** 23 service→service edges, all transcribed: 22 from the
+three auto-enable blocks (corroborated against
+`roles/pazny.postgresql/tasks/post.yml`'s `CREATE DATABASE` loop and
+`default.config.yml`'s `mariadb_databases`) and one from
+`woodpecker-base`'s `requires.peer_service: gitea`. The slot is a **top-level
+`depends_on:`** on the service plugin — same key, shape and refusals as a pulse
+job's, one level up — and it did NOT need the two Wing allow-lists: those gate
+the *pulse catalog* POST, and a service edge is read straight off the manifest
+by `tools/anatomy-graph-gen.py`. No auto-enable block was touched.
+
+Two things the change deliberately did not do, both §4.1:
+
+- **`(onlyoffice → redis)` is written up, not declared.** `main.yml:1259`
+  auto-enables Redis for OnlyOffice; `roles/pazny.onlyoffice/templates/compose.yml.j2:38`
+  gates the whole `REDIS_SERVER_*` block on **`install_redis`, which no config
+  file defines** — so it has never rendered. Same phantom flag at
+  `roles/pazny.uptime_kuma/tasks/monitors.yml:302`, `state/manifest.yml:76` and
+  `state/gdpr-erasure-map.yml:171`. Repairing it turns Redis on for a live
+  service, which is a runtime change and belongs in its own diff.
+- **The observability flows are not dependencies.** Alloy→Prometheus/Loki/Tempo
+  and the exporter sidecars in `roles/pazny.grafana/templates/compose.yml.j2`
+  are producer→sink, and gated on the provider's own flag: removing Prometheus
+  does not stop Alloy. Declaring them under the same `kind` would make R2's
+  longest path answer a different question.
+
+**Absence is a state, not a gap in the data.** Every service node carries
+`dependency_survey`: `declared` (20 — 16 consumers plus 4 roots that declare
+`depends_on: []`, which is the measurement "looked, no upstreams"),
+`not-surveyed` (39), `no-manifest` (4). The remainder is published in `counts`,
+not rounded away.
 
 ## R2 — `layer`, derived
 

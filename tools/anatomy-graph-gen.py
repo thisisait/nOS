@@ -43,6 +43,25 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
                             emitted: a hub service already has a service: node
                             and a second address for it would be padding.
 
+SERVICE→SERVICE DEPENDENCIES (docs/idea/13-relations.md R1)
+-----------------------------------------------------------
+A service plugin declares, at its TOP level, what its service cannot run
+without — same key, same shape and same refusals as a pulse job's
+`depends_on`, one level up. The declarations are TRANSCRIBED from the four
+places the estate already held the fact as behaviour (main.yml's three
+auto-enable blocks, roles/pazny.postgresql/tasks/post.yml's CREATE DATABASE
+loop, default.config.yml's mariadb_databases, requires.peer_service), never
+authored from memory.
+
+Every service node therefore carries `dependency_survey`, because a service
+with no upstreams must not be indistinguishable from one nobody looked at:
+
+    declared       the plugin carries a depends_on: block. An EMPTY block is
+                   the positive statement "surveyed, no upstreams" — that is
+                   what makes a node an L0 root rather than an unread one.
+    not-surveyed   a plugin exists and carries no block
+    no-manifest    no <id>-base plugin at all
+
 WRITES (the second declared channel)
 ------------------------------------
 `depends_on` declares what a job READS (consumer-side, upstream → job).
@@ -447,6 +466,71 @@ def harvest_services(nodes: dict) -> None:
             }
 
 
+# ── harvest: service→service dependencies, consumer-side (R1) ─────────────
+
+
+def _consumer_service(doc: dict, path: Path, nodes: dict) -> str | None:
+    """Which service node this plugin speaks for.
+
+    Slug rule first (`<x>-base` → `service:<x with dashes→underscores>`,
+    which resolves for 59 of the 63 manifest services), `requires.feature_flag`
+    as the fallback and only when it names EXACTLY one service —
+    install_observability names five, and a graph must not guess which.
+    """
+    slug = re.sub(r"-base$", "", str(doc.get("name") or path.parent.name))
+    for cand in (slug, slug.replace("-", "_")):
+        if f"service:{cand}" in nodes:
+            return f"service:{cand}"
+    flag = (doc.get("requires") or {}).get("feature_flag")
+    if flag:
+        hits = [nid for nid, n in nodes.items()
+                if n["kind"] == "service" and n.get("install_flag") == flag]
+        if len(hits) == 1:
+            return hits[0]
+    return None
+
+
+def harvest_service_deps(nodes: dict, raw_edges: list) -> None:
+    """Top-level `depends_on:` on a service plugin → service→service edges.
+
+    Runs AFTER harvest_services (it resolves against the compiled service
+    nodes) and marks the survey state of every service node, including the
+    ones no plugin speaks for.
+    """
+    surveyed: dict[str, str] = {}
+    for path in sorted(REPO.glob("files/anatomy/plugins/*/plugin.yml")):
+        try:
+            doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError:
+            continue
+        if not isinstance(doc, dict):
+            continue
+        consumer = _consumer_service(doc, path, nodes)
+        if consumer is None:
+            # A composition plugin (alloy-*, grafana-*) or a Tier-2 app plugin
+            # speaks for no manifest service. Declaring a dependency from a
+            # plugin with no address is refused loudly rather than dropped.
+            if "depends_on" in doc:
+                _die(f"{path.relative_to(REPO)}: declares depends_on but resolves to no "
+                     f"service node — a graph lying at birth (add the service to "
+                     f"state/manifest.yml, or move the declaration to the plugin that "
+                     f"owns the consuming service)")
+            continue
+        if "depends_on" not in doc:
+            surveyed.setdefault(consumer, "not-surveyed")
+            continue
+        surveyed[consumer] = "declared"
+        for dep in doc.get("depends_on") or []:
+            raw_edges.append((consumer, dep, str(path.relative_to(REPO))))
+
+    for nid, n in nodes.items():
+        if n["kind"] != "service":
+            continue
+        # Three states, none of which is a calm default: a service nobody has
+        # looked at reads differently from one measured to have no upstreams.
+        n["dependency_survey"] = surveyed.get(nid, "no-manifest")
+
+
 # ── harvest: git surfaces + tofu state (operator ask, 2026-08-06) ─────────
 
 
@@ -616,16 +700,29 @@ def compile_declared(raw_edges: list, nodes: dict) -> list[dict]:
                      f"schedule adjacency with better clothes")
             edge["via"] = via or None
         if kind == "data":
-            edge["expects"] = dep.get("expects", "succeeded")
             up = nodes[on]
-            if (edge["expects"] == "succeeded" and up.get("findings_exit_codes")
-                    and "on_findings" not in dep):
-                _die(f"{consumer} ({src}): upstream {on} declares findings_exit_codes "
-                     f"{up['findings_exit_codes']} — the edge must say whether a findings "
-                     f"exit satisfies it (on_findings: proceed|block)")
-            if "on_findings" in dep:
-                edge["on_findings"] = dep["on_findings"]
+            if up["kind"] == "pulse":
+                edge["expects"] = dep.get("expects", "succeeded")
+                if (edge["expects"] == "succeeded" and up.get("findings_exit_codes")
+                        and "on_findings" not in dep):
+                    _die(f"{consumer} ({src}): upstream {on} declares findings_exit_codes "
+                         f"{up['findings_exit_codes']} — the edge must say whether a "
+                         f"findings exit satisfies it (on_findings: proceed|block)")
+                if "on_findings" in dep:
+                    edge["on_findings"] = dep["on_findings"]
+            elif "expects" in dep or "on_findings" in dep:
+                # `succeeded` is a word about a RUN. A service is not a run: it
+                # is up or it is not, and an edge that says "expects: succeeded"
+                # of a database has borrowed a vocabulary that cannot be
+                # checked against anything.
+                _die(f"{consumer} ({src}): edge from {on} carries expects/on_findings, "
+                     f"which describe a run outcome — only a pulse upstream has runs")
         if kind == "temporal":
+            for end in (on, consumer):
+                if not nodes[end].get("schedule"):
+                    _die(f"{consumer} ({src}): temporal edge from {on} touches {end}, "
+                         f"which has no cron schedule — a measured margin between two "
+                         f"things only one of which fires is arithmetic on a guess")
             if dep.get("margin_min") is None:
                 _die(f"{consumer} ({src}): temporal edge from {on} carries no margin_min — "
                      f"run tools/anatomy-measure-margins.py")
@@ -1051,6 +1148,7 @@ def build() -> dict:
     harvest_weaknesses(nodes)
     harvest_daemons(nodes)
     harvest_services(nodes)
+    harvest_service_deps(nodes, raw)   # after services — resolves against them
     harvest_repos_and_tofu(nodes)
     harvest_authentik(nodes)   # after services — slug→service binding needs them
     harvest_tables(nodes)
@@ -1093,6 +1191,16 @@ def build() -> dict:
         counts[f"nodes_{k}"] = sum(1 for n in nodes.values() if n["kind"] == k)
     for k in EDGE_KINDS + ("mutex", "governed_by"):
         counts[f"edges_{k}"] = sum(1 for e in all_edges if e["kind"] == k)
+    counts["edges_service_dependency"] = sum(
+        1 for e in all_edges
+        if e["from"].startswith("service:") and e["to"].startswith("service:"))
+    # The survey's own shape, countable. `services_not_surveyed` is the honest
+    # remainder — nobody has read those roles for upstreams yet, and a zero
+    # here would be the only calm reading of this line.
+    for state in ("declared", "not-surveyed", "no-manifest"):
+        counts[f"services_survey_{state.replace('-', '_')}"] = sum(
+            1 for n in nodes.values()
+            if n["kind"] == "service" and n.get("dependency_survey") == state)
 
     return {
         "version": 1,

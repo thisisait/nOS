@@ -25,6 +25,26 @@ requires:
     - host_alias
     - global_password_prefix
 
+# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R1) ──────
+# Transcribed from main.yml's two `Auto-enable <provider> for services that
+# require it` blocks (MariaDB, Redis Docker) — the estate has held this as
+# behaviour since before the graph existed. Compiled by
+# tools/anatomy-graph-gen.py; the equivalence between the two representations
+# is pinned by tests/anatomy/test_service_dependency_edges.py.
+depends_on:
+  - upstream: "service:mariadb"
+    kind: data
+    via: >-
+      DB_HOST=mariadb (roles/pazny.bookstack/templates/compose.yml.j2:26) —
+      schema `bookstack`
+    measured: "2026-08-07"
+  - upstream: "service:redis"
+    kind: data
+    via: >-
+      REDIS_SERVERS=redis:6379:0 — session + cache store
+      (roles/pazny.bookstack/templates/compose.yml.j2:35)
+    measured: "2026-08-07"
+
 authentik:
   mode: native_oidc
   provider_type: oauth2

@@ -36,6 +36,26 @@ requires:
     - host_alias
     - global_password_prefix
 
+# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R1) ──────
+# Transcribed from main.yml's two `Auto-enable <provider> for services that
+# require it` blocks (PostgreSQL, Redis Docker) — the estate has held this as
+# behaviour since before the graph existed. Compiled by
+# tools/anatomy-graph-gen.py; the equivalence between the two representations
+# is pinned by tests/anatomy/test_service_dependency_edges.py.
+depends_on:
+  - upstream: "service:postgresql"
+    kind: data
+    via: >-
+      DATABASE_URL=postgres://…@postgresql:5432
+      (roles/pazny.outline/templates/compose.yml.j2:23) — database `outline`
+    measured: "2026-08-07"
+  - upstream: "service:redis"
+    kind: data
+    via: >-
+      REDIS_URL=redis://…@redis:6379 — websocket collaboration state
+      (roles/pazny.outline/templates/compose.yml.j2:25)
+    measured: "2026-08-07"
+
 # =============================================================================
 # AUTHENTIK — native OIDC client (replaces authentik_oidc_apps[slug=outline])
 # =============================================================================

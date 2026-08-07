@@ -43,6 +43,26 @@ requires:
     - tenant_domain
     - host_alias
 
+# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R1) ──────
+# Transcribed from main.yml's two `Auto-enable <provider> for services that
+# require it` blocks (MariaDB, Redis Docker) — the estate has held this as
+# behaviour since before the graph existed. Compiled by
+# tools/anatomy-graph-gen.py; the equivalence between the two representations
+# is pinned by tests/anatomy/test_service_dependency_edges.py.
+depends_on:
+  - upstream: "service:mariadb"
+    kind: data
+    via: >-
+      DB_CONNECTION=mysql + DB_HOST=mariadb
+      (roles/pazny.firefly/templates/compose.yml.j2:43-44) — schema `firefly`
+    measured: "2026-08-07"
+  - upstream: "service:redis"
+    kind: data
+    via: >-
+      REDIS_HOST=redis — cache + session driver
+      (roles/pazny.firefly/templates/compose.yml.j2:53)
+    measured: "2026-08-07"
+
 # =============================================================================
 # AUTHENTIK — header_oidc (Authentik outpost → REMOTE_USER/REMOTE_EMAIL)
 # =============================================================================

@@ -936,10 +936,16 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 #: RE-DERIVED 2026-08-06 (fourth pass that day), both by running the tools:
 #:   pytest tests/anatomy -q  → "3050 passed, 27 skipped in 252s"
 #:   ansible-lint             → "0 failure(s) ... in 1489 files processed of 3193"
+#: RE-DERIVED 2026-08-07 after R1 (service→service dependency edges, +11 tests),
+#: both by running the tools:
+#:   pytest tests/anatomy -q  → "3061 passed, 27 skipped in 253s"
+#:   ansible-lint             → "0 failure(s) ... in 1495 files processed of 3227"
+#: The collection gate did NOT fire (3050 against 3088 collected is inside its
+#: 5% allowance) — re-derived anyway, because a record known stale is stale.
 MEASURED_WORK = {
-    "ansible-lint": 1489,
+    "ansible-lint": 1495,
     "genome-codegen": 2,
-    "pytest-anatomy": 3050,
+    "pytest-anatomy": 3061,
     "cortex-corpus-diff": 1,
 }
 

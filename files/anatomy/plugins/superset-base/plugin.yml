@@ -30,6 +30,27 @@ requires:
     - tenant_domain
     - host_alias
 
+# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R1) ──────
+# Transcribed from main.yml's two `Auto-enable <provider> for services that
+# require it` blocks (PostgreSQL, Redis Docker) — the estate has held this as
+# behaviour since before the graph existed. Compiled by
+# tools/anatomy-graph-gen.py; the equivalence between the two representations
+# is pinned by tests/anatomy/test_service_dependency_edges.py.
+depends_on:
+  - upstream: "service:postgresql"
+    kind: data
+    via: >-
+      DATABASE_HOST=postgresql — Superset's own metadata database
+      (roles/pazny.superset/templates/compose.yml.j2:35), not a chart
+      datasource
+    measured: "2026-08-07"
+  - upstream: "service:redis"
+    kind: data
+    via: >-
+      REDIS_HOST=redis — Celery broker + results backend
+      (roles/pazny.superset/templates/compose.yml.j2:40)
+    measured: "2026-08-07"
+
 authentik:
   mode: native_oidc
   provider_type: native_oidc

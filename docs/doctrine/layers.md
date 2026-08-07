@@ -52,26 +52,50 @@ consequence, not importance and not privilege.
 | **L2 application** | Leaf services with users but no dependents. Their failure is felt where it happens. | Jellyfin, Firefly, Paperclip, WordPress, n8n |
 | **L3 custom** | Small per-tenant apps, manifest-shipped, individually disposable. | the `*.apps.<tld>` set |
 
-## 4. Layer is DERIVED, and today it cannot be
+## 4. Layer is DERIVED, and until 2026-08-07 it could not be
 
 This is the part that must not be skipped, and it is why this document does not
 ship a hand-written list of which service sits where.
 
-**The anatomy graph holds zero service→service edges.** Measured on the 191-node
-artifact: `pulse→pulse` 66, `authentik→service` 38, `daemon→pulse` 20,
-`judge→doctrine` 14, and **none at all between the 63 service nodes**. The graph
-knows that a job feeds a job. It does not know that Nextcloud needs Postgres.
+> **CLOSED 2026-08-07 (R1).** The graph now carries **23 service→service edges**
+> and every service node states its `dependency_survey` — `declared` (20),
+> `not-surveyed` (39), `no-manifest` (4). The derivation has an input; §4.1 below
+> still governs how it may be used, and the *survey is incomplete*, which is why
+> the count of unread services is published rather than rounded to "done".
+> Declared consumer-side as a top-level `depends_on:` on the service plugin, the
+> same key and shape as a pulse job's; equivalence with the imperative blocks is
+> pinned by `tests/anatomy/test_service_dependency_edges.py`.
 
-That dependency is real and it is already written down — as **behaviour**, not
-as data:
+**The anatomy graph held zero service→service edges** when this document was
+written. Measured on the 191-node artifact: `pulse→pulse` 66,
+`authentik→service` 38, `daemon→pulse` 20, `judge→doctrine` 14, and **none at
+all between the 63 service nodes**. The graph knew that a job feeds a job. It
+did not know that Nextcloud needs Postgres.
+
+That dependency is real and it was already written down four times over — as
+**behaviour**, not as data. R1 transcribed these rather than authoring
+replacements, and **deleted none of them**: two representations is the defect,
+but removing the working one before the declared one is load-bearing is how an
+estate loses a dependency entirely.
 
 - `main.yml:1221` — *"Auto-enable MariaDB for services that require it"*, a
   `when:` over seven `install_*` flags. That is a dependency statement in
   imperative form.
-- `main.yml:1234` — the same for PostgreSQL.
+- `main.yml:1234` — the same for PostgreSQL; `main.yml:1248` the same for Redis,
+  and that one sets `redis_docker`, not `install_redis`.
+- `roles/pazny.postgresql/tasks/post.yml:104-119` — a `CREATE DATABASE` loop
+  over the same eight `install_*` flags, and `default.config.yml:1219`
+  `mariadb_databases` over the same seven schemas.
 - `requires.plugin` in the plugin manifests, present on **9 of 71** and almost
-  entirely composition plugins (`alloy-*`, `grafana-*`).
+  entirely composition plugins (`alloy-*`, `grafana-*`); `requires.peer_service`
+  on two more, which the schema itself calls "documentation-only today".
 - The bring-up order itself: infra + observability are always first, always.
+
+Comparing those representations is what R1 bought, and it found one of them
+already broken: `main.yml` auto-enables Redis for OnlyOffice, and OnlyOffice's
+compose template gates its whole `REDIS_SERVER_*` block on **`install_redis`, a
+variable no config file defines**. That block has never rendered. The edge is
+therefore *written up, not declared* — §4.1, exactly.
 
 So the rule, which is this repository's standing one:
 
@@ -82,8 +106,9 @@ So the rule, which is this repository's standing one:
 > compare the derivation against the declaration. Where they disagree, that is
 > the finding.
 
-Until those edges exist, §3 is a **design target**, not an inventory, and no
-gate may assert membership.
+Until the derivation exists, §3 is a **design target**, not an inventory, and no
+gate may assert membership. R1 (2026-08-07) supplied the input; R2 is the
+arithmetic and has not shipped, so that refusal still stands today.
 
 ## 5. Where the derivation will disagree with intuition, and that is the point
 

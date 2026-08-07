@@ -29,6 +29,20 @@ requires:
     - tenant_domain
     - host_alias
 
+# ── DEPENDS_ON — service→service edges (docs/idea/13-relations.md, R1) ──────
+# Transcribed from main.yml's `Auto-enable PostgreSQL for services that require
+# it` — the estate has held this as behaviour since before the graph existed.
+# Compiled by tools/anatomy-graph-gen.py; the equivalence between the two is
+# pinned by tests/anatomy/test_service_dependency_edges.py.
+depends_on:
+  - upstream: "service:postgresql"
+    kind: data
+    via: >-
+      MB_DB_TYPE=postgres + MB_DB_HOST=postgresql
+      (roles/pazny.metabase/templates/compose.yml.j2:23,28) — database
+      `metabase`
+    measured: "2026-08-07"
+
 authentik:
   mode: forward_auth
   provider_type: forward_auth
