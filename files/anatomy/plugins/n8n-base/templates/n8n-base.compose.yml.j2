@@ -7,8 +7,12 @@
 
 services:
   n8n:
-{% if tenant_domain_is_local | default(true) | bool %}
-    # mkcert CA conditional — local TLDs only.
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    # mkcert CA conditional — local TLDs only, and only when something in this
+    # container has a reason to trust the estate CA. The install_authentik half
+    # was missing until 2026-08-07: without it an Authentik-less local install
+    # bind-mounts {{ stacks_dir }}/shared-certs/rootCA.pem, a path
+    # tasks/stacks/core-up.yml writes only when `mkcert -CAROOT` returns 0.
     volumes:
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
 {% endif %}
@@ -33,7 +37,9 @@ services:
       N8N_SSRF_ALLOWED_IP_RANGES: "{{ n8n_ssrf_allowed_ip_ranges }}"
 {% endif %}
 {% endif %}
-{% if tenant_domain_is_local | default(true) | bool %}
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+      # Pairs with the volume above — same guard, or Node points at a path that
+      # the un-rendered mount never created.
       NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
 {% endif %}
 {% if install_authentik | default(false) %}
