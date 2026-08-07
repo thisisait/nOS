@@ -23,6 +23,8 @@
 		temporalDebt,
 		filterForCanvas,
 		joinLive,
+		mutexSpokes,
+		governingParagraphs,
 		NODE_KINDS,
 		type NodeKind,
 		type GraphNode
@@ -33,6 +35,8 @@
 
 	const graph = projectGraph(raw);
 	const debt = temporalDebt(graph);
+	/** Claim→resource spokes, once: the artifact does not change at runtime. */
+	const spokes = mutexSpokes(graph);
 
 	// Default view: the wiring. Services + authentik registry rows are 106
 	// mostly-leaf nodes; they stay one chip away rather than drowning the
@@ -159,6 +163,22 @@
 		return `M ${a.x + 150} ${a.y + 12} C ${midX + 60} ${a.y + 12}, ${midX - 60} ${b.y + 12}, ${b.x} ${b.y + 12}`;
 	}
 
+	/**
+	 * A flat-top hexagon 34 wide, 26 tall, sharing the node row's 24px height so
+	 * a claim sits on the same baseline as everything it is claimed by.
+	 * Computed once: the shape never varies, and re-deriving it per node per
+	 * frame would be work in a render loop for a constant.
+	 */
+	const HEX_PATH = (() => {
+		const w = 34, h = 26, cut = 9;
+		return `M ${cut} 0 L ${w - cut} 0 L ${w} ${h / 2} L ${w - cut} ${h} L ${cut} ${h} L 0 ${h / 2} Z`;
+	})();
+
+	/** How many nodes claim this resource — the number the hexagon replaces. */
+	function claimantCount(resourceId: string): number {
+		return spokes.filter((s) => s.resource === resourceId).length;
+	}
+
 	/** Live pulse state per node id — 'unmeasured' when no snapshot. */
 	function liveState(id: string): string | null {
 		if (!id.startsWith('pulse:')) return null;
@@ -253,9 +273,25 @@
 								}
 							}}
 						>
-							<rect width="150" height="24" rx="6" />
-							<text class="glyph" x="7" y="16">{KIND_GLYPH[n.kind]}</text>
-							<text class="name" x="24" y="16">{label(n.id)}</text>
+							{#if n.kind === 'resource'}
+								<!--
+								  A RESOURCE IS A CLAIM, not a node like the others, and drawing
+								  it as one is what left the mutex layer unreadable: 56 pairwise
+								  edges between things that are not connected to each other at
+								  all — they share a claim. The hexagon says "this is the thing
+								  being claimed", the count says by how many, and five shapes
+								  then carry what fifty-six lines could not. Nothing is hidden:
+								  the pairwise edges stay in the artifact and in the inspector.
+								-->
+								<path class="hex" d={HEX_PATH} />
+								<text class="glyph" x="20" y="18">{KIND_GLYPH[n.kind]}</text>
+								<text class="name" x="44" y="14">{label(n.id)}</text>
+								<text class="claimants" x="44" y="25">{claimantCount(n.id)} claimants</text>
+							{:else}
+								<rect width="150" height="24" rx="6" />
+								<text class="glyph" x="7" y="16">{KIND_GLYPH[n.kind]}</text>
+								<text class="name" x="24" y="16">{label(n.id)}</text>
+							{/if}
 							{#if ls && ls !== 'unmeasured' && ls !== 'unregistered'}
 								<circle class="dot {ls}" cx="140" cy="12" r="4" />
 							{:else if ls}
@@ -299,6 +335,49 @@
 							{/if}
 						{/each}
 					</dl>
+					{#if selected.kind !== 'doctrine'}
+						{@const laws = governingParagraphs(graph, [selected.id])}
+						{#if laws.length > 0}
+							<!--
+							  GOVERNED BY — the written law that applies to this node, with its
+							  heading, not just its number. A citation renders as prose because
+							  "§2.4" tells an operator nothing at 03:00, and because the whole
+							  point of the doctrine layer is that a rule can be READ where it
+							  binds rather than looked up in a document nobody opens.
+							-->
+							<h4>governed by</h4>
+							{#each laws as law (law.id)}
+								<div class="lawcard">
+									<div class="p">§{law.section} · {law.doc.split('/').pop()}</div>
+									<div class="q">{law.heading}</div>
+									{#each law.citedBy as c (c.node + c.via)}
+										<div class="cite">{c.via}{c.citations > 1 ? ` ×${c.citations}` : ''}</div>
+									{/each}
+								</div>
+							{/each}
+						{/if}
+					{/if}
+
+					{#if selected.kind === 'resource'}
+						<!--
+						  The hexagon collapses 56 pairwise edges into 5 claims. Collapsing is
+						  only honest if the thing collapsed is still reachable, so the
+						  claimants are listed here in full — the picture is a summary, this
+						  is the denominator behind it.
+						-->
+						{@const mine = spokes.filter((s) => s.resource === selected!.id)}
+						<h4>claimed by <span class="count">{mine.length}</span></h4>
+						<ul class="edgelist">
+							{#each mine as s (s.node)}
+								<li><span class="ek mutex">claims</span> {s.node}</li>
+							{/each}
+						</ul>
+						<p class="hint">
+							These may never run at once. The pairwise mutex edges behind this
+							claim stay in the artifact; the canvas draws the claim instead.
+						</p>
+					{/if}
+
 					<h4>edges</h4>
 					<ul class="edgelist">
 						{#each graph.edges.filter((e) => e.from === selected!.id || e.to === selected!.id) as e (e.kind + e.from + e.to)}
@@ -484,6 +563,25 @@
 		fill: rgba(255, 255, 255, 0.14);
 		stroke: var(--accent, #6aa2ff);
 	}
+	/* A claim is warn-toned, not neutral: it is the one node kind that
+	   constrains when other things may run, and the colour says "this is a
+	   constraint" without claiming anything is wrong. */
+	.node .hex {
+		fill: var(--warn-soft, rgba(255, 170, 60, 0.18));
+		stroke: var(--warn, #ffaa3c);
+		stroke-width: 1.2;
+	}
+	.node:hover .hex,
+	.node.selected .hex {
+		fill: rgba(255, 170, 60, 0.32);
+	}
+	.node:focus-visible .hex {
+		stroke-width: 2;
+	}
+	.node .claimants {
+		fill: var(--muted, #9aa4b2);
+		font-size: 8.5px;
+	}
 	.node {
 		cursor: pointer;
 		outline: none;
@@ -597,6 +695,36 @@
 		font-size: 11px;
 		color: var(--muted, #9aa4b2);
 		line-height: 1.5;
+	}
+	/* The law reads as a quotation, because that is what it is. Info-toned so
+	   it cannot be mistaken for a warning: a rule that applies is not a fault. */
+	.lawcard {
+		border: 1px solid rgba(90, 150, 255, 0.3);
+		background: var(--info-soft, rgba(90, 150, 255, 0.16));
+		border-radius: 10px;
+		padding: 8px 10px;
+		margin-bottom: 6px;
+	}
+	.lawcard .p {
+		font-family: ui-monospace, monospace;
+		font-size: 10px;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		color: var(--info-ink, #bcd4ff);
+	}
+	.lawcard .q {
+		font-size: 11.5px;
+		font-style: italic;
+		color: var(--fg, #e8ecf3);
+		margin-top: 4px;
+		line-height: 1.45;
+	}
+	.lawcard .cite {
+		font-family: ui-monospace, monospace;
+		font-size: 9.5px;
+		color: var(--muted, #9aa4b2);
+		margin-top: 4px;
+		word-break: break-all;
 	}
 	.debt table {
 		width: 100%;
