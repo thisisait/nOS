@@ -2,8 +2,7 @@
 
 > Canonical. This document owns the rules that are true about **someone else's**
 > software: images, binaries and protocols this estate consumes but does not
-> build. Cited from code; every `§` here is addressable and resolved by
-> `tools/doctrine-cite.py`.
+> build. Cited from code; every `§` is resolved by `tools/doctrine-cite.py`.
 
 ## 1. What belongs here
 
@@ -17,11 +16,9 @@ A rule earns a section only when all three hold:
 
 Everything failing (2) belongs elsewhere: ours-and-fixable is a fix,
 ours-and-remembered is a gate (`docs/doctrine/gates.md`), and a rule about the
-operator's own machine is a runbook step (`docs/nos-cli.md`).
-
-A section here is a **permanent accommodation**, so it must name both the
-accommodation and the code that performs it. A paragraph with no performing
-code is a claim, not doctrine.
+operator's own machine is a runbook step (`docs/nos-cli.md`). A section here is
+a **permanent accommodation**, so it names both the accommodation and the code
+that performs it; a paragraph with no performing code is a claim, not doctrine.
 
 ## 2. A healthcheck in a minimal image may be unable to RUN
 
@@ -42,12 +39,19 @@ the 2026-08-06 `redis_exporter` bump moved upstream's default image to `scratch`
 and failed a converge after 1200 s while the exporter served metrics on `:9121`
 the entire time.
 
-### 2.1 The accommodation — probe with what the image HAS
+### 2.1 The accommodation, in order of preference
 
-Bash-only image: `["CMD", "bash", "-c", ":>/dev/tcp/127.0.0.1/<port>"]` — TCP
-liveness via bash's built-in pseudo-device (`apps/qdrant.yml`). No shell at all:
-declare **no** healthcheck and rely on `restart: unless-stopped`. A check that
-cannot execute is worse than no check, because it manufactures a verdict.
+1. **Pin a tag that still carries a shell**, where upstream publishes one —
+   `redis_exporter_version: "v1.88.0-alpine"` (`default.config.yml`) is what
+   keeps the existing `wget --spider` probe in
+   `roles/pazny.grafana/templates/compose.yml.j2` executable. Dropping the
+   `-alpine` suffix re-opens the 2026-08-06 failure exactly.
+2. **Probe with what the image HAS** — bash-only: `["CMD", "bash", "-c",
+   ":>/dev/tcp/127.0.0.1/<port>"]`, TCP liveness via bash's built-in
+   pseudo-device (`apps/qdrant.yml`).
+3. **No shell at all: declare no healthcheck** and rely on
+   `restart: unless-stopped`. A check that cannot execute is worse than no
+   check, because it manufactures a verdict.
 
 ### 2.2 A check that could not run is reported, never excused
 
