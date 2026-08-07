@@ -205,10 +205,57 @@ is why they read as noise: they are not one category.
 | Run removals outside the IDE | **operational, about the human** | move to the operator runbook; it is not a code rule and cannot be gated |
 | Rust-slim images ship no `wget`/shell | **foreign property** — no fix exists | doctrine paragraph, citable. Half-covered already: the health probe now separates "the check could not run" from "the service is down" |
 | LSIO code-server is HTTP-only on 8443 | **foreign property** | doctrine paragraph; add the gate that `traefik_https_upstream_ids` only names services that actually bind TLS |
-| Mkcert CA mount must be guarded | **ours, fixable** | R1-adjacent: make it structural — a gate that every CA mount sits inside the `install_authentik and tenant_domain_is_local` guard, so the rule stops being a thing to remember |
-| Forward-auth ≠ native-OIDC double-protection | **ours, derivable** | falls out of the `access` facet: with `access.gate` declared per service, stacking is a contradiction the gate can see |
+| Mkcert CA mount must be guarded | **ours, fixable** | **SHIPPED 2026-08-07** — `tests/anatomy/test_mkcert_ca_mount_is_guarded.py`; the rule is no longer a thing to remember |
+| Forward-auth ≠ native-OIDC double-protection | **ours, derivable** | **SHIPPED 2026-08-07** — `tests/anatomy/test_forward_auth_does_not_stack.py`, expressed against today's storage because the `access` facet does not exist yet |
 
 Two die now, two become doctrine, two become work.
+
+### The two work items, shipped 2026-08-07
+
+**Mkcert CA — one real defect, found by writing the gate.** `n8n-base` guarded
+its CA mount (line 13) and `NODE_EXTRA_CA_CERTS` (line 37) on
+`tenant_domain_is_local` **alone**, with no `install_authentik`. The TLD half is
+the one every fragment's comment explains; the missing half is the one that
+bind-mounts `{{ stacks_dir }}/shared-certs/rootCA.pem` — a path
+`tasks/stacks/core-up.yml:60-69` writes only `when` `mkcert -CAROOT` returned 0
+— into a container that had no reason to trust the estate CA. Latent rather than
+live: the estate runs a public TLD, so the block does not render there today.
+Repaired in the same commit, per repair-before-declare.
+
+The gate keys on the **container path**, derived from the mount lines
+themselves, not on an env-var name. The estate already spells this variable six
+ways (`NODE_EXTRA_CA_CERTS`, `REQUESTS_CA_BUNDLE`, `SSL_CERT_FILE`,
+`AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL`, `GF_AUTH_GENERIC_OAUTH_TLS_CLIENT_CA`),
+and a name allow-list is the same "remember to add yours" the gate exists to
+delete. It also refuses an `{% else %}`/`{% elif %}` branch of a correct guard,
+which is the inverse of the guard and would otherwise read as guarded.
+
+**Forward-auth stacking — nothing to fix, and that is the measurement.** 45
+routed services, 19 declaring `native_oidc`, 19 carrying edge mode `oidc`.
+Corroborated against the running estate rather than the source alone:
+`~/stacks/infra/traefik/conf.d/services.yml` renders 42 routers of which 19 carry
+`authentik@file`, and the two sets are disjoint. The gate therefore ships GREEN;
+it was shown RED by two seeded mutations, one per failure shape — deleting
+`grafana: oidc` (the *omission*, which the `proxy` fall-through at
+`services.yml.j2:54` silently punishes) and writing `gitea: proxy` (the wrong
+entry).
+
+**`access.gate` does not exist**, so the check reads what IS declared:
+`traefik_auth_modes` + the plugin `authentik:` blocks + Tier-2 `nginx.auth`, and
+it models **all four** attachment paths including the two defaults. Four things
+it cannot yet cover are named in its header rather than left to be discovered:
+the missing facet itself; a runtime opt-in that flips a service's real mode
+without moving either declaration (`paperclip_native_oidc_enabled`, inert
+upstream today per `roles/pazny.paperclip/tasks/post.yml:170`); a `native_oidc`
+claim whose upstream OIDC **does not exist**, which is the OPPOSITE defect and
+leaves the service UNGATED (FreeScout — `freescout-base/plugin.yml:48` against
+CLAUDE.md's measured HTTP 404 on both module sources); and auth that Authentik
+does not issue (Woodpecker's Gitea OAuth).
+
+Both files refuse their own empty case. The population floors — 20 CA
+references, 40 routed services, 15 `native_oidc` declarations, 18 live
+attachments — are the 2026-08-07 census minus headroom, so a glob typo or a
+rename reports scope loss instead of a green.
 
 ## Order, and why
 
