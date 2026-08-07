@@ -108,6 +108,35 @@
 	/** Judge runs by uuid — a spoke carries the run's uuid as its id. */
 	const runByUuid = $derived(new Map((data?.judgeRuns ?? []).map((r) => [r.uuid, r])));
 
+	/**
+	 * Weakness ids the ledger cites that no declared source answers to.
+	 *
+	 * The registry lives in the graph as `weakness:*` nodes (Bone's
+	 * SOURCE_ORDER). Measured 2026-08-07: every proposal in the ledger cites
+	 * `w1` or `w2`, which are pilot placeholders — so the first link of the
+	 * lineage does not join, and the board says so rather than drawing it.
+	 */
+	const orphanWeaknesses = $derived.by(() => {
+		const declared = new Set(
+			graph.nodes
+				.filter((n) => n.kind === 'weakness')
+				.map((n) => n.id.slice('weakness:'.length))
+		);
+		const seen = new Set<string>();
+		for (const p of data?.proposals ?? []) {
+			const w = p.weakness_id;
+			if (w && !declared.has(w) && !declared.has(w.replace(/^weakness:/, ''))) seen.add(w);
+		}
+		return [...seen].sort();
+	});
+
+	/** Judge-run count and verdict for one proposal — the part that joins. */
+	function proposalChain(p: { id: number }) {
+		const runs = (data?.judgeRuns ?? []).filter((r) => r.proposal_id === p.id).length;
+		const v = (data?.verdicts ?? []).find((x) => x.proposal_id === p.id);
+		return { runs, result: v?.result ?? null, verdictUuid: v?.uuid ?? null };
+	}
+
 	// ── verdict rings ──
 	const rings = $derived(
 		(data?.verdicts ?? [])
@@ -348,15 +377,51 @@
 					{/each}
 				</div>
 
-				<h3>Proposals</h3>
+				<h3>Proposals <span class="pcount">{(data.proposals ?? []).length}</span></h3>
 				{#if (data.proposals ?? []).length === 0}
 					<StatusNote kind="empty" title="No proposals">The ledger holds none.</StatusNote>
 				{:else}
+					{#if orphanWeaknesses.length > 0}
+						<!--
+						  THE CHAIN IS weakness → proposal → judges → verdict, and its FIRST
+						  link does not join today. `loop_proposals.weakness_id` holds ids
+						  like `w1` while the weakness registry (Bone's SOURCE_ORDER, in the
+						  graph as weakness:* nodes) uses names like `weakness:corpus-diff`.
+						  Every proposal in the ledger is from one pilot day, 2026-08-02.
+
+						  Rendering a weakness column over those ids would draw a lineage
+						  that does not exist. Naming the gap is the honest half of a board
+						  whose other three columns do join.
+						-->
+						<p class="orphan">
+							{orphanWeaknesses.length} weakness id(s) in the ledger resolve to no
+							declared source — <code>{orphanWeaknesses.join(', ')}</code>. The
+							lineage weakness → proposal is NOT drawn, because it does not join:
+							the registry names sources like <code>weakness:corpus-diff</code>.
+						</p>
+					{/if}
 					<ul class="props">
 						{#each data.proposals ?? [] as p (p.uuid)}
-							<li>
+							{@const chain = proposalChain(p)}
+							<li class="prow" class:dim={openVerdict !== null && chain.verdictUuid !== openVerdict}>
 								<code>{p.weakness_id}</code>
 								<span class="pmeta">{p.intent_class} · {p.gate_set} · attempt {p.attempt_n} · {p.created_at}</span>
+								<!--
+								  The flow, inline: how many of the gate set's declared judges
+								  reported, and what the verdict was. Dimming the rows outside
+								  the opened verdict is variant C's move — one lineage lit, the
+								  rest present but quiet, so the board reads as a path rather
+								  than as a list.
+								-->
+								<span class="pflow">
+									<span class="pstep">{chain.runs} judge run(s)</span>
+									<span class="parrow">→</span>
+									{#if chain.result}
+										<span class="pverdict {chain.result}">{chain.result}</span>
+									{:else}
+										<span class="pverdict none">no verdict recorded</span>
+									{/if}
+								</span>
 							</li>
 						{/each}
 					</ul>
@@ -669,6 +734,55 @@
 		display: block;
 		color: var(--muted, #9aa4b2);
 		font-size: 10px;
+	}
+	.pcount {
+		color: var(--muted, #9aa4b2);
+		font-weight: 400;
+	}
+	/* One lineage lit, the rest present but quiet — the board reads as a path
+	   rather than a list. Dimmed, never hidden: a row you cannot see is a row
+	   you cannot count. */
+	.prow {
+		border-left: 2px solid transparent;
+		padding-left: 6px;
+		transition: opacity 120ms ease-out;
+	}
+	.prow.dim {
+		opacity: 0.42;
+	}
+	.pflow {
+		display: flex;
+		gap: 6px;
+		align-items: baseline;
+		font-size: 10px;
+		margin-top: 2px;
+	}
+	.pstep,
+	.parrow {
+		color: var(--muted, #9aa4b2);
+	}
+	.pverdict.pass {
+		color: var(--ok-ink, #b6e8c6);
+	}
+	.pverdict.fail {
+		color: var(--bad-ink, #ffc9c9);
+	}
+	.pverdict.indeterminate,
+	.pverdict.none {
+		color: var(--muted, #9aa4b2);
+		border-bottom: 1px dashed var(--muted, #9aa4b2);
+	}
+	/* An unresolvable reference is a finding, so it is warn-toned and sits
+	   above the list it qualifies rather than in a footnote below it. */
+	.orphan {
+		font-size: 10.5px;
+		line-height: 1.5;
+		color: var(--warn-ink, #ffdca8);
+		background: var(--warn-soft, rgba(255, 170, 60, 0.18));
+		border: 1px solid rgba(255, 170, 60, 0.35);
+		border-radius: 8px;
+		padding: 7px 9px;
+		margin: 0 0 8px;
 	}
 	select {
 		width: 100%;
