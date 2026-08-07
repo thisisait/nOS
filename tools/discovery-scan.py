@@ -418,9 +418,34 @@ def probe_doc_claim_vs_queue(res: ScanResult) -> None:
     if not CLAUDE_MD.is_file():
         res.skip("CLAUDE.md absent")
         return
-    m = _TALLY.search(CLAUDE_MD.read_text(encoding="utf-8"))
+    doc = CLAUDE_MD.read_text(encoding="utf-8")
+    m = _TALLY.search(doc)
     if m is None:
-        res.skip("CLAUDE.md tally sentence did not match its pattern")
+        # THE DOCUMENT STOPPED CACHING THE NUMBER (2026-08-07). It now names
+        # `tools/rem-status.py` instead, which is the structural cure for the
+        # defect this probe was written to catch: a moving value cannot go
+        # stale in a document that does not hold it.
+        #
+        # So the check does not disappear, it INVERTS. A skip here forever
+        # would be a probe quietly measuring nothing; instead the delegation
+        # itself is now the thing asserted, and re-adding a hand-written tally
+        # — or dropping the pointer — puts the estate back where it was.
+        if "rem-status.py" in doc:
+            res.compared += 1
+            return
+        res.findings.append(Finding(
+            slug=f"{OBS_PREFIX}claude-md-backlog-tally",
+            title="CLAUDE.md neither quotes the backlog nor points at the query",
+            track="platform",
+            refs="CLAUDE.md 'Security remediation backlog' · tools/rem-status.py",
+            body=(
+                "The tally sentence is gone and `tools/rem-status.py` is not named.\n\n"
+                "The paragraph carried the counts inline for four months and was wrong "
+                "three times; the cure was to stop caching a moving value and delegate "
+                "to a query. Losing the pointer as well leaves a reader with neither a "
+                "number nor a way to get one, which is worse than the stale number was."
+            ),
+        ))
         return
 
     claimed = {
