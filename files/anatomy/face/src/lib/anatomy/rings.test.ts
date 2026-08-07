@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ring, tally, arcs, arcPath, verdictRing, type Spoke } from './rings';
+import { ring, tally, arcs, arcPath, verdictRing, headroom, type Spoke } from './rings';
 
 const spoke = (id: string, state: Spoke['state'], reason?: string): Spoke => ({
 	id,
@@ -118,5 +118,50 @@ describe('verdictRing', () => {
 		const r = verdictRing({ ...verdict, evidence: 'not-json' }, runs, ['a', 'b']);
 		expect(r!.spokes).toHaveLength(0);
 		expect(r!.unaccounted).toBe(2);
+	});
+});
+
+describe('headroom — the ratchet as a proportion', () => {
+	it('calls a pass sitting just above its floor tight', () => {
+		// 2026-08-07 reality: 3014 tests against a floor of 2980.
+		const h = headroom(3014, 2980);
+		expect(h.pct).toBe(1);
+		expect(h.tight).toBe(true);
+	});
+
+	it('does not call a comfortable pass tight', () => {
+		// The 12x gap the estate shipped with: floor 200 against 2456 executed.
+		const h = headroom(2456, 200);
+		expect(h.tight).toBe(false);
+		expect(h.pct).toBeGreaterThan(1000);
+	});
+
+	it('puts the fill short of the tick when the run did less work', () => {
+		// The shape the bar exists to show: work below its own floor.
+		const h = headroom(2731, 2874);
+		expect(h.pct).toBeLessThan(0);
+		expect(h.fillPct).toBeLessThan(h.tickPct);
+		expect(h.tight).toBe(true);
+	});
+
+	it('keeps the tick in a fixed place so judges are comparable', () => {
+		// 2 artifacts, 1489 files and 3014 tests must land the tick in the same
+		// place, or the eye cannot compare two rows of one list.
+		const ticks = [headroom(2, 2), headroom(1489, 1450), headroom(3014, 2980)].map((h) =>
+			Math.round(h.tickPct)
+		);
+		expect(new Set(ticks).size).toBe(1);
+	});
+
+	it('clamps a run far above its floor instead of overflowing the row', () => {
+		expect(headroom(100_000, 10).fillPct).toBe(100);
+	});
+
+	it('refuses to divide by a floor of zero', () => {
+		// min_work is nullable upstream; a judge with no ratchet must render as
+		// nothing, never as a bar claiming 100%.
+		const h = headroom(500, 0);
+		expect(h.fillPct).toBe(0);
+		expect(h.tight).toBe(false);
 	});
 });

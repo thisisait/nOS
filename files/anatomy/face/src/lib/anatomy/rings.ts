@@ -214,3 +214,50 @@ export function verdictRing(
 		spokes
 	);
 }
+
+/** Where a judge run's work count sits against its own ratchet floor. */
+export interface Headroom {
+	/** Percent above the floor. Negative means below it. */
+	pct: number;
+	/** Close enough that ordinary growth would breach it. */
+	tight: boolean;
+	/** Bar fill, 0..100, on a scale 20% above the floor. */
+	fillPct: number;
+	/** Where the floor tick sits on that same scale. */
+	tickPct: number;
+}
+
+/**
+ * The ratchet as a proportion, not a verdict.
+ *
+ * `judges.py:1353` already refuses to call a below-floor run a pass — it
+ * resolves INDETERMINATE. So this is NOT a correctness display; it is the
+ * leading indicator for the one that is.
+ *
+ * WHY IT EARNS A PLACE: this estate's ratchets have decayed twice, both times
+ * by GROWTH rather than by anyone lowering a floor. The suite grew from 2456
+ * to 2788 while the floor sat at 2400, so a run that had lost 14% of its
+ * collection still cleared — the same defect as a floor 12x too low, arrived
+ * at from the other direction. A bar showing a pass sitting 1% above its own
+ * floor makes the NEXT decay visible before it fires.
+ *
+ * The scale is the floor plus 20%, so the tick lands at a fixed position and
+ * bars stay comparable across judges whose absolute counts differ by three
+ * orders of magnitude (2 artifacts, 1489 files, 3014 tests). Clamped: a run at
+ * ten times its floor should read "far above", not blow the row apart.
+ *
+ * `tight` at <= 5% is a judgement call, stated so it can be argued with — it
+ * is roughly one release of suite growth, which is how both decays happened.
+ */
+export function headroom(work: number, floor: number): Headroom {
+	if (!Number.isFinite(work) || !Number.isFinite(floor) || floor <= 0) {
+		return { pct: 0, tight: false, fillPct: 0, tickPct: 0 };
+	}
+	const scale = floor * 1.2;
+	return {
+		pct: Math.round(((work - floor) / floor) * 100),
+		tight: work <= floor * 1.05,
+		fillPct: Math.max(0, Math.min(100, (work / scale) * 100)),
+		tickPct: (floor / scale) * 100
+	};
+}

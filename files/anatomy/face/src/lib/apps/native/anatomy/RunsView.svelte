@@ -28,7 +28,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import graphRaw from '$lib/anatomy/anatomy-graph.json';
 	import { projectGraph, governingParagraphs } from '$lib/anatomy/graph';
-	import { verdictRing, arcs, arcPath, tally, type Ring } from '$lib/anatomy/rings';
+	import { verdictRing, arcs, arcPath, tally, headroom, type Ring } from '$lib/anatomy/rings';
 	import { loadLoop, runGateSet, judgeStatus, type LoopResponse } from '$lib/api/loop';
 	import { loadRuns, type PulseRunRow } from '$lib/api/pulse';
 	import { StatusNote, Badge, StateDot, exitTone } from '$lib/components/ui';
@@ -104,6 +104,9 @@
 			runMsg = e instanceof Error ? e.message : 'refused';
 		}
 	}
+
+	/** Judge runs by uuid — a spoke carries the run's uuid as its id. */
+	const runByUuid = $derived(new Map((data?.judgeRuns ?? []).map((r) => [r.uuid, r])));
 
 	// ── verdict rings ──
 	const rings = $derived(
@@ -302,10 +305,36 @@
 						{#if openVerdict === verdict.uuid}
 							<ul class="spokelist">
 								{#each r.spokes as s (s.id)}
+									{@const run = runByUuid.get(s.id)}
 									<li>
 										<span class="sstate {s.state}">{s.state === 'unjudged' ? 'not judged' : s.state}</span>
 										{s.label}
 										{#if s.reason}<span class="sreason">— {s.reason}</span>{/if}
+										{#if run && run.work_count !== null && run.min_work !== null && run.min_work > 0}
+											{@const head = headroom(run.work_count, run.min_work)}
+											<!--
+											  RATCHET HEADROOM. The runner already refuses to call a
+											  below-floor run a pass (judges.py:1353 → INDETERMINATE),
+											  so this is not a correctness display — it is the LEADING
+											  indicator that one. This estate's ratchets have decayed
+											  twice, both times by GROWTH: the floor stayed put while
+											  the suite grew past it, so a run that had lost 14% of
+											  its collection still cleared. A bar that shows a pass
+											  sitting 1% above its own floor makes the next decay
+											  visible before it fires.
+											-->
+											<span
+												class="ratchet"
+												class:tight={head.tight}
+												title="{run.work_count} of floor {run.min_work} — {head.pct}% headroom"
+											>
+												<span class="fill" style="width:{head.fillPct}%"></span>
+												<span class="floortick" style="left:{head.tickPct}%"></span>
+											</span>
+											<span class="rwork" class:tight={head.tight}>
+												{run.work_count} / {run.min_work}
+											</span>
+										{/if}
 									</li>
 								{/each}
 								{#if r.unaccounted > 0}
@@ -584,6 +613,45 @@
 	}
 	.sreason {
 		color: var(--muted, #9aa4b2);
+	}
+	/* The floor tick is the whole point of the bar: a fill that stops short of
+	   it is a run that did less work than its own ratchet demands. It is drawn
+	   over the fill so it can never be hidden by a bar that overshoots. */
+	.ratchet {
+		position: relative;
+		display: inline-block;
+		width: 74px;
+		height: 6px;
+		border-radius: 3px;
+		background: rgba(255, 255, 255, 0.08);
+		margin-left: 6px;
+		vertical-align: middle;
+	}
+	.ratchet .fill {
+		position: absolute;
+		inset: 0 auto 0 0;
+		border-radius: 3px;
+		background: var(--ok, #5ec27a);
+		opacity: 0.75;
+	}
+	.ratchet.tight .fill {
+		background: var(--warn, #ffaa3c);
+	}
+	.ratchet .floortick {
+		position: absolute;
+		top: -2px;
+		bottom: -2px;
+		width: 2px;
+		background: var(--fg, #e8ecf3);
+		opacity: 0.75;
+	}
+	.rwork {
+		color: var(--muted, #9aa4b2);
+		font-size: 10px;
+		margin-left: 4px;
+	}
+	.rwork.tight {
+		color: var(--warn-ink, #e2b93b);
 	}
 	.sunacc {
 		color: var(--warn-ink, #e2b93b);
