@@ -1,6 +1,11 @@
 # 14 — One notification spine
 
-**Status: half built. The write half ships; no channel carries an answer back yet.**
+**Status: items 2 and 3 shipped 2026-08-08 (Click link + tool-path
+notification fix; A11 retired into /inbox). Item 1 was found unsound under
+adversarial review the same day and is re-scoped below — its safe kernel
+(refuse anonymous answers) shipped; the chat reply path is deliberately NOT
+built. No channel carries an answer back yet, and the plan no longer
+pretends one is a small step away.**
 
 > One abstract channel. Chats, mail, approval surfaces and alerts are
 > implementations of it — not four systems that each grew a notifier.
@@ -63,101 +68,131 @@ away) is what made the easy part invisible.
 | edge gate removed for mobile; pointer-not-payload gated | `277eabd8` |
 | approvals and questions become one surface; lineage events | `4590dc48` |
 | `/inbox` answers; `Inbox:markRead` finally has a route | `3dbede9d` |
+| Click link + the tool path finally notifies (item 2 + the gap) | `00dd2bd9` |
+| A11 retired: /approvals → /inbox, one resolution store (item 3) | `fdeaf2c8` |
+| anonymous answers refused; the cited gate now exists (item 1 kernel) | (with this doc) |
 
-## What is left — the completion plan
+## What is left — the completion plan, as reviewed 2026-08-08
 
-Three items. **Order matters: 2 → 1 → 3.** The link must exist before a channel
-carries it, and A11 must not be retired until something else does its job.
-
----
-
-### 1. Hermes reply path — answer from a chat
-
-**What.** A `[q:<token>]` reply in Telegram/Discord resolves the question.
-Hermes is the cross-channel gateway; it holds the channel session and can
-identify the human. It `POST`s `/api/v1/inbox/questions/<uuid>/answer` with the
-reply token.
-
-**Why the token exists at all.** This is the *only* caller that needs it. Wing
-uses the Authentik session (stronger: it names a person). The token is for the
-operator with no session — in Telegram at 23:00.
-
-**Traps, all verified today:**
-
-- **The token reaches nobody today.** `deliver_ntfy` sends `Title`, `Priority`,
-  `Tags`, `Click` and has never read `metadata.reply_token`; the mail path reads
-  title/body/severity. The token is minted, hashed at rest, and delivered
-  nowhere. Any design that assumes it currently arrives is wrong.
-- **It must not travel through `notifications`.** That table is returned in full
-  by `GET /api/v1/notifications` to any bearer caller. Hermes must fetch the
-  token by a path that authenticates Hermes, or be handed it at ask time.
-- **`answered_by` must name a human, not a channel.** `channel:telegram` is an
-  audit dead end. Map the chat identity to an operator; if it cannot be mapped,
-  refuse rather than record an anonymous approval.
-- **`answered_via` already exists** and is emitted into the lineage — use it.
-
-**Acceptance.** A question asked by an agent is answered from a chat message;
-`events` shows exactly one decision with `via: telegram` and a real
-`operator_username`; a second reply to the same question is refused with the
-answer that won.
+Three items. The original order (2 → 1 → 3) rested on two claims that did not
+survive review: *"the link must exist before a channel carries it"* (the chat
+path never carries the click link) and *"A11 must not be retired until
+something else does its job"* (something else already did — `4590dc48` +
+`3dbede9d` shipped /inbox answering, including approvals, before this plan was
+written). The executed order was **2 → 3 → 1-kernel**: smallest first, the
+retirement blocked on nothing, and the chat path turned out not to be
+buildable safely at all today.
 
 ---
 
-### 2. The `Click` link — a notification you can act on
+### 1. Chat reply path — REVIEWED AND RE-SCOPED (2026-08-08)
+
+The item as first written was wrong three ways, each checked against the
+estate rather than the plan's own prose:
+
+- **`[q:<token>]` puts the credential in the chat.** A Telegram reply lives in
+  Telegram's message history on Telegram's servers — the same class of
+  resting-place as the metadata leak this feature already shipped and
+  retracted once. The plan's own trap list forbids the token in a URL and in
+  `notifications`, then writes it into a chat protocol. A human replying to a
+  question must reference it by uuid; only software may hold a credential.
+- **"Hermes must fetch the token by a path that authenticates Hermes" is
+  impossible.** The token exists in plaintext exactly once, in `ask()`'s
+  return value; only its SHA-256 is at rest. Wing structurally cannot hand it
+  out later. Only handed-at-ask-time could work — which requires a
+  per-question credential store inside the gateway.
+- **Hermes cannot safely hold ANY answer credential today.** Hermes is
+  upstream git-cloned software (`NousResearch/hermes-agent`); the only
+  execution surface this repo controls inside it is LLM-facing `SKILL.md`
+  instructions, and its tool executor runs with the daemon's env. A reply
+  credential in `~/.hermes/.env` — per-question token or Hermes-as-itself
+  service credential alike — is a credential inside an LLM agent's reach,
+  the same defect class as the reply token in a ToolResult. And measured
+  live: no Telegram/Discord channel is configured (`~/.hermes/config.yaml`),
+  so the acceptance criterion could not even be observed.
+
+**What the answer looks like when it is built** (not now, and not by a skill):
+a *deterministic* channel adapter — non-LLM code parsing `[q:<uuid>] yes`
+before any model sees the message — that authenticates AS ITSELF with its own
+minted credential (blast-radius rules: minted + persisted via
+`templates/secrets.yml.j2`, never prefix-derived) against an adapter-specific
+Wing path, maps the chat identity to an operator from an explicit allowlist,
+and **refuses** unmapped identities. Hermes-as-itself makes the per-question
+token unnecessary for that caller; the token stays for a session-less HTTP
+orchestrator that filed the question itself and holds the 201 body.
+
+**What shipped now — the kernel that was true regardless of transport:**
+`POST /api/v1/inbox/questions/<uuid>/answer` refuses an anonymous identity.
+`answered_by` is required, must not be `unknown`, and must not be shaped
+`agent:*` / `channel:*`; the old silent fallback to the bearer token's name (a
+service, not a person) is gone. Pinned by
+`test_only_a_gated_presenter_answers_without_a_token.py` — a gate the
+repository docblock had cited for hours before it existed.
+
+---
+
+### 2. The `Click` link — SHIPPED 2026-08-08, plus the hole the plan missed
 
 **What.** Every question notification carries
-`Click: https://wing.<tld>/inbox`, so the phone notification opens the queue.
+`Click: <WING_PUBLIC_URL>/inbox` (`WING_PUBLIC_URL=https://{{ wing_domain }}`,
+provisioned in both the launchd plist and the systemd `wing.env`; empty env →
+no Click header, never a fabricated URL).
 
-**Why first.** It is small, it closes the operator's original ask (*"přijde
-notifikace s odkazem"*), and it is the honest interim answer while 1 is
-unbuilt: the link goes to a surface that authenticates the reader, so it needs
-no credential at all.
+**What the plan missed, and was the bigger half of the work:** the flagship
+ask path never notified anyone. The notification insert lived only in
+`Api\InboxPresenter` — but `AskOperatorTool` talks to the repository directly
+(deliberately, so the token never rides an HTTP response) and the repository
+inserted nothing. A tool-asked question reached no phone and no mailbox; it
+sat open until its deadline and then decided itself. The insert (with the
+never-quieter-than-`high` floor and the click_url) now lives in
+`AgentQuestionRepository::ask()`, the one place both ask paths share — same
+argument as the in-process event emit: what must not drift from the ask lives
+with the ask.
 
-**Traps:**
+**Decisions taken, not discovered:** the link is Tier-1-only, matching
+/inbox's `$minAccessTier = 1` — answering authorises an agent, so the
+deciding surface stays gated; a lower-tier read view is not worth a second
+surface. The URL carries no credential and no per-question addressing.
 
-- **Never put the token in the URL.** A click URL lands in `metadata`, in ntfy's
-  server cache, and in the phone's notification history. The link points at
-  `/inbox`; the *reader* is authenticated there.
-- **`deliver_ntfy` already supports `Click`** — it reads `metadata.click_url`.
-  The presenter simply never sets it. This is one field, not a feature.
-- **`/inbox` is now `minAccessTier = 1`.** A link that 403s for a Tier-2
-  operator is worse than no link; either the link is Tier-1-only or the queue
-  gains a lower-tier read view. Decide, do not discover.
-
-**Acceptance.** A phone notification for a question opens `/inbox` with that
-question visible. The URL contains no credential. `test_a_notification_is_a_pointer`
-still passes.
+Pinned by `test_a_question_notification_carries_a_click.py` (retro-red: 4/5
+tests failed against the pre-fix tree). `test_a_notification_is_a_pointer`
+still passes; the credential gates followed the insert to its new home.
 
 ---
 
-### 3. Retire A11 `/approvals`
+### 3. Retire A11 `/approvals` — SHIPPED 2026-08-08
 
-**What.** `ApprovalsPresenter` and its two routes go away; approvals are
-`kind='approval'` questions rendered by `/inbox`.
+**What shipped.** `ApprovalsPresenter` + its template + its **three** routes
+(the plan said two — approve, reject, AND the bare list route) are gone;
+`/approvals` permanently redirects to `/inbox`; approvals are
+`kind='approval'` questions rendered there with Approve/Reject.
 
-**Why it is safe.** Measured 2026-08-08: the live estate holds **zero**
-`agent_approval_*` events. The surface has never been used, so there is nothing
-to migrate. Its own gate named the trigger for revisiting — *"a SECOND surface
-that programmatically gates on approvals"* — and `agents-inbox` is it.
+**Why it was safe** — re-verified at implementation time against the live
+`wing.db` (read with its `-wal`): **zero** `agent_approval_*` events, and the
+`agent_questions` table did not exist live yet either, so nothing could have
+raced in since the plan measured.
 
-**Traps:**
+**What the plan under-scoped:** "the presenter and its two routes" was maybe a
+third of the surface. Also readers of A11: the `@layout` nav tab (key 3, now
+deliberately unassigned) with its `pendingApprovalsCount` badge, the
+BasePresenter badge query (`EventRepository::countPendingApprovals` — the
+badge now counts OPEN QUESTIONS via `AgentQuestionRepository::countOpen`,
+deadline-aware so the tab number cannot disagree with the page), the
+Dashboard "Pending approvals" stat, `EventRepository`'s three approval
+readers (deleted — "pending" is a resolution question the event log cannot
+answer race-free), and **six** test files naming the presenter or template.
+A naive "delete and 404" would have left a dead nav tab and five red gates.
 
-- **Its decision path has two silent failures**, and they are the reason to
-  retire rather than repair: `postDecision` returns early on an empty
-  `WING_EVENTS_HMAC_SECRET`, and then does `curl_exec($ch);` discarding the
-  result. During the secret desync found this morning, every decision would have
-  401'd in silence. Nothing would have said so.
-- **`test_approval_queue_event_backed.py` must be rewritten, not deleted.** Its
-  three assertions encode a real decision. Replace them with the successor
-  contract; a deleted gate reads as a lifted constraint.
-- **The event types stay.** `agent_approval_request` / `_decision` are still
-  emitted for `kind='approval'`, so every audit query keyed on them survives.
-- **The orphan Authentik provider** for ntfy (recorded in
-  `PROVIDER_NOT_EDGE_ATTACHED`) is unrelated debt — do not fold it in.
-
-**Acceptance.** `/approvals` returns 404 or redirects to `/inbox`; an approval
-asked via `ask_operator` renders with Approve/Reject; the rewritten gate fails if
-a second approval store appears.
+**Kept, as planned:** the `agent_approval_request` / `_decision` event types —
+emitted by `AgentQuestionRepository`, decision only on the winning UPDATE.
+The rewritten `test_approval_queue_event_backed.py` (retro-red against the
+pre-retirement tree) pins: surface gone, legacy URL redirects, still no
+second approval store in the schema, the event types survive with exactly ONE
+writer, and the decision emit sits inside the `$affected === 1` branch.
+AdminPresenter still carries A11's HMAC-post shape (empty-secret return +
+discarded curl result) for halt/resume events — known debt, recorded in its
+docblock, deliberately not folded into this retirement. Neither was the
+orphan ntfy Authentik provider.
 
 ---
 

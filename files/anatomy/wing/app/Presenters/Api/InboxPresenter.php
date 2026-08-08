@@ -125,11 +125,32 @@ final class InboxPresenter extends BaseApiPresenter
 			}
 		}
 
+		// WHO ANSWERED must name a person, and there is no fallback on
+		// purpose. The old chain was `?? $this->getActorId() ?? 'unknown'`:
+		// getActorId() is the bearer token's name — a SERVICE — and 'unknown'
+		// is an anonymous approval; both are audit dead ends for the one
+		// question audit exists to answer. A channel adapter that cannot map
+		// its chat identity to an operator must be refused here, not
+		// recorded (the agents-inbox plan's own trap). `agent:*` and
+		// `channel:*` are the estate's two non-person actor spellings —
+		// refused by shape even when non-empty.
+		$answeredBy = trim((string) ($b['answered_by'] ?? ''));
+		if ($answeredBy === ''
+			|| strtolower($answeredBy) === 'unknown'
+			|| str_starts_with($answeredBy, 'agent:')
+			|| str_starts_with($answeredBy, 'channel:')) {
+			$this->sendError(
+				'answered_by must name the human operator who decided. '
+				. 'A caller that cannot map its identity to an operator must '
+				. 'refuse to answer, not anonymise the decision.',
+			);
+		}
+
 		$verdict = $this->questions->answer(
 			uuid:        $uuid,
 			replyToken:  (string) $b['reply_token'],
 			answer:      (string) $b['answer'],
-			answeredBy:  (string) ($b['answered_by'] ?? $this->getActorId() ?? 'unknown'),
+			answeredBy:  $answeredBy,
 			via:         (string) ($b['via'] ?? 'api'),
 		);
 
