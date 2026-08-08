@@ -48,6 +48,29 @@ traefik_auth_modes:
   # — kept only so the manifest↔auth-mode gate has something to read.
   traefik: none             # dashboard is NOT routed; see traefik_skip_ids
   offline_maps: none        # public tile server (no Authentik provider entry exists)
+  # ntfy: forward-auth REMOVED 2026-08-08, deliberately, so a PHONE can subscribe.
+  #
+  # A push client is a machine caller: it holds a credential and speaks HTTP. It
+  # cannot complete an Authentik browser flow, so `proxy` 302s it and no mobile
+  # device can ever receive a notification. Same class as the woodpecker entry
+  # above, and CLAUDE.md's own SSO doctrine names it: forward_auth 302's machine
+  # callers.
+  #
+  # WHAT GATES IT INSTEAD, and why this is not a downgrade: until today, nothing
+  # did. `auth-default-access: deny-all` was declared with no `auth-file`, so
+  # ntfy enforced nothing — anonymous publish AND subscribe both returned 200
+  # behind the forward-auth gate, and the admin account the playbook claimed to
+  # create had never existed. The gate was real for browsers and irrelevant to
+  # anything else. ntfy now has a user database, deny-all is in force, the
+  # dispatcher holds a write-only-on-nos-* identity, and the operator's phone
+  # authenticates as a real user.
+  #
+  # THE STANDING CONSTRAINT THAT MAKES THIS SAFE is not on this line: a
+  # notification is a POINTER, NOT A PAYLOAD. Nothing sensitive may ride in a
+  # title, body or metadata field, because a leaked subscribe credential must
+  # cost the operator a list of "something happened" and never the something.
+  # Pinned by tests/anatomy/test_a_notification_is_a_pointer.py.
+  ntfy: none
 
   # ── Native OIDC (Authentik OAuth2 provider) ────────────────────────────────
   grafana: oidc
@@ -101,7 +124,10 @@ traefik_auth_modes:
   paperclip: proxy
   wing: proxy
   code_server: proxy
-  ntfy: proxy               # has its own user DB but admin UI is gated
+  # ntfy moved to the `none` block above (2026-08-08) — a push client cannot do
+  # an Authentik browser flow. Its comment here read "has its own user DB but
+  # admin UI is gated"; the user DB did not exist, which is the other half of
+  # why this had to change.
   firefly: proxy
   keap: proxy               # header_oidc — outpost must stay in path to inject
                             # X-Authentik-* identity headers (firefly pattern)
@@ -129,6 +155,20 @@ traefik_auth_modes:
 # Deliberately absent: traefik itself. It is in traefik_skip_ids, and if anyone
 # removes it from there the gate fails — which is the whole point.
 traefik_auth_none_justification:
+  ntfy: >-
+    A push client is a machine caller: it holds a credential and speaks HTTP, and
+    cannot complete an Authentik browser flow — forward-auth 302s it, so no phone
+    could ever receive a notification. Same class as woodpecker. ntfy
+    authenticates subscribers itself (auth-file + deny-all + per-topic ACLs, all
+    of which were declared and INERT until 2026-08-08 because no auth-file
+    existed — anonymous publish AND subscribe both returned 200 behind the
+    forward-auth gate, so the gate protected browsers and nothing else). The
+    dispatcher holds a write-only-on-nos-* identity; the operator's phone
+    authenticates as a real user. Safety rests on the standing rule that a
+    notification is a POINTER, NOT A PAYLOAD — nothing sensitive in a title, body
+    or metadata — so a stolen subscribe credential costs a list of "something
+    happened" and never the something. Pinned by
+    tests/anatomy/test_a_notification_is_a_pointer.py.
   authentik: >-
     IS the auth provider. Gating Authentik behind Authentik is a bootstrap
     deadlock; it ships its own login flow, MFA policy and RBAC.

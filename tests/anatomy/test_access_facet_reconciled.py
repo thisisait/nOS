@@ -70,6 +70,21 @@ KNOWN_PROVIDER_GAP = {"qgis_server", "mcp_gateway", "smtp_stalwart"}
 PROVIDER_NOT_EDGE_ATTACHED = {
     "woodpecker": "app-auth via Gitea OAuth; a forward-auth gate would be the documented double-login anti-pattern",
     "onlyoffice": "DocServer is called server-side by Nextcloud/BookStack/Outline under a shared JWT; a browser gate would break the editor iframe",
+    # ntfy, 2026-08-08 — and this one is a DEBT, not a design, so it is worded
+    # to stay uncomfortable. The edge gate was removed because a push client
+    # cannot complete an Authentik browser flow, so no phone could ever
+    # subscribe; ntfy now authenticates subscribers itself. The Authentik proxy
+    # provider that used to back that gate is therefore unattached.
+    #
+    # It is not deleted here on purpose: providers are owned by OpenTofu
+    # (ADR-0001), so dropping the plugin's authentik block makes `tofu plan`
+    # report a DESTROY, and the destroy-guard refuses that outside a supervised
+    # apply. Retiring it is a deliberate operator step, not a side effect of a
+    # routing change. Until then Authentik holds one provider nothing uses —
+    # harmless, untidy, and exactly the kind of thing that becomes permanent if
+    # nobody writes down that it is temporary.
+    "ntfy": "edge gate removed so a phone can subscribe; ntfy authenticates its own users. "
+            "Provider retirement is a supervised tofu apply (destroy-guard), tracked separately",
 }
 
 
