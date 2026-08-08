@@ -68,16 +68,38 @@ hermes_claude_code_enabled: true
 # Hermes MCP client -> hook into our MCP servers (via mcpo gateway)
 # mcpo exposes individual servers as OpenAPI, but Hermes speaks raw MCP,
 # so they connect directly to MCP servers (stdio/sse, without the mcpo layer)
+# THREE OF THESE FIVE WERE DEAD ON EVERY START, and `hermes doctor` said
+# "Found 3 issue(s)" without naming any of them (measured 2026-08-08 — the
+# tracebacks scroll past ABOVE the summary, which reports calm; the estate's
+# own recurring defect, this time inside a third-party tool).
+#
+#   time, fetch   ImportError: cannot import name 'McpError' from
+#                 mcp.shared.exceptions ... Did you mean: 'MCPError'?
+#   git           ERROR: /Users/pazny/projects is not a valid Git repository
+#
+# `uvx <pkg>` resolves the LATEST of everything on every invocation. The `mcp`
+# SDK reached 2.0.0 and renamed McpError -> MCPError; mcp-server-time and
+# mcp-server-fetch still import the old name, so an unpinned uvx is guaranteed
+# to fetch an incompatible pair. `--with 'mcp<2'` holds the SDK on the side of
+# the rename these servers were written against — verified before shipping by
+# running both with the exact argv rendered below.
+#
+# The git one was ours: the repository is ~/projects/nOS. ~/projects is the
+# parent directory and has never been a git repo, so that server has answered
+# nothing since the day it was configured.
+#
+# NOT PINNED HERE, and deliberately: the npx servers. They have not broken, and
+# a pin nobody has a reason for is a maintenance burden that looks like rigour.
 hermes_mcp_servers:
   - name: "filesystem"
     command: "npx"
     args: ["-y", "@modelcontextprotocol/server-filesystem", "{{ ansible_facts['env']['HOME'] }}/projects", "{{ ansible_facts['env']['HOME'] }}/agents/log"]
   - name: "git"
     command: "uvx"
-    args: ["mcp-server-git", "--repository", "{{ ansible_facts['env']['HOME'] }}/projects"]
+    args: ["--with", "mcp<2", "mcp-server-git", "--repository", "{{ hermes_git_repository }}"]
   - name: "fetch"
     command: "uvx"
-    args: ["mcp-server-fetch"]
+    args: ["--with", "mcp<2", "mcp-server-fetch"]
   - name: "memory"
     command: "npx"
     args: ["-y", "@modelcontextprotocol/server-memory"]
@@ -85,7 +107,15 @@ hermes_mcp_servers:
       MEMORY_FILE_PATH: "{{ ansible_facts['env']['HOME'] }}/.hermes/memory.json"
   - name: "time"
     command: "uvx"
-    args: ["mcp-server-time", "--local-timezone=Europe/Prague"]
+    args: ["--with", "mcp<2", "mcp-server-time", "--local-timezone={{ hermes_timezone }}"]
+
+# The repository mcp-server-git serves. Must be a real git working tree —
+# pointing it at a parent directory makes the server log an error per start and
+# answer nothing, which is what it did until 2026-08-08.
+hermes_git_repository: "{{ playbook_dir }}"
+# Was hard-coded Europe/Prague in the args above; an operator elsewhere had no
+# way to change it without editing a role default.
+hermes_timezone: "Europe/Prague"
 
 # ── Web UI / API ──────────────────────────────────────────────────────────────
 
