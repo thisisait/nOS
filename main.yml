@@ -1508,8 +1508,45 @@
       # only when wing_events_hmac_secret looks like the unset/derived
       # default (so an explicit operator override in credentials.yml
       # still wins).
+      #
+      # THE RETIRED-RING CLAUSE, AND WHAT IT COST TO BE MISSING (2026-08-08).
+      # Three of the four conditions here detect a value that was never really
+      # set. The fourth — `== bone_secret` — sets it to what it already is: a
+      # branch shaped like a rule that can change nothing. The condition that
+      # was actually needed is the one below, and its absence took the alert
+      # channel down silently:
+      #
+      #   a `bone_secret_rotate=true` run mints a new bone_secret and pushes the
+      #   outgoing one onto `bone_secret_retired`, but never touches
+      #   wing_events_hmac_secret — which, being a persisted 64-hex value that
+      #   merely DIFFERS from bone_secret, fell through to the else-branch and
+      #   was preserved forever. Bone's plist renders
+      #   `wing_events_hmac_secret | default(bone_secret)`, so BONE KEPT
+      #   VERIFYING WITH THE RETIRED KEY while every caller that reads
+      #   bone_secret signed with the current one.
+      #
+      # Measured on the live estate the morning this landed: Bone's plist held
+      # sha 672fd2db… (== bone_secret_retired, exactly), secrets.yml's
+      # bone_secret held ff6bad9d…, and `alert-relay:relay-firing` had failed
+      # 53 consecutive times overnight with
+      # `HTTP 401 {"detail":"HMAC check failed: invalid signature"}` — seven
+      # undelivered alerts including a CVE-high. The job was honest: it exits 2
+      # and prints UNDELIVERED. Nothing read it, because the channel that would
+      # have carried the complaint is the channel that was down.
+      #
+      # So: if the current value IS a retired key, it is a stale copy of a
+      # rotated secret, not an operator override. Adopt the live one. An
+      # operator secret that was never a bone_secret is untouched, which is the
+      # whole point of the else-branch.
       ansible.builtin.set_fact:
-        wing_events_hmac_secret: "{% if '_pw_' in (wing_events_hmac_secret | default('')) or (wing_events_hmac_secret | default('') | length) < 32 or wing_events_hmac_secret == bone_secret %}{{ bone_secret }}{% else %}{{ wing_events_hmac_secret }}{% endif %}"
+        wing_events_hmac_secret: >-
+          {% set _cur = wing_events_hmac_secret | default('') -%}
+          {% set _ring = (bone_secret_retired | default('')).split(',') | map('trim') | select('!=', '') | list -%}
+          {% if '_pw_' in _cur or (_cur | length) < 32 or _cur == bone_secret or _cur in _ring -%}
+          {{ bone_secret }}
+          {%- else -%}
+          {{ _cur }}
+          {%- endif %}
       tags: ['always']
 
     - name: "Regenerate DESTRUCTIVE stateless secrets (prefix change, blank, or destroy_state)"

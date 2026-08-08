@@ -50,11 +50,28 @@ def test_lazy_regen_covers_all_hmac_secrets():
 		assert pat.search(src, idx), \
 			f"{var} must have an openssl-rand regen entry after the lazy-regen block start"
 	# wing_events_hmac_secret either openssl-rand or mirrors bone_secret.
-	wing_pat = re.compile(
-		r"^\s*wing_events_hmac_secret:\s*.*(openssl rand|\{\{\s*bone_secret\s*\}\})",
-		re.MULTILINE,
-	)
-	assert wing_pat.search(src, idx), \
+	#
+	# READ THE TASK, NOT THE LINE (2026-08-08). This was a single-line regex
+	# requiring `{{ bone_secret }}` on the same physical line as the key. That
+	# held only while the assignment was a one-line `{% if %}` ternary; when the
+	# reconciler grew a fourth condition — adopt the live key when the current
+	# one is on the retired ring, see
+	# test_a_rotated_secret_leaves_no_verifier_behind.py — it became a YAML block
+	# scalar and this gate went red on a change that STRENGTHENED it.
+	#
+	# The assertion is unchanged: the value must still resolve to an
+	# openssl-rand mint or to bone_secret. Only the scope moved, from one line to
+	# the task, which is the smallest change that stops the gate mistaking
+	# formatting for meaning. Note this is NOT a relaxation to fit an edit — a
+	# reconciler that mirrored neither would still fail.
+	wing_idx = src.find("wing_events_hmac_secret:", idx)
+	assert wing_idx > 0, \
+		"no wing_events_hmac_secret assignment after the lazy-regen block start"
+	# The task ends at the next task header; anything after that belongs to
+	# someone else and must not be allowed to satisfy this.
+	wing_end = src.find("\n    - name:", wing_idx)
+	wing_task = src[wing_idx : wing_end if wing_end != -1 else len(src)]
+	assert re.search(r"openssl rand|\{\{\s*bone_secret\s*\}\}", wing_task), \
 		"wing_events_hmac_secret must either openssl-rand-regen or mirror bone_secret"
 
 

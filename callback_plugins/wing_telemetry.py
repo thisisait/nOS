@@ -928,7 +928,7 @@ class CallbackModule(CallbackBase):
             if not os.path.isfile(path) or not os.access(path, os.X_OK):
                 continue
             try:
-                subprocess.run(
+                proc = subprocess.run(
                     [path],
                     input=json.dumps(payload, ensure_ascii=False),
                     text=True, env=env, timeout=15,
@@ -937,6 +937,29 @@ class CallbackModule(CallbackBase):
             except Exception as exc:  # noqa: BLE001
                 sys.stderr.write(
                     "[wing_telemetry] hook %s failed: %s\n" % (name, exc))
+                continue
+            # THE RESULT USED TO BE DISCARDED (fixed 2026-08-08). `check=False`
+            # plus `capture_output=True` plus no assignment meant a hook that
+            # RAN and exited non-zero — with its diagnosis on the stderr we had
+            # just captured — produced absolutely nothing. Only a failure to
+            # SPAWN was reported, which is the rarer half.
+            #
+            # This is the exact surface of the 2026-07-28 drift-check saga: the
+            # CVE drift hook aborted inside jq, printed nothing, and the estate
+            # recorded exit 0 for months. That fix repaired the hook. It did not
+            # repair the dispatcher that had swallowed it, so the next hook to
+            # fail the same way would have been just as silent.
+            #
+            # Deliberately still non-fatal: telemetry must never wedge a run
+            # (`docs/doctrine/observability.md`). Loud, not fatal — a hook that
+            # cannot do its job must not read as one that did.
+            if proc.returncode != 0:
+                tail = (proc.stderr or proc.stdout or "").strip().splitlines()
+                sys.stderr.write(
+                    "[wing_telemetry] hook %s exited %d%s\n"
+                    % (name, proc.returncode,
+                       (": " + tail[-1][:300]) if tail else
+                       " (no output — the hook said nothing about why)"))
 
     # ----- Ansible v2 callback hooks ---------------------------------------
 
