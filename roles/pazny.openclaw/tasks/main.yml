@@ -245,10 +245,17 @@
 # ── 5. Workspace bootstrap soubory ──────────────────────────────────────────
 
 - name: "[OpenClaw] Deploy SOUL.md (Inspektor Klepitko persona)"
-  ansible.builtin.copy:
-    src: openclaw/SOUL.md
+  ansible.builtin.template:
+    # WAS a static `copy:` of files/openclaw/SOUL.md — 280 lines that could not
+    # know a single estate variable, and had drifted accordingly: it taught
+    # nginx as the HTTPS proxy and *.dev.local hostnames long after Traefik
+    # became primary and this tenant moved to its own TLD. Now the same rendered
+    # source Hermes uses; only the runtime block differs.
+    src: personas/klepitko.md.j2
     dest: "{{ ansible_facts['env']['HOME'] }}/.openclaw/workspace/SOUL.md"
     mode: '0644'
+  vars:
+    persona_runtime: openclaw
 
 - name: "[OpenClaw] Deploy AGENTS.md (sub-agents config)"
   ansible.builtin.copy:

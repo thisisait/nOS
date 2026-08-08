@@ -130,9 +130,14 @@
 
 - name: "[Hermes] Deploy SOUL.md persona (Inspektor Klepitko)"
   ansible.builtin.template:
-    src: SOUL.md.j2
+    # ONE persona, two renders (2026-08-08). This was a hermes-local template
+    # while OpenClaw shipped a different, static, 280-line version of the same
+    # character; the two had drifted apart and both had drifted from the estate.
+    src: personas/klepitko.md.j2
     dest: "{{ hermes_config_dir }}/SOUL.md"
     mode: '0644'
+  vars:
+    persona_runtime: hermes
   notify: Restart hermes
 
 - name: "[Hermes] Ensure memories dir exists"

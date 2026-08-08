@@ -89,19 +89,32 @@ def test_the_swallowing_shell_redirect_is_gone():
         )
 
 
-def test_every_ntfy_cli_task_tolerates_a_locked_database():
-    """`database is locked` is a normal outcome, not an error to discover live.
+def test_no_ntfy_write_runs_when_the_state_is_already_right():
+    """A running ntfy owns its auth DB's write lock. Only write what is missing.
 
-    The ntfy CLI opens the auth SQLite file DIRECTLY while the server holds it
-    open, so every `ntfy user …` / `ntfy access …` call races the running
-    daemon. Measured 2026-08-08: on one converge `user add` won the race for
-    both accounts and `access` lost it, failing the play with
-    `stderr: database is locked` AFTER the users already existed.
+    THIS GATE PREVIOUSLY DEMANDED THE OPPOSITE, and was wrong for about an hour
+    (2026-08-08). It required `retries`, on the diagnosis that
+    `database is locked` was transient contention — the shape of the wing.db
+    busyTimeout fix from July. Measured properly, it is not transient:
 
-    The estate's precedent is `busyTimeout`, added to 13 wing.db writers after
-    the identical symptom (scout HIGH, 2026-07-15). ntfy's CLI has no such flag,
-    so the wait has to live in the task. Setting the same ACL or password twice
-    is a no-op, so retrying is safe.
+        $ docker exec iiab-ntfy-1 ntfy access nos-publisher "nos-*" write-only
+        database is locked            # 5 of 5 attempts, and would be 500 of 500
+        $ docker exec iiab-ntfy-1 ntfy user list
+        user admin (role: admin, tier: none)      # reads are unaffected
+
+    A running ntfy server holds the WRITE lock for its whole lifetime. Retrying
+    a write that cannot succeed only fails the play more slowly. The converge
+    that DID provision the accounts succeeded because its config probe failed
+    first and restarted the container — the CLI slipped in before the server
+    re-acquired the lock. Luck, wearing the shape of a working task.
+
+    So the invariant is: read the state, write only what is absent. Steady state
+    performs zero writes and the lock stops mattering; a first install writes
+    against a fresh DB with a just-started server, which is when it works.
+
+    KNOWN COST, stated because a skip can hide a real need: a password CHANGE
+    does not propagate on a plain converge, since the user exists and is
+    skipped. Restart ntfy first if one must land.
     """
     import yaml as _yaml
 
@@ -112,17 +125,26 @@ def test_every_ntfy_cli_task_tolerates_a_locked_database():
             task.get("ansible.builtin.shell", ""))
         if "ntfy user" not in blob and "ntfy access" not in blob:
             continue
-        # A read is not a writer and cannot deadlock the server's writes.
         if "user list" in blob:
-            continue
-        if not task.get("retries"):
+            continue  # a read cannot be blocked and needs no guard
+        conds = task.get("when") or []
+        conds = conds if isinstance(conds, list) else [conds]
+        joined = " ".join(str(c) for c in conds)
+        if "_ntfy_state" not in joined:
             offenders.append(task.get("name", "<unnamed>"))
     assert not offenders, (
-        "ntfy CLI task(s) with no `retries`, so a transient "
-        "`database is locked` fails the whole play:\n  " + "\n  ".join(offenders)
-        + "\n\nThe CLI contends with the running server for the same SQLite "
-        "file. Add `retries` + `until: <reg>.rc == 0`."
+        "ntfy CLI WRITE(s) that run without consulting the current state:\n  "
+        + "\n  ".join(offenders)
+        + "\n\nA running ntfy server holds the auth database's write lock for "
+        "its lifetime, so an unconditional write fails every converge once the "
+        "estate is provisioned. Guard it on `_ntfy_state.stdout` — and do not "
+        "reach for `retries`: that was tried, and a write that cannot succeed "
+        "does not succeed five times more slowly."
     )
+    assert any(
+        "user list" in (str(t.get("ansible.builtin.command", "")))
+        for t in (doc or [])
+    ), "nothing reads the ntfy state, so the guards above have nothing to read"
 
 
 def test_the_publisher_is_not_the_admin():
