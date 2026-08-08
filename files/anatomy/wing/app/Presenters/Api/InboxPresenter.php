@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Presenters\Api;
 
 use App\Model\AgentQuestionRepository;
-use App\Model\NotificationRepository;
 use Nette\Http\IResponse;
 
 /**
@@ -19,9 +18,10 @@ use Nette\Http\IResponse;
  *
  * WHY THE ANSWER PATH TAKES A TOKEN AND NOT A SESSION. The operator is in
  * Telegram at 23:00, not in a browser. `reply_token` is minted per question,
- * returned exactly once at ask time, stored only as a SHA-256, and carried to
- * the operator by the notification itself. It authorises answering ONE
- * question and nothing else.
+ * returned exactly once at ask time (in this endpoint's 201 body — the ONLY
+ * egress), and stored only as a SHA-256. It authorises answering ONE question
+ * and nothing else. It is NOT delivered by any notification or channel today;
+ * the caller that filed the question over HTTP holds the only copy.
  *
  * The two things this presenter refuses to do, both deliberate:
  *
@@ -40,7 +40,6 @@ final class InboxPresenter extends BaseApiPresenter
 {
 	public function __construct(
 		private AgentQuestionRepository $questions,
-		private NotificationRepository $notifications,
 	) {
 	}
 
@@ -96,62 +95,18 @@ final class InboxPresenter extends BaseApiPresenter
 			$this->sendError($e->getMessage());
 		}
 
-		// THE REPLY TOKEN IS NOT IN HERE, and putting it here is the bug this
-		// comment exists to prevent recurring (found by adversarial review,
-		// 2026-08-08, hours after it shipped).
+		// THE NOTIFICATION IS NOT INSERTED HERE. It lives inside
+		// AgentQuestionRepository::ask() (2026-08-08), because this endpoint
+		// used to be the only place that notified and AskOperatorTool — the
+		// path a real agent takes, bypassing HTTP so the token never rides a
+		// response an mcp-wing holder can read — filed questions nobody was
+		// told about. The repository is the one place both ask paths share.
 		//
-		// The first version passed `reply_token` in this metadata array. That
-		// is stored verbatim as `notifications.metadata_json`, re-hydrated by
-		// NotificationRepository::query() into a `metadata` field, and returned
-		// by `GET /api/v1/notifications` to any bearer caller — VERIFIED live:
-		// every item carries both `metadata` and `metadata_json`. `McpWingTool`
-		// is GET/POST over the whole /api/v1 surface, and conductor holds
-		// `mcp-wing` (agents/conductor/agent.yml:20). So the agent did not even
-		// need to file a question to obtain a token: it could read one out of
-		// the operator's notification list, at rest, in plaintext.
-		//
-		// The token is hashed in `agent_questions` precisely because "a
-		// plaintext token in a list is a bearer credential handed to every
-		// reader of that list" — and this wrote it into exactly such a list
-		// three lines later. Closing the front door and opening a wider side
-		// one is worse than never having claimed the door was shut.
-		//
-		// WHAT THE NOTIFICATION CARRIES NOW: that a question exists, and its
-		// uuid. Answering happens either in Wing (forward-auth session — no
-		// token needed) or through a channel adapter holding its own
-		// credential. Delivering a per-question token to an out-of-band channel
-		// is UNSOLVED and deliberately left so; see the roadmap row. It costs
-		// nothing today because no channel reads it either — `deliver_ntfy`
-		// sends title/body/click_url and has never read `metadata.reply_token`.
-		//
-		// A question nobody is told about sits open until its deadline and then
-		// decides itself, so the notification itself is not optional.
-		//
-		// A QUESTION IS NEVER QUIETER THAN `high`. The severity the agent
-		// declares describes what it is asking ABOUT; the ask itself is always
-		// something a human must see, and NotificationRepository's own default
-		// map only reaches ntfy at high/critical. An `info` question routed
-		// inbox-only would be one unread row in a web UI while a run blocks —
-		// the exact failure the map's docblock records from the Pulse path.
-		$severity = (string) ($b['severity'] ?? 'medium');
-		$this->notifications->insert([
-			'severity'        => in_array($severity, ['critical', 'high'], true) ? $severity : 'high',
-			'title'           => 'Agent asks: ' . (string) $b['agent_name'],
-			'body'            => (string) $b['prompt'],
-			'origin_plugin'   => 'agent-inbox',
-			'origin_agent'    => (string) $b['agent_name'],
-			'actor_id'        => 'agent:' . (string) $b['agent_name'],
-			'actor_action_id' => isset($b['session_uuid']) ? (string) $b['session_uuid'] : null,
-			'metadata'        => [
-				'question_uuid'    => $made['uuid'],
-				'kind'             => (string) ($b['kind'] ?? 'approval'),
-				'options'          => $b['options'] ?? null,
-				'asked_severity'   => $severity,
-				'expires_at'       => isset($b['ttl_seconds'])
-					? gmdate('Y-m-d\TH:i:s\Z', time() + (int) $b['ttl_seconds'])
-					: null,
-			],
-		]);
+		// The reasons the notification's metadata_json carries a click_url and
+		// NEVER the reply token (the mcp-wing leak this presenter shipped and
+		// adversarial review caught the same day) are recorded there, next to
+		// the insert. Do not add a second insert here; the gate that pins this
+		// is test_a_question_notification_carries_a_click.py.
 
 		$this->sendCreated($made);
 	}

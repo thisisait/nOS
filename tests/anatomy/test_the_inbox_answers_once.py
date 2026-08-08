@@ -240,11 +240,13 @@ def test_a_question_is_never_quieter_than_high():
     question would be one unread row in a web inbox while a run blocks — the
     same failure that map's own docblock records from the Pulse path.
     """
-    src = PRESENTER.read_text(encoding="utf-8")
+    src = REPOSITORY.read_text(encoding="utf-8")
     assert "'high'" in src and "in_array($severity, ['critical', 'high'], true)" in src, (
-        "InboxPresenter no longer floors a question's notification severity at "
-        "high. The severity an agent declares describes what it is asking "
-        "ABOUT; the asking is always urgent."
+        "AgentQuestionRepository::ask() no longer floors a question's "
+        "notification severity at high. The severity an agent declares "
+        "describes what it is asking ABOUT; the asking is always urgent. "
+        "(The floor moved here from Api\\InboxPresenter on 2026-08-08 so the "
+        "AskOperatorTool path inherits it too.)"
     )
 
 

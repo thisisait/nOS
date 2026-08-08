@@ -153,6 +153,14 @@
         <string>{{ (tenants_extra | default([])) | join(',') }}</string>
 {% endif %}
 
+        <!-- agents-inbox (2026-08-08): public base URL for notification Click
+             targets. A question notification carries
+             Click: <WING_PUBLIC_URL>/inbox — a LINK, never a credential; the
+             reader authenticates at /inbox (Authentik forward-auth, Tier-1).
+             Empty → notifications ship without a Click header. -->
+        <key>WING_PUBLIC_URL</key>
+        <string>https://{{ wing_domain }}</string>
+
         <!-- Tenant / host config the role-thinning recipe expects to see
              in the runtime env (Wing-side; Bone has its own copy). -->
         <key>TENANT_DOMAIN</key>

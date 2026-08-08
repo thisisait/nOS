@@ -97,24 +97,30 @@ def test_no_notification_metadata_carries_a_credential():
     )
 
 
-def test_the_inbox_presenter_specifically_is_clean():
+def test_the_question_notification_insert_specifically_is_clean():
     """Named separately so a regression here reads as the original defect.
 
     SCOPED TO THE INSERT, not the file. The first draft asserted that
     `'reply_token'` appears nowhere in the code and failed immediately —
-    `actionAnswer` legitimately READS `reply_token` from the request body,
+    the answer path legitimately READS `reply_token` from the request body,
     because answering is the one operation that must present it. A gate that
     cannot tell an input from an egress forbids the feature working.
+
+    2026-08-08 (same day, completion review): the insert moved from
+    Api\\InboxPresenter into AgentQuestionRepository::ask(), because the
+    presenter-only insert meant AskOperatorTool — the path a real agent takes
+    — filed questions nobody was told about. The property is unchanged: the
+    ONE insert that announces a question must not carry the token.
     """
-    src = (WING / "app/Presenters/Api/InboxPresenter.php").read_text(encoding="utf-8")
+    src = (WING / "app/Model/AgentQuestionRepository.php").read_text(encoding="utf-8")
     code = re.sub(r"/\*.*?\*/", "", src, flags=re.S)
     code = re.sub(r"^\s*//.*$", "", code, flags=re.M)
 
     start = code.find("$this->notifications->insert(")
     assert start != -1, (
-        "InboxPresenter no longer notifies on a filed question. A question "
-        "nobody is told about sits open until its deadline and then decides "
-        "itself."
+        "AgentQuestionRepository::ask() no longer notifies on a filed "
+        "question. A question nobody is told about sits open until its "
+        "deadline and then decides itself."
     )
     depth, i = 0, code.find("(", start)
     while i < len(code):
@@ -126,14 +132,15 @@ def test_the_inbox_presenter_specifically_is_clean():
                 break
         i += 1
     insert_call = code[start:i]
-    assert "reply_token" not in insert_call, (
-        "InboxPresenter passes reply_token into the notification insert. That "
+    assert "reply_token" not in insert_call and "$token" not in insert_call, (
+        "ask() passes the reply token into the notification insert. That "
         "row is returned by GET /api/v1/notifications to any bearer caller, "
         "including any agent holding mcp-wing."
     )
     # The one legitimate egress: handing the token back to whoever filed the
-    # question, once, in the 201 response.
-    assert "sendCreated($made)" in code, (
+    # question over HTTP, once, in the 201 response.
+    presenter = (WING / "app/Presenters/Api/InboxPresenter.php").read_text(encoding="utf-8")
+    assert "sendCreated($made)" in presenter, (
         "the ask() result is no longer returned to the caller that filed the "
         "question — that is the only copy anyone downstream can use."
     )
@@ -141,8 +148,9 @@ def test_the_inbox_presenter_specifically_is_clean():
 
 def test_the_reason_is_recorded_next_to_the_code():
     """A bare absence looks like an oversight and gets 'helpfully' filled in."""
-    src = (WING / "app/Presenters/Api/InboxPresenter.php").read_text(encoding="utf-8")
+    src = (WING / "app/Model/AgentQuestionRepository.php").read_text(encoding="utf-8")
     assert "metadata_json" in src and "mcp-wing" in src, (
-        "InboxPresenter no longer explains why the reply token is absent from "
-        "the notification. Someone will add it back as a convenience."
+        "AgentQuestionRepository no longer explains, next to the notification "
+        "insert, why the reply token is absent from it. Someone will add it "
+        "back as a convenience."
     )

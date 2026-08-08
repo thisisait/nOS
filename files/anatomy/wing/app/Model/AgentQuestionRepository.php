@@ -70,6 +70,7 @@ final class AgentQuestionRepository
 	public function __construct(
 		private Explorer $db,
 		private EventRepository $events,
+		private NotificationRepository $notifications,
 	) {
 	}
 
@@ -149,6 +150,9 @@ final class AgentQuestionRepository
 
 		$uuid  = $this->uuid4();
 		$token = bin2hex(random_bytes(32));
+		$expiresAt = $ttlSeconds !== null
+			? gmdate('Y-m-d\TH:i:s\Z', time() + $ttlSeconds)
+			: null;
 
 		$this->db->table('agent_questions')->insert([
 			'uuid'              => $uuid,
@@ -161,17 +165,15 @@ final class AgentQuestionRepository
 			'severity'          => $severity,
 			'reply_token_sha'   => hash('sha256', $token),
 			'status'            => 'open',
-			'expires_at'        => $ttlSeconds !== null
-				? gmdate('Y-m-d\TH:i:s\Z', time() + $ttlSeconds)
-				: null,
+			'expires_at'        => $expiresAt,
 			'default_on_expiry' => $defaultOnExpiry,
 			'actor_id'          => 'agent:' . $agentName,
 			'actor_action_id'   => $sessionUuid,
 		]);
 
-		// An `approval` emits A11's own event type, so the existing /approvals
-		// reader and every audit query keyed on it keep working unchanged while
-		// the two surfaces converge. Other kinds get their own type.
+		// An `approval` emits A11's own event type, so every audit query keyed
+		// on it keeps working unchanged now that /approvals itself is retired.
+		// Other kinds get their own type.
 		$this->emit(
 			$kind === 'approval' ? 'agent_approval_request' : 'agent_question_asked',
 			$uuid,
@@ -181,13 +183,56 @@ final class AgentQuestionRepository
 				'prompt'     => $prompt,
 				'severity'   => $severity,
 				'options'    => $options,
-				'expires_at' => $ttlSeconds !== null
-					? gmdate('Y-m-d\TH:i:s\Z', time() + $ttlSeconds) : null,
+				'expires_at' => $expiresAt,
 				// NO reply_token. Events are read by /timeline, by the judges and
 				// by SERE; the lineage must be safe to read widely, which is the
 				// same rule that keeps credentials out of notifications.
 			],
 		);
+
+		// THE NOTIFICATION IS INSERTED HERE, NOT AT A CALL SITE. Until
+		// 2026-08-08 it lived in Api\InboxPresenter only, which meant the
+		// flagship path — AskOperatorTool, which talks to this repository
+		// directly so the token never rides an HTTP response — filed questions
+		// NOBODY WAS TOLD ABOUT. A question with a deadline then decides
+		// itself, and nothing said a human was never asked. Same argument as
+		// emit() above: what must not drift from the ask lives with the ask.
+		//
+		// WHAT IT CARRIES: that a question exists, and where to answer it.
+		// `click_url` becomes ntfy's `Click` header (deliver_ntfy reads
+		// metadata.click_url), pointing at /inbox — the reader authenticates
+		// THERE (Authentik forward-auth, Tier-1: answering authorises an
+		// agent). NEVER the reply token, in the URL or anywhere else in this
+		// row: notifications.metadata_json is returned verbatim by
+		// GET /api/v1/notifications to any bearer caller, including any agent
+		// holding mcp-wing — that leak shipped once and was caught by
+		// adversarial review hours later. Empty WING_PUBLIC_URL → null →
+		// no Click header, never a fabricated URL.
+		//
+		// A QUESTION IS NEVER QUIETER THAN `high`. The severity the agent
+		// declares describes what it is asking ABOUT; the ask itself is always
+		// something a human must see, and NotificationRepository's default
+		// channel map only reaches ntfy at high/critical. An `info` question
+		// routed inbox-only would be one unread row in a web UI while a run
+		// blocks.
+		$publicUrl = rtrim((string) (getenv('WING_PUBLIC_URL') ?: ''), '/');
+		$this->notifications->insert([
+			'severity'        => in_array($severity, ['critical', 'high'], true) ? $severity : 'high',
+			'title'           => 'Agent asks: ' . $agentName,
+			'body'            => $prompt,
+			'origin_plugin'   => 'agent-inbox',
+			'origin_agent'    => $agentName,
+			'actor_id'        => 'agent:' . $agentName,
+			'actor_action_id' => $sessionUuid,
+			'metadata'        => [
+				'question_uuid'  => $uuid,
+				'kind'           => $kind,
+				'options'        => $options,
+				'asked_severity' => $severity,
+				'expires_at'     => $expiresAt,
+				'click_url'      => $publicUrl !== '' ? $publicUrl . '/inbox' : null,
+			],
+		]);
 
 		return ['uuid' => $uuid, 'reply_token' => $token];
 	}
@@ -392,6 +437,20 @@ final class AgentQuestionRepository
 			}
 		}
 		return $out;
+	}
+
+	/**
+	 * Badge count: open questions not past their deadline. The WHERE mirrors
+	 * listOpen()'s deadline exclusion exactly, so the number on the nav tab
+	 * can never disagree with the rows on the page. (Successor of the A11
+	 * badge, which counted unpaired agent_approval_request events.)
+	 */
+	public function countOpen(): int
+	{
+		return $this->db->table('agent_questions')
+			->where('status', 'open')
+			->where('expires_at IS NULL OR expires_at > ?', gmdate('Y-m-d\TH:i:s\Z'))
+			->count('*');
 	}
 
 	/** Withdraw a question the agent no longer needs answered. */
