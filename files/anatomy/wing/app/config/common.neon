@@ -111,6 +111,10 @@ services:
 	- App\Model\AgentSubscriptionRepository
 	# Dreams memory store (post-A14 follow-up B-Dreams, 2026-05-07).
 	- App\Model\AgentMemoryStoreRepository
+	# agents-inbox (2026-08-08): questions a running agent is blocked on.
+	# Consumed by Api\InboxPresenter and Tools\AskOperatorTool. NOT a ticket
+	# queue — durable work is the KEAP roadmap table, human support is FreeScout.
+	- App\Model\AgentQuestionRepository
 
 	# AgentKit core services
 	# %appDir% is the Bootstrap dir (Nette sets it to the dir of the file that
@@ -143,6 +147,11 @@ services:
 	    # Q8/A1: gated migration file-write tool (path-allowlisted to
 	    # files/anatomy/migrations/ + default.config.yml; escape-refused).
 	    - register(@App\AgentKit\Tools\MigrationWriteTool)
+	    # agents-inbox (2026-08-08): the return path for a run that reaches a
+	    # decision it may not make. Talks to the repository directly, NOT via
+	    # mcp_wing — the HTTP response carries the reply token and an agent
+	    # holding its own token can approve itself.
+	    - register(@App\AgentKit\Tools\AskOperatorTool)
 
 	# Tools
 	- App\AgentKit\Tools\BashReadOnlyTool
@@ -151,6 +160,7 @@ services:
 	- App\AgentKit\Tools\McpKeapTool
 	# Q8/A1: %nosRepoRoot% is the repo working-tree root (NOS_REPO_ROOT env).
 	- App\AgentKit\Tools\MigrationWriteTool(%nosRepoRoot%)
+	- App\AgentKit\Tools\AskOperatorTool
 
 	# Shared HTTP client for tools + adapters
 	- GuzzleHttp\Client
