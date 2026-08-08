@@ -89,6 +89,42 @@ def test_the_swallowing_shell_redirect_is_gone():
         )
 
 
+def test_every_ntfy_cli_task_tolerates_a_locked_database():
+    """`database is locked` is a normal outcome, not an error to discover live.
+
+    The ntfy CLI opens the auth SQLite file DIRECTLY while the server holds it
+    open, so every `ntfy user …` / `ntfy access …` call races the running
+    daemon. Measured 2026-08-08: on one converge `user add` won the race for
+    both accounts and `access` lost it, failing the play with
+    `stderr: database is locked` AFTER the users already existed.
+
+    The estate's precedent is `busyTimeout`, added to 13 wing.db writers after
+    the identical symptom (scout HIGH, 2026-07-15). ntfy's CLI has no such flag,
+    so the wait has to live in the task. Setting the same ACL or password twice
+    is a no-op, so retrying is safe.
+    """
+    import yaml as _yaml
+
+    doc = _yaml.safe_load(POST.read_text(encoding="utf-8"))
+    offenders = []
+    for task in doc or []:
+        blob = str(task.get("ansible.builtin.command", "")) + str(
+            task.get("ansible.builtin.shell", ""))
+        if "ntfy user" not in blob and "ntfy access" not in blob:
+            continue
+        # A read is not a writer and cannot deadlock the server's writes.
+        if "user list" in blob:
+            continue
+        if not task.get("retries"):
+            offenders.append(task.get("name", "<unnamed>"))
+    assert not offenders, (
+        "ntfy CLI task(s) with no `retries`, so a transient "
+        "`database is locked` fails the whole play:\n  " + "\n  ".join(offenders)
+        + "\n\nThe CLI contends with the running server for the same SQLite "
+        "file. Add `retries` + `until: <reg>.rc == 0`."
+    )
+
+
 def test_the_publisher_is_not_the_admin():
     creds = CREDS.read_text(encoding="utf-8")
     assert "ntfy_publisher_user" in creds and "ntfy_publisher_password" in creds, (

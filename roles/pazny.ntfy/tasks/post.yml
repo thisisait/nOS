@@ -106,6 +106,13 @@
   # print ntfy's own words.
   no_log: true
   failed_when: false
+  # Same race as the ACL grant below: the CLI opens ntfy's auth SQLite while the
+  # server holds it. This task won it on the converge that exposed the problem —
+  # by luck, not design. Retry here too, and let VERIFY stay the judge if the
+  # attempts run out.
+  retries: 5
+  delay: 3
+  until: _ntfy_user_add.rc | default(1) == 0
   check_mode: false
   when:
     - _ntfy_container.stdout | default('') | length > 0
@@ -113,12 +120,27 @@
 
 # Least privilege: the unattended publisher may WRITE the nos-* topics and read
 # nothing. `deny-all` plus this is what makes the earlier declaration real.
+#
+# RETRIED, because `database is locked` is a normal outcome here (2026-08-08).
+# The ntfy CLI opens the auth SQLite file DIRECTLY while the server holds it
+# open, so every `user add` / `access` call races the running daemon. It is not
+# a logic error and it is not deterministic: on the converge that surfaced it,
+# `user add` won the race for both users and `access` lost it, failing the play
+# after the accounts already existed.
+#
+# The estate's precedent is `busyTimeout`, added to 13 wing.db writers after the
+# same symptom (scout HIGH, 2026-07-15). ntfy's CLI exposes no such flag, so the
+# wait lives here instead: five attempts, three seconds apart. Setting the same
+# ACL twice is a no-op in ntfy, so retrying is safe.
 - name: "[pazny.ntfy Post] Grant the publisher write on nos-* only"
   ansible.builtin.command: >
     {{ docker_bin }} compose -p iiab exec -T
     ntfy ntfy access {{ ntfy_publisher_user | default("nos-publisher") }} "nos-*" write-only
   register: _ntfy_acl
   changed_when: _ntfy_acl.rc == 0
+  retries: 5
+  delay: 3
+  until: _ntfy_acl.rc == 0
   check_mode: false
   when:
     - _ntfy_container.stdout | default('') | length > 0
