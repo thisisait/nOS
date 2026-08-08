@@ -96,9 +96,36 @@ final class InboxPresenter extends BaseApiPresenter
 			$this->sendError($e->getMessage());
 		}
 
-		// The notification is not decoration — it is the ONLY copy of the reply
-		// token that reaches a human, and a question nobody is told about sits
-		// open until its deadline and then decides itself.
+		// THE REPLY TOKEN IS NOT IN HERE, and putting it here is the bug this
+		// comment exists to prevent recurring (found by adversarial review,
+		// 2026-08-08, hours after it shipped).
+		//
+		// The first version passed `reply_token` in this metadata array. That
+		// is stored verbatim as `notifications.metadata_json`, re-hydrated by
+		// NotificationRepository::query() into a `metadata` field, and returned
+		// by `GET /api/v1/notifications` to any bearer caller — VERIFIED live:
+		// every item carries both `metadata` and `metadata_json`. `McpWingTool`
+		// is GET/POST over the whole /api/v1 surface, and conductor holds
+		// `mcp-wing` (agents/conductor/agent.yml:20). So the agent did not even
+		// need to file a question to obtain a token: it could read one out of
+		// the operator's notification list, at rest, in plaintext.
+		//
+		// The token is hashed in `agent_questions` precisely because "a
+		// plaintext token in a list is a bearer credential handed to every
+		// reader of that list" — and this wrote it into exactly such a list
+		// three lines later. Closing the front door and opening a wider side
+		// one is worse than never having claimed the door was shut.
+		//
+		// WHAT THE NOTIFICATION CARRIES NOW: that a question exists, and its
+		// uuid. Answering happens either in Wing (forward-auth session — no
+		// token needed) or through a channel adapter holding its own
+		// credential. Delivering a per-question token to an out-of-band channel
+		// is UNSOLVED and deliberately left so; see the roadmap row. It costs
+		// nothing today because no channel reads it either — `deliver_ntfy`
+		// sends title/body/click_url and has never read `metadata.reply_token`.
+		//
+		// A question nobody is told about sits open until its deadline and then
+		// decides itself, so the notification itself is not optional.
 		//
 		// A QUESTION IS NEVER QUIETER THAN `high`. The severity the agent
 		// declares describes what it is asking ABOUT; the ask itself is always
@@ -117,7 +144,6 @@ final class InboxPresenter extends BaseApiPresenter
 			'actor_action_id' => isset($b['session_uuid']) ? (string) $b['session_uuid'] : null,
 			'metadata'        => [
 				'question_uuid'    => $made['uuid'],
-				'reply_token'      => $made['reply_token'],
 				'kind'             => (string) ($b['kind'] ?? 'approval'),
 				'options'          => $b['options'] ?? null,
 				'asked_severity'   => $severity,

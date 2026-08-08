@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\AgentKit\Tools;
 
+use App\AgentKit\LLMClient\ToolSchema;
 use App\Model\AgentQuestionRepository;
 
 /**
