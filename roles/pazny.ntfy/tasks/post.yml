@@ -41,11 +41,56 @@
 #
 # The verify step after this one is the fix that matters: provisioning is now
 # CONFIRMED BY A READER (`ntfy user list`), not by the command that attempted it.
+
+# ── The running container must be reading the CURRENT config ────────────────
+#
+# Two independent reasons it was not, and together they failed the converge that
+# first shipped auth (2026-08-08):
+#
+#   1. The `Restart ntfy` handler flushes at END OF PLAY. This file runs during
+#      stack-up, so a config rendered minutes earlier is still unread here.
+#   2. Docker bind-mounts a single FILE by inode. `template` writes a temp file
+#      and renames over the target, so the container keeps the old inode —
+#      measured: host 726 bytes, container 689, truncated mid-value, and ntfy
+#      answering `yaml: line 22: found unexpected end of stream` to EVERY CLI
+#      call. (Both restarts and recreates re-resolve it; a rewrite alone does
+#      not. This is the VirtioFS single-file class-risk, one more instance.)
+#
+# So: ASK the container whether its config parses, and restart it if not. A
+# probe, not an assumption — the failure mode above is invisible from the host,
+# where the file is perfectly valid.
+- name: "[pazny.ntfy Post] Probe whether the running config parses"
+  ansible.builtin.command: "{{ docker_bin }} exec {{ _ntfy_container.stdout | trim }} ntfy user list"
+  register: _ntfy_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _ntfy_container.stdout | default('') | length > 0
+
+- name: "[pazny.ntfy Post] Restart ntfy so it reads the rendered config"
+  ansible.builtin.command: "{{ docker_bin }} restart {{ _ntfy_container.stdout | trim }}"
+  register: _ntfy_reload
+  changed_when: true
+  when:
+    - _ntfy_container.stdout | default('') | length > 0
+    - _ntfy_probe.rc | default(1) != 0
+
+- name: "[pazny.ntfy Post] Wait for ntfy HTTP again after the restart"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ ntfy_port | default(2586) }}/v1/health"
+    status_code: 200
+    timeout: 5
+  register: _ntfy_health2
+  retries: 15
+  delay: 2
+  until: _ntfy_health2.status | default(0) == 200
+  when: _ntfy_reload is changed
+
 - name: "[pazny.ntfy Post] Create/reconverge users (admin + publisher)"
   ansible.builtin.shell: >
-    {{ docker_bin }} compose -p iiab exec -T
-    -e NTFY_PASSWORD={{ item.password | quote }}
-    ntfy sh -c 'ntfy user add --role={{ item.role }} {{ item.name }}
+    {{ docker_bin }} exec -e NTFY_PASSWORD={{ item.password | quote }}
+    {{ _ntfy_container.stdout | trim }}
+    sh -c 'ntfy user add --role={{ item.role }} {{ item.name }}
     || ntfy user change-pass {{ item.name }}'
   loop:
     - { name: '{{ ntfy_admin_user | default("admin") }}', password: '{{ ntfy_admin_password }}', role: 'admin' }
@@ -54,7 +99,13 @@
   changed_when: "'added' in (item_result.stdout | default('')) or 'changed' in (item_result.stdout | default(''))"
   vars:
     item_result: "{{ _ntfy_user_add }}"
+  # `no_log` is REQUIRED here (the loop carries passwords) and it is exactly why
+  # this task must not be the one that fails the play: a censored failure tells
+  # the operator nothing, which is what the first converge produced. Its exit is
+  # not the verdict — the VERIFY below is, and it carries no secret, so it can
+  # print ntfy's own words.
   no_log: true
+  failed_when: false
   check_mode: false
   when:
     - _ntfy_container.stdout | default('') | length > 0

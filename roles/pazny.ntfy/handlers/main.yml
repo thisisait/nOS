@@ -3,8 +3,34 @@
 # Fallback handler for standalone role use; Phase B coordinator
 # may define a play-level variant.
 
+# THIS HANDLER HAD NEVER RESTARTED ANYTHING (fixed 2026-08-08).
+#
+#   $ docker compose -f ~/stacks/iiab/docker-compose.yml -p iiab restart ntfy
+#   no such service: ntfy
+#
+# The base compose file declares `services: {}` — every real definition arrives
+# as an override passed with its own `-f` flag by the orchestrator. Naming that
+# ONE file with `-f` therefore hides the service, and `failed_when: false`
+# turned that into silence on every converge since the role was written.
+#
+# NOTE, because the obvious generalisation is wrong and was briefly acted on:
+# `docker compose -p iiab exec -T ntfy …` works fine — measured, rc=0 — since
+# compose resolves a running container from the project label when no `-f` is
+# given. The rest of this role and seven calls in pazny.calibre_web rely on
+# that, correctly. The defect was the explicit `-f <base>`, not the compose CLI.
+#
+# Restart by CONTAINER anyway: a handler is the one place that must work when
+# the project is half-assembled, and the label filter is already the idiom used
+# by the first task in tasks/post.yml.
 - name: Restart ntfy
   ansible.builtin.shell: >
-    {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
-    restart ntfy
-  failed_when: false
+    set -o pipefail;
+    cid=$({{ docker_bin }} ps -q
+      --filter "label=com.docker.compose.project=iiab"
+      --filter "label=com.docker.compose.service=ntfy");
+    if [ -n "$cid" ]; then {{ docker_bin }} restart "$cid"; else echo "ntfy not running"; fi
+  args:
+    executable: /bin/bash
+  changed_when: true
+  # NOT failed_when:false. A restart that cannot happen is how a config change
+  # silently does nothing — which is exactly what this handler did for months.
