@@ -441,6 +441,24 @@
     PLIST=~/Library/LaunchAgents/{{ wing_launchd_label }}.plist
     UID_NUM=$(id -u)
     PLIST_CHANGED={{ 'yes' if (_wing_plist is defined and _wing_plist is changed) else 'no' }}
+    # DRIFT, not just change (2026-08-08, second pass). Triggering only on "I
+    # just rewrote the file" cannot repair a process that is ALREADY stale: the
+    # plist gained WING_PUBLIC_URL on one converge, the process never reloaded,
+    # and every later converge saw an unchanged file and kickstarted forever.
+    # The file was right, the process was wrong, and nothing compared them.
+    #
+    # So ask the running job what it actually has. Any key present in the plist
+    # and absent from `launchctl print` is drift, whoever caused it.
+    if launchctl print "gui/${UID_NUM}/{{ wing_launchd_label }}" >/dev/null 2>&1; then
+      LOADED=$(launchctl print "gui/${UID_NUM}/{{ wing_launchd_label }}" 2>/dev/null)
+      set -o pipefail
+      for KEY in $(grep -o '<key>[A-Z_]*</key>' "$PLIST" | sed 's/<\/*key>//g' | sort -u); do
+        if ! printf '%s' "$LOADED" | grep -q "$KEY"; then
+          PLIST_CHANGED=yes
+          break
+        fi
+      done
+    fi
     if launchctl print "gui/${UID_NUM}/{{ wing_launchd_label }}" >/dev/null 2>&1; then
       if [ "$PLIST_CHANGED" = "yes" ]; then
         # RELOAD, not restart: kickstart keeps the in-memory job definition, so
