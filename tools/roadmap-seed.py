@@ -46,7 +46,7 @@ refuses to create a second one) and additive on rows.
 Usage:  python3 tools/roadmap-seed.py [--dry-run]
 """
 
-import json, sys, urllib.request, datetime
+import json, subprocess, sys, urllib.request, datetime
 TABLE = "2d498264-bc9a-4324-9935-489e5e4d92f3"
 BASE = f"http://127.0.0.1:8091/api/tables/{TABLE}"
 H = {"X-Authentik-Username": "akadmin", "X-Authentik-Email": "admin@pazny.eu",
@@ -141,7 +141,16 @@ row("cortex-lang","nos-cortex-lang — ontology-typed pipeline IR","2026-08-05",
     refs="nos-cortex-lang.md · nos-cortex-lang-wing-executor.md",
     body="WrenAI independently converged on the same validate/execute split and hashed contract — external evidence the design is right. Their enumeration-oracle error is the thing to NOT copy.")
 row("cortex-exec","Wing cortex-lang executor","2026-08-07","queued","cortex",parent="cortex",
-    refs="nos-cortex-lang-wing-executor.md", body="Designed, NOT built: files/anatomy/wing/app/Cortex/ does not exist. Blocks the hydrator.")
+    refs="nos-cortex-lang-wing-executor.md",
+    body="Designed, NOT built: files/anatomy/wing/app/Cortex/ does not exist. Blocks the "
+         "hydrator. THE DESIGN'S TWO OPEN INTEGRATION RISKS ARE NOW MEASURED CLOSED "
+         "(2026-08-08). §8.6 called the Wing-host -> KEAP-container path 'the one genuine "
+         "integration risk' — KEAP publishes 8080/tcp on 127.0.0.1:8091, the host gets "
+         "/agent/v1/health in 0.09s. §8.5 asked which role mints the RO token into Wing — the "
+         "running daemon already carries KEAP_API_URL, KEAP_AGENT_TOKEN_RO and _RW, declared "
+         "in its plist. So this is a Wing-only build with no network work: phase 1 is live in "
+         "KEAP (validate accepts chains, rejects unknown opcodes, warns on deferred "
+         "namespaces), and nothing executes.")
 row("cortex-rows","syncRows — rows as first-class objects","2026-08-06","queued","cortex",parent="cortex",
     refs="nos-genome-and-organelles.md B2", body="Ratified D3=materialised; graphMetaSchema already accepts mode:'rows'.")
 row("cortex-readers","ZIM/EPUB readers","2026-08-08","queued","cortex",parent="cortex",
@@ -162,9 +171,18 @@ row("plat","Platform truth","2026-08-02","active","platform",refs="docs/hidden_f
     body="The layers that report success they did not earn.")
 row("plat-linux","Linux estate must actually serve","2026-08-05","blocked","platform",parent="plat",
     refs="docs/hidden_fees/08", body="Playbook completes (ok=550) and 1/8 smoke probes pass. Infra stack does not come up. The gate is honest now; the port is not done.")
-row("plat-ollama","Ollama 0.30.7 -> 0.32.5, drop the local tap","2026-08-03","next","platform",parent="plat",
-    refs="technosideas/swama.md",
-    body="homebrew-core now builds AND tests llama-server; the tap's reason is gone. Consumers: hermes, openclaw, open-webui, keap embeddings, face ask, opencode. n8n's credentials live in its own DB and the playbook cannot see them.")
+row("plat-ollama","Ollama 0.30.7 -> 0.32.6, drop the local tap","2026-08-03","next","platform",parent="plat",
+    refs="technosideas/swama.md · default.config.yml ollama_version",
+    body="VERIFIED not assumed (2026-08-08): homebrew-core 0.32.6 builds llama-server "
+         "(cmake --install llama-server) AND its test block spawns it against a GGUF model and "
+         "asserts it listens. The tap's reason is gone. WHAT THE ABSENCE OF A PIN COST: "
+         "pazny/local is not in homebrew_taps, so the playbook never knew it existed, and "
+         "`state: latest` has meant 'latest within the tap' since June — two minor versions "
+         "back for weeks while every run reported success. ollama_version is now declared and "
+         "read back, and the failure names the shadowing tap. Remaining is one operator "
+         "action: brew uninstall ollama && brew untap pazny/local && brew install ollama. "
+         "Unblocks local-llm-grammar, which needs the llama-server the tap's build already "
+         "had and core's older bottle did not.")
 row("plat-v07","38 v0.7 plan docs, none implemented","2026-07-09","parked","platform",parent="plat",
     refs="docs/archive/v07-overnight/",
     body="All target branch feat/v0.7-overnight, which has ZERO commits not already in master. Either fold the live ones into the backlog or archive them; leaving 38 'PLAN (not implemented)' docs is noise that looks like a plan.")
@@ -276,6 +294,50 @@ row("local-llm-intent", "Intent grading — effectful chains only", _FILED,
          "request. Reserved for effectful chains — read-only ones do not earn the cost — and "
          "phrased as 'say in plain language what this will do' for the operator, rather than "
          "as a score, because a score is a comfortable place for a model to hide.")
+
+# ── Local models — measured 2026-08-08, and the numbers reordered the arc ───
+#
+# The four rows above assume a model choice nobody had measured. One afternoon
+# with `tools/local-model-bench.py` moved every assumption:
+#
+#   * `qwen3:14b` — the estate's own `openclaw_model` — makes the knowledge API
+#     UNAVAILABLE while resident. Not slow: /agent/v1/health times out at 25s on
+#     this M4 Max / 36 GB with 63 containers, and answers in 0.09s the moment
+#     `ollama stop` runs. So model size is an ESTATE constraint, not a quality
+#     trade-off, and `qwen2.5-coder:32b` at 19 GB was never a real option.
+#   * `hermes3:8b` scored 0/6 emitting cortex-lang, every failure a syntax error
+#     on an otherwise-correct pipeline. ONE worked example took it to 2/6 and
+#     cut the time from 13s to 3s. The gap was the prompt, not the parameters.
+#
+# Which is why these rows come BEFORE the training row rather than after it.
+_LMB = "tools/local-model-bench.py · state/local-model-bench.yml"
+
+row("local-llm-bench", "Which models this box can actually host", "2026-08-08",
+    "shipped", "agents", parent="local-llm", refs=_LMB,
+    body="A harness that scores a model on the one job the estate has for it — emit a "
+         "cortex-lang chain — with KEAP's validator as the judge, so no large model and no "
+         "human is needed to grade it. Reports four numbers per model: valid, used-the-asked-"
+         "for-opcode, tokens, and what /agent/v1/health answered in WHILE the model was "
+         "resident. That last column is the one that disqualifies: a model this host cannot "
+         "hold is not a candidate however well it scores.")
+
+row("local-llm-grammar", "Grammar-constrained decoding, so syntax cannot fail", "2026-08-08",
+    "next", "cortex", parent="local-llm", refs=_LMB,
+    body="cortex-lang is a formal grammar with a closed opcode registry, and llama.cpp's "
+         "llama-server supports GBNF constrained decoding — which makes a syntax error "
+         "IMPOSSIBLE rather than rarer. Measured: 4 of 6 hermes3:8b failures were punctuation, "
+         "not comprehension, so this converts the question from 'is the model smart enough' to "
+         "'did it pick the right opcode', which is the part a 4B can plausibly do. Depends on "
+         "the ollama that ships llama-server, i.e. plat-ollama — one thread, not two.")
+
+row("local-llm-thinkingcap", "Evaluate ThinkingCap-Qwen3.6-27B on our tasks", "2026-08-08",
+    "queued", "agents", parent="local-llm-model", refs="huggingface.co/bottlecapai/ThinkingCap-Qwen3.6-27B",
+    body="Apache-2.0 finetune of Qwen3.6-27B from BottleCap AI (Prague), claiming ~46% fewer "
+         "thinking tokens at equal accuracy — GSM8K -74.1% thinking tokens with accuracy rising "
+         "93.3% -> 96.5%. Tokens are the axis a loaded box feels, so the claim is worth testing "
+         "rather than admiring. GGUF and FP8 builds exist. HONEST CAVEAT: 27B at Q4 is ~16 GB "
+         "and qwen3:14b at 14 GB already times the estate out, so this is a candidate only if "
+         "run when the estate is idle, or on the SERE host once one exists.")
 
 # ── SERE — the environment the loop needs before it can be autonomous ───────
 #
@@ -523,22 +585,112 @@ if not _live_cols:
     sys.exit("REFUSING: could not read the live table's schema — "
              "cannot tell whether a write would land. Is KEAP up?")
 
-existing = {
-    r["values"].get("slug")
-    for r in req("GET", BASE + "/rows?limit=500")["data"]["rows"]
-}
+# ── The half git owns, and the half the table owns (--sync, 2026-08-08) ──────
+#
+# "Additive on rows" had a consequence nobody had named: this file is the SOURCE
+# OF TRUTH for a row's TITLE, PARENT, TRACK, REFS and BODY — they are authored
+# here and nowhere else — and an existing slug was skipped entirely. So editing
+# a body in git, committing it, and re-running changed nothing in the table. The
+# text went green in review and never reached a reader. Same shape as everything
+# else this week: two representations, nothing comparing them.
+#
+# The fix is not to make the seeder write everything. The columns split cleanly
+# by who can know them:
+#
+#     git owns   slug title parent track refs body   — authored, reviewable
+#     table owns status target occurred_at verified* — moved by the operator,
+#                                                      by tools/roadmap-update.py
+#                                                      and roadmap-verify.py
+#
+# `--sync` reconciles the git-owned half for rows that already exist and does
+# not touch the other half. Without it this stays purely additive, because
+# rewriting 68 rows should be something you asked for.
+SYNC = "--sync" in sys.argv
+GIT_OWNED = ("title", "parent", "track", "refs", "body")
+
+live_rows = {r["values"].get("slug"): r for r in req("GET", BASE + "/rows?limit=500")["data"]["rows"]}
+existing = set(live_rows)
 fresh = [r for r in R if r["slug"] not in existing]
 skipped = len(R) - len(fresh)
-print(f"already present: {skipped} · to insert: {len(fresh)}")
+
+drifted = []
+if SYNC:
+    for r in R:
+        cur = live_rows.get(r["slug"])
+        if cur is None:
+            continue
+        delta = {k: r[k] for k in GIT_OWNED
+                 if k in r and r[k] != (cur["values"].get(k) or "")}
+        if delta:
+            drifted.append((r, delta, cur["id"]))
+
+print(f"already present: {skipped} · to insert: {len(fresh)}"
+      + (f" · git-owned drift on {len(drifted)}" if SYNC else ""))
 
 if DRY_RUN:
     for r in fresh:
         print(f"  [dry] would insert {r['slug']:<24} {r['title'][:60]}")
-    print(f"DRY RUN — nothing was written. {len(fresh)} row(s) would be inserted.")
+    for r, delta, _ in drifted:
+        print(f"  [dry] would sync   {r['slug']:<24} {', '.join(sorted(delta))}")
+    print(f"DRY RUN — nothing was written. {len(fresh)} insert(s), "
+          f"{len(drifted)} sync(s).")
     sys.exit(0)
 
+# BOTH WRITES GO THROUGH THE AGENT DOOR, AND THE DOOR IS NOT A DETAIL.
+#
+# A KEAP row has two names: the id it is addressed by, and what its `slug` cell
+# says. The human API mints a UUID; the agent API uses the slug — and the agent
+# API's upsert, the only update path that exists at all, keys on the ID. So a
+# row inserted through the human door can never be changed afterwards: an
+# "update" matches nothing and inserts a duplicate beside it.
+#
+# That is not hypothetical. Every roadmap row was created that way and not one
+# had ever been updated since it was filed; `tools/keap-reid-rows.py` exists to
+# repair it. This file caused three more the first time --sync ran, because the
+# insert path had been left on the old door while the sync path used the new
+# one — the fix applied to the symptom and not to the source.
+_agent_tok = None
+
+
+def _agent_token():
+    global _agent_tok
+    if _agent_tok is None:
+        import os
+        _agent_tok = os.environ.get("KEAP_AGENT_TOKEN_RW", "").strip() or subprocess.run(
+            ["docker", "exec", "iiab-keap-1", "printenv", "KEAP_AGENT_TOKEN_RW"],
+            capture_output=True, text=True).stdout.strip()
+        if not _agent_tok:
+            sys.exit("REFUSING: no KEAP_AGENT_TOKEN_RW. The human API has no row "
+                     "update at all, and its inserts mint ids no later write can "
+                     "reach — so neither half of this run may use it.")
+    return _agent_tok
+
+
+AGENT = f"http://127.0.0.1:8091/agent/v1/tables/{TABLE}/rows"
+
+
+def agent_write(values):
+    rq = urllib.request.Request(
+        AGENT, data=json.dumps(values).encode(), method="POST",
+        headers={"authorization": f"Bearer {_agent_token()}",
+                 "content-type": "application/json"})
+    with urllib.request.urlopen(rq) as resp:
+        return json.loads(resp.read())
+
+
 for r in fresh:
-    req("POST", BASE + "/rows", {"values": r})
+    agent_write(r)
+
+if drifted:
+    unkeyed = [r["slug"] for r, _, rid in drifted if rid != r["slug"]]
+    if unkeyed:
+        sys.exit("REFUSING: these rows are not addressed by their slug, so a "
+                 f"sync would duplicate them: {', '.join(unkeyed)}\n"
+                 "  run `tools/keap-reid-rows.py --apply` first.")
+    for r, delta, _ in drifted:
+        agent_write({"slug": r["slug"], "title": r["title"],
+                     "status": live_rows[r["slug"]]["values"].get("status"), **delta})
+        print(f"  synced {r['slug']:<24} {', '.join(sorted(delta))}")
 
 after = req("GET", BASE + "/rows?limit=500")["data"]["rows"]
 tops = [x for x in after if not x["values"].get("parent")]

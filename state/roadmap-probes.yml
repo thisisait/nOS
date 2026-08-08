@@ -98,6 +98,24 @@ local-llm-intent: >-
 local-llm-model: >-
   test -d files/anatomy/models
 
+local-llm-bench: >-
+  test -x tools/local-model-bench.py && test -f state/local-model-bench.yml
+
+# CAUGHT MYSELF A THIRD TIME. The first version of this probe asserted that the
+# installed ollama ships `llama-server` — and came back `confirmed`, because it
+# does. But that is the PREREQUISITE, not the deliverable: the row is "the
+# estate emits chains under a grammar", and no grammar file exists. A probe that
+# passes on a dependency reports the ingredient as the meal, which is the same
+# mistake as reading the plan and calling it the work.
+#
+# The deliverable is a GBNF grammar for cortex-lang plus something that sends it.
+local-llm-grammar: >-
+  test -f state/cortex-lang.gbnf
+  && grep -rql "gbnf\|grammar" tools/local-model-bench.py
+
+local-llm-thinkingcap: >-
+  ollama list | grep -qi thinkingcap
+
 local-llm-lfm25:
   unverifiable: >-
     a benchmark result is a measurement someone must run and record; the
