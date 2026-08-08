@@ -207,6 +207,16 @@ pulse:
       env:
         WING_DB_PATH: "{{ wing_home }}/app/data/wing.db"
         NTFY_URL: "{{ ntfy_url }}"
+        # Publish credential (2026-08-08). ntfy's auth was UNCONFIGURED — no
+        # auth-file, so the declared `deny-all` did nothing and this job
+        # published anonymously to a port anyone could also SUBSCRIBE to. With
+        # auth on, an anonymous POST is 403, so the job needs an identity: a
+        # write-only-on-nos-* user, never the admin.
+        # BARE tokens — no `| default()`. The catalog builder does LITERAL
+        # substitution, not Jinja, so a filtered token reaches Wing verbatim and
+        # is rejected with a bare 400. Two gates say so; both caught this.
+        NTFY_PUBLISH_USER: "{{ ntfy_publisher_user }}"
+        NTFY_PUBLISH_PASSWORD: "{{ ntfy_publisher_password }}"
         # Mail target — Stalwart (production) when install_smtp_stalwart is on,
         # else mailpit (dev sink). The TLS_MODE + USERNAME + PASSWORD trio
         # tells the dispatch worker which SMTP dance to do; mailpit is raw

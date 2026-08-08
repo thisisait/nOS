@@ -32,19 +32,59 @@
   failed_when: false
   when: _ntfy_container.stdout | default('') | length > 0
 
-- name: "[pazny.ntfy Post] Create/reconverge admin user (idempotent)"
+# THIS TASK REPORTED SUCCESS FOR MONTHS AND CREATED NOTHING (fixed 2026-08-08).
+# `ntfy user add` needs an auth-file; server.yml declared none, so every run
+# failed with "auth is unconfigured for this server". `2>/dev/null` threw that
+# away and `changed_when` looked for 'added'/'changed password', which never
+# appeared — so the task was green, not-changed, forever, and the task below it
+# printed login instructions for an account that did not exist.
+#
+# The verify step after this one is the fix that matters: provisioning is now
+# CONFIRMED BY A READER (`ntfy user list`), not by the command that attempted it.
+- name: "[pazny.ntfy Post] Create/reconverge users (admin + publisher)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p iiab exec -T
-    -e NTFY_PASSWORD={{ ntfy_admin_password | quote }}
-    ntfy sh -c 'ntfy user add --role=admin {{ ntfy_admin_user | default("admin") }} 2>/dev/null
-    || ntfy user change-pass {{ ntfy_admin_user | default("admin") }}'
+    -e NTFY_PASSWORD={{ item.password | quote }}
+    ntfy sh -c 'ntfy user add --role={{ item.role }} {{ item.name }}
+    || ntfy user change-pass {{ item.name }}'
+  loop:
+    - { name: '{{ ntfy_admin_user | default("admin") }}', password: '{{ ntfy_admin_password }}', role: 'admin' }
+    - { name: '{{ ntfy_publisher_user | default("nos-publisher") }}', password: '{{ ntfy_publisher_password }}', role: 'user' }
   register: _ntfy_user_add
-  changed_when: >
-    'added' in (_ntfy_user_add.stdout | default('')) or
-    'changed password' in (_ntfy_user_add.stdout | default(''))
-  failed_when: false
-  check_mode: false
+  changed_when: "'added' in (item_result.stdout | default('')) or 'changed' in (item_result.stdout | default(''))"
+  vars:
+    item_result: "{{ _ntfy_user_add }}"
   no_log: true
+  check_mode: false
+  when:
+    - _ntfy_container.stdout | default('') | length > 0
+    - _ntfy_health.status | default(0) == 200
+
+# Least privilege: the unattended publisher may WRITE the nos-* topics and read
+# nothing. `deny-all` plus this is what makes the earlier declaration real.
+- name: "[pazny.ntfy Post] Grant the publisher write on nos-* only"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p iiab exec -T
+    ntfy ntfy access {{ ntfy_publisher_user | default("nos-publisher") }} "nos-*" write-only
+  register: _ntfy_acl
+  changed_when: _ntfy_acl.rc == 0
+  check_mode: false
+  when:
+    - _ntfy_container.stdout | default('') | length > 0
+    - _ntfy_health.status | default(0) == 200
+
+# A READER, not the attempting command. If the users are absent the play fails
+# here with ntfy's own words, instead of a green run and an operator who cannot
+# log in to the service the play just said it configured.
+- name: "[pazny.ntfy Post] VERIFY the users exist (independent read)"
+  ansible.builtin.command: "{{ docker_bin }} compose -p iiab exec -T ntfy ntfy user list"
+  register: _ntfy_user_list
+  changed_when: false
+  check_mode: false
+  failed_when: >
+    _ntfy_user_list.rc != 0
+    or (ntfy_admin_user | default('admin')) not in (_ntfy_user_list.stdout | default(''))
+    or (ntfy_publisher_user | default('nos-publisher')) not in (_ntfy_user_list.stdout | default(''))
   when:
     - _ntfy_container.stdout | default('') | length > 0
     - _ntfy_health.status | default(0) == 200

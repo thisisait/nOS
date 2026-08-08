@@ -1435,6 +1435,13 @@
         paperclip_auth_secret: "{% if '_pw_' in (paperclip_auth_secret | default('')) or (paperclip_auth_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ paperclip_auth_secret }}{% endif %}"
         outline_utils_secret: "{% if '_pw_' in (outline_utils_secret | default('')) or (outline_utils_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ outline_utils_secret }}{% endif %}"
         hedgedoc_session_secret: "{% if '_pw_' in (hedgedoc_session_secret | default('')) or (hedgedoc_session_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ hedgedoc_session_secret }}{% endif %}"
+        # ntfy publisher (2026-08-08). Minted rather than prefix-derived because
+        # `test_secret_blast_radius` refused the prefix form the moment it was
+        # written — correctly: this credential is held by an unattended daemon
+        # and never typed, so deriving it from the one string that unlocks the
+        # estate buys nothing and costs a ratchet notch. Same shape as its
+        # neighbours: mint once, persist, reuse.
+        ntfy_publisher_password: "{% if '_pw_' in (ntfy_publisher_password | default('')) or (ntfy_publisher_password | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ ntfy_publisher_password }}{% endif %}"
         # SEC-3 (2026-05-23): high-entropy HMAC secrets. Pre-this,
         # bone_secret + wing_events_hmac_secret + nos_deploy_hmac_secret
         # all defaulted to `{{ global_password_prefix }}_pw_<svc>` (~50

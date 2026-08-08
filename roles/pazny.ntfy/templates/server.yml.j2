@@ -19,4 +19,23 @@ behind-proxy: {{ ntfy_behind_proxy | default(true) | string | lower }}
 enable-signup: {{ ntfy_enable_signup | default(false) | string | lower }}
 enable-login: {{ ntfy_enable_login | default(true) | string | lower }}
 
+{# WITHOUT auth-file, EVERY LINE BELOW IS DECORATION (measured 2026-08-08).
+   ntfy enforces nothing until it has a user database: `deny-all` was declared
+   here and anonymous publish AND subscribe both answered 200, so anyone who
+   reached the port read every notification the estate sends. `ntfy user list`
+   inside the container said it plainly —
+
+       option database-url or auth-file not set; auth is unconfigured
+
+   — which also means the admin user `tasks/post.yml` claims to provision has
+   NEVER been created: that command fails with the same message, `2>/dev/null`
+   swallowed it, and its `changed_when` looked for words that never appeared.
+   The task reported OK on every converge for as long as it has existed, and
+   the task after it printed login instructions for an account that did not
+   exist. That is why the operator could not log in.
+
+   The file lives under the cache volume because that is the only path already
+   persisted (compose mounts ntfy_data_dir there); a user db on the container
+   filesystem would evaporate on the next image bump. #}
+auth-file: "{{ ntfy_auth_file | default('/var/cache/ntfy/user.db') }}"
 auth-default-access: "{{ ntfy_auth_default_access | default('deny-all') }}"

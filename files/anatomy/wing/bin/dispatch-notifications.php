@@ -327,6 +327,19 @@ function deliver_ntfy(array $row, string $baseUrl): ?string
 		$headers[] = 'Click: ' . $click;
 	}
 
+	// Publish credential (2026-08-08). This used to post anonymously, which
+	// succeeded only because ntfy's auth was UNCONFIGURED — server.yml declared
+	// `auth-default-access: deny-all` and ntfy ignored it for want of an
+	// auth-file, so anonymous publish AND subscribe both returned 200 and every
+	// notification the estate sends was world-readable on the port.
+	//
+	// With auth-file now set, an anonymous POST becomes 403. Absent credentials
+	// this still posts anonymously — correct for a bare install where auth is
+	// genuinely off, and the 403 is reported as a delivery error rather than
+	// swallowed, so the misconfiguration is visible instead of silent.
+	$ntfyUser = getenv('NTFY_PUBLISH_USER') ?: '';
+	$ntfyPass = getenv('NTFY_PUBLISH_PASSWORD') ?: '';
+
 	$ch = curl_init($url);
 	curl_setopt_array($ch, [
 		CURLOPT_RETURNTRANSFER => true,
@@ -336,6 +349,10 @@ function deliver_ntfy(array $row, string $baseUrl): ?string
 		CURLOPT_TIMEOUT        => 5,
 		CURLOPT_CONNECTTIMEOUT => 3,
 	]);
+	if ($ntfyUser !== '' && $ntfyPass !== '') {
+		curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+		curl_setopt($ch, CURLOPT_USERPWD, $ntfyUser . ':' . $ntfyPass);
+	}
 	$resp = curl_exec($ch);
 	$status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 	$cerr   = curl_error($ch);

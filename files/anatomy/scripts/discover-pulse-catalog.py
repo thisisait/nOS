@@ -94,6 +94,11 @@ def _build_substitutions() -> dict[str, str]:
         # Ansible-renders the resolved values (full var context) + passes them
         # as NOS_* env; wing-base/plugin.yml carries the matching bare tokens.
         "{{ ntfy_url }}":                 _env("NOS_NTFY_URL"),
+        # 2026-08-08: the dispatcher used to publish ANONYMOUSLY, which worked
+        # only because ntfy's auth was unconfigured (no auth-file, so the
+        # declared deny-all was inert and anyone could also SUBSCRIBE).
+        "{{ ntfy_publisher_user }}":      _env("NOS_NTFY_PUBLISH_USER"),
+        "{{ ntfy_publisher_password }}":  _env("NOS_NTFY_PUBLISH_PASSWORD"),
         "{{ mail_host }}":                _env("NOS_MAIL_HOST"),
         "{{ mail_port }}":                _env("NOS_MAIL_PORT"),
         "{{ mail_tls_mode }}":            _env("NOS_MAIL_TLS_MODE"),

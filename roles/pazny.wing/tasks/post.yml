@@ -430,6 +430,8 @@
     # Was: the conditionals lived in plugin.yml + shipped UNRENDERED (A9 mail/
     # ntfy delivery silently broken; caught by the live conductor 2026-05-25).
     NOS_NTFY_URL: "{{ ('http://127.0.0.1:' ~ ntfy_port) if install_ntfy | default(false) else '' }}"
+    NOS_NTFY_PUBLISH_USER: "{{ ntfy_publisher_user | default('') if install_ntfy | default(false) else '' }}"
+    NOS_NTFY_PUBLISH_PASSWORD: "{{ ntfy_publisher_password | default('') if install_ntfy | default(false) else '' }}"
     NOS_MAIL_HOST: "{{ '127.0.0.1' if (install_mailpit | default(true)) or (install_smtp_stalwart | default(false)) else '' }}"
     NOS_MAIL_PORT: "{{ (stalwart_port_submission | default(587)) if install_smtp_stalwart | default(false) else (mailpit_smtp_port | default(1025)) }}"
     NOS_MAIL_TLS_MODE: "{{ 'starttls' if install_smtp_stalwart | default(false) else 'none' }}"
