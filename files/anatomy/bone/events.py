@@ -126,6 +126,11 @@ VALID_TYPES = {
     "agent_vault_resolved",
     #   Agent approval workflow (A11 — /approvals UI).
     "agent_approval_request", "agent_approval_decision",
+    # agents-inbox (2026-08-08). TWIN of Wing's EventRepository::VALID_TYPES —
+    # a type present on one side only makes a proxied replay 400 with no clue
+    # which side is short. An approval stays on the two names above; these carry
+    # free-text questions and choices.
+    "agent_question_asked", "agent_question_answered",
     #   Big-red-button platform halt (A12 — /admin emergency control).
     "admin_emergency_halt", "admin_emergency_resume",
     #   E2E journey telemetry (A13 — non-interactive end-to-end testing).

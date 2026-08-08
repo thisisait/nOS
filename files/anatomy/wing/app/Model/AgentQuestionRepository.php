@@ -18,6 +18,42 @@ use Nette\Database\Explorer;
  * conditional UPDATE whose WHERE clause carries the precondition, and the
  * affected-row count is the verdict.
  */
+/**
+ * ── HOW THIS RELATES TO A11 `/approvals` (decided 2026-08-08) ────────────────
+ *
+ * A11 stores agent-action approvals as `events` rows — `agent_approval_request`
+ * paired with `agent_approval_decision` on `actor_action_id` — and
+ * `test_approval_queue_event_backed.py` forbids a dedicated table, on the
+ * correct ground that events are the single source of truth for audit and a
+ * side table would duplicate lineage. That gate also names its own trigger for
+ * revisiting: "when a SECOND surface programmatically gates on approvals".
+ * `agents-inbox` is that surface, so the deferral has come due.
+ *
+ * THE SPLIT THAT RESOLVES IT, and it is not a compromise:
+ *
+ *   events          the LINEAGE. Append-only, never edited, never deleted.
+ *                   Every ask and every answer emits one. This is what audit,
+ *                   the judges and SERE read.
+ *   agent_questions the RESOLUTION. Exactly one row per question, holding the
+ *                   fact of whether it is still open.
+ *
+ * An append-only log CANNOT enforce resolve-once — that is not an opinion about
+ * style, it is what append-only means. A11 shows the consequence: two operators
+ * clicking Approve at the same moment both append a decision event, and
+ * `listPendingApprovals` merely filters out anything that has *a* decision. If
+ * one approved and one rejected, the queue reads "decided" and which one won is
+ * whichever the reader happens to see first. Nothing detects it.
+ *
+ * So the table is not a second copy of the lineage. It holds the ONE fact the
+ * lineage structurally cannot: is this still open, and who closed it. The events
+ * are emitted BY this class, from inside the same transaction-shaped path that
+ * decides the answer, so the two cannot drift — which is the risk the A11 gate
+ * was actually protecting against.
+ *
+ * An approval is therefore a question with `kind='approval'`. There is nothing
+ * to migrate: measured 2026-08-08, the live estate holds ZERO
+ * `agent_approval_*` events, so A11's surface has never once been used.
+ */
 final class AgentQuestionRepository
 {
 	/** Answer accepted. */
@@ -33,7 +69,42 @@ final class AgentQuestionRepository
 
 	public function __construct(
 		private Explorer $db,
+		private EventRepository $events,
 	) {
+	}
+
+	/**
+	 * Emit the lineage row for a question transition.
+	 *
+	 * IN-PROCESS, not an HMAC-signed POST to /api/v1/events. A11's
+	 * `ApprovalsPresenter::postDecision` takes the HTTP path and then does
+	 * `curl_exec($ch);` — discarding the result — with an earlier
+	 * `if ($secret === '') { return; }`. So an operator's decision could be
+	 * dropped in two different silent ways, and on 2026-08-08 the estate spent
+	 * an unknown period with `wing_events_hmac_secret` holding a RETIRED key,
+	 * under which every such POST 401'd. Nothing would have said so.
+	 *
+	 * Writing through the repository removes the signature, the network hop and
+	 * both silences: an insert either happens or throws.
+	 *
+	 * `actor_action_id` is the question uuid, so one
+	 * `SELECT ... WHERE actor_action_id=?` reconstructs ask → answer, which is
+	 * the A10 lineage contract the rest of the estate already reads.
+	 *
+	 * @param array<string, mixed> $result
+	 */
+	private function emit(string $type, string $uuid, string $actorId, array $result): void
+	{
+		$this->events->insert([
+			'ts'              => gmdate('c'),
+			'type'            => $type,
+			'run_id'          => 'question-' . $uuid,
+			'source'          => 'wing',
+			'actor_id'        => $actorId,
+			'actor_action_id' => $uuid,
+			'acted_at'        => gmdate('c'),
+			'result'          => $result,
+		]);
 	}
 
 	/**
@@ -98,6 +169,26 @@ final class AgentQuestionRepository
 			'actor_action_id'   => $sessionUuid,
 		]);
 
+		// An `approval` emits A11's own event type, so the existing /approvals
+		// reader and every audit query keyed on it keep working unchanged while
+		// the two surfaces converge. Other kinds get their own type.
+		$this->emit(
+			$kind === 'approval' ? 'agent_approval_request' : 'agent_question_asked',
+			$uuid,
+			'agent:' . $agentName,
+			[
+				'kind'       => $kind,
+				'prompt'     => $prompt,
+				'severity'   => $severity,
+				'options'    => $options,
+				'expires_at' => $ttlSeconds !== null
+					? gmdate('Y-m-d\TH:i:s\Z', time() + $ttlSeconds) : null,
+				// NO reply_token. Events are read by /timeline, by the judges and
+				// by SERE; the lineage must be safe to read widely, which is the
+				// same rule that keeps credentials out of notifications.
+			],
+		);
+
 		return ['uuid' => $uuid, 'reply_token' => $token];
 	}
 
@@ -138,7 +229,29 @@ final class AgentQuestionRepository
 			]);
 
 		if ($affected === 1) {
-			return ['result' => self::ANSWER_OK, 'question' => $this->find($uuid)];
+			$row = $this->find($uuid);
+			// Emitted only on the WINNING write. The conditional UPDATE above is
+			// what makes that meaningful: a loser never reaches this line, so the
+			// lineage carries exactly one decision per question — which is the
+			// property A11's append-only path cannot offer, because there every
+			// caller appends and the last one to be read wins.
+			$this->emit(
+				($row['kind'] ?? '') === 'approval'
+					? 'agent_approval_decision'
+					: 'agent_question_answered',
+				$uuid,
+				$answeredBy,
+				[
+					'verdict'           => $answer,
+					'operator_username' => $answeredBy,
+					'via'               => $via,
+					'kind'              => $row['kind'] ?? null,
+					'waited_seconds'    => isset($row['created_at'])
+						? max(0, strtotime($now) - strtotime((string) $row['created_at']))
+						: null,
+				],
+			);
+			return ['result' => self::ANSWER_OK, 'question' => $row];
 		}
 
 		// Nothing moved. Say which of the three reasons it was — "it did not

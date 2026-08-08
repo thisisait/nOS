@@ -38,6 +38,17 @@ final class EventRepository
 		// `WHERE actor_action_id=?`. Decision payload carries
 		// `result_json: {verdict: "approve"|"reject", operator_username, note}`.
 		'agent_approval_request', 'agent_approval_decision',
+		// agents-inbox (2026-08-08): an agent asks, the run suspends, the answer
+		// may arrive from any channel. An APPROVAL keeps the two types above —
+		// same surface, different shape of answer — so /approvals and every
+		// audit query keyed on them keep working while the surfaces converge.
+		// These two carry the rest: free-text questions and choices.
+		//   agent_question_asked     — AgentQuestionRepository::ask()
+		//   agent_question_answered  — emitted ONLY on the winning conditional
+		//     UPDATE in ::answer(), so the lineage carries exactly one decision
+		//     per question. Twin rule: both names must also exist in Bone's
+		//     VALID_TYPES or a Bone-proxied replay of these rows 400s.
+		'agent_question_asked', 'agent_question_answered',
 		// Big-red-button platform halt (A12 — /admin emergency control, 2026-05-07).
 		//   admin_emergency_halt     — Tier-1 operator halts all Pulse cron firing
 		//   admin_emergency_resume   — Tier-1 operator resumes after halt
