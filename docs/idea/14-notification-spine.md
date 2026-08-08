@@ -74,7 +74,10 @@ away) is what made the easy part invisible.
 
 ## What is left — the completion plan, as reviewed 2026-08-08
 
-Three items. The original order (2 → 1 → 3) rested on two claims that did not
+Four items — 2 and 3 shipped, 1 re-scoped and deferred, 4 opened 2026-08-08 by
+the operator asking whether agents can mail each other yet.
+
+The original order (2 → 1 → 3) rested on two claims that did not
 survive review: *"the link must exist before a channel carries it"* (the chat
 path never carries the click link) and *"A11 must not be retired until
 something else does its job"* (something else already did — `4590dc48` +
@@ -193,6 +196,67 @@ AdminPresenter still carries A11's HMAC-post shape (empty-secret return +
 discarded curl result) for halt/resume events — known debt, recorded in its
 docblock, deliberately not folded into this retirement. Neither was the
 orphan ntfy Authentik provider.
+
+---
+
+### 4. `target_actor_id` is an address nothing delivers to — NEW 2026-08-08
+
+**The question that surfaced it**, from the operator: *can agents send mail to
+each other yet, or only to me?* The answer is neither yes nor no, and the shape
+of it is this file's recurring one.
+
+**The model already addresses.** `notifications.target_actor_id` is a real
+column, defaults to `'operator'`, is filterable through
+`NotificationRepository::query()` and exposed as a query parameter by
+`Api\NotificationsPresenter`. An agent can set it to `agent:librarian` today and
+the row stores correctly.
+
+**No transport reads it.**
+
+| channel | who actually receives it |
+|---|---|
+| `mail` | `NOS_MAIL_RECIPIENT` = `default_admin_email` — one fixed address |
+| `ntfy` | topic `nos-<severity>` — keyed by SEVERITY, not by recipient |
+| `wing-inbox` | `/inbox`, which does filter on `target_actor_id` — the only one |
+
+So a notification addressed to another agent is **silently delivered to the
+operator**: the intended reader never sees it and the operator receives someone
+else's post. That is worse than an unimplemented feature, because the address
+field invites the mistake and nothing reports it.
+
+**Agents CAN already reach each other** — by a different mechanism.
+`agent_subscriptions` carries outbound HMAC-signed webhooks
+(`AgentKit\Webhook\WebhookDispatcher`). That is the existing agent→X channel and
+this item does not replace it.
+
+**What closes it.** `target_actor_id` becomes a routing key and each transport
+learns to resolve it. Small, because the column and the one honest filter exist:
+
+- **ntfy** — a per-recipient topic (`nos-<actor>`) beside the severity topics.
+  This doubles as the operator's spam control, which was the original ask: the
+  phone subscribes to the topics it wants and nothing else.
+- **mail** — an actor→address map replacing the single constant. An unmapped
+  actor must FAIL, not fall back to the operator; falling back is the current
+  behaviour and is precisely the defect.
+- **wing-inbox** — already correct.
+
+**Traps.**
+
+- **Do not let an unresolvable address default to the operator.** That is the
+  bug, not the fix. A notification for `agent:librarian` with no route must be
+  recorded undelivered and say so — absence must not render as calm.
+- **A per-actor ntfy topic is readable by anyone who can read that topic.** The
+  pointer-not-payload invariant applies unchanged, and more sharply: an
+  agent-to-agent message is likelier to carry operational detail than an
+  operator alert.
+- **`target_actor_id` has no vocabulary.** `'operator'` is a bare string; so
+  would `agent:librarian` be. Decide whether it is validated against the agent
+  roster or free-form BEFORE the first non-operator writer, or the two will
+  disagree the way `tier` did.
+
+**Acceptance.** A notification addressed to a non-operator actor reaches that
+actor and does NOT reach the operator's inbox; one addressed to an unknown actor
+is visibly undelivered rather than quietly redirected.
 
 ---
 
