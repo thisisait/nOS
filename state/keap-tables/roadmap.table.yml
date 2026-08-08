@@ -83,8 +83,23 @@ schema:
     # `inbox` is where an agent-filed observation lands before a human has read
     # it. Nothing reaches `doing` without passing `triaged`, so an agent cannot
     # start work simply by filing it.
+    #
+    # THE LAST THREE ARE NOT DESIGN, THEY ARE THE LIVE BOARD (added 2026-08-07).
+    # This list originally held the eight agent-filing values only, while
+    # `tools/roadmap-seed.py` had been writing `active`, `next` and `parked`
+    # into all 60 live rows since before this file existed. Nothing compared
+    # them, so the definition described a board nobody had: applying it would
+    # have rejected every row the writer produces. They are declared here rather
+    # than relabelled because renaming 60 rows changes what the operator's
+    # Planner says, and that is a decision, not a cleanup.
+    #
+    # `parked` is the one with no synonym above: deliberately not now, which is
+    # not `dropped` (abandoned) and not `blocked` (waiting on something).
+    # `active`/`next` overlap `doing`/`triaged`; collapsing them is the open
+    # question, pinned by tests/anatomy/test_the_roadmap_declares_the_table_it_fills.py
     - { key: status,      label: "Status",       kind: select, role: dimension, required: true, concept: lifecycle.status,
-        options: ["inbox", "triaged", "queued", "doing", "blocked", "review", "shipped", "dropped"] }
+        options: ["inbox", "triaged", "queued", "doing", "blocked", "review", "shipped", "dropped",
+                  "active", "next", "parked"] }
     - { key: owner,       label: "Owner",        kind: text,   role: dimension, concept: access.owner }
     - { key: effort,      label: "Effort",       kind: select, role: attribute, concept: class.complexity,
         options: ["small", "medium", "large"] }
@@ -99,6 +114,17 @@ schema:
     - { key: evidence,    label: "Evidence",     kind: json,   role: attribute, concept: evidence.observation }
 
     # ── time ─────────────────────────────────────────────────────────────────
+    # THE LIVE TABLE STILL HAS A SINGLE `when` AND THIS FILE DELIBERATELY DOES
+    # NOT (2026-08-07). Declaring `when` here was tried and rejected within the
+    # hour: `test_keap_table_concepts.py` refuses two columns claiming one
+    # concept, and the only concept `when` could honestly claim is
+    # `time.occurred_at` — already taken, because that is exactly the conflation
+    # the split exists to end. The L1 vocabulary has three date concepts
+    # (`time.target`, `time.occurred_at`, `time.verified_at`) and no name for a
+    # date that is sometimes an intention and sometimes a fact. That absence is
+    # the answer, not an omission: the writer migrates, the schema does not
+    # regress. `tools/roadmap-seed.py` now emits these two and refuses to run
+    # against a table that lacks them.
     - { key: target,      label: "Target",       kind: date,   role: attribute, concept: time.target }
     - { key: occurred_at, label: "Landed",       kind: date,   role: attribute, concept: time.occurred_at }
 

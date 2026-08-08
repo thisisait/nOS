@@ -1,7 +1,9 @@
 # keap-linked-data — external-enrichment tooling for the KEAP star-map
 
 Typing-first slice of the **KEAP node metadata + external dataset linkage** epic
-(`docs/roadmap.md`). Resolves each KEAP concept node to a **Wikidata QID** and a
+(`docs/archive/roadmap-2026q3.md` § KEAP — the prose roadmap was retired
+2026-08-07; live rows are `tools/roadmap-status.py --track cortex`). Resolves
+each KEAP concept node to a **Wikidata QID** and a
 **type** (P31 → KEAP render bucket + schema.org-ish class), so the star-map can
 grow an entity-type lens + typed celestial forms and (later) a scope-signal and a
 temporal axis.
@@ -113,4 +115,4 @@ signal; OpenAlex `cited_by_count` is the live alternative for science branches.
   optionally wire as a Pulse job (parity with `keap-features-sync`) — though the
   QID/scope resolution is stable, so occasional re-runs beat a nightly recompute.
 - OpenAlex `cited_by_count` (science-branch scope, live) + dates (P571/575/585,
-  dated subset only) → temporal axis. See `docs/roadmap.md`.
+  dated subset only) → temporal axis. See `docs/archive/roadmap-2026q3.md`.

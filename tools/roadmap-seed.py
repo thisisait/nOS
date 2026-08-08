@@ -13,13 +13,32 @@ The ROWS still come from this script, the same split as apps (app generator) and
 systems (service registry); it is recorded in the seeder gate's UNSEEDED list
 with that reason rather than left as an orphan.
 
-ONE MIGRATION IS OWED AND NOT DONE HERE. This script writes a single `when` per
-row, which the new definition splits into `target` (an intention) and
-`occurred_at` (a fact) — precisely so the table can answer "did this land when
-we said it would", which one column cannot. Shipped rows should migrate to
-`occurred_at`, queued rows to `target`. Doing it silently inside a seeding pass
-would rewrite history no one asked to have rewritten, so it waits for a
-deliberate run.
+THE OWED MIGRATION IS DONE HERE, IN THE WRITER (2026-08-07). This script wrote a
+single `when` per row; the definition splits it into `target` (an intention) and
+`occurred_at` (a fact), precisely so the table can answer "did this land when we
+said it would", which one column cannot. Shipped rows now carry `occurred_at`,
+everything else carries `target`.
+
+WHAT FORCED IT was not the split but what the divergence hid. The definition and
+this script had never been compared, and they disagreed twice: on the date column,
+and on three `status` values (`active`, `next`, `parked`) that this script writes
+into all 60 live rows and the definition did not list. A definition that would
+reject every row its own writer produces is not a definition. Both halves are now
+pinned by `tests/anatomy/test_the_roadmap_declares_the_table_it_fills.py`.
+
+Declaring a deprecated `when` alongside `occurred_at` was tried first and refused
+within the hour by `test_keap_table_concepts.py`: two columns may not claim one
+concept, and `time.occurred_at` is the only concept `when` could honestly claim.
+The L1 vocabulary has no name for a date that is sometimes a plan and sometimes a
+fact. That absence is the answer.
+
+WHAT IS STILL NOT DONE, AND IS NOW LOUD RATHER THAN SILENT. The LIVE table
+predates the definition: nine columns, a single `when`, and none of `target` /
+`occurred_at` / `verified`. Nothing applies the definition — the playbook seeds
+only the three `face-*` tables. So this script PREFLIGHTS the live schema and
+refuses, naming the missing columns, instead of writing dates into a column the
+definition no longer has. Rewriting the 60 rows already filed stays out of scope:
+that changes filed history and belongs to a deliberate migration, not a re-seed.
 
 This script remains the reproducible path for rows: idempotent on the table (it
 refuses to create a second one) and additive on rows.
@@ -37,9 +56,20 @@ def req(m, u, b=None):
     with urllib.request.urlopen(r) as x: return json.loads(x.read())
 def ts(d): return int(datetime.datetime.strptime(d, "%Y-%m-%d").timestamp())
 
+#: A date on a shipped row is an observation; on any other row it is an
+#: intention. The call sites still pass one date because at authoring time that
+#: is all anyone knows — the STATUS is what says which kind of date it is, and
+#: it is the only thing that can say so. Keep this the single place that decides.
+SHIPPED = "shipped"
+
 R = []
 def row(slug, title, when, status, track, parent="", release="", refs="", body=""):
-    R.append(dict(slug=slug, title=title, parent=parent, when=ts(when), status=status,
+    at = ts(when)
+    # Exactly one date key is SET, never both-with-one-null: a null in a column
+    # is indistinguishable from a value nobody wrote, and the whole reason these
+    # two columns exist is to keep an intention and a fact tellable apart.
+    R.append(dict(slug=slug, title=title, parent=parent, status=status,
+                  **({"occurred_at": at} if status == SHIPPED else {"target": at}),
                   track=track, release=release, refs=refs, body=body))
 
 # ── Shipped releases — the spine ────────────────────────────────────────────
@@ -397,6 +427,37 @@ print("orphan check: OK · duplicate check: OK")
 # out of scope — this script adds, and a change to a filed row belongs to the
 # planner, not to a re-seed.
 DRY_RUN = "--dry-run" in sys.argv
+
+# ── Preflight: does the live table have the columns this script writes? ──────
+#
+# Added 2026-08-07 with the target/occurred_at migration. The live table was
+# created before `state/keap-tables/roadmap.table.yml` existed and nothing has
+# ever applied that definition — the playbook seeds only the three `face-*`
+# tables. So the columns below may simply not be there, and a POST carrying an
+# unknown key is the kind of failure that is easy to write and hard to read.
+#
+# This refuses BEFORE writing anything, names the missing columns, and exits
+# non-zero — a step that cannot do its job must not exit 0. It runs under
+# --dry-run too: a rehearsal that skips the check would rehearse the wrong run.
+_live_cols = {
+    c.get("key")
+    for c in (req("GET", BASE)["data"].get("schema", {}).get("columns") or [])
+}
+_need = {k for r in R for k in r}
+_missing = sorted(_need - _live_cols)
+if _live_cols and _missing:
+    sys.exit(
+        "REFUSING: the live table is missing column(s) this script writes: "
+        + ", ".join(_missing)
+        + "\n  The live table predates state/keap-tables/roadmap.table.yml and"
+          "\n  nothing applies that definition. Apply it (or add the columns in"
+          "\n  the Planner) before seeding — do not widen this script to fit a"
+          "\n  schema the definition has already moved past."
+        + f"\n  live columns: {' '.join(sorted(_live_cols))}"
+    )
+if not _live_cols:
+    sys.exit("REFUSING: could not read the live table's schema — "
+             "cannot tell whether a write would land. Is KEAP up?")
 
 existing = {
     r["values"].get("slug")

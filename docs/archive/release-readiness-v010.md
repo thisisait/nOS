@@ -79,7 +79,7 @@ TRUE at end: `git merge-base --is-ancestor origin/master master` succeeds; `mast
 longer 676 and 794 commits behind `origin/master`. The phantom 791-commit figure appears in no
 planning document.
 *Why first: every subsequent size estimate is wrong until this is true, and this is the second time
-it has misled a plan (`docs/roadmap.md:250-258` records the first, closed 2026-07-20).*
+it has misled a plan (`docs/archive/roadmap-2026q3.md:250-258` records the first, closed 2026-07-20).*
 
 **Step 2 — `dev` is green and fully exposed to CI.**
 TRUE at end: `ansible-lint roles/pazny.cortex/tasks/main.yml` reports 0 violations; all 54 unpushed
@@ -167,7 +167,7 @@ $ git rev-list --count dev..origin/master
 ```
 
 The 791 was `master..dev` measured off a **local** `master` that is 676 commits stale. `dev` is a
-strict fast-forward descendant of v0.9-beta; nothing is stranded. `docs/roadmap.md:250-258` records
+strict fast-forward descendant of v0.9-beta; nothing is stranded. `docs/archive/roadmap-2026q3.md:250-258` records
 this same false alarm being raised and closed on 2026-07-20 — it has now recurred within a week.
 
 **Real scope of the merge**, since the commit count overstates it by an order of magnitude:

@@ -26,7 +26,7 @@ something else — because there is no signal that finds them on purpose.
 | Surface | Holds |
 |---|---|
 | [`active-work.md`](../active-work.md) | what to do **now** |
-| [`roadmap.md`](../roadmap.md) | the prioritized forward plan |
+| the `nOS Roadmap` table | the prioritized forward plan — ask it with `tools/roadmap-status.py`; [`roadmap.md`](../roadmap.md) is the pointer and the v1.0 exit criteria |
 | [`docs/llm/security/remediation-queue.json`](../llm/security/remediation-queue.json) | security findings, with severities |
 | [`docs/doctrine/`](../doctrine/) | decisions already made and binding |
 

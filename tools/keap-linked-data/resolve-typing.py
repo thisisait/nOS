@@ -15,7 +15,9 @@ label match + lexical overlap with our node description — no per-candidate P31
 fetch. P31 is fetched only for the FINAL chosen QIDs (batched) to produce typing.
 
 Read-only against public Wikidata. Responses cached to --cache for resumability.
-Design + spike: docs/roadmap.md (KEAP node metadata + external dataset linkage).
+Design + spike: docs/archive/roadmap-2026q3.md (KEAP node metadata + external
+dataset linkage). The prose roadmap was retired 2026-08-07; the live surface is
+the KEAP table, read by tools/roadmap-status.py.
 
 Usage:
   python3 resolve-typing.py --graph graph.json --out qid-typing.json [--limit N]

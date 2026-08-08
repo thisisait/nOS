@@ -3,7 +3,8 @@
 **Status:** PoC VALIDATED (2026-07-14). The difference-vector semantic axes produce
 clean, interpretable signal on the real 1462-node embedding corpus — see the
 results table below. Next: productionise the derived-features job + GraphCanvas
-rendering. Roadmap item: `docs/roadmap.md` (KEAP section).
+rendering. Roadmap item: the KEAP roadmap table (`tools/roadmap-status.py --track cortex`);
+the prose version is `docs/archive/roadmap-2026q3.md` § KEAP.
 
 ## Idea
 Every node carries a 768-dim embedding (`nomic-embed-text`, local Ollama, synced by
