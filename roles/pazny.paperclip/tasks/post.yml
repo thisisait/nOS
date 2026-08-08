@@ -62,13 +62,32 @@
   delay: 3
   failed_when: false
 
+# WRITING THE HOSTNAME IS NOT ENOUGH — the server must re-read it (2026-08-08).
+#
+# Measured: `config.json` carried `allowedHostnames: ["paperclip.<tld>"]` and
+# the UI still answered *"Hostname paperclip.<tld> is not allowed for this
+# Paperclip instance"*. The container had started 2026-07-24 and the config was
+# rewritten 2026-08-08 — Paperclip reads it at boot and never again. The
+# operator was even told to run the exact command this task already runs, and
+# running it replied "already allowed", because it was.
+#
+# Third instance of one defect on one day: ntfy's server.yml, the launchd
+# plists, and this. Rendered, and never read.
+#
+# `changed_when` now distinguishes a real registration from a no-op. It used to
+# be `rc == 0`, and the CLI exits 0 whether it adds the host or finds it
+# present — so every converge reported changed and the notify would have fired
+# forever, which is its own way of meaning nothing.
 - name: "[pazny.paperclip Post] Register primary allowed hostname"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p devops exec -T paperclip
     pnpm paperclipai allowed-hostname {{ paperclip_domain }}
   register: _paperclip_hostname
-  changed_when: _paperclip_hostname.rc | default(1) == 0
+  changed_when:
+    - _paperclip_hostname.rc | default(1) == 0
+    - "'already allowed' not in (_paperclip_hostname.stdout | default(''))"
   failed_when: false
+  notify: Restart paperclip
 
 - name: "[pazny.paperclip Post] Hostname registration result"
   ansible.builtin.debug:

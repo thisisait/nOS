@@ -135,7 +135,7 @@
   ansible.builtin.shell: |
     cd {{ stacks_dir }}/iiab
     {{ docker_bin }} compose -p iiab \
-      -f docker-compose.yml \
+      \
       $(find overrides -name '*.yml' -exec echo '-f {}' \;) \
       up -d mcp-grafana mcpo 2>&1
   args:

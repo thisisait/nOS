@@ -6,6 +6,6 @@
 
 - name: Restart calibre-web
   ansible.builtin.shell: >
-    {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+    {{ docker_bin }} compose -p iiab
     restart calibre-web
   failed_when: false

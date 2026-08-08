@@ -94,7 +94,6 @@
 - name: "[pazny.erpnext Post] Restart frontend + backend"
   ansible.builtin.shell: >
     {{ docker_bin }} compose
-    -f "{{ stacks_dir }}/b2b/docker-compose.yml"
     -p b2b
     restart erpnext-frontend erpnext-backend 2>&1
   when: >

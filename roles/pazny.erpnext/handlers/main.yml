@@ -7,7 +7,7 @@
 
 - name: Restart erpnext
   ansible.builtin.shell: >
-    {{ docker_bin }} compose -f "{{ stacks_dir }}/b2b/docker-compose.yml" -p b2b
+    {{ docker_bin }} compose -p b2b
     restart erpnext-configurator erpnext-backend erpnext-frontend
     erpnext-queue-short erpnext-queue-long erpnext-scheduler
   failed_when: false

@@ -41,7 +41,21 @@ ROLES = REPO / "roles"
 #: `-f …/docker-compose.yml` — the base file the orchestrator overlays overrides
 #: onto. Matching the literal filename keeps this narrow: a role naming a
 #: RENDERED override with -f is doing something else and is not covered.
-BASE_F = re.compile(r"-f\s+[\"']?[^\"'\s]*docker-compose\.yml[\"']?[^\n]*\b(restart|exec)\b")
+#
+#: THE QUOTED ALTERNATIVE IS NOT DECORATION. The first version was
+#: `[^"'\s]*docker-compose\.yml`, which cannot span a path containing spaces —
+#: and `"{{ stacks_dir }}/devops/docker-compose.yml"` contains two. So the gate
+#: caught pazny.ntfy (an unquoted `~/stacks/...` path) and silently MISSED
+#: pazny.paperclip, whose handler had the identical defect and the same
+#: `failed_when: false` hiding it. A gate that only finds the instance it was
+#: written from is a gate that ships a false sense of coverage.
+BASE_F = re.compile(
+    r"""-f\s+(?:"[^"]*docker-compose\.yml"      # quoted, may contain {{ vars }}
+             |'[^']*docker-compose\.yml'
+             |\S*docker-compose\.yml)           # bare
+        [^\n]*\b(restart|exec)\b""",
+    re.X,
+)
 
 
 def command_strings(node) -> list[str]:

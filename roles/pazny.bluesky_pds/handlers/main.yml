@@ -5,6 +5,6 @@
 
 - name: Restart bluesky-pds
   ansible.builtin.shell: >
-    {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+    {{ docker_bin }} compose -p infra
     restart bluesky-pds
   failed_when: false

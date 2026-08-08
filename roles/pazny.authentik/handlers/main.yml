@@ -6,7 +6,7 @@
 
 - name: Restart authentik
   ansible.builtin.shell: >
-    {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+    {{ docker_bin }} compose -p infra
     restart authentik-server authentik-worker
   failed_when: false
 

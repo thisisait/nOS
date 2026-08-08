@@ -3,8 +3,23 @@
 # Paperclip had no dedicated play-level handler in main.yml, so this
 # the role is the only source. The coordinator in Phase B has nothing to remove.
 
+# Same defect the pazny.ntfy handler carried, found the same day (2026-08-08):
+# `-f <base>/docker-compose.yml` names a file that declares `services: {}` —
+# every real definition is an override the orchestrator adds with its own -f —
+# so the restart answered `no such service: paperclip`, silently, under
+# `failed_when: false`. It had therefore never restarted anything, which is why
+# Paperclip served a config from 2026-07-24 while its config.json had been
+# rewritten on 2026-08-08 and the UI refused its own hostname.
+#
+# Restart by CONTAINER via the compose labels: no knowledge of how many override
+# files were assembled, and no silence.
 - name: Restart paperclip
   ansible.builtin.shell: >
-    {{ docker_bin }} compose -f "{{ stacks_dir }}/devops/docker-compose.yml" -p devops
-    restart paperclip
-  failed_when: false
+    set -o pipefail;
+    cid=$({{ docker_bin }} ps -q
+      --filter "label=com.docker.compose.project=devops"
+      --filter "label=com.docker.compose.service=paperclip");
+    if [ -n "$cid" ]; then {{ docker_bin }} restart "$cid"; else echo "paperclip not running"; fi
+  args:
+    executable: /bin/bash
+  changed_when: true

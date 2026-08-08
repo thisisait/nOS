@@ -5,6 +5,6 @@
 
 - name: Restart gitea
   ansible.builtin.shell: >
-    {{ docker_bin }} compose -f "{{ stacks_dir }}/devops/docker-compose.yml" -p devops
+    {{ docker_bin }} compose -p devops
     restart gitea
   failed_when: false

@@ -6,6 +6,6 @@
 
 - name: Restart portainer
   ansible.builtin.shell: >
-    {{ docker_bin }} compose -f "{{ stacks_dir }}/infra/docker-compose.yml" -p infra
+    {{ docker_bin }} compose -p infra
     restart portainer
   failed_when: false

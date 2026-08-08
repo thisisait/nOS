@@ -5,6 +5,6 @@
 
 - name: Restart offline_maps
   ansible.builtin.shell: >
-    {{ docker_bin }} compose -f "{{ stacks_dir }}/iiab/docker-compose.yml" -p iiab
+    {{ docker_bin }} compose -p iiab
     restart tileserver
   failed_when: false

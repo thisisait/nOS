@@ -3,7 +3,7 @@
   ansible.builtin.shell: |
     cd {{ stacks_dir }}/iiab
     {{ docker_bin }} compose -p iiab \
-      -f docker-compose.yml \
+      \
       $(find overrides -name '*.yml' -exec echo '-f {}' \;) \
       restart mcpo mcp-grafana 2>&1 || true
   args:

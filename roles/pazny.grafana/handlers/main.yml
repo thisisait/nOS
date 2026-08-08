@@ -5,6 +5,6 @@
 
 - name: Restart grafana
   ansible.builtin.shell: >
-    {{ docker_bin }} compose -f "{{ stacks_dir }}/observability/docker-compose.yml" -p observability
+    {{ docker_bin }} compose -p observability
     restart grafana
   failed_when: false
