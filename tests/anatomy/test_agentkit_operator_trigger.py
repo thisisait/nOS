@@ -287,8 +287,8 @@ def test_browser_presenter_has_action_start():
     )
     # POST-only gate.
     assert "$this->requirePostMethod()" in src, (
-        "actionStart must call requirePostMethod() -- same anti-CSRF gate "
-        "ApprovalsPresenter uses (BasePresenter::requirePostMethod)."
+        "actionStart must call requirePostMethod() -- the canonical anti-CSRF "
+        "gate (BasePresenter::requirePostMethod)."
     )
     # Bearer token comes from env, not from request.
     assert "getenv('WING_API_TOKEN')" in src, (

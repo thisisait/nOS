@@ -48,7 +48,7 @@
 {* Surfaces the same counts as the top-nav tab-count bubbles, but with
    context + deep-links. Zero-count rows hide via {if} guards so a quiet
    inbox doesn't show empty placeholders. *}
-{if ($unreadInboxCount ?? 0) > 0 || ($pendingApprovalsCount ?? 0) > 0}
+{if ($unreadInboxCount ?? 0) > 0 || ($openQuestionsCount ?? 0) > 0}
 	<div class="chart-container mt-md">
 		<h3>Operator attention</h3>
 		<div class="flex gap-lg flex-wrap">
@@ -59,11 +59,12 @@
 					<div class="sub">Open Inbox →</div>
 				</a>
 			{/if}
-			{if ($pendingApprovalsCount ?? 0) > 0}
-				<a class="stat" style="display:block; text-decoration:none; min-width:200px;" href="/approvals">
-					<div class="label">Pending approvals</div>
-					<div class="value" style="color: var(--color-danger)">{$pendingApprovalsCount}</div>
-					<div class="sub">Tier-1 review queue →</div>
+			{* A11 retired 2026-08-08: approvals are answered on /inbox. *}
+			{if ($openQuestionsCount ?? 0) > 0}
+				<a class="stat" style="display:block; text-decoration:none; min-width:200px;" href="/inbox">
+					<div class="label">Agent questions</div>
+					<div class="value" style="color: var(--color-danger)">{$openQuestionsCount}</div>
+					<div class="sub">An agent is blocked — answer in Inbox →</div>
 				</a>
 			{/if}
 		</div>

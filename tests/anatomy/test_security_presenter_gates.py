@@ -52,9 +52,14 @@ _PRIVILEGED_PRESENTERS: list[tuple[str, Path, list[str]]] = [
         ["actionHalt", "actionResume"],
     ),
     (
-        "ApprovalsPresenter",
-        PRESENTERS / "ApprovalsPresenter.php",
-        ["actionApprove", "actionReject"],
+        # InboxPresenter became privileged on 2026-08-08: it used to only SHOW
+        # things, it now DECIDES them — actionAnswer can authorise an agent
+        # action, which is what A11's ApprovalsPresenter (retired the same
+        # day) gated with requireSuperAdmin(). Gate is the declarative
+        # `$minAccessTier = 1` enforced by BasePresenter::startup().
+        "InboxPresenter",
+        PRESENTERS / "InboxPresenter.php",
+        ["actionAnswer", "actionMarkRead"],
     ),
     (
         # Browser-side AgentsPresenter (NOT the Api/ one). actionStart proxies
@@ -275,8 +280,8 @@ def test_state_changing_actions_require_post(name, path, actions):
 _TEMPLATE_PRIVILEGED_PATHS = [
     ("/admin/halt",   TEMPLATES / "Admin"     / "default.latte"),
     ("/admin/resume", TEMPLATES / "Admin"     / "default.latte"),
-    # Approvals templates use plink helper rather than literal paths;
-    # the test below scans for any leftover <a href> on Approvals.
+    # The Inbox answer template uses the plink helper rather than literal
+    # paths; the test below scans for any leftover <a href> on Inbox:answer.
 ]
 
 
@@ -302,20 +307,22 @@ def test_admin_template_uses_post_form(path, template):
     )
 
 
-def test_approvals_template_uses_post_forms():
-    """Approvals template: actions must be POST forms keyed on actionId.
+def test_inbox_answer_template_uses_post_forms():
+    """Inbox template (successor of A11's Approvals template, retired
+    2026-08-08): answering must be a POST form keyed on the question uuid.
     We don't pin the literal path because it goes through Nette's plink
     helper; scan for the pattern instead."""
-    src = (TEMPLATES / "Approvals" / "default.latte").read_text()
-    # No <a href to Approvals:approve / Approvals:reject (plink form)
-    assert not re.search(r'<a[^>]*href\s*=\s*["\']?\{plink Approvals:(approve|reject)',
+    src = (TEMPLATES / "Inbox" / "default.latte").read_text()
+    # No <a href to Inbox:answer / Inbox:markRead (plink form)
+    assert not re.search(r'<a[^>]*href\s*=\s*["\']?\{plink Inbox:(answer|markRead)',
                          src, re.IGNORECASE), (
-        "Approvals template uses <a href={plink Approvals:...}> — A13.7 forbids; "
-        "must be <form method=\"post\" action=\"{plink Approvals:...}\">"
+        "Inbox template uses <a href={plink Inbox:...}> for a state-changing "
+        "action — A13.7 forbids; must be "
+        "<form method=\"post\" action=\"{plink Inbox:...}\">"
     )
-    # MUST have at least one POST form for approve and one for reject
-    for verb in ("approve", "reject"):
+    # MUST have at least one POST form for answer and one for mark-read
+    for verb in ("answer", "markRead"):
         assert re.search(
-            rf'<form[^>]*method\s*=\s*["\']?post[^>]*action\s*=\s*["\']?\{{plink Approvals:{verb}',
+            rf'<form[^>]*method\s*=\s*["\']?post[^>]*action\s*=\s*["\']?\{{plink Inbox:{verb}',
             src, re.IGNORECASE,
-        ), f"Approvals template no longer POST-forms the {verb} action"
+        ), f"Inbox template no longer POST-forms the {verb} action"

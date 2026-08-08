@@ -2,7 +2,9 @@
 //
 // Pre-W4 the tab chips ("Hub 1", "Inbox 2", ...) suggested keyboard nav
 // but no JS was wired. Wing operators reach for the keyboard a lot
-// (inbox triage, approvals approve/reject); this closes the loop.
+// (inbox triage: mark-read, answering agent questions); this closes the
+// loop. (Key 3 was the Approvals tab until A11's retirement, 2026-08-08 —
+// it stays unassigned so the other digits keep their muscle memory.)
 //
 // Behavior:
 //   - Press a digit (0-9) → navigate to the tab whose .tab-key chip

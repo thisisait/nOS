@@ -56,8 +56,13 @@
 		<div class="nav-overlay-group">
 			<h2>Operate</h2>
 			<a class="tab{if $activeTab === 'hub'} active{/if}" href="/hub" data-tab="hub">Hub <span class="tab-key">1</span></a>
-			<a class="tab{if $activeTab === 'inbox'} active{/if}" href="/inbox" data-tab="inbox">Inbox{if ($unreadInboxCount ?? 0) > 0} <span class="tab-count" aria-label="unread notifications">{$unreadInboxCount}</span>{/if} <span class="tab-key">2</span></a>
-			<a class="tab{if $activeTab === 'approvals'} active{/if}" href="/approvals" data-tab="approvals">Approvals{if ($pendingApprovalsCount ?? 0) > 0} <span class="tab-count" aria-label="pending approvals">{$pendingApprovalsCount}</span>{/if} <span class="tab-key">3</span></a>
+			{* A11 retired 2026-08-08: the Approvals tab (key 3) is gone —
+			   approvals are kind='approval' questions answered on /inbox. The
+			   second badge below counts OPEN QUESTIONS: a blocked run is more
+			   urgent than an unread notification, so it gets its own number
+			   rather than being summed away. Key 3 stays unassigned so the
+			   other digits keep their muscle memory. *}
+			<a class="tab{if $activeTab === 'inbox'} active{/if}" href="/inbox" data-tab="inbox">Inbox{if ($unreadInboxCount ?? 0) > 0} <span class="tab-count" aria-label="unread notifications">{$unreadInboxCount}</span>{/if}{if ($openQuestionsCount ?? 0) > 0} <span class="tab-count" aria-label="open agent questions">{$openQuestionsCount} blocking</span>{/if} <span class="tab-key">2</span></a>
 		</div>
 
 		<div class="nav-overlay-group">

@@ -71,15 +71,17 @@ def test_pulse_run_agent_awk_uses_last_field():
     assert "awk '{print $NF}'" in src
 
 
-def test_approvals_presenter_canonicalizes_payload():
-    """A11 ApprovalsPresenter signed `json_encode($payload)` directly,
-    which doesn't sort keys. Same Bone-canonicalization mismatch as the
-    bash side — operator approvals would 401 silently."""
-    src = (REPO / "files/anatomy/wing/app/Presenters/ApprovalsPresenter.php").read_text()
-    assert "self::canonicalize" in src
-    assert "ksort" in src
-    # Don't ship a naked json_encode($payload) in the signing path.
-    assert "$body = json_encode($payload)" not in src
+# test_approvals_presenter_canonicalizes_payload was deleted with its subject:
+# ApprovalsPresenter retired 2026-08-08 (A11 → agents-inbox; the retirement is
+# pinned by test_approval_queue_event_backed.py). The property it pinned —
+# canonical JSON before HMAC signing — matters only for BONE-verified writes
+# (Bone re-canonicalizes the parsed dict before computing the expected HMAC).
+# The one surviving in-app signer, AdminPresenter::postAuditEvent, posts to
+# Wing's /api/v1/events, whose verifier HMACs the RAW body (EventsPresenter),
+# so signing the exact string sent is correct there and needs no canonical
+# form. Question answers no longer sign anything: AgentQuestionRepository
+# emits the decision event in-process, which is what removed the 401-in-silence
+# failure mode this test was guarding the edges of.
 
 
 def test_pulse_run_agent_reads_nos_agent_env():

@@ -100,11 +100,9 @@ def test_no_static_override_of_nette_parent_method():
 	)
 
 
-def test_approvals_presenter_uses_canonicalize_json_alias():
-	"""Regression-pin the specific bug we hit: the JSON-canonicalization
-	helper must NOT be called `canonicalize`."""
-	src = (PRESENTERS_DIR / "ApprovalsPresenter.php").read_text()
-	# The helper survived the rename — pin the new name.
-	assert "canonicalizeJson" in src
-	# The buggy name must not reappear as a static function declaration.
-	assert "static function canonicalize(" not in src
+# The file-specific regression pin (test_approvals_presenter_uses_canonicalize_json_alias)
+# died with its subject: ApprovalsPresenter was retired on 2026-08-08 (A11 →
+# agents-inbox; see test_approval_queue_event_backed.py). The general scan
+# above still refuses a `static function canonicalize(` — or any other
+# reserved-parent-method shadow — in EVERY presenter, which is the property
+# that mattered; the deleted test only named the historical offender.

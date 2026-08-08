@@ -1,32 +1,34 @@
-"""Anatomy CI gate: approval queue is event-backed by design (DEFERRED table).
+"""Anatomy CI gate: ONE approval surface, split lineage/resolution by design.
 
-Finding ``approval-queue-persistence`` (low / tech-debt, confirmed): the
-agent-action approval queue stores requests + decisions as ``events`` rows
-(``agent_approval_request`` / ``agent_approval_decision``, paired on
-``actor_action_id``) rather than in a dedicated ``approval_requests`` table.
+HISTORY, because this file's three previous assertions encoded a real decision
+and a deleted gate reads as a lifted constraint.
 
-Verdict (both reviewers): the event-based model is **architecturally
-correct** — events are the single source of truth for audit, so a side
-table would duplicate that lineage and risk drift. The proposed fix is a
-**deferral**: revisit (dedicated table OR a read-only ``/api/v1/approvals``
-endpoint) only when a SECOND agent ships that programmatically gates on
-approvals — conductor (the sole live agent) does not.
+A11 (2026-05-07) stored approvals as paired ``events`` rows
+(``agent_approval_request`` / ``agent_approval_decision`` on
+``actor_action_id``) and THIS gate forbade a dedicated table, on the correct
+ground that events are the single source of truth for audit. It also named its
+own revisit trigger: *"a SECOND surface that programmatically gates on
+approvals"*. ``agents-inbox`` (2026-08-08) is that surface, so the deferral
+came due — and retired A11 rather than duplicating it, because the estate had
+measured what the append-only model cannot do: two operators clicking Approve
+in the same instant both append a decision, the reader filtered on merely
+HAVING one, and approve + reject read as "decided" with the winner being
+whichever row a reader met first. Nothing detected it. A11's write path also
+carried two silent failures (return-on-empty-HMAC-secret, discarded
+``curl_exec`` result). Measured on the live estate before retirement: ZERO
+``agent_approval_*`` events — nothing to migrate.
 
-This gate pins that decision so it can't drift silently:
+THE SUCCESSOR CONTRACT this file now pins:
 
-  1. NO ``approval_requests`` (or ``approval_decisions``) table is ever
-     declared in the Wing schema — if one appears, the deferral has been
-     un-deferred and this contract + the presenter docblock must be
-     re-reviewed together.
-  2. The ``/approvals`` read path goes through ``EventRepository``
-     (``listPendingApprovals`` / ``listRecentDecisions``) — never raw SQL
-     in the presenter.
-  3. The presenter docblock carries the explicit DEFERRED marker + the
-     trigger condition, so a future maintainer reads the rationale before
-     adding a side table.
+  events           the LINEAGE — append-only; ``agent_approval_request`` /
+                   ``agent_approval_decision`` are STILL the event types an
+                   approval emits, so every audit query keyed on them survives.
+  agent_questions  the RESOLUTION — exactly one row, closed by a conditional
+                   UPDATE (``kind='approval'``); the decision event is emitted
+                   only on the winning write, in-process.
 
-Like the sibling A13.7 gates, this test parses source files with regex
-(no PHP execution) so the CI runner stays on the pytest + pyyaml stack.
+Every assertion reads code (comments stripped, scoped to the smallest
+syntactic unit), never prose.
 """
 
 from __future__ import annotations
@@ -36,22 +38,72 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WING = REPO_ROOT / "files" / "anatomy" / "wing"
-PRESENTER = WING / "app" / "Presenters" / "ApprovalsPresenter.php"
-EVENT_REPO = WING / "app" / "Model" / "EventRepository.php"
+APP = WING / "app"
+RETIRED_PRESENTER = APP / "Presenters" / "ApprovalsPresenter.php"
+RETIRED_TEMPLATE_DIR = APP / "Templates" / "Approvals"
+ROUTER = APP / "Core" / "RouterFactory.php"
+REPOSITORY = APP / "Model" / "AgentQuestionRepository.php"
+EVENT_REPO = APP / "Model" / "EventRepository.php"
 DB_DIR = WING / "db"
 
 
+def _code_only_php(src: str) -> str:
+    src = re.sub(r"/\*.*?\*/", "", src, flags=re.S)
+    return re.sub(r"^\s*//.*$", "", src, flags=re.M)
+
+
 def _schema_sql() -> str:
-    """Concatenate every .sql file under the Wing db/ tree."""
     return "\n".join(p.read_text() for p in sorted(DB_DIR.glob("*.sql")))
 
 
-def test_no_dedicated_approval_table_in_schema():
-    """The deferral holds only while there is NO dedicated approval table.
-    A ``CREATE TABLE approval_requests`` (or ``approval_decisions``) means
-    the event-source model was abandoned — fail loudly so the docblock +
-    this contract get re-reviewed in lock-step (not silently superseded).
+def test_the_a11_surface_is_gone():
+    """Presenter, template and verb routes are retired — not half-retired.
+
+    A dead nav entry or a routed-but-presenterless verb is worse than either
+    state alone: the operator meets a control that 500s or silently no-ops.
     """
+    assert not RETIRED_PRESENTER.exists(), (
+        "ApprovalsPresenter.php is back. Approvals are kind='approval' "
+        "questions answered on /inbox; a second decision surface reintroduces "
+        "the append-only race this file's docblock records."
+    )
+    assert not RETIRED_TEMPLATE_DIR.exists(), (
+        "Templates/Approvals/ is back without its presenter — a template "
+        "nothing renders, or a resurrected surface. Neither is intended."
+    )
+    router_code = _code_only_php(ROUTER.read_text())
+    verb_routes = re.findall(r"addRoute\('approvals/[^']*'", router_code)
+    assert not verb_routes, (
+        f"RouterFactory still routes A11 verb forms: {verb_routes} — these "
+        "targeted ApprovalsPresenter::actionApprove/actionReject, which no "
+        "longer exist."
+    )
+
+
+def test_the_legacy_url_lands_on_the_successor():
+    """/approvals redirects to /inbox rather than 404ing. Bookmarks and
+    muscle memory learn the successor; a 404 teaches nothing."""
+    router_code = _code_only_php(ROUTER.read_text())
+    assert re.search(r"addRoute\('approvals',\s*'Inbox:approvals'\)", router_code), (
+        "the bare 'approvals' route no longer lands on Inbox:approvals — "
+        "either restore the redirect route or update this gate alongside a "
+        "deliberate decision to 404."
+    )
+    inbox = _code_only_php((APP / "Presenters" / "InboxPresenter.php").read_text())
+    m = re.search(
+        r"public function actionApprovals\(\)\s*:\s*void\s*\{(.*?)\n\t\}",
+        inbox, re.DOTALL,
+    )
+    assert m and "redirectPermanent" in m.group(1), (
+        "InboxPresenter::actionApprovals() does not permanently redirect to "
+        "the inbox — the legacy URL must answer with the successor, not 404."
+    )
+
+
+def test_still_no_second_approval_store_in_schema():
+    """Carried forward from the original gate, strengthened: the RESOLUTION
+    lives in agent_questions and nowhere else. A second store means two
+    places can disagree about whether something is decided."""
     sql = _schema_sql()
     for table in ("approval_requests", "approval_decisions", "agent_approvals"):
         assert not re.search(
@@ -59,73 +111,65 @@ def test_no_dedicated_approval_table_in_schema():
             sql, re.IGNORECASE,
         ), (
             f"A dedicated `{table}` table appeared in the Wing schema. The "
-            f"approval queue was DEFERRED to the event-backed model on purpose "
-            f"(events = single source of truth for audit). Un-deferring it "
-            f"requires re-reviewing ApprovalsPresenter's docblock + this gate "
-            f"together — update both, then adjust this assertion."
+            f"resolution store is agent_questions (kind='approval'); a second "
+            f"store reintroduces the drift the A11 gate was protecting against."
         )
-
-
-def test_read_path_uses_event_repository_not_raw_sql():
-    """The presenter must query the approval queue via EventRepository, not
-    by reaching into the DB with raw SQL. This is what makes the event store
-    the single canonical read surface (and keeps audit semantics uniform)."""
-    src = PRESENTER.read_text()
-    assert "listPendingApprovals" in src and "listRecentDecisions" in src, (
-        "ApprovalsPresenter no longer reads through "
-        "EventRepository::listPendingApprovals / listRecentDecisions — the "
-        "event-backed read contract has drifted."
-    )
-    # No raw query against an approval-specific table from inside the presenter.
-    assert not re.search(
-        r"->query\(|->table\(\s*['\"]approval", src, re.IGNORECASE
+    assert re.search(
+        r"create\s+table\s+(if\s+not\s+exists\s+)?[\"`']?agent_questions\b",
+        sql, re.IGNORECASE,
     ), (
-        "ApprovalsPresenter reaches the DB with raw SQL / an approval table — "
-        "the read path must go through EventRepository (events source-of-truth)."
+        "agent_questions vanished from the schema — the resolution store is "
+        "gone while this gate still certifies it."
     )
 
 
-def test_event_repository_pairs_request_with_decision_on_actor_action_id():
-    """The event-source model relies on request/decision rows being paired by
-    actor_action_id (a pending request = a request event with no matching
-    decision event). Pin both event types + the pairing column so a refactor
-    can't quietly break the 'pending = undecided' definition."""
-    src = EVENT_REPO.read_text()
-    assert "agent_approval_request" in src and "agent_approval_decision" in src, (
-        "EventRepository no longer references both approval event types — "
-        "the event-backed pairing model is gone."
+def test_the_approval_event_types_survive_and_have_one_writer():
+    """The lineage keeps A11's vocabulary — and exactly one code path writes
+    the decision event: AgentQuestionRepository, on the winning UPDATE.
+
+    Comment-stripped, so a docblock recalling A11 cannot satisfy (or trip)
+    this. EventRepository may carry the literals only in its VALID_TYPES
+    registry; no presenter may emit a decision on its own.
+    """
+    repo_code = _code_only_php(REPOSITORY.read_text())
+    assert "'agent_approval_request'" in repo_code, (
+        "AgentQuestionRepository no longer emits agent_approval_request for "
+        "kind='approval' asks — audit queries keyed on A11's types break."
     )
-    m = re.search(
-        r"public function listPendingApprovals\([^)]*\)\s*:\s*array\s*\{(.+?)\n\t\}",
-        src, re.DOTALL,
+    assert "'agent_approval_decision'" in repo_code, (
+        "AgentQuestionRepository no longer emits agent_approval_decision on "
+        "the winning answer — the lineage loses the decision."
     )
-    assert m, "listPendingApprovals body not parseable"
-    body = m.group(1)
-    assert "actor_action_id" in body, (
-        "listPendingApprovals no longer pairs request/decision on "
-        "actor_action_id — pending-detection is broken."
+
+    writers = []
+    for php in APP.rglob("*.php"):
+        if php == REPOSITORY or php == EVENT_REPO:
+            continue
+        code = _code_only_php(php.read_text(encoding="utf-8"))
+        if "agent_approval_decision" in code:
+            writers.append(str(php.relative_to(REPO_ROOT)))
+    assert not writers, (
+        f"agent_approval_decision appears in code outside AgentQuestionRepository "
+        f"/ EventRepository's registry: {writers}. The decision event must be "
+        f"emitted ONLY on the winning conditional UPDATE — a second writer is "
+        f"how approve+reject both got recorded under A11."
     )
 
 
-def test_presenter_documents_the_deferral_and_trigger():
-    """The deferral decision (no dedicated table) + its revisit trigger must
-    live in the presenter docblock, so a future maintainer reads WHY before
-    adding a side table. This is the human-facing half of the contract that
-    this gate enforces structurally."""
-    src = PRESENTER.read_text()
-    # Collapse the comment-prefix line wrapping (" * ") + whitespace so a
-    # phrase that the formatter split across lines still matches as prose.
-    prose = re.sub(r"\s*\*\s*", " ", src)
-    prose = re.sub(r"\s+", " ", prose)
-    assert "DEFERRED" in src and "approval_requests" in src, (
-        "ApprovalsPresenter docblock no longer records the DEFERRED "
-        "no-dedicated-table decision — restore the rationale + trigger."
-    )
-    assert "single source of truth" in prose, (
-        "ApprovalsPresenter docblock dropped the 'events = single source of "
-        "truth' rationale for the deferral."
-    )
-    assert "second agent" in prose.lower(), (
-        "ApprovalsPresenter docblock dropped the revisit trigger (a SECOND "
-        "agent that programmatically gates on approvals)."
-    )
+def test_the_decision_event_rides_the_winning_update():
+    """The emit sits inside the `$affected === 1` branch of answer() AND of
+    answerAsOperator() — never before the UPDATE, never unconditionally."""
+    code = _code_only_php(REPOSITORY.read_text())
+    for method in ("public function answer(", "public function answerAsOperator("):
+        start = code.find(method)
+        assert start != -1, f"{method} not found in AgentQuestionRepository"
+        # Body up to the next public method.
+        nxt = code.find("public function", start + len(method))
+        body = code[start : nxt if nxt != -1 else len(code)]
+        cond = body.find("$affected === 1")
+        emit = body.find("$this->emit(")
+        assert cond != -1 and emit != -1 and emit > cond, (
+            f"in {method} the decision emit does not follow the "
+            f"affected-row check — a losing (or failed) answer could emit a "
+            f"decision event, which is exactly the A11 defect."
+        )

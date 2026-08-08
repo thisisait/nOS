@@ -25,13 +25,20 @@ STYLE = REPO / "files/anatomy/wing/www/assets/style.css"
 
 
 def test_top_nav_carries_every_grouped_tab():
-    """The 13 active nav entries (12 always-visible + Admin gated) must
-    all be present in the layout's `.tabs` block."""
+    """The active nav entries (always-visible + Admin gated) must all be
+    present in the layout's `.tabs` block. (The Approvals tab left the roster
+    on 2026-08-08 with A11's retirement — approvals are answered on /inbox,
+    and a nav entry pointing at a redirect would be a button that lies.)"""
     src = LAYOUT.read_text()
     # Operate group
     assert 'href="/hub"' in src
     assert 'href="/inbox"' in src
-    assert 'href="/approvals"' in src
+    assert 'href="/approvals"' not in src, (
+        "the Approvals tab is back in the layout — /approvals has been a "
+        "redirect to /inbox since A11's retirement (2026-08-08); either the "
+        "surface was resurrected (see test_approval_queue_event_backed.py) "
+        "or this is a stale nav entry."
+    )
     # Insights group
     assert 'href="/dashboard"' in src
     assert 'href="/timeline"' in src

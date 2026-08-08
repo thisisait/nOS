@@ -39,7 +39,6 @@ WING = REPO / "files/anatomy/wing"
 QUESTIONS = WING / "app/Model/AgentQuestionRepository.php"
 EVENTS_PHP = WING / "app/Model/EventRepository.php"
 EVENTS_PY = REPO / "files/anatomy/bone/events.py"
-APPROVALS = WING / "app/Presenters/ApprovalsPresenter.php"
 
 ASK_TYPES = ("agent_question_asked", "agent_approval_request")
 ANSWER_TYPES = ("agent_question_answered", "agent_approval_decision")
@@ -205,18 +204,15 @@ def test_both_vocabularies_know_the_new_types():
 def test_the_a11_race_is_recorded_where_someone_will_find_it():
     """The defect that motivated the merge must not become folklore.
 
-    A11's decision path is still append-only and its writer still discards the
-    HTTP result. Until that presenter is retired or repaired, the reasoning has
-    to live somewhere a maintainer will actually meet it.
+    2026-08-08: ApprovalsPresenter was retired (this test's second assertion
+    said, in its own message, to delete it when that happened — done; the
+    retirement is pinned by test_approval_queue_event_backed.py). What must
+    survive the retirement is the REASONING: why a resolution table exists
+    beside an append-only log, recorded where a maintainer of the table will
+    meet it.
     """
     assert "resolve-once" in src() or "append-only" in src(), (
         "AgentQuestionRepository no longer explains why a resolution table "
         "exists beside an append-only log. Without it the table looks like the "
-        "duplicate the A11 gate forbids."
-    )
-    approvals = APPROVALS.read_text(encoding="utf-8")
-    assert "curl_exec($ch);" in approvals, (
-        "ApprovalsPresenter::postDecision changed — if the discarded result was "
-        "fixed, say so and delete this assertion; if the presenter was retired, "
-        "delete this test. Do not leave it asserting a fault that is gone."
+        "duplicate the A11 gate forbade."
     )

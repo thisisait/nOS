@@ -90,7 +90,11 @@ final class AdminPresenter extends BasePresenter
 
 	/**
 	 * Audit-write the halt / resume event via the canonical /api/v1/events
-	 * HMAC path -- same shape as ApprovalsPresenter::postDecision (A11).
+	 * HMAC path -- same shape as A11's ApprovalsPresenter::postDecision
+	 * (retired 2026-08-08; see git history). NOTE it inherits that shape's
+	 * two silent failure modes (empty-secret early return, discarded
+	 * curl_exec result) -- known debt, recorded in the A11 retirement
+	 * report rather than fixed here.
 	 * One write path keeps every audit row identical regardless of caller.
 	 */
 	private function postAuditEvent(string $type, array $result): void

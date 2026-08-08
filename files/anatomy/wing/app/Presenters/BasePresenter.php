@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Presenters;
 
+use App\Model\AgentQuestionRepository;
 use App\Model\AuditChainRepository;
-use App\Model\EventRepository;
 use App\Model\NotificationRepository;
 use Nette\Application\UI\Presenter;
 
@@ -21,7 +21,7 @@ abstract class BasePresenter extends Presenter
 	public NotificationRepository $notificationsForBadge;
 
 	/** @inject */
-	public EventRepository $eventsForBadge;
+	public AgentQuestionRepository $questionsForBadge;
 
 	/** @inject */
 	public AuditChainRepository $auditChainForBadge;
@@ -144,20 +144,22 @@ abstract class BasePresenter extends Presenter
 		// is empty on a fresh-bootstrap dev box.
 		$this->template->authentikDomain = getenv('AUTHENTIK_DOMAIN') ?: 'auth.dev.local';
 
-		// W4 (2026-05-17): live unread/pending counts for the Inbox +
-		// Approvals tab badges. Both repos are cheap to query (countUnread
-		// is a single COUNT(*); countPendingApprovals scans the pending
-		// queue capped at 200). Failures are swallowed — a missing DB
-		// shouldn't blow up every page render; the badges just hide.
+		// W4 (2026-05-17): live counts for the Inbox tab badges. Both repos
+		// are cheap to query (single COUNT(*) each). Failures are swallowed —
+		// a missing DB shouldn't blow up every page render; the badges just
+		// hide. A11 retired 2026-08-08: the second badge counts OPEN AGENT
+		// QUESTIONS (agent_questions, deadline-aware) instead of unpaired
+		// agent_approval_request events — an approval is now a
+		// kind='approval' question answered on /inbox.
 		try {
 			$this->template->unreadInboxCount = $this->notificationsForBadge->countUnread();
 		} catch (\Throwable) {
 			$this->template->unreadInboxCount = 0;
 		}
 		try {
-			$this->template->pendingApprovalsCount = $this->eventsForBadge->countPendingApprovals();
+			$this->template->openQuestionsCount = $this->questionsForBadge->countOpen();
 		} catch (\Throwable) {
-			$this->template->pendingApprovalsCount = 0;
+			$this->template->openQuestionsCount = 0;
 		}
 		// Audit-chain integrity badge — ONLY when the chain is enabled (strict
 		// '1' gate, matching EventRepository + bone/clients/wing.py). Reads the
@@ -250,8 +252,9 @@ abstract class BasePresenter extends Presenter
 
 	/**
 	 * Tier-1 super-admin gate. Used by AdminPresenter (big-red-button halt /
-	 * resume), ApprovalsPresenter (rubber-stamp queue for agent actions),
-	 * and AgentsPresenter (AgentKit runtime catalog).
+	 * resume) and AgentsPresenter (AgentKit runtime catalog). (A11's
+	 * ApprovalsPresenter used it too until its retirement on 2026-08-08 —
+	 * approvals are now questions gated by InboxPresenter's $minAccessTier.)
 	 *
 	 * Per the CLAUDE.md RBAC table, **Tier-1 = `nos-providers` OR
 	 * `nos-admins`** (both groups). Pre-2026-05-17 this gate only
@@ -287,7 +290,7 @@ abstract class BasePresenter extends Presenter
 	 * super-admin visiting a malicious page would have their session
 	 * cookie (Authentik's, SameSite=Lax by default) ride along on a
 	 * hidden auto-submitting form to https://wing.<tld>/admin/halt,
-	 * /users/invite-create, /approvals/approve/<id>, etc. — full RBAC
+	 * /users/invite-create, /inbox/answer/<uuid>, etc. — full RBAC
 	 * bypass via the operator's own browser.
 	 *
 	 * Templates emit the token as a hidden input named `_csrf` via the

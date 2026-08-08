@@ -47,7 +47,7 @@ final class AgentsPresenter extends BasePresenter
 
 	/**
 	 * Tier-1 RBAC gate (BasePresenter::requireSuperAdmin). Mirrors
-	 * AdminPresenter / ApprovalsPresenter — every action on this presenter
+	 * AdminPresenter (and A11's ApprovalsPresenter, retired 2026-08-08) — every action on this presenter
 	 * (read AND write) requires nos-providers membership. actionStart is
 	 * particularly sensitive: it forwards a server-side cURL with the
 	 * daemon's WING_API_TOKEN to the bearer-protected API endpoint, so a

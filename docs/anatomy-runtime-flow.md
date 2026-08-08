@@ -81,7 +81,8 @@ Two surfaces, gated by Traefik:
 
 - **Operator UI** (browser → `wing.<tld>`) — Authentik forward-auth.
   Tier-1 admin pages: `/state`, `/migrations`, `/upgrades`, `/coexistence`,
-  `/timeline`, `/audit`, `/inbox`, `/approvals`.
+  `/timeline`, `/audit`, `/inbox` (which also answers agent questions and
+  approvals — `/approvals` was retired into it 2026-08-08 and now redirects).
 - **REST API** (`http://127.0.0.1:9000/api/v1/...`) — Bearer token
   (per-actor row in `api_tokens`) for everything except
   `POST /api/v1/events`, which uses HMAC (callback plugin and conductor
@@ -326,7 +327,7 @@ the whole run as a coherent story.
 |---|---|---|
 | `conductor:self-test-001` Pulse cron | registered, `next_fire_at=null` | Variant A from the 2026-05-07 plan — daemon-driven ceremony. Manual B-variant proved the ceremony works; cron-driven proves Pulse triggers it. |
 | `EventRepository::VALID_TYPES` for `conductor.*` | not yet whitelisted | Conductor falls back to `task_ok` / `agent_run_end`. Cosmetic; full attribution preserved via `actor_id`. |
-| Wing `/approvals` UI | A8.c.2 stub presenter live, no rows handled | Once conductor reports findings to `/inbox`, operator needs `/approvals` to act. P1 this arc. |
+| Wing `/approvals` UI | RETIRED 2026-08-08 (never held a row live) | Approvals are `kind='approval'` questions in `agent_questions`, answered on `/inbox`; `/approvals` redirects there. The `agent_approval_*` event types survive. |
 | Bone CI lint forbidding direct sqlite3 | not enforced | P0.1 follow-up. The pattern is gone from the code; lint is the seal. |
 
 ## What's structurally complete

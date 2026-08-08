@@ -16,7 +16,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 ASSETS = REPO / "files/anatomy/wing/www/assets"
 LAYOUT = REPO / "files/anatomy/wing/app/Templates/@layout.latte"
 BASE_PRESENTER = REPO / "files/anatomy/wing/app/Presenters/BasePresenter.php"
-EVENT_REPO = REPO / "files/anatomy/wing/app/Model/EventRepository.php"
+QUESTION_REPO = REPO / "files/anatomy/wing/app/Model/AgentQuestionRepository.php"
 KEYBOARD_JS = ASSETS / "keyboard-nav.js"
 
 
@@ -24,12 +24,14 @@ KEYBOARD_JS = ASSETS / "keyboard-nav.js"
 
 
 def test_base_presenter_injects_count_repos():
-    """BasePresenter @inject's NotificationRepository + EventRepository
-    so every subclass gets badge counts for free (no constructor edits)."""
+    """BasePresenter @inject's NotificationRepository + AgentQuestionRepository
+    so every subclass gets badge counts for free (no constructor edits).
+    (A11 retired 2026-08-08: the approvals badge — EventRepository — became
+    the open-questions badge.)"""
     src = BASE_PRESENTER.read_text()
     assert "@inject" in src
     assert "NotificationRepository" in src
-    assert "EventRepository" in src
+    assert "AgentQuestionRepository" in src
 
 
 def test_base_presenter_populates_badge_counts():
@@ -38,18 +40,25 @@ def test_base_presenter_populates_badge_counts():
     blowing up the entire page render."""
     src = BASE_PRESENTER.read_text()
     assert "unreadInboxCount" in src
-    assert "pendingApprovalsCount" in src
+    assert "openQuestionsCount" in src
     assert "countUnread()" in src
-    assert "countPendingApprovals()" in src
+    assert "countOpen()" in src
     # Defensive try/catch — a missing repo at request time shouldn't 500.
     assert "Throwable" in src
 
 
-def test_event_repository_exposes_countPendingApprovals():
-    """W4 added a count-only helper so the badge query doesn't pay the
-    cost of loading + iterating the full pending-list."""
-    src = EVENT_REPO.read_text()
-    assert "function countPendingApprovals" in src
+def test_question_repository_exposes_countOpen():
+    """The badge needs a count-only helper (W4 pattern) that mirrors
+    listOpen()'s deadline exclusion, so the number on the tab can never
+    disagree with the rows on the page."""
+    src = QUESTION_REPO.read_text()
+    assert "function countOpen" in src
+    body = src[src.find("function countOpen"):]
+    body = body[: body.find("\n\t}")]
+    assert "expires_at IS NULL OR expires_at >" in body, (
+        "countOpen() no longer excludes past-deadline questions — the badge "
+        "would count rows the page refuses to show."
+    )
 
 
 def test_layout_renders_badges_conditionally():
@@ -57,11 +66,11 @@ def test_layout_renders_badges_conditionally():
     {if} guard) so a quiet inbox doesn't show a stale '0' bubble."""
     src = LAYOUT.read_text()
     assert "$unreadInboxCount" in src
-    assert "$pendingApprovalsCount" in src
+    assert "$openQuestionsCount" in src
     assert 'class="tab-count"' in src
     # Both badges are inside {if ... > 0} guards.
     assert "$unreadInboxCount ?? 0) > 0" in src
-    assert "$pendingApprovalsCount ?? 0) > 0" in src
+    assert "$openQuestionsCount ?? 0) > 0" in src
 
 
 # ── Keyboard nav ───────────────────────────────────────────────────────

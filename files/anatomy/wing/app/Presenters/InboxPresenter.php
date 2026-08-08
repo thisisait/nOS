@@ -90,6 +90,17 @@ final class InboxPresenter extends BasePresenter
 		$this->template->questions = $this->questions->listOpen();
 	}
 
+	/**
+	 * Legacy /approvals → /inbox (A11 retired 2026-08-08). Permanent, so
+	 * anything still holding the old URL learns the successor. The tier gate
+	 * runs first (startup()), which matches A11's requireSuperAdmin: a caller
+	 * who could not see /approvals cannot use this redirect to probe /inbox.
+	 */
+	public function actionApprovals(): void
+	{
+		$this->redirectPermanent('Inbox:default');
+	}
+
 	public function actionMarkRead(string $uuid): void
 	{
 		$this->requirePostMethod();

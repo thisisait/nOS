@@ -207,7 +207,7 @@ final class RouterFactory
 		// GDPR browser route (Track D, 2026-04-26)
 		$router->addRoute('gdpr', 'Gdpr:default');
 
-		// Conductor inbox + approvals (Anatomy A8.c, 2026-05-07)
+		// Conductor inbox (Anatomy A8.c, 2026-05-07)
 		//
 		// THE TWO VERB ROUTES BELOW WERE MISSING UNTIL 2026-08-08, and the
 		// consequence was silent: Nette renders an unroutable {plink} as `#`,
@@ -219,18 +219,19 @@ final class RouterFactory
 		// Found while adding `Inbox:answer`, which would have inherited exactly
 		// the same fate: an Approve button that posts nowhere is worse than no
 		// button, because the operator believes they decided. Same
-		// specific-before-catch-all ordering as the approvals routes below.
+		// specific-before-catch-all ordering as everywhere else in this file.
 		$router->addRoute('inbox/mark-read/<uuid>', 'Inbox:markRead');
 		$router->addRoute('inbox/answer/<uuid>', 'Inbox:answer');
 		$router->addRoute('inbox', 'Inbox:default');
-		// A11 (2026-05-07): operator clicks Approve/Reject in /approvals.
-		// Each maps to ApprovalsPresenter::actionApprove / actionReject($actionId)
-		// which posts an agent_approval_decision event and redirects back.
-		// Specific routes BEFORE the catch-all `approvals` so the matcher
-		// hits the parameterized form first.
-		$router->addRoute('approvals/approve/<actionId>', 'Approvals:approve');
-		$router->addRoute('approvals/reject/<actionId>', 'Approvals:reject');
-		$router->addRoute('approvals', 'Approvals:default');
+		// A11 RETIRED (2026-08-08): an approval is a kind='approval' question
+		// — resolution in agent_questions (resolve-once conditional UPDATE),
+		// lineage keeps the agent_approval_* event types, buttons on /inbox.
+		// The bare URL survives as a permanent redirect so bookmarks and
+		// muscle memory learn the successor; the approve/reject verb routes
+		// died with ApprovalsPresenter (whose decision path could lose a
+		// decision two silent ways: empty-secret early return + discarded
+		// curl result). Pinned by test_approval_queue_event_backed.py.
+		$router->addRoute('approvals', 'Inbox:approvals');
 
 		// A10.c / X.1.c (2026-05-08): actor-attributed event browser.
 		// Phase 5 ceremony pass criterion uses this view to verify the

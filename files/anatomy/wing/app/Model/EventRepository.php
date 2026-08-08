@@ -31,17 +31,19 @@ final class EventRepository
 		// falls back to `task_ok` and loses semantic clarity in the audit
 		// trail (caught during the 2026-05-07 first ceremony).
 		'conductor_self_test_step', 'conductor_report',
-		// Agent approval workflow (A11 — /approvals UI, 2026-05-07).
-		//   agent_approval_request   — agent posts before high-blast-radius action
-		//   agent_approval_decision  — operator clicks Approve / Reject in /approvals
-		// Both share `actor_action_id` so a request + its decision pair via
-		// `WHERE actor_action_id=?`. Decision payload carries
-		// `result_json: {verdict: "approve"|"reject", operator_username, note}`.
+		// Agent approval workflow (A11 2026-05-07; A11's /approvals UI retired
+		// 2026-08-08 — the event TYPES survive it).
+		//   agent_approval_request   — AgentQuestionRepository::ask(kind='approval')
+		//   agent_approval_decision  — emitted ONLY on the winning conditional
+		//                              UPDATE in AgentQuestionRepository
+		// Both share `actor_action_id` (the question uuid) so a request + its
+		// decision pair via `WHERE actor_action_id=?`. Decision payload carries
+		// `result_json: {verdict, operator_username, via, waited_seconds}`.
 		'agent_approval_request', 'agent_approval_decision',
 		// agents-inbox (2026-08-08): an agent asks, the run suspends, the answer
 		// may arrive from any channel. An APPROVAL keeps the two types above —
-		// same surface, different shape of answer — so /approvals and every
-		// audit query keyed on them keep working while the surfaces converge.
+		// same surface, different shape of answer — so every audit query keyed
+		// on them keeps working across the A11 retirement.
 		// These two carry the rest: free-text questions and choices.
 		//   agent_question_asked     — AgentQuestionRepository::ask()
 		//   agent_question_answered  — emitted ONLY on the winning conditional
@@ -316,105 +318,14 @@ final class EventRepository
 		return ['items' => $items, 'total' => $total];
 	}
 
-	/**
-	 * List `agent_approval_request` events that have NOT yet been paired
-	 * with an `agent_approval_decision` row (matched by actor_action_id).
-	 * Newest first. Used by the /approvals UI (A11, 2026-05-07).
-	 *
-	 * @return array<int, array<string, mixed>>
-	 */
-	public function listPendingApprovals(int $limit = 50): array
-	{
-		$limit = max(1, min(200, $limit));
-		// Subquery: actor_action_id values that already have a decision.
-		$decided = $this->db->table('events')
-			->where('type', 'agent_approval_decision')
-			->select('actor_action_id');
-		$decidedIds = [];
-		foreach ($decided->fetchAll() as $row) {
-			$decidedIds[$row->actor_action_id] = true;
-		}
-
-		$rows = [];
-		foreach (
-			$this->db->table('events')
-				->where('type', 'agent_approval_request')
-				->order('id DESC')
-				->limit($limit)
-				->fetchAll() as $row
-		) {
-			if (isset($decidedIds[$row->actor_action_id])) {
-				continue;
-			}
-			$item = $row->toArray();
-			if (!empty($item['result_json'])) {
-				$item['result'] = json_decode($item['result_json'], true);
-			}
-			$rows[] = $item;
-		}
-		return $rows;
-	}
-
-	/**
-	 * Count requests that haven't been decided yet. Cheaper than
-	 * listPendingApprovals when the caller only needs a badge number
-	 * (used by BasePresenter to populate the Approvals tab count).
-	 *
-	 * Capped at the same 200 limit as listPendingApprovals so a runaway
-	 * pending queue can't make the per-request render cost unbounded —
-	 * 200+ is "many" either way.
-	 */
-	public function countPendingApprovals(): int
-	{
-		$decidedIds = [];
-		foreach (
-			$this->db->table('events')
-				->where('type', 'agent_approval_decision')
-				->select('actor_action_id')
-				->fetchAll() as $row
-		) {
-			$decidedIds[$row->actor_action_id] = true;
-		}
-		$count = 0;
-		foreach (
-			$this->db->table('events')
-				->where('type', 'agent_approval_request')
-				->order('id DESC')
-				->limit(200)
-				->fetchAll() as $row
-		) {
-			if (!isset($decidedIds[$row->actor_action_id])) {
-				$count++;
-			}
-		}
-		return $count;
-	}
-
-	/**
-	 * Recent decisions (last N), newest first. For the /approvals history
-	 * panel beneath the pending queue.
-	 *
-	 * @return array<int, array<string, mixed>>
-	 */
-	public function listRecentDecisions(int $limit = 20): array
-	{
-		$limit = max(1, min(100, $limit));
-		$rows = [];
-		foreach (
-			$this->db->table('events')
-				->where('type', 'agent_approval_decision')
-				->order('id DESC')
-				->limit($limit)
-				->fetchAll() as $row
-		) {
-			$item = $row->toArray();
-			if (!empty($item['result_json'])) {
-				$item['result'] = json_decode($item['result_json'], true);
-			}
-			$rows[] = $item;
-		}
-		return $rows;
-	}
+	// A11's three approval readers (listPendingApprovals /
+	// countPendingApprovals / listRecentDecisions) were deleted with the
+	// /approvals surface on 2026-08-08. "Pending" is a RESOLUTION question and
+	// the event log structurally cannot answer it race-free — two operators
+	// deciding in the same instant both append, and a reader that filters on
+	// merely HAVING a decision calls approve+reject "decided". The open set
+	// now comes from agent_questions (AgentQuestionRepository::listOpen /
+	// countOpen); the lineage here remains the audit trail.
 
 	/**
 	 * All events tied to a migration_id (chronological).
