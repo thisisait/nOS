@@ -111,7 +111,7 @@ function fetch_pending(SQLite3 $db, string $channel, int $limit): array
 	$digestExclusion = $channel === 'mail' ? ' AND mail_digest_window IS NULL' : '';
 	$stmt = $db->prepare("
 		SELECT id, uuid, severity, title, body, channels_json, metadata_json,
-		       actor_id, origin_plugin, origin_agent, created_at
+		       actor_id, target_actor_id, origin_plugin, origin_agent, created_at
 		  FROM notifications
 		 WHERE {$col} IS NULL
 		   AND channels_json LIKE :pattern{$digestExclusion}
@@ -194,7 +194,7 @@ function fetch_digest_queue(SQLite3 $db, int $limit = 500): array
 {
 	$stmt = $db->prepare("
 		SELECT id, uuid, severity, title, body, channels_json, metadata_json,
-		       actor_id, origin_plugin, origin_agent, created_at, mail_digest_window
+		       actor_id, target_actor_id, origin_plugin, origin_agent, created_at, mail_digest_window
 		  FROM notifications
 		 WHERE mail_digest_window IS NOT NULL
 		   AND mail_dispatched_at IS NULL
@@ -301,9 +301,42 @@ function deliver_mail_digest(array $rows, string $host, int $port, string $from,
  * become the ntfy headers/body. Returns null on success, error string on
  * failure.
  */
+/**
+ * Which ntfy topic carries a notification, given who it is FOR.
+ *
+ * `notifications.target_actor_id` has been a real, defaulted, filterable column
+ * since A9 — and until 2026-08-08 no transport read it. Mail went to one fixed
+ * address and ntfy keyed the topic by SEVERITY, so a notification addressed to
+ * `agent:librarian` was delivered, silently, to the operator: the intended
+ * reader never saw it and the operator received someone else's post. An address
+ * field that invites a mistake and reports nothing is worse than no field.
+ *
+ * The scheme is convention, not configuration:
+ *
+ *   operator          nos-<severity>      unchanged — the phone's existing
+ *                                         subscription keeps working, and
+ *                                         severity remains the volume control
+ *   anything else     nos-<slug(actor)>   `agent:librarian` -> nos-agent-librarian
+ *
+ * A per-actor topic is readable by anything that can read that topic, so the
+ * pointer-not-payload rule applies here MORE sharply than to operator alerts:
+ * agent-to-agent traffic is likelier to carry operational detail.
+ */
+function ntfy_topic_for(array $row): string
+{
+	$target = trim((string) ($row['target_actor_id'] ?? 'operator'));
+	if ($target === '' || $target === 'operator') {
+		return 'nos-' . strtolower((string) $row['severity']);
+	}
+	// ntfy topics are [A-Za-z0-9_-]; `agent:librarian` must survive as something
+	// stable and readable, because a human subscribes to it by typing it.
+	$slug = strtolower(preg_replace('/[^A-Za-z0-9]+/', '-', $target) ?? '');
+	return 'nos-' . trim($slug, '-');
+}
+
 function deliver_ntfy(array $row, string $baseUrl): ?string
 {
-	$topic = 'nos-' . strtolower($row['severity']);
+	$topic = ntfy_topic_for($row);
 	$url = rtrim($baseUrl, '/') . '/' . rawurlencode($topic);
 
 	$priority = match (strtolower($row['severity'])) {
@@ -479,6 +512,24 @@ function deliver_mail(array $row, string $host, int $port, string $from, string 
 	if ($recipient === '') {
 		return 'MAIL_RECIPIENT env var is empty';
 	}
+
+	// WHO IS THIS FOR? `$recipient` is one address for the whole estate. Before
+	// 2026-08-08 it received EVERY notification regardless of
+	// `target_actor_id`, so mail addressed to an agent quietly became mail to
+	// the operator: wrong reader, and the sender never told.
+	//
+	// There is no actor->address map yet, and inventing one here would be worse
+	// than the gap — it would encode routes nobody has decided. So an
+	// unroutable target FAILS, per row and in writing. The row keeps its NULL
+	// mail_dispatched_at, retries to the attempt budget, and is finally stamped
+	// carrying this reason: visibly undelivered. Falling back to the operator
+	// IS the defect and must not be the fix.
+	$target = trim((string) ($row['target_actor_id'] ?? 'operator'));
+	if ($target !== '' && $target !== 'operator') {
+		return "no mail route for target_actor_id '{$target}' — the operator "
+			. 'address is not a fallback (docs/idea/14-notification-spine.md §4)';
+	}
+
 	$sockOrErr = _smtp_open_session($host, $port, $mailTlsMode, $mailUsername, $mailPassword, $mailTlsVerify);
 	if (is_string($sockOrErr)) {
 		return $sockOrErr;
