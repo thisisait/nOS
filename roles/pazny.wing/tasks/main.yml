@@ -364,6 +364,8 @@
   notify: Restart wing
 
 - name: "[pazny.wing] Render launchd plist"
+  register: _wing_plist        # consumed by the bootstrap task below: a CHANGED
+                               # plist needs bootout+bootstrap, not kickstart.
   ansible.builtin.template:
     src: wing.plist.j2
     dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ wing_launchd_label }}.plist"
@@ -409,6 +411,22 @@
 # job is registered; if so, kickstart -k for graceful restart on plist change.
 # Otherwise, bootstrap the agent into the user's launchd domain.
 #
+# THE LINE ABOVE WAS FALSE ABOUT THE PART THAT MATTERS (fixed 2026-08-08).
+# `kickstart -k` restarts the PROCESS and reuses the job definition launchd
+# already holds in memory. A changed `EnvironmentVariables` block in the plist
+# file is NOT re-read. Only bootout + bootstrap reloads it.
+#
+# Measured, end to end: the converge rendered WING_PUBLIC_URL into the plist,
+# Wing restarted (runs=3) — and `launchctl print gui/501/…wing` still showed no
+# such variable, so `click_url` came out NULL on a live question notification
+# and the phone got an alert with no link. The file was right, the process never
+# saw it. Exactly the ntfy defect from the same morning, one layer up.
+#
+# Cost of getting this wrong is silent and open-ended: EVERY new secret or
+# setting added to a host daemon's plist takes effect only at the next reboot
+# or manual bootout. Bone and Pulse carry the same pattern and the same bug —
+# pinned for all three by test_a_plist_change_is_actually_loaded.py.
+#
 # A17 (2026-05-20) hardening: post-bootstrap health probe with fail-loud
 # diagnostic. Pre-A17 the bootstrap was `failed_when: false` so a
 # plist syntax error / port conflict / missing dep silently left the
@@ -422,9 +440,18 @@
   ansible.builtin.shell: |
     PLIST=~/Library/LaunchAgents/{{ wing_launchd_label }}.plist
     UID_NUM=$(id -u)
+    PLIST_CHANGED={{ 'yes' if (_wing_plist is defined and _wing_plist is changed) else 'no' }}
     if launchctl print "gui/${UID_NUM}/{{ wing_launchd_label }}" >/dev/null 2>&1; then
-      launchctl kickstart -k "gui/${UID_NUM}/{{ wing_launchd_label }}"
-      echo "already-loaded"
+      if [ "$PLIST_CHANGED" = "yes" ]; then
+        # RELOAD, not restart: kickstart keeps the in-memory job definition, so
+        # a new EnvironmentVariables entry would never reach the process.
+        launchctl bootout "gui/${UID_NUM}/{{ wing_launchd_label }}" 2>/dev/null || true
+        launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
+        echo "reloaded"
+      else
+        launchctl kickstart -k "gui/${UID_NUM}/{{ wing_launchd_label }}"
+        echo "already-loaded"
+      fi
     else
       launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
       echo "bootstrapped"
@@ -432,7 +459,9 @@
   register: _wing_launchd_bootstrap
   # Same idempotence signal as pazny.bone: changed only on a real bootstrap.
   # A steady-state re-run kickstarts (graceful restart) but is changed=0.
-  changed_when: "'bootstrapped' in _wing_launchd_bootstrap.stdout"
+  changed_when: >-
+    'bootstrapped' in _wing_launchd_bootstrap.stdout
+    or 'reloaded' in _wing_launchd_bootstrap.stdout
   failed_when: false
   when: (nos_service_manager | default('launchd')) == 'launchd'
 

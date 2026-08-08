@@ -103,6 +103,7 @@
 
 # ---- macOS: launchd ----
 - name: "[pazny.pulse] Render launchd plist"
+  register: _pulse_plist
   ansible.builtin.template:
     src: pulse.plist.j2
     dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ pulse_launchd_label }}.plist"
@@ -117,14 +118,28 @@
     set -e
     PLIST=~/Library/LaunchAgents/{{ pulse_launchd_label }}.plist
     UID_NUM=$(id -u)
+    # A CHANGED plist needs bootout+bootstrap. launchctl holds the job
+    # definition in memory; a loaded job simply never re-reads the file, so a
+    # new EnvironmentVariables entry reaches the process at the next REBOOT and
+    # not before. Measured on Wing 2026-08-08: plist had WING_PUBLIC_URL, the
+    # running process did not, and a live notification lost its link.
+    PLIST_CHANGED={{ 'yes' if (_pulse_plist is defined and _pulse_plist is changed) else 'no' }}
     if launchctl print "gui/${UID_NUM}/{{ pulse_launchd_label }}" >/dev/null 2>&1; then
-      echo "already-loaded"
+      if [ "$PLIST_CHANGED" = "yes" ]; then
+        launchctl bootout "gui/${UID_NUM}/{{ pulse_launchd_label }}" 2>/dev/null || true
+        launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
+        echo "reloaded"
+      else
+        echo "already-loaded"
+      fi
     else
       launchctl bootstrap gui/${UID_NUM} "$PLIST"
       echo "bootstrapped"
     fi
   register: _pulse_bootstrap
-  changed_when: "'bootstrapped' in _pulse_bootstrap.stdout"
+  changed_when: >-
+    'bootstrapped' in _pulse_bootstrap.stdout
+    or 'reloaded' in _pulse_bootstrap.stdout
   when: (nos_service_manager | default('launchd')) == 'launchd'
 
 # ---- Linux: systemd --user (env mirrors pulse.plist.j2) ----
