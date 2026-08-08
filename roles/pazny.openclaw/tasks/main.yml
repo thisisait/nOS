@@ -12,6 +12,56 @@
     state: latest
   when: nos_pkg_manager == 'homebrew'
 
+# `state: latest` upgrades to the latest of WHICHEVER FORMULA WINS THE NAME, and
+# a third-party tap outranks homebrew/core. On this host `pazny/local` has done
+# exactly that since June, so "latest" meant 0.30.7 while core moved to 0.32.6 —
+# for weeks, with every run reporting changed=false and success.
+#
+# So the landed binary is read back against the pin, the same way
+# `frankenphp_version` is (roles/pazny.wing/tasks/main.yml). The shadowing tap is
+# named in the failure because that is the part nobody could see: it is not in
+# `homebrew_taps`, so nothing in this repository knows it exists.
+- name: "[Ollama] Read the landed ollama version"
+  ansible.builtin.command: ollama --version
+  register: _ollama_ver
+  changed_when: false
+  failed_when: false
+  when: nos_pkg_manager == 'homebrew'
+
+- name: "[Ollama] Find any tap shadowing homebrew/core/ollama"
+  ansible.builtin.shell: |
+    set -o pipefail
+    brew info ollama 2>&1 | grep -o 'shadows homebrew/core/ollama' || true
+  args:
+    executable: /bin/bash
+  register: _ollama_shadow
+  changed_when: false
+  failed_when: false
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - ollama_version | default('') | length > 0
+    - ollama_version not in (_ollama_ver.stdout | default(''))
+
+- name: "[Ollama] Refuse on ollama version mismatch"
+  ansible.builtin.fail:
+    msg: |
+      ollama did not report the pinned version {{ ollama_version }}
+      (rc={{ _ollama_ver.rc | default('?') }}).
+        Reported: {{ _ollama_ver.stdout | default('(none)') | trim }}
+      {% if 'shadows' in (_ollama_shadow.stdout | default('')) %}
+        CAUSE: a third-party tap outranks homebrew/core for the name `ollama`,
+        so `state: latest` has been upgrading within that tap. Check `brew tap`.
+        Fix (one operator action — models in {{ ollama_models_dir }} survive it):
+          brew uninstall ollama && brew untap pazny/local && brew install ollama
+      {% else %}
+        `brew upgrade ollama`, then re-pin ollama_version in default.config.yml
+        if upstream has moved past it.
+      {% endif %}
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - ollama_version | default('') | length > 0
+    - ollama_version not in (_ollama_ver.stdout | default(''))
+
 - name: "[Ollama] Ensure models directory exists (persistent across --blank)"
   ansible.builtin.file:
     path: "{{ ollama_models_dir }}"

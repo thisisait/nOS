@@ -1,0 +1,102 @@
+# =============================================================================
+# state/local-model-bench.yml — the task set `tools/local-model-bench.py` runs
+# against every candidate local model.
+#
+# WHY THESE TASKS AND NOT A LEADERBOARD. We do not need to know which model is
+# best at maths. We need to know which model can emit a cortex-lang chain that
+# `POST /agent/v1/validate` accepts — because that is the one thing the estate
+# will actually ask a small local model to do, and because CODE CAN SCORE IT.
+#
+# That is the whole argument for going small. A model writing free prose needs a
+# large model to judge it. A model emitting a typed pipeline IR is judged by a
+# parser: `valid: true` or not, `unknown_opcode` or not. The roadmap row
+# `local-llm-corpus` states it plainly — "the opcode registry and the validator
+# are a free oracle" — and an oracle that costs nothing is what makes a 4B
+# candidate worth measuring instead of assuming a 32B.
+#
+# TOKEN COUNTS ARE PART OF THE SCORE, not a footnote. Ollama returns
+# `prompt_eval_count` and `eval_count` per request, so "how many tokens did it
+# burn to get there" is measured, not estimated. That is the axis BottleCap AI's
+# ThinkingCap-Qwen3.6-27B competes on — Apache-2.0, a Qwen3.6-27B finetune
+# claiming ~46% fewer thinking tokens at equal accuracy — and it is an axis a
+# 36 GB box with 63 containers on it cares about more than raw capability.
+#
+# HOW A TASK IS SCORED
+#   valid     the emitted chain passes KEAP's validator          (hard pass/fail)
+#   opcode    the chain uses the opcode the task asked for       (did it understand?)
+#   tokens    prompt_eval_count + eval_count                     (what it cost)
+#   seconds   wall clock, first token to last                    (what you wait)
+#
+# `valid` without `opcode` is the interesting failure: syntactically perfect and
+# not what was asked. It is the same defect class as everything else in this
+# repo — something that passes its checker while being wrong — which is why the
+# expectation is recorded per task rather than left to a reader.
+# =============================================================================
+
+# Prepended to every task. Deliberately short: a prompt that teaches the whole
+# grammar would measure the prompt, not the model.
+system: |
+  You emit cortex-lang, a pipeline IR. Answer with ONE line and nothing else —
+  no explanation, no markdown fence.
+
+  Grammar:  @input | opcode(namespace:operand, ?param=value) | opcode(...)
+  Opcodes:  get map filter rank classify resolve embed        (read-only)
+            link insert update delete preserve route review   (mutating)
+  Namespaces: tax (taxonomy) rel (relations) kg ent db svc doc
+  A mutating opcode should carry ?commit=true when the user asked to change
+  something for real.
+
+  Example — "rank the taxonomy nodes under 03":
+  @input | map(tax:03) | rank()
+
+# WHY THERE IS EXACTLY ONE EXAMPLE, MEASURED (2026-08-08).
+#
+# The first version had none, on the reasoning that a prompt teaching the whole
+# grammar measures the prompt rather than the model. hermes3:8b scored 0/6 — and
+# every single failure was `syntax_error` on shapes that were otherwise right:
+#
+#     @input | get tax:02.02 | rank        <- the pipeline, minus the parentheses
+#
+# Adding this one line, nothing else, on the same model:
+#
+#     0/6 valid, 905 tokens, 13s   ->   2/6 valid, 1015 tokens, 3s
+#
+# So zero-shot was measuring whether the model could guess punctuation, which is
+# not the capability anyone wants to buy. One example is the floor at which the
+# question becomes "did it pick the right opcode" — the thing actually worth
+# knowing, and the thing a 4B might do as well as a 32B.
+#
+# 2/6 is still poor, and the interesting part is WHY it is not worse: three of
+# the four failures are punctuation again, not comprehension. cortex-lang is a
+# formal grammar, and llama.cpp's `llama-server` supports GBNF grammar-
+# constrained decoding — which makes a syntax error impossible rather than
+# merely rarer. homebrew-core's ollama 0.32.6 ships that binary (verified), so
+# the upgrade and the small-model direction are one thread, not two.
+
+tasks:
+  - id: map-taxonomy
+    prompt: "Take the input and map it onto taxonomy node 01."
+    expect_opcode: map
+
+  - id: rank-results
+    prompt: "Take the input, map it onto taxonomy node 02.02, then rank it."
+    expect_opcode: rank
+
+  - id: insert-partner
+    prompt: "Založ nového obchodního partnera v databázi business-partners. Opravdu ulož."
+    expect_opcode: insert
+
+  - id: classify-input
+    prompt: "Classify the input against the taxonomy."
+    expect_opcode: classify
+
+  - id: filter-then-embed
+    prompt: "Filter the input by taxonomy node 11.01 and then embed the result."
+    expect_opcode: embed
+
+  # The refusal case. `kg:` is constant-rejected by KEAP — a model that emits it
+  # anyway is guessing from the namespace list rather than reasoning about it.
+  # Scored the same way as the rest: the validator decides, not us.
+  - id: kg-trap
+    prompt: "Get the knowledge-graph object for the input."
+    expect_opcode: get

@@ -1030,6 +1030,34 @@ ollama_num_parallel: 2         # Max parallel inference requests
 ollama_keep_alive: "5m"        # Release model from RAM after idle (default 5m, 0 = immediate)
 ollama_flash_attention: 1      # Flash attention for MLX (faster, less memory)
 
+# THE PIN THAT DID NOT EXIST, AND WHAT ITS ABSENCE COST (added 2026-08-08).
+#
+# `roles/pazny.openclaw` installs ollama with `state: latest` and nothing has
+# ever declared WHICH ollama the estate wants. That is fine right up until a
+# formula of the same name outranks homebrew/core — and one does, on this host:
+#
+#     $ brew info ollama
+#     ==> ollama: stable 0.30.7 (bottled)
+#     Warning: `ollama` shadows `homebrew/core/ollama`      <- core is 0.32.6
+#
+# `pazny/local` was tapped in June to carry a HEAD build, because core's 0.30.7
+# bottle shipped no `llama-server` and every GGUF answered HTTP 500 (memory
+# `ollama-brew-mlx-only-bottle`). The tap did its job. But it is NOT in
+# `homebrew_taps` above, so the playbook never knew it existed, `state: latest`
+# has meant "latest within the tap" ever since, and the estate sat two minor
+# versions back for weeks while every run reported success.
+#
+# The tap's reason is gone, verified rather than assumed: homebrew-core 0.32.6
+# builds llama-server (`cmake --install llama-server --component llama-server`)
+# AND its `test do` block spawns it against a GGUF model and asserts it listens.
+#
+# So the pin is declared here and VERIFIED against the landed binary, the same
+# shape `frankenphp_version` uses — because a pin nobody reads back is a wish.
+# Moving to it needs one operator action the playbook must not take unattended:
+#     brew uninstall ollama && brew untap pazny/local && brew install ollama
+# Models live in `ollama_models_dir` and survive it.
+ollama_version: "0.32.6"
+
 # Run openclaw as a launchd daemon (always running, autorestart)
 openclaw_install_daemon: true
 openclaw_domain: "claw{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
