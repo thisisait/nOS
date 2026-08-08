@@ -1442,6 +1442,10 @@
         # estate buys nothing and costs a ratchet notch. Same shape as its
         # neighbours: mint once, persist, reuse.
         ntfy_publisher_password: "{% if '_pw_' in (ntfy_publisher_password | default('')) or (ntfy_publisher_password | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ ntfy_publisher_password }}{% endif %}"
+        # ntfy_admin_password is deliberately NOT minted here — see the note in
+        # default.credentials.yml. A human types it; the operator reconstructs it
+        # from their own prefix. Minting it would have re-randomised a working
+        # login for a doctrinal gain.
         # SEC-3 (2026-05-23): high-entropy HMAC secrets. Pre-this,
         # bone_secret + wing_events_hmac_secret + nos_deploy_hmac_secret
         # all defaulted to `{{ global_password_prefix }}_pw_<svc>` (~50
