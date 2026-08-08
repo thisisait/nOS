@@ -55,7 +55,10 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
 
+REPO = Path(__file__).resolve().parents[1]
+PROBES = REPO / "state/roadmap-probes.yml"
 KEAP = "http://127.0.0.1:8091"
 TABLE = "2d498264-bc9a-4324-9935-489e5e4d92f3"
 HUMAN_HDR = {
@@ -98,17 +101,91 @@ def _req(method: str, url: str, headers: dict, body=None):
         return {"success": False, "error": f"HTTP {exc.code}: {exc.read().decode()[:300]}"}
 
 
+def run_catalogue(args) -> int:
+    """Run every probe in state/roadmap-probes.yml and report the disagreements.
+
+    The interesting output is not the tally, it is the two mismatch classes:
+    a row claiming `shipped` that the estate contradicts, and a row still
+    `queued` whose deliverable is already there. The second is what 35 overdue
+    rows turned out to be made of.
+    """
+    import yaml
+
+    if not PROBES.exists():
+        _die(f"no probe catalogue at {PROBES}")
+    catalogue = yaml.safe_load(PROBES.read_text(encoding="utf-8")) or {}
+
+    rows = _req("GET", f"{KEAP}/api/tables/{TABLE}/rows?limit=500", HUMAN_HDR)
+    if not rows.get("success"):
+        _die(f"cannot read rows — {rows.get('error')}. Is KEAP up?")
+    by_slug = {r["values"].get("slug"): r for r in rows["data"]["rows"]}
+
+    unknown = sorted(set(catalogue) - set(by_slug))
+    if unknown:
+        _die("the catalogue names rows the table does not hold: " + ", ".join(unknown))
+
+    argv = [sys.executable, os.path.abspath(__file__)]
+    tally: dict[str, int] = {}
+    mismatch: list[tuple[str, str, str]] = []
+    for slug, probe in catalogue.items():
+        cmd = argv + ["--slug", slug]
+        cmd += (["--unverifiable", probe["unverifiable"]]
+                if isinstance(probe, dict) else ["--by", probe])
+        if args.dry_run:
+            cmd.append("--dry-run")
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        line = next((ln for ln in proc.stdout.splitlines() if "verified" in ln), "")
+        verdict = line.rsplit("-> ", 1)[-1].strip() if line else "?"
+        if not line:
+            print(f"  {slug:<24} PROBE FAILED TO RUN")
+            print((proc.stderr or proc.stdout).strip()[:300])
+            tally["?"] = tally.get("?", 0) + 1
+            continue
+        tally[verdict] = tally.get(verdict, 0) + 1
+        status = by_slug[slug]["values"].get("status")
+        flag = ""
+        if verdict == "confirmed" and status not in ("shipped", "dropped"):
+            flag, _ = "  <-- DONE, and the row does not say so", mismatch.append(
+                (slug, status, verdict))
+        elif verdict == "contradicted" and status == "shipped":
+            flag, _ = "  <-- claims shipped, estate disagrees", mismatch.append(
+                (slug, status, verdict))
+        print(f"  {slug:<24} {status:<8} {verdict:<13}{flag}")
+
+    print("\n" + " · ".join(f"{n} {k}" for k, n in sorted(tally.items())))
+    if mismatch:
+        print(f"\n{len(mismatch)} row(s) where the claim and the estate disagree:")
+        for slug, status, verdict in mismatch:
+            print(f"  {slug:<24} status={status:<8} verified={verdict}")
+        print("  move them with tools/roadmap-update.py — this tool never will.")
+    if args.dry_run:
+        print("\nDRY RUN — nothing written.")
+    # A disagreement is a successful verification, so it is not an error exit;
+    # 3 is reserved for "something was contradicted" the same as the single-row
+    # path, so a scheduler can key a finding on it.
+    return 3 if any(v == "contradicted" for _, _, v in mismatch) else 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--slug", required=True)
+    ap.add_argument("--slug")
     ap.add_argument("--by", help="command to run; its exit code IS the verdict")
     ap.add_argument("--unverifiable", metavar="REASON",
                     help="no probe exists for this row; the reason is the record")
+    ap.add_argument("--all", action="store_true",
+                    help=f"run every probe in {PROBES.name}")
     ap.add_argument("--cwd", default=None, help="where to run --by (default: repo root)")
     ap.add_argument("--timeout", type=int, default=120)
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
+    if args.all:
+        if args.slug or args.by or args.unverifiable:
+            _die("--all runs the catalogue; it takes no --slug/--by/--unverifiable")
+        return run_catalogue(args)
+
+    if not args.slug:
+        _die("pass --slug, or --all to run the catalogue")
     if bool(args.by) == bool(args.unverifiable):
         _die("pass exactly one of --by (a probe that produces the verdict) or "
              "--unverifiable (a reason no probe exists).")

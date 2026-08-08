@@ -1,0 +1,205 @@
+# =============================================================================
+# state/roadmap-probes.yml — one probe per roadmap row, run by
+# `tools/roadmap-verify.py --all`.
+#
+# WHAT A PROBE ASSERTS, AND WHY IT IS ALWAYS THE SAME DIRECTION
+# -------------------------------------------------------------
+# Every command here asserts ONE thing: **the row's deliverable exists**. Not
+# "the row's status is right" — that would make each probe depend on the claim
+# it is supposed to be independent of, and the whole point of the `verified`
+# column is that it does not.
+#
+# Read the two columns together and all four combinations mean something:
+#
+#   status=shipped  verified=confirmed     they agree
+#   status=shipped  verified=contradicted  the most useful row the table can
+#                                          hold — someone said it landed and
+#                                          the estate disagrees
+#   status=queued   verified=confirmed     ALSO a finding, and the one this
+#                                          file was written for: the work is
+#                                          there and nobody recorded it
+#   status=queued   verified=contradicted  consistent — genuinely not started
+#
+# The third line is the measured problem. On 2026-08-08 the roadmap had 35 rows
+# past their target and no way to tell lateness from unrecorded progress,
+# because no row's status had EVER changed since it was filed. At least three
+# of the 35 were done.
+#
+# WHAT MAKES A GOOD PROBE. Something the estate can answer without a human
+# reading it: a file that must exist, a symbol that must be defined, a version
+# the host must report. `test -d …` is a fine probe. `true` is not, and neither
+# is anything whose output would embarrass us in a table the face renders —
+# `tools/roadmap-verify.py` stores stdout as evidence and cannot know which
+# bytes you would not want read.
+#
+# A PROBE MAY NOT MATCH THE DESCRIPTION OF THE WORK. The first draft of this
+# file got five of nine `confirmed` verdicts wrong the same way, and it is worth
+# recording because it is this estate's oldest bug wearing yet another hat:
+#
+#     sec-p1:  grep -rqil "hkdf" tools/ files/anatomy/ roles/    -> confirmed
+#     the only file in the repo containing "hkdf" is tools/roadmap-seed.py
+#     — the script that AUTHORS the roadmap row saying HKDF should be built
+#
+# The probe verified that we had written down the plan. Same for `sec-p5`
+# (keychain), and `loop-forget` matched `last_attempted_at`, a webhook retry
+# column with nothing to do with the loop remembering what it tried.
+#
+# So: `grep -r` may not take `tools/` or `docs/` as a search root — those hold
+# the plan — and a probe should prefer a named artifact over a word. Pinned by
+# tests/anatomy/test_a_probe_cannot_match_its_own_description.py.
+#
+# WHEN THERE IS NO PROBE, SAY SO. `{unverifiable: "reason"}` is a first-class
+# answer, not a gap. A row that nobody can check should say that rather than
+# inherit `unverified` forever or borrow a neighbour's evidence. Absence must
+# never render as calm.
+#
+# Commands run from the repo root, through the shell, with a 120s cap.
+# =============================================================================
+
+# ── agents ──────────────────────────────────────────────────────────────────
+agents-inbox: >-
+  test -f files/anatomy/wing/app/Model/AgentQuestionRepository.php
+  && test -f files/anatomy/wing/app/AgentKit/Tools/AskOperatorTool.php
+  && grep -q "inbox/answer" files/anatomy/wing/app/Core/RouterFactory.php
+
+agents-evals: >-
+  ls tools/ | grep -q "agent-eval"
+
+# The engine exists; the driver is the row. A pulse job is what would schedule
+# it, so its absence from every manifest is the honest test.
+loop-driver: >-
+  grep -rql "loop-propose\|loop-driver" files/anatomy/plugins/*/plugin.yml
+
+# The table that would hold "this was tried and failed". Named, not worded —
+# the first version matched `last_attempted_at`, which is webhook retry state.
+loop-forget: >-
+  grep -q "CREATE TABLE IF NOT EXISTS loop_attempts"
+  files/anatomy/wing/db/schema-extensions.sql
+
+loop-reach:
+  unverifiable: >-
+    a whitelist's CORRECTNESS is the question, and no command can answer
+    whether it matches where defects actually are — that needs the defect
+    history read against the rule, which is a person's job
+
+loop-operator-model: >-
+  test -f docs/doctrine/operator-model.md
+
+loop-sandbox:
+  unverifiable: >-
+    the row asks whether two named open questions have MIT answers — a
+    literature verdict, not an estate fact
+
+# The deliverable is a grader AGENT, so the probe is that agent's definition —
+# not the word "intent", which the scout's manifest already uses in prose.
+local-llm-intent: >-
+  test -f files/anatomy/agents/intent-grader/agent.yml
+
+local-llm-model: >-
+  test -d files/anatomy/models
+
+local-llm-lfm25:
+  unverifiable: >-
+    a benchmark result is a measurement someone must run and record; the
+    absence of a number is not something a file test can distinguish from a
+    number nobody wrote down
+
+# ── cortex ──────────────────────────────────────────────────────────────────
+cortex-exec: >-
+  test -d files/anatomy/wing/app/Cortex
+
+cortex-rows: >-
+  grep -rql "syncRows" files/anatomy/cortex/
+
+cortex-lang: >-
+  test -f files/anatomy/cortex/server/cortex-lang.ts
+  && test -f files/anatomy/cortex/server/cortex-validate.ts
+
+cortex-readers: >-
+  grep -rqil "epub" files/anatomy/face/src/lib/apps/native/
+
+local-llm-corpus: >-
+  ls tools/ | grep -q "cortex-corpus-gen"
+
+local-llm-executor: >-
+  test -d files/anatomy/wing/app/Cortex
+
+# ── face ────────────────────────────────────────────────────────────────────
+face-anatomy: >-
+  test -d files/anatomy/face/src/lib/apps/native/anatomy
+
+face-planner: >-
+  test -d files/anatomy/face/src/lib/apps/native/planner
+
+# Four styles render (files/anatomy/face/src/lib/tables/view.ts). The row is
+# the PICKER — a control that switches a live table between them.
+face-styles: >-
+  grep -rql "ResolvedStyle" files/anatomy/face/src/lib/components/
+
+face-tree: >-
+  grep -rql "parent" files/anatomy/face/src/lib/tables/tree.ts
+
+# ── platform ────────────────────────────────────────────────────────────────
+# The one probe here that reads the HOST rather than the tree: the row is about
+# what the machine runs, and the pin is downstream of that.
+plat-ollama: >-
+  ollama --version | grep -Eq "0\.(3[2-9]|[4-9][0-9])"
+
+plat-signing: >-
+  test "$(git config commit.gpgsign)" = "true"
+
+plat-linux:
+  unverifiable: >-
+    the claim is about an Ubuntu estate this Mac is not; the honest probe is
+    the Linux integration job, which cannot run from here
+
+sere-a: >-
+  test -x tools/ci-local.sh && python3 -m pytest tests/anatomy -q --co >/dev/null 2>&1
+
+sere-b:
+  unverifiable: "needs a host that can be created and destroyed; none exists yet"
+
+sere-c:
+  unverifiable: "a mutex over the live estate — nothing to probe until it is built"
+
+sere-hosts:
+  unverifiable: "no Linux host or VPS is provisioned to probe"
+
+plat-v07: >-
+  test -d docs/archive/v0.7
+
+# ── security ────────────────────────────────────────────────────────────────
+# The derivation itself, where a derivation would live — not `tools/`, whose
+# roadmap-seed.py is the only file in the repo that has ever said "hkdf".
+sec-p1: >-
+  grep -rqil "hkdf" roles/ files/anatomy/library files/anatomy/module_utils
+  files/anatomy/wing/app
+
+sec-p3: >-
+  grep -rql "canary" default.credentials.yml
+
+sec-p5: >-
+  grep -rql "find-generic-password" roles/
+
+# Not "is the queue empty" — it never will be. The row is the open HIGHs, and
+# the estate's own reader is the probe.
+sec-rem: >-
+  test "$(python3 tools/rem-status.py | grep -c 'HIGH ')" -eq 0
+
+sec-queue-authorship: >-
+  grep -ql "resolved_by" tools/scan-runner.sh
+
+# ── filesystem ──────────────────────────────────────────────────────────────
+fs-s0: >-
+  grep -rql "canonical" files/anatomy/plugins/nextcloud-base/plugin.yml
+
+fs-s1:
+  unverifiable: >-
+    the row names its own test — open a .docx in ONLYOFFICE, save, and check
+    the bytes changed in the VFS tree. That is a browser doing it, not a shell
+
+# Per-user CONTAINERS, so the artifact is a compose template that renders one
+# service per tenant. The word "per-user" appears in three manifests as prose
+# and proves nothing.
+fs-peruser: >-
+  ls roles/pazny.*/templates/ | grep -q "peruser\|per-user"

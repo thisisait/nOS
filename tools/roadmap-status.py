@@ -191,9 +191,24 @@ def main() -> int:
               "this table — see `--schema`.")
     else:
         unverified = sum(1 for r in rows if not r.get("verified"))
+        # This footer said "and nothing writes it yet" for exactly one day, and
+        # was false the moment tools/roadmap-verify.py landed. Count instead of
+        # asserting: a number cannot outlive its mode the way a sentence can.
+        disagree = [r for r in rows
+                    if (r.get("verified") == "confirmed"
+                        and r.get("status") not in ("shipped", "dropped"))
+                    or (r.get("verified") == "contradicted"
+                        and r.get("status") == "shipped")]
         print(f"\n  status is a CLAIM; `verified` is what a probe observed. "
-              f"{unverified}/{len(rows)} rows\n  carry no verification — the "
-              "column exists now, and nothing writes it yet.")
+              f"{len(rows) - unverified}/{len(rows)} rows carry a verdict\n"
+              f"  (`tools/roadmap-verify.py --all` writes them from "
+              f"state/roadmap-probes.yml).")
+        if disagree:
+            print(f"  {len(disagree)} row(s) where the two disagree — the most "
+                  "useful rows here:")
+            for r in disagree:
+                print(f"    {r.get('slug'):<24} status={r.get('status'):<8} "
+                      f"verified={r.get('verified')}")
     return 0
 
 
