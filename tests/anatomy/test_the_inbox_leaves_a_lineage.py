@@ -67,19 +67,57 @@ def test_asking_emits_exactly_one_lineage_event():
         assert t in body, f"ask() no longer emits {t}"
 
 
+def answer_paths() -> dict[str, str]:
+    """Every method that can resolve a question, by name.
+
+    There are two by design — one authorised by a reply token (no session, the
+    operator in Telegram), one by an Authentik forward-auth identity (Wing). The
+    invariant below must hold for BOTH, so this is discovered rather than
+    listed: a third answer path added later is covered automatically instead of
+    slipping past a hard-coded pair.
+
+    Discovered the hard way: this test originally sliced `answer` -> `poll` and
+    went red the moment `answerAsOperator` was inserted between them. The gate
+    was right that something changed; the fix was to widen the invariant, not to
+    re-slice around the new method.
+    """
+    s = src()
+    names = re.findall(r"public function (answer\w*)\(", s)
+    assert names, "no answer path found — the class shape changed"
+    bounds = sorted(
+        (s.find(f"public function {n}("), n)
+        for n in set(re.findall(r"public function (\w+)\(", s))
+    )
+    out = {}
+    for i, (pos, name) in enumerate(bounds):
+        if name not in names:
+            continue
+        end = bounds[i + 1][0] if i + 1 < len(bounds) else len(s)
+        out[name] = s[pos:end]
+    return out
+
+
 def test_only_the_winning_answer_emits_a_decision():
     """The property A11's append-only path structurally cannot have."""
-    body = method("answer", "poll")
-    assert body.count("$this->emit(") == 1, (
-        "answer() emits other than exactly one event."
+    paths = answer_paths()
+    assert len(paths) >= 2, (
+        f"expected at least the token path and the session path, found {list(paths)}"
     )
-    win = body.find("$affected === 1")
-    emit = body.find("$this->emit(")
-    assert win != -1 and win < emit, (
-        "the decision event is emitted OUTSIDE the winning branch. A loser must "
-        "not append a decision — that is exactly how A11 ends up with two "
-        "verdicts for one request and no way to tell which counted."
-    )
+    for name, body in paths.items():
+        assert body.count("$this->emit(") == 1, (
+            f"{name}() emits other than exactly one event."
+        )
+        win = body.find("$affected === 1")
+        emit = body.find("$this->emit(")
+        assert win != -1 and win < emit, (
+            f"{name}() emits its decision event OUTSIDE the winning branch. A "
+            "loser must not append a decision — that is exactly how A11 ends up "
+            "with two verdicts for one request and no way to tell which counted."
+        )
+        assert "'status', 'open'" in body, (
+            f"{name}() no longer carries the open-status precondition in its "
+            "UPDATE, so resolve-once does not hold on this path."
+        )
 
 
 def test_the_lineage_carries_what_a_reader_needs():

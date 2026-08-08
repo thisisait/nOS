@@ -271,6 +271,83 @@ final class AgentQuestionRepository
 	}
 
 	/**
+	 * Answer as an authenticated operator, with no reply token.
+	 *
+	 * WHY THIS EXISTS SEPARATELY. The reply token authorises a caller who has no
+	 * session — the operator in Telegram at 23:00. Inside Wing the Authentik
+	 * forward-auth session IS the authorisation, and it is the stronger of the
+	 * two: it names a person, carries their groups, and cannot be lifted out of
+	 * a notification. Demanding a token there would mean either showing it in
+	 * the UI (a credential on a screen, defeating the point) or storing it
+	 * un-hashed (defeating it harder).
+	 *
+	 * THE RISK THIS METHOD CARRIES, stated because the signature hides it: it
+	 * skips the only check that stops an arbitrary caller answering. It is safe
+	 * ONLY while every call site is behind an RBAC gate. `InboxPresenter` sets
+	 * `$minAccessTier = 1` for exactly this reason, and
+	 * `test_only_a_gated_presenter_answers_without_a_token.py` refuses any new
+	 * caller that is not similarly gated. Do not call it from an API presenter
+	 * that authenticates with a bearer token — a service token is not a person,
+	 * and "who approved this" must name someone.
+	 *
+	 * Everything else — resolve-once, the deadline in the WHERE clause, the
+	 * single decision event on the winning write — is identical, because it is
+	 * the same UPDATE.
+	 *
+	 * @return array{result: string, question: array<string,mixed>|null}
+	 */
+	public function answerAsOperator(
+		string $uuid,
+		string $answer,
+		string $operator,
+	): array {
+		$now = gmdate('Y-m-d\TH:i:s\Z');
+
+		$affected = $this->db->table('agent_questions')
+			->where('uuid', $uuid)
+			->where('status', 'open')
+			->where('expires_at IS NULL OR expires_at > ?', $now)
+			->update([
+				'answer'       => $answer,
+				'answered_by'  => $operator,
+				'answered_via' => 'wing',
+				'answered_at'  => $now,
+				'status'       => 'answered',
+				'updated_at'   => $now,
+			]);
+
+		if ($affected === 1) {
+			$row = $this->find($uuid);
+			$this->emit(
+				($row['kind'] ?? '') === 'approval'
+					? 'agent_approval_decision'
+					: 'agent_question_answered',
+				$uuid,
+				$operator,
+				[
+					'verdict'           => $answer,
+					'operator_username' => $operator,
+					'via'               => 'wing',
+					'kind'              => $row['kind'] ?? null,
+					'waited_seconds'    => isset($row['created_at'])
+						? max(0, strtotime($now) - strtotime((string) $row['created_at']))
+						: null,
+				],
+			);
+			return ['result' => self::ANSWER_OK, 'question' => $row];
+		}
+
+		$row = $this->find($uuid);
+		if ($row === null) {
+			return ['result' => self::ANSWER_UNKNOWN, 'question' => null];
+		}
+		return [
+			'result'   => $row['status'] === 'answered' ? self::ANSWER_ALREADY : self::ANSWER_EXPIRED,
+			'question' => $row,
+		];
+	}
+
+	/**
 	 * What the asking agent polls. Returns the row plus a resolved verdict:
 	 * an open question past its deadline reports `expired` WITHOUT waiting for
 	 * anything to sweep it, and carries the default the asker declared.

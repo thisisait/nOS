@@ -9,10 +9,71 @@
 	{if $findingCount > 0}
 		<span class="badge badge-warning" style="font-size:13px; margin-left:8px;">{$findingCount} findings</span>
 	{/if}
+	{if count($questions) > 0}
+		<span class="badge badge-critical" style="font-size:13px; margin-left:8px;">{count($questions)} blocking</span>
+	{/if}
 </h2>
 <div style="color:var(--text2); font-size:13px; margin-bottom:20px;">
-	Operator-attention notifications + unresolved secret findings + conductor agent runs.
+	Agent questions + operator-attention notifications + unresolved secret findings + conductor agent runs.
 </div>
+
+{* ── Agent questions (agents-inbox, 2026-08-08) ──────────────────────────────
+   FIRST on the page because a run is STOPPED until one of these is answered,
+   and a question with a deadline will decide for itself if nobody arrives.
+
+   Absence is rendered explicitly. An empty section that simply disappears reads
+   as "nothing to do" and is indistinguishable from a broken query — this page
+   already learned that lesson elsewhere in the estate. *}
+<h3 style="font-size:15px; margin-bottom:10px;">Agent questions</h3>
+{if count($questions) === 0}
+	<div style="color:var(--text2); font-size:13px; margin-bottom:20px;">
+		No agent is waiting on an answer.
+	</div>
+{else}
+	<table style="margin-bottom:24px;">
+		<thead>
+			<tr>
+				<th>Agent</th><th>Question</th><th>Kind</th><th>Asked</th><th>Deadline</th><th>Answer</th>
+			</tr>
+		</thead>
+		<tbody>
+			{foreach $questions as $q}
+				<tr>
+					<td style="font-size:12px;">{$q['agent_name']}</td>
+					<td>
+						<div style="max-width:520px;">{$q['prompt']}</div>
+						{if !empty($q['default_on_expiry'])}
+							<div style="font-size:11px; color:var(--text2); margin-top:2px;">
+								if nobody answers: {$q['default_on_expiry']}
+							</div>
+						{/if}
+					</td>
+					<td style="font-size:11px; color:var(--text2)">{$q['kind']}</td>
+					<td style="font-size:11px; color:var(--text2)">{($q['created_at'] ?? '')|substr:0,19}</td>
+					<td style="font-size:11px; color:var(--text2)">
+						{if !empty($q['expires_at'])}{$q['expires_at']|substr:0,19}{else}—{/if}
+					</td>
+					<td>
+						<form method="post" action="{plink Inbox:answer, uuid => $q['uuid']}" style="display:inline;">
+							<input type="hidden" name="_csrf" value="{$csrfToken}">{* SEC-14 CSRF *}
+							{if $q['kind'] === 'approval'}
+								<button type="submit" name="answer" value="approve" class="btn btn-small">Approve</button>
+								<button type="submit" name="answer" value="reject" class="btn btn-small">Reject</button>
+							{elseif $q['kind'] === 'choice' && !empty($q['options_json'])}
+								{foreach json_decode($q['options_json'], true) ?? [] as $opt}
+									<button type="submit" name="answer" value="{$opt}" class="btn btn-small">{$opt}</button>
+								{/foreach}
+							{else}
+								<input type="text" name="answer" placeholder="answer…" style="width:160px;">
+								<button type="submit" class="btn btn-small">Send</button>
+							{/if}
+						</form>
+					</td>
+				</tr>
+			{/foreach}
+		</tbody>
+	</table>
+{/if}
 
 {* ── Notifications (A9 — operator-attention fanout, 2026-05-16) ─────────── *}
 <h3 style="font-size:15px; margin-bottom:10px;">Notifications</h3>

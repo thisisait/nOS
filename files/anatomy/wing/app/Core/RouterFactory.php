@@ -208,6 +208,20 @@ final class RouterFactory
 		$router->addRoute('gdpr', 'Gdpr:default');
 
 		// Conductor inbox + approvals (Anatomy A8.c, 2026-05-07)
+		//
+		// THE TWO VERB ROUTES BELOW WERE MISSING UNTIL 2026-08-08, and the
+		// consequence was silent: Nette renders an unroutable {plink} as `#`,
+		// so `/inbox`'s "Mark read" button carried `action="#"` — verified on
+		// the live page — and posted to the current URL, which is a GET render.
+		// Nothing was ever marked read. No error, no log, a button that looks
+		// like a button.
+		//
+		// Found while adding `Inbox:answer`, which would have inherited exactly
+		// the same fate: an Approve button that posts nowhere is worse than no
+		// button, because the operator believes they decided. Same
+		// specific-before-catch-all ordering as the approvals routes below.
+		$router->addRoute('inbox/mark-read/<uuid>', 'Inbox:markRead');
+		$router->addRoute('inbox/answer/<uuid>', 'Inbox:answer');
 		$router->addRoute('inbox', 'Inbox:default');
 		// A11 (2026-05-07): operator clicks Approve/Reject in /approvals.
 		// Each maps to ApprovalsPresenter::actionApprove / actionReject($actionId)
