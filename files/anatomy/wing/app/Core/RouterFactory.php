@@ -117,6 +117,15 @@ final class RouterFactory
 		$api->addRoute('api/v1/pulse_runs/summary', 'Pulse:runSummary');
 		$api->addRoute('api/v1/pulse_runs[/<id>]', 'Pulse:runs');
 
+		// Agent inbox — the write half of the A9 spine (2026-08-08). An agent
+		// asks, the run suspends, and the answer may arrive from any channel.
+		// /answer and /cancel before the general [/<uuid>] sibling: same
+		// first-match-wins reason as pulse_runs/summary above, and here the
+		// cost of getting it wrong is an answer 404-ing instead of landing.
+		$api->addRoute('api/v1/inbox/questions/<uuid>/answer', 'Inbox:answer');
+		$api->addRoute('api/v1/inbox/questions/<uuid>/cancel', 'Inbox:cancel');
+		$api->addRoute('api/v1/inbox/questions[/<uuid>]', 'Inbox:questions');
+
 		// Gitleaks findings (Anatomy A7, 2026-05-06).
 		// resolve must come before the general [/<id>] route.
 		$api->addRoute('api/v1/gitleaks_findings/<id>/resolve', 'Gitleaks:resolve');

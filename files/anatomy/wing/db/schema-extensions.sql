@@ -773,3 +773,70 @@ CREATE TABLE IF NOT EXISTS migrations_authored (
 CREATE INDEX IF NOT EXISTS idx_mig_authored_service ON migrations_authored (service);
 CREATE INDEX IF NOT EXISTS idx_mig_authored_status  ON migrations_authored (review_status);
 CREATE INDEX IF NOT EXISTS idx_mig_authored_session ON migrations_authored (session_uuid);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- agent_questions — the write half of the notification spine (2026-08-08).
+--
+-- WHY IT EXISTS. A9 fanout is ONE-WAY: an agent can tell the operator
+-- something and cannot ask them anything. So an unattended AgentKit run has
+-- exactly two options at a decision it is not authorised to make — guess, or
+-- die — and neither is what a supervised estate wants. Three independent
+-- technology audits (openworker, cloudflare-os, channels-sdk; see the
+-- TechNosIdeas table, decision=implement) converged on this same missing
+-- organ without being pointed at it.
+--
+-- THE THREE PROPERTIES THAT ARE THE WHOLE DESIGN, and each is enforced here
+-- rather than in the caller:
+--
+--   RESOLVE-ONCE. A question is answered at most once, ever. Enforced by
+--   `UPDATE ... WHERE status='open'` + affected-row count, never by reading
+--   then writing — two operators replying at the same moment on two channels
+--   is the NORMAL case for this table, not the exotic one.
+--
+--   FIRST-RESPONDER-WINS. The loser of that race is told so (409 + the answer
+--   that won), rather than silently overwriting or silently no-op-ing. A
+--   second answer that vanishes is worse than one that is refused.
+--
+--   ANSWERABLE FROM ANY CHANNEL. `reply_token` authorises answering WITHOUT a
+--   Wing session, because the operator is in Telegram at 23:00, not in a
+--   browser. It is single-use by construction: the same UPDATE that records
+--   the answer is the one that closes the question.
+--
+-- EXPIRY IS EVALUATED AT ANSWER TIME, not by a sweeper. A sweeper leaves a
+-- window in which a question is expired in fact and open in the table, and an
+-- answer landing in that window would be accepted against a run that had
+-- already given up. The WHERE clause carries the deadline.
+--
+-- WHAT THIS TABLE DELIBERATELY IS NOT: a ticket queue. It holds decisions a
+-- RUNNING agent is blocked on. Durable work items belong in the KEAP roadmap
+-- table, human support belongs in FreeScout, and conflating any two of those
+-- three is how an estate ends up with a seventh place work hides.
+CREATE TABLE IF NOT EXISTS agent_questions (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid            TEXT NOT NULL UNIQUE,             -- public id, safe to put in a URL
+    session_uuid    TEXT,                             -- soft FK agent_sessions.uuid; NULL = asked outside a session
+    agent_name      TEXT NOT NULL,
+    kind            TEXT NOT NULL DEFAULT 'approval', -- approval | question | choice
+    prompt          TEXT NOT NULL,                    -- what the operator is being asked
+    context_json    TEXT,                             -- what the agent was doing; rendered, never executed
+    options_json    TEXT,                             -- choice: the allowed answers. NULL = free text
+    severity        TEXT NOT NULL DEFAULT 'medium',   -- A9 severities; drives the notification floor
+    -- The token is stored HASHED. A questions list is readable by any Tier-1
+    -- caller, and a plaintext token in a list is a bearer credential handed to
+    -- every reader of that list.
+    reply_token_sha TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'open',     -- open | answered | expired | cancelled
+    answer          TEXT,                             -- NULL until answered
+    answered_by     TEXT,                             -- operator identity, or 'channel:telegram'
+    answered_via    TEXT,                             -- wing | telegram | ntfy | api
+    answered_at     TEXT,
+    expires_at      TEXT,                             -- NULL = no deadline; else ISO-8601 UTC
+    default_on_expiry TEXT,                           -- what the agent should assume if nobody answers
+    actor_id        TEXT,                             -- agent:<name>
+    actor_action_id TEXT,                             -- == session_uuid; A10 lineage
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_agent_questions_status  ON agent_questions (status, created_at);
+CREATE INDEX IF NOT EXISTS idx_agent_questions_session ON agent_questions (session_uuid);
+CREATE INDEX IF NOT EXISTS idx_agent_questions_expiry  ON agent_questions (status, expires_at);
