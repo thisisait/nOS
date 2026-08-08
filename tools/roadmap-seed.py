@@ -398,6 +398,70 @@ row("loop-forget", "Nothing records what was already tried", _SERE,
          "the failure mode that makes a self-improving loop feel busy while going in circles, "
          "and it is cheap to close before there is a driver rather than after.")
 
+# ── From the TechNosIdeas audits, 2026-08-07/08 ─────────────────────────────
+#
+# 24 candidates were audited and each carries a `decision` in that table. Only
+# `decision: implement` earns a row here — that is what the word MEANS, and it
+# is checkable against the table rather than being a mood. `steal`, `postpone`
+# and `watch` deliberately get no row: the estate's most expensive documentation
+# failure was 38 plan documents naming a branch with zero commits, and a row for
+# every good idea is how that starts. The audit file is the record until a
+# decision moves.
+#
+# The strongest signal in the batch was one nobody went looking for: THREE
+# independent audits (openworker, cloudflare-os, channels-sdk) converged on the
+# same missing organ — an agent can broadcast but cannot ASK. A9 notification
+# fanout is one-way; there is no way for an unattended run to stop and wait for
+# a human, and no way for a human to answer from whatever channel they are in.
+_TNI = "2026-08-08"
+
+row("agents", "Agents that can ask, and be graded", _TNI, "next", "agents",
+    refs="documents/research/technosideas/{openworker,cloudflare-os,channels-sdk,skilltune}.md",
+    body="Two capabilities the runtime lacks, both found by auditing other people's tools rather "
+         "than by reading our own. AgentKit can act and can report; it cannot pause for consent, "
+         "and nothing measures whether a prompt change made an agent better or worse.")
+
+row("agents-inbox", "An agent can ask, and suspend until answered", _TNI, "queued", "agents",
+    parent="agents", refs="technosideas/openworker.md · technosideas/cloudflare-os.md",
+    body="openworker's inbox.py: resolve-once, first-responder-wins, the run SUSPENDS, and the "
+         "answer may arrive from any channel via an id-token reply. cloudflare-os's Gatekeeper "
+         "adds the better half — deferred approval with SIMULATED results, so the agent keeps "
+         "going instead of blocking. Lands in Wing (queue + presenter), Bone (the API), Hermes "
+         "(the reply path). ~2-4 days. Unblocks every unattended AgentKit run.")
+
+row("agents-evals", "A prompt change must prove it did not regress", _TNI, "queued", "agents",
+    parent="agents", refs="technosideas/skilltune.md · github.com/danielsogl/skills",
+    body="The estate gates code and does not gate prompts: every agent.yml, system.md and rubric "
+         "is unversioned against behaviour. Steal the mechanism, not the $199/yr product — eval "
+         "cases hash-locked BEFORE a change, A/B against base, refuse on non-monotonic result. "
+         "danielsogl/skills is the open reference (41 assertions, token accounting). ~1-2 days "
+         "on AgentKit, which already owns the grader loop.")
+
+row("loop-sandbox", "The loop's two named open questions have MIT answers", _TNI, "queued",
+    "agents", parent="sere", refs="technosideas/shepherd.md · docs/idea/11-agentic-loop-contract.md",
+    body="shepherd must not carry the loop — paper-launch alpha, mid-ABI-rewrite, and its "
+         "meta-agent-as-judge premise is what the contract rejected. But two tested files answer "
+         "questions the contract itself leaves open: _clonefile_carrier.py (APFS cp -c -R CoW "
+         "sandbox, §9.2, hours) and _seatbelt_containment.py (deny-closed SBPL jail for the "
+         "single-UID §3.3 boundary, ~1-2 days). Both belong in Bone's judges.py.")
+
+row("face-planner", "The Planner is declared as existing and is not built", _TNI, "next", "face",
+    parent="face", refs="technosideas/circle.md · state/keap-tables/roadmap.table.yml",
+    body="roadmap.table.yml says 'RENDERED BY the nOS-face Planner app: board, tree, timeline'. "
+         "Zero files under face/src mention planner — the third unchecked claim in that one file. "
+         "circle (MIT, no backend) supplies two of the three readings: a grouped-board engine "
+         "including the 'n issues hidden by filters' footer, which is absence-doctrine rendered "
+         "in UI, and a timeline zoom ladder that now has target/occurred_at to draw. ~1-1.5 wks.")
+
+row("local-llm-lfm25", "Benchmark LFM2.5-2.6B as the emitter", _TNI, "queued", "agents",
+    parent="local-llm-model", refs="technosideas/lfm25-26b.md",
+    body="The cheapest test of the whole local-LLM arc: first-party GGUF + MLX, ~2 GB, zero "
+         "containers, one line in openclaw_additional_models. Its admitted weaknesses (agentic "
+         "coding, knowledge recall) are precisely what cortex-lang designs out of the emitter. "
+         "Judge with /agent/v1/validate against qwen3-coder:30b. CARRIES A LICENCE DECISION: LFM "
+         "Open License v1.0 is $10M-revenue-conditional and derivatives inherit it — the first "
+         "non-Apache weight in the estate, and that is the operator's call, not a benchmark's.")
+
 print(f"prepared {len(R)} rows")
 
 # ── Orphan gate: KEAP cannot enforce this, so the seeder must ───────────────

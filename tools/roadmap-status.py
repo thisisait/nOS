@@ -161,24 +161,39 @@ def main() -> int:
     if show:
         print()
         emit("", 0)
-        # A row whose parent is filtered out would otherwise vanish silently.
-        shown = {id(r) for r in children.get("", [])}
+        # A row whose parent is settled or filtered out would otherwise vanish
+        # silently — and so would ITS children, which is how `local-llm-lfm25`
+        # disappeared from the first run of this tool. Orphans are re-rooted and
+        # recursed, not listed flat.
+        present = {x.get("slug") for x in show}
         orphans = [r for r in show
-                   if r.get("parent") and r.get("parent") not in {x.get("slug") for x in show}]
+                   if r.get("parent") and r.get("parent") not in present]
         if orphans:
             print(f"\n  +{len(orphans)} row(s) whose parent is settled or filtered:")
-            for r in orphans:
-                print(f"    [{r.get('status') or '?':7s}] {r.get('slug')} "
+            for r in sorted(orphans, key=lambda x: rank(x.get("status"))):
+                print(f"    [{r.get('status') or '?':7s}] {r.get('track') or '-':11s} "
+                      f"{r.get('slug') or '?':20s} {r.get('title') or ''} "
                       f"(under {r.get('parent')})")
+                emit(r.get("slug") or "\0", 2)
 
     if not args.all:
         rest = len(rows) - len(show)
         if rest:
             print(f"\n  +{rest} shipped/dropped — `--all` lists them.")
 
-    print("\n  status is a CLAIM. The `verified` column that would hold an "
-          "independent\n  observation is declared in git and absent from this "
-          "table — see `--schema`.")
+    # Say what is true NOW, not what was true when this was written. `verified`
+    # was absent from the live table until the git definition was applied on
+    # 2026-08-08; a footer that kept asserting it is missing would be this
+    # repo's own recurring defect, shipped inside the tool built to catch it.
+    if "verified" not in live_cols:
+        print("\n  status is a CLAIM. The `verified` column that would hold an "
+              "independent\n  observation is declared in git and absent from "
+              "this table — see `--schema`.")
+    else:
+        unverified = sum(1 for r in rows if not r.get("verified"))
+        print(f"\n  status is a CLAIM; `verified` is what a probe observed. "
+              f"{unverified}/{len(rows)} rows\n  carry no verification — the "
+              "column exists now, and nothing writes it yet.")
     return 0
 
 
