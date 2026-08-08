@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -68,7 +69,8 @@ HOST_WRITTEN = [
 ]
 
 TABLE = "2d498264-bc9a-4324-9935-489e5e4d92f3"
-BASE = f"http://127.0.0.1:8091/api/tables/{TABLE}"
+KEAP = "http://127.0.0.1:8091"
+BASE = f"{KEAP}/api/tables/{TABLE}"
 HEADERS = {
     "X-Authentik-Username": "akadmin",
     "X-Authentik-Email": "admin@pazny.eu",
@@ -77,8 +79,10 @@ HEADERS = {
 }
 
 # Rows this tool files are prefixed so a reader can tell an OBSERVATION from a
-# plan. The live table has no `source` column yet — the git-owned definition
-# adds one, and until that migration lands the slug carries it.
+# plan. The prefix survives now that `source` is live (verified 2026-08-08: the
+# column exists with `agent-observation` among its options, and the rows carry
+# it) because a slug is what a person reads in a list; `source` is what a query
+# filters on. Both, not either.
 OBS_PREFIX = "obs-"
 
 
@@ -491,25 +495,69 @@ def probe_doc_claim_vs_queue(res: ScanResult) -> None:
 
 # ---------------------------------------------------------------------------
 
+def _agent_token() -> str:
+    """The RW agent token, from the pulse job's env (see the plugin manifest).
+
+    Absent, this tool files through the human door instead — which still records
+    the finding, and says so. A scan that refused to report because a token was
+    missing would lose the observation to protect a row id.
+    """
+    return os.environ.get("KEAP_AGENT_TOKEN_RW", "").strip()
+
+
 def file_rows(findings: list[Finding]) -> int:
-    """POST rows the table does not already hold. HTTP only — no file writes."""
+    """POST rows the table does not already hold. HTTP only — no file writes.
+
+    THROUGH THE AGENT DOOR, AND THE DOOR IS THE POINT (fixed 2026-08-08).
+
+    A KEAP row has two names: the id it is addressed by, and what its `slug`
+    cell says. The human API mints a UUID id; the agent API uses the slug. And
+    the agent API's upsert — the ONLY way to update a row, since the human API
+    has no update at all — keys on the ID. So every row this tool filed through
+    the human door was unreachable by any later write: an "upsert" against it
+    matched nothing and inserted a duplicate.
+
+    Measured that day: all 68 roadmap rows carried UUID ids and not one had ever
+    been updated since it was filed. Seven of them were this tool's.
+
+    So the rows go through the agent door, where the id is the slug and a later
+    correction can actually land. If no token is available the human door is
+    used and the caller is told, because losing the finding would be worse than
+    filing one that needs `tools/keap-reid-rows.py` afterwards.
+    """
     req = urllib.request.Request(BASE + "/rows?limit=500", headers=HEADERS)
     with urllib.request.urlopen(req, timeout=30) as resp:
         existing = {r["values"].get("slug")
                     for r in json.loads(resp.read())["data"]["rows"]}
+    token = _agent_token()
     filed = 0
     for f in findings:
         if f.slug in existing:
             continue
-        body = json.dumps({"values": {
-            "slug": f.slug, "title": f.title, "parent": "", "when": 0,
+        # No date. An observation has no target (nobody has scheduled it) and no
+        # landing (nothing happened). The column this used to fill was `when: 0`
+        # — epoch, rendered as a date, meaning nothing.
+        values = {
+            "slug": f.slug, "title": f.title, "parent": "",
             "status": "queued", "track": f.track, "release": "",
-            "refs": f.refs, "body": f.body,
-        }}).encode()
-        r = urllib.request.Request(BASE + "/rows", data=body,
-                                   headers=HEADERS, method="POST")
+            "refs": f.refs, "body": f.body, "source": "agent-observation",
+        }
+        if token:
+            r = urllib.request.Request(
+                f"{KEAP}/agent/v1/tables/{TABLE}/rows",
+                data=json.dumps(values).encode(), method="POST",
+                headers={"authorization": f"Bearer {token}",
+                         "content-type": "application/json"})
+        else:
+            r = urllib.request.Request(BASE + "/rows",
+                                       data=json.dumps({"values": values}).encode(),
+                                       headers=HEADERS, method="POST")
         with urllib.request.urlopen(r, timeout=30):
             filed += 1
+    if filed and not token:
+        print("  note: filed through the human API (no KEAP_AGENT_TOKEN_RW), so "
+              "these rows are keyed by UUID and cannot be updated until "
+              "`tools/keap-reid-rows.py --apply` runs.", file=sys.stderr)
     return filed
 
 

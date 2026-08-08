@@ -105,7 +105,13 @@ pulse:
             :470 file_rows, HTTP only — no filesystem writes). 2026-08-06 run:
             125 pairs compared, 4 contradictions, 4 rows filed"
           measured: "2026-08-06"
-      env: {}
+      # The token is what decides WHICH DOOR the rows come through, and the door
+      # decides whether they can ever be corrected. Without it the scanner falls
+      # back to the human API, whose rows carry UUID ids that no upsert can
+      # reach — which is how the seven rows it filed before 2026-08-08 became
+      # unwritable. See tools/discovery-scan.py::file_rows.
+      env:
+        KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
 
 # =============================================================================
 # NOTIFICATION (A9 canonical severity shape)
