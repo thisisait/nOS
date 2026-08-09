@@ -21,7 +21,32 @@
 # `frankenphp_version` is (roles/pazny.wing/tasks/main.yml). The shadowing tap is
 # named in the failure because that is the part nobody could see: it is not in
 # `homebrew_taps`, so nothing in this repository knows it exists.
-- name: "[Ollama] Read the landed ollama version"
+# READ THE KEG, NOT THE SERVER — and they are different questions (2026-08-09).
+#
+# The first version ran `ollama --version`, which reports the RUNNING DAEMON's
+# version, not the installed one. Right after the operator switched taps that
+# said:
+#
+#     $ brew list --versions ollama      ->  ollama 0.32.6
+#     $ ollama --version                 ->  ollama version is 0.30.7
+#                                            Warning: client version is 0.32.6
+#
+# The keg was correct and the daemon was still executing the old binary, because
+# a keg swap does not restart launchd — the same defect family as the plist that
+# was written and never re-read. So this preflight would have failed a converge
+# that had just done exactly the right thing, and it would have failed BEFORE
+# the LaunchAgent reload further down that fixes it.
+#
+# Two questions, two checks: the keg is asserted here (did brew install the pin)
+# and the daemon is asserted AFTER the reload (is the estate running it).
+- name: "[Ollama] Read the installed ollama keg version"
+  ansible.builtin.command: brew list --versions ollama
+  register: _ollama_keg
+  changed_when: false
+  failed_when: false
+  when: nos_pkg_manager == 'homebrew'
+
+- name: "[Ollama] Read the version the running daemon reports"
   ansible.builtin.command: ollama --version
   register: _ollama_ver
   changed_when: false
@@ -50,14 +75,14 @@
   when:
     - nos_pkg_manager == 'homebrew'
     - ollama_version | default('') | length > 0
-    - ollama_version not in (_ollama_ver.stdout | default(''))
+    - ollama_version not in (_ollama_keg.stdout | default(''))
 
-- name: "[Ollama] Refuse on ollama version mismatch"
+- name: "[Ollama] Refuse when the INSTALLED keg is not the pin"
   ansible.builtin.fail:
     msg: |
-      ollama did not report the pinned version {{ ollama_version }}
-      (rc={{ _ollama_ver.rc | default('?') }}).
-        Reported: {{ _ollama_ver.stdout | default('(none)') | trim }}
+      brew has not installed the pinned ollama {{ ollama_version }}.
+        keg:    {{ _ollama_keg.stdout | default('(none)') | trim }}
+        daemon: {{ _ollama_ver.stdout | default('(none)') | trim }}
       {% if (_ollama_shadow.stdout | default('0') | trim | int) > 0 %}
         CAUSE: a third-party tap outranks homebrew/core for the name `ollama`,
         so `state: latest` has been upgrading within that tap and
@@ -76,7 +101,7 @@
   when:
     - nos_pkg_manager == 'homebrew'
     - ollama_version | default('') | length > 0
-    - ollama_version not in (_ollama_ver.stdout | default(''))
+    - ollama_version not in (_ollama_keg.stdout | default(''))
 
 - name: "[Ollama] Ensure models directory exists (persistent across --blank)"
   ansible.builtin.file:
@@ -181,6 +206,86 @@
   delay: 5
   until: _ollama_api.status | default(0) == 200
   failed_when: false
+
+# RESTART ON DRIFT, BECAUSE `launchctl load` IS NOT A RESTART (2026-08-09).
+#
+# A keg swap replaces the binary on disk and leaves the running daemon executing
+# the old one; `launchctl load` above answers "already loaded" and changes
+# nothing. Measured the moment the operator moved off the shadowing tap:
+#
+#     brew list --versions ollama  ->  ollama 0.32.6
+#     ollama --version             ->  ollama version is 0.30.7
+#                                      Warning: client version is 0.32.6
+#
+# The client is new, the SERVER is old, and every consumer — hermes, openclaw,
+# KEAP embeddings, face ask — keeps talking to 0.30.7. That is the same defect
+# as the launchd plist that was written and never re-read
+# (roles/pazny.wing/tasks/main.yml), and it wants the same answer: compare what
+# is running against what is installed, and reload on the DIFFERENCE rather than
+# on having just written something.
+- name: "[Ollama] Compare the running daemon against the installed keg"
+  ansible.builtin.shell: |
+    set -o pipefail
+    keg=$(brew list --versions ollama 2>/dev/null | awk '{print $2}')
+    srv=$(ollama --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+    [ -n "$keg" ] && [ "$keg" = "$srv" ] && echo same || echo "drift keg=$keg srv=$srv"
+  args:
+    executable: /bin/bash
+  register: _ollama_drift
+  changed_when: false
+  failed_when: false
+  when: nos_service_manager == 'launchd'
+
+- name: "[Ollama] Reload the daemon so it execs the installed binary"
+  ansible.builtin.shell: |
+    set -o pipefail
+    L="{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.ollama.agent.plist"
+    launchctl bootout "gui/$(id -u)/com.ollama.agent" 2>/dev/null || true
+    sleep 2
+    launchctl bootstrap "gui/$(id -u)" "$L"
+  args:
+    executable: /bin/bash
+  changed_when: true
+  failed_when: false
+  when:
+    - nos_service_manager == 'launchd'
+    - "'drift' in (_ollama_drift.stdout | default(''))"
+
+# The daemon half of the pin, asserted only AFTER the reload has had its chance.
+# Split from the keg check on purpose: "brew installed the wrong version" and
+# "the right version is installed and nothing is running it" are different
+# faults with different fixes, and one message covering both would name neither.
+- name: "[Ollama] Re-read the daemon version after the reload"
+  ansible.builtin.shell: |
+    set -o pipefail
+    for i in $(seq 1 15); do
+      v=$(ollama --version 2>/dev/null | head -1 || true)
+      case "$v" in *{{ ollama_version }}*) echo "$v"; exit 0;; esac
+      sleep 2
+    done
+    ollama --version 2>&1 | head -1 || true
+  args:
+    executable: /bin/bash
+  register: _ollama_ver_after
+  changed_when: false
+  failed_when: false
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - ollama_version | default('') | length > 0
+
+- name: "[Ollama] Refuse when the estate is running a version it did not install"
+  ansible.builtin.fail:
+    msg: |
+      the installed keg is {{ ollama_version }} but the running daemon reports
+      something else, so every consumer is still talking to the old binary.
+        daemon: {{ _ollama_ver_after.stdout | default('(none)') | trim }}
+      The reload above should have fixed this. If it did not, do it by hand:
+        launchctl bootout gui/$(id -u)/com.ollama.agent
+        launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ollama.agent.plist
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - ollama_version | default('') | length > 0
+    - ollama_version not in (_ollama_ver_after.stdout | default(''))
 
 - name: "[Ollama] Pull primary model ({{ openclaw_model }})"
   ansible.builtin.command: ollama pull {{ openclaw_model }}

@@ -54,6 +54,22 @@ DAEMON_ROLES_EXCUSED = {
     "pazny.backup": "launchd TIMER, not a daemon — each tick execs ~/.nos/backup.sh fresh, so no process can hold stale code",
     "pazny.backrest": "install_backrest defaults false and the role has no handlers file at all; wiring one is part of un-blocking that spike, not this gate",
     "pazny.linux.systemd_user": "shared helper role (ensure_unit.yml) invoked BY daemon roles — it owns no daemon of its own",
+    # Surfaced by this check the day the reload was added (2026-08-09), and the
+    # answer is that a notify would be WEAKER here, not merely different.
+    #
+    # A handler fires when ANSIBLE saw the change. The ollama keg is routinely
+    # swapped by the operator at a shell — that is exactly how it moved from the
+    # shadowing tap to core — and on the next converge brew reports changed=false,
+    # so a notify-driven restart would never fire and the daemon would keep
+    # executing the old binary. Measured within minutes of that swap:
+    # `brew list --versions` said 0.32.6 while `ollama --version` said 0.30.7.
+    #
+    # So the role compares the RUNNING daemon against the INSTALLED keg and
+    # reloads on the difference, whoever caused it. Same argument as the Wing
+    # plist drift reload: key on reality, not on having just written something.
+    "pazny.openclaw": "reloads on measured keg-vs-daemon drift, not on notify — "
+                      "a handler misses the common case (operator swaps the keg "
+                      "by hand, brew then reports changed=false forever)",
 }
 
 
