@@ -137,8 +137,14 @@ $s->close();
 // Pulse verify job is the only caller; fires regardless of --json. WAL-safe
 // (busyTimeout) + best-effort: a write failure is SWALLOWED so the exit code
 // stays driven SOLELY by the verdict (0 intact / 2 broken / 3 secret-or-db).
+// Computed BEFORE the verdict write, not after. The first draft put this check
+// below and left `$verdictOk` keyed on `$break` alone — so the Wing header badge
+// would have rendered a calm green while this process exited 2. A cached verdict
+// that disagrees with the verdict is the defect this whole file is about.
+$tailIsCurrent = $key === null || hash_equals($keyRing[0], (string) $key);
+
 if ($writeVerdict) {
-    $verdictOk = $break === null ? '1' : '0';
+    $verdictOk = ($break === null && $tailIsCurrent) ? '1' : '0';
     try {
         $w = new SQLite3($db, SQLITE3_OPEN_READWRITE);
         $w->busyTimeout(5000);
@@ -168,9 +174,52 @@ if ($break !== null) {
     }
     exit(2);
 }
+
+// A CONSISTENT CHAIN IS NOT A CORRECTLY-SIGNED ONE (added 2026-08-09).
+//
+// Everything above asks one question: is the chain self-consistent? It never
+// asks WHICH ring member signed it, and those are not the same question. A
+// writer holding a retired secret signs every row with it, each row verifies
+// against the last, and this file prints CHAIN-OK forever.
+//
+// Measured, not imagined. On 2026-08-08 the tail segment changed keys and the
+// break exposed what had been true underneath:
+//
+//     retired key   173948 rows   2026-07-24T20:49 .. 2026-08-08T07:24
+//     current key      152 rows   2026-08-08T07:25 .. 2026-08-08T07:28
+//
+// The ENTIRE chain — every row of it — had been signed with a retired
+// credential for fifteen days, and the nightly job reported ok:true on every
+// one of those nights. The rotation that retired that key had run, reported
+// success, and the Wing daemon never adopted it: launchd had not re-read the
+// changed plist (fixed separately, roles/pazny.wing/tasks/main.yml). Rotating a
+// leaked key is worth nothing if the writer keeps using the old one, and the
+// control that exists to notice could not see it.
+//
+// So the tail is checked against the CURRENT key specifically. This is the only
+// place that can catch it: a break needs a key CHANGE, and a writer that never
+// changes its key never produces one.
+if (!$tailIsCurrent) {
+    if ($json) {
+        echo json_encode([
+            'ok' => false, 'checked' => $checked, 'unsigned' => $skipped,
+            'first_break' => null,
+            'stale_key' => 'the newest segment is signed with a RETIRED key — the '
+                . 'chain is self-consistent and the writer never adopted the rotation',
+        ]) . "\n";
+    } else {
+        fwrite(STDERR, "CHAIN-STALE-KEY: {$checked} rows verify, but the newest "
+            . "segment is signed with a RETIRED key. The writer never adopted the "
+            . "rotation; restart the Wing daemon so it re-reads its plist.\n");
+    }
+    exit(2);
+}
+
 if ($json) {
-    echo json_encode(['ok' => true, 'checked' => $checked, 'unsigned' => $skipped]) . "\n";
+    echo json_encode(['ok' => true, 'checked' => $checked, 'unsigned' => $skipped,
+                      'tail_key' => 'current']) . "\n";
 } else {
-    echo "CHAIN-OK: {$checked} chained rows verified, {$skipped} unsigned rows skipped\n";
+    echo "CHAIN-OK: {$checked} chained rows verified, {$skipped} unsigned rows "
+        . "skipped, newest segment signed with the current key\n";
 }
 exit(0);
