@@ -28,10 +28,20 @@
   failed_when: false
   when: nos_pkg_manager == 'homebrew'
 
+# THE PATTERN MATTERS AND THE FIRST ONE WAS WRONG (fixed 2026-08-09, same day).
+# This grepped for the literal `shadows homebrew/core/ollama`. Brew actually
+# prints, backticks and all:
+#
+#     Warning: `ollama` shadows `homebrew/core/ollama`.
+#
+# so it never matched, the diagnosis below never rendered, and the operator's
+# converge told them to run `brew upgrade ollama` — which is a NO-OP precisely
+# because the tap shadows core. The one task whose whole job was to explain the
+# situation sent them in a circle instead. Match the word, not the punctuation.
 - name: "[Ollama] Find any tap shadowing homebrew/core/ollama"
   ansible.builtin.shell: |
     set -o pipefail
-    brew info ollama 2>&1 | grep -o 'shadows homebrew/core/ollama' || true
+    brew info ollama 2>&1 | grep -ci 'shadows' || true
   args:
     executable: /bin/bash
   register: _ollama_shadow
@@ -48,14 +58,20 @@
       ollama did not report the pinned version {{ ollama_version }}
       (rc={{ _ollama_ver.rc | default('?') }}).
         Reported: {{ _ollama_ver.stdout | default('(none)') | trim }}
-      {% if 'shadows' in (_ollama_shadow.stdout | default('')) %}
+      {% if (_ollama_shadow.stdout | default('0') | trim | int) > 0 %}
         CAUSE: a third-party tap outranks homebrew/core for the name `ollama`,
-        so `state: latest` has been upgrading within that tap. Check `brew tap`.
+        so `state: latest` has been upgrading within that tap and
+        `brew upgrade ollama` is a NO-OP. Check `brew tap`.
         Fix (one operator action — models in {{ ollama_models_dir }} survive it):
           brew uninstall ollama && brew untap pazny/local && brew install ollama
+      {% elif _ollama_shadow.rc | default(1) != 0 %}
+        The shadow probe did not run, so this cannot tell a stale formula from a
+        shadowing tap. Check `brew info ollama` for a "shadows" warning BEFORE
+        reaching for `brew upgrade` — under a shadowing tap the upgrade does
+        nothing and looks like it worked.
       {% else %}
-        `brew upgrade ollama`, then re-pin ollama_version in default.config.yml
-        if upstream has moved past it.
+        No shadowing tap found. `brew upgrade ollama`, then re-pin
+        ollama_version in default.config.yml if upstream has moved past it.
       {% endif %}
   when:
     - nos_pkg_manager == 'homebrew'

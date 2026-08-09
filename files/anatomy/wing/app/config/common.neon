@@ -116,6 +116,32 @@ services:
 	# queue — durable work is the KEAP roadmap table, human support is FreeScout.
 	- App\Model\AgentQuestionRepository
 
+	# ── Cortex-lang executor (P1, read verbs, 2026-08-09) ────────────────────
+	# KEAP owns MEANING (validate), Wing owns PERMISSION. The handler map is
+	# CODE and listed here one verb at a time on purpose: a capability that
+	# could be added by data would not be a capability boundary. Adding a verb
+	# means adding a class AND a line here, both of which a reviewer sees.
+	- App\Model\KeapCortexClient
+	- App\Cortex\CortexBindingGate
+	- App\Cortex\Handler\GetHandler
+	- App\Cortex\Handler\ResolveHandler
+	- App\Cortex\Handler\MapHandler
+	- App\Cortex\Handler\FilterHandler
+	- App\Cortex\Handler\RankHandler
+	- App\Cortex\Handler\ClassifyHandler
+	- App\Cortex\Handler\EmbedHandler
+	cortexOpcodes:
+		factory: App\Cortex\CortexOpcodeRegistry
+		arguments:
+			handlers:
+				- @App\Cortex\Handler\GetHandler
+				- @App\Cortex\Handler\ResolveHandler
+				- @App\Cortex\Handler\MapHandler
+				- @App\Cortex\Handler\FilterHandler
+				- @App\Cortex\Handler\RankHandler
+				- @App\Cortex\Handler\ClassifyHandler
+				- @App\Cortex\Handler\EmbedHandler
+
 	# AgentKit core services
 	# %appDir% is the Bootstrap dir (Nette sets it to the dir of the file that
 	# calls `new Configurator`, i.e. app/Bootstrap). The agent definitions live

@@ -363,6 +363,24 @@ $addMissingColumns($db, 'systems', [
 	'health_url' => 'TEXT',
 ]);
 
+// api_tokens.cortex_{verbs,namespaces,tenants} — the cortex executor's
+// capability axes (2026-08-09).
+//
+// WHY THREE COLUMNS AND NOT A BOOLEAN. The executor's whole security posture is
+// that its token is provably WEAKER than the flat Wing brain token: a caller may
+// be allowed `get` over `tax` in one tenant and nothing else. One flag cannot
+// express that, and a flag is what gets granted broadly "just to unblock".
+//
+// NULL means NO cortex capability, and that is the important default: every
+// token that exists today — including the brain token — gets NULL and is refused
+// at the executor door. A capability nobody granted is a capability nobody has.
+// Comma-separated lists; '*' widens one axis and must be written deliberately.
+$addMissingColumns($db, 'api_tokens', [
+	'cortex_verbs' => 'TEXT',
+	'cortex_namespaces' => 'TEXT',
+	'cortex_tenants' => 'TEXT',
+]);
+
 // notifications.{ntfy,mail}_attempts — delivery retry counters (2026-08-01).
 // Existing DBs pick them up here; every legacy row starts at 0, which is
 // correct: an already-stamped row is never re-fetched, and an unstamped one

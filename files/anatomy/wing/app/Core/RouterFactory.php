@@ -117,6 +117,13 @@ final class RouterFactory
 		$api->addRoute('api/v1/pulse_runs/summary', 'Pulse:runSummary');
 		$api->addRoute('api/v1/pulse_runs[/<id>]', 'Pulse:runs');
 
+		// Cortex-lang executor — P1, read verbs, synchronous (2026-08-09).
+		// No /status/<id>: a synchronous dispatch has no job to poll. That
+		// route belongs to P3, when write verbs go async, and it goes ABOVE
+		// these two when it lands (Nette is first-match-wins).
+		$api->addRoute('api/v1/cortex/opcodes', 'CortexExecutor:opcodes');
+		$api->addRoute('api/v1/cortex/execute', 'CortexExecutor:execute');
+
 		// Agent inbox — the write half of the A9 spine (2026-08-08). An agent
 		// asks, the run suspends, and the answer may arrive from any channel.
 		// /answer and /cancel before the general [/<uuid>] sibling: same
