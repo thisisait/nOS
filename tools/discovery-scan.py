@@ -115,7 +115,21 @@ _VERSION_VAR = re.compile(r"^([a-z0-9_]+)_version:\s*[\"']?([^\"'#\s]+)", re.MUL
 # as 6.8.6 and reported a contradiction against a row that names three fix
 # versions and says none of them ships in a container. That is exactly the
 # guess this tool's precision rule forbids: an ambiguous comparison SKIPS.
-_NUMERIC = re.compile(r"v?(\d+(?:\.\d+)*)(?:-[a-z0-9.]+)?$", re.IGNORECASE)
+#
+# THE PRERELEASE SUFFIX IS PART OF THE VERSION, and this regex used to swallow
+# it: the `(?:-…)?` group matched it and nothing read it back, so only group(1)
+# was compared. `1.0.0-beta.11` and `1.0.0-beta.12` both reduced to (1, 0, 0).
+# Measured 2026-08-09 — the scan reported, in its own words,
+#   "REM-187 still pending; iiab-rustfs-1 already runs 1.0.0-beta.11 >= 1.0.0-beta.12"
+# and filed two roadmap rows from it. The tool whose whole job is catching false
+# records was producing one.
+#
+# The dangerous direction is the silent one. A swallowed suffix makes a BEHIND
+# container read as EQUAL, so probe A stops reporting a pin that never reached
+# its container, and probe B stops reporting a `resolved` row whose fix never
+# landed — for every prerelease-tagged component. rustfs, the backup target, is
+# exactly such a component. A false alarm gets read; a suppressed one does not.
+_VERSION = re.compile(r"v?(\d+(?:\.\d+)*)(?:-([a-z0-9.]+))?$", re.IGNORECASE)
 
 
 def declared_versions() -> dict[str, str]:
@@ -198,17 +212,90 @@ def at_head(relpath: str) -> str | None:
     return out.stdout if out.returncode == 0 else None
 
 
-def numeric(v: str) -> tuple[int, ...] | None:
+@dataclass(frozen=True)
+class Version:
+    """A release core plus an optional prerelease, ordered by semver rules.
+
+    `pre is None` means a release. A release outranks any prerelease sharing
+    its core (1.0.0 > 1.0.0-beta.12), and prereleases order by dot-separated
+    identifier: numeric ones numerically, and numeric below alphanumeric.
+    """
+
+    core: tuple[int, ...]
+    pre: tuple[tuple[int, int, str], ...] | None
+
+
+def numeric(v: str) -> Version | None:
     """Only a WHOLE dotted-numeric version compares. Anything else skips.
 
     A leading-numeric match is not good enough: prose that begins with a
     version number is prose, and treating it as a version manufactures
-    contradictions out of punctuation.
+    contradictions out of punctuation. A prerelease suffix is READ, not
+    discarded — see the note on _VERSION.
     """
-    m = _NUMERIC.fullmatch(v.strip())
+    m = _VERSION.fullmatch(v.strip())
     if not m:
         return None
-    return tuple(int(x) for x in m.group(1).split("."))
+    core = tuple(int(x) for x in m.group(1).split("."))
+    suffix = m.group(2)
+    if suffix is None:
+        return Version(core, None)
+    ids: list[tuple[int, int, str]] = []
+    for part in suffix.lower().split("."):
+        # (rank, number, text): rank 0 = numeric identifier, which semver puts
+        # below any alphanumeric one. The unused slot stays neutral so the
+        # tuples compare field-by-field without ever mixing int against str.
+        ids.append((0, int(part), "") if part.isdigit() else (1, 0, part))
+    return Version(core, tuple(ids))
+
+
+# The only prerelease words this tool claims to know the order of. Everything
+# else — dev, nightly, snapshot, canary, a date, a git sha — is a moving build
+# whose position relative to the release is the vendor's convention, not ours.
+_CHANNELS = {"alpha": 0, "beta": 1, "rc": 2}
+
+
+def _channel(pre: tuple[tuple[int, int, str], ...]) -> str | None:
+    """The leading identifier when it is a word; None when it is a number."""
+    kind, _, text = pre[0]
+    return text if kind == 1 else None
+
+
+def compare(a: Version, b: Version) -> int | None:
+    """-1 / 0 / +1, or None when the two are not comparable.
+
+    Cores are zero-padded, so 2.44 == 2.44.0. Where the cores differ they
+    decide outright — a prerelease of 1.0.0 is below 1.1.0 either way.
+
+    Same core, and the suffixes have to be honest about their limits:
+      * neither has one          -> equal
+      * only one has one         -> NOT COMPARABLE. Whether `6.0.0-dev` is a
+                                    build BEFORE 6.0.0 or a dev build cut AFTER
+                                    it is the vendor's convention. Semver says
+                                    below; Docker tagging very often means
+                                    above. Refuse rather than guess — this is
+                                    the same rule that makes prose skip.
+      * same channel word        -> the rest decides (beta.11 < beta.12)
+      * both channels known      -> alpha < beta < rc
+      * anything else            -> NOT COMPARABLE
+    """
+    width = max(len(a.core), len(b.core))
+    ca = a.core + (0,) * (width - len(a.core))
+    cb = b.core + (0,) * (width - len(b.core))
+    if ca != cb:
+        return -1 if ca < cb else 1
+    if a.pre is None and b.pre is None:
+        return 0
+    if a.pre is None or b.pre is None:
+        return None
+    cha, chb = _channel(a.pre), _channel(b.pre)
+    if cha == chb:
+        if a.pre == b.pre:
+            return 0
+        return -1 if a.pre < b.pre else 1
+    if cha in _CHANNELS and chb in _CHANNELS:
+        return -1 if _CHANNELS[cha] < _CHANNELS[chb] else 1
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -239,10 +326,14 @@ def probe_pin_vs_running(images: dict[str, str], res: ScanResult) -> None:
             # `latest`, `main`, `6.0.0-dev` — comparing these is guessing.
             res.skip("version not strictly numeric")
             continue
-        res.compared += 1
-        if want == have:
+        verdict = compare(have, want)
+        if verdict is None:
+            res.skip("prerelease suffix not comparable to the other side")
             continue
-        direction = "BEHIND" if have < want else "AHEAD OF"
+        res.compared += 1
+        if verdict == 0:
+            continue
+        direction = "BEHIND" if verdict < 0 else "AHEAD OF"
         res.findings.append(Finding(
             slug=f"{OBS_PREFIX}pin-{var.replace('_', '-')}",
             title=f"{name} runs {tag}, pinned {declared}",
@@ -291,9 +382,13 @@ def probe_queue_vs_running(images: dict[str, str], res: ScanResult) -> None:
         if tag is None or want is None or have is None:
             res.skip("queue or image version not strictly numeric")
             continue
+        verdict = compare(have, want)
+        if verdict is None:
+            res.skip("prerelease suffix not comparable to the other side")
+            continue
         res.compared += 1
 
-        if status == "resolved" and have < want:
+        if status == "resolved" and verdict < 0:
             res.findings.append(Finding(
                 slug=f"{OBS_PREFIX}queue-{item['id'].lower()}",
                 title=f"{item['id']} says resolved; {name} runs {tag} < {fix}",
@@ -309,7 +404,7 @@ def probe_queue_vs_running(images: dict[str, str], res: ScanResult) -> None:
                     f"a reading."
                 ),
             ))
-        elif status == "pending" and have >= want:
+        elif status == "pending" and verdict >= 0:
             res.findings.append(Finding(
                 slug=f"{OBS_PREFIX}queue-{item['id'].lower()}",
                 title=f"{item['id']} still pending; {name} already runs {tag} >= {fix}",
