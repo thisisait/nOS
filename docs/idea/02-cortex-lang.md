@@ -1,8 +1,9 @@
 # 02 — cortex-lang: an ontology-typed pipeline IR
 
 **Status: design frozen (P0 spec, freeze-ready after two review rounds). The
-Wing executor is designed and NOT built — `files/anatomy/wing/app/Cortex/` does
-not exist.**
+Wing executor now EXISTS (`files/anatomy/wing/app/Cortex/`, 2026-08-09) and
+executes two of its seven verbs; the other five wait on KEAP routes that are
+not published yet — see [What is actually built](#what-is-actually-built).**
 **Detail:** [`nos-cortex-lang.md`](../archive/nos-cortex-lang.md) ·
 [`nos-cortex-lang-wing-executor.md`](../archive/nos-cortex-lang-wing-executor.md)
 
@@ -49,14 +50,22 @@ expression language.
 | `POST /agent/v1/validate` in KEAP | live |
 | opcode registry + hash compare | live (Wing refuses to boot on a published opcode with no handler) |
 | `onto1:` ontology hash gate | live, pinned |
-| **Wing executor** | **designed, absent** |
+| **Wing executor** | **present, and refuses five of its seven verbs** |
 
 The executor is the capability boundary — three-axis scoped tokens
-(`verbs`/`namespaces`/`tenants`). Until it exists, [06](06-genome.md)'s hydrator
-has nowhere to land, and an external system has no way to satisfy a contract at
-runtime.
+(`verbs`/`namespaces`/`tenants`). `files/anatomy/wing/app/Cortex/` landed on
+2026-08-09 (`901ec719`): registry, capability, binding gate and seven handlers,
+of which `get` and `resolve` execute and the other five extend
+`LateBoundHandler`. That is not modesty about untested code — it is a
+**measurement about the other side**: KEAP publishes no taxonomy/search/
+classify/embed route to any bearer Wing holds, so those five verbs have nothing
+to bind to yet.
+
+Until they bind, [06](06-genome.md)'s hydrator still has nowhere to land for
+anything but `get`/`resolve`.
 
 ## Next
 
-Build the executor read-only first (P1 is explicitly read-only by design), then
-weigh whether the hydrator is a second consumer or the first real one.
+Two of seven verbs execute. The next move is on the KEAP side — publish the
+routes the remaining five late-bind against — not on Wing's, where the handlers
+are already waiting for them.

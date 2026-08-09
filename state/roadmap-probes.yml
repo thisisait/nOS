@@ -123,8 +123,20 @@ local-llm-lfm25:
     number nobody wrote down
 
 # ── cortex ──────────────────────────────────────────────────────────────────
+# CAUGHT THE SAME WAY local-llm-grammar was, and it is worth the fourth telling.
+# This probe was `test -d files/anatomy/wing/app/Cortex`, and on 2026-08-09 that
+# directory appeared — so the probe would have flipped to `confirmed` on a
+# handler set where FIVE of the seven verbs are LateBoundHandler stubs, because
+# KEAP publishes no taxonomy/search/classify/embed route to any bearer. An
+# executor that refuses five of its seven verbs is an executor in the same sense
+# that an empty stack is `0/0 ready`.
+#
+# The deliverable is an executor that executes. While any handler is still
+# late-bound this reads `refuted` against a status of `active`, which is the
+# honest pairing: built, running, not done.
 cortex-exec: >-
   test -d files/anatomy/wing/app/Cortex
+  && ! grep -rql "extends LateBoundHandler" files/anatomy/wing/app/Cortex/Handler/
 
 cortex-rows: >-
   grep -rql "syncRows" files/anatomy/cortex/
@@ -139,8 +151,17 @@ cortex-readers: >-
 local-llm-corpus: >-
   ls tools/ | grep -q "cortex-corpus-gen"
 
+# This row and cortex-exec are close enough to be one row wearing two slugs, and
+# pointing both at the same `test -d` is what hid that. Not papering over it with
+# an invented distinction: the row says "authorisation AND execution", so it asks
+# for BOTH halves — a binding gate that something actually loads (a class nobody
+# loads is a lint, not a gate), and an execution surface with no late-bound verbs
+# left. Narrowing it to the gate alone would have flipped it to `confirmed`
+# today, which is the overclaim this whole pass exists to remove.
 local-llm-executor: >-
-  test -d files/anatomy/wing/app/Cortex
+  test -f files/anatomy/wing/app/Cortex/CortexBindingGate.php
+  && grep -rql "CortexBindingGate" tests/
+  && ! grep -rql "extends LateBoundHandler" files/anatomy/wing/app/Cortex/Handler/
 
 # ── face ────────────────────────────────────────────────────────────────────
 face-anatomy: >-
@@ -160,8 +181,18 @@ face-tree: >-
 # ── platform ────────────────────────────────────────────────────────────────
 # The one probe here that reads the HOST rather than the tree: the row is about
 # what the machine runs, and the pin is downstream of that.
+# Three readings, because this row has three halves and today's fix
+# (7ac823a1, "the keg and the daemon are two questions") exists precisely
+# because one of them was mistaken for the whole. `ollama --version` reports the
+# RUNNING DAEMON, so it can say 0.32.6 while the keg is still 0.30.7 — or the
+# reverse, right after a swap with no reload. And neither reading sees the tap,
+# which is the other half of the row's title; memory `ollama-brew-mlx-only-bottle`
+# records that tap shadowing core for two months without `state: latest` ever
+# showing it.
 plat-ollama: >-
-  ollama --version | grep -Eq "0\.(3[2-9]|[4-9][0-9])"
+  brew list --versions ollama | grep -Eq "0\.(3[2-9]|[4-9][0-9])"
+  && ollama --version | grep -Eq "0\.(3[2-9]|[4-9][0-9])"
+  && ! brew tap | grep -q "pazny/local"
 
 plat-signing: >-
   test "$(git config commit.gpgsign)" = "true"

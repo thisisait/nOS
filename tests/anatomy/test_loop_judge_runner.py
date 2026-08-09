@@ -384,13 +384,13 @@ def test_a_completed_pytest_run_still_passes():
         registry=_one_judge_registry("pytest-anatomy", "repo"),
         repo_root=REPO,
         spawn=_fake_spawn(
-            **{"pytest": J.Completed(exit_code=0, stdout="3091 passed, 27 skipped in 250.00s\n")}
+            **{"pytest": J.Completed(exit_code=0, stdout="3252 passed, 28 skipped in 244.00s\n")}
         ),
         probe=_always_true,
         sandbox_factory=lambda root: (root, "sha-fake", lambda: None),
     )
     assert verdict.result is J.Result.PASS, verdict.reason
-    assert verdict.runs[0].work == 3091
+    assert verdict.runs[0].work == 3252
 
 
 def test_an_interrupted_pytest_that_did_fail_is_still_a_fail():
@@ -740,7 +740,7 @@ def test_pytest_never_runs_against_the_live_tree():
 
     def spy(argv, cwd, timeout_s):
         seen_cwd.append(cwd)
-        return J.Completed(exit_code=0, stdout="3091 passed in 250.00s\n")
+        return J.Completed(exit_code=0, stdout="3252 passed in 244.00s\n")
 
     sandbox = REPO.parent / "fake-sandbox"
     verdict = J.run_gate_set(
@@ -776,7 +776,7 @@ def test_every_judge_in_a_set_observes_exactly_one_tree():
         return {
             "ansible-lint": GREEN_ANSIBLE_LINT,
             "genome-codegen": GREEN_GENOME,
-            "pytest": J.Completed(exit_code=0, stdout="3091 passed in 250.00s\n"),
+            "pytest": J.Completed(exit_code=0, stdout="3252 passed in 244.00s\n"),
         }[_argv_key(argv)]
 
     sandbox = REPO.parent / "one-tree-sandbox"
@@ -953,10 +953,16 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 #: ansible-lint moved by 3 and only 1 of those is this diff's new test file:
 #: the two commits after R2 (`654cf3ee`, `44c90677`) grew the tree without
 #: re-deriving, which is the drift this record exists to make visible.
+#: RE-DERIVED 2026-08-09 — the collection gate FIRED (3281 collected against a
+#: 3113 record, a 5% gap) during the truth pass that sharpened the roadmap
+#: probes. The suite had grown by 139 tests across the intervening commits and
+#: 13 more from the prerelease-comparison gate; only the last 13 belong to the
+#: diff that tripped it, which is exactly the drift this record is for.
+#:   pytest tests/anatomy -q  → "3252 passed, 28 skipped in 244s"
 MEASURED_WORK = {
     "ansible-lint": 1500,
     "genome-codegen": 2,
-    "pytest-anatomy": 3113,
+    "pytest-anatomy": 3252,
     "cortex-corpus-diff": 1,
 }
 

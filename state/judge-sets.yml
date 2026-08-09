@@ -151,7 +151,14 @@ judges:
     # facet: one declaration for form/build/layer, the compiler's stamp_axes
     # refusals, and the anchor rename). Collection ratchet did not fire again;
     # moved anyway, same rule, same diff.
-    min_work: 3080
+    #
+    # RE-DERIVED 2026-08-09 (3252 passed, 28 skipped — the truth pass:
+    # discovery-scan's prerelease comparison + its 13 gates). The collection
+    # ratchet FIRED this time, at 3281 collected against a 3113 record. Note
+    # what that means: most of the 139-test gap was grown by commits that did
+    # NOT move this line, so the compulsion did the work the cadence was
+    # supposed to. The floor moving on its own is cheaper than this.
+    min_work: 3220
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,
