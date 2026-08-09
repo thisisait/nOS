@@ -50,6 +50,7 @@ expression language.
 | `POST /agent/v1/validate` in KEAP | live |
 | opcode registry + hash compare | live (Wing refuses to boot on a published opcode with no handler) |
 | `onto1:` ontology hash gate | live, pinned |
+| `agent:` + `delegate` (contract **v2**) | live in the registry; validates, executes nothing (mutating) |
 | **Wing executor** | **present, and refuses five of its seven verbs** |
 
 The executor is the capability boundary — three-axis scoped tokens
@@ -64,24 +65,40 @@ to bind to yet.
 Until they bind, [06](06-genome.md)'s hydrator still has nowhere to land for
 anything but `get`/`resolve`.
 
-## The two nouns the language is missing (decided 2026-08-09, `w-vocab`)
+## The two nouns the language was missing (shipped 2026-08-10, contract v2)
 
 The loop needs to name **which agent** and **which model**, because swapping the
-provider is how it learns. Both arrive as namespaces with policy `deferred`:
+provider is how it learns.
 
 ```
-@input | delegate(agent:librarian, ?via=model:anthropic-claude-opus-4-7)
+@input | delegate(agent:librarian, ?via="openclaw-qwen2.5-coder:32b")
 ```
 
-- `agent:` and `model:` are `deferred` — Wing decides, and **KEAP never
-  enumerates agents**, which would be exactly the enumeration oracle this file
-  rejects two sections above.
-- The model operand is the **AgentKit URI verbatim** (`anthropic-claude-opus-4-7`,
-  `openclaw-qwen-coder-32b`). Dashes are word characters in the tokenizer, so it
-  lexes as one segment, and the estate keeps one spelling of a model instead of
-  two. The provider vocabulary itself is declared three times today
-  (`agent.schema.yaml`, `Factory::fromUri`, `test_agentkit_naming.py:89`) and
-  `model:` would make a fourth — one source, the rest derived (`w-provider-list`).
+- `agent:` is a namespace with policy `deferred` — Wing decides, and **KEAP
+  never enumerates agents**, which would be exactly the enumeration oracle this
+  file rejects two sections above. A name nobody has deployed validates
+  identically to one that runs nightly; that is the test.
+- `?via` is a **param**, typed `model-uri`, whose value is the AgentKit URI.
+
+**The first draft of this section was wrong and the correction is the useful
+part.** It proposed `?via=model:anthropic-claude-opus-4-7` — a `model:`
+namespace in the kv slot. *That does not parse.* `parseValue` accepts
+`string | dotted_word`, `:` is its own token, so the value ends at `model` and
+the colon is a syntax error. The suite now opens with that refusal as a test,
+so the shape cannot come back.
+
+The correction is better than the original rather than a workaround. A model is
+not something the chain **operates on** — it is a hint about who runs the stage
+— so it belongs in a param. And it must be **quoted**, because real model tags
+carry colons: this box serves `qwen2.5-coder:32b`, `nomic-embed-text:latest`,
+`hermes3:8b`. A quoted string is the one slot in this grammar that carries
+another vendor's punctuation unedited, which is what
+[`foreign-properties`](../doctrine/foreign-properties.md) asks of us — we own
+the provider prefix, ollama owns everything after it.
+
+The provider vocabulary is declared three times today (`agent.schema.yaml`,
+`Factory::fromUri`, `test_agentkit_naming.py:89`) and `MODEL_URI_RE` is now a
+fourth — one source, the rest derived (`w-provider-list`).
 
 **The provider is a binding, not a fact in the sentence, and that is what makes
 the loop work.** If a chain pinned its provider, the loop could only change
@@ -117,6 +134,14 @@ name**. Three conditions, all load-bearing:
 3. The audit records both — the named macro and what it became. The model learns
    at the abstraction, the gate judges the concrete, and the training corpus has
    both levels.
+
+**`delegate` is declared `mutating`, and that is not a formality.** Running an
+agent spends tokens, may write memory, and can reach whatever the agent's own
+scopes allow. P1 refuses every mutating stage at the door — so `delegate`
+**validates today and executes nothing**, which is the honest state until every
+agent run goes through one runtime (`w-agentkit-spine`). It also means Wing
+needs no handler yet: the coverage gate excludes mutating opcodes precisely so
+it never demands dead code.
 
 ## Declarative sentences: yes, but not in this grammar
 

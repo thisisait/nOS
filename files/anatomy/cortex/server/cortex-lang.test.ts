@@ -14,6 +14,7 @@ import {
   type CortexIssueCode,
 } from './cortex-lang';
 import {
+  CORTEX_CONTRACT_VERSION,
   CORTEX_NAMESPACES,
   CORTEX_OPCODES,
   CORTEX_SCOPE,
@@ -778,7 +779,7 @@ describe('analysis invariants', () => {
 // ---------------------------------------------------------------------------
 
 describe('opcode registry', () => {
-  it('holds the 14 P1 opcodes and excludes `branch`', () => {
+  it('holds the 14 P1 opcodes plus v2 `delegate`, and excludes `branch`', () => {
     expect(opcodeNames()).toEqual([
       'get',
       'map',
@@ -794,6 +795,10 @@ describe('opcode registry', () => {
       'preserve',
       'route',
       'review',
+      // v2, 2026-08-10. Listed last because the order of this array is the
+      // order of the registry fingerprint; appending is the only shape of
+      // addition that does not renumber everything before it.
+      'delegate',
     ]);
     expect(getOpcode('branch')).toBeUndefined();
   });
@@ -805,7 +810,12 @@ describe('opcode registry', () => {
       expect(op.operands.min).toBeLessThanOrEqual(op.operands.max);
       expect(op.operands.namespaces.length).toBeGreaterThan(0);
       for (const ns of op.operands.namespaces) expect(CORTEX_NAMESPACES).toContain(ns);
-      expect(op.since).toBe(1);
+      // `since` must name a contract version that EXISTS. The old assertion was
+      // `toBe(1)`, which is a different claim — it said "there has never been a
+      // second version", and it would have had to be edited by anyone adding an
+      // opcode, which is the one moment a gate should hold rather than yield.
+      expect(op.since).toBeGreaterThanOrEqual(1);
+      expect(op.since).toBeLessThanOrEqual(CORTEX_CONTRACT_VERSION);
       // every mutating verb declares the gate flags KEAP reports on
       if (op.mutating) {
         expect(op.params.dry_run?.type).toBe('bool');
@@ -851,5 +861,102 @@ describe('opcode registry', () => {
     expect([...CORTEX_SCOPE.deferred].sort()).toEqual(
       CORTEX_NAMESPACES.filter((ns) => NAMESPACE_POLICY[ns] === 'deferred').slice().sort(),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// contract v2 — the `agent:` namespace, `delegate`, and `?via`
+// ---------------------------------------------------------------------------
+
+/**
+ * THE DESIGN NOTE THIS SUITE CORRECTED, recorded because the correction is the
+ * useful part. docs/idea/02 first proposed spelling the binding hint
+ *
+ *     delegate(agent:librarian, ?via=model:anthropic-claude-opus-4-7)
+ *
+ * with a `model:` NAMESPACE in the kv slot. It does not parse, and the first
+ * test below is the proof: `parseValue` accepts `string | dotted_word`, `:` is
+ * its own token, so the value ends at `model` and the colon is a syntax error.
+ *
+ * The correction is better than the original rather than a workaround. A model
+ * is not something the chain OPERATES on — it is a hint about who runs the
+ * stage — so it belongs in a param, not an operand. And it has to be a QUOTED
+ * string, because real model tags carry colons (`qwen2.5-coder:32b`,
+ * `nomic-embed-text:latest` — measured on the host this was written on) and a
+ * quoted string is the one slot in this grammar that carries another vendor's
+ * punctuation unedited.
+ */
+describe('contract v2 — delegate', () => {
+  it('REFUSES the shape the plan originally proposed', () => {
+    const err = only('@input | delegate(agent:librarian, ?via=model:anthropic-claude-opus-4-7)');
+    expect(err.code).toBe('syntax_error');
+  });
+
+  it('accepts the corrected shape — a quoted model uri', () => {
+    const stage = stage0('@input | delegate(agent:librarian, ?via="anthropic-claude-opus-4-7")');
+    expect(stage.opcode).toBe('delegate');
+    expect(stage.operands[0].ns).toBe('agent');
+    expect(stage.params.via.value).toBe('anthropic-claude-opus-4-7');
+  });
+
+  it('carries a real ollama tag, colons and all', () => {
+    // The point of the quoted form. `openclaw-qwen2.5-coder:32b` is the live
+    // tag on this box; an unquoted spelling could not survive the tokenizer,
+    // and a dash-ified rewrite would be us editing ollama's identifier.
+    const stage = stage0('@input | delegate(agent:scout, ?via="openclaw-qwen2.5-coder:32b")');
+    expect(stage.params.via.value).toBe('openclaw-qwen2.5-coder:32b');
+  });
+
+  it('marks `?via` as defaulted — the hint may not read as a command', () => {
+    // The `?` is the whole narrowing argument in one AST field: it says the
+    // caller expressed a PREFERENCE. Data may narrow a permission and never
+    // widen one, so the binding gate stays free to refuse.
+    const stage = stage0('@input | delegate(agent:librarian, ?via="local-tinyllama")');
+    expect(stage.params.via.defaulted).toBe(true);
+  });
+
+  it('rejects a provider that is not in the list', () => {
+    const err = only('@input | delegate(agent:librarian, ?via="mistral-large")');
+    expect(err.code).toBe('invalid_param_value');
+  });
+
+  it('rejects a model uri with no provider prefix at all', () => {
+    expect(only('@input | delegate(agent:librarian, ?via="claude-opus-4-7")').code).toBe(
+      'invalid_param_value',
+    );
+  });
+
+  it('is MUTATING, so P1 refuses it at the door', () => {
+    // Not a formality. Running an agent spends tokens, may write memory, and
+    // can reach whatever the agent's own scopes allow. Declaring it mutating is
+    // what makes `delegate` validate today and execute nothing — the honest
+    // state until every agent run goes through one runtime.
+    const op = getOpcode('delegate');
+    expect(op?.mutating).toBe(true);
+    expect(op?.params.dry_run?.type).toBe('bool');
+    expect(op?.params.commit?.type).toBe('bool');
+  });
+
+  it('takes exactly one agent operand and nothing from another namespace', () => {
+    const op = getOpcode('delegate');
+    expect(op?.operands).toMatchObject({ min: 1, max: 1, namespaces: ['agent'] });
+    expect(only('@input | delegate(tax:01.01)').code).toBe('namespace_not_accepted');
+  });
+
+  it('never resolves an agent — KEAP must not learn the roster', () => {
+    // `deferred` is the only honest policy here. `resolved` would mean KEAP can
+    // enumerate the estate's agents; `unresolved` would mean it knows them and
+    // declines to say. Both disclose. A name nobody has ever deployed must
+    // therefore validate exactly like one that runs nightly.
+    const real = stage0('@input | delegate(agent:scout)');
+    const invented = stage0('@input | delegate(agent:no-such-agent-anywhere)');
+    expect(real.operands[0].kind).toBe('deferred');
+    expect(invented.operands[0].kind).toBe('deferred');
+    expect(NAMESPACE_POLICY.agent).toBe('deferred');
+  });
+
+  it('needs no `?via` at all — the binding decides when the sentence does not', () => {
+    const stage = stage0('@input | delegate(agent:conductor)');
+    expect(stage.params.via).toBeUndefined();
   });
 });

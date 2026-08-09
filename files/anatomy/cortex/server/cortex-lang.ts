@@ -35,6 +35,7 @@
  */
 import {
   CORTEX_NAMESPACES,
+  MODEL_URI_RE,
   NAMESPACE_POLICY,
   RESERVED_SCOPE_WORDS,
   getOpcode,
@@ -997,6 +998,13 @@ function checkParamValue(spec: CortexParamSpec, value: CortexValue): boolean {
       return value.type === 'string';
     case 'id':
       return value.type === 'string' && TAX_ID_RE.test(String(value.value));
+    case 'model-uri':
+      // Real model tags carry colons (`qwen2.5-coder:32b`), and `:` is the
+      // namespace token — so this value can only arrive QUOTED. A bareword
+      // would have ended at the colon and failed to parse long before here.
+      // The check is therefore on shape alone: whether that provider is
+      // configured, and whether the caller may reach it, are Wing's questions.
+      return value.type === 'string' && MODEL_URI_RE.test(String(value.value));
     default:
       return false;
   }

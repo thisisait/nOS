@@ -477,7 +477,11 @@ describe('D1 — kg:/ent: are never resolved', () => {
       authorizes: false,
       resolved: ['tax', 'rel'],
       unresolved: ['kg', 'ent'],
-      deferred: ['db', 'svc', 'doc'],
+      // `agent` joins the deferred set in contract v2. It belongs here and
+      // nowhere else: `resolved` would mean KEAP can enumerate the estate's
+      // agents, and `unresolved` would mean it knows the roster and is
+      // declining to say — both are disclosures. Deferred means it never learns.
+      deferred: ['db', 'svc', 'doc', 'agent'],
     });
     // `valid: true` is a statement about MEANING, never about permission.
     expect(run('@input | classify(tax:01.01)').scope.authorizes).toBe(false);

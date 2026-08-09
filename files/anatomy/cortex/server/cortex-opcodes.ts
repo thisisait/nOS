@@ -27,13 +27,17 @@ import { createHash } from 'node:crypto';
 /** Cortex contract version. Published at `GET /agent/v1/health` as
  *  `contracts.cortex`. Increments on any incompatible change to this registry,
  *  the AST schema or the error codes. `contracts.selfmodel` is never bumped. */
-export const CORTEX_CONTRACT_VERSION = 1;
+// v2 (2026-08-10) — the `agent:` namespace and the `delegate` opcode. This is a
+// contract bump and not a quiet addition: the namespace enum is published in the
+// `unknown_namespace` error's `expected` list, so a client that memorised seven
+// tokens now sees eight. Wing reads `contracts.cortex` at boot.
+export const CORTEX_CONTRACT_VERSION = 2;
 
 // ---------------------------------------------------------------------------
 // Namespaces (grammar §3: a closed seven-symbol enum)
 // ---------------------------------------------------------------------------
 
-export const CORTEX_NAMESPACES = ['tax', 'ent', 'kg', 'rel', 'db', 'svc', 'doc'] as const;
+export const CORTEX_NAMESPACES = ['tax', 'ent', 'kg', 'rel', 'db', 'svc', 'doc', 'agent'] as const;
 export type CortexNamespace = (typeof CORTEX_NAMESPACES)[number];
 
 const NAMESPACE_SET: ReadonlySet<string> = new Set<string>(CORTEX_NAMESPACES);
@@ -65,6 +69,13 @@ export const NAMESPACE_POLICY: Readonly<Record<CortexNamespace, CortexNamespaceP
   db: 'deferred',
   svc: 'deferred',
   doc: 'deferred',
+  // `agent:` is deferred for the same reason `svc:` is, and for one more that is
+  // sharper: KEAP must never learn WHICH AGENTS EXIST. An enumerable agent list
+  // is an enumeration oracle over the estate's capabilities — the exact
+  // affordance this contract refuses elsewhere (see the WrenAI note in
+  // docs/idea/02) — and it would also make the roster a fact in the ontology
+  // rather than a permission Wing holds.
+  agent: 'deferred',
 };
 
 /** The machine-readable scope declaration returned as `data.scope` (§3.2).
@@ -76,7 +87,7 @@ export const CORTEX_SCOPE = {
   authorizes: false,
   resolved: ['tax', 'rel'],
   unresolved: ['kg', 'ent'],
-  deferred: ['db', 'svc', 'doc'],
+  deferred: ['db', 'svc', 'doc', 'agent'],
 } as const;
 
 /**
@@ -98,7 +109,35 @@ export const RESERVED_SCOPE_WORDS: Readonly<Partial<Record<CortexNamespace, stri
 // Opcode specs
 // ---------------------------------------------------------------------------
 
-export type CortexParamType = 'bool' | 'int' | 'string' | 'id';
+export type CortexParamType = 'bool' | 'int' | 'string' | 'id' | 'model-uri';
+
+/**
+ * A model URI: `<provider>-<vendor's own model id>`.
+ *
+ * WHY A QUOTED STRING AND NOT AN OPERAND, decided 2026-08-10 by reading the
+ * parser rather than the plan. The design note first written into docs/idea/02
+ * proposed `?via=model:anthropic-claude-opus-4-7` — a `model:` namespace in the
+ * kv slot. **That does not parse.** `parseValue` accepts `string | dotted_word`
+ * and `:` is its own token, so the value would end at `model` and the colon
+ * would be a syntax error. The correction is better than the original: a model
+ * is not a thing the chain OPERATES ON, it is a hint about who runs it, so it
+ * belongs in a param — and a quoted string is the one slot in this grammar that
+ * carries arbitrary vendor punctuation.
+ *
+ * WHICH MATTERS, because real tags have colons. The box this was written on
+ * serves `qwen2.5-coder:32b`, `nomic-embed-text:latest`, `hermes3:8b`. We own
+ * the provider prefix; ollama owns everything after it, and rewriting another
+ * system's identifier is what docs/doctrine/foreign-properties.md exists to
+ * stop. So the tail is deliberately permissive: dots, colons, slashes and
+ * underscores all survive, because they all appear in real registries.
+ *
+ * The provider list is the SAME list AgentKit validates against. It is declared
+ * in three places already (state/schema/agent.schema.yaml, Factory::fromUri,
+ * test_agentkit_naming.py) and this would be a fourth — see the `w-provider-list`
+ * roadmap row, which collapses them to one. Until it lands, this comment is the
+ * pointer that keeps the duplication visible instead of quiet.
+ */
+export const MODEL_URI_RE = /^(anthropic|openclaw|openai|local)-[A-Za-z0-9._:/-]{1,96}$/;
 
 export interface CortexParamSpec {
   readonly type: CortexParamType;
@@ -274,6 +313,48 @@ export const CORTEX_OPCODES = [
     params: GATE_PARAMS,
     mutating: true,
     since: 1,
+  },
+  {
+    // THE SKILL THAT REPLACES SEVERAL SKILLS. One verb the emitter can reach for
+    // instead of composing a ceremony by hand — but a macro adds no capability
+    // ONLY IF the gate meets its EXPANSION rather than its name. Three
+    // conditions, all load-bearing, recorded here because the executor is where
+    // they are enforced and this is where they are declared:
+    //   1. expansion runs BEFORE the binding gate, so every expanded verb is
+    //      authorised individually against the caller's scoped token;
+    //   2. the 16-stage limit counts the EXPANDED chain, or a macro is a limit
+    //      bypass wearing one stage;
+    //   3. the audit records both — the macro and what it became — so the model
+    //      learns at the abstraction while the gate judges the concrete.
+    //
+    // MUTATING, AND NOT AS A FORMALITY. Running an agent spends tokens, may
+    // write memory and can reach anything the agent's own scopes allow. P1
+    // refuses every mutating stage at the door, so `delegate` VALIDATES today
+    // and EXECUTES nothing — which is the honest state until every agent run
+    // goes through one runtime (roadmap `w-agentkit-spine`). It also means Wing
+    // needs no handler yet: the coverage gate excludes mutating opcodes
+    // precisely so it never demands dead code.
+    name: 'delegate',
+    summary: 'hand the input to an agent, which decides how to satisfy it',
+    operands: { min: 1, max: 1, namespaces: ['agent'] },
+    params: {
+      ...GATE_PARAMS,
+      // A HINT THAT MAY ONLY NARROW. `?via` names who the caller would PREFER
+      // to run this; the binding gate still decides and its refusal is recorded.
+      // The asymmetry is the whole safety argument: data may narrow a
+      // permission, never widen one. `?via="local-…"` as a restriction — "this
+      // must not leave the box" — can only subtract, which is exactly the shape
+      // a residency rule needs. `?via` naming a remote provider is a REQUEST.
+      // What is forbidden is reading it as a command, and the `?` marker already
+      // says so: it sets `defaulted: true` in the AST.
+      via: { type: 'model-uri', required: false },
+      // What the agent is being asked for, in its own words. Free text on
+      // purpose: the point of delegating is that the CALLER does not have to
+      // know which stages the work decomposes into.
+      task: { type: 'string', required: false },
+    },
+    mutating: true,
+    since: 2,
   },
 ] as const satisfies readonly CortexOpcodeSpec[];
 
