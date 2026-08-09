@@ -158,6 +158,51 @@ enforced by the engine and not by instruction:
 6. **A Pulse job** running one bounded cycle nightly, once 1–4 have run
    attended enough times to trust them.
 
+## 6b. The prerequisite nobody had written down (measured 2026-08-09)
+
+**Everything this file assumes about identity, memory, grading and observability
+is a property of a runtime that is not running the agents.**
+
+The estate has two:
+
+| runtime | what it does | what it records |
+|---|---|---|
+| `pulse-run-agent.sh` → `claude` CLI | **runs the nightly agents** | tokens, an exit code |
+| AgentKit (`App\AgentKit\*`) | sessions, threads, iterations, grader decisions, vault, `actor_action_id` lineage | everything the loop needs |
+
+They are not the same runtime, and the live one is the thin one. So the RFL
+corpus this loop is supposed to produce — *(prompt, binding, tool calls,
+outcome, grade)* — has no writer today. That is not hygiene beside the loop; it
+is item 0 of the build order (`w-agentkit-spine`), and it is also where a
+provider stops being a fact in a chain and becomes a **binding on a run**
+(see [02](02-cortex-lang.md)).
+
+The same gap answers a question that looked unrelated: switching the cloud
+agents to another provider. `pulse/runners/subprocess.py:35` strips every
+inherited variable matching `/ANTHROPIC/` — so `ANTHROPIC_BASE_URL` never
+reaches the CLI, and the only route in today is `pulse_jobs.env_json`, in
+plaintext, in `wing.db`. One spine removes both problems at once.
+
+## 6c. Precedent — the row that already existed, and the shipped answer to it
+
+`loop-forget` — *"Nothing records what was already tried"* — has been queued
+since it was filed. It is the difference between a loop that improves and one
+that rediscovers.
+
+[semantica-agi/semantica](https://github.com/semantica-agi/semantica) (MIT,
+2.7k stars, active) ships the shape: decisions are first-class graph nodes with
+causal ancestry, `trace_decision_chain()`, `analyze_decision_impact()`, and
+`find_similar_decisions()` for precedent search. Their W3C **PROV-O** export is
+worth taking too — our audit chain is bespoke, and a standard export is what a
+regulator can actually read.
+
+**What must not come with it.** In that design `record_decision()` is a data
+write and rules are data; there is no permission model. Importing the shape
+without the boundary would quietly lose this estate's load-bearing rule — *a
+capability may never be added by data* — which is why the opcode registry is a
+literal map and not a directory scan. Take the precedent search over
+`agent_sessions`; leave the capability model where it is.
+
 ## 7. What would prove it works
 
 Not "the loop ran". **A weakness that was on the list, is not on the list, and

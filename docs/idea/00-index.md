@@ -24,7 +24,10 @@
 | [09](09-hidden-fees.md) | Hidden fees | a ledger, always open | The costs paid without a decision. Thirteen entries; two closed. |
 | [14](14-notification-spine.md) | One notification spine | **half built** | One abstract channel; chats, mail and approval surfaces are implementations. The write half ships and no channel carries an answer back. |
 | [12](12-state-surface.md) | The state surface | design | One artifact every model reads first — and 81 058 of 81 098 events have no actor, which is the real gap behind "show the session in Wing". |
+| [10](10-roadmap-surface.md) | The roadmap surface | shipped | A plan that must be rewritten by hand to stay true will not stay true; the table is asked, not copied. |
 | [11](11-agentic-loop.md) | The agentic loop | design | The propose→judge loop exists per session; nothing carries between them, and no judge is addressable. |
+| [13](13-relations.md) | Relations | design | What is joined to what, and who owns the verb. |
+| [15](15-business-fixture.md) | A real business on nOS | **proposed** | Every claim so far was measured against a corpus we authored; a fixture is data that argues back. |
 
 ## How to use this
 

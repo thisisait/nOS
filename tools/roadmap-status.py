@@ -151,8 +151,24 @@ def main() -> int:
     for r in show:
         children[r.get("parent") or ""].append(r)
 
+    def order(r: dict) -> tuple:
+        """Status first, then the operator's explicit order, then slug.
+
+        `ordinal` carries the concept `ui.sort` and until 2026-08-09 no reader
+        honoured it — so a set of rows deliberately sequenced as a week rendered
+        alphabetically, which is the one order that cannot be a plan. Rows with
+        no ordinal keep sorting after those that have one rather than at 0,
+        because absent is not first.
+        """
+        raw = r.get("ordinal")
+        try:
+            explicit = (0, float(raw)) if raw not in (None, "") else (1, 0.0)
+        except (TypeError, ValueError):
+            explicit = (1, 0.0)
+        return (rank(r.get("status")), *explicit, r.get("slug") or "")
+
     def emit(parent: str, depth: int) -> None:
-        for r in sorted(children.get(parent, []), key=lambda x: rank(x.get("status"))):
+        for r in sorted(children.get(parent, []), key=order):
             pad = "  " * depth
             print(f"  {pad}[{r.get('status') or '?':7s}] {r.get('track') or '-':11s} "
                   f"{r.get('slug') or '?':20s} {r.get('title') or ''}")

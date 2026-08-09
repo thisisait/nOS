@@ -64,6 +64,95 @@ to bind to yet.
 Until they bind, [06](06-genome.md)'s hydrator still has nowhere to land for
 anything but `get`/`resolve`.
 
+## The two nouns the language is missing (decided 2026-08-09, `w-vocab`)
+
+The loop needs to name **which agent** and **which model**, because swapping the
+provider is how it learns. Both arrive as namespaces with policy `deferred`:
+
+```
+@input | delegate(agent:librarian, ?via=model:anthropic-claude-opus-4-7)
+```
+
+- `agent:` and `model:` are `deferred` — Wing decides, and **KEAP never
+  enumerates agents**, which would be exactly the enumeration oracle this file
+  rejects two sections above.
+- The model operand is the **AgentKit URI verbatim** (`anthropic-claude-opus-4-7`,
+  `openclaw-qwen-coder-32b`). Dashes are word characters in the tokenizer, so it
+  lexes as one segment, and the estate keeps one spelling of a model instead of
+  two. The provider vocabulary itself is declared three times today
+  (`agent.schema.yaml`, `Factory::fromUri`, `test_agentkit_naming.py:89`) and
+  `model:` would make a fourth — one source, the rest derived (`w-provider-list`).
+
+**The provider is a binding, not a fact in the sentence, and that is what makes
+the loop work.** If a chain pinned its provider, the loop could only change
+providers by rewriting chains — and then every experiment varies two things at
+once and no run is comparable to another. The sentence is the constant; the
+binding is the variable; the run records both. That is also the only reading
+consistent with `CORTEX_SCOPE.authorizes === false`.
+
+### `?via=` narrows, it never widens
+
+The asymmetry is the whole safety argument, and it is worth stating as a rule
+rather than a caveat:
+
+> **Data may narrow a permission. Data may never widen one.**
+
+`?via=model:openclaw-…` as a *restriction* — "this must not leave the box" — is
+safe by construction: it can only subtract. Personal data under a residency rule
+needs exactly this. `?via=` naming a remote provider is a *request*, which the
+binding gate must approve anyway and whose refusal is recorded. What is
+forbidden is `?via=` read as a command. The `?` arg form already carries
+`defaulted: true`, so this is a change of meaning, not of grammar.
+
+### `delegate` is a macro, and macros expand BEFORE the gate
+
+One skill that performs what would otherwise take several is a macro, and a
+macro adds no capability **only if the gate meets the expansion rather than the
+name**. Three conditions, all load-bearing:
+
+1. Expansion runs before `CortexBindingGate`, so every verb is authorised
+   individually against the caller's scoped token.
+2. The 16-stage limit counts the **expanded** chain. Otherwise a macro is a
+   limit bypass.
+3. The audit records both — the named macro and what it became. The model learns
+   at the abstraction, the gate judges the concrete, and the training corpus has
+   both levels.
+
+## Declarative sentences: yes, but not in this grammar
+
+The pipeline is functional and strictly linear (`source? stage ("|" stage)*`).
+Two extensions were weighed on 2026-08-09:
+
+- **Longer functional sentences — take it.** Named intermediates and fan-in turn
+  the chain into a DAG. Still no side effects before execution, still a closed
+  vocabulary, still validatable.
+- **Declarative statements — not here.** A declarative sentence says what
+  *holds*, not what to *do*, and admitting both into one grammar requires a
+  general expression language. That road ends where WrenAI's did, five sections
+  above: `read_csv(/etc/passwd)` blocked in `FROM`, allowed in a projection,
+  closed with a maintained **denylist**. A denylist is the opposite of
+  fail-closed.
+
+The declarative layer therefore lives **outside** as its own typed artifact,
+compiled into a cortex chain that still meets the gate. It may be rich precisely
+because it executes nothing.
+
+**The engine for it is chosen** (`w-datalog`): vendor
+`datalog_reasoner.py` from [semantica-agi/semantica](https://github.com/semantica-agi/semantica)
+— 16 KB, MIT, importing only `re`/`collections`/`dataclasses`/`typing`,
+semi-naive bottom-up fixpoint with **termination guaranteed on finite graphs**.
+That guarantee is the property that makes a declarative layer safe to accept
+from a model. Not the package: its *required* dependencies include torch,
+transformers, spacy, opencv-python and librosa.
+
+Its scope is **derived, not chosen**. Datalog over a graph is an enumeration
+oracle, and this estate already refuses `kg:`/`ent:` at namespace granularity
+*without issuing a query*, so that no timing oracle survives. Rules may
+therefore read only what the caller could already enumerate wholesale — `tax:`
+and `rel:`, the two `resolved` namespaces. Their Rete engine is deliberately
+**not** taken: their own README warns its matcher is "intentionally simple" and
+says not to wire it into production compliance gates.
+
 ## Next
 
 Two of seven verbs execute. The next move is on the KEAP side — publish the
