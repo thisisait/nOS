@@ -96,11 +96,20 @@
                       | map('basename') | map('regex_replace', '\.yml$', '') | list) }}
   tags: ['stacks', 'core', 'always']
 
+- name: "[Stacks] Reset the accumulator (this file is imported TWICE)"
+  # core-up.yml and stack-up.yml both import this. An accumulator that only ever
+  # appends would see its own first pass on the second import and report every
+  # service twice — 64 fragments where there are 32. Caught before the first
+  # converge, by asking what happens on the second import rather than the first.
+  ansible.builtin.set_fact:
+    _disabled_services: []
+  tags: ['stacks', 'core', 'always']
+
 - name: "[Stacks] Which of them are switched OFF right now"
   # The RESOLVED value, so an operator's config.yml override counts — the
   # committed default is only how the name was discovered.
   ansible.builtin.set_fact:
-    _disabled_services: "{{ _disabled_services | default([]) + [item] }}"
+    _disabled_services: "{{ _disabled_services + [item] }}"
   loop: "{{ _flag_candidates }}"
   loop_control:
     label: "{{ item }}"
