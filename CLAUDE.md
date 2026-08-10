@@ -8,6 +8,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `nOS` is the open-source reference implementation behind [**This is AIT — Agentic IT**](https://thisisait.eu). Forked from geerlingguy/mac-dev-playbook → roles renamed under the `pazny.*` namespace.
 
+## The repo is not the running system
+
+**This checkout is the SOURCE. nOS runs from elsewhere on the host** — `~/stacks`,
+`~/keap/src`, `~/face/src`, `~/wing`, launchd organs — so development here never
+disturbs the estate serving on this machine. A converge is what moves source into
+runtime; nothing else does.
+
+The consequence, and it is the one that costs tokens when forgotten: **a git ref
+answers "what is in the repo", never "what is running"**, and the two are
+routinely different on purpose. The deployed KEAP sat three releases ahead of the
+local checkout for a week in August 2026 and both were correct.
+
+Same shape one level down: `default.config.yml` is the committed default and
+`config.yml` (gitignored) overrides it, so a flag read from the default alone is
+not the flag the estate uses. A local branch ref is likewise not `origin`'s until
+someone fetches.
+
+**Do not hand-derive any of this.** Ask, the way CLAUDE.md already tells you to
+ask for the security queue:
+
+```bash
+tools/estate-status.py          # host vs local repo vs origin, all three
+tools/estate-status.py --config install_gitlab   # the RESOLVED value, not the default
+```
+
 ## Git Workflow
 
 Three long-lived branches (`feat → dev → master`), revived 2026-05-17 after the `master`-only flow proved hard to gate once contributors arrive:
