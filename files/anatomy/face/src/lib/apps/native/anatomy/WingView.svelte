@@ -15,7 +15,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { loadWing, type WingResponse } from '$lib/api/pulse';
-	import { isContested, type WingEventView, type WingNotificationView } from '$lib/anatomy/wing';
+	import type { WingEventView, WingNotificationView } from '$lib/anatomy/wing';
 	import { StatusNote, Badge, StateDot, Panel, severityTone } from '$lib/components/ui';
 
 	interface Props {

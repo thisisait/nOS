@@ -42,10 +42,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 		if (e instanceof UpstreamError) {
 			// Wing's own refusals pass through with their status intact —
 			// 409 paused and 404 unknown are answers, not transport faults.
-			throw error(
-				e.status === 404 || e.status === 409 ? e.status : 502,
-				e.message
-			);
+			throw error(e.status === 404 || e.status === 409 ? e.status : 502, e.message);
 		}
 		throw error(502, 'Wing did not answer');
 	}

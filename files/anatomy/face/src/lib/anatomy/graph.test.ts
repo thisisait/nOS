@@ -152,9 +152,7 @@ describe('mutexSpokes', () => {
 	it('folds pairwise exclusions into one spoke per claim', () => {
 		const spokes = mutexSpokes(graph);
 		const agentSpokes = spokes.filter((s) => s.resource === 'resource:agent-run-lock');
-		const pairs = graph.edges.filter(
-			(e) => e.kind === 'mutex' && e.resource === 'agent-run-lock'
-		);
+		const pairs = graph.edges.filter((e) => e.kind === 'mutex' && e.resource === 'agent-run-lock');
 		// N claimants: N spokes vs N(N-1)/2 pairs. Same information, less ink.
 		expect((agentSpokes.length * (agentSpokes.length - 1)) / 2).toBe(pairs.length);
 		expect(agentSpokes.length).toBeGreaterThanOrEqual(5);
@@ -200,9 +198,7 @@ describe('joinLive', () => {
 	it('treats an absent snapshot as all-unregistered, never as all-ok', () => {
 		const join = joinLive(graph, undefined);
 		expect(join.states.size).toBe(0);
-		expect(join.unregistered.length).toBe(
-			graph.nodes.filter((n) => n.kind === 'pulse').length
-		);
+		expect(join.unregistered.length).toBe(graph.nodes.filter((n) => n.kind === 'pulse').length);
 	});
 });
 

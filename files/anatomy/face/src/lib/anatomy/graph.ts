@@ -265,11 +265,11 @@ export function serviceCoverage(graph: AnatomyGraph): ServiceCoverage {
 		cov.services === 0
 			? 'service coverage unmeasured — this graph carries no service counts'
 			: gap === 0
-			? `all ${cov.services} services surveyed · ${cov.dependencyEdges} dependency edges ` +
-				`(${cov.unenforcedEdges} not backed by an auto-enable block) · layer derived for all`
-			: `${cov.surveyed} of ${cov.services} services surveyed — ${gap} unread · ` +
-				`${cov.dependencyEdges} dependency edges (${cov.unenforcedEdges} not backed by an ` +
-				`auto-enable block) · layer derived for ${cov.layered}, WITHHELD for ${cov.withheld}`;
+				? `all ${cov.services} services surveyed · ${cov.dependencyEdges} dependency edges ` +
+					`(${cov.unenforcedEdges} not backed by an auto-enable block) · layer derived for all`
+				: `${cov.surveyed} of ${cov.services} services surveyed — ${gap} unread · ` +
+					`${cov.dependencyEdges} dependency edges (${cov.unenforcedEdges} not backed by an ` +
+					`auto-enable block) · layer derived for ${cov.layered}, WITHHELD for ${cov.withheld}`;
 	return { ...cov, sentence };
 }
 
@@ -347,9 +347,7 @@ export function filterForCanvas(
 	const edges = graph.edges.filter(
 		(e) => e.kind !== 'mutex' && kindVisible(e.from) && kindVisible(e.to)
 	);
-	const spokes = mutexSpokes(graph).filter(
-		(s) => kindVisible(s.node) && kindVisible(s.resource)
-	);
+	const spokes = mutexSpokes(graph).filter((s) => kindVisible(s.node) && kindVisible(s.resource));
 	const touched = new Set<string>();
 	for (const e of edges) {
 		touched.add(e.from);
@@ -489,9 +487,7 @@ export function spotlight(graph: AnatomyGraph, n = 7): Spotlight {
 		bump(e.to);
 	}
 	const nodes = [...graph.nodes]
-		.sort(
-			(a, b) => (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0) || a.id.localeCompare(b.id)
-		)
+		.sort((a, b) => (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0) || a.id.localeCompare(b.id))
 		.slice(0, Math.max(0, n));
 	const ids = new Set(nodes.map((x) => x.id));
 	const edges = graph.edges.filter((e) => e.kind !== 'mutex' && ids.has(e.from) && ids.has(e.to));

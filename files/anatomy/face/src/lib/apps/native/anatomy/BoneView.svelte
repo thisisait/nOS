@@ -60,7 +60,10 @@
 						<Badge tone="neutral">up {humanUptime(data.uptimeSeconds ?? null)}</Badge>
 					</p>
 					<p class="line">
-						<StateDot tone={data.authReady ? 'ok' : 'bad'} label={data.authReady ? 'JWT auth ready' : 'JWT auth not initialised'} />
+						<StateDot
+							tone={data.authReady ? 'ok' : 'bad'}
+							label={data.authReady ? 'JWT auth ready' : 'JWT auth not initialised'}
+						/>
 						<span>
 							{#if data.authReady}
 								JWT auth initialised
@@ -71,9 +74,9 @@
 					</p>
 					{#if data.authReady === false}
 						<StatusNote kind="error" title="Every scope-gated endpoint is answering 503">
-							Bone still reports <code>status: ok</code> — liveness is all that field
-							claims. Agents calling state, migration or upgrade endpoints are being
-							refused while this screen’s first line stays green.
+							Bone still reports <code>status: ok</code> — liveness is all that field claims. Agents calling
+							state, migration or upgrade endpoints are being refused while this screen’s first line stays
+							green.
 						</StatusNote>
 					{/if}
 				{:else}
@@ -85,7 +88,10 @@
 
 			<Panel title="Vein · face → Bone VFS">
 				<p class="line">
-					<StateDot tone={data.vfs?.ok ? 'ok' : 'bad'} label={data.vfs?.ok ? 'carrying' : 'not carrying'} />
+					<StateDot
+						tone={data.vfs?.ok ? 'ok' : 'bad'}
+						label={data.vfs?.ok ? 'carrying' : 'not carrying'}
+					/>
 					<span>{data.vfs?.ok ? 'carrying traffic' : 'not carrying'}</span>
 				</p>
 				<p class="detail">{data.vfs?.detail}</p>
@@ -99,25 +105,25 @@
 		</div>
 
 		<div class="gaps">
-		<Panel title="Not visible from here">
-			<p class="intro">
-				These are read surfaces this view is not credentialed for. They are listed
-				rather than omitted: a panel that shows nothing where it cannot look
-				teaches you there is nothing there.
-			</p>
-			<ul>
-				{#each gaps as g (g.endpoint)}
-					<li>
-						<code>{g.endpoint}</code>
-						<span>{g.reason}</span>
-					</li>
-				{/each}
-			</ul>
-			<StatusNote kind="unwired" title="To close these">
-				mint a face client with the <code>nos:state:read</code> scope, or have Bone
-				expose an ungated summary. Until then this view is honest about its reach.
-			</StatusNote>
-		</Panel>
+			<Panel title="Not visible from here">
+				<p class="intro">
+					These are read surfaces this view is not credentialed for. They are listed rather than
+					omitted: a panel that shows nothing where it cannot look teaches you there is nothing
+					there.
+				</p>
+				<ul>
+					{#each gaps as g (g.endpoint)}
+						<li>
+							<code>{g.endpoint}</code>
+							<span>{g.reason}</span>
+						</li>
+					{/each}
+				</ul>
+				<StatusNote kind="unwired" title="To close these">
+					mint a face client with the <code>nos:state:read</code> scope, or have Bone expose an ungated
+					summary. Until then this view is honest about its reach.
+				</StatusNote>
+			</Panel>
 		</div>
 	{/if}
 </div>

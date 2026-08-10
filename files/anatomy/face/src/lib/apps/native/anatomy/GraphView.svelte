@@ -178,7 +178,9 @@
 	 * frame would be work in a render loop for a constant.
 	 */
 	const HEX_PATH = (() => {
-		const w = 34, h = 26, cut = 9;
+		const w = 34,
+			h = 26,
+			cut = 9;
 		return `M ${cut} 0 L ${w - cut} 0 L ${w} ${h / 2} L ${w - cut} ${h} L ${cut} ${h} L 0 ${h / 2} Z`;
 	})();
 
@@ -279,8 +281,7 @@
 						<g
 							class="node {n.kind}"
 							class:selected={selected?.id === n.id}
-							class:unsurveyed={n.dependencySurvey != null &&
-								n.dependencySurvey !== 'declared'}
+							class:unsurveyed={n.dependencySurvey != null && n.dependencySurvey !== 'declared'}
 							transform="translate({p.x},{p.y})"
 							role="button"
 							tabindex="0"
@@ -345,8 +346,7 @@
 								{#if ls === 'unmeasured'}
 									unmeasured — the Pulse snapshot did not load; this is not "ok"
 								{:else if ls === 'unregistered'}
-									declared in the repo, not registered in Wing — the next Wing
-									converge closes this
+									declared in the repo, not registered in Wing — the next Wing converge closes this
 								{:else}
 									<StateDot tone={STATE_TONE[ls] ?? 'neutral'} label={ls} />
 									{ls}
@@ -398,8 +398,8 @@
 							{/each}
 						</ul>
 						<p class="hint">
-							These may never run at once. The pairwise mutex edges behind this
-							claim stay in the artifact; the canvas draws the claim instead.
+							These may never run at once. The pairwise mutex edges behind this claim stay in the
+							artifact; the canvas draws the claim instead.
 						</p>
 					{/if}
 
@@ -418,9 +418,9 @@
 				<div class="debt">
 					<h3>Temporal debt</h3>
 					<p class="hint">
-						margin the schedules declare, worst-case. A red row's own budgets
-						already permit the ordering to flip — only real runtimes far below
-						their ceilings keep the chain ordered tonight.
+						margin the schedules declare, worst-case. A red row's own budgets already permit the
+						ordering to flip — only real runtimes far below their ceilings keep the chain ordered
+						tonight.
 					</p>
 					<table>
 						<thead>
@@ -443,8 +443,8 @@
 					{#if live.unregistered.length > 0 && pulse}
 						<h3>Declared, not registered</h3>
 						<p class="hint">
-							In the repo's manifests but absent from Wing's catalog — the wiring
-							ships on the next Wing converge.
+							In the repo's manifests but absent from Wing's catalog — the wiring ships on the next
+							Wing converge.
 						</p>
 						<ul class="plain">
 							{#each live.unregistered as id (id)}<li>{id}</li>{/each}
@@ -458,8 +458,7 @@
 					{/if}
 					{#if !pulse}
 						<StatusNote kind="unwired" title="Live join unmeasured">
-							The Pulse snapshot did not load, so live states are unknown —
-							unknown, not healthy.
+							The Pulse snapshot did not load, so live states are unknown — unknown, not healthy.
 						</StatusNote>
 					{/if}
 				</div>
@@ -468,9 +467,8 @@
 	</div>
 
 	<footer class="src">
-		{graph.counts.nodes} nodes · {graph.counts.edges} edges · compiled by
-		tools/anatomy-graph-gen.py from the manifests — data is as fresh as the last
-		converge, and says so rather than pretending to stream.
+		{graph.counts.nodes} nodes · {graph.counts.edges} edges · compiled by tools/anatomy-graph-gen.py from
+		the manifests — data is as fresh as the last converge, and says so rather than pretending to stream.
 	</footer>
 </div>
 

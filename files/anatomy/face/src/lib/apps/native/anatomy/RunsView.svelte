@@ -118,9 +118,7 @@
 	 */
 	const orphanWeaknesses = $derived.by(() => {
 		const declared = new Set(
-			graph.nodes
-				.filter((n) => n.kind === 'weakness')
-				.map((n) => n.id.slice('weakness:'.length))
+			graph.nodes.filter((n) => n.kind === 'weakness').map((n) => n.id.slice('weakness:'.length))
 		);
 		const seen = new Set<string>();
 		for (const p of data?.proposals ?? []) {
@@ -211,7 +209,9 @@
 			<Badge tone="neutral">{data.counts?.proposals ?? 0} proposals</Badge>
 			<Badge tone="neutral">{data.counts?.judgeRuns ?? 0} judge runs</Badge>
 			<Badge tone="neutral">{data.counts?.verdicts ?? 0} verdicts</Badge>
-			<span class="stamp">polled {agoS(polledAt)} ago · every {jobId ? 10 : 60}s — this is a poll, not a stream</span>
+			<span class="stamp"
+				>polled {agoS(polledAt)} ago · every {jobId ? 10 : 60}s — this is a poll, not a stream</span
+			>
 		</header>
 
 		<section class="cols">
@@ -219,9 +219,9 @@
 			<div class="col">
 				<h3>Gate sets — committed definition</h3>
 				<p class="hint">
-					Rendered from state/judge-sets.yml via the anatomy graph — the loop's
-					own oracle, inside its own deny list. Running one is the screen's only
-					write; it selects work by NAME and nothing else.
+					Rendered from state/judge-sets.yml via the anatomy graph — the loop's own oracle, inside
+					its own deny list. Running one is the screen's only write; it selects work by NAME and
+					nothing else.
 				</p>
 				{#each gatesets as gs (gs.id)}
 					{@const name = gs.id.slice('gateset:'.length)}
@@ -277,10 +277,15 @@
 					<summary>what this button refuses</summary>
 					<ul>
 						<li>any body key other than <code>gate_set</code> → 400 (refused, not stripped)</li>
-						<li><code>proposal_uuid</code> is never forwarded — judging a proposal is the engine's ceremony</li>
+						<li>
+							<code>proposal_uuid</code> is never forwarded — judging a proposal is the engine's ceremony
+						</li>
 						<li>sets declared <code>unattended: false</code> → 409 (attended-host judges)</li>
 						<li>callers below Tier-1 → 403, re-checked server-side</li>
-						<li>no parameter can supply, hint at, or override a result — Bone's contract, not a UI choice</li>
+						<li>
+							no parameter can supply, hint at, or override a result — Bone's contract, not a UI
+							choice
+						</li>
 					</ul>
 				</details>
 			</div>
@@ -289,9 +294,9 @@
 			<div class="col">
 				<h3>Verdicts — each ring one sealed run</h3>
 				<p class="hint">
-					Spokes are the judges the set DECLARES. Hatched = not judged
-					(indeterminate / skipped, with its reason); hollow = recorded scope
-					with no row. Neither is a pass and neither is a failure.
+					Spokes are the judges the set DECLARES. Hatched = not judged (indeterminate / skipped,
+					with its reason); hollow = recorded scope with no row. Neither is a pass and neither is a
+					failure.
 				</p>
 				{#if rings.length === 0}
 					<StatusNote kind="empty" title="No verdicts sealed yet">
@@ -306,10 +311,27 @@
 							class:open={openVerdict === verdict.uuid}
 							onclick={() => (openVerdict = openVerdict === verdict.uuid ? null : verdict.uuid)}
 						>
-							<svg viewBox="-60 -60 120 120" class="ringsvg" aria-label="{r.label}: {t.good} good, {t.bad} bad, {t.unjudged} not judged, {t.unaccounted} unaccounted of {t.declared}">
+							<svg
+								viewBox="-60 -60 120 120"
+								class="ringsvg"
+								aria-label="{r.label}: {t.good} good, {t.bad} bad, {t.unjudged} not judged, {t.unaccounted} unaccounted of {t.declared}"
+							>
 								<defs>
-									<pattern id="hatch-{verdict.uuid}" patternUnits="userSpaceOnUse" width="4" height="4" patternTransform="rotate(45)">
-										<line x1="0" y1="0" x2="0" y2="4" stroke="var(--warn, #e2b93b)" stroke-width="1.4" />
+									<pattern
+										id="hatch-{verdict.uuid}"
+										patternUnits="userSpaceOnUse"
+										width="4"
+										height="4"
+										patternTransform="rotate(45)"
+									>
+										<line
+											x1="0"
+											y1="0"
+											x2="0"
+											y2="4"
+											stroke="var(--warn, #e2b93b)"
+											stroke-width="1.4"
+										/>
 									</pattern>
 								</defs>
 								{#each arcs(r) as a, i (i)}
@@ -328,15 +350,19 @@
 								<text class="ringresult {verdict.result}" x="0" y="4">{verdict.result}</text>
 							</svg>
 							<span class="ringlabel">{r.label}</span>
-							<span class="ringmeta">{verdict.created_at} · {t.good}✓ {t.bad}✗ {t.unjudged}◍{#if t.unaccounted > 0}
-									· {t.unaccounted} unaccounted{/if}</span>
+							<span class="ringmeta"
+								>{verdict.created_at} · {t.good}✓ {t.bad}✗ {t.unjudged}◍{#if t.unaccounted > 0}
+									· {t.unaccounted} unaccounted{/if}</span
+							>
 						</button>
 						{#if openVerdict === verdict.uuid}
 							<ul class="spokelist">
 								{#each r.spokes as s (s.id)}
 									{@const run = runByUuid.get(s.id)}
 									<li>
-										<span class="sstate {s.state}">{s.state === 'unjudged' ? 'not judged' : s.state}</span>
+										<span class="sstate {s.state}"
+											>{s.state === 'unjudged' ? 'not judged' : s.state}</span
+										>
 										{s.label}
 										{#if s.reason}<span class="sreason">— {s.reason}</span>{/if}
 										{#if run && run.work_count !== null && run.min_work !== null && run.min_work > 0}
@@ -368,8 +394,7 @@
 								{/each}
 								{#if r.unaccounted > 0}
 									<li class="sunacc">
-										{r.unaccounted} declared member(s) have no run row — the gap is
-										the finding, not noise.
+										{r.unaccounted} declared member(s) have no run row — the gap is the finding, not noise.
 									</li>
 								{/if}
 							</ul>
@@ -394,18 +419,23 @@
 						  whose other three columns do join.
 						-->
 						<p class="orphan">
-							{orphanWeaknesses.length} weakness id(s) in the ledger resolve to no
-							declared source — <code>{orphanWeaknesses.join(', ')}</code>. The
-							lineage weakness → proposal is NOT drawn, because it does not join:
-							the registry names sources like <code>weakness:corpus-diff</code>.
+							{orphanWeaknesses.length} weakness id(s) in the ledger resolve to no declared source —
+							<code>{orphanWeaknesses.join(', ')}</code>. The lineage weakness → proposal is NOT
+							drawn, because it does not join: the registry names sources like
+							<code>weakness:corpus-diff</code>.
 						</p>
 					{/if}
 					<ul class="props">
 						{#each data.proposals ?? [] as p (p.uuid)}
 							{@const chain = proposalChain(p)}
-							<li class="prow" class:dim={openVerdict !== null && chain.verdictUuid !== openVerdict}>
+							<li
+								class="prow"
+								class:dim={openVerdict !== null && chain.verdictUuid !== openVerdict}
+							>
 								<code>{p.weakness_id}</code>
-								<span class="pmeta">{p.intent_class} · {p.gate_set} · attempt {p.attempt_n} · {p.created_at}</span>
+								<span class="pmeta"
+									>{p.intent_class} · {p.gate_set} · attempt {p.attempt_n} · {p.created_at}</span
+								>
 								<!--
 								  The flow, inline: how many of the gate set's declared judges
 								  reported, and what the verdict was. Dimming the rows outside
@@ -433,10 +463,9 @@
 				<h3>Replay</h3>
 				<p class="hint">
 					A time cursor over the loaded window. Wing's <code>since/until</code>
-					window params exist in the repo as of 2026-08-06 and this screen asks
-					for them — but the DEPLOYED Wing honours them only after its next
-					converge; until then it answers the unwindowed default and the count
-					below is honest about what actually loaded.
+					window params exist in the repo as of 2026-08-06 and this screen asks for them — but the DEPLOYED
+					Wing honours them only after its next converge; until then it answers the unwindowed default
+					and the count below is honest about what actually loaded.
 				</p>
 				<select bind:value={replayJob} onchange={() => void loadReplay()}>
 					<option value="">choose a job…</option>
@@ -465,12 +494,19 @@
 								<tr>
 									<td>{r.fired_at}</td>
 									<td>
-										<StateDot tone={exitTone(r.exit_code)} label={r.exit_code === null ? 'no result' : `exit ${r.exit_code}`} />
+										<StateDot
+											tone={exitTone(r.exit_code)}
+											label={r.exit_code === null ? 'no result' : `exit ${r.exit_code}`}
+										/>
 										{r.exit_code ?? '—'}
 									</td>
 									<td>
 										{#if r.actor_action_id}
-											<button class="follow" onclick={() => onfollowthread?.(r.actor_action_id as string)}>follow →</button>
+											<button
+												class="follow"
+												onclick={() => onfollowthread?.(r.actor_action_id as string)}
+												>follow →</button
+											>
 										{/if}
 									</td>
 								</tr>
@@ -478,10 +514,9 @@
 						</tbody>
 					</table>
 					<p class="hint">
-						{visibleRuns.length} of {replayRuns.length} loaded runs at cursor. The
-						graph's edges say what should precede each run; that overlay is
-						derived, not recorded, until dispatch annotation lands — so it is not
-						drawn here yet.
+						{visibleRuns.length} of {replayRuns.length} loaded runs at cursor. The graph's edges say what
+						should precede each run; that overlay is derived, not recorded, until dispatch annotation
+						lands — so it is not drawn here yet.
 					</p>
 				{/if}
 			</div>

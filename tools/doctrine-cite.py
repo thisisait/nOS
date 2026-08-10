@@ -76,8 +76,18 @@ SKIP_DIRS = {"node_modules", ".svelte-kit", "build", "dist", "vendor",
              "__pycache__", ".git"}
 #: Corpus docs living under a harvest root (files/anatomy/docs) are corpus,
 #: not citing code — harvesting them would count the law citing itself.
+#: GENERATED artifacts are an ECHO, never an authored claim. The contract
+#: exports lift Bone's and Wing's docblocks verbatim into OpenAPI descriptions,
+#: so every `§` a source file already contributes gets counted a SECOND time the
+#: moment someone regenerates. Measured 2026-08-10: regenerating the three
+#: contracts after two features had landed pushed the unqualified count from 124
+#: to 127 — three citations nobody wrote, in a file nobody edits, failing a
+#: ceiling whose whole purpose is to notice new claims. The source citations
+#: themselves are still harvested from the source, which is where they can
+#: actually be fixed.
 SKIP_FILES_PREFIX = ("files/anatomy/docs/", "files/anatomy/cortex/docs/",
-                     "files/anatomy/cortex/README.md")
+                     "files/anatomy/cortex/README.md",
+                     "files/anatomy/skills/contracts/")
 
 #: This tool and its gate QUOTE citations as data — KNOWN_FINDINGS carries
 #: the phantom REM-088 verbatim, docstrings carry §-examples. Harvesting

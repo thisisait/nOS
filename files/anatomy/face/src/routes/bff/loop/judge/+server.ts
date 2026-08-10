@@ -52,7 +52,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 	if (keys.length !== 1 || keys[0] !== 'gate_set' || typeof body.gate_set !== 'string') {
 		throw error(
 			400,
-			'body accepts exactly {gate_set}. proposal_uuid is deliberately not forwarded — judging a proposal is the loop engine\'s ceremony, not a browser act.'
+			"body accepts exactly {gate_set}. proposal_uuid is deliberately not forwarded — judging a proposal is the loop engine's ceremony, not a browser act."
 		);
 	}
 	const gateSet = body.gate_set;

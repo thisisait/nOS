@@ -163,7 +163,13 @@
 			icon: '⊞',
 			run: () => applyTiling('2x2')
 		},
-		{ id: 'act:untile', title: 'Leave tiling', hint: 'window', icon: '◫', run: () => clearTiling() },
+		{
+			id: 'act:untile',
+			title: 'Leave tiling',
+			hint: 'window',
+			icon: '◫',
+			run: () => clearTiling()
+		},
 		// The shortcuts are discoverable here rather than only in a source file.
 		// Selecting one performs it, so the palette doubles as the help sheet.
 		...SHORTCUTS.map((s, i) => ({

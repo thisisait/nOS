@@ -104,7 +104,11 @@ describe('form + build are two independent axes', () => {
 		const viewBuilds = new Set(appsOfForm('view').map((a) => a.build));
 		expect(viewBuilds.size).toBeGreaterThan(1);
 		// Same build, different forms: F1 is both a view (Files) and a widget.
-		const f1Forms = new Set(faceApps().filter((a) => a.build === 'F1').map((a) => a.form));
+		const f1Forms = new Set(
+			faceApps()
+				.filter((a) => a.build === 'F1')
+				.map((a) => a.form)
+		);
 		expect(f1Forms.size).toBeGreaterThan(1);
 	});
 
@@ -115,9 +119,9 @@ describe('form + build are two independent axes', () => {
 		expect(appForm('grafana')).toBe('frame');
 		expect(getNativeApp('grafana')?.component).toBeUndefined();
 		expect(getNativeApp('grafana')?.build).toBeUndefined();
-		expect(() =>
-			registerNativeApp({ slug: 'x', title: 'x', icon: 'x', form: 'view' })
-		).toThrow(/needs a component/);
+		expect(() => registerNativeApp({ slug: 'x', title: 'x', icon: 'x', form: 'view' })).toThrow(
+			/needs a component/
+		);
 		expect(() =>
 			registerNativeApp({
 				slug: 'y',

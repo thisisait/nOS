@@ -149,7 +149,11 @@ function parseTime(v: string | null | undefined): number | null {
  * encodes "never ran" as ABSENCE on purpose, so that a job with no history
  * cannot be mistaken for one with a clean history.
  */
-export function projectJob(raw: RawJob, summary: RawSummary | undefined, now: number): PulseJobView {
+export function projectJob(
+	raw: RawJob,
+	summary: RawSummary | undefined,
+	now: number
+): PulseJobView {
 	const paused = raw.paused === 1 || raw.paused === true;
 	const neverRan = summary === undefined || !raw.last_fired_at;
 	const exit = summary?.last_exit_code ?? null;

@@ -30,12 +30,7 @@
 	const showCount = $derived(typeof count === 'number' && count !== 0);
 </script>
 
-<span
-	class="badge"
-	class:outline
-	style="--ink: {vars.ink}; --soft: {vars.soft}"
-	{title}
->
+<span class="badge" class:outline style="--ink: {vars.ink}; --soft: {vars.soft}" {title}>
 	{#if showCount}<b>{count}</b>{/if}{#if children}{@render children()}{/if}
 </span>
 

@@ -18,10 +18,13 @@
 
 	function schedule() {
 		const ms = 60_000 - ((Date.now() % 60_000) + 1);
-		timer = setTimeout(() => {
-			now = new Date();
-			schedule();
-		}, Math.max(1000, ms));
+		timer = setTimeout(
+			() => {
+				now = new Date();
+				schedule();
+			},
+			Math.max(1000, ms)
+		);
 	}
 
 	onMount(() => {
@@ -30,10 +33,10 @@
 	});
 	onDestroy(() => clearTimeout(timer));
 
-	const time = $derived(
-		now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+	const time = $derived(now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }));
+	const date = $derived(
+		now.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
 	);
-	const date = $derived(now.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }));
 </script>
 
 <time class="clock" datetime={now.toISOString()} title={now.toString()}>

@@ -16,7 +16,13 @@
 -->
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { loadPulse, loadRuns, runJobNow, type PulseResponse, type PulseRunRow } from '$lib/api/pulse';
+	import {
+		loadPulse,
+		loadRuns,
+		runJobNow,
+		type PulseResponse,
+		type PulseRunRow
+	} from '$lib/api/pulse';
 	import type { PulseJobView, PulseState } from '$lib/anatomy/pulse';
 	import { StatusNote, Badge, StateDot, exitTone, type Tone } from '$lib/components/ui';
 
@@ -196,8 +202,8 @@
 
 		{#if jobs.length === 0}
 			<StatusNote kind="empty" title="No registered jobs at all">
-				Wing answered — this is a real result, not a loading state. If you expect jobs
-				here, the plugin loader has not run.
+				Wing answered — this is a real result, not a loading state. If you expect jobs here, the
+				plugin loader has not run.
 			</StatusNote>
 		{/if}
 
@@ -208,123 +214,128 @@
 					<span class="group-count">{g.jobs.length}</span>
 					<span class="group-blurb">{g.blurb}</span>
 				</h3>
-		<ul class="rows">
-			{#each g.jobs as j (j.id)}
-				<li class="row" class:open={selected === j.id}>
-					<button class="head" onclick={() => void select(j.id)}>
-						<StateDot tone={STATE_TONE[j.state]} label={STATE_LABEL[j.state]} />
-						<span class="name">
-							<span class="id">{j.plugin}<span class="sep">:</span>{j.job}</span>
-							<span class="meta">{j.schedule} · {j.commandName}</span>
-						</span>
-						<span class="state {j.state}">{STATE_LABEL[j.state]}</span>
-						{#if j.paused}<Badge tone="neutral" outline>paused</Badge>{/if}
-						<span class="when">
-							{#if j.neverRan}
-								no runs recorded
-							{:else}
-								{ago(j.lastFiredAt)} ago · {ms(j.lastDurationMs)}
+				<ul class="rows">
+					{#each g.jobs as j (j.id)}
+						<li class="row" class:open={selected === j.id}>
+							<button class="head" onclick={() => void select(j.id)}>
+								<StateDot tone={STATE_TONE[j.state]} label={STATE_LABEL[j.state]} />
+								<span class="name">
+									<span class="id">{j.plugin}<span class="sep">:</span>{j.job}</span>
+									<span class="meta">{j.schedule} · {j.commandName}</span>
+								</span>
+								<span class="state {j.state}">{STATE_LABEL[j.state]}</span>
+								{#if j.paused}<Badge tone="neutral" outline>paused</Badge>{/if}
+								<span class="when">
+									{#if j.neverRan}
+										no runs recorded
+									{:else}
+										{ago(j.lastFiredAt)} ago · {ms(j.lastDurationMs)}
+									{/if}
+								</span>
+							</button>
+
+							{#if j.state === 'failing' && j.lastError}
+								<pre class="stderr">{j.lastError}</pre>
 							{/if}
-						</span>
-					</button>
-
-					{#if j.state === 'failing' && j.lastError}
-						<pre class="stderr">{j.lastError}</pre>
-					{/if}
-					{#if j.state === 'overdue' && j.overdueBySeconds !== null}
-						<p class="warn">
-							Scheduled for {j.nextFireAt} — {dur(j.overdueBySeconds)} ago. Wing advances the next
-							fire time only when a run finishes, so a whole column of overdue jobs means the
-							Pulse daemon is not firing.
-						</p>
-					{/if}
-					{#if j.neverRan}
-						<p class="warn">
-							Registered {j.schedule}, never fired once.{#if j.paused}
-								It is paused{#if j.pausedReason} — {j.pausedReason}{/if}.{:else}
-								It is not paused, so nothing explains this.{/if}
-						</p>
-					{/if}
-					{#if j.consecutiveFailures > 1}
-						<p class="warn">{j.consecutiveFailures} consecutive failures.</p>
-					{/if}
-
-					{#if selected === j.id}
-						<div class="runs">
-							<div class="actions">
-								{#if j.paused}
-									<!-- Stated, not greyed: a disabled button teaches nothing.
-									     Wing answers 409 with the reason; saying it up front
-									     saves the click without hiding the rule. -->
-									<span class="pausednote">paused — run-now does not override a pause{#if j.pausedReason}
-											({j.pausedReason}){/if}</span>
-								{:else}
-									<button class="runnow" onclick={() => void fireRunNow(j.id)}>
-										run now ▸
-									</button>
-									<span class="runnote">edits next_fire_at only — the daemon dispatches with every guard intact</span>
-								{/if}
-							</div>
-							{#if runNowMsg}<p class="runmsg">{runNowMsg}</p>{/if}
-							{#if j.envKeys.length > 0}
-								<!-- Names only. Wing redacts the values at the source; publishing
-								     them would hand every viewer the estate's credentials. -->
-								<p class="envk">
-									env: {j.envKeys.join(', ')}
-									<span class="dim">(values redacted by Wing)</span>
+							{#if j.state === 'overdue' && j.overdueBySeconds !== null}
+								<p class="warn">
+									Scheduled for {j.nextFireAt} — {dur(j.overdueBySeconds)} ago. Wing advances the next
+									fire time only when a run finishes, so a whole column of overdue jobs means the Pulse
+									daemon is not firing.
 								</p>
 							{/if}
-							{#if loadingRuns}
-								<StatusNote kind="loading" block={false}>Loading runs…</StatusNote>
-							{:else if runsErr}
-								<StatusNote kind="error" block={false}>{runsErr}</StatusNote>
-							{:else if runs.length === 0}
-								<StatusNote kind="empty" block={false}>
-									No run rows exist for this job.
-								</StatusNote>
-							{:else}
-								<table>
-									<thead>
-										<tr><th>fired</th><th>rc</th><th>took</th><th>actor</th><th></th></tr>
-									</thead>
-									<tbody>
-										{#each runs as r (r.run_id)}
-											<tr>
-												<td>{r.fired_at}</td>
-												<td>
-													<StateDot
-														tone={exitTone(r.exit_code)}
-														label={r.exit_code === null
-															? 'no result reported'
-															: `exit ${r.exit_code}`}
-													/>
-													{r.exit_code === null ? '—' : r.exit_code}
-												</td>
-												<td>{ms(r.duration_ms)}</td>
-												<td>{r.actor_id ?? '—'}</td>
-												<td>
-													{#if r.actor_action_id}
-														<!-- The thread. Same value on the events this run
+							{#if j.neverRan}
+								<p class="warn">
+									Registered {j.schedule}, never fired once.{#if j.paused}
+										It is paused{#if j.pausedReason}
+											— {j.pausedReason}{/if}.{:else}
+										It is not paused, so nothing explains this.{/if}
+								</p>
+							{/if}
+							{#if j.consecutiveFailures > 1}
+								<p class="warn">{j.consecutiveFailures} consecutive failures.</p>
+							{/if}
+
+							{#if selected === j.id}
+								<div class="runs">
+									<div class="actions">
+										{#if j.paused}
+											<!-- Stated, not greyed: a disabled button teaches nothing.
+									     Wing answers 409 with the reason; saying it up front
+									     saves the click without hiding the rule. -->
+											<span class="pausednote"
+												>paused — run-now does not override a pause{#if j.pausedReason}
+													({j.pausedReason}){/if}</span
+											>
+										{:else}
+											<button class="runnow" onclick={() => void fireRunNow(j.id)}>
+												run now ▸
+											</button>
+											<span class="runnote"
+												>edits next_fire_at only — the daemon dispatches with every guard intact</span
+											>
+										{/if}
+									</div>
+									{#if runNowMsg}<p class="runmsg">{runNowMsg}</p>{/if}
+									{#if j.envKeys.length > 0}
+										<!-- Names only. Wing redacts the values at the source; publishing
+								     them would hand every viewer the estate's credentials. -->
+										<p class="envk">
+											env: {j.envKeys.join(', ')}
+											<span class="dim">(values redacted by Wing)</span>
+										</p>
+									{/if}
+									{#if loadingRuns}
+										<StatusNote kind="loading" block={false}>Loading runs…</StatusNote>
+									{:else if runsErr}
+										<StatusNote kind="error" block={false}>{runsErr}</StatusNote>
+									{:else if runs.length === 0}
+										<StatusNote kind="empty" block={false}>
+											No run rows exist for this job.
+										</StatusNote>
+									{:else}
+										<table>
+											<thead>
+												<tr><th>fired</th><th>rc</th><th>took</th><th>actor</th><th></th></tr>
+											</thead>
+											<tbody>
+												{#each runs as r (r.run_id)}
+													<tr>
+														<td>{r.fired_at}</td>
+														<td>
+															<StateDot
+																tone={exitTone(r.exit_code)}
+																label={r.exit_code === null
+																	? 'no result reported'
+																	: `exit ${r.exit_code}`}
+															/>
+															{r.exit_code === null ? '—' : r.exit_code}
+														</td>
+														<td>{ms(r.duration_ms)}</td>
+														<td>{r.actor_id ?? '—'}</td>
+														<td>
+															{#if r.actor_action_id}
+																<!-- The thread. Same value on the events this run
 														     produced; following it is the reason Anatomy is
 														     one app rather than three. -->
-														<button
-															class="follow"
-															onclick={() => onfollowthread?.(r.actor_action_id as string)}
-														>
-															follow →
-														</button>
-													{/if}
-												</td>
-											</tr>
-										{/each}
-									</tbody>
-								</table>
+																<button
+																	class="follow"
+																	onclick={() => onfollowthread?.(r.actor_action_id as string)}
+																>
+																	follow →
+																</button>
+															{/if}
+														</td>
+													</tr>
+												{/each}
+											</tbody>
+										</table>
+									{/if}
+								</div>
 							{/if}
-						</div>
-					{/if}
-				</li>
-			{/each}
-		</ul>
+						</li>
+					{/each}
+				</ul>
 			</div>
 		{/each}
 	{/if}
@@ -350,26 +361,45 @@
 		font-size: 11px;
 		color: var(--muted, #9aa4b2);
 	}
-	.group { margin-block-start: 1.1rem; }
-	.group:first-of-type { margin-block-start: 0; }
+	.group {
+		margin-block-start: 1.1rem;
+	}
+	.group:first-of-type {
+		margin-block-start: 0;
+	}
 	.group-head {
-		display: flex; align-items: baseline; gap: 0.5rem;
-		margin: 0 0 0.35rem; padding-block-end: 0.25rem;
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		margin: 0 0 0.35rem;
+		padding-block-end: 0.25rem;
 		border-block-end: 1px solid var(--line, rgba(128, 128, 128, 0.25));
-		font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em;
+		font-size: 0.78rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
 		text-transform: uppercase;
 	}
-	.group-name { color: var(--fg, inherit); }
+	.group-name {
+		color: var(--fg, inherit);
+	}
 	.group-count {
-		font-variant-numeric: tabular-nums; font-weight: 500;
+		font-variant-numeric: tabular-nums;
+		font-weight: 500;
 		color: var(--fg-dim, rgba(128, 128, 128, 0.9));
 	}
 	.group-blurb {
-		margin-inline-start: auto; text-transform: none; letter-spacing: 0;
-		font-weight: 400; font-size: 0.72rem;
+		margin-inline-start: auto;
+		text-transform: none;
+		letter-spacing: 0;
+		font-weight: 400;
+		font-size: 0.72rem;
 		color: var(--fg-dim, rgba(128, 128, 128, 0.9));
 	}
-	@media (max-width: 30rem) { .group-blurb { display: none; } }
+	@media (max-width: 30rem) {
+		.group-blurb {
+			display: none;
+		}
+	}
 
 	.rows {
 		list-style: none;

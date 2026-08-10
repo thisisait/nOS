@@ -42,10 +42,13 @@ describe('liveness is not health', () => {
 
 describe('the vein is probed separately from the organ', () => {
 	it('records a failing VFS beside a healthy daemon', () => {
-		const b = projectBone({ status: 'ok', uptime: 1, auth_ready: true }, {
-			ok: false,
-			detail: '401 Authorization: Bearer <token> required'
-		});
+		const b = projectBone(
+			{ status: 'ok', uptime: 1, auth_ready: true },
+			{
+				ok: false,
+				detail: '401 Authorization: Bearer <token> required'
+			}
+		);
 		expect(b.alive).toBe(true);
 		expect(b.vfs.ok).toBe(false);
 		expect(b.vfs.detail).toContain('401');

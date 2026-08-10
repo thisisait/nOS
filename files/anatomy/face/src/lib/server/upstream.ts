@@ -291,7 +291,8 @@ export async function boneHealth(): Promise<unknown> {
  * the face is credentialed for.
  */
 export async function boneVfsProbe(uid: string): Promise<{ ok: boolean; detail: string }> {
-	if (!VFS_TOKEN()) return { ok: false, detail: 'NOS_VFS_API_TOKEN is not set on the face container' };
+	if (!VFS_TOKEN())
+		return { ok: false, detail: 'NOS_VFS_API_TOKEN is not set on the face container' };
 	try {
 		await vfs.stat(uid, '/');
 		return { ok: true, detail: 'stat / succeeded with the face VFS bearer' };

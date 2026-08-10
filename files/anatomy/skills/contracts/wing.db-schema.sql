@@ -8,7 +8,7 @@
 PRAGMA foreign_keys = ON;
 
 -- ============================================================
--- TABLES (41)
+-- TABLES (42)
 -- ============================================================
 
 CREATE TABLE advisories (
@@ -58,6 +58,33 @@ CREATE TABLE agent_memory_stores (
     trace_id            TEXT,                     -- W3C trace_id for cross-link
     created_at          TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE agent_questions (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid            TEXT NOT NULL UNIQUE,             -- public id, safe to put in a URL
+    session_uuid    TEXT,                             -- soft FK agent_sessions.uuid; NULL = asked outside a session
+    agent_name      TEXT NOT NULL,
+    kind            TEXT NOT NULL DEFAULT 'approval', -- approval | question | choice
+    prompt          TEXT NOT NULL,                    -- what the operator is being asked
+    context_json    TEXT,                             -- what the agent was doing; rendered, never executed
+    options_json    TEXT,                             -- choice: the allowed answers. NULL = free text
+    severity        TEXT NOT NULL DEFAULT 'medium',   -- A9 severities; drives the notification floor
+    -- The token is stored HASHED. A questions list is readable by any Tier-1
+    -- caller, and a plaintext token in a list is a bearer credential handed to
+    -- every reader of that list.
+    reply_token_sha TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'open',     -- open | answered | expired | cancelled
+    answer          TEXT,                             -- NULL until answered
+    answered_by     TEXT,                             -- operator identity, or 'channel:telegram'
+    answered_via    TEXT,                             -- wing | telegram | ntfy | api
+    answered_at     TEXT,
+    expires_at      TEXT,                             -- NULL = no deadline; else ISO-8601 UTC
+    default_on_expiry TEXT,                           -- what the agent should assume if nobody answers
+    actor_id        TEXT,                             -- agent:<name>
+    actor_action_id TEXT,                             -- == session_uuid; A10 lineage
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE agent_sessions (
@@ -136,7 +163,7 @@ CREATE TABLE api_tokens (
 		created_at  TEXT NOT NULL DEFAULT (datetime('now')),
 		last_used_at TEXT,
 		active      INTEGER NOT NULL DEFAULT 1
-	);
+	, cortex_verbs TEXT, cortex_namespaces TEXT, cortex_tenants TEXT);
 
 CREATE TABLE attack_probes (
 		id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -532,6 +559,22 @@ CREATE TABLE pulse_jobs (
     jitter_min      INTEGER NOT NULL DEFAULT 0,
     max_runtime_s   INTEGER NOT NULL DEFAULT 300,
     max_concurrent  INTEGER NOT NULL DEFAULT 1,
+    -- Exit codes that mean "this job ran correctly AND found something", as a
+    -- JSON array. NULL/[] keeps the old rule: anything non-zero is a failure.
+    --
+    -- MEASURED 2026-08-06: gitleaks:nightly-scan and discovery:contradiction-scan
+    -- both exit 1 to say "findings present" — their whole purpose — and Wing
+    -- raised a HIGH "job failing" for each. A successful night with findings was
+    -- indistinguishable from a broken job at the scheduler layer, which trains
+    -- an operator to skim exactly the notifications that carry news.
+    -- Vocabulary borrowed from state/judge-sets.yml, which already learned that
+    -- exit codes disagree between tools and must be declared, not guessed.
+    findings_exit_codes TEXT,
+    -- Purpose grouping for the operator-facing catalog (security | compliance |
+    -- knowledge | platform | agents | notification). NULL renders as
+    -- "uncategorised" and is never silently bucketed — an unclassified job is a
+    -- thing to notice, not to hide among the others.
+    category        TEXT,
     paused          INTEGER NOT NULL DEFAULT 0,       -- 0/1; manual operator pause
     paused_reason   TEXT,                             -- nullable
     next_fire_at    TEXT,                             -- ISO-8601; computed Wing-side
@@ -748,7 +791,7 @@ CREATE VIEW components AS
 		FROM systems;
 
 -- ============================================================
--- INDEXS (83)
+-- INDEXS (86)
 -- ============================================================
 
 CREATE INDEX idx_adv_date ON advisories(date);
@@ -756,6 +799,12 @@ CREATE INDEX idx_adv_date ON advisories(date);
 CREATE INDEX idx_agent_credentials_scope    ON agent_credentials(scope);
 
 CREATE INDEX idx_agent_iterations_result   ON agent_iterations(grader_result);
+
+CREATE INDEX idx_agent_questions_expiry  ON agent_questions (status, expires_at);
+
+CREATE INDEX idx_agent_questions_session ON agent_questions (session_uuid);
+
+CREATE INDEX idx_agent_questions_status  ON agent_questions (status, created_at);
 
 CREATE INDEX idx_agent_sessions_agent_name ON agent_sessions(agent_name);
 

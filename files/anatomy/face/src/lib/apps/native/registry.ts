@@ -88,7 +88,10 @@ export function registerNativeApp(app: FaceApp): void {
  * returned as a skip: a native app and a hub service can collide on a slug,
  * and the component-backed one is the one the shell renders.
  */
-export function registerHubFrames(apps: readonly HubApp[]): { registered: number; skipped: string[] } {
+export function registerHubFrames(apps: readonly HubApp[]): {
+	registered: number;
+	skipped: string[];
+} {
 	const skipped: string[] = [];
 	let registered = 0;
 	for (const a of apps) {

@@ -23,8 +23,7 @@ export interface LoopSnapshot {
 	counts: { proposals: number; judgeRuns: number; verdicts: number };
 }
 
-const num = (v: unknown): number | null =>
-	typeof v === 'number' && Number.isFinite(v) ? v : null;
+const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const str = (v: unknown): string => (v == null ? '' : String(v));
 const strOrNull = (v: unknown): string | null => (v == null ? null : String(v));
 

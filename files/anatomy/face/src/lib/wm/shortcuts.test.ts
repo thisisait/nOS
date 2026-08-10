@@ -33,9 +33,9 @@ describe('text entry is never hijacked', () => {
 	});
 
 	it('bails inside contenteditable', () => {
-		expect(
-			isTextEntry({ tagName: 'DIV', isContentEditable: true } as unknown as EventTarget)
-		).toBe(true);
+		expect(isTextEntry({ tagName: 'DIV', isContentEditable: true } as unknown as EventTarget)).toBe(
+			true
+		);
 	});
 
 	it('acts normally elsewhere', () => {

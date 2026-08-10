@@ -20,8 +20,20 @@ describe('projectLoop', () => {
 					}
 				]
 			},
-			{ judge_runs: [{ uuid: 'r', gate_set: 'fast', judge_name: 'j', status: 'exited', sandbox_path: '/host/layout' }] },
-			{ verdicts: [{ uuid: 'v', gate_set: 'fast', result: 'pass', evidence: '{}', created_at: 't' }] }
+			{
+				judge_runs: [
+					{
+						uuid: 'r',
+						gate_set: 'fast',
+						judge_name: 'j',
+						status: 'exited',
+						sandbox_path: '/host/layout'
+					}
+				]
+			},
+			{
+				verdicts: [{ uuid: 'v', gate_set: 'fast', result: 'pass', evidence: '{}', created_at: 't' }]
+			}
 		);
 		for (const field of WITHHELD_LOOP_FIELDS) {
 			expect(JSON.stringify(snap)).not.toContain(field);

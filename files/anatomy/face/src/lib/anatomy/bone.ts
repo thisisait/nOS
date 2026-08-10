@@ -61,11 +61,13 @@ export const SCOPE_GATED: BoneGap[] = [
 	},
 	{
 		endpoint: 'GET /api/services',
-		reason: 'service registry — scope-gated since REM-110 (it is recon fuel: every internal host, port and version)'
+		reason:
+			'service registry — scope-gated since REM-110 (it is recon fuel: every internal host, port and version)'
 	},
 	{
 		endpoint: 'GET /api/health/aggregate',
-		reason: 'per-service fan-out — same scope. Note it reports each service’s OWN /health, which is exactly the signal that stayed green for ten days behind a broken Kuma'
+		reason:
+			'per-service fan-out — same scope. Note it reports each service’s OWN /health, which is exactly the signal that stayed green for ten days behind a broken Kuma'
 	}
 ];
 
@@ -98,6 +100,7 @@ export function humanUptime(seconds: number | null): string {
 	if (seconds === null || seconds < 0) return 'unknown';
 	if (seconds < 60) return `${seconds}s`;
 	if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-	if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+	if (seconds < 86400)
+		return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
 	return `${Math.floor(seconds / 86400)}d ${Math.floor((seconds % 86400) / 3600)}h`;
 }

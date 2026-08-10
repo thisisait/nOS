@@ -5,6 +5,17 @@
 ---
 components:
   schemas:
+    ForgetIn:
+      additionalProperties: false
+      properties:
+        fingerprint:
+          minLength: 8
+          title: Fingerprint
+          type: string
+      required:
+      - fingerprint
+      title: ForgetIn
+      type: object
     HTTPValidationError:
       properties:
         detail:
@@ -13,6 +24,70 @@ components:
           title: Detail
           type: array
       title: HTTPValidationError
+      type: object
+    JudgeIn:
+      additionalProperties: false
+      properties:
+        gate_set:
+          minLength: 1
+          title: Gate Set
+          type: string
+        proposal_uuid:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Proposal Uuid
+      required:
+      - gate_set
+      title: JudgeIn
+      type: object
+    ProposalIn:
+      additionalProperties: false
+      properties:
+        diff_text:
+          minLength: 1
+          title: Diff Text
+          type: string
+        gate_set:
+          minLength: 1
+          title: Gate Set
+          type: string
+        intent_class:
+          minLength: 1
+          title: Intent Class
+          type: string
+        proposer_id:
+          minLength: 1
+          title: Proposer Id
+          type: string
+        proposer_model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Proposer Model
+        target_paths:
+          items:
+            type: string
+          minItems: 1
+          title: Target Paths
+          type: array
+        tree_sha:
+          minLength: 7
+          title: Tree Sha
+          type: string
+        weakness_id:
+          minLength: 1
+          title: Weakness Id
+          type: string
+      required:
+      - weakness_id
+      - target_paths
+      - intent_class
+      - gate_set
+      - tree_sha
+      - proposer_id
+      - diff_text
+      title: ProposalIn
       type: object
     ValidationError:
       properties:
@@ -1035,6 +1110,448 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Events Ingest
+  /api/v1/loop/budget:
+    get:
+      description: 'What a proposal judged by `gate_set` may touch.
+
+
+        A function of the SET, not a constant: the paths a judge reads to form its
+
+        verdict are that judge''s oracle, and a proposal may not edit the thing that
+
+        grades it.'
+      operationId: get_budget_api_v1_loop_budget_get
+      parameters:
+      - in: query
+        name: gate_set
+        required: true
+        schema:
+          minLength: 1
+          title: Gate Set
+          type: string
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          default: ''
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Get Budget Api V1 Loop Budget Get
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Budget
+      tags:
+      - loop
+  /api/v1/loop/forget:
+    post:
+      description: '§4 "the block lifts" / §6.2 `nos-loop forget` — the operator''s exit from
+
+        a wedged fingerprint.
+
+
+        Until this route existed the wedge was PERMANENT in practice: a crashed
+
+        judge job leaves a proposal with zero verdicts, `check()` reads that as
+
+        `attempt-pending` forever, and `OperatorLedger.forget` — tested, documented
+
+        — had no route, no CLI and no caller. A lift key nobody can turn is
+
+        decoration.
+
+
+        The scope is `forget`, held ONLY by the operator identity
+
+        (BONE_LOOP_OPERATOR_TOKEN): the proposer resetting its own ceiling is the
+
+        grinder §4 exists to stop, and the evaluator resetting it would let a judge
+
+        schedule its own re-runs. 404 when nothing carries the fingerprint — a
+
+        forget that cuts nothing must not read as a lift that happened.'
+      operationId: post_forget_api_v1_loop_forget_post
+      parameters:
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          default: ''
+          title: Authorization
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgetIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Post Forget Api V1 Loop Forget Post
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Forget
+      tags:
+      - loop
+  /api/v1/loop/history:
+    get:
+      description: Has this been tried, and what happened?
+      operationId: get_history_api_v1_loop_history_get
+      parameters:
+      - in: query
+        name: fingerprint
+        required: true
+        schema:
+          minLength: 8
+          title: Fingerprint
+          type: string
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          default: ''
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Get History Api V1 Loop History Get
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get History
+      tags:
+      - loop
+  /api/v1/loop/judge:
+    post:
+      description: '202 + a job id. The set may take minutes; nothing here blocks on it.
+
+
+        The ONLY input that selects work is the gate-set NAME. There is no parameter
+
+        that supplies, hints at, or overrides a result.'
+      operationId: post_judge_api_v1_loop_judge_post
+      parameters:
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          default: ''
+          title: Authorization
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JudgeIn'
+        required: true
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Post Judge Api V1 Loop Judge Post
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Judge
+      tags:
+      - loop
+  /api/v1/loop/judge/{job_id}:
+    get:
+      description: 'running | done + the sealed verdict | error | unknown.
+
+
+        `unknown` after a restart is deliberate and is NOT `passed`. See the note on
+
+        `_JOBS`.'
+      operationId: get_judge_api_v1_loop_judge__job_id__get
+      parameters:
+      - in: path
+        name: job_id
+        required: true
+        schema:
+          title: Job Id
+          type: string
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          default: ''
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Get Judge Api V1 Loop Judge  Job Id  Get
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Judge
+      tags:
+      - loop
+  /api/v1/loop/judge_runs:
+    get:
+      operationId: list_judge_runs_api_v1_loop_judge_runs_get
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 200
+          maximum: 1000
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: gate_set
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Gate Set
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          default: ''
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response List Judge Runs Api V1 Loop Judge Runs Get
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: List Judge Runs
+      tags:
+      - loop
+  /api/v1/loop/proposals:
+    get:
+      operationId: list_proposals_api_v1_loop_proposals_get
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          maximum: 500
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          default: ''
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response List Proposals Api V1 Loop Proposals Get
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: List Proposals
+      tags:
+      - loop
+    post:
+      description: 'Record an intent. Nothing here says whether it is any good.
+
+
+        409 on refusal, and the refusal is the point: a fingerprint that already
+
+        failed is rejected WITHOUT running the judges, which is what stops the loop
+
+        re-proposing the same change forever.'
+      operationId: post_proposal_api_v1_loop_proposals_post
+      parameters:
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          default: ''
+          title: Authorization
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProposalIn'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Post Proposal Api V1 Loop Proposals Post
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Post Proposal
+      tags:
+      - loop
+  /api/v1/loop/verdicts:
+    get:
+      operationId: list_verdicts_api_v1_loop_verdicts_get
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          maximum: 500
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          default: ''
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response List Verdicts Api V1 Loop Verdicts Get
+                type: object
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: List Verdicts
+      tags:
+      - loop
+  /api/v1/loop/weaknesses:
+    get:
+      description: Ranked weaknesses. Read-only, loopback-only, no body, no side effect.
+      operationId: get_weaknesses_api_v1_loop_weaknesses_get
+      parameters:
+      - in: query
+        name: top
+        required: false
+        schema:
+          anyOf:
+          - maximum: 500
+            minimum: 1
+            type: integer
+          - type: 'null'
+          title: Top
+      - in: query
+        name: source
+        required: false
+        schema:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Source
+      - in: query
+        name: min_severity
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Min Severity
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          default: ''
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Weaknesses
+      tags:
+      - loop
   /api/v1/notifications:
     get:
       description: 'Paginated notification query — convenience for CLI users + dispatch

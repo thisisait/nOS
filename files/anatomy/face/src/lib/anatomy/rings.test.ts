@@ -29,7 +29,11 @@ describe('ring invariants', () => {
 	});
 
 	it('handles both measured extremes as the same component', () => {
-		const five = ring('full', 5, Array.from({ length: 5 }, (_, i) => spoke(`j${i}`, 'good')));
+		const five = ring(
+			'full',
+			5,
+			Array.from({ length: 5 }, (_, i) => spoke(`j${i}`, 'good'))
+		);
 		const many = ring(
 			'pairs',
 			125,

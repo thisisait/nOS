@@ -48,7 +48,6 @@
 		font-variant-emoji: emoji;
 		/* Keep an emoji from inheriting a UI font that would render it as a
 		   monochrome outline on some platforms. */
-		font-family:
-			'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', system-ui, sans-serif;
+		font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', system-ui, sans-serif;
 	}
 </style>
