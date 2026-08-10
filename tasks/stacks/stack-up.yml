@@ -152,6 +152,9 @@
 - name: "[Stacks] Prune overrides of retired services"
   ansible.builtin.import_tasks: prune-retired.yml
 
+- name: "[Stacks] Report (and optionally prune) overrides of DISABLED services"
+  ansible.builtin.import_tasks: prune-disabled.yml
+
 - name: "[Stacks] Enumerate compose overrides per remaining stack"
   tags: ['stacks', 'always']
   ansible.builtin.find:

@@ -362,6 +362,9 @@
 - name: "[Core] Prune overrides of retired services"
   ansible.builtin.import_tasks: prune-retired.yml
 
+- name: "[Core] Report (and optionally prune) overrides of DISABLED services"
+  ansible.builtin.import_tasks: prune-disabled.yml
+
 - name: "[Core] Enumerate infra compose overrides"
   tags: ['core', 'always']
   ansible.builtin.find:

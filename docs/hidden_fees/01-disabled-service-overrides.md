@@ -45,6 +45,32 @@ an untouched open row: it is an open exposure that has been *talked out of being
 counted*. The fee is therefore not only a stale container — it is a queue whose
 arithmetic is wrong in the reassuring direction.
 
+## Status — reconciler shipped 2026-08-10, removal opt-in
+
+`tasks/stacks/prune-disabled.yml` is the disabled half of `prune-retired.yml`,
+imported by both orchestrators. It **reports every converge** (that alone ends
+the "does not fail loudly" complaint) and **removes on `prune_disabled_overrides:
+true`**, default false — because the fee has been open long enough for sixteen
+containers to accumulate and the first converge after it lands would take all
+sixteen down at once. Live-verified the day it shipped: 32 fragments across 18
+services, and `postgresql` correctly absent.
+
+Two exclusion classes are DERIVED rather than listed, so neither needs an edit
+when the estate grows: flags `main.yml` auto-enables from other flags
+(`install_postgresql`, `install_mariadb` — pruning postgresql's fragment would
+tear down the database), and Tier-2 manifest apps owned by `apps/<name>.yml`.
+Matching is separator-insensitive: `code-server.yml` sits beside
+`qgis_server.yml`, and a hyphen-only mapping found 16 of 18.
+
+**This entry closes when the default flips to true.** That is a dated obligation
+on an operator who has seen the list, not a permanent shim. Gate:
+`tests/anatomy/test_disabled_services_are_reconciled.py`.
+
+REM-159 (HIGH, gitlab), REM-184 (HIGH) and REM-185 (MEDIUM, qgis_server) carry an
+amended disposition saying their claimed mitigation is not in effect. REM-165
+(erpnext) was left alone — its container genuinely is not running, so its claim
+holds.
+
 ## When the bill comes due
 
 Whenever a service is toggled off on a host that has already converged with it

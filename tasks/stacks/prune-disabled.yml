@@ -1,0 +1,158 @@
+---
+# ==============================================================================
+# tasks/stacks/prune-disabled.yml — the DISABLED half of hidden_fees/01
+#
+# `prune-retired.yml` closed the case where a service leaves nOS. This closes
+# the case where a service stays in nOS and the operator switches it OFF, which
+# its sibling names and explicitly does not handle:
+#
+#     "A service that is merely DISABLED (install_* false) is NOT retired and is
+#      not handled here."
+#
+# MEASURED 2026-08-10, and the number is why this exists: SIXTEEN services on
+# this host carried `install_<svc>: false` while their container was up —
+# bookstack, code_server, firefly, gitlab, hedgedoc, homeassistant, influxdb,
+# jellyfin, miniflux, nodered, ntfy, onlyoffice, qgis_server, smtp_stalwart,
+# snappymail, wordpress. The render path is create-only, so the fragment written
+# on the converge that had the service ON is never removed and the orchestrator
+# keeps merging it. The operator's switch switched nothing off.
+#
+# IT IS A SECURITY CONTROL, NOT HOUSEKEEPING. Nine rows in the remediation queue
+# argue mitigation from exactly this flag — "MITIGATED: install_gitlab=false" —
+# and three of those are HIGH. A row that lowers its own severity because a
+# service is "disabled" is an open exposure that has been talked out of being
+# counted.
+#
+# ── Two false positives this MUST NOT produce, both derived rather than listed ─
+#
+#  1. AUTO-ENABLED DEPENDENCIES. `main.yml` flips install_postgresql,
+#     install_mariadb and redis_docker to true at run time from other flags, so
+#     `false` in default.config.yml is their correct DEFAULT. Pruning
+#     postgresql's fragment would tear down the database every estate depends
+#     on. The list is read from main.yml's own `Auto-enable …` tasks, so a
+#     fourth dependency needs no edit here.
+#  2. TIER-2 MANIFEST APPS. `apps/<name>.yml` owns their bring-up, not a toggle,
+#     so the toggle is not the thing that would have switched them off.
+#
+# ── Naming is NOT uniform, and a naive mapping misses half of them ───────────
+#
+# Fragments are named by whatever the role chose: `code-server.yml` with hyphens
+# sits beside `qgis_server.yml` and `smtp_stalwart.yml` with underscores. So the
+# match is SEPARATOR-INSENSITIVE, the same rule tools/discovery-scan.py already
+# needed for container names. A hyphen-only mapping found 16 of 18.
+#
+# ── Why removing the fragment is enough ─────────────────────────────────────
+#
+# Every orchestrator runs `up -d --remove-orphans`, so once the fragment is gone
+# the service drops out of the project config and compose removes the container
+# on the next up. Data volumes are NOT touched — this is the same reversible
+# teardown `prune-retired.yml` relies on. Re-enabling the flag and converging
+# brings the service back with its data.
+#
+# ── DEFAULT IS REPORT-ONLY, and that is a decision, not timidity ─────────────
+#
+# The fee has been open long enough for sixteen containers to accumulate, so the
+# first converge after this lands would remove sixteen at once. The estate's
+# destructive-op doctrine is dry-run first, act on an explicit token. So the
+# REPORT runs every converge and cannot be missed; the REMOVAL waits for
+# `prune_disabled_overrides: true`, which is one deliberate flip with the whole
+# list in front of the operator.
+#
+# This is a dated obligation, not a permanent shim: once an estate has flipped
+# it, the flag should become the default and this note should be deleted.
+# ==============================================================================
+
+- name: "[Stacks] Read the auto-enabled dependency flags from main.yml"
+  # DERIVED, never restated. A hard-coded list here would be the fourth place
+  # the same fact lives, and the one nobody updates.
+  ansible.builtin.set_fact:
+    _auto_enabled: >-
+      {{ lookup('file', playbook_dir ~ '/main.yml')
+         | regex_findall('^\s*install_([a-z0-9_]+):\s*true\s*$', multiline=True) }}
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Names of the Tier-2 manifest apps"
+  # apps/<name>.yml owns their bring-up, so an `install_<name>` toggle is not
+  # what would have switched one off. Derived from the directory, not listed.
+  ansible.builtin.find:
+    paths: "{{ playbook_dir }}/apps"
+    patterns: "*.yml"
+    excludes: "_template.yml"
+  register: _manifest_apps
+  delegate_to: localhost
+  become: false
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Every install_* toggle nOS declares"
+  # Read from the COMMITTED defaults, then resolved one at a time below. Reading
+  # `vars` wholesale is the eager-resolve trap CLAUDE.md keeps a gate for; a
+  # per-name `lookup('vars', …)` touches only the flags this task is about.
+  ansible.builtin.set_fact:
+    _flag_candidates: >-
+      {{ lookup('file', playbook_dir ~ '/default.config.yml')
+         | regex_findall('^install_([a-z0-9_]+):', multiline=True)
+         | difference(_auto_enabled)
+         | difference(_manifest_apps.files | default([]) | map(attribute='path')
+                      | map('basename') | map('regex_replace', '\.yml$', '') | list) }}
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Which of them are switched OFF right now"
+  # The RESOLVED value, so an operator's config.yml override counts — the
+  # committed default is only how the name was discovered.
+  ansible.builtin.set_fact:
+    _disabled_services: "{{ _disabled_services | default([]) + [item] }}"
+  loop: "{{ _flag_candidates }}"
+  loop_control:
+    label: "{{ item }}"
+  when: not (lookup('vars', 'install_' ~ item, default=false) | bool)
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Collect every rendered compose override"
+  ansible.builtin.find:
+    paths: "{{ stacks_dir }}"
+    patterns: "*.yml"
+    recurse: true
+  register: _all_overrides
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Match disabled services to the fragments still on disk"
+  # SEPARATOR-INSENSITIVE: `code-server.yml` sits beside `qgis_server.yml`, and a
+  # hyphen-only mapping found 16 of 18. `_` becomes `[-_]?` so one name matches
+  # whichever spelling the role happened to choose.
+  ansible.builtin.set_fact:
+    _disabled_fragments: >-
+      {{ _all_overrides.files | default([]) | map(attribute='path')
+         | select('search', '/overrides/')
+         | select('match', '.*/overrides/(' ~ (_disabled_services | default([])
+                  | map('regex_replace', '_', '[-_]?') | join('|')) ~ ')(-base)?\.yml$')
+         | list }}
+  when: (_disabled_services | default([]) | length) > 0
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] REPORT — services switched off whose compose fragment is still merged"
+  # Runs whether or not the removal is enabled. The whole complaint in
+  # hidden_fees/01 is that this case "does not fail loudly"; a report that only
+  # appears once someone opts in would leave that true.
+  ansible.builtin.debug:
+    msg: >-
+      {{ _disabled_fragments | length }} compose override(s) belong to services
+      declared install_*: false and are still being merged into `docker compose
+      up` —
+      {{ _disabled_fragments | map('basename') | join(', ') }}.
+      {{ 'Removing them now (prune_disabled_overrides is true).'
+         if (prune_disabled_overrides | default(false) | bool)
+         else 'NOT removed: set prune_disabled_overrides=true to reconcile. Until
+               then these services keep running and any security finding that
+               claims mitigation from install_*=false is unsound (hidden_fees/01).' }}
+  when: (_disabled_fragments | default([]) | length) > 0
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Remove compose overrides of disabled services"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ _disabled_fragments | default([]) }}"
+  loop_control:
+    label: "{{ item | basename }}"
+  when: prune_disabled_overrides | default(false) | bool
+  tags: ['stacks', 'core', 'always']
