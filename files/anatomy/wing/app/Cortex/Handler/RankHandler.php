@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Cortex\Handler;
 
 /**
- * `rank` — present, typed, and waiting on a route KEAP does not publish.
+ * `rank` — present, typed, and waiting on the executor, not on KEAP.
  *
  * The class exists so the D3 coverage gate stays green and Wing boots; the body
- * lives in {@see LateBoundHandler}, which records what was measured and why a
- * typed absence beats an empty result set.
+ * lives in {@see LateBoundHandler}, which records the measurement, the false
+ * conclusion it first produced, and the real blocker underneath.
  */
 final class RankHandler extends LateBoundHandler
 {
@@ -23,8 +23,8 @@ final class RankHandler extends LateBoundHandler
         return ['tax'];
     }
 
-    protected function awaitingRoute(): string
+    protected function awaiting(): string
     {
-        return '/agent/v1/taxonomy with ?by and ?limit';
+        return 'stage-to-stage row threading; KEAP /agent/v1/search/semantic already returns ranked rows for the search-backed case';
     }
 }

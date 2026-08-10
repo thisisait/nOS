@@ -123,6 +123,74 @@ final class KeapCortexClient
     }
 
     /**
+     * A taxonomy node with its children — the read `map` projects through.
+     *
+     * MEASURED 2026-08-10, and it corrects the record. The executor shipped with
+     * five verbs late-bound because a probe found `/agent/v1/taxonomy` 401 and
+     * concluded KEAP publishes nothing for them. The probe tested the paths the
+     * DESIGN DOCUMENT named (docs/archive/nos-cortex-lang-wing-executor.md §3.4's table), not KEAP's actual surface: the route
+     * is `/agent/v1/taxonomy/node/:id` and it answers 200 to the RO bearer,
+     * carrying `children`, `ancestors`, `childCount`, `curated` and
+     * `contentLink`. The bare `/agent/v1/taxonomy` 401 is the forward-auth
+     * catch-all firing on a path with no agent route — which the handler's own
+     * comment correctly identified as the MECHANISM while drawing the wrong
+     * conclusion from it.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function taxonomyNode(string $id): ?array
+    {
+        if ($id === '') {
+            return null;
+        }
+        $res = $this->request('GET', '/agent/v1/taxonomy/node/' . rawurlencode($id));
+        $node = $res['body']['data'] ?? null;
+        return is_array($node) ? $node : null;
+    }
+
+    /**
+     * Lexical taxonomy search. The read `classify` and `rank` stand on.
+     *
+     * @return list<array<string,mixed>>|null
+     */
+    public function taxonomySearch(string $query, int $limit = 20): ?array
+    {
+        if (trim($query) === '') {
+            return null;
+        }
+        $res = $this->request('GET', '/agent/v1/taxonomy/search?q=' . rawurlencode($query)
+            . '&limit=' . max(1, min($limit, 50)));
+        $rows = $res['body']['data']['results'] ?? null;
+        return is_array($rows) ? array_values($rows) : null;
+    }
+
+    /**
+     * Hybrid (lexical + vector + graph) search, already ranked by KEAP.
+     *
+     * `legs` in the response says which of the three actually ran; a caller that
+     * ignores it can read a purely lexical answer as a semantic one, so it is
+     * returned alongside the rows rather than dropped.
+     *
+     * @return array{results:list<array<string,mixed>>,legs:array<string,mixed>}|null
+     */
+    public function semanticSearch(string $query, int $limit = 20): ?array
+    {
+        if (trim($query) === '') {
+            return null;
+        }
+        $res = $this->request('GET', '/agent/v1/search/semantic?q=' . rawurlencode($query)
+            . '&limit=' . max(1, min($limit, 50)));
+        $data = $res['body']['data'] ?? null;
+        if (!is_array($data) || !is_array($data['results'] ?? null)) {
+            return null;
+        }
+        return [
+            'results' => array_values($data['results']),
+            'legs' => is_array($data['legs'] ?? null) ? $data['legs'] : [],
+        ];
+    }
+
+    /**
      * @param array<string,mixed>|null $json
      * @return array{status:int,body:mixed}|null
      */

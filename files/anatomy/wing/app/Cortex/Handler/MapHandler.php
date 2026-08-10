@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Cortex\Handler;
 
 /**
- * `map` — present, typed, and waiting on a route KEAP does not publish.
+ * `map` — present, typed, and waiting on the executor, not on KEAP.
  *
  * The class exists so the D3 coverage gate stays green and Wing boots; the body
- * lives in {@see LateBoundHandler}, which records what was measured and why a
- * typed absence beats an empty result set.
+ * lives in {@see LateBoundHandler}, which records the measurement, the false
+ * conclusion it first produced, and the real blocker underneath.
  */
 final class MapHandler extends LateBoundHandler
 {
@@ -23,8 +23,8 @@ final class MapHandler extends LateBoundHandler
         return ['tax'];
     }
 
-    protected function awaitingRoute(): string
+    protected function awaiting(): string
     {
-        return '/agent/v1/taxonomy (subtree listing)';
+        return 'stage-to-stage row threading; the read it will use — KEAP /agent/v1/taxonomy/node/:id (children) — already answers 200';
     }
 }
