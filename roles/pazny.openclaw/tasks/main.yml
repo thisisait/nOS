@@ -39,8 +39,27 @@
 #
 # Two questions, two checks: the keg is asserted here (did brew install the pin)
 # and the daemon is asserted AFTER the reload (is the estate running it).
-- name: "[Ollama] Read the installed ollama keg version"
-  ansible.builtin.command: brew list --versions ollama
+# ONE READING, USED BY ALL THREE CHECKS BELOW — and it is the LINKED keg.
+#
+# `brew list --versions ollama` prints EVERY keg brew kept: on this host
+# "ollama 0.32.6 0.32.7". Every check here used to substring-match the pin
+# against that line, so a pin of 0.32.6 read as "installed" while
+# /opt/homebrew/bin/ollama pointed at 0.32.7 — the pin gate stayed silent and
+# the drift gate then failed the converge blaming the daemon. Measured live
+# 2026-08-10 when exactly that happened.
+#
+# The linked keg is what `ollama` will EXEC, so it is the only one that can
+# disagree with anything. Same rule as tools/estate-status.py: ask the thing
+# that runs, not the thing that lists.
+- name: "[Ollama] Resolve the LINKED ollama keg (not merely an installed one)"
+  ansible.builtin.shell: |
+    set -o pipefail
+    bin=$(command -v ollama 2>/dev/null)
+    [ -n "$bin" ] || exit 0
+    python3 -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$bin" 2>/dev/null \
+      | sed -nE 's|.*/Cellar/[^/]+/([^/]+)/.*|\1|p'
+  args:
+    executable: /bin/bash
   register: _ollama_keg
   changed_when: false
   failed_when: false
@@ -75,13 +94,13 @@
   when:
     - nos_pkg_manager == 'homebrew'
     - ollama_version | default('') | length > 0
-    - ollama_version not in (_ollama_keg.stdout | default(''))
+    - (_ollama_keg.stdout | default('') | trim) not in ('', ollama_version)
 
 - name: "[Ollama] Refuse when the INSTALLED keg is not the pin"
   ansible.builtin.fail:
     msg: |
-      brew has not installed the pinned ollama {{ ollama_version }}.
-        keg:    {{ _ollama_keg.stdout | default('(none)') | trim }}
+      the LINKED ollama keg is not the pinned {{ ollama_version }}.
+        linked keg: {{ _ollama_keg.stdout | default('(none)') | trim }}
         daemon: {{ _ollama_ver.stdout | default('(none)') | trim }}
       {% if (_ollama_shadow.stdout | default('0') | trim | int) > 0 %}
         CAUSE: a third-party tap outranks homebrew/core for the name `ollama`,
@@ -101,7 +120,7 @@
   when:
     - nos_pkg_manager == 'homebrew'
     - ollama_version | default('') | length > 0
-    - ollama_version not in (_ollama_keg.stdout | default(''))
+    - (_ollama_keg.stdout | default('') | trim) not in ('', ollama_version)
 
 - name: "[Ollama] Ensure models directory exists (persistent across --blank)"
   ansible.builtin.file:
@@ -223,12 +242,21 @@
 # (roles/pazny.wing/tasks/main.yml), and it wants the same answer: compare what
 # is running against what is installed, and reload on the DIFFERENCE rather than
 # on having just written something.
+# THE KEG IS THE LINKED ONE, NOT THE FIRST ONE LISTED. `brew list --versions`
+# prints EVERY keg it kept — on this host "ollama 0.32.6 0.32.7" — so the old
+# `awk '{print $2}'` returned 0.32.6 while /opt/homebrew/bin/ollama pointed at
+# 0.32.7. Measured 2026-08-10, live, when this very gate failed a converge: it
+# reported drift, ran a reload that could change nothing, and then refused,
+# because the number it called "the keg" was a keg nobody was running.
+#
+# Resolving the symlink asks what will actually EXEC, which is the same rule
+# tools/estate-status.py is built on: the port and the binary beat the manifest.
 - name: "[Ollama] Compare the running daemon against the installed keg"
   ansible.builtin.shell: |
     set -o pipefail
-    keg=$(brew list --versions ollama 2>/dev/null | awk '{print $2}')
+    keg="{{ _ollama_keg.stdout | default('') | trim }}"
     srv=$(ollama --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-    [ -n "$keg" ] && [ "$keg" = "$srv" ] && echo same || echo "drift keg=$keg srv=$srv"
+    [ -n "$keg" ] && [ "$keg" = "$srv" ] && echo "same keg=$keg" || echo "drift keg=$keg srv=$srv"
   args:
     executable: /bin/bash
   register: _ollama_drift
@@ -251,37 +279,75 @@
     - nos_service_manager == 'launchd'
     - "'drift' in (_ollama_drift.stdout | default(''))"
 
-# The daemon half of the pin, asserted only AFTER the reload has had its chance.
-# Split from the keg check on purpose: "brew installed the wrong version" and
-# "the right version is installed and nothing is running it" are different
-# faults with different fixes, and one message covering both would name neither.
-- name: "[Ollama] Re-read the daemon version after the reload"
+# Re-measure the SAME comparison after the reload, not a different one. The
+# first draft waited for the daemon to report `ollama_version` — the PIN — so on
+# a host where brew had moved past the pin it looped fifteen times, timed out,
+# and handed the refusal a string that could never match. What the reload was
+# supposed to fix is keg-vs-daemon, so that is what gets re-read.
+- name: "[Ollama] Re-compare keg and daemon after the reload"
   ansible.builtin.shell: |
     set -o pipefail
+    keg="{{ _ollama_keg.stdout | default('') | trim }}"
     for i in $(seq 1 15); do
-      v=$(ollama --version 2>/dev/null | head -1 || true)
-      case "$v" in *{{ ollama_version }}*) echo "$v"; exit 0;; esac
+      srv=$(ollama --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+      if [ -n "$keg" ] && [ "$keg" = "$srv" ]; then echo "same keg=$keg"; exit 0; fi
       sleep 2
     done
-    ollama --version 2>&1 | head -1 || true
+    echo "drift keg=$keg srv=${srv:-none}"
   args:
     executable: /bin/bash
-  register: _ollama_ver_after
+  register: _ollama_drift_after
   changed_when: false
   failed_when: false
   when:
     - nos_pkg_manager == 'homebrew'
-    - ollama_version | default('') | length > 0
+    - "'drift' in (_ollama_drift.stdout | default(''))"
 
-- name: "[Ollama] Refuse when the estate is running a version it did not install"
+- name: "[Ollama] Read the daemon version for the messages below"
+  ansible.builtin.command: ollama --version
+  register: _ollama_ver_after
+  changed_when: false
+  failed_when: false
+  when: nos_pkg_manager == 'homebrew'
+
+# THREE FAULTS, THREE MESSAGES. The first draft of this gate had one message for
+# all of them and it named none: it printed `ollama_version` — THE PIN — under
+# the words "the installed keg", then blamed the daemon for "still talking to
+# the old binary". On 2026-08-10 that failed a converge in which nothing was
+# wrong except the pin: brew had upgraded 0.32.6 -> 0.32.7 mid-run (`state:
+# latest`), keg and daemon agreed at 0.32.7, and the daemon was NEWER than the
+# number the message called the keg. A refusal that misnames the fault sends the
+# operator to `launchctl bootout` for a launchd problem that does not exist.
+- name: "[Ollama] Refuse — the daemon is not running the keg that is installed"
   ansible.builtin.fail:
     msg: |
-      the installed keg is {{ ollama_version }} but the running daemon reports
-      something else, so every consumer is still talking to the old binary.
-        daemon: {{ _ollama_ver_after.stdout | default('(none)') | trim }}
-      The reload above should have fixed this. If it did not, do it by hand:
+      the linked keg and the running daemon disagree, so every consumer —
+      hermes, openclaw, KEAP embeddings, face ask — is talking to the wrong one.
+        {{ _ollama_drift.stdout | default('(not measured)') | trim }}
+        daemon now: {{ _ollama_ver_after.stdout | default('(none)') | trim }}
+      The reload above should have fixed it. By hand:
         launchctl bootout gui/$(id -u)/com.ollama.agent
         launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ollama.agent.plist
+  when:
+    - nos_service_manager == 'launchd'
+    - "'drift' in (_ollama_drift.stdout | default(''))"
+    - "'drift' in (_ollama_drift_after.stdout | default(_ollama_drift.stdout | default('')))"
+
+# A SEPARATE fault with a SEPARATE fix. Nothing is broken here — the estate is
+# coherent, the PIN is simply not what got installed. Saying so is worth a task
+# because `state: latest` means the pin never decided anything, and a pin that
+# cannot lose is a pin that will silently be wrong forever (memory
+# `version-pins-default-config-shadow`, and the ollama tap note that says
+# `state: latest` "to nikdy neukázal").
+- name: "[Ollama] Report — brew installed a version the pin does not name"
+  ansible.builtin.debug:
+    msg: |
+      ollama_version is {{ ollama_version }} but the linked keg is
+      {{ _ollama_keg.stdout | default('?') | trim }}, and the daemon agrees with the KEG, not the pin.
+      Nothing is broken: `state: latest` upgrades regardless of this pin, so the
+      pin is descriptive, not prescriptive. Update default.config.yml to
+      {{ _ollama_keg.stdout | default('?') | trim }} — or make the install version-pinned if the pin is
+      meant to decide.
   when:
     - nos_pkg_manager == 'homebrew'
     - ollama_version | default('') | length > 0

@@ -98,15 +98,45 @@ def test_the_pin_is_read_back_on_both_sides():
     preflight reading only the SERVER would have failed a converge that had just
     done the right thing; one reading only the KEG would call it done while
     every consumer still talked to the old binary.
+
+    THIS GATE NAMED A TASK TITLE AND BROKE WHEN THE READING IMPROVED. On
+    2026-08-10 the keg read moved from `brew list --versions` — which prints
+    EVERY kept keg, so "ollama 0.32.6 0.32.7" made a stale pin substring-match
+    as installed — to resolving what /opt/homebrew/bin/ollama actually points
+    at. Strictly better, and this gate went red because it was pinned to the
+    old title. A gate that fails an improvement is testing the wording.
+
+    So it asserts the PROPERTY now: something reads the keg, something reads the
+    daemon after the reload, and — the part that was missing and would have
+    caught the real defect — the keg reading must not be a substring test
+    against a multi-keg listing.
     """
     names = [str(t.get("name", "")) for t in tasks()]
-    assert any("installed ollama keg version" in n for n in names), (
+    assert any("keg" in n.lower() and "resolve" in n.lower() for n in names) or \
+           any("installed ollama keg version" in n for n in names), (
         "nothing reads the installed keg back; a declared pin nobody verifies is "
         "how this estate sat two minor versions behind for weeks while every run "
         "reported success")
-    assert any("daemon version after the reload" in n for n in names), (
-        "nothing checks what the RUNNING daemon reports after the reload. The "
-        "keg being right is not the estate running it.")
+    assert any("after the reload" in n for n in names), (
+        "nothing re-reads state after the reload. The keg being right is not the "
+        "estate running it.")
+
+    # TASK BODIES, not the file. The comments deliberately QUOTE the old command
+    # to explain why it was abandoned, and a whole-file grep would fail on its
+    # own history — the same mistake this suite made once already on a
+    # comment-scanning drift check.
+    shells = " ".join(
+        str(t.get(k, ""))
+        for t in tasks()
+        for k in ("ansible.builtin.shell", "ansible.builtin.command", "shell", "command")
+    )
+    assert "brew list --versions ollama" not in shells, (
+        "the keg is read from `brew list --versions` again. That prints every "
+        "keg brew kept, so a pin of 0.32.6 matches the line 'ollama 0.32.6 "
+        "0.32.7' while the LINKED binary is 0.32.7 — the pin gate stays silent "
+        "and the drift gate then fails the converge blaming the daemon. "
+        "Measured live 2026-08-10. Resolve the symlink instead."
+    )
 
 
 def test_the_daemon_is_reloaded_on_drift_not_on_having_written_something():

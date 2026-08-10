@@ -1056,7 +1056,7 @@ ollama_flash_attention: 1      # Flash attention for MLX (faster, less memory)
 # Moving to it needs one operator action the playbook must not take unattended:
 #     brew uninstall ollama && brew untap pazny/local && brew install ollama
 # Models live in `ollama_models_dir` and survive it.
-ollama_version: "0.32.6"
+ollama_version: "0.32.7"                       # what brew LINKED on 2026-08-10; `state: latest` decides, this records
 
 # Run openclaw as a launchd daemon (always running, autorestart)
 openclaw_install_daemon: true
