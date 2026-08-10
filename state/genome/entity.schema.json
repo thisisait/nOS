@@ -350,5 +350,25 @@
       }
     }
   },
-  "$ref": "#/definitions/entity"
+  "$ref": "#/definitions/entity",
+  "vocabularies": {
+    "llm": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A VOCABULARY, not a facet — which is why it lives beside `definitions` rather than inside it. A facet is something an ENTITY carries; nOS services do not have an `llm` block, and `test_every_facet_is_reachable_from_the_base` was right to refuse it as one on the first run. Vocabularies are shared closed lists the runtimes agree on; they are emitted by the codegen and composed into nothing.\n\nWhich model may be NAMED, and in what spelling. NOT which model an agent may USE — that is a capability and stays hand-written per runtime, the same split this file's own description draws for opcodes.\n\nWHY IT IS HERE. Measured 2026-08-10: the identical alternation `(anthropic|openclaw|openai|local)` was restated SIX times — AgentLoader.php:261, state/schema/agent.schema.yaml three times (primary, fallback, and the grader's), tests/anatomy/test_agentkit_naming.py, and cortex's MODEL_URI_RE in two vendored copies. The sixth was written the day before this facet and ALREADY DISAGREED with the other five on the tail, which is how fast this drifts when nothing compares it.\n\nWHY THE TAIL IS PERMISSIVE, and it is the whole reason the drift mattered. The old tail was `[a-z0-9.-]+` — no colon. Every real ollama tag has one (`qwen2.5-coder:32b`, `nomic-embed-text:latest`, `hermes3:8b` on this host), so the correct value was UNWRITEABLE and got dash-ified into `qwen-coder-32b`, a model that does not exist, as the fallback of all nine agents. We own the provider prefix; the vendor owns everything after it, which is what docs/doctrine/foreign-properties.md asks of us.",
+      "properties": {
+        "provider": {
+          "description": "FAIL-CLOSED ORDERING, inherited verbatim from the opcode/handler rule: the ADAPTER ships first and the provider joins this enum second. A member here with no adapter is a URI the schema accepts and the Factory throws on — validation that outruns capability. `minimax` is deliberately ABSENT until its adapter exists.\n\nNARROWED 2026-08-10 BY THIS RULE'S FIRST RUN, which is the useful part: `openai` and `local` were in the list and Factory::fromUri has no arm for either — its own docstring calls them 'reserved (not yet implemented; throws)'. So an agent.yml declaring `primary: openai-gpt-4` passed every schema check in the estate and failed at session-open. Reserved belongs in the CODE, where the Factory already says so, not in the vocabulary a validator accepts. Nothing used either (checked across agents/, apps/ and plugins/), so narrowing cost nothing and closed a gap the gate was written to find in someone else's declaration.",
+          "enum": [
+            "anthropic",
+            "openclaw"
+          ]
+        },
+        "model_id_pattern": {
+          "description": "The tail after `<provider>-`. Another system's identifier, carried unedited: dots, colons, slashes and underscores all appear in real registries. Bounded at 96 so it cannot be an injection surface.",
+          "const": "[A-Za-z0-9._:/-]{1,96}"
+        }
+      }
+    }
+  }
 }

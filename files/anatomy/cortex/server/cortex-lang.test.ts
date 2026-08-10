@@ -911,7 +911,11 @@ describe('contract v2 — delegate', () => {
     // The `?` is the whole narrowing argument in one AST field: it says the
     // caller expressed a PREFERENCE. Data may narrow a permission and never
     // widen one, so the binding gate stays free to refuse.
-    const stage = stage0('@input | delegate(agent:librarian, ?via="local-tinyllama")');
+    // A LOCAL provider on purpose: the narrowing case is the one that has to
+    // work, because "this must not leave the box" is what a residency rule
+    // needs. (`local-` was a provider until 2026-08-10, when the adapter-first
+    // rule removed it — it had no adapter. openclaw IS the local path.)
+    const stage = stage0('@input | delegate(agent:librarian, ?via="openclaw-hermes3:8b")');
     expect(stage.params.via.defaulted).toBe(true);
   });
 

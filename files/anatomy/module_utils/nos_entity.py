@@ -69,6 +69,21 @@ AXIS_VOCABULARY = {
     "layer": SERVICE_LAYERS,
 }
 
+#: LLM providers that have an adapter. The enum ships SECOND — see the genome's
+#: `llm.provider` note: a member here with no adapter is validation outrunning
+#: capability.
+LLM_PROVIDERS = (
+    "anthropic",
+    "openclaw",
+)
+
+#: `<provider>-<the vendor's own model id>`. DERIVED from LLM_PROVIDERS, so the
+#: list cannot be restated. The tail carries colons on purpose: every real
+#: ollama tag has one, and a spelling that cannot express the right value gets
+#: approximated into a wrong one.
+MODEL_URI_PATTERN = r"^(anthropic|openclaw)-[A-Za-z0-9._:/-]{1,96}$"
+MODEL_URI_RE = re.compile(MODEL_URI_PATTERN)
+
 ANCHOR_PATTERN = r"^[0-9]{2}(\.[0-9]{2}){0,2}$"
 ANCHOR_RE = re.compile(ANCHOR_PATTERN)
 

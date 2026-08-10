@@ -39,14 +39,14 @@ properties:
       primary:
         type: string
         # URI scheme: <provider>-<model-id>, dashes throughout.
-        pattern: "^(anthropic|openclaw|openai|local)-[a-z0-9.-]+$"
+        pattern: "^(anthropic|openclaw)-[A-Za-z0-9._:/-]{1,96}$"
         description: |
           URI of the primary LLM backend. Format <provider>-<model>.
           Known providers: anthropic, openclaw, openai, local.
           Examples: anthropic-claude-opus-4-7, openclaw-qwen-coder-32b.
       grader:
         type: string
-        pattern: "^(anthropic|openclaw|openai|local)-[a-z0-9.-]+$"
+        pattern: "^(anthropic|openclaw)-[A-Za-z0-9._:/-]{1,96}$"
         description: |
           OPTIONAL model for the outcome Grader. When absent the grader reuses
           the agent's own client, which means the judge and the proposer share
@@ -55,7 +55,7 @@ properties:
           agent whose grade actually gates something.
       fallback:
         type: string
-        pattern: "^(anthropic|openclaw|openai|local)-[a-z0-9.-]+$"
+        pattern: "^(anthropic|openclaw)-[A-Za-z0-9._:/-]{1,96}$"
         description: |
           Fallback URI used when primary fails (rate-limited, network error,
           model unavailable). The protocol is platform-agnostic so an

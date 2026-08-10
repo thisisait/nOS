@@ -16,7 +16,7 @@ description: |
 
 model:
   primary: anthropic-claude-opus-4-7
-  fallback: openclaw-qwen-coder-32b
+  fallback: openclaw-qwen2.5-coder:32b
 
 system_prompt_path: system.md
 

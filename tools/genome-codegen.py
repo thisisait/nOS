@@ -64,6 +64,19 @@ def facet(schema: dict, name: str) -> dict:
     return schema["definitions"][name]
 
 
+def vocabulary(schema: dict, name: str) -> dict:
+    """A shared closed list, as opposed to a facet an entity carries.
+
+    The distinction is structural rather than a naming convention: facets live
+    in `definitions` and are `$ref`'d from the base entity, and
+    test_genome_contract::test_every_facet_is_reachable_from_the_base refuses
+    any that is not. `llm` was written there first and correctly rejected — an
+    nOS service does not have an `llm` block. Vocabularies are composed into
+    nothing and emitted for every runtime.
+    """
+    return schema["vocabularies"][name]
+
+
 def enum_of(schema: dict, facet_name: str, prop: str) -> list[str]:
     return facet(schema, facet_name)["properties"][prop]["enum"]
 
@@ -110,6 +123,14 @@ def collect(schema: dict) -> dict:
         "justification_min": facet(schema, "access")["properties"]["justification"]["minLength"],
         "tier_min": facet(schema, "access")["properties"]["tier"]["minimum"],
         "tier_max": facet(schema, "access")["properties"]["tier"]["maximum"],
+        "llm_provider": vocabulary(schema, "llm")["properties"]["provider"]["enum"],
+        # The URI regex is DERIVED, never declared beside the enum. Declaring
+        # both would put the list in the genome twice and let them disagree —
+        # which is the exact failure this facet was added to end.
+        "model_uri_pattern": (
+            "^(" + "|".join(vocabulary(schema, "llm")["properties"]["provider"]["enum"]) + ")-"
+            + vocabulary(schema, "llm")["properties"]["model_id_pattern"]["const"] + "$"
+        ),
     }
 
 
@@ -154,6 +175,18 @@ AXIS_VOCABULARY = {{
     "build": APP_BUILDS,
     "layer": SERVICE_LAYERS,
 }}
+
+#: LLM providers that have an adapter. The enum ships SECOND — see the genome's
+#: `llm.provider` note: a member here with no adapter is validation outrunning
+#: capability.
+LLM_PROVIDERS = {_py_list(g["llm_provider"])}
+
+#: `<provider>-<the vendor's own model id>`. DERIVED from LLM_PROVIDERS, so the
+#: list cannot be restated. The tail carries colons on purpose: every real
+#: ollama tag has one, and a spelling that cannot express the right value gets
+#: approximated into a wrong one.
+MODEL_URI_PATTERN = r"{g["model_uri_pattern"]}"
+MODEL_URI_RE = re.compile(MODEL_URI_PATTERN)
 
 ANCHOR_PATTERN = r"{g["anchor_pattern"]}"
 ANCHOR_RE = re.compile(ANCHOR_PATTERN)
@@ -277,6 +310,17 @@ export const APP_BUILDS = {_ts_arr(g["build"])};
  *  estate refuses to place — is not in this list; it is not a fifth layer. */
 export type ServiceLayer = {_ts_union(g["layer"])};
 export const SERVICE_LAYERS = {_ts_arr(g["layer"])};
+
+/** LLM providers that have an adapter. Adapter first, enum second — a member
+ *  with no adapter is a URI the schema accepts and the Factory throws on. */
+export type LlmProvider = {_ts_union(g["llm_provider"])};
+export const LLM_PROVIDERS = {_ts_arr(g["llm_provider"])};
+
+/** `<provider>-<the vendor's own model id>`. DERIVED from LLM_PROVIDERS. The
+ *  tail keeps colons: every real ollama tag has one, and a spelling that cannot
+ *  express the right value gets approximated into a wrong one — which is how
+ *  nine agents came to name `qwen-coder-32b`, a model that does not exist. */
+export const MODEL_URI_PATTERN = /{g["model_uri_pattern"]}/;
 
 export const ANCHOR_PATTERN = /{g["anchor_pattern"]}/;
 export const LAYER_WITHHELD_MIN_LENGTH = {g["layer_withheld_min"]};

@@ -8,7 +8,9 @@ PHP needed) so a broken agent.yml never lands on master.
 Also asserts:
   * agent.yml::name matches the directory name
   * system_prompt_path / outcomes.rubric_path point at files that exist
-  * model URI scheme matches `^(anthropic|openclaw|openai|local)-[a-z0-9.-]+$`
+  * model URI scheme matches the genome's single declaration
+    (`state/genome/entity.schema.json` -> `nos_entity.MODEL_URI_PATTERN`); the
+    pattern is NOT restated here, because it was, and it drifted
   * capability_scopes is non-empty
 """
 
@@ -31,7 +33,22 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 AGENTS_DIR = REPO_ROOT / "files" / "anatomy" / "agents"
 SCHEMA_PATH = REPO_ROOT / "state" / "schema" / "agent.schema.yaml"
 
-_MODEL_URI_RE = re.compile(r"^(anthropic|openclaw|openai|local)-[a-z0-9.-]+$")
+#: NOT a seventh copy. Loaded from the genome's generated artifact, because
+#: this file used to carry the alternation as a literal and was one of the six
+#: places it had drifted across — see test_one_llm_provider_list.py.
+def _model_uri_re():
+    import importlib.util
+    import sys
+
+    target = REPO_ROOT / "files/anatomy/module_utils/nos_entity.py"
+    spec = importlib.util.spec_from_file_location("nos_entity_for_agent_schema", target)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module.MODEL_URI_RE
+
+
+_MODEL_URI_RE = _model_uri_re()
 _NAME_RE = re.compile(r"^[a-z][a-z0-9-]{1,38}[a-z0-9]$")
 
 

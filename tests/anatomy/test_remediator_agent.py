@@ -16,6 +16,20 @@ import yaml
 REPO = pathlib.Path(__file__).resolve().parents[2]
 
 
+def _genome_constants():
+    """The generated genome artifact, loaded by path — module_utils is flat."""
+    import importlib.util
+    import sys
+
+    target = REPO / "files/anatomy/module_utils/nos_entity.py"
+    spec = importlib.util.spec_from_file_location("nos_entity_for_remediator", target)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 # ── Generic pulse-run-agent.sh contract ────────────────────────────────
 
 
@@ -223,14 +237,35 @@ def test_remediator_agentkit_profile_exists():
 
 
 def test_remediator_agentkit_agent_yml_model_uri():
-    """AgentKit naming convention (test_agentkit_naming.py) enforces the
-    URI scheme — verify our model URIs match.
+    """The model URIs must be LEGAL, which is not the same as being a literal.
+
+    This asserted `fallback == "openclaw-qwen-coder-32b"` for months. That value
+    resolves — OpenClawAdapter strips the prefix — to `qwen-coder-32b`, a model
+    ollama has never served on this host (it serves `qwen2.5-coder:32b`). So the
+    gate was pinning a typo in place: the one check that mentioned the fallback
+    made it harder to correct rather than easier to trust.
+
+    It now asserts the SHAPE, against the genome's single declaration
+    (`state/genome/llm.provider` → `nos_entity.MODEL_URI_PATTERN`), so a rename
+    of a model does not need this file edited, while a URI no runtime could ever
+    build still fails. Whether the model is INSTALLED is a runtime fact and
+    belongs to a live check, not to an offline suite — see
+    tests/anatomy/test_one_llm_provider_list.py for the estate-wide version.
     """
+    entity = _genome_constants()
     agent = yaml.safe_load(
         (REPO / "files/anatomy/agents/remediator/agent.yml").read_text()
     )
+    for slot in ("primary", "fallback"):
+        uri = agent["model"][slot]
+        assert entity.MODEL_URI_RE.match(uri), (
+            f"remediator model.{slot} = {uri!r} is not a legal model uri "
+            f"({entity.MODEL_URI_PATTERN})"
+        )
+    # The primary is pinned by name on purpose: the remediator reads security
+    # findings, and silently demoting it to a cheaper tier is a change worth
+    # failing a test over.
     assert agent["model"]["primary"] == "anthropic-claude-opus-4-7"
-    assert agent["model"]["fallback"] == "openclaw-qwen-coder-32b"
 
 
 def test_remediator_agentkit_system_md_has_no_write_section():
