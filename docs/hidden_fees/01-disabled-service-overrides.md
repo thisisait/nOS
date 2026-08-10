@@ -18,6 +18,33 @@ Two cases, and only one is closed:
 The asymmetry is the fee: we fixed the case that failed loudly and left the case
 that does not fail at all.
 
+## The number, measured 2026-08-10
+
+**Sixteen.** `tools/discovery-scan.py` gained a probe for this (probe E) and
+found sixteen services carrying `install_<svc>: false` with a container up:
+
+`bookstack · code_server · firefly · gitlab · hedgedoc · homeassistant ·
+influxdb · jellyfin · miniflux · nodered · ntfy · onlyoffice · qgis_server ·
+smtp_stalwart · snappymail · wordpress`
+
+Two classes are deliberately NOT counted, because comparing them would be a
+guess rather than a contradiction: flags `main.yml` auto-enables from other
+flags at run time (`install_postgresql`, `install_mariadb`), and Tier-2 manifest
+apps whose bring-up belongs to `apps/<name>.yml` rather than to a toggle
+(`qdrant`). The probe derives both lists rather than restating them.
+
+## What it costs beyond tidiness
+
+Nine rows in the remediation queue argue mitigation from exactly this flag —
+*"MITIGATED: install_gitlab=false"* — and three of those are **HIGH**
+(REM-159 gitlab, REM-165 erpnext, REM-184 qgis_server). `gitlab` and
+`qgis_server` are in the list above.
+
+A row that lowers its own severity because a service is "disabled" is worse than
+an untouched open row: it is an open exposure that has been *talked out of being
+counted*. The fee is therefore not only a stale container — it is a queue whose
+arithmetic is wrong in the reassuring direction.
+
 ## When the bill comes due
 
 Whenever a service is toggled off on a host that has already converged with it

@@ -656,6 +656,90 @@ def file_rows(findings: list[Finding]) -> int:
     return filed
 
 
+# ---------------------------------------------------------------------------
+# Probe E — what the operator SWITCHED OFF vs what is still running
+# ---------------------------------------------------------------------------
+
+def probe_disabled_vs_running(images: dict[str, str], res: ScanResult) -> None:
+    """`install_<svc>: false` while the container is up.
+
+    docs/hidden_fees/01 records the mechanism and calls it open: the role render
+    path is create-only, so a disabled service's compose override stays on disk
+    and keeps being merged into `docker compose up`. The fee had no NUMBER until
+    2026-08-10, when this probe was written: EIGHT services declared false were
+    running, including gitlab, qgis-server, jellyfin and home-assistant.
+
+    WHY IT BELONGS IN THE SECURITY SCANNER AND NOT ONLY IN THE FEE LEDGER. Nine
+    rows in the remediation queue argue mitigation from exactly this flag —
+    "MITIGATED: install_gitlab=false" — and three of them are HIGH. A row that
+    downgrades its own severity on the strength of a switch that did not switch
+    anything off is worse than an open row: it is an open row that has been
+    talked out of being counted.
+    """
+    cfg = CONFIG.read_text(encoding="utf-8")
+    # DERIVED, not restated: main.yml's "Auto-enable …" tasks flip some flags to
+    # true at run time from other flags, so `false` in default.config.yml is the
+    # correct DEFAULT for them and a running container is no contradiction at
+    # all. Reading the list from main.yml means a fourth auto-enabled dependency
+    # needs no edit here. The first run of this probe reported install_postgresql
+    # as a finding, which is exactly the noise this tool's own docstring says
+    # gets a detector muted.
+    auto = set(re.findall(r"^\s*(install_[a-z0-9_]+|redis_docker):\s*true\s*$",
+                          (REPO / "main.yml").read_text(encoding="utf-8"), re.MULTILINE))
+    live: list[tuple[str, str, str]] = []
+    for m in re.finditer(r"^install_([a-z0-9_]+):\s*(\S+)", cfg, re.MULTILINE):
+        var, declared = m.group(1), m.group(2).strip().strip('"\'')
+        if declared not in ("false", "no"):
+            continue
+        if f"install_{var}" in auto:
+            res.skip("flag is auto-enabled from another flag at run time")
+            continue
+        # A Tier-2 manifest app is brought up by apps_runner from apps/<name>.yml,
+        # not by this toggle, so the toggle is not the thing that would have
+        # switched it off. Comparing them is the ambiguity this tool skips on.
+        if (REPO / "apps" / f"{var}.yml").exists():
+            res.skip("manifest app — apps/<name>.yml owns bring-up, not the toggle")
+            continue
+        res.compared += 1
+        hit = container_for(var, images)
+        if hit is not None:
+            live.append((var, hit[0], hit[1]))
+
+    if not live:
+        return
+
+    # ONE finding for the CLASS, not one per instance. The fee is a single
+    # mechanism with N victims, and filing N rows would bury the roadmap under
+    # one defect wearing sixteen names — the opposite of what a triage surface
+    # is for. The instances travel in the body, where they can be re-counted.
+    listing = "\n".join(f"  install_{v}: false -> {n} ({i})" for v, n, i in sorted(live))
+    res.findings.append(Finding(
+        slug=f"{OBS_PREFIX}disabled-services-still-running",
+        title=f"{len(live)} service(s) declared false are running",
+        track="security",
+        refs="default.config.yml · docker ps · docs/hidden_fees/01",
+        body=(
+            f"{len(live)} service(s) carry install_<svc>: false in "
+            "default.config.yml and have a container up right now:\n\n"
+            f"{listing}\n\n"
+            "MECHANISM, already recorded and still open: docs/hidden_fees/01. The "
+            "role render path is create-only — each role writes "
+            "stacks/<stack>/overrides/<svc>.yml and NOTHING removes a fragment, "
+            "so the orchestrator keeps merging the override written on the "
+            "converge that had the service ON. The retired case was closed "
+            "2026-07-20 (nos_retired_services + prune-retired.yml); the DISABLED "
+            "case was left, because it is the one that does not fail loudly.\n\n"
+            "WHY THIS IS A SECURITY ROW AND NOT ONLY A TIDINESS ONE. Rows in the "
+            "remediation queue argue mitigation from this exact flag — "
+            "'MITIGATED: install_gitlab=false' — and some of them are HIGH. A row "
+            "that lowers its own severity because a service is 'disabled' is an "
+            "open exposure that has been talked out of being counted. Before "
+            "trusting any queue row's disposition for these components, re-read "
+            "it against this list."
+        ),
+    ))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--file", action="store_true",
@@ -679,6 +763,7 @@ def main() -> int:
     probe_queue_vs_running(images, res)
     probe_artefact_vs_repo(res)
     probe_doc_claim_vs_queue(res)
+    probe_disabled_vs_running(images, res)
 
     if args.json:
         print(json.dumps({
