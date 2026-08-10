@@ -660,23 +660,59 @@ def file_rows(findings: list[Finding]) -> int:
 # Probe E — what the operator SWITCHED OFF vs what is still running
 # ---------------------------------------------------------------------------
 
+def resolved_install_flags(default_path: Path | None = None,
+                           override_path: Path | None = None) -> dict[str, str]:
+    """`install_*` flags resolved across the documented config layering.
+
+    default.config.yml is the committed default; config.yml (gitignored,
+    operator-owned) overrides it — the same order main.yml's vars_files
+    declares. The override wins where both declare a flag, and a flag declared
+    only in config.yml is seen too: that is exactly the shape of an operator
+    switching OFF something the default ships ON.
+
+    WHY THIS FUNCTION EXISTS AS A FUNCTION. Probe E's first run (2026-08-10)
+    read the committed default alone, and on any host carrying a config.yml
+    that inverts the verdict twice over: services config.yml ENABLES read as
+    "switched off but running" (expected drift reported as contradiction —
+    sixteen of them here), while the one service the operator genuinely
+    switched off (install_mailpit: false, container up) was invisible. The
+    wrong sixteen then propagated into docs/hidden_fees/01 and three queue
+    amendments before anyone re-derived it. Gate:
+    tests/anatomy/test_discovery_probe_reads_resolved_config.py.
+    """
+    default_path = CONFIG if default_path is None else default_path
+    override_path = (REPO / "config.yml") if override_path is None else override_path
+    flags: dict[str, str] = {}
+    for path in (default_path, override_path):
+        if not path.exists():
+            continue
+        for m in re.finditer(r"^install_([a-z0-9_]+):\s*(\S+)",
+                             path.read_text(encoding="utf-8"), re.MULTILINE):
+            flags[m.group(1)] = m.group(2).strip().strip('"\'')
+    return flags
+
+
 def probe_disabled_vs_running(images: dict[str, str], res: ScanResult) -> None:
-    """`install_<svc>: false` while the container is up.
+    """`install_<svc>: false` (RESOLVED across the config layering) while the
+    container is up.
 
     docs/hidden_fees/01 records the mechanism and calls it open: the role render
     path is create-only, so a disabled service's compose override stays on disk
-    and keeps being merged into `docker compose up`. The fee had no NUMBER until
-    2026-08-10, when this probe was written: EIGHT services declared false were
-    running, including gitlab, qgis-server, jellyfin and home-assistant.
+    and keeps being merged into `docker compose up`. Measured honestly for the
+    first time 2026-08-10, after the layering fix in resolved_install_flags():
+    ONE service on this host — mailpit, switched off in the operator's
+    config.yml, both fragments still on disk, iiab-mailpit-1 up. (The same
+    day's first draft read only default.config.yml and reported sixteen; every
+    one of those is enabled in config.yml and running legitimately.)
 
     WHY IT BELONGS IN THE SECURITY SCANNER AND NOT ONLY IN THE FEE LEDGER. Nine
     rows in the remediation queue argue mitigation from exactly this flag —
     "MITIGATED: install_gitlab=false" — and three of them are HIGH. A row that
-    downgrades its own severity on the strength of a switch that did not switch
-    anything off is worse than an open row: it is an open row that has been
-    talked out of being counted.
+    downgrades its own severity on the strength of a flag whose RESOLVED value
+    is true is measuring the wrong layer; a row whose resolved value is false
+    while the container runs is an open exposure that has been talked out of
+    being counted. This probe now distinguishes the two.
     """
-    cfg = CONFIG.read_text(encoding="utf-8")
     # DERIVED, not restated: main.yml's "Auto-enable …" tasks flip some flags to
     # true at run time from other flags, so `false` in default.config.yml is the
     # correct DEFAULT for them and a running container is no contradiction at
@@ -687,8 +723,7 @@ def probe_disabled_vs_running(images: dict[str, str], res: ScanResult) -> None:
     auto = set(re.findall(r"^\s*(install_[a-z0-9_]+|redis_docker):\s*true\s*$",
                           (REPO / "main.yml").read_text(encoding="utf-8"), re.MULTILINE))
     live: list[tuple[str, str, str]] = []
-    for m in re.finditer(r"^install_([a-z0-9_]+):\s*(\S+)", cfg, re.MULTILINE):
-        var, declared = m.group(1), m.group(2).strip().strip('"\'')
+    for var, declared in sorted(resolved_install_flags().items()):
         if declared not in ("false", "no"):
             continue
         if f"install_{var}" in auto:
@@ -717,10 +752,11 @@ def probe_disabled_vs_running(images: dict[str, str], res: ScanResult) -> None:
         slug=f"{OBS_PREFIX}disabled-services-still-running",
         title=f"{len(live)} service(s) declared false are running",
         track="security",
-        refs="default.config.yml · docker ps · docs/hidden_fees/01",
+        refs="default.config.yml + config.yml (resolved) · docker ps · docs/hidden_fees/01",
         body=(
-            f"{len(live)} service(s) carry install_<svc>: false in "
-            "default.config.yml and have a container up right now:\n\n"
+            f"{len(live)} service(s) carry install_<svc>: false RESOLVED "
+            "across default.config.yml + config.yml (the operator's override "
+            "layer wins) and have a container up right now:\n\n"
             f"{listing}\n\n"
             "MECHANISM, already recorded and still open: docs/hidden_fees/01. The "
             "role render path is create-only — each role writes "

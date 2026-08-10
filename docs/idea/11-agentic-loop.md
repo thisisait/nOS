@@ -190,11 +190,23 @@ since it was filed. It is the difference between a loop that improves and one
 that rediscovers.
 
 [semantica-agi/semantica](https://github.com/semantica-agi/semantica) (MIT,
-2.7k stars, active) ships the shape: decisions are first-class graph nodes with
-causal ancestry, `trace_decision_chain()`, `analyze_decision_impact()`, and
-`find_similar_decisions()` for precedent search. Their W3C **PROV-O** export is
-worth taking too — our audit chain is bespoke, and a standard export is what a
-regulator can actually read.
+2.7k stars, active) ships the *schema* worth taking: decisions as first-class
+graph nodes (category / scenario / reasoning / outcome / confidence, temporal
+validity, supersession filters), and a W3C **PROV-O** export — our audit chain
+is bespoke, and a standard export is what a regulator can actually read.
+
+Its headline implementations are not worth taking, measured rather than read
+off the README: `find_similar_decisions()` precedent search is bag-of-words
+Jaccard (its `use_semantic_search` parameter is never read — dead), and
+`trace_decision_chain()` infers "causes" from entity co-occurrence plus
+timestamp order — guessed ancestry, not recorded lineage. (A stronger sibling
+exists in the repo — `DecisionRecorder.link_precedents` writes typed
+PRECEDENT_FOR/CAUSED edges — but ancestry there is caller-asserted, and it is
+not what the headline functions read.) This estate already holds the stronger
+lineage half: `actor_action_id` is live and *recorded*. The search half — the
+Qdrant/librarian corpus (docs/rag-architecture.md) — is designed but not
+shipped (Librarian is contract-only), so the honest statement is: take the
+schema and the PROV-O export, keep our lineage, and build our own search.
 
 **What must not come with it.** In that design `record_decision()` is a data
 write and rules are data; there is no permission model. Importing the shape

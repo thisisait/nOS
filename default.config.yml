@@ -1939,14 +1939,18 @@ stack_up_wait_timeout: 540
 # the log. 15s is a good balance of heartbeat freshness vs task-count noise.
 stack_wait_tick_interval: 15
 
-# # hidden_fees/01 — the DISABLED half. A service switched off leaves its compose
+# hidden_fees/01 — the DISABLED half. A service switched off leaves its compose
 # override on disk and the orchestrator keeps merging it, so it keeps running.
-# Measured 2026-08-10: sixteen such services on this host. The reconciler REPORTS
-# every converge regardless; set this true to have it actually remove them.
-# Reversible — data volumes are untouched, so re-enabling brings the service back.
+# Measured 2026-08-10 on the RESOLVED config (default.config.yml + config.yml):
+# one such service on this host — install_mailpit false in the operator's
+# config.yml with iiab-mailpit-1 up. (A first measurement said sixteen; it read
+# the committed default only, and all sixteen are enabled in config.yml.)
+# The reconciler REPORTS every converge regardless; set this true to have it
+# actually remove them. Reversible — data volumes are untouched, so re-enabling
+# brings the service back.
 prune_disabled_overrides: false
 
-nos_retired_services: services nOS no longer ships. The render path is
+# nos_retired_services: services nOS no longer ships. The render path is
 # CREATE-ONLY — deleting a role/plugin leaves its already-rendered
 # `<stack>/overrides/<svc>.yml` on every live host, and the orchestrators merge
 # whatever `find` turns up. Puter (removed 2026-07-20) left exactly that behind

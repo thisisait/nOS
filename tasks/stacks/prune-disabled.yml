@@ -9,19 +9,27 @@
 #     "A service that is merely DISABLED (install_* false) is NOT retired and is
 #      not handled here."
 #
-# MEASURED 2026-08-10, and the number is why this exists: SIXTEEN services on
-# this host carried `install_<svc>: false` while their container was up —
-# bookstack, code_server, firefly, gitlab, hedgedoc, homeassistant, influxdb,
-# jellyfin, miniflux, nodered, ntfy, onlyoffice, qgis_server, smtp_stalwart,
-# snappymail, wordpress. The render path is create-only, so the fragment written
+# MEASURED 2026-08-10 — and MISMEASURED the same day, which is its own lesson.
+# The first count said SIXTEEN services carried `install_<svc>: false` with a
+# container up; it was read from default.config.yml ALONE, and all sixteen are
+# `install_*: true` in the operator's config.yml (the documented override
+# layer). They run because they are enabled. The genuine instance on this host
+# is the ONE service actually switched off there: install_mailpit: false, with
+# mailpit.yml + mailpit-base.yml still on disk and iiab-mailpit-1 up. The
+# mechanism is real — the render path is create-only, so the fragment written
 # on the converge that had the service ON is never removed and the orchestrator
-# keeps merging it. The operator's switch switched nothing off.
+# keeps merging it — but it had one victim here, not sixteen. This file always
+# resolved the flags correctly (lookup('vars') below sees config.yml); the
+# narrative around it did not. See tools/discovery-scan.py
+# resolved_install_flags() for the corrected probe.
 #
 # IT IS A SECURITY CONTROL, NOT HOUSEKEEPING. Nine rows in the remediation queue
 # argue mitigation from exactly this flag — "MITIGATED: install_gitlab=false" —
-# and three of those are HIGH. A row that lowers its own severity because a
-# service is "disabled" is an open exposure that has been talked out of being
-# counted.
+# and three of those are HIGH. Those claims read the COMMITTED DEFAULT, and the
+# resolved flag is true on this host, so the services are simply running; but a
+# row whose RESOLVED flag really is false while the container is up (mailpit)
+# is an open exposure that has been talked out of being counted. Either way a
+# flag is not evidence — only the reconciled estate is.
 #
 # ── Two false positives this MUST NOT produce, both derived rather than listed ─
 #
@@ -39,7 +47,8 @@
 # Fragments are named by whatever the role chose: `code-server.yml` with hyphens
 # sits beside `qgis_server.yml` and `smtp_stalwart.yml` with underscores. So the
 # match is SEPARATOR-INSENSITIVE, the same rule tools/discovery-scan.py already
-# needed for container names. A hyphen-only mapping found 16 of 18.
+# needed for container names — a hyphen-only mapping silently misses the
+# underscore-named fragments (qgis_server, smtp_stalwart).
 #
 # ── Why removing the fragment is enough ─────────────────────────────────────
 #
@@ -51,10 +60,9 @@
 #
 # ── DEFAULT IS REPORT-ONLY, and that is a decision, not timidity ─────────────
 #
-# The fee has been open long enough for sixteen containers to accumulate, so the
-# first converge after this lands would remove sixteen at once. The estate's
-# destructive-op doctrine is dry-run first, act on an explicit token. So the
-# REPORT runs every converge and cannot be missed; the REMOVAL waits for
+# Removing fragments is a container teardown, and the estate's destructive-op
+# doctrine is dry-run first, act on an explicit token. So the REPORT runs every
+# converge and cannot be missed; the REMOVAL waits for
 # `prune_disabled_overrides: true`, which is one deliberate flip with the whole
 # list in front of the operator.
 #
@@ -97,10 +105,15 @@
   tags: ['stacks', 'core', 'always']
 
 - name: "[Stacks] Reset the accumulator (this file is imported TWICE)"
-  # core-up.yml and stack-up.yml both import this. An accumulator that only ever
-  # appends would see its own first pass on the second import and report every
-  # service twice — 64 fragments where there are 32. Caught before the first
-  # converge, by asking what happens on the second import rather than the first.
+  # core-up.yml and stack-up.yml both import this. Without the reset, the list
+  # doubles its NAMES on the second import — harmless to the report today,
+  # because everything downstream keys off _disabled_fragments, a unique-path
+  # select() that a doubled name alternation cannot inflate. The reset is
+  # defensive hygiene: a stale accumulator is exactly the shape that becomes a
+  # bug the day something starts counting _disabled_services itself. (An
+  # earlier version of this comment claimed a doubled fragment count — "64
+  # where there are 32" — which the select() cannot produce; corrected
+  # 2026-08-10.)
   ansible.builtin.set_fact:
     _disabled_services: []
   tags: ['stacks', 'core', 'always']
@@ -125,9 +138,9 @@
   tags: ['stacks', 'core', 'always']
 
 - name: "[Stacks] Match disabled services to the fragments still on disk"
-  # SEPARATOR-INSENSITIVE: `code-server.yml` sits beside `qgis_server.yml`, and a
-  # hyphen-only mapping found 16 of 18. `_` becomes `[-_]?` so one name matches
-  # whichever spelling the role happened to choose.
+  # SEPARATOR-INSENSITIVE: `code-server.yml` sits beside `qgis_server.yml`, so a
+  # hyphen-only mapping silently misses the underscore-named fragments. `_`
+  # becomes `[-_]?` so one name matches whichever spelling the role chose.
   ansible.builtin.set_fact:
     _disabled_fragments: >-
       {{ _all_overrides.files | default([]) | map(attribute='path')

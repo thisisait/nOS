@@ -18,14 +18,23 @@ Two cases, and only one is closed:
 The asymmetry is the fee: we fixed the case that failed loudly and left the case
 that does not fail at all.
 
-## The number, measured 2026-08-10
+## The number, measured 2026-08-10 — and corrected the same day
 
-**Sixteen.** `tools/discovery-scan.py` gained a probe for this (probe E) and
-found sixteen services carrying `install_<svc>: false` with a container up:
+The first measurement said **sixteen**, and it was taken on the wrong config
+layer. Probe E of `tools/discovery-scan.py` read `install_<svc>: false` from
+`default.config.yml` alone — the committed default — but this host's
+`config.yml` (the documented override layer, which wins) sets every one of
+those sixteen flags to `true`. Those services run because they are **enabled**;
+committed-default-vs-estate is expected drift for every config.yml-enabled
+service, not a contradiction.
 
-`bookstack · code_server · firefly · gitlab · hedgedoc · homeassistant ·
-influxdb · jellyfin · miniflux · nodered · ntfy · onlyoffice · qgis_server ·
-smtp_stalwart · snappymail · wordpress`
+Resolved across both layers, the measured number is **one**: the operator's
+config.yml sets `install_mailpit: false`, `mailpit.yml` + `mailpit-base.yml`
+are still under `~/stacks/iiab/overrides/`, and `iiab-mailpit-1` is up and
+healthy — the mechanism exactly as described, with one victim, not sixteen.
+The probe now resolves the layering (`resolved_install_flags()`:
+default.config.yml, then config.yml when present; gate
+`tests/anatomy/test_discovery_probe_reads_resolved_config.py`).
 
 Two classes are deliberately NOT counted, because comparing them would be a
 guess rather than a contradiction: flags `main.yml` auto-enables from other
@@ -37,8 +46,13 @@ apps whose bring-up belongs to `apps/<name>.yml` rather than to a toggle
 
 Nine rows in the remediation queue argue mitigation from exactly this flag —
 *"MITIGATED: install_gitlab=false"* — and three of those are **HIGH**
-(REM-159 gitlab, REM-165 erpnext, REM-184 qgis_server). `gitlab` and
-`qgis_server` are in the list above.
+(REM-159 gitlab, REM-165 erpnext, REM-184 qgis_server). Those claims commit the
+same wrong-layer error in the *reassuring* direction: they read `false` off the
+committed default while the operator's config.yml enables the service, so
+gitlab and qgis_server are up — not as zombies, but because they were never
+switched off. Their amended dispositions ("treat as fully exposed") are
+therefore right in conclusion, and a flag on either layer is not evidence:
+only the reconciled estate is.
 
 A row that lowers its own severity because a service is "disabled" is worse than
 an untouched open row: it is an open exposure that has been *talked out of being
@@ -50,26 +64,36 @@ arithmetic is wrong in the reassuring direction.
 `tasks/stacks/prune-disabled.yml` is the disabled half of `prune-retired.yml`,
 imported by both orchestrators. It **reports every converge** (that alone ends
 the "does not fail loudly" complaint) and **removes on `prune_disabled_overrides:
-true`**, default false — because the fee has been open long enough for sixteen
-containers to accumulate and the first converge after it lands would take all
-sixteen down at once. Live-verified the day it shipped: 32 fragments across 18
-services, and `postgresql` correctly absent.
+true`**, default false — destructive teardown waits for an explicit token, per
+the estate's destructive-op doctrine.
+
+The verification number needed correcting too. "32 fragments across 18
+services" was computed with default-only semantics — semantics the shipped
+task does not use: it resolves each flag via `lookup('vars', …)`, so the
+operator's config.yml counts, exactly as its own comment says. Under the
+semantics that actually run, this host reports **2 fragments across 1 service**
+(`mailpit.yml` + `mailpit-base.yml`), and `postgresql` is correctly absent
+under either reading. The reconciler was right all along; the narrative around
+it was measured on the wrong layer.
 
 Two exclusion classes are DERIVED rather than listed, so neither needs an edit
 when the estate grows: flags `main.yml` auto-enables from other flags
 (`install_postgresql`, `install_mariadb` — pruning postgresql's fragment would
 tear down the database), and Tier-2 manifest apps owned by `apps/<name>.yml`.
 Matching is separator-insensitive: `code-server.yml` sits beside
-`qgis_server.yml`, and a hyphen-only mapping found 16 of 18.
+`qgis_server.yml`, and a hyphen-only mapping silently misses the
+underscore-named fragments.
 
 **This entry closes when the default flips to true.** That is a dated obligation
 on an operator who has seen the list, not a permanent shim. Gate:
 `tests/anatomy/test_disabled_services_are_reconciled.py`.
 
 REM-159 (HIGH, gitlab), REM-184 (HIGH) and REM-185 (MEDIUM, qgis_server) carry an
-amended disposition saying their claimed mitigation is not in effect. REM-165
-(erpnext) was left alone — its container genuinely is not running, so its claim
-holds.
+amended disposition: exposure stands, but the mechanism is the wrong-layer read
+above — the operator's config.yml enables those services, so their containers
+are up legitimately and the original `install_*=false` mitigation claims read a
+layer the estate does not run. REM-165 (erpnext) was left alone — its container
+genuinely is not running, so its claim holds.
 
 ## When the bill comes due
 

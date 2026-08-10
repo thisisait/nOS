@@ -2,15 +2,20 @@
 
 `prune-retired.yml` removes the compose override of a service that LEFT nOS. Its
 own header says the DISABLED case — `install_<svc>: false`, service still shipped
-— "is not handled here". Measured 2026-08-10: sixteen services on this host were
-declared false with their container up, because the render path is create-only
-and the orchestrator keeps merging the fragment written on the converge that had
-the service on.
+— "is not handled here". Measured 2026-08-10 on the RESOLVED config
+(default.config.yml + the operator's config.yml, which wins): ONE service on
+this host was genuinely switched off with its container up — mailpit — because
+the render path is create-only and the orchestrator keeps merging the fragment
+written on the converge that had the service on. (A same-day first measurement
+said sixteen; it read the committed default alone, and all sixteen are enabled
+in config.yml — running legitimately, not zombies.)
 
 WHY IT IS A SECURITY GATE. Nine rows in the remediation queue argue mitigation
-from that flag — "MITIGATED: install_gitlab=false" — three of them HIGH. A row
-that lowers its own severity because a service is "disabled" is an open exposure
-that has been talked out of being counted.
+from that flag — "MITIGATED: install_gitlab=false" — three of them HIGH. Those
+claims read the committed default while the resolved flag is true, and a row
+whose resolved flag really is false while the container runs is an open exposure
+that has been talked out of being counted. Either way the flag is not evidence;
+only the reconciled estate is.
 
 THE TWO FALSE POSITIVES THIS MUST NEVER PRODUCE, and they are the reason most of
 this file exists rather than a one-line "the task is imported" check:
@@ -18,9 +23,8 @@ this file exists rather than a one-line "the task is imported" check:
   1. AUTO-ENABLED DEPENDENCIES. `main.yml` flips install_postgresql /
      install_mariadb to true at run time from other flags, so `false` in
      default.config.yml is their correct default. Pruning postgresql's fragment
-     would tear down the database the whole estate runs on. Live-verified
-     2026-08-10: the reconciler reported 32 fragments across 18 services and
-     postgresql was not among them.
+     would tear down the database the whole estate runs on. Verified 2026-08-10
+     under both flag semantics: postgresql's fragment is never in the report.
   2. TIER-2 MANIFEST APPS. `apps/<name>.yml` owns their bring-up, so the toggle
      is not what would have switched them off.
 
@@ -85,9 +89,9 @@ def test_removal_is_opt_in_and_the_report_is_not(tasks) -> None:
     )
     remove_when = str(remove[0].get("when", ""))
     assert "prune_disabled_overrides" in remove_when, (
-        "the removal is NOT gated. Sixteen containers would be torn down on the "
-        "first converge after this lands; the estate's destructive-op doctrine "
-        "is report first, act on an explicit token."
+        "the removal is NOT gated. Every resolved-disabled service would be "
+        "torn down on the first converge after this lands; the estate's "
+        "destructive-op doctrine is report first, act on an explicit token."
     )
 
 
@@ -133,12 +137,12 @@ def test_manifest_apps_are_derived_from_the_directory(tasks) -> None:
 
 
 def test_the_match_is_separator_insensitive(tasks) -> None:
-    """`code-server.yml` sits beside `qgis_server.yml`; one spelling misses 2 of 18."""
+    """`code-server.yml` sits beside `qgis_server.yml`; one spelling misses the other."""
     body = TASK.read_text(encoding="utf-8")
     assert "[-_]?" in body, (
         "the fragment match went back to a single separator. Fragments are named "
-        "by whatever the role chose — a hyphen-only mapping found 16 of 18, "
-        "silently leaving qgis_server and smtp_stalwart merged."
+        "by whatever the role chose — a hyphen-only mapping silently leaves "
+        "underscore-named fragments (qgis_server, smtp_stalwart) merged."
     )
 
 

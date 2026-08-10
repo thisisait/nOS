@@ -164,11 +164,37 @@ because it executes nothing.
 
 **The engine for it is chosen** (`w-datalog`): vendor
 `datalog_reasoner.py` from [semantica-agi/semantica](https://github.com/semantica-agi/semantica)
-— 16 KB, MIT, importing only `re`/`collections`/`dataclasses`/`typing`,
-semi-naive bottom-up fixpoint with **termination guaranteed on finite graphs**.
-That guarantee is the property that makes a declarative layer safe to accept
-from a model. Not the package: its *required* dependencies include torch,
-transformers, spacy, opencv-python and librosa.
+— 16 KB, MIT, semi-naive bottom-up fixpoint with **termination guaranteed on
+finite graphs**. Not the package: its *required* dependencies include torch,
+transformers, spacy, opencv-python and librosa. And not the file byte-identical
+either: beyond stdlib (`re`/`collections`/`dataclasses`/`typing`) it imports
+two semantica-internal modules — a logging wrapper and a 1,656-line
+`progress_tracker` — at seven call sites, so the vendored copy strips those as
+its first declared divergence.
+
+**Termination is necessary, not sufficient** — the same distinction the estate
+already draws for STRICT health waits. A model-authored rule that terminates
+can still be a resource bomb at this estate's own scale, measured on the
+candidate: the textbook 2-rule ancestor closure over a 790-node chain (the
+taxonomy's size) derives 312,444 facts in ~142 s; `pair(X,Y) :- node(X),
+node(Y)` derives 624,890 facts in ~2 s, and the 3-variable variant is ~493M
+facts. `derive_all()` loops until the delta empties with no cap of any kind,
+and scaling is cubic on chains. So the second declared divergence is **hard
+budgets as a vendor condition**: `max_derived_facts`, `max_iterations` and
+`max_seconds`, each failing closed with a diagnostic when exceeded.
+
+**Upstream's parser is fail-open, and closing it is the third vendor
+condition.** Body parsing is a regex findall that keeps what matches and never
+checks the residue: `p(X) :- q(X), not r(X).` is accepted with the `not`
+silently stripped — deriving the semantic *inverse* of the author's intent —
+and a comparison guard (`A > 18`) vanishes the same way; a ground query on a
+true fact answers no (the empty-binding row is dropped). The vendored parser
+must tokenize strictly and **raise on any unconsumed input** — negation,
+operators, anything outside pure positive Datalog — and fix or forbid ground
+queries. All three divergences are declarations in the vendor-contract sense
+(compare declarations, not bytes): the gate
+`tests/anatomy/test_cortex_lang_vendor_conditions.py` holds this document to
+them today and holds the vendored copy to them the day it lands.
 
 Its scope is **derived, not chosen**. Datalog over a graph is an enumeration
 oracle, and this estate already refuses `kg:`/`ent:` at namespace granularity
