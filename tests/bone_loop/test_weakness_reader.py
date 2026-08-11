@@ -231,11 +231,32 @@ class TestAbsenceIsNeverSuccess:
     def test_a_missing_required_source_produces_a_weakness_and_drops_complete(
         self, repo, weaknesses
     ):
+        # The DELTA, not the absolute list.
+        #
+        # This asserted `degraded_sources == ["scan-state"]`, which quietly also
+        # asserted that every OTHER source is healthy on the machine running the
+        # test. It held on the operator's Mac and failed on CI, where
+        # `prometheus-alerts` is absent too:
+        #
+        #     assert ['scan-state', …, 'prometheus-alerts'] == ['scan-state']
+        #
+        # Nothing was wrong — a runner is not an estate. Measuring what removing
+        # ONE file changes keeps the precision (it must add exactly one entry,
+        # not two, not zero) and drops the assumption about everything else.
+        before = set(weaknesses.read_weaknesses()["degraded_sources"])
         (repo / SCAN_REL).unlink()
 
         payload = weaknesses.read_weaknesses()
         assert payload["complete"] is False
-        assert payload["degraded_sources"] == ["scan-state"]
+        after = set(payload["degraded_sources"])
+        assert after - before == {"scan-state"}, (
+            f"removing {SCAN_REL} changed degraded_sources by {after - before}; "
+            "exactly one source went missing, so exactly one should be reported"
+        )
+        assert not before - after, (
+            f"removing {SCAN_REL} made {before - after} stop being degraded, "
+            "which means the reader is not accumulating what it finds"
+        )
         w = _by_id(payload, "source:scan-state:unavailable")
         assert w["severity"] == "medium"
         assert "incomplete" in w["title"]

@@ -51,22 +51,36 @@ def _declared() -> int:
     return int(m.group(1))
 
 
-def _asserted() -> int:
-    m = re.search(
-        r"expect\(\s*health\.contracts\.cortex\s*\)\.toBe\(\s*(\d+)\s*\)",
-        SPEC.read_text(encoding="utf-8"),
-    )
-    assert m, (
-        f"{SPEC.relative_to(REPO)} no longer asserts a literal contract number. "
-        "If it now compares against the imported constant, the assertion cannot "
-        "fail and the contract version is pinned by nothing — see this file's "
-        "docstring for why the literal is deliberate."
-    )
-    return int(m.group(1))
+#: EVERY place the spec writes the contract number down, not just the first.
+#: The first cut of this gate matched only `health.contracts.cortex` and shipped
+#: green while `data.contract` — the SAME number, published by the opcode
+#: registry twelve lines further down — was still 1. CI found the second one on
+#: the next push. A gate that covers one of two identical literals is not half a
+#: gate; it is a gate that reports the file as checked.
+ASSERTIONS = (
+    r"expect\(\s*health\.contracts\.cortex\s*\)\.toBe\(\s*(\d+)\s*\)",
+    r"expect\(\s*data\.contract\s*\)\.toBe\(\s*(\d+)\s*\)",
+)
+
+
+def _asserted_all() -> list[int]:
+    text = SPEC.read_text(encoding="utf-8")
+    found: list[int] = []
+    for pattern in ASSERTIONS:
+        m = re.search(pattern, text)
+        assert m, (
+            f"{SPEC.relative_to(REPO)} no longer asserts a literal contract "
+            f"number for /{pattern}/. If it now compares against the imported "
+            "constant, the assertion cannot fail and the contract version is "
+            "pinned by nothing — see this file's docstring for why the literal "
+            "is deliberate."
+        )
+        found.append(int(m.group(1)))
+    return found
 
 
 def test_the_spec_asserts_the_version_the_organ_ships() -> None:
-    declared, asserted = _declared(), _asserted()
+    declared, asserted = _declared(), _asserted_all()[0]
     assert asserted == declared, (
         f"the cortex organ ships contract v{declared} and the e2e spec asserts "
         f"v{asserted}. CI fails with 'Expected: {asserted}, Received: {declared}' "
@@ -98,4 +112,21 @@ def test_the_spec_the_gate_reads_is_the_spec_ci_runs(path: str) -> None:
     assert "cortex" in ci.lower(), (
         "the CI workflow no longer mentions cortex, so the job this gate exists "
         "to keep green may not run at all any more."
+    )
+
+
+def test_every_place_the_spec_writes_the_number_agrees() -> None:
+    """Both literals, together — the defect that got past the first version.
+
+    `health.contracts.cortex` and the opcode registry's `data.contract` are the
+    same version published on two surfaces. Bumping one is how the CI job stayed
+    red after a fix that looked complete.
+    """
+    declared = _declared()
+    found = _asserted_all()
+    assert all(v == declared for v in found), (
+        f"the organ ships contract v{declared} and the spec asserts {found} "
+        "across its two surfaces. They are the same number: `contracts.cortex` "
+        "on /health and `contract` on the opcode registry. Bump both, in the "
+        "vendored copy AND in KEAP's."
     )

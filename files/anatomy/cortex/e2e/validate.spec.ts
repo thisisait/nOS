@@ -368,7 +368,7 @@ test.describe('cortex validate', () => {
       registryHash: string;
       opcodes: Array<{ name: string; mutating: boolean; operands: { min: number; max: number; namespaces: string[] } }>;
     };
-    expect(data.contract).toBe(1);
+    expect(data.contract).toBe(2);
     const names = data.opcodes.map((o) => o.name);
     expect(names).toContain('classify');
     expect(names).toContain('insert');

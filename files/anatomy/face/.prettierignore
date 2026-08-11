@@ -8,6 +8,13 @@
 # one law" shape the genome exists to remove.
 src/lib/contracts/*.gen.ts
 
+# `src/lib/anatomy/anatomy-graph.json` is emitted by `tools/anatomy-graph-gen.py`
+# for the same reason and with the same consequence. It arrived here on
+# 2026-08-11: a role edit re-ran the generator, the emitted JSON did not match
+# prettier's idea of it, and the Face job went red over whitespace in a file no
+# human writes. Two owners, one file — the exact shape the note above refuses.
+src/lib/anatomy/anatomy-graph.json
+
 # Build output and dependencies.
 build/
 .svelte-kit/
