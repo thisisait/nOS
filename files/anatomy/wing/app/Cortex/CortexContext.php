@@ -31,21 +31,34 @@ final class CortexContext
         public readonly string $actionId,
         public readonly ?string $traceId = null,
         public readonly array $input = [],
+        public readonly bool $inputOffered = false,
     ) {
     }
 
     /**
-     * A stage defined over its input, reached with none, is not a stage over an
-     * empty world.
+     * Was this stage handed an input at all?
      *
-     * The distinction this method exists to keep: `filter` over zero rows could
-     * legitimately return zero rows, and that is indistinguishable from `filter`
-     * never having been given anything. The first is an answer; the second is a
-     * broken pipe. Handlers ask this before working, and return an `unavailable`
-     * rather than a confident nothing.
+     * THE DISTINCTION THIS EXISTS FOR, and it took two attempts to get right.
+     * `filter` over zero rows could legitimately return zero rows, and that is
+     * indistinguishable from `filter` never having been given anything. The
+     * first is an answer; the second is a broken pipe.
+     *
+     * The first cut asked `input !== []`, which collapsed exactly the two cases
+     * the paragraph above separates: a predecessor that ran and honestly matched
+     * nothing was treated as a break, so the honest zero this design defends was
+     * unreachable through a pipe. `inputOffered` is set by the executor for
+     * every stage after the first, independently of how many rows arrived, so
+     * `offered && input === []` is an answer and `!offered` is a stage 0 that
+     * had no predecessor to be defined over.
      */
     public function hasInput(): bool
     {
-        return $this->input !== [];
+        return $this->inputOffered;
+    }
+
+    /** An input arrived and it was empty — an answer, not an absence. */
+    public function inputIsEmpty(): bool
+    {
+        return $this->inputOffered && $this->input === [];
     }
 }

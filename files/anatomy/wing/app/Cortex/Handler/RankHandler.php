@@ -59,11 +59,24 @@ final class RankHandler implements CortexHandlerInterface
 
     public function execute(ResolvedStage $stage, CortexContext $ctx): CortexStageResult
     {
+        // `nothingToOperateBy`, not `pipeBroken`. A handler only ever sees
+        // `!hasInput()` at STAGE 0 — the executor short-circuits a real break
+        // before the handler runs — so there is no predecessor to have broken.
+        // Reporting a broken pipe here would send the caller looking for a
+        // failing stage that does not exist; the actual fault is a chain that
+        // opens with a verb defined over an input it never provides.
         if (!$ctx->hasInput()) {
-            return CortexStageResult::unavailable(
+            return CortexStageResult::nothingToOperateBy(
                 "'rank' orders its input and received none. An empty ordering is "
                 . 'not an ordering of nothing.'
             );
+        }
+
+        // An input ARRIVED and was empty. That is an answer from the stage
+        // before, not an absence here, so the honest reply is zero rows rather
+        // than a refusal — see CortexContext::inputIsEmpty().
+        if ($ctx->inputIsEmpty()) {
+            return CortexStageResult::read([], 0);
         }
 
         $by = trim((string) $stage->param('by', ''));
@@ -76,7 +89,7 @@ final class RankHandler implements CortexHandlerInterface
             }
         }
         if ($by === '') {
-            return CortexStageResult::unavailable(
+            return CortexStageResult::nothingToOperateBy(
                 "'rank' was given no `by` and no operand, so there is no signal to "
                 . 'order by. Returning the input in arrival order and calling it '
                 . 'ranked would be a claim about relevance nobody made.'
@@ -85,7 +98,7 @@ final class RankHandler implements CortexHandlerInterface
 
         $hit = $this->keap->semanticSearch($by, self::SIGNAL_DEPTH);
         if ($hit === null) {
-            return CortexStageResult::unavailable(sprintf(
+            return CortexStageResult::upstreamUnreachable(sprintf(
                 "'rank' could not obtain a signal: KEAP's hybrid search did not "
                 . "answer for '%s'. The input is returned by no one; nothing was ordered.",
                 $by

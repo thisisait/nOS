@@ -74,7 +74,24 @@ FALSE_CLAIMS = (
 
 
 def _php_sources() -> list[pathlib.Path]:
-    return sorted(HANDLERS.glob("*.php")) + [CLIENT]
+    # WIDENED 2026-08-11 to the cortex TESTS, because that is where the retired
+    # claim actually survived: `test_the_cortex_executor_materialises.py` still
+    # said "five of the seven … KEAP publishes no route for them yet" three days
+    # after the diagnosis was corrected, and this gate — written to stop exactly
+    # that sentence outliving the defect — could not see it. A gate that reads
+    # only the code it governs misses the documentation that describes it.
+    #
+    # THIS FILE IS EXCLUDED, and the exclusion is load-bearing rather than
+    # cosmetic: FALSE_CLAIMS quotes the false sentences in order to forbid them,
+    # so scanning this file would fail the gate on its own reason for existing.
+    # That family has caught three checks in this repository already — a probe
+    # matching its own description, `\bopen\(` matching `opener.open(`, and a
+    # cortex gate matching the comment that fixed the bug.
+    tests = [
+        p for p in sorted((REPO / "tests/anatomy").glob("test_*cortex*.py"))
+        if p.name != pathlib.Path(__file__).name
+    ]
+    return sorted(HANDLERS.glob("*.php")) + [CLIENT] + tests
 
 
 def test_no_handler_still_claims_keap_publishes_nothing() -> None:
@@ -206,9 +223,12 @@ def test_a_broken_pipe_propagates_rather_than_emptying() -> None:
         "stage cannot say why it has no input — it can only report zero rows, "
         "which is indistinguishable from a real empty answer."
     )
-    assert "CortexStageResult::unavailable" in dispatch, (
-        "a stage downstream of a break no longer returns a typed absence. It is "
-        "answering over an empty world and calling that a result."
+    assert "CortexStageResult::pipeBroken" in dispatch, (
+        "a stage downstream of a break no longer returns `pipe_broken`. Either "
+        "it answers over an empty world and calls that a result, or it has gone "
+        "back to reporting `late_binding_unavailable` — which would re-merge "
+        "'your chain matched nothing' with 'this verb has no upstream', the "
+        "one-label-for-three-causes defect split apart on 2026-08-11."
     )
 
 
@@ -227,4 +247,64 @@ def test_the_verbs_over_input_refuse_when_they_have_none() -> None:
             "a chain it would operate on an empty list and report a confident "
             "nothing, which is the failure `CortexStageResult::unavailable` exists "
             "to keep distinguishable."
+        )
+
+
+# ── one absence code per cause, added 2026-08-11 after an adversarial review ──
+
+
+def test_each_absence_has_its_own_code() -> None:
+    """One label for three causes is a label that teaches a model nothing.
+
+    `late_binding_unavailable` was the only typed absence, and the pipe-threading
+    commit borrowed it for three more situations: an earlier stage produced
+    nothing, the caller supplied no predicate or signal, and KEAP did not answer.
+    So "this verb has no upstream", "your chain matched nothing" and "the estate
+    is down" arrived identically.
+
+    The cost is mostly forward. `local-llm-corpus` and `local-llm-intent` are
+    queued, and a reward signal that cannot separate a bad chain from an outage
+    trains a model to avoid outages. Relabelling a generated corpus costs more
+    than four constructors did.
+    """
+    src = (REPO / "files/anatomy/wing/app/Cortex/CortexStageResult.php").read_text(encoding="utf-8")
+    for ctor, code in (
+        ("unavailable", "late_binding_unavailable"),
+        ("pipeBroken", "pipe_broken"),
+        ("nothingToOperateBy", "nothing_to_operate_by"),
+        ("upstreamUnreachable", "upstream_unreachable"),
+    ):
+        assert f"function {ctor}(" in src, (
+            f"CortexStageResult::{ctor}() is gone. Its cause is now sharing "
+            "another code, and the merge is invisible at the call site."
+        )
+        assert f"'{code}'" in src, f"the `{code}` code no longer exists"
+
+
+def test_late_binding_is_claimed_only_by_a_genuinely_absent_upstream() -> None:
+    """`embed` alone. Anything else reaching for it is borrowing again."""
+    borrowers = [
+        p.name for p in HANDLERS.glob("*.php")
+        if "CortexStageResult::unavailable" in p.read_text(encoding="utf-8")
+    ]
+    assert borrowers == ["LateBoundHandler.php"], (
+        f"{borrowers} report `late_binding_unavailable`. That code means the "
+        "upstream route does not exist — true for `embed` and nothing else. Use "
+        "pipeBroken / nothingToOperateBy / upstreamUnreachable."
+    )
+
+
+def test_the_envelope_cannot_read_as_success_when_no_stage_ran() -> None:
+    """Per-stage honesty was never the gap; the envelope above it was.
+
+    A chain in which every stage returned a typed absence answered 200 with
+    `valid: true, dispatched: true` and nothing else. A caller that did not walk
+    every stage — a repair loop, the face, a reward function — read success.
+    """
+    text = PRESENTER.read_text(encoding="utf-8")
+    for field in ("'executed'", "'absent'", "'pipe_broken_at'"):
+        assert field in text, (
+            f"the response envelope lost {field}. Without it a fully dead pipe "
+            "is indistinguishable from a successful one at the top level, which "
+            "is absence rendering as calm one layer above where the work was done."
         )

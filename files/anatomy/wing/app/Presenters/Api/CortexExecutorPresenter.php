@@ -227,27 +227,34 @@ final class CortexExecutorPresenter extends BaseApiPresenter
         foreach ($stages as $raw) {
             $stage = ResolvedStage::fromAst((array) $raw);
             $actionId = 'cx-' . bin2hex(random_bytes(10));
-            $ctx = new CortexContext($actor, $tenant, $actionId, null, $prev);
+            $ctx = new CortexContext($actor, $tenant, $actionId, null, $prev, $stage->index > 0);
 
             $this->audit('cortex_stage_begin', $stage->opcode, $actor, $actionId, [
                 'index' => $stage->index, 'ns' => $stage->namespaces(), 'tenant' => $tenant,
             ]);
             $result = $brokenAt !== null
-                ? CortexStageResult::unavailable(sprintf(
-                    "stage %d ('%s') produced no rows, so '%s' has no input. A verb "
-                    . 'defined over its input must not answer over an empty world; '
-                    . 'nothing was read.',
+                ? CortexStageResult::pipeBroken(sprintf(
+                    "stage %d ('%s') could not produce an input, so '%s' has "
+                    . 'nothing to be defined over. Nothing was read.',
                     $brokenAt['index'],
                     $brokenAt['opcode'],
                     $stage->opcode
                 ))
                 : $this->opcodes->handler($stage->opcode)->execute($stage, $ctx);
 
-            // The pipe survives only a stage that actually produced something.
-            // `code !== null` is a typed absence (late binding, an upstream that
-            // did not answer); rows === [] is a stage that ran and found nothing,
-            // which is equally not something the next verb can operate on.
-            if ($result->code !== null || $result->rows === []) {
+            // ONLY A TYPED ABSENCE BREAKS THE PIPE.
+            //
+            // The first cut also broke on `rows === []`, which erased the exact
+            // distinction CortexContext's docblock defends: a stage that RAN and
+            // honestly matched nothing is an answer, and `rank` over that answer
+            // legitimately produces nothing. Treating it as a break made the
+            // honest zero unreachable through a pipe — the code and its own
+            // comment disagreeing inside one commit.
+            //
+            // So an empty-but-real result flows on as an empty input, and the
+            // handler downstream reads `inputIsEmpty()` and answers zero rather
+            // than refusing.
+            if ($result->code !== null) {
                 $brokenAt ??= ['index' => $stage->index, 'opcode' => $stage->opcode];
                 $prev = [];
             } else {
@@ -268,10 +275,27 @@ final class CortexExecutorPresenter extends BaseApiPresenter
             ];
         }
 
+        // THE ENVELOPE MUST NOT READ AS SUCCESS WHEN NOTHING RAN.
+        //
+        // Per-stage honesty was already here; the envelope was not. A chain in
+        // which every stage returned a typed absence answered 200 with
+        // `valid: true, dispatched: true`, so any caller that did not walk every
+        // stage — a repair loop, the face, a reward function — read success.
+        // Absence rendering as calm, one level above where the work was done.
+        //
+        // `executed` counts stages that produced a result rather than an excuse.
+        // `pipe_broken_at` names the first stage that could not, or is null.
+        $absent = array_values(array_filter(
+            $out,
+            static fn (array $s): bool => ($s['result']['code'] ?? null) !== null
+        ));
         $this->sendSuccess([
             'valid' => true,
             'complete' => (bool) ($report['complete'] ?? false),
             'dispatched' => true,
+            'executed' => count($out) - count($absent),
+            'absent' => count($absent),
+            'pipe_broken_at' => $brokenAt,
             'stages' => $out,
             'binding' => $bind,
         ]);

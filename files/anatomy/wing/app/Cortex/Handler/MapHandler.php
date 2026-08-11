@@ -25,6 +25,16 @@ use App\Model\KeapCortexClient;
  * `cortex-opcodes.ts`, a validator that can see it, and a review — not a branch
  * in this file.
  *
+ * THE OPERAND BOUNDS THE DESCENT, and this class shipped without reading it.
+ * The grammar makes it mandatory (`operands: { min: 1, max: 1 }`), so
+ * `get(tax:01) | map(tax:02)` parsed, passed the namespace gate, and returned
+ * the children of 01 — the caller's constraint visible in the source and absent
+ * from the behaviour. `ClassifyHandler`'s docblock condemns exactly that, in the
+ * same commit; the doctrine and its violation shipped together, and the live
+ * example chain happened to use `map(tax:01)` after `get(tax:01)`, the one input
+ * where the bug is invisible. Children are now kept only if they fall under the
+ * named subtree.
+ *
  * ONE KEAP CALL PER INPUT ROW, capped. A chain that fanned out unbounded would
  * be a cheap way to make Wing hammer KEAP on a caller's behalf, so the input is
  * truncated before the loop and the cost is reported as rows examined. The cap
@@ -60,14 +70,43 @@ final class MapHandler implements CortexHandlerInterface
 
     public function execute(ResolvedStage $stage, CortexContext $ctx): CortexStageResult
     {
+        // `nothingToOperateBy`, not `pipeBroken`. A handler only ever sees
+        // `!hasInput()` at STAGE 0 — the executor short-circuits a real break
+        // before the handler runs — so there is no predecessor to have broken.
+        // Reporting a broken pipe here would send the caller looking for a
+        // failing stage that does not exist; the actual fault is a chain that
+        // opens with a verb defined over an input it never provides.
         if (!$ctx->hasInput()) {
-            return CortexStageResult::unavailable(
+            return CortexStageResult::nothingToOperateBy(
                 "'map' projects each item of its input and received none. An empty "
                 . 'projection and an absent one are different facts.'
             );
         }
 
+        // An input ARRIVED and was empty. That is an answer from the stage
+        // before, not an absence here, so the honest reply is zero rows rather
+        // than a refusal — see CortexContext::inputIsEmpty().
+        if ($ctx->inputIsEmpty()) {
+            return CortexStageResult::read([], 0);
+        }
+
+        $scope = '';
+        foreach ($stage->operands as $o) {
+            $scope = (string) ($o['id'] ?? $o['surface'] ?? '');
+            if ($scope !== '') {
+                break;
+            }
+        }
+        if ($scope === '') {
+            return CortexStageResult::nothingToOperateBy(
+                "'map' projects through an operand and this stage carries none "
+                . 'usable. Descending anywhere would ignore the projection the '
+                . 'chain names.'
+            );
+        }
+
         $visited = array_slice($ctx->input, 0, self::MAX_INPUT);
+        $truncated = max(0, count($ctx->input) - count($visited));
         $rows = [];
         $seen = [];
         $answered = 0;
@@ -90,6 +129,13 @@ final class MapHandler implements CortexHandlerInterface
                 if ($key === '' || isset($seen[$key])) {
                     continue;
                 }
+                // Dotted-path containment, and the dot matters: without it the
+                // scope `01` would also claim `010`, a different branch.
+                $cid = mb_strtolower((string) ($child['id'] ?? ''));
+                $prefix = mb_strtolower($scope);
+                if ($cid !== $prefix && !str_starts_with($cid, $prefix . '.')) {
+                    continue;
+                }
                 $seen[$key] = true;
                 $child['ns'] = 'tax';
                 $child['mappedFrom'] = $id;
@@ -101,12 +147,27 @@ final class MapHandler implements CortexHandlerInterface
         // here would say "these nodes have no children", which is a claim about
         // the taxonomy rather than about the call.
         if ($answered === 0) {
-            return CortexStageResult::unavailable(sprintf(
+            return CortexStageResult::upstreamUnreachable(sprintf(
                 "'map' could not read a single one of its %d input row(s): either "
                 . 'they carry no taxonomy id or KEAP did not answer. That is not '
                 . 'the same as those nodes having no children.',
                 count($visited)
             ));
+        }
+
+        // Say what was dropped. A cap is a defensible decision; a cap nobody is
+        // told about turns 60 rows in / 25 rows out into a result that reads as
+        // complete (docs/hidden_fees: "no silent caps").
+        if ($truncated > 0) {
+            $rows[] = [
+                'ns' => 'tax',
+                'note' => sprintf(
+                    'input truncated: %d row(s) beyond the %d-row cap were not projected',
+                    $truncated,
+                    self::MAX_INPUT
+                ),
+                'truncated' => $truncated,
+            ];
         }
 
         return CortexStageResult::read($rows, count($visited));
@@ -115,9 +176,13 @@ final class MapHandler implements CortexHandlerInterface
     /**
      * The taxonomy id this row stands for, whatever produced it.
      *
-     * `get` emits `id`, a previous `map` emits the child's `id`, `classify`
-     * emits `nodeId`. Reading one key would make the verb composable after one
-     * predecessor and silently inert after another.
+     * `get` emits `id` and a previous `map` emits the child's `id`. `nodeId` is
+     * read defensively rather than because anything produces it — CORRECTED
+     * 2026-08-11: this said "`classify` emits `nodeId`", which no handler does;
+     * classify attaches `classifiedAs` and leaves the row's own identity alone,
+     * so `… | classify | map` descends from what went IN, not from what it was
+     * assigned to. That is the honest composition; the sentence describing a
+     * different one was wrong for as long as it stood.
      *
      * @param array<string,mixed> $row
      */

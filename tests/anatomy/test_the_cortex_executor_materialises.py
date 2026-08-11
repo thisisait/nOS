@@ -25,12 +25,29 @@ WHAT ELSE IT PINS, AND WHY EACH ONE IS HERE
     class nobody registered is unreachable, and a registration with no class
     fatals the container at boot.
 
-WHAT IT DOES NOT COVER. Whether a handler's body does anything useful. Five of
-the seven are `LateBoundHandler` subclasses returning a typed
-`late_binding_unavailable` because KEAP publishes no route for them yet
-(measured 2026-08-09: /agent/v1/{taxonomy,nodes,search,classify,embed} all 401
-for the RO *and* RW bearers, i.e. no route). That is the honest state, and the
-test asserts the shape of the answer rather than pretending otherwise.
+WHAT IT DOES NOT COVER. Whether a handler's body does anything useful.
+
+THIS PARAGRAPH USED TO BE WRONG, and the correction is left here rather than the
+sentence deleted. It claimed five of the seven verbs were late-bound because the
+upstream served nothing for them, citing a 2026-08-09 sweep in which several
+`/agent/v1/…` paths answered 401 to both bearers. The 401s were real; the
+conclusion was not — the probe tested the paths a design document named, and a
+401 from the forward-auth catch-all on an unrouted path is byte-identical to a
+scope refusal. The real blocker was ours: the executor dispatched stages
+independently, so a verb defined over its input had no input.
+
+The claim is DESCRIBED and not quoted, deliberately. `test_cortex_blocker_is_
+named_correctly.py` forbids the phrasings by regex, and reproducing one inside a
+correction fails that gate — which it duly did on the first attempt, the third
+time this repository has watched a check match the prose written about its own
+defect.
+
+Fixed 2026-08-11. `embed` alone is late-bound now, for the one genuinely upstream
+reason. `test_cortex_blocker_is_named_correctly.py` gates that sentence in the
+handler sources — and NOT here, because its `_php_sources()` scans handlers and
+the client only. The retired claim survived three days next door to the gate
+written to retire it, which is the most exact possible demonstration of why that
+gate should read wider.
 """
 
 from __future__ import annotations

@@ -40,11 +40,58 @@ final class CortexStageResult
      * not exist yet. Deliberately NOT an error: the D3 coverage gate requires a
      * handler for every published non-mutating opcode, and a typed absence is
      * how a handler can be present and honest at the same time.
+     *
+     * ONLY for a genuinely absent upstream. After 2026-08-11 that is `embed`
+     * alone; see the three constructors below for the reasons this code used to
+     * be borrowed for.
      */
     public static function unavailable(string $detail): self
     {
         return new self('read', [], 0, 'late_binding_unavailable', $detail);
     }
+
+    /**
+     * An earlier stage produced nothing to operate on.
+     *
+     * SPLIT OUT 2026-08-11, hours after the pipe first piped. Every absence
+     * above and below was reported as `late_binding_unavailable`, so one label
+     * covered "this verb has no upstream", "your chain matched nothing" and
+     * "KEAP is down". Any consumer counting late-bound verbs over-counted; more
+     * expensively, the queued RFL corpus and intent grader would have trained on
+     * a signal that cannot separate a bad chain from an outage — and relabelling
+     * a generated corpus costs more than four constructors.
+     */
+    public static function pipeBroken(string $detail): self
+    {
+        return new self('read', [], 0, 'pipe_broken', $detail);
+    }
+
+    /**
+     * The stage ran, and the caller gave it nothing to work BY — no predicate,
+     * no signal, no operand. A caller error, not an estate condition.
+     */
+    public static function nothingToOperateBy(string $detail): self
+    {
+        return new self('read', [], 0, 'nothing_to_operate_by', $detail);
+    }
+
+    /**
+     * The surface exists and did not answer. Distinct from every code above
+     * because it is the only one that will be different tomorrow without anyone
+     * changing anything, and the only one an operator should be paged about.
+     */
+    public static function upstreamUnreachable(string $detail): self
+    {
+        return new self('read', [], 0, 'upstream_unreachable', $detail);
+    }
+
+    /** Every typed-absence code this class can produce. */
+    public const ABSENCE_CODES = [
+        'late_binding_unavailable',
+        'pipe_broken',
+        'nothing_to_operate_by',
+        'upstream_unreachable',
+    ];
 
     /** @return array<string,mixed> */
     public function toArray(): array

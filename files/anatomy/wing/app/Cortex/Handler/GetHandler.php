@@ -66,7 +66,7 @@ final class GetHandler implements CortexHandlerInterface
             if ($ns === 'rel') {
                 $fetched = $this->keap->relations((string) ($o['id'] ?? $o['surface'] ?? ''), $limit);
                 if ($fetched === null) {
-                    return CortexStageResult::unavailable(
+                    return CortexStageResult::upstreamUnreachable(
                         'KEAP /agent/v1/relations did not answer; nothing was read'
                     );
                 }

@@ -72,12 +72,25 @@ final class ClassifyHandler implements CortexHandlerInterface
 
     public function execute(ResolvedStage $stage, CortexContext $ctx): CortexStageResult
     {
+        // `nothingToOperateBy`, not `pipeBroken`. A handler only ever sees
+        // `!hasInput()` at STAGE 0 — the executor short-circuits a real break
+        // before the handler runs — so there is no predecessor to have broken.
+        // Reporting a broken pipe here would send the caller looking for a
+        // failing stage that does not exist; the actual fault is a chain that
+        // opens with a verb defined over an input it never provides.
         if (!$ctx->hasInput()) {
-            return CortexStageResult::unavailable(
+            return CortexStageResult::nothingToOperateBy(
                 "'classify' assigns its input to an ontology node and received no "
                 . 'input. Nothing was classified, and no rows is not the same as '
                 . 'nothing being classifiable.'
             );
+        }
+
+        // An input ARRIVED and was empty. That is an answer from the stage
+        // before, not an absence here, so the honest reply is zero rows rather
+        // than a refusal — see CortexContext::inputIsEmpty().
+        if ($ctx->inputIsEmpty()) {
+            return CortexStageResult::read([], 0);
         }
 
         $threshold = (int) $stage->param('threshold', 0);
@@ -95,7 +108,7 @@ final class ClassifyHandler implements CortexHandlerInterface
             }
         }
         if ($scope === '') {
-            return CortexStageResult::unavailable(
+            return CortexStageResult::nothingToOperateBy(
                 "'classify' takes the ontology subtree to assign within, and this "
                 . 'stage carries no usable operand. Assigning anywhere would '
                 . 'ignore the scope the chain names.'
@@ -145,7 +158,7 @@ final class ClassifyHandler implements CortexHandlerInterface
         // Not one upstream answer. Rows carrying `classifiedAs: null` would read
         // as "nothing matched"; this says the classifier never ran.
         if ($answered === 0) {
-            return CortexStageResult::unavailable(sprintf(
+            return CortexStageResult::upstreamUnreachable(sprintf(
                 "'classify' got no answer from KEAP for any of its %d input "
                 . 'row(s). Unclassified and unasked are different states.',
                 count($visited)

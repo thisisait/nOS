@@ -54,12 +54,25 @@ final class FilterHandler implements CortexHandlerInterface
 
     public function execute(ResolvedStage $stage, CortexContext $ctx): CortexStageResult
     {
+        // `nothingToOperateBy`, not `pipeBroken`. A handler only ever sees
+        // `!hasInput()` at STAGE 0 — the executor short-circuits a real break
+        // before the handler runs — so there is no predecessor to have broken.
+        // Reporting a broken pipe here would send the caller looking for a
+        // failing stage that does not exist; the actual fault is a chain that
+        // opens with a verb defined over an input it never provides.
         if (!$ctx->hasInput()) {
-            return CortexStageResult::unavailable(
+            return CortexStageResult::nothingToOperateBy(
                 "'filter' is defined over its input and received none. Zero rows "
                 . 'kept and zero rows never offered are different facts, and this '
                 . 'one is the second.'
             );
+        }
+
+        // An input ARRIVED and was empty. That is an answer from the stage
+        // before, not an absence here, so the honest reply is zero rows rather
+        // than a refusal — see CortexContext::inputIsEmpty().
+        if ($ctx->inputIsEmpty()) {
+            return CortexStageResult::read([], 0);
         }
 
         $where = trim((string) $stage->param('where', ''));
@@ -73,7 +86,7 @@ final class FilterHandler implements CortexHandlerInterface
         }
 
         if ($ids === [] && $where === '') {
-            return CortexStageResult::unavailable(
+            return CortexStageResult::nothingToOperateBy(
                 "'filter' was given neither operands nor a `where`, so there is "
                 . 'nothing to keep BY. Returning the input unchanged would read as '
                 . 'a filter that ran; nothing was filtered.'
@@ -98,9 +111,17 @@ final class FilterHandler implements CortexHandlerInterface
      * Is this row one of the named operands?
      *
      * Checked across the same key set the operands were read from, because a row
-     * arriving from `get` carries `id`, one from `map` carries the child's `id`,
-     * and one from `classify` carries the node it was assigned to. Matching on a
-     * single key would make the verb work after one predecessor and not another.
+     * arriving from `get` carries `id` and one from `map` carries the child's
+     * `id`. Matching on a single key would make the verb work after one
+     * predecessor and not another.
+     *
+     * CORRECTED 2026-08-11: this claimed a row from `classify` "carries the node
+     * it was assigned to". It does not — classify ATTACHES `classifiedAs` and
+     * leaves the row's identity untouched, deliberately, so that
+     * `… | classify | filter` filters the things classified rather than the
+     * ontology. Filtering by an assignment is therefore not possible today; it
+     * would need `classifiedAs` in this key list, which is a decision to take
+     * openly rather than a sentence to leave standing.
      *
      * @param array<string,mixed>  $row
      * @param array<string,bool>   $ids
