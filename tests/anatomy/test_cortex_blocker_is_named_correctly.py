@@ -308,3 +308,44 @@ def test_the_envelope_cannot_read_as_success_when_no_stage_ran() -> None:
             "is indistinguishable from a successful one at the top level, which "
             "is absence rendering as calm one layer above where the work was done."
         )
+
+
+def test_the_estate_smokes_the_executor() -> None:
+    """A feature no end-to-end instrument calls is a feature nobody will notice break.
+
+    MEASURED 2026-08-11 by an adversarial review: `state/smoke-catalog.yml` had
+    zero entries mentioning cortex, so `nos-smoke --strict` — the instrument
+    CLAUDE.md names as owning end-to-end truth — never touched the executor, and
+    the week's release gate would have tagged around it.
+
+    The entry asserts rows at STAGE 1 rather than stage 0 deliberately: `map` is
+    defined over its input, so rows there mean the pipe carried. A probe on
+    stage 0 alone would pass against the executor that shipped the week before
+    and could not pipe at all.
+    """
+    import yaml
+
+    catalog = yaml.safe_load((REPO / "state/smoke-catalog.yml").read_text(encoding="utf-8")) or {}
+    entries = catalog.get("smoke_endpoints") or []
+    hit = next((e for e in entries if isinstance(e, dict) and e.get("id") == "cortex-executor"), None)
+    assert hit is not None, (
+        "the cortex-executor smoke entry is gone. The executor is POST-only and "
+        "bearer-gated, so no manifest-derived GET can stand in for it — without "
+        "this entry nothing in the estate calls a chain."
+    )
+    assert hit.get("method", "").upper() == "POST", "the entry stopped being a POST"
+    assert hit.get("require_json"), (
+        "the entry no longer asserts anything about the RESPONSE. The executor's "
+        "interesting failure is 200 with every stage absent; a status-only probe "
+        "cannot see it."
+    )
+    assert "stages[1]" in str(hit["require_json"]), (
+        "the entry asserts on a stage other than 1. Stage 0 needs no input, so "
+        "it passes on an executor that cannot pipe — which is exactly the state "
+        "this feature left behind."
+    )
+    assert "token" in str(hit.get("bearer_secret", "")), (
+        "the entry no longer carries a bearer from ~/.nos/secrets.yml, so it "
+        "will 403 or, worse, someone will paste a literal secret into a "
+        "committed file."
+    )

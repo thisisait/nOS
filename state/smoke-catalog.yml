@@ -21,6 +21,18 @@
 #   timeout     float   — per-request timeout seconds (default 5)
 #   tier        int     — 1 = Tier-1 (manifest-derived), 2 = Tier-2 (apps_runner),
 #                          3 = framework / health (defaults to 3 here)
+#   method      string  — "GET" (default) or "POST". A POST entry takes the four
+#                          fields below and is the only shape that can judge a
+#                          surface which answers 200 while doing nothing.
+#   body        map     — JSON request body (POST only)
+#   bearer_secret string— key in ~/.nos/secrets.yml whose value becomes the
+#                          Authorization bearer. The catalog stays committable;
+#                          the value never appears here.
+#   header_secrets map  — {Header-Name: secret_key}, resolved the same way
+#   require_json string — dotted path into the response that must be truthy and,
+#                          for a list, non-empty (e.g. "data.stages[0].result.rows").
+#                          A 200 whose payload fails this is reported as a FAIL
+#                          with the status AND the reason it was not enough.
 #
 # Strict mode (Track G):
 #   nos-smoke.py --strict (or post-smoke.yml with `nos_smoke_strict_status: true`)
@@ -133,6 +145,36 @@ smoke_endpoints:
     when: "install_gitlab | default(false)"
     timeout: 30
     note: "GitLab Omnibus — slow first-boot (3-5 min); long timeout"
+
+  # ── The cortex executor, and it is the reason POST entries exist ───────
+  # Measured 2026-08-11 by an adversarial review: the executor had NO smoke
+  # entry, so `w-release` would have tagged around the week's flagship feature
+  # without once calling it. A GET could not have covered it either — the
+  # surface is POST-only, bearer-gated, and its interesting failure is a 200 in
+  # which every stage returned a typed absence.
+  #
+  # The chain is the smallest one that proves the PIPE rather than one verb:
+  # `map` is defined over its input, so rows at stage 1 mean stage 0's output
+  # reached it. A `get`-only probe would pass against the executor that shipped
+  # last week and could not pipe at all.
+  - id: cortex-executor
+    url: "http://127.0.0.1:9000/api/v1/cortex/execute"
+    method: POST
+    body:
+      source: "get(tax:01) | map(tax:01)"
+    bearer_secret: cortex_executor_token
+    header_secrets:
+      X-Wing-Edge-Token: wing_edge_token
+    # No `data.` prefix: this endpoint sends the envelope at the top level.
+    # The first version of this entry assumed the API-wide `{data: …}` wrapper
+    # and the probe reported "200 but the path is None" — which is the probe
+    # doing its job, on its author.
+    require_json: "stages[1].result.rows"
+    expect: [200]
+    when: "install_wing | default(true) and install_keap | default(false)"
+    timeout: 30
+    tier: 3
+    note: "cortex chain executes end to end; stage 1 receives stage 0's rows"
 
   # ── Tier-2 apps (populated by apps_runner once it lands) ──────────────────
   # Apps_runner appends entries here automatically per onboarded

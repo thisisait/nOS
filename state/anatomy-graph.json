@@ -862,7 +862,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": false,
       "mutates_worktree": false,
-      "min_work": 9,
+      "min_work": 10,
       "argv": [
         "python3",
         "tools/nos-smoke.py",
@@ -873,7 +873,7 @@
         "live_estate"
       ],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 tools/nos-smoke.py --no-jsonl` — work floor min_work=9, deterministic=False"
+      "description": "Loop judge: gate command `python3 tools/nos-smoke.py --no-jsonl` — work floor min_work=10, deterministic=False"
     },
     "judge:pytest-anatomy": {
       "kind": "judge",

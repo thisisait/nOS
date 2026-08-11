@@ -416,6 +416,89 @@ def _probe_via_loopback(url, ctx, timeout, method):
         return None, type(exc).__name__ + ": " + str(exc)
 
 
+def _secret(name: str) -> str | None:
+    """A value from ~/.nos/secrets.yml, or None. Never from the catalog itself."""
+    path = pathlib.Path.home() / ".nos/secrets.yml"
+    if not path.is_file():
+        return None
+    try:
+        import yaml
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except Exception:                                            # noqa: BLE001
+        return None
+    value = data.get(name)
+    return str(value) if value else None
+
+
+def _dotted(data, path: str):
+    """`data.stages[0].result.rows` → the value, or None if any hop is missing."""
+    cur = data
+    for part in path.replace("]", "").replace("[", ".").split("."):
+        if part == "":
+            continue
+        if isinstance(cur, list):
+            if not part.isdigit() or int(part) >= len(cur):
+                return None
+            cur = cur[int(part)]
+        elif isinstance(cur, dict):
+            if part not in cur:
+                return None
+            cur = cur[part]
+        else:
+            return None
+    return cur
+
+
+def _probe_api(entry: dict, ctx, timeout: float) -> tuple[int | None, str | None, str | None]:
+    """POST + bearer + a truthiness assertion on the parsed answer.
+
+    Returns (status, transport_error, assertion_failure). A failed assertion
+    reports the status it really got AND why that status was not enough, because
+    "200 but the pipe was dead" is the case this probe was added for.
+    """
+    url = entry["url"]
+    body = json.dumps(entry.get("body") or {}).encode("utf-8")
+    req = urllib.request.Request(url, data=body, method="POST")
+    req.add_header("Content-Type", "application/json")
+    req.add_header("User-Agent", "nos-smoke/1.0")
+
+    for header, secret in (entry.get("bearer_secret") and
+                           [("Authorization", entry["bearer_secret"])] or []):
+        value = _secret(secret)
+        if not value:
+            return None, f"secret '{secret}' not in ~/.nos/secrets.yml", None
+        req.add_header(header, f"Bearer {value}")
+    for header, secret in (entry.get("header_secrets") or {}).items():
+        value = _secret(secret)
+        if not value:
+            return None, f"secret '{secret}' not in ~/.nos/secrets.yml", None
+        req.add_header(header, value)
+
+    opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx))
+    try:
+        with opener.open(req, timeout=timeout) as resp:
+            status, payload = resp.status, resp.read()
+    except urllib.error.HTTPError as exc:
+        return exc.code, None, None
+    except (urllib.error.URLError, OSError) as exc:
+        return None, f"{type(exc).__name__}: {exc}", None
+
+    require = entry.get("require_json")
+    if not require:
+        return status, None, None
+    try:
+        parsed = json.loads(payload.decode("utf-8", "replace"))
+    except ValueError:
+        return status, None, "response was not JSON, so require_json could not be checked"
+    value = _dotted(parsed, require)
+    if value is None or value is False or value == [] or value == 0:
+        return status, None, (
+            f"{status} but `{require}` is {value!r} — the surface answered and "
+            "did nothing, which is the case this probe exists to catch"
+        )
+    return status, None, None
+
+
 def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
           tester_password: str | None = None,
           authentik_domain: str | None = None) -> ProbeResult:
@@ -445,6 +528,32 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
 
     ctx = _make_ssl_context(entry.get("insecure", True))
     started = time.monotonic()
+
+    # ── An API probe: POST a body, carry a bearer, read the answer ──────────
+    #
+    # WHY THIS EXISTS. Until 2026-08-11 every catalog entry was a GET whose only
+    # verdict was a status code, so a surface that answers 200 while doing
+    # nothing smoked green. The cortex executor is exactly that shape: it is
+    # POST-only, bearer-gated, and its interesting failure is `200 with every
+    # stage absent` — a chain that parsed, dispatched and read nothing. An
+    # adversarial review found it had NO smoke entry at all, so the release gate
+    # would have tagged around the week's flagship feature without calling it.
+    #
+    # `require_json` is a dotted path into the response that must be TRUTHY and,
+    # for a list, non-empty. Deliberately not an expression language: a probe
+    # that can compute is a probe whose verdict needs its own review.
+    #
+    # `bearer_secret` names a key in ~/.nos/secrets.yml rather than carrying a
+    # value, so the catalog stays committable.
+    if entry.get("method", "GET").upper() == "POST":
+        status, err, detail = _probe_api(entry, ctx, timeout)
+        elapsed = (time.monotonic() - started) * 1000
+        # `ok` is the AND of both questions: did it answer with an accepted
+        # status, and did the answer contain what the entry requires. A probe
+        # that stopped at the status is the probe this entry exists to replace.
+        return ProbeResult(entry=entry, status=status, duration_ms=elapsed,
+                           error=err or detail,
+                           ok=(err is None and detail is None and status in expect))
 
     # ── Anon path: simple HEAD/GET ─────────────────────────────────────────
     # Redirect-loop detection: urllib.request.urlopen follows redirects up to
