@@ -13,6 +13,7 @@ use GuzzleHttp\Client as HttpClient;
  *
  * URI scheme: `<provider>-<model-id>`. Provider determines adapter:
  *   anthropic-* → AnthropicAdapter (needs ANTHROPIC_API_KEY)
+ *   claude-*    → ClaudeCliAdapter (the local `claude` binary, no API key)
  *   openclaw-*  → OpenClawAdapter  (HTTP to OPENCLAW_BASE_URL)
  *   openai-*    → reserved (not yet implemented; throws)
  *   local-*     → reserved (not yet implemented; throws)
@@ -34,6 +35,15 @@ final class Factory
 		[$provider, ] = $this->splitUri($modelUri);
 		return match ($provider) {
 			'anthropic' => $this->buildAnthropic($modelUri),
+			// `claude-*` is the LOCAL CLI, not the API. Added 2026-08-11 because
+			// AgentKit could not drive the only backend this estate has: the
+			// nightly agents run on the operator's `claude` subscription through
+			// pulse-run-agent.sh, and neither existing provider reaches it —
+			// anthropic-* wants an API key nobody sets, openclaw-* wants a
+			// gateway that was dead for weeks. That gap, not "two runtimes" in
+			// the abstract, is why agent_sessions held 3 rows and
+			// agent_iterations held 0.
+			'claude'    => $this->buildClaudeCli($modelUri),
 			'openclaw'  => $this->buildOpenClaw($modelUri),
 			default     => throw new \InvalidArgumentException(
 				"LLM provider '{$provider}' not yet supported (URI: {$modelUri})"
@@ -50,6 +60,24 @@ final class Factory
 			throw new \InvalidArgumentException("Invalid model URI: {$modelUri}");
 		}
 		return [$m[1], $m[2]];
+	}
+
+	/**
+	 * `claude-sonnet` → the CLI with `--model sonnet`.
+	 *
+	 * NO CREDENTIAL PASSES THROUGH HERE, which makes this the one provider the
+	 * factory's "only place that touches secrets" docblock does not describe:
+	 * the CLI carries the operator's own session. Worth stating rather than
+	 * leaving as an omission — it means an agent on this backend inherits the
+	 * operator's identity and cannot be scoped down by a vault binding, and any
+	 * per-agent isolation has to come from what the ceremony is allowed to call.
+	 */
+	private function buildClaudeCli(string $modelUri): ClaudeCliAdapter
+	{
+		[, $model] = $this->splitUri($modelUri);
+		$binary = getenv('NOS_CLAUDE_BIN') ?: 'claude';
+		$timeout = (int) (getenv('NOS_CLAUDE_TIMEOUT_S') ?: 900);
+		return new ClaudeCliAdapter($modelUri, $model, $binary, $timeout);
 	}
 
 	private function buildAnthropic(string $modelUri): AnthropicAdapter
