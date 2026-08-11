@@ -15,7 +15,7 @@ description: |
     - Upgrade-advisor turns the version matrix into a reviewed upgrade plan.
 
 model:
-  primary: anthropic-claude-opus-4-7
+  primary: claude-sonnet
   fallback: openclaw-qwen2.5-coder:32b
 
 system_prompt_path: system.md

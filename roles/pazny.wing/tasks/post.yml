@@ -429,18 +429,17 @@
   ansible.builtin.command:
     cmd: "python3 {{ playbook_dir }}/files/anatomy/scripts/discover-pulse-catalog.py"
   environment:
+    # The secret-shaped NOS_* vars that used to live here are GONE (2026-08-11).
+    # The catalog now emits `secret:<name>` references and the Pulse daemon
+    # resolves them from ~/.nos/secrets.yml at exec time, so passing the VALUES
+    # into this subprocess would put nineteen credentials into a process
+    # environment that no longer reads them — visible to `ps -E` for the life of
+    # the task, for nothing. Removed rather than left as harmless: an unused
+    # secret in flight is still a secret in flight.
     NOS_PLAYBOOK_DIR: "{{ playbook_dir }}"
     NOS_AUTHENTIK_DOMAIN: "{{ authentik_domain | default('auth.' ~ (tenant_domain | default('dev.local'))) }}"
     NOS_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
     NOS_GLOBAL_PASSWORD_PREFIX: "{{ global_password_prefix }}"
-    NOS_WING_API_TOKEN: "{{ wing_api_token | default('') }}"
-    NOS_CONDUCTOR_WING_API_TOKEN: "{{ conductor_wing_api_token | default('') }}"
-    NOS_REMEDIATOR_WING_API_TOKEN: "{{ remediator_wing_api_token | default('') }}"
-    NOS_SCOUT_WING_API_TOKEN: "{{ scout_wing_api_token | default('') }}"
-    NOS_UPGRADE_ADVISOR_WING_API_TOKEN: "{{ upgrade_advisor_wing_api_token | default('') }}"
-    NOS_UPGRADE_ARCHITECT_WING_API_TOKEN: "{{ upgrade_architect_wing_api_token | default('') }}"
-    NOS_MIGRATION_AUTHOR_WING_API_TOKEN: "{{ migration_author_wing_api_token | default('') }}"
-    NOS_BONE_SECRET: "{{ bone_secret | default('') }}"
     NOS_BONE_SECRET_RETIRED: "{{ bone_secret_retired | default('') }}"
     NOS_BONE_PORT: "{{ bone_port | default(8099) }}"
     # alert-relay-base polls Prometheus for firing alerts (2026-08-05). Same
@@ -460,12 +459,10 @@
     # ntfy delivery silently broken; caught by the live conductor 2026-05-25).
     NOS_NTFY_URL: "{{ ('http://127.0.0.1:' ~ ntfy_port) if install_ntfy | default(false) else '' }}"
     NOS_NTFY_PUBLISH_USER: "{{ ntfy_publisher_user | default('') if install_ntfy | default(false) else '' }}"
-    NOS_NTFY_PUBLISH_PASSWORD: "{{ ntfy_publisher_password | default('') if install_ntfy | default(false) else '' }}"
     NOS_MAIL_HOST: "{{ '127.0.0.1' if (install_mailpit | default(true)) or (install_smtp_stalwart | default(false)) else '' }}"
     NOS_MAIL_PORT: "{{ (stalwart_port_submission | default(587)) if install_smtp_stalwart | default(false) else (mailpit_smtp_port | default(1025)) }}"
     NOS_MAIL_TLS_MODE: "{{ 'starttls' if install_smtp_stalwart | default(false) else 'none' }}"
     NOS_MAIL_USERNAME: "{{ (stalwart_admin_username | default('admin')) if install_smtp_stalwart | default(false) else '' }}"
-    NOS_MAIL_PASSWORD: "{{ (stalwart_admin_password | default('')) if install_smtp_stalwart | default(false) else '' }}"
     NOS_MAIL_TLS_VERIFY: "{{ '1' if mail_tls_verify | default(true) else '0' }}"
     NOS_MAIL_FROM: "wing@{{ tenant_domain | default('dev.local') }}"
     NOS_MAIL_RECIPIENT: "{{ default_admin_email | default('') }}"
@@ -475,13 +472,7 @@
     # keap_port / keap_agent_token_rw tokens; the catalog literal-substitutes
     # them from these Ansible-rendered values.
     NOS_KEAP_PORT: "{{ keap_port | default(8091) }}"
-    NOS_KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw | default('') }}"
-    NOS_KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro | default('') }}"
-    NOS_LIBRARIAN_WING_API_TOKEN: "{{ librarian_wing_api_token | default('') }}"
-    NOS_CURATOR_WING_API_TOKEN: "{{ curator_wing_api_token | default('') }}"
     # keap-consolidate (cortex dream sweep): capture-tier token + source roots.
-    NOS_KEAP_AGENT_TOKEN_CAPTURE: "{{ keap_agent_token_capture | default('') }}"
-    NOS_MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password | default('') }}"
     # backup-restore-drill: backup-base/plugin.yml carries the bare
     # {{ backup_verify_script_path }} token; the catalog literal-substitutes it.
     NOS_BACKUP_VERIFY_SCRIPT: "{{ backup_verify_script_path | default(ansible_facts['env']['HOME'] ~ '/.nos/backup-verify.sh') }}"
@@ -491,9 +482,6 @@
     # keap-embed-sync then behave exactly as they did before the second target
     # existed, rather than failing against a daemon that is not there.
     NOS_CORTEX_FANOUT_URL: "{{ ('http://127.0.0.1:' ~ (cortex_port | default(8098))) if install_cortex | default(false) else '' }}"
-    NOS_CORTEX_RW_TOKEN: "{{ cortex_rw_token | default('') }}"
-    NOS_CORTEX_RO_TOKEN: "{{ cortex_ro_token | default('') }}"
-    NOS_CORTEX_CAPTURE_TOKEN: "{{ cortex_capture_token | default('') }}"
   register: _pulse_catalog_raw
   changed_when: false
   check_mode: false

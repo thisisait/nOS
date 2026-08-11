@@ -86,7 +86,7 @@ def test_uri_scheme_uses_dash_separator():
     m = re.search(r"^\s*primary:\s*(\S+)", src, re.MULTILINE)
     assert m, "conductor agent.yml has no model.primary"
     primary = m.group(1).strip().strip('"').strip("'")
-    assert re.match(r"^(anthropic|openclaw)-[A-Za-z0-9._:/-]{1,96}$", primary), (
+    assert re.match(r"^(anthropic|claude|openclaw)-[A-Za-z0-9._:/-]{1,96}$", primary), (
         f"conductor model.primary '{primary}' violates dash-separator scheme"
     )
 

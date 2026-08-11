@@ -258,7 +258,7 @@ final class AgentLoader
 
 	private function isValidModelUri(string $uri): bool
 	{
-		return (bool) preg_match('/^(anthropic|openclaw)-[A-Za-z0-9._:/-]{1,96}$/', $uri);
+		return (bool) preg_match('/^(anthropic|claude|openclaw)-[A-Za-z0-9._:/-]{1,96}$/', $uri);
 	}
 }
 

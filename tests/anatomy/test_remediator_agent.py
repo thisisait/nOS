@@ -264,8 +264,12 @@ def test_remediator_agentkit_agent_yml_model_uri():
         )
     # The primary is pinned by name on purpose: the remediator reads security
     # findings, and silently demoting it to a cheaper tier is a change worth
-    # failing a test over.
-    assert agent["model"]["primary"] == "anthropic-claude-opus-4-7"
+    # failing a test over. It duly did — a 2026-08-11 sweep repointed all nine
+    # profiles from `anthropic-claude-opus-4-7` (an API backend this estate has
+    # no key for) to `claude-sonnet`, and this assertion is what noticed that
+    # the sweep had also demoted the one agent whose tier is a security
+    # decision. The provider moved; the TIER did not.
+    assert agent["model"]["primary"] == "claude-opus"
 
 
 def test_remediator_agentkit_system_md_has_no_write_section():

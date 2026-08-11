@@ -15,7 +15,7 @@ description: |
       drop in conductor heartbeat, pulse job exit_code skew).
 
 model:
-  primary: anthropic-claude-opus-4-7
+  primary: claude-sonnet
   fallback: openclaw-qwen2.5-coder:32b
 
 system_prompt_path: system.md

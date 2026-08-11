@@ -13,7 +13,7 @@ description: |
   resolved without operator action.
 
 model:
-  primary: anthropic-claude-opus-4-7
+  primary: claude-opus
   fallback: openclaw-qwen2.5-coder:32b
 
 system_prompt_path: system.md

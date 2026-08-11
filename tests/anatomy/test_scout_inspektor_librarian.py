@@ -81,14 +81,35 @@ def test_wing_post_yml_provisions_scout_token():
     src = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
     # Token-provisioning task present.
     assert "--name=scout" in src
-    # Env-export for the discover script.
-    assert "NOS_SCOUT_WING_API_TOKEN" in src
+    # The playbook no longer exports the token's VALUE to the discover script:
+    # the catalog emits a reference and the daemon resolves it. Asserting the
+    # ABSENCE keeps the direction pinned — a re-added export would mean the
+    # value is travelling again.
+    assert "NOS_SCOUT_WING_API_TOKEN" not in src, (
+        "the playbook exports the scout token to the catalog task again; it is "
+        "resolved at exec time now and does not belong in that process env"
+    )
 
 
-def test_discover_pulse_catalog_substitutes_scout_token():
+def test_discover_pulse_catalog_points_at_the_scout_token():
+    """The token is REFERENCED, not substituted (changed 2026-08-11).
+
+    This asserted the catalog reads `NOS_SCOUT_WING_API_TOKEN` and writes the
+    VALUE into the job's env. That is what put nineteen credentials in the clear
+    into `pulse_jobs.env_json`; the catalog now emits `secret:scout_wing_api_token`
+    and `pulse/daemon.py` resolves it at exec time from the 0600 store. The env
+    var is gone from the playbook too — an unused secret in flight is still a
+    secret in flight.
+    """
     src = (REPO / "files/anatomy/scripts/discover-pulse-catalog.py").read_text()
-    assert '{{ scout_wing_api_token }}' in src
-    assert "NOS_SCOUT_WING_API_TOKEN" in src
+    assert '{{ scout_wing_api_token }}' in src, "the substitution key is gone"
+    assert '"secret:scout_wing_api_token"' in src, (
+        "the scout token is no longer emitted as a reference — check whether it "
+        "went back to being a value"
+    )
+    assert "NOS_SCOUT_WING_API_TOKEN" not in src, (
+        "the catalog reads the token's VALUE from the environment again"
+    )
 
 
 # ── Inspektor (contract-only) + Librarian (live, on-demand) ───────────

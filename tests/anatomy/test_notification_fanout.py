@@ -223,13 +223,32 @@ def test_wing_base_wires_stalwart_when_enabled():
         assert "if " not in env.get("MAIL_PORT", ""), \
             f"{job['name']} MAIL_PORT must be a bare token, not a conditional"
 
-    # The Stalwart conditional now lives in wing post.yml's NOS_MAIL_* env,
-    # where Ansible renders it with full var context.
+    # The Stalwart conditional lives in wing post.yml's NOS_MAIL_* env, where
+    # Ansible renders it with full var context — EXCEPT the password.
+    #
+    # MOVED 2026-08-11. `NOS_MAIL_PASSWORD` went with the secret-reference
+    # change: the catalog emits `secret:mail_password` and the Pulse daemon
+    # resolves it at exec time, so the value no longer travels into that
+    # subprocess. The conditional itself did not disappear — it moved to
+    # `templates/secrets.yml.j2`, because a reference to a name nothing computes
+    # is a job that refuses when it runs. That was measured: 18 of 19 referenced
+    # names resolved, and this was the one that did not.
     post = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
     assert "NOS_MAIL_TLS_MODE" in post and "install_smtp_stalwart" in post
     assert "stalwart_port_submission" in post
     assert "stalwart_admin_username" in post
-    assert "stalwart_admin_password" in post
+    assert "stalwart_admin_password" not in post, (
+        "the Stalwart password is back in the catalog task env. It is resolved "
+        "from the 0600 store at exec time now and does not belong in a process "
+        "environment that no longer reads it."
+    )
+
+    store = (REPO / "templates/secrets.yml.j2").read_text()
+    assert "stalwart_admin_password" in store and "install_smtp_stalwart" in store, (
+        "the Stalwart conditional is in neither place. `secret:mail_password` "
+        "would then point at a name nothing computes, and every notification "
+        "job would refuse at exec time."
+    )
 
 
 def test_dispatch_worker_handles_digest_path():

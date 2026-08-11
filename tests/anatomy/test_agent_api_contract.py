@@ -139,7 +139,14 @@ def test_upgrade_advisor_agent_wired():
     assert "upgrade_advisor_wing_api_token" in creds, "Wing token credential missing"
     post = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
     assert "--name=upgrade-advisor" in post, "Wing token not provisioned by the role"
-    assert "NOS_UPGRADE_ADVISOR_WING_API_TOKEN" in post, "token not in the wing daemon env"
+    # Was `NOS_UPGRADE_ADVISOR_WING_API_TOKEN in post` and labelled "the wing
+    # daemon env" — it was the catalog task's env, and nothing ever read it as a
+    # daemon variable. What matters is that the token still PROVISIONS its
+    # api_tokens row; the value no longer travels to the catalog subprocess.
+    assert "--token={{ upgrade_advisor_wing_api_token }}" in post, (
+        "the upgrade-advisor token no longer provisions an api_tokens row, so "
+        "its bearer authenticates against nothing"
+    )
     # Propose-only: the profile queues upgrades and never applies/forces.
     prof = (base / "upgrade-advisor.yml").read_text()
     assert "/queue" in prof, "advisor must queue upgrades"
@@ -157,17 +164,34 @@ def test_agent_clients_blueprint_is_force_applied():
         assert "30-agent-clients" in src, f"{f}: reapply handler must apply 30-agent-clients"
 
 
-def test_pulse_catalog_substitutes_agent_wing_tokens():
+def test_pulse_catalog_points_at_agent_wing_tokens():
     """2026-05-27: discover-pulse-catalog.py does LITERAL substring substitution
     on a FIXED token map (no Jinja). A new agent's {{ <agent>_wing_api_token }}
-    must be added to that map AND passed as NOS_*_WING_API_TOKEN in the wing
-    post env, or the agent's WING_API_TOKEN stays the literal placeholder and
-    its API calls 401 (hit with upgrade-advisor)."""
+    must be in that map, or its WING_API_TOKEN stays the literal placeholder and
+    every API call 401s (hit with upgrade-advisor).
+
+    CHANGED 2026-08-11: the map now yields a REFERENCE (`secret:<name>`) rather
+    than the value. The old shape is what put nineteen credentials in the clear
+    into `pulse_jobs.env_json`, and the `NOS_*` env export was removed with it —
+    an unused secret in a process environment is still a secret in a process
+    environment. The token itself is unchanged and still provisions its
+    `api_tokens` row a few tasks further down.
+    """
     cat = (REPO / "files/anatomy/scripts/discover-pulse-catalog.py").read_text()
     assert "{{ upgrade_advisor_wing_api_token }}" in cat, "catalog substitution map missing upgrade_advisor token"
-    assert "NOS_UPGRADE_ADVISOR_WING_API_TOKEN" in cat, "catalog must read the token from env"
-    post = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
-    assert post.count("NOS_UPGRADE_ADVISOR_WING_API_TOKEN") >= 1, "wing post must pass the token to the catalog env"
+    assert '"secret:upgrade_advisor_wing_api_token"' in cat, (
+        "the map no longer yields a reference for this token — check whether it "
+        "went back to substituting the value"
+    )
+    assert "NOS_UPGRADE_ADVISOR_WING_API_TOKEN" not in cat, (
+        "the catalog reads the token's value from the environment again"
+    )
+    # The name must still be resolvable, or the job refuses at exec time.
+    store = (REPO / "templates/secrets.yml.j2").read_text()
+    assert "upgrade_advisor_wing_api_token:" in store, (
+        "the token is referenced but the secrets template never writes that "
+        "name, so the Pulse daemon cannot resolve it"
+    )
 
 
 def test_upgrade_architect_agent_wired():
@@ -183,9 +207,14 @@ def test_upgrade_architect_agent_wired():
     assert 'client_id: "nos-upgrade-architect"' in (REPO / "default.config.yml").read_text()
     assert "upgrade_architect_wing_api_token" in (REPO / "default.credentials.yml").read_text()
     cat = (REPO / "files/anatomy/scripts/discover-pulse-catalog.py").read_text()
-    assert "{{ upgrade_architect_wing_api_token }}" in cat and "NOS_UPGRADE_ARCHITECT_WING_API_TOKEN" in cat
+    assert "{{ upgrade_architect_wing_api_token }}" in cat and '"secret:upgrade_architect_wing_api_token"' in cat
     post = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
-    assert "--name=upgrade-architect" in post and "NOS_UPGRADE_ARCHITECT_WING_API_TOKEN" in post
+    # The env half went with the secret-reference change (2026-08-11): the
+    # catalog resolves the name at exec time, so the value no longer travels to
+    # its subprocess. Provisioning the api_tokens row is the half that matters
+    # and is asserted directly.
+    assert "--name=upgrade-architect" in post
+    assert "--token={{ upgrade_architect_wing_api_token }}" in post
     prof = (base / "upgrade-architect.yml").read_text()
     assert "/coexistence/" in prof and "queue" in prof, "architect must queue coexistence"
     assert "never write" in prof.lower() or "propose-only" in prof.lower() or "never write/commit" in prof.lower()

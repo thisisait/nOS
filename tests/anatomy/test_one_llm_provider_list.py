@@ -120,7 +120,15 @@ def test_the_tail_is_still_bounded(gen) -> None:
     assert not gen.MODEL_URI_RE.match("openclaw-has spaces")
     assert not gen.MODEL_URI_RE.match("openclaw-")
     assert not gen.MODEL_URI_RE.match("mistral-large"), "unknown provider must not match"
-    assert not gen.MODEL_URI_RE.match("claude-opus-4-7"), "a bare model with no provider"
+    # `claude-opus-4-7` stood here as the bare-model example until 2026-08-11,
+    # when `claude` became a real provider (the local CLI). It is now a LEGAL
+    # uri meaning "the CLI running opus-4-7", which is the honest reading of
+    # that string on this estate — so the example moved to one that is still
+    # genuinely bare. Worth recording rather than silently swapping: adding a
+    # provider changes what previously-invalid strings MEAN, and the day that
+    # happens is the day to check nothing was relying on the refusal.
+    assert not gen.MODEL_URI_RE.match("opus-4-7"), "a bare model with no provider"
+    assert not gen.MODEL_URI_RE.match("qwen2.5-coder:32b"), "a bare ollama tag is not a uri"
 
 
 # ── the hand-written copies ────────────────────────────────────────────────

@@ -163,6 +163,74 @@ class PulseDaemon:
         t.start()
         return True
 
+    #: What a stored env value looks like when it is a POINTER rather than a
+    #: value. Deliberately one scheme, not AgentKit's two: `infisical:` would
+    #: mean this daemon holds a vault credential, which is the thing it is
+    #: trying to stop holding.
+    SECRET_PREFIX = "secret:"
+
+    def _resolve_secrets(self, env: dict) -> dict:
+        """`secret:wing_api_token` → the value from ~/.nos/secrets.yml (0600).
+
+        A REFERENCE THAT CANNOT BE RESOLVED FAILS THE JOB. Passing the literal
+        `secret:foo` through would hand a subprocess a string shaped like a
+        token: the call would 401, the job would report a plausible upstream
+        error, and the actual fault — a name that is not in the store — would be
+        invisible. Refusing names it.
+
+        Literals pass through untouched, so this can land before the catalog
+        stops emitting them; a job is migrated when its value becomes a
+        reference, one at a time, with the rest still running.
+        """
+        refs = {k: v for k, v in env.items()
+                if isinstance(v, str) and v.startswith(self.SECRET_PREFIX)}
+        if not refs:
+            return env
+
+        store = self._secret_store()
+        out = dict(env)
+        missing = []
+        for key, ref in refs.items():
+            name = ref[len(self.SECRET_PREFIX):]
+            # PRESENCE, not truthiness. `mail_password` is legitimately '' on an
+            # estate using mailpit rather than Stalwart, and the first cut of
+            # this check treated an empty value as an absent name — which would
+            # have refused every notification job on a correctly-configured
+            # host. Declared-and-empty is an answer; not declared is a fault.
+            if name not in store:
+                missing.append(f"{key} -> {name}")
+                continue
+            out[key] = str(store[name] if store[name] is not None else '')
+        if missing:
+            raise RuntimeError(
+                "unresolvable secret reference(s): " + ", ".join(missing)
+                + f" (store: {self._secrets_path()}). The job was NOT run — a "
+                "literal 'secret:…' reaching a subprocess would look like a "
+                "credential and fail as one somewhere else."
+            )
+        return out
+
+    def _secrets_path(self):
+        import pathlib as _pathlib
+        return _pathlib.Path.home() / ".nos/secrets.yml"
+
+    def _secret_store(self) -> dict:
+        """Read per resolution, not cached.
+
+        A converge rewrites this file; a daemon holding a parsed copy from boot
+        would authenticate with a rotated-away value and report the upstream's
+        refusal as the fault. The file is small and this runs once per job.
+        """
+        path = self._secrets_path()
+        if not path.is_file():
+            return {}
+        try:
+            import yaml
+            return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except Exception as exc:                                  # noqa: BLE001
+            log.error("could not read %s: %s", path, exc)
+            return {}
+
     def _run_in_thread(self, job_id: str, run_id: str,
                        command: str, args: list, timeout_s: float,
                        env: dict[str, str] | None = None) -> None:
@@ -177,7 +245,22 @@ class PulseDaemon:
                                           stdout_tail="dry-run",
                                           stderr_tail="")
                 return
-            result = sp_runner.execute(command, args, timeout_s=timeout_s, env=env or {})
+            # SECRETS ARE RESOLVED HERE, not stored resolved.
+            #
+            # MEASURED 2026-08-11: 19 of 29 rows in `pulse_jobs` carried a
+            # derived secret in `env_json` IN THE CLEAR — client secrets,
+            # `KEAP_AGENT_TOKEN_RW`, `WING_EVENTS_HMAC_SECRET`, every one of them
+            # `<prefix>_pw_*`, so a single row also reveals the prefix that
+            # yields the rest by construction. SEC-9 already scrubs subprocess
+            # OUTPUT; nothing addressed the values at rest, and wing.db is read
+            # by anything running as this UID.
+            #
+            # AgentKit has said the answer since A14 — `agent_credentials.
+            # secret_ref` is a POINTER (`env:VAR`, `infisical:/path`) resolved at
+            # session-open, never a value — and the runtime that actually runs
+            # the agents did the opposite. This closes that gap on the Pulse side.
+            env = self._resolve_secrets(env or {})
+            result = sp_runner.execute(command, args, timeout_s=timeout_s, env=env)
             log.info("job %s done rc=%d dur=%.1fs timed_out=%s",
                      job_id, result.exit_code, result.duration_s, result.timed_out)
             # SEC-9 (2026-05-23): scrub stdout/stderr tails BEFORE

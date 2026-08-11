@@ -58,20 +58,52 @@ def _build_substitutions() -> dict[str, str]:
     plugin.yml content — e.g. ``{{ playbook_dir }}`` is the literal
     11-character key. Python's ``str.replace`` does no Jinja parsing;
     these are just dumb substring substitutions.
+
+    THE SECRET-SHAPED ENTRIES EMIT A REFERENCE, NOT A VALUE (2026-08-11).
+    `"{{ wing_api_token }}": "secret:wing_api_token"` puts a POINTER into
+    `pulse_jobs.env_json`; `pulse/daemon.py::_resolve_secrets` reads the real
+    value from ~/.nos/secrets.yml (0600) at exec time and fails the job if the
+    name is not there. Before this, 19 of 29 job rows held a derived secret in
+    the clear in wing.db — a file the /audit timeline, the events API and the
+    nightly backup all reach, and one row of which also reveals the prefix that
+    yields the rest by construction.
+
+    `{{ global_password_prefix }}` deliberately stays a VALUE: manifests
+    concatenate it (`{{ global_password_prefix }}_pw_agent_curator`), so a
+    reference would render as `secret:global_password_prefix_pw_agent_curator`
+    — a name that does not exist, failing the job at exec time instead of at
+    render. Those sites need a named var of their own; until then they are the
+    measured remainder, not a thing this change quietly covers.
     """
     return {
         "{{ playbook_dir }}":             _env("NOS_PLAYBOOK_DIR"),
+        # The agent client secrets, keyed on the WHOLE literal rather than on
+        # `{{ global_password_prefix }}` alone. Substituting the prefix would
+        # render `secret:global_password_prefix_pw_agent_curator` — a name that
+        # does not exist — so the concatenation is matched entire and replaced
+        # by a reference to the name the store now carries. These MUST precede
+        # the bare-prefix entry below: str.replace runs in dict order and the
+        # shorter key would consume the prefix first, leaving a broken tail.
+        "{{ global_password_prefix }}_pw_agent_conductor": "secret:agent_conductor_client_secret",
+        "{{ global_password_prefix }}_pw_agent_curator": "secret:agent_curator_client_secret",
+        "{{ global_password_prefix }}_pw_agent_librarian": "secret:agent_librarian_client_secret",
+        "{{ global_password_prefix }}_pw_agent_migration_author": "secret:agent_migration_author_client_secret",
+        "{{ global_password_prefix }}_pw_agent_remediator": "secret:agent_remediator_client_secret",
+        "{{ global_password_prefix }}_pw_agent_scout": "secret:agent_scout_client_secret",
+        "{{ global_password_prefix }}_pw_agent_upgrade_architect": "secret:agent_upgrade_architect_client_secret",
+        "{{ global_password_prefix }}_pw_agent_upgrade_advisor": "secret:agent_upgrade_advisor_client_secret",
+        "{{ global_password_prefix }}_pw_agent_inspektor": "secret:agent_inspektor_client_secret",
         "{{ authentik_domain }}":         _env("NOS_AUTHENTIK_DOMAIN"),
         "{{ tenant_domain }}":            _env("NOS_TENANT_DOMAIN"),
         "{{ global_password_prefix }}":   _env("NOS_GLOBAL_PASSWORD_PREFIX"),
-        "{{ wing_api_token }}":           _env("NOS_WING_API_TOKEN"),
-        "{{ conductor_wing_api_token }}": _env("NOS_CONDUCTOR_WING_API_TOKEN"),
-        "{{ remediator_wing_api_token }}": _env("NOS_REMEDIATOR_WING_API_TOKEN"),
-        "{{ scout_wing_api_token }}":      _env("NOS_SCOUT_WING_API_TOKEN"),
-        "{{ upgrade_advisor_wing_api_token }}": _env("NOS_UPGRADE_ADVISOR_WING_API_TOKEN"),
-        "{{ upgrade_architect_wing_api_token }}": _env("NOS_UPGRADE_ARCHITECT_WING_API_TOKEN"),
-        "{{ migration_author_wing_api_token }}": _env("NOS_MIGRATION_AUTHOR_WING_API_TOKEN"),
-        "{{ bone_secret }}":              _env("NOS_BONE_SECRET"),
+        "{{ wing_api_token }}":           "secret:wing_api_token",
+        "{{ conductor_wing_api_token }}": "secret:conductor_wing_api_token",
+        "{{ remediator_wing_api_token }}": "secret:remediator_wing_api_token",
+        "{{ scout_wing_api_token }}":      "secret:scout_wing_api_token",
+        "{{ upgrade_advisor_wing_api_token }}": "secret:upgrade_advisor_wing_api_token",
+        "{{ upgrade_architect_wing_api_token }}": "secret:upgrade_architect_wing_api_token",
+        "{{ migration_author_wing_api_token }}": "secret:migration_author_wing_api_token",
+        "{{ bone_secret }}":              "secret:bone_secret",
         # The audit chain's retired-key ring (2026-08-06). Verify-only, and
         # legitimately EMPTY until the first rotation — which is why it needs an
         # entry here rather than being left out: an unknown token would reach
@@ -98,12 +130,12 @@ def _build_substitutions() -> dict[str, str]:
         # only because ntfy's auth was unconfigured (no auth-file, so the
         # declared deny-all was inert and anyone could also SUBSCRIBE).
         "{{ ntfy_publisher_user }}":      _env("NOS_NTFY_PUBLISH_USER"),
-        "{{ ntfy_publisher_password }}":  _env("NOS_NTFY_PUBLISH_PASSWORD"),
+        "{{ ntfy_publisher_password }}":  "secret:ntfy_publisher_password",
         "{{ mail_host }}":                _env("NOS_MAIL_HOST"),
         "{{ mail_port }}":                _env("NOS_MAIL_PORT"),
         "{{ mail_tls_mode }}":            _env("NOS_MAIL_TLS_MODE"),
         "{{ mail_username }}":            _env("NOS_MAIL_USERNAME"),
-        "{{ mail_password }}":            _env("NOS_MAIL_PASSWORD"),
+        "{{ mail_password }}":            "secret:mail_password",
         "{{ mail_tls_verify_flag }}":     _env("NOS_MAIL_TLS_VERIFY"),
         "{{ mail_from }}":                _env("NOS_MAIL_FROM"),
         "{{ mail_recipient }}":           _env("NOS_MAIL_RECIPIENT"),
@@ -112,17 +144,17 @@ def _build_substitutions() -> dict[str, str]:
         # keap-embed-sync (cortex Phase 6, 2026-07-11): keap-base/plugin.yml
         # carries these bare tokens; wing post.yml Ansible-renders the values.
         "{{ keap_port }}":                _env("NOS_KEAP_PORT"),
-        "{{ keap_agent_token_rw }}":      _env("NOS_KEAP_AGENT_TOKEN_RW"),
-        "{{ keap_agent_token_ro }}":      _env("NOS_KEAP_AGENT_TOKEN_RO"),
-        "{{ librarian_wing_api_token }}": _env("NOS_LIBRARIAN_WING_API_TOKEN"),
+        "{{ keap_agent_token_rw }}":      "secret:keap_agent_token_rw",
+        "{{ keap_agent_token_ro }}":      "secret:keap_agent_token_ro",
+        "{{ librarian_wing_api_token }}": "secret:librarian_wing_api_token",
         # curator-sweep shipped 2026-07-14 with this token in its env and no
         # entry here, so Pulse stored the literal braces as the bearer. env is
         # not covered by the SEC-8 command validator, so it never 400'd — the
         # agent would simply have 401'd against Wing at run time, silently.
         # Found 2026-08-01 by test_pulse_catalog_renders_every_token.
-        "{{ curator_wing_api_token }}":   _env("NOS_CURATOR_WING_API_TOKEN"),
-        "{{ keap_agent_token_capture }}": _env("NOS_KEAP_AGENT_TOKEN_CAPTURE"),
-        "{{ mariadb_root_password }}":    _env("NOS_MARIADB_ROOT_PASSWORD"),
+        "{{ curator_wing_api_token }}":   "secret:curator_wing_api_token",
+        "{{ keap_agent_token_capture }}": "secret:keap_agent_token_capture",
+        "{{ mariadb_root_password }}":    "secret:mariadb_root_password",
         # backup-restore-drill (2026-08-01): the weekly DR round-trip.
         "{{ backup_verify_script_path }}": _env("NOS_BACKUP_VERIFY_SCRIPT"),
         "{{ consolidate_fs_roots }}":     _env("NOS_CONSOLIDATE_FS_ROOTS"),
@@ -135,9 +167,9 @@ def _build_substitutions() -> dict[str, str]:
         # secrets from KEAP's — one name, two secrets, one host is how a write
         # token reaches the wrong daemon (§2.1).
         "{{ cortex_fanout_url }}":        _env("NOS_CORTEX_FANOUT_URL"),
-        "{{ cortex_rw_token }}":          _env("NOS_CORTEX_RW_TOKEN"),
-        "{{ cortex_ro_token }}":          _env("NOS_CORTEX_RO_TOKEN"),
-        "{{ cortex_capture_token }}":     _env("NOS_CORTEX_CAPTURE_TOKEN"),
+        "{{ cortex_rw_token }}":          "secret:cortex_rw_token",
+        "{{ cortex_ro_token }}":          "secret:cortex_ro_token",
+        "{{ cortex_capture_token }}":     "secret:cortex_capture_token",
     }
 
 
