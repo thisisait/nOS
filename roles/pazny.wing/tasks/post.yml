@@ -233,6 +233,35 @@
     or 'Updated' in (_wing_conductor_token.stdout | default(''))
   no_log: true
 
+# THE EXECUTOR'S DOOR. Measured 2026-08-11: nine provisioned tokens, not one
+# with a cortex column set, and the playbook had no task that could set one. The
+# cortex executor was built, deployed, gated and unreachable — `CortexCapability`
+# refuses a token missing ANY of the three axes, by design, so "powerful
+# elsewhere" is correctly not a way in.
+#
+# The scopes are the executor's own P1 surface and no wider: the five read verbs
+# it can dispatch (`embed` is still late-bound upstream, so granting it would
+# name a verb that cannot run), and the two namespaces KEAP resolves. `db:` is
+# deliberately absent — a chain that could reach the Wing or GDPR store through
+# this token would make the executor a second, unaudited path into them.
+- name: "[pazny.wing] Reconverge API token — cortex executor (all three axes)"
+  ansible.builtin.command:
+    argv:
+      - php
+      - "{{ wing_app_dir }}/bin/provision-token.php"
+      - --db={{ wing_data_dir }}/wing.db
+      - --token={{ cortex_executor_token }}
+      - --name=cortex-executor
+      - --cortex-verbs=get,resolve,map,filter,rank,classify
+      - --cortex-namespaces=tax,rel
+      - --cortex-tenants=default
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_cortex_token
+  changed_when: >
+    'Created' in (_wing_cortex_token.stdout | default(''))
+    or 'Updated' in (_wing_cortex_token.stdout | default(''))
+  no_log: true
+
 - name: "[pazny.wing] Reconverge API token — librarian (cortex L2 knowledge judge)"
   # Judges the KEAP lint intake queue (overlap-review/near-duplicate pairs).
   # Client nos-librarian pre-provisioned in authentik_agent_clients; this adds

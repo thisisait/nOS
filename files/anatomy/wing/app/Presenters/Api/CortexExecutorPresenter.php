@@ -8,6 +8,7 @@ use App\Cortex\CortexBindingGate;
 use App\Cortex\CortexCapability;
 use App\Cortex\CortexContext;
 use App\Cortex\CortexOpcodeRegistry;
+use App\Cortex\CortexStageResult;
 use App\Cortex\ResolvedStage;
 use App\Model\EventRepository;
 use App\Model\KeapCortexClient;
@@ -203,17 +204,56 @@ final class CortexExecutorPresenter extends BaseApiPresenter
             }
         }
 
-        // 6 — dispatch, one audited action per stage.
+        // 6 — dispatch, one audited action per stage, THREADING ROWS BETWEEN THEM.
+        //
+        // Until 2026-08-11 this loop dispatched every stage independently and
+        // collected the results side by side, so `|` was punctuation rather than
+        // a pipe. The consequence was total and legible in the registry's own
+        // summaries: `get` and `resolve` are the two verbs defined over no input
+        // and they were the two that ran; `map`, `filter`, `rank`, `classify`
+        // and `embed` are each defined over THE INPUT and all five were
+        // late-bound. The correlation was not a fact about KEAP.
+        //
+        // A BROKEN PIPE PROPAGATES, and this is the part worth reading twice. If
+        // stage N returns a typed absence, stage N+1 has no input — and a verb
+        // over no input must not answer as though the world were empty. Carrying
+        // the previous rows through would make a dead stage look like a no-op
+        // filter; substituting [] would make every downstream stage report a
+        // confident nothing. So the pipe is marked broken and every later stage
+        // says so, naming the stage that broke it.
         $out = [];
+        $prev = [];
+        $brokenAt = null;
         foreach ($stages as $raw) {
             $stage = ResolvedStage::fromAst((array) $raw);
             $actionId = 'cx-' . bin2hex(random_bytes(10));
-            $ctx = new CortexContext($actor, $tenant, $actionId);
+            $ctx = new CortexContext($actor, $tenant, $actionId, null, $prev);
 
             $this->audit('cortex_stage_begin', $stage->opcode, $actor, $actionId, [
                 'index' => $stage->index, 'ns' => $stage->namespaces(), 'tenant' => $tenant,
             ]);
-            $result = $this->opcodes->handler($stage->opcode)->execute($stage, $ctx);
+            $result = $brokenAt !== null
+                ? CortexStageResult::unavailable(sprintf(
+                    "stage %d ('%s') produced no rows, so '%s' has no input. A verb "
+                    . 'defined over its input must not answer over an empty world; '
+                    . 'nothing was read.',
+                    $brokenAt['index'],
+                    $brokenAt['opcode'],
+                    $stage->opcode
+                ))
+                : $this->opcodes->handler($stage->opcode)->execute($stage, $ctx);
+
+            // The pipe survives only a stage that actually produced something.
+            // `code !== null` is a typed absence (late binding, an upstream that
+            // did not answer); rows === [] is a stage that ran and found nothing,
+            // which is equally not something the next verb can operate on.
+            if ($result->code !== null || $result->rows === []) {
+                $brokenAt ??= ['index' => $stage->index, 'opcode' => $stage->opcode];
+                $prev = [];
+            } else {
+                $prev = $result->rows;
+            }
+
             $this->audit('cortex_stage_finish', $stage->opcode, $actor, $actionId, [
                 'index' => $stage->index, 'effect' => $result->effect,
                 'rows' => count($result->rows), 'code' => $result->code,

@@ -1421,6 +1421,25 @@
         bluesky_pds_rotation_key: "{% if (bluesky_pds_rotation_key | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ bluesky_pds_rotation_key }}{% endif %}"
         outline_secret_key: "{% if '_pw_' in (outline_secret_key | default('')) or (outline_secret_key | default('') | length) != 64 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ outline_secret_key }}{% endif %}"
         authentik_secret_key: "{% if '_pw_' in (authentik_secret_key | default('')) or (authentik_secret_key | default('') | length) < 50 %}{{ lookup('pipe', 'openssl rand -hex 50') }}{% else %}{{ authentik_secret_key }}{% endif %}"
+        # The cortex executor's bearer — GENERATED, not derived, and the ratchet
+        # in tests/anatomy/test_secret_blast_radius.py is what decided that.
+        # Declaring it as `{prefix}_pw_wing_cortex_exec` grew the derived-secret
+        # count past its ceiling, and the ceiling's own rule is "lower these as
+        # the plan lands; never raise them". Raising it for a NEW secret would
+        # have been the clearest possible case of moving the goalposts.
+        #
+        # It is also simply the right shape for this one: the token dispatches
+        # chains over the taxonomy on the caller's behalf, so one leaked sibling
+        # revealing the prefix must not yield reach into the executor by
+        # construction (the REM-144 class).
+        # `'placeholder' in …` is not decoration. Written with the `_pw_` and
+        # length tests alone, this guard could not fire: the declared placeholder
+        # `placeholder-regenerated-on-first-run` is 36 characters and contains no
+        # `_pw_`, so it passed both tests and became the live bearer verbatim —
+        # measured 2026-08-11, with a working chain authenticated by the literal
+        # word "placeholder". Every sibling line above tests for it; this one
+        # omitted it and the omission was invisible because the token WORKED.
+        cortex_executor_token: "{% if 'placeholder' in (cortex_executor_token | default('')) or '_pw_' in (cortex_executor_token | default('')) or (cortex_executor_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ cortex_executor_token }}{% endif %}"
         # REM-191 (HIGH, 2026-08-11). Superset's local Flask-AppBuilder admin is
         # reachable REGARDLESS of AUTH_TYPE: `POST /api/v1/security/login` with
         # {"provider":"db"} calls auth_user_db() unconditionally — verified in the

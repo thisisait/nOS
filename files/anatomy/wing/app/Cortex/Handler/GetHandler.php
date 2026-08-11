@@ -57,7 +57,7 @@ final class GetHandler implements CortexHandlerInterface
 
     public function execute(ResolvedStage $stage, CortexContext $ctx): CortexStageResult
     {
-        $limit = (int) ($stage->params['limit'] ?? 20);
+        $limit = (int) $stage->param('limit', 20);
         $limit = max(1, min($limit, 200));
 
         $rows = [];

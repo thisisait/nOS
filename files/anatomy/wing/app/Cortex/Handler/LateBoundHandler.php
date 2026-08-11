@@ -34,13 +34,16 @@ use App\Cortex\ResolvedStage;
  *     classify  assign THE INPUT to an ontology node
  *     embed     project THE INPUT into vector space
  *
- * The two verbs that execute are exactly the two that need no input, and the
- * five that do not are exactly the five that consume it. That correlation is
- * total, and it is not a coincidence about KEAP: `CortexExecutorPresenter`
- * dispatches each stage INDEPENDENTLY and collects the results side by side.
- * Nothing carries stage N's rows into stage N+1. The `|` in the surface syntax
- * does not pipe yet, so a verb defined over its input has no input to be
- * defined over.
+ * The two verbs that executed were exactly the two that need no input, and the
+ * five that did not were exactly the five that consume it. That correlation was
+ * total, and it was not a fact about KEAP: `CortexExecutorPresenter` dispatched
+ * each stage INDEPENDENTLY and collected the results side by side, so the `|` in
+ * the surface syntax did not pipe and a verb defined over its input had none.
+ *
+ * FIXED 2026-08-11. `CortexContext` carries the previous stage's rows, the
+ * executor threads them, and `map`, `filter`, `rank` and `classify` have bodies
+ * against routes that answered all along. This class now has exactly one
+ * subclass.
  *
  * `embed` carries a second, independent gap: KEAP has `GET /embeddings/pending`
  * (the queue) and `POST /embeddings` (a write of computed vectors), but no
@@ -65,10 +68,8 @@ abstract class LateBoundHandler implements CortexHandlerInterface
     public function execute(ResolvedStage $stage, CortexContext $ctx): CortexStageResult
     {
         return CortexStageResult::unavailable(sprintf(
-            "'%s' is defined over the pipeline's input, and this executor does "
-            . 'not thread rows between stages yet — CortexExecutorPresenter '
-            . 'dispatches each stage independently, so there is no input to '
-            . 'operate on. Waiting on: %s. Nothing was read.',
+            "'%s' is published, legal and has no surface to call. Waiting on: %s. "
+            . 'Nothing was read.',
             $this->opcode(),
             $this->awaiting()
         ));

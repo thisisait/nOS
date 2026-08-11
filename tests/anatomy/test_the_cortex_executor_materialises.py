@@ -173,12 +173,22 @@ def test_a_qualified_namespace_grant_does_not_widen(tmp_path: Path):
 
 
 def test_a_late_bound_handler_reports_absence_not_emptiness(tmp_path: Path):
-    """Empty rows would be indistinguishable from a query that matched nothing."""
+    """Empty rows would be indistinguishable from a query that matched nothing.
+
+    Probes `embed`, which on 2026-08-11 became the ONLY late-bound verb. This
+    probed `rank` until then, and rank's unblocking broke it in a way worth
+    recording: the probe constructs the handler directly, so the moment rank
+    gained a `KeapCortexClient` dependency the test died on an ArgumentCountError
+    rather than on its subject. A direct `new` is the right shape here — it keeps
+    the probe free of the DI container — but it means this test must always name
+    a handler that takes nothing, and `embed` is the one whose blocker is
+    genuinely upstream (KEAP computes no embedding for supplied text).
+    """
     out = php(textwrap.dedent(f"""\
-        require '{CORTEX}/Handler/RankHandler.php';
-        $h = new App\\Cortex\\Handler\\RankHandler();
+        require '{CORTEX}/Handler/EmbedHandler.php';
+        $h = new App\\Cortex\\Handler\\EmbedHandler();
         $r = $h->execute(
-            new App\\Cortex\\ResolvedStage(0, 'rank', false, [], []),
+            new App\\Cortex\\ResolvedStage(0, 'embed', false, [], []),
             new App\\Cortex\\CortexContext('t', 'default', 'cx-test'));
         $a = $r->toArray();
         echo ($a['code'] ?? 'NONE');

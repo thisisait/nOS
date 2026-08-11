@@ -45,6 +45,36 @@ final class ResolvedStage
         );
     }
 
+    /**
+     * A parameter's VALUE, unwrapped.
+     *
+     * MEASURED 2026-08-11, and it had been silently wrong since the first
+     * handler shipped. `cortex-lang.ts` emits each param as an object —
+     * `{value, defaulted, span}` — because the span is what an error message
+     * points at. Handlers read `$this->params['limit']` and cast it:
+     *
+     *     $limit = (int) ($stage->params['limit'] ?? 20);
+     *
+     * `(int)` of a non-empty PHP array is **1**. So every `limit=` ever written
+     * in a chain meant one row, `threshold=70` meant 1, and nothing failed —
+     * `get(tax:01, limit=50)` returned a single row and looked like a node with
+     * one child. A cast that cannot fail over a shape nobody checked.
+     *
+     * One accessor, so the unwrapping is done once and no handler re-derives it.
+     * A flat scalar is tolerated because the tests construct stages by hand.
+     */
+    public function param(string $key, mixed $default = null): mixed
+    {
+        $raw = $this->params[$key] ?? null;
+        if ($raw === null) {
+            return $default;
+        }
+        if (is_array($raw)) {
+            return array_key_exists('value', $raw) ? $raw['value'] : $default;
+        }
+        return $raw;
+    }
+
     /** Namespaces this stage's operands reach. */
     public function namespaces(): array
     {
