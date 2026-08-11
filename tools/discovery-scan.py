@@ -337,7 +337,13 @@ def probe_pin_vs_running(images: dict[str, str], res: ScanResult) -> None:
         res.findings.append(Finding(
             slug=f"{OBS_PREFIX}pin-{var.replace('_', '-')}",
             title=f"{name} runs {tag}, pinned {declared}",
-            track="security" if have < want else "platform",
+            # `verdict`, not `have < want`: Version carries a prerelease suffix
+            # and deliberately has no ordering operators, because two suffixes
+            # are not always comparable — that is what compare() returning None
+            # means, and it is handled above. This line was left behind by the
+            # refactor that introduced compare(), and it crashed the whole scan
+            # (TypeError) rather than any one probe, so nothing ran at all.
+            track="security" if verdict < 0 else "platform",
             refs=f"default.config.yml {var} · docker ps {name}",
             body=(
                 f"The running container is {direction} its pin. "

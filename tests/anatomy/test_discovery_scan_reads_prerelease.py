@@ -27,6 +27,7 @@ agreement.
 from __future__ import annotations
 
 import importlib.util
+import re
 import pathlib
 import sys
 
@@ -141,4 +142,60 @@ def test_an_unreadable_comparison_is_counted_as_a_skip(scan) -> None:
         "both probes must report an unreadable prerelease as a skip. An "
         "uncounted refusal is indistinguishable from agreement, and the summary "
         "line's promise — 'Skips are not agreements' — is what makes that safe."
+    )
+
+
+# ── the caller side, added 2026-08-11 after a crash the above could not see ──
+#
+# Every test above exercises `compare()`, and `compare()` was correct. The scan
+# still died on its first run of the day:
+#
+#     TypeError: '<' not supported between instances of 'Version' and 'Version'
+#     tools/discovery-scan.py:340   track="security" if have < want else ...
+#
+# A line left behind by the refactor that introduced `compare()`. It took down
+# the WHOLE scan — not the pin probe, the process — so every other probe's
+# findings were lost too, and the estate went unmeasured until someone read a
+# traceback. Loud, at least; the quiet version of this is what the rest of this
+# suite exists for.
+#
+# `Version` has no ordering ON PURPOSE: two prerelease channels are not always
+# rankable, which is precisely what `compare()` returning None expresses. An
+# operator cannot express "unrankable", so it must never be reached for.
+
+
+def test_version_deliberately_refuses_the_comparison_operators(scan) -> None:
+    a, b = scan.numeric("1.2.3"), scan.numeric("1.2.4")
+    with pytest.raises(TypeError):
+        _ = a < b
+    assert scan.compare(a, b) == -1, (
+        "compare() is the ONLY way to order two Versions, and it just stopped "
+        "working. If Version gained ordering deliberately, delete this test — "
+        "but then decide what `<` means for two unrankable prereleases first."
+    )
+
+
+def test_no_caller_orders_two_versions_with_an_operator() -> None:
+    """The line that crashed, pinned by shape rather than by number.
+
+    Deliberately narrow: it looks only at the names that hold parsed Versions in
+    the pin probe. A broad `<` search across the file would match loop bounds and
+    counters and go stale within a week, which is how a gate stops being read.
+    """
+    src = SCANNER.read_text(encoding="utf-8")
+    body = src[src.index("def probe_pin_vs_running"):]
+    body = body[: body.index("\ndef ", 1)]
+    # Comments stripped first. On this gate's very first run it failed on the
+    # fix's OWN comment — which quotes `have < want` to explain why not to write
+    # it. That is the third time in this repo a check has matched its own
+    # documentation (`\bopen\(` vs `opener.open(`; a roadmap probe matching the
+    # sentence describing the work), so it is worth saying out loud: a gate that
+    # reads prose reads the prose written ABOUT the defect too.
+    code = "\n".join(ln.split("#", 1)[0] for ln in body.splitlines())
+    offenders = re.findall(r"\b(?:have|want)\s*[<>]=?\s*(?:have|want)\b", code)
+    assert not offenders, (
+        f"probe_pin_vs_running orders two Versions with an operator: {offenders}. "
+        "Version has no ordering, so this is a TypeError that kills the entire "
+        "scan at runtime — every probe, not just this one. Use the `verdict` "
+        "that compare() already returned a few lines above."
     )
