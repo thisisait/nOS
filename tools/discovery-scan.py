@@ -776,6 +776,109 @@ def probe_disabled_vs_running(images: dict[str, str], res: ScanResult) -> None:
     ))
 
 
+# ---------------------------------------------------------------------------
+# Probe F — a route that declares "the service gates itself", and does not
+# ---------------------------------------------------------------------------
+
+def probe_declared_gate_actually_exists(res: ScanResult) -> None:
+    """`traefik_auth_modes: oidc` asserts the service's OWN login offers Authentik.
+
+    That assertion buys something real: no forward-auth middleware is attached,
+    because stacking one on a native_oidc service is the documented double-login
+    anti-pattern. The estate has a gate for the stacking half
+    (test_forward_auth_does_not_stack.py) and CLAUDE.md names, in that gate's own
+    words, what it cannot cover: "a native_oidc claim whose upstream OIDC does
+    not exist (FreeScout)".
+
+    That blind spot became a HIGH on 2026-08-11 (REM-192). FreeScout was marked
+    `oidc`, so its edge carried no middleware, while the freescout-oauth module
+    404s at both upstreams — /login served a bare local email+password form to
+    the internet. Four files said gated; the login page said otherwise.
+
+    So this asks the login page. A service claiming `oidc` whose page offers a
+    PASSWORD FIELD and NO Authentik/OAuth affordance is claiming a gate it does
+    not have.
+
+    DELIBERATELY CONSERVATIVE. Unreachable is a SKIP, never a finding — half the
+    estate is off on any given host. A page with no password field is a skip too:
+    plenty of services answer 200 with a redirect shell or an SPA, and guessing
+    from an empty page is the noise that gets a detector muted.
+    """
+    manifest = REPO / "state/manifest.yml"
+    tvars = REPO / "roles/pazny.traefik/vars/main.yml"
+    if not manifest.exists() or not tvars.exists():
+        res.skip("manifest or traefik vars absent")
+        return
+    try:
+        import yaml  # noqa: PLC0415 — optional dep; absence must skip, not crash
+    except ImportError:
+        res.skip("pyyaml absent — the declared-gate probe did not run")
+        return
+
+    modes = (yaml.safe_load(tvars.read_text(encoding="utf-8")) or {}).get("traefik_auth_modes") or {}
+    rows = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
+    rows = rows.get("services", rows)
+    rows = rows if isinstance(rows, list) else list(rows.values())
+    cfg = CONFIG.read_text(encoding="utf-8")
+
+    #: A page that offers a local password AND nothing Authentik-shaped.
+    pw = re.compile(r"""(type=["']password|name=["']password)""", re.I)
+    sso = re.compile(r"(authentik|oauth|openid|oidc|single.sign|sign in with)", re.I)
+
+    for row in rows:
+        sid = row.get("id")
+        if not sid or modes.get(sid) != "oidc":
+            continue
+        port_var = row.get("port_var")
+        m = re.search(rf"^{re.escape(str(port_var))}:\s*(\d+)", cfg, re.MULTILINE) if port_var else None
+        if not m:
+            res.skip("no loopback port for the declared-oidc service")
+            continue
+        try:
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{m.group(1)}/login",
+                headers={"User-Agent": "nos-discovery-scan"},
+            )
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                body = resp.read(60000).decode("utf-8", "replace")
+        except Exception:
+            # Unreachable, redirecting off-host, or no /login. Not a finding.
+            res.skip("declared-oidc service did not serve a readable /login")
+            continue
+
+        res.compared += 1
+        if not pw.search(body):
+            res.skip("declared-oidc /login has no password field to judge")
+            continue
+        if sso.search(body):
+            continue  # a local form beside an Authentik button is normal
+        res.findings.append(Finding(
+            slug=f"{OBS_PREFIX}gate-claimed-not-offered-{sid.replace('_', '-')}",
+            title=f"{sid} is marked oidc but its login page offers no Authentik",
+            track="security",
+            refs=f"roles/pazny.traefik/vars/main.yml traefik_auth_modes.{sid} · "
+                 f"127.0.0.1:{m.group(1)}/login · docs/idea (SSO trichotomy)",
+            body=(
+                f"traefik_auth_modes.{sid} is `oidc`, which asserts the service's "
+                "OWN login page gates the user — and on that assertion the edge "
+                "router is rendered WITHOUT authentik@file. The page served on "
+                f"the loopback port carries a password field and no Authentik, "
+                "OAuth, OIDC or 'sign in with' affordance anywhere in the first "
+                "60 KB.\n\n"
+                "If that is right, the route is open onto a local credential "
+                "form. The fix is usually the CLASSIFICATION rather than a hunt "
+                "for the missing module: set traefik_auth_modes to `proxy` (this "
+                "map's word for forward-auth) and flip the plugin's "
+                "authentik.mode/provider_type to forward_auth, dropping "
+                "redirect_uris and scopes. That is what closed REM-192 for "
+                "freescout on 2026-08-11.\n\n"
+                "If it is WRONG — the page is a shell and the real login is "
+                "elsewhere — say so here rather than muting the probe, because "
+                "the next reader will ask the same question."
+            ),
+        ))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--file", action="store_true",
@@ -800,6 +903,7 @@ def main() -> int:
     probe_artefact_vs_repo(res)
     probe_doc_claim_vs_queue(res)
     probe_disabled_vs_running(images, res)
+    probe_declared_gate_actually_exists(res)
 
     if args.json:
         print(json.dumps({
