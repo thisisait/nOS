@@ -1,3 +1,56 @@
+# nOS Vulnerability Scan Addendum — 2026-08-11 (Cycle 26, batch-49)
+
+**Batch:** superset, outline, freescout, paperclip, tileserver · **Probe:** `default_credentials_test` (**first-ever run** — `attack_probe_schedule` cycle_mod 2, `last_run` was `null`)
+**Outcome:** 3 queue items added (**REM-191 HIGH**, **REM-192 HIGH** — the probe's finding of record, **REM-193 LOW**). outline / paperclip / tileserver clean at their pins. Pending HIGH goes **4 → 6**.
+
+> **The finding of record, stated once.** A service marked `oidc` in `traefik_auth_modes` means **the edge is OPEN** — Traefik attaches *no* forward-auth middleware — and the service's own login is the only gate. This batch found two services where that gate is a **prefix-derived default credential**, reachable from the internet. This is the exact class the `default_credentials_test` probe exists to catch, and it took the probe's first run to see it because prior batches only ran unauthenticated-endpoint / version-leak probes that never exercised a login.
+
+---
+
+### 🟠 HIGH — [REM-191, no CVE] Superset's local `admin` bypasses OIDC at an open, internet-reachable edge
+
+- **Component:** superset — `nos/superset:6.0.0-dev` (built from `apache/superset:6.0.0-dev`), live as `data-superset-1`
+- **Status:** config-derived, **live-verified**, high confidence. Not anonymous — gated by knowing a prefix-derived password.
+
+`superset fab create-admin --username admin --password {{ superset_admin_password }}` runs every converge (`roles/pazny.superset/tasks/post.yml:43-52`). `superset_admin_password` defaults to `{{ global_password_prefix }}_pw_superset` (`default.config.yml:2265`), is **not** overridden in the operator's `credentials.yml`, and is **not** in `main.yml`'s lazy-regenerate group — so unlike `outline_secret_key` / `paperclip_auth_secret` it stays concatenation-derived at runtime, inside the **REM-144** blast radius (one leaked sibling credential reveals the master prefix; the master yields this by construction).
+
+**Why the intended OIDC-only gate does not hold.** `superset_config.py` sets `AUTH_TYPE=AUTH_OAUTH`, so the estate treats Superset as native-OIDC and `traefik_auth_modes.superset='oidc'` attaches **no** `authentik@file` forward-auth to the auto-derived edge router (`state/manifest.yml:746-756`). But Flask-AppBuilder's `POST /api/v1/security/login` accepts an explicit `{"provider":"db"}` and authenticates against the **local user table regardless of `AUTH_TYPE`** — so the OIDC front door is bypassed by the DB-auth API.
+
+**Proven live (not inferred):**
+```
+curl -s -X POST http://127.0.0.1:8089/api/v1/security/login \
+  -d '{"username":"admin","password":"<wrong>","provider":"db"}'
+→ HTTP 401 {"message":"Not authorized"}
+```
+A 401 is credential *evaluation-and-rejection* — not a 404, not "provider disabled" — confirming the db-auth path is live under `AUTH_OAUTH`. (No attempt was made with the real derived password; account access would be exfiltration, and the wrong-password 401 already proves the vector.)
+
+**Internet reach confirmed** to REM-190's forced-anycast standard (a plain local curl hits gunicorn directly via split-horizon dnsmasq — the REM-144/190 caveat — so the public Cloudflare address is forced):
+```
+curl --resolve superset.pazny.eu:443:188.114.96.9 https://superset.pazny.eu/
+→ HTTP 302 → /superset/welcome/  ·  server: cloudflare  ·  cf-ray: a293af8efd7f58b7-PRG  ·  cf-cache-status: DYNAMIC
+```
+
+**Why HIGH.** Superset Admin ⇒ SQLLab arbitrary SQL against every connected database — a data-plane compromise, not a dashboard. **Action:** mint `superset_admin_password` random + persist (add to `main.yml` lazy-regenerate group), rotate the live account off the derived value, and confirm OIDC admin mapping (`nos-admins → Admin`) before demoting/removing the local admin.
+
+---
+
+### 🟠 HIGH — [REM-192, no CVE] FreeScout's edge is `oidc`-classified but the OIDC module is a 404 — only a local default-admin form stands
+
+- **Component:** freescout — `nfrastack/freescout:2.1.5-php8.3` (app 1.8.231), live as `b2b-freescout-1`
+- **Status:** config-derived, **live-verified**, high confidence.
+
+`traefik_auth_modes.freescout='oidc'` leaves the auto-derived edge router un-gated (`state/manifest.yml:621-629`) on the premise that native OIDC handles login. **That premise is false here:** the `freescout-oauth` module never installs — both upstream sources are HTTP 404 (`freescout-help-desk/oauth`, `tiredofit/freescout-module-oauth`), documented at length in `roles/pazny.freescout/tasks/post.yml`. So `/login` renders **only** a local email+password form, and the admin is `admin@pazny.eu` (`freescout_admin_email = default_admin_email`) / `{{ global_password_prefix }}_pw_freescout` — again prefix-derived, not overridden, not lazy-regenerated.
+
+**Proven live:** `/login` (via the 302→https) returns HTTP 200 carrying `name="email"` + `name="password"` inputs and **no** "Sign in with Authentik" marker. Internet reach confirmed:
+```
+curl --resolve helpdesk.pazny.eu:443:188.114.96.9 https://helpdesk.pazny.eu/
+→ HTTP 302 → /login  ·  server: cloudflare  ·  cf-ray: a293af8e8be023fa-PRG  ·  cf-cache-status: DYNAMIC
+```
+
+**Why HIGH.** FreeScout admin ⇒ full read/write over a helpdesk holding customer PII and inbound mail. **Action:** the honest fix for the classification lie is to **flip `traefik_auth_modes.freescout` to `proxy`** so the edge forward-auth-gates it — FreeScout has no working native OIDC, so a browser SSO wall in front of the local form is *not* a double-login (there is no second login). Also mint `freescout_admin_password` random. Re-evaluate `oidc` only if a reachable `freescout-oauth` module source is ever supplied. **REM-193 (LOW)** is the CVE currency leg: pinned app 1.8.231 lags security release 1.8.232 (2026-07-31, [GHSA-jvmv-2qcp-7855](https://github.com/freescout-help-desk/freescout/security/advisories) forgot-password throttling); 1.8.233 is non-security.
+
+---
+
 # nOS Vulnerability Scan Addendum — 2026-08-01 (Cycle 19, batch-40)
 
 **Batch:** dnsmasq, n8n, metabase, tempo, alloy · **Probe:** `ssrf_vector_analysis`

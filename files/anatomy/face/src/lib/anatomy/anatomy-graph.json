@@ -4,8 +4,8 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 196,
-    "edges": 232,
+    "nodes": 197,
+    "edges": 234,
     "nodes_pulse": 29,
     "nodes_judge": 5,
     "nodes_gateset": 4,
@@ -15,11 +15,11 @@
     "nodes_resource": 5,
     "nodes_repo": 4,
     "nodes_tofu": 1,
-    "nodes_authentik": 43,
+    "nodes_authentik": 44,
     "nodes_table": 6,
     "nodes_doctrine": 12,
     "nodes_faceapp": 5,
-    "edges_data": 132,
+    "edges_data": 134,
     "edges_trigger": 22,
     "edges_temporal": 5,
     "edges_mutex": 56,
@@ -39,6 +39,17 @@
     "union-kind cycle (feedback loop, review-not-refuse): pulse:cortex:cortex-fs-sync -> pulse:keap:keap-embed-sync -> pulse:cortex:cortex-corpus-diff -> pulse:cortex:cortex-fs-sync"
   ],
   "nodes": {
+    "authentik:backrest": {
+      "kind": "authentik",
+      "source": "state/tofu-authentik-services.yml",
+      "mode": "forward_auth",
+      "tier": 1,
+      "client_id": "nos-backrest",
+      "service": "backrest",
+      "managed_by": "tofu:authentik-state",
+      "anchor": "02.02.08",
+      "description": "Authentik forward_auth client 'nos-backrest' (RBAC tier 1) — gates service:backrest; provider+application managed by OpenTofu from the committed registry"
+    },
     "authentik:bookstack": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
@@ -119,13 +130,13 @@
     "authentik:freescout": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
-      "mode": "native_oidc",
+      "mode": "forward_auth",
       "tier": 2,
       "client_id": "nos-freescout",
       "service": "freescout",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-freescout' (RBAC tier 2) — gates service:freescout; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'nos-freescout' (RBAC tier 2) — gates service:freescout; provider+application managed by OpenTofu from the committed registry"
     },
     "authentik:gitea": {
       "kind": "authentik",
@@ -1419,7 +1430,7 @@
       "layer": "L1",
       "layer_basis": {
         "height": 3,
-        "dependents": 38,
+        "dependents": 39,
         "upstreams": 2
       }
     },
@@ -2357,6 +2368,13 @@
   },
   "edges": [
     {
+      "from": "authentik:backrest",
+      "to": "service:backrest",
+      "kind": "data",
+      "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
+      "derived": "tofu-authentik-registry"
+    },
+    {
       "from": "authentik:bookstack",
       "to": "service:bookstack",
       "kind": "data",
@@ -2402,7 +2420,7 @@
       "from": "authentik:freescout",
       "to": "service:freescout",
       "kind": "data",
-      "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
+      "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
       "derived": "tofu-authentik-registry"
     },
     {
@@ -2723,6 +2741,13 @@
     },
     {
       "from": "service:authentik",
+      "to": "authentik:backrest",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
       "to": "authentik:bookstack",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
@@ -2774,7 +2799,7 @@
       "from": "service:authentik",
       "to": "authentik:freescout",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {

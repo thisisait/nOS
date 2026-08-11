@@ -99,7 +99,11 @@ traefik_auth_modes:
   jellyfin: oidc            # SSO-Auth plugin
   wordpress: oidc           # OpenID Connect Generic plugin
   erpnext: oidc             # Frappe OAuth2 social_login_keys
-  freescout: oidc           # OAuth Module
+  freescout: proxy          # REM-192, 2026-08-11: `oidc` gated NOTHING — the freescout-oauth
+                            # module 404s at both upstreams, so /login served a bare local
+                            # password form at an open edge. `proxy` = attach authentik@file.
+                            # (This map's vocabulary is proxy|oidc|none — NOT the doctrine
+                            #  word `forward_auth`, which the template does not understand.)
   infisical: proxy          # CE org-OIDC is enterprise-licensed (inert on CE) → gate at the
                             # edge with authentik@file forward-auth, else this Tier-1 vault is
                             # UNGATED (live-verified 2026-06-02). Flip back to oidc only with an

@@ -44,21 +44,38 @@ depends_on:
       schema `freescout`
     measured: "2026-08-07"
 
+# FLIPPED native_oidc -> forward_auth, 2026-08-11, closing REM-192 (HIGH).
+#
+# The `native_oidc` claim was ASPIRATIONAL and the edge paid for it. Declaring
+# `oidc` means the auto-derived Traefik router carries NO authentik@file
+# middleware — correct for a service whose own login page offers Authentik, and
+# a doctrine violation for one that does not. FreeScout does not: the
+# `freescout-oauth` module never installs because BOTH upstream sources are
+# HTTP 404 (freescout-help-desk/oauth, tiredofit/freescout-module-oauth), which
+# roles/pazny.freescout/tasks/post.yml has documented at length and CLAUDE.md
+# lists under "ASPIRATIONAL, not live".
+#
+# So the FREESCOUT_OIDC_* env rendered, nothing consumed it, /login served the
+# local email+password form, and the edge was open onto it. Measured live by
+# the cycle-26 default_credentials_test probe: HTTP 200 with name="email" and
+# name="password" inputs and no authentik marker anywhere on the page.
+#
+# forward_auth is the honest classification while no reachable module exists —
+# Authentik gates the route, FreeScout keeps its own local account behind it.
+# docs/active-work.md carried this decision ("or reclassify FreeScout as
+# forward_auth") before the probe proved it; this is the doing.
+#
+# NO redirect_uris and NO scopes: a proxy provider has no OIDC client, and
+# leaving them would declare a callback nothing can reach.
 authentik:
-  mode: native_oidc
-  provider_type: oauth2
+  mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
+  provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)
   client_id: nos-freescout
   client_secret: "{{ global_password_prefix }}_pw_oidc_freescout"
   slug: freescout
   name: 'FreeScout'
   enabled: "{{ install_freescout | default(false) }}"
-  redirect_uris:
-    - "https://{{ freescout_domain }}/oauth/callback"
   launch_url: "https://{{ freescout_domain }}"
-  scopes:
-    - openid
-    - email
-    - profile
   tier: 2
 
 compose_extension:
