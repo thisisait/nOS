@@ -925,9 +925,25 @@ describe('contract v2 — delegate', () => {
   });
 
   it('rejects a model uri with no provider prefix at all', () => {
-    expect(only('@input | delegate(agent:librarian, ?via="claude-opus-4-7")').code).toBe(
+    // `claude-opus-4-7` stood here until 2026-08-11, when `claude` became a
+    // real provider — the LOCAL binary the nightly ceremonies run on — and the
+    // string turned legal, meaning "the CLI running opus-4-7". The example
+    // moved to one that is still genuinely bare. Worth the comment: widening a
+    // provider list changes what previously-invalid strings MEAN, and this test
+    // and its Python sibling (test_one_llm_provider_list) both had to be told.
+    expect(only('@input | delegate(agent:librarian, ?via="opus-4-7")').code).toBe(
       'invalid_param_value',
     );
+  });
+
+  it('accepts the local CLI provider, which is what actually runs here', () => {
+    // The counterweight. A provider added to the vocabulary and rejected by the
+    // validator would be a list that permits what the language refuses.
+    // `only()` asserts there IS exactly one error, so it is the wrong helper for
+    // a case that must produce none — it failed on its first run for that
+    // reason, not for the provider.
+    const { errors } = analyzeCortex('@input | delegate(agent:librarian, ?via="claude-sonnet")');
+    expect(codes(errors)).toEqual([]);
   });
 
   it('is MUTATING, so P1 refuses it at the door', () => {
