@@ -56,3 +56,48 @@
   when:
     - _superset_db.rc | default(1) == 0
     - not ansible_check_mode
+
+# THE HALF THAT MAKES THE OTHER HALF REAL (REM-191, 2026-08-11).
+#
+# `fab create-admin` on an EXISTING user reports that it exists and leaves the
+# password alone. So main.yml's lazy-regenerate of superset_admin_password would
+# have changed the variable, changed ~/.nos/secrets.yml, and left the live
+# account still answering to `{prefix}_pw_superset` — a fix visible everywhere
+# except where it matters. That is the estate's own "success markers must be
+# written by a reader" defect, applied to a credential.
+#
+# WHY THIS MATTERS AT ALL: Flask-AppBuilder's `POST /api/v1/security/login`
+# accepts {"provider":"db"} and calls auth_user_db() regardless of AUTH_TYPE, so
+# AUTH_OAUTH does not gate this account, and traefik_auth_modes['superset']
+# = 'oidc' attaches no forward-auth middleware to an internet-reachable route.
+#
+# Idempotent by shape: reset-password writes the value the playbook already
+# holds, so a converge where nothing changed rewrites the same secret.
+- name: "[pazny.superset Post] Reset the admin password to the managed value"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p data
+    exec -T superset superset fab reset-password
+    --username admin
+    --password {{ superset_admin_password }}
+  register: _superset_pw
+  changed_when: false
+  failed_when: false
+  no_log: true
+  when:
+    - _superset_db.rc | default(1) == 0
+    - not ansible_check_mode
+
+- name: "[pazny.superset Post] REFUSE a silent password reset failure"
+  # `failed_when: false` above keeps a converge alive; this makes the outcome
+  # legible. A reset that did not happen leaves the derived password live, which
+  # is the whole finding — so it must not pass as quiet success.
+  ansible.builtin.assert:
+    that: (_superset_pw.rc | default(1)) == 0
+    fail_msg: >-
+      superset fab reset-password failed (rc={{ _superset_pw.rc | default('?') }}).
+      The admin account may still answer to the prefix-derived password that
+      REM-191 was filed for. Run it by hand and check:
+      docker compose -p data exec -T superset superset fab reset-password --username admin --password <value from ~/.nos/secrets.yml>
+  when:
+    - _superset_db.rc | default(1) == 0
+    - not ansible_check_mode

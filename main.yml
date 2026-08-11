@@ -1421,6 +1421,20 @@
         bluesky_pds_rotation_key: "{% if (bluesky_pds_rotation_key | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ bluesky_pds_rotation_key }}{% endif %}"
         outline_secret_key: "{% if '_pw_' in (outline_secret_key | default('')) or (outline_secret_key | default('') | length) != 64 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ outline_secret_key }}{% endif %}"
         authentik_secret_key: "{% if '_pw_' in (authentik_secret_key | default('')) or (authentik_secret_key | default('') | length) < 50 %}{{ lookup('pipe', 'openssl rand -hex 50') }}{% else %}{{ authentik_secret_key }}{% endif %}"
+        # REM-191 (HIGH, 2026-08-11). Superset's local Flask-AppBuilder admin is
+        # reachable REGARDLESS of AUTH_TYPE: `POST /api/v1/security/login` with
+        # {"provider":"db"} calls auth_user_db() unconditionally — verified in the
+        # installed flask_appbuilder/security/api.py, and FAB offers no switch to
+        # disable it. So the OIDC front door does not gate that account, and the
+        # account's password was `{prefix}_pw_superset`: one leaked sibling reveals
+        # the prefix, and the prefix yields this by construction (REM-144).
+        #
+        # Randomising it does NOT close the endpoint — it takes the credential out
+        # of the concatenation blast radius, which is what made the endpoint
+        # dangerous rather than merely present. The account itself is reset in
+        # roles/pazny.superset/tasks/post.yml, because a regenerated variable that
+        # never reaches the live user is a fix that only looks like one.
+        superset_admin_password: "{% if '_pw_' in (superset_admin_password | default('')) or (superset_admin_password | default('') | length) < 24 %}{{ lookup('pipe', 'openssl rand -base64 24') }}{% else %}{{ superset_admin_password }}{% endif %}"
         # wing_api_token: persisted (was regen-every-run above). The agents' Wing
         # bearer + Pulse's launchd plist embed it; regenerating every run churned
         # the token and made the Pulse plist render non-idempotent. Generate once
