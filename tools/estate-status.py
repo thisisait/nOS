@@ -323,14 +323,31 @@ def axis_toolchain(res: Result) -> None:
 # ── axis 4: a config flag, resolved the way the playbook resolves it ────────
 
 
+#: In ansible precedence order, LOWEST first. A role default is a real
+#: declaration and the tool used to be blind to it: asking for `keap_repo_ref`
+#: — which lives only in roles/pazny.keap/defaults — answered "declared in no
+#: layer", which reads as "nobody sets this" about a variable that governs
+#: which git ref the cortex is built from. Honest, because it refused rather
+#: than guessed, but useless to the person asking.
+CONFIG_LAYERS = ("roles/*/defaults/main.yml", "default.config.yml", "config.yml")
+
+
 def resolve_flag(flag: str) -> list[tuple[str, str]]:
-    """Every layer that declares it, in vars_files order. The LAST one wins."""
+    """Every layer that declares it, in precedence order. The LAST one wins."""
     seen: list[tuple[str, str]] = []
+    pattern = re.compile(rf"^{re.escape(flag)}:\s*(\S+)", re.MULTILINE)
+
+    # Role defaults first: they are outranked by both vars_files below.
+    for path in sorted((REPO / "roles").glob("*/defaults/main.yml")):
+        m = pattern.search(path.read_text(encoding="utf-8"))
+        if m:
+            seen.append((str(path.relative_to(REPO)), m.group(1).strip().strip('"\'')))
+
     for layer in ("default.config.yml", "config.yml"):
         path = REPO / layer
         if not path.exists():
             continue
-        m = re.search(rf"^{re.escape(flag)}:\s*(\S+)", path.read_text(encoding="utf-8"), re.MULTILINE)
+        m = pattern.search(path.read_text(encoding="utf-8"))
         if m:
             seen.append((layer, m.group(1).strip().strip('"\'')))
     return seen
@@ -343,7 +360,19 @@ def axis_config(res: Result, flag: str) -> None:
         return
     winner = layers[-1]
     trail = " -> ".join(f"{lyr}={val}" for lyr, val in layers)
-    note = "" if len(layers) == 1 else "  (the LAST layer wins)"
+
+    # THE PRECEDENCE RULE IS PRINTED WHETHER OR NOT A SECOND LAYER EXISTS.
+    # It used to appear only when len(layers) > 1, which taught the rule to the
+    # reader who could already see it working and withheld it from the one
+    # looking at a single line, wondering whether something else could be in
+    # play. It also made this axis environment-dependent — config.yml is
+    # gitignored, so CI resolves one layer where the operator resolves two — and
+    # a gate asserting the sentence went red on CI for a difference that is not
+    # a defect. Measured 2026-08-11.
+    note = "  (the LAST layer wins)"
+    declared_in = {lyr for lyr, _ in layers}
+    if "config.yml" not in declared_in:
+        note += "; config.yml does not override it"
     res.add("config", flag, f"{trail}{note}  ==> {winner[1]}")
 
 

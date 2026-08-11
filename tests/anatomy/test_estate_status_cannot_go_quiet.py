@@ -126,20 +126,65 @@ def test_absence_is_never_summarised_as_agreement() -> None:
     )
 
 
-@pytest.mark.parametrize(("flag", "expect_layers"), [
-    ("install_gitlab", 2),    # default false, config.yml true — the inverted verdict
-    ("install_mailpit", 2),   # default true, config.yml false — the one real case
+@pytest.mark.parametrize("flag", [
+    "install_gitlab",    # default false, config.yml true — the inverted verdict
+    "install_mailpit",   # default true, config.yml false — the one real case
 ])
-def test_the_config_axis_reads_every_layer(flag: str, expect_layers: int) -> None:
-    """Rule 4, pinned on the two flags that produced the wrong answer."""
+def test_the_config_axis_reads_every_layer(flag: str) -> None:
+    """Rule 4, pinned on the two flags that produced the wrong answer.
+
+    TWO DEFECTS OF ITS OWN, both found by CI on 2026-08-11 and both worth
+    naming because each is a way a gate can be wrong while looking right:
+
+    1. `"config.yml=" in out` is satisfied by the substring inside
+       `"default.config.yml="`. The check for the SECOND layer passed even
+       when only the first was read — it could never have failed.
+    2. `config.yml` is gitignored, so CI resolves one layer where the operator
+       resolves two. Asserting a sentence the tool only printed for two layers
+       made this test pass locally and fail on the runner, for no defect.
+
+    So: the committed layer is required unconditionally, the operator's layer is
+    required only where it exists, and the substring trap is closed by anchoring
+    the match to the start of a token.
+    """
     out = run("--config", flag).stdout
-    assert "default.config.yml=" in out and "config.yml=" in out, (
-        f"resolving {flag} did not show both layers. Reading the committed "
-        "default alone is what turned sixteen enabled services into 'switched "
-        "off but running', and hid the one that really was off."
+    assert "default.config.yml=" in out, (
+        f"resolving {flag} did not read the committed default at all."
     )
-    assert "the LAST layer wins" in out, "the precedence direction is no longer stated"
+    if (REPO / "config.yml").exists():
+        assert re.search(rf"(?<![.\w]){re.escape('config.yml')}=", out), (
+            f"resolving {flag} did not show the operator's config.yml layer. "
+            "Reading the committed default alone is what turned sixteen enabled "
+            "services into 'switched off but running', and hid the one that "
+            "really was off. (Anchored so that 'default.config.yml=' cannot "
+            "satisfy this by accident — it did, silently, until 2026-08-11.)"
+        )
+    assert "the LAST layer wins" in out, (
+        "the precedence direction is no longer stated. It must print whether or "
+        "not a second layer exists: the reader looking at ONE line is the one "
+        "who cannot see the rule working."
+    )
     assert re.search(r"==>\s*\S+", out), "no resolved verdict was printed"
+
+
+def test_a_role_default_is_a_layer_too() -> None:
+    """The blind spot found while releasing KEAP v1.40.1.
+
+    `keap_repo_ref` lives only in `roles/pazny.keap/defaults/main.yml` and the
+    tool answered "declared in no layer" — which reads as "nobody sets this"
+    about the variable that decides which git ref the cortex is BUILT from. It
+    refused rather than guessed, so it was never dishonest; it was just no use
+    to the person asking.
+    """
+    out = run("--config", "keap_repo_ref").stdout
+    assert "declared in no layer" not in out, (
+        "keap_repo_ref reads as undeclared. It is declared in a role default, "
+        "which outranks nothing and is still where the value comes from."
+    )
+    assert "roles/" in out and "defaults/main.yml" in out, (
+        "the resolved trail does not name the role default it came from. A "
+        "value without its source is the thing this tool exists to stop."
+    )
 
 
 def test_claude_md_points_at_the_tool_rather_than_restating_it() -> None:

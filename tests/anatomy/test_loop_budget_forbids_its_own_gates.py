@@ -483,12 +483,24 @@ def test_a_capital_letter_does_not_lift_a_deny_rule(registry, canonical, variant
         v = budget.check_paths([path], intent_class="config-fix", gate_set="repo",
                                registry=registry)
         assert [x.reason for x in v] == [reason], f"{path} → {v}"
-    # …and the variant really does resolve to the protected file on this host,
-    # or the test is about a path that does not exist.
-    if (REPO / canonical).is_file():
+    # …and on a case-INsensitive filesystem the variant really does resolve to
+    # the protected file, which is what makes the loop above load-bearing there.
+    #
+    # On a case-SENSITIVE one — every Linux runner — the variant is simply a path
+    # that does not exist, and the deny rule must refuse it anyway. The loop
+    # above already asserted exactly that, so nothing is lost; there is just no
+    # second question to ask.
+    #
+    # This was written as an unguarded read and raised FileNotFoundError on CI
+    # for four parametrisations, turning a filesystem difference into a red
+    # build. The comment already NAMED the case-sensitive host it then crashed
+    # on. Measured 2026-08-11.
+    if (REPO / canonical).is_file() and (REPO / variant).is_file():
         assert (REPO / variant).read_bytes() == (REPO / canonical).read_bytes(), (
-            "this filesystem is case-SENSITIVE, so the variant is a different "
-            "file and this gate is measuring nothing here"
+            "the variant exists and is a DIFFERENT file. That is neither a "
+            "case-insensitive filesystem nor an absent path: it is two real "
+            "files whose names differ only in case, and the deny rule is now "
+            "guarding whichever one the registry happens to spell."
         )
 
 

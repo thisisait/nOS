@@ -37,6 +37,8 @@ CI-safe: no network, no daemon, no Docker. The one real subprocess is
 from __future__ import annotations
 
 import importlib.util
+import shutil
+import os
 import pathlib
 import re
 import subprocess
@@ -64,6 +66,48 @@ J = _load_judges()
 
 
 # ── helpers ────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture(autouse=True, scope="module")
+def _judge_executables_exist():
+    """Every judge's argv[0] resolvable, so these tests measure the RUNNER.
+
+    MEASURED 2026-08-11: six tests in this file failed on CI with
+
+        ansible-lint: executable 'ansible-lint' not found on PATH — not run
+
+    and passed on the operator's Mac, where it happens to be installed. The
+    runner was right — `_executable_present` refuses to report PASS or FAIL for
+    a judge that cannot be spawned, and INDETERMINATE is the honest answer. The
+    tests were wrong: they carefully replace `spawn` (the process) and `probe`
+    (the requirements) and then let the EXECUTABLE be whatever the host has, so
+    what they actually asserted was "ansible-lint is installed here".
+
+    A stub on PATH closes that. It is never executed — `spawn` is a double in
+    every one of these tests — it exists only to be resolved, which is the one
+    thing the runner asks of it. The registry declares exactly two argv[0]s
+    (`ansible-lint`, `python3`); python3 is running this file, so one stub is
+    the whole fix.
+
+    NOT a skip. Skipping would have made six real assertions vanish on the only
+    machine that gates merges, which is the calm-by-absence shape this suite
+    exists to refuse.
+    """
+    import tempfile
+
+    tmp = tempfile.mkdtemp(prefix="nos-judge-stubs-")
+    stub = pathlib.Path(tmp) / "ansible-lint"
+    stub.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    stub.chmod(0o755)
+
+    previous = os.environ.get("PATH", "")
+    os.environ["PATH"] = f"{tmp}{os.pathsep}{previous}"
+    try:
+        yield tmp
+    finally:
+        os.environ["PATH"] = previous
+        shutil.rmtree(tmp, ignore_errors=True)
+
 
 
 def _registry():
