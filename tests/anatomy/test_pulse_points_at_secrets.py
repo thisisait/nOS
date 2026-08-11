@@ -119,3 +119,29 @@ def test_every_referenced_name_is_one_the_store_declares() -> None:
         f"{missing}. Each one is a job that will refuse at exec time — correctly, "
         "but for a reason introduced here rather than by the operator."
     )
+
+
+def test_the_resolver_declares_the_parser_it_needs() -> None:
+    """The repo is not the running system, in its sharpest form: a dependency.
+
+    MEASURED 2026-08-11, minutes after the references landed. The repo-side
+    probe resolved all 25 jobs; the DEPLOYED venv resolved 0, because
+    `~/pulse/venv` carried no YAML parser. `_secret_store()` caught the
+    ImportError, logged it, returned `{}`, and every job refused — correctly,
+    and for a reason that existed only in the runtime. The operator's own
+    interpreter has yaml, which is exactly why the check passed where it was
+    written and failed where it runs.
+
+    The refusal was the honest outcome; the declaration is the fix.
+    """
+    pyproject = (REPO / "files/anatomy/pulse/pyproject.toml").read_text(encoding="utf-8")
+    deps = pyproject[pyproject.index("dependencies = ["):]
+    deps = deps[: deps.index("]")]
+    assert re.search(r"(?i)pyyaml", deps), (
+        "the Pulse package no longer declares a YAML parser, but the daemon "
+        "reads ~/.nos/secrets.yml to resolve every `secret:` reference. Without "
+        "it the store parses as empty and all reference-carrying jobs refuse — "
+        "silently in the repo, loudly and only on the host."
+    )
+    daemon = DAEMON.read_text(encoding="utf-8")
+    assert "import yaml" in daemon, "the daemon no longer imports the parser it declares"

@@ -11,6 +11,14 @@ license = {text = "AGPL-3.0"}
 requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28",
+    # Added 2026-08-11 with `_resolve_secrets`. The daemon reads
+    # ~/.nos/secrets.yml to turn a `secret:<name>` reference into a value, and
+    # the venv did not carry a YAML parser — so the resolver returned an empty
+    # store and ALL 25 reference-carrying jobs refused. Caught only by running
+    # the check inside the deployed venv: the same probe passed against the
+    # repo, where the operator's interpreter has yaml. The repo is not the
+    # running system, and a dependency is the sharpest form of that.
+    "PyYAML>=6",
 ]
 
 [project.optional-dependencies]
