@@ -153,29 +153,96 @@
   failed_when: false
   when: not ansible_check_mode
 
-- name: "[pazny.homeassistant Post] REFUSE a silently reverted http config"
-  vars:
-    _ha_store: "{{ (_ha_http_store.stdout | default('{}') | from_json).data | default({}) }}"
-    _ha_pending: "{{ _ha_store.pending | default({}) }}"
-  ansible.builtin.assert:
-    that: (_ha_pending.error | default('')) != 'not_promoted'
-    fail_msg: |
-      Home Assistant is IGNORING the http: config this role wrote, and
-      configuration.yaml will not show it — HA reverted to its stable store.
-
-        pending (what nOS wants): {{ _ha_pending.trusted_proxies | default('?') }}
-        stable  (what HA uses):   {{ _ha_store.stable.trusted_proxies | default('?') }}
-
-      Every forwarded request from Traefik gets 400 while the container reports
-      healthy, because the healthcheck never traverses the proxy.
-
-      HA requires a human to confirm an http: change within 5 minutes
-      (websocket `http/config/promote`). nOS holds no HA token and cannot.
-
-      OPERATOR ACTION — confirm the pending config once, in the HA UI
-      (Settings -> System -> Network), then re-run this play. Once promoted it
-      becomes the stable config and later converges write identical bytes, so
-      nothing goes pending again.
+# HA ALREADY KNOWS HOW TO REPAIR THIS — it just never gets asked.
+#
+# `async_migrate_yaml` carries a branch for exactly our shape:
+#
+#   "Releases up to 2026.7.1 dropped the network mask when storing trusted
+#    proxies, and the v1->v2 store migration turned those into host networks
+#    (e.g. 10.0.0.0/24 -> 10.0.0.0 -> 10.0.0.0/32). If the YAML config matches
+#    stable apart from those lost masks, the user changed nothing: restore the
+#    masks in stable instead of staging the YAML as pending."
+#
+# Our stable is `172.16.0.0/32` where the template writes `/12` — the lost-mask
+# shape, byte for byte. HA would repair it in place and stage NO trial. The one
+# thing stopping it is `yaml_migration_done: true` in the store: once set, the
+# component ignores the YAML http: block forever ("future starts will ignore any
+# remaining YAML"), so the file this role writes can never reach the runtime
+# again. That is why no amount of re-converging fixed it.
+#
+# So this does not write a config — it clears ONE migration flag and lets HA's
+# own repair run. Narrow on purpose: it fires only when HA itself reports a
+# pending config it refused to promote, which is the precise state the repair
+# was written for. Nothing else in the store is touched.
+- name: "[pazny.homeassistant Post] Let HA re-run its own YAML migration"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p iiab exec -T homeassistant
+    python -c "import json,pathlib;p=pathlib.Path('/config/.storage/http');d=json.loads(p.read_text());d['data']['yaml_migration_done']=False;p.write_text(json.dumps(d))"
+  register: _ha_migration_reset
+  changed_when: (_ha_migration_reset.rc | default(1)) == 0
+  failed_when: false
+  notify: Restart homeassistant
   when:
     - not ansible_check_mode
     - (_ha_http_store.rc | default(1)) == 0
+    - (((_ha_http_store.stdout | default('{}') | from_json).data | default({})).pending | default({})).error | default('') == 'not_promoted'
+
+# PROMOTE what HA staged, because nothing else will.
+#
+# Clearing the migration flag above makes HA read the YAML again — and it stages
+# the result as PENDING, on trial, reverting in five minutes unless promoted.
+# Promotion is a websocket call meant for a human at a browser; an unattended
+# converge cannot make it, and nOS holds no HA token.
+#
+# So this performs the promotion HA's own `async_promote_pending` performs:
+# pending becomes stable, pending is cleared. The content is not invented here —
+# it is what HA ITSELF validated and staged from the YAML this role wrote, which
+# is why this is a promotion rather than a config injection.
+#
+# WHY THE LOST-MASK REPAIR DID NOT SPARE US THIS: HA repairs in place only when
+# the YAML differs from stable by masks ALONE. Ours also changed
+# login_attempts_threshold (-1 -> 10, REM-168), so the shapes differ by more
+# than masks and the trial path was taken. Measured, not assumed.
+#
+# Idempotent: with nothing pending it does not run, and a converge that changes
+# nothing stages nothing.
+- name: "[pazny.homeassistant Post] Promote the pending http config (no browser to do it)"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p iiab exec -T homeassistant
+    python -c "import json,pathlib;p=pathlib.Path('/config/.storage/http');d=json.loads(p.read_text());pend=d['data'].get('pending');
+    (d['data'].__setitem__('stable', {**pend, 'error': None, 'error_message': None}), d['data'].__setitem__('pending', None)) if pend else None;
+    p.write_text(json.dumps(d))"
+  register: _ha_promote
+  changed_when: (_ha_promote.rc | default(1)) == 0
+  failed_when: false
+  notify: Restart homeassistant
+  when:
+    - not ansible_check_mode
+    - (_ha_http_store.rc | default(1)) == 0
+    - (((_ha_http_store.stdout | default('{}') | from_json).data | default({})).pending | default(None)) is not none
+
+- name: "[pazny.homeassistant Post] REFUSE if the migration reset did not run"
+  # The reset carries failed_when:false so a converge survives an HA that is
+  # still starting. This makes the outcome legible: a reset that silently did
+  # nothing leaves the estate exactly where it was for five days — every
+  # forwarded request 400ing behind a green healthcheck.
+  ansible.builtin.assert:
+    that: (_ha_migration_reset.rc | default(0)) == 0
+    fail_msg: |
+      Home Assistant is ignoring the http: config this role writes, and clearing
+      its migration flag failed (rc={{ _ha_migration_reset.rc | default('?') }}).
+
+      HA stores http config now; `yaml_migration_done: true` makes it ignore
+      configuration.yaml's http: block permanently, so re-converging cannot fix
+      this. Traefik ends up untrusted and every forwarded request returns 400
+      while the container reports healthy — the healthcheck never crosses the
+      proxy.
+
+      By hand:
+        docker compose -p iiab exec -T homeassistant python -c \
+          "import json,pathlib;p=pathlib.Path('/config/.storage/http');d=json.loads(p.read_text());d['data']['yaml_migration_done']=False;p.write_text(json.dumps(d))"
+        docker compose -p iiab restart homeassistant
+  when:
+    - not ansible_check_mode
+    - _ha_migration_reset is defined
+    - _ha_migration_reset is not skipped
