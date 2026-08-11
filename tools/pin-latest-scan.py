@@ -180,6 +180,16 @@ def registry_tags(image: str, until: str | None = None) -> list[str]:
 # ── classification ───────────────────────────────────────────────────────────
 
 
+#: Years, for telling `2026.5.2` (a release train) from `12.4.4` (a major).
+#: Deliberately narrow: a project that ships a genuine major version 2026 has
+#: bigger problems than this classifier.
+CALVER_YEARS = range(2000, 2101)
+
+
+def is_calver(parsed) -> bool:
+    return parsed is not None and parsed[0] in CALVER_YEARS
+
+
 def classify(pinned: str, newest: str | None) -> str:
     if newest is None:
         return "unknown"
@@ -188,6 +198,24 @@ def classify(pinned: str, newest: str | None) -> str:
         return "unknown"
     if b[:3] <= a[:3]:
         return "current"
+
+    # CALENDAR VERSIONING PUTS THE RELEASE TRAIN IN THE SECOND FIELD, and reading
+    # it as semver understates every jump by one whole grade.
+    #
+    # MEASURED 2026-08-11. authentik `2026.5.2 -> 2026.8` came back `minor`,
+    # which is the grade this tool's own docstring calls "the part a sweep may
+    # take". It is three release trains of an SSO spine whose schema migrations
+    # are FORWARD-ONLY (CLAUDE.md: restoring the old dump under new code
+    # half-migrates it). A sweep that took it would have been the single most
+    # expensive edit available that day — every service's login at once — and the
+    # report would have said it was routine.
+    #
+    # So for a calver pin the year is not the major; the month is. `2026.8.0 ->
+    # 2026.8.1` stays a patch, `2026.5 -> 2026.8` reads `major`, and the year
+    # rolling over reads `major` too, which it is.
+    if is_calver(a) or is_calver(b):
+        return "major" if b[:2] != a[:2] else "patch"
+
     if b[0] != a[0]:
         return "major"
     if b[1] != a[1]:

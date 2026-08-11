@@ -1535,7 +1535,7 @@ mysqld_exporter_version: "v0.19.0"  # [swept 2026-08-06]
 # One declaration, not a hardcoded suffix in the template: pin-latest-scan
 # matches candidate tags by SHAPE, so this keeps tracking the -alpine line
 # rather than drifting back onto scratch at the next sweep.
-redis_exporter_version: "v1.88.0-alpine"  # [swept v1.58.0 2026-08-06]
+redis_exporter_version: "v1.89.0-alpine"  # [swept v1.88.0-alpine 2026-08-11]
 cadvisor_version: "v0.49.1"
 blackbox_exporter_version: "v0.28.0"  # [swept 2026-08-06]
 
@@ -1595,7 +1595,7 @@ n8n_port: 5678
 # 2.32.7 is the queue's number and sits above that floor, with six days of soak;
 # 2.34.2 shipped today and buys nothing — no advisory has been published since
 # 2026-07-22. Same-major, migrate-on-start. arm64 tag confirmed on the registry.
-n8n_version: "2.34.2"  # [swept 2026-08-06]
+n8n_version: "2.35.0"  # [swept 2.34.2 2026-08-11]
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
 n8n_admin_email: "{{ default_admin_email }}"
@@ -2093,7 +2093,7 @@ hermes_web_port: 18790
 mailpit_port: 8025                      # UI port (1025 is SMTP)
 
 # ── Home Assistant ─────────────────────────────────────────────────────────────
-homeassistant_version: "2026.8.0"     # CVE-2026-34205 (CVSS 9.7 Supervisor bypass) [swept 2026.6.0 2026-08-06]
+homeassistant_version: "2026.8.1"     # CVE-2026-34205 (CVSS 9.7 Supervisor bypass) [swept 2026.8.0 2026-08-11]
 homeassistant_port: 8123
 homeassistant_domain: "home{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 homeassistant_timezone: "Europe/Prague"
@@ -2783,7 +2783,7 @@ authentik_oidc_issuer: "https://{{ authentik_domain | default('auth' ~ (_host_al
 # Central vault for DB passwords, API keys, certificates. E2EE.
 # ==============================================================================
 
-infisical_version: "v0.162.16"   # synced to role default (cleared version-pin shadow) [swept v0.162.14 2026-08-06]
+infisical_version: "v0.162.19"   # synced to role default (cleared version-pin shadow) [swept v0.162.16 2026-08-11]
 infisical_domain: "vault{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 infisical_port: 8075
 infisical_encryption_key: "{{ global_password_prefix }}_pw_infisical_enc"
