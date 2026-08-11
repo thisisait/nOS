@@ -116,3 +116,66 @@
   when:
     - _ha_user_create.json.auth_code is defined
   failed_when: false
+
+# ─── HA REVERTS AN UNCONFIRMED http: CONFIG, AND SAYS SO ONLY IN ITS LOG ────
+#
+# MEASURED 2026-08-11 after five days of `https://home.<tld>` returning 400 with
+# the container `healthy` and the route live.
+#
+# Home Assistant treats ANY change to the `http:` block as PENDING and reverts
+# it unless something promotes it within five minutes:
+#
+#   "Pending HTTP config was not confirmed within 0:05:00;
+#    reverting to the stable config and restarting"
+#
+# Promotion is the websocket command `http/config/promote`, whose own docstring
+# reads "Called by the user after they have verified Home Assistant is working
+# correctly". An unattended converge is not a user, and nOS holds no HA token,
+# so the promotion never happens — every converge writes the right file and
+# every converge is reverted. `configuration.yaml` on disk stays CORRECT while
+# the runtime uses the previous stable config, which is why nothing on the file
+# side could ever reveal this.
+#
+# On this host the stable store held `172.16.0.0/32` — a single host, not the
+# /12 the template writes — so Traefik at 172.30.0.55 was untrusted and every
+# forwarded request 400'd.
+#
+# This task cannot promote (no token; minting one needs an authenticated session
+# HA does not offer unattended). What it CAN do is stop the silence: read HA's
+# own store and refuse the converge with the exact operator action. A five-day
+# outage behind a green healthcheck is what "absence rendered as calm" costs.
+- name: "[pazny.homeassistant Post] Read HA's http config store (pending vs stable)"
+  ansible.builtin.command: >
+    {{ docker_bin }} compose -p iiab exec -T homeassistant
+    cat /config/.storage/http
+  register: _ha_http_store
+  changed_when: false
+  failed_when: false
+  when: not ansible_check_mode
+
+- name: "[pazny.homeassistant Post] REFUSE a silently reverted http config"
+  vars:
+    _ha_store: "{{ (_ha_http_store.stdout | default('{}') | from_json).data | default({}) }}"
+    _ha_pending: "{{ _ha_store.pending | default({}) }}"
+  ansible.builtin.assert:
+    that: (_ha_pending.error | default('')) != 'not_promoted'
+    fail_msg: |
+      Home Assistant is IGNORING the http: config this role wrote, and
+      configuration.yaml will not show it — HA reverted to its stable store.
+
+        pending (what nOS wants): {{ _ha_pending.trusted_proxies | default('?') }}
+        stable  (what HA uses):   {{ _ha_store.stable.trusted_proxies | default('?') }}
+
+      Every forwarded request from Traefik gets 400 while the container reports
+      healthy, because the healthcheck never traverses the proxy.
+
+      HA requires a human to confirm an http: change within 5 minutes
+      (websocket `http/config/promote`). nOS holds no HA token and cannot.
+
+      OPERATOR ACTION — confirm the pending config once, in the HA UI
+      (Settings -> System -> Network), then re-run this play. Once promoted it
+      becomes the stable config and later converges write identical bytes, so
+      nothing goes pending again.
+  when:
+    - not ansible_check_mode
+    - (_ha_http_store.rc | default(1)) == 0
