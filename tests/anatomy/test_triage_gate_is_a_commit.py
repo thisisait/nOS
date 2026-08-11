@@ -159,8 +159,14 @@ def test_the_roadmap_writer_cannot_write_workflow_specs(writer):
     # write. Third substring false-positive in one day's gates; matching a bare
     # token inside a larger identifier is how a gate ends up describing
     # something other than what it names.
-    writes = [v for v in (r"\bopen\(", r"\bwrite_text\b", r"\bos\.makedirs\b",
-                          r"\bshutil\.")
+    # `open(` must be the BARE BUILTIN, not a method call. 2026-08-11: probe G
+    # gave discovery-scan a no-redirect `opener.open(req)` — an HTTP call — and
+    # `\bopen\(` flagged it as a filesystem write. That is the FOURTH
+    # substring false-positive in this family, and this time the gate's own
+    # comment three lines up had already recorded the lesson for a different
+    # token. A word boundary does not exclude a preceding dot; a lookbehind does.
+    writes = [v for v in (r"(?<![.\w])open\(", r"\bwrite_text\b",
+                          r"\bos\.makedirs\b", r"\bshutil\.")
               if re.search(v, src)]
     assert not writes, (
         f"{writer.name} performs filesystem writes ({writes}). The tool "

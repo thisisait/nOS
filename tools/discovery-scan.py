@@ -879,6 +879,128 @@ def probe_declared_gate_actually_exists(res: ScanResult) -> None:
         ))
 
 
+# ---------------------------------------------------------------------------
+# Probe G — `healthy` vs actually reachable from the host
+# ---------------------------------------------------------------------------
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Turn every redirect into an HTTPError, i.e. into "it answered"."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: D102
+        return None
+
+    opener = urllib.request.build_opener()
+
+
+_NoRedirect.opener = urllib.request.build_opener(_NoRedirect)
+
+
+def probe_healthy_but_unreachable(images: dict[str, str], res: ScanResult) -> None:
+    """Docker says healthy; the published port answers nothing.
+
+    MEASURED 2026-08-11 on paperclip, which had been `Up 47 hours (healthy)`
+    while every host request was closed on connect. The app bound 127.0.0.1
+    INSIDE the container (a wizard-written config.json in the persisted volume
+    declared `server.bind: loopback`, outranking the compose env), Docker's port
+    forward targeted eth0 where nothing listened, and the healthcheck curled
+    `localhost` — the one address that worked. Every signal was green and the
+    service was unreachable.
+
+    WHY THIS IS A PROBE AND NOT A GATE. 34 compose templates in this estate
+    healthcheck via localhost, and for almost all of them that is FINE: a
+    service that binds 0.0.0.0 is correctly proven alive by a loopback request.
+    Banning the pattern would fail 34 files to catch one, and a gate that cries
+    that loudly gets deleted. Whether the bind is actually wrong is a live fact,
+    so it is measured live.
+
+    SCOPE, deliberately narrow. Only services the manifest routes over HTTP
+    (they carry a `domain_var`), only those Docker currently calls `healthy`,
+    and only their loopback-published port. A finding means the two disagree:
+    the container claims health and the host cannot get a single HTTP status
+    line out of it. Any status — 200, 401, 500 — counts as reachable, because
+    the question is transport, not content.
+    """
+    manifest = REPO / "state/manifest.yml"
+    if not manifest.exists():
+        res.skip("manifest absent — reachability not checked")
+        return
+    try:
+        import yaml  # noqa: PLC0415
+    except ImportError:
+        res.skip("pyyaml absent — reachability not checked")
+        return
+
+    rows = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
+    rows = rows.get("services", rows)
+    rows = rows if isinstance(rows, list) else list(rows.values())
+    cfg = CONFIG.read_text(encoding="utf-8")
+
+    try:
+        out = subprocess.run(
+            ["docker", "ps", "--filter", "health=healthy", "--format", "{{.Names}}"],
+            capture_output=True, text=True, timeout=30)
+        healthy = {n.strip() for n in out.stdout.splitlines() if n.strip()}
+    except (subprocess.SubprocessError, OSError):
+        res.skip("could not list healthy containers")
+        return
+
+    for row in rows:
+        sid, port_var = row.get("id"), row.get("port_var")
+        if not sid or not port_var or not row.get("domain_var"):
+            continue
+        hit = container_for(sid, images)
+        if hit is None or hit[0] not in healthy:
+            continue  # not running, or not claiming health — nothing to contradict
+        m = re.search(rf"^{re.escape(str(port_var))}:\s*(\d+)", cfg, re.MULTILINE)
+        if not m:
+            res.skip("healthy service has no loopback port declared")
+            continue
+
+        port = m.group(1)
+        res.compared += 1
+        try:
+            req = urllib.request.Request(f"http://127.0.0.1:{port}/",
+                                         headers={"User-Agent": "nos-discovery-scan"})
+            # REDIRECTS ARE NOT FOLLOWED, and that is the whole correctness of
+            # this probe. The first draft used a plain urlopen: wordpress and
+            # gitlab both answer 301 to `https://<domain>/`, urllib chased it
+            # off-box, the chase failed, and the probe reported two healthy,
+            # perfectly reachable services as answering nothing. The question
+            # here is TRANSPORT — did anything speak HTTP back — so a 301 is a
+            # yes, and following it asks a different question badly.
+            _NoRedirect.opener.open(req, timeout=6).read(1)
+            continue                      # answered
+        except urllib.error.HTTPError:
+            continue                      # 3xx/4xx/5xx is still an answer
+        except Exception as exc:          # noqa: BLE001 — transport failure is the finding
+            detail = f"{type(exc).__name__}: {exc}"
+
+        res.findings.append(Finding(
+            slug=f"{OBS_PREFIX}healthy-unreachable-{sid.replace('_', '-')}",
+            title=f"{hit[0]} is healthy and answers nothing on 127.0.0.1:{port}",
+            track="security",
+            refs=f"docker ps (health=healthy) · 127.0.0.1:{port} · docs/hidden_fees/02",
+            body=(
+                f"Docker reports {hit[0]} healthy, and a plain HTTP request to its "
+                f"published port 127.0.0.1:{port} produced no status line at all "
+                f"({detail}).\n\n"
+                "The two cannot both be right. The usual cause is a healthcheck "
+                "that probes `localhost` INSIDE the container while the service "
+                "binds only the loopback there — the check then measures the one "
+                "address nobody reaches through. paperclip sat in exactly this "
+                "state for at least 47 hours on 2026-08-11 and the fix was two "
+                "parts: bind the container's real interface, and make the "
+                "healthcheck request the address Docker's port forward targets "
+                "(`hostname -i | awk '{print $1}'` — it prints several when the "
+                "container is on several networks).\n\n"
+                "Check the bind first: `docker exec <c> cat /proc/net/tcp` and "
+                "read the listening address. A config file in a persisted volume "
+                "can outrank the compose environment, which is what made this "
+                "survive a converge."
+            ),
+        ))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--file", action="store_true",
@@ -904,6 +1026,7 @@ def main() -> int:
     probe_doc_claim_vs_queue(res)
     probe_disabled_vs_running(images, res)
     probe_declared_gate_actually_exists(res)
+    probe_healthy_but_unreachable(images, res)
 
     if args.json:
         print(json.dumps({

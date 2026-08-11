@@ -20,8 +20,35 @@ services:
     volumes:
       - {{ paperclip_data_dir }}:/paperclip
     environment:
-      HOST: "0.0.0.0"
-      PORT: "3100"
+      # A WIZARD-WRITTEN CONFIG FILE OUTRANKS THIS BLOCK (measured 2026-08-11).
+      #
+      # `HOST: "0.0.0.0"` sat here for weeks and never took effect. The app does
+      # read `HOST`, but only as the LAST of three sources:
+      #
+      #   configuredHost = env.HOST ?? fileConfig.server.host ?? "127.0.0.1"
+      #   bind = env.PAPERCLIP_BIND ?? fileConfig.server.bind
+      #                             ?? inferBindModeFromHost(configuredHost)
+      #
+      # `/paperclip/instances/default/config.json` — inside the PERSISTED volume,
+      # stamped `"source": "configure"` by the app's own setup flow — declares
+      # `server.bind: "loopback"`. That short-circuits the third line entirely,
+      # so `HOST` was never even consulted and the server bound 127.0.0.1:3100
+      # inside the container (confirmed from /proc/net/tcp: one listener,
+      # loopback only). Docker's port forward targets eth0, where nothing
+      # listened, so every host request was closed on connect.
+      #
+      # `PAPERCLIP_BIND` is the ONE variable that outranks the file, and `lan`
+      # resolves to ALL_INTERFACES_BIND_HOST (0.0.0.0) inside the container.
+      # That is NOT a LAN exposure: the `ports:` mapping above still publishes
+      # to 127.0.0.1 on the HOST unless services_lan_access is on, so the host
+      # boundary is unchanged — only the container's own interface opens, which
+      # is what its published port has always pointed at.
+      #
+      # Legal values are ["loopback","lan","tailnet","custom"] — there is no
+      # "all", and an unrecognised value falls back to the file, i.e. silently
+      # back to loopback.
+      PAPERCLIP_BIND: "lan"
+      PAPERCLIP_LISTEN_PORT: "3100"
       # REM-009 per-client require pinning — sslmode=require fails closed on
       # no-TLS (enforces in-transit TLS where the server offers it). prefer
       # when postgresql_ssl_enabled is off (Linux) keeps the wet-test green:
@@ -41,7 +68,18 @@ services:
       BETTER_AUTH_SECRET: "{{ paperclip_auth_secret }}"
       BETTER_AUTH_TRUSTED_ORIGINS: "https://{{ paperclip_domain }}{{ ',' + (service_extra_hosts | default([]) | map('regex_replace', '^(.*)$', 'https://\\1') | join(',')) if (service_extra_hosts | default([]) | length > 0) else '' }}"
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:3100/ || exit 1"]
+      # NOT `localhost`. A healthcheck that probes the loopback proves the
+      # process is alive and says nothing about whether anyone can REACH it —
+      # which is how a service bound to 127.0.0.1 reported healthy for 47 hours
+      # while returning nothing to the host. `hostname -i` is the address
+      # Docker's port forward actually targets, so this fails when the bind is
+      # wrong. docs/hidden_fees/02 is this defect's family.
+      # `awk {print $1}` is NOT decoration: this container sits on TWO networks,
+      # so bare `hostname -i` prints "172.23.0.7 172.30.0.43" and the URL becomes
+      # malformed (curl exit 3). The first draft of this check did exactly that
+      # and replaced a BLIND healthcheck with a BROKEN one — green for the wrong
+      # reason, then red for the wrong reason.
+      test: ["CMD-SHELL", "curl -sf -H 'Host: {{ paperclip_domain }}' http://$(hostname -i | awk '{print $1}'):3100/ || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 10
