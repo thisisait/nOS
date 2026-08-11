@@ -448,6 +448,112 @@
   failed_when: false
   changed_when: _oc_onboard.rc == 0
 
+# -- The gateway plist is written once and never re-read ---------------------
+#
+# MEASURED 2026-08-11. `nos-smoke` had openclaw DEAD on 127.0.0.1:18789 with
+# `launchctl list` reporting exit **78** (EX_CONFIG), and the refusal itself was
+# unreadable: the plist sends StandardErrorPath to /dev/null, so the daemon
+# discarded its own explanation on every restart. Run by hand, it says:
+#
+#     Your OpenClaw config was written by version 2026.7.1-2, but this command
+#     is running 2026.6.11. Refusing to run automatic gateway startup
+#     migrations because this binary is older than the config.
+#
+# OpenClaw is right to refuse. The estate is what was wrong, and this is the
+# same defect family the Ollama preflight above already names — a plist written
+# once and never re-read — arriving by a different road:
+#
+#   `npm install -g openclaw` installs into WHATEVER NODE IS CURRENT. This host
+#   carries four, one per nvm version it has passed through:
+#
+#       2026.5.19   node v24.15.0
+#       2026.6.1    node v24.16.0
+#       2026.6.11   node v24.18.0   <- the plist launches this one
+#       2026.7.1-2  node v24.19.0   <- this one is on PATH and wrote the config
+#
+#   Every node bump strands the previous install and leaves the plist pointing
+#   at it. The onboarding task above passes `--install-daemon`, but only
+#   `when: not _oc_config.stat.exists` — first run only. So the one task that
+#   could have repaired this is the one task that never runs again.
+#
+# The remedy is OpenClaw's own (`gateway install --force`), not a hand-written
+# plist: the service file is the vendor's property and its shape is theirs to
+# change (docs/doctrine/foreign-properties.md). We only decide WHEN to ask.
+#
+# Idempotent by comparison, not by flag: on a steady estate the two paths agree
+# and nothing here runs.
+
+- name: "[OpenClaw] Which openclaw does the gateway service actually launch"
+  ansible.builtin.shell: |
+    plist="$HOME/Library/LaunchAgents/ai.openclaw.gateway.plist"
+    [ -f "$plist" ] || exit 0
+    python3 -c '
+    import plistlib, sys
+    args = plistlib.load(open(sys.argv[1], "rb")).get("ProgramArguments", [])
+    hit = next((a for a in args if "/node_modules/openclaw" in a), "")
+    print(hit.split("/node_modules/openclaw")[0] + "/node_modules/openclaw" if hit else "")
+    ' "$plist"
+  args:
+    executable: /bin/bash
+  register: _oc_plist_target
+  changed_when: false
+  failed_when: false
+  when: nos_service_manager == 'launchd'
+
+- name: "[OpenClaw] Which openclaw is on PATH — the one that writes the config"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && . "{{ homebrew_prefix }}/opt/nvm/nvm.sh" >/dev/null 2>&1
+    nvm use default >/dev/null 2>&1 || true
+    bin=$(command -v openclaw 2>/dev/null) || exit 0
+    python3 -c '
+    import os, sys
+    p = os.path.realpath(sys.argv[1])
+    print(p.split("/node_modules/openclaw")[0] + "/node_modules/openclaw" if "/node_modules/openclaw" in p else "")
+    ' "$bin"
+  args:
+    executable: /bin/bash
+  register: _oc_path_target
+  changed_when: false
+  failed_when: false
+  when: nos_service_manager == 'launchd'
+
+- name: "[OpenClaw] Repoint the gateway service at the openclaw on PATH"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && . "{{ homebrew_prefix }}/opt/nvm/nvm.sh" >/dev/null 2>&1
+    nvm use default >/dev/null 2>&1 || true
+    openclaw gateway install --force --port {{ openclaw_gateway_port | default(18789) }}
+  args:
+    executable: /bin/bash
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+    HOME: "{{ ansible_facts['env']['HOME'] }}"
+  register: _oc_daemon_repoint
+  changed_when: (_oc_daemon_repoint.rc | default(1)) == 0
+  failed_when: false
+  when:
+    - nos_service_manager == 'launchd'
+    - (_oc_path_target.stdout | default('') | trim) != ''
+    - (_oc_plist_target.stdout | default('') | trim) != (_oc_path_target.stdout | default('') | trim)
+
+# Only asserted when we just acted. A gateway that was already fine is not this
+# task's claim to make, and a converge on a host whose openclaw is deliberately
+# stopped must not go red for it.
+- name: "[OpenClaw] Verify the repointed gateway actually listens"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ openclaw_gateway_port | default(18789) }}/"
+    status_code: [200, 401, 403]
+    timeout: 5
+  register: _oc_gateway_probe
+  retries: 12
+  delay: 5
+  until: _oc_gateway_probe is success
+  when:
+    - not ansible_check_mode
+    - _oc_daemon_repoint is defined
+    - _oc_daemon_repoint is changed
+
 - name: "[OpenClaw] Set maxConcurrent in config"
   ansible.builtin.shell: |
     export NVM_DIR="$HOME/.nvm"
