@@ -1,14 +1,28 @@
-"""Journey: approval flow — A11 agent_approval_request → operator decision.
+"""Journey: an approval is asked, decided once, and provable afterwards.
 
-Walks the full agentic-loop closure path:
-  1. Seed an `agent_approval_request` event via HMAC POST (simulates an
-     agent posting a high-blast-radius proposal).
-  2. GET /approvals as the test operator — verify the seeded request
-     appears in pending queue.
-  3. GET /approvals/approve/<actor_action_id> — verify 302 redirect.
-  4. Verify the matching `agent_approval_decision` event landed with
-     verdict=approve, paired via actor_action_id.
-  5. Verify post-decision /approvals no longer shows the request.
+REWRITTEN 2026-08-11. This walked A11's `/approvals` surface, which was RETIRED
+on 2026-08-08 — `ApprovalsPresenter` is gone, an approval is now a
+`kind='approval'` row in `agent_questions`, and `/approvals` survives only as a
+permanent redirect to `/inbox`. The journey kept pointing at the old address and
+failed with a 301 that the CSRF helper reported as if the POST had returned it;
+the real 301 came from the GET one step earlier. Every anatomy gate had been
+updated for the retirement. This file was the one thing left behind, and because
+CI skips the e2e journeys, nothing said so for three days.
+
+What the journey MEASURES has not changed, so the steps map across:
+
+  1. an agent files an approval question            POST /api/v1/inbox/questions
+  2. the operator can see it                        GET  /inbox
+  3. the operator decides it                        POST /inbox/answer/<uuid>
+  4. the decision is provable afterwards            events: agent_approval_decision
+  5. it leaves the open queue                       GET  /api/v1/inbox/questions
+  6. a second decision cannot overwrite the first   resolve-once
+
+Step 6 is new and it is the point. The router's retirement note says A11's
+decision path "could lose a decision two silent ways: empty-secret early return
++ discarded curl result", and `InboxPresenter::actionAnswer` says it exists not
+to repeat that. A successor justified by not losing decisions should be asked,
+by a test, whether it loses decisions.
 """
 
 from __future__ import annotations
@@ -121,71 +135,133 @@ def _require_wing():
         pytest.skip("WING_EVENTS_HMAC_SECRET not set; HMAC seed path unavailable")
 
 
+def _api(path: str, method: str = "GET", payload: dict | None = None) -> tuple[int, dict]:
+    """Bearer-authenticated call to Wing's agent API (the path an agent takes)."""
+    data = json.dumps(payload).encode() if payload is not None else None
+    req = urllib.request.Request(
+        WING_URL + path, data=data, method=method,
+        headers=_with_edge({
+            "Authorization": f"Bearer {os.environ.get('WING_API_TOKEN', '')}",
+            "Content-Type": "application/json",
+        }),
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=5) as r:
+            return r.status, json.loads(r.read().decode("utf-8", "replace") or "{}")
+    except urllib.error.HTTPError as e:
+        return e.code, {"error": e.read().decode("utf-8", "replace")[:200]}
+    except (urllib.error.URLError, OSError) as e:
+        return 0, {"error": str(e)}
+
+
+def _decisions(uuid_: str) -> list[tuple[str, str]]:
+    """(actor_id, verdict) for every decision event on this question."""
+    with sqlite3.connect(WING_DB) as conn:
+        rows = conn.execute(
+            "SELECT actor_id, result_json FROM events "
+            "WHERE actor_action_id=? AND type='agent_approval_decision' "
+            "ORDER BY id ASC",
+            (uuid_,),
+        ).fetchall()
+    return [(a, json.loads(r or "{}").get("verdict")) for a, r in rows]
+
+
 def test_approval_flow_request_to_decision(journey):
-    action_id = f"e2e-approval-{uuid.uuid4().hex[:12]}"
+    marker = uuid.uuid4().hex[:12]
     with journey("approval_flow") as j:
 
-        with j.step("seed_approval_request") as s:
-            status = _hmac_post({
-                "ts": _now(),
-                "type": "agent_approval_request",
-                "run_id": f"e2e-approval-test-{action_id}",
-                "source": "e2e",
-                "actor_id": "e2e-mock-agent",
-                "actor_action_id": action_id,
-                "acted_at": _now(),
-                "task": "E2E test: approve me to verify the loop",
-                "result": {
-                    "summary": "synthetic approval request from e2e suite",
-                },
+        with j.step("agent_files_an_approval_question") as s:
+            status, payload = _api("/api/v1/inbox/questions", "POST", {
+                "agent_name": "e2e-mock-agent",
+                "prompt": f"E2E {marker}: approve me to verify the loop",
+                "kind": "approval",
+                "severity": "medium",
+                "options": ["approve", "reject"],
             })
-            assert status == 201, f"seed POST returned {status}"
-            s.note = f"seeded action_id={action_id[:16]}"
+            assert status in (200, 201), f"filing the question returned {status}: {payload}"
+            question_uuid = (payload.get("data") or payload).get("uuid")
+            assert question_uuid, f"no uuid in {payload}"
+            s.note = f"uuid={question_uuid[:16]}"
 
-        with j.step("verify_request_in_pending_queue") as s:
-            with sqlite3.connect(WING_DB) as conn:
-                row = conn.execute(
-                    "SELECT type, actor_action_id FROM events "
-                    "WHERE actor_action_id=? AND type='agent_approval_request'",
-                    (action_id,),
-                ).fetchone()
-            assert row is not None, f"seeded request {action_id} not in events table"
-            s.note = "request landed in events"
+        with j.step("operator_can_see_it") as s:
+            status, html, _ = _http_get("/inbox", headers={
+                "X-Authentik-Username": TEST_OPERATOR,
+                "X-Authentik-Groups": "nos-providers",
+            })
+            assert status == 200, f"/inbox returned {status}"
+            assert marker in html, (
+                f"the question filed as {question_uuid} is not on /inbox. An "
+                "approval nobody can see is an approval nobody can give."
+            )
+            s.note = "visible in the queue"
 
-        with j.step("operator_clicks_approve") as s:
-            # A13.7: /approvals/approve/* is POST-only + super-admin gated.
-            # SEC-14: it CSRF-validates → GET /approvals first to mint the
-            # session + token, then POST the approve with _csrf (+ edge token).
+        with j.step("operator_decides_it") as s:
+            # POST-only + CSRF-validated, so mint the session on /inbox first.
             status, _, loc = csrf_post(
-                WING_URL, "/approvals", f"/approvals/approve/{action_id}",
+                WING_URL, "/inbox", f"/inbox/answer/{question_uuid}",
                 headers={
                     "X-Authentik-Username": TEST_OPERATOR,
                     "X-Authentik-Groups": "nos-providers",
                 },
+                extra_post={"answer": "approve"},
             )
-            assert status in (302, 303), (
-                f"approve action expected 302/303, got {status}"
-            )
-            assert "/approvals" in loc, f"expected redirect to /approvals, got {loc}"
-            s.note = f"{status} → {loc}"
+            assert status in (302, 303), f"answer expected 302/303, got {status}"
+            assert "inbox" in loc.lower(), f"expected a redirect to the inbox, got {loc}"
+            s.note = f"{status} -> {loc}"
 
-        # Decision event lands async via Wing internal HMAC POST; settle
-        time.sleep(0.5)
-
-        with j.step("verify_decision_landed_with_verdict_approve") as s:
-            with sqlite3.connect(WING_DB) as conn:
-                row = conn.execute(
-                    "SELECT actor_id, result_json FROM events "
-                    "WHERE actor_action_id=? AND type='agent_approval_decision' "
-                    "ORDER BY id DESC LIMIT 1",
-                    (action_id,),
-                ).fetchone()
-            assert row is not None, (
-                f"decision event missing for action_id={action_id} — "
-                f"approve click didn't write through /api/v1/events"
+        with j.step("the_decision_is_provable") as s:
+            found = _decisions(question_uuid)
+            assert found, (
+                f"no agent_approval_decision event for {question_uuid}. The "
+                "operator decided and the estate cannot show who or what — "
+                "which is the whole reason this queue writes lineage."
             )
-            actor, result_json = row
-            assert actor == TEST_OPERATOR, f"actor_id mismatch: {actor} != {TEST_OPERATOR}"
-            verdict = json.loads(result_json or "{}").get("verdict")
+            actor, verdict = found[-1]
+            assert actor == TEST_OPERATOR, f"actor_id mismatch: {actor}"
             assert verdict == "approve", f"verdict mismatch: {verdict}"
-            s.note = f"verdict=approve, actor={actor}"
+            s.note = f"verdict=approve by {actor}"
+
+        with j.step("it_leaves_the_open_queue") as s:
+            status, payload = _api("/api/v1/inbox/questions")
+            assert status == 200, f"listing open questions returned {status}"
+            still_open = [
+                q for q in (payload.get("data") or {}).get("questions", [])
+                if q.get("uuid") == question_uuid
+            ]
+            assert not still_open, (
+                "the answered question is still listed as open — an operator "
+                "would be asked to decide it a second time."
+            )
+            s.note = "closed"
+
+        with j.step("a_second_decision_cannot_overwrite_the_first") as s:
+            # The named reason A11 was retired. Answering again must be refused
+            # as already-decided: same stored answer, same author, and NO second
+            # decision event — a lineage that records two verdicts for one
+            # question cannot say which one held.
+            before = len(_decisions(question_uuid))
+            status, _, _ = csrf_post(
+                WING_URL, "/inbox", f"/inbox/answer/{question_uuid}",
+                headers={
+                    "X-Authentik-Username": "e2e-second-operator",
+                    "X-Authentik-Groups": "nos-providers",
+                },
+                extra_post={"answer": "reject"},
+            )
+            assert status in (302, 303), f"second answer expected a redirect, got {status}"
+
+            after = _decisions(question_uuid)
+            assert len(after) == before, (
+                f"answering twice wrote {len(after) - before} extra decision "
+                f"event(s): {after}. Resolve-once is what makes the answer "
+                "authoritative; without it the last writer wins silently."
+            )
+            with sqlite3.connect(WING_DB) as conn:
+                stored = conn.execute(
+                    "SELECT answer, answered_by FROM agent_questions WHERE uuid=?",
+                    (question_uuid,),
+                ).fetchone()
+            assert stored == ("approve", TEST_OPERATOR), (
+                f"the second answer overwrote the first: {stored}"
+            )
+            s.note = "refused; first decision stands"
