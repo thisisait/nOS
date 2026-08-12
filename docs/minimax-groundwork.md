@@ -123,3 +123,91 @@ backend — e.g. drop the `--model` flag when `ANTHROPIC_BASE_URL` is set and le
 `ANTHROPIC_MODEL`/`ANTHROPIC_SMALL_FAST_MODEL` drive, or carry the MiniMax model
 id directly in `NOS_AGENT_MODEL`. Left to the operator so the six deliberate tier
 pins (readiness item 3) are re-decided consciously, not silently rerouted.
+
+---
+
+# The rulings (operator, 2026-08-12)
+
+All three decisions above are SETTLED. What follows is what was decided, and —
+because a fifth review pass went looking for what the rulings imply — what each
+one turned out to require that the decision itself did not say.
+
+## Ruling 1 — the switch is per job, at maximum granularity
+
+Ceremonies that only read KEAP APIs and write text may route to MiniMax.
+Ceremonies that AUTHOR CODE (`recipe-author`, `promote-migration`, both
+`opus`-pinned) stay on Anthropic until the inner posture is tighter. The switch
+is never estate-wide.
+
+**THE CRITERION NEEDS A SECOND AXIS, and this is the correction the ruling did
+not survive first contact without.** "Authors code vs. writes text" is one axis:
+output capability. It classifies `triage-open-findings` as MiniMax-eligible —
+and that ceremony is the single most sensitive READER in the fleet. It does not
+read the CVE queue (that travels via `scan-runner.sh`, which never meets the
+injection); it reads gitleaks findings, whose rows carry git author name and
+email, and then `cat`s the file around every leak site ±4 lines — the plaintext
+neighbourhood of every unresolved secret leak. So a ceremony qualifies on
+capability AND on data sensitivity, and either axis alone routes it wrong.
+
+**WHAT WAS BUILT CANNOT EXPRESS THIS.** `discover-pulse-catalog.py` injects into
+every `pulse-run-agent.sh` job, and `test_minimax_prepared_not_armed.py:111-116`
+asserts that every agent job carries the override — the gate enforces the
+estate-wide shape the ruling forbids. The documented escape (a job's own env wins
+on a key clash) cannot express it either: a clash can override
+`ANTHROPIC_BASE_URL` but cannot REMOVE the injected `ANTHROPIC_AUTH_TOKEN`, so an
+opus job "opted back" to Anthropic would present the MiniMax key as its bearer —
+a 401 on exactly the jobs the ruling protects, plus a key sent to the wrong
+party. The default is also fail-open: a new ceremony lands on MiniMax silently.
+
+Implementation therefore moves INTO `w-agentkit-spine`, where a backend becomes a
+binding on a run rather than an env var. Per-job selection encoded in `env_json`
+now would be built twice, and the gate rewritten twice with it.
+
+## Ruling 2 — fail-closed classification, with the unmatched message logged
+
+An error phrase the classifier does not recognise stays PERMANENT (not retried).
+Retrying a real configuration fault forever is worse than losing one night. The
+unmatched message is logged so MiniMax's actual phrasings can be learned from one
+outage instead of guessed from documentation nobody verified.
+
+**THE GENUINELY UNLOGGED THING IS NOT THE MESSAGE — IT IS THE FALLBACK.** An
+unmatched phrase becomes `LLMPermanentError`, which falls back immediately with
+no retry, and the fallback's answer is returned with NO RECORD that it answered:
+`model_uri` is written once at session open from the PRIMARY. All nine profiles
+declare `openclaw-qwen2.5-coder:32b`. So the first MiniMax throttle yields output
+authored by a 32B local model, recorded as the primary's — and `events` rows are
+WORM-triggered and hash-chained, so the mislabel is permanent by construction.
+The RFL corpus has no writer yet and no provider field, so provenance must be
+right AT WRITE TIME; there is no relabelling later. Record the identifier of the
+client that actually answered, and emit a fallback event.
+
+## Ruling 3 — no `--model` when `ANTHROPIC_BASE_URL` is set
+
+`--model` outranks `ANTHROPIC_MODEL`, so the alias remaps a foreign backend needs
+would not take effect while the flag is passed. With the flag dropped,
+`ANTHROPIC_MODEL` / `ANTHROPIC_SMALL_FAST_MODEL` drive.
+
+**THE TIERS COLLAPSE UNLESS PER-JOB OVERRIDES ARE PERMITTED.** One global
+`ANTHROPIC_MODEL` erases the haiku/sonnet distinction the six deliberate pins
+express. Note `test_agent_jobs_pin_model.py` hard-codes `{haiku,sonnet,opus}` and
+would refuse a MiniMax id in `NOS_AGENT_MODEL` — the gate agrees with this ruling
+and refuses the alternative. Deeper: the pulse path records
+`model_uri = 'cli:unrecorded'` by design, so once armed, NOTHING anywhere records
+which backend or model served a run except `cost_basis` on the end event. Stamp
+the effective backend and model into the run-end event when arming.
+
+## What must happen before arming, in order
+
+1. The Art-30 / DPA register work — see `docs/llm/` and the roadmap row filed
+   2026-08-12. It is not a MiniMax prerequisite only: the register currently
+   asserts zero third-party processors while the nightly agents have shipped
+   prompts to Anthropic all along, and the business fixture's own rule ("real
+   people only after a register entry exists") waits on the same afternoon.
+2. `w-agentkit-spine`, which is where rulings 1 and 3 acquire a place to live.
+3. The env-withholding hardening: `NOS_AGENT_CLIENT_SECRET` and
+   `WING_EVENTS_HMAC_SECRET` are runner-only and need not reach the child
+   `claude` process. The second derives the audit chain key
+   (`AuditChain.php:56`), whose own threat model says a holder "can recompute the
+   whole chain undetectably" — and the child runs with `bypassPermissions` and no
+   `--allowedTools` anywhere in the repo. This one is worth doing whatever
+   backend is in use.
