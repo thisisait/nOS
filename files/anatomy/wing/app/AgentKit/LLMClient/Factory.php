@@ -71,6 +71,17 @@ final class Factory
 	 * leaving as an omission — it means an agent on this backend inherits the
 	 * operator's identity and cannot be scoped down by a vault binding, and any
 	 * per-agent isolation has to come from what the ceremony is allowed to call.
+	 *
+	 * AND THAT IDENTITY RUNS UNGATED: the adapter invokes the CLI with a
+	 * hardcoded `--permission-mode bypassPermissions`, so anything the CLI's
+	 * own internal tool loop decides to do, it does as the operator with no
+	 * prompt in the way. That is the same posture `pulse-run-agent.sh` runs the
+	 * nightly ceremonies under, and it is stated here because THIS note is
+	 * where the identity consequences of this backend live: no vault scoping,
+	 * no permission gate — the ceremony's own reach is the only boundary.
+	 * Deliberately not configurable: a per-agent permission mode would be a
+	 * capability toggled by data, and softer modes block on interactive
+	 * prompts no daemon can answer.
 	 */
 	private function buildClaudeCli(string $modelUri): ClaudeCliAdapter
 	{

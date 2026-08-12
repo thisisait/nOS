@@ -68,7 +68,14 @@ final class ClaudeCliAdapter implements LLMClientInterface
         int $maxTokens = 4096,
     ): LLMResponse {
         if ($tools !== []) {
-            throw new LLMPermanentError(sprintf(
+            // LLMCapabilityError, not the plain permanent class: the Runner
+            // answers a permanent error by re-sending the SAME request to the
+            // fallback backend, and for THIS refusal that resend would hand the
+            // tool schemas to a backend that treats them as a hint — the exact
+            // silent drop this throw exists to prevent, one hop later. A
+            // capability refusal is about the request's shape and must
+            // propagate; see LLMCapabilityError's docblock for the argument.
+            throw new LLMCapabilityError(sprintf(
                 "the claude CLI backend cannot be handed a tool schema: invoked as "
                 . '`--print`, it runs its own tool loop and returns a final message, '
                 . 'so the %d tool(s) offered here would be silently dropped. Give '
@@ -100,9 +107,27 @@ final class ClaudeCliAdapter implements LLMClientInterface
             $argv[] = '--model';
             $argv[] = $this->model;
         }
+        // `--` ends option parsing. Without it, a folded prompt that happens to
+        // open with `-` is read as a flag — measured 2026-08-12 on claude 2.1.220:
+        // `claude --print "-say OK"` dies with `error: unknown option '-say OK'`,
+        // and a [USER] fold beginning with a dash is not exotic (a diff, a YAML
+        // list, a CLI transcript). With `--` the same prompt is answered.
+        $argv[] = '--';
         $argv[] = $prompt;
 
-        [$exit, $stdout, $stderr] = $this->run($argv);
+        // `$maxTokens` is HONOURED, via the one control the CLI exposes:
+        // CLAUDE_CODE_MAX_OUTPUT_TOKENS caps every model call the CLI makes.
+        // This adapter used to accept the parameter and read it never — the
+        // exact shape its own tools refusal condemns ("an argument visible in
+        // the source and absent from the behaviour"). Semantics differ from the
+        // API's max_tokens, and the difference is handled below: the API
+        // truncates and reports stop_reason=max_tokens; the CLI DISCARDS the
+        // over-cap response and reports is_error (measured 2026-08-12: cap=100,
+        // "count to 300" -> is_error:true, "response exceeded the 100 output
+        // token maximum", usage still billed).
+        [$exit, $stdout, $stderr] = $this->run($argv, [
+            'CLAUDE_CODE_MAX_OUTPUT_TOKENS' => (string) max(1, $maxTokens),
+        ]);
 
         $decoded = json_decode($stdout, true);
         if (!is_array($decoded)) {
@@ -116,8 +141,32 @@ final class ClaudeCliAdapter implements LLMClientInterface
             ));
         }
 
+        $usage = (array) ($decoded['usage'] ?? []);
+
         if (($decoded['is_error'] ?? false) || $exit !== 0) {
             $message = (string) ($decoded['result'] ?? $decoded['error'] ?? 'unknown error');
+
+            // The cap was hit. The CLI discards the over-cap text instead of
+            // truncating it, so this is rendered as what it is in the
+            // vendor-neutral contract — stop_reason=max_tokens with no content —
+            // rather than as a backend failure. A string match, because the CLI
+            // gives the condition no structured code (`subtype` stays "success");
+            // the phrase is pinned by the 2026-08-12 probe in send()'s comment.
+            if (stripos($message, 'output token maximum') !== false) {
+                return new LLMResponse(
+                    stopReason: 'max_tokens',
+                    contentBlocks: [],
+                    tokensInput: (int) ($usage['input_tokens'] ?? 0),
+                    tokensOutput: (int) ($usage['output_tokens'] ?? 0),
+                    tokensCacheRead: (int) ($usage['cache_read_input_tokens'] ?? 0),
+                    tokensCacheCreation: (int) ($usage['cache_creation_input_tokens'] ?? 0),
+                    errorMessage: "claude CLI: {$message} (the CLI discards the "
+                        . 'over-cap response; no partial text survives)',
+                    costUsd: isset($decoded['total_cost_usd'])
+                        ? (float) $decoded['total_cost_usd'] : null,
+                );
+            }
+
             // A usage-limit answer will succeed later; a bad flag will not.
             $transient = stripos($message, 'rate limit') !== false
                 || stripos($message, 'overloaded') !== false
@@ -127,8 +176,6 @@ final class ClaudeCliAdapter implements LLMClientInterface
                 : new LLMPermanentError("claude CLI (exit {$exit}): {$message}");
         }
 
-        $usage = (array) ($decoded['usage'] ?? []);
-
         return new LLMResponse(
             stopReason: 'end_turn',
             contentBlocks: [['type' => 'text', 'text' => (string) ($decoded['result'] ?? '')]],
@@ -136,6 +183,12 @@ final class ClaudeCliAdapter implements LLMClientInterface
             tokensOutput: (int) ($usage['output_tokens'] ?? 0),
             tokensCacheRead: (int) ($usage['cache_read_input_tokens'] ?? 0),
             tokensCacheCreation: (int) ($usage['cache_creation_input_tokens'] ?? 0),
+            // `.total_cost_usd` is the third field the header names as what makes
+            // a real LLMResponse possible — and until 2026-08-12 it was named and
+            // then dropped on the floor. Carried now; Runner surfaces it on the
+            // per-call agent_message audit row.
+            costUsd: isset($decoded['total_cost_usd'])
+                ? (float) $decoded['total_cost_usd'] : null,
         );
     }
 
@@ -195,13 +248,19 @@ final class ClaudeCliAdapter implements LLMClientInterface
      * adapter that built a command string would be re-opening that hole in a
      * language with a better answer available.
      *
-     * @param list<string> $argv
+     * @param list<string>          $argv
+     * @param array<string,string>  $envOverride merged over the inherited env —
+     *        proc_open's env argument REPLACES the environment wholesale, and the
+     *        CLI needs HOME (its config + the operator's session) and PATH, so a
+     *        bare override array would break auth in a way that reads as a model
+     *        error.
      * @return array{0:int,1:string,2:string}
      */
-    private function run(array $argv): array
+    private function run(array $argv, array $envOverride = []): array
     {
         $descriptors = [1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
-        $proc = proc_open($argv, $descriptors, $pipes);
+        $env = $envOverride === [] ? null : array_merge(getenv(), $envOverride);
+        $proc = proc_open($argv, $descriptors, $pipes, null, $env);
         if (!is_resource($proc)) {
             throw new LLMTransientError("could not start '{$this->binary}'");
         }

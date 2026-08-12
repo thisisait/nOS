@@ -184,7 +184,17 @@ final class AgentSessionRepository
 			'trigger'       => 'pulse',
 			'actor_id'      => $actorId,
 			'trace_id'      => '',          // claude-CLI runs carry no OTel trace
-			'model_uri'     => 'claude-cli',
+			// A SENTINEL, and deliberately not URI-shaped. This slot held
+			// 'claude-cli' until 2026-08-12 — harmless while no provider was
+			// named `claude`, but the day the local-CLI adapter landed that
+			// string became a VALID model uri meaning `claude --model cli`, a
+			// model that does not exist. A synth row's model is UNRECORDED (the
+			// shell bridge does not report which model NOS_AGENT_MODEL pinned),
+			// and the sentinel now says so in a shape no Factory::fromUri can
+			// parse — feed it to the factory and it throws instead of
+			// dispatching a ghost. Rows written before 2026-08-12 still carry
+			// 'claude-cli'; they are historical facts, not re-labelled.
+			'model_uri'     => 'cli:unrecorded',
 			'started_at'    => $ts,
 		];
 	}

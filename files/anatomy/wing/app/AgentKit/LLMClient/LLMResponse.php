@@ -30,6 +30,12 @@ final class LLMResponse
 		public readonly int $tokensCacheRead = 0,
 		public readonly int $tokensCacheCreation = 0,
 		public readonly ?string $errorMessage = null,
+		// Dollars, when the backend reports them. Null means "not reported",
+		// which is every API-priced backend today — the claude CLI is the one
+		// that states its own cost (`.total_cost_usd`), and a token tally alone
+		// cannot reconstruct it there (subscription vs API pricing differ).
+		// Null and 0.0 are different facts; do not collapse them.
+		public readonly ?float $costUsd = null,
 	) {
 	}
 

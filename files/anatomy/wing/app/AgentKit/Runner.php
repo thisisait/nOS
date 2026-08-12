@@ -6,6 +6,7 @@ namespace App\AgentKit;
 
 use App\AgentKit\LLMClient\Factory as LLMFactory;
 use App\AgentKit\LLMClient\LLMClientInterface;
+use App\AgentKit\LLMClient\LLMCapabilityError;
 use App\AgentKit\LLMClient\LLMPermanentError;
 use App\AgentKit\LLMClient\LLMTransientError;
 use App\AgentKit\LLMClient\Message;
@@ -369,6 +370,10 @@ final class Runner
 					// renders the verbatim LLM chat history from this field;
 					// text_preview is retained for lean digest consumers.
 					'text' => $response->textOutput(),
+					// Only backends that STATE their own cost fill this (the
+					// claude CLI's total_cost_usd); token tallies cannot
+					// reconstruct it. Absent, not zero, when unreported.
+					'cost_usd' => $response->costUsd,
 				],
 				traceId: $traceId,
 			);
@@ -652,6 +657,19 @@ final class Runner
 				if ($attempt < count(self::TRANSIENT_RETRY_DELAYS_S)) {
 					sleep($delay);
 				}
+			} catch (LLMCapabilityError $exc) {
+				// NO FALLBACK for a capability refusal, and the ordering of
+				// this catch above LLMPermanentError is the entire fix. The
+				// refusal says the REQUEST's shape cannot be honoured (e.g. the
+				// claude CLI cannot be handed tool schemas); re-sending the
+				// identical request to `modelFallbackUri` would either hit the
+				// same wall or — worse — reach a backend that "accepts" tools
+				// as an unenforced hint, converting a loud refusal into the
+				// silent drop it exists to prevent. The caller must change the
+				// request (drop the tools, rewrite the ceremony) or change the
+				// PRIMARY to a backend that speaks the missing protocol; a
+				// fallback cannot decide either of those on its behalf.
+				throw $exc;
 			} catch (LLMPermanentError $exc) {
 				if ($agent->modelFallbackUri !== null) {
 					$fallback = $this->llmFactory->fromUri($agent->modelFallbackUri);
