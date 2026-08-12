@@ -102,6 +102,12 @@ pulse:
         # identically on both runtimes. Empty → tool fail-softs (repo_root).
         NOS_REPO_ROOT: "{{ playbook_dir }}"
         NOS_AGENT_NAME: "migration-author"
+        # Model pin: the highest-stakes ceremony in the fleet — it WRITES a real
+        # schema-valid migration, bumps the version pin, then branches + commits
+        # + opens an MR on the forge (step 5, migration-pr.sh). Committed code
+        # earns the strongest tier; a pin is mandatory (else it takes the default,
+        # which happens to be top too, but the intent here is deliberate, not luck).
+        NOS_AGENT_MODEL: "opus"
         NOS_AGENT_CLIENT_ID: "nos-migration-author"
         NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_migration_author"
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/migration-author.yml"

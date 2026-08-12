@@ -99,6 +99,11 @@ pulse:
       env:
         NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
         NOS_AGENT_NAME: "remediator"
+        # Model pin: reads each open finding, fetches file context, and proposes
+        # a concrete fix per finding — security reasoning the operator reviews
+        # before acting (nothing is committed here). sonnet gives sound proposals
+        # at mid cost; a pin is mandatory or it inherits the default tier.
+        NOS_AGENT_MODEL: "sonnet"
         NOS_AGENT_CLIENT_ID: "nos-remediator"
         NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_remediator"
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/remediator.yml"

@@ -91,6 +91,11 @@ pulse:
         # Genericized A9.3 (2026-05-17). Both NOS_AGENT_* and NOS_CONDUCTOR_*
         # work in the runner; new agents only set NOS_AGENT_*.
         NOS_AGENT_NAME: "conductor"
+        # Model pin: this ceremony is four fixed GET calls + a summary table +
+        # a 0/1 exit — mechanical read-and-tabulate, no authoring, no open-ended
+        # reasoning. haiku is the right (cheapest) tier; without a pin it would
+        # inherit the operator's default (the most expensive tier).
+        NOS_AGENT_MODEL: "haiku"
         NOS_AGENT_CLIENT_ID: "nos-conductor"
         NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_conductor"
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/conductor.yml"

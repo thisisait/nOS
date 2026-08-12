@@ -90,6 +90,11 @@ pulse:
       env:
         NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
         NOS_AGENT_NAME: "scout"
+        # Model pin: a 7-day drift read reasons about anomalies across ~200
+        # events/notifications — analysis, not authoring. sonnet is the mid tier
+        # that spots a real drift without paying the opus premium; a pin is
+        # mandatory or it inherits the operator's default (most expensive).
+        NOS_AGENT_MODEL: "sonnet"
         NOS_AGENT_CLIENT_ID: "nos-scout"
         NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_scout"
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/scout.yml"

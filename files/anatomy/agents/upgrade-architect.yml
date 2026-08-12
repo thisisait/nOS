@@ -70,6 +70,12 @@ pulse:
       env:
         NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
         NOS_AGENT_NAME: "upgrade-architect"
+        # Model pin: this ceremony AUTHORS upgrade recipes — it drafts real YAML
+        # per coverage gap that the operator then commits. Authoring correct,
+        # committable recipes is high-value and error-prone, so it earns the
+        # strongest tier; a pin is mandatory or it inherits the default anyway,
+        # but here the intent is explicitly the top tier, not a fallback.
+        NOS_AGENT_MODEL: "opus"
         NOS_AGENT_CLIENT_ID: "nos-upgrade-architect"
         NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_upgrade_architect"
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/upgrade-architect.yml"

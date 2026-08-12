@@ -68,6 +68,11 @@ pulse:
       env:
         NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
         NOS_AGENT_NAME: "upgrade-advisor"
+        # Model pin: matches installed versions against recipe from_patterns and
+        # queues the ones that fit — version-range reasoning, but every wrong
+        # match is caught by the queue guard (409). sonnet gets the ranges right
+        # without opus cost; a pin is mandatory or it falls to the default tier.
+        NOS_AGENT_MODEL: "sonnet"
         NOS_AGENT_CLIENT_ID: "nos-upgrade-advisor"
         NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_upgrade_advisor"
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/upgrade-advisor.yml"
