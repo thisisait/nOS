@@ -1,3 +1,53 @@
+# nOS Vulnerability Scan Addendum — 2026-08-12 (Cycle 27, batch-50)
+
+**Batch:** traefik, woodpecker, jellyfin, uptime_kuma, calibreweb · **Probe:** `ssrf_vector_analysis`
+**Outcome:** 2 queue items added (**REM-194 HIGH** — the probe's finding of record, **REM-195 HIGH**). CVE leg clean at every live pin. Pending HIGH goes **6 → 8**.
+
+> **The finding of record, stated once.** `ports: - "127.0.0.1:8080:8080"` on a Docker service is a **host** firewall, never a **container-network** one. Traefik runs `api.insecure: true` (its dashboard/API on the container's `:8080`, bound `0.0.0.0` *inside* the container) and joins `infra_net` + `shared_net` + `gated_net` + `gated_b2b_net`. So all ~40 peer containers reach `http://infra-traefik-1:8080/` **unauthenticated** by DNS name — and `GET /api/http/middlewares` hands them the plaintext `X-Face-Edge-Token` and `X-Wing-Edge-Token`, the anti-spoof secrets that let a caller forge `X-Authentik-*` identity. This overturns **REM-144**, resolved on the reasoning that the loopback bind made `:8080` safe.
+
+---
+
+### 🟠 HIGH — [REM-194, no CVE] Traefik's `:8080` API is peer-container-reachable and leaks the Wing/Face edge-trust tokens → live admin-identity forgery into Face
+
+- **Component:** traefik — `traefik:v3.7.10`, live as `infra-traefik-1`, on `infra_net` + `shared_net` + `gated_net` + `gated_b2b_net`
+- **Status:** config-derived, **live-verified end-to-end**, high confidence. Not anonymous-from-internet — needs one container foothold, hence HIGH not CRITICAL.
+- **Distinct from REM-144** (resolved): that closed the *edge* file-provider router for the dashboard via `traefik_skip_ids`; it explicitly left `api.insecure: true` and its `resolved_by` reasoned the `127.0.0.1:8080` compose map kept it "local-only." That is true for **host** callers and false for the **container fabric**.
+
+**The leak (unauthenticated, from any shared_net peer):**
+```
+docker exec iiab-uptime-kuma-1 node -e 'http.get({host:"infra-traefik-1",port:8080,path:"/api/http/middlewares"},...)'
+→ HTTP 200 · ...
+  "face-edge@file": customRequestHeaders {"X-Face-Edge-Token":"0c02fc19...d7440"}
+  "wing-edge@file": customRequestHeaders {"X-Wing-Edge-Token":"7c627dde...11e4b"}
+```
+`/api/overview` also returns the full 53-router / 51-service / 13-middleware topology — backend recon for every service.
+
+**The escalation (live-proven, from a gated_net peer of `face`):** these tokens ARE the entire anti-spoof gate — Wing's `BasePresenter::enforceEdgeTrust()` and the Face BFF trust forged identity headers *only* on a request carrying the matching token. Replaying the stolen Face token from `calibre-web` (shares `gated_net` with `iiab-face-1`):
+```
+# no token                                              → HTTP 403
+# stolen X-Face-Edge-Token + X-Authentik-Username: admin
+#   + X-Authentik-Groups: nos-providers,nos-admins       → HTTP 200   (Tier-1 admin)
+# wrong token + forged admin                             → HTTP 403
+```
+So the leaked secret is sufficient to forge Tier-1 admin identity into Face. The Wing leg is narrower — Wing is host launchd on `127.0.0.1:9000`, not on any Docker network, so its token is exposed but only weaponizable from a host foothold.
+
+**Why it's the SSRF probe's finding of record.** A live connect-probe confirms `uptime-kuma` (on `shared_net`) reaches every infra peer — `infisical:8080`, `portainer:9000`, `authentik:9000`, `postgresql:5432`, `redis:6379`, `mariadb:3306`, `grafana:3000`, `traefik:8080` all OPEN. Any container-scoped SSRF sink (**REM-044** uptime-kuma admin-monitor, **REM-136** vaultwarden icon) pivots to `:8080` to harvest the identity-forgery keys. The flat `shared_net` (40+ members) is the amplifier; SEC-02 only isolated calibre/2fauth/firefly.
+
+**Action (any one closes it):** (a) drop `api.insecure` and serve the dashboard on a loopback-only router the peer network can't address; (b) add a host-gateway-bound internal entrypoint for `:8080` and take Traefik's dashboard off `shared_net`; (c) stop shipping edge tokens as a plaintext `customRequestHeaders` middleware the API reflects — use an IP-allowlist or a secret the `/api` doesn't echo. **Verify:** `docker exec <shared_net peer> wget -qO- http://infra-traefik-1:8080/api/http/middlewares` must fail to connect (or contain no `X-*-Edge-Token`).
+
+---
+
+### 🟠 HIGH — [REM-195, CVE-2025-6998 + CVE-2025-7404 + Kobo IDOR] Calibre-Web 0.6.27 is a security release — the pin at 0.6.26 now lags a real upstream fix
+
+- **Component:** calibreweb — `lscr.io/linuxserver/calibre-web:0.6.26`, live as `iiab-calibre-web-1` (SEC-02 `gated_net`-only)
+- **Status:** version-currency, high confidence. **Overturns** the "janeczku dormant / no upstream fix exists" disposition that **both** resolved REM-074 and REM-120 rest on.
+
+janeczku shipped **0.6.27 ("Ludmila") on 2026-08-08** — 9 days after the last calibre-web look — and its release notes' **Security** section fixes, by name: `CVE-2025-6998` (ReDoS in whitespace stripping — **REM-074**), the **Kobo-token IDOR** (**REM-120** / CVE-2026-7709 class), `CVE-2025-7404` (OS-command-injection via external binary names), plus SQL injection via the DB-path parameter, LDAP injection in `bind_user`/`get_object_details`, XXE in EPUB/FB2/Goodreads parsing, two stored-XSS (book comments + author names), unauthorized `/show/` book-file access, and encryption-key file perms `0o600`. The `0.6.26...0.6.27` compare is 135 commits touching `cps/kobo_auth.py`, `cps/admin.py`, `cps/editbooks.py`, `cps/string_helper.py` and a new `cps/binary_helper.py`. The LSIO image `0.6.27` / `0.6.27-ls395` published 2026-08-09 (arm64v8 present).
+
+**Perimeter (unchanged):** forward_auth wall + `127.0.0.1:8083` loopback + SEC-02 `gated_net`-only ⇒ these are authenticated/insider-scoped, not anonymous. But the Kobo IDOR, `/show/` access, and stored-XSS are exploitable by any authenticated Tier-3 SSO user against another. **Action:** repin `calibreweb_version` `0.6.26 → 0.6.27` (`default.config.yml:1773`); 0.6.27 requires `nh3` in place of deprecated `bleach` — the LSIO image bundles it, verify the container starts clean post-bump.
+
+---
+
 # nOS Vulnerability Scan Addendum — 2026-08-11 (Cycle 26, batch-49)
 
 **Batch:** superset, outline, freescout, paperclip, tileserver · **Probe:** `default_credentials_test` (**first-ever run** — `attack_probe_schedule` cycle_mod 2, `last_run` was `null`)
