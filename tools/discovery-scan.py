@@ -199,17 +199,52 @@ def queue_items() -> list[dict]:
     return data.get("items", data.get("remediations", []))
 
 
-def at_head(relpath: str) -> str | None:
-    """The file's content as the CURRENT BRANCH holds it, or None.
+def at_ref(ref: str, relpath: str) -> str | None:
+    """The file's content as `ref` holds it, or None if git can't answer.
 
-    None means "git could not answer" — a new file, a detached state, no git at
-    all. Every one of those is a reason to skip rather than to claim drift.
+    None means a new file, a detached state, a missing ref, no git at all —
+    every one a reason to skip rather than to claim drift.
     """
     out = subprocess.run(
-        ["git", "-C", str(REPO), "show", f"HEAD:{relpath}"],
+        ["git", "-C", str(REPO), "show", f"{ref}:{relpath}"],
         capture_output=True, text=True, timeout=30,
     )
     return out.stdout if out.returncode == 0 else None
+
+
+def at_head(relpath: str) -> str | None:
+    """The file's content as the CURRENT BRANCH holds it, or None."""
+    return at_ref("HEAD", relpath)
+
+
+# The scan artefacts live in TWO places by design, and disk legitimately matches
+# either at different moments. The nightly scanner writes remediation-queue.json /
+# scan-state.json and commits them to the `scan-data` branch; resolutions are then
+# reviewed onto `dev`/HEAD. So at any instant disk may equal scan-data (fresh
+# scan), OR HEAD (a checkout carrying reviewed resolutions scan-data has not caught
+# up to). Probe C's real question is NOT "does disk match ONE chosen ref" — that
+# manufactures a contradiction out of the intended lag in whichever direction the
+# chosen ref happens to trail (measured 2026-08-12: disk 190 == scan-data 190,
+# HEAD 188 → HEAD trailed; after a resolution commit scan-data trails instead).
+# The genuine failure — the "one `git checkout` from gone" case — is disk matching
+# NEITHER ref: scan output recorded nowhere in git. So we gather every baseline and
+# fire only when disk equals none of them.
+SCAN_DATA_REF = "scan-data"
+SCAN_ARTEFACT_REFS = (SCAN_DATA_REF, "HEAD")
+
+
+def scan_artefact_baselines(relpath: str) -> "list[tuple[str, str]]":
+    """[(ref_name, content), …] for every ref that holds `relpath`.
+
+    Empty when no ref answers (new file, detached, no git) — the caller then
+    skips rather than claiming drift.
+    """
+    out = []
+    for ref in SCAN_ARTEFACT_REFS:
+        content = at_ref(ref, relpath)
+        if content is not None:
+            out.append((ref, content))
+    return out
 
 
 @dataclass(frozen=True)
@@ -447,49 +482,49 @@ def probe_artefact_vs_repo(res: ScanResult) -> None:
     same repo read the 152-row copy and compared the WRONG SIDE — this scanner
     included.
 
-    The pair is the file on disk against the file at HEAD. Byte equality is the
-    whole comparison, so there is nothing to guess.
+    Disk is compared against every baseline ref (scan-data, HEAD); it is safe as
+    long as it matches ONE — the artefact is then recorded in git and no
+    `git checkout` erases it. Only when disk matches NONE is it genuinely
+    uncommitted. Byte equality is the whole comparison, so there is nothing to
+    guess.
     """
     for rel in HOST_WRITTEN:
         path = REPO / rel
         if not path.is_file():
             res.skip("host-written artefact absent from this checkout")
             continue
-        committed = at_head(rel)
-        if committed is None:
-            res.skip("artefact not tracked at HEAD")
+        baselines = scan_artefact_baselines(rel)
+        if not baselines:
+            res.skip("artefact not tracked at scan-data or HEAD")
             continue
         live = path.read_text(encoding="utf-8")
         res.compared += 1
-        if live == committed:
-            continue
+        if any(live == content for _, content in baselines):
+            continue  # recorded in git somewhere — not one checkout from gone
 
-        # A row-count delta when both sides parse; the divergence stands on its
-        # own either way, so a parse failure must not suppress the finding.
-        detail = ""
-        try:
-            def _n(text: str) -> int:
+        # Matches no ref. A row-count delta against each, when parseable — the
+        # divergence stands on its own, so a parse failure must not suppress it.
+        def _n(text: str) -> "int | str":
+            try:
                 d = json.loads(text)
                 return len(d if isinstance(d, list) else d.get("items", []))
-            detail = f" ({_n(live)} rows on disk, {_n(committed)} at HEAD)"
-        except Exception:
-            pass
+            except Exception:
+                return "?"
+        refs_seen = ", ".join(f"{name} {_n(content)}" for name, content in baselines)
+        detail = f" ({_n(live)} rows on disk; {refs_seen})"
 
         res.findings.append(Finding(
             slug=f"{OBS_PREFIX}uncommitted-{Path(rel).stem}",
-            title=f"{Path(rel).name} on disk differs from the branch{detail}",
+            title=f"{Path(rel).name} on disk matches no committed ref{detail}",
             track="security",
-            refs=f"{rel} · git show HEAD:{rel}",
+            refs=f"{rel} · git show {SCAN_DATA_REF}:{rel}",
             body=(
-                f"A nightly job writes {rel} and no job commits it, so its "
-                f"content{detail} exists only in this working tree. That has "
-                f"three consequences, and the third is the one that bites: it "
-                f"is invisible on the branch; it never reaches CI; and any "
-                f"OTHER checkout — a worktree, a fresh clone, this scanner — "
-                f"reads the stale committed copy and compares against it "
-                f"without knowing. Commit the artefact, or make the writing job "
-                f"commit it. Until then the estate's record of its own exposure "
-                f"is one `git checkout` from gone."
+                f"A nightly job writes {rel}; it is committed to the {SCAN_DATA_REF} "
+                f"branch and resolutions are reviewed onto HEAD. This working "
+                f"tree's copy{detail} matches NEITHER — so this scan output exists "
+                f"only here, is invisible on every branch, never reaches CI, and "
+                f"is one `git checkout` from gone. Commit it to {SCAN_DATA_REF} "
+                f"(fresh scan) or review the resolutions onto HEAD."
             ),
         ))
 
