@@ -1770,7 +1770,7 @@ uptime_kuma_docker_host_monitors: false           # Optional Docker healthcheck 
 
 calibreweb_domain: "books{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 calibreweb_port: 8083
-calibreweb_version: "0.6.26"   # lscr.io/linuxserver/calibre-web
+calibreweb_version: "0.6.27"   # lscr.io/linuxserver/calibre-web (REM-195: security release)
 calibreweb_timezone: "Europe/Prague"
 
 # ==============================================================================
