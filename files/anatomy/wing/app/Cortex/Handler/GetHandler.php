@@ -30,9 +30,11 @@ use App\Model\KeapCortexClient;
  * measurement that was carefully performed still reached a false conclusion.
  *
  * So `rel:` is served from `relations` and `tax:` now really is fetched. When
- * KEAP does not answer, the AST's own resolution is returned AND LABELLED as a
- * fallback, because an unreachable upstream must not read like a node with no
- * children.
+ * KEAP does not answer, BOTH namespaces answer the same way: a typed
+ * `upstream_unreachable`, nothing read. (Until 2026-08-12 the `tax:` arm
+ * instead emitted a labelled "resolution only" fallback ROW — which flowed on
+ * as data, counted as executed, and fed the next stage an input KEAP never
+ * produced. One outage, two answers, depending on namespace.)
  */
 final class GetHandler implements CortexHandlerInterface
 {
@@ -83,16 +85,24 @@ final class GetHandler implements CortexHandlerInterface
             // KeapCortexClient::taxonomyNode).
             $node = $this->keap->taxonomyNode((string) ($o['id'] ?? $o['surface'] ?? ''));
             if ($node === null) {
-                // Fall back to what the AST already carries, and SAY that it is
-                // a fallback. An unreachable KEAP must not read like a node with
-                // no children.
-                $rows[] = [
-                    'ns' => $ns,
-                    'id' => $o['id'] ?? null,
-                    'resolvedName' => $o['resolvedName'] ?? null,
-                    'note' => 'resolution only — KEAP node fetch did not answer',
-                ];
-                continue;
+                // A TYPED ABSENCE, exactly as the `rel:` arm above answers, and
+                // this used to be the inconsistent arm: an unreachable fetch
+                // produced a "resolution only" FALLBACK ROW that flowed on as
+                // data — counted as executed by the envelope, offered to the
+                // next stage as an input, its `note` searchable by `filter
+                // where=`. The same outage answered two ways depending on the
+                // namespace. The operand is fresh out of KEAP's own validate on
+                // this very dispatch, so a null here is not "no such node" — it
+                // is the surface not answering for a node its validator just
+                // vouched for, which is the one condition an operator should be
+                // paged about, not a row a repair loop should retry around.
+                return CortexStageResult::upstreamUnreachable(sprintf(
+                    "KEAP's node fetch did not answer for '%s' — an operand its "
+                    . 'validate resolved moments earlier. Nothing was read; the '
+                    . "AST's own resolution is deliberately NOT returned as "
+                    . 'data, because a resolution is not a node.',
+                    (string) ($o['id'] ?? $o['surface'] ?? '')
+                ));
             }
             $node['ns'] = $ns;
             $rows[] = $node;

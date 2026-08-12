@@ -116,8 +116,15 @@ final class ClassifyHandler implements CortexHandlerInterface
         }
 
         $visited = array_slice($ctx->input, 0, self::MAX_INPUT);
+        // The cap was SILENT until 2026-08-12: 40 rows in, 25 classified, and
+        // nothing anywhere said so — the exact shape MapHandler's cap comment
+        // condemns, standing uncorrected one file over. Reported via `meta`
+        // (the handler's own channel), never as a pseudo-row the pipe would
+        // carry downstream as input.
+        $truncated = max(0, count($ctx->input) - count($visited));
         $rows = [];
         $answered = 0;
+        $unanswered = 0;
 
         foreach ($visited as $row) {
             $text = $this->describe($row);
@@ -128,6 +135,7 @@ final class ClassifyHandler implements CortexHandlerInterface
 
             $hit = $this->keap->semanticSearch($text, self::CANDIDATES);
             if ($hit === null) {
+                $unanswered++;
                 $rows[] = $row + ['classifiedAs' => null, 'classifyNote' => 'KEAP search did not answer'];
                 continue;
             }
@@ -165,7 +173,21 @@ final class ClassifyHandler implements CortexHandlerInterface
             ));
         }
 
-        return CortexStageResult::read($rows, count($visited));
+        $meta = [];
+        if ($truncated > 0) {
+            $meta['truncated_input'] = $truncated;
+            $meta['input_cap'] = self::MAX_INPUT;
+        }
+        // Per-row upstream failures are already visible on the rows themselves
+        // (`classifyNote`), so only the aggregate rides here. Counted where the
+        // null happened, NOT derived as visited-minus-answered: a row with no
+        // text to classify was never ASKED, and folding it into "unanswered"
+        // would misreport a caller-data gap as an upstream one.
+        if ($unanswered > 0) {
+            $meta['unanswered_input'] = $unanswered;
+        }
+
+        return CortexStageResult::read($rows, count($visited), $meta);
     }
 
     /**

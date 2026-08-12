@@ -129,9 +129,16 @@ def test_get_actually_fetches_a_taxonomy_node() -> None:
         "AST already carried, on the stated grounds that no fetch route existed — "
         "and that was the false claim."
     )
-    assert "resolution only — KEAP node fetch did not answer" in text, (
-        "the unreachable-KEAP fallback lost its label. An upstream that did not "
-        "answer must not read like a node with no children."
+    # UPDATED 2026-08-12, deliberately, with the behaviour it pinned. This
+    # assert used to require the labelled "resolution only" FALLBACK ROW — and
+    # the second adversarial pass found that row was itself a defect: it flowed
+    # on as data, counted as executed, and answered the same outage differently
+    # than the rel: arm. The contract is now a typed absence in both arms; an
+    # upstream that did not answer must not read like a node with no children,
+    # and it must not read like a row either.
+    assert text.count("upstreamUnreachable") >= 2, (
+        "a null node fetch no longer answers with a typed absence in both "
+        "namespace arms of GetHandler."
     )
 
 

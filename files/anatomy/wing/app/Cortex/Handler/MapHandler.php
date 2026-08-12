@@ -110,14 +110,18 @@ final class MapHandler implements CortexHandlerInterface
         $rows = [];
         $seen = [];
         $answered = 0;
+        $unidentifiable = 0;
+        $unanswered = 0;
 
         foreach ($visited as $row) {
             $id = $this->identify($row);
             if ($id === null) {
+                $unidentifiable++;
                 continue;
             }
             $node = $this->keap->taxonomyNode($id);
             if ($node === null) {
+                $unanswered++;
                 continue;
             }
             $answered++;
@@ -155,22 +159,31 @@ final class MapHandler implements CortexHandlerInterface
             ));
         }
 
-        // Say what was dropped. A cap is a defensible decision; a cap nobody is
-        // told about turns 60 rows in / 25 rows out into a result that reads as
-        // complete (docs/hidden_fees: "no silent caps").
+        // Say what was dropped — in `meta`, NEVER as a row. The first cut
+        // appended the truncation note INTO $rows, and once stages piped that
+        // note flowed to the next stage as input: an id-less pseudo-row that
+        // `map` downstream could not read, which (with nothing else answering)
+        // minted `upstream_unreachable` — the page-worthy code — against a
+        // healthy KEAP. A cap is a defensible decision; a cap reported as DATA
+        // poisons the pipe it was meant to explain (proved live 2026-08-12).
+        $meta = [];
         if ($truncated > 0) {
-            $rows[] = [
-                'ns' => 'tax',
-                'note' => sprintf(
-                    'input truncated: %d row(s) beyond the %d-row cap were not projected',
-                    $truncated,
-                    self::MAX_INPUT
-                ),
-                'truncated' => $truncated,
-            ];
+            $meta['truncated_input'] = $truncated;
+            $meta['input_cap'] = self::MAX_INPUT;
+        }
+        // Partial coverage is not silence either: rows skipped above are two
+        // different facts and are reported apart — an id-less row was never
+        // ASKED (a caller-data gap), a fetched-and-null row was asked and got
+        // no answer (an upstream gap). Folding them together would page the
+        // operator for the caller's shape, or hide an outage behind it.
+        if ($unanswered > 0) {
+            $meta['unanswered_input'] = $unanswered;
+        }
+        if ($unidentifiable > 0) {
+            $meta['unidentifiable_input'] = $unidentifiable;
         }
 
-        return CortexStageResult::read($rows, count($visited));
+        return CortexStageResult::read($rows, count($visited), $meta);
     }
 
     /**

@@ -16,23 +16,40 @@ namespace App\Cortex;
  * verbs whose upstream read surface KEAP does not publish yet. A stage that
  * returns it is honest about having done nothing; a stage that returned empty
  * rows would look like a successful query over an empty world.
+ *
+ * `meta` is WHAT THE HANDLER HAS TO SAY ABOUT PRODUCING THE ROWS — truncation,
+ * unanswered inputs — and it is a separate channel because the day it lived
+ * inside `$rows` was the day the executor lied twice at once (2026-08-12):
+ * `map` appended its truncation note AS A ROW, so the note flowed into the next
+ * stage as input, an id-less "row" the downstream verb could not read — and a
+ * later stage minted `upstream_unreachable`, the one code this file calls
+ * page-worthy, while KEAP was healthy. Rows are data; every element of `$rows`
+ * must be a thing a downstream stage may operate on. Anything a handler wants
+ * to SAY goes here, where the pipe never carries it.
  */
 final class CortexStageResult
 {
-    /** @param list<array<string,mixed>> $rows */
+    /**
+     * @param list<array<string,mixed>> $rows
+     * @param array<string,mixed> $meta
+     */
     private function __construct(
         public readonly string $effect,
         public readonly array $rows,
         public readonly int $cost,
         public readonly ?string $code = null,
         public readonly ?string $detail = null,
+        public readonly array $meta = [],
     ) {
     }
 
-    /** @param list<array<string,mixed>> $rows */
-    public static function read(array $rows, int $cost = 0): self
+    /**
+     * @param list<array<string,mixed>> $rows
+     * @param array<string,mixed> $meta
+     */
+    public static function read(array $rows, int $cost = 0, array $meta = []): self
     {
-        return new self('read', $rows, $cost);
+        return new self('read', $rows, $cost, null, null, $meta);
     }
 
     /**
@@ -100,6 +117,9 @@ final class CortexStageResult
         if ($this->code !== null) {
             $out['code'] = $this->code;
             $out['detail'] = $this->detail;
+        }
+        if ($this->meta !== []) {
+            $out['meta'] = $this->meta;
         }
         return $out;
     }

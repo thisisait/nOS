@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Cortex\Handler;
 
 use App\Cortex\CortexContext;
+use App\Cortex\CortexRowProvenance;
 use App\Cortex\CortexStageResult;
 use App\Cortex\ResolvedStage;
 
@@ -138,18 +139,30 @@ final class FilterHandler implements CortexHandlerInterface
     }
 
     /**
-     * Case-folded substring test over the row's own scalar text.
+     * Case-folded substring test over the row's own scalar DATA.
      *
      * Scalars only, and one level deep: a recursive search would let `where=x`
      * match an id buried in a nested structure the caller never meant to search,
      * which is a quiet way for a filter to keep more than it says.
+     *
+     * PROVENANCE-BLIND, and this is the half that was missing. Handlers write
+     * their own marks onto rows (`ns`, `mappedFrom`, the `classify*` family —
+     * the named set in CortexRowProvenance), and a substring test that read
+     * them matched the pipeline's handwriting instead of the caller's data:
+     * `filter where=tax` kept 5/5 rows, live, because every row carried
+     * `ns: "tax"` — a value the handler itself had written two stages earlier.
+     * A predicate that wants provenance needs it as AST structure, per the
+     * header's no-second-grammar rule.
      *
      * @param array<string,mixed> $row
      */
     private function contains(array $row, string $needle): bool
     {
         $needle = mb_strtolower($needle);
-        foreach ($row as $value) {
+        foreach ($row as $key => $value) {
+            if (is_string($key) && CortexRowProvenance::isProvenance($key)) {
+                continue;
+            }
             if ((is_string($value) || is_numeric($value))
                 && str_contains(mb_strtolower((string) $value), $needle)
             ) {
