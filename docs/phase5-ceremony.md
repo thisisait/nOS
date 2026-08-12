@@ -63,21 +63,26 @@ also tee'd to stdout. Sections:
 ## How env vars get resolved
 
 The script reads `pulse_jobs.env_json` from `wing.db` for the conductor
-self-test row. Ansible already rendered all `{{ global_password_prefix }}`
-+ `{{ tenant_domain }}` + `{{ bone_secret }}` references when the plugin
-loader registered the job (`POST /api/v1/pulse_jobs` after the
-playbook's `tasks/stacks/core-up.yml` ran). So the wrapper doesn't need
-to know the prefix — it just exports whatever Ansible wrote.
+self-test row. Since 2026-08-11 the secret-shaped entries in that blob are
+**`secret:<name>` references, not values** (`discover-pulse-catalog.py`
+emits pointers; the values live only in `~/.nos/secrets.yml`, 0600). The
+wrapper pipes the blob through `resolve_pulse_env_json`
+(`tools/lib/pulse-env.sh` → `python3 -m pulse.secrets`) — **the same
+resolver the Pulse daemon delegates to**, not a copy of it
+(`tests/anatomy/test_secret_resolution_is_shared.py`). An unresolvable
+name refuses at pre-flight with the missing name on stderr; the literal
+`secret:…` is never exported as if it were a token.
 
 This matters for two reasons:
 
 1. **Single source of truth.** If the operator rotates
-   `global_password_prefix`, re-running the playbook updates
-   `pulse_jobs.env_json` automatically; this CLI inherits the new value
-   on the next invocation.
-2. **No secrets-on-CLI.** The script never reads `default.credentials.yml`
-   directly; the resolved values live in SQLite which is mode 0640
-   under `~/wing/`.
+   `global_password_prefix`, re-running the playbook rewrites
+   `~/.nos/secrets.yml`; the resolver reads the store per invocation
+   (never cached), so this CLI inherits the new value immediately.
+2. **No secrets-on-CLI, none in SQLite.** The script never reads
+   `default.credentials.yml`, and since the 2026-08-11 migration
+   `wing.db` carries pointers rather than credentials — the store is
+   the 0600 file, not the 0640 database.
 
 ## What constitutes a GREEN verdict
 

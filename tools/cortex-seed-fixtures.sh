@@ -43,6 +43,11 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# THE secret-reference resolver (shared with the Pulse daemon — one
+# implementation, N callers; see tools/lib/pulse-env.sh).
+# shellcheck source=tools/lib/pulse-env.sh
+source "${REPO_ROOT}/tools/lib/pulse-env.sh"
+
 DATA_ROOT="${NOS_DATA_ROOT:-/Volumes/SSD1TB/nOS/data}"
 TENANT="${NOS_TENANT_SLUG:-pazny}"
 UID_DIR="${CORTEX_FIXTURE_UID:-akadmin}"
@@ -61,8 +66,12 @@ WING_DB="${WING_DB:-$HOME/wing/app/data/wing.db}"
 # rather than an approximation of one. Exporting them by hand invites a
 # diagnostic that fails on auth and reads as a corpus disagreement.
 job_env () {
-  python3 - "$WING_DB" "$1" <<'PY'
-import json, sqlite3, sys, shlex
+  # The row's env_json may carry `secret:<name>` references — resolve them
+  # through THE shared resolver (--exports emits the quoted export lines this
+  # used to build itself). An unresolvable name refuses (empty output), so a
+  # literal `secret:…` is never exported as if it were a token.
+  python3 - "$WING_DB" "$1" <<'PY' | resolve_pulse_env_json --exports
+import sqlite3, sys
 db, job = sys.argv[1], sys.argv[2]
 try:
     c = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
@@ -75,8 +84,7 @@ except sqlite3.Error as e:
 if not row:
     print(f"# no pulse_jobs row for {job}", file=sys.stderr)
     sys.exit(1)
-for k, v in sorted(json.loads(row[0] or "{}").items()):
-    print(f"export {k}={shlex.quote(str(v))}")
+print(row[0] or "{}")
 PY
 }
 

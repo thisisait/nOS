@@ -47,6 +47,11 @@ done
 
 _die() { echo "ERROR: $*" >&2; exit 2; }
 
+# THE secret-reference resolver (shared with the Pulse daemon — one
+# implementation, N callers; see tools/lib/pulse-env.sh).
+# shellcheck source=tools/lib/pulse-env.sh
+source "$(cd "$(dirname "$0")" && pwd)/lib/pulse-env.sh"
+
 echo "── Phase 5 ceremony — operator-driven conductor self-test ─────────────────"
 echo "WING_DB: $WING_DB"
 echo "Report:  $REPORT_FILE"
@@ -77,6 +82,11 @@ JOB_ID=$(echo "$PULSE_JOB_ROW" | jq -r '.[0].id')
 JOB_CMD=$(echo "$PULSE_JOB_ROW" | jq -r '.[0].command')
 JOB_ARGS_JSON=$(echo "$PULSE_JOB_ROW" | jq -r '.[0].args_json')
 JOB_ENV_JSON=$(echo "$PULSE_JOB_ROW" | jq -r '.[0].env_json')
+# Resolve `secret:<name>` references NOW — the pre-flight below reads tokens
+# out of this env and the agent subprocess inherits it. Refusal here is a
+# pre-flight failure, not a burned LLM run; the literal is never exported.
+JOB_ENV_JSON=$(printf '%s' "$JOB_ENV_JSON" | resolve_pulse_env_json) \
+    || _die "secret-reference resolution failed for $JOB_ID (see message above; store: ~/.nos/secrets.yml — nothing was exported)"
 JOB_PAUSED=$(echo "$PULSE_JOB_ROW" | jq -r '.[0].paused')
 
 [[ -x "$JOB_CMD" ]] || _die "registered command is not executable: $JOB_CMD"
