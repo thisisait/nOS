@@ -74,15 +74,14 @@ smoke_endpoints:
     url: "http://127.0.0.1:{{ traefik_dashboard_port | default(8082) }}/ping"
     expect: [200]
     when: "install_traefik | default(true)"
-    note: "Traefik /ping — dashboard liveness"
+    note: "Traefik /ping — liveness (the dedicated ping entrypoint; :8082 no longer serves the API, REM-194)"
     tier: 3
 
-  - id: traefik-routers-count
-    url: "http://127.0.0.1:{{ traefik_dashboard_port | default(8082) }}/api/http/routers"
-    expect: [200]
-    when: "install_traefik | default(true)"
-    note: "Traefik file + Docker routers — dashboard JSON list"
-    tier: 3
+  # traefik-routers-count REMOVED 2026-08-12 (REM-194): it probed
+  # :8082/api/http/routers, but api.insecure is now false so the API is off
+  # :8082 entirely (only /ping remains). The dashboard/API is reachable only via
+  # the opt-in SSO api@internal router. traefik-ping above is the liveness signal;
+  # the router catalog is not a smoke surface any more.
 
   # ── Manifest-service overrides ────────────────────────────────────────────
   # These IDs match state/manifest.yml entries — the runner uses these

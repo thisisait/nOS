@@ -158,7 +158,11 @@ judges:
     # what that means: most of the 139-test gap was grown by commits that did
     # NOT move this line, so the compulsion did the work the cadence was
     # supposed to. The floor moving on its own is cheaper than this.
-    min_work: 3220
+    #
+    # RE-DERIVED 2026-08-12 (3400 passed, 29 skipped — the readiness batch's four
+    # new gate files). Collection ratchet FIRED at 3429 vs the 3252 record; floor
+    # raised to just below the fresh measurement.
+    min_work: 3390
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,
@@ -209,7 +213,9 @@ judges:
     # only — the part a proposal could delete. Pinned against
     # state/smoke-catalog.yml by test_the_ratchets_match_measured_reality;
     # that catalog is this judge's own oracle, so the loop cannot lower both.
-    min_work: 10
+    # 10 -> 9 on 2026-08-12: traefik-routers-count removed — the :8082 API
+    # surface it probed was closed (api.insecure:false); one fewer curated entry.
+    min_work: 9
     mutates_worktree: false
     requires: ["live_estate"]
     # §5.1 — the prober and the catalog it reads. Removing an entry from the

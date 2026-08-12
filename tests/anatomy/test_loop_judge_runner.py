@@ -428,13 +428,13 @@ def test_a_completed_pytest_run_still_passes():
         registry=_one_judge_registry("pytest-anatomy", "repo"),
         repo_root=REPO,
         spawn=_fake_spawn(
-            **{"pytest": J.Completed(exit_code=0, stdout="3252 passed, 28 skipped in 244.00s\n")}
+            **{"pytest": J.Completed(exit_code=0, stdout="3400 passed, 29 skipped in 244.00s\n")}
         ),
         probe=_always_true,
         sandbox_factory=lambda root: (root, "sha-fake", lambda: None),
     )
     assert verdict.result is J.Result.PASS, verdict.reason
-    assert verdict.runs[0].work == 3252
+    assert verdict.runs[0].work == 3400
 
 
 def test_an_interrupted_pytest_that_did_fail_is_still_a_fail():
@@ -784,7 +784,7 @@ def test_pytest_never_runs_against_the_live_tree():
 
     def spy(argv, cwd, timeout_s):
         seen_cwd.append(cwd)
-        return J.Completed(exit_code=0, stdout="3252 passed in 244.00s\n")
+        return J.Completed(exit_code=0, stdout="3400 passed in 244.00s\n")
 
     sandbox = REPO.parent / "fake-sandbox"
     verdict = J.run_gate_set(
@@ -820,7 +820,7 @@ def test_every_judge_in_a_set_observes_exactly_one_tree():
         return {
             "ansible-lint": GREEN_ANSIBLE_LINT,
             "genome-codegen": GREEN_GENOME,
-            "pytest": J.Completed(exit_code=0, stdout="3252 passed in 244.00s\n"),
+            "pytest": J.Completed(exit_code=0, stdout="3400 passed in 244.00s\n"),
         }[_argv_key(argv)]
 
     sandbox = REPO.parent / "one-tree-sandbox"
@@ -1003,10 +1003,14 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 #: 13 more from the prerelease-comparison gate; only the last 13 belong to the
 #: diff that tripped it, which is exactly the drift this record is for.
 #:   pytest tests/anatomy -q  → "3252 passed, 28 skipped in 244s"
+#: RE-DERIVED 2026-08-12 — the collection gate FIRED (3429 collected against the
+#: 3252 record) after the readiness batch added its gate files (traefik-api,
+#: agent-model-pins, discovery-scan-scan-data, minimax-prepared). Fresh run:
+#: "3400 passed, 29 skipped" (3399 + this ratchet, which passes once re-measured).
 MEASURED_WORK = {
     "ansible-lint": 1500,
     "genome-codegen": 2,
-    "pytest-anatomy": 3252,
+    "pytest-anatomy": 3400,
     "cortex-corpus-diff": 1,
 }
 
