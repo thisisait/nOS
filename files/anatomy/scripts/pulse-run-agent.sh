@@ -352,7 +352,7 @@ if [[ "$CLAUDE_EXIT" -eq 0 ]]; then
     fi
 fi
 
-echo "INFO: claude exited with code $CLAUDE_EXIT${TOK_IN:+ (tokens in=$TOK_IN out=$TOK_OUT cache=$TOK_CACHE cost=${COST:+\$$COST}${COST:-unpriced} basis=$COST_BASIS)}"
+echo "INFO: claude exited with code $CLAUDE_EXIT${TOK_IN:+ (tokens in=$TOK_IN out=$TOK_OUT cache=$TOK_CACHE cost=${COST:+\$}${COST:-unpriced} basis=$COST_BASIS)}"
 if [[ -n "$CLAUDE_OUTPUT" ]]; then
     echo "$CLAUDE_OUTPUT" | tail -20
 fi
