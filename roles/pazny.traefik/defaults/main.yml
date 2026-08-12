@@ -15,10 +15,19 @@
 
 traefik_http_port: 80
 traefik_https_port: 443
-# Host port for the Traefik dashboard. Default 8082 — 8080=cadvisor,
-# 8081=tileserver, 8090=freescout. Container always exposes :8080 (built-in).
+# Host port for the /ping liveness probe (dedicated `ping` entry point since
+# REM-194). Default 8082 — 8080=cadvisor, 8081=tileserver, 8090=freescout.
+# Container publishes :8080 (ping only; the API is no longer on it).
 traefik_dashboard_port: 8082
 traefik_domain: "traefik{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+# REM-194: with api.insecure false the dashboard is no longer anonymous on
+# :8080. The SSO-gated api@internal router (authentik@file, websecure) is the
+# intended browser path — but it FAILS CLOSED (404) until an Authentik proxy
+# provider is registered for traefik_domain, and `traefik` has no plugin
+# authentik: block yet, so none exists. Default OFF so nothing ships as a
+# confusing 404. Turn on AFTER registering a provider for traefik_domain;
+# until then reach routing state via `docker exec infra-traefik-1` internally.
+traefik_dashboard_route_enabled: false
 traefik_log_level: "INFO"                           # DEBUG / INFO / WARN / ERROR
 
 # Config tree on the host. Bind-mounted into the container.

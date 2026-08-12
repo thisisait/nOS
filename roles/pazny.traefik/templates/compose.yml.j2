@@ -16,7 +16,9 @@ services:
       # Edge — public on every interface
       - "{{ traefik_http_port | default(80) }}:80"
       - "{{ traefik_https_port | default(443) }}:443"
-      # Dashboard + ping — local only (api.insecure: true is fine since 127.0.0.1)
+      # /ping liveness — host-local only. Container :8080 serves ONLY /ping now
+      # (REM-194: api.insecure is false; the API is no longer on :8080). The
+      # dashboard moves to the opt-in SSO router (traefik_dashboard_route_enabled).
       - "127.0.0.1:{{ traefik_dashboard_port | default(8080) }}:8080"
     volumes:
       # Static config (traefik.yml) + dynamic config tree (conf.d/)

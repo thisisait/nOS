@@ -3,12 +3,17 @@
 
 api:
   dashboard: true
-  # `insecure: true` exposes the dashboard on Traefik's built-in "traefik"
-  # entry point (port 8080 inside the container). We don't define a separate
-  # `dashboard` entry point — that would collide with the built-in one.
-  # The compose override binds host 127.0.0.1:{{ traefik_dashboard_port }} →
-  # container :8080 so the dashboard stays local-only.
-  insecure: true
+  # REM-194 (HIGH, live-confirmed 2026-08-12): `insecure: true` served the WHOLE
+  # unauthenticated API — including /api/http/middlewares, which reflects the
+  # face-edge/wing-edge anti-spoof tokens verbatim — on the built-in "traefik"
+  # entry point (:8080, bound 0.0.0.0 INSIDE the container). The compose host-port
+  # map (127.0.0.1:{{ traefik_dashboard_port }}) constrained only HOST callers; the
+  # container also sits on infra_net/shared_net/gated_net, so ~40 peer containers
+  # read the tokens off `http://infra-traefik-1:8080/` anonymously and forged
+  # Tier-1 identity into the Face BFF. `insecure: false` takes the API off :8080
+  # entirely. The dashboard is instead reachable ONLY through the SSO-gated
+  # api@internal router in dynamic/services.yml.j2 (authentik@file, websecure).
+  insecure: false
 
 global:
   checkNewVersion: false
@@ -40,6 +45,13 @@ entryPoints:
         allowEncodedSlash: false
         allowEncodedBackSlash: false
         allowEncodedNullCharacter: false
+  # REM-194: a dedicated entry point that serves ONLY /ping (see `ping:` below).
+  # It carries no routers (every router binds `websecure`), so a peer container
+  # reaching :8080 gets the harmless 200 "OK" of /ping and a 404 on /api/*.
+  # The compose host-port map (127.0.0.1:{{ traefik_dashboard_port }} → :8080)
+  # and the container healthcheck both hit /ping here — unchanged.
+  ping:
+    address: ":8080"
 
 providers:
   docker:
@@ -64,6 +76,8 @@ accessLog:
   format: "json"
   bufferingSize: 100
 
-# Liveness endpoint for the docker healthcheck — exposed on the same built-in
-# "traefik" entry point as the dashboard (i.e. container port 8080).
-ping: {}
+# Liveness endpoint for the docker healthcheck + host smoke probe. Pinned to the
+# dedicated loopback-published `ping` entry point (:8080) — NOT the built-in API
+# entry point, which no longer exists now that api.insecure is false (REM-194).
+ping:
+  entryPoint: "ping"

@@ -111,6 +111,21 @@ http:
 {% endif %}
 {% endfor %}
 
+{# ── REM-194: SSO-gated Traefik dashboard (api@internal) ─────────────────── #}
+{# The dashboard/API is NO LONGER anonymous on :8080 (api.insecure:false). This #}
+{# router is the ONLY way in, and it is gated by authentik@file. It is NOT the  #}
+{# REM-144 shape: the upstream is the built-in api@internal service (not the    #}
+{# Docker host-gateway), and `traefik` stays in traefik_skip_ids so the manifest #}
+{# auto-loop emits nothing for it. Gate: test_traefik_api_not_insecure.py.       #}
+{% if traefik_dashboard_route_enabled | default(true) | bool %}
+    traefik-dashboard:
+      rule: "Host(`{{ traefik_domain }}`)"
+      entryPoints: ["websecure"]
+      service: "api@internal"
+      middlewares: ["authentik@file", "security-headers@file", "compress@file"]
+      tls: {}
+{% endif %}
+
   services:
 {% for s in nos_manifest.services | default([]) %}
 {% if s.domain_var is defined and s.port_var is defined and s.id not in (traefik_skip_ids | default([])) %}

@@ -194,14 +194,15 @@ traefik_auth_none_justification:
 traefik_skip_ids:
   - bone             # Bone is on host; published only on 127.0.0.1; reach via Wing UI
   - cortex           # Reasoning organ: pure loopback by design (no route unless explicitly opted in)
-  # REM-144 (CRITICAL, live-confirmed 2026-07-30): Traefik's own dashboard/API.
-  # state/manifest.yml gives this id domain_var + port_var, so services.yml.j2
-  # auto-derived a websecure router with NO authentik@file, upstream = the Docker
-  # host-gateway — i.e. Traefik proxied around the 127.0.0.1:8082 bind that was
-  # supposed to protect it. api.insecure:true then made the ENTIRE API anonymous
-  # over 443, and /api/http/middlewares serves rendered customRequestHeaders
-  # verbatim: both SEC-6 edge tokens, one of which carries the password prefix.
-  # Reach the dashboard at http://127.0.0.1:{{ traefik_dashboard_port }} instead.
+  # REM-144 (CRITICAL, 2026-07-30) + REM-194 (HIGH, 2026-08-12): Traefik's own
+  # dashboard/API. The manifest gives this id domain_var + port_var, so the
+  # auto-loop would derive a websecure router whose upstream is the Docker
+  # host-gateway with NO authentik@file — REM-144's exact re-open. Keeping it in
+  # traefik_skip_ids blocks that. The dashboard is instead served by the
+  # SSO-gated `traefik-dashboard` router (service: api@internal, authentik@file)
+  # emitted directly in dynamic/services.yml.j2 — a DIFFERENT, gated mechanism.
+  # REM-194 closed the second leg: api.insecure is now false, so the API is no
+  # longer anonymous on container :8080 (peers could read the edge tokens off it).
   - traefik
 
 # Service ids whose CONTAINER listener is HTTPS (not HTTP). Traefik upstream
