@@ -145,3 +145,35 @@ def test_the_resolver_declares_the_parser_it_needs() -> None:
     )
     daemon = DAEMON.read_text(encoding="utf-8")
     assert "import yaml" in daemon, "the daemon no longer imports the parser it declares"
+
+
+def test_no_secret_shaped_token_is_substituted_as_a_value() -> None:
+    """The `_pw_` blind spot, closed by shape instead of by list.
+
+    MEASURED 2026-08-12, live wing.db: the `audit-chain-verify` row carried
+    `WING_EVENTS_HMAC_SECRET_RETIRED` as a 64-hex literal — the LEAKED chain
+    key, the very one rotation retired — while this file's docstring said
+    "0 plaintext". Both were true: the 2026-08-11 sweep and its gate keyed on
+    the `_pw_` naming pattern, and the retired key is not `_pw_`-shaped. A
+    claim scoped by a pattern reads as a claim about the world.
+
+    So this asserts by SHAPE over the whole substitution table: any token whose
+    name says it is credential-like must map to a `secret:` reference, never
+    through `_env(` — a value channel. New secret-shaped tokens are covered the
+    day they are added, not the day someone remembers this file.
+    """
+    src = CATALOG.read_text(encoding="utf-8")
+    secretish = re.compile(r"(secret|token|password|_pw_|hmac|credential)", re.I)
+    offenders = []
+    for m in re.finditer(r'"(\{\{ [^"]+ \}\}[^"]*)":\s*(_env\("([^"]+)"\)|"[^"]*")', src):
+        token, value = m.group(1), m.group(2)
+        # The prefix itself must stay a value (concatenation — see the gate
+        # above); it is the one deliberate exception and it is named.
+        if token == "{{ global_password_prefix }}":
+            continue
+        if secretish.search(token) and value.startswith("_env("):
+            offenders.append(f"{token} -> {value}")
+    assert not offenders, (
+        "secret-shaped token(s) substituted as VALUES into pulse_jobs.env_json "
+        "(the retired-chain-key class):\n  " + "\n  ".join(offenders)
+    )

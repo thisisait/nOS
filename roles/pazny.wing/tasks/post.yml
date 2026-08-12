@@ -440,7 +440,11 @@
     NOS_AUTHENTIK_DOMAIN: "{{ authentik_domain | default('auth.' ~ (tenant_domain | default('dev.local'))) }}"
     NOS_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
     NOS_GLOBAL_PASSWORD_PREFIX: "{{ global_password_prefix }}"
-    NOS_BONE_SECRET_RETIRED: "{{ bone_secret_retired | default('') }}"
+    # NOS_BONE_SECRET_RETIRED left this block 2026-08-12: the catalog now emits
+    # `secret:bone_secret_retired` (the last secret-shaped token that still rode
+    # as a VALUE — the leaked, rotated-out chain key, sitting 64-hex in the
+    # live audit-chain-verify row because it is not `_pw_`-shaped and the
+    # 2026-08-11 sweep keyed on that shape).
     NOS_BONE_PORT: "{{ bone_port | default(8099) }}"
     # alert-relay-base polls Prometheus for firing alerts (2026-08-05). Same
     # reason bone_port is here: so a manifest declares the port instead of

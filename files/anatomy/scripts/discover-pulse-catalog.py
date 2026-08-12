@@ -105,10 +105,17 @@ def _build_substitutions() -> dict[str, str]:
         "{{ migration_author_wing_api_token }}": "secret:migration_author_wing_api_token",
         "{{ bone_secret }}":              "secret:bone_secret",
         # The audit chain's retired-key ring (2026-08-06). Verify-only, and
-        # legitimately EMPTY until the first rotation — which is why it needs an
-        # entry here rather than being left out: an unknown token would reach
-        # Wing verbatim, and `{{ bone_secret_retired }}` is not a key ring.
-        "{{ bone_secret_retired }}":      _env("NOS_BONE_SECRET_RETIRED"),
+        # legitimately EMPTY until the first rotation. A REFERENCE since
+        # 2026-08-12: this was the one secret-shaped token still substituted as
+        # a VALUE — it escaped the 2026-08-11 sweep because it is not
+        # `_pw_`-shaped — so the live `audit-chain-verify` row carried the
+        # retired chain key as a 64-hex literal in env_json. That key is the
+        # LEAKED one (the reason it was rotated out); anything that could read
+        # wing.db could still VERIFY — and therefore forge — chain segments
+        # from its era. The store declares `bone_secret_retired` even when
+        # empty (templates/secrets.yml.j2), and the daemon resolves
+        # declared-and-empty as an answer, so the reference is blank-safe.
+        "{{ bone_secret_retired }}":      "secret:bone_secret_retired",
         # Bone's port, so a manifest need not hardcode 8099 (the gitleaks
         # notification hardcoded 9000 — Wing's — and 401ed nightly).
         "{{ bone_port }}":                _env("NOS_BONE_PORT"),
