@@ -34,6 +34,7 @@ import re
 REPO = pathlib.Path(__file__).resolve().parents[2]
 CATALOG = REPO / "files/anatomy/scripts/discover-pulse-catalog.py"
 DAEMON = REPO / "files/anatomy/pulse/pulse/daemon.py"
+RESOLVER = REPO / "files/anatomy/pulse/pulse/secrets.py"
 STORE_TEMPLATE = REPO / "templates/secrets.yml.j2"
 
 
@@ -76,30 +77,41 @@ def test_the_prefix_itself_is_never_turned_into_a_reference() -> None:
 
 
 def test_the_daemon_resolves_at_exec_time() -> None:
+    """Since 2026-08-12 the resolution logic lives in pulse/secrets.py (shared
+    with the on-demand shell runners — see test_secret_resolution_is_shared.py);
+    the daemon's `_resolve_secrets` is a delegation. Both halves are asserted:
+    the daemon still resolves at the exec site, and the module it delegates to
+    still refuses on an unknown name."""
     src = DAEMON.read_text(encoding="utf-8")
-    assert "_resolve_secrets" in src, (
-        "the Pulse daemon no longer resolves references. Every job would receive "
-        "the literal string `secret:…` as its credential."
+    assert "self._resolve_secrets(env" in src, (
+        "the Pulse daemon no longer resolves references at exec time. Every "
+        "job would receive the literal string `secret:…` as its credential."
     )
     body = src[src.index("def _resolve_secrets"):]
     body = body[: body.index("\n    def ", 1)]
-    assert "raise RuntimeError" in body, (
+    assert "resolve_env(" in body, (
+        "`_resolve_secrets` no longer delegates to pulse.secrets.resolve_env — "
+        "either the resolution went missing or a second implementation grew "
+        "back inside the daemon."
+    )
+    resolver = RESOLVER.read_text(encoding="utf-8")
+    assert "raise UnresolvableSecretError" in resolver, (
         "an unresolvable reference no longer refuses. Passing `secret:foo` "
         "through hands a subprocess a token-shaped string: the call 401s, the "
         "job reports a plausible upstream error, and the real fault — a name "
         "that is not in the store — is invisible."
     )
-    assert "secrets.yml" in src, "the daemon no longer reads the 0600 store"
+    assert "secrets.yml" in resolver, "the resolver no longer reads the 0600 store"
 
 
 def test_the_store_is_read_per_resolution_not_cached() -> None:
-    """A converge rewrites the store; a daemon holding a boot-time copy would
+    """A converge rewrites the store; a caller holding a boot-time copy would
     authenticate with a rotated-away value and blame the upstream."""
-    src = DAEMON.read_text(encoding="utf-8")
-    body = src[src.index("def _secret_store"):]
-    body = body[: body.index("\n    def ", 1)]
+    src = RESOLVER.read_text(encoding="utf-8")
+    body = src[src.index("def load_store"):]
+    body = body[: body.index("\ndef ", 1)]
     assert "yaml.safe_load" in body, "the store reader stopped parsing the file"
-    assert "self._cache" not in body and "@cache" not in body, (
+    assert "_cache" not in body and "@cache" not in body and "lru_cache" not in src, (
         "the secret store is cached. After a prefix rotation the daemon would "
         "keep presenting the old value until it was restarted."
     )
@@ -143,8 +155,10 @@ def test_the_resolver_declares_the_parser_it_needs() -> None:
         "it the store parses as empty and all reference-carrying jobs refuse — "
         "silently in the repo, loudly and only on the host."
     )
-    daemon = DAEMON.read_text(encoding="utf-8")
-    assert "import yaml" in daemon, "the daemon no longer imports the parser it declares"
+    resolver = RESOLVER.read_text(encoding="utf-8")
+    assert "import yaml" in resolver, (
+        "the resolver no longer imports the parser it declares"
+    )
 
 
 def test_no_secret_shaped_token_is_substituted_as_a_value() -> None:

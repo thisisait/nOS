@@ -28,6 +28,7 @@ import uuid
 from datetime import datetime, timezone
 
 from . import redact
+from . import secrets as secret_refs
 from .config import PulseConfig
 from .runners import subprocess as sp_runner
 from .wing_client import WingClient
@@ -163,73 +164,22 @@ class PulseDaemon:
         t.start()
         return True
 
-    #: What a stored env value looks like when it is a POINTER rather than a
-    #: value. Deliberately one scheme, not AgentKit's two: `infisical:` would
-    #: mean this daemon holds a vault credential, which is the thing it is
-    #: trying to stop holding.
-    SECRET_PREFIX = "secret:"
-
     def _resolve_secrets(self, env: dict) -> dict:
         """`secret:wing_api_token` → the value from ~/.nos/secrets.yml (0600).
 
-        A REFERENCE THAT CANNOT BE RESOLVED FAILS THE JOB. Passing the literal
-        `secret:foo` through would hand a subprocess a string shaped like a
-        token: the call would 401, the job would report a plausible upstream
-        error, and the actual fault — a name that is not in the store — would be
-        invisible. Refusing names it.
+        DELEGATES to ``pulse.secrets.resolve_env`` — THE resolver, shared with
+        the on-demand shell runners (`tools/run-*.sh` via `tools/lib/
+        pulse-env.sh` → `python3 -m pulse.secrets`). The 2026-08-11 migration
+        shipped with only this daemon resolving, so every operator-triggered
+        run of a migrated job exported the literal `secret:…` and died on a
+        401. The semantics (presence-not-truthiness, refuse-on-unknown,
+        read-per-resolution) live in ONE place so a second copy cannot drift.
 
-        Literals pass through untouched, so this can land before the catalog
-        stops emitting them; a job is migrated when its value becomes a
-        reference, one at a time, with the rest still running.
+        An unresolvable reference raises (``UnresolvableSecretError`` is a
+        ``RuntimeError``), which the exception path below turns into a
+        synthetic rc=255 run-finish — the job is NOT run with a literal.
         """
-        refs = {k: v for k, v in env.items()
-                if isinstance(v, str) and v.startswith(self.SECRET_PREFIX)}
-        if not refs:
-            return env
-
-        store = self._secret_store()
-        out = dict(env)
-        missing = []
-        for key, ref in refs.items():
-            name = ref[len(self.SECRET_PREFIX):]
-            # PRESENCE, not truthiness. `mail_password` is legitimately '' on an
-            # estate using mailpit rather than Stalwart, and the first cut of
-            # this check treated an empty value as an absent name — which would
-            # have refused every notification job on a correctly-configured
-            # host. Declared-and-empty is an answer; not declared is a fault.
-            if name not in store:
-                missing.append(f"{key} -> {name}")
-                continue
-            out[key] = str(store[name] if store[name] is not None else '')
-        if missing:
-            raise RuntimeError(
-                "unresolvable secret reference(s): " + ", ".join(missing)
-                + f" (store: {self._secrets_path()}). The job was NOT run — a "
-                "literal 'secret:…' reaching a subprocess would look like a "
-                "credential and fail as one somewhere else."
-            )
-        return out
-
-    def _secrets_path(self):
-        import pathlib as _pathlib
-        return _pathlib.Path.home() / ".nos/secrets.yml"
-
-    def _secret_store(self) -> dict:
-        """Read per resolution, not cached.
-
-        A converge rewrites this file; a daemon holding a parsed copy from boot
-        would authenticate with a rotated-away value and report the upstream's
-        refusal as the fault. The file is small and this runs once per job.
-        """
-        path = self._secrets_path()
-        if not path.is_file():
-            return {}
-        try:
-            import yaml
-            return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-        except Exception as exc:                                  # noqa: BLE001
-            log.error("could not read %s: %s", path, exc)
-            return {}
+        return secret_refs.resolve_env(env or {})
 
     def _run_in_thread(self, job_id: str, run_id: str,
                        command: str, args: list, timeout_s: float,

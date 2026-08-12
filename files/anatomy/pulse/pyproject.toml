@@ -11,7 +11,9 @@ license = {text = "AGPL-3.0"}
 requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28",
-    # Added 2026-08-11 with `_resolve_secrets`. The daemon reads
+    # Added 2026-08-11 with `_resolve_secrets` (since 2026-08-12 the
+    # implementation is pulse/secrets.py, shared with the on-demand shell
+    # runners via `python3 -m pulse.secrets`). The resolver reads
     # ~/.nos/secrets.yml to turn a `secret:<name>` reference into a value, and
     # the venv did not carry a YAML parser — so the resolver returned an empty
     # store and ALL 25 reference-carrying jobs refused. Caught only by running
