@@ -313,6 +313,23 @@ print(u.get("input_tokens", ""), u.get("output_tokens", ""), u.get("cache_read_i
 [[ -s "$CLAUDE_ERR" ]] && CLAUDE_OUTPUT+=$'\n'"$(cat "$CLAUDE_ERR")"
 rm -f "$CLAUDE_ERR"
 
+# ── Cost basis (honesty gate) ────────────────────────────────────────────────
+# claude-CLI's total_cost_usd is ALWAYS priced against Anthropic's rate table.
+# When a job points ANTHROPIC_BASE_URL at a non-Anthropic backend (MiniMax, a
+# local gateway, …) that dollar figure is fiction — right token counts, wrong
+# prices. We must record what is TRUE: the tokens always, and the dollar figure
+# ONLY when the backend that produced it is the one it is priced against.
+#   • basis "anthropic"  → COST is truthful, persist it.
+#   • basis "foreign:<host>" → COST is unpriced-for-this-backend, persist null.
+# The tokens survive either way, so a future rate table can price them honestly.
+COST_BASIS="anthropic"
+_abu="${ANTHROPIC_BASE_URL:-}"
+if [[ -n "$_abu" ]] && ! printf '%s' "$_abu" | grep -qiE '(^|//|\.)anthropic\.com(/|:|$)'; then
+    _abu_host=$(printf '%s' "$_abu" | sed -E 's#^[a-z]+://##i; s#[/:].*$##')
+    COST_BASIS="foreign:${_abu_host:-unknown}"
+    COST=""   # drop the Anthropic-priced figure — it does not describe this run
+fi
+
 # Propagate the agent's self-declared verdict. `claude --print` exits 0 on any
 # successful run regardless of what the agent concluded, so the operator run-
 # tools (run-upgrade-advisor.sh etc.) couldn't tell REVIEW (queued/drafted)
@@ -335,7 +352,7 @@ if [[ "$CLAUDE_EXIT" -eq 0 ]]; then
     fi
 fi
 
-echo "INFO: claude exited with code $CLAUDE_EXIT${TOK_IN:+ (tokens in=$TOK_IN out=$TOK_OUT cache=$TOK_CACHE cost=\$$COST)}"
+echo "INFO: claude exited with code $CLAUDE_EXIT${TOK_IN:+ (tokens in=$TOK_IN out=$TOK_OUT cache=$TOK_CACHE cost=${COST:+\$$COST}${COST:-unpriced} basis=$COST_BASIS)}"
 if [[ -n "$CLAUDE_OUTPUT" ]]; then
     echo "$CLAUDE_OUTPUT" | tail -20
 fi
@@ -358,10 +375,13 @@ _post_wing_event "$(jq -a --sort-keys -nc \
     --argjson t_in "${TOK_IN:-0}" \
     --argjson t_out "${TOK_OUT:-0}" \
     --argjson t_cache "${TOK_CACHE:-0}" \
+    --argjson cost "${COST:-null}" \
+    --arg cost_basis "$COST_BASIS" \
     '{ts:$ts, type:"agent_run_end", run_id:$run_id, source:$src,
       actor_id:$actor_id, actor_action_id:$action_id, acted_at:$ts,
       result:{exit_code:$exit_code, summary:$summary,
-              tokens_input:$t_in, tokens_output:$t_out, tokens_cache_read:$t_cache}}')"
+              tokens_input:$t_in, tokens_output:$t_out, tokens_cache_read:$t_cache,
+              cost_usd:$cost, cost_basis:$cost_basis}}')"
 
 # ── A9 notification on non-zero exit ──────────────────────────────────────────
 # Exit 1 = conductor reported actionable findings (operator review).

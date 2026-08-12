@@ -288,6 +288,29 @@ pulse:
         # a rotation without it — every pre-rotation row unverifiable under the
         # new key. Verify-only; the writer never reads it.
         WING_EVENTS_HMAC_SECRET_RETIRED: "{{ bone_secret_retired }}"
+    # ── Daily agent-cost tally (readiness item 2, 2026-08-12) ─────────────
+    # pulse-run-agent.sh persists cost_usd + cost_basis into every
+    # agent_run_end event; this job is the reader that makes the number seen.
+    # It sums the last 24h of TRUTHFUL (basis=anthropic) spend, tallies tokens
+    # for every run, and fires an A9 notification above the floor OR whenever a
+    # run was unpriced (a foreign backend) — so foreign-backend spend can never
+    # accumulate in silence. All-literal env (no new catalog token, so no
+    # double-allowlist to keep in sync); floor/window are plain values.
+    - name: agent-cost-tally
+      category: platform
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/scripts/agent-cost-tally.py"
+      schedule: "23 6 * * *"        # daily 06:23 UTC; after the night's agent runs
+      jitter_min: 5
+      max_runtime_s: 60
+      max_concurrent: 1
+      env:
+        WING_DATA_DIR: "{{ wing_home }}/app/data"
+        # bare token (catalog literal-replace) — WING_EVENTS_HMAC_SECRET signs
+        # the /api/v1/notifications POST exactly as pulse-run-agent.sh does.
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
+        NOS_COST_TALLY_WINDOW_H: "24"
+        NOS_COST_TALLY_FLOOR_USD: "5.00"
 
 # =============================================================================
 # OBSERVABILITY — Loki labels (forward-auth has no /metrics natively)
