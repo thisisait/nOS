@@ -177,7 +177,45 @@ def _build_substitutions() -> dict[str, str]:
         "{{ cortex_rw_token }}":          "secret:cortex_rw_token",
         "{{ cortex_ro_token }}":          "secret:cortex_ro_token",
         "{{ cortex_capture_token }}":     "secret:cortex_capture_token",
+        # MiniMax (PREPARED, NOT ARMED). The token → a `secret:` reference so
+        # the key never rides as a value. Present in the map unconditionally so
+        # test_pulse_catalog_renders_every_token is satisfied the day a manifest
+        # first uses it; the ENV that carries it is injected only when armed
+        # (_minimax_env below). See docs/minimax-groundwork.md.
+        "{{ minimax_api_key }}":         "secret:minimax_api_key",
     }
+
+
+def _minimax_env() -> dict[str, str]:
+    """The Anthropic-compatible backend override, or {} when not armed.
+
+    PREPARED, NOT ARMED. Injected into every scheduled agent job ONLY when
+    NOS_MINIMAX_ENABLED is truthy (Ansible renders it from minimax_enabled,
+    default false). Off → {} → nothing changes and the feature is inert.
+
+    Shape (the "already verified" env contract): ANTHROPIC_BASE_URL is a plain
+    value; ANTHROPIC_AUTH_TOKEN is a `secret:` reference the Pulse daemon
+    resolves at exec time; the two ANTHROPIC_*_MODEL keys remap the haiku/sonnet/
+    opus aliases the jobs pin onto MiniMax model ids. _safe_env in
+    pulse/runners/subprocess.py lets all four through (none match the ban regex).
+    """
+    if _env("NOS_MINIMAX_ENABLED").strip().lower() not in ("1", "true", "yes"):
+        return {}
+    env = {
+        "ANTHROPIC_BASE_URL": _env("NOS_MINIMAX_BASE_URL"),
+        "ANTHROPIC_AUTH_TOKEN": "secret:minimax_api_key",
+    }
+    # Alias remaps are optional — only emit a key when the operator set its id,
+    # so an unarmed-but-enabled misconfig doesn't blank the model to "".
+    if _env("NOS_MINIMAX_MODEL"):
+        env["ANTHROPIC_MODEL"] = _env("NOS_MINIMAX_MODEL")
+    if _env("NOS_MINIMAX_SMALL_MODEL"):
+        env["ANTHROPIC_SMALL_FAST_MODEL"] = _env("NOS_MINIMAX_SMALL_MODEL")
+    return env
+
+
+# Jobs that run a scheduled agent — the only ones the MiniMax backend applies to.
+_AGENT_RUNNER = "pulse-run-agent.sh"
 
 
 def _expand(value, subs: dict[str, str]):
@@ -213,6 +251,7 @@ def main() -> int:
         return 2
 
     subs = _build_substitutions()
+    minimax_env = _minimax_env()   # {} unless armed — computed once
     catalog: list[dict] = []
     for path in _scan_sources(playbook_dir):
         try:
@@ -222,6 +261,14 @@ def main() -> int:
             continue
         block = doc.get("pulse") or {}
         for job in block.get("jobs") or []:
+            expanded = _expand(job, subs)
+            # PREPARED, NOT ARMED: when minimax is enabled, the backend override
+            # rides on every scheduled-agent job. A job's OWN env wins on a key
+            # clash (it is more specific), so this only ADDS the ANTHROPIC_* keys.
+            if minimax_env and _AGENT_RUNNER in str(expanded.get("command", "")):
+                merged = dict(minimax_env)
+                merged.update(expanded.get("env") or {})
+                expanded["env"] = merged
             catalog.append({
                 "source": path.split("/anatomy/")[-1],
                 "plugin_name": (
@@ -229,7 +276,7 @@ def main() -> int:
                     or doc.get("agent_id")
                     or path.split("/")[-1].replace(".yml", "")
                 ),
-                "job": _expand(job, subs),
+                "job": expanded,
             })
 
     print(json.dumps(catalog))

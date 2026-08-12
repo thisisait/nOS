@@ -1030,6 +1030,29 @@ ollama_num_parallel: 2         # Max parallel inference requests
 ollama_keep_alive: "5m"        # Release model from RAM after idle (default 5m, 0 = immediate)
 ollama_flash_attention: 1      # Flash attention for MLX (faster, less memory)
 
+# ── MiniMax cloud backend for scheduled agents — PREPARED, NOT ARMED ─────────
+# When minimax_enabled is true, discover-pulse-catalog.py injects an Anthropic-
+# compatible backend override (ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN=
+# secret:minimax_api_key + the two alias-remap envs) into EVERY scheduled agent
+# job (pulse-run-agent.sh). Default false → NOTHING is injected and the whole
+# feature is inert, so this ships dormant. It does NOT touch ~/.claude/settings.
+# json (the operator's own interactive thread must stay on Anthropic). Arming it
+# is a deliberate act gated on the two decisions in docs/minimax-groundwork.md;
+# the API key itself is pasted into credentials.yml (default.credentials.yml
+# carries the empty default). See also the cost_basis honesty path in
+# files/anatomy/scripts/pulse-run-agent.sh — under a foreign backend the CLI's
+# dollar figure is dropped, only tokens + basis are recorded.
+minimax_enabled: false
+minimax_base_url: "https://api.minimax.io/anthropic"   # Anthropic-compatible endpoint
+# The two alias remaps: the agent jobs pin NOS_AGENT_MODEL to haiku/sonnet/opus,
+# which are Anthropic aliases MiniMax does not know. These map the main and the
+# small/fast tier to MiniMax model ids. EMPTY by default — the operator fills
+# them from MiniMax's catalog when arming. NOTE (arming gotcha, see the doc):
+# pulse-run-agent.sh passes `--model <alias>` and the CLI's --model flag OUTRANKS
+# ANTHROPIC_MODEL, so arming also requires deciding how NOS_AGENT_MODEL routes.
+minimax_model: ""              # -> ANTHROPIC_MODEL   (main tier)
+minimax_small_model: ""        # -> ANTHROPIC_SMALL_FAST_MODEL (haiku-class tier)
+
 # THE PIN THAT DID NOT EXIST, AND WHAT ITS ABSENCE COST (added 2026-08-08).
 #
 # `roles/pazny.openclaw` installs ollama with `state: latest` and nothing has
