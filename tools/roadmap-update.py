@@ -10,8 +10,10 @@ byte-identical to what the seeder first wrote. Not one row had ever moved, in
 either direction, since the day it was filed. Thirty-five rows sat past their
 target and no one could tell lateness from unrecorded progress.
 
-This is the missing half, kept deliberately small: it moves `status`, and the
-two dates that say when something was meant to happen and when it did.
+This is the missing half, kept deliberately small: it moves `status`, the two
+dates that say when something was meant to happen and when it did, and the
+`title` — a row's CLAIM of what it is (correcting a title that overstates what
+shipped is a claim edit, never a verdict, so it stays on this side of the split).
 
 WHAT IT MUST NOT DO, AND WHY THE SPLIT IS A FILE BOUNDARY. The table's own
 definition carries the reason: `status` is what someone CLAIMS, `verified` is
@@ -55,8 +57,9 @@ HUMAN_HDR = {
 }
 
 #: The only cells this tool may set. `verified*` and `evidence` are absent on
-#: purpose and adding one here is the change the gate exists to refuse.
-WRITABLE = {"status", "target", "occurred_at", "owner"}
+#: purpose and adding one here is the change the gate exists to refuse. `title`
+#: is a claim (what the row IS), not a verdict, so it belongs here.
+WRITABLE = {"status", "target", "occurred_at", "owner", "title"}
 
 SHIPPED = "shipped"
 
@@ -107,11 +110,13 @@ def main() -> int:
     ap.add_argument("--target", help="YYYY-MM-DD — when it is meant to happen")
     ap.add_argument("--occurred", help="YYYY-MM-DD — when it did (implied by --status shipped)")
     ap.add_argument("--owner", help="who is carrying it")
+    ap.add_argument("--title", help="corrected claim of what the row is")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
-    if not (args.status or args.target or args.occurred or args.owner):
-        _die("nothing to change — pass at least one of --status/--target/--occurred/--owner")
+    if not (args.status or args.target or args.occurred or args.owner or args.title):
+        _die("nothing to change — pass at least one of "
+             "--status/--target/--occurred/--owner/--title")
 
     human = f"{KEAP}/api/tables/{TABLE}"
     agent = f"{KEAP}/agent/v1/tables/{TABLE}"
@@ -174,6 +179,8 @@ def main() -> int:
             patch["occurred_at"] = today
         if args.owner:
             patch["owner"] = args.owner
+        if args.title:
+            patch["title"] = args.title
 
         patch = {k: v for k, v in patch.items() if k in WRITABLE}
         patch = {k: v for k, v in patch.items() if v != cur.get(k)}
