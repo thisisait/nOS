@@ -21,9 +21,12 @@ a model that does not exist, declared as the fallback of all nine agents. The
 fallback is live code (Runner.php:656, on a transient primary failure), so it
 would have been discovered at the exact moment resilience was needed.
 
-THE ORDERING RULE, inherited verbatim from opcodes → handlers. Wing refuses to
-boot when KEAP publishes an opcode no handler covers; the same shape applies
-here. A provider in the enum with no adapter in `Factory::fromUri` is validation
+THE ORDERING RULE, inherited from opcodes → handlers. The cortex executor
+refuses to serve while KEAP publishes an opcode no handler covers
+(`assertCoversPublished`, called per dispatch in `actionExecute` — CORRECTED
+2026-08-12: this paragraph said "Wing refuses to boot" while the method had no
+runtime caller at all, a doctrine cited as an enforcement); the same shape
+applies here. A provider in the enum with no adapter in `Factory::fromUri` is validation
 outrunning capability: the schema accepts the URI and the factory throws. So the
 ADAPTER ships first and the enum second, and `test_every_declared_provider_has_an_adapter`
 is what makes that ordering real rather than remembered.

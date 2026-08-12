@@ -8,7 +8,7 @@ use App\Cortex\Handler\CortexHandlerInterface;
 use RuntimeException;
 
 /**
- * The closed opcode -> handler map, and the gate that refuses to boot without it.
+ * The closed opcode -> handler map, and the gate that refuses to serve without it.
  *
  * WHY A LITERAL MAP AND NOT A SCAN. Both design documents draw the same line and
  * it is the load-bearing one: facts about an entity may be declared in data, but
@@ -17,10 +17,17 @@ use RuntimeException;
  * without review — which is the difference between an executor and an open door.
  *
  * THE COVERAGE GATE (D3, fail-closed). KEAP publishes an opcode registry with a
- * hash. If it publishes a NON-MUTATING opcode Wing has no handler for, Wing
- * refuses to start. The ordering that follows is deliberate: Wing ships the
- * handler first, KEAP enables the opcode second. The reverse order takes the
- * estate down, which is the correct incentive.
+ * hash. If it publishes a NON-MUTATING opcode Wing has no handler for, the
+ * cortex executor refuses to SERVE — `CortexExecutorPresenter::actionExecute`
+ * calls `assertCoversPublished` on every dispatch and answers 503 while the gap
+ * stands. (CORRECTED 2026-08-12: this docblock claimed Wing "refuses to start"
+ * through two reviews in which the method had no runtime caller at all — the
+ * claim was used as a premise elsewhere while being enforced nowhere. Boot-time
+ * was also the wrong door: Wing must come up with KEAP down or uninstalled, so
+ * the refusal belongs to the one surface the coverage protects.) The ordering
+ * incentive is unchanged: Wing ships the handler first, KEAP enables the opcode
+ * second — the reverse order takes the executor surface down, loudly, at the
+ * door rather than at a caller.
  *
  * Mutating opcodes are excluded from coverage on purpose. KEAP publishes 14, of
  * which 7 mutate; the executor rejects every mutating stage at the door in P1,
@@ -65,6 +72,10 @@ final class CortexOpcodeRegistry
 
     /**
      * Refuse to serve when KEAP publishes a dispatchable opcode we cannot dispatch.
+     *
+     * Runtime caller: `CortexExecutorPresenter::actionExecute`, per dispatch,
+     * 503 on throw. A method like this with only a test calling it is a
+     * doctrine, not a gate — that was measured here, three reviews running.
      *
      * @param list<array<string,mixed>> $published KEAP's /agent/v1/validate/opcodes payload
      */

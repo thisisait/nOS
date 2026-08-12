@@ -10,10 +10,14 @@ it exists afterwards.
 WHAT ELSE IT PINS, AND WHY EACH ONE IS HERE
 
   * **The registry's coverage gate actually refuses.** `assertCoversPublished()`
-    is what makes Wing fail closed when KEAP publishes a dispatchable opcode
-    nobody wrote a handler for. A gate that only checked the method EXISTS
-    would pass against a body that returns early — so this calls it with a
-    published opcode that has no handler and requires the throw.
+    is what makes the cortex EXECUTOR fail closed (503 per dispatch, wired in
+    `CortexExecutorPresenter::actionExecute` 2026-08-12 — for three reviews the
+    method had no runtime caller while prose said "Wing refuses to boot") when
+    KEAP publishes a dispatchable opcode nobody wrote a handler for. A gate that
+    only checked the method EXISTS would pass against a body that returns early
+    — so this calls it with a published opcode that has no handler and requires
+    the throw. `test_the_coverage_gate_is_wired_into_dispatch` below pins the
+    runtime call site, because a unit-only caller is how the claim went false.
 
   * **Mutating opcodes are excluded from coverage.** KEAP publishes 14, seven of
     them mutating; P1 refuses mutating stages at the door. Demanding handlers
@@ -137,6 +141,38 @@ def test_the_coverage_gate_actually_throws(tmp_path: Path):
     assert out.stdout.strip() == "THREW", (
         "assertCoversPublished did not refuse an uncovered non-mutating opcode, "
         f"or did not name it.\nstdout: {out.stdout}\nstderr: {out.stderr}")
+
+
+def test_the_coverage_gate_is_wired_into_dispatch():
+    """A refusal with only a unit test calling it is prose. For three reviews
+    `assertCoversPublished` had no runtime caller while two docstrings cited it
+    as the thing that makes Wing fail closed — this pins the call site in
+    `actionExecute`, before any stage is gated, answering 503 on the gap and
+    SKIPPING (not passing) when KEAP cannot be asked."""
+    src = (WING / "app/Presenters/Api/CortexExecutorPresenter.php")\
+        .read_text(encoding="utf-8")
+    body = src[src.find("function actionExecute"):]
+    # The CALL shape, not the bare name — the wiring's own comment names the
+    # method in prose, and a find() on the word matched the comment first
+    # (three gates in this batch tripped on exactly that).
+    call = body.find("->assertCoversPublished(")
+    assert call != -1, (
+        "actionExecute no longer calls assertCoversPublished — the coverage "
+        "gate is back to being a doctrine with a unit test."
+    )
+    fed = body.find("->publishedOpcodes()")
+    assert fed != -1 and fed < call, (
+        "the coverage call is not fed from KEAP's published registry."
+    )
+    assert "503" in body[:call + 600], (
+        "the coverage refusal no longer answers 503 — a gap must take the "
+        "surface down, not degrade into a warning."
+    )
+    stage_gate = body.find("foreach ($stages as $raw)")
+    assert stage_gate == -1 or call < stage_gate, (
+        "coverage is checked after stages start being gated — the refusal must "
+        "come at the door, before any per-stage decision."
+    )
 
 
 def test_mutating_opcodes_are_not_demanded(tmp_path: Path):

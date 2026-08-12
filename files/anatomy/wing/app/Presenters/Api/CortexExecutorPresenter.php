@@ -128,6 +128,29 @@ final class CortexExecutorPresenter extends BaseApiPresenter
             $this->sendError('KEAP_AGENT_TOKEN_RO is not configured; nothing can be validated', 502);
         }
 
+        // THE COVERAGE GATE, finally called by something. `assertCoversPublished`
+        // spent three reviews as a method with a doctrine and no runtime caller —
+        // the gate test exercised it as a unit, and a test-only caller is how a
+        // "fail-closed" claim stays prose. It runs HERE rather than at Wing boot,
+        // deliberately: Wing must come up with KEAP down or uninstalled (boot
+        // order, optional organ), so the refusal is scoped to the one surface
+        // the coverage protects — this executor refuses to SERVE while KEAP
+        // publishes a dispatchable opcode it cannot dispatch, even when the
+        // present chain never names the uncovered verb. Failing only when the
+        // gap is tripped would page a caller at 2am for a decision made at noon.
+        // When KEAP cannot be asked, the check is SKIPPED, not passed — the
+        // per-stage `has()` gate below still refuses anything actually missing,
+        // and /cortex/opcodes reports `covers_keap: null` for the same state.
+        $published = $this->keap->publishedOpcodes();
+        if ($published !== null) {
+            try {
+                $this->opcodes->assertCoversPublished($published['opcodes']);
+            } catch (\RuntimeException $e) {
+                $this->reject('coverage', 'published-opcode-gap', $actor);
+                $this->sendError($e->getMessage(), 503);
+            }
+        }
+
         // 1 — phase-1 authority, on every dispatch.
         $ttl = isset($body['ttlSeconds']) && is_int($body['ttlSeconds']) ? $body['ttlSeconds'] : null;
         $report = $this->keap->validate($source, $ttl);
