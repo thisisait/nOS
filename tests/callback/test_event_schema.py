@@ -90,6 +90,12 @@ def test_extra_properties_are_rejected(validator, fresh_plugin):
 def test_full_playbook_lifecycle_validates(validator, fresh_plugin):
     mod, plugin = fresh_plugin
 
+    # Verbose on, deliberately: task_start / task_skipped rows are gated OFF by
+    # default since 2026-08-12 (they were 86% of the live events table — see
+    # tests/callback/test_task_noise_gate.py, which owns the default), but they
+    # remain emittable, so their payloads must remain schema-valid.
+    plugin._task_verbose = True
+
     captured = []
 
     def capture(events):

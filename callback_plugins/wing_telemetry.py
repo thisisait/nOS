@@ -501,6 +501,22 @@ class CallbackModule(CallbackBase):
 
         self._debug = os.environ.get("WING_EVENTS_DEBUG", "") == "1"
 
+        # ── Task-noise gate (2026-08-12) ────────────────────────────────────
+        # Default OFF for `task_start` and `task_skipped` ROWS. Measured on the
+        # live estate the day this landed: events held 332,506 rows in a 698 MB
+        # wing.db, and task_start (165,476) + task_skipped (120,811) were 86% of
+        # them — a skipped task writes TWO chained rows to say nothing happened,
+        # into a WORM table with hash-chain triggers where every byte is
+        # HMAC-linked forever and pruning is a design problem, not a DELETE.
+        # What the operator can act on survives at full per-task fidelity:
+        # task_ok / task_changed / task_failed / task_unreachable (durations
+        # intact — the timing map below is in-memory and independent of
+        # emission), and the playbook_end recap still carries the aggregate
+        # skip count, so absence is COUNTED, just not narrated 120k times.
+        # Flip on for a debugging run: -e … NOS_TELEMETRY_TASK_VERBOSE=1.
+        self._task_verbose = (
+            os.environ.get("NOS_TELEMETRY_TASK_VERBOSE", "") == "1")
+
         # Configurable knobs
         self._url = os.environ.get("WING_EVENTS_URL",
                                    self.DEFAULT_URL)
@@ -1031,9 +1047,13 @@ class CallbackModule(CallbackBase):
         self._task_started_at[getattr(task, "_uuid", id(task))] = \
             time.monotonic()
         self._task_role_name[getattr(task, "_uuid", id(task))] = role_name
-        self._emit("task_start",
-                   task=task_name,
-                   role=role_name)
+        # Bookkeeping above ALWAYS runs (durations on ok/changed/failed rows
+        # depend on it); only the row itself is gated — see the noise-gate
+        # comment in __init__.
+        if self._task_verbose:
+            self._emit("task_start",
+                       task=task_name,
+                       role=role_name)
 
     def v2_playbook_on_handler_task_start(self, task):
         if not self._active:
@@ -1110,12 +1130,18 @@ class CallbackModule(CallbackBase):
         if not self._active:
             return
         task, task_name = self._task_of(result)
+        # The timing/role maps are popped even when the row is gated —
+        # otherwise every skipped task leaks an entry for the life of the run.
+        duration = self._task_duration_ms(task) if task else None
+        role = self._role_for(task) if task is not None else None
+        if not self._task_verbose:
+            return  # counted in the playbook_end recap; not narrated per row
         self._emit(
             "task_skipped",
             task=task_name,
-            role=self._role_for(task) if task is not None else None,
+            role=role,
             host=self._host_of(result),
-            duration_ms=self._task_duration_ms(task) if task else None,
+            duration_ms=duration,
         )
 
     def v2_runner_on_unreachable(self, result):
