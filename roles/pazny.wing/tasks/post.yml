@@ -486,16 +486,14 @@
     # keap-embed-sync then behave exactly as they did before the second target
     # existed, rather than failing against a daemon that is not there.
     NOS_CORTEX_FANOUT_URL: "{{ ('http://127.0.0.1:' ~ (cortex_port | default(8098))) if install_cortex | default(false) else '' }}"
-    # MiniMax backend for scheduled agents — PREPARED, NOT ARMED. Rendered HERE
-    # (full var context) so the catalog need not parse Jinja; when minimax_enabled
-    # is false (default) NOS_MINIMAX_ENABLED is '0' and discover-pulse-catalog.py
-    # injects nothing. The API KEY is NOT passed as a value — the catalog emits
-    # `secret:minimax_api_key` and the Pulse daemon resolves it. See
-    # docs/minimax-groundwork.md.
-    NOS_MINIMAX_ENABLED: "{{ '1' if minimax_enabled | default(false) | bool else '0' }}"
-    NOS_MINIMAX_BASE_URL: "{{ minimax_base_url | default('') if minimax_enabled | default(false) | bool else '' }}"
-    NOS_MINIMAX_MODEL: "{{ minimax_model | default('') if minimax_enabled | default(false) | bool else '' }}"
-    NOS_MINIMAX_SMALL_MODEL: "{{ minimax_small_model | default('') if minimax_enabled | default(false) | bool else '' }}"
+    # NO MiniMax env, deliberately (2026-08-13). The catalog used to receive
+    # NOS_MINIMAX_* here and inject an ANTHROPIC_* override into every agent
+    # job — the estate-wide shape ruling 1 (docs/minimax-groundwork.md)
+    # forbids. Backend selection is now a per-agent BINDING resolved by
+    # AgentKit (state/llm-backends.yml + model.backend in agent.yml); the
+    # catalog carries no backend env at all, and the arming envs
+    # (NOS_ARMED_BACKENDS + the model-id envs) ride wing.plist where the
+    # binding resolver runs.
   register: _pulse_catalog_raw
   changed_when: false
   check_mode: false

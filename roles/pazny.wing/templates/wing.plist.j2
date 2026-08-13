@@ -227,6 +227,20 @@
         <key>STALWART_ADMIN_PASSWORD</key>
         <string>{{ stalwart_admin_password | default('') }}</string>
 {% endif %}
+        <!-- LLM backend arming (state/llm-backends.yml). Space-separated list
+             of backend names App\AgentKit\BindingResolver may honour; a
+             backend absent here is declared-but-disarmed and every run on it
+             proceeds on the default backend with an audit event saying so.
+             Fail-closed: empty/absent arms nothing. The model-id envs carry
+             the operator's tier choices (default "" = refuse at session
+             open); NEVER the API key — that stays in ~/.nos/secrets.yml,
+             resolved as nos:minimax_api_key at session open. -->
+        <key>NOS_ARMED_BACKENDS</key>
+        <string>{{ 'minimax' if minimax_enabled | default(false) | bool else '' }}</string>
+        <key>NOS_MINIMAX_MODEL</key>
+        <string>{{ minimax_model | default('') }}</string>
+        <key>NOS_MINIMAX_SMALL_MODEL</key>
+        <string>{{ minimax_small_model | default('') }}</string>
     </dict>
 
     <!-- launchd respawns on crash; ThrottleInterval prevents tight loops

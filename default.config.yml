@@ -1031,27 +1031,32 @@ ollama_keep_alive: "5m"        # Release model from RAM after idle (default 5m, 
 ollama_flash_attention: 1      # Flash attention for MLX (faster, less memory)
 
 # ── MiniMax cloud backend for scheduled agents — PREPARED, NOT ARMED ─────────
-# When minimax_enabled is true, discover-pulse-catalog.py injects an Anthropic-
-# compatible backend override (ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN=
-# secret:minimax_api_key + the two alias-remap envs) into EVERY scheduled agent
-# job (pulse-run-agent.sh). Default false → NOTHING is injected and the whole
-# feature is inert, so this ships dormant. It does NOT touch ~/.claude/settings.
-# json (the operator's own interactive thread must stay on Anthropic). Arming it
-# is a deliberate act gated on the two decisions in docs/minimax-groundwork.md;
-# the API key itself is pasted into credentials.yml (default.credentials.yml
-# carries the empty default). See also the cost_basis honesty path in
-# files/anatomy/scripts/pulse-run-agent.sh — under a foreign backend the CLI's
-# dollar figure is dropped, only tokens + basis are recorded.
+# REWIRED 2026-08-13: minimax_enabled no longer arms a catalog injection into
+# every agent job (that estate-wide shape is what ruling 1 in
+# docs/minimax-groundwork.md forbids, and it is gone from
+# discover-pulse-catalog.py). The flag now renders into wing.plist as
+# NOS_ARMED_BACKENDS, where App\AgentKit\BindingResolver reads it — and a
+# backend serves a run ONLY when, in addition, (a) that agent's own agent.yml
+# declares `model.backend: minimax`, (b) the agent's gdpr.processors names the
+# MiniMax processor (its Article-30 record — the binding reads the register,
+# never outruns it), (c) the agent is not deferred and not opus-pinned, and
+# (d) the model ids below are set. Every gate is per agent; the shell-bridge
+# path (pulse-run-agent.sh) always runs on the default backend. The registry
+# of backends is state/llm-backends.yml. It still does NOT touch
+# ~/.claude/settings.json (the operator's own thread stays on Anthropic).
+# The API key is pasted into credentials.yml and persisted as
+# secret nos:minimax_api_key; the cost_basis honesty path in
+# pulse-run-agent.sh is unchanged (foreign backend → dollar figure dropped).
 minimax_enabled: false
 minimax_base_url: "https://api.minimax.io/anthropic"   # Anthropic-compatible endpoint
-# The two alias remaps: the agent jobs pin NOS_AGENT_MODEL to haiku/sonnet/opus,
-# which are Anthropic aliases MiniMax does not know. These map the main and the
-# small/fast tier to MiniMax model ids. EMPTY by default — the operator fills
-# them from MiniMax's catalog when arming. NOTE (arming gotcha, see the doc):
-# pulse-run-agent.sh passes `--model <alias>` and the CLI's --model flag OUTRANKS
-# ANTHROPIC_MODEL, so arming also requires deciding how NOS_AGENT_MODEL routes.
-minimax_model: ""              # -> ANTHROPIC_MODEL   (main tier)
-minimax_small_model: ""        # -> ANTHROPIC_SMALL_FAST_MODEL (haiku-class tier)
+# The tier remaps: AgentKit tiers (claude-haiku/-sonnet primaries) map through
+# these to MiniMax model ids. EMPTY by default — the operator fills them from
+# MiniMax's catalog when arming; an armed backend with an empty model id
+# REFUSES at session open rather than sending a blank model. There is no opus
+# remap by design (ruling 1: opus-pinned code-authoring ceremonies stay on the
+# default backend).
+minimax_model: ""              # -> NOS_MINIMAX_MODEL       (sonnet tier)
+minimax_small_model: ""        # -> NOS_MINIMAX_SMALL_MODEL (haiku tier)
 
 # THE PIN THAT DID NOT EXIST, AND WHAT ITS ABSENCE COST (added 2026-08-08).
 #

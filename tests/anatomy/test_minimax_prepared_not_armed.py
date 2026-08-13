@@ -1,21 +1,31 @@
-"""Gate — the MiniMax backend is fully plumbed but ships INERT (readiness item 7).
+"""Gate — MiniMax stays PREPARED, NOT ARMED; and the catalog carries no backend.
 
-The operator asked for the credential path built end to end so that pasting a key
-into credentials.yml and converging is the ONLY remaining step — and for the
-switch to not half-happen. This pins both halves:
+REWRITTEN ONCE, 2026-08-13, as `w-agentkit-spine` said it would be. The first
+version of this gate asserted that, when armed, EVERY scheduled-agent job
+carried the ANTHROPIC_* override — the estate-wide shape ruling 1
+(docs/minimax-groundwork.md) forbids. The gate was enforcing what the ruling
+prohibited, which is why implementation was deferred into the spine rather
+than patched here: per-job selection encoded in `pulse_jobs.env_json` would
+have been built twice and this gate rewritten twice with it.
 
-  * PREPARED — the secret is declared in the persisted store, the catalog knows
-    the `{{ minimax_api_key }}` token maps to a `secret:` reference (never a
-    value), and the empty credential default exists.
-  * NOT ARMED — minimax_enabled defaults false, and with it false the catalog
-    injects NO ANTHROPIC_* backend override into any scheduled-agent job.
+THE CONTRACT NOW:
 
-It also guards the two things that must NEVER leak: the api key as a plaintext
-value, and any ANTHROPIC_* env on a NON-agent job.
-
-Pure source + subprocess scan of the catalog builder; no Docker, no live host,
-and crucially no ~/.claude/settings.json (the operator's own thread stays on
-Anthropic — this feature must never touch it).
+  * PREPARED — the key has a documented place to be pasted
+    (default.credentials.yml), a persisted home (~/.nos/secrets.yml via
+    templates/secrets.yml.j2), and a registry entry that resolves it by
+    REFERENCE (state/llm-backends.yml, `nos:minimax_api_key`).
+  * NOT ARMED — minimax_enabled defaults false, and arming renders
+    NOS_ARMED_BACKENDS into wing.plist where App\\AgentKit\\BindingResolver
+    reads it. Routing additionally requires a per-agent `model.backend`
+    declaration that agrees with that agent's Article-30 record — gated by
+    test_a_binding_reads_the_register.py, not here.
+  * THE CATALOG CARRIES NO BACKEND, EVER. discover-pulse-catalog.py must not
+    emit a single ANTHROPIC_* env key or minimax secret reference on ANY job,
+    armed or not — the shell-bridge ceremonies always run on the default
+    backend, which is ruling 1's fail-closed default. The armed state is
+    exercised here by feeding the catalog the OLD arming envs and requiring
+    them to change nothing: the flag must no longer be able to reach the
+    catalog's output at all.
 """
 from __future__ import annotations
 
@@ -32,40 +42,45 @@ CATALOG = REPO / "files" / "anatomy" / "scripts" / "discover-pulse-catalog.py"
 SECRETS_TPL = REPO / "templates" / "secrets.yml.j2"
 CFG = REPO / "default.config.yml"
 CREDS = REPO / "default.credentials.yml"
-
-
-def _cfg() -> dict:
-    return yaml.safe_load(CFG.read_text())
+REGISTRY = REPO / "state" / "llm-backends.yml"
+WING_PLIST = REPO / "roles" / "pazny.wing" / "templates" / "wing.plist.j2"
 
 
 def test_disabled_by_default():
-    assert _cfg().get("minimax_enabled") is False, (
+    cfg = yaml.safe_load(CFG.read_text())
+    assert cfg.get("minimax_enabled") is False, (
         "minimax_enabled must default to false — this feature ships inert"
     )
 
 
-def test_secret_is_declared_by_reference_not_value():
-    tpl = SECRETS_TPL.read_text()
-    assert "minimax_api_key:" in tpl, (
-        "templates/secrets.yml.j2 does not declare minimax_api_key — the Pulse "
-        "daemon then has no secret to resolve `secret:minimax_api_key` against"
-    )
-    cat = CATALOG.read_text()
-    assert '"{{ minimax_api_key }}":         "secret:minimax_api_key"' in cat \
-        or '"{{ minimax_api_key }}"' in cat and "secret:minimax_api_key" in cat, (
-        "the catalog token map must send `{{ minimax_api_key }}` to a secret "
-        "reference, never a value (the double-allowlist that bit twice)"
-    )
-
-
-def test_empty_credential_default_exists():
+def test_the_credential_path_is_prepared_end_to_end():
     assert "minimax_api_key:" in CREDS.read_text(), (
         "default.credentials.yml must carry an empty minimax_api_key so the "
         "operator has a documented place to paste the key"
     )
+    assert "minimax_api_key:" in SECRETS_TPL.read_text(), (
+        "templates/secrets.yml.j2 no longer persists minimax_api_key — the "
+        "binding resolver then has nothing to resolve `nos:minimax_api_key` "
+        "against and arming fails at session open"
+    )
+    registry = yaml.safe_load(REGISTRY.read_text())
+    ref = registry["backends"]["minimax"]["auth_secret"]
+    assert ref == "nos:minimax_api_key", (
+        f"the registry resolves {ref!r} — the three declarations above and "
+        "this one must name the same key or the chain breaks silently"
+    )
 
 
-def _run_catalog(minimax_enabled: str) -> list[dict]:
+def test_arming_renders_into_the_plist_not_the_catalog():
+    plist = WING_PLIST.read_text()
+    assert "NOS_ARMED_BACKENDS" in plist and "minimax_enabled" in plist, (
+        "wing.plist.j2 no longer renders NOS_ARMED_BACKENDS from "
+        "minimax_enabled — the flag would arm nothing anywhere, or worse, "
+        "something somewhere else"
+    )
+
+
+def _run_catalog(extra_env: dict[str, str]) -> list[dict]:
     env = dict(os.environ)
     env.update({
         "NOS_PLAYBOOK_DIR": str(REPO),
@@ -76,11 +91,8 @@ def _run_catalog(minimax_enabled: str) -> list[dict]:
         "NOS_PROMETHEUS_PORT": "9090",
         "NOS_WING_HOME": "/tmp/wing",
         "NOS_WING_APP_DIR": "/tmp/wing/app",
-        "NOS_MINIMAX_ENABLED": minimax_enabled,
-        "NOS_MINIMAX_BASE_URL": "https://api.minimax.io/anthropic",
-        "NOS_MINIMAX_MODEL": "MiniMax-M2",
-        "NOS_MINIMAX_SMALL_MODEL": "MiniMax-Text-01",
     })
+    env.update(extra_env)
     out = subprocess.run(
         [sys.executable, str(CATALOG)], env=env, capture_output=True, text=True,
     )
@@ -88,41 +100,35 @@ def _run_catalog(minimax_enabled: str) -> list[dict]:
     return json.loads(out.stdout)
 
 
-def _anthropic_keys(job: dict) -> list[str]:
-    return [k for k in (job.get("env") or {}) if k.startswith("ANTHROPIC_")]
-
-
-def test_off_injects_nothing():
-    cat = _run_catalog("0")
-    leaks = [
-        (c["plugin_name"], c["job"]["name"], _anthropic_keys(c["job"]))
-        for c in cat
-        if _anthropic_keys(c["job"])
-    ]
-    assert not leaks, f"minimax OFF must inject no ANTHROPIC_* env, found: {leaks}"
-    # And no literal token survived un-substituted anywhere.
-    assert "{{ minimax_api_key }}" not in json.dumps(cat)
-
-
-def test_armed_injects_reference_only_into_agent_jobs():
-    cat = _run_catalog("1")
-    agent_jobs = [c for c in cat if "pulse-run-agent.sh" in c["job"].get("command", "")]
-    assert agent_jobs, "no agent-runner jobs discovered — shape drift?"
-    for c in agent_jobs:
-        env = c["job"]["env"]
-        assert env.get("ANTHROPIC_AUTH_TOKEN") == "secret:minimax_api_key", (
-            f"{c['job']['name']}: auth token must be a secret reference, not a value"
+def test_the_catalog_carries_no_backend_env_armed_or_not():
+    # The OLD arming envs are deliberately fed in the "armed" case: they used
+    # to inject ANTHROPIC_* into every agent job, and the assertion is that
+    # they can no longer reach the output at all.
+    for label, extra in (
+        ("unarmed", {"NOS_MINIMAX_ENABLED": "0"}),
+        ("armed", {
+            "NOS_MINIMAX_ENABLED": "1",
+            "NOS_MINIMAX_BASE_URL": "https://api.minimax.io/anthropic",
+            "NOS_MINIMAX_MODEL": "MiniMax-M2",
+            "NOS_MINIMAX_SMALL_MODEL": "MiniMax-Text-01",
+        }),
+    ):
+        cat = _run_catalog(extra)
+        assert cat, "catalog is empty — the sweep below would pass by absence"
+        offenders = [
+            (c["plugin_name"], c["job"]["name"], k)
+            for c in cat
+            for k in (c["job"].get("env") or {})
+            if k.startswith("ANTHROPIC_")
+        ]
+        assert not offenders, (
+            f"[{label}] the catalog put a backend env on a job again: "
+            f"{offenders}. Backend selection is a per-agent AgentKit binding "
+            "(state/llm-backends.yml); the catalog re-growing an injection is "
+            "the estate-wide shape ruling 1 forbids, rebuilt."
         )
-        assert env.get("ANTHROPIC_BASE_URL"), f"{c['job']['name']}: base url missing"
-    # NON-agent jobs must never receive the backend override.
-    non_agent = [c for c in cat if "pulse-run-agent.sh" not in c["job"].get("command", "")]
-    bled = [(c["plugin_name"], c["job"]["name"]) for c in non_agent if _anthropic_keys(c["job"])]
-    assert not bled, f"ANTHROPIC_* leaked onto non-agent jobs: {bled}"
-
-
-def test_key_value_never_appears_in_catalog_when_armed():
-    """Even armed, the catalog carries the reference, never a key VALUE."""
-    cat = _run_catalog("1")
-    blob = json.dumps(cat)
-    # secret: reference is fine; a raw 'sk-'/'mm-'-style value must not appear.
-    assert "secret:minimax_api_key" in blob
+        blob = json.dumps(cat)
+        assert "minimax" not in blob.lower(), (
+            f"[{label}] a minimax reference appeared in the catalog output — "
+            "the key or its secret reference is riding job env again"
+        )
