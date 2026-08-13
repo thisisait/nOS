@@ -85,6 +85,19 @@ final class EventRepository
 		'agent_webhook_dispatch', // outbound webhook fired
 		'agent_webhook_receipt',  // inbound webhook ack from subscriber
 		'agent_vault_resolved',   // credential pulled at session start (no plaintext)
+		// Backend attribution (2026-08-13). Both were emitted by Runner before
+		// they were listed here, and the twin-parity gate did not object —
+		// parity held because they were missing from BOTH lists. A check that
+		// compares two artefacts to each other cannot see them being equally
+		// wrong; `test_an_emitted_event_type_is_whitelisted.py` now derives the
+		// question from the code that emits instead.
+		//   agent_model_fallback   — a fallback served instead of the primary;
+		//     carries the UNMATCHED error message, which is the only evidence
+		//     a rule for a foreign backend's phrasing could be written from.
+		//   agent_binding_disarmed — an agent.yml declares a backend that is
+		//     not armed; the default served. Mirrors prepared-not-armed, so a
+		//     committed binding cannot half-arm an estate.
+		'agent_model_fallback', 'agent_binding_disarmed',
 		// User invitations (A15 — operator-issued Authentik invites, 2026-05-17).
 		//   user_invitation_issued   — operator mints an invitation from /users/invite
 		//   user_invitation_revoked  — operator revokes an outstanding (unredeemed) invitation

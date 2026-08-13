@@ -124,6 +124,10 @@ VALID_TYPES = {
     "agent_message", "agent_grader_decision",
     "agent_webhook_dispatch", "agent_webhook_receipt",
     "agent_vault_resolved",
+    #   Backend attribution (2026-08-13). TWIN of Wing's list. Both types were
+    #   emitted by Runner before either list carried them, and the twin-parity
+    #   gate stayed green because parity held with both halves missing.
+    "agent_model_fallback", "agent_binding_disarmed",
     #   Agent approval workflow (A11 — /approvals UI).
     "agent_approval_request", "agent_approval_decision",
     # agents-inbox (2026-08-08). TWIN of Wing's EventRepository::VALID_TYPES —
