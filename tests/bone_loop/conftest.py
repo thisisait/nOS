@@ -38,7 +38,20 @@ def loopauth():
 
 
 @pytest.fixture(scope="session")
-def weaknesses(loopauth):  # noqa: ARG001 — load order: weaknesses imports loopauth
+def judges():
+    """Preloaded because `weaknesses` imports it flat, the way Bone runs.
+
+    Until 2026-08-13 nothing here loaded it, and this directory still passed —
+    `tests/anatomy/test_loop_repo_root_is_asked.py` imports `judges` into
+    `sys.modules` and sorts earlier, so the whole suite worked and
+    `pytest tests/bone_loop` alone raised 42 ModuleNotFoundErrors. A fixture
+    that depends on another directory having run first is not a fixture.
+    """
+    return _load("judges", BONE_DIR / "judges.py")
+
+
+@pytest.fixture(scope="session")
+def weaknesses(loopauth, judges):  # noqa: ARG001 — load order: weaknesses imports both
     return _load("weaknesses", BONE_DIR / "weaknesses.py")
 
 
@@ -73,6 +86,32 @@ def state(tmp_path):
         })
     )
     return d
+
+
+@pytest.fixture(autouse=True)
+def prometheus(tmp_path, monkeypatch):
+    """Serve the alerts endpoint from disk, so no test reads the live estate.
+
+    MEASURED 2026-08-13: `test_severity_is_gated_on_pending_status` asserted
+    `counts['critical'] == 0` for a fixture holding one pending HIGH, and got 1
+    — from `NosCriticalCveFoundCritical`, firing on the operator's own
+    Prometheus since 06:12 that morning. The synthetic repo above is careful to
+    read nothing of the operator's; the alert source reached straight past it to
+    127.0.0.1:9090. A gate that goes red because the estate it guards has a
+    problem cannot be told apart from one that found a bug in itself.
+
+    `urllib` opens `file://`, and the reader appends `/api/v1/alerts` to
+    whatever base it is given — so a directory IS the stub. Empty and firing
+    nothing, which is the neutral baseline the `state` fixture aims for; a test
+    wanting alerts overwrites the file.
+    """
+    endpoint = tmp_path / "prom" / "api" / "v1"
+    endpoint.mkdir(parents=True, exist_ok=True)
+    (endpoint / "alerts").write_text(
+        json.dumps({"status": "success", "data": {"alerts": []}})
+    )
+    monkeypatch.setenv("PROMETHEUS_URL", (tmp_path / "prom").as_uri())
+    return endpoint / "alerts"
 
 
 @pytest.fixture
