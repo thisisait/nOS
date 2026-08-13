@@ -240,3 +240,44 @@ def test_the_guard_is_per_job_not_global(monkeypatch):
         assert d._dispatch({"id": "b", "runner": "subprocess", "command": "/bin/true"}) is True
     finally:
         release.set()
+
+
+# ── PULSE_RUN_ID — the run id reaches the child ────────────────────────
+
+def test_the_child_receives_the_run_id_the_daemon_minted(monkeypatch):
+    """pulse-run-agent.sh has read PULSE_RUN_ID since A8; nothing ever set it.
+
+    MEASURED 2026-08-13 against the live events table: every Pulse-fired
+    ceremony carries run_id `<agent>-manual-<epoch>` — the script's fallback
+    for a NON-Pulse invocation — so the Sunday-04:00 conductor is labelled
+    `conductor-manual-…`, indistinguishable from an operator's terminal run,
+    and no agent event joins back to its `pulse_runs` row even though that
+    schema grew `actor_action_id` precisely for the join (A10). The daemon
+    held the real UUID the whole time; this pins that it hands it over, and
+    that a job declaring its own PULSE_RUN_ID is not overridden.
+    """
+    cfg = make_config()
+    wing = MagicMock()
+    d = PulseDaemon(cfg, wing=wing)
+    seen: dict = {}
+
+    def capture(command, args, *, timeout_s, env=None, cwd=None):
+        seen.update(env or {})
+        return RunResult(0, 0.01, "", "", False)
+
+    monkeypatch.setattr("pulse.daemon.sp_runner.execute", capture)
+    d._run_in_thread("conductor:self-test-001", "uuid-from-daemon",
+                     "/bin/true", [], 5.0, {"NOS_AGENT_NAME": "conductor"})
+    assert seen.get("PULSE_RUN_ID") == "uuid-from-daemon", (
+        "the daemon no longer exports PULSE_RUN_ID to the child — every "
+        "scheduled agent run degrades to the `-manual-` fallback label and "
+        "the events↔pulse_runs join is severed again"
+    )
+    assert seen.get("NOS_AGENT_NAME") == "conductor"  # job env intact
+
+    seen.clear()
+    d._run_in_thread("j", "uuid-2", "/bin/true", [], 5.0,
+                     {"PULSE_RUN_ID": "job-declared"})
+    assert seen.get("PULSE_RUN_ID") == "job-declared", (
+        "a job's own PULSE_RUN_ID was clobbered — setdefault, not assignment"
+    )

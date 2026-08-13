@@ -210,6 +210,16 @@ class PulseDaemon:
             # session-open, never a value — and the runtime that actually runs
             # the agents did the opposite. This closes that gap on the Pulse side.
             env = self._resolve_secrets(env or {})
+            # THE RUN ID REACHES THE CHILD. pulse-run-agent.sh has read
+            # `PULSE_RUN_ID` since A8 to build its event run_id — and nothing
+            # ever set it. MEASURED 2026-08-13: every Pulse-fired ceremony in
+            # the live events table carries run_id `<agent>-manual-<epoch>`
+            # (the script's fallback for a NON-Pulse invocation), so a
+            # scheduled nightly is indistinguishable from an operator's manual
+            # run and no event row joins back to its `pulse_runs` row. The
+            # daemon has held the real UUID all along — this hands it over.
+            # setdefault: a job that declares its own PULSE_RUN_ID keeps it.
+            env.setdefault("PULSE_RUN_ID", run_id)
             result = sp_runner.execute(command, args, timeout_s=timeout_s, env=env)
             log.info("job %s done rc=%d dur=%.1fs timed_out=%s",
                      job_id, result.exit_code, result.duration_s, result.timed_out)
