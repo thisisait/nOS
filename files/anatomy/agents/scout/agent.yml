@@ -58,3 +58,25 @@ exit_code_semantics:
   exit_0: "Drift survey completed; delta report posted as events. Prose-only — exits 0 even when drift is detected (the operator decides whether drift is intentional)."
   exit_1: "Does not emit exit 1. Detected drift lives in the report body for a human decision, not in the process exit."
   exit_2: "Environment / auth / Wing error inside pulse-run-agent.sh. Fires a CRITICAL A9 notification."
+# ── Article 30 ────────────────────────────────────────────────────────────────
+gdpr:
+  purpose: |
+    Correlates recent wing.db events against the committed state manifest and
+    reports drift. Estate operation (legitimate interest, Art. 6(1)(f)). Event
+    rows carry the actor that caused them, so operator and agent identifiers
+    travel with the excerpt sent for reasoning.
+  legal_basis: legitimate_interests
+  data_categories:
+    - estate_event_records        # incl. actor_id / actor_action_id
+    - declared_state_manifest
+  data_subjects:
+    - operators
+    - automation_identities       # agent + service accounts named in events
+  retention_days: -1
+  processors:
+    - name: "Anthropic, PBC"
+      role: "LLM inference for the ceremony's reasoning (claude CLI, --print)"
+      country: "US"
+      safeguard: "None claimed. Assess SCCs / Art. 46 before this is relied on."
+  eu_residency: false
+  transfers_outside_eu: true

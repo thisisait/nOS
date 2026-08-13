@@ -94,3 +94,18 @@ gdpr:
   retention_days: -1              # job catalog lives as long as pulse does
   processors: []
   eu_residency: true
+  notes: |
+    TRUE OF PULSE, NOT OF WHAT PULSE STARTS (clarified 2026-08-13). The empty
+    processor list describes the scheduler itself: it holds job metadata on the
+    host and transfers nothing. Ten of the jobs it dispatches are agent
+    ceremonies that DO send estate content to a US-hosted model, and until this
+    date the register said otherwise everywhere — no record anywhere declared a
+    processor or a transfer, because `nos_gdpr.all_records()` swept plugins and
+    app manifests only, and the agent definitions are in neither.
+
+    Those transfers are now declared per ceremony in
+    `files/anatomy/agents/<name>/agent.yml` (`agent_*` records), where they can
+    differ honestly: `agent_curator` sends taxonomy prose, `agent_remediator`
+    sends leaked-secret context and commit-author identity. This note exists so
+    that reading THIS record alone cannot leave the impression that nothing
+    leaves the host — which is exactly how the omission survived.

@@ -20,14 +20,23 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 79 (75 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (73)
-- **Transfers outside the EU:** 0 activities
-- **Activities engaging a third-party processor:** 0
+- **Processing activities:** 88 (75 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (82)
+- **Transfers outside the EU:** 8 activities
+- **Activities engaging a third-party processor:** 8
 
 ## Transfers & processors (audit-sensitive subset)
 
-None. Every processing activity is fully EU-resident and self-hosted with no third-party processor.
+| Service | Outside EU? | Processors |
+|---|---|---|
+| conductor (`agent_conductor`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
+| curator (`agent_curator`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
+| librarian (`agent_librarian`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
+| migration-author (`agent_migration-author`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
+| remediator (`agent_remediator`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
+| scout (`agent_scout`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
+| upgrade-advisor (`agent_upgrade-advisor`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
+| upgrade-architect (`agent_upgrade-architect`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
 
 ## Security measures (Art. 32 — platform baseline)
 
@@ -54,8 +63,8 @@ a precondition of providing the service to the user, so the legal basis is
 contract (Art. 6(1)(b)). Subjects include human operators and tenant
 end-users as well as automated agent clients (Bone, Pulse, conductor).
 - **Legal basis (Art. 6):** `contract`
-- **Data subjects:** `operators`, `end_users`, `automated_systems`
-- **Data categories:** `authentication_credentials`, `identity_metadata`, `session_tokens`, `audit_log_entries`
+- **Data subjects:** `operators`; `end_users`; `automated_systems`
+- **Data categories:** `authentication_credentials`; `identity_metadata`; `session_tokens`; `audit_log_entries`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
@@ -72,8 +81,8 @@ tenants who are bridged an @user.bsky.<tld> account (legitimate interest
 in operating the social service, Art. 6(1)(f)). The repository lifecycle
 is operator-managed; deletion is handled via the Art-17 erasure path.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `at_protocol_identities`, `social_repository_content`, `object_storage_blobs`, `account_credentials`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `at_protocol_identities`; `social_repository_content`; `object_storage_blobs`; `account_credentials`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
@@ -86,7 +95,7 @@ encrypted secrets, project metadata, audit logs, and OIDC session links.
 Vault values are envelope-encrypted at rest.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `encrypted_secrets`, `audit_logs`, `oauth_session_data`, `email`
+- **Data categories:** `encrypted_secrets`; `audit_logs`; `oauth_session_data`; `email`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
@@ -102,8 +111,8 @@ persistence layer, Art. 6(1)(f)). End-user PII present here is owned by the
 consuming service; data lifetime and the precise processing purpose are
 determined by that service, not by MariaDB itself.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `application_user_data`, `audit_logs`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `application_user_data`; `audit_logs`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
@@ -118,7 +127,7 @@ estate (legitimate interest in service operation, Art. 6(1)(f)). The only
 data subjects are operators; no tenant end-user data is processed.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `admin_credentials`, `oauth_session_data`, `audit_logs`
+- **Data categories:** `admin_credentials`; `oauth_session_data`; `audit_logs`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -134,8 +143,8 @@ operating the persistence layer, Art. 6(1)(f)). End-user PII present here
 is owned by the consuming service; data lifetime and the precise processing
 purpose are determined by that service, not by PostgreSQL itself.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `application_user_data`, `audit_logs`, `oauth_session_data`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `application_user_data`; `audit_logs`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
@@ -150,8 +159,8 @@ operating the cache layer, Art. 6(1)(f)). Session keys can be linked to
 downstream end-users, but nothing is durable — the AOF rotates within a
 day. Data ownership and purpose remain with the consuming service.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `cache_data`, `oauth_session_data`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `cache_data`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 1 days
@@ -169,8 +178,8 @@ mailbox owners, and external correspondents whose addresses and message
 content appear in inbound/outbound flows. Mailbox retention is ~365 days;
 queue/bounce logs are shorter.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `mailbox_owners`, `external_correspondents`
-- **Data categories:** `mailbox_contents`, `smtp_envelope_metadata`, `mailbox_credentials`, `delivery_logs`
+- **Data subjects:** `operators`; `mailbox_owners`; `external_correspondents`
+- **Data categories:** `mailbox_contents`; `smtp_envelope_metadata`; `mailbox_credentials`; `delivery_logs`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -186,8 +195,8 @@ interest in service operation and security, Art. 6(1)(f)). The IP and
 User-Agent fields are attributable to end-users; access logs rotate on a
 ~30-day horizon aligned with Loki retention.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `request_metadata`, `client_ip_addresses`, `user_agent_strings`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `request_metadata`; `client_ip_addresses`; `user_agent_strings`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 30 days
@@ -205,8 +214,8 @@ interest in service operation, Art. 6(1)(f)). End-user data appears only
 transiently in transit inside forwarded log/trace payloads; durable
 storage and retention are owned by the Loki/Tempo backends, not Alloy.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `infrastructure_metrics`, `log_lines_in_transit`, `trace_spans_in_transit`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `infrastructure_metrics`; `log_lines_in_transit`; `trace_spans_in_transit`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 1 days
@@ -222,8 +231,8 @@ necessary to operate and monitor the platform for self-observability
 end-users are data subjects here — only the operator/admin staff who use
 the console.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operator`, `admins`
-- **Data categories:** `usage_metrics`, `dashboard_view_logs`, `oauth_session_data`
+- **Data subjects:** `operator`; `admins`
+- **Data categories:** `usage_metrics`; `dashboard_view_logs`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -235,7 +244,7 @@ the console.
 Authentik-authenticated principals reach the service.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `timeseries_metrics`, `bucket_metadata`, `oauth_session_data`
+- **Data categories:** `timeseries_metrics`; `bucket_metadata`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -251,8 +260,8 @@ service operation and security, Art. 6(1)(f)). End-user data appears
 incidentally inside ingested access-log lines; retention follows the Loki
 schema_config horizon (~30 days).
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `log_lines`, `hostname_labels`, `request_metadata`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `log_lines`; `hostname_labels`; `request_metadata`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 30 days
@@ -268,7 +277,7 @@ no end-user identifiers are stored. Retention follows prometheus_retention
 (~30 days).
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `infrastructure_metrics`, `hostname_labels`
+- **Data categories:** `infrastructure_metrics`; `hostname_labels`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 30 days
@@ -283,8 +292,8 @@ flows across services (legitimate interest in service operation,
 Art. 6(1)(f)). End-user data appears incidentally inside span attributes;
 retention is ~14 days.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `trace_spans`, `request_metadata`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `trace_spans`; `request_metadata`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 14 days
@@ -297,8 +306,8 @@ retention is ~14 days.
 - **Purpose:** Operator-hosted ebook library web reader (Calibre frontend). Forward-auth gate ensures only
 Authentik-authenticated principals reach the service.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `ebook_metadata`, `reading_progress`, `oauth_session_data`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `ebook_metadata`; `reading_progress`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -312,7 +321,7 @@ their own files in the class-3 per-user tree. Identity comes from the
 Authentik forward-auth headers; the shell stores no independent account.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `end_users`
-- **Data categories:** `username`, `email`
+- **Data categories:** `username`; `email`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -324,8 +333,8 @@ Authentik forward-auth headers; the shell stores no independent account.
 states, automations, sensor history, user accounts, and OIDC
 session data. Telemetry from physical IoT devices stays on-host.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `household_members`
-- **Data categories:** `device_telemetry`, `sensor_history`, `automation_definitions`, `user_accounts`, `oauth_session_data`
+- **Data subjects:** `operators`; `household_members`
+- **Data categories:** `device_telemetry`; `sensor_history`; `automation_definitions`; `user_accounts`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -341,7 +350,7 @@ companions posting text, transcripts, geo-tagged moments and
 media-by-reference to /ingest/v1).
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `end_users`
-- **Data categories:** `username`, `email`, `behavioural_data`, `user_generated_content`, `location_data`
+- **Data categories:** `username`; `email`; `behavioural_data`; `user_generated_content`; `location_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -352,8 +361,8 @@ media-by-reference to /ingest/v1).
 - **Purpose:** Operator-hosted offline content reader (Wikipedia, Gutenberg, ZIM archives). Forward-auth gate ensures only
 Authentik-authenticated principals reach the service.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `zim_access_logs`, `oauth_session_data`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `zim_access_logs`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 90 days
@@ -365,7 +374,7 @@ Authentik-authenticated principals reach the service.
 Authentik-authenticated principals reach the service.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `captured_email_bodies`, `smtp_envelope_metadata`, `oauth_session_data`
+- **Data categories:** `captured_email_bodies`; `smtp_envelope_metadata`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 7 days
@@ -381,8 +390,8 @@ repositories it exposes, in order to mediate and audit agent tool access
 operator and automated agent systems (e.g. Open WebUI agents); no tenant
 end-user identities are processed.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `automated_systems`
-- **Data categories:** `mcp_request_metadata`, `filesystem_access_logs`, `git_repo_access_logs`
+- **Data subjects:** `operators`; `automated_systems`
+- **Data categories:** `mcp_request_metadata`; `filesystem_access_logs`; `git_repo_access_logs`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 30 days
@@ -393,8 +402,8 @@ end-user identities are processed.
 - **Purpose:** Hosts the operator's RSS aggregator. Stores feed subscriptions,
 read/unread state, starred items, and the OIDC session link.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `feed_subscriptions`, `read_state`, `oauth_session_data`, `email`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `feed_subscriptions`; `read_state`; `oauth_session_data`; `email`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -407,8 +416,8 @@ workflow definitions, execution history, credentials, and OIDC
 session data. Workflows may process third-party data subjects'
 information depending on the operator's automations.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `workflow_definitions`, `execution_history`, `encrypted_credentials`, `oauth_session_data`, `email`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `workflow_definitions`; `execution_history`; `encrypted_credentials`; `oauth_session_data`; `email`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -420,8 +429,8 @@ information depending on the operator's automations.
 contacts, calendars, talk messages, user accounts, and OIDC session
 data. May process end-user uploads.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `file_storage`, `contacts`, `calendars`, `chat_messages`, `user_accounts`, `oauth_session_data`, `email`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `file_storage`; `contacts`; `calendars`; `chat_messages`; `user_accounts`; `oauth_session_data`; `email`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -433,7 +442,7 @@ data. May process end-user uploads.
 Authentik-authenticated principals reach the service.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `flow_definitions`, `credential_nodes`, `oauth_session_data`
+- **Data categories:** `flow_definitions`; `credential_nodes`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -444,8 +453,8 @@ Authentik-authenticated principals reach the service.
 - **Purpose:** Operator-hosted pub/sub HTTP push notifications server. Forward-auth gate ensures only
 Authentik-authenticated principals reach the service.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `topic_messages`, `subscriber_endpoints`, `oauth_session_data`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `topic_messages`; `subscriber_endpoints`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 30 days
@@ -460,8 +469,8 @@ service (legitimate interest in service operation, Art. 6(1)(f)). The
 request logs can be attributed to browsing end-users; no account or
 identity data is collected.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `tile_request_logs`, `hostname_labels`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `tile_request_logs`; `hostname_labels`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 30 days
@@ -473,8 +482,8 @@ identity data is collected.
 chat conversations, prompt history, model preferences, and OIDC
 session data.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `chat_messages`, `prompt_history`, `user_accounts`, `oauth_session_data`, `email`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `chat_messages`; `prompt_history`; `user_accounts`; `oauth_session_data`; `email`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -492,7 +501,7 @@ and governed by that service's record. Retention is the backup horizon
 (~90 days), tightened by per-bucket lifecycle policies.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `object_storage_blobs`, `access_logs`
+- **Data categories:** `object_storage_blobs`; `access_logs`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 90 days
@@ -505,8 +514,8 @@ Authentik-authenticated principals reach the webmail UI. IMAP/SMTP credentials
 are stored in SnappyMail's data directory and used to connect to the upstream
 mail server (Stalwart).
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `imap_smtp_credentials`, `webmail_session_data`, `oauth_session_data`, `email_cache_metadata`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `imap_smtp_credentials`; `webmail_session_data`; `oauth_session_data`; `email_cache_metadata`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -518,7 +527,7 @@ mail server (Stalwart).
 Authentik-authenticated principals reach the service.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `monitor_status`, `uptime_history`, `oauth_session_data`
+- **Data categories:** `monitor_status`; `uptime_history`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -532,8 +541,8 @@ attachments. Master password is operator-owned and never reaches the
 server in clear; Vaultwarden stores only the master-password-encrypted
 blob plus the OIDC link (when Authentik SSO is enabled).
 - **Legal basis (Art. 6):** `contract`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `encrypted_credentials`, `master_password_hash`, `encrypted_attachments`, `oauth_session_data`, `email`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `encrypted_credentials`; `master_password_hash`; `encrypted_attachments`; `oauth_session_data`; `email`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
@@ -550,7 +559,7 @@ subjects; no end-user data is processed. Logs rotate (max-size 10m,
 max-file 3).
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `container_metadata`, `update_event_logs`
+- **Data categories:** `container_metadata`; `update_event_logs`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 30 days
@@ -562,8 +571,8 @@ max-file 3).
 user accounts, and OIDC session data. Public-facing content may be
 reachable to anonymous visitors (legitimate interests basis).
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`, `anonymous_visitors`
-- **Data categories:** `blog_content`, `comments`, `user_accounts`, `oauth_session_data`, `email`
+- **Data subjects:** `operators`; `end_users`; `anonymous_visitors`
+- **Data categories:** `blog_content`; `comments`; `user_accounts`; `oauth_session_data`; `email`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -577,8 +586,8 @@ reachable to anonymous visitors (legitimate interests basis).
 retain the signed copy + signature audit log. Required to fulfil
 contracts with counter-parties who agree to electronic execution.
 - **Legal basis (Art. 6):** `contract`
-- **Data subjects:** `end_users`, `operators`
-- **Data categories:** `name`, `email`, `ip_address`, `signature_image`, `document_content`
+- **Data subjects:** `end_users`; `operators`
+- **Data categories:** `name`; `email`; `ip_address`; `signature_image`; `document_content`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -593,7 +602,7 @@ process (audit logs, CVE descriptions, system facts) — Qdrant itself
 does not collect data; it persists what Bone uploads.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `agent_run_metadata`, `system_facts`, `cybersec_metadata`
+- **Data categories:** `agent_run_metadata`; `system_facts`; `cybersec_metadata`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -606,8 +615,8 @@ itself stores only UI prefs, address book entries, and a short-term
 cache of message metadata for performance — message bodies live on
 the IMAP server (which has its own Article 30 entry).
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `email_metadata`, `address_book_entries`, `ui_preferences`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `email_metadata`; `address_book_entries`; `ui_preferences`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -621,7 +630,7 @@ a single phone. Replaces a hardware authenticator + paper backup. No
 third-party user data — the operator is the only data subject.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `credentials`, `authentication_metadata`
+- **Data categories:** `credentials`; `authentication_metadata`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
@@ -638,8 +647,8 @@ interest in research / agent operation, not contract-bound, Art. 6(1)(f)).
 Subjects are operators and automated agent systems; Bone redacts operator
 email before upsert. Points expire on a ~365-day nightly Pulse rebuild.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `automated_systems`
-- **Data categories:** `agent_prompt_context`, `advisory_text`, `vector_metadata`
+- **Data subjects:** `operators`; `automated_systems`
+- **Data categories:** `agent_prompt_context`; `advisory_text`; `vector_metadata`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -653,7 +662,7 @@ email before upsert. Points expire on a ~365-day nightly Pulse rebuild.
 Authentik-authenticated principals reach the service.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `workspace_files`, `git_credentials`, `oauth_session_data`
+- **Data categories:** `workspace_files`; `git_credentials`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -669,8 +678,8 @@ source-code hosting and collaboration to tenant developers. Providing the
 forge to a registered developer is contractual (Art. 6(1)(b)). Accounts
 persist while active; deletion is handled via the Art-17 erasure path.
 - **Legal basis (Art. 6):** `contract`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `identity_metadata`, `authentication_credentials`, `source_code`, `audit_log_entries`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `identity_metadata`; `authentication_credentials`; `source_code`; `audit_log_entries`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
@@ -682,8 +691,8 @@ persist while active; deletion is handled via the Art-17 erasure path.
 repositories, issues, merge requests, CI artifacts, user accounts,
 and OIDC session data.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `repository_content`, `issues_and_mrs`, `ci_artifacts`, `user_accounts`, `oauth_session_data`, `email`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `repository_content`; `issues_and_mrs`; `ci_artifacts`; `user_accounts`; `oauth_session_data`; `email`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -695,7 +704,7 @@ and OIDC session data.
 Authentik-authenticated principals reach the service.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `agent_runs`, `task_artifacts`, `oauth_session_data`
+- **Data categories:** `agent_runs`; `task_artifacts`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -711,8 +720,8 @@ contributors (legitimate interest in operating CI, Art. 6(1)(f)). Subjects
 are the operator and repo developers triggering pipelines; all execution is
 local with no external runners. CI logs auto-prune (~90 days).
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operator`, `developers`
-- **Data categories:** `ci_pipeline_logs`, `oauth_session_data`, `commit_author_metadata`
+- **Data subjects:** `operator`; `developers`
+- **Data categories:** `ci_pipeline_logs`; `oauth_session_data`; `commit_author_metadata`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 90 days
@@ -725,8 +734,8 @@ local with no external runners. CI logs auto-prune (~90 days).
 - **Purpose:** Hosts the operator's BookStack wiki. Stores pages, page revisions,
 user accounts, and the OIDC session link.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `wiki_content`, `revision_history`, `user_accounts`, `oauth_session_data`, `email`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `wiki_content`; `revision_history`; `user_accounts`; `oauth_session_data`; `email`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -743,8 +752,8 @@ and customers (Art. 6(1)(b)), with statutory accounting-retention
 obligations driving the ~7-year horizon. Subjects include operators,
 tenant employees/customers (end-users), and third-party CRM contacts.
 - **Legal basis (Art. 6):** `contract`
-- **Data subjects:** `operators`, `end_users`, `third_parties`
-- **Data categories:** `identity_metadata`, `financial_records`, `hr_data`, `customer_data`, `audit_log_entries`
+- **Data subjects:** `operators`; `end_users`; `third_parties`
+- **Data categories:** `identity_metadata`; `financial_records`; `hr_data`; `customer_data`; `audit_log_entries`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 2555 days (~7y)
@@ -755,8 +764,8 @@ tenant employees/customers (end-users), and third-party CRM contacts.
 - **Purpose:** Operator-hosted personal finance manager. Forward-auth gate ensures only
 Authentik-authenticated principals reach the service.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `transaction_history`, `account_balances`, `tags`, `oauth_session_data`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `transaction_history`; `account_balances`; `tags`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
@@ -770,8 +779,8 @@ OIDC session data. Customer email content is processed for support
 purposes (legitimate interests basis, contractual where the customer
 has an active service agreement).
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `support_agents`, `end_users`
-- **Data categories:** `support_conversations`, `ticket_metadata`, `customer_emails`, `internal_notes`, `user_accounts`, `oauth_session_data`
+- **Data subjects:** `operators`; `support_agents`; `end_users`
+- **Data categories:** `support_conversations`; `ticket_metadata`; `customer_emails`; `internal_notes`; `user_accounts`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 1095 days (~3y)
@@ -782,8 +791,8 @@ has an active service agreement).
 - **Purpose:** Hosts the operator's HedgeDoc collaborative markdown notes. Stores
 documents, edit history, and OIDC session links.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `document_content`, `edit_history`, `oauth_session_data`, `email`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `document_content`; `edit_history`; `oauth_session_data`; `email`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -794,8 +803,8 @@ documents, edit history, and OIDC session links.
 - **Purpose:** Operator-hosted collaborative office editor backend. Forward-auth gate ensures only
 Authentik-authenticated principals reach the service.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `document_edits`, `collaboration_sessions`, `oauth_session_data`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `document_edits`; `collaboration_sessions`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -806,8 +815,8 @@ Authentik-authenticated principals reach the service.
 - **Purpose:** Hosts the operator's Outline collaborative wiki. Stores documents,
 document revisions, comments, user accounts, and OIDC session data.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `wiki_content`, `revision_history`, `comments`, `user_accounts`, `oauth_session_data`, `email`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `wiki_content`; `revision_history`; `comments`; `user_accounts`; `oauth_session_data`; `email`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -826,8 +835,8 @@ Art. 6(1)(f)). Subjects include PBX admins, extension owners, and external
 callers whose numbers appear in CDRs. CDRs rotate on a ~90-day horizon;
 voicemail retention follows operator policy.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `extension_users`, `external_callers`
-- **Data categories:** `call_metadata`, `voicemail_recordings`, `extension_credentials`, `dialplan_state`
+- **Data subjects:** `operators`; `extension_users`; `external_callers`
+- **Data categories:** `call_metadata`; `voicemail_recordings`; `extension_credentials`; `dialplan_state`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 90 days
@@ -844,8 +853,8 @@ interest in service operation, Art. 6(1)(f)). Subjects are the operator and
 automated GIS clients consuming the endpoints; no account or end-user
 identity data is collected.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `automated_systems`
-- **Data categories:** `ogc_request_logs`, `hostname_labels`
+- **Data subjects:** `operators`; `automated_systems`
+- **Data categories:** `ogc_request_logs`; `hostname_labels`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 30 days
@@ -859,7 +868,7 @@ identity data is collected.
 metadata, dashboard definitions, query history, and user sessions.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `dashboard_definitions`, `query_history`, `user_accounts`
+- **Data categories:** `dashboard_definitions`; `query_history`; `user_accounts`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -877,7 +886,7 @@ tool; it holds no data-subject records of its own beyond the contents of
 the backups it manages and its own operation logs.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `backup_snapshots`, `backup_operation_metadata`
+- **Data categories:** `backup_snapshots`; `backup_operation_metadata`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** transient (not persisted)
@@ -892,8 +901,8 @@ pbkdf2) and writes them to the local RustFS bucket. Exists for disaster
 recovery and for the pre-wipe safety copy taken before a removal. It is
 machinery, not a service: no data subject ever interacts with it.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `tenant_users`
-- **Data categories:** `database_dumps`, `service_data_directories`, `operational_state`, `backup_operation_metadata`
+- **Data subjects:** `operators`; `tenant_users`
+- **Data categories:** `database_dumps`; `service_data_directories`; `operational_state`; `backup_operation_metadata`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 30 days
@@ -920,8 +929,8 @@ ownership. Per-user data is duplicated from KEAP's identical mirror, from
 the same host source, so this adds a second COPY of an already-registered
 category — no new category of subject data enters the estate.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `tenant_users`
-- **Data categories:** `taxonomy_tree`, `validate_requests`, `user_documents`, `consolidator_datapoints`
+- **Data subjects:** `operators`; `tenant_users`
+- **Data categories:** `taxonomy_tree`; `validate_requests`; `user_documents`; `consolidator_datapoints`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
@@ -933,7 +942,7 @@ category — no new category of subject data enters the estate.
 Authentik-authenticated principals reach the service.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `systems_inventory`, `remediation_items`, `audit_events`, `oauth_session_data`
+- **Data categories:** `systems_inventory`; `remediation_items`; `audit_events`; `oauth_session_data`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
@@ -941,6 +950,135 @@ Authentik-authenticated principals reach the service.
 - **Security measures:** platform baseline (see above)
 
 ### host / non-stack
+
+#### conductor — `agent_conductor`
+- **Purpose:** Verifies the platform end-to-end after a converge: reads Wing state, health
+endpoints and the Pulse job registry, then reports findings. Estate
+operation and assurance (legitimate interest, Art. 6(1)(f)). The prompt and
+the material it gathers are sent to a hosted model for reasoning.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `estate_health_telemetry`; `job_registry_metadata`; `operator_authored_prompts`
+- **Recipients / processors:** **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.
+- **Transfers outside EU:** **Yes**
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### curator — `agent_curator`
+- **Purpose:** Reconciles and reshapes the KEAP taxonomy — the librarian's active sibling.
+Estate knowledge maintenance (legitimate interest, Art. 6(1)(f)). What
+travels is curated public-knowledge content, not tenant data.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `knowledge_corpus_content`; `taxonomy_structure`
+- **Recipients / processors:** **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.
+- **Transfers outside EU:** **Yes**
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### inspektor — `agent_inspektor`
+- **Purpose:** Would survey the platform's security posture by driving scan substrates and
+analysing findings. DECLARED, NOT PERFORMED: `metadata.runner_status` is
+`deferred` — the agent ships as an AgentKit contract with no live execution
+and no registered Pulse ceremony, so no processing occurs and nothing is
+transferred.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `none_processed_while_deferred`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### librarian — `agent_librarian`
+- **Purpose:** Surfaces prior context — earlier agent runs, remediation history, KEAP
+knowledge nodes — so a question already answered is not re-answered.
+Estate operation (legitimate interest, Art. 6(1)(f)).
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `agent_run_history`; `remediation_queue_records`; `knowledge_corpus_content`
+- **Recipients / processors:** **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.
+- **Transfers outside EU:** **Yes**
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### migration-author — `agent_migration-author`
+- **Purpose:** Promotes a reviewed upgrade recipe into the committed codebase change.
+Estate maintenance (legitimate interest, Art. 6(1)(f)). Authoring a real
+code change sends repository source, and the resulting branch carries
+commit metadata.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`; `commit_authors`
+- **Data categories:** `repository_source`; `commit_metadata`
+- **Recipients / processors:** **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.
+- **Transfers outside EU:** **Yes**
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### remediator — `agent_remediator`
+- **Purpose:** Proposes (never applies) fixes for open security findings. Estate security
+(legitimate interest, Art. 6(1)(f)).
+
+THE SHARPEST CEREMONY IN THE FLEET, and the reason these records are per
+agent. It reads `gitleaks_findings` — whose rows carry the COMMIT AUTHOR'S
+NAME AND EMAIL — and then fetches the surrounding file context, i.e. the
+plaintext neighbourhood of every unresolved secret leak. Both leave the
+host. A record written for "the agent runtime" as a whole would have
+described the mildest ceremony and covered this one by implication.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`; `commit_authors`
+- **Data categories:** `secret_leak_neighbourhoods`; `commit_author_identifiers`; `remediation_queue_records`
+- **Recipients / processors:** **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.
+- **Transfers outside EU:** **Yes**
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### scout — `agent_scout`
+- **Purpose:** Correlates recent wing.db events against the committed state manifest and
+reports drift. Estate operation (legitimate interest, Art. 6(1)(f)). Event
+rows carry the actor that caused them, so operator and agent identifiers
+travel with the excerpt sent for reasoning.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`; `automation_identities`
+- **Data categories:** `estate_event_records`; `declared_state_manifest`
+- **Recipients / processors:** **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.
+- **Transfers outside EU:** **Yes**
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### upgrade-advisor — `agent_upgrade-advisor`
+- **Purpose:** Reads the upgrade version matrix and queues the upgrades that apply to the
+running estate, for the operator to apply. Estate maintenance (legitimate
+interest, Art. 6(1)(f)).
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `installed_version_inventory`; `upgrade_recipe_metadata`
+- **Recipients / processors:** **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.
+- **Transfers outside EU:** **Yes**
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### upgrade-architect — `agent_upgrade-architect`
+- **Purpose:** Authors upgrade recipes for the version gaps the advisor cannot act on.
+Estate maintenance (legitimate interest, Art. 6(1)(f)). Recipe authoring
+sends repository source — role defaults, task files, templates — for
+reasoning.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `repository_source`; `installed_version_inventory`
+- **Recipients / processors:** **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.
+- **Transfers outside EU:** **Yes**
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
 
 #### Alert Relay — `svc_alert-relay`
 - **Purpose:** Deliver Prometheus firing alerts to the operator via the A9 notification spine, so a rule that evaluates is a rule someone reads
@@ -961,8 +1099,8 @@ interest in service operation, Art. 6(1)(f)). End-user data only appears
 incidentally inside container access logs; high log volume means a short
 retention horizon.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `infrastructure_metrics`, `container_logs`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `infrastructure_metrics`; `container_logs`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 7 days
@@ -992,8 +1130,8 @@ Loki so the operator can debug failures and reconstruct an audit lineage
 End-user data appears incidentally inside host nginx access lines (request
 paths, source IPs); durable retention is owned by Loki, not this agent.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `operational_logs`, `audit_trail_logs`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `operational_logs`; `audit_trail_logs`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 14 days
@@ -1037,7 +1175,7 @@ paths, source IPs); durable retention is owned by Loki, not this agent.
 - **Purpose:** Secret detection in operator-managed source repositories (nOS repo)
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `source_code_metadata`, `partial_credentials`
+- **Data categories:** `source_code_metadata`; `partial_credentials`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -1052,8 +1190,8 @@ the operational Wing dashboards (legitimate interest in service operation,
 Art. 6(1)(f)). It stores nothing itself; the retention horizon is owned by
 keap-base. Read-only, admin-tier access.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `tenant_users`
-- **Data categories:** `knowledge_taxonomy`, `knowledge_corpus_metadata`, `datatable_rows`
+- **Data subjects:** `operators`; `tenant_users`
+- **Data categories:** `knowledge_taxonomy`; `knowledge_corpus_metadata`; `datatable_rows`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** transient (not persisted)
@@ -1098,7 +1236,7 @@ interest in service operation, Art. 6(1)(f)). It stores nothing itself;
 the trace-retention horizon is owned by tempo-base.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `trace_spans`, `request_metadata`
+- **Data categories:** `trace_spans`; `request_metadata`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 14 days
@@ -1114,7 +1252,7 @@ in service operation, Art. 6(1)(f)). It stores nothing itself; the
 retention horizon is owned by wing-base. Operator-only data subjects.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `playbook_event_metadata`, `agent_session_telemetry`
+- **Data categories:** `playbook_event_metadata`; `agent_session_telemetry`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** transient (not persisted)
@@ -1136,7 +1274,7 @@ the operator enables Anthropic delegation, prompts may be transferred to
 Anthropic (US) — update transfers_outside_eu + processors accordingly.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `operator_prompts`, `agent_run_metadata`, `agent_memory`
+- **Data categories:** `operator_prompts`; `agent_run_metadata`; `agent_memory`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** transient (not persisted)
@@ -1148,8 +1286,8 @@ Anthropic (US) — update transfers_outside_eu + processors accordingly.
 accounts (per-family-member profiles), watch history, and library
 metadata.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`, `end_users`
-- **Data categories:** `user_accounts`, `watch_history`, `media_metadata`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `user_accounts`; `watch_history`; `media_metadata`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -1161,7 +1299,7 @@ metadata.
 dashboard / collection metadata, query history, user accounts.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `dashboard_definitions`, `query_history`, `user_accounts`
+- **Data categories:** `dashboard_definitions`; `query_history`; `user_accounts`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -1188,7 +1326,7 @@ unless the caller explicitly POSTs to Wing /events with source=agent:*
 (in which case A10 actor_id audit applies).
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
-- **Data categories:** `operator_prompts`, `agent_run_metadata`
+- **Data categories:** `operator_prompts`; `agent_run_metadata`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** transient (not persisted)
@@ -1215,8 +1353,8 @@ operator authors or triggers jobs; no tenant end-user data is processed.
 tables, table rows, and the cryptographic identity (ctx.sender.identity)
 of every module caller. Module-level data subject is operator-defined.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operator`, `module_callers`
-- **Data categories:** `module_state`, `operator_identity`
+- **Data subjects:** `operator`; `module_callers`
+- **Data categories:** `module_state`; `operator_identity`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)

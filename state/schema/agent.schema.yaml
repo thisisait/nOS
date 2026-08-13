@@ -266,6 +266,100 @@ properties:
     type: object
     additionalProperties: true
     description: "Free-form key/value pairs, surfaced in Wing /agents UI."
+  gdpr:
+    type: object
+    additionalProperties: false
+    description: |
+      Article-30 record for THIS ceremony's processing (2026-08-13).
+
+      Why it is a first-class key and not a `metadata` entry: running an
+      agent sends estate content to an LLM provider, which is a transfer to
+      a processor — and until this key existed the register asserted zero
+      third-party processors while eight ceremonies had been shipping
+      prompts to Anthropic nightly since the runtime shipped. The register
+      never saw them because `nos_gdpr.all_records()` swept only
+      `files/anatomy/plugins/` and `apps/`, and the agent files live in
+      neither. A legal record hidden in a free-form bag is the same defect
+      one directory further in.
+
+      Why PER AGENT rather than one record for the runtime: the ceremonies
+      differ in exactly the way Article 30 cares about. `brief-taxonomy`
+      sends taxonomy prose; `triage-open-findings` sends the ±4-line
+      neighbourhood of every unresolved secret leak, and gitleaks rows
+      carry git author name and email — personal data. One flattened
+      record would state the mild case and hide the sharp one. The same
+      distinction is what the MiniMax routing ruling needs (capability is
+      one axis, data sensitivity the other), so the register and the
+      routing decision are served by one table rather than two.
+    required:
+      - purpose
+      - legal_basis
+      - data_categories
+      - data_subjects
+      - processors
+      - retention_days
+    properties:
+      purpose:
+        type: string
+        minLength: 32
+        description: "What this ceremony processes, and why. Art. 30(1)(b)."
+      legal_basis:
+        type: string
+        enum:
+          - consent
+          - contract
+          - legal_obligation
+          - vital_interests
+          - public_task
+          - legitimate_interests
+      data_categories:
+        type: array
+        minItems: 1
+        items: {type: string}
+        description: |
+          What actually leaves the host, named concretely. `repository_source`
+          is not the same claim as `secret_leak_neighbourhoods`.
+      data_subjects:
+        type: array
+        minItems: 1
+        items: {type: string}
+      processors:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [name, role, country]
+          properties:
+            name: {type: string}
+            role: {type: string}
+            country:
+              type: string
+              description: "ISO-3166 alpha-2, or a plain name. Drives transfers_outside_eu."
+            safeguard:
+              type: string
+              description: "Art. 46 mechanism, e.g. SCCs. Absent = none claimed."
+        description: |
+          EMPTY MEANS NOBODY, and is a claim. A ceremony that calls a hosted
+          model has a processor; saying `[]` there is the assertion this key
+          was added to stop being made by default.
+      retention_days:
+        type: integer
+        description: "-1 = kept for the lifetime of the estate."
+      eu_residency:
+        type: boolean
+        description: |
+          Whether processing stays inside the EU. Omitted defaults to TRUE
+          in nos_gdpr — an all-local-FOSS default that is false for any
+          ceremony reaching a US-hosted model, so state it explicitly.
+      transfers_outside_eu:
+        type: boolean
+      storage_location:
+        type: string
+      security_measures:
+        type: array
+        items: {type: string}
+      notes:
+        type: string
   exit_code_semantics:
     type: object
     additionalProperties: false

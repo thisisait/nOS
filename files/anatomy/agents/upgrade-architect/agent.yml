@@ -53,3 +53,24 @@ exit_code_semantics:
   exit_0: "Full recipe coverage; nothing needed drafting for the running version matrix."
   exit_1: "Drafted recipe(s) / queued coexistence prep pending operator review in the report body. Operator-review, not a failure. Fires a HIGH A9 notification."
   exit_2: "Environment / auth / Wing error inside pulse-run-agent.sh. Fires a CRITICAL A9 notification."
+# ── Article 30 ────────────────────────────────────────────────────────────────
+gdpr:
+  purpose: |
+    Authors upgrade recipes for the version gaps the advisor cannot act on.
+    Estate maintenance (legitimate interest, Art. 6(1)(f)). Recipe authoring
+    sends repository source — role defaults, task files, templates — for
+    reasoning.
+  legal_basis: legitimate_interests
+  data_categories:
+    - repository_source
+    - installed_version_inventory
+  data_subjects:
+    - operators
+  retention_days: -1
+  processors:
+    - name: "Anthropic, PBC"
+      role: "LLM inference for the ceremony's reasoning (claude CLI, --print)"
+      country: "US"
+      safeguard: "None claimed. Assess SCCs / Art. 46 before this is relied on."
+  eu_residency: false
+  transfers_outside_eu: true

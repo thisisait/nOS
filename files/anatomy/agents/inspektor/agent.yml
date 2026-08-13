@@ -64,3 +64,26 @@ exit_code_semantics:
   exit_0: "Contract-only (no live runner). Reserved: pentest survey completed, posted as events."
   exit_1: "Does not emit exit 1 today (runner deferred). Reserved: surfaced findings requiring operator review."
   exit_2: "Environment / auth / Wing error inside pulse-run-agent.sh. Fires a CRITICAL A9 notification."
+# ── Article 30 ────────────────────────────────────────────────────────────────
+gdpr:
+  purpose: |
+    Would survey the platform's security posture by driving scan substrates and
+    analysing findings. DECLARED, NOT PERFORMED: `metadata.runner_status` is
+    `deferred` — the agent ships as an AgentKit contract with no live execution
+    and no registered Pulse ceremony, so no processing occurs and nothing is
+    transferred.
+  legal_basis: legitimate_interests
+  data_categories:
+    - none_processed_while_deferred
+  data_subjects:
+    - operators
+  retention_days: -1
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false
+  notes: |
+    THIS RECORD MUST BE REWRITTEN BEFORE THE AGENT IS ARMED. Its intended
+    inputs are scan findings — the remediator's category, i.e. leak context and
+    commit-author identity — so arming it means declaring a processor and a
+    transfer. An empty `processors` list is true today and becomes the estate's
+    old false assertion the moment `runner_status` changes.

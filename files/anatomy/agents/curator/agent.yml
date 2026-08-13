@@ -79,3 +79,23 @@ exit_code_semantics:
   exit_0: "Sweep completed; visits checkpointed. Any desc proposals await the moderator — the normal, non-escalating outcome."
   exit_1: "Structural findings queued for operator review (a duplicate / contradiction / misparent the moderator must adjudicate)."
   exit_2: "Environment / auth / Wing or KEAP error inside pulse-run-agent.sh. Fires a CRITICAL A9 notification."
+# ── Article 30 ────────────────────────────────────────────────────────────────
+gdpr:
+  purpose: |
+    Reconciles and reshapes the KEAP taxonomy — the librarian's active sibling.
+    Estate knowledge maintenance (legitimate interest, Art. 6(1)(f)). What
+    travels is curated public-knowledge content, not tenant data.
+  legal_basis: legitimate_interests
+  data_categories:
+    - knowledge_corpus_content
+    - taxonomy_structure
+  data_subjects:
+    - operators
+  retention_days: -1
+  processors:
+    - name: "Anthropic, PBC"
+      role: "LLM inference for the ceremony's reasoning (claude CLI, --print)"
+      country: "US"
+      safeguard: "None claimed. Assess SCCs / Art. 46 before this is relied on."
+  eu_residency: false
+  transfers_outside_eu: true

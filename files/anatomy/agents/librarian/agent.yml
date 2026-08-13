@@ -72,3 +72,24 @@ exit_code_semantics:
   exit_0: "Contract-only (no live runner). Reserved: RAG recall completed, context posted as events."
   exit_1: "Does not emit exit 1 today (runner deferred). Reserved: surfaced prior-art requiring operator review."
   exit_2: "Environment / auth / Wing error inside pulse-run-agent.sh. Fires a CRITICAL A9 notification."
+# ── Article 30 ────────────────────────────────────────────────────────────────
+gdpr:
+  purpose: |
+    Surfaces prior context — earlier agent runs, remediation history, KEAP
+    knowledge nodes — so a question already answered is not re-answered.
+    Estate operation (legitimate interest, Art. 6(1)(f)).
+  legal_basis: legitimate_interests
+  data_categories:
+    - agent_run_history
+    - remediation_queue_records
+    - knowledge_corpus_content    # KEAP taxonomy + node text
+  data_subjects:
+    - operators
+  retention_days: -1
+  processors:
+    - name: "Anthropic, PBC"
+      role: "LLM inference for the ceremony's reasoning (claude CLI, --print)"
+      country: "US"
+      safeguard: "None claimed. Assess SCCs / Art. 46 before this is relied on."
+  eu_residency: false
+  transfers_outside_eu: true

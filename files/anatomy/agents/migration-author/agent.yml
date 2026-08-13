@@ -69,3 +69,25 @@ exit_code_semantics:
   exit_0: "Nothing to author — no merged recipe gap, or the migration record already exists / is already merged-backed. The trigger layer skips the MR post-step (no path_written migration file)."
   exit_1: "Authored a migration record + version bump (via migration-file-write). The trigger layer then runs tools/migration-pr.sh --open-pr as a deterministic post-step → local-forge MR pending operator review (GATE 2). Operator-review, not a failure. Fires a HIGH A9 notification."
   exit_2: "Environment / auth / Wing error inside the AgentKit Runner (or the migration-pr.sh post-step exit 2 — forge unavailable). Fires a CRITICAL A9 notification."
+# ── Article 30 ────────────────────────────────────────────────────────────────
+gdpr:
+  purpose: |
+    Promotes a reviewed upgrade recipe into the committed codebase change.
+    Estate maintenance (legitimate interest, Art. 6(1)(f)). Authoring a real
+    code change sends repository source, and the resulting branch carries
+    commit metadata.
+  legal_basis: legitimate_interests
+  data_categories:
+    - repository_source
+    - commit_metadata             # author + message on the branch it opens
+  data_subjects:
+    - operators
+    - commit_authors
+  retention_days: -1
+  processors:
+    - name: "Anthropic, PBC"
+      role: "LLM inference for the ceremony's reasoning (claude CLI, --print)"
+      country: "US"
+      safeguard: "None claimed. Assess SCCs / Art. 46 before this is relied on."
+  eu_residency: false
+  transfers_outside_eu: true

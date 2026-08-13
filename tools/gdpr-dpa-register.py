@@ -45,8 +45,34 @@ def _yesno(v) -> str:
     return "**Yes**" if v else "No"
 
 
-def _join(items: list[str]) -> str:
-    return ", ".join(f"`{i}`" for i in items) if items else "—"
+def _join(items: list) -> str:
+    """Render a list cell.
+
+    PROCESSORS ARE OBJECTS, not strings (2026-08-13). When the agent records
+    landed, the first render put a raw Python dict repr into the DPO-facing
+    table — `{'name': 'Anthropic, PBC', 'role': "...", 'country': 'US'}` —
+    which is the one artifact in this repo whose readability IS its purpose.
+    A processor is formatted as `name (country) — role`, with the Art-46
+    safeguard appended when one is claimed, so the absence of a safeguard is
+    visible rather than buried in a dict.
+    """
+    if not items:
+        return "—"
+    out = []
+    for i in items:
+        if isinstance(i, dict):
+            name = i.get("name", "unnamed processor")
+            country = i.get("country")
+            head = f"**{name}**" + (f" ({country})" if country else "")
+            role = i.get("role")
+            if role:
+                head += f" — {role}"
+            safeguard = i.get("safeguard")
+            head += f" · safeguard: {safeguard}" if safeguard else " · **no safeguard claimed**"
+            out.append(head)
+        else:
+            out.append(f"`{i}`")
+    return "; ".join(out)
 
 
 def _controller_lines() -> list[str]:

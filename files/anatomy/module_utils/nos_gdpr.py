@@ -219,9 +219,67 @@ def records_from_app_manifests(apps_dir: str | pathlib.Path) -> list[dict]:
     return out
 
 
+def records_from_agents(agents_dir: str | pathlib.Path) -> list[dict]:
+    """Agent ceremonies (`files/anatomy/agents/<name>/agent.yml`) → records.
+
+    WHY THIS SWEEP EXISTS (2026-08-13). `all_records()` read plugins and app
+    manifests, and the agent definitions live in neither — so the register
+    could be complete, pass its coverage gate, and still assert zero
+    third-party processors while eight ceremonies shipped prompts to a
+    US-hosted model every night. The omission was structural, not clerical:
+    nothing under `files/anatomy/agents/` was ever asked.
+
+    WHY `<name>/agent.yml` AND NOT `<name>.yml`. Both exist — the directory
+    form is the AgentKit definition, the flat file is the profile
+    `pulse-run-agent.sh` reads — and today it is the FLAT one that runs. The
+    record still belongs to the directory form: it is validated by
+    `state/schema/agent.schema.yaml` (the flat file is validated by nothing),
+    and it is keyed to the agent's identity rather than to whichever harness
+    currently invokes it, so it survives the spine cutover instead of being
+    rewritten by it. The record describes the ceremony's processing under
+    EITHER runtime; that is stated in each block's notes.
+
+    id convention: `agent_<slug>`, beside `svc_` and `app_`.
+    """
+    import yaml
+
+    d = pathlib.Path(agents_dir)
+    out: list[dict] = []
+    if not d.is_dir():
+        return out
+    for entry in sorted(d.iterdir()):
+        manifest = entry / "agent.yml"
+        if not (entry.is_dir() and manifest.is_file()):
+            continue
+        try:
+            m = yaml.safe_load(manifest.read_text()) or {}
+        except yaml.YAMLError:
+            continue
+        if not isinstance(m, dict):
+            continue
+        gdpr = m.get("gdpr")
+        if not gdpr:
+            continue
+        slug = m.get("name") or entry.name
+        out.append(
+            gdpr_block_to_record(
+                gdpr,
+                record_id=f"agent_{slug}",
+                slug=str(slug),
+                stack=None,
+                tier="agent",
+                display_name=m.get("name"),
+                source_plugin=f"agents/{entry.name}/agent.yml",
+            )
+        )
+    out.sort(key=lambda r: r["id"])
+    return out
+
+
 def all_records(repo_root: str | pathlib.Path) -> list[dict]:
-    """Tier-1 + Tier-2 records, the full Article-30 processing inventory."""
+    """Tier-1 + Tier-2 + agent records, the full Article-30 inventory."""
     repo = pathlib.Path(repo_root)
     recs = records_from_plugins(repo / "files/anatomy/plugins")
     recs += records_from_app_manifests(repo / "apps")
+    recs += records_from_agents(repo / "files/anatomy/agents")
     return recs

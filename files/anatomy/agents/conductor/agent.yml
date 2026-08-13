@@ -53,3 +53,28 @@ exit_code_semantics:
   exit_0: "Self-test ceremony completed; health report posted as events. Prose-only — conductor always exits 0 unless the runner itself errors."
   exit_1: "Does not emit exit 1. Conductor posts a markdown report, not a sentinel; findings live in the report body, not the process exit."
   exit_2: "Environment / auth / Wing error inside pulse-run-agent.sh (token, HMAC, claude CLI). Fires a CRITICAL A9 notification."
+# ── Article 30 ────────────────────────────────────────────────────────────────
+gdpr:
+  purpose: |
+    Verifies the platform end-to-end after a converge: reads Wing state, health
+    endpoints and the Pulse job registry, then reports findings. Estate
+    operation and assurance (legitimate interest, Art. 6(1)(f)). The prompt and
+    the material it gathers are sent to a hosted model for reasoning.
+  legal_basis: legitimate_interests
+  data_categories:
+    - estate_health_telemetry     # container/service status, endpoint probes
+    - job_registry_metadata       # plugin, job name, schedule, last exit
+    - operator_authored_prompts
+  data_subjects:
+    - operators
+  retention_days: -1              # findings persist as events in wing.db
+  processors:
+    - name: "Anthropic, PBC"
+      role: "LLM inference for the ceremony's reasoning (claude CLI, --print)"
+      country: "US"
+      safeguard: "None claimed. Assess SCCs / Art. 46 before this is relied on."
+  eu_residency: false
+  transfers_outside_eu: true
+  notes: |
+    The transfer is a property of the CEREMONY, not of the harness: it holds
+    whether pulse-run-agent.sh or AgentKit drives it.
