@@ -1,3 +1,101 @@
+# nOS Vulnerability Scan Addendum — 2026-08-13 (Cycle 28, batch-51)
+
+**Batch:** authentik, grafana, nextcloud, kiwix, loki · **Probe:** `docker_escape_paths`
+**Outcome:** 2 queue items added (**REM-196 CRITICAL** — new advisory, 2 days old; **REM-197 HIGH** — the probe's finding of record). CVE leg otherwise clean at every live pin. Pending CRITICAL goes **0 → 1**, pending HIGH **5 → 6**.
+
+> **The finding of record, stated once.** A `:ro` bind on a **unix socket** is cosmetic. It stops you unlinking the socket *file*; it does nothing to the Docker **API**, which is request/response *over* that socket. `observability-cadvisor-1` runs `privileged: true` as uid 0 with that socket live, host `/` at `/rootfs`, `label=disable`, on the flat `shared_net` — so code execution inside it is host root. And it is being carried for **nothing**: on Docker Desktop for Mac it emits **one** `container_cpu_usage_seconds_total` series, labelled `id="/"`. Zero per-container metrics. That is cAdvisor's entire purpose.
+
+---
+
+### 🔴 CRITICAL — [REM-196, CVE-2026-19516] mcp-grafana SSRF via `X-Grafana-URL`, second bite — the first patch only half-closed it
+
+- **Component:** mcp_gateway — `mcp/grafana` digest-pinned to `sha256:9362bcf6…4014`, live as `iiab-mcp-grafana-1`
+- **CVSS 9.1** · `AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:L/A:L` · published **2026-08-11**, two days before this scan
+- **Status:** version-currency, **high confidence**, remediation **blocked on registry availability**
+
+An authenticated caller invoking the `grafana_api_request` tool controls `X-Grafana-URL`, and therefore the **outbound request destination** — internal networks, loopback, cloud metadata — **and reads the response**. Grafana's advisory is explicit that this exists because the CVE-2026-15583 patch (**REM-150**) "prevented token leakage but failed to restrict destination targeting entirely." Fix floor moves `0.17.1 → 1.1.0`.
+
+**The resident image is pre-fix, and this is now proven at commit level** rather than inferred from a build date (which is all REM-150 had):
+
+```
+image label org.opencontainers.image.revision = 76ed7dba5a18c9058d58a9ec037cc0e6a6febe49
+  → grafana/mcp-grafana commit of 2026-07-07T21:39Z
+  → compare vs v0.17.1 : behind by 1 commit     ← CVE-2026-15583 unfixed
+  → compare vs v1.1.0  : behind by 27 commits   ← CVE-2026-19516 unfixed
+```
+
+**Why this cannot be fixed by a re-pull.** The pin is a *digest* pin (`mcp_grafana_version: "latest@sha256:9362bcf…"`), deliberately frozen to this build — and Docker Hub `mcp/grafana` publishes **only** `latest` and has not been pushed since **2026-07-08T07:08Z**. There is no fixed image on the configured registry. `ghcr.io/grafana/mcp-grafana` returns **403** to anonymous manifest requests for every tag tried (`v1.1.0`, `1.1.0`, `v0.17.2`, `latest`) — that is *access denied*, **not** proof of absence, and re-checking it with credentials is the first action.
+
+**Action, in order:** (a) authenticate to ghcr, repin to `v1.1.0` if present; (b) build from source (Go, Apache-2.0), pin a local image; (c) failing both, **disable the mcp-grafana backend** — an unfixable SSRF-to-metadata sink holding a Grafana service-account token is not worth its convenience. Fix REM-150 and REM-196 with **one** image move.
+
+**Perimeter (mitigating, and why this is not a fire):** `8000/tcp → null` (unpublished); absent from `state/manifest.yml` so Traefik derives **no** router; fronting mcpo is forward-auth gated (`traefik_auth_modes.mcp_gateway='proxy'`) *and* `--api-key` protected; `PR:L` means the attacker is already an authenticated MCP caller. Realistic path is a foothold on `iiab_net` / the flat `shared_net`. What raises the stakes is the payload it holds — `GRAFANA_SERVICE_ACCOUNT_TOKEN` (`compose.yml.j2:71`, populated by `tasks/post.yml:108`).
+
+> **Process defect closed alongside it.** `mcp_gateway` had **no entry in `scan-state.json`** — yet two items are filed against it. The scheduler walks that map `oldest_first`, so it could never select this component; mcp-grafana has only ever been looked at *incidentally*, while scanning grafana. An entry now exists. A component reachable only by accident is a component that will be missed.
+
+---
+
+### 🟠 HIGH — [REM-197, no CVE] cAdvisor: privileged, root, live Docker socket, on `shared_net` — delivering zero per-container metrics
+
+- **Component:** grafana — `gcr.io/cadvisor/cadvisor:v0.49.1`, live as `observability-cadvisor-1`, rendered by `roles/pazny.grafana/templates/compose.yml.j2`
+- **Status:** config-derived, **live-measured**, high confidence. Rated **exploitable-post-foothold**, not remotely triggerable.
+
+The grafana role's template does not stop at Grafana — its tail renders the exporter fleet, and cAdvisor in that fleet is the **highest-privilege container in the estate**. Measured, against the other four in this batch which all run non-root with no socket (`authentik` 1000, `grafana` 472, `loki` 10001, `kiwix` `user`):
+
+```
+privileged=true · user=root(0) · SecurityOpt=[label=disable]
+/ → /rootfs · /sys · /var/lib/docker · /var/run · docker.sock
+networks: observability_net + shared_net   (~40 peers)
+```
+
+**The socket is live, and the surface lies twice.** `ls -l` inside shows `/var/run/docker.sock` as a **symlink** to `/Users/pazny/.docker/run/docker.sock` — the `/var/run:/var/run:ro` bind shadows the explicit socket bind and drags in the *macOS host's* `/var/run` (Apple's own sockets are visible in there). That reads like a dangling link. It is not:
+
+```
+/proc/self/mountinfo:
+  2004 … /host-services/docker.proxy.sock  /Users/pazny/.docker/run/docker.sock  ro … tmpfs
+cat /var/run/docker.sock → ENXIO ("No such device or address" = it IS a socket, not ENOENT)
+```
+
+The symlink resolves *through* a real bind of Docker Desktop's live API socket. And `:ro` does not make the API read-only. `docker info` shows no rootless mode and no Enhanced Container Isolation (`SecurityOptions = seccomp builtin + cgroupns`), so nothing upstream constrains `POST /containers/create {Privileged:true, Binds:["/:/host"]}` → **host root**.
+
+**What decides the remediation is the value side, measured:**
+
+```
+count(container_cpu_usage_seconds_total)  → 1 series   id="/"   (root cgroup)
+count(container_memory_usage_bytes)       → 1 series   id="/"
+GET /api/v1.3/docker                      → 0 containers
+docker logs → endless: "failed to identify the read-write layer ID …
+   open /rootfs/var/lib/docker/image/overlayfs/layerdb/mounts/<id>/mount-id: no such file or directory"
+```
+
+**Zero** per-container CPU/memory metrics — the whole point of cAdvisor — because `/rootfs` is the macOS filesystem while the real `/var/lib/docker` lives inside the LinuxKit VM. It is architecturally unable to do its job on this platform. Maximum privilege, no delivered value. (The 85 `container_fs_usage_bytes` series are host filesystem devices, not containers.)
+
+**Why HIGH and not CRITICAL:** `:8080` answers **200 unauthenticated** to any `shared_net` peer by DNS name — the identical "a host port-map is not a network gate" error as REM-194 — but that API is read-only metrics and leaks no secret, and cAdvisor has no published CVE or public RCE. The vector needs code execution *in* cAdvisor. What the finding establishes is that the blast radius of any such bug is host root, and that this is the most valuable pivot target on `shared_net` for the SSRF chains already queued (REM-044, REM-136).
+
+> **Precedent, shipped one day before this scan.** REM-194 was closed 2026-08-12 by setting `api.insecure=false` so Traefik's API left container `:8080`. That fix accepted exactly the principle this finding rests on. cAdvisor is the same shape, on the same network, still open — and with host root on the other side of the socket.
+
+**Action (preference order):** (a) **drop cAdvisor on Darwin** — gate the service block and `alloy_scrape_cadvisor` on `ansible_os_family != 'Darwin'`; it works on the Linux port and delivers nothing here; (b) route it through the **docker-socket-proxy the estate already runs** for portainer and traefik (`--host tcp://docker-socket-proxy:2375`, how REM-001/REM-002 were closed) and drop `privileged`, the `/` and `/var/run` binds, and `label=disable`; (c) at minimum take it off `shared_net`. Bumping `v0.49.1 → v0.60.5` is hygiene and fixes **none** of this — the privilege is in our compose file, not their release notes.
+**Verify:** `docker inspect observability-cadvisor-1 --format '{{.HostConfig.Privileged}}'` → `false`, and `stat /var/run/docker.sock` inside must not resolve to a socket.
+
+---
+
+### Clean legs, stated with their evidence
+
+- **authentik** — no advisory newer than the 2026-07-15 wave (repo-level endpoint re-queried; it is the *only* source — global GHSA 404s, OSV has zero records). **REM-149 stands**, pin still `2026.5.2`. New scheduling fact: **2026.8.0 is at rc7**, so take `2026.5.6` now or the bump re-scopes into a major upgrade. Probe **clean** — uid 1000, no socket, no caps, RO blueprints. The estate's most security-critical container is also one of its least-privileged.
+- **nextcloud** — **near miss by one patch.** New **CVE-2026-61527** (HIGH 7.1, 2026-08-05): view-only link shares on Team Folders / External Storage are *always writeable*; affected `>= 33.0.4`, **fixed 33.0.6**. Live `occ status` reports **33.0.6.2** → **not affected**. That verdict *had* to come from a live measurement: the pin is the floating tag `nextcloud:33`, which cannot answer the question. CVE-2026-61545 N/A (Mail app not installed). **Standing note corrected:** prior entries listed `user_oidc` among apps "not in the base image" — it **is** enabled, at 8.10.1, above all three May fix floors (8.3.0 / 8.4.0 / 8.2.2). An untested packaging inference had exempted an *authentication* app from four scans.
+- **kiwix** — 3.8.2 is still upstream head; advisory endpoints empty; NVD keyword search returns `totalResults=1` for all time (CVE-2015-1032, fixed eleven years ago). Probe clean, non-root, and the only service in the batch **not** on `shared_net`. One theoretical, not filed: `exec kiwix-serve … $ZIMS` unquoted → *argument* injection via a whitespace-containing ZIM filename, reachable only by someone who can already write to the data dir.
+- **loki** — pin moved to **3.7.6** (swept 2026-08-06), head of branch. Reading the bodies rather than the version gap: 3.7.5 carries the security content and it is **dependency** hygiene (`klauspost/compress`, `otel`, `x/text`, `grpc`), the REM-004 class. Probe clean; loopback-only.
+
+### Two methodology traps, both of which would have produced a false finding
+
+1. **OSV is unusable for grafana.** `api.osv.dev` for `github.com/grafana/grafana` at `12.4.4` returns **39 vulns** — which reads like an alarm. The 2026 records carry ranges of literally `[{introduced: "0"}]` with **no fixed event**, so they match *every version ever released*. An OSV version query for this package is a false-positive generator, not a scan. Use GHSA (real ranges — CVE-2025-41117 is `>=12.2.0,<12.2.5` / `>=12.3.0,<12.3.3`, below the 12.4 line) or grafana.com. Note too that GHSA's Go-module ranges for CVE-2026-33380/33381 are *pseudo-versions* describing grafana-as-a-**library**, which do not map to the OSS 12.x distribution at all.
+2. **A web-search summarizer invented a CVE.** It asserted, twice and confidently, that **"CVE-2026-13438"** was fixed in 12.4.7 / 13.0.5. That id **does not exist**: `cveawg.mitre.org` returns `CVE_RECORD_DNE`, it appears in no release body (all of 12.4.5–12.4.8 and 13.0.5 were read), and it is absent from Grafana's own advisory index. **Not filed.** Search results are a pointer to a primary source, never a finding.
+
+### Housekeeping
+
+`remediation-queue.json`'s stored `summary` had **drifted** from its own rows — it read `resolved 138 / pending 42` while the rows said `140 / 40`. Cause is benign: REM-194 and REM-195 were filed pending on 2026-08-12 and resolved the same afternoon, and the resolutions updated the rows without recomputing the tally. Recomputed from the rows this cycle. It is the "a reader copied a moving value forward" failure, inside the file itself — trust `tools/rem-status.py`, which reads the rows.
+
+---
+
 # nOS Vulnerability Scan Addendum — 2026-08-12 (Cycle 27, batch-50)
 
 **Batch:** traefik, woodpecker, jellyfin, uptime_kuma, calibreweb · **Probe:** `ssrf_vector_analysis`
