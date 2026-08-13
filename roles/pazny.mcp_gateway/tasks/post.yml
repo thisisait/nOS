@@ -132,18 +132,52 @@
   # mcpo /openapi.json — that probe must run AFTER the restart, but
   # handlers fire at end-of-play. Same ordering pattern as launchctl
   # plist reload tasks elsewhere in the codebase.
+  # THE BASE FILE IS NOT OPTIONAL (fixed 2026-08-13). This passed only the
+  # overrides — the networks are declared in `iiab/docker-compose.yml`, so
+  # compose refused the whole project with `service "nodered" refers to
+  # undefined network iiab_net`, every run since this task was written. With
+  # `failed_when: false` above it, that refusal was invisible: the token was
+  # minted, persisted and sed'd into the override, and the CONTAINER kept the
+  # literal `placeholder-set-in-post` it was created with by the stack-level
+  # up. Measured 2026-08-13 — 30 tokens had accumulated on the `mcp-gateway`
+  # service account, one per converge, none of which ever reached the process.
+  # Ordering is why: the stack `up` creates the container from a freshly
+  # rendered override (placeholder), and only then does post.yml mint a token.
+  # So this restart IS the step that delivers it, and it may not fail quietly.
   ansible.builtin.shell: |
     cd {{ stacks_dir }}/iiab
     {{ docker_bin }} compose -p iiab \
-      \
+      -f docker-compose.yml \
       $(find overrides -name '*.yml' -exec echo '-f {}' \;) \
       up -d mcp-grafana mcpo 2>&1
   args:
     executable: /bin/bash
   register: _mcpo_restart
   changed_when: "'Started' in (_mcpo_restart.stdout | default('')) or 'Recreated' in (_mcpo_restart.stdout | default(''))"
-  failed_when: false
   when: _mcpo_token_update is changed
+
+- name: "[mcp_gateway Post] Verify the token actually reached the container"
+  # Written by a READER, per the doctrine in CLAUDE.md: the step above
+  # reporting success is what hid this for a month. Ask the running process
+  # what it holds. A placeholder here means the toolset is authenticated with
+  # a string, which Grafana answers `401 Invalid API key` — and mcpo stays
+  # `healthy` throughout, so nothing else in the estate would say so.
+  # `printenv` in the RUNNING process, not `docker inspect` on the container
+  # metadata: one asks what the binary actually holds, the other what it was
+  # configured with. No pipe, so nothing can swallow a non-zero rc either.
+  ansible.builtin.command:
+    cmd: "{{ docker_bin }} exec iiab-mcp-grafana-1 printenv GRAFANA_SERVICE_ACCOUNT_TOKEN"
+  register: _mcpo_token_live
+  changed_when: false
+  # BOTH legs, deliberately. A `failed_when` naming only the placeholder would
+  # override the rc check and hide an unset variable — the same shape as the
+  # `failed_when: false` this task exists to compensate for.
+  failed_when: >-
+    _mcpo_token_live.rc != 0
+    or (_mcpo_token_live.stdout | trim) == 'placeholder-set-in-post'
+  when:
+    - mcp_enable_grafana | default(true)
+    - _mcpo_token_update is changed
 
 # ── 4. Health check mcpo ──────────────────────────────────────────────────────
 
