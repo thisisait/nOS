@@ -198,11 +198,26 @@ the effective backend and model into the run-end event when arming.
 
 ## What must happen before arming, in order
 
-1. The Art-30 / DPA register work — see `docs/llm/` and the roadmap row filed
-   2026-08-12. It is not a MiniMax prerequisite only: the register currently
-   asserts zero third-party processors while the nightly agents have shipped
-   prompts to Anthropic all along, and the business fixture's own rule ("real
-   people only after a register entry exists") waits on the same afternoon.
+1. ~~The Art-30 / DPA register work.~~ **DONE 2026-08-13** for the Anthropic
+   half, which was the part that was already false. Eight ceremonies now carry
+   their own `gdpr:` block in `files/anatomy/agents/<name>/agent.yml`, swept by
+   `nos_gdpr.records_from_agents()`; the register went from 79 records / 0
+   processors / 0 EU exits to 88 / 8 / 8. Gate:
+   `tests/anatomy/test_a_ceremony_declares_its_processor.py`.
+
+   **WHAT ARMING MINIMAX ADDS, and it is not one edit.** A second processor
+   entry must be appended to the `gdpr.processors` list of EACH agent routed to
+   it — per agent, because ruling 1 routes per job, so the register would be
+   false if it declared the transfer estate-wide. `agent_remediator` is the
+   named exception: its record already carries the routing consequence, that
+   its data categories (leak neighbourhoods, commit-author identity) fail the
+   sensitivity axis for any additional recipient. `agent_inspektor` is the
+   other one to re-read — it declares `processors: []` truthfully today only
+   because `runner_status: deferred`, and its own note says so.
+
+   Do NOT pre-declare MiniMax before it is armed: a record asserting a transfer
+   that does not occur is wrong in the same way the empty list was, just
+   pointing the other direction.
 2. `w-agentkit-spine`, which is where rulings 1 and 3 acquire a place to live.
 3. The env-withholding hardening — **half shipped 2026-08-13, half was wrong as
    written.** `NOS_AGENT_CLIENT_SECRET` is genuinely runner-only (the runner
