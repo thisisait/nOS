@@ -33,6 +33,8 @@ writing a literal credential is a normal-looking thing to do.
 
 from __future__ import annotations
 
+import collections
+import math
 import re
 from pathlib import Path
 
@@ -79,6 +81,57 @@ PLACEHOLDER_MARKERS = (
 #: `"token_var": "grafana_admin_api_token"` names a variable, and pointing at a
 #: secret is the correct pattern, not a leak of one.
 REFERENCE_KEY_SUFFIXES = ("_var", "_name", "_env", "_path", "_ref", "_key")
+
+
+#: A credential-shaped literal sitting in NO key position at all.
+#:
+#: THE BLIND SPOT, measured 2026-08-13 when GitGuardian mailed about the public
+#: repo. `SECRET_KEY` above requires `KEY: 'value'` — a key in a data position.
+#: The 2026-08-06 sanitising fixed the fixture's keyed occurrence and left a
+#: SECOND copy of the same live-then value as a bare element of an array:
+#:
+#:     for (const secret of [
+#:         '0c05…c751',        <- no key precedes it; this gate could not see it
+#:
+#: It stayed published for eight further days, and because the fixture no longer
+#: produced that string, the assertion hunting for it could never fail again:
+#: one secret exposed, one test green and vacuous, from the same half-fix.
+#:
+#: SEPARATING SECRETS FROM BINARY FIXTURES BY MEASUREMENT, not by an exception
+#: list. Shannon entropy over the literal, measured the same day:
+#:
+#:     the retired key that leaked            3.85
+#:     `openssl rand -hex 32`, 12 samples     3.69 – 3.87   (how this estate mints)
+#:     hex-encoded PNG in test_devlog_media   2.40, 2.90    (legitimate fixtures)
+#:
+#: A floor of 3.5 clears both PNGs and sits below every minted key, so binary
+#: test data stays legal without being named — and a fixture nobody has written
+#: yet is covered on the day it lands.
+BARE_LITERAL = re.compile(r"""['"]([A-Za-z0-9+/=_\-]{32,})['"]""")
+HEX_ONLY = re.compile(r"^[0-9a-fA-F]+$")
+HEX_ENTROPY_FLOOR = 3.5
+#: Base64-ish alphabets carry more symbols, so the same randomness scores
+#: higher; the floor rises with it and mixed case is required, which excludes
+#: the snake_case identifiers and slash-bearing paths that dominate these files
+#: (50 literals ≥32 chars, of which 48 are paths or env-var names).
+B64_ENTROPY_FLOOR = 4.0
+
+
+def _entropy(value: str) -> float:
+    counts = collections.Counter(value)
+    n = len(value)
+    return -sum(c / n * math.log2(c / n) for c in counts.values())
+
+
+def _looks_like_a_credential(value: str) -> bool:
+    if HEX_ONLY.match(value):
+        return _entropy(value) > HEX_ENTROPY_FLOOR
+    mixed = (
+        re.search(r"[a-z]", value)
+        and re.search(r"[A-Z]", value)
+        and re.search(r"\d", value)
+    )
+    return bool(mixed) and _entropy(value) > B64_ENTROPY_FLOOR
 
 
 def _fixture_files() -> list[Path]:
@@ -144,4 +197,58 @@ def test_no_fixture_assigns_a_credential_shaped_literal():
         "the value is not real, say so in the value itself — `FAKE_…` is "
         "enough, and it is what two of that fixture's three values already "
         "did:\n" + "\n".join(offenders)
+    )
+
+
+def test_the_classifier_tells_a_minted_key_from_a_binary_fixture():
+    """Positive control for the entropy floor, so the rule below is not vacuous.
+
+    A random 32-byte hex key — what `openssl rand -hex 32` yields and what every
+    Pattern-B secret in this estate is — must be classified as a credential; the
+    PNG header that opens every image fixture must not. No real secret appears
+    here: the key is generated, and the PNG bytes are a public file-format magic.
+    """
+    import random
+
+    rng = random.Random(20260813)
+    minted = "".join(rng.choice("0123456789abcdef") for _ in range(64))
+    assert _looks_like_a_credential(minted), (
+        f"a freshly minted 64-hex key scores {_entropy(minted):.2f}, below the "
+        f"{HEX_ENTROPY_FLOOR} floor. The floor has drifted above what this "
+        "estate actually mints, so the gate below now passes everything."
+    )
+    png = "89504e470d0a1a0a0000000d494844520000000100000001080600000" "01f15c489"
+    assert not _looks_like_a_credential(png), (
+        "the PNG magic header now reads as a credential; legitimate binary "
+        "fixtures would have to be renamed to satisfy a secret gate."
+    )
+
+
+def test_no_fixture_holds_a_credential_shaped_literal_without_a_key():
+    offenders = []
+    for path in _fixture_files():
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for match in BARE_LITERAL.finditer(text):
+            value = match.group(1)
+            if _looks_like_a_placeholder(value):
+                continue
+            if not _looks_like_a_credential(value):
+                continue
+            line = text[: match.start()].count("\n") + 1
+            offenders.append(
+                f"  {path.relative_to(REPO)}:{line}  "
+                f"{value[:6]}…{value[-4:]} ({len(value)} chars, "
+                f"entropy {_entropy(value):.2f})"
+            )
+    assert not offenders, (
+        "a credential-shaped literal sits in a fixture with no key to name it. "
+        "The keyed gate above cannot see this position, and that is exactly "
+        "where the 2026-08-06 sanitising left a second copy of a live secret — "
+        "published for eight more days, while the assertion that quoted it "
+        "silently stopped being able to fail. Read such needles OUT of the "
+        "fixture instead of repeating them, so the two cannot drift:\n"
+        + "\n".join(offenders)
     )

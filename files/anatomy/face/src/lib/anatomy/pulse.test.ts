@@ -63,12 +63,17 @@ describe('the projection does not leak', () => {
 		// A key-name check alone would pass a projection that copied the values
 		// under a different name. Serialise the whole view and look for the
 		// secrets themselves.
+		//
+		// The needles are READ OUT OF THE FIXTURE, not repeated as literals.
+		// While they were repeated, sanitising the fixture on 2026-08-06 left
+		// this list holding the real retired value for another eight days, and
+		// the assertion — now hunting a string the fixture no longer produced —
+		// could never fail again. One secret, published; one test, green and
+		// vacuous. Derived from the fixture, the two cannot drift apart.
+		const secrets = Object.values(JSON.parse(rawJob().env_json) as Record<string, string>);
+		expect(secrets.length).toBeGreaterThan(0); // positive control
 		const blob = JSON.stringify(projectJob(rawJob(), summary(), NOW));
-		for (const secret of [
-			'0c05d247e394026ab3240c7f11483ed61c426ca6048bc2c9eb6b156a1725c751',
-			'wing_live_token_value_here_0123456789',
-			'hunter2hunter2hunter2'
-		]) {
+		for (const secret of secrets) {
 			expect(blob).not.toContain(secret);
 		}
 	});
