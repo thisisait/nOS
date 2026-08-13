@@ -35,6 +35,14 @@ final class Agent
 	 * @param array<int, SubscriptionSpec> $subscriptions  per-agent webhook fan-out
 	 * @param array<string, mixed> $metadata
 	 * @param string $sourceDir              absolute path to agent's directory
+	 * @param ?string $backendName           `model.backend` — backend binding name
+	 *        into state/llm-backends.yml; null = the default backend. Resolved
+	 *        (and possibly refused) by LLMClient\BindingResolver, per ruling 1.
+	 * @param array<string, mixed> $gdpr     the agent's Article-30 record
+	 *        (feat 57168ff8). Carried on the value object because the binding
+	 *        resolver READS it — a routing the register does not declare is a
+	 *        compliance defect, and the check must see the same file the
+	 *        register generator sweeps.
 	 */
 	public function __construct(
 		public readonly string $name,
@@ -57,6 +65,8 @@ final class Agent
 		public readonly array $subscriptions,
 		public readonly array $metadata,
 		public readonly string $sourceDir,
+		public readonly ?string $backendName = null,
+		public readonly array $gdpr = [],
 	) {
 	}
 

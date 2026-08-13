@@ -30,9 +30,26 @@ final class Factory
 	) {
 	}
 
-	public function fromUri(string $modelUri): LLMClientInterface
+	/**
+	 * @param ?Binding $binding backend binding (state/llm-backends.yml),
+	 *        resolved by BindingResolver. ONLY the `claude` provider accepts
+	 *        one — the binding is an env contract the CLI honours, and no
+	 *        other adapter speaks it. Offering a binding to any other
+	 *        provider throws rather than ignores: an argument visible in the
+	 *        source and absent from the behaviour is the MapHandler defect,
+	 *        and this factory refuses to ship it again.
+	 */
+	public function fromUri(string $modelUri, ?Binding $binding = null): LLMClientInterface
 	{
 		[$provider, ] = $this->splitUri($modelUri);
+		if ($binding !== null && $provider !== 'claude') {
+			throw new \InvalidArgumentException(
+				"backend binding '{$binding->name}' offered to provider "
+				. "'{$provider}' — only the claude CLI provider honours the "
+				. 'ANTHROPIC_* env contract a binding expresses. Accepting it '
+				. 'here would drop it silently.'
+			);
+		}
 		return match ($provider) {
 			'anthropic' => $this->buildAnthropic($modelUri),
 			// `claude-*` is the LOCAL CLI, not the API. Added 2026-08-11 because
@@ -43,7 +60,7 @@ final class Factory
 			// gateway that was dead for weeks. That gap, not "two runtimes" in
 			// the abstract, is why agent_sessions held 3 rows and
 			// agent_iterations held 0.
-			'claude'    => $this->buildClaudeCli($modelUri),
+			'claude'    => $this->buildClaudeCli($modelUri, $binding),
 			'openclaw'  => $this->buildOpenClaw($modelUri),
 			default     => throw new \InvalidArgumentException(
 				"LLM provider '{$provider}' not yet supported (URI: {$modelUri})"
@@ -83,12 +100,12 @@ final class Factory
 	 * capability toggled by data, and softer modes block on interactive
 	 * prompts no daemon can answer.
 	 */
-	private function buildClaudeCli(string $modelUri): ClaudeCliAdapter
+	private function buildClaudeCli(string $modelUri, ?Binding $binding = null): ClaudeCliAdapter
 	{
 		[, $model] = $this->splitUri($modelUri);
 		$binary = getenv('NOS_CLAUDE_BIN') ?: 'claude';
 		$timeout = (int) (getenv('NOS_CLAUDE_TIMEOUT_S') ?: 900);
-		return new ClaudeCliAdapter($modelUri, $model, $binary, $timeout);
+		return new ClaudeCliAdapter($modelUri, $model, $binary, $timeout, $binding);
 	}
 
 	private function buildAnthropic(string $modelUri): AnthropicAdapter

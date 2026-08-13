@@ -43,17 +43,30 @@ namespace App\AgentKit\LLMClient;
 final class ClaudeCliAdapter implements LLMClientInterface
 {
     /**
-     * @param string $modelUri  full URI, e.g. `claude-sonnet`
-     * @param string $model     what `--model` receives, e.g. `sonnet`
-     * @param string $binary    resolved `claude` path
-     * @param int    $timeoutS  wall clock for one call
+     * @param string   $modelUri full URI, e.g. `claude-sonnet`
+     * @param string   $model    what `--model` receives, e.g. `sonnet`
+     * @param string   $binary   resolved `claude` path
+     * @param int      $timeoutS wall clock for one call
+     * @param ?Binding $binding  backend binding (state/llm-backends.yml).
+     *        When present the CLI's traffic is steered by env — and RULING 3
+     *        (docs/minimax-groundwork.md) applies: `--model` is NOT passed,
+     *        because the flag OUTRANKS ANTHROPIC_MODEL and would silently
+     *        undo the remap; the binding's tier-resolved model id drives via
+     *        the env instead.
      */
     public function __construct(
         private readonly string $modelUri,
         private readonly string $model,
         private readonly string $binary = 'claude',
         private readonly int $timeoutS = 900,
+        private readonly ?Binding $binding = null,
     ) {
+    }
+
+    /** Which backend serves this adapter's traffic — 'anthropic' unbound. */
+    public function backendName(): string
+    {
+        return $this->binding?->name ?? 'anthropic';
     }
 
     public function identifier(): string
@@ -100,10 +113,15 @@ final class ClaudeCliAdapter implements LLMClientInterface
             $argv[] = '--system-prompt';
             $argv[] = $systemPrompt;
         }
-        if ($this->model !== '') {
+        if ($this->model !== '' && $this->binding === null) {
             // Without an explicit model the CLI falls back to the operator's
             // default — the most expensive tier — which bulk ceremonies must
             // never inherit. Same reason pulse-run-agent.sh pins NOS_AGENT_MODEL.
+            //
+            // SKIPPED UNDER A BINDING — ruling 3: `--model` outranks
+            // ANTHROPIC_MODEL, so passing it would send the Anthropic tier
+            // alias to a backend that does not know it AND override the
+            // binding's remap. The binding's modelId drives via env below.
             $argv[] = '--model';
             $argv[] = $this->model;
         }
@@ -125,9 +143,17 @@ final class ClaudeCliAdapter implements LLMClientInterface
         // over-cap response and reports is_error (measured 2026-08-12: cap=100,
         // "count to 300" -> is_error:true, "response exceeded the 100 output
         // token maximum", usage still billed).
-        [$exit, $stdout, $stderr] = $this->run($argv, [
-            'CLAUDE_CODE_MAX_OUTPUT_TOKENS' => (string) max(1, $maxTokens),
-        ]);
+        $envOverride = ['CLAUDE_CODE_MAX_OUTPUT_TOKENS' => (string) max(1, $maxTokens)];
+        if ($this->binding !== null) {
+            // The env contract the CLI's vendor honours — the whole reason a
+            // backend can be a binding instead of a new adapter. The token is
+            // function-local here and in run()'s merged env for the child's
+            // lifetime; never logged, never in argv (argv is visible to `ps`).
+            $envOverride['ANTHROPIC_BASE_URL'] = $this->binding->baseUrl;
+            $envOverride['ANTHROPIC_AUTH_TOKEN'] = $this->binding->authToken;
+            $envOverride['ANTHROPIC_MODEL'] = $this->binding->modelId;
+        }
+        [$exit, $stdout, $stderr] = $this->run($argv, $envOverride);
 
         $decoded = json_decode($stdout, true);
         if (!is_array($decoded)) {

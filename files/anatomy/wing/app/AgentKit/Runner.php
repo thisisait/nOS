@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\AgentKit;
 
+use App\AgentKit\LLMClient\BindingDecision;
+use App\AgentKit\LLMClient\BindingResolver;
 use App\AgentKit\LLMClient\Factory as LLMFactory;
 use App\AgentKit\LLMClient\LLMClientInterface;
 use App\AgentKit\LLMClient\LLMCapabilityError;
@@ -71,6 +73,12 @@ final class Runner
 		// identical to A14. Optional default keeps Runner direct-
 		// construction backwards compatible.
 		private readonly ?AgentMemoryStoreRepository $memoryStore = null,
+		// Optional, spine increment 1: resolves an agent's `model.backend`
+		// declaration into a Binding (or refuses — see BindingRefused). Null
+		// keeps every existing construction site byte-identical: no resolver
+		// means no agent can route anywhere but the default backend, which is
+		// the fail-closed shape the whole binding layer inherits.
+		private readonly ?BindingResolver $bindingResolver = null,
 	) {
 	}
 
@@ -139,7 +147,12 @@ final class Runner
 		$startNanos = self::now();
 		$resolvedActor = $actorId ?? ('agent:' . $agentName);
 
-		$llm = $this->llmFactory->fromUri($agent->modelPrimaryUri);
+		// Resolve the backend binding BEFORE any session row exists: a refusal
+		// (unknown backend, deferred agent, routing the agent's Article-30
+		// record does not declare) must abort at the door, not mid-lineage.
+		// No resolver wired → the default decision, byte-identical behaviour.
+		$decision = $this->bindingResolver?->resolve($agent) ?? BindingDecision::default();
+		$llm = $this->llmFactory->fromUri($agent->modelPrimaryUri, $decision->binding);
 		$this->servedByUri = null;
 		$this->fallbackContext = [
 			'session_uuid' => $sessionUuid,
@@ -171,6 +184,7 @@ final class Runner
 			'agent.name' => $agent->name,
 			'agent.version' => $agent->version,
 			'agent.model_primary' => $agent->modelPrimaryUri,
+			'agent.backend' => $decision->backendName(),
 			'agent.multiagent_type' => $agent->multiagentType,
 			'agent.has_outcome' => $agent->hasOutcome(),
 			'agent.trigger' => $trigger,
@@ -185,10 +199,33 @@ final class Runner
 			result: [
 				'agent_version' => $agent->version,
 				'model_primary' => $agent->modelPrimaryUri,
+				// Which backend serves this session — write-time attribution,
+				// same WORM argument as ruling 2: the events table has no
+				// relabelling path, so the backend is recorded when it is
+				// decided, not inferred later from cost shapes.
+				'backend' => $decision->backendName(),
 				'trigger' => $trigger,
 			],
 			traceId: $traceId,
 		);
+		if ($decision->declaredDisarmed !== null) {
+			// Declared-but-disarmed: the agent.yml asks for a backend the
+			// operator has not armed. The run proceeds on the default backend
+			// (prepared-not-armed: committing a declaration must never
+			// half-arm), and this event makes the dormant ask visible instead
+			// of indistinguishable from "never asked".
+			$this->audit->emit(
+				type: 'agent_binding_disarmed',
+				actorActionId: $sessionUuid,
+				actorId: $resolvedActor,
+				task: "agent:{$agent->name}",
+				result: [
+					'declared' => $decision->declaredDisarmed,
+					'served_by' => $decision->backendName(),
+				],
+				traceId: $traceId,
+			);
+		}
 		$this->webhooks->fire('agent_session_start', [
 			'id' => $sessionUuid,
 			'agent_name' => $agent->name,

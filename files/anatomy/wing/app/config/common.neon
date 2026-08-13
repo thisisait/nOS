@@ -153,6 +153,12 @@ services:
 	- App\AgentKit\AgentLoader(%agentsDir%)
 	- App\AgentKit\Vault\CredentialResolver
 	- App\AgentKit\LLMClient\Factory
+	# Backend binding resolver (spine increment 1, 2026-08-13). Reads
+	# state/llm-backends.yml (via NOS_REPO_ROOT) + the agent's own gdpr block,
+	# arms via NOS_ARMED_BACKENDS from wing.plist. Registered so Runner's
+	# optional dependency is FILLED in production — an optional dep that no
+	# bootstrap fills is machinery visible in source and absent from behaviour.
+	- App\AgentKit\LLMClient\BindingResolver
 	- App\AgentKit\Telemetry\AuditEmitter
 	- App\AgentKit\Telemetry\OtelExporter
 	- App\AgentKit\Webhook\WebhookDispatcher

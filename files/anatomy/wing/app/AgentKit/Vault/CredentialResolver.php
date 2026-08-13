@@ -96,6 +96,21 @@ final class CredentialResolver
 		return null;
 	}
 
+	/**
+	 * Dereference a raw secret_ref that did not come from a vault row.
+	 *
+	 * Added for the backend registry (state/llm-backends.yml): its
+	 * `auth_secret` is a secret_ref by the same rule as agent_credentials —
+	 * a pointer, never a value — but there is no vault row to look it up
+	 * through, so the schemes needed a public door. Same lifetime discipline
+	 * as resolve(): the value exists in function locals and the caller's
+	 * spawn, never in a log or a row.
+	 */
+	public function dereferenceRef(string $secretRef): ?string
+	{
+		return $this->dereference($secretRef);
+	}
+
 	private function dereference(string $secretRef): ?string
 	{
 		if (str_starts_with($secretRef, 'env:')) {
@@ -111,6 +126,23 @@ final class CredentialResolver
 			// (so the resolver falls back to env). Plaintext is never
 			// logged at any level.
 			return $this->infisical->fetch($path);
+		}
+		if (str_starts_with($secretRef, 'nos:')) {
+			// ~/.nos/secrets.yml — the converge-persisted store (0600) that
+			// Pulse's `secret:` scheme already resolves against. The key name
+			// is validated to a bare identifier BEFORE any file read so a
+			// crafted ref cannot smuggle YAML path tricks.
+			$key = substr($secretRef, 4);
+			if (!preg_match('/^[a-z][a-z0-9_]{0,63}$/', $key)) {
+				return null;
+			}
+			$path = (getenv('HOME') ?: '') . '/.nos/secrets.yml';
+			if (!is_file($path)) {
+				return null;
+			}
+			$doc = \Symfony\Component\Yaml\Yaml::parseFile($path);
+			$value = is_array($doc) ? ($doc[$key] ?? null) : null;
+			return is_string($value) && $value !== '' ? $value : null;
 		}
 		return null;
 	}

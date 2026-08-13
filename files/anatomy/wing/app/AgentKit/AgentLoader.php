@@ -214,6 +214,9 @@ final class AgentLoader
 			subscriptions: $subscriptions,
 			metadata: (array) ($raw['metadata'] ?? []),
 			sourceDir: $dir,
+			backendName: isset($raw['model']['backend'])
+				? (string) $raw['model']['backend'] : null,
+			gdpr: (array) ($raw['gdpr'] ?? []),
 		);
 
 		// Idempotent webhook registration — only when wired in production.
