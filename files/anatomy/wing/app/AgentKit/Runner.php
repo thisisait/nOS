@@ -75,6 +75,32 @@ final class Runner
 	}
 
 	/**
+	 * Who actually answered, when it was not the primary.
+	 *
+	 * RULING 2 (docs/minimax-groundwork.md) in one property. `model_uri` is
+	 * written into agent_sessions at session OPEN, from the primary client,
+	 * before a single call has been made — so a fallback's answer was returned
+	 * and recorded as the primary's work. That is not a cosmetic mislabel: the
+	 * `events` rows are WORM-triggered and hash-chained, the RFL corpus has no
+	 * provenance field and no relabelling path, so provenance is either right
+	 * at write time or wrong permanently.
+	 *
+	 * Null means the primary served the whole session, which is the ordinary
+	 * case and must stay distinguishable from "a fallback served and we did
+	 * not notice".
+	 *
+	 * Instance state is safe here because a Runner drives one session at a
+	 * time — concurrent agents each get their own process, by a mechanism that
+	 * deliberately lives outside this class — but it is reset at the top of
+	 * every run() so a second sequential session cannot inherit the first
+	 * one's attribution.
+	 */
+	private ?string $servedByUri = null;
+
+	/** Session context callWithRetry needs to attribute a fallback. */
+	private ?array $fallbackContext = null;
+
+	/**
 	 * Run an agent end to end.
 	 *
 	 * @param string  $agentName   matches files/anatomy/agents/<name>/
@@ -114,6 +140,14 @@ final class Runner
 		$resolvedActor = $actorId ?? ('agent:' . $agentName);
 
 		$llm = $this->llmFactory->fromUri($agent->modelPrimaryUri);
+		$this->servedByUri = null;
+		$this->fallbackContext = [
+			'session_uuid' => $sessionUuid,
+			'actor_id' => $resolvedActor,
+			'trace_id' => $traceId,
+			'agent_name' => $agent->name,
+			'primary' => $llm->identifier(),
+		];
 		$this->sessions->startSession([
 			'uuid' => $sessionUuid,
 			'agent_name' => $agent->name,
@@ -243,13 +277,20 @@ final class Runner
 			$sessionUuid,
 			$errorMessage === null ? 'idle' : 'terminated',
 			$stopReason,
-			[
-				'tokens_input' => $totalIn,
-				'tokens_output' => $totalOut,
-				'result_json' => $result,
-				'error_json' => $errorMessage !== null ? ['message' => $errorMessage] : null,
-				'outcome_result' => $result['outcome_result'] ?? null,
-			],
+			array_merge(
+				[
+					'tokens_input' => $totalIn,
+					'tokens_output' => $totalOut,
+					'result_json' => $result,
+					'error_json' => $errorMessage !== null ? ['message' => $errorMessage] : null,
+					'outcome_result' => $result['outcome_result'] ?? null,
+				],
+				// Correct the attribution to whoever actually answered. Written
+				// at session END rather than at open, because at open nobody has
+				// answered yet — which is the whole defect this closes. Absent
+				// key when the primary served, so the ordinary row is untouched.
+				$this->servedByUri !== null ? ['model_uri' => $this->servedByUri] : [],
+			),
 		);
 
 		$this->audit->emit(
@@ -672,26 +713,66 @@ final class Runner
 				throw $exc;
 			} catch (LLMPermanentError $exc) {
 				if ($agent->modelFallbackUri !== null) {
-					$fallback = $this->llmFactory->fromUri($agent->modelFallbackUri);
-					return $fallback->send(
-						$agent->systemPrompt ?? '',
-						$conversation,
-						$toolSchemas,
-					);
+					return $this->serveFallback($agent, $conversation, $toolSchemas, 'permanent_error', $exc);
 				}
 				throw $exc;
 			}
 		}
 		// Exhausted transient retries
 		if ($agent->modelFallbackUri !== null) {
-			$fallback = $this->llmFactory->fromUri($agent->modelFallbackUri);
-			return $fallback->send(
-				$agent->systemPrompt ?? '',
-				$conversation,
-				$toolSchemas,
-			);
+			return $this->serveFallback($agent, $conversation, $toolSchemas, 'transient_exhausted', $lastTransient);
 		}
 		throw $lastTransient ?? new LLMPermanentError('LLM call failed without exception');
+	}
+
+	/**
+	 * Hand the call to the fallback, and say so — in that order of importance.
+	 *
+	 * Both fallback sites route through here so they cannot drift: one used to
+	 * be reached by an unrecognised error phrase and the other by exhausted
+	 * retries, and NEITHER left any trace that a different model answered.
+	 *
+	 * THE MESSAGE IS THE POINT, not just the switch. Ruling 2 chose fail-closed
+	 * classification — an unrecognised phrase stays permanent and is not
+	 * retried — on the condition that the unmatched message be logged, so a
+	 * foreign backend's actual phrasings can be learned from one outage instead
+	 * of guessed. `ClaudeCliAdapter` matches three Anthropic strings
+	 * ('rate limit', 'overloaded', 'usage limit'); everything else lands here,
+	 * and until now landed silently.
+	 */
+	private function serveFallback(
+		Agent $agent,
+		array $conversation,
+		array $toolSchemas,
+		string $reason,
+		?\Throwable $cause,
+	): \App\AgentKit\LLMClient\LLMResponse {
+		$fallback = $this->llmFactory->fromUri($agent->modelFallbackUri);
+		$this->servedByUri = $fallback->identifier();
+		$ctx = $this->fallbackContext ?? [];
+
+		$this->audit->emit(
+			type: 'agent_model_fallback',
+			actorActionId: $ctx['session_uuid'] ?? null,
+			actorId: $ctx['actor_id'] ?? ('agent:' . $agent->name),
+			task: "agent:{$agent->name}",
+			result: [
+				'reason' => $reason,
+				'primary' => $ctx['primary'] ?? $agent->modelPrimaryUri,
+				'fallback' => $this->servedByUri,
+				// Verbatim, and unmatched by the classifier — this is the
+				// string a future rule would be written against.
+				'unmatched_message' => $cause?->getMessage(),
+				'cause_class' => $cause !== null ? get_class($cause) : null,
+			],
+			traceId: $ctx['trace_id'] ?? null,
+		);
+
+		return $fallback->send(
+			$agent->systemPrompt ?? '',
+			$conversation,
+			$toolSchemas,
+		);
 	}
 
 	private function defaultPrompt(Agent $agent): string
