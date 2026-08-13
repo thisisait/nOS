@@ -44,12 +44,13 @@ EXCEPTIONS = {
     # image the host was already running — `latest@sha256:f825a561…` — which
     # freezes it without changing what runs. This gate going red on the removal
     # is the gate working.
-    # mcp_grafana_version LEFT this list 2026-08-05. The exception said "pin
-    # once confirmed"; confirming it showed there is no versioned tag to pin to
-    # — mcp/grafana publishes only `latest`, last pushed 2026-07-08, seven days
-    # before the 0.17.1 fix REM-150 wants. So it is digest-pinned instead:
-    # `latest@sha256:9362bcf…`, which freezes the resident image without
-    # changing it. This gate going red on the removal is the gate working.
+    # mcp_grafana_version LEFT this list 2026-08-05, digest-pinned to
+    # `latest@sha256:9362bcf…` under the finding that "there is no versioned tag
+    # to pin to". That finding held for `mcp/grafana` — Docker's MCP-catalogue
+    # mirror, one floating tag — and NOT for the world: upstream publishes semver
+    # to `grafana/mcp-grafana`. Corrected 2026-08-13 to `1.1.0@sha256:f21a19ce…`
+    # when CVE-2026-19516 (REM-196) made the difference a CRITICAL one. Both a
+    # tag and a digest now: the tag says what was meant, the digest what is got.
     ("pazny.mcp_gateway", "mcpo_version"): "ghcr.io/open-webui/mcpo publishes only main/latest — no semver tag exists",
 }
 

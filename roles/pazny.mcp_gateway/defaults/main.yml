@@ -50,30 +50,32 @@ mcp_postgres_database: "postgres"                       # default DB s read-only
 # ── Grafana MCP ───────────────────────────────────────────────────────────────
 # Grafana service account token (created automatically in post.yml)
 mcp_grafana_url: "http://grafana:3000"                  # internal Docker service name
-mcp_grafana_image: "mcp/grafana"
-# DIGEST-PINNED, 2026-08-05. Not a version bump — there is nothing to bump TO.
+# THE REGISTRY WAS THE WRONG QUESTION (2026-08-13). `mcp/grafana` is Docker's
+# MCP-catalogue MIRROR: one floating `latest`, unpushed since 2026-07-08.
+# Upstream publishes to `grafana/mcp-grafana` — semver tags, 1.1.0 on
+# 2026-08-10 — and its README has said `docker pull grafana/mcp-grafana` all
+# along. The 2026-08-05 note here concluded "there is nothing to bump TO"
+# after asking the registry the estate already used, never asking where the
+# project publishes. Same shape as the GHSA-without-a-CVE lesson in CLAUDE.md:
+# the answer was true of the question and false of the world.
 #
-# REM-150 (HIGH, CVE-2026-15583: the X-Grafana-URL header overrides the
-# configured base URL, so the sidecar forwards its GRAFANA_SERVICE_ACCOUNT_TOKEN
-# to an attacker-chosen host; fixed upstream in 0.17.1) recorded the action as
-# "pin the tag". Measured against the registry today, that action is a no-op:
-# `mcp/grafana` publishes ONLY `latest`, and its single tag was last pushed
-# 2026-07-08 — seven days BEFORE the fix. There is no 0.17.1 image, and the
-# floating tag has not moved, so a `docker pull` changes nothing.
+# Verified drop-in before switching, from the registry rather than the docs —
+# both images carry the identical entrypoint
+# (`/app/mcp-grafana --transport sse --address 0.0.0.0:8000`) and expose 8000,
+# which is what `mcpo-config.json.j2` dials as http://mcp-grafana:8000/sse.
+# The official build additionally runs as a non-root user.
+mcp_grafana_image: "grafana/mcp-grafana"
+# REM-196 (CRITICAL, CVE-2026-19516, CVSS 9.1) — the SECOND bite at the
+# X-Grafana-URL header: an authenticated caller steers the OUTBOUND request and
+# READS THE RESPONSE, reaching loopback and cloud-metadata endpoints. Grafana's
+# advisory says the CVE-2026-15583 patch (REM-150) "prevented token leakage but
+# failed to restrict destination targeting entirely", moving the floor 0.17.1 ->
+# 1.1.0. The resident digest resolves to commit 76ed7db, ONE commit before
+# 0.17.1 — behind BOTH fixes.
 #
-# What the digest does buy is honesty. A floating tag means the resident image
-# can drift arbitrarily far from anything the repo records, with nothing to
-# show it — the same class as nextcloud's floating major tag, and the reason a
-# version-keyed scan calls this component "unknown" rather than "vulnerable".
-# Pinning the digest freezes what is already running (zero converge change:
-# this IS the resident image) and makes the exposure a stated fact instead of
-# an unmeasurable one. Re-check the registry when REM-150 is next reviewed; the
-# moment a versioned or rebuilt image appears, this becomes a real bump.
-#
-# Mitigations unchanged and load-bearing meanwhile: no host port published,
-# absent from state/manifest.yml so no Traefik router is derived, and fronting
-# mcpo is forward-auth gated plus --api-key protected.
-mcp_grafana_version: "latest@sha256:9362bcf6aa0e44e61f645b905cec03fb346a946a34a4dafecd7f3e28d3724014"
+# Digest form kept: the tag says what we meant, the digest says what we get.
+# The digest below is the multi-arch INDEX, so arm64 and amd64 both resolve.
+mcp_grafana_version: "1.1.0@sha256:f21a19cebbfa7c3a76ef1746171e5ffc3601064e432f593e7c6cb526e5216e5f"
 mcp_grafana_port: 8765                                  # internal SSE port
 
 # ── OpenWebUI Anthropic connector ─────────────────────────────────────────────

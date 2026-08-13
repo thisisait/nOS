@@ -64,7 +64,7 @@ services:
 {% if mcp_enable_grafana | default(true) %}
   # Grafana MCP server (SSE transport) — sibling container for mcpo
   mcp-grafana:
-    image: {{ mcp_grafana_image | default('mcp/grafana') }}:{{ mcp_grafana_version }}
+    image: {{ mcp_grafana_image | default('grafana/mcp-grafana') }}:{{ mcp_grafana_version }}
     restart: unless-stopped
     environment:
       GRAFANA_URL: "{{ mcp_grafana_url }}"
