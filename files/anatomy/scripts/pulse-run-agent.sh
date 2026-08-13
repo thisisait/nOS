@@ -282,8 +282,25 @@ CLAUDE_ARGS=(--print --output-format json --permission-mode bypassPermissions)
 
 # Capture the JSON envelope on stdout; keep stderr separate so a warning
 # line can't corrupt the JSON parse.
+#
+# CHILD-ENV WITHHOLDING (2026-08-13, docs/minimax-groundwork.md "what must
+# happen before arming" item 3). The Authentik client_secret is runner-only:
+# this script has ALREADY exchanged it for a scoped token by the time claude
+# spawns, and the child gets that token (NOS_AUTHENTIK_TOKEN), never the
+# secret that mints it. The `unset` lives inside the $( ) subshell, so the
+# parent keeps nothing it had — it never used the var after validation.
+#
+# WING_EVENTS_HMAC_SECRET stays, deliberately, and the groundwork doc's claim
+# that it "need not reach the child" is FALSE today: the conductor profile
+# (files/anatomy/agents/conductor.yml:43) instructs the ceremony to POST its
+# own attributed events, Bone's /api/v1/events accepts only HMAC, and the
+# live conductor_report rows sit BETWEEN agent_run_start and agent_run_end
+# (2026-08-09T04:04:25Z) — the child signed them. Withholding it is real
+# hardening (the secret derives the audit-chain key) but needs the events
+# POST to accept the child's bearer first; that is spine work, not an unset.
 CLAUDE_ERR=$(mktemp /tmp/pulse-agent-err-XXXXX)
 CLAUDE_JSON=$(
+    unset NOS_AGENT_CLIENT_SECRET NOS_CONDUCTOR_CLIENT_SECRET
     WING_API_URL="$WING_API_URL" \
     WING_API_TOKEN="$WING_API_TOKEN" \
     NOS_AUTHENTIK_TOKEN="$AUTHENTIK_TOKEN" \
@@ -323,12 +340,27 @@ rm -f "$CLAUDE_ERR"
 #   • basis "foreign:<host>" → COST is unpriced-for-this-backend, persist null.
 # The tokens survive either way, so a future rate table can price them honestly.
 COST_BASIS="anthropic"
+BACKEND="anthropic"
 _abu="${ANTHROPIC_BASE_URL:-}"
 if [[ -n "$_abu" ]] && ! printf '%s' "$_abu" | grep -qiE '(^|//|\.)anthropic\.com(/|:|$)'; then
     _abu_host=$(printf '%s' "$_abu" | sed -E 's#^[a-z]+://##i; s#[/:].*$##')
     COST_BASIS="foreign:${_abu_host:-unknown}"
+    BACKEND="${_abu_host:-unknown}"
     COST=""   # drop the Anthropic-priced figure — it does not describe this run
 fi
+
+# ── Effective model (write-time attribution) ─────────────────────────────────
+# Ruling 3 (docs/minimax-groundwork.md): "the pulse path records
+# model_uri = 'cli:unrecorded' … once armed, NOTHING anywhere records which
+# backend or model served a run except cost_basis on the end event. Stamp the
+# effective backend and model into the run-end event." The events table is
+# WORM hash-chained — a label wrong at write time is wrong forever — so this
+# records what the CLI was actually GIVEN, by the precedence the CLI applies:
+# `--model` (passed iff NOS_AGENT_MODEL is set) outranks ANTHROPIC_MODEL,
+# which outranks the operator's default. `cli-default` is a sentinel meaning
+# "nothing pinned it", not a model name; a spine run that owns its binding
+# will write a real model id here.
+EFFECTIVE_MODEL="${NOS_AGENT_MODEL:-${ANTHROPIC_MODEL:-cli-default}}"
 
 # Propagate the agent's self-declared verdict. `claude --print` exits 0 on any
 # successful run regardless of what the agent concluded, so the operator run-
@@ -377,11 +409,14 @@ _post_wing_event "$(jq -a --sort-keys -nc \
     --argjson t_cache "${TOK_CACHE:-0}" \
     --argjson cost "${COST:-null}" \
     --arg cost_basis "$COST_BASIS" \
+    --arg backend "$BACKEND" \
+    --arg model "$EFFECTIVE_MODEL" \
     '{ts:$ts, type:"agent_run_end", run_id:$run_id, source:$src,
       actor_id:$actor_id, actor_action_id:$action_id, acted_at:$ts,
       result:{exit_code:$exit_code, summary:$summary,
               tokens_input:$t_in, tokens_output:$t_out, tokens_cache_read:$t_cache,
-              cost_usd:$cost, cost_basis:$cost_basis}}')"
+              cost_usd:$cost, cost_basis:$cost_basis,
+              backend:$backend, model:$model}}')"
 
 # ── A9 notification on non-zero exit ──────────────────────────────────────────
 # Exit 1 = conductor reported actionable findings (operator review).
