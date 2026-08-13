@@ -222,3 +222,44 @@ admin user:
 | (D) | Backup | RustFS backup pipeline encryption (age recipient) |
 | (E) | Network | Split `stacks_shared_network` into `shared_edge_net` + `shared_data_net` |
 | (F) | CSRF | Session-bound token on browser POST forms |
+
+## Retired-but-published keys (added 2026-08-13)
+
+`.gitleaks.toml` has said since 2026-06-10 that a real finding "must NEVER be
+allowlisted — rotate + purge instead" and cited this document. Until today this
+document had no such section: the citation pointed at doctrine that did not
+exist. Written now, from the first case that needed it.
+
+**The case.** 2026-08-05, commit `710be435`: the live `bone_secret` was pasted
+into a test fixture and pushed to the PUBLIC repo. Sanitising on 2026-08-06
+missed a second copy (an assertion needle), which stayed published until
+2026-08-13. The key was rotated at discovery — the leaked value is
+`bone_secret_retired` in `~/.nos/secrets.yml`, the live key differs — but the
+value remains readable in git history on GitHub today.
+
+**The rule.** A secret that has ever been pushed to a public remote is BURNED,
+permanently, regardless of later deletions:
+
+1. **Rotate immediately** — this is the security fix, and the only step that
+   removes live exposure. Everything after it is hygiene and record-keeping.
+   (For `bone_secret` the estate's key-ring verification —
+   `AuditChain::chainKeys()` — keeps history verifiable across the rotation.)
+2. **Never treat the published value as secret again** — not as a fixture,
+   not as a needle in an assertion, not as an allowlist entry. The
+   `test_a_fixture_is_never_a_real_secret.py` gates exist because both misuse
+   shapes actually happened.
+3. **History purge is a separate, operator-only decision.** Rewriting a public
+   repo's history (`git filter-repo` + force-push) breaks every clone, every
+   PR base, and the release tags — and does NOT un-publish the value (forks,
+   scrapers and GitGuardian already have it). Its only benefit is stopping
+   FUTURE scanner noise on the old blob. The default disposition is therefore
+   **rotate + record, do not rewrite**; a purge is warranted only when the
+   operator judges the ongoing-noise cost higher than the history-break cost,
+   and it is never an agent's call.
+
+**Ledger of burned values** (so a future scanner hit can be answered from the
+record instead of re-investigated):
+
+| First published | Removed | Value (fingerprint) | Was | Rotated |
+|---|---|---|---|---|
+| 2026-08-05 `710be435` | 2026-08-13 `42a1224c` (2nd copy; 1st `2a3cf7ba` 08-06) | `0c05d2…c751` (sha-256-shaped, 64 hex) | `bone_secret` / `WING_EVENTS_HMAC_SECRET` | 2026-08-06 → value now `bone_secret_retired` |

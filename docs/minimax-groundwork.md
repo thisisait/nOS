@@ -204,10 +204,18 @@ the effective backend and model into the run-end event when arming.
    prompts to Anthropic all along, and the business fixture's own rule ("real
    people only after a register entry exists") waits on the same afternoon.
 2. `w-agentkit-spine`, which is where rulings 1 and 3 acquire a place to live.
-3. The env-withholding hardening: `NOS_AGENT_CLIENT_SECRET` and
-   `WING_EVENTS_HMAC_SECRET` are runner-only and need not reach the child
-   `claude` process. The second derives the audit chain key
-   (`AuditChain.php:56`), whose own threat model says a holder "can recompute the
-   whole chain undetectably" — and the child runs with `bypassPermissions` and no
-   `--allowedTools` anywhere in the repo. This one is worth doing whatever
-   backend is in use.
+3. The env-withholding hardening — **half shipped 2026-08-13, half was wrong as
+   written.** `NOS_AGENT_CLIENT_SECRET` is genuinely runner-only (the runner
+   exchanges it for a scoped token before the spawn) and is now withheld from
+   the child — gate `tests/anatomy/test_runner_child_env_and_attribution.py`.
+   But `WING_EVENTS_HMAC_SECRET` is NOT withholdable today, measured: the
+   conductor profile (`files/anatomy/agents/conductor.yml:43`) instructs the
+   ceremony to POST its own attributed events, Bone's `/api/v1/events` accepts
+   only HMAC, and the live `conductor_report` of 2026-08-09T04:04:25Z sits
+   between `agent_run_start` and `agent_run_end` — the child signed it with
+   the inherited secret. So the model is handed the key that derives the audit
+   chain (`AuditChain.php:56`: a holder "can recompute the whole chain
+   undetectably") *because the events endpoint gives its report no other door*.
+   The withholding of this one lands with the spine: the runtime posts the
+   report (or the events POST learns bearer auth), then the secret leaves the
+   child env and the gate's documented assertion flips.
