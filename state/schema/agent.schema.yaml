@@ -60,6 +60,24 @@ properties:
           Fallback URI used when primary fails (rate-limited, network error,
           model unavailable). The protocol is platform-agnostic so an
           openclaw fallback for an anthropic primary is safe.
+      backend:
+        type: string
+        pattern: "^[a-z][a-z0-9-]{0,30}$"
+        description: |
+          OPTIONAL backend binding — where a `claude-*` primary's traffic is
+          pointed, named into state/llm-backends.yml. A backend is NOT a
+          provider: the genome's llm.provider enum names which adapter runs
+          (fail-closed, adapter-first), while this names the env contract the
+          `claude` CLI honours (ANTHROPIC_BASE_URL / _AUTH_TOKEN / _MODEL).
+          Absent = the default backend (the operator's own CLI session).
+          Per agent, never estate-wide — ruling 1 in
+          docs/minimax-groundwork.md. Declaring it does NOT arm it: the
+          backend must also be armed via NOS_ARMED_BACKENDS, the agent's own
+          gdpr.processors must name the backend's processor, and
+          App\AgentKit\BindingResolver refuses deferred agents and
+          opus-primary agents outright. The registry file documents all six
+          gates; tests/anatomy/test_a_binding_reads_the_register.py holds the
+          declared values to them.
   system_prompt_path:
     type: string
     description: |

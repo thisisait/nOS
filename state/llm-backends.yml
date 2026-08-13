@@ -1,0 +1,73 @@
+# LLM backend registry — where a `claude-*` run's traffic MAY be pointed.
+#
+# A BACKEND IS NOT A PROVIDER. The genome's `llm.provider` vocabulary
+# (state/genome/entity.schema.json) names which ADAPTER runs, under a
+# fail-closed rule: adapter ships first, enum member second — `minimax` is
+# deliberately absent there because no MiniMax adapter exists. What exists is
+# the `claude` CLI adapter, whose vendor honours `ANTHROPIC_BASE_URL` /
+# `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_MODEL` in its environment. So a foreign
+# backend is a BINDING laid over the `claude` provider — an env contract on a
+# run — not a new provider, and this file is the closed list of backends a
+# binding may name. Rulings 1 and 3 (docs/minimax-groundwork.md) live here and
+# in App\AgentKit\BindingResolver, which reads this file.
+#
+# HOW A BACKEND IS SELECTED (all fail-closed, each gate independent):
+#   1. The agent declares `model.backend: <name>` in its agent.yml. Absent →
+#      the default backend. Per agent, never estate-wide — ruling 1.
+#   2. The name must exist here. Unknown → session refuses to open.
+#   3. The backend must be ARMED: its name must appear in the space-separated
+#      `NOS_ARMED_BACKENDS` env (rendered into wing.plist from the operator's
+#      `<name>_enabled` config flag). Declared-but-disarmed → the run proceeds
+#      on the default backend and an `agent_binding_disarmed` audit event says
+#      so — mirroring "prepared, not armed": committing an agent.yml must
+#      never half-arm a backend the operator has not flipped on.
+#   4. COMPLIANCE, and this is a refusal, not a degradation: the agent's own
+#      `gdpr.processors` (its Article-30 record, feat 57168ff8) must name the
+#      backend's processor (matched on `processor_match`). A routing the
+#      register does not declare is a compliance defect — the run must not
+#      happen on ANY backend, because the declaration is wrong, not the wire.
+#   5. `metadata.runner_status: deferred` refuses any binding: inspektor's
+#      register entry is truthful ONLY because it never runs (its own note
+#      says so); a binding that made it runnable would falsify the record.
+#   6. An `opus`-primary agent refuses a foreign binding outright — ruling 1:
+#      code-authoring, opus-pinned ceremonies stay on the default backend
+#      until the inner permission posture is tightened.
+#
+# Gate: tests/anatomy/test_a_binding_reads_the_register.py (values, not shape).
+
+backends:
+  # The default: the operator's own `claude` CLI session. No base_url — the
+  # CLI talks to its vendor unredirected; no secret — the CLI carries the
+  # operator's session. Every ACTIVE agent's Article-30 record already names
+  # this processor, which is what made the default honest to begin with.
+  anthropic:
+    default: true
+    processor_match: "Anthropic"
+
+  # MiniMax's Anthropic-compatible endpoint. PREPARED, NOT ARMED: arming is
+  # `minimax_enabled: true` in config.yml (renders into NOS_ARMED_BACKENDS)
+  # plus the operator's model-id choices below — and a per-agent
+  # `model.backend: minimax` plus a MiniMax processor entry in that agent's
+  # gdpr block, or gate 4 refuses the session.
+  minimax:
+    base_url: "https://api.minimax.io/anthropic"
+    # Resolved by CredentialResolver at session open; `nos:` reads the named
+    # key out of ~/.nos/secrets.yml (0600, operator-pasted, converge-persisted).
+    # NEVER a value here — same secret_ref rule as agent_credentials.
+    auth_secret: "nos:minimax_api_key"
+    # Which env carries the model id for each tier the agents pin. Values are
+    # ENV NAMES (rendered into wing.plist from minimax_model /
+    # minimax_small_model, both default "" — the operator re-decides the tier
+    # pins consciously; an armed backend with an empty model id refuses at
+    # resolution rather than sending a blank model). `opus: null` is ruling 1's
+    # carve-out, enforced as gate 6 above.
+    model_env:
+      haiku: "NOS_MINIMAX_SMALL_MODEL"
+      sonnet: "NOS_MINIMAX_MODEL"
+      opus: null
+    enabled_flag: "minimax_enabled"
+    # Match token against the agent's gdpr.processors[].name. The full legal
+    # entity for the international endpoint belongs in the agent's register
+    # entry (verify the contracting entity + Art. 46 safeguard when writing
+    # it); this token only keys the binding↔register agreement check.
+    processor_match: "MiniMax"
