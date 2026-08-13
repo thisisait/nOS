@@ -63,7 +63,15 @@ mcp_grafana_url: "http://grafana:3000"                  # internal Docker servic
 # both images carry the identical entrypoint
 # (`/app/mcp-grafana --transport sse --address 0.0.0.0:8000`) and expose 8000,
 # which is what `mcpo-config.json.j2` dials as http://mcp-grafana:8000/sse.
-# The official build additionally runs as a non-root user.
+# (Both run as the same non-root user too — an earlier note here credited that
+# to the official build alone; `docker image inspect` says otherwise.)
+#
+# "Drop-in" is true of the IMAGE and was false of the LINK (found 2026-08-13,
+# re-measuring the claim): BOTH builds ship a Host allowlist defaulting to
+# loopback, so the resident container had been answering mcpo's
+# `Host: mcp-grafana:8000` with 403 all along — mcpo starts healthy and
+# silently drops the grafana toolset. The compose template now restates the
+# entrypoint with `--allowed-hosts mcp-grafana:8000`; see the comment there.
 mcp_grafana_image: "grafana/mcp-grafana"
 # REM-196 (CRITICAL, CVE-2026-19516, CVSS 9.1) — the SECOND bite at the
 # X-Grafana-URL header: an authenticated caller steers the OUTBOUND request and
@@ -76,7 +84,11 @@ mcp_grafana_image: "grafana/mcp-grafana"
 # Digest form kept: the tag says what we meant, the digest says what we get.
 # The digest below is the multi-arch INDEX, so arm64 and amd64 both resolve.
 mcp_grafana_version: "1.1.0@sha256:f21a19cebbfa7c3a76ef1746171e5ffc3601064e432f593e7c6cb526e5216e5f"
-mcp_grafana_port: 8765                                  # internal SSE port
+# DEAD CONFIG, kept only to say so: nothing renders this var. The SSE port is
+# 8000 (baked into the image entrypoint and the compose override); 8765 never
+# was it. Deleting outright would silently break an operator override file
+# that sets it — announce first, remove on the next role-surface sweep.
+mcp_grafana_port: 8765
 
 # ── OpenWebUI Anthropic connector ─────────────────────────────────────────────
 # Add ANTHROPIC_API_KEY to config.yml / credentials.yml to activate

@@ -66,6 +66,28 @@ services:
   mcp-grafana:
     image: {{ mcp_grafana_image | default('grafana/mcp-grafana') }}:{{ mcp_grafana_version }}
     restart: unless-stopped
+    # The image entrypoint restated PLUS `--allowed-hosts`. The binary's Host
+    # allowlist defaults to loopback variants of --address, and mcpo dials
+    # http://mcp-grafana:8000/sse — a Host the default refuses. MEASURED
+    # 2026-08-13: the resident container answers mcpo with `403 forbidden:
+    # host not allowed` (mcpo logs it, starts healthy anyway, and silently
+    # drops the whole grafana toolset); a throwaway 1.1.0 with this flag
+    # answers Host mcp-grafana:8000 with 200 and any other Host with 403.
+    # Restating --transport/--address is required: compose `entrypoint:`
+    # replaces the image's, flags and all (image Cmd is null — nothing else
+    # is lost; the qgis lesson about CMD-clearing does not bite here).
+    # KNOWN FOLLOW-UP: 1.1.0 logs "SECURITY: … set MCP_GRAFANA_SERVER_TOKEN"
+    # on a non-loopback bind and upstream will make that a STARTUP ERROR in a
+    # future release; wiring it needs an Authorization header on mcpo's side
+    # of the dial, so it lands together with an mcpo config change, not here.
+    entrypoint:
+      - /app/mcp-grafana
+      - --transport
+      - sse
+      - --address
+      - 0.0.0.0:8000
+      - --allowed-hosts
+      - mcp-grafana:8000
     environment:
       GRAFANA_URL: "{{ mcp_grafana_url }}"
       GRAFANA_SERVICE_ACCOUNT_TOKEN: "{{ mcp_grafana_sa_token | default('placeholder-set-in-post') }}"
