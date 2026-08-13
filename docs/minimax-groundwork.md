@@ -149,19 +149,36 @@ email, and then `cat`s the file around every leak site ±4 lines — the plainte
 neighbourhood of every unresolved secret leak. So a ceremony qualifies on
 capability AND on data sensitivity, and either axis alone routes it wrong.
 
-**WHAT WAS BUILT CANNOT EXPRESS THIS.** `discover-pulse-catalog.py` injects into
-every `pulse-run-agent.sh` job, and `test_minimax_prepared_not_armed.py:111-116`
-asserts that every agent job carries the override — the gate enforces the
-estate-wide shape the ruling forbids. The documented escape (a job's own env wins
-on a key clash) cannot express it either: a clash can override
-`ANTHROPIC_BASE_URL` but cannot REMOVE the injected `ANTHROPIC_AUTH_TOKEN`, so an
-opus job "opted back" to Anthropic would present the MiniMax key as its bearer —
-a 401 on exactly the jobs the ruling protects, plus a key sent to the wrong
-party. The default is also fail-open: a new ceremony lands on MiniMax silently.
+**WHAT WAS BUILT COULD NOT EXPRESS THIS — RESOLVED 2026-08-13 (spine
+increment 1).** The history: `discover-pulse-catalog.py` injected the override
+into every `pulse-run-agent.sh` job, and the old
+`test_minimax_prepared_not_armed.py` asserted that estate-wide shape — the
+gate enforced what the ruling forbids; the env-clash escape could override
+`ANTHROPIC_BASE_URL` but never REMOVE the injected token, and a new ceremony
+landed on MiniMax silently (fail-open). All of that is gone. The ruling now
+lives as a **per-agent binding**:
 
-Implementation therefore moves INTO `w-agentkit-spine`, where a backend becomes a
-binding on a run rather than an env var. Per-job selection encoded in `env_json`
-now would be built twice, and the gate rewritten twice with it.
+- `model.backend: minimax` in `files/anatomy/agents/<name>/agent.yml` — the
+  declaration, per agent, never estate-wide.
+- `state/llm-backends.yml` — the closed backend registry and the six
+  fail-closed gates, prose and all.
+- `App\AgentKit\LLMClient\BindingResolver` — the gates as running code:
+  registry membership, arming via `NOS_ARMED_BACKENDS` (wing.plist, rendered
+  from `minimax_enabled`), **agreement with the agent's own Article-30
+  record** (the second axis, read from the register rather than duplicated —
+  a routing the register does not declare REFUSES the session), deferred
+  agents refused, opus-tier refused (the code-authoring carve-out), and an
+  armed backend with no model id refused.
+- The catalog carries **no backend env at all**, armed or not — the
+  shell-bridge ceremonies always run on the default backend, which makes the
+  fail-open default fail-closed. Gates:
+  `test_minimax_prepared_not_armed.py` (rewritten once, as predicted),
+  `test_a_binding_reads_the_register.py` (declared data vs the register),
+  `test_binding_resolver_effects.py` (the PHP, executed).
+
+What still waits on the supervised night: an actual ceremony routed through
+AgentKit under a binding, and the per-ROUTED-agent MiniMax processor entry in
+its gdpr block (see item 1 below).
 
 ## Ruling 2 — fail-closed classification, with the unmatched message logged
 
@@ -196,6 +213,19 @@ and refuses the alternative. Deeper: the pulse path records
 which backend or model served a run except `cost_basis` on the end event. Stamp
 the effective backend and model into the run-end event when arming.
 
+**RESOLVED 2026-08-13 (spine increment 1), on the only path that can arm.**
+`ClaudeCliAdapter` under a binding passes NO `--model` and drives via
+`ANTHROPIC_MODEL` carrying the binding's tier-resolved id — measured at the
+argv line by `test_binding_resolver_effects.py::test_ruling_3_at_the_argv_line`,
+both directions. The tiers survive because the resolver maps each agent's own
+tier (`claude-haiku`/`claude-sonnet`) through the registry's `model_env`
+per run; `opus` maps to null by ruling 1. The shell-bridge path keeps
+`--model` and needs no drop rule anymore: the catalog injects no
+`ANTHROPIC_BASE_URL`, so the conflict this ruling resolves cannot arise there.
+The write-time stamp (backend + effective model in `agent_run_end`) shipped
+2026-08-13 in `pulse-run-agent.sh` (gate
+`test_runner_child_env_and_attribution.py`).
+
 ## What must happen before arming, in order
 
 1. ~~The Art-30 / DPA register work.~~ **DONE 2026-08-13** for the Anthropic
@@ -218,7 +248,18 @@ the effective backend and model into the run-end event when arming.
    Do NOT pre-declare MiniMax before it is armed: a record asserting a transfer
    that does not occur is wrong in the same way the empty list was, just
    pointing the other direction.
-2. `w-agentkit-spine`, which is where rulings 1 and 3 acquire a place to live.
+2. ~~`w-agentkit-spine`, which is where rulings 1 and 3 acquire a place to
+   live.~~ **THE NON-SUPERVISED HALF SHIPPED 2026-08-13**: rulings 1 and 3 now
+   live in the binding layer (`state/llm-backends.yml` +
+   `App\AgentKit\LLMClient\BindingResolver` + `model.backend` per agent.yml —
+   see ruling 1's resolution above for the map). What remains of the spine row
+   is the operator-supervised half: a parallel-run night proving a real
+   ceremony through AgentKit, then the Pulse cutover. Arming MiniMax for an
+   agent is, in full: paste the key (credentials.yml) · converge · set
+   `minimax_enabled: true` + the two model ids (config.yml) · declare
+   `model.backend: minimax` in that agent's agent.yml · append the MiniMax
+   processor entry to that agent's gdpr block — and the resolver refuses any
+   subset that disagrees.
 3. The env-withholding hardening — **half shipped 2026-08-13, half was wrong as
    written.** `NOS_AGENT_CLIENT_SECRET` is genuinely runner-only (the runner
    exchanges it for a scoped token before the spawn) and is now withheld from
