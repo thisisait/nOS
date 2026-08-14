@@ -1,0 +1,18 @@
+# KEAP DataTable — "Print materials" (label stock the jobs consume).
+
+title: "Print materials"
+description: >-
+  Label stock — papers and films a print job consumes, with the unit its
+  quantity is counted in. Jobs reference a material by rowRef.
+driver: libsql
+visibility: tier-managers
+anchors: ["nos.fixture.print"]
+
+schema:
+  columns:
+    - { key: slug, label: "Slug",     kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: name, label: "Name",     kind: text,   role: dimension, required: true, concept: identity.name }
+    - { key: kind, label: "Kind",     kind: select, role: dimension, required: true, concept: class.kind,
+        options: ["paper", "pp-film", "pet-film"] }
+    - { key: unit, label: "Unit",     kind: select, role: attribute, required: true,
+        options: ["labels", "meters"] }

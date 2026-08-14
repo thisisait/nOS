@@ -154,3 +154,13 @@
 - name: "[pazny.keap] Seed nOS-face config DataTables (layouts/wallpapers/controls)"
   ansible.builtin.include_tasks: seed-face-tables.yml
   when: install_keap | default(false) | bool
+
+# ── Label-printer business fixture (w-fixture increment 1) ───────────────────
+# Nine EN 16931 + print-shop DataTables with synthetic seed rows, git-owned so
+# a blank → converge recreates the tenant (the design doc's proof 3). Opt-in:
+# a public nOS install does not grow a label printer unasked.
+- name: "[pazny.keap] Seed the label-printer business fixture DataTables"
+  ansible.builtin.include_tasks: seed-fixture-tables.yml
+  when:
+    - install_keap | default(false) | bool
+    - keap_seed_business_fixture | default(false) | bool

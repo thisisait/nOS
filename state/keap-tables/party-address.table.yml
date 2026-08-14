@@ -1,0 +1,33 @@
+# KEAP DataTable — "Party addresses" (EN 16931 postal address facet).
+#
+# One row per address PER PURPOSE, rowRef'd to its party. The purpose column
+# is the whole point: EN 16931's buyer has a billing address and a delivery
+# address that routinely differ, and the fixture's design doc names "a real
+# delivery address that differs from the billing one" as an explicit surface
+# to exercise — expressed here as two rows, never as billing_*/delivery_*
+# column pairs (the flat shape the live `Business partners` table has and
+# this set supersedes). Field names follow the EN 16931 postal address group:
+# street/additional line, city, postcode, country subdivision, country.
+
+title: "Party addresses"
+description: >-
+  Postal addresses per party and purpose (registered | billing | delivery),
+  in the EN 16931 address group shape. Delivery differing from billing is two
+  rows, not extra columns; the party is a rowRef, restrict-on-delete.
+driver: libsql
+visibility: tier-managers
+anchors: ["nos.fixture.party"]
+
+schema:
+  columns:
+    - { key: slug,        label: "Slug",           kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: party,       label: "Party",          kind: rowRef, role: dimension, required: true,
+        refTable: "party", refDisplay: "legal_name", onDelete: "restrict", concept: graph.parent }
+    - { key: purpose,     label: "Purpose",        kind: select, role: dimension, required: true, concept: class.kind,
+        options: ["registered", "billing", "delivery"] }
+    - { key: street,      label: "Street line",    kind: text,   role: attribute, required: true }
+    - { key: street2,     label: "Additional line", kind: text,  role: attribute }
+    - { key: city,        label: "City",           kind: text,   role: attribute, required: true }
+    - { key: postcode,    label: "Postcode",       kind: text,   role: attribute, required: true }
+    - { key: subdivision, label: "Subdivision",    kind: text,   role: attribute }
+    - { key: country,     label: "Country",        kind: text,   role: dimension, required: true }

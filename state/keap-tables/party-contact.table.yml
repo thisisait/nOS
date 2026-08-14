@@ -1,0 +1,28 @@
+# KEAP DataTable — "Party contact points" (EN 16931 contact facet).
+#
+# One row per channel, rowRef'd to its party. THE SYNTHETIC-PEOPLE RULE BITES
+# HARDEST HERE: a contact point is the most directly personal column in the
+# fixture, so the gate (test_fixture_tables_declare_the_business.py) refuses
+# any seeded email not ending in `.invalid` and any phone not in the +420 000
+# reserved shape — real people appear only after the fixture's own Article-30
+# entry exists and the company has said yes in writing
+# (docs/idea/15-business-fixture.md, "The one rule this fixture ships with").
+
+title: "Party contact points"
+description: >-
+  Contact channels per party (email | phone | web), one row per channel with
+  an optional role label. The party is a rowRef, restrict-on-delete. Seeded
+  values are synthetic by gate until the fixture's register entry exists.
+driver: libsql
+visibility: tier-managers
+anchors: ["nos.fixture.party"]
+
+schema:
+  columns:
+    - { key: slug,  label: "Slug",    kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: party, label: "Party",   kind: rowRef, role: dimension, required: true,
+        refTable: "party", refDisplay: "legal_name", onDelete: "restrict", concept: graph.parent }
+    - { key: kind,  label: "Channel", kind: select, role: dimension, required: true, concept: class.kind,
+        options: ["email", "phone", "web"] }
+    - { key: value, label: "Value",   kind: text,   role: attribute, required: true }
+    - { key: role,  label: "Role",    kind: text,   role: attribute }

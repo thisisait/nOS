@@ -1,0 +1,37 @@
+# KEAP DataTable — "Print job steps" (the job ↔ machine N:N junction).
+#
+# THE JUNCTION, exactly as the relations doctrine prescribes: N:N is a table
+# with two rowRef columns, never an array cell, because the edge carries its
+# own attributes — here the step order and the planned/actual window
+# (docs/archive/datatables-relations.md: "an N:N edge almost always carries
+# its own attributes, an array cell has nowhere to put them"). A label job's
+# path IS a sequence of edges: press first, finisher second, each pass with
+# its own window on its own machine.
+#
+# This table is what makes "which jobs miss their deadline if machine 2
+# stops" answerable: filter steps by machine, walk job → order.due_at,
+# compare windows. The seed deliberately routes EVERY job's finishing step
+# through one finisher so the question has a non-trivial answer on day one.
+
+title: "Print job steps"
+description: >-
+  One row per pass of a job over a machine — the job↔machine N:N junction
+  with per-edge attributes: step order, planned window, actual times, status.
+driver: libsql
+visibility: tier-managers
+anchors: ["nos.fixture.print"]
+
+schema:
+  columns:
+    - { key: slug,          label: "Slug",          kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: job,           label: "Job",           kind: rowRef, role: dimension, required: true,
+        refTable: "print-job", refDisplay: "slug", onDelete: "restrict", concept: graph.parent }
+    - { key: machine,       label: "Machine",       kind: rowRef, role: dimension, required: true,
+        refTable: "print-machine", refDisplay: "name", onDelete: "restrict", concept: graph.uses }
+    - { key: step_ordinal,  label: "Step",          kind: number, role: dimension, required: true, concept: ui.sort }
+    - { key: planned_start, label: "Planned start", kind: date,   role: attribute, required: true, concept: time.target }
+    - { key: planned_end,   label: "Planned end",   kind: date,   role: attribute, required: true }
+    - { key: actual_start,  label: "Actual start",  kind: date,   role: attribute }
+    - { key: actual_end,    label: "Actual end",    kind: date,   role: attribute, concept: time.occurred_at }
+    - { key: status,        label: "Status",        kind: select, role: dimension, required: true, concept: lifecycle.status,
+        options: ["planned", "running", "done", "skipped"] }

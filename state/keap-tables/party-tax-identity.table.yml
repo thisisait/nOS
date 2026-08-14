@@ -1,0 +1,30 @@
+# KEAP DataTable — "Party tax identities" (EN 16931 tax registration facet).
+#
+# One row per registration, rowRef'd to its party — a party can hold a VAT id
+# AND a local company id (Czech IČO) with independent validity windows, which
+# is why this is not a column on `party`. `onDelete: restrict` because a tax
+# identity whose party vanished is a corrupt legal record, not an orphan to
+# tidy (docs/archive/datatables-relations.md: "legal records do not get
+# orphaned quietly"). Fixture doctrine + synthetic-value rules: see
+# party.table.yml's header; the gate holds seeded values to the synthetic
+# ranges (CZ000000xx / 000000xx).
+
+title: "Party tax identities"
+description: >-
+  Tax registrations per party (EN 16931 tax scheme + identifier): VAT ids,
+  Czech IČO, other local schemes. One row per registration with a validity
+  window; the party is a rowRef, restrict-on-delete.
+driver: libsql
+visibility: tier-managers
+anchors: ["nos.fixture.party"]
+
+schema:
+  columns:
+    - { key: slug,       label: "Slug",       kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: party,      label: "Party",      kind: rowRef, role: dimension, required: true,
+        refTable: "party", refDisplay: "legal_name", onDelete: "restrict", concept: graph.parent }
+    - { key: scheme,     label: "Scheme",     kind: select, role: dimension, required: true, concept: class.kind,
+        options: ["VAT", "ICO", "other"] }
+    - { key: value,      label: "Identifier", kind: text,   role: dimension, required: true }
+    - { key: valid_from, label: "Valid from", kind: date,   role: attribute, concept: time.occurred_at }
+    - { key: valid_to,   label: "Valid to",   kind: date,   role: attribute }

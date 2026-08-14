@@ -1,0 +1,60 @@
+---
+# =============================================================================
+# pazny.keap/tasks/seed-fixture-tables.yml — the label-printer business fixture
+#
+# w-fixture increment 1 (docs/idea/15-business-fixture.md): nine DataTables in
+# the EN 16931 party shape + the print-shop operational set, defined in
+# state/keap-tables/*.table.yml and seeded from
+# state/fixtures/label-printer.seed.yml. Everything is git-owned, so the
+# fixture is a REPRODUCIBLE TENANT: `nos --remove=data --confirm` → converge
+# recreates it byte-identically, which is the design doc's proof 3 and "the
+# real gate, the one most likely to fail".
+#
+# REUSES seed-face-table.yml PER TABLE — deliberately, name notwithstanding.
+# That file is the estate's one implementation of "create-or-reconcile a
+# DataTable + upsert missing rows by slug", and one law with two
+# implementations is how the agent-run mutex ended up not covering
+# scan-runner.sh (files/anatomy/scripts/agent-run-lock.sh header). Its loop
+# var is `_face_tbl`; renaming the shared task is a separate, whole-estate
+# commit, not a side effect of the fixture.
+#
+# ORDER IS DEPENDENCY ORDER. KEAP validates a rowRef's refTable at table
+# create and the seed's rowRef values are target-row slugs, so party must
+# exist (table and rows) before print-order references it, and print-job
+# before print-job-step. The offline gate
+# (tests/anatomy/test_fixture_tables_declare_the_business.py) refuses a
+# forward reference in either the defs or the seed, so a re-ordering here
+# goes red before it can 400 on a converge.
+#
+# Gated on keap_seed_business_fixture (default false in default.config.yml) —
+# a public nOS install does not grow a label printer unasked.
+# =============================================================================
+
+- name: "[pazny.keap] Load the label-printer fixture seed (git SoT)"
+  ansible.builtin.set_fact:
+    _fixture_seed: "{{ lookup('file', playbook_dir + '/state/fixtures/label-printer.seed.yml') | from_yaml }}"
+
+# Explicit YAML list, not a Jinja-built one: without jinja2_native a list
+# assembled inside a Jinja for-block lands in set_fact as its STRING repr and
+# the loop below would iterate characters. Same shape as seed-face-tables.yml.
+# The LIST ORDER is the dependency order; the gate asserts it matches the
+# order it checks rowRef targets against, so the two stay one fact.
+- name: "[pazny.keap] Assemble fixture DataTable defs + seed rows (dependency order)"
+  ansible.builtin.set_fact:
+    _fixture_tables:
+      - { slug: "party",              def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party.table.yml') | from_yaml }}",              rows: "{{ _fixture_seed['party'] }}" }
+      - { slug: "party-tax-identity", def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party-tax-identity.table.yml') | from_yaml }}", rows: "{{ _fixture_seed['party-tax-identity'] }}" }
+      - { slug: "party-address",      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party-address.table.yml') | from_yaml }}",      rows: "{{ _fixture_seed['party-address'] }}" }
+      - { slug: "party-contact",      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party-contact.table.yml') | from_yaml }}",      rows: "{{ _fixture_seed['party-contact'] }}" }
+      - { slug: "print-machine",      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/print-machine.table.yml') | from_yaml }}",      rows: "{{ _fixture_seed['print-machine'] }}" }
+      - { slug: "print-material",     def: "{{ lookup('file', playbook_dir + '/state/keap-tables/print-material.table.yml') | from_yaml }}",     rows: "{{ _fixture_seed['print-material'] }}" }
+      - { slug: "print-order",        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/print-order.table.yml') | from_yaml }}",        rows: "{{ _fixture_seed['print-order'] }}" }
+      - { slug: "print-job",          def: "{{ lookup('file', playbook_dir + '/state/keap-tables/print-job.table.yml') | from_yaml }}",          rows: "{{ _fixture_seed['print-job'] }}" }
+      - { slug: "print-job-step",     def: "{{ lookup('file', playbook_dir + '/state/keap-tables/print-job-step.table.yml') | from_yaml }}",     rows: "{{ _fixture_seed['print-job-step'] }}" }
+
+- name: "[pazny.keap] Seed each fixture DataTable (create/reconcile + upsert missing rows)"
+  ansible.builtin.include_tasks: seed-face-table.yml
+  loop: "{{ _fixture_tables }}"
+  loop_control:
+    loop_var: _face_tbl
+    label: "{{ _face_tbl.slug }}"

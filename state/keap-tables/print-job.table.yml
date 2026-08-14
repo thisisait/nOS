@@ -1,0 +1,31 @@
+# KEAP DataTable — "Print jobs" (the fixture's core object).
+#
+# docs/idea/15-business-fixture.md: "Its core object is a job — a deadline, a
+# material, a quantity, a machine, and a physical outcome. That is the shape
+# nOS has no example of." The deadline lives on the order (a job inherits it
+# through graph.parent), the machine lives in print-job-step (N:N, because a
+# label runs press THEN finisher and each pass carries its own window), and
+# the material + quantity + outcome live here.
+
+title: "Print jobs"
+description: >-
+  Production jobs — one per press run, nesting under an order (rowRef,
+  graph.parent), consuming a material (rowRef, graph.uses), reaching machines
+  only through print-job-step. Outcome is the physical result, recorded when
+  it exists.
+driver: libsql
+visibility: tier-managers
+anchors: ["nos.fixture.print"]
+
+schema:
+  columns:
+    - { key: slug,        label: "Slug",       kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: order,       label: "Order",      kind: rowRef, role: dimension, required: true,
+        refTable: "print-order", refDisplay: "reference", onDelete: "restrict", concept: graph.parent }
+    - { key: material,    label: "Material",   kind: rowRef, role: dimension, required: true,
+        refTable: "print-material", refDisplay: "name", onDelete: "restrict", concept: graph.uses }
+    - { key: quantity,    label: "Quantity",   kind: number, role: attribute, required: true }
+    - { key: status,      label: "Status",     kind: select, role: dimension, required: true, concept: lifecycle.status,
+        options: ["queued", "scheduled", "running", "done", "failed"] }
+    - { key: finished_at, label: "Finished at", kind: date,  role: attribute, concept: time.occurred_at }
+    - { key: outcome,     label: "Outcome",    kind: text,   role: attribute, concept: evidence.observation }

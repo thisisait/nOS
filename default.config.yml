@@ -2353,6 +2353,16 @@ keap_version: "1.40.1"                          # nos/keap image tag
 # real OLAP-shaped content, not an empty grid. Opt-in + once-only (a marker
 # file); the seed is idempotent. Set false to keep a pristine empty install.
 keap_seed_fixtures: true
+# The label-printer BUSINESS fixture (w-fixture, docs/idea/15-business-fixture.md)
+# — nine DataTables (EN 16931 party/tax/address/contact + machines, materials,
+# orders, jobs, job-steps with rowRef joins) seeded from
+# state/fixtures/label-printer.seed.yml. NOT the demo tables above: this is the
+# reproducible-tenant fixture whose data someone's week is meant to depend on.
+# Default OFF — a public nOS install does not grow a label printer unasked; the
+# fixture estate flips it in config.yml. Synthetic people only, enforced by
+# tests/anatomy/test_fixture_tables_declare_the_business.py — real customers
+# wait for the fixture's own Article-30 entry + the company's written yes.
+keap_seed_business_fixture: false
 # nOS catalog DataTables ("Apps" + "Systems", LeanIX-style — state/keap-tables/,
 # docs/archive/keap-datatables-apps-systems.md). The Systems seeder is idempotent
 # and by default writes ONLY installed systems (install_* true) into KEAP. Flip

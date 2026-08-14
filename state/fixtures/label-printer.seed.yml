@@ -1,0 +1,106 @@
+# =============================================================================
+# Label-printer fixture — SEED ROWS (w-fixture, docs/idea/15-business-fixture.md)
+#
+# REAL STRUCTURE, SYNTHETIC PEOPLE. Every person and company in this file is
+# invented; every email ends in `.invalid` (RFC 2606 reserved), every phone
+# sits in the +420 000 range, every tax identifier is in the 000001xx range no
+# registry issues. This is the fixture's one shipped rule, and it is a GATE,
+# not a convention: tests/anatomy/test_fixture_tables_declare_the_business.py
+# refuses this file the moment a value stops looking synthetic. Real customers
+# require the fixture's own Article-30 register entry AND the company's yes in
+# writing — the order the design doc calls "the sequence that cannot be
+# undone" — and neither exists yet. The 88-record register shipped 2026-08-13
+# covers the AGENT ceremonies' processors; it does not cover this data.
+#
+# ROW IDENTITY: a row's `slug` doubles as its row id in KEAP's agent upsert
+# (agent.ts POST /agent/v1/tables/:slug/rows), so rowRef VALUES in this file
+# are target-row slugs, literal and stable — a re-seed PATCHes rather than
+# duplicates, which is what lets proof 3 of the design doc ("a converge does
+# not lose it") be attempted at all.
+#
+# TABLE ORDER IS DEPENDENCY ORDER — a rowRef's target table (and target rows)
+# must exist before the referencing rows land. The seeder walks this file top
+# to bottom; the gate refuses a forward reference.
+#
+# THE SCHEDULE IS DELIBERATELY PINCHED: every job's finishing pass routes
+# through the one finisher, so "which jobs miss their deadline if the finisher
+# stops" has a non-trivial answer on day one — and a DIFFERENT answer than
+# "if the digital press stops", which touches only three of the four jobs.
+# Dates are fixed epoch seconds (KEAP `date` kind), so the seed is
+# deterministic and the fixture reproducible byte-for-byte.
+# =============================================================================
+
+party:
+  - { slug: synthetic-stitky-vzor, legal_name: "Stitky VZOR s.r.o. (synthetic)", trading_name: "VZOR Labels",
+      party_kind: org, country: CZ, notes: "The label shop itself — the fixture's seller party." }
+  - { slug: synthetic-pivovar-okoun, legal_name: "Pivovar Okoun a.s. (synthetic)", trading_name: "Okoun",
+      party_kind: org, country: CZ, notes: "Brewery customer; billing and delivery addresses differ on purpose." }
+  - { slug: synthetic-novakova-jana, legal_name: "Jana Novakova (synthetic)",
+      party_kind: person, country: CZ, notes: "Sole-trader customer; the fixture's natural-person case." }
+
+party-tax-identity:
+  - { slug: tax-stitky-vat,   party: synthetic-stitky-vzor,   scheme: VAT, value: "CZ00000100", valid_from: 1786352400 }
+  - { slug: tax-stitky-ico,   party: synthetic-stitky-vzor,   scheme: ICO, value: "00000100" }
+  - { slug: tax-pivovar-vat,  party: synthetic-pivovar-okoun, scheme: VAT, value: "CZ00000101", valid_from: 1786352400 }
+  - { slug: tax-pivovar-ico,  party: synthetic-pivovar-okoun, scheme: ICO, value: "00000101" }
+
+party-address:
+  - { slug: addr-stitky-registered,  party: synthetic-stitky-vzor,   purpose: registered,
+      street: "Tiskarska 1 (synthetic)", city: "Ceske Budejovice", postcode: "370 01", country: CZ }
+  # The EN 16931 case the design doc names outright: the brewery BILLS to its
+  # Prague seat and takes DELIVERY at the Brno warehouse — two rows, one party.
+  - { slug: addr-pivovar-billing,    party: synthetic-pivovar-okoun, purpose: billing,
+      street: "Sladovnicka 12 (synthetic)", city: "Praha", postcode: "110 00", subdivision: "CZ010", country: CZ }
+  - { slug: addr-pivovar-delivery,   party: synthetic-pivovar-okoun, purpose: delivery,
+      street: "Skladova 77 (synthetic)", city: "Brno", postcode: "602 00", subdivision: "CZ064", country: CZ }
+  - { slug: addr-novakova-delivery,  party: synthetic-novakova-jana, purpose: delivery,
+      street: "Kvetna 3 (synthetic)", city: "Tabor", postcode: "390 01", country: CZ }
+
+party-contact:
+  - { slug: contact-stitky-web,     party: synthetic-stitky-vzor,   kind: web,   value: "https://stitky.example.invalid" }
+  - { slug: contact-pivovar-email,  party: synthetic-pivovar-okoun, kind: email, value: "objednavky@example.invalid", role: "orders" }
+  - { slug: contact-pivovar-phone,  party: synthetic-pivovar-okoun, kind: phone, value: "+420 000 000 101" }
+  - { slug: contact-novakova-email, party: synthetic-novakova-jana, kind: email, value: "jana@example.invalid" }
+
+print-machine:
+  - { slug: flexo-1,    name: "Flexo press 1",   kind: flexo-press,   status: up }
+  - { slug: digital-1,  name: "Digital press 1", kind: digital-press, status: up }
+  - { slug: finisher-1, name: "Finisher 1",      kind: finisher,      status: up }
+
+print-material:
+  - { slug: paper-semigloss, name: "Semi-gloss paper", kind: paper,    unit: labels }
+  - { slug: pp-white,        name: "PP white film",    kind: pp-film,  unit: labels }
+  - { slug: pet-clear,       name: "PET clear film",   kind: pet-film, unit: meters }
+
+print-order:
+  - { slug: ord-2026-101, reference: "ORD-2026-101", customer: synthetic-pivovar-okoun,
+      ordered_at: 1786352400, due_at: 1787140800, status: in-production,
+      notes: "Two label runs for the summer batch; delivery to the Brno warehouse." }
+  - { slug: ord-2026-102, reference: "ORD-2026-102", customer: synthetic-novakova-jana,
+      ordered_at: 1786528800, due_at: 1787313600, status: confirmed }
+  - { slug: ord-2026-103, reference: "ORD-2026-103", customer: synthetic-pivovar-okoun,
+      ordered_at: 1786629600, due_at: 1787562000, status: confirmed }
+
+print-job:
+  - { slug: job-101-1, order: ord-2026-101, material: pp-white,        quantity: 20000, status: scheduled }
+  - { slug: job-101-2, order: ord-2026-101, material: paper-semigloss, quantity: 5000,  status: queued }
+  - { slug: job-102-1, order: ord-2026-102, material: paper-semigloss, quantity: 1200,  status: queued }
+  - { slug: job-103-1, order: ord-2026-103, material: pet-clear,       quantity: 800,   status: queued }
+
+print-job-step:
+  - { slug: step-101-1-print,  job: job-101-1, machine: flexo-1,    step_ordinal: 1,
+      planned_start: 1786953600, planned_end: 1787032800, status: planned }
+  - { slug: step-101-1-finish, job: job-101-1, machine: finisher-1, step_ordinal: 2,
+      planned_start: 1787032800, planned_end: 1787061600, status: planned }
+  - { slug: step-101-2-print,  job: job-101-2, machine: digital-1,  step_ordinal: 1,
+      planned_start: 1787032800, planned_end: 1787061600, status: planned }
+  - { slug: step-101-2-finish, job: job-101-2, machine: finisher-1, step_ordinal: 2,
+      planned_start: 1787061600, planned_end: 1787119200, status: planned }
+  - { slug: step-102-1-print,  job: job-102-1, machine: digital-1,  step_ordinal: 1,
+      planned_start: 1787119200, planned_end: 1787140800, status: planned }
+  - { slug: step-102-1-finish, job: job-102-1, machine: finisher-1, step_ordinal: 2,
+      planned_start: 1787241600, planned_end: 1787313600, status: planned }
+  - { slug: step-103-1-print,  job: job-103-1, machine: digital-1,  step_ordinal: 1,
+      planned_start: 1787241600, planned_end: 1787313600, status: planned }
+  - { slug: step-103-1-finish, job: job-103-1, machine: finisher-1, step_ordinal: 2,
+      planned_start: 1787313600, planned_end: 1787562000, status: planned }

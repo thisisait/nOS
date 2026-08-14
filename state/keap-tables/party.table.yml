@@ -1,0 +1,52 @@
+# =============================================================================
+# KEAP DataTable definition — "Parties" (the entity registry's counterparty core)
+#
+# THE FIXTURE'S FIRST TABLE (w-fixture, docs/idea/15-business-fixture.md), and
+# deliberately GENERAL FIRST, BUSINESS SECOND: this is the EN 16931 party
+# shape (seller/buyer/delivery party as one noun), not a label-printer table.
+# The label-printer tables reference it by rowRef; a future e-shop would
+# reference the same rows. docs/archive/datatables-relations.md §5 carries the
+# argument: do not invent the schema — adopt the European e-invoicing semantic
+# model so a customer in another country is representable on day one.
+#
+# WHAT THIS SUPERSEDES, and must eventually retire: the LIVE `Business
+# partners` table (seeded 2026-07-29 as cortex test data, present on the
+# estate, declared in NO git file) is the pre-rowRef flat shape — billing and
+# delivery addresses as text columns on the partner row — which is exactly the
+# "five spreadsheets that each spell the customer's name differently" failure
+# §5 names. Nothing here reads or writes it; its retirement is an operator
+# decision recorded in the fixture doc.
+#
+# ONE PARTY, MANY FACETS: tax identities, addresses and contact points live in
+# sibling tables (party-tax-identity / party-address / party-contact), each
+# holding a rowRef to this one — 1:N by placement, the reference on the MANY
+# side. EN 16931 needs a delivery address that differs from the billing one;
+# two rows in party-address express that without this table growing columns.
+#
+# SEEDING: rows come from state/fixtures/label-printer.seed.yml via
+# roles/pazny.keap/tasks/seed-fixture-tables.yml, gated on
+# keap_seed_business_fixture (default false). Every seeded person is
+# SYNTHETIC — the fixture's one rule, enforced by
+# tests/anatomy/test_fixture_tables_declare_the_business.py.
+# =============================================================================
+
+title: "Parties"
+description: >-
+  Counterparty registry in the EN 16931 party shape — every person or
+  organisation the estate's business tables reference. Tax identities,
+  addresses and contact points are sibling tables holding a rowRef here, so
+  one party has many facets without this table growing columns.
+driver: libsql
+visibility: tier-managers
+anchors: ["nos.fixture.party"]
+
+schema:
+  columns:
+    - { key: slug,         label: "Slug",          kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: legal_name,   label: "Legal name",    kind: text,   role: dimension, required: true, concept: identity.name }
+    - { key: trading_name, label: "Trading name",  kind: text,   role: attribute }
+    - { key: party_kind,   label: "Kind",          kind: select, role: dimension, required: true, concept: class.kind,
+        options: ["person", "org"] }
+    # ISO 3166-1 alpha-2, the EN 16931 country code form.
+    - { key: country,      label: "Country",       kind: text,   role: dimension, required: true }
+    - { key: notes,        label: "Notes",         kind: text,   role: attribute, concept: identity.description }
