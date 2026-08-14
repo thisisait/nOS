@@ -1,7 +1,49 @@
 # 15 — A real business on nOS
 
-**Status: proposed 2026-08-09, targeted 2026-08-15 (`w-fixture`).**
+**Status: increment 1 SHIPPED 2026-08-14 (structure + synthetic seed, commit
+`8165de48`); proposed 2026-08-09, targeted 2026-08-15 (`w-fixture`).**
 **Detail:** the roadmap row carries the schedule; this file carries the argument.
+
+## What shipped, and what "unblocked" turned out to license (2026-08-14)
+
+Nine git-owned DataTables (`state/keap-tables/{party,party-tax-identity,
+party-address,party-contact,print-machine,print-material,print-order,
+print-job,print-job-step}.table.yml`), a deterministic synthetic seed
+(`state/fixtures/label-printer.seed.yml`), an idempotent converge seeder
+(`roles/pazny.keap/tasks/seed-fixture-tables.yml`, opt-in via
+`keap_seed_business_fixture`, default false), and the offline referee
+(`tests/anatomy/test_fixture_tables_declare_the_business.py`).
+
+**"Unblocked" re-derived, because the two register entries are different
+registers of different things.** The 2026-08-13 Article-30 work (88 records)
+declares the AGENT ceremonies' processors. The rule below needs an entry for
+the FIXTURE's processing of customer data plus the company's written yes —
+neither exists, and pre-declaring one would assert processing that does not
+occur (the same wrongness the empty list had, pointing the other way — the
+minimax lesson). So what is licensed today is exactly what shipped: real
+structure, synthetic people, with the synthetic-ness ENFORCED by gate
+(`.invalid` mail, `+420 000` phones, unissued tax-id ranges, `synthetic-`
+slugs) rather than by convention.
+
+**Drift found while building, so the next reader does not rediscover it:**
+
+- A live table `Business partners` (seeded 2026-07-29 as "cortex test data")
+  exists on the estate and in NO git file — it is the flat pre-`rowRef` shape
+  (billing/delivery as text columns on the partner row) that
+  `docs/archive/datatables-relations.md` §5 argues against. The party set
+  supersedes it; nothing reads it; **its retirement is an operator decision**
+  (its four rows are disposable TEST data by its own description).
+- The relations doc's spelling `onRefDelete` predates the implementation:
+  KEAP ships `onDelete` (+ `refDisplay`), verified against
+  `~/keap/src/shared/contracts/table.ts` and `row-refs.test.ts`.
+- KEAP's agent row-upsert treats a row's `slug` as its row id, so seed rowRef
+  values are literal target slugs and a re-seed PATCHes instead of
+  duplicating — this is what makes proof 3 attemptable.
+
+**Still ahead:** the converge that creates the tenant (proof 3 measured, not
+argued), the cortex chain over `print-job-step` (the machine-stop question),
+the loop question (proof 1), and — only after the register entry and the
+written yes — real people.
 
 ## The idea
 
