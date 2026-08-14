@@ -132,7 +132,7 @@ def test_the_junction_is_a_real_junction():
 
 def test_the_seeder_walks_the_same_order():
     text = SEEDER.read_text()
-    declared = re.findall(r'-\s+\{\s*slug:\s*"([a-z-]+)"', text)
+    declared = re.findall(r'^\s+- slug: "([a-z-]+)"$', text, re.MULTILINE)
     assert declared == ORDER, (
         f"seed-fixture-tables.yml order {declared} != the dependency order "
         "this gate checks refs against — KEAP validates refTable at create, "

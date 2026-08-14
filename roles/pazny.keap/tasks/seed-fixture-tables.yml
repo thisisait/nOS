@@ -34,23 +34,43 @@
   ansible.builtin.set_fact:
     _fixture_seed: "{{ lookup('file', playbook_dir + '/state/fixtures/label-printer.seed.yml') | from_yaml }}"
 
-# Explicit YAML list, not a Jinja-built one: without jinja2_native a list
-# assembled inside a Jinja for-block lands in set_fact as its STRING repr and
-# the loop below would iterate characters. Same shape as seed-face-tables.yml.
+# Explicit YAML list in BLOCK style, twice deliberate: without jinja2_native a
+# list assembled inside a Jinja for-block lands in set_fact as its STRING repr
+# (the loop would iterate characters), and an inline `- { ... | from_yaml }`
+# one-liner trips test_config_stock_jinja_only's loop-item filter rule — the
+# 2.20.6 filter-less-context trap. Same shape as seed-face-tables.yml.
 # The LIST ORDER is the dependency order; the gate asserts it matches the
 # order it checks rowRef targets against, so the two stay one fact.
 - name: "[pazny.keap] Assemble fixture DataTable defs + seed rows (dependency order)"
   ansible.builtin.set_fact:
     _fixture_tables:
-      - { slug: "party",              def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party.table.yml') | from_yaml }}",              rows: "{{ _fixture_seed['party'] }}" }
-      - { slug: "party-tax-identity", def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party-tax-identity.table.yml') | from_yaml }}", rows: "{{ _fixture_seed['party-tax-identity'] }}" }
-      - { slug: "party-address",      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party-address.table.yml') | from_yaml }}",      rows: "{{ _fixture_seed['party-address'] }}" }
-      - { slug: "party-contact",      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party-contact.table.yml') | from_yaml }}",      rows: "{{ _fixture_seed['party-contact'] }}" }
-      - { slug: "print-machine",      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/print-machine.table.yml') | from_yaml }}",      rows: "{{ _fixture_seed['print-machine'] }}" }
-      - { slug: "print-material",     def: "{{ lookup('file', playbook_dir + '/state/keap-tables/print-material.table.yml') | from_yaml }}",     rows: "{{ _fixture_seed['print-material'] }}" }
-      - { slug: "print-order",        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/print-order.table.yml') | from_yaml }}",        rows: "{{ _fixture_seed['print-order'] }}" }
-      - { slug: "print-job",          def: "{{ lookup('file', playbook_dir + '/state/keap-tables/print-job.table.yml') | from_yaml }}",          rows: "{{ _fixture_seed['print-job'] }}" }
-      - { slug: "print-job-step",     def: "{{ lookup('file', playbook_dir + '/state/keap-tables/print-job-step.table.yml') | from_yaml }}",     rows: "{{ _fixture_seed['print-job-step'] }}" }
+      - slug: "party"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party.table.yml') | from_yaml }}"
+        rows: "{{ _fixture_seed['party'] }}"
+      - slug: "party-tax-identity"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party-tax-identity.table.yml') | from_yaml }}"
+        rows: "{{ _fixture_seed['party-tax-identity'] }}"
+      - slug: "party-address"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party-address.table.yml') | from_yaml }}"
+        rows: "{{ _fixture_seed['party-address'] }}"
+      - slug: "party-contact"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party-contact.table.yml') | from_yaml }}"
+        rows: "{{ _fixture_seed['party-contact'] }}"
+      - slug: "print-machine"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/print-machine.table.yml') | from_yaml }}"
+        rows: "{{ _fixture_seed['print-machine'] }}"
+      - slug: "print-material"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/print-material.table.yml') | from_yaml }}"
+        rows: "{{ _fixture_seed['print-material'] }}"
+      - slug: "print-order"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/print-order.table.yml') | from_yaml }}"
+        rows: "{{ _fixture_seed['print-order'] }}"
+      - slug: "print-job"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/print-job.table.yml') | from_yaml }}"
+        rows: "{{ _fixture_seed['print-job'] }}"
+      - slug: "print-job-step"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/print-job-step.table.yml') | from_yaml }}"
+        rows: "{{ _fixture_seed['print-job-step'] }}"
 
 - name: "[pazny.keap] Seed each fixture DataTable (create/reconcile + upsert missing rows)"
   ansible.builtin.include_tasks: seed-face-table.yml

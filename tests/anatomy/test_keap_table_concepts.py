@@ -55,17 +55,77 @@ def _vendored_concept_ids() -> set[str] | None:
     return ids or None
 
 
+# Columns deliberately WITHOUT a concept, each with the reason — the same
+# idiom as UNSEEDED below, and subject to the same pruning discipline
+# (test_the_conceptless_excuse_is_not_stale). Added 2026-08-14 with the
+# label-printer fixture (w-fixture), whose EN 16931 tables hold data the
+# CLOSED vocabulary has no words for yet: postal geography, tax identifiers,
+# measures, counterparties, validity windows. The alternative was stretching
+# a neighbour — country as `class.group`, a VAT id as `identity.name` — and a
+# WRONG meaning poisons exactly the cross-table queries concepts exist for:
+# "every column meaning identity.name" must never return a tax number.
+# The vocabulary grows in KEAP (`shared/contracts/field-concepts.ts`), then
+# re-vendors, then these rows are PRUNED — that order is this gate's own
+# instruction in test_declared_concepts_exist_in_the_vendored_vocabulary,
+# and the concepts to propose upstream are named per row.
+CONCEPTLESS = {
+    "party.trading_name": "secondary name; identity.name is (rightly) the legal name — needs identity.alias",
+    "party.country": "no geography concept exists — needs place.country",
+    "party-address.street": "no postal concepts exist — needs place.street",
+    "party-address.street2": "same — place.street2 or a structured place.address",
+    "party-address.city": "same — place.city",
+    "party-address.postcode": "same — place.postcode",
+    "party-address.subdivision": "same — place.subdivision (NUTS/ISO 3166-2)",
+    "party-address.country": "same — place.country",
+    "party-contact.value": "one column, three channels (email|phone|web); net.url fits only one of them",
+    "party-contact.role": "free-text qualifier of the channel, not a class.* of the row",
+    "party-tax-identity.value": "a tax identifier is not identity.name; needs identity.registration",
+    "party-tax-identity.valid_to": "an expiry is neither time.target nor time.occurred_at — needs time.valid_to",
+    "print-order.customer": "no counterparty concept; graph.parent would claim the order nests under the customer",
+    "print-job.quantity": "no measure concept — needs measure.quantity",
+    "print-material.unit": "the measure's unit, not a class.* of the material — needs measure.unit",
+    "print-job-step.planned_end": "time.target is claimed by planned_start (once-per-table rule); needs a window pair",
+    "print-job-step.actual_start": "time.occurred_at is claimed by actual_end (same) — same window pair",
+}
+
+
 def test_every_seeded_column_declares_a_concept():
     missing = [
         f"{name}.{c['key']}"
         for name, doc in _definitions()
         for c in doc["schema"]["columns"]
-        if not c.get("concept")
+        if not c.get("concept") and f"{name}.{c['key']}" not in CONCEPTLESS
     ]
     assert not missing, (
         "columns with no declared meaning — they carry a storage kind and an "
         "OLAP role, and nothing a cross-table consumer can key on:\n  "
         + "\n  ".join(missing)
+        + "\nDeclare a concept from the vendored vocabulary, or — ONLY when "
+        "the vocabulary genuinely lacks the meaning — add a CONCEPTLESS row "
+        "naming the concept KEAP should grow."
+    )
+
+
+def test_the_conceptless_excuse_is_not_stale():
+    """Every excused column must exist and still be concept-less.
+
+    The excuse list is a debt register, not a bypass: a row for a column that
+    gained a concept (pay-down) or that no longer exists (ghost) is a stale
+    entry hiding future drift — the same pruning contract UNSEEDED carries.
+    """
+    cols = {
+        f"{name}.{c['key']}": c.get("concept")
+        for name, doc in _definitions()
+        for c in doc["schema"]["columns"]
+    }
+    stale = [
+        key for key in CONCEPTLESS
+        if key not in cols or cols[key] is not None
+    ]
+    assert not stale, (
+        "CONCEPTLESS rows that no longer excuse anything — the column gained "
+        "a concept or is gone; prune them so the gate covers it again:\n  "
+        + "\n  ".join(stale)
     )
 
 
@@ -137,11 +197,18 @@ UNSEEDED = {
 
 
 def test_every_definition_is_either_seeded_or_explicitly_excused():
+    # TWO seeders since 2026-08-14: the face config tables and the
+    # label-printer fixture tables (seed-fixture-tables.yml, w-fixture). The
+    # question stays the same — a definition must land somewhere — the answer
+    # now has two places to come from.
     src = (REPO / "roles" / "pazny.keap" / "tasks" / "seed-face-tables.yml").read_text()
+    fixture_src = (REPO / "roles" / "pazny.keap" / "tasks" / "seed-fixture-tables.yml").read_text()
     orphans = sorted(
         name
         for name, _ in _definitions()
-        if f'slug: "face-{name}"' not in src and name not in UNSEEDED
+        if f'slug: "face-{name}"' not in src
+        and f'slug: "{name}"' not in fixture_src
+        and name not in UNSEEDED
     )
     assert not orphans, (
         "table definitions no seeder entry references — they carry concepts, "
