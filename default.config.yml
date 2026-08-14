@@ -2267,7 +2267,7 @@ qgis_version: "latest@sha256:f825a56109bea5a9b7bee50d43bdec472aa614276ea2fbd44e5
 
 metabase_domain: "bi{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 metabase_port: 3002
-metabase_version: "v0.63.5"      # REM-153 CRITICAL GHSA-cwxq-fmxq-jv8h (no CVE id — a CVE-only scan cannot see it) [swept v0.61.9 2026-08-06]
+metabase_version: "v0.63.10"     # REM-198 CRITICAL GHSA-r495-55cx-fjh7 — the SECOND metabase advisory with NO CVE id; the repo advisory endpoint is the only channel that shows either [was v0.63.5, REM-153]
 metabase_db_name: "metabase"
 metabase_db_user: "metabase"
 metabase_db_password: "{{ global_password_prefix }}_pw_metabase"

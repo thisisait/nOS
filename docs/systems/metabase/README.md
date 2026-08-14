@@ -10,7 +10,7 @@
 | **Port** | `3002` |
 | **Stack** | `data` |
 | **Toggle** | `install_metabase: true` |
-| **Image** | `metabase/metabase:v0.61.2.6` (`metabase_version`) |
+| **Image** | `metabase/metabase:{{ metabase_version }}` — the VAR, not a copy. A literal here went stale by two CRITICAL advisories (`v0.61.2.6` while the pin was `v0.63.5`); `default.config.yml` is the single declaration. |
 | **Compose** | `~/stacks/data/docker-compose.yml` |
 | **Data** | **PostgreSQL** — database `metabase`, user `metabase` on the `postgresql` container (`MB_DB_TYPE: postgres`). Questions, dashboards, collections, users and query history all live there. |
 | **Container mount** | `{{ metabase_data_dir }}` = `{{ nos_data_root }}/platform/services/metabase/data` → `/metabase-data` (default `~/nos/platform/services/metabase/data`) |

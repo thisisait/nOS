@@ -1,3 +1,93 @@
+# nOS Vulnerability Scan Addendum — 2026-08-14 (Cycle 29, batch-52)
+
+**Batch:** n8n, metabase, tempo, alloy, dnsmasq · **Probe:** `tls_crypto_weakness`
+**Outcome:** 5 queue items added (**REM-198 CRITICAL** — advisory 3 days old; **REM-199/200/201/202** — four probe findings). CVE leg otherwise clean at every live pin. Pending CRITICAL goes **0 → 1**, pending MEDIUM **17 → 21**.
+
+> **The finding of record, stated once.** Metabase publishes most of its security work **without CVE IDs**, and this is the second consecutive batch where that channel carried the only real CVE finding. `GHSA-r495-55cx-fjh7` (2026-08-11, critical, **no CVE**) moves the 63-line fix floor to **x.63.10**; the pin sits at **v0.63.5**. The three loud August CVEs — including the CVSS-10.0 unauthenticated SQLi upstream confirms is being **actively exploited** — are all *already covered* by that same pin. The dangerous one is the quiet one.
+
+---
+
+### 🔴 CRITICAL — [REM-198, no CVE] Metabase `GHSA-r495-55cx-fjh7` — a ten-item hardening roll-up, five patch releases ahead of the pin
+
+- **Component:** metabase — `metabase/metabase:v0.63.5` (`default.config.yml:2270`), live as `data-metabase-1`, build `1dca717` dated 2026-08-05
+- **Published 2026-08-11T19:19:08Z**, three days before this scan · **no CVE ID** · upstream severity **Critical**
+- **Fix `v0.63.10`, on Docker Hub since 2026-08-11** — a one-line pin bump, not a blocked item
+
+Metabase writes advisory ranges as `x.NN.P` covering **both** the OSS `0.x` and the EE `1.x` builds, so `v0.63.5` reads directly as `x.63.5`. Affected range `>= x.63.0, < x.63.10` → **affected**.
+
+The advisory is a roll-up of ten distinct issue classes with no per-issue severities:
+
+```
+1  SQL-injection hardening — query params, filters, cast options, metric/segment
+   defs reached the DB as raw SQL rather than as data
+2  HoneySQL dependency bump for CVE-2026-61620   ← the only identifier in it, and transitive
+3  incomplete permission checks — nested question refs + dashboard-card adds bypassed
+4  rate-limit bypass via header manipulation on login AND password-reset
+5  version-revert restores sensitive settings without revalidating permissions
+6  sandboxing bypass — row/column restrictions and impersonation controls
+7  loose API request validation
+8  network exposure — legacy HTTP actions, SSH-tunnel binding, unauthenticated site-URL influence
+9  admin access control — public sharing, DB health checks, settings management
+10 client-overrideable query + download row limits
+```
+
+**Why CRITICAL here, argued rather than copied.** Nothing above is stated to be unauthenticated RCE and nothing is under active exploitation — that was `GHSA-vwf4-m7j8-wcjf` (**CVE-2026-72898**, CVSS 10.0, `/api/session/reset_password`), which this pin **already covers**, along with `GHSA-r8h2-qpfx-mx59` (CVE-2026-72899, 9.6) and `GHSA-8hmm-hrhg-ppqp` (CVE-2026-72900). What carries it is item **1** plus item **8** on a product whose purpose is to accept operator-authored queries — and the nOS-specific aggravation from `docs/sso-and-attribution.md`: Metabase OSS has no OIDC, so it runs behind a Traefik `forward_auth` gate in front of **one shared account**. "Authenticated-only" buys much less separation when every tenant user who clears the Authentik wall *is the same query-capable principal*, with no per-user attribution beneath it.
+
+**Scoped honestly — what is not true of this estate.** No publicly shared cards or dashboards; no external database attached (`metabase_database` holds exactly one row); `site-url` on loopback. Reachable blast radius today is the Metabase **application** database, not a warehouse. That is an argument about exposure, not about the fix.
+
+> **Correction of record.** REM-153 justified its CRITICAL partly with *"the bundled SAMPLE DATABASE IS H2"*. At v0.63.5 that is measurably false — `SELECT engine FROM metabase_database` returns **`sqlite`**, `{"db":"/plugins/sample-database.sqlite","read-only?":true}`. REM-153 is resolved by version regardless, so nothing re-opens; but the premise must not be carried into a future H2-family finding without re-measuring the engine column.
+
+---
+
+### 🟡 The `tls_crypto_weakness` probe — four findings, and the one that isn't
+
+**[REM-199, MEDIUM] Metabase has no `MB_ENCRYPTION_SECRET_KEY`.** Zero hits repo-wide, zero in the live env — at-rest encryption of app-DB secrets is off (upstream default). Filed at MEDIUM because the blast radius is *empty today*: the only `metabase_database` row is the read-only sample. That is precisely the argument for doing it **now** — set the key later and it needs the one-shot `rotate-encryption-key`, because Metabase encrypts on write. Upstream draws the link itself in CVE-2026-72900: *"On any instance without MB_ENCRYPTION_SECRET_KEY set (the default), the same read returns the stored credentials for every connected database in cleartext."* The read path is patched; the storage posture survives every version bump.
+
+**[REM-200, MEDIUM] Metabase `site-url` is `http://127.0.0.1:3002`.** `MB_SITE_URL` is never set, so the instance self-detected the loopback health-probe URL. `MB_EMBEDDING_APP_ORIGIN` *is* set correctly to `https://os.pazny.eu` — which is exactly why this looked configured. Metabase derives the cookie `Secure` flag from that **scheme**, not from the request:
+
+```
+Set-Cookie: metabase.DEVICE=<redacted>; HttpOnly; Path=/; Expires=…2046…; SameSite=Lax
+                                                                    ^ no Secure
+redirect-all-requests-to-https = false
+```
+
+The `DEVICE` cookie is **measured**; `metabase.SESSION` is **inferred** (medium confidence — the shared forward_auth account was not logged into). Users reach Metabase over TLS through Traefik, so the cookie is *set* over HTTPS and then sent over plaintext `http://` to the same host on demand. The `Strict-Transport-Security` header Metabase emits does not save this — browsers ignore HSTS delivered over plaintext, which is where it was observed.
+
+**[REM-201, MEDIUM] Tempo: unauthenticated plaintext read *and* ingest, from any container on `shared_net`.** The crypto question answered itself — no TLS on any of the three ports, no auth extension — so the probe went after reachability, and the batch-50 Traefik lesson applies verbatim: **`127.0.0.1` port maps isolate host callers, not the container fabric.** `tempo.yaml.j2` binds the OTLP receivers to `0.0.0.0` and the HTTP API to `""`, and the service joins `shared_net` alongside ~40 peers. Proven from `data-metabase-1` — a *different stack*, no business talking to Tempo:
+
+```
+GET  http://tempo:3200/ready            → 200
+GET  http://tempo:3200/status/config    → full effective config, unauthenticated
+GET  http://tempo:3200/api/search?…     → 200, well-formed result body
+POST http://tempo:4328/v1/traces        → 200      ← ingest accepts peer writes
+```
+
+Read is a disclosure primitive proportional to what the estate traces; write lets anyone with a container foothold forge or bury spans — corrupting the evidence an incident responder reaches for first. **What it does not buy, measured:** the config dump carries no secrets. `storage.trace.backend: local`, and all 16 credential-shaped fields (`access_key`, `secret_key`, `sse`, sasl/ldap `password`) are empty strings from unused GCS/S3/Kafka sections. That is the exact exposure of CVE-2026-28377 / REM-036, closed twice over — by the pin *and* by the storage choice. Precondition is code execution in some container; this is lateral movement, not an entry point. Tempo's only real peers are Grafana (on `observability_net`) and Alloy (over **host** loopback `localhost:4327`, not the docker network) — so dropping `shared_net` should cost nothing.
+
+**[REM-202, MEDIUM] n8n's encryption key sits in the same directory as the ciphertext it protects.** No `N8N_ENCRYPTION_KEY` anywhere in the repo or the runtime env, so n8n generated one on first boot:
+
+```
+/home/node/.n8n/config          0600, 56 B   {"encryptionKey": "…"}
+/home/node/.n8n/database.sqlite 1.6 MB       ← the credentials that key encrypts
+```
+
+Encryption at rest whose key ships in the adjacent file protects against exactly one adversary: someone who reads the database file and not the directory it is in. The larger half is **custody** — the key exists only inside a container volume, is absent from `credentials.yml` and Infisical, and is in no backup-restore contract, so a restore without that file yields unrecoverable ciphertext and a `--remove=data` regenerates it silently. Not exploitable on its own (reading it is post-compromise); it makes every container-escape or backup-disclosure event strictly worse. *Operational note: the key value materialised into this scan's transcript and is deliberately not recorded in the queue — treat it as disclosed and rotate if the transcript is retained.*
+
+**And the one that isn't.** dnsmasq serves plaintext UDP/TCP 53 on `127.0.0.1` **and** `192.168.1.64` with no DNSSEC and no DoT/DoH — every answer a LAN client gets is unauthenticated and forgeable. **No row filed**, and the reasoning is recorded so the next batch doesn't re-derive it: an attacker positioned to spoof UDP 53 on the LAN can equally ARP-spoof the resolver, and enabling DNSSEC would re-open the parser surface of CVE-2026-4890/4891 to authenticate answers for names that never leave the host. The actionable dnsmasq gap is still **REM-154** (`stop-dns-rebind`), pending since batch-40.
+
+---
+
+### Clean legs, verified rather than carried
+
+| Component | Live version | Verdict |
+|---|---|---|
+| **n8n** | `2.35.0` (live `iiab-n8n-1`) | Covers a **third** advisory wave the queue hadn't seen — 17 repo-level advisories on **2026-08-05**, all `cve_id: null`, fix `>= 2.34.1` (incl. `GHSA-6h4x-896x-fw5m` main-process RCE via MCP node-schema path traversal, `GHSA-m3hg-p5r9-fg9h` task-runner sandbox escape, `GHSA-9fqj-7wc5-cwhx` decrypted credential headers into execution data). OSV `n8n@2.35.0` → **0 vulns** (it returned 29 at 2.28.1). The sweep got there first; recorded so the coverage is evidence, not luck. |
+| **tempo** | `2.10.3` | OSV returns the same two known records — GO-2026-5359 (CVE-2026-28377, fixed **2.10.3** = the pin *is* the fix) and GO-2026-5528 (CVE-2026-21728, fixed 2.10.2). Both surface on a naive query only via the unmapped `SEMVER {introduced:0}` range; read the ECOSYSTEM `custom_ranges`. |
+| **alloy** | `1.18.1` | Both `1.18.0` and `1.18.1` sit in the Cellar — the shape that produces a stale *running* binary, so it was checked: 1.18.1 installed `2026-08-07T10:10`, process started `2026-08-09 10:46`, and `alloy_build_info` reports `version="v1.18.1"`. OSV empty, **zero** repo-level advisories. REM-107 still in force — 4317/4318/12345 all loopback-bound. |
+| **dnsmasq** | `2.93` | Upstream's full fix for the May-2026 CERT/CC cluster (VU#471747). Nothing published since. **Housekeeping unapplied, now two batches old:** `default.config.yml:1882` still reads `dnsmasq_version: "2.91"` — doc-only, but it under-reports the live host by two releases. |
+
+---
+
 # nOS Vulnerability Scan Addendum — 2026-08-13 (Cycle 28, batch-51)
 
 **Batch:** authentik, grafana, nextcloud, kiwix, loki · **Probe:** `docker_escape_paths`

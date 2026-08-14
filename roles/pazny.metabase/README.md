@@ -28,7 +28,7 @@ Two invocation modes from `tasks/stacks/stack-up.yml`:
 
 | Variable | Default | Description |
 |---|---|---|
-| `metabase_version` | `latest` | `metabase/metabase` image tag |
+| `metabase_version` | pinned in `default.config.yml` | `metabase/metabase` image tag. NOT `latest` — this table said so while the estate ran a pin, and a floating tag is what `test_image_pin_hygiene.py` refuses. |
 | `metabase_port` | `3002` | HTTP port bound on `127.0.0.1` |
 | `metabase_data_dir` | `~/metabase` | Host bind mount |
 | `metabase_db_name` | `metabase` | PostgreSQL database |
