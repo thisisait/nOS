@@ -20,7 +20,21 @@ description: |
   The Authentik client `nos-librarian` is pre-provisioned and reserved.
 
 model:
-  primary: claude-sonnet
+  # THE SONNET TIER, NAMED THROUGH THE SDK ADAPTER (2026-08-15, supervised run).
+  # Was `claude-sonnet` — the local CLI — which cannot be handed the four tool
+  # schemas this agent declares, so AgentKit could not run it at all
+  # (`spine-tools-vs-cli-refusal`). The `anthropic-*` provider selects the SDK
+  # adapter, which speaks the tool protocol; the URI names INTENT and TIER, and
+  # a binding supplies the endpoint, bearer and served model id.
+  #
+  # CONSEQUENCE WORTH KNOWING BEFORE DISARMING: unbound, this URI resolves to
+  # Anthropic's API and demands ANTHROPIC_API_KEY, which this estate does not
+  # set. So with `minimax_enabled: false` this agent no longer falls back to the
+  # operator's CLI session — it refuses. That is fail-closed, not silent, but it
+  # is a change from "runs on the subscription" and must be undone deliberately
+  # (put `claude-sonnet` back) rather than discovered on a quiet Sunday.
+  primary: anthropic-claude-sonnet-4-5
+  backend: minimax
   fallback: openclaw-qwen2.5-coder:32b
 
 system_prompt_path: system.md
@@ -91,5 +105,20 @@ gdpr:
       role: "LLM inference for the ceremony's reasoning (claude CLI, --print)"
       country: "US"
       safeguard: "None claimed. Assess SCCs / Art. 46 before this is relied on."
+    # Added 2026-08-15 for the supervised run, BEFORE any prompt was routed
+    # there — the binding resolver refuses a session whose register does not
+    # name the backend's processor, which is the order this estate wants.
+    #
+    # THE LEGAL ENTITY HERE IS UNVERIFIED AND MUST BE CORRECTED BY THE
+    # OPERATOR. `MiniMax` is the match token the backend registry keys on, not
+    # a contracting party: the international endpoint api.minimax.io is
+    # operated by a MiniMax group company whose registered name, seat and
+    # transfer mechanism were NOT established from a primary source before
+    # writing this. Naming it precisely, and establishing whether any Art. 46
+    # safeguard exists, is a records obligation that outlives this run.
+    - name: "MiniMax"
+      role: "LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit)"
+      country: "unverified — international endpoint api.minimax.io; entity and seat not established"
+      safeguard: "None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer."
   eu_residency: false
   transfers_outside_eu: true
