@@ -400,6 +400,33 @@
       when: _persisted_secrets_stat.stat.exists | default(false)
       tags: ['always']
 
+    # ── The operator's file is the LAST word, and was not (fixed 2026-08-15) ──
+    # CLAUDE.md states the layering as default.config → default.credentials →
+    # config.yml → credentials.yml, credentials.yml highest. The persisted
+    # store is in that list nowhere, yet it loaded AFTER credentials.yml (both
+    # are include_vars, so the later one wins) and therefore outranked it.
+    #
+    # MEASURED THE DAY IT BIT: the operator pasted `minimax_api_key` into
+    # credentials.yml and converged. The store carried the key declared-and-
+    # EMPTY from an earlier run — the template writes every name unconditionally,
+    # which is what makes it "blank-safe" — so the empty value shadowed the real
+    # one, `~/.nos/secrets.yml` was rewritten empty, and the documented "paste
+    # the key and converge" step could not work on any host that had ever
+    # converged. Proven by replaying the two loads in order: 126 chars after
+    # credentials.yml, 0 after the store.
+    #
+    # Blast radius, measured rather than assumed: five of the operator's twelve
+    # keys also live in the store, and four of them AGREE byte-for-byte (the
+    # store was seeded from them). So this restores one value and changes
+    # nothing else — the divergence existed only for the newly pasted key.
+    # This is the drift class docs/secret-lifecycle-doctrine.md already names:
+    # a value captured at bootstrap outranking the value the operator declares.
+    - name: "[Secrets] Re-assert operator credentials over the persisted store"
+      ansible.builtin.include_vars: "{{ item }}"
+      with_fileglob:
+        - "{{ playbook_dir }}/credentials.yml"
+      tags: ['always']
+
     # ── Version Policy ─────────────────────────────────────────────────────────
     # stable (default) = pinned CVE-patched versions from default.config.yml
     # latest           = override all pinned Docker image tags to latest
