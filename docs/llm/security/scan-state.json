@@ -1,9 +1,9 @@
 {
   "initialized_at": "2026-04-08T12:00:00Z",
-  "last_full_scan": "2026-08-14T02:24:22Z",
-  "last_advisory_check": "2026-08-14T04:13:20+02:00",
+  "last_full_scan": "2026-08-15T02:16:04Z",
+  "last_advisory_check": "2026-08-15T04:13:20+02:00",
   "last_remediation_applied": "2026-04-09T12:00:00Z",
-  "scan_cycle": 30,
+  "scan_cycle": 31,
   "scanner_version": "2.0.0",
   "config": {
     "batch_size": 5,
@@ -359,49 +359,49 @@
       "notes": "Cycle-29 batch-52 RE-SCAN (2026-08-14, tls_crypto_weakness): CVE leg CLEAN, no new item, REM-106 stays resolved. `brew list --versions dnsmasq` -> 2.93, upstream's full fix release for the May-2026 CERT/CC cluster (VU#471747): CVE-2026-2291 (extract_name heap overflow -> cache poisoning), CVE-2026-5172 (extract_addresses OOB read), plus CVE-2026-4890/4891 (DNSSEC infinite loop / OOB read), CVE-2026-4892 (DHCPv6 OOB write -> local root) and CVE-2026-4893 (RFC-7871 client-subnet source-check bypass) -- the last four N/A by config anyway (no dnssec, no dhcp-range, no add-subnet) and closed by the version regardless. Nothing has been published against dnsmasq since 2.93. HOUSEKEEPING, UNAPPLIED AND NOW TWO BATCHES OLD: default.config.yml:1882 still reads dnsmasq_version '2.91'. It is doc-only (nothing consumes it -- tasks/dnsmasq.yml uses homebrew state:present, which is why the host tracked upstream by itself) but it is the only dnsmasq version string in the repo and it under-reports the live host by two releases; batch-40 asked for the bump and it has not happened. PROBE (tls_crypto_weakness): NO new row filed, and the reasoning is recorded so the next batch does not re-file it. dnsmasq here serves plaintext UDP/TCP 53 on 127.0.0.1 AND 192.168.1.64 (dnsmasq_lan_access defaults true), with no DNSSEC validation and no encrypted transport (no DoT/DoH upstream) -- so every answer a LAN or Tailscale client receives is unauthenticated and forgeable by an on-path attacker. That is real but it is not a DEFECT of this configuration: an attacker positioned to spoof UDP 53 on the LAN can equally ARP-spoof the resolver itself, and turning DNSSEC ON would re-open the parser surface of CVE-2026-4890/4891 in exchange for authenticating answers the estate's own names (address=/.<tenant>/ + local=/<tenant>/) never leave the host for. The one genuinely actionable dnsmasq config gap remains REM-154 (no stop-dns-rebind, LIVE-CONFIRMED via `dig +short @127.0.0.1 localtest.me A` -> 127.0.0.1), still PENDING, and it is the item to close before adding anything else to this component."
     },
     "bone": {
-      "last_checked": "2026-08-02T04:02:04+02:00",
-      "last_cve_scan": "2026-08-02T04:02:04+02:00",
+      "last_checked": "2026-08-15T04:09:16+02:00",
+      "last_cve_scan": "2026-08-15T04:09:16+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-02T04:02:04+02:00",
-      "findings_count": 3,
+      "last_attack_probe": "2026-08-15T04:09:16+02:00",
+      "findings_count": 4,
       "status": "scanned",
-      "notes": "Cycle-20 batch-41 SCAN (2026-08-02, docker_escape_paths + CVE scan): RUNTIME CLEAN, +REM-157 (LOW, pending, installer-only). REM-110 + REM-128 both RESOLVED and LIVE-VERIFIED this batch against the actual ~/bone/venv: starlette 1.3.1 (REM-128 BadHost fix), PyJWT 2.13.0 (REM-110 floor), fastapi 0.139.2, httpx 0.28.1, uvicorn 0.51.0, cryptography 49.0.0 -- an OSV querybatch over all 27 installed packages returned exactly ONE hit: pip 26.0.1 itself (< 26.1.2) = CVE-2026-8643/GHSA-wf93-45jw-7689 entry-point-name path traversal (+ transitively CVE-2026-3219 tar/ZIP confusion, CVE-2026-6357, both fixed 26.1). REACHABILITY nil: pip is the build-time installer, never invoked by bone at runtime; the exploit needs bone to pip-install an attacker package, which does not happen post-provisioning. Filed LOW as REM-157 for completeness (verified advisory match on an installed package). ACTION (hygiene): `python -m pip install -U pip` in the venv-build task or fold into the REM-110 lockfile item. PROBE (docker_escape_paths): N/A by construction -- bone is a HOST launchd process (uvicorn 127.0.0.1:8099 loopback), not a container, so there is no container->host escape surface. Live /api/health reachable from containers via host.docker.internal:8099 (public liveness by design; the scope-gated /api/services|status|health/aggregate stay Depends(require_scope('nos:state:read')) per REM-110). Sources: OSV GHSA-wf93-45jw-7689, GHSA-58qw-9mgm-455v, GHSA-jp4c-xjxw-mgf9."
+      "notes": "Cycle-30 batch-53 SCAN (2026-08-15, resource_exhaustion_vectors + CVE). +REM-203 (MEDIUM, pending): the FastAPI `body: dict` endpoints /api/events + /api/v1/notifications buffer and JSON-parse the FULL request body BEFORE the in-body HMAC check; bone is a host launchd process with no mem_limit and no body-size middleware / uvicorn --limit flag. LIVE-CONFIRMED: an unauth 20MB POST to /api/v1/events returned 401 with size_upload=20971544 (full body accepted before the auth 401). Pre-auth DoS, loopback/container-reachable only (127.0.0.1:8099, Traefik-excluded; host.docker.internal maps to host loopback on Docker Desktop). The /vfs/upload path is the correct counter-pattern (streamed + capped at _MAX_UPLOAD_BYTES=128MiB). CVE leg: REM-110 (PyJWT>=2.13.0) + REM-128 (starlette) still LIVE-fixed; REM-157 (pip build-time-only) unchanged. No new dependency CVE at installed versions."
     },
     "wing": {
-      "last_checked": "2026-08-02T04:02:04+02:00",
-      "last_cve_scan": "2026-08-02T04:02:04+02:00",
+      "last_checked": "2026-08-15T04:09:16+02:00",
+      "last_cve_scan": "2026-08-15T04:09:16+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-02T04:02:04+02:00",
+      "last_attack_probe": "2026-08-15T04:09:16+02:00",
       "findings_count": 1,
       "status": "scanned",
-      "notes": "Cycle-20 batch-41 SCAN (2026-08-02, docker_escape_paths + CVE scan): CLEAN/re-verified. REM-123 RESOLVED and live-verified against files/anatomy/wing/composer.lock -- guzzlehttp/guzzle 7.15.1 + guzzlehttp/psr7 2.13.0 (both above the 7.12.1/2.12.1 refined fix floors); nette/latte re-verified CVE-clean. TWO new FrankenPHP advisories published 2026-07-18, BOTH N/A here, each checked not assumed: GHSA-v3ph-cgqh-r8p5 (HIGH 7.7, cross-request PHP session-id leak in WORKER MODE when session is a shared module) -- wing's Caddyfile uses `php_server` CLASSIC mode with NO `worker` directive (grep-confirmed), so worker-mode is off; and the advisory exempts builds where session is statically compiled (the official static binary wing links on Linux, and by the same token the dunglas static-linked build) -> not affected on both legs. GHSA-cj57-c655-p798 (MED 5.3, Docker image serves phpinfo() default index.php) -- Docker-image-only; wing is a HOST FrankenPHP launchd binary serving its own Nette front controller www/index.php, no default placeholder -> N/A. CVE-2026-45062 (CGI path-split, fixed 1.11.2) + the 2026-02 $_SESSION/path cluster (24894/24895) all covered by frankenphp_version 1.12.4 (default.config.yml:651). Optional hygiene: 1.12.6 (2026-07-21) is the latest; no security delta applicable to this config. PROBE (docker_escape_paths): N/A by construction -- wing is a host launchd process (FrankenPHP 127.0.0.1:9000 loopback, SEC-6 bind), not a container. Direct 9000 hits from a container (host.docker.internal:9000) return 403 -- the SEC-6 X-Wing-Edge-Token gate (BasePresenter::enforceEdgeTrust) refuses any request lacking Traefik's wing-edge@file token, live-confirmed. Sources: frankenphp advisories GHSA-v3ph-cgqh-r8p5, GHSA-cj57-c655-p798; composer.lock."
+      "notes": "Cycle-30 batch-53 SCAN (2026-08-15, resource_exhaustion_vectors + CVE). CLEAN. Wing (FrankenPHP host launchd, 127.0.0.1:9000 bind, SEC-6) fronts requests through Caddy `php_server` classic mode; the Caddyfile caps frankenphp num_threads 4. No new FrankenPHP/guzzle/latte advisory since batch-41 (REM-123 still LIVE-fixed at guzzle 7.15.1). resource_exhaustion note: request-body size for the PHP path is governed by FrankenPHP/PHP ini defaults (post_max_size), not an unbounded host buffer like bone's; no finding. Forward-auth header-trust model unchanged."
     },
     "pulse": {
-      "last_checked": "2026-08-02T04:02:04+02:00",
-      "last_cve_scan": "2026-08-02T04:02:04+02:00",
+      "last_checked": "2026-08-15T04:09:16+02:00",
+      "last_cve_scan": "2026-08-15T04:09:16+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-02T04:02:04+02:00",
+      "last_attack_probe": "2026-08-15T04:09:16+02:00",
       "findings_count": 0,
       "status": "scanned",
-      "notes": "Cycle-20 batch-41 SCAN (2026-08-02, docker_escape_paths + CVE scan): CLEAN/re-verified. Pulse is a bespoke Python launchd job-runner (nos-pulse 0.1.0) with NO HTTP listener -- OSV querybatch over the live ~/pulse/venv (8 packages) returned ZERO hits: httpx 0.28.1 (sole runtime dep, outbound-only CLIENT to the loopback Wing API in wing_client.py), pip 26.2 (>= the 26.1.2 CVE-2026-8643 fix, so unaffected -- unlike bone's pip 26.0.1 in REM-157). No uvicorn/FastAPI/flask/socket/bind/listen anywhere in pulse/*.py (grep-confirmed). PROBE (docker_escape_paths): N/A by construction -- pulse is a host launchd process with no bound port and no container; there is no container->host escape surface and no unauth-endpoint surface for a probe to reach. The Starlette BadHost CVE (REM-128) does not touch pulse (no FastAPI/Starlette dep). No actionable item."
+      "notes": "Cycle-30 batch-53 SCAN (2026-08-15, resource_exhaustion_vectors + CVE). CLEAN by construction. Pulse (nos-pulse host launchd, NO HTTP listener) is well-bounded against resource exhaustion: max_concurrent_runs default 4 (PULSE_MAX_CONCURRENT), per-job max_concurrent defaults 1, per-run timeout clamped `min(max_runtime_s, 3600.0)`, worker threads tracked in _inflight with a drain-on-stop. No bound port -> no external exhaustion surface. httpx outbound-only client to loopback Wing API. Zero OSV hits on the venv."
     },
     "miniflux": {
-      "last_checked": "2026-08-02T04:02:04+02:00",
-      "last_cve_scan": "2026-08-02T04:02:04+02:00",
+      "last_checked": "2026-08-15T04:09:16+02:00",
+      "last_cve_scan": "2026-08-15T04:09:16+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-02T04:02:04+02:00",
+      "last_attack_probe": "2026-08-15T04:09:16+02:00",
       "findings_count": 1,
       "status": "scanned",
-      "notes": "Cycle-20 batch-41 SCAN (2026-08-02, docker_escape_paths): +REM-155 (MEDIUM, pending) -- OVERTURNS the 2026-07-18 batch-29 'CLEAN/re-verified at 2.2.19' disposition. Pinned miniflux_version 2.2.19 (role default; live iiab-miniflux-1, uid 65534) is FOUR releases behind and sits INSIDE a reviewed advisory range. CVE-2026-55185 / GHSA-m999-j542-5w3r (MODERATE, CVSS4 5.1, CWE-601, published 2026-06-19): redirect_url validator rejects '//host' but backslash '/\\host' passes IsRelativePath and the browser normalises \\ -> / into an external redirect; OSV introduced 0, fixed 2.3.1 => 2.2.19 affected. Plus changelog security content the pin lacks: 2.3.1 fixed an OAuth account-binding vuln (associate arbitrary OAuth identity) + metrics constant-time compare; 2.3.2 fixed login-timing username enumeration; 2.3.3 fixed authenticated cross-user favicon read via GET /v1/icons/{iconID}. REACHABILITY MEDIUM: native_oidc (traefik_auth_modes.miniflux='oidc', 200 at edge rss.<tld>, own login), 127.0.0.1:3011 loopback (services_lan_access=false); open-redirect is UI:A (phishing primitive against SSO users, edge-reachable), the OAuth-bind/favicon legs authenticated. Prior coverage holds at 2.2.19 (CVE-2026-21885 media-proxy SSRF fixed 2.2.16, GHSA-cq88 stored-XSS 2.2.7, GHSA-wqv2 open-redirect 2.2.15). ACTION: bump 2.2.19 -> 2.3.3 in roles/pazny.miniflux/defaults/main.yml:9 (no default.config.yml shadow). 2.3.2 raises min PostgreSQL to 11 (nOS PG16, no blocker). PROBE (docker_escape_paths): MITIGATED -- container non-privileged, CapAdd [], no SecurityOpt, no docker-socket mount, no devices, no bind mounts at all (miniflux is DB-backed, stateless container); no escape primitive. Sits on flat shared_net (lateral SSRF surface, pre-existing SEC-02 scope), which is not an escape. Sources: GHSA-m999-j542-5w3r, miniflux releases 2.3.1/2.3.2/2.3.3."
+      "notes": "Cycle-30 batch-53 SCAN (2026-08-15, resource_exhaustion_vectors + CVE). REM-155 (MEDIUM, pending) INDEPENDENTLY RE-CONFIRMED and STRENGTHENED: fetched tags 2.2.19/2.3.0/2.3.1 -- 2.2.19's internal/urllib/url.go IsRelativePath is BYTE-IDENTICAL to the vulnerable 2.3.0; 2.3.1 is the first tag to add the `strings.Contains(link,\"\\\\\")` backslash rejection. So GHSA-m999-j542-5w3r/CVE-2026-55185's advertised range (2.3.0 only, fixed 2.3.1) is UNDER-SCOPED; OSV's Go-ecosystem record (introduced 0, fixed 2.3.1) is correct and 2.2.19 IS affected. Pin miniflux_version 2.2.19 (live iiab-miniflux-1 healthy) is now 4 releases behind; latest 2.3.3 (2026-07-24). 2.3.1 also fixed an OAuth account-binding vuln + a dynamic-ORDER-BY SQLi + metrics constant-time compare; 2.3.2/2.3.3 add login-timing enumeration + cross-user favicon-read fixes. FIX unchanged: bump pin to >=2.3.3. resource_exhaustion: media-proxy fetch is SSRF-hardened since 2.2.16/2.2.18 (private-network block); no unbounded-body finding."
     },
     "nodered": {
-      "last_checked": "2026-08-02T04:02:04+02:00",
-      "last_cve_scan": "2026-08-02T04:02:04+02:00",
+      "last_checked": "2026-08-15T04:09:16+02:00",
+      "last_cve_scan": "2026-08-15T04:09:16+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-02T04:02:04+02:00",
+      "last_attack_probe": "2026-08-15T04:09:16+02:00",
       "findings_count": 1,
       "status": "scanned",
-      "notes": "Cycle-20 batch-41 SCAN (2026-08-02, docker_escape_paths): +REM-156 (MEDIUM, pending) -- OVERTURNS the 2026-07-19 batch-30 'CLEAN/re-verified at 4.0.9' disposition, and is a CVE-LESS repo-level advisory exactly like the authentik/n8n/metabase blind spot named in batch-39/40. Pinned nodered_version 4.0.9 (role default; live iiab-nodered-1, uid 1000) is on the FROZEN 4.0.x branch; the maintained line is v4-maintenance=4.1.13 (npm dist-tag, 2026-07-30). TWO missing fixes: (1) PR#5884 'Sanitize session messages' (4.1.12) -- index.mst renders `RED.sessionMessages = {{{sessionMessages}}}` UNESCAPED (triple-mustache) inside <script>; in 4.0.9 editor-api ui.js JSON.stringify's req.session.messages with no escaping, and passport sets that message to req.query.error_description verbatim on OIDC error=access_denied (passport-openidconnect strategy.js:97) via failureMessage:true on /auth/strategy(/callback). nOS wires adminAuth through passport-openidconnect, and those routes answer pre-editor-auth -> crafted error_description with </script><script> = reflected XSS in the admin editor context. Fix escapes < > & / to \\u-forms. (2) PR#5768 'Sanitize projects/git api args' (4.1.11) -- reachable because nOS sets NODE_RED_ENABLE_PROJECTS='true'. REACHABILITY MEDIUM: native_oidc (traefik_auth_modes.nodered='oidc', adminAuth mandatory in 4.x), 127.0.0.1:1880 loopback, install_nodered=false default; XSS needs the passport failure path hit at the edge, not pre-auth RCE. N/A holds: CVE-2025-41656 (unauth RCE, no-adminAuth <=3.1.8) inapplicable. ACTION: bump 4.0.9 -> 4.1.13 in roles/pazny.nodered/defaults/main.yml:12 (no default.config.yml shadow). v5.0.4 needs Node 22.9+ -> stay on v4 line unless base image node bumped. PROBE (docker_escape_paths): MITIGATED -- non-privileged, CapAdd [], no SecurityOpt, no --pid=host, no devices, NO docker socket; only bind is the scoped /data host subdir (/Volumes/SSD1TB/.../nodered/data, writable but a data dir, not / or docker.sock). docker-socket-proxy is infra_net-isolated: from nodered its DNS name does not resolve and host-gateway :2375 is connection-refused -> socket-escape chain unreachable. Residual = flat shared_net lateral reach to host-gateway ports (portainer :9002 401-unauth, bone :8099 health, mariadb :3306 handshake), pre-existing SSRF surface, NOT an escape. Sources: node-red PR#5884/#5883/#5768, releases 4.1.12/4.1.11, npm dist-tags."
+      "notes": "Cycle-30 batch-53 SCAN (2026-08-15, resource_exhaustion_vectors + CVE). REM-156 (MEDIUM, pending) stands UNCHANGED and corroborated: OSV npm query for node-red 4.0.9 returns ZERO hits -- it remains a CVE-less repo-level advisory (PR#5884 session-message XSS, fixed 4.1.12). Pinned nodered_version 4.0.9 (live iiab-nodered-1, node v20.19.0) is on the frozen 4.0.x line; v4-maintenance dist-tag is now 4.1.13 (npm). FIX unchanged: bump to >=4.1.13, which also carries the maintained Node.js-platform security patches the frozen 4.0.9 base lacks. resource_exhaustion: admin editor is native_oidc-gated (passport-openidconnect); no new unbounded vector found."
     },
     "hedgedoc": {
       "last_checked": "2026-08-04T04:01:35+02:00",
@@ -486,11 +486,11 @@
   },
   "rotation": {
     "next_batch": [
-      "bone",
-      "wing",
-      "pulse",
-      "miniflux",
-      "nodered"
+      "gitlab",
+      "wordpress",
+      "freepbx",
+      "hedgedoc",
+      "bookstack"
     ],
     "strategy": "oldest_first",
     "note": "Advanced by batch-49 (2026-08-11) after re-running the batch-48 cohort. The five just-scanned (superset,outline,freescout,paperclip,tileserver) now hold last_checked 2026-08-11T04:00:09+02:00 and rotate to the back; next_batch should be recomputed oldest-first at the start of batch-50."
@@ -560,7 +560,22 @@
     "unauthenticated_endpoint_scan",
     "version_header_leakage",
     "supply_chain_freshness",
-    "default_credentials_test"
+    "default_credentials_test",
+    {
+      "cycle": 30,
+      "probe": "resource_exhaustion_vectors",
+      "components": [
+        "bone",
+        "wing",
+        "pulse",
+        "miniflux",
+        "nodered"
+      ],
+      "at": "2026-08-15T04:13:20+02:00",
+      "findings": [
+        "REM-203"
+      ]
+    }
   ],
   "last_full_scan_summary": "Cycle-26 batch-49 (2026-08-11, default_credentials_test) over superset,outline,freescout,paperclip,tileserver: +2 HIGH (REM-191 superset local-admin OIDC bypass, REM-192 freescout local-form default admin -- both edge-open, internet-confirmed, prefix-derived), +1 LOW (REM-193 freescout 1.8.232 currency). outline/paperclip/tileserver clean at pins."
 }

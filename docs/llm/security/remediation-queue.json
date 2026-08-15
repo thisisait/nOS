@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-14T04:13:20+02:00",
+  "generated_at": "2026-08-15T04:13:20+02:00",
   "generator": "NOS Vulnerability Scanner v1",
   "items": [
     {
@@ -3423,25 +3423,41 @@
       "confidence": "high",
       "found_at": "2026-08-14T04:13:20+02:00",
       "scan_cycle": 29
+    },
+    {
+      "id": "REM-203",
+      "finding_ref": "PENTEST-bone-request-body-buffered-and-parsed-before-hmac-auth",
+      "component": "bone",
+      "severity": "MEDIUM",
+      "current_version": "nos-bone (host launchd eu.thisisait.nos.bone) live as ~/bone/venv uvicorn main:app --host 127.0.0.1 --port 8099; no mem_limit (host process); files/anatomy/bone/main.py declares no body-size middleware and no --limit-* uvicorn flags in roles/pazny.bone/templates/bone.plist.j2",
+      "fix_version": "config_change: reject oversized bodies BEFORE parsing -- add an ASGI/Starlette Content-Length + streamed-size guard (a small middleware that 413s when Content-Length or accumulated stream bytes exceed a cap, e.g. 1-4 MB for the JSON control-plane endpoints), so the HMAC/scope gate is reached without first buffering the whole body. The /vfs/upload path already models the correct pattern (streamed, capped at _MAX_UPLOAD_BYTES).",
+      "remediation_type": "config_change",
+      "remediation_detail": "Cycle-30 batch-53 ATTACK PROBE (resource_exhaustion_vectors), Bone. FastAPI endpoints that declare a `body: dict` / `body: dict | None` parameter cause Starlette to read the ENTIRE request body (request.body() concatenates every request.stream() chunk into one in-memory bytes object) and JSON-parse it into a Python dict BEFORE the function body runs. On the two HMAC-authenticated ingestion endpoints -- POST /api/events + /api/v1/events (events_ingest) and POST /api/v1/notifications (notifications_ingest) -- the HMAC verification is performed INSIDE the function body (verify_hmac(x_wing_timestamp, x_wing_signature, raw)), i.e. strictly AFTER the full body has already been buffered and parsed. There is no Content-Length guard, no body-size middleware (grep of main.py for add_middleware/Middleware/max.*body returns nothing), and no uvicorn --limit-* flag in the plist. Bone is a HOST launchd process with NO memory limit (contrast every Docker service, which carries mem_limit). LIVE-CONFIRMED 2026-08-15: a single unauthenticated `curl -X POST http://127.0.0.1:8099/api/v1/events --data-binary @20MB.json` with NO HMAC headers returned `HTTP 401 {\"detail\":\"HMAC check failed: missing HMAC headers\"}` with size_upload=20971544 -- proving the 20 MB body was accepted and buffered in full before the 401 was emitted. Because the buffer is unbounded and the process is unlimited, a caller can drive bone's RSS to an arbitrary multiple of the request size (deeply-nested JSON also amplifies CPU during parse); scaling to multi-GB was deliberately NOT executed against the live estate to avoid OOM-ing the operator's host, but the mechanism (full buffer strictly before auth) is proven and scaling is arithmetic. REACHABILITY: bone binds 127.0.0.1:8099 and is EXCLUDED from Traefik (traefik_auth_modes.bone='none', listed under the Traefik exclusion set 'Bone is on host; published only on 127.0.0.1; reach via Wing UI'), so this is NOT internet- or LAN-facing. It is reachable by (a) any local host process and (b) any Docker container in the estate via host.docker.internal:8099 (Docker Desktop for Mac maps host.docker.internal to the host loopback -- the same container->loopback trust surface SEC-6 hardened for Wing's :9000 bind). VERDICT: exploitable as a PRE-AUTH local/container-scoped denial-of-service against the audit+telemetry backbone; not remotely reachable and not a confidentiality/integrity breach. Rated MEDIUM: the buffer-before-auth defect is real and unauthenticated, but the loopback-only reachability makes it a post-foothold or malicious-local-process amplifier rather than an edge-exposed vector. The same `body: dict` pattern is used on ~14 other POST endpoints (scope/JWT-guarded via Depends); FastAPI may resolve those Depends before body parse, so this row is deliberately scoped to the two endpoints where auth is provably downstream of the parse and where a live 401-after-full-upload was observed.",
+      "status": "pending",
+      "auto_fixable": false,
+      "source": "live: curl -X POST http://127.0.0.1:8099/api/v1/events (20MB unauth body -> HTTP 401 size_upload=20971544, 2026-08-15) ; files/anatomy/bone/main.py:691-740 (events_ingest), 782+ (notifications_ingest) ; files/anatomy/bone/vfs.py:267-294 (the correct streamed+capped counter-pattern, _MAX_UPLOAD_BYTES=128MiB) ; roles/pazny.bone/templates/bone.plist.j2 (no --limit flags) ; roles/pazny.traefik/vars/main.yml:39,195 (bone=none, Traefik-excluded)",
+      "confidence": "high",
+      "found_at": "2026-08-15T04:13:20+02:00",
+      "scan_cycle": 30
     }
   ],
   "summary": {
-    "total_items": 197,
+    "total_items": 198,
     "by_severity": {
       "CRITICAL": 39,
       "HIGH": 73,
-      "MEDIUM": 59,
+      "MEDIUM": 60,
       "LOW": 26
     },
     "by_status": {
-      "resolved": 142,
+      "resolved": 143,
       "wontfix": 4,
       "vendor-blocked": 5,
       "pending": 45,
       "obsolete": 1
     },
     "auto_fixable": 143,
-    "manual_review_required": 54,
-    "note": "SUMMARY TALLY RECOMPUTED FROM THE ROWS 2026-08-14 (cycle-29). Five rows added this batch: REM-198 (metabase CRITICAL, GHSA-r495-55cx-fjh7, pin v0.63.5 < fix v0.63.10) plus four tls_crypto_weakness probe findings -- REM-199/200 (metabase key-at-rest and site-url/Secure-cookie), REM-201 (tempo unauthenticated plaintext read+ingest from the shared_net container fabric), REM-202 (n8n encryption key co-located with its own ciphertext and unmanaged). The batch's CVE leg was otherwise CLEAN: n8n 2.35.0 covers the 17-advisory 2026-08-05 wave (fix 2.34.1), tempo 2.10.3 and alloy 1.18.1 return zero OSV hits at their pinned/installed versions, and dnsmasq 2.93 remains at upstream's full fix for the May-2026 CERT/CC cluster."
+    "manual_review_required": 55,
+    "note": "SUMMARY TALLY RECOMPUTED FROM THE ROWS 2026-08-15 (cycle-30). One row added this batch: REM-203 (bone MEDIUM, resource_exhaustion_vectors probe) -- FastAPI `body: dict` endpoints /api/events + /api/v1/notifications buffer and JSON-parse the FULL request body before the in-body HMAC check, on a host daemon with no mem_limit; LIVE-CONFIRMED a 20MB unauth body was accepted in full before the 401. Loopback/container-reachable pre-auth DoS, not edge-facing. CVE leg for the five scanned components was CLEAN-with-standing-debt: miniflux REM-155 INDEPENDENTLY RE-CONFIRMED (2.2.19's IsRelativePath is BYTE-IDENTICAL to the vulnerable 2.3.0; GHSA-m999-j542-5w3r's '2.3.0-only' range is under-scoped, OSV's introduced=0/fixed=2.3.1 is correct; pin still 4 releases behind, latest 2.3.3); nodered REM-156 stands unchanged (OSV npm node-red 4.0.9 = 0 hits, it is a CVE-less repo advisory, v4-maintenance now 4.1.13, pin still 4.0.9); bone/wing/pulse dependency surface otherwise clean at installed versions."
   }
 }
