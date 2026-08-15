@@ -180,6 +180,28 @@ What still waits on the supervised night: an actual ceremony routed through
 AgentKit under a binding, and the per-ROUTED-agent MiniMax processor entry in
 its gdpr block (see item 1 below).
 
+**THE SPINE REDIRECT (operator, 2026-08-15), and what it changed here.** The
+night's first attempt found `spine-tools-vs-cli-refusal`: every agent declares
+tools, the CLI adapter refuses tool schemas (rightly — it cannot honour them),
+and the Runner rethrows a capability refusal without fallback (also rightly).
+Three correct decisions, one deadlock: AgentKit could run NO agent through the
+CLI. The operator's direction: **primarily the classic API** — where
+`AnthropicAdapter` speaks the tool protocol and AgentKit's own Runner drives
+the loop, so the refusal dissolves structurally — with Claude as only ONE of
+the permitted highest-level orchestrators (mechanically: one row in
+`state/llm-backends.yml`, which IS the permitted-orchestrator list; see its
+header). The binding layer built for the CLI carried over unchanged in
+doctrine and mostly in code: the API adapter is now the primary bindable one
+(base_url + bearer + tier-remapped model id, `model_effective` stamped at
+session start), the CLI binding remains for tool-less ceremonies, and the
+tier carve-out follows the TIER, not the adapter — an opus-tier agent refuses
+a foreign binding on every path, or switching provider would be the bypass.
+The tmux idea (interactive CLI as an agent surface) was assessed and does NOT
+enter this increment: an agent that can type into an interactive session can
+answer its own permission prompts, which converts the permission system into
+a formality, and the path yields no structured envelope for the audit trail —
+if ever wanted, it needs its own threat model and a dedicated runner.
+
 ## Ruling 2 — fail-closed classification, with the unmatched message logged
 
 An error phrase the classifier does not recognise stays PERMANENT (not retried).

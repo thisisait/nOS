@@ -1,15 +1,33 @@
-# LLM backend registry — where a `claude-*` run's traffic MAY be pointed.
+# LLM backend registry — THE PERMITTED-ORCHESTRATOR LIST.
+#
+# The operator's direction (2026-08-15, spine redirect): "Claude should be
+# only ONE of the permitted highest-level orchestrators." Mechanically that
+# notion is THIS FILE and nothing new: an orchestrator of a run is the
+# (adapter, backend) pair that serves an agent session's PRIMARY model, a
+# PERMITTED orchestrator is a row here, and the per-agent grant is the
+# binding — `model.backend` in agent.yml, walked through the resolver's six
+# gates below, including agreement with that agent's own Article-30 record.
+# "Claude is one of several" = the `anthropic` default row is one entry,
+# `minimax` the second, and a future orchestrator (a local model, another
+# compatible endpoint) joins as a ROW once an adapter speaks its protocol —
+# never as a per-agent free-text field, which would be the second
+# implementation of the same law.
 #
 # A BACKEND IS NOT A PROVIDER. The genome's `llm.provider` vocabulary
 # (state/genome/entity.schema.json) names which ADAPTER runs, under a
 # fail-closed rule: adapter ships first, enum member second — `minimax` is
-# deliberately absent there because no MiniMax adapter exists. What exists is
-# the `claude` CLI adapter, whose vendor honours `ANTHROPIC_BASE_URL` /
-# `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_MODEL` in its environment. So a foreign
-# backend is a BINDING laid over the `claude` provider — an env contract on a
-# run — not a new provider, and this file is the closed list of backends a
-# binding may name. Rulings 1 and 3 (docs/minimax-groundwork.md) live here and
-# in App\AgentKit\BindingResolver, which reads this file.
+# deliberately absent there and stays absent. TWO adapters honour a binding,
+# each by its own mechanism:
+#   * `anthropic` (the SDK) — THE PRIMARY BINDABLE PATH since 2026-08-15: the
+#     client is rebuilt with the binding's base_url + bearer, and because
+#     AgentKit's Runner drives the tool loop against this adapter, a bound
+#     run keeps its tools. This is what dissolved the spine blocker
+#     (`spine-tools-vs-cli-refusal`): every agent declares tools, and the CLI
+#     adapter rightly refuses tool schemas it cannot honour.
+#   * `claude` (the local CLI) — the ANTHROPIC_BASE_URL / _AUTH_TOKEN /
+#     _MODEL env contract; tool-LESS ceremonies only, by that refusal.
+# Rulings 1 and 3 (docs/minimax-groundwork.md) live here and in
+# App\AgentKit\BindingResolver, which reads this file.
 #
 # HOW A BACKEND IS SELECTED (all fail-closed, each gate independent):
 #   1. The agent declares `model.backend: <name>` in its agent.yml. Absent →
