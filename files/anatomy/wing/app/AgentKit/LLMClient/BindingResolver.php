@@ -65,6 +65,25 @@ final class BindingResolver
 			return BindingDecision::default();
 		}
 
+		// Gate 7 (2026-08-16, the Mistral-readiness gate) — the adapter must
+		// SPEAK the backend's wire protocol. Both current providers speak
+		// `anthropic` (the SDK natively; the CLI via its vendor's env
+		// contract), so today this refuses nothing — it exists so that the
+		// day an `openai`-protocol backend row lands (Mistral), an
+		// anthropic-* primary bound to it refuses at session open instead of
+		// dying at the endpoint with a shape error nothing classifies.
+		$provider = substr($agent->modelPrimaryUri, 0, (int) strpos($agent->modelPrimaryUri, '-'));
+		$speaks = ['claude' => 'anthropic', 'anthropic' => 'anthropic'];
+		$protocol = (string) ($spec['protocol'] ?? 'anthropic');
+		if (($speaks[$provider] ?? null) !== $protocol) {
+			throw new BindingRefused(
+				"agent '{$agent->name}': provider '{$provider}' does not speak "
+				. "backend '{$declared}'s wire protocol '{$protocol}'. The "
+				. 'binding would send one protocol\'s requests to the other\'s '
+				. 'endpoint; pick a primary whose adapter speaks it.'
+			);
+		}
+
 		// Gate 5 — a binding is an arming, and a deferred agent's Article-30
 		// record is truthful only because it never runs.
 		$status = strtolower((string) ($agent->metadata['runner_status'] ?? ''));

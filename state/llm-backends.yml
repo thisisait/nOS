@@ -58,8 +58,24 @@ backends:
   # CLI talks to its vendor unredirected; no secret — the CLI carries the
   # operator's session. Every ACTIVE agent's Article-30 record already names
   # this processor, which is what made the default honest to begin with.
+  #
+  # `protocol` names the WIRE PROTOCOL the backend speaks, and it is what a
+  # future EU backend (Mistral: OpenAI-compatible, NOT anthropic) makes
+  # load-bearing: a binding may only pair a backend with an adapter that
+  # speaks its protocol, or the request dies at the endpoint with a shape
+  # error nothing classified. The resolver refuses the mismatch at session
+  # open (gate 7); the provider→protocol map lives beside it.
+  #
+  # `residency` is the COMPLIANCE fact, declared once here and held against
+  # every bound agent's own Article-30 record by the register gate: an agent
+  # may declare `transfers_outside_eu: false` ONLY when every backend that
+  # can serve it — the declared one AND the default it degrades to when
+  # disarmed — is EU-resident. Today no such serving set exists, which is
+  # why every active agent's record honestly says `true`.
   anthropic:
     default: true
+    protocol: "anthropic"
+    residency: { country: "US", eu: false }
     processor_match: "Anthropic"
 
   # MiniMax's Anthropic-compatible endpoint. PREPARED, NOT ARMED: arming is
@@ -68,6 +84,12 @@ backends:
   # `model.backend: minimax` plus a MiniMax processor entry in that agent's
   # gdpr block, or gate 4 refuses the session.
   minimax:
+    protocol: "anthropic"
+    # `eu: false` is CERTAIN (the endpoint is not an EU deployment); the
+    # entity/seat behind api.minimax.io could not be established from a
+    # primary source (agent_librarian's register entry records the same
+    # UNVERIFIED status) — the boolean is load-bearing, the string is honest.
+    residency: { country: "UNVERIFIED (non-EU)", eu: false }
     base_url: "https://api.minimax.io/anthropic"
     # Resolved by CredentialResolver at session open; `nos:` reads the named
     # key out of ~/.nos/secrets.yml (0600, operator-pasted, converge-persisted).

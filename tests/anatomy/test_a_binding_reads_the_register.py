@@ -81,6 +81,20 @@ def test_the_registry_is_well_formed_and_fail_closed():
     )
     secrets_tpl = SECRETS_TPL.read_text()
     for name, b in backends.items():
+        # Every row — default included — carries the two facts other layers
+        # key on: the wire protocol (resolver gate 7 pairs adapters with it)
+        # and the residency boolean (the compliance rule below reads it).
+        assert (b or {}).get("protocol") in {"anthropic", "openai"}, (
+            f"backend {name!r} protocol {b.get('protocol')!r} is not a "
+            "protocol an adapter speaks — gate 7 would refuse every binding "
+            "to it, or worse, a typo would read as a new protocol"
+        )
+        residency = (b or {}).get("residency") or {}
+        assert isinstance(residency.get("eu"), bool), (
+            f"backend {name!r} declares no residency.eu boolean — the "
+            "EU-residency compliance rule has nothing to read and every "
+            "agent's transfers_outside_eu claim goes ungated"
+        )
         if (b or {}).get("default"):
             continue
         assert b.get("base_url", "").startswith("https://"), (
@@ -155,6 +169,33 @@ def test_a_declared_binding_agrees_with_the_agents_register_entry():
                 "would be complete, well-formed, and false. Write the "
                 "processor entry first; the binding reads the register, it "
                 "does not outrun it."
+            )
+        # RESIDENCY TRUTH (2026-08-16, the operator's EU question). The
+        # serving set of a bound agent is the declared backend AND the
+        # default it degrades to when disarmed — a run can land on either,
+        # so the Article-30 record must be true of BOTH. Only when every
+        # member is EU-resident may the record say the data stays. Today no
+        # EU backend exists, so this asserts every bound agent says
+        # `transfers_outside_eu: true` — and the day a Mistral row lands,
+        # the same rule says exactly which agents may flip to `false`:
+        # those whose WHOLE serving set went EU, not those whose declared
+        # half did.
+        serving = [spec, backends.get("anthropic") or {}]
+        any_non_eu = any(
+            not ((s.get("residency") or {}).get("eu", False)) for s in serving
+        )
+        gdpr = doc.get("gdpr") or {}
+        if any_non_eu and gdpr.get("transfers_outside_eu") is not True:
+            problems.append(
+                f"{name}: bound to {backend_name!r} whose serving set "
+                "includes a non-EU backend, but its register entry does not "
+                "declare transfers_outside_eu: true — the record is false "
+                "the moment the binding disarms, if not sooner"
+            )
+        if any_non_eu and gdpr.get("eu_residency") is not False:
+            problems.append(
+                f"{name}: eu_residency must be false while any backend in "
+                "its serving set is non-EU"
             )
     assert not problems, "\n  " + "\n  ".join(problems)
     # No agent declares a binding today (MiniMax is prepared, not armed) — the

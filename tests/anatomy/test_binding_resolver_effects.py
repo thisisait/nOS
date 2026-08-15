@@ -203,6 +203,28 @@ $try('factory_refuses_openclaw_binding', function () use ($resolver, $factory) {
     }
 });
 
+$try('protocol_mismatch_refused', function () use ($credentials, $probeDir) {
+    // Gate 7 with a registry row the estate does not have yet: an
+    // openai-protocol backend (the Mistral shape, VERIFIED 2026-08-16:
+    // /v1/chat/completions, no Anthropic surface). An anthropic-* primary
+    // bound to it must refuse at session open — the alternative is one
+    // protocol's requests dying at the other's endpoint as a shape error.
+    $tmp = "$probeDir/registry-openai.yml";
+    file_put_contents($tmp, <<<'YAML'
+backends:
+  anthropic: { default: true, protocol: anthropic, residency: { eu: false }, processor_match: Anthropic }
+  mistral-test:
+    protocol: openai
+    residency: { eu: true }
+    base_url: "https://api.eu.mistral.example/v1"
+    auth_secret: "nos:minimax_api_key"
+    model_env: { haiku: NOS_X, sonnet: NOS_X, opus: null }
+    processor_match: "Mistral"
+YAML);
+    $r = new BindingResolver($credentials, $tmp);
+    return $r->resolve(agent(['backend' => 'mistral-test']));
+});
+
 $try('api_unbound_still_requires_the_key', function () use ($factory) {
     putenv('ANTHROPIC_API_KEY');
     try {
@@ -348,6 +370,22 @@ def test_the_tier_carveout_follows_the_tier_not_the_provider(verdicts):
         "— ruling 1's carve-out is about what the ceremony authors, and it "
         "must hold for every adapter, or switching provider becomes the "
         "bypass"
+    )
+
+
+def test_a_protocol_mismatch_refuses_at_the_door(verdicts):
+    """Gate 7 — the Mistral-readiness gate, exercised against a synthetic row.
+
+    Mistral speaks OpenAI's wire protocol and has no Anthropic surface
+    (verified 2026-08-16), so the day its registry row lands, an anthropic-*
+    primary bound to it must refuse at session open. Refusing NOW, against a
+    synthetic openai-protocol row, is what keeps that day boring.
+    """
+    v = verdicts["protocol_mismatch_refused"]
+    assert isinstance(v, dict) and "refused" in v and "wire protocol" in v["refused"], (
+        f"an anthropic-* primary bound to an openai-protocol backend was not "
+        f"refused: {v!r} — the request would die at the endpoint as a shape "
+        "error nothing classifies, on the first armed night with an EU backend"
     )
 
 
