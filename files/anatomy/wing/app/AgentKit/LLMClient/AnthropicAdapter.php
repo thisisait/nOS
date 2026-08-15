@@ -25,19 +25,38 @@ final class AnthropicAdapter implements LLMClientInterface
 {
 	private readonly string $modelId;
 
+	/**
+	 * @param ?Binding $binding backend binding (state/llm-backends.yml). THIS
+	 *        is the adapter the spine redirect (2026-08-15) makes bindable:
+	 *        it speaks the tool protocol AnthropicKit's Runner drives, so a
+	 *        bound run keeps AgentKit's own tool loop — the structural
+	 *        dissolution of the CLI adapter's tools refusal, not a workaround
+	 *        for it. The binding's MODEL ID replaces the URI's tail (the URI
+	 *        then names the declared intent, the binding the served model —
+	 *        both recorded, `model_effective` at session start); base URL and
+	 *        bearer are applied where the CLIENT is built (Factory), because
+	 *        this class never touches credentials.
+	 */
 	public function __construct(
 		private readonly Client $client,
 		private readonly string $modelUri,
+		private readonly ?Binding $binding = null,
 	) {
 		if (!str_starts_with($modelUri, 'anthropic-')) {
 			throw new \InvalidArgumentException("AnthropicAdapter requires anthropic-* URI; got {$modelUri}");
 		}
-		$this->modelId = substr($modelUri, strlen('anthropic-'));
+		$this->modelId = $binding?->modelId ?? substr($modelUri, strlen('anthropic-'));
 	}
 
 	public function identifier(): string
 	{
 		return $this->modelUri;
+	}
+
+	/** Which backend serves this adapter's traffic — 'anthropic' unbound. */
+	public function backendName(): string
+	{
+		return $this->binding?->name ?? 'anthropic';
 	}
 
 	public function send(

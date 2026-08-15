@@ -196,16 +196,25 @@ final class Runner
 			actorActionId: $sessionUuid,
 			actorId: $resolvedActor,
 			task: "agent:{$agent->name}",
-			result: [
-				'agent_version' => $agent->version,
-				'model_primary' => $agent->modelPrimaryUri,
-				// Which backend serves this session — write-time attribution,
-				// same WORM argument as ruling 2: the events table has no
-				// relabelling path, so the backend is recorded when it is
-				// decided, not inferred later from cost shapes.
-				'backend' => $decision->backendName(),
-				'trigger' => $trigger,
-			],
+			result: array_merge(
+				[
+					'agent_version' => $agent->version,
+					'model_primary' => $agent->modelPrimaryUri,
+					// Which backend serves this session — write-time
+					// attribution, same WORM argument as ruling 2: the events
+					// table has no relabelling path, so the backend is
+					// recorded when it is decided, not inferred later from
+					// cost shapes.
+					'backend' => $decision->backendName(),
+					'trigger' => $trigger,
+				],
+				// Under a binding the SERVED model differs from the declared
+				// URI (the binding's tier remap chose it). Absent when
+				// unbound — the declared model served, and the ordinary
+				// event should not grow a field that restates the URI.
+				$decision->binding !== null
+					? ['model_effective' => $decision->binding->modelId] : [],
+			),
 			traceId: $traceId,
 		);
 		if ($decision->declaredDisarmed !== null) {

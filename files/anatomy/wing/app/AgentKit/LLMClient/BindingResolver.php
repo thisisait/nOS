@@ -95,16 +95,23 @@ final class BindingResolver
 			);
 		}
 
-		// Gate 6 — tier from the primary URI (`claude-<tier>`); ruling 1 maps
-		// opus to null, and the registry gate pins that shape offline.
-		$tier = substr($agent->modelPrimaryUri, (int) strpos($agent->modelPrimaryUri, '-') + 1);
+		// Gate 6 — the TIER WORD in the primary URI's tail, for both bindable
+		// providers: `claude-sonnet` names it outright, and every Anthropic
+		// API model id carries it (`anthropic-claude-opus-4-7`). Ruling 1
+		// maps opus to null in the registry, so an opus-tier agent refuses
+		// here REGARDLESS of which adapter would have served it — the
+		// carve-out follows the tier, not the provider. A tail with no tier
+		// word refuses too: a model the tiers cannot name cannot be remapped
+		// by a tier table, and guessing would route it silently.
+		$tail = substr($agent->modelPrimaryUri, (int) strpos($agent->modelPrimaryUri, '-') + 1);
+		$tier = preg_match('/\b(haiku|sonnet|opus)\b/', $tail, $m) ? $m[1] : $tail;
 		$modelEnvByTier = (array) ($spec['model_env'] ?? []);
 		if (!array_key_exists($tier, $modelEnvByTier) || $modelEnvByTier[$tier] === null) {
 			throw new BindingRefused(
-				"agent '{$agent->name}' (tier '{$tier}') has no model mapping on "
-				. "backend '{$declared}' — ruling 1 keeps opus-pinned ceremonies "
-				. 'on the default backend, and an unknown tier is a typo, not a '
-				. 'fallthrough.'
+				"agent '{$agent->name}' (tier '{$tier}', from '{$agent->modelPrimaryUri}') "
+				. "has no model mapping on backend '{$declared}' — ruling 1 keeps "
+				. 'opus-tier ceremonies on the default backend, and a tail without '
+				. 'a tier word cannot be remapped by a tier table.'
 			);
 		}
 

@@ -135,6 +135,84 @@ $try('armed_bound', function () use ($resolver) {
     ];
 });
 
+// ── The API path (spine redirect 2026-08-15) ────────────────────────────────
+// The operator's direction: primarily the classic API, because AnthropicAdapter
+// speaks the tool protocol and AgentKit's Runner drives the loop — the tools
+// refusal dissolves instead of being worked around. These cases prove the
+// bound construction WITHOUT a network call: what can be verified offline is
+// which endpoint, which credential, which model the client was BUILT with;
+// the request itself is the armed night's job.
+use App\AgentKit\LLMClient\Factory;
+
+$factory = new Factory($credentials);
+
+$try('api_bound_builds_the_bound_client', function () use ($resolver, $factory) {
+    putenv('NOS_ARMED_BACKENDS=minimax');
+    putenv('NOS_MINIMAX_MODEL=FAKE-MiniMax-M2');
+    $d = $resolver->resolve(agent([
+        'backend' => 'minimax', 'primary' => 'anthropic-claude-sonnet-4-5',
+    ]));
+    $adapter = $factory->fromUri('anthropic-claude-sonnet-4-5', $d->binding);
+
+    // Reflection over the built client: baseUrl, bearer-vs-apiKey, model id.
+    $ref = new ReflectionObject($adapter);
+    $clientProp = $ref->getProperty('client');
+    $client = $clientProp->getValue($adapter);
+    $modelProp = $ref->getProperty('modelId');
+
+    $props = [];
+    for ($c = new ReflectionObject($client); $c !== false; $c = $c->getParentClass()) {
+        foreach ($c->getProperties() as $p) {
+            if (!array_key_exists($p->getName(), $props) && $p->isInitialized($client)) {
+                $props[$p->getName()] = $p->getValue($client);
+            }
+        }
+    }
+    // The base URL may be stored as a string or a PSR-7 UriInterface —
+    // stringify whatever can be stringified before searching.
+    $strings = [];
+    foreach ($props as $v) {
+        if (is_string($v)) { $strings[] = $v; }
+        elseif (is_object($v) && method_exists($v, '__toString')) { $strings[] = (string) $v; }
+    }
+    return [
+        'backend' => $adapter->backendName(),
+        'model_id' => $modelProp->getValue($adapter),
+        'base_url_bound' => (bool) array_filter($strings, fn ($v) => str_contains($v, 'api.minimax.io')),
+        'bearer_set' => ($props['authToken'] ?? '') !== '',
+        'api_key_empty' => ($props['apiKey'] ?? 'MISSING') === '',
+    ];
+});
+
+$try('api_opus_tier_refused', function () use ($resolver) {
+    putenv('NOS_ARMED_BACKENDS=minimax');
+    return $resolver->resolve(agent([
+        'backend' => 'minimax', 'primary' => 'anthropic-claude-opus-4-7',
+    ]));
+});
+
+$try('factory_refuses_openclaw_binding', function () use ($resolver, $factory) {
+    putenv('NOS_ARMED_BACKENDS=minimax');
+    putenv('NOS_MINIMAX_MODEL=FAKE-MiniMax-M2');
+    $d = $resolver->resolve(agent(['backend' => 'minimax']));
+    try {
+        $factory->fromUri('openclaw-qwen2.5-coder:32b', $d->binding);
+        return ['accepted' => true];
+    } catch (InvalidArgumentException $e) {
+        return ['refused' => $e->getMessage()];
+    }
+});
+
+$try('api_unbound_still_requires_the_key', function () use ($factory) {
+    putenv('ANTHROPIC_API_KEY');
+    try {
+        $factory->fromUri('anthropic-claude-sonnet-4-5');
+        return ['built' => true];
+    } catch (RuntimeException $e) {
+        return ['refused' => $e->getMessage()];
+    }
+});
+
 // Ruling 3 at the argv line, both directions.
 $send = function (?Binding $binding) use ($fakeClaude, $probeDir) {
     @unlink("$probeDir/claude-args");
@@ -239,6 +317,51 @@ def test_an_armed_binding_resolves_from_registry_and_secrets(verdicts):
         f"got {verdicts['armed_bound']!r} — the armed path must read base_url "
         "from state/llm-backends.yml, the model id from the tier env, and the "
         "token from ~/.nos/secrets.yml via nos:minimax_api_key"
+    )
+
+
+def test_the_api_path_builds_the_bound_client(verdicts):
+    """The spine redirect's core claim, measured at construction.
+
+    A MiniMax-served run is the ANTHROPIC adapter (the SDK speaks the wire
+    protocol; the genome's provider enum stays untouched) built with the
+    binding's endpoint and BEARER — never ANTHROPIC_API_KEY, which belongs to
+    a different party — and the binding's tier-resolved model id. What this
+    deliberately cannot prove: that a request round-trips. That is the armed
+    night's job, and pretending otherwise here would be a success marker
+    written by the attempting code.
+    """
+    v = verdicts["api_bound_builds_the_bound_client"]
+    assert v == {
+        "backend": "minimax",
+        "model_id": "FAKE-MiniMax-M2",
+        "base_url_bound": True,
+        "bearer_set": True,
+        "api_key_empty": True,
+    }, f"bound client construction drifted: {v!r}"
+
+
+def test_the_tier_carveout_follows_the_tier_not_the_provider(verdicts):
+    v = verdicts["api_opus_tier_refused"]
+    assert isinstance(v, dict) and "refused" in v and "opus" in v["refused"], (
+        f"an opus-TIER agent routed through the API path was not refused: {v!r} "
+        "— ruling 1's carve-out is about what the ceremony authors, and it "
+        "must hold for every adapter, or switching provider becomes the "
+        "bypass"
+    )
+
+
+def test_the_factory_still_refuses_what_cannot_bind(verdicts):
+    v = verdicts["factory_refuses_openclaw_binding"]
+    assert "refused" in v, (
+        "the factory accepted a binding for openclaw, which speaks neither "
+        "mechanism — the binding would be silently dropped (the MapHandler "
+        "defect, again)"
+    )
+    unbound = verdicts["api_unbound_still_requires_the_key"]
+    assert "refused" in unbound and "ANTHROPIC_API_KEY" in unbound["refused"], (
+        "the UNBOUND anthropic path no longer demands its key — the bound "
+        "branch weakened the ordinary one"
     )
 
 

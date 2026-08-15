@@ -32,26 +32,33 @@ final class Factory
 
 	/**
 	 * @param ?Binding $binding backend binding (state/llm-backends.yml),
-	 *        resolved by BindingResolver. ONLY the `claude` provider accepts
-	 *        one — the binding is an env contract the CLI honours, and no
-	 *        other adapter speaks it. Offering a binding to any other
-	 *        provider throws rather than ignores: an argument visible in the
-	 *        source and absent from the behaviour is the MapHandler defect,
-	 *        and this factory refuses to ship it again.
+	 *        resolved by BindingResolver. TWO providers accept one, each by
+	 *        its own mechanism — and the asymmetry is the 2026-08-15 spine
+	 *        redirect ("primarily through the classic API"):
+	 *          `anthropic` — the PRIMARY bindable path. The SDK client is
+	 *          rebuilt with the binding's baseUrl + bearer, and because
+	 *          AgentKit's Runner drives the tool loop against this adapter,
+	 *          a bound run keeps tools — the structural dissolution of the
+	 *          CLI adapter's tools refusal.
+	 *          `claude` — the env contract the CLI honours; tool-less
+	 *          ceremonies only, by that adapter's own refusal.
+	 *        `openclaw` still refuses: its gateway speaks neither mechanism,
+	 *        and an argument visible in the source and absent from the
+	 *        behaviour is the MapHandler defect this factory will not ship.
 	 */
 	public function fromUri(string $modelUri, ?Binding $binding = null): LLMClientInterface
 	{
 		[$provider, ] = $this->splitUri($modelUri);
-		if ($binding !== null && $provider !== 'claude') {
+		if ($binding !== null && !in_array($provider, ['claude', 'anthropic'], true)) {
 			throw new \InvalidArgumentException(
 				"backend binding '{$binding->name}' offered to provider "
-				. "'{$provider}' — only the claude CLI provider honours the "
-				. 'ANTHROPIC_* env contract a binding expresses. Accepting it '
-				. 'here would drop it silently.'
+				. "'{$provider}', which speaks neither the ANTHROPIC_* env "
+				. 'contract nor the SDK base-url mechanism. Accepting it here '
+				. 'would drop it silently.'
 			);
 		}
 		return match ($provider) {
-			'anthropic' => $this->buildAnthropic($modelUri),
+			'anthropic' => $this->buildAnthropic($modelUri, $binding),
 			// `claude-*` is the LOCAL CLI, not the API. Added 2026-08-11 because
 			// AgentKit could not drive the only backend this estate has: the
 			// nightly agents run on the operator's `claude` subscription through
@@ -108,8 +115,23 @@ final class Factory
 		return new ClaudeCliAdapter($modelUri, $model, $binary, $timeout, $binding);
 	}
 
-	private function buildAnthropic(string $modelUri): AnthropicAdapter
+	private function buildAnthropic(string $modelUri, ?Binding $binding = null): AnthropicAdapter
 	{
+		if ($binding !== null) {
+			// The bound path authenticates with the BINDING's bearer against
+			// the BINDING's endpoint — never with ANTHROPIC_API_KEY, which
+			// belongs to a different party. `authToken` is the SDK's
+			// Authorization-Bearer form, the same credential shape the CLI's
+			// ANTHROPIC_AUTH_TOKEN carries; MiniMax's Anthropic-compatible
+			// endpoint takes exactly that. The token came out of the resolver
+			// at session open (nos:… secret_ref) and lives in the client for
+			// the session — the same lifetime the unbound apiKey has.
+			$client = new AnthropicClient(
+				authToken: $binding->authToken,
+				baseUrl: $binding->baseUrl,
+			);
+			return new AnthropicAdapter($client, $modelUri, $binding);
+		}
 		$apiKey = $this->credentials->resolve('anthropic-api')
 			?? getenv('ANTHROPIC_API_KEY')
 			?: '';
