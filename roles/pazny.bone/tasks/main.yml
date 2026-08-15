@@ -157,8 +157,21 @@
     PLIST_CHANGED={{ 'yes' if (_bone_plist is defined and _bone_plist is changed) else 'no' }}
     if launchctl print "gui/${UID_NUM}/{{ bone_launchd_label }}" >/dev/null 2>&1; then
       if [ "$PLIST_CHANGED" = "yes" ]; then
+        # See the wing role for the measurement: bootout is ASYNCHRONOUS, and
+        # bootstrapping into the teardown returns `5: Input/output error` and
+        # leaves the job unloaded. Four reload sites across the estate had the
+        # sleep and three did not; the difference only shows on a converge that
+        # actually changes a plist, which is why it hid for months.
+        #
+        # NO APOSTROPHES IN THIS BLOCK. An earlier draft used a possessive
+        # form here and ansible-lint refused the whole role: "failed at
+        # splitting arguments, either an unbalanced jinja2 block or quotes".
+        # A lone single quote inside a shell scalar breaks the argument
+        # splitter in Ansible even when it sits in a comment. This note went
+        # through the same wall once while being written.
         launchctl bootout "gui/${UID_NUM}/{{ bone_launchd_label }}" 2>/dev/null || true
-        launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
+        sleep 1
+        launchctl bootstrap "gui/${UID_NUM}" "$PLIST" || echo "BOOTSTRAP-FAILED rc=$?"
         echo "reloaded"
       else
         echo "already-loaded"
@@ -248,7 +261,7 @@
     LABEL="{{ bone_launchd_label }}"; UID_NUM=$(id -u)
     launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
     sleep 1
-    launchctl bootstrap "gui/${UID_NUM}" "$HOME/Library/LaunchAgents/${LABEL}.plist"
+    launchctl bootstrap "gui/${UID_NUM}" "$HOME/Library/LaunchAgents/${LABEL}.plist" || echo "BOOTSTRAP-FAILED rc=$?"
   register: _bone_stale_reload
   changed_when: true
   when:

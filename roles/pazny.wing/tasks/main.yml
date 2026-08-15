@@ -463,8 +463,28 @@
       if [ "$PLIST_CHANGED" = "yes" ]; then
         # RELOAD, not restart: kickstart keeps the in-memory job definition, so
         # a new EnvironmentVariables entry would never reach the process.
+        # BOOTOUT IS ASYNCHRONOUS, and this is what took Wing down twice on
+        # 2026-08-15. Firing bootstrap immediately after it races the teardown:
+        #
+        #   $ launchctl bootout gui/501/…wing; launchctl bootstrap gui/501 "$PLIST"
+        #   Bootstrap failed: 5: Input/output error        (rc=5)
+        #   -> job NOT LOADED, daemon dead
+        #
+        # Reproduced deliberately, then re-run with the sleep: rc=0, HTTP 403.
+        # The handler in main.yml has carried `sleep 1` between the two calls
+        # all along; this copy did not, and the difference was invisible because
+        # bootout swallows its own errors, this task is `failed_when: false`,
+        # and the health probe below is too — so the converge walked on with the
+        # daemon down and the FIRST loud failure was a Pulse registration three
+        # tasks later, blaming a connection it had no part in breaking.
         launchctl bootout "gui/${UID_NUM}/{{ wing_launchd_label }}" 2>/dev/null || true
-        launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
+        sleep 1
+        launchctl bootstrap "gui/${UID_NUM}" "$PLIST" || {
+          # Loud on the ONE path that leaves nothing running. Still not
+          # `failed_when` — the probe below owns that verdict — but a silent
+          # rc here is how a dead daemon reads as a green run.
+          echo "BOOTSTRAP-FAILED rc=$?"
+        }
         echo "reloaded"
       else
         launchctl kickstart -k "gui/${UID_NUM}/{{ wing_launchd_label }}"

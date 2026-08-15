@@ -126,8 +126,14 @@
     PLIST_CHANGED={{ 'yes' if (_pulse_plist is defined and _pulse_plist is changed) else 'no' }}
     if launchctl print "gui/${UID_NUM}/{{ pulse_launchd_label }}" >/dev/null 2>&1; then
       if [ "$PLIST_CHANGED" = "yes" ]; then
+        # See the wing role for the measurement: bootout is ASYNCHRONOUS, and
+        # bootstrapping into the teardown returns `5: Input/output error` and
+        # leaves the job unloaded. Pulse losing this race is the worst of the
+        # three — nothing else fires the scheduled jobs, so the estate would
+        # simply stop having nights, quietly, until someone looked.
         launchctl bootout "gui/${UID_NUM}/{{ pulse_launchd_label }}" 2>/dev/null || true
-        launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
+        sleep 1
+        launchctl bootstrap "gui/${UID_NUM}" "$PLIST" || echo "BOOTSTRAP-FAILED rc=$?"
         echo "reloaded"
       else
         echo "already-loaded"

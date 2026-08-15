@@ -270,7 +270,7 @@
     L="{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.ollama.agent.plist"
     launchctl bootout "gui/$(id -u)/com.ollama.agent" 2>/dev/null || true
     sleep 2
-    launchctl bootstrap "gui/$(id -u)" "$L"
+    launchctl bootstrap "gui/$(id -u)" "$L" || echo "BOOTSTRAP-FAILED rc=$?"
   args:
     executable: /bin/bash
   changed_when: true

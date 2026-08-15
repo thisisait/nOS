@@ -193,8 +193,11 @@
 # (the launchctl kickstart trap, see 2026-05-17 incident notes).
 - name: "[backup] (Re)load exporter agent"
   ansible.builtin.shell: |
+    # bootout is asynchronous — see the wing role for the measurement
+    # (`Bootstrap failed: 5: Input/output error`, job left unloaded).
     launchctl bootout gui/$(id -u)/{{ backup_exporter_launchd_label }} 2>/dev/null || true
-    launchctl bootstrap gui/$(id -u) "{{ backup_exporter_launchd_plist }}"
+    sleep 1
+    launchctl bootstrap gui/$(id -u) "{{ backup_exporter_launchd_plist }}" || echo "BOOTSTRAP-FAILED rc=$?"
   when:
     - backup_exporter_enabled | default(true) | bool
     - (nos_service_manager | default('launchd')) == 'launchd'

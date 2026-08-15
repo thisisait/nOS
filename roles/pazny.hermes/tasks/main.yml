@@ -243,8 +243,10 @@
     CHANGED="{{ (_hermes_plist is changed) | ternary('1', '0') }}"
     if launchctl print "gui/${UID_NUM}/{{ hermes_launchd_label }}" >/dev/null 2>&1; then
       if [ "$CHANGED" = "1" ]; then
+        # bootout is asynchronous — see the wing role for the measurement.
         launchctl bootout "gui/${UID_NUM}/{{ hermes_launchd_label }}" 2>/dev/null || true
-        launchctl bootstrap gui/${UID_NUM} "$PLIST"
+        sleep 1
+        launchctl bootstrap gui/${UID_NUM} "$PLIST" || echo "BOOTSTRAP-FAILED rc=$?"
         echo "reloaded"
       else
         echo "already-current"

@@ -70,7 +70,7 @@
         UID_NUM=$(id -u)
         launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
         sleep 1
-        launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
+        launchctl bootstrap "gui/${UID_NUM}" "$PLIST" || echo "BOOTSTRAP-FAILED rc=$?"
       changed_when: true
 
     - name: "[pazny.bone] Wait for Bone to answer again after reload"
