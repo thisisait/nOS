@@ -217,7 +217,7 @@ backends:
     protocol: openai
     residency: { eu: true }
     base_url: "https://api.eu.mistral.example/v1"
-    auth_secret: "nos:minimax_api_key"
+    auth_secret: "nos:fake_key_never_resolved"
     model_env: { haiku: NOS_X, sonnet: NOS_X, opus: null }
     processor_match: "Mistral"
 YAML);
