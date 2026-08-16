@@ -130,6 +130,11 @@ backends:
   # `transfers_outside_eu: false` REACHABLE for an agent whose whole serving
   # set is this row (see the no-degrade rule in the resolver: a register
   # entry declaring false removes the degrade-to-default path by itself).
+  # PRIMARY-URI CONVENTION for protocol-only providers: `openai-sonnet` — the
+  # tail is the TIER, because the vendor model comes from the binding's
+  # model_env remap and a tail like `mistral-large` carries no tier word for
+  # gate 6 to map. (For `claude`/`anthropic` primaries the tier word sits
+  # inside the vendor id and both readings agree.)
   mistral-eu:
     protocol: "openai"
     residency: { country: "FR", eu: true }

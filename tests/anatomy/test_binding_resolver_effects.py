@@ -225,6 +225,63 @@ YAML);
     return $r->resolve(agent(['backend' => 'mistral-test']));
 });
 
+// ── Gate 8: no-degrade, derived from the register (2026-08-16) ──────────────
+$euRegistry = function () use ($probeDir): string {
+    $tmp = "$probeDir/registry-eu.yml";
+    file_put_contents($tmp, <<<'YAML'
+backends:
+  anthropic: { default: true, protocol: anthropic, residency: { eu: false }, processor_match: Anthropic }
+  mistral-test:
+    protocol: openai
+    residency: { eu: true }
+    base_url: "https://api.eu.mistral.example/v1"
+    auth_secret: "nos:fake_key_never_resolved"
+    model_env: { haiku: NOS_FAKE_SMALL, sonnet: NOS_FAKE_MODEL, opus: null }
+    processor_match: "Mistral"
+YAML);
+    return $tmp;
+};
+$euAgent = fn (array $over = []) => agent($over + [
+    'primary' => 'openai-sonnet',   // protocol-only provider: the tail IS the tier
+    'gdpr' => [
+        'transfers_outside_eu' => false,
+        'eu_residency' => true,
+        'processors' => [['name' => 'Mistral AI SAS']],
+    ],
+]);
+
+$try('eu_record_refuses_degrade_when_disarmed', function () use ($credentials, $euRegistry, $euAgent) {
+    putenv('NOS_ARMED_BACKENDS');   // nothing armed
+    $r = new BindingResolver($credentials, $euRegistry());
+    return $r->resolve($euAgent(['backend' => 'mistral-test']));
+});
+
+$try('eu_record_refuses_a_non_eu_backend', function () use ($resolver) {
+    putenv('NOS_ARMED_BACKENDS=minimax');
+    putenv('NOS_MINIMAX_MODEL=FAKE-MiniMax-M2');
+    return $resolver->resolve(agent([
+        'backend' => 'minimax',
+        'gdpr' => [
+            'transfers_outside_eu' => false,
+            'processors' => [['name' => 'MiniMax (international API)']],
+        ],
+    ]));
+});
+
+$try('ordinary_agent_still_degrades', function () use ($credentials, $euRegistry) {
+    putenv('NOS_ARMED_BACKENDS');
+    $r = new BindingResolver($credentials, $euRegistry());
+    $d = $r->resolve(agent([
+        'backend' => 'mistral-test',
+        'primary' => 'openai-sonnet',
+        'gdpr' => [
+            'transfers_outside_eu' => true,
+            'processors' => [['name' => 'Mistral AI SAS'], ['name' => 'Anthropic, PBC']],
+        ],
+    ]));
+    return ['backend' => $d->backendName(), 'declared_disarmed' => $d->declaredDisarmed];
+});
+
 $try('api_unbound_still_requires_the_key', function () use ($factory) {
     putenv('ANTHROPIC_API_KEY');
     try {
@@ -387,6 +444,34 @@ def test_a_protocol_mismatch_refuses_at_the_door(verdicts):
         f"refused: {v!r} — the request would die at the endpoint as a shape "
         "error nothing classifies, on the first armed night with an EU backend"
     )
+
+
+def test_the_record_is_the_residency_mechanism(verdicts):
+    """Gate 8 — no-degrade, and why there is no knob for it.
+
+    The gov-ready half (operator, 2026-08-16): EU residency that evaporates
+    under a config flag is a claim, not a property. The mechanism is the
+    agent's own Article-30 record: declaring `transfers_outside_eu: false`
+    removes the degrade-to-default path (disarmed = refuse, not "the US
+    default serves"), and forbids routing to any non-EU backend outright.
+    Both directions measured here; the third case pins that ORDINARY agents
+    kept the degrade behaviour — a no-degrade that leaked onto everyone
+    would turn every disarm into an outage.
+    """
+    v = verdicts["eu_record_refuses_degrade_when_disarmed"]
+    assert isinstance(v, dict) and "refused" in v and "falsify" in v["refused"], (
+        f"a transfers_outside_eu:false agent with a disarmed EU backend was "
+        f"not refused: {v!r} — it would have degraded to the non-EU default "
+        "and the register entry would be false at the first prompt"
+    )
+    v = verdicts["eu_record_refuses_a_non_eu_backend"]
+    assert isinstance(v, dict) and "refused" in v and "not EU-resident" in v["refused"], (
+        f"a transfers_outside_eu:false agent bound to a NON-EU backend was "
+        f"not refused: {v!r}"
+    )
+    assert verdicts["ordinary_agent_still_degrades"] == {
+        "backend": "anthropic", "declared_disarmed": "mistral-test",
+    }, "the no-degrade rule leaked onto ordinary agents — every disarm is now an outage"
 
 
 def test_the_factory_still_refuses_what_cannot_bind(verdicts):

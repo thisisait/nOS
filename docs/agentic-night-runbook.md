@@ -80,6 +80,27 @@ are not touched that night.
    takes it. One-at-a-time is operator discipline for this night — fine
    supervised, a gap before anything is scheduled.
 
+## 3b. The CLI entry point does not inherit the daemon's environment
+
+Measured 2026-08-16 while landing the first real session: `bin/run-agent.php`
+runs in whatever shell invoked it, NOT under wing.plist — so the two envs the
+binding layer depends on are simply absent unless exported:
+
+- **`NOS_REPO_ROOT`** absent → the DI container dies with a TypeError (the
+  neon's fail-soft promise cannot hold when `::getenv()` yields `false`).
+- **`NOS_ARMED_BACKENDS`** absent → a bound agent resolves DISARMED. For an
+  ordinary agent that silently serves the default; for a
+  `transfers_outside_eu: false` agent, gate 8 refuses the run outright —
+  correct, but confusing if you forgot the export.
+- The tier envs (`NOS_MINIMAX_MODEL`, `NOS_MISTRAL_MODEL`, …) follow the
+  same rule: armed-without-a-model-id refuses at session open.
+
+Before any supervised invocation, export the trio (values from wing.plist —
+`plutil -p ~/Library/LaunchAgents/eu.thisisait.nos.wing.plist | grep NOS_`),
+or wrap the call in `launchctl print`-derived env. A future
+`tools/run-agent.sh` wrapper that reads the plist and refuses to start
+without them is the structural fix; until it exists, this section is it.
+
 ## 4. Observability — what the operator watches
 
 - `sqlite3 -readonly ~/wing/app/data/wing.db "SELECT agent_name, status,

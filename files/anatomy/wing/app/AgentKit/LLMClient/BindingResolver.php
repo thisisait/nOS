@@ -114,6 +114,30 @@ final class BindingResolver
 			);
 		}
 
+		// Gate 8 — NO-DEGRADE, derived from the register rather than a knob
+		// (2026-08-16, the gov-ready half). An agent whose own Article-30
+		// record declares `transfers_outside_eu: false` while naming
+		// processors has committed its data to staying in the EU; that
+		// commitment is the MECHANISM here, not a parallel setting:
+		//   * routing it to a non-EU backend refuses — the record is false
+		//     the moment the first prompt leaves, and running elsewhere
+		//     instead would falsify it from the other side;
+		//   * degrading to the (non-EU) default when the binding is disarmed
+		//     refuses too, below — for every other agent disarmed means "the
+		//     default serves", for this one it means "no run". EU residency
+		//     that evaporates under a config flag is a claim, not a property.
+		$euOnly = (($agent->gdpr['transfers_outside_eu'] ?? null) === false)
+			&& ((array) ($agent->gdpr['processors'] ?? []) !== []);
+		$backendIsEu = ((($spec['residency'] ?? []))['eu'] ?? false) === true;
+		if ($euOnly && !$backendIsEu) {
+			throw new BindingRefused(
+				"agent '{$agent->name}' declares transfers_outside_eu: false "
+				. "but routes to '{$declared}', which is not EU-resident "
+				. '(state/llm-backends.yml residency.eu). One of the two is '
+				. 'wrong; refusing until they agree.'
+			);
+		}
+
 		// Gate 6 — the TIER WORD in the primary URI's tail, for both bindable
 		// providers: `claude-sonnet` names it outright, and every Anthropic
 		// API model id carries it (`anthropic-claude-opus-4-7`). Ruling 1
@@ -141,6 +165,19 @@ final class BindingResolver
 			true,
 		);
 		if (!$armed) {
+			if ($euOnly) {
+				// The no-degrade half of gate 8: the default backend is not
+				// EU-resident, and this agent's record says the data does not
+				// leave. Refusing IS the residency property — see the gate 8
+				// comment above.
+				throw new BindingRefused(
+					"agent '{$agent->name}' declares transfers_outside_eu: "
+					. "false and its backend '{$declared}' is not armed. "
+					. 'Degrading to the default would ship the data outside '
+					. 'the EU and falsify the record — arm the backend or do '
+					. 'not run this agent.'
+				);
+			}
 			return BindingDecision::disarmed($declared);
 		}
 

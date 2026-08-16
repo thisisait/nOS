@@ -213,33 +213,51 @@ def test_a_declared_binding_agrees_with_the_agents_register_entry():
                 "processor entry first; the binding reads the register, it "
                 "does not outrun it."
             )
-        # RESIDENCY TRUTH (2026-08-16, the operator's EU question). The
-        # serving set of a bound agent is the declared backend AND the
-        # default it degrades to when disarmed — a run can land on either,
-        # so the Article-30 record must be true of BOTH. Only when every
-        # member is EU-resident may the record say the data stays. Today no
-        # EU backend exists, so this asserts every bound agent says
-        # `transfers_outside_eu: true` — and the day a Mistral row lands,
-        # the same rule says exactly which agents may flip to `false`:
-        # those whose WHOLE serving set went EU, not those whose declared
-        # half did.
-        serving = [spec, backends.get("anthropic") or {}]
-        any_non_eu = any(
-            not ((s.get("residency") or {}).get("eu", False)) for s in serving
-        )
+        # RESIDENCY TRUTH (2026-08-16, the operator's EU question; no-degrade
+        # semantics since gate 8). The record itself is the mechanism: an
+        # agent declaring `transfers_outside_eu: false` (with processors)
+        # loses the degrade-to-default path — the resolver REFUSES disarmed
+        # runs instead of serving the non-EU default — so its serving set is
+        # the declared backend ALONE, which must therefore be EU-resident.
+        # Every other bound agent's serving set still includes the default,
+        # and its record must say the transfer happens.
         gdpr = doc.get("gdpr") or {}
-        if any_non_eu and gdpr.get("transfers_outside_eu") is not True:
-            problems.append(
-                f"{name}: bound to {backend_name!r} whose serving set "
-                "includes a non-EU backend, but its register entry does not "
-                "declare transfers_outside_eu: true — the record is false "
-                "the moment the binding disarms, if not sooner"
+        eu_only = (
+            gdpr.get("transfers_outside_eu") is False
+            and (gdpr.get("processors") or []) != []
+        )
+        declared_eu = ((spec.get("residency") or {}).get("eu", False)) is True
+        if eu_only:
+            if not declared_eu:
+                problems.append(
+                    f"{name}: declares transfers_outside_eu: false but routes "
+                    f"to {backend_name!r}, which is not EU-resident — one of "
+                    "the two is wrong (resolver gate 8 refuses this at "
+                    "session open; fix it here first)"
+                )
+            if gdpr.get("eu_residency") is not True:
+                problems.append(
+                    f"{name}: transfers_outside_eu: false with eu_residency "
+                    "not true — the two halves of the claim disagree"
+                )
+        else:
+            serving = [spec, backends.get("anthropic") or {}]
+            any_non_eu = any(
+                not ((s.get("residency") or {}).get("eu", False))
+                for s in serving
             )
-        if any_non_eu and gdpr.get("eu_residency") is not False:
-            problems.append(
-                f"{name}: eu_residency must be false while any backend in "
-                "its serving set is non-EU"
-            )
+            if any_non_eu and gdpr.get("transfers_outside_eu") is not True:
+                problems.append(
+                    f"{name}: bound to {backend_name!r} whose serving set "
+                    "includes a non-EU backend, but its register entry does "
+                    "not declare transfers_outside_eu: true — the record is "
+                    "false the moment the binding disarms, if not sooner"
+                )
+            if any_non_eu and gdpr.get("eu_residency") is not False:
+                problems.append(
+                    f"{name}: eu_residency must be false while any backend "
+                    "in its serving set is non-EU"
+                )
     assert not problems, "\n  " + "\n  ".join(problems)
     # No agent declares a binding today (MiniMax is prepared, not armed) — the
     # loop above must still be REAL. Prove it by running the same checks on a
