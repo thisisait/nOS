@@ -182,7 +182,19 @@ final class BashReadOnlyTool implements ToolInterface
             2 => ['pipe', 'w'],
         ];
         $env = $this->minimalEnv();
-        $proc = proc_open($argv, $descriptors, $pipes, null, $env);
+        // THE REPO, not wherever the daemon happens to live (2026-08-16).
+        // cwd was null, so commands inherited Wing's own directory
+        // (~/wing/app). Every agent task in this estate is written against the
+        // CHECKOUT — `docs/llm/security/remediation-queue.json`,
+        // `default.config.yml` — so every relative path missed, and the agent
+        // paid to find out: a one-line-diff task spent 63,112 input tokens
+        // exploring the filesystem before the ceiling stopped it, having read
+        // nothing it was asked about. Falls back to inheriting when
+        // NOS_REPO_ROOT is unset, which is the state the wrapper refuses to
+        // start in.
+        $cwd = getenv('NOS_REPO_ROOT');
+        $cwd = (is_string($cwd) && $cwd !== '' && is_dir($cwd)) ? $cwd : null;
+        $proc = proc_open($argv, $descriptors, $pipes, $cwd, $env);
         if (!is_resource($proc)) {
             return ToolResult::error('failed to spawn process for verb ' . $verb);
         }
