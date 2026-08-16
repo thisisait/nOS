@@ -1,3 +1,130 @@
+# nOS Vulnerability Scan Addendum — 2026-08-16 (Cycle 31, batch-54)
+
+**Batch:** gitlab, wordpress, freepbx, hedgedoc, bookstack · **Probe:** `supply_chain_freshness`
+**Outcome:** 4 queue items added (**REM-204 HIGH** — the CVE leg's finding of record, live-verified precondition; **REM-205/206/207 MEDIUM** — three probe findings) and **one prior row corrected on the facts** (REM-159). No new CRITICAL. Pending HIGH goes **5 → 6**, pending MEDIUM **22 → 25**, pending total **45 → 49**. Nothing closed.
+
+> **The finding of record, stated once.** WordPress is **two security releases behind** — and the second of them, 7.0.4, fixes an Author+ RCE that upstream scopes to "sites that use Imagick and Ghostscript." **This estate is such a site, and that was measured rather than assumed.** The live container has `imagick` loaded and Ghostscript 10.05.1 at `/usr/bin/gs`, and once XML comments are stripped from `/etc/ImageMagick-7/policy.xml` the *active* policy denies only the URL/HTTPS/HTTP coders — the PS/EPS/PDF coders and the Ghostscript delegate are wide open. A naive `grep` of that file reads as a deny-all, because the stock deny stanzas are commented out. The comment-strip is the whole difference between "probably fine" and "precondition met."
+
+---
+
+### 🟠 HIGH — [REM-204] WordPress `7.0.2` is two security releases behind: CVE-2026-64638 (8.9, pre-auth) plus a live-precondition Author+ RCE
+
+- **Component:** wordpress — `wordpress:7.0.2` (`default.config.yml:1326`), live as `iiab-wordpress-1`, digest `sha256:b2d7e315…ce2f7a3`, up 6 days, healthy
+- **Fix `7.0.4`** (2026-08-12) — a one-line pin bump. Target verified: `library/wordpress:7.0.4` → HTTP 200, pushed **2026-08-13T03:15Z**, all `php8.2`–`php8.5` apache/fpm/alpine variants
+
+**7.0.3** (2026-08-06) fixed **twelve** issues. The headline is **CVE-2026-64638** (CVSS **8.9**, reported by pwn.ai): a **pre-authentication reflected XSS on the login screen** that can escalate to PHP code execution. The escalation is worth stating at its real ceiling rather than at its scariest: per Patchstack the RCE leg is not drive-by — it requires phishing an Administrator into clicking the crafted link. The unauth reach is the XSS; the RCE is what follows the click. The other eleven: stored XSS in emoji settings, Post Content block, Quick Edit and Post Date block (all Contributor+); multisite privilege escalation (multisite *with* open registration — N/A here); information disclosure via the Latest Comments block; post-slug enumeration; comment-feed disclosure; a CSS-injection bypass (Author+); an email-confirmation bypass; and an SSRF. Several reach back to WordPress 4.7.
+
+**7.0.4** (2026-08-12) fixed an **authenticated Author+ RCE via malicious file upload**, scoped by upstream to "sites that use Imagick and Ghostscript." One file revised: `/wp-includes/class-wp-image-editor-imagick.php`.
+
+**Why this is HIGH and not MEDIUM — the precondition was measured, not inferred.**
+
+```
+$ docker exec iiab-wordpress-1 php -m | grep -i imagick     → imagick
+$ docker exec iiab-wordpress-1 which gs && gs --version     → /usr/bin/gs   10.05.1
+$ …strip XML comments from /etc/ImageMagick-7/policy.xml, then list live <policy> nodes:
+    <policy domain="Undefined" rights="none"/>
+    <policy domain="resource" …/>            ×6   (memory/map/area/disk/width/height)
+    <policy domain="path"  rights="none" pattern="@*"/>
+    <policy domain="coder" rights="none" pattern="URL"   />
+    <policy domain="coder" rights="none" pattern="HTTPS" />
+    <policy domain="coder" rights="none" pattern="HTTP"  />
+```
+
+No `PS`, no `EPS`, no `PDF`, no `delegate` deny. The Imagick → Ghostscript path an Author+ upload needs is open.
+
+**Scoped honestly — what is not true of this estate.** `install_wordpress` defaults false. WordPress is `native_oidc` behind Authentik, so "Author+" means an Authentik principal holding a WordPress Author role, not an anonymous signup — the 7.0.4 RCE needs a real, provisioned account. That mitigation buys **nothing** against CVE-2026-64638, which is reachable by anyone who can load `wp-login.php`.
+
+**Compounded by [REM-163]**, re-verified unfixed this batch (`FORCE_SSL` / `X_FORWARDED_PROTO` / `WORDPRESS_CONFIG_EXTRA` / `is_ssl` → **zero** matches across the role and its plugin): the post-login auth cookie is still issued **without `Secure`**. An XSS or network position on the login path is worth more here than on a correctly-configured install. Fix the two together.
+
+> **Correction of record (REM-163 metadata).** That row's `current_version` read `6.9.4`; the pin has since advanced to `7.0.2`. The finding is a config defect and version-independent, so nothing about its validity changes — corrected explicitly rather than silently, because a wrong version inside a row is exactly what REM-178 was about.
+
+> **A first read that was wrong, recorded so it is not repeated.** The truncated Docker Hub tag page suggested the official image had **skipped 7.0.3**. It did not — 20 `7.0.3-*` tags exist, pushed 2026-08-11/12. The registry manifest API is authoritative here and the name-filtered Hub page is not. Image-lag measurement for the probe: core 7.0.3 → image **+5 days**; core 7.0.4 → image **+1 day**.
+
+---
+
+### 🔵 The `supply_chain_freshness` probe — three findings, and a correction the probe forced
+
+**[REM-206, MEDIUM] The pinned FreePBX image no longer exists.** `roles/pazny.freepbx/templates/compose.yml.j2:12` renders `tiredofit/freepbx:{{ freepbx_version }}` with `freepbx_version: "latest"`. That reference no longer resolves:
+
+```
+hub.docker.com/v2/repositories/tiredofit/freepbx/            → 404
+registry-1.docker.io/v2/tiredofit/freepbx/tags/list          → 401   (anonymous pull scope)
+
+controls, run before concluding:
+  grafana/grafana          → hub 200, registry 200
+  linuxserver/bookstack    → hub 200
+  tiredofit/freescout      → hub 200      ← the namespace is alive; this one REPO is gone
+```
+
+The `freescout` control is what makes this a finding rather than a broken probe: the `tiredofit` namespace is still publishing, so it is this single repository that has been removed. *A `docker pull` cross-check was attempted and could not complete* — the host's Docker credential helper hangs and the CLI aborts with `error getting credentials`. The registry-API evidence stands on its own; the failed pull is recorded so nobody later reads it as a negative result.
+
+Two consequences. **Availability, today:** `install_freepbx: true` on a fresh host now **hard-fails at image pull** — the voip stack brings up zero containers and trips the guard at `tasks/stacks/stack-up.yml:498`. An operator flipping that flag gets a failed converge, not a warning. **Latent, theoretical:** a deleted Hub repo name plus a floating `:latest` plus zero digest pinning is a dangling reference — but the namespace remains owner-controlled, so re-registration presupposes an account compromise. Rated theoretical, not exploitable.
+
+**This resolves a question four rows left hanging.** REM-014 (CVSS 10.0), REM-046, REM-113 and REM-130 are all blocked on *"no path to a fix in this image, abandoned 2022-04-30."* The image is now not merely abandoned but **absent** — FreePBX is **undeployable** rather than deployable-and-unpatched. Those four keep their `vendor-blocked` status; REM-206 does not close them. The role should be retired or repointed, because a dead pin left in the tree is a trap for the next operator who flips the flag.
+
+**[REM-205, MEDIUM] GitLab withdrew 18.11.8 — but the container tag is still served.** GitLab shipped 18.11.8 on 2026-08-05, found that deprecation code in it "enabled Mattermost incorrectly" (breaking 19.x upgrades even where Mattermost was never configured), **pulled the omnibus package**, and replaced it with 18.11.9 on 2026-08-06. The registry did not follow:
+
+```
+gitlab/gitlab-ce:18.11.8-ce.0   → 200,  pushed 2026-08-05T12:49:42Z   ← withdrawn build
+gitlab/gitlab-ce:18.11.9-ce.0   → 200,  pushed 2026-08-06T09:34:40Z   ← the real terminal
+```
+
+The withdrawal exists only in vendor **prose**. Anything that resolves "the highest `18.11.x` tag" — including this estate's own upgrade-advisor agent, which authors recipes by reading registry tag lists — lands on the known-bad build with no registry-side signal to the contrary. Two caveats kept explicit: the withdrawal GitLab describes is of the **Linux package**, and the Docker image, though built from omnibus, is distributed separately — whether the *container* carries the same defect is **not verified here**; and nOS is unaffected today because it pins `18.11.7-ce.0` explicitly and never resolves a floating tag. This is a guard-rail item: when REM-159's bump runs, exclude `18.11.8-ce.0` **by name** in `upgrades/gitlab.yml`.
+
+**[REM-207, `all`, MEDIUM] No digest pinning, no re-pull, no record of what is deployed.** Three measurements that are individually mundane and jointly mean the estate has no content-integrity anchor:
+
+```
+1  roles/*/templates/compose.yml.j2   → 52 image: refs,  0 carrying @sha256
+2  main.yml:473   _docker_compose_pull = '--pull always'  ONLY if version_policy in [latest, lts]
+   default.config.yml:348  version_policy: "stable"   → the flag renders EMPTY at all five
+   consumers (core-up 442,504 · stack-up 199,271 · apps-up 78) → nothing ever re-pulls
+3  docs/llm/security/versions.json    → the string "sha256" appears 0 times
+```
+
+(1) and (3) together are the real point: if a tag's content were swapped upstream, nOS could neither prevent it **nor detect it afterwards**, because nothing on disk records what content was ever trusted. (2) is the mirror failure — an operator who believes `:latest` tracks upstream is running a frozen image with no signal. This is the same shape as the standing doctrine that *a success marker must be written by a reader, not by the attempting code*: the queue records the version we **intended** to deploy and calls it the version deployed. The digests are readable and simply never captured — `docker image inspect --format '{{index .RepoDigests 0}}'` returned one for all four live components in this batch.
+
+Graduated action, none urgent: **(a)** capture `RepoDigests` into `versions.json` during the existing scan so drift becomes observable — the cheap half, no converge needed; **(b)** digest-pin the roles whose tag genuinely floats, not all 52, so the discipline stays reviewable; **(c)** decide deliberately whether `stable` should imply `--pull`, given it today silently means *never refresh*. Rated MEDIUM: no exploitation path demonstrated, no tag swap alleged or observed. A missing detection control, not an active exposure.
+
+---
+
+### 🔧 [REM-159] Corrected on the facts; the conclusion survives
+
+**Falsified.** REM-159 stated: *"There is no 18.11.8 and there will not be one, so the pinned 18.11.7-ce.0 is now a TERMINAL pin."* Both halves are wrong. 18.11.8 shipped 2026-08-05 (then withdrawn) and 18.11.9 shipped 2026-08-06. The 18.11 line was **not** abandoned and 18.11.7 is **not** its terminal build.
+
+**Survives.** The *security* conclusion is untouched. 18.11.9 carries **no GitLab security fixes** — regressions and bugs, plus a PostgreSQL server bump to 16.14/17.10 for upstream PG patches. The 18.11 line stayed outside the backport window for **both** the 2026-07-29 and the 2026-08-12 waves. The pin still carries both, unpatched.
+
+> The lesson is one already on the books: a row that states what a vendor *will* do is asserting a fact it cannot have. The backport-window observation was sound; the extrapolation from it was not.
+
+**New exposure from the 2026-08-12 wave** (19.2.2 / 19.1.4 / 19.0.6, 14 CVEs), filtered to items that are **both** CE-affecting **and** whose *affected-from* range actually reaches 18.11.7 — five, three of them HIGH:
+
+| CVE | Sev | Issue | Auth | From |
+|---|---|---|---|---|
+| CVE-2026-15217 | **8.7** | XSS — Analytics Dashboards, table field | yes | 18.2 |
+| CVE-2026-15216 | **8.7** | XSS — Analytics Dashboards, pagination | yes | 18.2 |
+| CVE-2026-10053 | **8.5** | **RCE** — package registry, path traversal | yes | 18.8 |
+| CVE-2026-7427 | 5.3 | GraphQL API denial of service | **no** | 18.5 |
+| CVE-2026-8667 | 4.3 | npm dist-tags authorization | yes | 17.6 |
+
+**Filtered out, named so they are not re-added later.** CVE-2026-15423 (8.5, CI/CD pipeline authz) is introduced in **19.0** and CVE-2026-16627 (7.7, CI job modal XSS) in **19.2** — 18.11.7 predates both. CVE-2026-19228, CVE-2026-16494, CVE-2026-6821, CVE-2026-4879, CVE-2026-18244, CVE-2026-18433 and CVE-2025-9486 are **EE-only**; this estate runs CE (`devops-gitlab-1`, `gitlab/gitlab-ce:18.11.7-ce.0`, digest `sha256:62b055a5…b38f9db6`, up 6 days, healthy).
+
+**Revised action.** Target moves **19.2.1 → 19.2.2-ce.0** (verified present, HTTP 200). The `18.11.9-ce.0` half-step buys the PG bumps, the regression fixes and — per the vendor notes — a fix for upgrade failures *into* 19.x, so it may be worth taking as a staging step before the major. It buys **zero** GitLab CVEs and is not a remediation on its own.
+
+---
+
+### ✅ Clean-with-standing-debt
+
+**hedgedoc** — no new advisory. **REM-158 re-confirmed**, unfixed at **12 days**. 1.11.1 is still the latest: the vendor index shows GHSA-93w7-49m2-cqwg (2026-07-24) as most recent, and the registry agrees (`:1.11.1` → 200, `:1.11.2` → 404). Pin unmoved at `roles/pazny.hedgedoc/defaults/main.yml:12` = 1.11.0; live `b2b-hedgedoc-1` digest `sha256:04f0d948…6377c89`. Stays LOW on the advisory's own wording — a data-integrity edge case on owner-supplied permission input, not an authz bypass.
+
+**bookstack** — no new advisory. **REM-161 re-confirmed**, unfixed at **18 days**. v26.05.3 (2026-07-29) still latest (`:26.05.3` → 200, `:26.05.4` → 404). Pin unmoved at `roles/pazny.bookstack/defaults/main.yml:16` = 26.05.2; live `b2b-bookstack-1` digest `sha256:d945ea01…778de7a8`. The leg keeping it at MEDIUM is unchanged: the external-auth ID mismatch binds two Authentik principals differing only by case or accents to one BookStack account, and bookstack is `native_oidc` — it sits on the live SSO path. *Probe note:* BookStack's upstream moved **from GitHub to Codeberg** as of v26.05, so the project's source-of-truth host changed beneath the LinuxServer.io build. No integrity problem alleged — recorded because an upstream provenance change under a pinned image is precisely what a freshness probe exists to notice.
+
+**freepbx (CVE leg)** — the security-reporting feed has published nothing since the 2026-07-16/17 wave already captured by REM-130.
+
+---
+
+> **Coverage ceiling of this probe, stated rather than implied.** `supply_chain_freshness` read registry metadata and repository/tag state. It did **not** verify image signatures or provenance attestations, did **not** diff layer contents against upstream build recipes, and did **not** audit the language-level dependency manifests inside any image. Absence of a finding on those axes is absence of a test, not evidence of cleanliness.
+
+---
+
 # nOS Vulnerability Scan Addendum — 2026-08-14 (Cycle 29, batch-52)
 
 **Batch:** n8n, metabase, tempo, alloy, dnsmasq · **Probe:** `tls_crypto_weakness`
