@@ -259,9 +259,39 @@ final class AgentLoader
 		}
 	}
 
+	/**
+	 * THE DELIMITER WAS INSIDE THE CHARACTER CLASS (fixed 2026-08-16).
+	 *
+	 * The pattern was `/…[A-Za-z0-9._:/-]{1,96}$/` — a `/`-delimited regex
+	 * with an unescaped `/` in the class. PCRE ended the pattern at that
+	 * slash and read `-]{1,96}$/` as modifiers:
+	 *
+	 *     preg_match(): Unknown modifier '-'
+	 *
+	 * `preg_match` returns FALSE on a compile error, and `(bool) false` is
+	 * indistinguishable here from "this URI is invalid". So this method had
+	 * never once returned true — measured against every shape the estate
+	 * uses, and against the literal string "garbage", which was rejected for
+	 * the same non-reason:
+	 *
+	 *     claude-sonnet                 => false
+	 *     anthropic-claude-sonnet-4-5   => false
+	 *     openclaw-qwen2.5-coder:32b    => false
+	 *     garbage                       => false
+	 *
+	 * Which means `AgentLoader::load()` threw `model.primary invalid` for
+	 * EVERY agent, and AgentKit has never successfully loaded one. The four
+	 * rows in `agent_sessions` were written by the shell bridge, which does
+	 * not use this class — so the whole runtime above it (bindings, session
+	 * ceilings, fallback attribution) had been built on a floor nothing had
+	 * ever stood on. Nothing reported it because nothing ever called it.
+	 *
+	 * `#` as the delimiter, so the class needs no escaping and the next
+	 * person to add a character to it cannot re-open this.
+	 */
 	private function isValidModelUri(string $uri): bool
 	{
-		return (bool) preg_match('/^(anthropic|claude|openclaw)-[A-Za-z0-9._:/-]{1,96}$/', $uri);
+		return (bool) preg_match('#^(anthropic|claude|openclaw)-[A-Za-z0-9._:/-]{1,96}$#', $uri);
 	}
 }
 
