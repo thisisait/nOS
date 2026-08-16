@@ -56,6 +56,32 @@ final class Runner
 	private const MAX_LLM_CALLS_PER_ITERATION = 30; // hard cap on tool-use loop
 	private const TRANSIENT_RETRY_DELAYS_S = [1, 4, 12];
 
+	/**
+	 * SESSION CEILINGS — the bound that did not exist (2026-08-16).
+	 *
+	 * The three caps above are PER ITERATION and multiply: 600s per SDK
+	 * request × 30 calls × 10 iterations is roughly fifteen hours for one
+	 * stuck agent, and nothing at all counted tokens. `docs/idea/11-agentic-loop.md`
+	 * §5 is titled "Bounded, because unbounded is the failure mode"; the
+	 * session was the level with no bound.
+	 *
+	 * Both are BACKSTOPS, not budgets. Measured against a real ceremony (the
+	 * conductor run of 2026-08-13: in=97, out=10128), the token ceiling is
+	 * ~24× a healthy session — it exists to stop a runaway, not to shape one.
+	 * Env-overridable so an operator can tighten for a supervised night
+	 * without a code change.
+	 *
+	 * WHAT EACH ONE COVERS, precisely, because a bound that is believed wider
+	 * than it is would be worse than none:
+	 *   * the wall clock is checked before every Runner-driven LLM call AND at
+	 *     the top of every outcome iteration, so it bounds the grader too;
+	 *   * the token ceiling counts only what Runner itself drives. The Grader
+	 *     holds its own client (`new Grader($graderLlm)`) and its spend is
+	 *     bounded by maxIterations and by the clock, not by this number.
+	 */
+	private const SESSION_WALL_CLOCK_S = 3600;
+	private const SESSION_TOKEN_CEILING = 250000;
+
 	public function __construct(
 		private readonly LLMFactory $llmFactory,
 		private readonly ToolRegistry $tools,
@@ -104,6 +130,10 @@ final class Runner
 	 * one's attribution.
 	 */
 	private ?string $servedByUri = null;
+
+	/** Session ceilings, reset per run(). Null deadline = no session open. */
+	private ?float $sessionDeadline = null;
+	private int $sessionTokens = 0;
 
 	/** Session context callWithRetry needs to attribute a fallback. */
 	private ?array $fallbackContext = null;
@@ -154,6 +184,10 @@ final class Runner
 		$decision = $this->bindingResolver?->resolve($agent) ?? BindingDecision::default();
 		$llm = $this->llmFactory->fromUri($agent->modelPrimaryUri, $decision->binding);
 		$this->servedByUri = null;
+		$this->sessionTokens = 0;
+		$this->sessionDeadline = microtime(true) + (float) (
+			getenv('NOS_AGENT_SESSION_WALL_CLOCK_S') ?: self::SESSION_WALL_CLOCK_S
+		);
 		$this->fallbackContext = [
 			'session_uuid' => $sessionUuid,
 			'actor_id' => $resolvedActor,
@@ -431,9 +465,11 @@ final class Runner
 			$callSpan->setAttribute('llm.model_uri', $llm->identifier());
 			$callSpan->setAttribute('llm.call_index', $call);
 
+			$this->assertSessionCeiling('llm_call');
 			$response = $this->callWithRetry($agent, $llm, $conversation, $toolSchemas);
 			$totalIn += $response->tokensInput;
 			$totalOut += $response->tokensOutput;
+			$this->sessionTokens += $response->tokensInput + $response->tokensOutput;
 
 			$callSpan->setAttributes([
 				'llm.stop_reason' => $response->stopReason,
@@ -612,6 +648,9 @@ final class Runner
 		$outcomeId = 'outcome_' . substr($sessionUuid, 0, 8);
 
 		for ($iteration = 0; $iteration < $agent->maxIterations; $iteration++) {
+			// Checked here too, so the clock bounds the GRADER — which holds
+			// its own client and whose spend the token ceiling cannot see.
+			$this->assertSessionCeiling('iteration');
 			$iterStart = (int) (microtime(true) * 1000);
 			$loopOut = $this->runToolUseLoop(
 				$agent,
@@ -769,6 +808,40 @@ final class Runner
 			return $this->serveFallback($agent, $conversation, $toolSchemas, 'transient_exhausted', $lastTransient);
 		}
 		throw $lastTransient ?? new LLMPermanentError('LLM call failed without exception');
+	}
+
+	/**
+	 * Refuse to spend past a session ceiling — BEFORE the spend, not after.
+	 *
+	 * Throws `SessionCeilingReached`, which `run()` catches like any other
+	 * terminal error: the session ends `terminated` with the reason recorded,
+	 * so a run that hit a wall is distinguishable from one that finished. A
+	 * ceiling discovered by reading the bill afterwards is not a ceiling.
+	 *
+	 * @param string $at where the check fired — 'llm_call' or 'iteration'.
+	 */
+	private function assertSessionCeiling(string $at): void
+	{
+		if ($this->sessionDeadline === null) {
+			return; // no session open (direct unit-level use of the loop)
+		}
+		$tokenCeiling = (int) (
+			getenv('NOS_AGENT_SESSION_TOKEN_CEILING') ?: self::SESSION_TOKEN_CEILING
+		);
+		if (microtime(true) >= $this->sessionDeadline) {
+			throw new SessionCeilingReached(
+				"session wall clock exhausted at {$at}: the run passed its "
+				. 'deadline before this call. Per-call and per-iteration caps '
+				. 'multiply; this is the session-level bound that stops them.'
+			);
+		}
+		if ($this->sessionTokens >= $tokenCeiling) {
+			throw new SessionCeilingReached(
+				"session token ceiling reached at {$at}: {$this->sessionTokens} "
+				. ">= {$tokenCeiling}. Counts what Runner drives; the grader's "
+				. 'own client is bounded by the clock and by maxIterations.'
+			);
+		}
 	}
 
 	/**
