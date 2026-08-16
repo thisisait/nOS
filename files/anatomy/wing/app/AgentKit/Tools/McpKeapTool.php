@@ -142,8 +142,13 @@ final class McpKeapTool implements ToolInterface
 			'headers' => [
 				'Accept' => 'application/json',
 				'Authorization' => 'Bearer ' . $token,
-				// KEAP attributes writes as user_id "agent:<name>".
-				'X-Keap-Agent' => $context->actorId,
+				// KEAP attributes writes as user_id "agent:<name>" — it adds the
+				// prefix itself, so send the BARE name. `$context->actorId` is
+				// already `agent:librarian`, and passing it produced
+				// `agent:agent:librarian` on the seven briefs filed 2026-08-16.
+				// An attribution nobody can match to an agent is a provenance
+				// hole, not a typo.
+				'X-Keap-Agent' => preg_replace('#^agent:#', '', (string) $context->actorId),
 				'X-AgentKit-Session' => $context->sessionUuid,
 				'X-AgentKit-Trace' => $context->traceId,
 			],

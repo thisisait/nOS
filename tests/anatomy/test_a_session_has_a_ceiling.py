@@ -102,7 +102,8 @@ def test_the_counters_are_reset_per_run():
     src = _runner()
     body = src[src.index("public function run("):]
     body = body[: body.index("\n\tprivate function ")]
-    assert "$this->sessionTokens = 0;" in body, "the token counter is not reset per run"
+    for counter in ("$this->sessionTokensIn = 0;", "$this->sessionTokensOut = 0;"):
+        assert counter in body, f"{counter} is not reset per run"
     assert "$this->sessionDeadline = microtime(true)" in body, (
         "the deadline is not recomputed per run"
     )
@@ -135,3 +136,22 @@ def test_zero_is_a_value_not_an_absence():
             f"{name} is no longer read through envInt, so a deliberate 0 is "
             "ignored again."
         )
+
+
+def test_a_terminated_run_still_reports_what_it_spent():
+    """MEASURED 2026-08-16: the run that filed the first seven briefs hit the
+    token ceiling at 168707 and reported `tokens: {input: 0, output: 0}`.
+
+    `$totalIn`/`$totalOut` are assigned only on the success paths, so any throw
+    leaves them zero while the session counters know better. A cost record that
+    reads zero for exactly the runs that overspend is worse than none — it puts
+    the expensive sessions at the bottom of the report.
+    """
+    src = _runner()
+    assert "max($totalIn, $this->sessionTokensIn)" in src, (
+        "the reported input total is no longer floored by the session counter; "
+        "a terminated run will report 0 again."
+    )
+    assert "max($totalOut, $this->sessionTokensOut)" in src, (
+        "the reported output total is no longer floored by the session counter."
+    )

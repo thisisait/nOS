@@ -133,7 +133,17 @@ final class Runner
 
 	/** Session ceilings, reset per run(). Null deadline = no session open. */
 	private ?float $sessionDeadline = null;
-	private int $sessionTokens = 0;
+	/**
+	 * Split in/out, because a TERMINATED session must still report what it
+	 * spent. `$totalIn`/`$totalOut` in run() are assigned only on the
+	 * success paths; when the ceiling (or any throw) interrupts the loop
+	 * they stay 0 and the session reported `tokens: {input: 0, output: 0}`
+	 * after genuinely spending 168707 — measured 2026-08-16, on the run
+	 * that finally filed seven briefs. A cost record that reads zero for
+	 * the runs that overspend is worse than no cost record.
+	 */
+	private int $sessionTokensIn = 0;
+	private int $sessionTokensOut = 0;
 
 	/** Session context callWithRetry needs to attribute a fallback. */
 	private ?array $fallbackContext = null;
@@ -184,7 +194,8 @@ final class Runner
 		$decision = $this->bindingResolver?->resolve($agent) ?? BindingDecision::default();
 		$llm = $this->llmFactory->fromUri($agent->modelPrimaryUri, $decision->binding);
 		$this->servedByUri = null;
-		$this->sessionTokens = 0;
+		$this->sessionTokensIn = 0;
+		$this->sessionTokensOut = 0;
 		$this->sessionDeadline = microtime(true)
 			+ (float) self::envInt('NOS_AGENT_SESSION_WALL_CLOCK_S', self::SESSION_WALL_CLOCK_S);
 		$this->fallbackContext = [
@@ -340,6 +351,13 @@ final class Runner
 			$errorMessage = $exc::class . ': ' . $exc->getMessage();
 		}
 
+		// A TERMINATED run still spent. The loop totals are assigned only on the
+		// success paths, so a throw leaves them 0 while the session counters
+		// know better — take the larger of the two rather than reporting the
+		// convenient one.
+		$totalIn = max($totalIn, $this->sessionTokensIn);
+		$totalOut = max($totalOut, $this->sessionTokensOut);
+
 		$rootSpan->setAttributes([
 			'agent.tokens_input' => $totalIn,
 			'agent.tokens_output' => $totalOut,
@@ -468,7 +486,8 @@ final class Runner
 			$response = $this->callWithRetry($agent, $llm, $conversation, $toolSchemas);
 			$totalIn += $response->tokensInput;
 			$totalOut += $response->tokensOutput;
-			$this->sessionTokens += $response->tokensInput + $response->tokensOutput;
+			$this->sessionTokensIn += $response->tokensInput;
+			$this->sessionTokensOut += $response->tokensOutput;
 
 			$callSpan->setAttributes([
 				'llm.stop_reason' => $response->stopReason,
@@ -855,9 +874,10 @@ final class Runner
 				. 'multiply; this is the session-level bound that stops them.'
 			);
 		}
-		if ($this->sessionTokens >= $tokenCeiling) {
+		$spent = $this->sessionTokensIn + $this->sessionTokensOut;
+		if ($spent >= $tokenCeiling) {
 			throw new SessionCeilingReached(
-				"session token ceiling reached at {$at}: {$this->sessionTokens} "
+				"session token ceiling reached at {$at}: {$spent} "
 				. ">= {$tokenCeiling}. Counts what Runner drives; the grader's "
 				. 'own client is bounded by the clock and by maxIterations.'
 			);
