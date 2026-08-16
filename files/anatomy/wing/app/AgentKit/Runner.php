@@ -343,6 +343,16 @@ final class Runner
 				$stopReason = $loop['stop_reason'];
 				$result = ['final_text' => $loop['final_text']];
 			}
+		} catch (SessionCeilingReached $exc) {
+			// A CEILING IS NOT AN ERROR — it is the bound working, and the two
+			// must not read alike. MEASURED 2026-08-16: the run that filed the
+			// first seven briefs was stopped by a deliberate 150k ceiling and
+			// landed in agent_sessions as `terminated / error / 0 tokens`,
+			// byte-identical to the run that died on a 404. A reviewer reading
+			// the table would call the successful ceremony a crash — and one
+			// did, the same evening.
+			$stopReason = 'ceiling';
+			$errorMessage = $exc->getMessage();
 		} catch (LLMPermanentError $exc) {
 			$stopReason = 'error';
 			$errorMessage = $exc->getMessage();

@@ -155,3 +155,24 @@ def test_a_terminated_run_still_reports_what_it_spent():
     assert "max($totalOut, $this->sessionTokensOut)" in src, (
         "the reported output total is no longer floored by the session counter."
     )
+
+
+def test_a_ceiling_does_not_read_as_an_error():
+    """MEASURED 2026-08-16: the run that filed the first seven briefs was
+    stopped by a deliberate 150k ceiling and recorded as
+    `terminated / error / 0 tokens` — byte-identical to the session that died
+    on a 404. A reviewer reading the table called the successful ceremony a
+    crash, the same evening, and was reasoning correctly from what the store
+    said. The bound working and the run failing must not look alike.
+    """
+    src = _runner()
+    assert "catch (SessionCeilingReached $exc)" in src, (
+        "the ceiling is no longer caught separately, so it falls to the generic "
+        "Throwable branch and is recorded as an error."
+    )
+    body = src[src.index("catch (SessionCeilingReached $exc)"):]
+    body = body[: body.index("} catch (")]
+    assert "$stopReason = 'ceiling'" in body, (
+        "a ceiling termination no longer has its own stop_reason; it is "
+        "indistinguishable from a crash in agent_sessions."
+    )
