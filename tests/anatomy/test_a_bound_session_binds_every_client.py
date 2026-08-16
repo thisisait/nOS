@@ -111,3 +111,34 @@ def test_the_call_sites_this_gate_describes_still_look_like_this():
         "delete this file — its reason to exist is gone. If MORE are unbound, "
         "the split it guards against has grown."
     )
+
+
+def test_a_bound_session_refuses_a_bindable_fallback():
+    """The hole this file previously only DESCRIBED is now closed.
+
+    The fallback is built unbound, and that was safe by accident: every agent
+    names an `openclaw-*` fallback, which Factory refuses to bind anyway. The
+    day one names a bindable provider, a MiniMax-bound agent would fall back to
+    the DEFAULT backend — answering from a party its own Article-30 record does
+    not name, under this session's attribution, with nothing raised.
+
+    Residency a failure can silently revoke is a claim, not a property. So a
+    bound session now REFUSES rather than degrades, and the two tripwires above
+    stay as the early warning.
+    """
+    src = RUNNER.read_text(encoding="utf-8")
+    assert "$this->activeBinding = $decision->binding;" in src, (
+        "the session no longer records which binding serves it, so the "
+        "fallback cannot be held to it."
+    )
+    body = src[src.index("private function serveFallback("):]
+    body = body[: body.index("\n\tprivate function ", 1)]
+    assert "$this->activeBinding !== null" in body, (
+        "serveFallback no longer checks whether the session is bound; a bound "
+        "agent can silently fall back to the default backend again."
+    )
+    assert "isBindableUri" in body, (
+        "the refusal no longer distinguishes a bindable fallback from an "
+        "unbindable one — refusing an openclaw fallback would turn every "
+        "transient blip into an outage."
+    )

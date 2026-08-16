@@ -131,6 +131,15 @@ final class Runner
 	 */
 	private ?string $servedByUri = null;
 
+	/** The binding serving THIS session, so the fallback can be held to it. */
+	private ?\App\AgentKit\LLMClient\Binding $activeBinding = null;
+
+	/** Providers a binding can steer — Factory refuses every other. */
+	private function isBindableUri(?string $uri): bool
+	{
+		return $uri !== null && (bool) preg_match('#^(anthropic|claude)-#', $uri);
+	}
+
 	/** Session ceilings, reset per run(). Null deadline = no session open. */
 	private ?float $sessionDeadline = null;
 	/**
@@ -193,6 +202,7 @@ final class Runner
 		// No resolver wired → the default decision, byte-identical behaviour.
 		$decision = $this->bindingResolver?->resolve($agent) ?? BindingDecision::default();
 		$llm = $this->llmFactory->fromUri($agent->modelPrimaryUri, $decision->binding);
+		$this->activeBinding = $decision->binding;
 		$this->servedByUri = null;
 		$this->sessionTokensIn = 0;
 		$this->sessionTokensOut = 0;
@@ -916,6 +926,23 @@ final class Runner
 		string $reason,
 		?\Throwable $cause,
 	): \App\AgentKit\LLMClient\LLMResponse {
+		// THE FALLBACK MUST NOT LEAVE THE DECLARED SERVING SET (2026-08-16).
+		// It is built UNBOUND, and that was safe only by accident: every agent's
+		// fallback happens to name `openclaw-*`, which Factory refuses to bind
+		// anyway. The day one names a bindable provider, a MiniMax-bound agent
+		// would fall back to the DEFAULT backend — answering from a party its own
+		// Article-30 record does not name, under this session's attribution, with
+		// nothing raised. Residency that a failure can silently revoke is a claim,
+		// not a property; so a bound session refuses rather than degrades.
+		if ($this->activeBinding !== null && $this->isBindableUri($agent->modelFallbackUri)) {
+			throw new LLMPermanentError(
+				"agent '{$agent->name}' is bound to backend "
+				. "'{$this->activeBinding->name}' and declares a bindable fallback "
+				. "('{$agent->modelFallbackUri}'), which would be served UNBOUND by "
+				. 'the default backend. Declare a fallback the binding cannot reach, '
+				. 'or none.'
+			);
+		}
 		$fallback = $this->llmFactory->fromUri($agent->modelFallbackUri);
 		$this->servedByUri = $fallback->identifier();
 		$ctx = $this->fallbackContext ?? [];
