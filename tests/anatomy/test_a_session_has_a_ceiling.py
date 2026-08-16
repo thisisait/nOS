@@ -106,3 +106,32 @@ def test_the_counters_are_reset_per_run():
     assert "$this->sessionDeadline = microtime(true)" in body, (
         "the deadline is not recomputed per run"
     )
+
+
+def test_zero_is_a_value_not_an_absence():
+    """`getenv() ?: $default` reads "0" as empty and restores the default.
+
+    MEASURED 2026-08-16 while trying to PROVE the wall-clock brake:
+    `NOS_AGENT_SESSION_WALL_CLOCK_S=0` produced a session that ran to
+    completion on 2335 tokens, because the 0 silently became 3600. The
+    tightest setting an operator can ask for was the one that could not be
+    applied — and a brake nobody can test is not known to work. Same shape as
+    `getenv()` returning `false` for unset, two hours earlier in the same
+    afternoon: falsiness standing in for absence.
+    """
+    src = _runner()
+    assert "private static function envInt(" in src, (
+        "the env reader is gone; a bare `getenv(...) ?: $default` treats a "
+        "deliberate 0 as unset and silently restores the wider default."
+    )
+    body = src[src.index("private static function envInt("):]
+    body = body[: body.index("\n\t/**", 1)]
+    assert "=== false" in body, "envInt no longer distinguishes unset from falsy"
+    for name in ("NOS_AGENT_SESSION_WALL_CLOCK_S", "NOS_AGENT_SESSION_TOKEN_CEILING"):
+        assert f"'{name}'" in src, f"{name} is no longer read at all"
+        idx = src.index(f"'{name}'")
+        window = src[max(0, idx - 120): idx]
+        assert "envInt" in window, (
+            f"{name} is no longer read through envInt, so a deliberate 0 is "
+            "ignored again."
+        )

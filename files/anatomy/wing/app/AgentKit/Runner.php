@@ -185,9 +185,8 @@ final class Runner
 		$llm = $this->llmFactory->fromUri($agent->modelPrimaryUri, $decision->binding);
 		$this->servedByUri = null;
 		$this->sessionTokens = 0;
-		$this->sessionDeadline = microtime(true) + (float) (
-			getenv('NOS_AGENT_SESSION_WALL_CLOCK_S') ?: self::SESSION_WALL_CLOCK_S
-		);
+		$this->sessionDeadline = microtime(true)
+			+ (float) self::envInt('NOS_AGENT_SESSION_WALL_CLOCK_S', self::SESSION_WALL_CLOCK_S);
 		$this->fallbackContext = [
 			'session_uuid' => $sessionUuid,
 			'actor_id' => $resolvedActor,
@@ -811,6 +810,26 @@ final class Runner
 	}
 
 	/**
+	 * An env override, where ZERO is a value and not an absence.
+	 *
+	 * `getenv($k) ?: $default` reads "0" as empty and silently restores the
+	 * default — so the tightest setting an operator can ask for was the one
+	 * setting that could not be applied. Measured 2026-08-16 by trying to
+	 * prove the wall-clock brake with `NOS_AGENT_SESSION_WALL_CLOCK_S=0`: the
+	 * session ran to completion on 2335 tokens, because the 0 became 3600.
+	 * The same shape as `getenv()` returning `false` for unset, one operator
+	 * two hours earlier — falsiness standing in for absence.
+	 */
+	private static function envInt(string $name, int $default): int
+	{
+		$raw = getenv($name);
+		if ($raw === false || trim($raw) === '') {
+			return $default;
+		}
+		return (int) $raw;
+	}
+
+	/**
 	 * Refuse to spend past a session ceiling — BEFORE the spend, not after.
 	 *
 	 * Throws `SessionCeilingReached`, which `run()` catches like any other
@@ -825,8 +844,8 @@ final class Runner
 		if ($this->sessionDeadline === null) {
 			return; // no session open (direct unit-level use of the loop)
 		}
-		$tokenCeiling = (int) (
-			getenv('NOS_AGENT_SESSION_TOKEN_CEILING') ?: self::SESSION_TOKEN_CEILING
+		$tokenCeiling = self::envInt(
+			'NOS_AGENT_SESSION_TOKEN_CEILING', self::SESSION_TOKEN_CEILING
 		);
 		if (microtime(true) >= $this->sessionDeadline) {
 			throw new SessionCeilingReached(
