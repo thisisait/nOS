@@ -91,3 +91,18 @@ def test_it_announces_the_backend_before_spending():
     idx_exec = src.index("exec php bin/run-agent.php")
     announce = src.rindex("armed backends", 0, idx_exec)
     assert announce < idx_exec, "the backend is announced after the run starts"
+
+
+def test_redaction_matches_anywhere_in_the_name():
+    """MEASURED 2026-08-16: `*TOKEN` as a SUFFIX printed KEAP_AGENT_TOKEN_RO
+    in full, because it ends in `_RO`. A redaction that covers the names it was
+    written against and leaks the next one is the shape this estate keeps
+    finding — the fixture-secret gate learned it the same week."""
+    src = _src()
+    case = re.search(r"case \"\$name\" in\n(.*?)esac", src, re.S)
+    assert case, "the redaction case block is gone"
+    for token in ("TOKEN", "SECRET", "KEY"):
+        assert f"*{token}*" in case.group(1), (
+            f"{token} is matched as a suffix or prefix, not anywhere in the "
+            "name — KEAP_AGENT_TOKEN_RO is the counter-example that leaked."
+        )

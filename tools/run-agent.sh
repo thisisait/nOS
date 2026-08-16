@@ -75,24 +75,36 @@ resolve() {
         | head -1
 }
 
-# Names the child needs, and why. Absence of any of these is not a warning.
+# EXPORT WHAT THE DAEMON HAS, rather than a list of what it is thought to need.
+#
+# The first draft named ten variables. The first real ceremony then failed on
+# `KEAP_AGENT_TOKEN_RO is not set`, then a Bone 401, then "Missing HMAC
+# headers" — none of them missing from the daemon, all of them missing from
+# THAT LIST. The agent had four working tools and no credential for three of
+# them, and spent 39k tokens discovering it politely.
+#
+# A hand-kept enumeration of someone else's environment drifts the moment the
+# environment grows, and it drifts silently, because an unexported credential
+# looks exactly like an unconfigured service. The running job is the authority
+# on what the runtime holds; this passes it through and checks only the names
+# whose ABSENCE has a specific, misleading symptom.
+while IFS= read -r line; do
+    name="${line%% => *}"
+    value="${line#* => }"
+    [[ "$name" =~ ^[A-Z][A-Z0-9_]*$ ]] || continue
+    export "$name=$value"
+done < <(printf '%s\n' "$LOADED" | sed -n 's/^[[:space:]]*\([A-Z][A-Z0-9_]*\) => \(.*\)$/\1 => \2/p')
+
+# Absence of these is not a warning — each produces an error naming something
+# other than itself (a TypeError in the DI container; an unbound resolve
+# demanding a key nobody sets).
 REQUIRED=(NOS_REPO_ROOT)
-OPTIONAL=(NOS_ARMED_BACKENDS NOS_MINIMAX_MODEL NOS_MINIMAX_SMALL_MODEL \
-          NOS_MISTRAL_MODEL NOS_MISTRAL_SMALL_MODEL \
-          WING_API_URL WING_API_TOKEN KEAP_API_URL BONE_API_URL)
+REPORTED=(NOS_ARMED_BACKENDS NOS_MINIMAX_MODEL WING_API_TOKEN \
+          KEAP_AGENT_TOKEN_RO WING_EVENTS_HMAC_SECRET)
 
 missing=()
 for name in "${REQUIRED[@]}"; do
-    value="$(resolve "$name")"
-    if [[ -z "$value" ]]; then
-        missing+=("$name")
-    else
-        export "$name=$value"
-    fi
-done
-for name in "${OPTIONAL[@]}"; do
-    value="$(resolve "$name")"
-    [[ -n "$value" ]] && export "$name=$value"
+    [[ -z "${!name:-}" ]] && missing+=("$name")
 done
 
 if [[ ${#missing[@]} -gt 0 ]]; then
@@ -104,12 +116,17 @@ fi
 
 if [[ "$SHOW_ENV" == "1" ]]; then
     echo "[run-agent] resolved from the running ${LABEL}:"
-    for name in "${REQUIRED[@]}" "${OPTIONAL[@]}"; do
+    for name in "${REQUIRED[@]}" "${REPORTED[@]}"; do
         value="${!name:-}"
         [[ -z "$value" ]] && { printf '  %-26s <absent>\n' "$name"; continue; }
+        # ANYWHERE IN THE NAME, not at the end. The first draft matched
+        # `*TOKEN|*SECRET|*KEY` as suffixes and printed KEAP_AGENT_TOKEN_RO in
+        # full, because it ends in `_RO` — a redaction that covers the names it
+        # was written against and leaks the next one someone adds.
         case "$name" in
-            *TOKEN|*SECRET|*KEY) printf '  %-26s <set, %d chars>\n' "$name" "${#value}" ;;
-            *)                   printf '  %-26s %s\n' "$name" "$value" ;;
+            *TOKEN*|*SECRET*|*KEY*|*PASSWORD*|*HMAC*|*CREDENTIAL*)
+                printf '  %-26s <set, %d chars>\n' "$name" "${#value}" ;;
+            *)  printf '  %-26s %s\n' "$name" "$value" ;;
         esac
     done
     exit 0
