@@ -72,3 +72,27 @@ def test_an_absent_repo_root_falls_back_rather_than_crashing():
         "fails the spawn and the agent gets a spawn error instead of a file."
     )
     assert ": null" in body, "there is no fallback when NOS_REPO_ROOT is unset"
+
+
+def test_a_model_never_hand_writes_a_hunk_header():
+    """The gap that turned a correct decision into an unjudgeable one.
+
+    MEASURED 2026-08-16: the agent chose the right fix for the right reason and
+    emitted a hunk claiming seven lines over a body of five. Both judges
+    returned `indeterminate` — correctly, since a malformed patch is not a bad
+    change but an unjudgeable one. `tools/loop-diff.py` moves the format burden
+    off the model: it states FILE/OLD/NEW, the patch is built from the file on
+    disk, and the tool REFUSES to emit one that does not `git apply --check`.
+    Same decision, re-proposed as attempt 2: pass.
+    """
+    tool = REPO / "tools/loop-diff.py"
+    assert tool.is_file(), "tools/loop-diff.py is gone"
+    src = tool.read_text(encoding="utf-8")
+    assert "git" in src and "apply" in src and "--check" in src, (
+        "loop-diff.py no longer proves the patch applies before printing it; "
+        "it would emit the same unjudgeable hunks the model did."
+    )
+    assert "matches" in src and "be specific" in src, (
+        "the ambiguous-match refusal is gone. A replacement that could land in "
+        "two places is a proposal nobody can review."
+    )
