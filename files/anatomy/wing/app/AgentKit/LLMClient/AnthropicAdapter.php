@@ -78,9 +78,23 @@ final class AnthropicAdapter implements LLMClientInterface
 			$apiTools[] = $tool->toAnthropicArray();
 		}
 
+		// THESE KEYS BECOME NAMED ARGUMENTS — `create(...$params)` spreads a
+		// string-keyed array as PHP named parameters, so every key here must
+		// match the SDK method's parameter name exactly. The SDK is camelCase
+		// (`$maxTokens`), and this array said `max_tokens`, so the very first
+		// real API session died on:
+		//
+		//     Anthropic SDK unexpected error: Unknown named parameter $max_tokens
+		//
+		// It was classified TRANSIENT and retried three times before falling
+		// back — a code defect wearing a rate-limit's clothes. It surfaced only
+		// because the fallback event carries the unmatched message verbatim;
+		// without that the session read as "OpenClaw 404" and would have sent
+		// someone to debug a gateway that had done nothing wrong.
+		// Pinned by tests/anatomy/test_the_sdk_named_parameters_match.py.
 		$params = [
 			'model' => $this->modelId,
-			'max_tokens' => $maxTokens,
+			'maxTokens' => $maxTokens,
 			'messages' => $apiMessages,
 		];
 		if ($systemPrompt !== '') {
