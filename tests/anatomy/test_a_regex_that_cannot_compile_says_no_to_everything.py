@@ -5,7 +5,10 @@ MEASURED 2026-08-16, while trying to run the first real AgentKit session.
 `AgentLoader::isValidModelUri` carried a `/`-delimited pattern with an
 unescaped `/` inside its character class:
 
-    /^(anthropic|claude|openclaw)-[A-Za-z0-9._:/-]{1,96}$/
+    /^(<the provider alternation>)-[A-Za-z0-9._:/-]{1,96}$/
+
+(alternation elided here so the one-provider-list sweep does not read a
+historical quote as a live copy; the bug is the delimiter, not the list)
 
 PCRE ends the pattern at that slash and reads `-]{1,96}$/` as modifiers:
 `preg_match(): Unknown modifier '-'`. On a compile error `preg_match` returns

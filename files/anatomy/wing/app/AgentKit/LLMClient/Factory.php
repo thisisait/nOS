@@ -49,7 +49,7 @@ final class Factory
 	public function fromUri(string $modelUri, ?Binding $binding = null): LLMClientInterface
 	{
 		[$provider, ] = $this->splitUri($modelUri);
-		if ($binding !== null && !in_array($provider, ['claude', 'anthropic'], true)) {
+		if ($binding !== null && !in_array($provider, ['claude', 'anthropic', 'openai'], true)) {
 			throw new \InvalidArgumentException(
 				"backend binding '{$binding->name}' offered to provider "
 				. "'{$provider}', which speaks neither the ANTHROPIC_* env "
@@ -59,6 +59,12 @@ final class Factory
 		}
 		return match ($provider) {
 			'anthropic' => $this->buildAnthropic($modelUri, $binding),
+			// `openai-*` names a PROTOCOL, not a vendor default: this estate has
+			// no default OpenAI endpoint, so the provider exists ONLY bound —
+			// the registry row (mistral-eu, a local server) is what makes it a
+			// place requests can go. Adapter-first rule satisfied 2026-08-16:
+			// this arm and the genome enum member land in the same commit.
+			'openai'    => $this->buildOpenAiCompat($modelUri, $binding),
 			// `claude-*` is the LOCAL CLI, not the API. Added 2026-08-11 because
 			// AgentKit could not drive the only backend this estate has: the
 			// nightly agents run on the operator's `claude` subscription through
@@ -143,6 +149,24 @@ final class Factory
 		}
 		$client = new AnthropicClient(apiKey: $apiKey);
 		return new AnthropicAdapter($client, $modelUri);
+	}
+
+	private function buildOpenAiCompat(string $modelUri, ?Binding $binding): OpenAiCompatAdapter
+	{
+		if ($binding === null) {
+			throw new \RuntimeException(
+				"openai-* names a protocol, not a vendor default — this estate has "
+				. 'no default OpenAI endpoint. Give the agent a model.backend whose '
+				. 'registry row speaks protocol openai (state/llm-backends.yml).'
+			);
+		}
+		$http = new HttpClient([
+			'http_errors' => true,
+			// Same per-request ceiling the Anthropic SDK defaults to; the
+			// session wall-clock in Runner bounds the sum.
+			'timeout' => (float) (getenv('NOS_OPENAI_COMPAT_TIMEOUT_S') ?: 600),
+		]);
+		return new OpenAiCompatAdapter($http, $modelUri, $binding);
 	}
 
 	private function buildOpenClaw(string $modelUri): OpenClawAdapter

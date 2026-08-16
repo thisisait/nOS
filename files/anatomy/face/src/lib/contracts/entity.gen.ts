@@ -34,14 +34,14 @@ export const SERVICE_LAYERS = ['L0', 'L1', 'L2', 'L3'] as const;
 
 /** LLM providers that have an adapter. Adapter first, enum second — a member
  *  with no adapter is a URI the schema accepts and the Factory throws on. */
-export type LlmProvider = 'anthropic' | 'claude' | 'openclaw';
-export const LLM_PROVIDERS = ['anthropic', 'claude', 'openclaw'] as const;
+export type LlmProvider = 'anthropic' | 'claude' | 'openai' | 'openclaw';
+export const LLM_PROVIDERS = ['anthropic', 'claude', 'openai', 'openclaw'] as const;
 
 /** `<provider>-<the vendor's own model id>`. DERIVED from LLM_PROVIDERS. The
  *  tail keeps colons: every real ollama tag has one, and a spelling that cannot
  *  express the right value gets approximated into a wrong one — which is how
  *  nine agents came to name `qwen-coder-32b`, a model that does not exist. */
-export const MODEL_URI_PATTERN = /^(anthropic|claude|openclaw)-[A-Za-z0-9._:/-]{1,96}$/;
+export const MODEL_URI_PATTERN = /^(anthropic|claude|openai|openclaw)-[A-Za-z0-9._:/-]{1,96}$/;
 
 export const ANCHOR_PATTERN = /^[0-9]{2}(\.[0-9]{2}){0,2}$/;
 export const LAYER_WITHHELD_MIN_LENGTH = 40;

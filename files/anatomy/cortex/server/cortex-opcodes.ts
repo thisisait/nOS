@@ -137,7 +137,7 @@ export type CortexParamType = 'bool' | 'int' | 'string' | 'id' | 'model-uri';
  * roadmap row, which collapses them to one. Until it lands, this comment is the
  * pointer that keeps the duplication visible instead of quiet.
  */
-export const MODEL_URI_RE = /^(anthropic|claude|openclaw)-[A-Za-z0-9._:/-]{1,96}$/;
+export const MODEL_URI_RE = /^(anthropic|claude|openai|openclaw)-[A-Za-z0-9._:/-]{1,96}$/;
 
 export interface CortexParamSpec {
   readonly type: CortexParamType;

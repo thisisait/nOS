@@ -362,6 +362,7 @@
           "enum": [
             "anthropic",
             "claude",
+            "openai",
             "openclaw"
           ]
         },

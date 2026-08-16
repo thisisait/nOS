@@ -75,6 +75,7 @@ AXIS_VOCABULARY = {
 LLM_PROVIDERS = (
     "anthropic",
     "claude",
+    "openai",
     "openclaw",
 )
 
@@ -82,7 +83,7 @@ LLM_PROVIDERS = (
 #: list cannot be restated. The tail carries colons on purpose: every real
 #: ollama tag has one, and a spelling that cannot express the right value gets
 #: approximated into a wrong one.
-MODEL_URI_PATTERN = r"^(anthropic|claude|openclaw)-[A-Za-z0-9._:/-]{1,96}$"
+MODEL_URI_PATTERN = r"^(anthropic|claude|openai|openclaw)-[A-Za-z0-9._:/-]{1,96}$"
 MODEL_URI_RE = re.compile(MODEL_URI_PATTERN)
 
 ANCHOR_PATTERN = r"^[0-9]{2}(\.[0-9]{2}){0,2}$"

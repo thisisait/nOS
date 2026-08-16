@@ -73,7 +73,7 @@ final class BindingResolver
 		// anthropic-* primary bound to it refuses at session open instead of
 		// dying at the endpoint with a shape error nothing classifies.
 		$provider = substr($agent->modelPrimaryUri, 0, (int) strpos($agent->modelPrimaryUri, '-'));
-		$speaks = ['claude' => 'anthropic', 'anthropic' => 'anthropic'];
+		$speaks = ['claude' => 'anthropic', 'anthropic' => 'anthropic', 'openai' => 'openai'];
 		$protocol = (string) ($spec['protocol'] ?? 'anthropic');
 		if (($speaks[$provider] ?? null) !== $protocol) {
 			throw new BindingRefused(
