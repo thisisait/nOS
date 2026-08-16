@@ -236,11 +236,15 @@
              open); NEVER the API key — that stays in ~/.nos/secrets.yml,
              resolved as nos:minimax_api_key at session open. -->
         <key>NOS_ARMED_BACKENDS</key>
-        <string>{{ 'minimax' if minimax_enabled | default(false) | bool else '' }}</string>
+        <string>{{ (('minimax ' if minimax_enabled | default(false) | bool else '') ~ ('mistral-eu' if mistral_enabled | default(false) | bool else '')) | trim }}</string>
         <key>NOS_MINIMAX_MODEL</key>
         <string>{{ minimax_model | default('') }}</string>
         <key>NOS_MINIMAX_SMALL_MODEL</key>
         <string>{{ minimax_small_model | default('') }}</string>
+        <key>NOS_MISTRAL_MODEL</key>
+        <string>{{ mistral_model | default('') }}</string>
+        <key>NOS_MISTRAL_SMALL_MODEL</key>
+        <string>{{ mistral_small_model | default('') }}</string>
     </dict>
 
     <!-- launchd respawns on crash; ThrottleInterval prevents tight loops

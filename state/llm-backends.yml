@@ -111,3 +111,33 @@ backends:
     # entry (verify the contracting entity + Art. 46 safeguard when writing
     # it); this token only keys the binding↔register agreement check.
     processor_match: "MiniMax"
+
+  # Mistral's EU-regional endpoint — PREPARED, NOT ARMED (2026-08-16, the
+  # operator's EU-residency direction). The FIRST openai-protocol row, served
+  # by OpenAiCompatAdapter via an `openai-*` primary; gate 7 refuses any
+  # other pairing. Arming = `mistral_enabled: true` + the model ids + the key
+  # in credentials.yml + per-agent backend/gdpr edits, same five-edit shape
+  # as minimax.
+  #
+  # RESIDENCY, verified 2026-08-16 against docs.mistral.ai and priced facts:
+  # `api.eu.mistral.ai` guarantees EU INFERENCE (at 1.1x the base price; the
+  # bare api.mistral.ai no longer carries that guarantee). eu: true refers to
+  # inference+storage under the regional endpoint. CAVEATS the operator's
+  # register entry must weigh: the CONTROL PLANE (auth, billing, abuse) is
+  # not regionalised; zero-data-retention is Scale-plan-only, by request;
+  # training use requires an explicit opt-out. Mistral AI SAS, Paris, is the
+  # contracting entity — an EU processor with an EU seat, which is what makes
+  # `transfers_outside_eu: false` REACHABLE for an agent whose whole serving
+  # set is this row (see the no-degrade rule in the resolver: a register
+  # entry declaring false removes the degrade-to-default path by itself).
+  mistral-eu:
+    protocol: "openai"
+    residency: { country: "FR", eu: true }
+    base_url: "https://api.eu.mistral.ai/v1"
+    auth_secret: "nos:mistral_api_key"
+    model_env:
+      haiku: "NOS_MISTRAL_SMALL_MODEL"
+      sonnet: "NOS_MISTRAL_MODEL"
+      opus: null
+    enabled_flag: "mistral_enabled"
+    processor_match: "Mistral"

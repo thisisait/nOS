@@ -1058,6 +1058,17 @@ minimax_base_url: "https://api.minimax.io/anthropic"   # Anthropic-compatible en
 minimax_model: ""              # -> NOS_MINIMAX_MODEL       (sonnet tier)
 minimax_small_model: ""        # -> NOS_MINIMAX_SMALL_MODEL (haiku tier)
 
+# ── Mistral EU backend — PREPARED, NOT ARMED (2026-08-16) ────────────────────
+# The first openai-protocol row in state/llm-backends.yml (its comment carries
+# the residency facts + control-plane caveats). Arming follows the same
+# five-edit shape as MiniMax: key in credentials.yml, this flag, the model ids
+# (from Mistral's catalog — the operator re-decides the tier pins), plus the
+# per-agent backend + gdpr edits. `api.eu.mistral.ai` prices at 1.1x the base
+# endpoint; that is the residency premium, chosen consciously.
+mistral_enabled: false
+mistral_model: ""              # -> NOS_MISTRAL_MODEL       (sonnet tier)
+mistral_small_model: ""        # -> NOS_MISTRAL_SMALL_MODEL (haiku tier)
+
 # THE PIN THAT DID NOT EXIST, AND WHAT ITS ABSENCE COST (added 2026-08-08).
 #
 # `roles/pazny.openclaw` installs ollama with `state: latest` and nothing has

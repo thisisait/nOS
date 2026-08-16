@@ -130,6 +130,49 @@ def test_the_registry_is_well_formed_and_fail_closed():
         )
 
 
+def test_every_backend_ships_prepared_not_armed():
+    """Derived from the registry, so the NEXT row is covered the day it lands.
+
+    The prepared-not-armed contract, generalised from the minimax original
+    when mistral-eu became the second row (2026-08-16): every non-default
+    backend's enabled_flag defaults FALSE in default.config.yml (arming is a
+    config.yml act, never a committed default), the wing plist renders the
+    backend's name into NOS_ARMED_BACKENDS conditioned on exactly that flag,
+    and every model_env the tiers point at is rendered there too — an armed
+    backend whose tier env nobody renders refuses every session with "armed
+    without a model id", which is the resolver working but the converge's
+    fault. A backend-shaped hole in any of the three layers is found here,
+    not on the night.
+    """
+    cfg = yaml.safe_load((REPO / "default.config.yml").read_text())
+    plist = (REPO / "roles/pazny.wing/templates/wing.plist.j2").read_text()
+    problems = []
+    for name, b in _registry().items():
+        if (b or {}).get("default"):
+            continue
+        flag = (b or {}).get("enabled_flag", "")
+        if cfg.get(flag) is not False:
+            problems.append(
+                f"{name}: {flag or '(no enabled_flag)'} must exist and "
+                f"default false in default.config.yml, found {cfg.get(flag)!r}"
+            )
+        # Prefix-quoted, not exact-quoted: the template legally renders
+        # `'minimax '` with a joining space inside the literal.
+        if f"'{name}" not in plist or flag not in plist:
+            problems.append(
+                f"{name}: wing.plist.j2 does not render this backend into "
+                f"NOS_ARMED_BACKENDS from {flag} — the flag would arm nothing"
+            )
+        for tier, env in ((b or {}).get("model_env") or {}).items():
+            if env is not None and f"<key>{env}</key>" not in plist:
+                problems.append(
+                    f"{name}: tier {tier} reads {env}, which wing.plist.j2 "
+                    "never renders — armed sessions refuse with 'armed "
+                    "without a model id' and the night blames the resolver"
+                )
+    assert not problems, "\n  " + "\n  ".join(problems)
+
+
 def test_a_declared_binding_agrees_with_the_agents_register_entry():
     backends = _registry()
     problems = []
