@@ -60,6 +60,20 @@ properties:
           Fallback URI used when primary fails (rate-limited, network error,
           model unavailable). The protocol is platform-agnostic so an
           openclaw fallback for an anthropic primary is safe.
+      max_output_tokens:
+        type: integer
+        minimum: 256
+        maximum: 200000
+        default: 4096
+        description: |
+          Output cap for ONE model call. 4096 was the interface default and
+          the only value anything ever passed — measured 2026-08-16, the
+          librarian's taxonomy-brief batch (ten briefs of 300-12000 characters
+          each) stopped at `stop_reason: max_tokens` mid-sentence and never
+          reached the POST the ceremony exists to make. A reading ceremony and
+          a writing one do not want the same budget; the agent is the level
+          that knows which it is. This is NOT the session ceiling in Runner —
+          that one is a runaway backstop across the whole run.
       backend:
         type: string
         pattern: "^[a-z][a-z0-9-]{0,30}$"

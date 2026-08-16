@@ -775,6 +775,7 @@ final class Runner
 					$agent->systemPrompt ?? '',
 					$conversation,
 					$toolSchemas,
+					$agent->maxOutputTokens,
 				);
 			} catch (LLMTransientError $exc) {
 				$lastTransient = $exc;
@@ -910,6 +911,9 @@ final class Runner
 			$agent->systemPrompt ?? '',
 			$conversation,
 			$toolSchemas,
+			// The SAME cap as the primary. A fallback that silently writes
+			// less would make a truncated answer look like a shorter one.
+			$agent->maxOutputTokens,
 		);
 	}
 

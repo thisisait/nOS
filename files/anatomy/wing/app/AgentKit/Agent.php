@@ -66,6 +66,18 @@ final class Agent
 		public readonly array $metadata,
 		public readonly string $sourceDir,
 		public readonly ?string $backendName = null,
+		/**
+		 * Per-agent output cap for ONE model call.
+		 *
+		 * 4096 was the interface default and the only value anything ever
+		 * passed. Measured 2026-08-16: the librarian's taxonomy-brief batch
+		 * writes ten briefs of 300-12000 characters each and stopped at
+		 * `stop_reason: max_tokens` mid-sentence, so it never reached the
+		 * POST that is the point of the ceremony. A reading ceremony and a
+		 * WRITING ceremony do not want the same budget, and the agent is
+		 * the level that knows which it is.
+		 */
+		public readonly int $maxOutputTokens = 4096,
 		public readonly array $gdpr = [],
 	) {
 	}

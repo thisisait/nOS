@@ -35,6 +35,12 @@ model:
   # (put `claude-sonnet` back) rather than discovered on a quiet Sunday.
   primary: anthropic-claude-sonnet-4-5
   backend: minimax
+  # A WRITING ceremony. taxonomy-brief emits ten briefs per batch, each 300-12000
+  # characters of English plus a Czech translation, so one call must carry
+  # roughly 15-25k output tokens. At the 4096 default the run stopped at
+  # `stop_reason: max_tokens` mid-brief on 2026-08-16 and never reached the POST
+  # that the batch exists to make — 39k tokens spent, zero proposals filed.
+  max_output_tokens: 32000
   fallback: openclaw-qwen2.5-coder:32b
 
 system_prompt_path: system.md

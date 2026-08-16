@@ -120,6 +120,16 @@ final class AgentLoader
 
 		// Outcomes
 		$rubric = null;
+		// Per-agent output cap for one model call. Absent -> the old
+		// interface default; a writing ceremony declares its own, because
+		// 4096 truncated the librarian mid-brief and it never reached the
+		// POST that the batch exists to make.
+		$maxOutputTokens = (int) ($raw['model']['max_output_tokens'] ?? 4096);
+		if ($maxOutputTokens < 256 || $maxOutputTokens > 200000) {
+			throw new AgentLoadException(
+				"agent.yml model.max_output_tokens out of range (256..200000): {$maxOutputTokens}"
+			);
+		}
 		$maxIterations = 3;
 		if (!empty($raw['outcomes'])) {
 			if (!empty($raw['outcomes']['rubric_path'])) {
@@ -217,6 +227,7 @@ final class AgentLoader
 			backendName: isset($raw['model']['backend'])
 				? (string) $raw['model']['backend'] : null,
 			gdpr: (array) ($raw['gdpr'] ?? []),
+			maxOutputTokens: $maxOutputTokens,
 		);
 
 		// Idempotent webhook registration — only when wired in production.
