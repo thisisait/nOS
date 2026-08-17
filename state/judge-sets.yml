@@ -162,7 +162,14 @@ judges:
     # RE-DERIVED 2026-08-12 (3400 passed, 29 skipped — the readiness batch's four
     # new gate files). Collection ratchet FIRED at 3429 vs the 3252 record; floor
     # raised to just below the fresh measurement.
-    min_work: 3390
+    #
+    # RE-DERIVED 2026-08-17 (3548 passed, 33 skipped). Fired again, at 3582
+    # collected vs the 3400 record — grown by the apex font gates, the web-root
+    # inode gate, the tool-result encoding gate and the bound-loop gate. Same
+    # lesson as the entry above and worth repeating: every one of those commits
+    # left this line alone, so the ratchet, not the author, kept the floor
+    # honest.
+    min_work: 3540
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,

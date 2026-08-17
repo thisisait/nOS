@@ -428,13 +428,13 @@ def test_a_completed_pytest_run_still_passes():
         registry=_one_judge_registry("pytest-anatomy", "repo"),
         repo_root=REPO,
         spawn=_fake_spawn(
-            **{"pytest": J.Completed(exit_code=0, stdout="3400 passed, 29 skipped in 244.00s\n")}
+            **{"pytest": J.Completed(exit_code=0, stdout="3548 passed, 33 skipped in 258.00s\n")}
         ),
         probe=_always_true,
         sandbox_factory=lambda root: (root, "sha-fake", lambda: None),
     )
     assert verdict.result is J.Result.PASS, verdict.reason
-    assert verdict.runs[0].work == 3400
+    assert verdict.runs[0].work == 3548
 
 
 def test_an_interrupted_pytest_that_did_fail_is_still_a_fail():
@@ -784,7 +784,7 @@ def test_pytest_never_runs_against_the_live_tree():
 
     def spy(argv, cwd, timeout_s):
         seen_cwd.append(cwd)
-        return J.Completed(exit_code=0, stdout="3400 passed in 244.00s\n")
+        return J.Completed(exit_code=0, stdout="3548 passed in 258.00s\n")
 
     sandbox = REPO.parent / "fake-sandbox"
     verdict = J.run_gate_set(
@@ -820,7 +820,7 @@ def test_every_judge_in_a_set_observes_exactly_one_tree():
         return {
             "ansible-lint": GREEN_ANSIBLE_LINT,
             "genome-codegen": GREEN_GENOME,
-            "pytest": J.Completed(exit_code=0, stdout="3400 passed in 244.00s\n"),
+            "pytest": J.Completed(exit_code=0, stdout="3548 passed in 258.00s\n"),
         }[_argv_key(argv)]
 
     sandbox = REPO.parent / "one-tree-sandbox"
@@ -1007,10 +1007,15 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 #: 3252 record) after the readiness batch added its gate files (traefik-api,
 #: agent-model-pins, discovery-scan-scan-data, minimax-prepared). Fresh run:
 #: "3400 passed, 29 skipped" (3399 + this ratchet, which passes once re-measured).
+#: RE-DERIVED 2026-08-17 — FIRED again (3582 collected against the 3400 record),
+#: grown by the apex font + web-root gates, the tool-result encoding gate and the
+#: bound-loop gate. Fresh run: "3548 passed, 33 skipped in 258s". Third firing in
+#: eleven days, every one by growth and none by a bad guess: the cadence this
+#: ratchet replaces would have had to run three times in that window to match it.
 MEASURED_WORK = {
     "ansible-lint": 1500,
     "genome-codegen": 2,
-    "pytest-anatomy": 3400,
+    "pytest-anatomy": 3548,
     "cortex-corpus-diff": 1,
 }
 

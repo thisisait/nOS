@@ -880,7 +880,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": true,
       "mutates_worktree": true,
-      "min_work": 3390,
+      "min_work": 3540,
       "argv": [
         "python3",
         "-m",
@@ -893,7 +893,7 @@
       ],
       "requires": [],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=3390, deterministic=True"
+      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=3540, deterministic=True"
     },
     "pulse:alert-relay:relay-firing": {
       "kind": "pulse",
@@ -3466,7 +3466,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:250",
+      "via": "cited at state/judge-sets.yml:257",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -3474,7 +3474,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:231",
+      "via": "cited at state/judge-sets.yml:238",
       "citations": 2,
       "derived": "doctrine-cite"
     },
@@ -3482,7 +3482,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2f",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:256",
+      "via": "cited at state/judge-sets.yml:263",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -3514,7 +3514,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:221",
+      "via": "cited at state/judge-sets.yml:228",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -3522,7 +3522,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:188",
+      "via": "cited at state/judge-sets.yml:195",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -3530,7 +3530,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M2",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:209",
+      "via": "cited at state/judge-sets.yml:216",
       "citations": 2,
       "derived": "doctrine-cite"
     },
@@ -3538,7 +3538,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:173",
+      "via": "cited at state/judge-sets.yml:180",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -3546,7 +3546,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5a",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:174",
+      "via": "cited at state/judge-sets.yml:181",
       "citations": 1,
       "derived": "doctrine-cite"
     },
@@ -3554,7 +3554,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:166",
+      "via": "cited at state/judge-sets.yml:173",
       "citations": 1,
       "derived": "doctrine-cite"
     },

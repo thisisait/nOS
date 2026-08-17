@@ -2826,6 +2826,22 @@ authentik_agent_clients:
       - "nos:upgrades:read"
       - "nos:patches:read"
 
+  - name: "nOS Surveyor"
+    slug: "nos-surveyor"
+    client_id: "nos-surveyor"
+    client_secret: "{{ global_password_prefix }}_pw_agent_surveyor"
+    # Surveyor agent (A20, 2026-08-17) — reports which of the estate deserves
+    # a control surface: what changes, what a person decides on, and what is
+    # decided on while being displayed nowhere. Strictly read-only; it
+    # proposes and never renders, so no write scope of any kind. Reads the
+    # same surfaces a control centre would have to read, which is the point.
+    capabilities:
+      - "nos:state:read"
+      - "nos:security:read"
+      - "nos:migrations:read"
+      - "nos:upgrades:read"
+      - "nos:coexistence:read"
+
   - name: "nOS Devlog"
     slug: "nos-devlog"
     client_id: "nos-devlog"

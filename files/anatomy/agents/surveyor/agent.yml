@@ -1,0 +1,129 @@
+name: surveyor
+version: 1
+description: |
+  nOS surveyor — walks the estate and reports what a control surface
+  should SHOW. Reads the estate's own declarations (state/manifest.yml,
+  the plugin manifests, docs/systems/) and what is actually running,
+  then ranks what is worth putting in front of a person.
+
+  The judgement it exists for is not "what exists" — a script answers
+  that, and `tools/estate-status.py` already does. It is:
+    * what CHANGES often enough that a still picture lies;
+    * what a human DECIDES on, as opposed to merely reads;
+    * what is decided on today while being visible NOWHERE — the gap
+      between the estate's surfaces and the estate's decisions.
+
+  Distinct from its siblings:
+    - Scout reports DELTAS against the manifest (drift; did something
+      change unexpectedly).
+    - Conductor reports HEALTH (does everything respond, end to end).
+    - Surveyor reports LEGIBILITY (of what is true, what deserves a
+      picture, and where the current pictures are silent).
+
+  Read-only. It proposes; it never renders, never edits a ruling, and
+  never opens a route.
+
+model:
+  primary: anthropic-claude-sonnet-4-5
+  backend: minimax
+  max_output_tokens: 16000
+  fallback: openclaw-qwen2.5-coder:32b
+
+system_prompt_path: system.md
+
+tools:
+  - id: bash-read-only
+  - id: mcp-wing
+  - id: mcp-bone
+
+multiagent:
+  type: solo
+  max_concurrent_threads: 1
+
+outcomes:
+  rubric_path: rubric.md
+  max_iterations: 3
+
+audit:
+  capability_scopes:
+    - bash.read
+    - mcp.tool_use
+    - wing.read
+    - bone.read
+    - events.write
+    - audit.read
+  pii_classification: none
+
+vault:
+  required_credentials:
+    - scope: anthropic-api
+    - scope: mcp-wing
+    - scope: mcp-bone
+
+metadata:
+  ait_phase: A20
+  ceremony_role: surface-legibility
+  # `unproven`, not `live` — and the distinction is measured, not cautious.
+  # Five supervised runs on 2026-08-17 produced no report: the model writes a
+  # one-line preamble, calls a tool, repeats until the budget ends. The live
+  # sessions table says the same of every ceremony ever routed to a backend
+  # (14 sessions, 0 completions), while all five that ever finished ran on the
+  # claude-CLI path. Gate: tests/anatomy/test_the_bound_agent_loop_is_unproven.py.
+  runner_status: unproven
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: >-
+    Survey completed; the ranked report is posted as events. Prose-only —
+    exits 0 whether or not it found gaps, because a gap is a proposal for
+    the operator, not a failure of the estate.
+  exit_1: >-
+    Does not emit exit 1. A finding lives in the report body for a human
+    decision, never in the process exit.
+  exit_2: >-
+    Environment / auth / Wing error inside pulse-run-agent.sh. Fires a
+    CRITICAL A9 notification.
+
+# ── Article 30 ────────────────────────────────────────────────────────────────
+gdpr:
+  purpose: |
+    Reads the estate's declared structure (service manifest, plugin
+    manifests, system documentation) and its running shape (container
+    inventory, Wing surface indexes) to advise which of it is worth
+    displaying. Estate operation (legitimate interest, Art. 6(1)(f)).
+
+    What travels to the processor is STRUCTURAL: service identifiers,
+    declared ports and domains, documentation prose. Operator and agent
+    identifiers reach it only where they appear in the surface indexes
+    it reads — the ceremony asks for counts and shapes, not for rows.
+  legal_basis: legitimate_interests
+  data_categories:
+    - declared_state_manifest
+    - service_plugin_manifests
+    - system_documentation
+    - surface_inventory          # which views exist, not what they contain
+  data_subjects:
+    - operators
+    - automation_identities      # agent + service accounts named in surfaces
+  retention_days: -1
+  processors:
+    - name: "MiniMax"
+      role: >-
+        LLM inference via the Anthropic-compatible endpoint (SDK adapter,
+        tool loop driven by AgentKit). The bound backend for this ceremony.
+      country: >-
+        unverified — international endpoint api.minimax.io; entity and seat
+        not established
+      safeguard: >-
+        None established. Recorded as UNVERIFIED rather than asserted; the
+        binding gate refuses a backend this record does not name, so this
+        entry is what permits the routing and must not be written as a
+        claim it cannot support.
+    - name: "Anthropic, PBC"
+      role: >-
+        LLM inference when this ceremony is driven on the claude-CLI path
+        rather than the bound backend (--print)
+      country: "US"
+      safeguard: "None claimed. Assess SCCs / Art. 46 before this is relied on."
+  eu_residency: false
+  transfers_outside_eu: true

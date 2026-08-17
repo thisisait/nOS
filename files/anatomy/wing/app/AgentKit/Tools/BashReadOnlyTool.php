@@ -90,6 +90,28 @@ final class BashReadOnlyTool implements ToolInterface
         return ['bash.read'];
     }
 
+    /**
+     * The working directory, phrased for the model rather than for a log.
+     *
+     * Same resolution as the spawn site below, deliberately: a notice that
+     * could disagree with the actual cwd would be worse than none.
+     */
+    private static function cwdNotice(): string
+    {
+        $root = getenv('NOS_REPO_ROOT');
+        if (is_string($root) && $root !== '' && is_dir($root)) {
+            return "Commands run with the working directory set to {$root} — " .
+                'the nOS checkout. Prefer paths relative to it (`state/manifest.yml`, ' .
+                '`docs/`, `files/anatomy/`). Absolute paths elsewhere on the host are ' .
+                'allowed but are usually a sign of having guessed the wrong root: the ' .
+                'deployed runtime under ~/wing, ~/stacks and ~/pulse is NOT the checkout ' .
+                'and does not contain its documentation.';
+        }
+        return 'Commands inherit the daemon\'s own working directory — NOS_REPO_ROOT ' .
+            'is unset, so relative paths do NOT resolve against the nOS checkout. ' .
+            'Establish where you are before reading anything by path.';
+    }
+
     public function schema(): ToolSchema
     {
         return new ToolSchema(
@@ -99,7 +121,17 @@ final class BashReadOnlyTool implements ToolInterface
                 'string arguments). Allowed verbs: ' . implode(', ', self::ALLOWED_VERBS) . '. ' .
                 'Verbs `git` and `sqlite3` have additional argv guards (see metadata on rejected ' .
                 'calls for the specific rule). For HTTP probes use mcp_wing or mcp_bone instead. ' .
-                'Output > 8 KiB is truncated; runtime cap 30s.',
+                'Output > 8 KiB is truncated; runtime cap 30s. ' .
+                // SAY WHERE THE MODEL IS STANDING. Measured 2026-08-17 on the
+                // surveyor's first live run: the tool was correctly anchored to
+                // the checkout, and the agent still spent its whole session
+                // under ~/wing — `cat ~/wing/app/CLAUDE.md`, `ls ~/wing`,
+                // `cat ~/wing/CLAUDE.md`, all absolute, all wrong. Nothing had
+                // ever told it otherwise, so it reasoned from the only path it
+                // had seen: the deployed location of its own definition. The
+                // 2026-08-16 fix gave the TOOL an anchor; this gives the MODEL
+                // one, which is a different problem with the same symptom.
+                self::cwdNotice(),
             inputSchema: [
                 'type' => 'object',
                 'required' => ['verb'],
@@ -236,6 +268,25 @@ final class BashReadOnlyTool implements ToolInterface
         if (strlen($combined) > self::MAX_OUTPUT_BYTES) {
             $combined = substr($combined, 0, self::MAX_OUTPUT_BYTES) .
                 "\n...[truncated; +" . (strlen($combined) - self::MAX_OUTPUT_BYTES) . ' bytes]';
+        }
+        // A FILESYSTEM IS NOT UTF-8 AND A CONVERSATION MUST BE.
+        //
+        // Measured 2026-08-17: the surveyor ran `tree ~/wing`, whose output
+        // carried bytes that are not valid UTF-8. That single result then
+        // killed the session on EVERY path — `json_encode` refuses the whole
+        // request body, so the primary backend failed, the fallback failed
+        // identically, and the run ended `stop_reason: error` after 13,054
+        // input tokens. It also poisoned the audit: the `agent_tool_result`
+        // row's result_json is the literal `0` that json_encode returns on
+        // failure, so the one event that would explain the death is the one
+        // event that did not record.
+        //
+        // The truncation above makes this WORSE by itself — an 8 KiB cut can
+        // land mid-codepoint and manufacture invalid UTF-8 out of valid
+        // output. So the substitution runs after it, and covers both causes.
+        if (!mb_check_encoding($combined, 'UTF-8')) {
+            $combined = mb_convert_encoding($combined, 'UTF-8', 'UTF-8');
+            $combined .= "\n...[some bytes were not valid UTF-8 and were replaced]";
         }
         if ($combined === '') {
             $combined = "(no output, exit {$exitCode})";
