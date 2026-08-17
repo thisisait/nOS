@@ -23,7 +23,7 @@ MEASURED GROUND (verified 2026-08-16, rely on it):
 - Wing has 20 top-level presenters plus an Api/ subtree. Its Traefik auth mode is 'proxy' (forward_auth) — the WHOLE app is gated at the edge, per-app not per-path.
 - https://pazny.eu currently returns 404. The root domain is unclaimed.
 - roles/pazny.traefik/vars/main.yml carries traefik_extra_routers, a verbatim escape hatch supporting auth: 'none' for routes that gate themselves.
-- files/anatomy/face/src/lib/anatomy/{graph.ts,graphLayout.ts} is 642 lines of hand-rolled layout; the face has ONE runtime dependency (html-to-image). The anatomy artifact has 207 nodes / 235 edges; the DEFAULT view is 60 nodes / 71 connectors with 308 crossings. docs/idea/17 recommends adding d3-force as a second layout mode (75 crossings on that view).
+- files/anatomy/face/src/lib/anatomy/{graph.ts,graphLayout.ts} is 642 lines of hand-rolled layout; the face has ONE runtime dependency (html-to-image). The anatomy artifact has 207 nodes / 235 edges; the DEFAULT view is 60 nodes / 71 connectors with 308 crossings. docs/idea/17-loop-split-refactor-graph.md recommends adding d3-force as a second layout mode (75 crossings on that view).
 - KEAP's /explore is a "cosmology": stars, dataType facets, a side panel.
 - nos-face doctrine (memory): its BFF is an allow-list PROJECTION, never a proxy.
 - The estate is FOSS-only, all-local, offline-capable. A CDN-dependent, telemetry-carrying or non-FOSS dependency is disqualified — check, do not assume.
@@ -173,7 +173,7 @@ BUILD: the anatomy view, offline and dependency-honest.
 Per the decision:
 ${decision}
 
-Implement the visual: organs, organelles, vessels, in the KEAP-explore manner — zoomed to a scope, discreet navigation only, click-through targets present but inert if the route does not exist yet. Read files/anatomy/face/src/lib/anatomy/graph.ts and graphLayout.ts first; docs/idea/17 recommends d3-force as a second layout mode and that recommendation may serve here too.
+Implement the visual: organs, organelles, vessels, in the KEAP-explore manner — zoomed to a scope, discreet navigation only, click-through targets present but inert if the route does not exist yet. Read files/anatomy/face/src/lib/anatomy/graph.ts and graphLayout.ts first; docs/idea/17-loop-split-refactor-graph.md recommends d3-force as a second layout mode and that recommendation may serve here too.
 
 Consume ONLY the public projection from the sibling task — never the internal artifact. If the projection is not ready, build against its documented shape and say so.
 
