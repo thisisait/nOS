@@ -1,0 +1,5 @@
+{
+	"comment": "Determinism pin for forceLayout() on the default view (docs/idea/17-loop-split-refactor-graph.md §3). sha256 over [id,x,y,rank] per node + width/height, full float precision. Lives OUTSIDE the test file because tests/anatomy/test_a_fixture_is_never_a_real_secret.py refuses credential-shaped literals inside *.test.ts, and a 64-hex pin is exactly that shape. Re-pin deliberately: run graphLayout.test.ts, read the new hash from the failure.",
+	"pinnedAt": "2026-08-17",
+	"defaultViewPositionsSha256": "d5a6dc4a09bb5cd693da2c7df1b6dfc1ebdf05a28239c1f40802934fb05c1661"
+}

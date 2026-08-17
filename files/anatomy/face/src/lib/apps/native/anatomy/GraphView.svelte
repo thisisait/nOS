@@ -33,7 +33,7 @@
 		type NodeKind,
 		type GraphNode
 	} from '$lib/anatomy/graph';
-	import { layout } from '$lib/anatomy/graphLayout';
+	import { layout, forceLayout } from '$lib/anatomy/graphLayout';
 	import { loadPulse, type PulseResponse } from '$lib/api/pulse';
 	import { Badge, StatusNote, StateDot } from '$lib/components/ui';
 
@@ -55,6 +55,14 @@
 	);
 	let connectedOnly = $state(true);
 	let selected = $state<GraphNode | null>(null);
+	// Layout mode (docs/idea/17-loop-split-refactor-graph.md §3). Layered
+	// stays the default — it is the right picture for the 8-rank
+	// temporal/trigger spine; force untangles the default view (50 crossings
+	// vs 330, measured 2026-08-17 through this exact filterForCanvas
+	// pipeline; doc 17's own figures were 75 vs 308).
+	// Both modes place THE SAME node set through THE SAME markup below, so
+	// every node stays keyboard-focusable with its aria-label in either mode.
+	let layoutMode = $state<'layered' | 'force'>('layered');
 
 	interface Props {
 		/** A node id the caller was already pointing at (the desktop widget's
@@ -109,8 +117,12 @@
 	);
 
 	const view = $derived(filterForCanvas(graph, visibleKinds, connectedOnly));
+	// One layout run per filter/mode change — `$derived` recomputes only when
+	// `view` or `layoutMode` change, never per frame. The force simulation is
+	// seeded-deterministic (see graphLayout.ts), so a converge that changes
+	// nothing moves nothing, same as the layered mode.
 	const placed = $derived(
-		layout({
+		(layoutMode === 'force' ? forceLayout : layout)({
 			nodes: view.nodes,
 			edges: [...view.edges, ...view.spokes.map((s) => ({ from: s.node, to: s.resource }))]
 		})
@@ -167,6 +179,10 @@
 		const a = placed.byId.get(from);
 		const b = placed.byId.get(to);
 		if (!a || !b) return '';
+		if (layoutMode === 'force') {
+			// No left-to-right flow to exploit — connect centre to centre.
+			return `M ${a.x + 75} ${a.y + 12} L ${b.x + 75} ${b.y + 12}`;
+		}
 		const midX = (a.x + b.x) / 2;
 		return `M ${a.x + 150} ${a.y + 12} C ${midX + 60} ${a.y + 12}, ${midX - 60} ${b.y + 12}, ${b.x} ${b.y + 12}`;
 	}
@@ -214,6 +230,15 @@
 			<input type="checkbox" bind:checked={connectedOnly} />
 			connected only
 		</label>
+		<button
+			class="chip toggle"
+			class:on={layoutMode === 'force'}
+			onclick={() => (layoutMode = layoutMode === 'force' ? 'layered' : 'force')}
+			aria-pressed={layoutMode === 'force'}
+			title="Layered follows the temporal/trigger spine left-to-right; force untangles the hairball."
+		>
+			⇄ force layout
+		</button>
 	</header>
 
 	<!--

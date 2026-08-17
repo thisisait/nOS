@@ -225,6 +225,22 @@ If insertion instability bites (one new node moves the other 151 by mean 254 px;
 
 56 of 207 nodes have degree 0. The default view already hides 147. **Semantic clustering** — `authentik:X` under `service:X`, services under their stack — will do more than any layout swap, needs no dependency, and is where compound-layout support would finally be worth buying. ~2–3 days, separate piece.
 
+### Built (2026-08-17)
+
+The operator assented to the dependency cost; `forceLayout()` shipped beside `layout()` in `graphLayout.ts`, mode toggle in `GraphView.svelte`, layered mode stays the default. Everything below was measured through the real `filterForCanvas` pipeline (straight-segment proxy for the drawn connectors), not inherited from this document.
+
+| view | nodes | connectors | layered crossings | force crossings |
+|---|---|---|---|---|
+| default | 60 | 71 | 330 | 50 |
+| all kinds, connected | 153 | 192 | 2418 | 219 |
+
+- **The node/connector counts reproduce this doc's table exactly; the crossing figures do not** (this doc: 308 → 75 on default). Same conclusion, different numbers: layered measured 330 (anchor/proxy sensitivity vs the review's replica), force measured 50 with the shipped tuning (link 140 / charge −460 / collide 58, 400 ticks, seeded). 6.6× on the picture the operator opens.
+- **Packages: +4 runtime, exactly as predicted** — `d3-force 3.0.0`, `d3-dispatch 3.0.1`, `d3-quadtree 3.0.1`, `d3-timer 3.0.1`, each ISC per its installed `package.json` and LICENSE — plus `@types/d3-force 3.0.10` (MIT), devDependencies only. Installed `--ignore-scripts`; the 6 `npm audit` findings on the tree predate this change (toolchain deps, none d3).
+- **Bundle delta from a real build:** client JS 114,824 → 120,757 bytes gzip (**+5.9 KB**, against the ~12 KB predicted); total built JS +16.1 KB uncompressed (client + server).
+- **Simulation wall-clock** (once per filter change, never per frame): default view ~29 ms; all-kinds 153 nodes ~100 ms for 400 ticks (this doc: 118 ms / 151 nodes — consistent).
+- **Determinism — re-verified, not inherited.** Even the UNSEEDED (Math.random-sourced) simulation hashed bit-for-bit identical across fresh node processes and across Node 22.23.1 / 24.19.0 (two V8 majors) on this host — the doc's claim holds, but as a property of the input (phyllotaxis initial placement never coincides two nodes, so `jiggle()` never draws), not of the library. `forceLayout()` therefore pins `simulation.randomSource()` to a constant-seeded mulberry32, making determinism constructional; the sha256 of the default-view positions is pinned in `graphLayout.force.pin.json` and asserted by `graphLayout.test.ts` (the hash lives outside the test file because the fixture-secret gate refuses 64-hex literals in `*.test.ts`). Linux equality was NOT locally established; CI's ubuntu vitest job is the arbiter.
+- **A11y survives in both modes, gated:** both layouts place the identical node id set through the single `role="button" tabindex="0"` markup path (`{#each placed.nodes}`); `graphLayout.test.ts` pins the id-set equality and the one-markup-path source contract, and pins force < layered crossings on the default view so the mode's justification cannot rot silently.
+
 ---
 
 ## 4. The implementation workflow shape
