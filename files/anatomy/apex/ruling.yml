@@ -33,9 +33,10 @@
 
 ruling: thisisait-public-anatomy
 version: 1
-status: PROPOSED          # PROPOSED = local preview only. SIGNED = may deploy.
-signed_by: null
+status: SIGNED            # PROPOSED = local preview only. SIGNED = may deploy.
+signed_by: Pázny
 proposed: 2026-08-17
+signed: 2026-08-17        # every organ title and all 63 `speaks:` phrases read
 artifact: state/anatomy-graph.json
 
 # The declared split. The gate recounts the table below and refuses to run
