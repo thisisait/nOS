@@ -56,6 +56,7 @@ RUNNERS = [
     "tools/run-phase5-ceremony.sh",
     "tools/run-remediator.sh",
     "tools/run-scout.sh",
+    "tools/run-surveyor.sh",
     "tools/run-upgrade-advisor.sh",
     "tools/run-upgrade-architect.sh",
 ]

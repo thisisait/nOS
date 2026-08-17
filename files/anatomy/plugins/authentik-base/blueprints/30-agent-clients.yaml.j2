@@ -52,6 +52,11 @@ entries:
       client_type: "confidential"
       client_id: "{{ agent.client_id }}"
       client_secret: "{{ agent.client_secret }}"
+      # Authentik 2026.5.x made grant_types an explicit ArrayField that defaults
+      # EMPTY → an unset list mints no tokens ("Invalid grant_type for provider").
+      # These are M2M agent clients, so client_credentials ONLY (no browser flow).
+      grant_types:
+        - "client_credentials"
       # client_credentials grant doesn't traverse a flow, but Authentik
       # still requires authorization_flow + invalidation_flow to exist on
       # the provider for the admin UI to render. They're never executed

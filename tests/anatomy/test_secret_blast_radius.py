@@ -97,7 +97,11 @@ CROWN_JEWELS = {
 
 # ── Ratchets. Lower these as the plan lands; never raise them. ───────────────
 BLAST_RADIUS_CEILING = 86    # runtime, after lazy-regenerate. P1 drives this to 1
-DECLARED_CEILING = 101       # declaration sites; falls as defaults stop being templates
+DECLARED_CEILING = 102       # declaration sites; falls as defaults stop being templates
+#: 101 -> 102 on 2026-08-17: `surveyor_wing_api_token`, the per-agent Wing
+#: bearer a tenth agent needs. Raised deliberately and it should NOT become a
+#: habit — a per-agent bearer is one derived credential per agent forever,
+#: which is the shape this ceiling exists to make visible rather than to bless.
 CROWN_JEWEL_CEILING = 0      # excluding BLOCKED. P2 freed one of two; the other is blocked, not done
 
 

@@ -440,6 +440,12 @@ nodes:
   "pulse:npm-supply-chain:daily-ioc-scan": withheld
   "pulse:remediator:triage-open-findings": withheld
   "pulse:scout:drift-scan": withheld
+  # A20, added 2026-08-17 AFTER the signature. WITHHELD, and that is why no
+  # re-signature is needed: D4 freezes the PUBLISHED set, and this publishes
+  # nothing — 63 atoms before, 63 after. The gate halted the build rather than
+  # let an unruled node pass either way, which is the behaviour that makes the
+  # frozen set mean something.
+  "pulse:surveyor:surface-survey": withheld
   "pulse:upgrade-advisor:upgrade-advise": withheld
   "pulse:upgrade-architect:recipe-author": withheld
   "pulse:wing:agent-cost-tally": withheld

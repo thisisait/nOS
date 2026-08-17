@@ -299,6 +299,27 @@
     or 'Updated' in (_wing_scout_token.stdout | default(''))
   no_log: true
 
+- name: "[pazny.wing] Reconverge API token — surveyor (A20 surface-legibility agent)"
+  # Read-only surface survey. Same provision-token.php pattern as scout; the
+  # Authentik client (nos-surveyor) is pre-provisioned in
+  # default.config.yml::authentik_agent_clients, and this hook adds the
+  # matching api_tokens row Wing checks at request time. Without it the agent
+  # dies inside pulse-run-agent.sh on "WING_API_TOKEN is not set" — a message
+  # that names the symptom and not the five declarations a new agent needs.
+  ansible.builtin.command:
+    argv:
+      - php
+      - "{{ wing_app_dir }}/bin/provision-token.php"
+      - --db={{ wing_data_dir }}/wing.db
+      - --token={{ surveyor_wing_api_token }}
+      - --name=surveyor
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_surveyor_token
+  changed_when: >
+    'Created' in (_wing_surveyor_token.stdout | default(''))
+    or 'Updated' in (_wing_surveyor_token.stdout | default(''))
+  no_log: true
+
 - name: "[pazny.wing] Reconverge API token — upgrade-advisor (W5-B4)"
   # Reads the /upgrades matrix + queues applicable upgrades. The token name
   # is the actor_id recorded as planned_by on each queued upgrade. Authentik

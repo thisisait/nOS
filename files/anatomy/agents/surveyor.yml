@@ -16,9 +16,12 @@
 # (the runner injects it whole, and the task arrives separately via
 # NOS_AGENT_TASK), while the AgentKit system.md can afford to teach.
 #
-# NO PULSE JOB BLOCK, deliberately. This ceremony is operator-triggered while
-# it is young; a schedule would make an unproven ceremony spend money weekly
-# without anybody reading the result. Add one when a run is worth repeating.
+# THE PULSE BLOCK BELOW IS PAUSED, NOT SCHEDULED. This file first shipped with
+# no block at all and the reasoning was wrong: the row is not a cadence here,
+# it is where `tools/run-surveyor.sh` reads the job's environment from, and
+# where the `secret:` references get resolved by the one shared resolver. No
+# row, no runner. The pause is what keeps an unproven ceremony from spending
+# money weekly with nobody reading the result.
 # =============================================================================
 
 name: surveyor
@@ -96,6 +99,51 @@ notification:
   on_medium: ['wing-inbox']
   on_low: []
   on_info: []
+
+# ── Pulse job — the row exists so the runner has an env to read ─────────────
+# PAUSED, and it stays paused. The row is not a schedule here: every on-demand
+# agent in this estate keeps one because `tools/run-<agent>.sh` resolves its
+# environment from `pulse_jobs.env_json`, which is also where the `secret:`
+# references get resolved by one shared resolver instead of by each caller.
+# A cadence would make an unproven ceremony spend money weekly with nobody
+# reading the result; add a schedule when a run is worth repeating.
+pulse:
+  jobs:
+    - name: surface-survey
+      category: agents
+      runner: subprocess
+      command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
+      schedule: "0 7 * * 0"                # placeholder — paused by default
+      jitter_min: 5
+      max_runtime_s: 900
+      max_concurrent: 1
+      paused: true
+      paused_reason: "surveyor is on-demand; tools/run-surveyor.sh fires it"
+      env:
+        NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
+        NOS_AGENT_NAME: "surveyor"
+        # Model pin: the walk is judgement over prose and structure, not
+        # authoring. sonnet is the tier that can rank and refuse; without a
+        # pin the run inherits the operator's default, which is the dearest.
+        NOS_AGENT_MODEL: "sonnet"
+        NOS_AGENT_CLIENT_ID: "nos-surveyor"
+        NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_surveyor"
+        NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/surveyor.yml"
+        # The runner hard-requires these three and dies before spending a
+        # token if any is missing. WING_API_TOKEN is per-agent so the audit
+        # trail attributes the run to the surveyor and not to "some agent".
+        # Literal, like every sibling profile. The catalog substitutes tokens
+        # by plain string replacement with no Jinja engine, so a filtered
+        # token (`{{ wing_port | default(9000) }}`) survives into the stored
+        # job verbatim and the agent dials a hostname that does not exist.
+        WING_API_URL: "http://127.0.0.1:9000"
+        WING_API_TOKEN: "{{ surveyor_wing_api_token }}"
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
+        NOS_AGENT_TASK: |
+          Walk the estate and report which of it deserves a control surface.
+          Follow your system prompt exactly — including the ~15-read budget
+          and every required section. The operator is designing an admin
+          control centre and needs to know what belongs on it.
 
 # Matches authentik_agent_clients[nos-surveyor].capabilities. Read-only.
 # UNQUOTED, and that is load-bearing: pulse-run-agent.sh reads this list with
