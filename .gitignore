@@ -70,3 +70,6 @@ terraform/**/*.auto.tfvars.json
 terraform/**/tfplan
 terraform/authentik/generated.tf
 terraform/authentik/imports.generated.tf
+
+# apex public-site build output (preview only, never served from the repo)
+files/anatomy/apex/dist/

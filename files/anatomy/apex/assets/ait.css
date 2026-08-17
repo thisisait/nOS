@@ -1,0 +1,351 @@
+/* =========================================================================
+   AIT brand system — "Autonomous IT", dark-first.
+   Rebuilt from the operator's colors_and_type.css v0.3 with ONE deliberate
+   change: the runtime Google-Fonts @import is GONE. This estate is
+   offline-capable and telemetry-free; the typefaces are vendored below
+   (fonts/, OFL licences alongside), the way www assets are vendored
+   elsewhere in nOS.
+   Second deliberate change: the brand's heartbeat keyframe is renamed
+   `ait-breathe` here — its original name collides with an internal
+   service name that this page's leak gate forbids (which is also why
+   this comment cannot spell it).
+   ========================================================================= */
+
+@font-face {
+  font-family: "Open Sans";
+  src: url("fonts/OpenSans-Variable.ttf") format("truetype");
+  font-weight: 300 800;
+  font-stretch: 75% 100%;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("fonts/SourceSerif4-Variable.ttf") format("truetype");
+  font-weight: 200 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Code Pro";
+  src: url("fonts/SourceCodePro-Variable.ttf") format("truetype");
+  font-weight: 200 900;
+  font-display: swap;
+}
+
+:root {
+  /* canvas */
+  --canvas: #0A0B0D;
+  --panel: #0F1116;
+  --raise: #13161C;
+  --sunk: #07080A;
+  /* ink — warm cream, never stark white */
+  --ink: #F1ECE3;
+  --ink-mute: #B8B3AA;
+  --ink-dim: #6F6A61;
+  --ink-faint: #3A3731;
+  /* czech flag blue — kicker, rule, link, action */
+  --blue: #11457E;
+  --blue-hi: #2A63A8;
+  --blue-soft: #6A8CD3;
+  --blue-faint: #142240;
+  /* czech flag red — STATE ONLY */
+  --red: #D7141A;
+  --on-red: #25252A;
+  /* type */
+  --sans: "Open Sans", system-ui, -apple-system, sans-serif;
+  --serif: "Source Serif 4", Georgia, serif;
+  --code: "Source Code Pro", ui-monospace, "SF Mono", monospace;
+  /* modular scale, ratio 1.25 from 16px */
+  --t-0: 1rem;
+  --t-1: 1.25rem;
+  --t-2: 1.563rem;
+  --t-3: 1.953rem;
+  --t-4: 2.441rem;
+  --t-5: 3.052rem;
+  /* 8pt grid */
+  --s-1: 8px; --s-2: 16px; --s-3: 24px; --s-4: 32px; --s-6: 48px; --s-8: 64px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { background: var(--canvas); }
+
+body {
+  font-family: var(--serif);
+  font-size: var(--t-0);
+  line-height: 1.6;
+  color: var(--ink-mute);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ---- aurora: cool navy from bottom-left, warm amber from top-right ---- */
+.aurora {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+.aurora::before, .aurora::after {
+  content: "";
+  position: absolute;
+  width: 68vmax; height: 68vmax;
+  border-radius: 50%;
+  filter: blur(90px);
+  mix-blend-mode: screen;
+}
+.aurora::before {
+  left: -24vmax; bottom: -30vmax;
+  background: radial-gradient(circle, rgba(17, 69, 126, 0.35), transparent 65%);
+}
+.aurora::after {
+  right: -26vmax; top: -32vmax;
+  background: radial-gradient(circle, rgba(196, 138, 62, 0.14), transparent 65%);
+}
+
+/* ---- signature: notched corners, never rounded ---- */
+.notch {
+  clip-path: polygon(
+    8px 0, 100% 0, 100% calc(100% - 8px),
+    calc(100% - 8px) 100%, 0 100%, 0 8px
+  );
+}
+
+/* ---- masthead ---- */
+.masthead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-3);
+  max-width: 1080px;
+  margin: 0 auto;
+}
+.wordmark, .wordmark-sm {
+  font-family: var(--code);
+  letter-spacing: 0.18em;
+  color: var(--ink);
+  font-weight: 600;
+}
+.wordmark { font-size: var(--t-1); }
+.wordmark-sm { font-size: 0.8rem; }
+.chip-red {
+  background: var(--red);
+  color: var(--on-red);
+  padding: 1px 7px 2px;
+  font-weight: 700;
+}
+.kicker {
+  font-family: var(--code);
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  color: var(--blue-soft);
+}
+
+/* ---- hero ---- */
+main { max-width: 1080px; margin: 0 auto; padding: 0 var(--s-3) var(--s-8); }
+.hero { padding: var(--s-6) 0 var(--s-4); max-width: 46rem; }
+h1 {
+  font-family: var(--sans);
+  font-weight: 750;
+  font-size: clamp(var(--t-3), 6vw, var(--t-5));
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin-bottom: var(--s-3);
+}
+.lede {
+  font-size: var(--t-1);
+  line-height: 1.55;
+  border-left: 3px solid var(--blue);
+  padding-left: var(--s-2);
+}
+.lede strong { color: var(--ink); font-weight: 600; }
+.dim { color: var(--ink-dim); font-size: 0.85rem; }
+
+/* ---- the engine ---- */
+.engine { margin: var(--s-4) auto var(--s-6); max-width: 760px; }
+.engine svg { width: 100%; height: auto; display: block; }
+.engine figcaption {
+  text-align: center;
+  margin-top: var(--s-2);
+  font-family: var(--code);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+}
+
+.organ { cursor: pointer; outline: none; }
+.organ .halo {
+  fill: rgba(42, 99, 168, 0.05);
+  stroke: none;
+  transition: fill 0.35s ease;
+}
+.organ .poly {
+  fill: rgba(42, 99, 168, 0.06);
+  stroke: rgba(106, 140, 211, 0.35);
+  stroke-width: 0.8;
+  transition: all 0.35s ease;
+}
+.organ .chord {
+  fill: none;
+  stroke: rgba(106, 140, 211, 0.18);
+  stroke-width: 0.6;
+}
+.organ .star {
+  fill: var(--ink);
+  opacity: 0.85;
+}
+.organ .organ-label {
+  font-family: var(--code);
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  fill: var(--ink-dim);
+  transition: fill 0.35s ease;
+}
+.organ.lit .halo, .organ:hover .halo, .organ:focus-visible .halo { fill: rgba(42, 99, 168, 0.16); }
+.organ.lit .poly, .organ:hover .poly, .organ:focus-visible .poly {
+  stroke: var(--blue-soft);
+  fill: rgba(42, 99, 168, 0.14);
+}
+.organ.lit .organ-label, .organ:hover .organ-label, .organ:focus-visible .organ-label { fill: var(--ink); }
+.organ:focus-visible .halo { stroke: var(--blue-soft); stroke-width: 1; stroke-dasharray: 3 3; }
+
+.vein {
+  fill: none;
+  stroke: var(--blue-soft);
+  stroke-width: 1.3;
+  opacity: 0.38;
+  stroke-dasharray: 2 7;
+  transition: opacity 0.35s ease;
+}
+.feather {
+  fill: none;
+  stroke: rgba(106, 140, 211, 0.10);
+  stroke-width: 0.9;
+}
+.sweep {
+  fill: none;
+  stroke: var(--blue-soft);
+  stroke-width: 1.1;
+  opacity: var(--wo, 0.12);
+  stroke-linecap: round;
+}
+.spine-line {
+  stroke: rgba(106, 140, 211, 0.14);
+  stroke-width: 1;
+  stroke-dasharray: 1 6;
+}
+
+/* ---- breathing: seeded per organ at BUILD time, constant forever ---- */
+@keyframes ait-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.025); }
+}
+@keyframes ait-twinkle {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 0.45; }
+}
+@keyframes ait-drift {
+  to { stroke-dashoffset: -90; }
+}
+.organ {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ait-breathe var(--dur, 6s) ease-in-out infinite;
+  animation-delay: var(--ph, 0s);
+}
+.organ .star { animation: ait-twinkle 4.5s ease-in-out infinite; animation-delay: var(--tw, 0s); }
+.vein { animation: ait-drift var(--drift, 20s) linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .organ, .organ .star, .vein { animation: none; }
+}
+
+/* ---- cards ---- */
+.organs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--s-2);
+  margin-bottom: var(--s-8);
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--raise);
+  padding: var(--s-3);
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+.card.lit, .card:hover { border-color: var(--blue); background: var(--raise); }
+.card h3 {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: var(--t-1);
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.card .tells { font-size: 0.95rem; margin-bottom: var(--s-1); }
+.card details summary {
+  font-family: var(--code);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--blue-soft);
+  cursor: pointer;
+  list-style: none;
+  padding: var(--s-1) 0 0;
+}
+.card details summary::before { content: "▸ "; }
+.card details[open] summary::before { content: "▾ "; }
+.card details ul {
+  list-style: none;
+  margin-top: var(--s-1);
+  border-top: 1px solid var(--blue-faint);
+  padding-top: var(--s-1);
+}
+.card details li {
+  font-size: 0.88rem;
+  color: var(--ink-mute);
+  padding: 3px 0 3px 14px;
+  position: relative;
+}
+.card details li::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0.85em;
+  width: 5px; height: 5px;
+  background: var(--blue-hi);
+  clip-path: polygon(2px 0, 100% 0, 100% calc(100% - 2px), calc(100% - 2px) 100%, 0 100%, 0 2px);
+}
+
+/* ---- principles ---- */
+.principles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--s-2);
+  border-top: 1px solid var(--raise);
+  padding-top: var(--s-4);
+}
+.tile h3 {
+  font-family: var(--code);
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--blue-soft);
+  margin-bottom: var(--s-1);
+}
+.tile p { font-size: 0.92rem; }
+
+/* ---- footer ---- */
+footer {
+  border-top: 1px solid var(--raise);
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--s-4) var(--s-3) var(--s-6);
+}
+footer a { color: var(--blue-soft); text-decoration-color: var(--blue); }
+footer a:hover { color: var(--ink); }
+footer p + p { margin-top: var(--s-1); }
+
+@media (max-width: 560px) {
+  .masthead { flex-direction: column; gap: 4px; }
+  .hero { padding-top: var(--s-4); }
+  .organ .organ-label { font-size: 13px; }
+}

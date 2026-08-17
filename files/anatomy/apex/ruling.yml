@@ -1,0 +1,474 @@
+# =============================================================================
+# THE PUBLIC-SURFACE RULING — pazny.eu apex site
+# =============================================================================
+#
+# This file is the ONLY door between the internal anatomy artifact
+# (state/anatomy-graph.json) and anything served to an anonymous visitor.
+# It is written to be read and signed by a person, not parsed by engineers:
+# every line under `nodes:` that says `publish:` is a sentence that will
+# leave this machine, exactly as written here, and nothing else will.
+#
+# THE DEFAULT IS WITHHELD. A field or a node with no ruling here does not
+# fall through — it HALTS THE BUILD (files/anatomy/apex/projection.py
+# refuses to run until someone adds a ruling). A generator commit is not a
+# public-surface review; this file is where the review happens.
+#
+# HOW TO READ A FIELD RULING
+#   VERBATIM    — the value may leave byte-identical.
+#   TRANSFORMED — only the named transform of the value may leave; the raw
+#                 value never does.
+#   WITHHELD    — nothing derived from this field may leave, including its
+#                 count, its ordering, and its absence.
+#
+# HOW TO READ A NODE RULING
+#   publish: <organ>  — the node joins that organ as ONE ANONYMOUS ATOM.
+#                       What leaves: the organ it belongs to, and the
+#                       `speaks:` phrase. What never leaves: its name, its
+#                       hostname, its version, its schedule, its health.
+#   withheld          — the node contributes nothing to the public surface.
+#
+# TO SIGN: set status: SIGNED and put your name in signed_by. Until then
+# the build is preview-only and must not be wired to any route.
+# =============================================================================
+
+ruling: thisisait-public-anatomy
+version: 1
+status: PROPOSED          # PROPOSED = local preview only. SIGNED = may deploy.
+signed_by: null
+proposed: 2026-08-17
+artifact: state/anatomy-graph.json
+
+# The declared split. The gate recounts the table below and refuses to run
+# if the actual split differs — so a ruling change is always a conscious
+# edit of BOTH the row and this ledger line.
+splits:
+  verbatim: 6
+  transformed: 9
+  withheld: 57
+
+# -----------------------------------------------------------------------------
+# STANDING DECISIONS — operator rulings, recorded as decisions with reasons,
+# not as omissions. These outrank everything below.
+# -----------------------------------------------------------------------------
+decisions:
+  - id: D1
+    subject: "node fields `layer`, `layer_withheld`, `layer_basis` and the artifact `layer_basis`"
+    ruling: WITHHELD
+    ruled_by: operator
+    recorded: 2026-08-17
+    reason: >
+      No blast-radius ranking on the public page. A layer index (L0/L1/L2)
+      is a prioritised target list: it tells a stranger which organ to hit
+      first. Ruled out entirely — no ring index, no derived ordering.
+
+  - id: D2
+    subject: "hostnames and service names, in any spelling"
+    ruling: WITHHELD
+    ruled_by: operator
+    recorded: 2026-08-17
+    reason: >
+      DNS and the TLS certificate are both wildcards, so the service-to-
+      hostname map is not currently enumerable from outside. A page naming
+      services hands that map over. Therefore: no service names, no
+      subdomains, no click-through. An organ says what it is FOR, never
+      what it is CALLED. This is also why the projection's leak check
+      treats every service's name as a forbidden mark.
+
+  - id: D3
+    subject: "freshness, health, schedules — anything that changes when the estate does"
+    ruling: WITHHELD
+    ruled_by: this ruling (second-order invariant)
+    recorded: 2026-08-17
+    reason: >
+      Structure may move; state may not. A page whose pulse changes when a
+      container dies is a monitoring feed for anyone watching. All motion
+      on the page is seeded from this file's `version:` — a build-time
+      constant — never from live health, never from the artifact's
+      content, never from the clock. The build is byte-deterministic:
+      building twice yields identical files, which is what the gate tests.
+
+  - id: D4
+    subject: "the published node set"
+    ruling: FROZEN
+    ruled_by: this ruling (second-order invariant)
+    recorded: 2026-08-17
+    reason: >
+      Absence is an oracle if the node set moves. The published set is the
+      list below, not "whatever the artifact holds today": a node that
+      appears in the artifact without a ruling here halts the build, and a
+      ruled node that vanishes from the artifact halts the build. Every
+      count on the page is recomputed over the published set only.
+
+# -----------------------------------------------------------------------------
+# FIELD RULINGS — all 72 fields the artifact carries today: 8 top-level,
+# 47 node fields, 17 edge fields. The gate diffs this table against the
+# artifact's actual key census, both directions.
+# -----------------------------------------------------------------------------
+fields:
+  artifact:
+    version:      { ruling: VERBATIM, note: "schema literal; a build-time constant" }
+    generated_by: { ruling: WITHHELD, why: "internal tool path" }
+    doctrine:     { ruling: WITHHELD, why: "internal doc path" }
+    layer_basis:  { ruling: WITHHELD, why: "D1" }
+    counts:       { ruling: TRANSFORMED, transform: "discarded and recomputed over the published set only (D4); no internal tally ever leaves" }
+    warnings:     { ruling: WITHHELD, why: "a written catalogue of the estate's failure modes" }
+    nodes:        { ruling: TRANSFORMED, transform: "filtered to the ruled atoms below, rewritten to organs; ids never leave (D2)" }
+    edges:        { ruling: TRANSFORMED, transform: "aggregated to organ-pair veins; an edge with an unpublished endpoint, or both endpoints in one organ, is dropped" }
+
+  node:
+    kind:              { ruling: TRANSFORMED, transform: "selector only — `service` nodes may become atoms; every other kind has no public form; the word itself never leaves" }
+    description:       { ruling: TRANSFORMED, transform: "replaced by the operator-authored `speaks:` phrase below; the artifact string never leaves and is a forbidden term in the leak check" }
+    stack:             { ruling: TRANSFORMED, transform: "folded into the organ assignment below; the value never leaves" }
+    category:          { ruling: TRANSFORMED, transform: "folded into the organ assignment below; the value never leaves" }
+    form:              { ruling: VERBATIM, note: "generic vocabulary (`view`); granted, not exercised in v1" }
+    build:             { ruling: VERBATIM, note: "F-tier label from a public doctrine doc; granted, not exercised in v1" }
+    deterministic:     { ruling: VERBATIM, note: "content-free boolean; granted, not exercised in v1" }
+    unattended:        { ruling: VERBATIM, note: "content-free boolean; granted, not exercised in v1" }
+    source:            { ruling: WITHHELD, why: "file paths" }
+    mode:              { ruling: WITHHELD, why: "SSO edge posture per service" }
+    tier:              { ruling: WITHHELD, why: "RBAC map" }
+    client_id:         { ruling: WITHHELD, why: "OIDC client identifier" }
+    service:           { ruling: WITHHELD, why: "service name (D2)" }
+    managed_by:        { ruling: WITHHELD, why: "internal management plane" }
+    anchor:            { ruling: WITHHELD, why: "internal taxonomy address" }
+    section:           { ruling: WITHHELD, why: "doctrine coordinates" }
+    heading:           { ruling: WITHHELD, why: "doctrine coordinates" }
+    title:             { ruling: WITHHELD, why: "names internal apps and tables (D2)" }
+    api_scopes:        { ruling: WITHHELD, why: "API surface map" }
+    hosted_by:         { ruling: WITHHELD, why: "names a service (D2)" }
+    reads_artifact:    { ruling: WITHHELD, why: "internal wiring" }
+    judges:            { ruling: WITHHELD, why: "gate inventory" }
+    mutates_worktree:  { ruling: WITHHELD, why: "gate behaviour" }
+    min_work:          { ruling: WITHHELD, why: "gate calibration" }
+    argv:              { ruling: WITHHELD, why: "literal commands" }
+    claims:            { ruling: WITHHELD, why: "internal wiring" }
+    requires:          { ruling: WITHHELD, why: "internal wiring" }
+    schedule:          { ruling: WITHHELD, why: "when the house is busy and when it sleeps (D3)" }
+    jitter_min:        { ruling: WITHHELD, why: "D3" }
+    max_runtime_s:     { ruling: WITHHELD, why: "D3" }
+    paused:            { ruling: WITHHELD, why: "live state (D3)" }
+    findings_exit_codes: { ruling: WITHHELD, why: "internal contract" }
+    command_name:      { ruling: WITHHELD, why: "literal commands" }
+    role:              { ruling: WITHHELD, why: "repo topology" }
+    automated_writers: { ruling: WITHHELD, why: "names agents with write access" }
+    operator_tools:    { ruling: WITHHELD, why: "tool paths" }
+    evidence:          { ruling: WITHHELD, why: "points at the estate's own weaknesses" }
+    ref:               { ruling: WITHHELD, why: "git ref" }
+    install_flag:      { ruling: WITHHELD, why: "config namespace" }
+    dependency_survey: { ruling: WITHHELD, why: "survey coverage discloses the unsurveyed" }
+    layer:             { ruling: WITHHELD, why: "D1" }
+    layer_withheld:    { ruling: WITHHELD, why: "D1" }
+    layer_basis:       { ruling: WITHHELD, why: "D1" }
+    engine_flag:       { ruling: WITHHELD, why: "config namespace" }
+    guards:            { ruling: WITHHELD, why: "names the estate's own guard rails" }
+    registry:          { ruling: WITHHELD, why: "file path" }
+    required:          { ruling: WITHHELD, why: "weakness metadata" }
+
+  edge:
+    kind:                { ruling: VERBATIM, note: "relationship vocabulary (`data`, `trigger`, ...); only leaves on veins between published organs" }
+    from:                { ruling: TRANSFORMED, transform: "rewritten to the public organ id; internal ids never leave" }
+    to:                  { ruling: TRANSFORMED, transform: "rewritten to the public organ id; internal ids never leave" }
+    via:                 { ruling: WITHHELD, why: "env var names, ports, file:line — 174 occurrences of exactly what an attacker maps first" }
+    unenforced:          { ruling: WITHHELD, why: "a written catalogue of silent-failure modes, with file:line" }
+    derived:             { ruling: WITHHELD, why: "provenance metadata" }
+    measured:            { ruling: WITHHELD, why: "provenance metadata" }
+    declared:            { ruling: WITHHELD, why: "provenance metadata" }
+    expects:             { ruling: WITHHELD, why: "internal contract" }
+    enforced_by:         { ruling: WITHHELD, why: "names the enforcing gate" }
+    citations:           { ruling: WITHHELD, why: "file paths" }
+    resource:            { ruling: WITHHELD, why: "names contended resources" }
+    margin_min:          { ruling: WITHHELD, why: "D3" }
+    schedules:           { ruling: WITHHELD, why: "D3" }
+    gap_min:             { ruling: WITHHELD, why: "D3" }
+    declared_margin_min: { ruling: WITHHELD, why: "D3" }
+    can_invert:          { ruling: WITHHELD, why: "temporal-ordering weakness" }
+
+# -----------------------------------------------------------------------------
+# VOCABULARY AMNESTY — withheld VALUES that happen to be ordinary English
+# words the page needs as its own vocabulary. Each entry is a signable
+# exception to the leak check's harvested-substring rule. An amnesty term
+# may never equal a service name — the gate enforces that.
+# -----------------------------------------------------------------------------
+vocabulary_amnesty:
+  - term: anatomy
+    collides_with: "an internal app title"
+    why_needed: "it is the page's own subject word"
+
+# -----------------------------------------------------------------------------
+# FORBIDDEN MARKS — distinctive product names behind the atoms. The leak
+# check refuses any output containing one of these as a word, in any case,
+# regardless of how it got there. This list is a backstop UNDER the field
+# and node rulings, not a substitute for them.
+# -----------------------------------------------------------------------------
+forbidden_marks:
+  [authentik, traefik, tailscale, bluesky, infisical, vaultwarden, bitwarden,
+   mariadb, postgres, postgresql, redis, restic, keap, kiwix, calibre,
+   nextcloud, onlyoffice, jellyfin, grafana, prometheus, loki, influxdb,
+   gitea, gitlab, woodpecker, erpnext, freescout, firefly, metabase,
+   superset, wordpress, freepbx, asterisk, stalwart, snappymail, miniflux,
+   hedgedoc, bookstack, portainer, watchtower, kuma, rustfs, backrest,
+   openclaw, ollama, mailpit, ntfy, n8n, nodered, homeassistant, qgis,
+   docker, ansible, launchd]
+
+# -----------------------------------------------------------------------------
+# ORGANS — the public shapes. Thirteen constellations forming one winged
+# engine: a core column and two limbs. `tells:` is the sentence that
+# unfolds on hover/tap. Everything here is authored for the public page;
+# none of it is derived from the artifact.
+# -----------------------------------------------------------------------------
+organs:
+  gatehouse: { title: "The Gatehouse", tells: "Access is decided in one place.",              limb: core,  order: 1 }
+  spine:     { title: "The Spine",     tells: "The estate governs and audits itself.",        limb: core,  order: 2 }
+  memory:    { title: "The Memory",    tells: "Everything remembered lives here, at home.",   limb: core,  order: 3 }
+  vault:     { title: "The Vault",     tells: "Secrets are kept, never scattered.",           limb: core,  order: 4 }
+  keel:      { title: "The Keel",      tells: "Copied nightly. Restore, proven.",             limb: core,  order: 5 }
+  archive:   { title: "The Archive",   tells: "Where knowledge is preserved and grown.",      limb: left,  order: 1 }
+  forge:     { title: "The Forge",     tells: "Software made, tested and landed at home.",    limb: left,  order: 2 }
+  ledger:    { title: "The Ledger",    tells: "Business runs on its own books.",              limb: left,  order: 3 }
+  commons:   { title: "The Commons",   tells: "Daily work and daily life, shared.",           limb: left,  order: 4 }
+  senses:    { title: "The Senses",    tells: "The system watches itself.",                   limb: right, order: 1 }
+  wits:      { title: "The Wits",      tells: "Autonomous minds with bounded hands.",         limb: right, order: 2 }
+  reflexes:  { title: "The Reflexes",  tells: "Events become actions, on schedule.",          limb: right, order: 3 }
+  voice:     { title: "The Voice",     tells: "Mail, calls and signals, spoken from home.",   limb: right, order: 4 }
+
+# -----------------------------------------------------------------------------
+# NODE RULINGS — all 207 nodes the artifact carries today. 63 atoms
+# publish; 144 nodes are withheld. For a published atom, the `speaks:`
+# phrase is the ONLY text that leaves for that node — read each one as the
+# sentence a stranger will see.
+# -----------------------------------------------------------------------------
+nodes:
+  # --- the core -------------------------------------------------------------
+  "service:authentik":     { publish: gatehouse, speaks: "one door for every room — who you are is decided once" }
+  "service:traefik":       { publish: gatehouse, speaks: "every request crosses one guarded threshold" }
+  "service:tailscale":     { publish: gatehouse, speaks: "a private corridor home, from anywhere" }
+  "service:bluesky_pds":   { publish: gatehouse, speaks: "an identity that can speak to the open social web" }
+
+  "service:wing":          { publish: spine, speaks: "the audit floor — what happened, provable" }
+  "service:bone":          { publish: spine, speaks: "a quiet bridge between the runs and the records" }
+  "service:face":          { publish: spine, speaks: "one desk from which the whole estate is seen" }
+  "service:iiab_terminal": { publish: spine, speaks: "a guided terminal for guests" }
+  "service:portainer":     { publish: spine, speaks: "the engine room's control panel" }
+
+  "service:mariadb":       { publish: memory, speaks: "structured records kept safe, transaction by transaction" }
+  "service:postgresql":    { publish: memory, speaks: "the deep store most organs write to" }
+  "service:redis":         { publish: memory, speaks: "short-term recall, answered in microseconds" }
+
+  "service:infisical":     { publish: vault, speaks: "machine secrets, sealed in one place" }
+  "service:vaultwarden":   { publish: vault, speaks: "a personal vault for passwords and keys" }
+
+  "service:backup":        { publish: keel, speaks: "every organ's state, copied each night" }
+  "service:backrest":      { publish: keel, speaks: "snapshots that can prove they restore" }
+  "service:rustfs":        { publish: keel, speaks: "the shelf where the nightly copies land" }
+
+  # --- the left limb --------------------------------------------------------
+  "service:keap":          { publish: archive, speaks: "a curated map of what the house knows" }
+  "service:cortex":        { publish: archive, speaks: "machinery that tends and grows the knowledge map" }
+  "service:kiwix":         { publish: archive, speaks: "whole libraries, readable with no internet" }
+  "service:calibre_web":   { publish: archive, speaks: "a bookshelf of the house's own books" }
+  "service:outline":       { publish: archive, speaks: "a shared handbook the team writes together" }
+  "service:bookstack":     { publish: archive, speaks: "manuals kept chapter and verse" }
+  "service:hedgedoc":      { publish: archive, speaks: "notes drafted together, as they happen" }
+  "service:offline_maps":  { publish: archive, speaks: "the world's map, served from home" }
+  "service:miniflux":      { publish: archive, speaks: "the outside world's writing, gathered quietly" }
+
+  "service:gitea":         { publish: forge, speaks: "the house's own code, versioned at home" }
+  "service:gitlab":        { publish: forge, speaks: "a review floor where changes are argued before they land" }
+  "service:woodpecker":    { publish: forge, speaks: "every change built and tested before it ships" }
+  "service:code_server":   { publish: forge, speaks: "a workshop reachable from any screen" }
+  "service:paperclip":     { publish: forge, speaks: "a clipboard where working material is kept" }
+
+  "service:erpnext":       { publish: ledger, speaks: "orders, stock and invoices in one book" }
+  "service:freescout":     { publish: ledger, speaks: "every customer conversation answered from one desk" }
+  "service:firefly":       { publish: ledger, speaks: "where the money is watched" }
+  "service:metabase":      { publish: ledger, speaks: "questions asked of the numbers, answered in charts" }
+  "service:superset":      { publish: ledger, speaks: "heavier analytics for heavier questions" }
+
+  "service:nextcloud":     { publish: commons, speaks: "files, calendars and people in one shared home" }
+  "service:onlyoffice":    { publish: commons, speaks: "office documents, edited together in the browser" }
+  "service:jellyfin":      { publish: commons, speaks: "the family's media, streamed at home" }
+  "service:qgis_server":   { publish: commons, speaks: "maps drawn from the house's own data" }
+
+  # --- the right limb -------------------------------------------------------
+  "service:grafana":       { publish: senses, speaks: "vital signs, drawn where anyone can read them" }
+  "service:prometheus":    { publish: senses, speaks: "numbers sampled from every organ, on a heartbeat" }
+  "service:loki":          { publish: senses, speaks: "every log line, kept and searchable" }
+  "service:tempo":         { publish: senses, speaks: "one request's path, traced end to end" }
+  "service:alloy":         { publish: senses, speaks: "the courier that carries signals to the watchers" }
+  "service:influxdb":      { publish: senses, speaks: "measurements kept over time, for the trends" }
+  "service:uptime_kuma":   { publish: senses, speaks: "a bell that rings when something goes quiet" }
+  "service:watchtower":    { publish: senses, speaks: "an eye on the parts that grow stale" }
+
+  "service:openclaw":      { publish: wits, speaks: "an autonomous hand that does the night work" }
+  "service:hermes":        { publish: wits, speaks: "a messenger mind that meets you on any channel" }
+  "service:opencode":      { publish: wits, speaks: "a mind that writes code beside you" }
+  "service:open_webui":    { publish: wits, speaks: "a chat room with the house's own models" }
+  "service:mcp_gateway":   { publish: wits, speaks: "one socket where minds plug into tools" }
+
+  "service:n8n":           { publish: reflexes, speaks: "workflows that click together without code" }
+  "service:nodered":       { publish: reflexes, speaks: "wires from events to actions" }
+  "service:pulse":         { publish: reflexes, speaks: "the metronome every scheduled duty answers to" }
+  "service:homeassistant": { publish: reflexes, speaks: "the physical home, sensed and switched" }
+
+  "service:smtp_stalwart": { publish: voice, speaks: "the house post office" }
+  "service:mailpit":       { publish: voice, speaks: "a sealed room where test mail lands" }
+  "service:snappymail":    { publish: voice, speaks: "a window onto the mailbox" }
+  "service:ntfy":          { publish: voice, speaks: "a tap on the shoulder when something matters" }
+  "service:wordpress":     { publish: voice, speaks: "the public word, published from home" }
+  "service:freepbx":       { publish: voice, speaks: "a telephone switchboard of one's own" }
+
+  # --- withheld: SSO clients (the map of who gates what stays home) ---------
+  "authentik:backrest": withheld
+  "authentik:bookstack": withheld
+  "authentik:calibre-web": withheld
+  "authentik:code-server": withheld
+  "authentik:documenso": withheld
+  "authentik:erpnext": withheld
+  "authentik:face": withheld
+  "authentik:firefly": withheld
+  "authentik:freescout": withheld
+  "authentik:gitea": withheld
+  "authentik:gitlab": withheld
+  "authentik:grafana": withheld
+  "authentik:hedgedoc": withheld
+  "authentik:hermes": withheld
+  "authentik:homeassistant": withheld
+  "authentik:infisical": withheld
+  "authentik:influxdb": withheld
+  "authentik:jellyfin": withheld
+  "authentik:keap": withheld
+  "authentik:kiwix": withheld
+  "authentik:mailpit": withheld
+  "authentik:metabase": withheld
+  "authentik:miniflux": withheld
+  "authentik:n8n": withheld
+  "authentik:nextcloud": withheld
+  "authentik:nodered": withheld
+  "authentik:ntfy": withheld
+  "authentik:onlyoffice": withheld
+  "authentik:open-webui": withheld
+  "authentik:openclaw": withheld
+  "authentik:outline": withheld
+  "authentik:paperclip": withheld
+  "authentik:portainer": withheld
+  "authentik:qdrant": withheld
+  "authentik:roundcube": withheld
+  "authentik:snappymail": withheld
+  "authentik:spacetimedb": withheld
+  "authentik:superset": withheld
+  "authentik:twofauth": withheld
+  "authentik:uptime-kuma": withheld
+  "authentik:vaultwarden": withheld
+  "authentik:wing": withheld
+  "authentik:woodpecker": withheld
+  "authentik:wordpress": withheld
+
+  # --- withheld: host daemons (the estate's launchd organs) -----------------
+  "daemon:eu.thisisait.nos.acme-renew": withheld
+  "daemon:eu.thisisait.nos.backrest": withheld
+  "daemon:eu.thisisait.nos.backup.exporter": withheld
+  "daemon:eu.thisisait.nos.backup.offsite": withheld
+  "daemon:eu.thisisait.nos.backup.rustfs": withheld
+  "daemon:eu.thisisait.nos.bone": withheld
+  "daemon:eu.thisisait.nos.cortex": withheld
+  "daemon:eu.thisisait.nos.heartbeat": withheld
+  "daemon:eu.thisisait.nos.hermes": withheld
+  "daemon:eu.thisisait.nos.pulse": withheld
+  "daemon:eu.thisisait.nos.resume": withheld
+  "daemon:eu.thisisait.nos.wing": withheld
+
+  # --- withheld: doctrine paragraphs (internal law) --------------------------
+  "doctrine:docs/archive/cortex-corpus-parallel.md#2.1": withheld
+  "doctrine:docs/archive/cortex-corpus-parallel.md#5.3": withheld
+  "doctrine:docs/archive/nos-cortex-organ-design.md#2": withheld
+  "doctrine:docs/idea/11-agentic-loop-contract.md#5.1": withheld
+  "doctrine:docs/idea/11-agentic-loop-contract.md#5a": withheld
+  "doctrine:docs/idea/11-agentic-loop-contract.md#8.1": withheld
+  "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d": withheld
+  "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e": withheld
+  "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2f": withheld
+  "doctrine:docs/idea/11-agentic-loop-contract.md#M2": withheld
+  "doctrine:docs/idea/11-agentic-loop-contract.md#M3": withheld
+  "doctrine:docs/idea/11-agentic-loop-contract.md#M7": withheld
+
+  # --- withheld: face apps, gate sets, judges --------------------------------
+  "faceapp:anatomy": withheld
+  "faceapp:anatomy-widget": withheld
+  "faceapp:files": withheld
+  "faceapp:keap-explore": withheld
+  "faceapp:tables": withheld
+  "gateset:fast": withheld
+  "gateset:full": withheld
+  "gateset:live": withheld
+  "gateset:repo": withheld
+  "judge:ansible-lint": withheld
+  "judge:cortex-corpus-diff": withheld
+  "judge:genome-codegen": withheld
+  "judge:nos-smoke": withheld
+  "judge:pytest-anatomy": withheld
+
+  # --- withheld: scheduled jobs (when the house is busy stays home, D3) ------
+  "pulse:alert-relay:relay-firing": withheld
+  "pulse:authentik-tofu-drift:tofu-drift-plan": withheld
+  "pulse:backup:backup-restore-drill": withheld
+  "pulse:conductor:scan-state-record": withheld
+  "pulse:conductor:security-drift-watch": withheld
+  "pulse:conductor:self-test-001": withheld
+  "pulse:conductor:vulnerability-scan": withheld
+  "pulse:cortex:cortex-corpus-diff": withheld
+  "pulse:cortex:cortex-fs-sync": withheld
+  "pulse:curator:curator-sweep": withheld
+  "pulse:discovery:contradiction-scan": withheld
+  "pulse:gdpr-breach:breach-deadline-scan": withheld
+  "pulse:gitleaks:nightly-scan": withheld
+  "pulse:keap:keap-consolidate": withheld
+  "pulse:keap:keap-embed-sync": withheld
+  "pulse:keap:keap-features-sync": withheld
+  "pulse:keap:keap-lint": withheld
+  "pulse:librarian:brief-taxonomy": withheld
+  "pulse:librarian:describe-taxonomy": withheld
+  "pulse:librarian:judge-lint-queue": withheld
+  "pulse:migration-author:promote-migration": withheld
+  "pulse:npm-supply-chain:daily-ioc-scan": withheld
+  "pulse:remediator:triage-open-findings": withheld
+  "pulse:scout:drift-scan": withheld
+  "pulse:upgrade-advisor:upgrade-advise": withheld
+  "pulse:upgrade-architect:recipe-author": withheld
+  "pulse:wing:agent-cost-tally": withheld
+  "pulse:wing:audit-chain-verify": withheld
+  "pulse:wing:dispatch-notifications": withheld
+  "pulse:wing:dispatch-notifications-digest": withheld
+
+  # --- withheld: repos, resources, tables, engine, weaknesses ----------------
+  "repo:gitea-forge": withheld
+  "repo:github-origin": withheld
+  "repo:gitlab-forge": withheld
+  "repo:scan-data": withheld
+  "resource:agent-run-lock": withheld
+  "resource:cortex_token_ro": withheld
+  "resource:keap_token_ro": withheld
+  "resource:live_estate": withheld
+  "resource:nos_entity": withheld
+  "table:apps": withheld
+  "table:controls": withheld
+  "table:layouts": withheld
+  "table:party": withheld
+  "table:party-address": withheld
+  "table:party-contact": withheld
+  "table:party-tax-identity": withheld
+  "table:print-job": withheld
+  "table:print-job-step": withheld
+  "table:print-machine": withheld
+  "table:print-material": withheld
+  "table:print-order": withheld
+  "table:roadmap": withheld
+  "table:systems": withheld
+  "table:wallpapers": withheld
+  "tofu:authentik-state": withheld
+  "weakness:corpus-diff": withheld
+  "weakness:git-worktree": withheld
+  "weakness:hidden-fees": withheld
+  "weakness:prometheus-alerts": withheld
+  "weakness:pulse-runs": withheld
+  "weakness:remediation-queue": withheld
+  "weakness:scan-state": withheld
