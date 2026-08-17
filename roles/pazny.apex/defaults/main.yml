@@ -1,0 +1,23 @@
+---
+# ==============================================================================
+# pazny.apex — the public anatomy page at the ROOT domain (iiab compose stack)
+#
+# STATIC FILES WITH NO APPLICATION BEHIND THEM, by ruling: the page is a
+# projection of state/anatomy-graph.json through the operator-signable
+# allow-list files/anatomy/apex/ruling.yml (63 `speaks:` phrases, 13 organs;
+# everything else withheld). tasks/main.yml REFUSES to build or serve while
+# the ruling is not `status: SIGNED` + `signed_by:` — fail-at-converge, never
+# fail-at-render. Gate: tests/anatomy/test_apex_serving_is_signature_gated.py.
+#
+# Centralized variables (apex_domain, apex_port, apex_version, install_apex)
+# live in top-level default.config.yml due to external consumers (Traefik
+# file-provider render, manifest introspection). This file holds only the
+# role-internal knobs.
+# ==============================================================================
+
+# Where the built site lands for the read-only bind mount. Derived content —
+# rebuilt on every converge from the repo, so a blank may wipe it freely.
+apex_web_root: "{{ stacks_dir }}/iiab/apex-www"
+
+apex_mem_limit: "{{ docker_mem_limit_light | default('256m') }}"
+apex_cpus: "{{ docker_cpus_light | default('0.5') }}"

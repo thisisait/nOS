@@ -232,8 +232,8 @@ organs:
   voice:     { title: "The Voice",     tells: "Mail, calls and signals, spoken from home.",   limb: right, order: 4 }
 
 # -----------------------------------------------------------------------------
-# NODE RULINGS — all 207 nodes the artifact carries today. 63 atoms
-# publish; 144 nodes are withheld. For a published atom, the `speaks:`
+# NODE RULINGS — all 208 nodes the artifact carries today. 63 atoms
+# publish; 145 nodes are withheld. For a published atom, the `speaks:`
 # phrase is the ONLY text that leaves for that node — read each one as the
 # sentence a stranger will see.
 # -----------------------------------------------------------------------------
@@ -316,6 +316,13 @@ nodes:
   "service:ntfy":          { publish: voice, speaks: "a tap on the shoulder when something matters" }
   "service:wordpress":     { publish: voice, speaks: "the public word, published from home" }
   "service:freepbx":       { publish: voice, speaks: "a telephone switchboard of one's own" }
+
+  # --- withheld: the page's own server (a page must not narrate itself) -----
+  # service:apex serves THIS site. Publishing it would name the serving
+  # infrastructure of the very surface a stranger is reading — and its
+  # manifest id is a service-name token, so the leak check already forbids
+  # the word from every emitted file. Withheld, deliberately and forever.
+  "service:apex": withheld
 
   # --- withheld: SSO clients (the map of who gates what stays home) ---------
   "authentik:backrest": withheld

@@ -1,0 +1,13 @@
+---
+galaxy_info:
+  role_name: apex
+  author: pazny
+  description: Public anatomy page at the root domain — static build of the signed apex ruling, served read-only by nginx
+  license: MIT
+  min_ansible_version: "2.20"
+  platforms:
+    - name: MacOSX
+      versions: [all]
+    - name: Ubuntu
+      versions: [all]
+dependencies: []

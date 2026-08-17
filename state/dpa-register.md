@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 88 (75 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (82)
+- **Processing activities:** 89 (76 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (83)
 - **Transfers outside the EU:** 8 activities
 - **Activities engaging a third-party processor:** 8
 
@@ -1135,6 +1135,23 @@ paths, source IPs); durable retention is owned by Loki, not this agent.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 14 days
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Apex — `svc_apex`
+- **Purpose:** Serves the public anatomy page at the root domain — a static,
+operator-signed projection of the estate's structure for anonymous
+visitors (the "This is AIT" front door). The page carries no live
+state, no user accounts, no cookies, no forms and no telemetry; the
+only personal data processed is standard web-server access metadata
+(visitor IP address, user agent, request path) written to rotated
+container logs for security monitoring of a public endpoint.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `anonymous_visitors`
+- **Data categories:** `access_log_ip_addresses`; `user_agent_strings`; `request_paths`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 30 days
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 

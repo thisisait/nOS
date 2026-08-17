@@ -175,6 +175,36 @@ def gate(artifact: dict, ruling: dict) -> None:
     _gate_amnesty(artifact, ruling)
 
 
+def serve_gate(ruling: dict) -> None:
+    """The DEPLOY gate, distinct from the build gate above.
+
+    A PROPOSED ruling may build a local preview (that is what the operator
+    reads before signing); it may never build FOR SERVING. The converge
+    path (roles/pazny.apex) calls this — via ``build.py --require-signed``
+    AND an Ansible assert of its own — so an unsigned ruling fails the
+    converge loudly instead of quietly rendering a page nobody approved.
+
+    Two conditions, both required: ``status: SIGNED`` and a non-empty
+    ``signed_by``. A signature names a person; SIGNED with nobody behind
+    it is not a signature.
+    """
+    status = ruling.get("status")
+    signed_by = str(ruling.get("signed_by") or "").strip()
+    if status != "SIGNED":
+        raise GateError(
+            f"the ruling is {status!r}, not SIGNED — nothing may be built for "
+            "serving. The operator must read every `speaks:` phrase and organ "
+            "title in files/anatomy/apex/ruling.yml, then set status: SIGNED "
+            "and signed_by. Local preview (build.py without --require-signed) "
+            "remains available."
+        )
+    if not signed_by:
+        raise GateError(
+            "status is SIGNED but signed_by is empty — a signature names a "
+            "person. Put the signer's name in signed_by."
+        )
+
+
 def _service_tokens(artifact: dict) -> set[str]:
     """The name tokens of every service node, in the spellings a page
     could plausibly render (underscore, dash, space)."""

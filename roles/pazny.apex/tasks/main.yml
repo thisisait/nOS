@@ -1,0 +1,77 @@
+---
+# ==============================================================================
+# pazny.apex/tasks/main.yml
+#
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
+# gates on the SIGNED apex ruling, builds the static site from the repo,
+# places it under {{ apex_web_root }} for a read-only bind mount, and renders
+# the compose override fragment to {{ stacks_dir }}/iiab/overrides/apex.yml.
+#
+# THE SIGNATURE GATE COMES FIRST AND EVERYTHING ELSE IS BEHIND IT.
+# files/anatomy/apex/ruling.yml is the operator-signable allow-list that
+# decides what may appear on an unauthenticated page at the root domain.
+# While it says `status: PROPOSED`, this role FAILS THE CONVERGE LOUDLY —
+# it does not skip, and it does not render a compose override that a later
+# `docker compose up` would happily serve. Belt and braces: the build script
+# itself re-checks the same signature (`build.py --require-signed`, exit 4),
+# so reordering these tasks cannot silently open the door.
+# Gate: tests/anatomy/test_apex_serving_is_signature_gated.py.
+# ==============================================================================
+
+- name: "[pazny.apex] Read the public-surface ruling"
+  ansible.builtin.slurp:
+    src: "{{ playbook_dir }}/files/anatomy/apex/ruling.yml"
+  register: _apex_ruling_raw
+
+- name: "[pazny.apex] REFUSE to serve while the ruling is unsigned"
+  vars:
+    _apex_ruling: "{{ _apex_ruling_raw.content | b64decode | from_yaml }}"
+  ansible.builtin.assert:
+    that:
+      - _apex_ruling.status == 'SIGNED'
+      - (_apex_ruling.signed_by | default('', true) | trim | length) > 0
+    fail_msg: >-
+      files/anatomy/apex/ruling.yml is status={{ _apex_ruling.status }},
+      signed_by={{ _apex_ruling.signed_by | default('null', true) }}.
+      The apex page is a public projection of the estate's anatomy and may
+      not be built for serving until the operator has read and signed the
+      ruling (every `speaks:` phrase and organ title), set status: SIGNED
+      and signed_by, and reconverged. Nothing was rendered and no route
+      will exist. To silence this instead, set install_apex: false.
+    success_msg: >-
+      apex ruling v{{ _apex_ruling.version }} SIGNED by
+      {{ _apex_ruling.signed_by | default('?', true) }}
+
+- name: "[pazny.apex] Ensure web root parent exists"
+  ansible.builtin.file:
+    path: "{{ apex_web_root | dirname }}"
+    state: directory
+    mode: '0755'
+
+# Deterministic build (ruling decision D3): byte-identical output for the
+# same repo inputs, so re-running is a no-op in content terms. The script
+# re-verifies the signature itself and exits 4 on an unsigned ruling.
+- name: "[pazny.apex] Build the public site into the web root (signature re-checked)"
+  ansible.builtin.command:
+    argv:
+      - python3
+      - "{{ playbook_dir }}/files/anatomy/apex/build.py"
+      - "--require-signed"
+      - "--out"
+      - "{{ apex_web_root }}"
+  register: _apex_build
+  changed_when: false
+
+- name: "[pazny.apex] Deploy nginx server config (server_tokens off)"
+  ansible.builtin.template:
+    src: apex-nginx.conf.j2
+    dest: "{{ stacks_dir }}/iiab/apex-nginx.conf"
+    mode: '0644'
+  notify: Restart apex
+
+- name: "[pazny.apex] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/apex.yml"
+    mode: '0600'
+  notify: Restart apex

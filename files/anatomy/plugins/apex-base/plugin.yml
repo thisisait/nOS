@@ -1,0 +1,74 @@
+# =============================================================================
+# apex-base — service plugin for the public anatomy page at the ROOT domain.
+#
+# The thinnest plugin in the estate, because the service is the thinnest
+# service: static files behind a pinned nginx, no application, no database,
+# no identity model. NO authentik: block — the surface is public by design
+# (traefik_auth_modes.apex: none, justified in
+# roles/pazny.traefik/vars/main.yml per the REM-144 rule). The serving gate
+# lives upstream of SSO entirely: roles/pazny.apex refuses to build or serve
+# while files/anatomy/apex/ruling.yml is not status: SIGNED.
+# =============================================================================
+
+name: apex-base
+version: 0.1.0
+description: |
+  Wiring layer for the apex public site: GDPR Article 30 row for the
+  estate's one deliberately-anonymous web surface, notification routing,
+  and the (empty, surveyed) dependency declaration. The content pipeline
+  is files/anatomy/apex/ — artifact -> signed ruling -> projection ->
+  static pages — and runs at converge, not at request time.
+upstream: https://thisisait.eu
+license: MIT
+
+type:
+  - service
+
+requires:
+  role: pazny.apex
+  feature_flag: install_apex
+  variables:
+    - apex_domain
+    - apex_port
+    - apex_version
+    - tenant_domain
+
+# ── DEPENDS_ON — surveyed, no upstreams (docs/idea/13-relations.md, R1) ──────
+# The empty list is a positive statement: apex serves prebuilt static files
+# and can outlive every other container. Its build-time input
+# (state/anatomy-graph.json + the signed ruling) is repo substrate, not a
+# running service, so no service→service edge exists to declare.
+depends_on: []
+
+gdpr:
+  purpose: |
+    Serves the public anatomy page at the root domain — a static,
+    operator-signed projection of the estate's structure for anonymous
+    visitors (the "This is AIT" front door). The page carries no live
+    state, no user accounts, no cookies, no forms and no telemetry; the
+    only personal data processed is standard web-server access metadata
+    (visitor IP address, user agent, request path) written to rotated
+    container logs for security monitoring of a public endpoint.
+  legal_basis: legitimate_interests
+  data_categories:
+    - access_log_ip_addresses
+    - user_agent_strings
+    - request_paths
+  data_subjects:
+    - anonymous_visitors
+  # Container logs rotate at 3×10 MB (json-file); horizon stated for the
+  # register. No other storage exists on this surface.
+  retention_days: 30
+  processors: []
+  eu_residency: true
+
+# ── Notification routing (A9 severity → channel) ─────────────────────────────
+# The emitter decides severity; this block only routes. A failed apex build
+# (unsigned ruling, gate halt, leak refusal) surfaces at converge, so the
+# channels matter mainly for future Pulse probes of the public surface.
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []

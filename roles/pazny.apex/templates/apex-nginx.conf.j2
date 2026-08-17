@@ -1,0 +1,24 @@
+# {{ ansible_managed }}
+# pazny.apex — nginx server config for the public anatomy page.
+#
+# server_tokens off: a version number on a public page is a shopping list
+# for the CVE the estate has not patched yet (docs/llm/security doctrine);
+# the default nginx config advertises its exact version in the Server
+# header and on error pages. Everything else is stock static serving —
+# no proxying, no CGI, no application behind this surface, by ruling.
+
+server {
+    listen 80;
+    server_name _;
+    server_tokens off;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Static, deterministic content rebuilt only at converge — cache briefly.
+    add_header Cache-Control "public, max-age=3600";
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}

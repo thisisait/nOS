@@ -493,6 +493,13 @@ install_iiab_terminal: false      # TUI access via SSH for anyone on LAN [requir
 # ── Web desktop ───────────────────────────────────────────────────────────────
 install_face: true               # nOS face – unified web-desktop shell (SvelteKit; composes hub catalog + header-SSO + Bone VFS) [Docker]
 
+# ── Public apex site (the ROOT domain) ────────────────────────────────────────
+# Static, unauthenticated, no application behind it — a projection of the
+# anatomy through the operator-signable allow-list files/anatomy/apex/ruling.yml.
+# The pazny.apex role FAILS THE CONVERGE while the ruling is not SIGNED, so
+# flipping this on before signing produces a loud refusal, not a page.
+install_apex: false              # apex – public anatomy page at the root domain [Docker, static nginx; requires SIGNED apex ruling]
+
 # ── Knowledge / cortex ────────────────────────────────────────────────────────
 install_keap: true               # KEAP – knowledge explorer & preserver (taxonomy, content links, agent API) [Docker]
 install_cortex: true             # Cortex – reasoning organ (validate surface; host Node daemon, loopback-only) [requires: node]
@@ -2348,6 +2355,23 @@ face_keap_explore_url: ""                       # override KEAP explore-graph if
 # Command-palette LLM model (host Ollama). Empty → auto-pick the first installed
 # non-embedding model, so "ask" works with whatever chat model the host pulled.
 face_ask_model: ""
+
+# ==============================================================================
+# apex – the public anatomy page at the ROOT domain (the estate's front door).
+# Static build of files/anatomy/apex/ (projection of state/anatomy-graph.json
+# through the SIGNED ruling), served by a pinned nginx with a read-only bind.
+# No application, no database, no identity model, no telemetry — by ruling.
+# Serving gate: roles/pazny.apex refuses an unsigned ruling at converge.
+# ==============================================================================
+
+# The ROOT domain itself, not a subdomain: the apex answers https://<tld>/.
+# host_alias deliberately does not apply — an aliased host publishes no apex.
+apex_domain: "{{ tenant_domain | default('dev.local') }}"
+apex_port: 8061                                # loopback publish (container binds 80)
+# nginx stable-alpine. The tag says what we meant, the digest says what we get
+# (mcp_gateway precedent). Digest is the multi-arch INDEX (arm64 + amd64).
+# Asked at the source registry (Docker Hub library/nginx), 2026-08-17.
+apex_version: "1.30.4-alpine@sha256:97d490c12ba55b4946b01546d1c3ed324e8d41ab1c9fcb2a616aa470620e5b46"
 
 # ==============================================================================
 # KEAP – Knowledge Explorer and Preserver (the CORTEX of the nOS anatomy)

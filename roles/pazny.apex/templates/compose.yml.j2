@@ -1,0 +1,47 @@
+# =============================================================================
+# pazny.apex - compose override fragment
+# Merged into `docker compose -p iiab up` in tasks/stacks/stack-up.yml via
+# ansible.builtin.find over {{ stacks_dir }}/iiab/overrides/*.yml.
+#
+# A static file server and nothing else, per the apex ruling: read-only root
+# filesystem, read-only binds, no writable state beyond tmpfs scratch. The
+# content is built at converge time by roles/pazny.apex from the SIGNED
+# ruling — this container never generates anything.
+#
+# SEC-02 posture: gated_net ONLY (defined external in the iiab base template;
+# Traefik joins it via traefik_networks). This is the estate's most public
+# surface, so it shares a network with nothing but the edge proxy: a
+# compromised apex reaches Traefik and nothing else, and no peer container
+# can reach apex except through the edge.
+# =============================================================================
+
+services:
+  apex:
+    image: nginx:{{ apex_version }}
+    restart: unless-stopped
+    # Read-only root FS; nginx needs exactly these scratch paths writable.
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    ports:
+      - "127.0.0.1:{{ apex_port | default(8061) }}:80"
+    volumes:
+      - {{ apex_web_root }}:/usr/share/nginx/html:ro
+      - {{ stacks_dir }}/iiab/apex-nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      # busybox wget ships in the alpine base — no curl in this image.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - gated_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ apex_mem_limit | default(docker_mem_limit_light) }}
+    cpus: {{ apex_cpus | default(docker_cpus_light) }}

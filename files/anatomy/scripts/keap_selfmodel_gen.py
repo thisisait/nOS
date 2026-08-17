@@ -115,7 +115,7 @@ SYSTEM_NAME = {
     "authentik": "Authentik", "infisical": "Infisical", "portainer": "Portainer",
     "traefik": "Traefik", "bluesky-pds": "Bluesky PDS", "smtp-stalwart": "Stalwart Mail",
     "grafana": "Grafana", "prometheus": "Prometheus", "loki": "Loki", "tempo": "Tempo",
-    "wordpress": "WordPress", "nextcloud": "Nextcloud", "n8n": "n8n",
+    "wordpress": "WordPress", "apex": "Apex Site", "nextcloud": "Nextcloud", "n8n": "n8n",
     "nodered": "Node-RED", "kiwix": "Kiwix", "offline-maps": "Offline Maps",
     "jellyfin": "Jellyfin", "open-webui": "Open WebUI", "uptime-kuma": "Uptime Kuma",
     "calibre-web": "Calibre-Web", "homeassistant": "Home Assistant", "rustfs": "RustFS",
@@ -273,6 +273,13 @@ SYSTEM_EN = {
         "WordPress, the estate's public-facing website and blog. It is the one system "
         "meant to be read by anonymous visitors, in contrast with the wikis that sit "
         "behind the login."
+    ),
+    "apex": (
+        "The apex site: a static anatomy page served at the root domain to anonymous "
+        "visitors. Unlike WordPress (the editable blog with accounts and a database), "
+        "it has no application behind it at all — nginx serving files that are built "
+        "at converge time from an operator-signed allow-list ruling, and the converge "
+        "refuses to build or serve while that ruling is unsigned."
     ),
     "nextcloud": (
         "Nextcloud, the tenant file cloud: WebDAV storage with sharing, calendars and "

@@ -65,7 +65,8 @@
         { "service": "vaultwarden", "path": "/admin", "risk": "Admin panel (token-protected)", "auth": "admin_token" },
         { "service": "traefik", "path": ":8080/dashboard/", "risk": "Traefik dashboard (localhost only)", "auth": "none (localhost)" },
         { "service": "prometheus", "path": ":9090/-/ready", "risk": "Health check (localhost only)", "auth": "none (localhost)" },
-        { "service": "calibreweb", "path": "/login", "risk": "Login with default admin/admin123", "auth": "default_creds" }
+        { "service": "calibreweb", "path": "/login", "risk": "Login with default admin/admin123", "auth": "default_creds" },
+        { "service": "apex", "path": "/", "risk": "Public static anatomy page at the ROOT domain — anonymous by design; serves only the signed allow-list projection (files/anatomy/apex/ruling.yml), read-only nginx, no application/DB/session behind it; server_tokens off; converge refuses to serve an unsigned ruling", "auth": "none (public by design)" }
       ]
     },
     "container_escape_vectors": {

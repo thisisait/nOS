@@ -48,6 +48,10 @@ traefik_auth_modes:
   # — kept only so the manifest↔auth-mode gate has something to read.
   traefik: none             # dashboard is NOT routed; see traefik_skip_ids
   offline_maps: none        # public tile server (no Authentik provider entry exists)
+  apex: none                # public-by-design static page at the ROOT domain; the
+                            # real gate is upstream of routing: roles/pazny.apex
+                            # refuses to build/serve while the apex ruling is
+                            # unsigned. Justification field below (REM-144 rule).
   # ntfy: forward-auth REMOVED 2026-08-08, deliberately, so a PHONE can subscribe.
   #
   # A push client is a machine caller: it holds a credential and speaks HTTP. It
@@ -186,6 +190,19 @@ traefik_auth_none_justification:
   offline_maps: >-
     Public tile server by design — read-only, no user data, no Authentik provider
     entry exists for it.
+  apex: >-
+    The public anatomy page at the root domain — anonymous BY DESIGN, and the
+    only surface in the estate whose purpose is to be read by strangers. What
+    it serves is a signed allow-list projection (files/anatomy/apex/ruling.yml:
+    63 operator-approved `speaks:` phrases in 13 organs; service names,
+    hostnames, versions, health and counts all withheld and leak-checked at
+    build time). There is no application, no database, no session and no
+    identity model behind it: a pinned nginx with a read-only bind serving
+    files that are byte-deterministic outputs of the signed ruling. An
+    Authentik gate would contradict the surface's entire purpose; the real
+    gate sits upstream of routing — roles/pazny.apex refuses to build or
+    serve while the ruling is not status: SIGNED (pinned by
+    tests/anatomy/test_apex_serving_is_signature_gated.py).
 
 # Service ids to skip even if their install flag is on (no Traefik router).
 # These either expose a non-HTTP protocol or are intentionally LAN-only.
@@ -264,6 +281,7 @@ traefik_host_services:
 # listed fall back to host-gateway routing (host daemons).
 traefik_host_gateway_ip: "192.168.65.254"   # Docker Desktop host gateway (IPv4); override per host
 traefik_container_upstreams:
+  apex:          { port: 80 }   # gated_net only (SEC-02 posture; calibre-web precedent)
   grafana:       { port: 3000 }
   gitea:         { port: 3000 }
   gitlab:        { port: 80 }

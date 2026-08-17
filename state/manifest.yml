@@ -262,6 +262,23 @@ services:
     oidc: native
     rbac_tier: 4
 
+  - id: apex
+    category: web
+    stack: iiab
+    install_flag: install_apex
+    version_var: apex_version
+    version_source: docker_image
+    image: nginx
+    domain_var: apex_domain
+    port_var: apex_port
+    oidc: none
+    rbac_tier: 4
+    notes: >-
+      Public anatomy page at the ROOT domain. Static files only — the signed
+      projection of files/anatomy/apex/ruling.yml; no application, no DB, no
+      identity model. The pazny.apex role refuses to build or serve while the
+      ruling is unsigned.
+
   - id: nextcloud
     category: collaboration
     stack: iiab

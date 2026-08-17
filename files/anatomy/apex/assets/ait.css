@@ -11,6 +11,15 @@
    this comment cannot spell it).
    ========================================================================= */
 
+/* FOLLOW-UP (named, measured 2026-08-17): serve subsetted woff2 instead of
+   full variable TTFs. The serif TTF is 1.2 MB; a Latin+Latin-Ext subset via
+   pyftsubset (fontTools 4.x, already on the host) measures 492 KB as TTF,
+   and woff2 would roughly halve that again — but the woff2 encoder needs
+   the Brotli python module, which is NOT present in any estate toolchain,
+   and adding a build dependency for it was deliberately refused (ruling-
+   adjacent decision, this session). When Brotli arrives for another reason,
+   subset all three faces, keep the OFL notices, and note the OFL
+   Reserved-Font-Name clause before shipping a renamed-or-not subset. */
 @font-face {
   font-family: "Open Sans";
   src: url("fonts/OpenSans-Variable.ttf") format("truetype");

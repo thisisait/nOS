@@ -1,0 +1,8 @@
+---
+# pazny.apex — handlers
+
+- name: Restart apex
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    restart apex
+  failed_when: false

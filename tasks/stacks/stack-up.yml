@@ -66,6 +66,8 @@
 
 # IIAB roles
 - { name: "[Stacks] pazny.wordpress render", ansible.builtin.include_role: { name: pazny.wordpress, apply: { tags: ['wordpress'] } }, when: "install_wordpress | default(false)", tags: ['wordpress'] }
+# pazny.apex FAILS (does not skip) on an unsigned files/anatomy/apex/ruling.yml — deliberate: an operator who enabled install_apex must see the refusal, not a silent no-op.
+- { name: "[Stacks] pazny.apex render", ansible.builtin.include_role: { name: pazny.apex, apply: { tags: ['apex'] } }, when: "install_apex | default(false)", tags: ['apex'] }
 - { name: "[Stacks] pazny.nextcloud render", ansible.builtin.include_role: { name: pazny.nextcloud, apply: { tags: ['nextcloud'] } }, when: "install_nextcloud | default(false)", tags: ['nextcloud'] }
 - { name: "[Stacks] pazny.n8n render", ansible.builtin.include_role: { name: pazny.n8n, apply: { tags: ['n8n'] } }, when: "install_n8n | default(false)", tags: ['n8n'] }
 - { name: "[Stacks] pazny.kiwix render", ansible.builtin.include_role: { name: pazny.kiwix, apply: { tags: ['kiwix'] } }, when: "install_kiwix | default(false)", tags: ['kiwix'] }
