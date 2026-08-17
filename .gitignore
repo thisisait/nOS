@@ -16,6 +16,10 @@ roles/*
 # Frozen pre-release-gate venv built by tools/ci-local.sh (ansible-core 2.21
 # mirror of the CI integration job). Regenerated on demand; never committed.
 .ci-venv/
+# Isolated LangGraph-spike venv (docs/idea/17 clause 2). NOT Bone's venv,
+# installed by no playbook path; tools/orchestrator-acceptance.py runs
+# against it via .spike-venv/bin/python. Regenerated on demand.
+.spike-venv/
 .remember/*
 vision.md
 _credentials.yml

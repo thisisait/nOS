@@ -44,7 +44,15 @@ relabelling path. ~1,250 LOC of Runner+resolver, plus ~30 gate files.
 the tool loop, ceilings check before each call, attribution corrects at
 session end. The PRE-loop seam (resolver, binding, register gates) is clean
 and portable. The IN-loop welds need a host with veto-capable hooks;
-observational callbacks (LangChain's) cannot refuse. LangGraph's
+observational callbacks (LangChain's) cannot refuse. *[CORRECTION
+2026-08-17: the "observational callbacks" premise is 2024 folklore and is
+stale — doc 17 §2 catalogues six of eleven surveyed hosts with veto-capable
+refusal in 2026, and the LangGraph spike measured it: `langgraph==1.2.11`
+driven by `tools/orchestrator-acceptance.py --host langgraph` (adapter
+`tools/orchestrator_hosts/langgraph_host.py`) passed all four items —
+abort before a model call (0 calls made), abort at an iteration boundary,
+unretried exception propagation, and spend recorded on abort. Veto
+capability no longer discriminates between candidates.]* LangGraph's
 interrupts/checkpoints could host some of it. The welding is load-bearing
 but not fused: a port is possible, not free.
 

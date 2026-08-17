@@ -155,6 +155,19 @@ Two corrections to carry into the spike anyway: the "LangChain callbacks are obs
 
 **This is a defect, not a design question. Fix it before anything else in this document.** It is a one-line change plus a gate.
 
+### Spike result (2026-08-17)
+
+Run per this clause: `langgraph==1.2.11` in an isolated `.spike-venv/`, adapter `tools/orchestrator_hosts/langgraph_host.py` driving a real `StateGraph` loop (boundary → gate → model, iteration edge back, no checkpointer), judged by the pre-committed `tools/orchestrator-acceptance.py`.
+
+- **All four items PASS**, including the hard item 4: `actually spent in/out 20/10; ledger recorded 20/10; finished=True`. Reference pair behaved (null 4/4 PASS; broken 3 FAIL + 1 HARD FAIL). A `Refusal` raised in a gate node propagates out of `invoke()` before the model node runs; `ModelBroke` escapes unretried (default `retry_policy` is none).
+- **Checkpointer is a parameter, not a requirement** — VERIFIED: `StateGraph.compile(checkpointer=None)` is the default and every probe ran without one. Corollary, measured: on an exception, `invoke()` yields no state and checkpointer-less partial state is unrecoverable — the spend tally must be written by the caller that owns the ledger (the adapter's `finally`), not by a node. The ledger/checkpointer duplication objection does not arise; the ledger stays outside the graph.
+- **`langsmith` is inert by default** — VERIFIED: under `env -i`, `langsmith.utils.tracing_is_enabled()` → `False` (langsmith 0.11.0).
+- **No phone-home at import or first run** — VERIFIED by a raising socket guard (`socket`, `create_connection`, `getaddrinfo`) around import + a 4-iteration run: zero external attempts. The single socket constructor call is urllib3's import-time IPv6 capability probe against loopback `::1` (`urllib3/util/connection.py:137`).
+- **Dependency arithmetic** — 1 declared package resolves to **35** (pip freeze). Licences: MIT/BSD/Apache/PSF throughout; MPL-2.0 on `certifi` and (file-level, with Apache/MIT) `orjson`; no copyleft beyond that. Bone's live venv measures **26** resolved today (this doc said 29 at research time); name-overlap is 13, so LangGraph-in-Bone's-venv would add **22 packages (26 → 48)**. One real conflict: `langgraph-sdk` pins `websockets<16`; Bone runs `websockets 16.1.1` under uvicorn — co-installation forces a downgrade.
+- Two adapter-layer facts for the eventual `loop-driver`: node/branch callables must not annotate a method-local state schema (`get_type_hints()` forward-ref `NameError` under `from __future__ import annotations`); and the operator's pyenv **global** site-packages already carries an undocumented `langgraph 1.1.10` + `langchain 1.2.18` stack, which also passes 4/4 — the spike venv exists precisely so that stray install is not what got measured.
+
+**Verdict: LangGraph fits the four-item contract.** The open question from §5 — veto *between tool calls inside a prebuilt agent node* — remains unmeasured; this spike used a hand-built graph, where the gate-node seam is trivially available.
+
 ---
 
 ## 3. The visualisation
