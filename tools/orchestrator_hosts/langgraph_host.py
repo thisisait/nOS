@@ -84,6 +84,28 @@ class LangGraphHost:
                     f"run via .spike-venv/bin/python")
         return None
 
+    def provenance(self) -> str:
+        """Name the exact subject of the measurement.
+
+        Added after an undeclared langgraph in the operator's global python
+        was measured by a bare harness run and passed — for a version nobody
+        had chosen. Version AND path: two installs can share a version.
+        """
+        try:
+            from importlib.metadata import distribution
+            from importlib.util import find_spec
+
+            dist = distribution("langgraph")
+            spec = find_spec("langgraph")
+            # `langgraph` is a NAMESPACE package and has no `__file__`, so the
+            # obvious `langgraph.__file__` reports nothing. The search location
+            # is the answer to "which one is this".
+            where = (list(spec.submodule_search_locations or []) or
+                     [str(dist.locate_file(""))])[0]
+            return f"langgraph {dist.version} from {where}"
+        except Exception as exc:  # noqa: BLE001
+            return f"langgraph present but unreportable ({type(exc).__name__})"
+
     def run(
         self,
         model: Any,

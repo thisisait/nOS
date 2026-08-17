@@ -331,7 +331,18 @@ def run_host(name: str) -> int:
         print(f"{name}: SKIP — {reason}")
         return 3
 
+    # SAY WHAT WAS MEASURED. Found 2026-08-17: the operator's global python
+    # carried an undeclared langgraph 1.1.10 that nobody installed on purpose,
+    # so a bare `python3 tools/orchestrator-acceptance.py --host langgraph`
+    # measured THAT and reported a clean pass — for a version the spike never
+    # chose. The stack has been removed, which closes today's instance and not
+    # the shape: a result that does not name its subject can always be a
+    # result about something else.
     print(f"\n  host: {name}")
+    print(f"  interpreter: {sys.executable}")
+    provenance = getattr(host, "provenance", None)
+    if callable(provenance):
+        print(f"  subject:     {provenance()}")
     print("  " + "-" * 68)
     failures = 0
     hard_failures = 0
