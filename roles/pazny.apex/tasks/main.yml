@@ -62,6 +62,37 @@
   register: _apex_build
   changed_when: false
 
+# ── The site is on the host. Ask the CONTAINER whether it is also there. ─────
+# Measured 2026-08-17: the build used to clear its output directory by
+# removing and recreating it, which gave the web root a new inode while the
+# running container's bind mount still pointed at the old one. Host: correct.
+# Converge: failed=0. World: 403. build.py no longer does that
+# (tests/anatomy/test_apex_rebuild_keeps_the_web_root.py), but a mount can go
+# stale for reasons this role does not author — an external-storage remount,
+# a manual move — and the failure is silent on every surface except the page
+# itself. So the container is asked, and a container that cannot see its own
+# content is removed rather than restarted: `restart` keeps the container,
+# and with it the mount that is the problem. The compose-up that follows this
+# role in stack-up.yml then builds a fresh one against the current inode.
+- name: "[pazny.apex] Ask the container whether it can see the page it serves"
+  ansible.builtin.command:
+    argv: ["{{ docker_bin }}", "exec", "iiab-apex-1",
+           "test", "-s", "/usr/share/nginx/html/index.html"]
+  register: _apex_sees_its_content
+  failed_when: false
+  changed_when: false
+
+- name: "[pazny.apex] Remove a container whose mount no longer resolves"
+  ansible.builtin.command:
+    argv: ["{{ docker_bin }}", "rm", "-f", "iiab-apex-1"]
+  # rc 1 from `docker exec` on a MISSING container is the ordinary first-run
+  # case and must not trigger a removal; only a container that exists and
+  # cannot read its own index does.
+  when: >-
+    _apex_sees_its_content.rc != 0
+    and 'No such container' not in (_apex_sees_its_content.stderr | default(''))
+  changed_when: true
+
 - name: "[pazny.apex] Deploy nginx server config (server_tokens off)"
   ansible.builtin.template:
     src: apex-nginx.conf.j2

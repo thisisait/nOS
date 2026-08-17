@@ -11,31 +11,37 @@
    this comment cannot spell it).
    ========================================================================= */
 
-/* FOLLOW-UP (named, measured 2026-08-17): serve subsetted woff2 instead of
-   full variable TTFs. The serif TTF is 1.2 MB; a Latin+Latin-Ext subset via
-   pyftsubset (fontTools 4.x, already on the host) measures 492 KB as TTF,
-   and woff2 would roughly halve that again — but the woff2 encoder needs
-   the Brotli python module, which is NOT present in any estate toolchain,
-   and adding a build dependency for it was deliberately refused (ruling-
-   adjacent decision, this session). When Brotli arrives for another reason,
-   subset all three faces, keep the OFL notices, and note the OFL
-   Reserved-Font-Name clause before shipping a renamed-or-not subset. */
+/* The faces are Latin subsets, cut by the subsetting tool that sits
+   beside this stylesheet, from the upstream binaries in fonts/upstream/
+   (kept as provenance, never served).
+   First visit went from 1,954,484 to 558,540 bytes of typeface — 71% — and
+   the saving came from dropping OpenType features this page never asks for,
+   not from cutting glyphs; the Latin floor is deliberately generous so Czech
+   and Polish copy needs no re-subset. woff2 would roughly halve it again and
+   is NOT available: its encoder needs Brotli, absent from every toolchain
+   here, and a build dependency for a font was refused.
+
+   The serif and the mono are RENAMED. Both declare Reserved Font Name
+   'Source' in their own copyright string, a subset is a Modified Version,
+   and OFL clause 3 forbids a Modified Version from carrying the reserved name.
+   The original copyright notices travel with the binaries, as clause 1 requires.
+   Open Sans declares no reserved name and keeps its own. */
 @font-face {
   font-family: "Open Sans";
-  src: url("fonts/OpenSans-Variable.ttf") format("truetype");
+  src: url("fonts/OpenSans-Variable-Latin.ttf") format("truetype");
   font-weight: 300 800;
   font-stretch: 75% 100%;
   font-display: swap;
 }
 @font-face {
-  font-family: "Source Serif 4";
-  src: url("fonts/SourceSerif4-Variable.ttf") format("truetype");
+  font-family: "AIT Serif";          /* subset of Source Serif 4 (Adobe, OFL) */
+  src: url("fonts/SourceSerif4-Variable-Latin.ttf") format("truetype");
   font-weight: 200 900;
   font-display: swap;
 }
 @font-face {
-  font-family: "Source Code Pro";
-  src: url("fonts/SourceCodePro-Variable.ttf") format("truetype");
+  font-family: "AIT Mono";           /* subset of Source Code Pro (Adobe, OFL) */
+  src: url("fonts/SourceCodePro-Variable-Latin.ttf") format("truetype");
   font-weight: 200 900;
   font-display: swap;
 }
@@ -61,8 +67,8 @@
   --on-red: #25252A;
   /* type */
   --sans: "Open Sans", system-ui, -apple-system, sans-serif;
-  --serif: "Source Serif 4", Georgia, serif;
-  --code: "Source Code Pro", ui-monospace, "SF Mono", monospace;
+  --serif: "AIT Serif", Georgia, serif;
+  --code: "AIT Mono", ui-monospace, "SF Mono", monospace;
   /* modular scale, ratio 1.25 from 16px */
   --t-0: 1rem;
   --t-1: 1.25rem;

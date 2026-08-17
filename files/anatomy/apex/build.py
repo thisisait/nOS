@@ -48,9 +48,17 @@ def build(out_dir: Path = DIST) -> Path:
     html = render.page_html(doc, seed)
     css = (ASSETS / "ait.css").read_text(encoding="utf-8")
 
-    # every emitted text surface passes the leak check
-    for name, text in (("index.html", html), ("public-anatomy.json", doc_text),
-                       ("ait.css", css)):
+    # EVERY emitted text surface passes the leak check — which until
+    # 2026-08-17 meant the three generated ones only, while the copied font
+    # licences went out unread. They are prose that a person edits, they sit
+    # at a guessable public path, and the day one of them named an internal
+    # service nothing would have said so. Copied text is now checked with
+    # the rest, BEFORE anything is written.
+    copied = [(p.name, p.read_text(encoding="utf-8"))
+              for p in sorted((ASSETS / "fonts").glob("*"))
+              if p.is_file() and p.suffix in {".txt", ".md"}]
+    for name, text in [("index.html", html), ("public-anatomy.json", doc_text),
+                       ("ait.css", css), *copied]:
         try:
             projection.leak_check(text, artifact, ruling)
         except projection.LeakError as exc:
@@ -66,12 +74,25 @@ def build(out_dir: Path = DIST) -> Path:
                 f"--out {out_dir} exists and does not look like a previous "
                 "apex build; refusing to erase it"
             )
-        shutil.rmtree(out_dir)
-    (out_dir / "assets").mkdir(parents=True)
+        # CLEAR THE CONTENTS, NEVER THE DIRECTORY. Measured 2026-08-17, on the
+        # first rebuild after the site went live: rmtree + mkdir gives the web
+        # root a NEW inode, and the running container's bind mount still points
+        # at the old one. The host directory looked perfect, the converge
+        # reported failed=0, and https://pazny.eu answered 403 to the world
+        # because nginx was looking at a directory that no longer had a name.
+        # Only the smoke probe said so. Keeping the inode keeps the mount.
+        for child in out_dir.iterdir():
+            shutil.rmtree(child) if child.is_dir() else child.unlink()
+    (out_dir / "assets").mkdir(parents=True, exist_ok=True)
     (out_dir / "index.html").write_text(html, encoding="utf-8")
     (out_dir / "public-anatomy.json").write_text(doc_text, encoding="utf-8")
     (out_dir / "assets" / "ait.css").write_text(css, encoding="utf-8")
-    shutil.copytree(ASSETS / "fonts", out_dir / "assets" / "fonts")
+    # `upstream/` holds the full unsubsetted binaries the vendored subsets are
+    # cut from. They are provenance, not payload: copying them would put the
+    # 1.9 MB this page was trimmed of back inside the web root, reachable by
+    # anyone who guesses the path.
+    shutil.copytree(ASSETS / "fonts", out_dir / "assets" / "fonts",
+                    ignore=shutil.ignore_patterns("upstream"))
     return out_dir
 
 

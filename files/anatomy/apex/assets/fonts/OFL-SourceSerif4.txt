@@ -1,4 +1,7 @@
-Copyright 2014 The Source Serif 4 Project Authors (https://github.com/adobe-fonts/source-serif)
+Copyright 2014 - 2021 Adobe Systems Incorporated (http://www.adobe.com/), with Reserved Font Name 'Source'.
+(Corrected 2026-08-17: the notice previously shipped here carried no Reserved
+Font Name while the vendored binary's own copyright string does. The binary is
+authoritative — see the subsetting tool in this site's source tree.)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
