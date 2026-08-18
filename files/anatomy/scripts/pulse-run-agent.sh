@@ -104,6 +104,16 @@ nos_agent_lock_acquire "$AGENT_NAME" 0 || exit 2
 
 # ── HMAC helper ───────────────────────────────────────────────────────────────
 
+# Audit-visibility ledger (2026-08-18). The 08-17 surveyor run completed,
+# cost $0.96, exited 0 — and left ZERO events in wing.db, because both HMAC
+# POSTs died before the request was even sent (curl exit 3: URL glob parse)
+# and the WARN below printed the caret line of curl's stderr as if it were
+# an HTTP status. A runner whose job includes making the run visible to the
+# audit surface must not exit 0 when it could not — see the exit-code
+# contract at the top of this file (2 = Wing error) and the same rule in
+# agent-run-lock.sh. Counted here, escalated at the bottom.
+WING_EVENT_POST_FAILURES=0
+
 # POST a Wing event with HMAC auth. Args: <json_body>
 #
 # IMPORTANT: body MUST be canonical JSON (sorted keys, no whitespace). Bone's
@@ -129,19 +139,31 @@ _post_wing_event() {
           | openssl dgst -sha256 -hmac "$WING_EVENTS_HMAC_SECRET" \
           | awk '{print $NF}')
 
-    local resp
-    resp=$(curl -sS -w "\n%{http_code}" \
+    # `-g` disables curl's URL globbing: a bracketed host (IPv6 `[::1]`) or any
+    # stray `[`/`{` in WING_API_URL otherwise kills curl at exit 3 BEFORE the
+    # request is sent — and before `-w` prints, so the "last line" trusted
+    # below is stderr text, not a status (the 08-17 surveyor incident).
+    local resp curl_rc=0
+    resp=$(curl -sSg -w "\n%{http_code}" \
         -X POST \
         -H "X-Wing-Timestamp: $ts" \
         -H "X-Wing-Signature: $sig" \
         -H "Content-Type: application/json" \
         -d "$body" \
-        "$WING_API_URL/api/v1/events" 2>&1) || true
+        "$WING_API_URL/api/v1/events" 2>&1) || curl_rc=$?
 
     local code
     code=$(echo "$resp" | tail -n 1)
-    if [[ "$code" != "201" ]]; then
+    if [[ "$code" == "201" ]]; then
+        return 0
+    fi
+    WING_EVENT_POST_FAILURES=$((WING_EVENT_POST_FAILURES + 1))
+    if [[ "$code" =~ ^[0-9]{3}$ ]]; then
         echo "WARN: Wing event POST returned HTTP $code" >&2
+    else
+        # curl died before a response existed; report what actually happened
+        # instead of parading stderr fragments as an HTTP status.
+        echo "WARN: Wing event POST never got a status (curl exit $curl_rc): $(echo "$resp" | head -n 1)" >&2
     fi
 }
 
@@ -164,13 +186,13 @@ _post_wing_notification() {
           | openssl dgst -sha256 -hmac "$WING_EVENTS_HMAC_SECRET" \
           | awk '{print $NF}')
     local code
-    code=$(curl -sS -o /dev/null -w "%{http_code}" \
+    code=$(curl -sSg -o /dev/null -w "%{http_code}" \
         -X POST \
         -H "X-Wing-Timestamp: $ts" \
         -H "X-Wing-Signature: $sig" \
         -H "Content-Type: application/json" \
         -d "$payload" \
-        "$WING_API_URL/api/v1/notifications" 2>&1 || echo "000")
+        "$WING_API_URL/api/v1/notifications" 2>/dev/null) || code="000"
     if [[ "$code" != "200" && "$code" != "201" ]]; then
         echo "WARN: notification POST returned HTTP $code" >&2
     fi
@@ -439,5 +461,17 @@ if [[ "$CLAUDE_EXIT" -ne 0 ]]; then
     _post_wing_notification "$NOTIF_SEV" "$NOTIF_TITLE" "$NOTIF_BODY"
 fi
 
-echo "INFO: ${AGENT_NAME} finished (exit=$CLAUDE_EXIT)"
-exit "$CLAUDE_EXIT"
+# ── Audit-visibility escalation ──────────────────────────────────────────────
+# A clean ceremony whose audit events never landed is NOT a success: the run
+# is invisible to wing.db, the /agents UI, and the lineage joins. Escalate to
+# the contract's exit 2 (Wing error) — deliberately AFTER the A9 block, which
+# rides the same Wing pipe that just failed. A real claude failure (exit ≥ 1)
+# keeps its own code; it already summons the operator.
+FINAL_EXIT="$CLAUDE_EXIT"
+if [[ "$WING_EVENT_POST_FAILURES" -gt 0 && "$FINAL_EXIT" -eq 0 ]]; then
+    echo "ERROR: ceremony succeeded but $WING_EVENT_POST_FAILURES Wing audit event POST(s) failed — this run is invisible to the audit surface" >&2
+    FINAL_EXIT=2
+fi
+
+echo "INFO: ${AGENT_NAME} finished (exit=$FINAL_EXIT)"
+exit "$FINAL_EXIT"

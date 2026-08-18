@@ -133,4 +133,5 @@ minutes"** — the same defect as the unannounced `flush-deep` prune. A first
 full-corpus embed after `remove=all` (every vector deleted) took ~10 minutes and
 announced nothing at all.
 
+| `pulse-run-agent.sh` `_post_wing_event` | `WARN: Wing event POST returned HTTP ` + curl stderr debris (a caret) presented as the status — while the run exited 0 with ZERO events landed (2026-08-17 surveyor, $0.96) | never — the "code" was `tail -n 1` of merged stderr; **PAID** 2026-08-18: WARN validates 3-digit codes and names curl's exit, and a run whose audit POSTs failed exits 2 (gate `test_wing_event_post_failure_is_not_silent.py`) |
 | _(operator-reported, pending)_ | | |
