@@ -93,6 +93,8 @@ tmux send-keys -t "$SESSION:ops.1" \
     "$W --interval 20 --title 'agents' -- tools/agent-status.py --limit 8" C-m
 
 tmux split-window -v -t "$SESSION:ops.1" -c "$REPO_ROOT" -p 40
+tmux send-keys -t "$SESSION:ops.2" \
+    "tools/elsewhere-status.py; clear" C-m
 
 # ── stuck: the quiet half. red-status says what FAILS; this says what STOPPED ─
 # Deliberately its own window rather than a pane: it is the view you open when

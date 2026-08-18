@@ -42,21 +42,39 @@ mkdir -p "$(dirname "$CACHE")" 2>/dev/null || true
 refresh() {
     cd "$REPO_ROOT" 2>/dev/null || { printf 'nos: no repo\n'; return 0; }
 
-    local reds inbox
-    reds="$(python3 tools/red-status.py --json 2>/dev/null \
-        | python3 -c 'import json,sys
-try:
-    d = json.load(sys.stdin)
-    print(d.get("red_count", "?"))
-    print((d.get("inbox") or {}).get("critical_or_high", "?"))
-except Exception:
-    print("?"); print("?")' 2>/dev/null)"
-    inbox="$(printf '%s\n' "$reds" | sed -n 2p)"
-    reds="$(printf '%s\n' "$reds" | sed -n 1p)"
+    # ONE python, not a pipeline of them. The first version chained
+    # `red-status --json | python -c` and `elsewhere-status --json | python -c`
+    # with quoting nested three deep, and the second one silently produced
+    # nothing — the detector found an off-screen converge while the bar kept
+    # saying all was calm. A status bar that fails quietly is the exact defect
+    # the bar exists to end, so the quoting hazard is removed rather than fixed.
+    python3 - <<'PYEOF' > "$CACHE" 2>/dev/null || printf 'nos: readers failed' > "$CACHE"
+import json, subprocess, sys
 
-    # `?` means the reader could not answer. It must not render as 0 — absence
-    # read as health is this estate's most-repeated defect.
-    printf 'red %s · inbox %s' "${reds:-?}" "${inbox:-?}" > "$CACHE"
+def read(tool):
+    try:
+        out = subprocess.run([sys.executable, tool, "--json"],
+                             capture_output=True, text=True, timeout=20)
+        return json.loads(out.stdout) if out.returncode == 0 else None
+    except Exception:
+        return None
+
+red = read("tools/red-status.py") or {}
+els = read("tools/elsewhere-status.py") or {}
+
+# `?` where a reader could not answer. It must never render as 0 — absence
+# read as health is this estate's most-repeated defect.
+reds = red.get("red_count", "?")
+inbox = (red.get("inbox") or {}).get("critical_or_high", "?")
+
+parts = []
+outside = els.get("outside") or []
+if outside:
+    parts.append(f"\u27f6 {outside[0]['what']} in {outside[0]['session']}")
+parts.append(f"red {reds}")
+parts.append(f"inbox {inbox}")
+sys.stdout.write(" \u00b7 ".join(parts))
+PYEOF
     cat "$CACHE"
     printf '\n'
 }

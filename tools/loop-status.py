@@ -87,6 +87,45 @@ def _source_of(weakness_id: str) -> str:
     return weakness_id.split(":", 1)[0] if ":" in weakness_id else weakness_id
 
 
+def live_weaknesses() -> tuple[list[dict], str | None]:
+    """Every weakness reported RIGHT NOW, with what it says about itself.
+
+    THE GAP THIS EXISTS TO SHOW. Measured 2026-08-18: seven sources report 67
+    weaknesses; `loop_proposals` holds three rows, all against `rem:`. So the
+    loop has a reader, a ledger, judges and a verdict chain — and NO STEP THAT
+    TURNS A REPORTED WEAKNESS INTO A PROPOSAL. The three real proposals were
+    filed by agents that happened to be pointed at remediation work
+    (`proposer_id` reads `agent:claude-opus-5`, `agent:librarian`); nothing
+    walks the list.
+
+    That missing step is `loop-driver` on the roadmap and it is not built. Until
+    it is, the cheapest honest thing is to make the gap COUNTABLE and NAMED,
+    because "six detectors are silent" is a shrug and "here are the 64 findings
+    nobody has proposed against, worst first" is a queue.
+    """
+    import sys as _sys
+
+    bone = pathlib.Path(__file__).resolve().parents[1] / "files/anatomy/bone"
+    _sys.path.insert(0, str(bone))
+    try:
+        import weaknesses as _w  # noqa: PLC0415
+
+        out = []
+        for report in _w.collect():
+            for weakness in report.weaknesses:
+                out.append({
+                    "id": weakness.weakness_id,
+                    "source": report.name,
+                    "severity": str(getattr(weakness, "severity", "") or "").lower(),
+                    "title": str(getattr(weakness, "title", "") or "")[:96],
+                })
+        return out, None
+    except Exception as exc:  # noqa: BLE001
+        return [], f"{type(exc).__name__}: {exc}"
+    finally:
+        _sys.path.remove(str(bone))
+
+
 def _live_weakness_ids() -> tuple[set[str], str | None]:
     """What the reader reports RIGHT NOW, or why we could not ask.
 
@@ -178,9 +217,40 @@ def main() -> int:
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--unresolved", action="store_true",
                     help="only weakness ids that no longer join to a source")
+    ap.add_argument("--gap", action="store_true",
+                    help="reported weaknesses that no proposal has ever cited")
     args = ap.parse_args()
 
     report = collect()
+
+    if args.gap:
+        live, err = live_weaknesses()
+        if err:
+            print(f"cannot list weaknesses — the reader did not load: {err}")
+            print("  no gap is reported; an empty list here would be a guess.")
+            return 0
+        proposed = {w for s in report.get("sources", []) for w in s["weaknesses"]}
+        gap = [w for w in live if w["id"] not in proposed]
+        order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
+        gap.sort(key=lambda w: (order.get(w["severity"], 9), w["id"]))
+
+        if args.json:
+            json.dump({"reported": len(live), "proposed_against": len(live) - len(gap),
+                       "gap": gap}, sys.stdout, indent=2, sort_keys=True)
+            sys.stdout.write("\n")
+            return 0
+
+        print(f"{len(gap)} of {len(live)} reported weaknesses have never been "
+              f"proposed against")
+        print("  (there is no step that turns a finding into a proposal — "
+              "`loop-driver` is not built. This is the queue it would read.)\n")
+        for w in gap[:25]:
+            sev = (w["severity"] or "-")[:8]
+            print(f"  {sev:<9} {w['id']:<34} {w['title'][:58]}")
+        if len(gap) > 25:
+            print(f"\n  … and {len(gap) - 25} more")
+        return 0
+
     if args.json:
         json.dump(report, sys.stdout, indent=2, sort_keys=True, default=list)
         sys.stdout.write("\n")
