@@ -31,7 +31,17 @@ ask for the security queue:
 ```bash
 tools/estate-status.py          # host vs local repo vs origin, all three
 tools/estate-status.py --config install_gitlab   # the RESOLVED value, not the default
+tools/red-status.py             # what is red RIGHT NOW, across every source
 ```
+
+**Start a session with `tools/red-status.py`.** A notification is an event and
+red is a state, and the estate had no way to ask for the state until 2026-08-18:
+two nightly jobs failed for two days having correctly notified once, on the first
+night, and then gone quiet by design — the repeat-failure rule that stops a
+per-minute job flooding the inbox also stops a nightly one repeating news that
+still holds. Establishing that took six ad-hoc SQL queries. The reader is
+strictly a reader (gate `test_the_red_reader_only_reads.py`) and exits 0 whatever
+it finds; an unreadable source is reported as UNKNOWN, never as green.
 
 ## Git Workflow
 
