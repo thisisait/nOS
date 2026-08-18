@@ -3,6 +3,11 @@
 > Status: 2026-05-23. Companion to `plugin-loader-spec.md` and
 > `role-thinning-recipe.md`. Pinned by `tests/anatomy/test_plugin_wiring_contract.py`;
 > measured by `tools/plugin-wiring-report.py`.
+>
+> **The counts below are as-measured on their dates and have drifted** (the
+> "55/55" era; the estate holds 60 service plugins as of 2026-08-18, still at
+> full notification coverage). The gate pins the *contract shape*, not these
+> tallies — for today's numbers run the report tool, do not cite this file.
 
 A service plugin (`files/anatomy/plugins/<svc>-base/plugin.yml`) wires its
 service into the platform through a handful of optional manifest blocks. This

@@ -1,6 +1,7 @@
 """Anatomy CI gate — uniform plugin wiring contract.
 
-The 55 service plugins under files/anatomy/plugins/ wire services into the
+The service plugins under files/anatomy/plugins/ (counted live, not here —
+55 when this gate was written, 60 by 2026-08-18) wire services into the
 platform through optional manifest blocks. Coverage drifted as plugins were
 authored by different passes, and the gating mechanism had real holes
 (qdrant-base ran its post_compose wait_health on every run regardless of

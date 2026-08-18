@@ -17,7 +17,7 @@ this estate, two of them in data, one in prose only, one proposed.
 | (proposed) | **what else breaks when this stops** | nowhere |
 
 The estate had already hit the collision once and worked around it locally:
-`default.config.yml:528` explains that a variable was named
+`default.config.yml:534` explains that a variable was named
 `sso_autologin_min_tier_<N>` specifically "to avoid collision/confusion with the
 unrelated `authentik_app_tiers` / `authentik_rbac_tiers` maps". Someone paid the
 cost of the ambiguity and routed around it rather than removing it.
@@ -36,7 +36,7 @@ prefixing: **F1–F4**, **H**. This document generalises that precedent.
   `definitions.axes`) beside `form` and `build`, and are generated into both
   runtimes by `tools/genome-codegen.py`. This section is prose about a
   vocabulary it does not own; `null` — the refusal to place a service, carried
-  by 38 of 63 today — is a legal value of the axis there, and the schema
+  by 38 of 64 today — is a legal value of the axis there, and the schema
   requires it to travel with a written reason.
 - **Delivery tier is RETIRED.** Say what the thing is: a **role service**
   (`roles/pazny.<name>/`, compose-override) or a **manifest app**
@@ -64,11 +64,11 @@ consequence, not importance and not privilege.
 This is the part that must not be skipped, and it is why this document does not
 ship a hand-written list of which service sits where.
 
-> **PARTIAL — 25 of 63 services surveyed (R1 2026-08-07, widened by R2 the same
+> **PARTIAL — 26 of 64 services surveyed (R1 2026-08-07, widened by R2 the same
 > day).** The graph carries **35 service→service edges**, and every service node
-> states its `dependency_survey`: `declared` (25), `not-surveyed` (34),
+> states its `dependency_survey`: `declared` (26), `not-surveyed` (34),
 > `no-manifest` (4). The derivation has an input and §4.2 governs what it may be
-> spent on. It is NOT an inventory: 38 of 63 services carry no `layer` at all.
+> spent on. It is NOT an inventory: 38 of 64 services carry no `layer` at all.
 > Declared consumer-side as a top-level `depends_on:` on the service plugin, the
 > same key and shape as a pulse job's; equivalence with the imperative blocks is
 > pinned by `tests/anatomy/test_service_dependency_edges.py`.
@@ -91,7 +91,7 @@ ship a hand-written list of which service sits where.
 **The anatomy graph held zero service→service edges** when this document was
 written. Measured on the 191-node artifact: `pulse→pulse` 66,
 `authentik→service` 38, `daemon→pulse` 20, `judge→doctrine` 14, and **none at
-all between the 63 service nodes**. The graph knew that a job feeds a job. It
+all between the 64 service nodes**. The graph knew that a job feeds a job. It
 did not know that Nextcloud needs Postgres.
 
 That dependency is real and it was already written down four times over — as
@@ -100,15 +100,15 @@ replacements, and **deleted none of them**: two representations is the defect,
 but removing the working one before the declared one is load-bearing is how an
 estate loses a dependency entirely.
 
-- `main.yml:1221` — *"Auto-enable MariaDB for services that require it"*, a
+- `main.yml:1248` — *"Auto-enable MariaDB for services that require it"*, a
   `when:` over seven `install_*` flags. That is a dependency statement in
   imperative form.
-- `main.yml:1234` — the same for PostgreSQL; `main.yml:1248` the same for Redis,
+- `main.yml:1261` — the same for PostgreSQL; `main.yml:1275` the same for Redis,
   and that one sets `redis_docker`, not `install_redis`.
 - `roles/pazny.postgresql/tasks/post.yml:104-119` — a `CREATE DATABASE` loop
-  over the same eight `install_*` flags, and `default.config.yml:1219`
+  over the same eight `install_*` flags, and `default.config.yml:1293`
   `mariadb_databases` over the same seven schemas.
-- `requires.plugin` in the plugin manifests, present on **9 of 71** and almost
+- `requires.plugin` in the plugin manifests, present on **9 of 76** and almost
   entirely composition plugins (`alloy-*`, `grafana-*`); `requires.peer_service`
   on two more, which the schema itself calls "documentation-only today".
 - The bring-up order itself: infra + observability are always first, always.
@@ -187,7 +187,7 @@ still be a leaf. If the derived answer is unwelcome, the correct response is to
 argue with the edges, not to overrule the arithmetic.
 
 **Measured 2026-08-07 (R2).** The prediction held, and it brought two more with
-it. The census is L0 3 · L1 4 · L2 18 · L3 0 · withheld 38:
+it. The census is L0 3 · L1 4 · L2 19 · L3 0 · withheld 38:
 
 | service | §3 says | derives | why |
 |---|---|---|---|
@@ -210,7 +210,7 @@ that movement is the finding.
 - **Removal.** *"What breaks if this service is removed"* is a graph query once
   the edges exist. Today it is a guess — which is precisely why the ERPNext
   removal question could not be answered with a number.
-- **Visualisation.** The estate map draws 63 service nodes with no structure
+- **Visualisation.** The estate map draws 64 service nodes with no structure
   between them because there is none to draw. Layer is the missing depth.
 - **Bring-up and blast-radius reasoning.** The order infra→observability→rest is
   already a layering; it is simply not named or checkable.

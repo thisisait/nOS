@@ -42,10 +42,12 @@ the entire time.
 ### 2.1 The accommodation, in order of preference
 
 1. **Pin a tag that still carries a shell**, where upstream publishes one —
-   `redis_exporter_version: "v1.88.0-alpine"` (`default.config.yml`) is what
-   keeps the existing `wget --spider` probe in
-   `roles/pazny.grafana/templates/compose.yml.j2` executable. Dropping the
-   `-alpine` suffix re-opens the 2026-08-06 failure exactly.
+   the `-alpine` suffix on `redis_exporter_version` (`default.config.yml`) is
+   what keeps the existing `wget --spider` probe in
+   `roles/pazny.grafana/templates/compose.yml.j2` executable. The numeric part
+   moves with the pin sweep (this doctrine quoted `v1.88.0` and was stale
+   within four days); the suffix is the doctrine. Dropping `-alpine` re-opens
+   the 2026-08-06 failure exactly.
 2. **Probe with what the image HAS** — bash-only: `["CMD", "bash", "-c",
    ":>/dev/tcp/127.0.0.1/<port>"]`, TCP liveness via bash's built-in
    pseudo-device (`apps/qdrant.yml`).

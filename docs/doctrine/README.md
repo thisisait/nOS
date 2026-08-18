@@ -1,15 +1,18 @@
 # nOS Doctrine
 
 **The constitution layer.** Each file here states *one* set of absolutely-key,
-load-bearing decisions in **10–80 lines** — terse enough to read in a minute, stable
+load-bearing decisions — terse enough to read in a few minutes, stable
 enough that changing one is a deliberate act. Detail, rationale, and phasing live in
 `docs/idea/` and `docs/` guides; doctrine files are the *canonical decision*, not the
 essay.
 
 **Rule:** if a design choice is one that a future contributor (or agent) could
-plausibly get wrong by guessing, it belongs here. Keep each file short — if it grows
-past ~80 lines, the detail belongs in a `docs/idea/` or `docs/` companion, linked from
-the doctrine file.
+plausibly get wrong by guessing, it belongs here. Keep each file short — the target
+is well under ~130 lines (an axis-owning file like `layers.md` may run longer); when
+one grows past that, the detail belongs in a `docs/idea/` or `docs/` companion,
+linked from the doctrine file. (The old "10–80 lines" ceiling was asserted while six
+of twelve files exceeded it and nothing enforced it — retracted 2026-08-18 rather
+than kept as a rule that only ever reports its own defeat.)
 
 ## Files
 
@@ -25,8 +28,10 @@ the doctrine file.
 | [workflows.md](workflows.md) | multi-agent fan-out must be **union** or **veto** (selection banned); a chain is not a fan-out; the gate reads evidence, not model trust; discovery files / implementation authorises via a COMMITTED spec, never a status; recursion needs asymmetric judgement + a retro-red ratchet | ✅ v1 |
 | [foreign-properties.md](foreign-properties.md) | upstream facts we cannot fix, only route around: a healthcheck that cannot RUN in a minimal image is not a sick service; LSIO code-server is plain HTTP on 8443, so an upstream is HTTP until measured otherwise | ✅ v1 |
 | [four-trees.md](four-trees.md) | branch vs checkout vs worktree vs estate: nothing propagates on its own; `config.yml` is a fifth surface that outranks the defaults and is not in git | ✅ v1 |
+| [layers.md](layers.md) | the `layer` axis (L0–L3, derived, `withheld` over guessed) and what the word `tier` may mean | ✅ v1 |
+| [face-app-tiers.md](face-app-tiers.md) | face-app `form` + build-complexity (F1–F4/H) axes | ✅ v1 |
 | table-naming.md | DB table / column naming conventions | planned |
-| taxonomy.md | taxonomy / ontology term definitions (L0–L4, node/pillar/block, relations) | planned |
+| taxonomy.md | taxonomy / ontology term definitions (KEAP taxonomy depth levels, node/pillar/block, relations — NOT the service `layer` L0–L3 axis, which layers.md owns) | planned |
 | agentkit.md | agent tool-mediation, scopes, FS/RBAC gating | planned |
 | pulse.md | scheduled-job contract (job ids, tokens, catalog substitution) | planned |
 | wing.md | Wing identity, RBAC tiers, DB-writer contract | planned |

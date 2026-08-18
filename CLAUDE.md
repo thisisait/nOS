@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~50 Docker services organized into 75 Ansible roles under the `pazny.*` namespace, 76 anatomy plugins for cross-service wiring, SSO (Authentik), secrets vault (Infisical), a unified web-desktop (nOS face), AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `nos --remove=data --confirm` (legacy `blank=true`) wipes everything and reinstalls from scratch.
+**nOS** — Ansible playbook that automates a macOS development environment on Apple Silicon (M1+). A complete self-hosted **Agentic Home Lab** with ~50 Docker services organized into 76 Ansible roles under the `pazny.*` namespace, 76 anatomy plugins for cross-service wiring, SSO (Authentik), secrets vault (Infisical), a unified web-desktop (nOS face), AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode), observability (LGTM stack + InfluxDB), nightly backup to RustFS, and Tailscale remote access. Every service is FOSS; all data stays local. Fully replicable — `nos --remove=data --confirm` (legacy `blank=true`) wipes everything and reinstalls from scratch.
 
 `nOS` is the open-source reference implementation behind [**This is AIT — Agentic IT**](https://thisisait.eu). Forked from geerlingguy/mac-dev-playbook → roles renamed under the `pazny.*` namespace.
 
@@ -135,9 +135,10 @@ four unrelated meanings until 2026-08-07; the axes and the settled rules live in
 adjective to a service.
 
 - **`layer`** (L0 substrate · L1 platform · L2 application · L3 custom) is the new axis:
-  *what else breaks when this stops*. It is DERIVED from service→service dependency
-  edges, which do not exist in the graph yet — so it is a design target, not an
-  inventory (`layers.md` §4).
+  *what else breaks when this stops*. It is DERIVED from the graph's service→service
+  dependency edges — live since R2 (2026-08-07, 35 edges; gate
+  `test_service_layer_is_derived.py`); services without a survey carry
+  `layer_withheld`, never a guess (`layers.md` §4).
 - **`F1`–`F4`/`H`** is face-app build complexity, already prefixed
   ([docs/doctrine/face-app-tiers.md](docs/doctrine/face-app-tiers.md)).
 - **Delivery tier is retired.** Say **role service** (`roles/pazny.<name>/`) or
@@ -159,7 +160,7 @@ The core of nOS is the **anatomy** — a layered metaphor for how the platform i
 
 When working within the anatomy use **surgeon-like commit messages**: name the exact tendon / vein / bone touched, the symptom that surfaced the issue, the structural change that closes it, and the test that pins it. See P0.x commit series (`12a7828..ca26bd7`) for examples.
 
-### Role-based service delivery (75 roles under `pazny.*`)
+### Role-based service delivery (76 roles under `pazny.*`)
 
 Every Docker service is owned by an Ansible role in `roles/pazny.<service>/`. Each role follows the **compose-override pattern**:
 
@@ -215,7 +216,7 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 
 **Key invariant:** infra + observability are **always required, always first**. Post-start tasks can assume MariaDB, PostgreSQL, Authentik, Infisical, Grafana, Loki, and Tempo are online.
 
-### Docker stacks (8 compose projects in `~/stacks/`)
+### Docker stacks (9 compose projects in `~/stacks/`)
 
 | Stack | Services (each owned by a `pazny.*` role) |
 |-------|------|
@@ -242,13 +243,14 @@ Passwords follow the pattern `{global_password_prefix}_pw_{service}`. A blank ru
 - **Wing** — security-research dashboard; source at `files/anatomy/wing/`, host launchd as of anatomy A3.5 (FrankenPHP single binary)
 - **Bone** — local REST API bridge; source at `files/anatomy/bone/`, host launchd as of anatomy A3a
 - **Pulse** — scheduled-job daemon; source at `files/anatomy/pulse/`, host launchd skeleton as of anatomy A4
+- **Cortex (daemon)** — the reasoning organ, fourth host organ beside Bone/Wing/Pulse: loopback-only Node daemon (`roles/pazny.cortex`, `install_cortex`) serving `/agent/v1/validate` from the vendored KEAP port at `files/anatomy/cortex/`. Distinct from "Cortex (KEAP)" above — the Docker-served knowledge layer
 - **Conductor** — autonomous DevOps agent; profile at `files/anatomy/agents/conductor/`, first-class Wing consumer as of A8
 
 ### IAM & SSO (Authentik)
 
 Central SSO via Authentik at `auth.<tld>` (default `auth.dev.local`). OIDC providers + applications are generated from per-plugin `authentik:` blocks in `files/anatomy/plugins/<svc>-base/plugin.yml`, harvested by `authentik-base`'s aggregator into `inputs.clients` and rendered into the live Authentik blueprint by the plugin loader (D1.2/D1.3 cutover, 2026-05-05). The legacy central `authentik_oidc_apps` list in `default.config.yml` was retired in D1.3 — only the empty stub survives as the Tier-2 apps_runner extension channel.
 
-> **Plugin wiring contract (2026-05-23):** every plugin manifest block (`authentik`, `notification`, `pulse`, `compose_extension`, `observability`, `lifecycle`, `requires`) has a documented status — which blocks have a *live consumer* vs *forward-ready metadata* — in `files/anatomy/docs/plugin-wiring-capabilities.md`, pinned by `tests/anatomy/test_plugin_wiring_contract.py` and measured by `tools/plugin-wiring-report.py`. Notification routing is unified at the canonical A9 severity shape (`on_critical`/`on_high`/`on_medium`/`on_low`/`on_info` → `wing-inbox`|`ntfy`|`mail`) across **56/56 service** plugins (57 notification blocks total — the 7 composition plugins carry none by design).
+> **Plugin wiring contract (2026-05-23):** every plugin manifest block (`authentik`, `notification`, `pulse`, `compose_extension`, `observability`, `lifecycle`, `requires`) has a documented status — which blocks have a *live consumer* vs *forward-ready metadata* — in `files/anatomy/docs/plugin-wiring-capabilities.md`, pinned by `tests/anatomy/test_plugin_wiring_contract.py` and measured by `tools/plugin-wiring-report.py`. Notification routing is unified at the canonical A9 severity shape (`on_critical`/`on_high`/`on_medium`/`on_low`/`on_info` → `wing-inbox`|`ntfy`|`mail`) across **every service plugin** (60/60 as of 2026-08-18; 9 of the 16 composition plugins carry none by design). Do not copy the tally forward — ask `tools/plugin-wiring-report.py`.
 
 **β1.A (2026-05-05) doctrine — three SSO buckets, not two:**
 
@@ -350,7 +352,7 @@ No code changes. The runner takes care of routing, secrets, and observability.
 
 ### Feature-toggle pattern
 
-~87 `install_*` / `configure_*` boolean variables. `when:` conditions + tags for CLI filtering. Bring-up tuning vars (`stack_up_parallel`, `stack_up_wait_timeout`, `stack_wait_tick_interval`) live in `default.config.yml`; `profiles/all-on.yml` is the committed "everything-on" override profile.
+~94 `install_*` / `configure_*` boolean variables (count moves; grep `default.config.yml`). `when:` conditions + tags for CLI filtering. Bring-up tuning vars (`stack_up_parallel`, `stack_up_wait_timeout`, `stack_wait_tick_interval`) live in `default.config.yml`; `profiles/all-on.yml` is the committed "everything-on" override profile.
 
 ## Linting Rules
 
@@ -430,7 +432,7 @@ These aren't backlog — they're surprises a future operator can hit when extend
 **Moved out of this list** (2026-08-07, `docs/idea/13-relations.md` §R5 — a gotcha that is someone else's property is doctrine, and one about the operator's own machine is a runbook step): the two upstream-image facts (a healthcheck that cannot RUN in a `scratch`/rust-slim image; LSIO code-server serving plain HTTP on 8443) now live as citable sections in `docs/doctrine/foreign-properties.md` §2 / §3, cited from the code they govern; "run removals from a terminal outside the IDE" is `docs/nos-cli.md` §Where to run a removal FROM.
 
 - **Mkcert CA gate for Authentik OIDC roles — NO LONGER A THING TO REMEMBER (gated 2026-08-07):** the mkcert root CA volume mount AND every env var pointing at it (`*_CA_CERTS`, `REQUESTS_CA_BUNDLE`, `SSL_CERT_FILE`, `GF_AUTH...TLS_CLIENT_CA`, …) must sit inside `{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}`. Without the TLD half, LE chain validation breaks on public TLDs; without the `install_authentik` half the container bind-mounts `{{ stacks_dir }}/shared-certs/rootCA.pem`, a path `tasks/stacks/core-up.yml:60-69` writes only when `mkcert -CAROOT` returns 0. `tests/anatomy/test_mkcert_ca_mount_is_guarded.py` now enforces both halves on all 25 references, keyed on the *container path* rather than an env-var name allow-list — writing this gate found `n8n-base` guarded on the TLD half alone. The canonical home stays the plugin compose-extension (`files/anatomy/plugins/<service>-base/templates/<service>-base.compose.yml.j2`), not the per-role compose template (D2 doctrine, 2026-05-05).
-- **Forward-auth ≠ native-OIDC double-protection — GATED 2026-08-07:** services with `200 OK` on a Traefik route (e.g. Gitea, Portainer, HedgeDoc) are not bypassing SSO — they have native OIDC with a "Sign in with Authentik" button on their own login page. Stacking `authentik@file` on top is a double login for no security gain, and it 302's machine callers (the Woodpecker case, `roles/pazny.traefik/vars/main.yml:63-72`). `tests/anatomy/test_forward_auth_does_not_stack.py` refuses the contradiction across all four attachment paths — including the silent one, where `traefik_auth_modes` **falls through to `proxy`** for an id nobody listed (`services.yml.j2:54`). It shipped green: 19 native_oidc services, 19 correct edge modes, corroborated against the 19 `authentik@file` routers the live estate renders. What it cannot cover — the missing `access` facet, runtime opt-in flags like `paperclip_native_oidc_enabled`, and a native_oidc claim whose upstream OIDC does not exist (FreeScout) — is named in the file's header.
+- **Forward-auth ≠ native-OIDC double-protection — GATED 2026-08-07:** services with `200 OK` on a Traefik route (e.g. Gitea, Portainer, HedgeDoc) are not bypassing SSO — they have native OIDC with a "Sign in with Authentik" button on their own login page. Stacking `authentik@file` on top is a double login for no security gain, and it 302's machine callers (the Woodpecker case, `roles/pazny.traefik/vars/main.yml:90-94`). `tests/anatomy/test_forward_auth_does_not_stack.py` refuses the contradiction across all four attachment paths — including the silent one, where `traefik_auth_modes` **falls through to `proxy`** for an id nobody listed (`services.yml.j2:54`). It shipped green: 19 native_oidc services, 19 correct edge modes, corroborated against the 19 `authentik@file` routers the live estate renders. What it cannot cover — the missing `access` facet, runtime opt-in flags like `paperclip_native_oidc_enabled`, and a native_oidc claim whose upstream OIDC does not exist (FreeScout) — is named in the file's header.
 - **`{{ vars }}` eager-resolve trap — GATED, not remembered.** A var in `default.config.yml`/`default.credentials.yml` using a non-stock Jinja filter, or referenced only via `| default()` with no definition loading before core-up, aborts the run with `No filter named '<x>'`. Both variants are pinned by `tests/anatomy/test_config_stock_jinja_only.py`, which is more authoritative than this paragraph was: the two-page account that stood here is in the gate's own docstring, where a reader arrives by failing it. Strategic fix (stop passing `{{ vars }}` wholesale) rides the ansible-core 2.24 track.
 
 ## Recently shipped doctrine (one-line pointers)
