@@ -18,5 +18,24 @@ export default defineConfig({
 	test: {
 		include: ['server/**/*.test.ts', 'knowledge/**/*.test.mjs'],
 		environment: 'node',
+		// MEASURED 2026-08-18, after CI run 32142107402 went red on two
+		// cortex-store tests and PASSED on a bare re-run. Not flake — a
+		// margin. Both build a real store, and on this M-series Mac they
+		// measure:
+		//
+		//     boots FTS-only …                4106 ms
+		//     refuses a populated store …     4182 ms
+		//
+		// against vitest's 5000 ms default: an 18% margin, on a shared
+		// runner that is slower than a laptop. CI reported 6696 ms and
+		// 8877 ms. A timeout set that close to the measurement fails on
+		// schedule, and a suite that goes red for reasons nobody acts on
+		// teaches people to stop reading it — which costs more than the
+		// two tests are worth.
+		//
+		// 20 s is 5x the measurement, not a number picked to make today
+		// pass. If these tests grow past ~10 s, that is a real slowdown in
+		// store construction and wants investigating, not another raise.
+		testTimeout: 20_000,
 	},
 });
