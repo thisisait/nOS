@@ -12,20 +12,38 @@ container reported **healthy for 19 hours** while `/` returned 500 to every
 caller, and the STRICT health-wait passed it. Fixed 2026-07-20 by probing `/`
 instead, pinned by `test_miniflux_healthcheck_is_db_aware`.
 
-**The class is not closed.** Surveyed on the other Postgres-backed services:
+**The class is not closed.** Surveyed on the other Postgres-backed services —
+and RESOLVED for four of them on 2026-08-18, by reading the handler out of the
+running image rather than reasoning about the endpoint's name:
 
-| service | probe | DB-aware? |
-|---|---|---|
-| hedgedoc | `:>/dev/tcp/127.0.0.1/3000` | **no** — pure TCP liveness |
-| outline | `/_health` | unverified |
-| superset | `/health` | unverified |
-| infisical | `/api/status` | unverified |
-| metabase | `/api/health` | unverified |
-| paperclip | `/` | likely yes |
+| service | probe | DB-aware? | evidence |
+|---|---|---|---|
+| outline | `/_health` | **yes** | `await sequelize.query("SELECT 1")` **and** a Redis ping, 500 on either — read from `/opt/outline/build/server/index.js` |
+| hedgedoc | ~~`/dev/tcp`~~ → `/status` | **yes, as of today** | see below |
+| superset | `/health` | **NO — static** | `/app/superset/views/health.py` is four lines: bump a stats counter, `return "OK"`. Touches nothing |
+| infisical | `/api/status` | **partly** | handler calls `getServerCfg()`, which is `withCache({… ttlSeconds …})` over `serverCfgDAL.findById`. Redis every call, Postgres only on a cache MISS — so it stays 200 for the whole TTL after the database dies |
+| metabase | `/api/health` | **still unverified** | the jar is AOT-compiled and carries no `metabase/api/health*` entry; the monitoring docs do not mention the endpoint. Recorded so the next reader does not repeat the search |
+| paperclip | `/` | likely yes | unchanged |
 
-"Unverified" is the fee. A dedicated `/health` endpoint *may* check the database
-or may be a static 200 — and which one it is decides whether the STRICT gate
-means anything for that service.
+**hedgedoc closed the same day, and its old comment is the lesson.** It read
+"HedgeDoc image has no curl/wget; bash is present" — true, and measured again
+today: `curl`, `wget`, `nc`, `psql` are all missing. The conclusion drawn from
+it was wrong, because `node` is present; HedgeDoc *is* node. The probe is now a
+node one-liner against `/status`, which returns `notesCount` and
+`registeredUsers` — SELECT counts that cannot be answered without Postgres.
+`/_health` returns a static `{"ready":true}` and would have been the tempting
+choice: the same trap one layer up.
+
+**superset is now the open instance, and it cannot be fixed the miniflux way.**
+`/health` is static by design and Superset publishes no unauthenticated
+DB-touching endpoint, so pointing the probe elsewhere means either authenticating
+inside a healthcheck or asserting on a login page's HTML. Both are worse than
+the honest statement: superset's container health means the web process is up
+and says nothing about its metadata database.
+
+"Unverified" was the fee. Two of the six are now verified GOOD, one verified
+BAD, one verified PARTIAL, one fixed, one still unknown — which is a different
+and much smaller fee than the one this entry was filed with.
 
 ## When the bill comes due
 

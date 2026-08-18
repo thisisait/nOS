@@ -53,7 +53,7 @@ One file per fee, `NN-short-slug.md`, with these headings:
 | # | Fee | Bill comes due when | Status |
 |---|---|---|---|
 | [01](01-disabled-service-overrides.md) | A disabled service's compose override lingers on the host | ~~a service is toggled off and its dead config keeps merging~~ | **override half closed** (prune-disabled.yml); other resources open |
-| [02](02-db-blind-healthchecks.md) | Healthchecks that answer without touching their database | a DB is reinitialised under a running container | partly closed |
+| [02](02-db-blind-healthchecks.md) | Healthchecks that answer without touching their database | a DB is reinitialised under a running container | **4 of 6 verified 2026-08-18**; hedgedoc fixed, superset is the open instance |
 | [03](03-leading-digit-slugs.md) | A service name starting with a digit cannot be a KEAP node id | ~~someone adds a service whose name starts with a number~~ | **closed 2026-07-26** |
 | [04](04-systems-docs-drift.md) | `docs/systems/` covers a third of the estate and targets dead paths | the skill router embeds them and starts routing | open |
 | [05](05-keap-face-host-deprecation.md) | `KEAP_FACE_HOST` shim emitted for a pin we will leave behind | ~~`keap_repo_ref` moves past v1.21.0~~ | **closed 2026-07-21** |

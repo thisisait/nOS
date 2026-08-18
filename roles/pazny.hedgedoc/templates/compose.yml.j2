@@ -52,9 +52,23 @@ services:
       - "host.docker.internal:host-gateway"
 {% endif %}
     healthcheck:
-      # HedgeDoc image has no curl/wget; bash is present. TCP liveness on the
-      # internal app port (CMD_PORT 3000).
-      test: ["CMD", "bash", "-c", ":>/dev/tcp/127.0.0.1/3000"]
+      # DB-AWARE, via node (docs/hidden_fees/02, closed for hedgedoc 2026-08-18).
+      #
+      # The old probe was `:>/dev/tcp/127.0.0.1/3000` — pure TCP liveness, which
+      # certifies a container whose every real request is failing. That is the
+      # exact shape miniflux proved in July: healthy for 19 hours while `/`
+      # returned 500 to every caller, and the STRICT bring-up gate passed it.
+      #
+      # The old comment's premise was right and its conclusion was not. MEASURED
+      # in the running image: curl, wget, nc and psql are all MISSING — so TCP
+      # looked like the only option — but `node` is present, because HedgeDoc IS
+      # node. That is enough to speak HTTP.
+      #
+      # `/status` is the endpoint that cannot lie: it returns `notesCount` and
+      # `registeredUsers`, which are SELECT counts. Postgres down → no reply.
+      # (`/_health` returns a static `{"ready":true}` and would have been the
+      # tempting choice; it is the same trap one layer up.)
+      test: ["CMD", "node", "-e", "require('http').get({host:'127.0.0.1',port:3000,path:'/status'},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 5
