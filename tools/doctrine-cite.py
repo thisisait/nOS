@@ -114,6 +114,29 @@ RE_DECISION = re.compile(r"DECISION\s+([0-9]+[a-z]?)\b")
 RE_CONSTRAINT = re.compile(r"[Cc]onstraint\s+([A-H])\b")
 RE_M = re.compile(r"\b(M[1-9])\b")
 RE_REM = re.compile(r"\b(REM-[0-9]{3})\b")
+
+#: Repos this estate cites but does not contain. Their `docs/` paths are
+#: shaped exactly like ours, so without this table they resolve against this
+#: checkout and report as permanently missing. Adding one is a statement that
+#: we depend on someone else's written word — keep the list short and name
+#: the upstream, so a reader can go and check it.
+FOREIGN_REPOS = {
+    "KEAP": "thisisait/nos-keap",
+}
+
+#: Ids that were CITED but never persisted. `docs/llm/security/2026-04-08-vuln-report.md`
+#: records the gap: REM-088…092 appear in `scan-state.json` notes while the queue
+#: runs REM-087 -> REM-093. Four were re-persisted at fresh ids (111/113/114);
+#: REM-088 was left, and its debt was satisfied structurally instead (the
+#: postgresql pin advanced 16.13 -> 16.14, filed COVERED/CLEAN, no item needed).
+#:
+#: They are declared rather than silenced because you cannot document a phantom
+#: without writing its id, and the first attempt at that documentation simply
+#: moved the same three findings four lines up the file. A declared phantom is
+#: a fact with a citation; an undeclared one is a lookup that fails forever.
+PHANTOM_REM_IDS = {
+    "REM-088": "never persisted; postgresql pin advanced to 16.14, filed COVERED/CLEAN",
+}
 RE_SEC = re.compile(r"\b(SEC-[0-9]{2})\b")
 #: Epic ids only where the surrounding text says anatomy/epic — a bare
 #: "A9" in code matches container names and hex; the measured live shapes
@@ -241,7 +264,7 @@ class Citation:
     key: str            # normalised id, e.g. "2.4", "DECISION 2b", "REM-118"
     doc: str | None     # resolved corpus doc, when any
     how: str            # sameline|header|self|registry|none
-    status: str = ""    # resolved|moved|wrong|missing-doc|unqualified|unknown-id
+    status: str = ""    # resolved|moved|wrong|missing-doc|unqualified|unknown-id|phantom
     heading: str = ""   # the target heading text, when resolved
 
 
@@ -361,6 +384,24 @@ def harvest_file(f: Path, rel: str, corpus: dict[str, DocIndex]) -> list[Citatio
                 if re.search(r"RFC\s*\d+\s*$", line[:m.start()]):
                     out.append(Citation(rel, i, "external", f"RFC {key}",
                                         None, "external", status="resolved-external"))
+                    continue
+
+                # A citation into a repo we do not own is not a broken link —
+                # it is a different KIND of claim, and this estate already has
+                # a doctrine for it (docs/doctrine/foreign-properties.md: "a
+                # gotcha that is someone else's property is doctrine"). Two
+                # such cites in roles/pazny.keap read as `missing-doc` for
+                # months because KEAP's `docs/specs/*` look exactly like ours
+                # and resolve against this checkout, where they will never be.
+                # Qualify them and they classify honestly; leave them and the
+                # findings list carries two entries nobody can ever close.
+                foreign = next((name for name, path in FOREIGN_REPOS.items()
+                                if re.search(rf"\b{name}\s+\S*$", line[:m.start()])
+                                or re.search(rf"\b{name}\s+docs/", line)), None)
+                if foreign:
+                    out.append(Citation(rel, i, "external", f"{foreign} §{key}",
+                                        FOREIGN_REPOS[foreign], "foreign-repo",
+                                        status="resolved-external"))
                     continue
 
                 def _has(d: str) -> bool:
@@ -499,8 +540,16 @@ def resolve(citations: list[Citation], corpus: dict[str, DocIndex]) -> None:
             else:
                 c.status = "unknown-id"
         elif c.shape == "rem":
-            c.status = "resolved" if c.key in rems else "unknown-id"
-            c.doc = "docs/llm/security/remediation-queue.json" if c.status == "resolved" else None
+            if c.key in rems:
+                c.status, c.doc = "resolved", "docs/llm/security/remediation-queue.json"
+            elif c.key in PHANTOM_REM_IDS:
+                # Declared absent, with a reason. Its own class so the tally
+                # still SHOWS it — a phantom folded into `resolved` would be
+                # the estate's oldest defect (a marker written by the thing
+                # being measured) in a new place.
+                c.status, c.doc = "phantom", PHANTOM_REM_IDS[c.key]
+            else:
+                c.status, c.doc = "unknown-id", None
         elif c.shape == "sec":
             holder = next(iter(sorted(sec_docs)), None)
             c.status = "resolved" if holder else "unknown-id"

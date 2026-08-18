@@ -89,23 +89,27 @@ def test_an_external_standard_is_not_a_corpus_miss(tool, resolved):
 
 # ── the live tree ──────────────────────────────────────────────────────────
 
-#: The verified residue, 2026-08-06. Four findings, six citations:
-#:   §205             a LINE-NUMBER citation ("the plan §205-209") — the §
-#:                    shape used for something that is not a section; the
-#:                    plan it lines into is not a committed doc.
-#:   two KEAP specs   cross-repo: deploy-knowledge-mount-split.md and
-#:                    cortex-cutover.md live in thisisait/nos-keap
-#:                    (docs/archive/cortex-specs-ledger.md names them); not
-#:                    resolvable from this tree by design.
-#:   REM-088 ×3       a phantom queue id — never persisted to
-#:                    remediation-queue.json (same family as the documented
-#:                    phantom REM-089, see REM-114's remediation_detail).
-KNOWN_FINDINGS = {
-    ("tasks/authentik-recovery-key.yml", "section", "205", "wrong"),
-    ("roles/pazny.keap/templates/compose.yml.j2", "section", "3", "missing-doc"),
-    ("roles/pazny.keap/templates/compose.yml.j2", "section", "1", "missing-doc"),
-    ("tests/anatomy/test_postgresql_version_pin.py", "rem", "REM-088", "unknown-id"),
-}
+#: The verified residue. EMPTY since 2026-08-18 — all four findings closed,
+#: and each was closed by naming the truth rather than by widening a rule:
+#:   §205             was a LINE-NUMBER wearing a section's syntax ("the plan
+#:                    §205-209") on the same line as a doc it does not live
+#:                    in. Now cites `docs/sso-autologin-plan.md` item 3 by name.
+#:   two KEAP specs   cross-repo by design. The resolver now has a declared
+#:                    FOREIGN_REPOS table and classes them `resolved-external`,
+#:                    alongside RFCs — a citation into property we do not own
+#:                    is a different KIND of claim, not a broken link
+#:                    (docs/doctrine/foreign-properties.md).
+#:   REM-088 ×3       a phantom id, never persisted (queue runs 087 -> 093).
+#:                    Declared in PHANTOM_REM_IDS with its evidence and given
+#:                    its own `phantom` class, because documenting a phantom
+#:                    requires writing its id — the first attempt just moved
+#:                    the same three findings four lines up the file.
+#:
+#: An empty set is a strong claim and it may not be defended by loosening the
+#: classifier: `phantom` and `resolved-external` are SEPARATE classes and stay
+#: visible in the tally for exactly that reason. A new residue goes here with
+#: the verification note the old four carried.
+KNOWN_FINDINGS: set[tuple[str, str, str, str]] = set()
 
 #: Measured 2026-08-06 after the self-referential exclusion: 1061 citations,
 #: 929 resolved, 124 unqualified. The floor sits just under the measurement

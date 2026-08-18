@@ -20,7 +20,9 @@
 #   `authentik_core.token`, NOT `recoverytoken`). A blueprint-provision attempt
 #   would either silently no-op or fail, creating a CRITICAL lockout risk.
 #   Recovery keys are CLI-only; this secret is plain config persistence, not a
-#   blueprint seed. See the plan §205-209 and docs/break-glass-runbook.md
+#   blueprint seed. See docs/sso-autologin-plan.md item 3 ("Authentik
+#   recovery key — CLI-provisioned, NE blueprint") and
+#   docs/break-glass-runbook.md
 #   (authored by the runbook agent).
 #
 # DORMANCY / IDEMPOTENCE
