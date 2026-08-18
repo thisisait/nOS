@@ -27,7 +27,14 @@ services:
     build:
       context: {{ keap_src_dir | default(ansible_facts['env']['HOME'] + '/keap/src') }}
       dockerfile: Dockerfile
-    image: nos/keap:{{ keap_version }}
+    # VERSION + COMMIT (docs/hidden_fees/12, 2026-08-18). `nos/keap:1.40.1`
+    # alone was rewritten in place by every `up -d --build`, so the tag named
+    # the last build rather than a tree and could not roll back. `keap_image_tag`
+    # is set in tasks/main.yml from `git rev-parse` in the checkout — no
+    # `| default(keap_version)` here on purpose: falling back to the bare
+    # version would silently restore the ambiguity on exactly the passes where
+    # the fact is missing, and a missing fact should be a loud render failure.
+    image: nos/keap:{{ keap_image_tag }}
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{ keap_port | default(8091) }}:8080"

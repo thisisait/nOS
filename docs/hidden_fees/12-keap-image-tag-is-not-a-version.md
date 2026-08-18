@@ -36,8 +36,27 @@ Either of these, independently:
 
 - **Tag with the resolved commit** (`nos/keap:1.29.0-<sha8>`), or stop rebuilding
   an already-present tag. Makes `keap_version` mean something.
+  **PAID 2026-08-18.** `tasks/main.yml` runs `git rev-parse --short=8 HEAD` in
+  the checkout and sets `keap_image_tag`; the compose fragment renders
+  `nos/keap:{{ keap_version }}-{{ sha }}`. A different tree is now a different
+  tag, so the image either already exists and IS that tree, or is built.
+
+  Read from the CHECKOUT, not from `_keap_clone.after`: the registered result is
+  undefined on every pass that did not re-clone (`--tags keap` with the source
+  present, check mode, a skipped `when`), and a tag that depended on whether a
+  clone happened would be worse than one that depended on a version. There is
+  deliberately **no `| default(keap_version)`** in the template — that fallback
+  reads as caution and restores the whole defect on exactly the `--tags` passes
+  where someone is iterating and not looking. A missing fact is a loud render
+  failure. Gate: `tests/anatomy/test_the_keap_tag_names_a_tree.py`.
+
+  **Cost accepted:** one image per commit rather than one per version, so the
+  local image store grows with iteration. `nos --remove=deep` prunes it; that is
+  cheaper than a version number that cannot roll back.
+
 - **A version handshake before the ingest.** KEAP has offered a
   `knowledge/version-check.mjs` + generated `release.json`, run via `docker exec`
   before `ingest.mjs` and refusing on skew. It costs one more generated file to
-  keep in step at every release. Unclaimed as of v1.29.0 — the trade-off is
-  written down so it is made rather than forgotten.
+  keep in step at every release. **Still unclaimed** — and it is the half that
+  catches a LIVE skew (a hand-pulled checkout mid-run) rather than preventing a
+  stale tag, so the two are complements and this entry stays open until it lands.

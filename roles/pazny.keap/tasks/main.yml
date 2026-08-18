@@ -85,6 +85,39 @@
   delay: 30
   notify: Restart keap
 
+# ── docs/hidden_fees/12 — make the tag mean something ────────────────────────
+# `nos/keap:1.40.1` meant "whatever the last `up -d --build` produced", because
+# `build:` runs on every converge and rewrites the tag in place. Two consequences,
+# both of which the version number exists to prevent:
+#
+#   * Setting `keap_repo_ref` back to an earlier release does NOT get that
+#     release's image unless it is also rebuilt — so the version cannot roll back.
+#   * `git pull` by hand in ~/keap/src changes what the running container ingests
+#     immediately, with no rebuild and no signal, because knowledge/ is bind-
+#     mounted live while the application code is baked.
+#
+# Resolving the commit into the tag closes both: a different tree is a different
+# tag, so the image either exists (and is that tree) or is built. It also makes
+# the two halves auditable against each other — `docker image inspect` names the
+# commit the code came from, and the mount comes from the same checkout.
+#
+# READ, not registered from the clone: `_keap_clone.after` is undefined whenever
+# the clone task did not run this pass (`--tags keap` with the source already
+# present, check mode, a skipped `when`), and a template that fell back to the
+# bare version on those passes would rebuild the ambiguity exactly when someone
+# is iterating. Asking git is cheap and always answers.
+- name: "[pazny.keap] Resolve the commit the image will be built from"
+  ansible.builtin.command:
+    cmd: git rev-parse --short=8 HEAD
+    chdir: "{{ keap_src_dir }}"
+  register: _keap_sha
+  changed_when: false
+  check_mode: false
+
+- name: "[pazny.keap] Pin the image tag to version + commit"
+  ansible.builtin.set_fact:
+    keap_image_tag: "{{ keap_version }}-{{ _keap_sha.stdout | trim }}"
+
 - name: "[pazny.keap] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

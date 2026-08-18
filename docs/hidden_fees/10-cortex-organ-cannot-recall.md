@@ -7,6 +7,21 @@ C1 shipped the organ with a store that is **git-complete by design**: 1841 nodes
 0 captures, 0 embeddings**. That property is what made C1 need no data migration,
 no shared file and no two-writer decision, and it was the right way to land it.
 
+> **The three zeros expired (re-measured 2026-08-18).** The organ now holds
+> **359 `knowledge_objects` and 6 482 embeddings** — S2's parallel corpus has
+> been landing, and `keap:keap-embed-sync` feeds it nightly ("cortex +40" on
+> 08-18). So the half this entry is named for is no longer missing outright;
+> what is unestablished is whether recall WORKS, which is a different and
+> harder claim than whether vectors exist. `/agent/v1/context` returning
+> results is the measurement, and nothing in this repo runs it.
+>
+> Two consequences worth carrying forward rather than leaving implied:
+> `docs/hidden_fees/09`'s "only defensible while the organ holds no vectors"
+> is therefore void — both stores now hold real corpora, and 09 has the live
+> A/B numbers. And the caveat below about `captures` is stale in a smaller
+> way: the organ has no `captures` table at all, so the count cannot be
+> compared to KEAP's the way this entry assumes.
+
 But the organ is named for the half it does not have. `Cortex` is *"remembers and
 reasons"*; without vectors it only reasons. `/agent/v1/context` — the recall
 endpoint the design names as the organ's second surface — has nothing to search.

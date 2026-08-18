@@ -63,7 +63,7 @@ One file per fee, `NN-short-slug.md`, with these headings:
 | [09](09-untuned-vector-index.md) | The vector index is 8× larger than it needs to be | being paid now — 449 MB and an 8× slower embed pass | open |
 | [10](10-cortex-organ-cannot-recall.md) | The cortex organ can typecheck but cannot remember | anything is built assuming the organ is where reasoning happens | open |
 | [11](11-vendored-cortex-copies-drift.md) | Two implementations of one language, nothing compares them | ~~a KEAP change lands without a re-vendor~~ — **it already has** | **comparator paid 2026-08-18** (14 undeclared drifts); S5 open |
-| [12](12-keap-image-tag-is-not-a-version.md) | `nos/keap:<version>` means "whatever the last build produced" | a rollback is attempted, or `~/keap/src` is pulled by hand | open |
+| [12](12-keap-image-tag-is-not-a-version.md) | `nos/keap:<version>` means "whatever the last build produced" | ~~a rollback is attempted~~ · a hand-pull mid-run | **tag paid 2026-08-18**; ingest handshake open |
 | [13](13-per-user-db-without-enforcement.md) | A per-user database chosen by an unauthenticated parameter | the first user who must not read another's data | open |
 | [14](14-a-long-run-cut-from-under.md) | A long run's paths change under it mid-flight | the next multi-hour run that outlives the tree it started in | open |
 | [15](15-a-lineage-that-does-not-join.md) | The loop records a lineage whose first link does not join | ~~the first real autonomous run~~ | **write half paid 2026-08-16**; read half open |
