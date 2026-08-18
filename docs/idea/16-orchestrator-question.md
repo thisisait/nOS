@@ -144,14 +144,48 @@ pre-spend ceiling check — inside a library's loop. It is the ergonomic path,
 it will look like the obvious way to write it, and it is the one shape that
 gives away the property this estate exists for. Manual round-trip only.
 
-**Not established, and to be answered by the spike, not by assumption:**
-whether the generic OpenAI-compatible client accepts a per-session `base_url` +
-bearer (the binding contract in `state/llm-backends.yml`); whether MiniMax and
-OpenClaw ride that client cleanly; and how much `FinishReason` fidelity
-survives — the enum plus `getRawFinishReason()` looks like more than we have,
-but the estate now needs to distinguish a forced ending from a natural one
-(`call_cap_synthesis`, 2026-08-18) and that distinction is ours to keep either
-way. The `claude` CLI backend is a subprocess and stays ours regardless.
+### The spike, run the same day
+
+`AiAccessAdapter` (one file, behind the two-method interface), three live round
+trips against `api.minimax.io/anthropic`, ~600 tokens total:
+
+```
+round 1  stop=tool_use   roll({"sides":20})  id=call_function_618cgpmwtio4_1
+round 2  stop=end_turn   "You rolled a **17**!"       ← stateless replay held
+round 3  stop=end_turn   toolCalls=0                  ← tools withheld
+```
+
+Every open question above is now answered, and one assumption was wrong:
+
+- **Binding works on BOTH dialects, and one would not have been enough.**
+  `OpenAICompatible\Client` takes `baseUrl` as a constructor argument;
+  `Claude\Client` takes it via `setOptions(customBaseUrl:)`. The paragraph
+  above assumed the OpenAI-compatible client was the whole story — but
+  `minimax` binds an **Anthropic-dialect** URL and `mistral` an OpenAI one, so
+  a single-dialect adapter would have covered exactly one of the two armed
+  backends. The adapter takes a `dialect` argument for this reason.
+- **The stateless replay holds.** `send()` hands over the whole conversation
+  each call and `Chat` is stateful; a fresh `Chat` per call with history
+  replayed round-trips a tool call correctly, including `addToolResult()`
+  resolving a call id out of the replayed turns.
+- **Round 3 is the synthesis turn on borrowed rails** — passing no tools
+  produces prose rather than another call, the same mechanism the Runner
+  gained hours earlier for its own loop.
+- `FinishReason` is richer than our four values, so the mapping narrows rather
+  than stretches. `Unknown` maps to `error`, never `end_turn`: a provider we
+  cannot read must not be recorded as one that said it was done.
+
+The `claude` CLI backend is a subprocess and stays ours regardless.
+
+**Found sideways, and worth more than the spike:** adding the dependency ran
+`composer audit` for what appears to be the first time, and it reported a
+**HIGH in `guzzlehttp/guzzle` 7.15.1** (CVE-2026-69246, noncanonical host
+bypasses host-based checks; fixed in 7.15.2) plus a medium cookie-domain one.
+Wing's own PHP tree — which runs the audit chain, the agent runtime and the
+operator console — had never been audited by the security machine, which scans
+Docker images and CVE feeds only. Lock bumped to 7.15.2, `composer audit
+--locked` now clean; the class is filed as `docs/hidden_fees/17`. ai-access
+itself contributed zero advisories, having zero dependencies.
 
 **Decision: STEAL, scoped.** One spike file, `AiAccessAdapter implements
 LLMClientInterface`, behind the two-method interface `test_agentkit_naming.py`

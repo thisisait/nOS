@@ -4,8 +4,79 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "08f5f1d96eb7014fb8625fa951cd6f2e",
+    "content-hash": "5b0a1c1474163139c7ee38ed6cbdfbb0",
     "packages": [
+        {
+            "name": "ai-access/ai-access",
+            "version": "v1.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/dg/ai-access.git",
+                "reference": "ca4b3ba10a44a5014c267c42d27ed1803b65c4d8"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/dg/ai-access/zipball/ca4b3ba10a44a5014c267c42d27ed1803b65c4d8",
+                "reference": "ca4b3ba10a44a5014c267c42d27ed1803b65c4d8",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-fileinfo": "*",
+                "ext-json": "*",
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "dg/bypass-finals": "^1.9",
+                "mockery/mockery": "^1.6",
+                "nette/phpstan-rules": "^1.0",
+                "nette/tester": "^2.5",
+                "phpstan/extension-installer": "^1.4@stable",
+                "phpstan/phpstan": "^2.2@stable",
+                "tracy/tracy": "^2.10"
+            },
+            "type": "library",
+            "autoload": {
+                "classmap": [
+                    "src/"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "authors": [
+                {
+                    "name": "David Grudl",
+                    "homepage": "https://davidgrudl.com"
+                }
+            ],
+            "description": "A flexible PHP library providing access to various AI models (Gemini, OpenAI, Anthropic, DeepSeek, Grok) via a consistent interface.",
+            "keywords": [
+                "Gemini",
+                "Generative AI",
+                "Large Language Model",
+                "ai",
+                "ai access",
+                "anthropic",
+                "api",
+                "artificial intelligence",
+                "chat",
+                "chatbot",
+                "client",
+                "deepseek",
+                "grok",
+                "llm",
+                "openai",
+                "sdk",
+                "xai"
+            ],
+            "support": {
+                "issues": "https://github.com/dg/ai-access/issues",
+                "source": "https://github.com/dg/ai-access/tree/v1.0.2"
+            },
+            "time": "2026-08-16T13:47:03+00:00"
+        },
         {
             "name": "anthropic-ai/sdk",
             "version": "v0.20.0",
@@ -315,16 +386,16 @@
         },
         {
             "name": "guzzlehttp/guzzle",
-            "version": "7.15.1",
+            "version": "7.15.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/guzzle.git",
-                "reference": "61443dfb33c62f308ee8add20f45b4d6e4bf8d2f"
+                "reference": "744101956d78b7c1384d0cbf379db13e859167bf"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/61443dfb33c62f308ee8add20f45b4d6e4bf8d2f",
-                "reference": "61443dfb33c62f308ee8add20f45b4d6e4bf8d2f",
+                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/744101956d78b7c1384d0cbf379db13e859167bf",
+                "reference": "744101956d78b7c1384d0cbf379db13e859167bf",
                 "shasum": ""
             },
             "require": {
@@ -423,7 +494,7 @@
             ],
             "support": {
                 "issues": "https://github.com/guzzle/guzzle/issues",
-                "source": "https://github.com/guzzle/guzzle/tree/7.15.1"
+                "source": "https://github.com/guzzle/guzzle/tree/7.15.2"
             },
             "funding": [
                 {
@@ -439,7 +510,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-07-18T11:23:11+00:00"
+            "time": "2026-07-26T23:23:20+00:00"
         },
         {
             "name": "guzzlehttp/promises",
