@@ -320,6 +320,29 @@
     or 'Updated' in (_wing_surveyor_token.stdout | default(''))
   no_log: true
 
+- name: "[pazny.wing] Reconverge API token — curator (KEAP reshaping agent)"
+  # FOUND BY GATE, 2026-08-18. curator has asked for `WING_API_TOKEN:
+  # "{{ curator_wing_api_token }}"` in its pulse env since it shipped; the
+  # secret was templated and present in default.credentials.yml, the Authentik
+  # client existed, the catalog knew the name — and this block did not exist,
+  # so the api_tokens row was never written and Wing would reject the token at
+  # request time. Four of five declarations in place is the condition
+  # docs/hidden_fees/16 describes as invisible: every gate green, one 401 at
+  # 02:00 naming the symptom instead of the missing member.
+  ansible.builtin.command:
+    argv:
+      - php
+      - "{{ wing_app_dir }}/bin/provision-token.php"
+      - --db={{ wing_data_dir }}/wing.db
+      - --token={{ curator_wing_api_token }}
+      - --name=curator
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_curator_token
+  changed_when: >
+    'Created' in (_wing_curator_token.stdout | default(''))
+    or 'Updated' in (_wing_curator_token.stdout | default(''))
+  no_log: true
+
 - name: "[pazny.wing] Reconverge API token — upgrade-advisor (W5-B4)"
   # Reads the /upgrades matrix + queues applicable upgrades. The token name
   # is the actor_id recorded as planned_by on each queued upgrade. Authentik

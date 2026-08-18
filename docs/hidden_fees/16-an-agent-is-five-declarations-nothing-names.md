@@ -1,10 +1,27 @@
 # 16 — Onboarding an agent is five declarations, and nothing names the set
 
-**Status:** OPEN. Filed 2026-08-18 from the surveyor onboarding (2026-08-17);
-one symptom of the shape paid the same day (the runner's silent audit-POST
-failure — see occurrence in [07](07-messages-that-outlive-their-mode.md) and
-`tests/anatomy/test_wing_event_post_failure_is_not_silent.py`), the class is
-unpaid.
+**Status: AFFORDABLE HALF PAID 2026-08-18** (the gate). The structural close —
+one derived source — remains open. Filed the same day from the surveyor
+onboarding (2026-08-17); one symptom of the shape paid then too (the runner's
+silent audit-POST failure — see occurrence in
+[07](07-messages-that-outlive-their-mode.md) and
+`tests/anatomy/test_wing_event_post_failure_is_not_silent.py`).
+
+> **The gate found a live instance on the run that introduced it.** `curator`
+> had asked for `WING_API_TOKEN: "{{ curator_wing_api_token }}"` in its pulse
+> env since it shipped. The secret was templated, present in
+> `default.credentials.yml`, the Authentik client existed and the pulse catalog
+> knew the name — and `roles/pazny.wing/tasks/post.yml` mentioned curator zero
+> times, so the `api_tokens` row was never written and Wing would have rejected
+> the token at request time. **Four of five declarations in place**, every gate
+> green, and the only signal available was a 401 at 02:00.
+>
+> Gate: `tests/anatomy/test_an_agent_is_wired_everywhere_it_asks_to_be.py`. It
+> triggers on the agent's OWN declaration — an agent that asks for a token is
+> checked everywhere, one that does not (`migration-author`,
+> `upgrade-advisor`, `upgrade-architect` run operator-driven) is not checked at
+> all. So it cannot be satisfied by editing the gate: there is no list here to
+> add a name to, only the agent to wire or the request to withdraw.
 
 ## The fee
 

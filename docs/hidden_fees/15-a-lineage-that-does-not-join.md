@@ -1,9 +1,39 @@
 # 15 — the loop records a lineage whose first link does not join
 
-**Status:** OPEN. Found 2026-08-07 while building the ledger's flow board — the
-board could not draw the column it was designed around.
+**Status: WRITE HALF PAID 2026-08-16, verified 2026-08-18. Read half open.**
 
-## The fee
+> **The fee below describes the estate as it was on 2026-08-07 and is kept for
+> the reasoning, not the facts.** Re-measured 2026-08-18 before touching
+> anything — which is how this was noticed at all:
+>
+> ```sql
+> SELECT weakness_id, COUNT(*), MIN(date(created_at)) FROM loop_proposals GROUP BY 1;
+> -- rem:REM-159  2  2026-08-16
+> -- rem:REM-204  1  2026-08-16
+> -- w1           8  2026-08-02
+> -- w2           1  2026-08-02
+> ```
+>
+> The proposer now cites real ids that join to the registry. It cannot do
+> otherwise: `Ledger._weakness_evidence_sha` raises
+> `ProposalRefused("unknown-weakness")` for any id no source reports, on the
+> propose path (`ledger.py:879, 986`), gated twice
+> (`test_loop_ledger.py:896`, `test_loop_ratchet_inputs_are_derived.py:328`).
+> A proposal claiming `w1` is now impossible rather than merely discouraged.
+>
+> That refusal arrived for a DIFFERENT reason — §4's retry ceiling was keyed on
+> two fields a grinder could vary, so the sha had to be looked up rather than
+> accepted — and closing this fee was a side effect nobody recorded. The nine
+> `w1`/`w2` rows are pilot residue from one day in August, not a live defect.
+>
+> **What remains is the half this entry named last and buried:** *"Which
+> weakness sources actually produce proposals?"* is still unanswerable, because
+> nothing reads the join even now that it resolves. A source that has never led
+> anywhere still looks exactly like one that leads everywhere. See
+> `tools/loop-status.py` (2026-08-18) for the reader, and "What paying it looks
+> like" below for why a gate was deliberately not the answer.
+
+## The fee (as measured 2026-08-07)
 
 The loop's whole claim is a chain: **a weakness is detected → a proposal is
 raised against it → judges rule → a verdict is sealed.** Three of those four

@@ -35,10 +35,38 @@ Deleting one of the two implementations. That is **S5** in
 before it is mitigation.
 
 One mitigation landed 2026-07-26: `tests/anatomy/test_cortex_vendored_docs.py`
-asserts every vendored spec carries a provenance header. It cannot detect drift
-from the original — nothing in this repo can — but it stops the failure mode
-where someone edits the copy, believes the spec is fixed, and loses the change at
-the next re-vendor.
+asserts every vendored spec carries a provenance header. It stops the failure
+mode where someone edits the copy, believes the spec is fixed, and loses the
+change at the next re-vendor.
+
+**"Nothing in this repo can" detect drift was true of the REPO and false of the
+HOST (corrected 2026-08-18).** `~/keap/src` is a full checkout the playbook puts
+there, sitting beside the vendored tree the whole time. The comparison was never
+impossible, only never written. `tools/cortex-drift.py` is it — a reader, not a
+gate, because CI has no KEAP checkout and inventing one would be a third copy to
+keep in step. On a host without the checkout it says drift is UNKNOWN rather
+than absent.
+
+It reads three claims out of the files themselves rather than keeping lists:
+`LOCALLY AUTHORED (not a port)` excludes the organ's own programs (`index.ts`
+shares a NAME with KEAP's backend and is a different thing — 694 lines of noise
+on the first run), and `nOS Sn DIFF` markers set aside divergence someone
+declared. What is left is the category entry 11 is actually about: **drift
+nobody wrote down**.
+
+First run, organ 0.1.0 vs KEAP 1.40.1 — 160 identical, **14 undeclared**, 2
+declared, 9 locally authored. Two of the fourteen are not cosmetic:
+
+- `server/cortex-opcodes.ts` — the organ's `MODEL_URI_RE` accepts
+  `claude-*` and `openai-*`; KEAP's accepts neither. **Two implementations of
+  one language disagreeing about what the language is**, which is the bill this
+  entry predicted (*"`ast.binding` stamps are issued for a language the source
+  repo no longer speaks"*) arriving before anyone looked.
+- `server/fs-roots.ts` — the organ's overlap guard checks EVERY per-user root;
+  KEAP's still reads `KEAP_USER_FILES_DIR`, a variable the organ's plist never
+  sets, so the guard's `if` never runs. The organ carries a fix for
+  cross-user file exposure that KEAP does not. Drift can run in both
+  directions, and the direction that matters is not always ours.
 
 The one live detector is KEAP's `cortex.ontologyDrift` on `/agent/v1/health`
 (v1.29.0): under organ mode it compares the two `onto1` digests and reports
