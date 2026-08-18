@@ -133,3 +133,82 @@ def test_a_forced_ending_is_distinguishable_from_a_natural_one():
         "run produced the deliverable; failing it would make the exit code "
         "punish a spent budget and hide it among real crashes."
     )
+
+
+def test_the_ceiling_also_gets_a_wrap_up_turn():
+    """THE CORRECTION, made by running it (2026-08-18).
+
+    The call-cap reservation above shipped in the morning. The first bound run
+    under it died on the SESSION TOKEN CEILING at call 23 of 30 —
+    260 745 in / 2 558 out — so the reserved 30th call was never reached and
+    the run ended, once again, with nothing written. The reservation guarded a
+    bound that does not bind.
+
+    Both bounds must therefore end rather than stop, and the token one needs
+    its own headroom: `assertSessionCeiling` measures the WORKING budget
+    against `ceiling - SYNTHESIS_TOKEN_RESERVE`, and the wrap-up asks to be
+    measured against the hard ceiling instead.
+    """
+    src = _src()
+    assert "SYNTHESIS_TOKEN_RESERVE" in src, (
+        "no tokens are held back from the session ceiling, so a run that hits "
+        "it has nothing left to write a report with — the exact shape the "
+        "first bound run demonstrated."
+    )
+    assert re.search(r"catch \(SessionCeilingReached [^)]*\)", src), (
+        "the tool-use loop no longer catches SessionCeilingReached, so the "
+        "ceiling once again ends the run mid-investigation with no report."
+    )
+    assert "ceiling_synthesis" in src, (
+        "a report written after the ceiling fired is no longer distinguishable "
+        "from a run that hit the ceiling and said nothing."
+    )
+
+
+def test_the_wrap_up_is_measured_against_the_hard_ceiling():
+    """The counterweight, and the reason the reserve is not just a bigger
+    ceiling: the wrap-up must be refused if IT cannot fit. A bound that can be
+    talked past on the second attempt is not a bound."""
+    src = _src()
+    assert re.search(r"assertSessionCeiling\('synthesis',\s*false\)", src), (
+        "the wrap-up no longer re-checks the HARD ceiling before spending. "
+        "Without it the reserve becomes an extension anyone can claim, and the "
+        "session's real bound moves by SYNTHESIS_TOKEN_RESERVE."
+    )
+    assert re.search(r"bool \$reserveHeadroom = true", src), (
+        "assertSessionCeiling no longer distinguishes the working budget from "
+        "the hard ceiling."
+    )
+
+
+def test_the_wrap_up_does_not_replay_the_transcript():
+    """Why a plain 'one more call' cannot work: the conversation that reaches a
+    ceiling is mostly tool RESULTS, resent every turn — 260 745 input tokens
+    for 2 558 of output. Replaying it costs as much again, so the reserve would
+    have to be a second ceiling."""
+    src = _src()
+    assert "compactForSynthesis" in src, (
+        "the ceiling wrap-up no longer compacts the transcript, so it would "
+        "replay a quarter-million tokens of tool output to ask one question."
+    )
+    body = src[src.index("private function compactForSynthesis"):]
+    body = body[: body.index("\n\t/**", 10)] if "\n\t/**" in body[10:] else body
+    assert "'text'" in body, "the compactor no longer keeps the model's own text"
+    assert "tool_use" not in body and "tool_result" not in body, (
+        "the compactor now carries tool blocks through. A tool_use whose result "
+        "was dropped is an unanswered call, and several providers reject that "
+        "shape outright."
+    )
+
+
+def test_a_failed_wrap_up_is_not_an_error():
+    """It must not turn a bounded run into a crashed one: without the wrap-up
+    the run ended at the ceiling with no report, which is exactly where a
+    failure here leaves it."""
+    src = _src()
+    tail = src[src.index("private function synthesiseUnderCeiling"):]
+    assert "catch (\\Throwable $exc)" in tail, (
+        "the ceiling wrap-up no longer swallows its own failure, so a wrap-up "
+        "that errors would crash a run that was merely out of budget."
+    )
+    assert "return '';" in tail, "a failed wrap-up must return no text, not throw"

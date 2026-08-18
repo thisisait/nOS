@@ -64,6 +64,23 @@ final class Runner
 	private const SYNTHESIS_CALLS_RESERVED = 1;
 
 	/**
+	 * Tokens held back from the session ceiling for the compacted wrap-up.
+	 *
+	 * MEASURED, not chosen: the surveyor's ceiling run spent 260 745 INPUT
+	 * tokens producing 2 558 of output, because every turn resends the whole
+	 * conversation and the conversation is mostly tool results — file bodies,
+	 * directory listings, API payloads. A wrap-up that replayed all of that
+	 * would cost another quarter-million and could not fit under any reserve
+	 * worth the name.
+	 *
+	 * `compactForSynthesis()` therefore drops the tool traffic and keeps what
+	 * the model itself wrote, which for that run was those same 2 558 tokens.
+	 * 20 000 is roughly 8× the largest such transcript observed, leaving room
+	 * for the report itself.
+	 */
+	private const SYNTHESIS_TOKEN_RESERVE = 20000;
+
+	/**
 	 * Deliberately not "summarise". The agents that reach this point have been
 	 * reading for twenty-nine turns and a summary invites a table of contents;
 	 * what the grader needs is the ceremony's actual output, in the shape the
@@ -272,6 +289,21 @@ final class Runner
 			'session.uuid' => $sessionUuid,
 		]);
 
+		// A THROW HERE USED TO ORPHAN THE ROW (found 2026-08-18, by causing it).
+		//
+		// The session row is already inserted and `running`; the main try/catch
+		// that would mark it `terminated` does not begin for another seventy
+		// lines. Until this morning nothing could throw here — `AuditEmitter`
+		// swallowed everything — so the gap was unreachable. Making the chain
+		// refusal fatal (rightly: an agent that cannot be audited cannot do its
+		// job) made it reachable, and the first shell invocation that lacked
+		// the daemon's environment left exactly one row `running` forever.
+		//
+		// That row is not cosmetic. `agent_sessions` is the table this estate
+		// reads to answer "has the bound loop ever completed a ceremony", and a
+		// row that will never finish is indistinguishable from one in progress.
+		// A run that cannot start must fail CLOSED and CLEAN.
+		try {
 		$this->audit->emit(
 			type: 'agent_session_start',
 			actorActionId: $sessionUuid,
@@ -321,6 +353,22 @@ final class Runner
 			'agent_name' => $agent->name,
 			'trace_id' => $traceId,
 		]);
+		} catch (\Throwable $exc) {
+			// The row is already inserted and `running`, and the main try/catch
+			// that would mark it `terminated` does not begin for another forty
+			// lines — so a throw in here orphans it.
+			$this->sessions->endSession(
+				$sessionUuid,
+				'terminated',
+				'error',
+				['error_json' => json_encode([
+					'class' => $exc::class,
+					'message' => $exc->getMessage(),
+					'at' => 'session_start_audit',
+				], JSON_UNESCAPED_SLASHES)],
+			);
+			throw $exc;
+		}
 
 		$threadUuid = self::uuid();
 		$threadSpanId = TraceContext::newSpanId();
@@ -540,6 +588,12 @@ final class Runner
 			// the final turn. With no tools on offer, the only move left is
 			// prose. This costs one call out of thirty and converts a run that
 			// produced nothing into one that produces its best answer so far.
+			//
+			// THAT WAS HALF THE FIX (corrected the same day, by running it). The
+			// call cap is not the bound that binds: the first bound run under
+			// this code died on the SESSION TOKEN CEILING at call 23 of 30, so
+			// this reservation was never reached. The other half is the catch
+			// below, which turns that ceiling into the same wrap-up turn.
 			$isSynthesis = $call >= self::MAX_LLM_CALLS_PER_ITERATION - self::SYNTHESIS_CALLS_RESERVED;
 			if ($isSynthesis && !$synthesisAnnounced) {
 				$conversation[] = Message::userText(self::SYNTHESIS_PROMPT);
@@ -557,7 +611,31 @@ final class Runner
 			$callSpan->setAttribute('llm.model_uri', $llm->identifier());
 			$callSpan->setAttribute('llm.call_index', $call);
 
-			$this->assertSessionCeiling('llm_call');
+			try {
+				$this->assertSessionCeiling('llm_call');
+			} catch (SessionCeilingReached $exc) {
+				// THE BOUND THAT ACTUALLY BINDS. Rather than leaving the run with
+				// nothing, spend the reserved headroom on one compacted wrap-up
+				// and return it. The ceiling still holds — `compactForSynthesis()`
+				// throws the tool traffic away, so the call costs thousands rather
+				// than the quarter-million a full replay would.
+				//
+				// If the wrap-up ITSELF cannot fit, the throw stands: a bound that
+				// can be talked past on the second attempt is not a bound. That is
+				// what the `false` argument tests — the hard ceiling, no reserve.
+				$this->assertSessionCeiling('synthesis', false);
+				$finalText = $this->synthesiseUnderCeiling(
+					$agent, $llm, $conversation, $sessionUuid, $actorId, $traceId, $totalIn, $totalOut,
+				);
+				return [
+					'stop_reason' => $finalText === '' ? 'ceiling' : 'ceiling_synthesis',
+					'tokens_input' => $totalIn,
+					'tokens_output' => $totalOut,
+					'final_text' => $finalText,
+					'conversation' => $conversation,
+					'ceiling_note' => $exc->getMessage(),
+				];
+			}
 			// Withholding the schemas is what makes the synthesis turn binding.
 			// Asking politely for a summary while still offering tools reliably
 			// produces one more tool call — the instruction competes with the
@@ -920,6 +998,107 @@ final class Runner
 	}
 
 	/**
+	 * One wrap-up call against a COMPACTED transcript, when the ceiling hit.
+	 *
+	 * WHY COMPACTED AND NOT JUST "ONE MORE CALL". The conversation that reaches
+	 * a ceiling is mostly tool RESULTS — file bodies, directory listings, API
+	 * payloads — resent in full on every turn. That is why the surveyor's run
+	 * spent 260 745 input tokens to produce 2 558 of output. Replaying it costs
+	 * as much again, so a reserve large enough to hold it would not be a reserve,
+	 * it would be a second ceiling.
+	 *
+	 * What a report actually needs is what the model itself concluded, and that
+	 * is the cheap half of the transcript. So the tool traffic goes and the
+	 * assistant's own prose stays, in order, with the wrap-up instruction after
+	 * it. The model is summarising its own notes rather than re-reading the
+	 * estate.
+	 *
+	 * A FAILURE HERE IS NOT AN ERROR. If the compacted call also fails, the run
+	 * still ends at the ceiling with no report — exactly where it was before this
+	 * existed. Returning '' says so; it must not turn a bounded run into a
+	 * crashed one, and it must never be retried, because the whole point is that
+	 * the budget is gone.
+	 *
+	 * @param array<int, Message> $conversation
+	 */
+	private function synthesiseUnderCeiling(
+		Agent $agent,
+		LLMClientInterface $llm,
+		array $conversation,
+		string $sessionUuid,
+		string $actorId,
+		string $traceId,
+		int &$totalIn,
+		int &$totalOut,
+	): string {
+		try {
+			$compacted = $this->compactForSynthesis($conversation);
+			$compacted[] = Message::userText(self::SYNTHESIS_PROMPT);
+			// No tools, for the same reason as the call-cap turn: an affordance
+			// beats an instruction.
+			$response = $llm->send($agent->systemPrompt ?? '', $compacted, [], $agent->maxOutputTokens);
+			$totalIn += $response->tokensInput;
+			$totalOut += $response->tokensOutput;
+			$this->sessionTokensIn += $response->tokensInput;
+			$this->sessionTokensOut += $response->tokensOutput;
+
+			$this->audit->emit(
+				type: 'agent_message',
+				actorActionId: $sessionUuid,
+				actorId: $actorId,
+				task: "agent:{$agent->name}/llm.call.synthesis",
+				result: [
+					'stop_reason' => 'ceiling_synthesis',
+					'text_preview' => substr($response->textOutput(), 0, 240),
+					'text' => $response->textOutput(),
+					'compacted_from' => count($conversation),
+					'compacted_to' => count($compacted),
+					'cost_usd' => $response->costUsd,
+				],
+				traceId: $traceId,
+			);
+			return $response->textOutput();
+		} catch (\Throwable $exc) {
+			error_log('[AgentKit] ceiling synthesis failed: ' . $exc->getMessage());
+			return '';
+		}
+	}
+
+	/**
+	 * Drop the tool traffic, keep what the model wrote.
+	 *
+	 * Tool RESULTS are dropped because they are the bulk and the model has
+	 * already read them; tool USES are dropped with them, because a tool_use
+	 * block whose result is gone is an unanswered call and several providers
+	 * reject that shape outright. What survives is the opening prompt and every
+	 * assistant text block — the run's own reasoning, in order.
+	 *
+	 * @param array<int, Message> $conversation
+	 * @return array<int, Message>
+	 */
+	private function compactForSynthesis(array $conversation): array
+	{
+		$out = [];
+		foreach ($conversation as $index => $message) {
+			$text = '';
+			foreach ($message->content as $block) {
+				if (($block['type'] ?? null) === 'text') {
+					$text .= (string) ($block['text'] ?? '');
+				}
+			}
+			if (trim($text) === '') {
+				continue;   // a turn that was nothing but tool traffic
+			}
+			// The first user message is the ceremony's brief and must survive
+			// even if later user turns are only tool results.
+			$out[] = $index === 0 || $message->role === 'user'
+				? Message::userText($text)
+				: Message::assistantText($text);
+		}
+		return $out;
+	}
+
+	/**
 	 * An env override, where ZERO is a value and not an absence.
 	 *
 	 * `getenv($k) ?: $default` reads "0" as empty and silently restores the
@@ -949,7 +1128,7 @@ final class Runner
 	 *
 	 * @param string $at where the check fired — 'llm_call' or 'iteration'.
 	 */
-	private function assertSessionCeiling(string $at): void
+	private function assertSessionCeiling(string $at, bool $reserveHeadroom = true): void
 	{
 		if ($this->sessionDeadline === null) {
 			return; // no session open (direct unit-level use of the loop)
@@ -957,6 +1136,22 @@ final class Runner
 		$tokenCeiling = self::envInt(
 			'NOS_AGENT_SESSION_TOKEN_CEILING', self::SESSION_TOKEN_CEILING
 		);
+		// HEADROOM, so the run can still SAY something (2026-08-18). Measured on
+		// the first bound surveyor run after the synthesis turn shipped: the
+		// session died here at 260 745 in / 2 558 out after 23 calls. The call
+		// cap is 30, so the reservation made that morning — one call held back
+		// out of thirty — protected a bound that never binds for this agent. The
+		// ceiling that actually fires is this one, and it fired mid-investigation
+		// with nothing written, which is the same empty-handed run in a different
+		// costume.
+		//
+		// So the working budget stops short of the ceiling and the difference is
+		// spent on one compacted wrap-up call (see runToolUseLoop's catch). The
+		// hard ceiling is unchanged and is still enforced — `$reserveHeadroom =
+		// false` is how the wrap-up asks to be measured against it.
+		if ($reserveHeadroom) {
+			$tokenCeiling = max(1, $tokenCeiling - self::SYNTHESIS_TOKEN_RESERVE);
+		}
 		if (microtime(true) >= $this->sessionDeadline) {
 			throw new SessionCeilingReached(
 				"session wall clock exhausted at {$at}: the run passed its "
