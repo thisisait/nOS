@@ -68,11 +68,19 @@ def test_every_tmux_target_is_anchored():
     code = _code(CC)
     targets = re.findall(r'-t\s+"([^"]+)"', code)
     assert targets, "no tmux targets found — this gate has stopped seeing them"
+    # `set-option` is the ONE exception, and it is tmux's, not ours: it resolves
+    # `-t` as a PANE and rejects `=name` outright. Anchoring it produced
+    # `no such session: =nos-cc` four times into a stderr nobody read, and the
+    # status bar was silently never set. The exception is safe on its own terms
+    # — a prefix match there writes a status bar, which closing the session
+    # undoes; the anchored commands are the ones where a prefix match costs
+    # someone their work.
+    set_option_targets = set(re.findall(r'set-option\s+-t\s+"([^"]+)"', code))
     unanchored = [
         t for t in targets
         # `$SESSION:window` forms address a window INSIDE the session and are
         # already scoped by it; only bare session targets need the anchor.
-        if not t.startswith("=") and ":" not in t
+        if not t.startswith("=") and ":" not in t and t not in set_option_targets
     ]
     assert not unanchored, (
         f"unanchored tmux session target(s): {unanchored}. tmux matches by "
@@ -176,6 +184,18 @@ def test_the_layout_builds_without_touching_other_sessions():
         assert "already exists" in again.stdout, (
             "a second run did not detect the existing session — it would "
             "rebuild over live panes"
+        )
+        # THE BAR MUST ACTUALLY BE SET. It was not, for the first version of
+        # this script, because tmux refused the target and the script did not
+        # look. A layout test that never reads back an option cannot see that.
+        bar = subprocess.run(
+            ["tmux", "show-options", "-t", "nos-cc-selftest", "status-right"],
+            capture_output=True, text=True,
+        ).stdout
+        assert "nos-statusline.sh" in bar, (
+            f"the session's status-right does not call the reader; got {bar!r}. "
+            "tmux reports a rejected target on stderr and exits non-zero — if "
+            "the script does not check, the bar is silently absent."
         )
     finally:
         subprocess.run(["tmux", "kill-session", "-t", "=nos-cc-selftest"],

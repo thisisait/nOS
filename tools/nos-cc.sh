@@ -94,10 +94,30 @@ tmux send-keys -t "$SESSION:ops.1" \
 
 tmux split-window -v -t "$SESSION:ops.1" -c "$REPO_ROOT" -p 40
 
+# ── stuck: the quiet half. red-status says what FAILS; this says what STOPPED ─
+# Deliberately its own window rather than a pane: it is the view you open when
+# nothing is on fire and you want to know what has been sitting still, and it is
+# long enough that squeezing it beside something else would truncate the part
+# that matters (the oldest rows are at the bottom of each list).
+tmux new-window -t "=$SESSION" -n stuck -c "$REPO_ROOT"
+tmux send-keys -t "$SESSION:stuck" \
+    "$W --interval 300 --title 'what has stopped moving' -- tools/stuck-status.py" C-m
+
 # ── loop: the self-improvement ledger, which nothing else displays ───────────
 tmux new-window -t "=$SESSION" -n loop -c "$REPO_ROOT"
 tmux send-keys -t "$SESSION:loop" \
     "$W --interval 120 --title 'weakness -> proposal -> verdict' -- tools/loop-status.py" C-m
+
+# ── code: what changed, and the ability to go and look ───────────────────────
+# `git log` is a READER too, and it is the one that answers "what did we just
+# do to ourselves" — the question every other pane here raises. The editor is
+# left unopened beside it: a window that launches vim on attach is a window you
+# fight before you can read anything.
+tmux new-window -t "=$SESSION" -n code -c "$REPO_ROOT"
+tmux send-keys -t "$SESSION:code" \
+    "$W --interval 60 --title 'recent history' -- git -c color.ui=always log --oneline --decorate -18" C-m
+tmux split-window -h -t "$SESSION:code" -c "$REPO_ROOT" -p 50
+tmux send-keys -t "$SESSION:code.1" "vim ." ""
 
 # ── converge: its own window, because a converge is long and worth watching ──
 # NOT auto-started. A converge is a deliberate act and this script is not the
@@ -112,12 +132,28 @@ tmux select-window -t "$SESSION:ops"
 tmux select-pane -t "$SESSION:ops.2"
 
 # ── the bar ──────────────────────────────────────────────────────────────────
-# Session-scoped (`set -t`), so attaching does not rewrite the operator's own
-# tmux config for every other session on the host.
-tmux set -t "=$SESSION" status-interval 15
-tmux set -t "=$SESSION" status-left "#[bold] nOS #[default]"
-tmux set -t "=$SESSION" status-right "#($REPO_ROOT/tools/nos-statusline.sh) #[dim]%H:%M"
-tmux set -t "=$SESSION" status-right-length 60
+#
+# Session-scoped, so attaching does not rewrite the operator's own tmux config
+# for every other session on the host.
+#
+# UNANCHORED, AND THAT IS THE EXCEPTION (found 2026-08-18 by reading stderr).
+# `set-option` resolves `-t` as a PANE, so `-t "=$SESSION"` is rejected outright
+# — `no such session: =nos-cc`, four times, straight past a script that does not
+# check. The bar was silently never set. The anchor rule stands everywhere it
+# can: `has-session`, `kill-session` and `attach` all take it, and those are the
+# ones where a prefix match costs someone their work. Setting a status option on
+# the wrong session writes a status bar, which is recoverable by closing it.
+#
+# The `|| echo` is not decoration. The whole reason this needed finding is that
+# tmux reported the failure and nothing was listening.
+for opt in "status-interval 15" \
+           "status-left #[bold] nOS #[default]" \
+           "status-right #($REPO_ROOT/tools/nos-statusline.sh) #[dim]%H:%M" \
+           "status-right-length 60"; do
+    name="${opt%% *}"; value="${opt#* }"
+    tmux set-option -t "$SESSION" "$name" "$value" \
+        || echo "warning: could not set $name on $SESSION" >&2
+done
 
 if [[ $ATTACH -eq 1 ]]; then
     exec tmux attach -t "=$SESSION"
