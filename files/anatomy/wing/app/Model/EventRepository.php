@@ -12,6 +12,16 @@ use Nette\Database\Explorer;
  */
 final class EventRepository
 {
+	/**
+	 * Does THIS database already hold a signed row? Answered once per process
+	 * and cached: the question is about the log's history, which no single
+	 * process can change from unchained to chained mid-run.
+	 *
+	 * Null = not yet asked. Deliberately not a constructor probe — a reader
+	 * that never inserts should not pay for it.
+	 */
+	private static ?bool $chainedDb = null;
+
 	/** @var string[] Whitelisted event types (see event.schema.json). */
 	public const VALID_TYPES = [
 		'playbook_start', 'playbook_end',
@@ -268,6 +278,47 @@ final class EventRepository
 				}
 				throw $e;
 			}
+		}
+
+		// AN UNSIGNED ROW MAY NOT FOLLOW A SIGNED ONE.
+		//
+		// MEASURED 2026-08-16/18: a bare `php bin/run-agent.php` from a shell
+		// inherits none of the daemon's launchd environment, so
+		// WING_AUDIT_CHAIN_ENABLED was unset, the branch above was skipped,
+		// and the librarian appended 37 unsigned rows to a chained database.
+		// `audit-chain-verify` has failed every night since:
+		//
+		//     ok:false  checked 337462  unsigned 37
+		//     first_break: segment start prev_hash neither genesis nor anchor
+		//
+		// Nothing errored. The insert succeeded, the agent finished, and the
+		// tamper-evident log silently stopped being one — which is the exact
+		// failure the chain exists to make impossible.
+		//
+		// The condition above asks the ENVIRONMENT whether to sign, and an
+		// absent env var reads as "this estate has no chain". So this asks the
+		// DATABASE instead, which cannot be misconfigured by a caller: if the
+		// table already holds a signed row, this database is chained and an
+		// unsigned append is corruption, not a legacy insert. Chain-off
+		// estates are untouched — they have no signed row to find.
+		//
+		// Cached per process: one query, not one per event.
+		if (self::$chainedDb === null) {
+			self::$chainedDb = (bool) $this->db->getConnection()
+				->query('SELECT 1 FROM events WHERE row_hash IS NOT NULL LIMIT 1')
+				->fetchField();
+		}
+		if (self::$chainedDb) {
+			throw new UnchainedAuditWrite(
+				'refusing to append an UNSIGNED row to a chained audit log. This '
+				. 'database holds signed rows, but this process cannot sign: '
+				. (getenv('WING_AUDIT_CHAIN_ENABLED') === '1'
+					? 'WING_EVENTS_HMAC_SECRET is unset or empty'
+					: 'WING_AUDIT_CHAIN_ENABLED is not "1"')
+				. '. A CLI writer must carry the daemon\'s environment — use '
+				. 'tools/run-agent.sh, which reads it from the running launchd '
+				. 'job, rather than invoking bin/run-agent.php directly.'
+			);
 		}
 
 		$this->db->table('events')->insert($row);

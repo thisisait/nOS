@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\AgentKit\Telemetry;
 
 use App\Model\EventRepository;
+use App\Model\UnchainedAuditWrite;
 
 /**
  * Emits AgentKit lifecycle events into the wing.db `events` table via
@@ -56,6 +57,15 @@ final class AuditEmitter
 		}
 		try {
 			$this->events->insert($payload);
+		} catch (UnchainedAuditWrite $exc) {
+			// NOT swallowed, and the asymmetry is the point. A transient insert
+			// failure leaves a hole in the trail; this one means the trail has
+			// stopped being verifiable, and every further row buries the break
+			// deeper. Measured 2026-08-16: swallowed here, the librarian ran to
+			// completion and exit 0 while appending 37 unsigned rows, and the
+			// nightly verify has failed every night since without a single
+			// signal from the run that produced it.
+			throw $exc;
 		} catch (\Throwable $exc) {
 			// Audit is critical but we never want to crash the agent because
 			// a single insert failed. Log to stderr; the OTel span will still
