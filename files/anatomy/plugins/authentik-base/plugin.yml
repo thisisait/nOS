@@ -13,13 +13,15 @@
 #   roles/pazny.authentik/templates/blueprints/{00,10,20,30}-*.yaml.j2
 #   roles/pazny.authentik/tasks/blueprints.yml — Ansible template tasks
 #
-# Post-P0.3 shape:
-#   files/anatomy/plugins/authentik-base/blueprints/{00,10,20,30}-*.yaml.j2
-#   plugin loader pre_compose hook renders them via render_dir.
-#   roles/pazny.authentik/tasks/blueprints.yml KEEPS RENDERING for now
-#   (Phase 2 C1+C5 deletes the role-side after Q2 lands per-plugin
-#   `authentik:` blocks across 35 services). Both render to the same
-#   target dir; templates are byte-identical → idempotent.
+# Post-P0.3 shape (inventory refreshed 2026-08-18):
+#   files/anatomy/plugins/authentik-base/blueprints/ — seven templates
+#   ({00,10,20,30,40,46,50}) rendered by the plugin loader pre_compose hook.
+#   roles/pazny.authentik/tasks/blueprints.yml still renders the TWO
+#   surviving role-side copies (00-admin-groups, 30-agent-clients) into the
+#   same target dir; those two MUST stay byte-identical with the plugin
+#   copies. That used to be asserted right here and was false (the f781f42d
+#   grant fix sat in the copy that never renders); it is now CHECKED by
+#   test_the_duplicated_blueprints_agree.py, not merely asserted.
 #
 # Aggregator wiring (becomes load-bearing in Q2):
 #   For every peer plugin with an `authentik:` block, the loader harvests

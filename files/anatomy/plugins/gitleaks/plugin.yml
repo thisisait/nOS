@@ -90,14 +90,14 @@ pulse:
         GITLEAKS_MIN_SEVERITY: "medium"
 
 # =============================================================================
-# SCHEMA MIGRATION — applied by plugin loader hook 2 (idempotent DDL).
-# Duplicates schema-extensions.sql so plugin carries its own migration;
-# Wing's init-db.php ALSO applies schema-extensions.sql, so the table
-# will exist before the first Pulse run regardless of which path fires first.
+# SCHEMA — this plugin carries NO migration (the banner that said it
+# "duplicates schema-extensions.sql" outlived the block's removal; fixed
+# 2026-08-18). The note below is the truth.
 # =============================================================================
 
 # schema: the gitleaks_findings table + indexes are the single source of truth
-# in files/anatomy/wing/db/schema-extensions.sql (lines 251-273), applied by
+# in files/anatomy/wing/db/schema-extensions.sql (grep gitleaks_findings —
+# a line-number cite rotted here once already), applied by
 # Wing's init-db.php. A duplicate inline `schema:` block lived here but nothing
 # consumed it (the loader has no schema-block handler) and it used an
 # {migrations:[{sql}]} shape the plugin schema doesn't permit (schema = array

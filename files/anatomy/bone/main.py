@@ -18,9 +18,11 @@ app = FastAPI(title="nOS Bone API", version="0.2.0")
 
 # Track B (2026-04-26): operational endpoints now require Authentik-issued
 # JWTs with capability scopes. The legacy BONE_SECRET / X-API-Key channel is
-# retired (decision O4); the only places that read it from env are Bone's
-# own boot-time guard (auth.py:assert_configured) and the events.py HMAC
-# fallback secret. See files/anatomy/bone/auth.py for the verifier.
+# retired (decision O4) — and as of 2026-08-18 NOTHING in Bone reads
+# BONE_SECRET from env (the earlier claim that assert_configured and events.py
+# read it was measured false: auth.py verifies Authentik JWTs, and events.py:24
+# reads WING_EVENTS_HMAC_SECRET). The Ansible var `bone_secret` survives only
+# as the playbook-side default for wing_events_hmac_secret — a different thing.
 SERVICE_REGISTRY_PATH = os.getenv(
     "SERVICE_REGISTRY_PATH",
     os.path.expanduser("~/projects/default/service-registry.json"),

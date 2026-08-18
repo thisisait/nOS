@@ -137,9 +137,10 @@
   ansible.builtin.template:
     src: bone.plist.j2
     dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ bone_launchd_label }}.plist"
-    # 0600: plist embeds BONE_SECRET (HMAC seed for every API call) +
-    # WING_API_TOKEN. Same threat model as the Wing plist — peer
-    # processes / backup agents must not be able to read these.
+    # 0600: plist embeds WING_EVENTS_HMAC_SECRET, BONE_VFS_TOKEN and the
+    # three BONE_LOOP_* tokens (BONE_SECRET itself was dropped by SEC
+    # L-BONE2 — see bone.plist.j2). Same threat model as the Wing plist —
+    # peer processes / backup agents must not be able to read these.
     mode: '0600'
   notify: Restart bone
   when: (nos_service_manager | default('launchd')) == 'launchd'

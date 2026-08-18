@@ -23,10 +23,12 @@ model, and they never share an identity)
     say "the command exited 2 and printed this text", exactly as a real process
     would, and the adapter then computes the verdict from that text the same way
     it does in production. A double cannot return ``Result.PASS``; the adapters
-    are the only code in the estate that constructs a ``Result``, and they are
-    not injectable. This is the difference between mocking a subprocess and
-    mocking an oracle, and the gate
-    ``test_no_seam_can_supply_a_result`` pins it.
+    are the only code that constructs a ``Result`` from a live judgment, and
+    they are not injectable. (Stated precisely, 2026-08-18: the gate
+    ``test_no_seam_can_supply_a_result`` pins THIS FILE; ``ledger.py`` also
+    re-hydrates a ``Result`` from its stored, CHECK-constrained verdict
+    column, which is replay, not judgment.) This is the difference between
+    mocking a subprocess and mocking an oracle.
 
 FAIL CLOSED, EVERYWHERE (§2.4)
     Three of five judges return 0 when they did no work. That is the same defect
@@ -447,7 +449,8 @@ def _text(v: Any) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Adapters — the ONLY code that constructs a Result (§2.2)
+# Adapters — the ONLY code that constructs a Result from a live judgment
+# (§2.2; ledger.py re-hydrates stored verdict rows, which is replay)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
