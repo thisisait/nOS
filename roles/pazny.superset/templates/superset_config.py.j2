@@ -47,12 +47,23 @@ AUTH_USER_REGISTRATION = True
 AUTH_USER_REGISTRATION_ROLE = "Gamma"
 AUTH_ROLES_SYNC_AT_LOGIN = True
 
-# Authentik group -> FAB role
+# Authentik group -> FAB role, derived from authentik_rbac_tiers (a LIST of
+# tier dicts). The previous `.admin`/`.manager` attribute lookups were always
+# Undefined on a list, so the `| default()` literals were the only thing that
+# ever rendered — a renamed tier group silently never reached Superset, and
+# nos-providers (tier-1 everywhere else in the estate) landed as Gamma
+# (found 2026-08-18). Tier group lists are cumulative, so each group maps at
+# the FIRST tier that names it: every tier-1 group -> Admin, the group tier 2
+# adds -> Alpha, and so on — same derivation idiom as open-webui-base.
+{% set _fab_role = {1: 'Admin', 2: 'Alpha', 3: 'Gamma', 4: 'Public'} %}
+{% set _ns = namespace(seen=[]) %}
 AUTH_ROLES_MAPPING = {
-    "{{ authentik_rbac_tiers.admin   | default('nos-admins') }}":   ["Admin"],
-    "{{ authentik_rbac_tiers.manager | default('nos-managers') }}": ["Alpha"],
-    "{{ authentik_rbac_tiers.user    | default('nos-users') }}":    ["Gamma"],
-    "{{ authentik_rbac_tiers.guest   | default('nos-guests') }}":   ["Public"],
+{% for t in authentik_rbac_tiers | sort(attribute='tier') %}
+{% for g in t.groups if g not in _ns.seen %}
+    "{{ g }}": ["{{ _fab_role[t.tier] }}"],
+{% set _ns.seen = _ns.seen + [g] %}
+{% endfor %}
+{% endfor %}
 }
 
 OAUTH_PROVIDERS = [
