@@ -11,29 +11,46 @@
 
 ## Now (current track)
 
-**v0.10-beta SHIPPED** (2026-08-02) — tag, GitHub Release and devlog Pages all
-published; v0.9-beta's missing release backfilled. Narrative in `RELEASE.md`.
+**Now: three reds, in this order.**
 
-**Now: the agentic loop.** Engine callable in Bone (`/api/v1/loop/*`); secrets
-P0/P2/P4 shipped, P1 written and NOT run (needs a blank). Known open at the
-tag is listed in RELEASE.md §Known open — S-0 applies to the next login only,
-32 of 76 L1 columns reach the DB, FreeScout has no SSO, REM-151/152 HIGH.
+1. **CI is RED on `dev`** (runs 32065150345, 32071719508 — 08-17). One job:
+   Face vitest, one test, `forceLayout` determinism. macOS hashes
+   `d5a6dc4a…`, Linux hashes `565b17ce…`. The test's own comment named CI as
+   the arbiter for exactly this and said a disagreement is a determinism
+   finding, not flake — so it is one: d3-force reproduces per-platform, not
+   across platforms. Seed-pinning `randomSource` was not enough. Decide
+   whether the pin should tolerate float drift (round the emitted
+   coordinates) or whether cross-platform bit-identity is a claim we drop.
+2. **The audit chain is broken.** `audit-chain-verify` rc=2 on 08-17 and
+   08-18: `ok:false, checked 337462, unsigned 37`. All 37 unsigned rows were
+   written by `agent:librarian` via `source=agentkit` on 2026-08-16
+   11:49–11:50 — AgentKit's in-process write path is outside the signing
+   discipline the rest of the spine obeys. Last passing verify 08-16 04:19.
+   Re-anchoring a tamper-evident log is the operator's act, not an agent's.
+3. **The nightly security scan has not run for two nights.** rc=1 =
+   "Claude Code scan exited non-zero — NOT stamping components as scanned".
+   The honest-marker fix works: 5 components sit at `scan_failed` and
+   `last_full_scan` is still 2026-08-16 rather than a fabricated today.
+
+**Shipped 2026-08-17** (narrative → devlog): public apex site at the root
+domain, signed ruling, 1.9 MB → 596 kB (`afaa56ec`, `43076e48`); d3-force
+second layout, face v0.8 (`07d9d826`); surveyor agent + first survey
+(`6b960b47`, `f781f42d`); LangGraph harness + spike 4/4, NOT adopted
+(`0d926671`, `b38a5057`). AgentKit's bound loop is **unproven** — 14 sessions,
+0 completions, gated by `test_the_bound_agent_loop_is_unproven.py`.
 
 ## Open follow-ups
 
-Two adversarial sweeps (26 agents) + a pre-tag promise survey; sharpest findings
-fixed. The **general fix** — a per-service `verify.yml` hook plus the loader
-change that lets it fail — is in
+The general fix for the class below — a per-service `verify.yml` hook plus the
+loader change that lets it fail — is in
 [`nos-genome-and-organelles.md`](archive/nos-genome-and-organelles.md) §Thread D.
-
 
 - **FreeScout has no SSO** (survey, 08-02): both `freescout-oauth` sources 404,
   so the `FREESCOUT_OIDC_*` env is inert and `/login` is local-form-only. Tasks
   now report it instead of claiming `changed`. Open: find a reachable module
   source, or reclassify FreeScout as forward_auth.
-- **`drift-watch.sh` still `exit 0`s regardless of the Bone POST** and swallows
-  a CRITICAL when the HMAC secret is unset — same shape as the 07-28 fix, one
-  level up. **`genome-codegen.py` emits 2 of B1's 4 targets.**
+- **`drift-watch.sh` `exit 0`s regardless of the Bone POST**, swallowing a
+  CRITICAL when the HMAC secret is unset. `genome-codegen.py` emits 2 of B1's 4.
 - **Infisical MTI render fix (S-track):** the aggregator still emits an oauth2
   identity for infisical, so the orphan OAuth2Provider sharing the Provider
   base row with the ProxyProvider reappears on apply; deleting it cascades the
@@ -52,40 +69,24 @@ change that lets it fail — is in
   `0/0 ready (stack empty)`, green for weeks on an estate with no DB at all.
   Three pieces: render it (cause undiagnosed — do not guess), make the probe read
   the bring-up rc, give the smoke a manifest-enabled floor.
-- **KEAP contract v2 proposal — typed skill→service relations (2026-07-22, undecided).**
-  KEAP asks why skills carry no typed edges to their services (today: tree +
-  `[[anchor]]` rays only). Proposed shape: a `relations:` list in card frontmatter
-  (`relations: [{type: provided-by, to: nos.iiab.rustfs}]`), emitted by our
-  self-model generator, ingested as confirmed edges with pack provenance. **They
-  are waiting on us for the verb set** (`provided-by` / `documents` / `depends-on`?)
-  before either side builds; KEAP side needs an FM_VERSION bump. Decide the verbs
-  against what the generator can derive from real state — a verb we cannot populate
-  from the manifest is a verb that ships empty.
-- **Removal vocabulary: `blank`/`reset` TAG rename + shim deletion.** The vars moved
-  to `remove=none|data|deep|all`, but every removal task still carries
-  `tags: ['blank','reset']` / `['flush','reset']` (`main.yml`, `tasks/blank-reset.yml`)
-  and `tasks/run-mode.yml`'s R4 fail message hard-codes those names — deliberately
-  deferred so this release changed vocabulary in one layer only. The compat shim
-  (`tasks/run-mode.yml`) is marked **DEPRECATED — delete after v0.10**: a dated
-  obligation, tracked here so it does not become a permanent shim.
-- **R5 verify does not cover best-effort teardown steps.** Tasks with
-  `failed_when: false` (e.g. `/etc/resolver/dev.local`) can survive a removal
-  silently; the absence assert only stats the path set. Documented in
-  `docs/nos-cli.md`, unbuilt.
-- **FS doctrine P3** — AgentKit tool-layer FS path-scoping (`docs/archive/fs-doctrine.md`).
-  P1/P1b shipped this cycle (`nos_data_root` resolver + per-user tree); the plan header
-  still says "DESIGN (P0) — we are here" and is stale.
+- **KEAP contract v2 — typed skill→service relations (undecided since 07-22).**
+  They wait on us for the verb set (`provided-by`/`documents`/`depends-on`).
+  Decide against what the generator can derive: a verb we cannot populate from
+  the manifest is a verb that ships empty.
+- **Removal vocabulary shim is now DUE.** `tasks/run-mode.yml` is marked
+  "DEPRECATED — delete after v0.10" and v0.10 is tagged; removal tasks still
+  carry `tags: ['blank','reset']`. A dated obligation that has come due.
+- **R5 verify misses best-effort teardown.** `failed_when: false` tasks can
+  survive a removal silently; the absence assert only stats the path set.
+- **FS doctrine P3** — AgentKit tool-layer FS path-scoping; P1/P1b shipped and
+  the plan header still says "DESIGN (P0) — we are here" (`docs/archive/fs-doctrine.md`).
 - **Version-pin drift wave:** counts in Snapshot (re-derive, never inherit).
   Gitea closed via the agentic recipe path — the template for the rest.
-- **Migration severity-enum drift:** `validate_record` lacks `security` (schema has
-  it); Gitea filed as `minor` to work around. Add it to `_SEVERITY_VALUES`.
-- **PG 16→17 cutover** — pg17 verified live beside pg16 on the coexistence track,
-  queued (`coexistence_planned`); the cutover itself is still operator-gated.
-- **Security backlog:** counts live in Snapshot below (re-derive, never inherit);
-  Phase C hardening + Phase D architectural remain.
-- **Gov P0 (profile-gated, not blocking non-gov):** ISDS + NIA/eIDAS federation
-  (greenfield), retention enforcement (metadata only today) —
-  `docs/compliance/gov-readiness-audit-2026q2.md`.
+  `validate_record` still lacks `security` in `_SEVERITY_VALUES` (schema has it).
+- **PG 16→17 cutover** — pg17 verified live beside pg16; operator-gated.
+- **Security backlog:** counts in Snapshot; Phase C + D remain.
+- **Gov P0 (profile-gated):** ISDS + NIA/eIDAS federation (greenfield),
+  retention enforcement (metadata only) — `docs/compliance/gov-readiness-audit-2026q2.md`.
 
 ## Operator to-dos
 
@@ -96,21 +97,20 @@ change that lets it fail — is in
   UNDETERMINED mechanism, recorded deliberately without a guessed remedy). 07 now owns
   a wider rule too: *a step that cannot do its job must not exit 0* — three instances
   (drift hook parsing nothing · its POST 401ing · Linux wet-test `0/0 ready`).
-- **Rotate `restic_password` (needs Full Disk Access).** A restic key is
-  per-repository, so P2 could not mint one without locking `/Volumes/SSD1TB/
-  nos-restic`; it stays at the OLD derived value — the last unfreed crown jewel.
-  `restic key add` under the old password FIRST, then persist the new one.
+- **Rotate `restic_password` (needs Full Disk Access)** — the last unfreed crown
+  jewel, still at the OLD derived value. `restic key add` under the old password
+  FIRST, then persist the new one.
 - **TCC grant for /Volumes/SSD1TB** — restic off-site leg fails `operation not
-  permitted`; blocks the backup DR round-trip verify (S4 leftover).
-- **Uptime Kuma has been in its setup wizard since 2026-07-24** — the 1→2 upgrade
-  ran, `/api/entry-page` says `setup-database`, and the container reported
-  `healthy` for 9 days because the healthcheck is a TCP connect. Finish the wizard
-  at `127.0.0.1:3001`, then `--tags uptime_kuma`. No uptime alerting until then.
-- **`s3://backups/2026-08-03/` (14 objects, 351 MB) opens with no key** — written
-  by the one nightly that ran under the minted-but-unpersisted archive key.
-  Decide whether to delete: unreadable ciphertext reads as a backup. 07-26..08-02
-  (86 objects) still open with `{prefix}_pw_backup_encryption`; the ring that
-  serves them fills on the NEXT converge (`7f4907ac`).
+  permitted`, blocking the backup DR round-trip verify.
+- **Uptime Kuma: the wizard is no longer blocking, the monitors are unproven.**
+  `/api/entry-page` now answers `entryPage:null`, not `setup-database` (measured
+  2026-08-18), so the 07-24 claim is overtaken. What is NOT established is
+  whether any monitor exists: the healthcheck is a TCP connect and reported
+  `healthy` through nine days of an unfinished wizard, so it cannot answer this.
+  Open `127.0.0.1:3001`, confirm monitors, then `--tags uptime_kuma`.
+- **`s3://backups/2026-08-03/` (14 objects, 351 MB) opens with no key.** Decide
+  whether to delete — unreadable ciphertext reads as a backup. 07-26..08-02 still
+  open with `{prefix}_pw_backup_encryption` (`7f4907ac`).
 - One-time (Phase C of devlog epic): repo Settings → Pages → Source = GitHub
   Actions.
 
@@ -118,27 +118,27 @@ change that lets it fail — is in
 
 - OpenClaw (Ollama/CUDA) + Hermes runtimes on Linux — `docs/linux-port.md`.
 - Host-nginx per-service vhosts on Linux (Traefik is the Linux edge).
-- Fleet provisioning (p2p/server-client/mesh) —
-  `docs/archive/fleet-review-2026q2.md` teed up push-vs-pull.
-- Inspektor + Librarian agent runners (contract-only; need trivy/grype substrate
-  resp. Qdrant corpus pipeline) — `docs/sso-and-attribution.md` agent matrix.
+- Fleet provisioning (p2p/server-client/mesh) — `docs/archive/fleet-review-2026q2.md`.
+- Inspektor + Librarian runners (contract-only; need trivy/grype resp. Qdrant).
 - ansible-core 2.24 jump (~4h once upstream ships stable) — CLAUDE.md tech debt.
 - Agent actor_id naming normalization across the two upgrade agents.
-- Architect at-target recipe drafts (freescout/gitlab/grafana, wing.db event 105)
-  — commit when next touching those services.
+- Architect at-target recipe drafts (freescout/gitlab/grafana) — commit when next
+  touching those services.
 
 ## Snapshot
 
 | Surface | State |
 |---|---|
-| Release | `v0.10-beta` gate MET (`agreeStreak: 6`, six clauses); tag pending operator |
-| Last verified | converge 2026-08-03 `ok=1445 failed=0`; archive key minted+persisted, ring fills next run |
-| Suites | anatomy **2164 passed / 4 skipped**; face 143 passed, 0 type errors |
+| Release | `v0.10-beta` tagged and published (the "tag pending" line was stale) |
+| Last verified | converge 2026-08-18 `failed=0`; 63 containers, 0 unhealthy |
+| Suites | anatomy **3558 passed / 33 skipped**; face 302 passed locally — **but face vitest is RED on CI** (see Now #1) |
 | Estate | `nos_data_root` = `/Volumes/SSD1TB/nOS/data` (one lever; NOT `configure_external_storage`) |
-| CI | was RED on `dev` (lint / face / contracts-drift / pytest); all four fixed 08-02, re-run pending |
+| CI | **RED on `dev`** — Face vitest, `forceLayout` determinism pin, macOS vs Linux |
 | Authentik | engine=tofu; self-reconcile preflight = idempotent non-blank converge |
 | Upgrades | PG17 coexistence queued |
-| Remediation queue | cycle-21: 15 pending / 128 resolved / 5 vendor-blocked / 3 wontfix / 1 obsolete of 152 |
+| Remediation queue | cycle-31: 49 pending (6 HIGH) / 143 resolved / 5 vendor-blocked / 4 wontfix / 1 obsolete of 202. REM-152 is CLOSED — it was carried here as the headline HIGH after it stopped being one |
+| Audit chain | **BROKEN** — 37 unsigned rows (agentkit, 08-16); nightly verify rc=2 |
+| Security scan | 5 components `scan_failed`; `last_full_scan` 2026-08-16 |
 
 ## Update protocol
 
