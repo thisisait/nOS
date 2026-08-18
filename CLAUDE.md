@@ -32,6 +32,10 @@ ask for the security queue:
 tools/estate-status.py          # host vs local repo vs origin, all three
 tools/estate-status.py --config install_gitlab   # the RESOLVED value, not the default
 tools/red-status.py             # what is red RIGHT NOW, across every source
+tools/agent-status.py           # what the agents did, and how the runs ended
+tools/loop-status.py            # which weakness sources produce proposals
+tools/cortex-drift.py           # the vendored organ vs ~/keap/src
+tools/nos-cc.sh                 # all of the above, live, in one tmux session
 ```
 
 **Start a session with `tools/red-status.py`.** A notification is an event and
@@ -42,6 +46,16 @@ per-minute job flooding the inbox also stops a nightly one repeating news that
 still holds. Establishing that took six ad-hoc SQL queries. The reader is
 strictly a reader (gate `test_the_red_reader_only_reads.py`) and exits 0 whatever
 it finds; an unreadable source is reported as UNKNOWN, never as green.
+
+**A pane shows STATE, not scrollback.** `tools/nos-cc.sh` is the terminal control
+centre those readers feed — built 2026-08-18 after the first bound ceremony ever
+to complete named the gap as its own primary finding. Its one design rule is
+worth carrying anywhere a surface gets built: a tailed log looks healthy right up
+until its writer stops, and then it looks exactly the same, so every pane re-runs
+a reader (`tools/nos-watch.sh`) and says so when the reader itself fails. It owns
+one tmux session, anchors every target with `=` (tmux matches by PREFIX, so an
+unanchored `-t nos` reaches the operator's own sessions), and never starts a
+converge for you. Gate: `test_the_control_centre_shows_state.py`.
 
 ## Git Workflow
 
