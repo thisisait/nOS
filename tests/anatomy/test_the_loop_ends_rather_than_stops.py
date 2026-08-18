@@ -212,3 +212,62 @@ def test_a_failed_wrap_up_is_not_an_error():
         "that errors would crash a run that was merely out of budget."
     )
     assert "return '';" in tail, "a failed wrap-up must return no text, not throw"
+
+
+def test_the_headroom_is_sized_from_what_calls_have_cost():
+    """THE THIRD RESERVE, and the first that survived a run.
+
+    Two were disproved by running them:
+      * a flat 20 000 — at a tightened test ceiling of 30 000 it ate two thirds
+        of the working budget;
+      * 15% of the ceiling — the wrap-up was then REFUSED at `42 500 >= 40 000`,
+        because the check happens BEFORE a call and the call it waves through
+        costs whatever it costs. The budget was 34 000, the loop was under it,
+        one call landed at 42 500, and the headroom had been spent by the very
+        call it was meant to leave room after.
+
+    So the reserve is sized from this session's own largest call. The
+    conversation only grows, so the largest so far is the honest lower bound on
+    the next one — and a reserve smaller than that cannot survive it.
+
+    Under this version the first bound ceremony ever ran end to end:
+    `status: idle`, `outcome_failed`, 6 707 output tokens, three iterations, a
+    structured report that labelled its own gaps.
+    """
+    src = _src()
+    assert "sessionLargestCall" in src, (
+        "the headroom no longer tracks the largest call, so any fixed reserve "
+        "can be consumed by the call that precedes the wrap-up."
+    )
+    assert re.search(r"\$this->sessionLargestCall\s*\+\s*self::SYNTHESIS_MIN_RESERVE", src), (
+        "the reserve is no longer LARGEST CALL + floor. A reserve that does not "
+        "cover the next call is spent before the wrap-up is reached."
+    )
+    assert re.search(r"\$this->sessionLargestCall = 0;", src), (
+        "the largest-call counter is not reset per session, so one expensive "
+        "run would shrink every later run's working budget in the same process."
+    )
+
+
+def test_an_iteration_boundary_stops_rather_than_discards():
+    """The outcome loop's own ceiling check used to throw, and the throw
+    travelled past everything the previous iteration had produced. Measured:
+    `ceiling at iteration`, 13 502 in / 1 708 out, with a completed first
+    iteration in hand. A budget that will not fund MORE work is not a reason to
+    bin the work already done."""
+    src = _src()
+    loop = src[src.index("private function runOutcomeLoop("):]
+    assert "assertSessionCeiling('iteration', false)" in loop, (
+        "the iteration check no longer measures against the HARD ceiling. The "
+        "reserved headroom belongs to the wrap-up inside runToolUseLoop; "
+        "spending it here starves the thing it was reserved for."
+    )
+    assert "'max_iterations_reached'" in loop and "break;" in loop, (
+        "the iteration-boundary ceiling no longer breaks out with the result so "
+        "far — it throws again, discarding a completed iteration."
+    )
+    assert "if ($iteration === 0)" in loop, (
+        "iteration 0 no longer rethrows. With nothing produced yet the ceiling "
+        "IS the outcome, and reporting success over an empty run is the defect "
+        "this whole file exists for."
+    )

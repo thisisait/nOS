@@ -41,12 +41,25 @@ vectors — true on 2026-07-26, **false since**.
 > ("doing it after the corpus has moved is a rebuild of a bigger index") is
 > being paid at 143 MB per three weeks.
 >
-> **Measuring trap, recorded because it cost a wrong conclusion here first:**
+> **Measuring trap, recorded because it cost a wrong conclusion here twice.**
 > `SELECT COUNT(*) FROM embeddings` returns **0** under stock `sqlite3` 3.51 on
 > a libsql table carrying a vector index, while `SELECT rowid, kind … LIMIT 3`
-> returns real rows. Count through a subquery — `SELECT COUNT(*) FROM (SELECT
-> rowid FROM embeddings)` — or ask KEAP. Read naively, the store looks like it
-> holds nothing and the whole index looks like dead pages.
+> returns real rows. Read naively, the store looks like it holds nothing and the
+> whole index looks like dead pages.
+>
+> The first version of this note prescribed a subquery — `SELECT COUNT(*) FROM
+> (SELECT rowid FROM embeddings)` — and **that does not work either**; it also
+> returns 0, in the same transcript that produced the numbers above. The
+> aggregate is what breaks, wherever it sits. What answers is a **GROUP BY**:
+>
+> ```sql
+> SELECT kind, COUNT(*) FROM embeddings GROUP BY kind;
+> -- capture|198  note|1220  object|365  taxonomy|2500
+> ```
+>
+> Or ask KEAP, which uses libsql and has no such blind spot. The lesson is
+> narrower than "sqlite3 miscounts": a workaround that was never itself run is
+> a guess wearing a command's clothes.
 
 ## When the bill comes due
 

@@ -66,11 +66,28 @@ def test_the_ceiling_is_checked_before_the_call_not_after():
 
 def test_the_clock_also_bounds_the_iteration_loop():
     """The Grader's tokens are invisible to the counter; the clock is what
-    reaches them."""
+    reaches them.
+
+    MATCHED ON THE ARGUMENT, NOT THE WHOLE CALL (2026-08-18). This asserted the
+    literal `assertSessionCeiling('iteration')` and broke when the call gained a
+    second argument — while the property it exists for was untouched. A gate
+    keyed to a call's exact spelling reports a signature change as a missing
+    bound, and the tempting repair is to delete it.
+
+    The second argument is checked BELOW rather than ignored, because it makes
+    this bound stronger: `false` measures the HARD ceiling instead of the
+    working budget, so the headroom reserved for the wrap-up cannot be spent on
+    starting another iteration.
+    """
     src = _runner()
-    assert "$this->assertSessionCeiling('iteration')" in src, (
+    assert re.search(r"assertSessionCeiling\('iteration'", src), (
         "the iteration loop no longer checks the ceiling, so a session whose "
         "spend is mostly in the grader has no bound at all."
+    )
+    assert re.search(r"assertSessionCeiling\('iteration',\s*false\)", src), (
+        "the iteration check now measures against the WORKING budget. That "
+        "budget excludes the headroom reserved for the ceiling wrap-up, so a "
+        "new iteration could consume the tokens the run needs to report at all."
     )
 
 

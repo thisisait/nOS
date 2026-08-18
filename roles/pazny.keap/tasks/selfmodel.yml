@@ -78,6 +78,66 @@
   ansible.builtin.set_fact:
     _keap_sm_services: "{{ (lookup('file', playbook_dir + '/state/manifest.yml') | from_yaml).services | default([]) }}"
 
+# ── Which services are DEMONSTRABLY ABSENT (docs/hidden_fees/04) ─────────────
+#
+# The obvious filter — "keep the ones whose install_flag is true" — was written
+# first and MEASURED WRONG. Resolved across both config layers it drops five
+# services, and two of the five are live:
+#
+#   backrest   install_backrest=false, no container — and `backrest` is LISTENING
+#              on 127.0.0.1:9898 as a host daemon (pid 6576)
+#   opencode   install_opencode=false, no container — and the binary is at
+#              /opt/homebrew/bin/opencode
+#
+# `install_<svc>` governs the DOCKER service. For a host-installed one it can be
+# false while the thing is installed and serving by another path, so reading the
+# flag as presence loses documentation for software that is running. That would
+# trade a known defect for an unknown one, in the direction nobody notices.
+#
+# So the test is PRESENCE, not the toggle: absent means no container of that name
+# in `docker ps -a` AND no binary on PATH AND the flag off. On this host that is
+# exactly erpnext, freepbx and mailpit — the three the estate really does not
+# have, and the three whose cards carry addresses that resolve to somebody else
+# (the FreePBX card asserts `Port: 8088`, which here is Stalwart's admin UI).
+- name: "[pazny.keap] Containers this host knows about, by name"
+  ansible.builtin.command:
+    cmd: "{{ docker_bin | default('docker') }} ps -a --format {{ '{{.Names}}' }}"
+  register: _keap_sm_containers
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[pazny.keap] Host binaries for the manifest's non-Docker services"
+  ansible.builtin.shell:
+    cmd: "command -v {{ item.id | replace('_', '-') }} || command -v {{ item.id }} || true"
+  loop: "{{ _keap_sm_services }}"
+  loop_control:
+    label: "{{ item.id }}"
+  register: _keap_sm_bins
+  changed_when: false
+  check_mode: false
+
+- name: "[pazny.keap] Services that are absent by every test we can run"
+  ansible.builtin.set_fact:
+    _keap_sm_absent: >-
+      {{ _keap_sm_services
+         | selectattr('install_flag', 'defined')
+         | selectattr('install_flag', 'in', vars)
+         | rejectattr('install_flag', 'extract', vars)
+         | map(attribute='id')
+         | reject('in', _keap_sm_containers.stdout_lines | default([])
+                        | map('regex_replace', '^[a-z0-9]+[-_]', '') | list)
+         | reject('in', _keap_sm_bins.results | default([])
+                        | selectattr('stdout', 'truthy')
+                        | map(attribute='item.id') | list)
+         | list }}
+
+- name: "[pazny.keap] The card set — everything the estate has not been shown to lack"
+  ansible.builtin.set_fact:
+    _keap_sm_enabled: >-
+      {{ _keap_sm_services | map(attribute='id')
+         | reject('in', _keap_sm_absent) | list }}
+
 - name: "[pazny.keap] Resolve REAL per-service deployment facts (Jinja)"
   ansible.builtin.set_fact:
     _keap_sm_facts: "{{ _keap_sm_facts | default({}) | combine({item.id: _one}) }}"
@@ -125,6 +185,23 @@
       - "{{ keap_selfmodel_anchors | to_json }}"
       - "--facts-json"
       - "{{ _keap_sm_facts | default({}) | to_json }}"
+      # THE FLAG THE GENERATOR HAS ALWAYS HAD AND NOBODY EVER PASSED
+      # (docs/hidden_fees/04, wired 2026-08-18). `render_cards()` filters on it
+      # and its own docstring promises "for ENABLED services only", but with no
+      # caller supplying it `enabled` stayed None and the filter never once ran.
+      #
+      # The cost was not tidiness. The estate shipped 13 embedded cards for
+      # three services it does not run, and the FreePBX card asserted
+      # `Port: 8088` — which on this host belongs to Stalwart's admin UI. An
+      # agent routed to "the FreePBX admin surface" lands on a live mail-server
+      # console. A card for an absent service is not a stale document, it is a
+      # wrong address that resolves.
+      #
+      # Resolved through BOTH config layers, the way tools/discovery-scan.py had
+      # to be taught (fee 01): `lookup('vars', …)` sees the operator's
+      # config.yml, so a service enabled only there is correctly kept.
+      - "--enabled-json"
+      - "{{ _keap_sm_enabled | to_json }}"
   register: _keap_selfmodel
   changed_when: >-
     ((_keap_selfmodel.stdout | default('{}') | from_json).created

@@ -81,6 +81,14 @@ final class Runner
 	private const SYNTHESIS_TOKEN_RESERVE = 20000;
 
 	/**
+	 * Floor for the headroom, and the whole of it before any call has been
+	 * measured. Sized for the COMPACTED wrap-up (2 558 tokens was the largest
+	 * such transcript observed, and the report itself is a few thousand more),
+	 * not for a full replay — that is what `compactForSynthesis()` is for.
+	 */
+	private const SYNTHESIS_MIN_RESERVE = 8000;
+
+	/**
 	 * Deliberately not "summarise". The agents that reach this point have been
 	 * reading for twenty-nine turns and a summary invites a table of contents;
 	 * what the grader needs is the ceremony's actual output, in the shape the
@@ -198,6 +206,17 @@ final class Runner
 	private int $sessionTokensIn = 0;
 	private int $sessionTokensOut = 0;
 
+	/**
+	 * The most expensive single call this session has made, in+out.
+	 *
+	 * Sizes the ceiling headroom (see assertSessionCeiling). The conversation
+	 * only grows, so the largest call so far is the honest lower bound on what
+	 * the next one will cost — and a reserve smaller than that is spent by the
+	 * very call it was meant to leave room after, which is how the first two
+	 * versions of the headroom failed.
+	 */
+	private int $sessionLargestCall = 0;
+
 	/** Session context callWithRetry needs to attribute a fallback. */
 	private ?array $fallbackContext = null;
 
@@ -250,6 +269,7 @@ final class Runner
 		$this->servedByUri = null;
 		$this->sessionTokensIn = 0;
 		$this->sessionTokensOut = 0;
+		$this->sessionLargestCall = 0;
 		$this->sessionDeadline = microtime(true)
 			+ (float) self::envInt('NOS_AGENT_SESSION_WALL_CLOCK_S', self::SESSION_WALL_CLOCK_S);
 		$this->fallbackContext = [
@@ -650,6 +670,13 @@ final class Runner
 			$totalOut += $response->tokensOutput;
 			$this->sessionTokensIn += $response->tokensInput;
 			$this->sessionTokensOut += $response->tokensOutput;
+			// What the NEXT call might cost, from what calls have cost. The
+			// conversation only grows, so the largest so far is the honest
+			// lower bound on the next one.
+			$this->sessionLargestCall = max(
+				$this->sessionLargestCall,
+				$response->tokensInput + $response->tokensOutput,
+			);
 
 			$callSpan->setAttributes([
 				'llm.stop_reason' => $response->stopReason,
@@ -836,7 +863,27 @@ final class Runner
 		for ($iteration = 0; $iteration < $agent->maxIterations; $iteration++) {
 			// Checked here too, so the clock bounds the GRADER — which holds
 			// its own client and whose spend the token ceiling cannot see.
-			$this->assertSessionCeiling('iteration');
+			//
+			// STOP ITERATING, DO NOT DISCARD (2026-08-18). This check used to
+			// throw, and the throw travelled past everything iteration 1 had
+			// produced. Measured on the cheap ceiling test — `stop_reason:
+			// ceiling` at `iteration`, 13 502 in / 1 708 out — with a completed
+			// first iteration sitting in `$finalText`, thrown away because the
+			// SECOND one could not be afforded. A budget that will not fund more
+			// work is not a reason to bin the work already done.
+			//
+			// The hard ceiling, not the working one: this decides whether to
+			// START an iteration, and the reserved headroom belongs to the
+			// wrap-up inside `runToolUseLoop`, which has its own check.
+			try {
+				$this->assertSessionCeiling('iteration', false);
+			} catch (SessionCeilingReached $exc) {
+				if ($iteration === 0) {
+					throw $exc;   // nothing produced yet; the ceiling IS the outcome
+				}
+				$result = 'max_iterations_reached';
+				break;
+			}
 			$iterStart = (int) (microtime(true) * 1000);
 			$loopOut = $this->runToolUseLoop(
 				$agent,
@@ -1150,7 +1197,27 @@ final class Runner
 		// hard ceiling is unchanged and is still enforced — `$reserveHeadroom =
 		// false` is how the wrap-up asks to be measured against it.
 		if ($reserveHeadroom) {
-			$tokenCeiling = max(1, $tokenCeiling - self::SYNTHESIS_TOKEN_RESERVE);
+			// THE RESERVE MUST COVER THE CALL THAT HAS NOT HAPPENED YET.
+			//
+			// Two wrong reserves shipped before this one, each disproved by a run:
+			//   * a flat 20 000 — at the tightened test ceiling of 30 000 it ate
+			//     two thirds of the budget;
+			//   * 15% of the ceiling — the wrap-up was then REFUSED at
+			//     `42 500 >= 40 000`, because the check happens BEFORE a call and
+			//     the call it lets through costs whatever it costs. The budget was
+			//     34 000, the loop was under it, one more call landed at 42 500,
+			//     and the headroom had already been spent by the thing it was
+			//     meant to leave room after.
+			//
+			// So the reserve is sized from what this session has actually cost:
+			// the largest single call seen so far, plus room for the compacted
+			// wrap-up itself. Both are measurements, and on call zero — where
+			// there is nothing to measure — the floor stands in.
+			$reserve = max(
+				self::SYNTHESIS_MIN_RESERVE,
+				$this->sessionLargestCall + self::SYNTHESIS_MIN_RESERVE,
+			);
+			$tokenCeiling = max(1, $tokenCeiling - $reserve);
 		}
 		if (microtime(true) >= $this->sessionDeadline) {
 			throw new SessionCeilingReached(
