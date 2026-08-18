@@ -92,3 +92,71 @@ shape the estate already has.
    plumbing defects recurring after the byte-gates (prediction: they will
    not); multi-agent coordination or streaming demands exceeding what ~900
    LOC of loop can carry; the spike in (3) succeeding decisively.
+
+---
+
+## 5. Amendment 2026-08-18 — `dg/ai-access`, a third option the decision missed
+
+The operator asked whether [`dg/ai-access`](https://github.com/dg/ai-access)
+should be used or extended. It should, and the reason is that §4 answered a
+question with only two candidates on the table.
+
+**It is neither of the things §4 weighed.** It is not a framework that owns the
+loop, so §2's "welding is load-bearing" objection does not apply to it. It is
+also not a fourth hand-written adapter, so decision 1's freeze does not
+prohibit it. It is a zero-dependency transport for precisely the list §2 called
+**"no differentiation, pure liability"** — provider adapters, request
+construction, retry/backoff, tool-schema translation, streaming, structured
+output — and it touches nothing on the "ours" list.
+
+**The seam is real, and its own API proves it rather than us hoping.** Omit the
+tool handler and the caller drives the loop:
+
+```php
+$response = $chat->sendMessage('…');
+foreach ($response->getToolCalls() as $call) {
+    $chat->addToolResult($call, $result);   // WE execute; we emit; we check the ceiling
+}
+echo $chat->sendMessage()->getText();
+```
+
+That is the shape Runner already has. `Chat` becomes the wire plus the
+conversation buffer; the iteration, the session ceilings, the synthesis turn
+and every `agent_message` / `agent_tool_use` / `agent_tool_result` audit row
+stay exactly where they are.
+
+**What it would retire:** four adapters plus the factory (~1,100 LOC), the
+`anthropic-ai/sdk: ^0.20` pin — a 0.x dependency is the churn risk §1 held
+against LangChain, sitting in our own file — and `Grader::parseStrictJson`,
+which strips ``` fences with a regex before `json_decode` and is what
+"structured output" means. `getUsage()` also reports `reasoningTokens` and
+`cacheReadTokens`, the latter a column `agent_sessions` has and no current
+adapter fills.
+
+**Fit that is not a coincidence:** same author as Nette, and Wing is Nette
+throughout; `php: >=8.3` on both sides; New BSD; zero dependencies, so the
+security machine gains one row and no transitive tree.
+
+**The one thing it must never be allowed to do.** `Chat` also has an automatic
+mode where you register handlers and it executes the round-trip itself. That
+mode would move tool execution — and therefore the audit emission and the
+pre-spend ceiling check — inside a library's loop. It is the ergonomic path,
+it will look like the obvious way to write it, and it is the one shape that
+gives away the property this estate exists for. Manual round-trip only.
+
+**Not established, and to be answered by the spike, not by assumption:**
+whether the generic OpenAI-compatible client accepts a per-session `base_url` +
+bearer (the binding contract in `state/llm-backends.yml`); whether MiniMax and
+OpenClaw ride that client cleanly; and how much `FinishReason` fidelity
+survives — the enum plus `getRawFinishReason()` looks like more than we have,
+but the estate now needs to distinguish a forced ending from a natural one
+(`call_cap_synthesis`, 2026-08-18) and that distinction is ours to keep either
+way. The `claude` CLI backend is a subprocess and stays ours regardless.
+
+**Decision: STEAL, scoped.** One spike file, `AiAccessAdapter implements
+LLMClientInterface`, behind the two-method interface `test_agentkit_naming.py`
+already pins — so the blast radius is one class and the gate estate is
+unchanged. If it carries a real ceremony, the three HTTP adapters retire and
+decision 1's freeze becomes moot rather than violated. This does not reopen
+decision 3: `loop-driver` remains the greenfield question, and LangGraph
+remains its candidate.

@@ -57,6 +57,33 @@ final class Runner
 	private const TRANSIENT_RETRY_DELAYS_S = [1, 4, 12];
 
 	/**
+	 * Calls held back from the working budget so the iteration can END rather
+	 * than merely STOP. One is enough: the turn carries the whole conversation,
+	 * so the model has everything it gathered in front of it.
+	 */
+	private const SYNTHESIS_CALLS_RESERVED = 1;
+
+	/**
+	 * Deliberately not "summarise". The agents that reach this point have been
+	 * reading for twenty-nine turns and a summary invites a table of contents;
+	 * what the grader needs is the ceremony's actual output, in the shape the
+	 * agent's own system prompt asked for. It also says what is true — the
+	 * budget is spent — because an agent told it may still look will look.
+	 */
+	private const SYNTHESIS_PROMPT = <<<'TXT'
+		This is your FINAL turn. The tool budget for this run is spent, no
+		further tools are available to you, and nothing you ask for now will
+		arrive. Do not plan more investigation and do not describe what you
+		would do next.
+
+		Write your report now, in the format your instructions specified, from
+		what you have already gathered. Partial findings clearly labelled as
+		partial are worth far more than an apology or an outline: state what you
+		established, what you could not reach, and what you would look at first
+		with more budget.
+		TXT;
+
+	/**
 	 * SESSION CEILINGS — the bound that did not exist (2026-08-16).
 	 *
 	 * The three caps above are PER ITERATION and multiply: 600s per SDK
@@ -486,10 +513,38 @@ final class Runner
 
 		$totalIn = 0;
 		$totalOut = 0;
-		$stopReason = 'end_turn';
+		// NOT 'end_turn'. That value is a CLAIM — the model said it was done —
+		// and until 2026-08-18 it was also what this method returned when the
+		// call cap cut the loop off mid-work, because the initialiser was never
+		// overwritten on the exhaustion path. A loop that gave up reported the
+		// stop reason meaning "the model finished", with `final_text: ''`
+		// attached, and the grader downstream duly failed an outcome nobody had
+		// written. The estate's own rule, from `docs/hidden_fees/`: a success
+		// marker must not be written by the code that attempted the work.
+		// Start pessimistic; only a real reply may improve it.
+		$stopReason = 'call_cap';
 		$finalText = '';
+		$synthesisAnnounced = false;
 
 		for ($call = 0; $call < self::MAX_LLM_CALLS_PER_ITERATION; $call++) {
+			// THE SYNTHESIS TURN (2026-08-18). Measured across all 14 bound
+			// sessions: zero reached `run_end`, and the shape was identical
+			// every time — the model walks the estate, calls a tool, reads the
+			// result, calls another, and is still doing exactly that when the
+			// budget ends. It never wrote the report because nothing ever told
+			// it to stop gathering, and the CLI path only looked better because
+			// its own harness does this for us.
+			//
+			// So the last call of every iteration is reserved: the tool
+			// schemas are withheld, and the model is told plainly that this is
+			// the final turn. With no tools on offer, the only move left is
+			// prose. This costs one call out of thirty and converts a run that
+			// produced nothing into one that produces its best answer so far.
+			$isSynthesis = $call >= self::MAX_LLM_CALLS_PER_ITERATION - self::SYNTHESIS_CALLS_RESERVED;
+			if ($isSynthesis && !$synthesisAnnounced) {
+				$conversation[] = Message::userText(self::SYNTHESIS_PROMPT);
+				$synthesisAnnounced = true;
+			}
 			$callSpanId = TraceContext::newSpanId();
 			$callStart = self::now();
 			$callSpan = new Span(
@@ -503,7 +558,16 @@ final class Runner
 			$callSpan->setAttribute('llm.call_index', $call);
 
 			$this->assertSessionCeiling('llm_call');
-			$response = $this->callWithRetry($agent, $llm, $conversation, $toolSchemas);
+			// Withholding the schemas is what makes the synthesis turn binding.
+			// Asking politely for a summary while still offering tools reliably
+			// produces one more tool call — the instruction competes with the
+			// affordance, and the affordance wins.
+			$response = $this->callWithRetry(
+				$agent,
+				$llm,
+				$conversation,
+				$isSynthesis ? [] : $toolSchemas,
+			);
 			$totalIn += $response->tokensInput;
 			$totalOut += $response->tokensOutput;
 			$this->sessionTokensIn += $response->tokensInput;
@@ -541,7 +605,13 @@ final class Runner
 
 			$toolUses = $response->toolUseBlocks();
 			if ($response->stopReason !== 'tool_use' || $toolUses === []) {
-				$stopReason = $response->stopReason;
+				// A report written on the forced turn is still a report, but it
+				// is NOT the same event as an agent that finished because it was
+				// done, and a session table that spells both `end_turn` cannot
+				// tell you which ceremonies had enough budget. Keep them apart:
+				// a run of `call_cap_synthesis` rows is the signal to raise the
+				// cap, and it is invisible if this collapses to `end_turn`.
+				$stopReason = $isSynthesis ? 'call_cap_synthesis' : $response->stopReason;
 				$finalText = $response->textOutput();
 				break;
 			}
@@ -1087,8 +1157,24 @@ final class RunResult
 	) {
 	}
 
+	/**
+	 * `call_cap_synthesis` counts (2026-08-18): the run was cut short of the
+	 * investigation it wanted, but it was given a final turn and it produced
+	 * the report — which is the deliverable this method is asked about. Calling
+	 * it a failure would make the exit code punish a full budget rather than a
+	 * broken ceremony, and would leave the caller no way to tell it apart from
+	 * a crash.
+	 *
+	 * That it was truncated is not lost: `stopReason` still says so, and a run
+	 * of these rows in `agent_sessions` is the evidence for raising the cap.
+	 * Successful is not the same as unconstrained.
+	 */
 	public function isSuccessful(): bool
 	{
-		return $this->error === null && in_array($this->stopReason, ['end_turn', 'outcome_satisfied'], true);
+		return $this->error === null && in_array(
+			$this->stopReason,
+			['end_turn', 'outcome_satisfied', 'call_cap_synthesis'],
+			true,
+		);
 	}
 }

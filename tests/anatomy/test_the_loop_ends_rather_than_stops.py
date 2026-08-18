@@ -1,0 +1,135 @@
+"""An iteration that runs out of calls must still produce its report.
+
+MEASURED 2026-08-18 across every bound session the estate has ever run — the
+same fourteen that `test_the_bound_agent_loop_is_unproven.py` counts. Reading
+the `events` rows rather than the tally changes the diagnosis completely:
+
+    agent_message  stop_reason=tool_use  "I need to walk the estate…"
+    agent_tool_use ls
+    agent_tool_result CLAUDE.md LICENSE README.md …
+    agent_message  stop_reason=tool_use  ""
+    agent_tool_use cat state/manifest.yml
+    …  (twenty-five more, then the budget ends)
+
+Nothing was malfunctioning. The model investigated competently and was still
+investigating when the money ran out, because **nothing ever told it to stop
+gathering and write**. The CLI path only looked better because its own harness
+does this for us.
+
+TWO DEFECTS, and the second is the expensive one:
+
+1. `runToolUseLoop` offered tools on every call including the last, so the
+   final turn was spent asking for one more file rather than answering.
+
+2. When the `for` exhausted `MAX_LLM_CALLS_PER_ITERATION`, `$stopReason` was
+   never reassigned — it kept its initialiser, `'end_turn'`, and returned
+   alongside `final_text: ''`. A loop that gave up reported the stop reason
+   that means *the model finished*. Downstream, the grader was handed an empty
+   artifact and recorded `outcome_failed`, so the ledger blamed the agent for
+   a report the runner had thrown away. This is the estate's own recurring
+   defect exactly (`docs/hidden_fees/`, and the standing rule in CLAUDE.md):
+   the success marker was written by the code that attempted the work.
+
+The fix reserves the last call, withholds the tool schemas on it, and tells the
+model plainly that the budget is spent. Withholding matters more than the
+wording: asking for a summary while still offering tools reliably produces one
+more tool call, because the instruction competes with the affordance and the
+affordance wins.
+
+WHAT THIS GATE DOES NOT DO. It reads source. It cannot prove a bound ceremony
+now completes — only a session reaching a graded outcome can, and until one
+does, `test_the_bound_agent_loop_is_unproven.py` stands and the agents stay
+`unproven`. Retire BOTH files on the same good day, in the commit that shows
+the session.
+"""
+
+from __future__ import annotations
+
+import pathlib
+import re
+
+REPO = pathlib.Path(__file__).resolve().parents[2]
+RUNNER = REPO / "files/anatomy/wing/app/AgentKit/Runner.php"
+
+
+def _src() -> str:
+    return RUNNER.read_text(encoding="utf-8")
+
+
+def test_the_runner_this_gate_describes_exists():
+    """Positive control — a moved or renamed loop makes everything vacuous."""
+    assert RUNNER.is_file(), "AgentKit/Runner.php is gone"
+    src = _src()
+    assert "private function runToolUseLoop(" in src, "the tool-use loop was renamed"
+    assert "MAX_LLM_CALLS_PER_ITERATION" in src, "the per-iteration call cap is gone"
+
+
+def test_the_exhaustion_path_does_not_claim_the_model_finished():
+    """The initialiser IS the exhaustion path's return value — nothing assigns
+    it when the `for` completes. So whatever it starts as is what a truncated
+    run reports, and `end_turn` there is a lie with an empty artifact attached.
+    """
+    src = _src()
+    loop_start = src.index("private function runToolUseLoop(")
+    loop_src = src[loop_start:src.index("private function runOutcomeLoop(")]
+
+    init = re.search(r"\$stopReason\s*=\s*'([a-z_]+)';", loop_src)
+    assert init, "the tool-use loop no longer initialises $stopReason at all"
+    assert init.group(1) != "end_turn", (
+        "the tool-use loop initialises $stopReason to 'end_turn' again. Nothing "
+        "reassigns it when the call cap is exhausted, so a run that was cut off "
+        "mid-investigation reports that the model finished — and hands the "
+        "grader an empty final_text to fail it for."
+    )
+
+
+def test_the_last_call_withholds_the_tools():
+    """Wording alone does not bind. A model told to wrap up while tool schemas
+    are still on the table will call a tool; removing the affordance is what
+    leaves prose as the only available move."""
+    src = _src()
+    assert "SYNTHESIS_CALLS_RESERVED" in src, (
+        "no calls are reserved for the wrap-up turn any more, so the iteration "
+        "can once again spend its last call asking for another file."
+    )
+    assert re.search(r"\$isSynthesis\s*\?\s*\[\]\s*:", src), (
+        "the synthesis turn no longer passes an EMPTY tool list to the model. "
+        "Every adapter guards on `$tools !== []`, so passing [] is what removes "
+        "the tools; passing them with a polite instruction does not."
+    )
+
+
+def test_a_reserved_call_leaves_a_working_budget():
+    """The counterweight. Reserving zero restores the original defect;
+    reserving most of the cap would starve the investigation to fix the
+    reporting."""
+    src = _src()
+    reserved = re.search(r"SYNTHESIS_CALLS_RESERVED\s*=\s*(\d+)", src)
+    cap = re.search(r"MAX_LLM_CALLS_PER_ITERATION\s*=\s*(\d+)", src)
+    assert reserved and cap, "the two constants this balance depends on are gone"
+    reserved_n, cap_n = int(reserved.group(1)), int(cap.group(1))
+    assert reserved_n >= 1, "no call is reserved; the wrap-up turn cannot happen"
+    assert reserved_n < cap_n / 2, (
+        f"{reserved_n} of {cap_n} calls are reserved for wrapping up. The point "
+        "is to end the investigation, not to replace it."
+    )
+
+
+def test_a_forced_ending_is_distinguishable_from_a_natural_one():
+    """Both produce a report; only one had enough budget. If they collapse to
+    the same stop reason, `agent_sessions` cannot answer 'should the cap go
+    up' — and that question is the whole reason to record it."""
+    src = _src()
+    assert "call_cap_synthesis" in src, (
+        "a report written on the forced final turn is no longer distinguished "
+        "from one written by an agent that was actually done."
+    )
+    assert re.search(
+        r"in_array\(\s*\$this->stopReason,\s*\[[^\]]*'call_cap_synthesis'",
+        src,
+        re.S,
+    ), (
+        "RunResult::isSuccessful() no longer counts call_cap_synthesis. The "
+        "run produced the deliverable; failing it would make the exit code "
+        "punish a spent budget and hide it among real crashes."
+    )
