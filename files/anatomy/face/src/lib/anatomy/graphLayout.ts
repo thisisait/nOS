@@ -239,16 +239,28 @@ export function forceLayout(input: LayoutInput): Layout {
 		maxX = Math.max(maxX, s.x!);
 		maxY = Math.max(maxY, s.y!);
 	}
+	// Whole-pixel emission — the cross-ISA determinism fix (2026-08-18).
+	// Seeding randomSource was necessary but not sufficient: arm64 and x86_64
+	// V8 disagree in the last bits of the float arithmetic itself. Measured on
+	// the 61-node default view (macOS/Linux arm64 bit-identical across Node
+	// 22/24; linux/amd64 container reproduces CI's exact divergent hash): max
+	// per-node drift after 400 ticks is 2.1e-06 px, median 8.5e-08. Rounding to
+	// whole px absorbs that with a measured ≥5.4e-04 px margin to the nearest
+	// rounding boundary (~257× the drift) — an empirical guarantee per
+	// artifact, not a constructional one. Sub-pixel placement buys nothing in
+	// this canvas, and the layered mode already emits integers. If the pinned
+	// hash ever splits by platform again, a boundary-straddling coordinate is
+	// the first thing to check.
 	const nodes: PlacedNode[] = simNodes.map((s) => ({
 		id: s.id,
 		rank: rank.get(s.id) ?? 0,
-		x: PAD + (s.x! - minX),
-		y: PAD + (s.y! - minY)
+		x: PAD + Math.round(s.x! - minX),
+		y: PAD + Math.round(s.y! - minY)
 	}));
 	return {
 		nodes,
 		byId: new Map(nodes.map((n) => [n.id, n])),
-		width: PAD * 2 + (maxX - minX) + NODE_W,
-		height: PAD * 2 + (maxY - minY) + NODE_H
+		width: PAD * 2 + Math.round(maxX - minX) + NODE_W,
+		height: PAD * 2 + Math.round(maxY - minY) + NODE_H
 	};
 }

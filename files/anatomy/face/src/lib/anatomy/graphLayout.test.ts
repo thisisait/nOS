@@ -119,13 +119,18 @@ describe('forceLayout', () => {
 	 * draws from the source when two nodes coincide exactly, which no current
 	 * input triggers but no contract prevents.
 	 *
-	 * Measured 2026-08-17 on this artifact: bit-for-bit identical across
-	 * fresh node processes AND across Node 22.23.1/24.19.0 (two V8 majors)
-	 * on macOS arm64. Linux was NOT locally established; V8 vendors its own
-	 * platform-independent transcendental math, so this hash is expected to
-	 * hold on CI's ubuntu runner — if CI ever disagrees with a dev box here,
-	 * that is a real determinism finding, not test flake: re-measure before
-	 * touching the constant.
+	 * Measured 2026-08-17: bit-for-bit identical across fresh node processes
+	 * AND across Node 22.23.1/24.19.0 (two V8 majors) on macOS arm64. The
+	 * 08-17 hope that the hash would hold on CI's ubuntu runner was WRONG —
+	 * CI arbitrated 08-18 and the raw floats are ISA-bound: linux/arm64
+	 * matches macOS bit-for-bit, x86_64 does not (a linux/amd64 container
+	 * reproduces CI's exact divergent hash; max drift 2.1e-06 px after 400
+	 * ticks). forceLayout() now rounds emitted coordinates to whole px, which
+	 * absorbs that drift with a measured ~257× margin, so ONE pin holds on
+	 * every platform again — see the rounding docblock in graphLayout.ts.
+	 * If this test ever splits by platform anyway, re-measure the same way:
+	 * `docker run --platform linux/amd64 node:22` over an esbuild bundle of
+	 * this file's default-view input, and diff per-node floats first.
 	 *
 	 * The pin re-freezes on ANY change to the artifact, the filter defaults,
 	 * or the force tuning. That is intended — re-run this test, read the new
