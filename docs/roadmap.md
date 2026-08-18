@@ -71,11 +71,13 @@ parity (OpenClaw, Hermes and fleet provisioning are post-1.0).
    number the estate can answer.
 7. **Feature freeze** on the beta service surface during stabilization.
 
-Criterion 6 is not met today, and the gap is precise:
-`state/keap-tables/roadmap.table.yml` declares 23 columns, the live table has 9,
-and **nothing applies the definition** — the playbook seeds only the three
-`face-*` tables. The `verified` column, whose entire purpose is to let a row say
-*someone claims this shipped and a probe disagrees*, exists in git and not in the
-database. `tools/roadmap-status.py --schema` prints the diff;
-`tests/anatomy/test_the_roadmap_declares_the_table_it_fills.py` keeps the two git
-artifacts from drifting further apart while that is true.
+Criterion 6's precise gap — 23 declared columns, 9 live, `verified` nowhere in
+the database — was closed on 2026-08-08 (`c1b688e7`, "the definition finally
+meets its table"): the definition is applied, the live table carries 24 columns,
+and `tools/roadmap-verify.py` writes probe verdicts into `verified` (39/88 rows
+carry one, measured 2026-08-18). Residue, so this paragraph does not overclaim
+the way its predecessor underclaimed: the live table still holds the undeclared
+`when` column (`tools/roadmap-status.py --schema` prints it), and a row without
+a probe still answers with a bare claim.
+`tests/anatomy/test_the_roadmap_declares_the_table_it_fills.py` keeps the two
+git artifacts from drifting apart.
