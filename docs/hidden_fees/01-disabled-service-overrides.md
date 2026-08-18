@@ -114,6 +114,30 @@ was never reported by anything.
 
 ## What closes it
 
+> **THE OVERRIDE HALF IS ALREADY CLOSED, and this entry did not say so
+> (corrected 2026-08-18).** `tasks/stacks/prune-disabled.yml` exists, is
+> imported by BOTH orchestrators (`core-up.yml:366`, `stack-up.yml:158`), and is
+> pinned by `tests/anatomy/test_disabled_services_are_reconciled.py`. It reports
+> every fragment whose resolved `install_*` is false on every converge and
+> removes them on `-e prune_disabled_overrides=true` — dry-run first, act on an
+> explicit token, per the estate's destructive-op doctrine.
+>
+> It also derives the two false-positive classes rather than listing them
+> (auto-enabled dependencies read out of `main.yml`'s own tasks; Tier-2 apps out
+> of `apps/`), and matches separator-insensitively so `qgis_server.yml` is found
+> beside `code-server.yml`.
+>
+> This is the THIRD entry today found paid-but-unrecorded (see also 15, and the
+> expired numbers in 09/10). The pattern is worth naming: closing happens in the
+> code and nobody walks back to the entry, so the index accumulates debt that is
+> not owed. A future reader should re-measure an entry before working it — which
+> is how each of these was caught.
+>
+> **What remains open** is the wider claim below, and it is genuinely wider: the
+> fragment is one resource among several. Data dirs, Traefik routes, Authentik
+> objects and Kuma monitors are still create-only, so disabling a service leaves
+> those behind and the next enable resurrects a half-old state.
+
 The managed-resource manifest in
 [`docs/archive/blank-uninstall-managed-resources.md`](../archive/blank-uninstall-managed-resources.md)
 (P1.5): a declared inventory of what a service owns — override fragments, data
