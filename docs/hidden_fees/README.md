@@ -67,3 +67,4 @@ One file per fee, `NN-short-slug.md`, with these headings:
 | [13](13-per-user-db-without-enforcement.md) | A per-user database chosen by an unauthenticated parameter | the first user who must not read another's data | open |
 | [14](14-a-long-run-cut-from-under.md) | A long run's paths change under it mid-flight | the next multi-hour run that outlives the tree it started in | open |
 | [15](15-a-lineage-that-does-not-join.md) | The loop records a lineage whose first link does not join | the first real autonomous run, when "why did it change itself" answers `w1` | open |
+| [16](16-an-agent-is-five-declarations-nothing-names.md) | Onboarding an agent is five declarations and nothing names the set | the next agent, at runtime, as one symptom naming one layer | open |
