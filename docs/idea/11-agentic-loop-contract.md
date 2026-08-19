@@ -715,10 +715,28 @@ Unchanged from the parent in spirit, corrected in detail.
 
 ## 11. WHAT WOULD PROVE IT WORKS
 
-The parent's §7 is right and is adopted unchanged:
+The parent's §7 criterion — *"a weakness that was on the list, is not on the
+list"* — is right about the ESTATE and wrong about the LOOP, and adopting it
+unchanged made this section unsatisfiable (fable review `docs/idea/13`, §3.1):
+`budget.py`'s `Rule("docs/**", "doctrine", "§5.2")` forbids the loop from
+writing under `docs/`, and most live weaknesses (the remediation queue under
+`docs/llm/security/`, the hidden fees under `docs/hidden_fees/`) can only leave
+the list via such a write. The cheapest way to "satisfy" the old wording was to
+carve a hole in `docs/**` — the one rule standing between the loop and its own
+doctrine — so the wording goes, not the wall.
 
-> A weakness that was on the list, is not on the list, and the verdict that
-> removed it was produced by a judge the proposer could not touch.
+The reachable criterion, which is what the loop actually contributes:
+
+> A weakness that was on the list has a judged diff MERGED into `dev` behind a
+> green pipeline, where the verdict was produced by a judge the proposer could
+> not touch, the merge was performed by a reviewer that answered its three
+> questions YES, and no step in between recorded its own success.
+
+The remaining links — an operator converges, the scanner re-scans, the row
+retires — belong OUTSIDE the loop by design (§7 non-goal 5, §5.2), and the loop
+contributing one link of six is still a loop. Whether the weakness then left
+the list is the scanner's answer, read from the queue, never asserted by
+anything that took part in the merge.
 
 With one addition this contract earns: **and the verdict replays.**
 `nos-loop verdict --replay <uuid>` re-runs the recorded `argv` against the
