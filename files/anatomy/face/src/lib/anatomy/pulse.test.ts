@@ -27,8 +27,8 @@ const rawJob = (over: Record<string, unknown> = {}) => ({
 	args_json: '[]',
 	env_json: JSON.stringify({
 		WING_EVENTS_HMAC_SECRET: 'FAKE_hmac_secret_for_tests_only_not_a_real_value_0000000000000000',
-		WING_API_TOKEN: 'wing_live_token_value_here_0123456789',
-		NOS_MARIADB_ROOT_PASSWORD: 'hunter2hunter2hunter2'
+		WING_API_TOKEN: 'FAKE_wing_api_token_for_tests_only_0123456789',
+		NOS_MARIADB_ROOT_PASSWORD: 'FAKE_mariadb_root_password_for_tests_only'
 	}),
 	schedule: '0 6 * * *',
 	jitter_min: 5,
