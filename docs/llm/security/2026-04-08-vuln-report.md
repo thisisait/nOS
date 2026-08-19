@@ -1,3 +1,101 @@
+# nOS Vulnerability Scan Addendum — 2026-08-19 (Cycle 33, batch-55)
+
+**Batch:** erpnext, homeassistant, firefly, onlyoffice, ntfy · **Probe:** `version_header_leakage`
+**Outcome:** 2 queue items added (**REM-208** — upstream **CRITICAL 9.9**, filed HIGH on nOS context; **REM-209 LOW** — the probe's finding of record), **1 pending row closed by reconciliation** (REM-165), one already-closed row given the live evidence it never had (REM-168), and **two prior verdicts corrected on the facts** (homeassistant's CVE leg; REM-167's stated mitigation). Pending HIGH stays **6** (REM-165 out, REM-208 in), pending LOW **18 → 19**, pending total **49 → 50**.
+
+> **Scheduling note, because it explains the 14-day gap.** This cohort's two previous nightly runs — 2026-08-17 and 2026-08-18 — **failed at dispatch**, exiting 1 within two seconds and correctly declining to stamp anything as scanned. The five components carried `status: scan_failed` and data last refreshed 2026-08-05. The runner behaved correctly; the components were simply unscanned for a fortnight, and both findings below landed inside that window.
+
+---
+
+### 🔴 CRITICAL upstream — [REM-208] The ERPNext pin misses the fix by **one patch**, eight days after being set
+
+- **Component:** erpnext — pinned `v15.119.0` (`default.config.yml:2220`), **not installed, not running**
+- **GHSA-6w83-8777-v93q** (2026-08-13, **no CVE assigned**) — CVSS **9.9** `AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H`, CWE-1336
+- **Affects `< 15.119.1`** · **Fixed 15.119.1 / 16.32.0** · vendor states **no workaround exists**
+
+Server-side template injection through user-controlled message fields lets an authenticated user holding an **ordinary operational role** evaluate template expressions in an unrestricted context — arbitrary database operations, document deletion, outbound requests, and mail sent from the server.
+
+**Zero live exposure, verified rather than inherited.** `install_erpnext` resolves **false** via `tools/estate-status.py --config` (not read from the default), the role is hard-blocked at load behind `erpnext_experimental_override`, it is excluded from `profiles/all-on.yml`, and `docker ps` shows no erpnext container. The SSTI needs an authenticated session against a server that does not exist. REM-208 is therefore the **updated acceptance criterion** for the deferred rework (REM-008), not an incident.
+
+**The method is the transferable part — this was not found by reading the advisory list.**
+
+```
+fetch all 62 advisories:  api.github.com/repos/frappe/erpnext/security-advisories
+compare every v15 fixed-version against the pin AS A VERSION TUPLE
+  → returns exactly ONE row: GHSA-6w83-8777-v93q
+```
+
+Eyeballing would have failed, and it is worth being precise about why. The 2026-08-13/14 wave alone is **40+ advisories**, and **four of them fix at exactly `15.119.0`** — `GHSA-8pr6-r75h-h8xx`, `GHSA-q8wq-q35q-gj8h`, `GHSA-m5xh-ghvj-xjrv`, `GHSA-48wc-j2qh-rcgw` — i.e. cleared by the pin with **zero margin** and trivially mis-read as affected. **Thirty-one of that wave carry no CVE id at all**, including the critical one. A CVE-keyed feed sees almost none of this; the batch-39/batch-43 lesson now has a scale measurement behind it.
+
+**Frappe Framework ships in the same image and is not cleared by an erpnext bump alone.** Its v15 floors reach `15.115.0` (**CVE-2026-66003**, HIGH, access-control bypass via REST API — published **2026-08-18, one day before this scan**) and `15.114.0` (**CVE-2026-66001**, HIGH, improper authorization in the OAuth2 consent endpoint). Three further items (CVE-2026-53569, CVE-2026-62315, CVE-2026-63654) publish with `vulnerable_version_range: tbd` and **cannot be version-keyed at all** — flagged, not scored. The bundled frappe version per erpnext tag was **not measured** (nothing is deployed to measure it on), so frappe coverage is stated at **medium** confidence.
+
+**Action:** do not enable erpnext below `v15.119.1`; set the pin to **`v15.119.3`** (published 2026-08-18, confirmed present) so the criterion carries margin instead of landing on the floor for a fourth time.
+
+---
+
+### 🟣 The correction of record — Home Assistant's CVE leg was declared clean while the estate ran an RCE
+
+Batch-43 (2026-08-05) wrote *"CVE LEG IS CLEAN and that is precisely the point"* and *"No Core-server advisory has a fixed version newer than 2026.6.0."* **That was false when written.**
+
+**CVE-2026-64824** (also carried as CVE-2026-47398 / PYSEC-2026-2905) published **2026-07-21**, fifteen days earlier: Home Assistant Core **before 2026.7.0**, symlink path traversal in backup-restore. A crafted tar pairing a benign member name with an absolute `linkname` writes outside the extraction directory, and because the official Docker image **runs as root**, overwriting an auto-imported Python path (`site-packages/sitecustomize.py`, `custom_components`) yields **remote code execution**. CVSS v3 **8.4**, CVSS v4 **9.3 CRITICAL**.
+
+The estate ran the affected `2026.6.0` from that publication until the **2026-08-11 sweep to 2026.8.1** — which closed an RCE as routine currency work, with no record that it was closing anything.
+
+> **Why the miss happened, and it inverts batch-43's own headline lesson.** That batch concluded *"query the vendor repo endpoint or see nothing"* after OSV missed a critical ERPNext RCE. For Home Assistant the failure runs the **other way**: CVE-2026-64824 is **absent from all 23** advisories at `repos/home-assistant/core/security-advisories` (verified — zero matches) and **present** in the CVE feed and OSV. Querying the repo endpoint is exactly what produced the wrong answer. **Neither source is sufficient; both must be queried.** That is the durable output of this batch.
+
+**Data-quality trap, recorded so it is not propagated.** OSV lists `GHSA-78r8-wwqv-r299` among this CVE's aliases. That GHSA resolves to a **PraisonAI** advisory (arbitrary code execution via `spec.loader.exec_module`) — an incorrect alias. **Do not cite a GHSA for CVE-2026-64824**; cite the CVE, PYSEC-2026-2905, or the `home-assistant/core` fix commits.
+
+**Current state is clean.** Pin `2026.8.1`, live `iiab-homeassistant-1` up 7 days healthy — above the `2026.7.0` fix. The six repo advisories published since 2026-06-17 are all Companion-app or already-closed items. `2026.8.2` (2026-08-14) is one patch ahead with no advisory in between — currency, not a fix.
+
+---
+
+### 🔵 The `version_header_leakage` probe — one finding, and four measured-clean comparators
+
+**[REM-209, LOW] ONLYOFFICE is the only one of the five that discloses its build to an anonymous caller at the edge** — measured through Traefik on 443 with a `Host` header and no credential, not inferred from a template and not merely on the loopback bind:
+
+```
+GET https://office.<tld>/index.html                             → HTTP/2 200
+    "Server is functioning normally. Version: 9.3.1. Build: 37."
+GET https://office.<tld>/web-apps/apps/api/documents/api.js     → HTTP/2 200
+    "* Version: 9.3.1 (build:59)"
+
+response header on both:  server: nginx        ← no version
+```
+
+**The header is clean and the body is not.** A header-only probe of this class would have reported all five components CLEAN and been wrong about one. *For this probe, read the body* — that is the transferable lesson.
+
+It is reachable because `traefik_auth_modes.onlyoffice: none` **by design** (`roles/pazny.traefik/vars/main.yml:42` — collaborative editing cannot sit behind forward-auth; the Nextcloud/Outline/BookStack integrations call it server-to-server), so there is **no gate to add** without breaking the service. The JWT gate (`JWT_ENABLED=true`) still protects the document and conversion API and is unaffected; static assets are served ahead of it. Rated **LOW**: this is **recon, not access**, and no DocumentServer advisory is outstanding against the build.
+
+**It corroborates [REM-170] from outside the host.** That row established *by in-container `dpkg`* that the running build is a euro-office **dev cut below the declared pin**; this probe reaches the same conclusion **anonymously over the network** — the served `9.3.1` matches `euro-office-documentserver 9.3.1-dev.1`, not the declared `9.3.1.2`. REM-170 re-verified unfixed, all three facts re-measured: still `:latest`, still `9.3.1-dev.1`, digest **unchanged** at `sha256:5a1a8b70…f7a2b3cbf2b` (created 2026-06-25). The floating tag has not moved in 14 days — **which is luck, not control**, and is precisely what REM-170 exists to make detectable.
+
+**Fix order:** pin the digest **first** (REM-170). Suppressing the disclosed string while the tag still floats would hide drift rather than close it — and suppression has an honest ceiling: `api.js` is a JavaScript asset the integrations fetch, whose comment header cannot be stripped without a `sub_filter` on a cached/compressed body, more fragility than a LOW recon leak justifies.
+
+**The four measured-clean comparators**, recorded so the negative result is not re-derived: **homeassistant** blanks `Server:` to an empty string on every path (`/`, `/manifest.json`, `/api/`) and leaks nothing; **firefly** returns a bare `server: nginx` and 302s anonymous callers to Authentik; **ntfy** emits no `Server` header and no version string; **erpnext** is not running and was marked **NOT ASSESSABLE** rather than clean.
+
+---
+
+### 🟡 Two pending rows re-confirmed, and one mitigation falsified
+
+**[REM-167, ntfy] Its stated mitigation is wrong and must not be carried forward.** The row records *"traefik_auth_modes.ntfy=proxy … forward-auth gates the web UI, admin surface AND publish/API paths."* Forward-auth was **removed from ntfy on 2026-08-08 — three days after that row was filed** — deliberately and with written justification: a push client is a machine caller holding a credential, cannot complete an Authentik browser flow, and so was 302'd, meaning no phone could ever receive a notification. What gates it now, verified live, is **ntfy's own user database** (`auth-file=/var/cache/ntfy/user.db`, `auth-default-access=deny-all`) — which the same change introduced, and before which `deny-all` was declared with **no** `auth-file`, so ntfy enforced nothing at all behind the wall.
+
+**The net effect on REM-167 is a wash, not a downgrade** — its template-memory DoS needs publish rights, which still need a real credential — but the *reason* changed, and a reader acting on the old sentence would look for an Authentik gate that is not there. Newly anonymous at the edge: `GET /config.js` → 200 and `GET /v1/stats` → 200 (disclosing a live message count, 54 at scan time).
+
+> **v2.27.0's second security leg was traced to source and found NOT applicable — a verified negative, so it is not re-litigated.** The release note *"exclude secrets from the config hash served to the web app"* maps to exactly that `/config.js`, which serves `config_hash=8c931a05…01fbb` anonymously. Reading the actual `v2.26.3...v2.27.0` diff of `server/config.go` rather than the prose, the fix adds `hash:"-"` to `AuthUsers`, `AuthTokens`, `UpstreamAccessToken`, `SMTPSenderPass`, `TwilioAuthToken`, `StripeSecretKey`, `StripeWebhookKey`, `WebPushPrivateKey` — so on v2.26.3 the hash **is** computed over them. **In nOS every one of those fields is empty**: the rendered `server.yml` sets only `enable-login`, `auth-file`, `auth-default-access`, and users/tokens live in the auth-file SQLite rather than the config struct. The hash covers no populated secret. **No row filed.** The v2.27.0 bump remains warranted for the template *allocation* caps, which the v2.26.0 execution *timeout* does not provide.
+
+**[REM-166, firefly] Unfixed and unchanged — stale by inaction, not by analysis.** Still `version-6.2.21`, live and healthy. The vendor repo endpoint carries **four** advisories in total and nothing has published since 2026-05-21. `GHSA-6jq6-x4cx-qvcm` remains operative at *affected `<= 6.6.2`, fixed `6.6.3`, introduced at 0* — the pin has never been outside it. **Target refreshed `6.6.3` → `version-6.6.6`** (current stable): same single edit, more margin, and it avoids landing *inside* `GHSA-5q8v-j673-m5v4`'s `>= 6.4.23, <= 6.5.0` window, which the pin currently predates. **Do not pick an intermediate version between 6.4.23 and 6.5.0.**
+
+---
+
+### ⚪ Reconciliation, and a doctrine trap this batch walked into
+
+**[REM-165] closed — the pin had already advanced to the exact `v15.119.0` it asked for**, and the role-default shadow it named is gone (`roles/pazny.erpnext/defaults/main.yml` carries no version key; the *declared-once* cutover landed in the interval). Twelve rows before this one were already live at their fix version; CLAUDE.md's warning that *a pending row is not proof of exposure* earned its place again.
+
+**[REM-168] was already resolved on 2026-08-10 with no evidence recorded** — so this batch did not close it; it **re-verified it live and supplied the detail it lacked**. That matters here more than usual, because the row's entire finding was that `ip_ban_enabled` *looked* enabled while banning nothing, so a remediation that merely renders would not close it. Measured in the running container: `ip_ban_enabled: true` **and** `login_attempts_threshold: 10`. A positive threshold is the exact switch `ban.py:147` tests before its early return, so bans now issue and the 207.7 ms cost-12 bcrypt amplifier is bounded at 10 attempts per source. Residual leg (b), the edge `rateLimit`, is **genuinely still absent** (a grep across `roles/pazny.traefik/` and every plugin returns nothing) and remains REM-169's scope.
+
+> **The doctrine trap, worth naming because every prior batch fell into it.** Those batches cite `install_ntfy=false`, `install_homeassistant=false`, `install_firefly=false`, `install_onlyoffice=false` as mitigations. **All four resolve to `true`** — `config.yml` overrides the default — **and all four are running right now.** The notes were internally contradictory, asserting `install_X=false` in the same paragraph as *"LIVE … up 11 days, healthy."* Only **erpnext** is genuinely absent. This is exactly the failure CLAUDE.md's *"the repo is not the running system"* section warns about: a flag read from `default.config.yml` alone is not the flag the estate uses. Ask `tools/estate-status.py --config <flag>`.
+
+---
+
 # nOS Vulnerability Scan Addendum — 2026-08-16 (Cycle 31, batch-54)
 
 **Batch:** gitlab, wordpress, freepbx, hedgedoc, bookstack · **Probe:** `supply_chain_freshness`
