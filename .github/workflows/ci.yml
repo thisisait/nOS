@@ -118,6 +118,15 @@ jobs:
   pytest:
     name: Pytest (Python tests)
     runs-on: ubuntu-latest
+    env:
+      # THE ENVIRONMENT CONTRACT (tests/anatomy/_environment_contract.py):
+      # every tool named here must resolve on PATH or the anatomy suite
+      # ABORTS before running a single test. This job is where the
+      # php/composer/jq/sqlite3-gated gates are SUPPOSED to run on GitHub —
+      # if a runner-image update drops one of these, the run must go red
+      # loudly, not demote those gates into skips nobody reads. Pinned by
+      # tests/anatomy/test_absence_is_counted.py.
+      NOS_TEST_PROVIDES: git,ansible-playbook,php,composer,jq,sqlite3,openssl
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v6
@@ -143,8 +152,14 @@ jobs:
 
       # fastapi: tests/bone_vfs mounts the Bone VFS router on a throwaway app to
       # exercise the containment + filename-hardening gates (nOS-face v0.2).
+      # ansible-core comes from the FROZEN pin (tools/ci-freeze.env) rather
+      # than the runner image's preinstalled ansible: 19 anatomy gates drive
+      # ansible-playbook harnesses (the fail-closed removal ladder), and they
+      # must run against a version this repo declares, not one the image
+      # happens to carry this month. markdown==3.10.2 must equal MARKDOWN_PIN
+      # in tools/devlog-compile.py (gated by test_absence_is_counted.py).
       - name: Install test dependencies.
-        run: pip3 install pytest pyyaml jsonschema httpx jinja2 requests markdown==3.10.2 fastapi
+        run: . tools/ci-freeze.env && pip3 install pytest pyyaml jsonschema httpx jinja2 requests markdown==3.10.2 fastapi "$NOS_ANSIBLE_CORE"
 
       - name: Run pytest suite.
         run: >

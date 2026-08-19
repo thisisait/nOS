@@ -36,6 +36,15 @@ steps:
   pytest-anatomy:
     image: python:3.13-slim
     pull: true
+    environment:
+      # THE ENVIRONMENT CONTRACT (tests/anatomy/_environment_contract.py):
+      # every tool named here MUST resolve on PATH or the suite ABORTS before
+      # running a single test. This is what stops a dropped apt package (or a
+      # trimmed image) from silently demoting a hundred tool-gated gates into
+      # skips: absence in a promising environment is a red run, not a quiet
+      # green one. Declaration pinned by test_absence_is_counted.py — do not
+      # remove a tool here to go green; install it below instead.
+      NOS_TEST_PROVIDES: git,ansible-playbook,php,jq,sqlite3
     commands:
       # pytest + pyyaml = anatomy test runner + yaml-based gates
       # httpx + pytest-asyncio = Pulse daemon test fixtures (test_pulse_daemon.py
@@ -52,10 +61,24 @@ steps:
       #   actually happen (the apply/landed/conflict oracle, the loop ratchet's
       #   committed-vs-worktree split). python:*-slim has no git, and without it
       #   they ERROR rather than fail — 13 errors, 43 extra failures, measured.
-      # markdown: tools/devlog-compile.py imports it.
-      - apt-get update -qq && apt-get install -y -qq --no-install-recommends git
+      # php (+sqlite/xml/mbstring): ~150 wing/agentkit gates execute PHP against
+      #   the vendor tree the composer-validate step installed into this shared
+      #   workspace. Without php they all skip — and the pzny branch mirrors to
+      #   the forge ONLY, so for that branch a php skip here is php gates
+      #   running NOWHERE. Debian trixie ships php 8.4; wing requires >=8.3.
+      # jq + sqlite3: the drift-watch / kuma-reader / vuln-cycle gates drive
+      #   the real scripts, which require them.
+      # markdown==3.10.2: tools/devlog-compile.py hard-pins this version for
+      #   bundle byte-determinism and sys.exit()s on any other — an unpinned
+      #   install (3.10.3) failed the devlog gates here on 2026-08-19. The pin
+      #   must equal MARKDOWN_PIN in tools/devlog-compile.py (gated).
+      # ansible-core (frozen pin from tools/ci-freeze.env): 19 gates drive
+      #   ansible-playbook harnesses against tasks/run-mode.yml and
+      #   tasks/removal-verify.yml — the fail-closed removal ladder. They are
+      #   the last gates that should ever be allowed to quietly not run.
+      - apt-get update -qq && apt-get install -y -qq --no-install-recommends git php-cli php-sqlite3 php-xml php-mbstring jq sqlite3
       - git config --global --add safe.directory "$CI_WORKSPACE"
-      - pip install --quiet --no-cache-dir pytest pytest-asyncio pyyaml httpx jinja2 jsonschema requests fastapi markdown
+      - . tools/ci-freeze.env && pip install --quiet --no-cache-dir pytest pytest-asyncio pyyaml httpx jinja2 jsonschema requests fastapi "markdown==3.10.2" "$NOS_ANSIBLE_CORE"
       # Install pulse as editable so its package imports resolve in test
       - pip install --quiet --no-cache-dir -e files/anatomy/pulse
       # -rA summary lists FAIL/SKIP/ERROR at the very end so even a
