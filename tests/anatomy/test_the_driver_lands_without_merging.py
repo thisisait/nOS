@@ -271,9 +271,36 @@ def test_it_never_merges_and_never_pushes_a_base_branch(drv, monkeypatch,
         assert "merge" not in argv, f"the driver ran a merge: {argv}"
     for push in rec.pushes():
         refspec = push[-1]
-        assert refspec.startswith("fix/"), (
+        dest = refspec.split(":", 1)[-1]
+        assert dest.startswith(("fix/", "refs/heads/fix/")), (
             f"the driver pushed {refspec!r}; it may only ever push its own "
             f"fix/* branch, never a base branch"
+        )
+
+
+def test_the_driver_mints_no_local_branch_ref(drv, monkeypatch, ready_row, wired):
+    """The branch lives on the FORGES; this clone never needs the ref.
+
+    Measured 2026-08-19, minutes after the refresh path shipped: run one's
+    `git switch -c fix/loop-…` left a repo-wide local ref the worktree removal
+    does not delete, and run two died on 'a branch named … already exists' —
+    a second wedge of exactly the shape the refresh existed to fix. Detached
+    commit + `HEAD:refs/heads/<branch>` refspec removes the collision class.
+    """
+    rec = Recorder()
+    monkeypatch.setattr(drv.subprocess, "run", rec)
+    drv.land(ready_row, base="dev", gate_set="repo", rejudge=False,
+             timeout=1, act=True, log=lambda _: None)
+    for call in rec.argvs():
+        assert not (call[:2] == ["git", "switch"] and
+                    any(a in ("-c", "-C", "-qc", "-qC") for a in call)), (
+            f"the driver created a local branch ref: {call}; the second run "
+            f"of the same proposal dies on the leftover"
+        )
+        assert call[:2] != ["git", "branch"], f"local branch ref minted: {call}"
+    for push in rec.pushes():
+        assert push[-1].startswith("HEAD:refs/heads/fix/"), (
+            f"push refspec {push[-1]!r} relies on a local ref existing"
         )
 
 
@@ -545,6 +572,39 @@ def test_an_unaskable_tip_refuses_rather_than_pushing_blind(drv, monkeypatch,
                   timeout=1, act=True, log=lambda _: None)
     assert rc == 2 and rec.pushes() == [], (
         "an unanswerable 'does the branch exist' was read as 'it does not'"
+    )
+
+
+def test_the_tip_lookup_spells_the_branch_slash_per_forge(drv, monkeypatch):
+    """Both readings were PAID FOR, one live run apart (2026-08-19): GitLab
+    404s on the raw slash — and 404 means "absent" here, so an existing branch
+    read as missing and the plain push was refused non-fast-forward; encoding
+    both then had Gitea answer 400 to `%2F`. GitLab gets `%2F`, Gitea the raw
+    slash; a tidy uniform rule is wrong in one direction or the other."""
+    seen: dict[str, str] = {}
+
+    def fake_urlopen(request, timeout=0):
+        raise drv.urllib.error.HTTPError(request.full_url, 404, "nf", {}, None)
+
+    monkeypatch.setattr(drv.urllib.request, "urlopen", fake_urlopen)
+
+    real_request = drv.urllib.request.Request
+
+    def spy_request(url, *a, **k):
+        seen[("gitlab" if "127.0.0.1" in url else "gitea")] = url
+        return real_request(url, *a, **k)
+
+    monkeypatch.setattr(drv.urllib.request, "Request", spy_request)
+    for forge in ({"name": "gitlab", "token": "t", "domain": "d.invalid",
+                   "owner": "root", "repo": "nOS"},
+                  {"name": "gitea", "token": "t", "domain": "d.invalid",
+                   "owner": "o", "repo": "nOS"}):
+        drv._remote_tip(forge, "fix/loop-rem-rem-204-6f139e22")
+    assert "fix%2Floop-" in seen["gitlab"], (
+        f"GitLab got a raw slash and will 404 an existing branch: {seen['gitlab']}"
+    )
+    assert "/branches/fix/loop-" in seen["gitea"], (
+        f"Gitea got an encoded slash and will 400: {seen['gitea']}"
     )
 
 

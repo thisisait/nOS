@@ -88,6 +88,7 @@ import subprocess
 import sys
 import tempfile
 import urllib.error
+import urllib.parse
 import urllib.request
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -335,13 +336,23 @@ def _remote_tip(forge: dict, branch: str) -> tuple[str | None, str | None]:
     "absent" — a plain push into a branch we could not see would either fail
     non-fast-forward (the MR !1 wedge this exists to fix) or, worse, race a
     state nobody examined. Fail closed, same doctrine as `_base_exists`.
+
+    THE SLASH IN THE BRANCH NAME IS PER-FORGE, and both readings were paid
+    for on 2026-08-19, one run apart: GitLab's branches endpoint 404s on the
+    RAW slash — and 404 is this function's word for "absent", so the first
+    live refresh read an EXISTING GitLab branch as missing, plain-pushed and
+    was refused non-fast-forward. Encoding BOTH then broke the other half:
+    Gitea answers 400 to `%2F` in the path (its router splits on raw slashes).
+    So: GitLab gets `%2F`, Gitea gets the slash, and the gate pins each to
+    its forge rather than to a tidy-looking rule.
     """
     if forge["name"] == "gitlab":
         port = _yaml_lookup("gitlab_http_port", REPO / "config.yml",
                             REPO / "default.config.yml",
                             REPO / "roles/pazny.gitlab/defaults/main.yml") or "8929"
+        encoded = urllib.parse.quote(branch, safe="")
         url = (f"http://127.0.0.1:{port}/api/v4/projects/"
-               f"{forge['owner']}%2F{forge['repo']}/repository/branches/{branch}")
+               f"{forge['owner']}%2F{forge['repo']}/repository/branches/{encoded}")
         headers = {"PRIVATE-TOKEN": forge["token"]}
     else:
         url = (f"https://{forge['domain']}/api/v1/repos/"
@@ -515,8 +526,13 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
     try:
         # Detached, off BASE — never the operator's checkout, and never their
         # current HEAD (on a leading branch the MR would carry unrelated commits).
+        # And it STAYS detached: the first version ran `git switch -c <branch>`
+        # here, which mints a repo-wide local ref the worktree removal does not
+        # delete — so the second run of the same proposal died on "a branch
+        # named fix/loop-… already exists" (measured 2026-08-19, minutes after
+        # the refresh path shipped). The branch exists on the FORGES, as the
+        # push refspec below; this clone never needs the ref at all.
         _git("worktree", "add", "--detach", "-q", str(tree), base_ref)
-        _git("switch", "-qc", branch, cwd=tree)
         apply_ = subprocess.run(  # noqa: S603
             ["git", "apply", "-"], cwd=str(tree), input=row["_diff"],
             text=True, capture_output=True, check=False,
@@ -551,7 +567,7 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
             if tip_err:
                 log(f"  {wid}: {tip_err} — refusing to push blind")
                 return 2
-            push_argv = ["git", "push", url, branch]
+            push_argv = ["git", "push", url, f"HEAD:refs/heads/{branch}"]
             if tip and tip != sha:
                 owned, why = _owns_remote_tip(tree, url, tip, row["uuid"], row["_diff"])
                 if not owned:
@@ -561,7 +577,7 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
                     return 2
                 push_argv = ["git", "push",
                              f"--force-with-lease=refs/heads/{branch}:{tip}",
-                             url, branch]
+                             url, f"HEAD:refs/heads/{branch}"]
                 refreshed = True
             done = subprocess.run(  # noqa: S603
                 push_argv, cwd=str(tree),
