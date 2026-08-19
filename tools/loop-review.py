@@ -72,6 +72,12 @@ DRIVER_BRANCH_PREFIX = "fix/loop-"
 
 MERGED, REFUSED, INDETERMINATE = "merged", "refused", "indeterminate"
 
+#: What `_promote` hands to tools/forge-sync.py. NEVER `--push-github`: the
+#: public trunk is an operator act (`tools/promote-public.sh` is the only
+#: thing on this host holding a GitHub credential, and a human runs it).
+#: Module-level so the gate pins the argv rather than trusting the prose.
+PROMOTE_ARGV = ["--apply"]
+
 #: Module-level so a gate can point it at a fixture. It was inlined until the
 #: retro-verification of `test_the_reviewer_refuses_before_it_merges.py` found
 #: that removing the diff comparison from `ledger_verdict` kept the suite green
@@ -302,6 +308,40 @@ def review(mr: dict, driver, *, act: bool, log) -> str:
     return REFUSED
 
 
+def _promote(log) -> int:
+    """After a merge, converge the trunk's holders — because until something
+    does, the merge exists ONLY on GitLab.
+
+    MEASURED 2026-08-19: the reviewer's first live merge landed on GitLab and
+    nowhere else; promoting it took a hand-built fetch with a token on the
+    command line, a `merge --ff-only` and two pushes, typed from memory. This
+    makes promotion a STEP OF THE MERGE rather than a thing a human remembers.
+
+    The step is delegated to `tools/forge-sync.py --apply` — the one tool that
+    owns directions, URLs and tokens — never re-implemented here. It converges
+    Gitea and (when the tree is clean) the local `dev`; the GitHub push stays
+    behind `--push-github`, which this reviewer NEVER passes: the public trunk
+    is an operator act, and forge-sync prints the exact command instead.
+
+    A merge whose promotion failed is HALF-DONE work — the exact state that
+    cost the diagnosis above — so a non-zero here propagates as exit 1.
+    """
+    import subprocess  # noqa: PLC0415 — only this step spawns anything
+
+    log("\n  promotion — converging the trunk's holders (tools/forge-sync.py --apply):")
+    done = subprocess.run(  # noqa: S603 — fixed argv, no shell
+        [sys.executable, str(REPO / "tools" / "forge-sync.py"), *PROMOTE_ARGV],
+        text=True, capture_output=True, check=False,
+    )
+    for line in (done.stdout + done.stderr).splitlines():
+        log(f"    {line}")
+    if done.returncode != 0:
+        log("  → the merge is on GitLab but the holders did NOT converge — "
+            "half-done; run tools/forge-sync.py yourself")
+        return 1
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--merge", action="store_true",
@@ -331,6 +371,8 @@ def main() -> int:
         outcomes = [review(mr, driver, act=args.merge, log=log) for mr in requests]
         log(f"\n  {outcomes.count(MERGED)} merged · {outcomes.count(REFUSED)} refused "
             f"· {outcomes.count(INDETERMINATE)} indeterminate")
+        if args.merge and outcomes.count(MERGED):
+            return _promote(log)
         return 0
     except Refused as exc:
         print(f"[loop-review] {exc}", file=sys.stderr)

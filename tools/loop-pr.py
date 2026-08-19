@@ -212,6 +212,45 @@ def _scrub(text: str) -> str:
     return re.sub(r"https://[^@\s]+@", "https://***@", text)
 
 
+def _base_alignment(local_sha: str, forge_tips: dict[str, tuple[str | None, str | None]],
+                    base: str) -> tuple[bool, str]:
+    """Is the commit this branch would be cut from THE base every forge holds?
+
+    MEASURED 2026-08-19, the day's most expensive lesson: the driver branched
+    off the LOCAL `dev` while the forges' `dev` was five commits behind, so the
+    merge request carried a 598 KB diff instead of two lines. The reviewer
+    refused it on question 3 — a true positive — but the refusal cost a full CI
+    cycle, a diagnosis, a sync and a re-run. The OTHER direction is quieter and
+    worse: a local base BEHIND the forges produces an MR whose three-dot diff
+    still shows only the patch, so the reviewer's byte-comparison passes — and
+    the verdict was sealed against a base the merge never lands on.
+
+    So the invariant is EQUALITY, both directions, checked before one byte
+    moves: the local base commit and every forge's tip of `base` must be the
+    same sha. Anything else is refused with the tool that fixes it
+    (`tools/forge-sync.py`) named in the refusal — the driver never syncs on
+    its own, because a sync is a trunk mutation and the driver's whole design
+    is that it only ever adds a branch.
+
+    `forge_tips` maps forge name → (sha, error) as `_remote_tip` returns them.
+    An unreadable forge refuses (fail closed), same doctrine as `_base_exists`.
+    """
+    for name, (sha, err) in forge_tips.items():
+        if err:
+            return False, f"{name}: {err} — cannot verify the base; refusing to cut a branch blind"
+        if sha is None:
+            return False, (f"{name} has no branch {base!r} — push the trunk "
+                           f"first: tools/forge-sync.py --apply")
+        if sha != local_sha:
+            return False, (
+                f"{name}'s {base} is {sha[:8]}, the local base is "
+                f"{local_sha[:8]} — the MR would not carry the judged patch "
+                f"alone. Reconcile first: tools/forge-sync.py (report), then "
+                f"tools/forge-sync.py --apply"
+            )
+    return True, ""
+
+
 def _refuse_master(base: str) -> None:
     """`master` is protected, PR-only and an operator's to move.
 
@@ -516,11 +555,24 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
         if not ok:
             log(f"  {wid}: {why}")
             return 2
-    subject, body = _commit_message(row)
-    branch = f"fix/loop-{str(wid).replace(':', '-').lower()}-{row['uuid'][:8]}"
-
     base_ref = base if _git("rev-parse", "--verify", "--quiet",
                             f"refs/heads/{base}", check=False) else "HEAD"
+    # THE TOPOLOGY PREFLIGHT — before any branch is cut. The branch's parent
+    # must be the very commit both forges hold as `base`, or the MR carries
+    # more (or less) than the judged patch. See `_base_alignment` for the two
+    # measured failure shapes; the fix is always a sync, never a workaround.
+    local_base = _git("rev-parse", base_ref)
+    aligned, why = _base_alignment(
+        local_base,
+        {forge["name"]: _remote_tip(forge, base) for forge in (gitea, gitlab)},
+        base,
+    )
+    if not aligned:
+        log(f"  {wid}: {why}")
+        return 2
+
+    subject, body = _commit_message(row)
+    branch = f"fix/loop-{str(wid).replace(':', '-').lower()}-{row['uuid'][:8]}"
     work = pathlib.Path(tempfile.mkdtemp(prefix="nos-loop-pr-"))
     tree = work / "t"
     try:

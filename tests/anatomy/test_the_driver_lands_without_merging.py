@@ -123,6 +123,9 @@ def wired(drv, monkeypatch):
         "owner": "o", "repo": "nOS",
     })
     monkeypatch.setattr(drv, "_base_exists", lambda forge, base: (True, ""))
+    # The topology preflight has its own gate (test_the_driver_refuses_a_desynced_base);
+    # here the four holders are stipulated to agree so the rest of the landing runs.
+    monkeypatch.setattr(drv, "_base_alignment", lambda *a, **k: (True, ""))
     # No branch exists on either forge — the plain-push path. The refresh path
     # has its own section below; without this stub the tip lookup would reach
     # for a real network (the GitLab half asks 127.0.0.1, i.e. the LIVE forge).
@@ -396,6 +399,9 @@ def test_a_pushed_branch_with_no_merge_request_exits_non_zero(drv, monkeypatch,
         "name": name, "token": "t", "domain": f"{name}.invalid",
         "owner": "o", "repo": "nOS"})
     monkeypatch.setattr(drv, "_base_exists", lambda forge, base: (True, ""))
+    # The topology preflight has its own gate (test_the_driver_refuses_a_desynced_base);
+    # here the four holders are stipulated to agree so the rest of the landing runs.
+    monkeypatch.setattr(drv, "_base_alignment", lambda *a, **k: (True, ""))
     monkeypatch.setattr(drv, "_remote_tip", lambda forge, branch: (None, None))
     monkeypatch.setattr(drv, "_open_merge_request",
                         lambda *a, **k: (500, "forge exploded"))
@@ -416,6 +422,9 @@ def test_a_token_never_reaches_the_output(drv, monkeypatch, ready_row):
         "name": name, "token": "FAKE_not_a_real_token", "domain": f"{name}.invalid",
         "owner": "o", "repo": "nOS"})
     monkeypatch.setattr(drv, "_base_exists", lambda forge, base: (True, ""))
+    # The topology preflight has its own gate (test_the_driver_refuses_a_desynced_base);
+    # here the four holders are stipulated to agree so the rest of the landing runs.
+    monkeypatch.setattr(drv, "_base_alignment", lambda *a, **k: (True, ""))
     monkeypatch.setattr(drv, "_remote_tip", lambda forge, branch: (None, None))
     rec = Recorder(rc=1, fail_on="push",
                    stderr="fatal: could not read from "
@@ -505,6 +514,9 @@ def _wire_refresh(drv, monkeypatch, *, tip, owned):
         "name": name, "token": "FAKE_not_a_real_token",
         "domain": f"{name}.invalid", "owner": "o", "repo": "nOS"})
     monkeypatch.setattr(drv, "_base_exists", lambda forge, base: (True, ""))
+    # The topology preflight has its own gate (test_the_driver_refuses_a_desynced_base);
+    # here the four holders are stipulated to agree so the rest of the landing runs.
+    monkeypatch.setattr(drv, "_base_alignment", lambda *a, **k: (True, ""))
     monkeypatch.setattr(drv, "_remote_tip", lambda forge, branch: (tip, None))
     monkeypatch.setattr(drv, "_owns_remote_tip",
                         lambda tree, url, sha, uuid, diff:
@@ -566,6 +578,9 @@ def test_an_unaskable_tip_refuses_rather_than_pushing_blind(drv, monkeypatch,
         "name": name, "token": "t", "domain": f"{name}.invalid",
         "owner": "o", "repo": "nOS"})
     monkeypatch.setattr(drv, "_base_exists", lambda forge, base: (True, ""))
+    # The topology preflight has its own gate (test_the_driver_refuses_a_desynced_base);
+    # here the four holders are stipulated to agree so the rest of the landing runs.
+    monkeypatch.setattr(drv, "_base_alignment", lambda *a, **k: (True, ""))
     monkeypatch.setattr(drv, "_remote_tip",
                         lambda forge, branch: (None, f"{forge['name']} unreachable"))
     rc = drv.land(ready_row, base="dev", gate_set="repo", rejudge=False,
