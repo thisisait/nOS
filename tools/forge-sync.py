@@ -115,6 +115,15 @@ def _git(*argv: str, env: dict | None = None, check: bool = True) -> tuple[int, 
     return done.returncode, done.stdout.strip(), done.stderr.strip()
 
 
+#: Prepended to every AUTHENTICATED git call. `credential.helper=` (empty)
+#: CLEARS the configured helper list — measured 2026-08-19: the operator's
+#: global `credential-osxkeychain` runs BEFORE GIT_ASKPASS and HANGS waiting
+#: on a Keychain authorization no Pulse job at 03:00 can click; the push sat
+#: silent for minutes while curl answered the same endpoint in 0.08 s. With
+#: helpers cleared, git falls through to askpass immediately.
+GIT_AUTH_ARGV = ("-c", "credential.helper=")
+
+
 class _TokenAuth:
     """GIT_ASKPASS bridge: the token rides the child's environment, never argv.
 
@@ -210,7 +219,7 @@ def _fetch_objects(tips: dict[str, dict], driver, branch: str) -> None:
         forge = entry.get("_forge") or driver._forge(name)
         auth = _TokenAuth(forge["token"])
         try:
-            _git("fetch", "-q", _forge_url(forge), branch,
+            _git(*GIT_AUTH_ARGV, "fetch", "-q", _forge_url(forge), branch,
                  env=auth.env, check=False)
         finally:
             auth.close()
@@ -318,7 +327,7 @@ def _apply_step(step: dict, tips: dict[str, dict], driver, branch: str,
     auth = _TokenAuth(forge["token"])
     try:
         # Plain push — the server's own non-fast-forward refusal is the guard.
-        rc, _, err = _git("push", _forge_url(forge),
+        rc, _, err = _git(*GIT_AUTH_ARGV, "push", _forge_url(forge),
                           f"{target}:refs/heads/{branch}",
                           env=auth.env, check=False)
     finally:
