@@ -203,3 +203,90 @@ remove-source pause; PREFIX = rotation prompt (ENTER = keep); SUDO =
 | `tools/nos-stacks.sh stacks -e retention_confirm=true` (also `export_confirm`/`forget_confirm`/`restore_auto_confirm`/`upgrade_confirmed`) | **NOT refused** — the `confirm=true` glob is anchored, so the documented GDPR/backup/restore workflow tokens keep working through the launcher |
 | `tools/nos-upgrade-detached.sh ... -e remove=all ...` | refused |
 | `ansible-bridge.sh run-tag blank` / `run-tag uninstall` / `run-tag reset` | exit 1 (BLOCKED/not-ALLOWED); the bridge has no extra-var surface at all |
+
+## Proving the ladder — the staged first execution (2026-08-19)
+
+The removal ladder has NEVER run, not once — no removal artefacts exist in
+`~/.nos`. "Fully replicable — one command wipes everything and reinstalls
+from scratch" is the project's central claim, and an untested removal path is
+an unproven claim. This is the staged, reversible sequence that earns it.
+Every stage is an OPERATOR act from a real terminal (the sudo pre-phase
+refuses agents and IDE shells alike — see "Where to run a removal FROM").
+Each stage has an evidence gate; do not climb without it.
+
+**What a factory reset / SSD wipe would add: nothing.** Measured 2026-08-19:
+zero `devboxnos-*` launchd bundles, no `~/.devboxnos`, 22 GB of ordinary
+reclaimable Docker cache. The host is not rotten; the ladder is what is
+unproven. The true from-nothing proof belongs to the portable-SSD replication
+epic (a second Mac), which proves it without destroying the primary.
+
+### Stage 0 — a backup that is PROVEN restorable (gate for everything below)
+
+- The weekly `backup:backup-restore-drill` last failed; the next scheduled
+  run is Sunday 04:00. A green drill — or a supervised manual restore of
+  `wing.db`, the KEAP corpus, and one service DB into a scratch dir — is the
+  entry ticket. A backup nobody has restored is a hope, not a backup.
+- Snapshot the irreplaceables explicitly: `wing.db` (audit chain, loop
+  ledger incl. 2026-08-19 history, agent sessions), KEAP corpus + review
+  queue, Nextcloud/user files on `/Volumes/SSD1TB`, Vaultwarden, Infisical,
+  `~/.nos/secrets.yml`.
+- Baseline readers green/quiet: `tools/red-status.py`,
+  `tools/identity-status.py`, `tools/rem-status.py`.
+
+### Stage 1 — dry runs (no risk, still never done)
+
+Run all three: `nos --remove=data`, `--remove=deep`, `--remove=all`.
+Evidence gate: the printed inventories are READ, and (a) external-path
+entries (`/Volumes/SSD1TB`, `/Volumes/KINGSTON`) appear with real
+post-override paths, (b) the preserved list matches expectation, (c) the
+known allowlist gap is checked by name — KEAP paths must appear in the
+inventory (the blank allowlist has historically missed services; a wipe that
+skips a service is drift, not mercy). Anything surprising stops the ladder
+here and becomes a fix.
+
+### Stage 2 — `nos --remove=data --confirm` (today's blank, ENTER-keep prefix)
+
+WHAT IS LOST: every service's runtime data — Authentik users beyond the
+declared roster (all invited users + their Infisical/Stalwart provisioning),
+Gitea repos incl. the local `pzny` mirror, Woodpecker history + agent rows,
+observability history, Wing's `wing.db`. Source, images, `~/nos` tenant
+user-files survive.
+Evidence gate: reconverge `failed=0` → `nos-smoke --strict` green →
+`tools/identity-status.py` shows every declared identity ok and exactly ONE
+Woodpecker agent row → restore ONE dataset from the Stage-0 backup (KEAP
+corpus or a Nextcloud dir) and verify content — restore is the other half of
+the claim.
+
+### Stage 3 — `nos --remove=deep --confirm`
+
+Adds image/build-cache/brew/npm/pip flush; the marginal loss is ~90 GB of
+re-pull time, not data. Evidence gate: same greens as Stage 2 on a cold
+image cache.
+
+### Stage 4 — `nos --remove=all --confirm` (or `-y --leave` + fresh run for
+full identity reset)
+
+WHAT IS LOST beyond Stage 3: the user SOURCE set (`~/nos` tenants incl.
+`~/nos/tenants/**` user files, `~/.nos`, `~/wing`, …); with `--leave` +
+fresh run, the persist-and-reuse identity group too (incl. the Bluesky PLC
+rotation key — federation identity is not recoverable). Evidence gate: R5
+absence verify green → reconverge from data-zero `failed=0` → smoke green.
+This stage, passed, is what a non-beta release claim stands on.
+
+### What a blank does NOT restore, because nothing declares it
+
+- `woodpecker_api_token` — an OAuth-derived PAT a human mints in the UI; the
+  new server DB does not know the old token. Until re-minted,
+  `tools/loop-review.py` reads CI as INDETERMINATE and the agent-row sweep
+  skips (both say so rather than passing).
+- Gitea/GitLab PATs of the same shape (`gitea_api_token` re-mints only via
+  the `gitea_agent_forge` toggle; `gitlab_api_token` is manual).
+- Anything living only in a realm: manually-created Grafana dashboards,
+  Uptime-Kuma monitors beyond the plugin-provisioned set, KEAP ingestion
+  bundles prepared-but-not-applied, invited users (the roster in
+  `nos_identities` is the floor that reconverges; invited population is not).
+- Hand-edited `config.yml` / `credentials.yml` SURVIVE (gitignored files in
+  the source checkout, outside every removal scope except a manual repo
+  delete) — but their realm-side counterparts (the OAuth apps, the PATs the
+  values point at) do not. A value that survives pointing at a realm object
+  that did not is the post-blank trap to check first.
