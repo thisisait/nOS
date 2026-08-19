@@ -389,6 +389,8 @@ nodes:
   "doctrine:docs/archive/cortex-corpus-parallel.md#2.1": withheld
   "doctrine:docs/archive/cortex-corpus-parallel.md#5.3": withheld
   "doctrine:docs/archive/nos-cortex-organ-design.md#2": withheld
+  # 2026-08-19: §10 gained citations when the loop's cadence shipped.
+  "doctrine:docs/idea/11-agentic-loop-contract.md#10": withheld
   "doctrine:docs/idea/11-agentic-loop-contract.md#5.1": withheld
   "doctrine:docs/idea/11-agentic-loop-contract.md#5a": withheld
   "doctrine:docs/idea/11-agentic-loop-contract.md#8.1": withheld
@@ -433,6 +435,12 @@ nodes:
   "pulse:keap:keap-embed-sync": withheld
   "pulse:keap:keap-features-sync": withheld
   "pulse:keap:keap-lint": withheld
+  # 2026-08-19 loop cadence (loop-base plugin) — the agentic loop's three
+  # scheduled jobs. WITHHELD like every other pulse:* node (D3: when the
+  # house is busy stays home); D4's frozen published set is untouched.
+  "pulse:loop:drive": withheld
+  "pulse:loop:propose": withheld
+  "pulse:loop:review": withheld
   "pulse:librarian:brief-taxonomy": withheld
   "pulse:librarian:describe-taxonomy": withheld
   "pulse:librarian:judge-lint-queue": withheld

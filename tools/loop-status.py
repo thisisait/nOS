@@ -177,6 +177,11 @@ def live_weaknesses() -> tuple[list[dict], str | None]:
                     "source": report.name,
                     "severity": str(getattr(weakness, "severity", "") or "").lower(),
                     "title": str(getattr(weakness, "title", "") or "")[:96],
+                    # False = the ledger WITHHOLDS this id (its evidence file
+                    # does not match HEAD), so no proposal can cite it until
+                    # someone commits. Reported rather than dropped: a gap row
+                    # that silently vanishes is docs/hidden_fees/08 again.
+                    "proposable": bool(getattr(weakness, "evidence_committed", True)),
                 })
         return out, None
     except Exception as exc:  # noqa: BLE001
@@ -595,9 +600,29 @@ def main() -> int:
               "`loop-driver` is not built. This is the queue it would read.)\n")
         for w in gap[:25]:
             sev = (w["severity"] or "-")[:8]
-            print(f"  {sev:<9} {w['id']:<34} {w['title'][:58]}")
+            held = "" if w.get("proposable", True) else "  [evidence uncommitted]"
+            print(f"  {sev:<9} {w['id']:<34} {w['title'][:58]}{held}")
         if len(gap) > 25:
             print(f"\n  … and {len(gap) - 25} more")
+
+        # THE COMMITTED-EVIDENCE DEADLOCK (measured 2026-08-19). While the
+        # nightly scan's queue file sat uncommitted, the ledger withheld every
+        # `rem:` row and the only proposable weaknesses were `fee:` — which
+        # close only by writing docs/**, a path every gate set's budget
+        # forbids. The loop could propose against nothing it was also allowed
+        # to fix, and no surface said so. This is that surface.
+        withheld = [w for w in gap if not w.get("proposable", True)]
+        if withheld:
+            print(f"\n  {len(withheld)} of these are WITHHELD from proposing — their "
+                  f"evidence file does not match HEAD.")
+            print("  Commit it (the nightly scan writes docs/llm/security/ and "
+                  "nobody commits it) to unblock.")
+        open_sources = {_source_of(w["id"]) for w in gap if w.get("proposable", True)}
+        if withheld and open_sources <= {"fee"}:
+            print("\n  DEADLOCK: every proposable weakness is a fee:, and a fee: "
+                  "closes only by writing docs/** —")
+            print("  a path every budget forbids. Until the evidence commits, the "
+                  "loop can propose nothing it may also fix.")
         return 0
 
     if args.json:

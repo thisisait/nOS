@@ -743,3 +743,20 @@ With one addition this contract earns: **and the verdict replays.**
 recorded `tree_sha` and reproduces the recorded `exit_code`, `work_count` and
 `stdout_sha`. A verdict that cannot be replayed is a claim, and this estate spent
 v0.10-beta learning what claims are worth.
+
+**The committed-evidence deadlock (measured 2026-08-19), which the rewrite above
+covers in general and did not name.** The ledger accepts only weaknesses whose
+evidence file matches HEAD (§4's lift key would otherwise be writable by the
+proposer), and the nightly scan WRITES `docs/llm/security/*` without committing
+it — so the proposable set periodically collapses to `fee:` rows, which close
+only by writing `docs/**`, a path §5.2 forbids in every gate set. In that state
+the loop can propose nothing it is also allowed to fix, and for several hours it
+did exactly that, silently. The settlement is SURFACE AND REFUSE, never
+automate: the ledger's refusal distinguishes `uncommitted-evidence` (with the
+commit named as the remedy) from `unknown-weakness`; `tools/loop-status.py
+--gap` counts the withheld rows and names the deadlock when it holds; the entry
+runner (`tools/loop-propose.py`) refuses with exit 3 rather than spending a
+model run on a proposal the engine must reject. Auto-committing the scan's
+output was considered and rejected — those files are the operator's, and a loop
+that commits its own evidence is a proposer minting lift keys with extra steps.
+Gate: `tests/anatomy/test_the_loop_has_a_cadence.py`.

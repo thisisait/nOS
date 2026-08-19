@@ -325,7 +325,14 @@ def test_ADVERSARIAL_an_uncommitted_fee_row_cannot_mint_a_ceiling_key(db, fee_re
     try:
         with pytest.raises(ledger.ProposalRefused) as e:
             propose(led, weakness_id="fee:2")
-        assert e.value.reason == "unknown-weakness"
+        # 2026-08-19: the reason string got MORE honest, not weaker. The mint
+        # is still refused; the ledger now also says WHY it is withheld
+        # ("uncommitted-evidence" + the commit remedy) instead of claiming no
+        # source reports it — that claim was false and cost hours during the
+        # committed-evidence deadlock. The property this gate pins — an
+        # uncommitted edit cannot key a ceiling — is the refusal itself.
+        assert e.value.reason == "uncommitted-evidence"
+        assert "commit" in str(e.value).lower()
     finally:
         led.close()
 

@@ -618,6 +618,30 @@ def default_weakness_index() -> dict[str, str]:
     }
 
 
+def default_uncommitted_weakness_ids() -> set[str]:
+    """The weaknesses the index above WITHHELD, so a refusal can say why.
+
+    MEASURED 2026-08-19: while `docs/llm/security/remediation-queue.json` sat
+    uncommitted (the nightly scan writes it; nobody commits it), the index
+    served 13 of 69 weaknesses — every one a `fee:`, and a `fee:` closes only
+    by writing `docs/**`, which every gate set's budget forbids. For several
+    hours the loop could propose against NOTHING it was also allowed to fix,
+    and the refusal it gave ("not reported by any weakness source") was a lie
+    of classification: the source reported it loudly; the ledger had withheld
+    it, correctly, for an uncommitted-evidence reason the message never named.
+    This deadlock recurs on every scan-write that nobody commits, so the
+    refusal must carry its own remedy. See §11 of the contract.
+    """
+    import weaknesses as _weaknesses  # noqa: PLC0415 — same seam as the index
+
+    return {
+        w.weakness_id
+        for report in _weaknesses.collect()
+        for w in report.weaknesses
+        if not w.evidence_committed
+    }
+
+
 def open_ledger(role: str, *, registry: Any = None,
                 weakness_index: Any = None):
     """Factory. `role` picks the CLASS, and the class's method set IS the
@@ -709,6 +733,23 @@ class ReaderLedger:
         try:
             return self.__weakness_cache[str(weakness_id)]
         except KeyError:
+            # NOT in the index — but WITHHELD is a different fact from UNSEEN,
+            # and conflating them cost hours on 2026-08-19 (see
+            # `default_uncommitted_weakness_ids`). Ask before claiming.
+            try:
+                withheld = default_uncommitted_weakness_ids()
+            except Exception:  # noqa: BLE001 — a broken reader must not mask the refusal
+                withheld = set()
+            if str(weakness_id) in withheld:
+                raise ProposalRefused(
+                    "uncommitted-evidence",
+                    f"{weakness_id} IS reported, but the file its evidence was "
+                    f"read from does not match HEAD, so it cannot key the §4 "
+                    f"retry ceiling (an uncommitted edit is a lift key the "
+                    f"proposer could write for itself). Commit the evidence "
+                    f"file — `git status docs/llm/security/` is the usual "
+                    f"culprit: the nightly scan writes it and nobody commits it",
+                ) from None
             raise ProposalRefused(
                 "unknown-weakness",
                 f"{weakness_id} is not reported by any weakness source; §4 keys "

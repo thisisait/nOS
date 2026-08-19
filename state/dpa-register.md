@@ -20,10 +20,10 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 90 (76 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (84)
-- **Transfers outside the EU:** 9 activities
-- **Activities engaging a third-party processor:** 9
+- **Processing activities:** 91 (77 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (85)
+- **Transfers outside the EU:** 10 activities
+- **Activities engaging a third-party processor:** 10
 
 ## Transfers & processors (audit-sensitive subset)
 
@@ -38,6 +38,7 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 | surveyor (`agent_surveyor`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
 | upgrade-advisor (`agent_upgrade-advisor`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
 | upgrade-architect (`agent_upgrade-architect`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
+| Loop (`svc_loop`) | **Yes** | `Anthropic (US) — claude CLI backend, authoring proposals when the propose job runs` |
 
 ## Security measures (Art. 32 — platform baseline)
 
@@ -1328,6 +1329,25 @@ metadata.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Loop — `svc_loop`
+- **Purpose:** The agentic-loop cadence runs three scheduled maintenance ceremonies on
+the operator's own repository: proposing a bounded code change against a
+reported weakness, opening a reviewed merge request for judged changes,
+and merging behind deterministic gates. It processes repository content
+and operator-authored weakness records (legitimate interest in service
+operation and security remediation, Art. 6(1)(f)). The paused `propose`
+job, when the operator unpauses it, sends repository excerpts and
+weakness titles to the model backend the estate has configured for the
+claude CLI — the same transfer the attended ceremony performs today.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `repository_content`; `job_metadata`
+- **Recipients / processors:** `Anthropic (US) — claude CLI backend, authoring proposals when the propose job runs`
+- **Transfers outside EU:** **Yes**
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 

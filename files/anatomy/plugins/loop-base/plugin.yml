@@ -1,0 +1,125 @@
+# =============================================================================
+# loop-base — the agentic loop's cadence (docs/idea/11-agentic-loop-contract.md §10 step 6, 2026-08-19)
+#
+# The loop's components all existed before this file — reader, ledger, judges
+# (Bone), driver (tools/loop-pr.py), reviewer (tools/loop-review.py), entry
+# runner (tools/loop-propose.py) — and NOTHING ran any of them: measured
+# 2026-08-19, zero Pulse jobs referenced the loop and every proposal ever
+# filed was typed by a human or a model a human was talking to. This plugin
+# declares the cadence; Pulse owns it (the engine deliberately has no internal
+# tick — docs/idea/11-agentic-loop-contract.md §7 non-goal 2).
+#
+# THE STEP-6 BAR, judged per half rather than waved at the whole:
+#   * The JUDGED half (drive + review) has three attended green cycles
+#     (REM-204, REM-159, REM-208, all 2026-08-16..19), each gated, and its
+#     refusal paths were observed refusing for real (the 598 KB desynced-base
+#     MR; the webhook-less push). Its two jobs ship ACTIVE.
+#   * The ENTRY half (a model authoring a proposal unattended) has had ZERO
+#     attended cycles in that shape. Its job ships PAUSED — the remediator
+#     precedent — and stays paused until attended runs of
+#     `tools/loop-propose.py --invoke` earn the cadence.
+#
+# IDENTITY SPLIT, preserved at the job level: the three jobs never share a
+# credential. `propose` reaches only loop_propose_token (via the nos-loop
+# plugin the spawned model reads); `drive` is the EVALUATOR (loop_judge_token,
+# read by nos-loop inside tools/loop-pr.py --rejudge); `review` holds forge +
+# woodpecker credentials and no loop scope at all. No job env below carries
+# any secret — every tool resolves its own from ~/.nos/secrets.yml, which is
+# also what keeps this manifest out of the two-allowlist substitution trap
+# (memory: pulse-catalog-literal-substitution).
+#
+# NO STEP RECORDS ITS OWN SUCCESS: all three commands are exactly the operator
+# CLI tools, whose exits are read by Pulse (the reader of the process exit),
+# and whether anything LANDED is git's answer via tools/loop-status.py.
+# =============================================================================
+
+name: loop-base
+version: "1.0.0"
+description: "Scheduled cadence for the agentic loop: drive passed proposals to MRs, review and merge behind 3×YES, and (paused until attended) hand weaknesses to a proposing model."
+
+type:
+  - scheduled-job
+
+requires:
+  role: pazny.bone
+  feature_flag: install_bone
+
+pulse:
+  jobs:
+    # ENTRY — paused until the attended bar is met (header). Unpausing is an
+    # operator act in Wing /pulse; the tool itself stays dry-run-by-default,
+    # so the cadence must pass --invoke explicitly.
+    - name: propose
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/loop-propose.py"
+      args: ["--invoke"]
+      schedule: "30 3 * * *"          # 03:30 UTC nightly, after the 03:00 scans
+      jitter_min: 5
+      max_runtime_s: 3600             # a model authoring a bounded patch
+      max_concurrent: 1
+      category: agents
+      paused: true
+      paused_reason: "entry half has zero attended cycles (docs/idea/11-agentic-loop-contract.md §10 step 6) — run tools/loop-propose.py --invoke attended until trusted, then unpause"
+      # Exit 3 = refused (nothing proposable / committed-evidence deadlock).
+      # That is NEWS for the operator, not a crash: the refusal names the
+      # commit that unblocks the loop.
+      findings_exit_codes: [1, 3]
+
+    # DRIVE — the evaluator: re-judge decayed verdicts against today's HEAD,
+    # then take every passed proposal to a branch on both forges + a GitLab MR.
+    # Never merges (its own gate: test_the_driver_lands_without_merging).
+    - name: drive
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/loop-pr.py"
+      args: ["--open-mr", "--rejudge"]
+      schedule: "10 6 * * *"          # after propose (03:30) + the 04:00 conductor
+      jitter_min: 5
+      max_runtime_s: 3600             # --rejudge runs the repo gate set (pytest)
+      max_concurrent: 1
+      category: platform
+
+    # REVIEW — merge behind three YES answers (CI on the exact sha, judges
+    # passed THIS diff, MR carries THAT diff), then converge the trunk's four
+    # holders via tools/forge-sync.py --apply. The GitHub push stays an
+    # operator act; forge-sync prints the exact command instead of running it.
+    # 06:50 gives Woodpecker 40 min of CI on whatever drive pushed at 06:10;
+    # an MR whose pipeline is still running is INDETERMINATE and simply waits
+    # for tomorrow's tick — an unanswered question is not a yes.
+    - name: review
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/loop-review.py"
+      args: ["--merge"]
+      schedule: "50 6 * * *"
+      jitter_min: 5
+      max_runtime_s: 900
+      max_concurrent: 1
+      category: platform
+
+# =============================================================================
+# GDPR — Article 30 register row (required-fields contract for every plugin)
+# =============================================================================
+gdpr:
+  purpose: |
+    The agentic-loop cadence runs three scheduled maintenance ceremonies on
+    the operator's own repository: proposing a bounded code change against a
+    reported weakness, opening a reviewed merge request for judged changes,
+    and merging behind deterministic gates. It processes repository content
+    and operator-authored weakness records (legitimate interest in service
+    operation and security remediation, Art. 6(1)(f)). The paused `propose`
+    job, when the operator unpauses it, sends repository excerpts and
+    weakness titles to the model backend the estate has configured for the
+    claude CLI — the same transfer the attended ceremony performs today.
+  data_categories:
+    - repository_content            # diffs, file paths, weakness evidence
+    - job_metadata                  # schedules, exit codes, run ids
+  data_subjects:
+    - operators
+  legal_basis: legitimate_interests
+  retention_days: -1                # ledger rows live as long as wing.db does
+  processors:
+    - "Anthropic (US) — claude CLI backend, authoring proposals when the propose job runs"
+  eu_residency: false               # honest: the propose half transfers to a US model
+  notes: |
+    Only the `propose` job involves a model; `drive` and `review` are
+    deterministic local tools. The transfer declaration mirrors the agent
+    ceremonies' records (see pulse-base gdpr notes, 2026-08-13 clarification).
