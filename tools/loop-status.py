@@ -52,22 +52,24 @@ verdict. What was not designed is that the waiting had no surface. That is `docs
 storey up: absence reading as success. A green verdict nobody can see is
 indistinguishable from no verdict at all.
 
-AND A VERDICT DECAYS. Both verdicts were sealed against a `tree_sha` whose
-`default.config.yml` has since changed. The judges ruled on a tree that no
-longer exists, so applying either patch to HEAD today would be an act no judge
-has blessed. `--awaiting` reports that as its own state rather than folding it
-into "ready" — the whole point of the ledger is that a verdict names the tree it
-covers, and a reader that drops the tree hands back the claim the ledger exists
-to replace.
+AND A VERDICT DECAYS. Both were sealed against a tree the repo has since moved
+away from — 141 files differ, for the older of the two. The judges ruled on a
+base that no longer exists, so applying either patch to HEAD would be an act no
+judge has blessed. `--awaiting` reports that as its own state rather than
+folding it into "ready": the whole point of the ledger is that a verdict names
+the tree it covers, and a reader that drops the tree hands back the claim the
+ledger exists to replace. Staleness is measured from the VERDICT's tree, never
+the proposal's — see `_base_moved_since` for why that distinction is load-bearing
+and was got wrong first.
 
 HOW THE STATE IS DERIVED — git decides, not a regex. Each state comes from
 `git apply --check` against the working tree, forward and reversed, which is the
 only oracle that cannot disagree with what would actually happen:
 
     landed     the reverse patch applies    → the change is in the tree
-    ready      the patch applies, and no target path moved since the verdict
-    re-judge   the patch applies, but a target path moved → the verdict is on
-               another tree; a judge must rule on THIS one before it can land
+    ready      the patch applies, and the judges' base is still HEAD
+    re-judge   the patch applies, but the base moved under it → the verdict is
+               about another tree; a judge must rule on THIS one first
     conflict   git parsed it and it fits neither way — the tree moved under it
     unusable   git cannot parse the patch at all (measured: proposal 074dec8a
                is a corrupt hunk the ledger accepted; it drew `indeterminate`,
@@ -233,28 +235,49 @@ def _apply_state(diff_text: str) -> tuple[str, str]:
     return "conflict", fwd_err.splitlines()[0] if fwd_err else ""
 
 
-def _paths_moved_since(tree_sha: str | None, paths: list[str]) -> tuple[list[str], str | None]:
-    """Which target paths changed between the judged tree and HEAD.
+def _base_moved_since(verdict_tree: str | None,
+                      target_paths: list[str]) -> tuple[list[str], str | None]:
+    """Has the tree moved under the judges since they ruled?
 
-    This is what makes a verdict transferable or not. `git diff --quiet A HEAD --
-    <path>` exits 1 when the path differs; anything else (an unknown sha, a
-    detached object) is reported as an inability to ask rather than as "no
-    drift", because a silent "no drift" is how a stale verdict would read as
-    fresh.
+    TWO COLUMNS NAMED `tree_sha`, TWO DIFFERENT KINDS OF OBJECT — measured
+    2026-08-19 and it is the reason this function exists in this shape.
+    `loop_proposals.tree_sha` is a COMMIT (what the proposer had checked out);
+    `loop_verdicts.tree_sha` is a git TREE (what the judges actually ruled on,
+    which is HEAD-plus-the-patch, built in a sandbox). The first version of this
+    reader measured staleness from the PROPOSAL's commit, so a proposal stayed
+    "decayed" forever no matter how recently it had been re-judged — the
+    proposal's sha never changes, only the verdict's does.
+
+    The operative question is not "has the file changed" but "is the base the
+    judges used still HEAD". The verdict tree is base+patch, so every path that
+    differs from HEAD other than the patched ones is base drift:
+
+        git diff --name-only <verdict_tree> HEAD   minus   target_paths
+
+    Verified on the two live rows the day it was written: the fresh verdict
+    differed from HEAD in exactly `default.config.yml` (the patch itself, so:
+    ready), the three-day-old one in 141 files (so: re-judge).
     """
-    if not tree_sha:
-        return [], "the proposal records no tree_sha"
-    rc, err = _git("cat-file", "-e", f"{tree_sha}^{{commit}}")
+    if not verdict_tree:
+        return [], "the verdict records no tree"
+    rc, _ = _git("cat-file", "-e", f"{verdict_tree}^{{tree}}")
     if rc != 0:
-        return [], f"the judged tree {tree_sha[:8]} is not in this clone"
-    moved = []
-    for path in paths:
-        rc, err = _git("diff", "--quiet", tree_sha, "HEAD", "--", path)
-        if rc == 1:
-            moved.append(path)
-        elif rc != 0:
-            return [], f"cannot compare {path}: {err or f'git exited {rc}'}"
-    return moved, None
+        return [], f"the judged tree {verdict_tree[:8]} is not in this clone"
+    rc, err = _git("diff", "--name-only", verdict_tree, "HEAD")
+    if rc != 0:
+        return [], f"cannot compare the judged tree: {err or f'git exited {rc}'}"
+    changed = [line for line in _git_lines("diff", "--name-only",
+                                           verdict_tree, "HEAD") if line]
+    return sorted(set(changed) - set(target_paths)), None
+
+
+def _git_lines(*argv: str) -> list[str]:
+    try:
+        done = subprocess.run(  # noqa: S603
+            ["git", *argv], cwd=REPO, text=True, capture_output=True, check=False)
+    except OSError:
+        return []
+    return done.stdout.splitlines()
 
 
 def _dirty(paths: list[str]) -> list[str]:
@@ -285,10 +308,14 @@ def awaiting() -> dict:
         rows = [dict(r) for r in conn.execute(
             """
             SELECT p.uuid, p.weakness_id, p.intent_class, p.proposer_id,
-                   p.target_paths, p.tree_sha, p.diff_text,
-                   v.result AS verdict, v.created_at AS verdict_at
+                   p.target_paths, p.diff_text,
+                   v.result AS verdict, v.created_at AS verdict_at,
+                   v.tree_sha AS verdict_tree
               FROM loop_proposals p
-              JOIN loop_verdicts v ON v.proposal_id = p.id
+              JOIN loop_verdicts v ON v.id = (
+                       SELECT id FROM loop_verdicts
+                        WHERE proposal_id = p.id
+                        ORDER BY id DESC LIMIT 1)
              WHERE v.result = 'pass'
              ORDER BY v.created_at
             """
@@ -318,7 +345,7 @@ def awaiting() -> dict:
             moved, drift_error = [], None
         else:
             state, detail = _apply_state(diff)
-            moved, drift_error = _paths_moved_since(row["tree_sha"], paths)
+            moved, drift_error = _base_moved_since(row["verdict_tree"], paths)
             # Only a patch that still applies can be described as ready or not;
             # for the other states the drift is not the operative fact.
             if state == "applies":
@@ -326,8 +353,11 @@ def awaiting() -> dict:
                     state = "re-judge"
                     detail = drift_error
                 elif moved:
+                    shown = ", ".join(moved[:3])
+                    more = f" (+{len(moved) - 3} more)" if len(moved) > 3 else ""
                     state = "re-judge"
-                    detail = f"{', '.join(moved)} changed since the judged tree"
+                    detail = (f"the base moved since the judges ruled: "
+                              f"{shown}{more}")
                 else:
                     state = "ready"
         out.append({
@@ -336,7 +366,7 @@ def awaiting() -> dict:
             "intent_class": row["intent_class"],
             "proposer_id": row["proposer_id"],
             "verdict_at": row["verdict_at"],
-            "tree_sha": row["tree_sha"],
+            "verdict_tree": row["verdict_tree"],
             "target_paths": paths,
             "state": state,
             "detail": detail,

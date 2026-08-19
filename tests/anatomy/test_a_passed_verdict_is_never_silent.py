@@ -187,35 +187,59 @@ def test_git_being_unaskable_yields_unknown_and_never_landed(scratch, loop, monk
     assert "OSError" in detail
 
 
-def test_a_verdict_on_a_moved_path_is_reported_as_needing_a_new_one(scratch, loop):
-    """A verdict names the tree it covers, and the reader must carry that.
+def test_staleness_is_measured_from_the_verdict_tree_not_the_proposal(scratch, loop):
+    """Two columns are called `tree_sha` and they hold different object kinds.
 
-    `ready` and `re-judge` differ by exactly this and nothing else: both patches
-    apply. One was blessed on this tree; the other was blessed on a tree that is
-    gone. Collapsing them is how a three-day-old verdict becomes a green light.
+    `loop_proposals.tree_sha` is the COMMIT the proposer had checked out;
+    `loop_verdicts.tree_sha` is the git TREE the judges actually ruled on
+    (HEAD-plus-the-patch, built in a sandbox). The first version of this reader
+    measured from the proposal, so a proposal stayed "decayed" forever however
+    recently it had been re-judged — the proposal's sha never changes. Caught
+    2026-08-19 by re-judging one and watching it stay red.
+
+    The operative question is whether the judges' BASE is still HEAD, so every
+    path differing from HEAD other than the patched ones is drift.
     """
     tmp, git, target = scratch
-    base = git("rev-parse", "HEAD").stdout.strip()
-    moved, err = loop._paths_moved_since(base, ["conf.yml"])
-    assert (moved, err) == ([], None), "an unmoved path must report no drift"
+    tree_now = git("rev-parse", "HEAD^{tree}").stdout.strip()
 
-    (tmp / "conf.yml").write_text("alpha: 2\nversion: \"1.0.0\"\nomega: 9\n",
-                                  encoding="utf-8")
-    git("commit", "-qam", "touch the target")
-    moved, err = loop._paths_moved_since(base, ["conf.yml"])
-    assert err is None and moved == ["conf.yml"], (
-        "a target path that changed since the judged tree must be named; "
-        "without it the verdict silently transfers to a tree no judge saw"
+    moved, err = loop._base_moved_since(tree_now, ["conf.yml"])
+    assert (moved, err) == ([], None), "an unmoved base must report no drift"
+
+    (tmp / "unrelated.txt").write_text("something else entirely\n", encoding="utf-8")
+    git("add", "-A")
+    git("commit", "-qm", "the base moves under the judges")
+    moved, err = loop._base_moved_since(tree_now, ["conf.yml"])
+    assert err is None and moved == ["unrelated.txt"], (
+        f"drift outside the target paths must be named, got {moved!r}/{err!r}; "
+        f"without it a verdict silently transfers to a tree no judge saw"
+    )
+
+
+def test_a_change_to_the_target_path_alone_is_not_drift(scratch, loop):
+    """The verdict tree IS base+patch, so the patched path always differs.
+
+    Counting it as drift would make every fresh verdict read as decayed — the
+    mirror image of the bug above, and just as effective at stopping the loop.
+    """
+    tmp, git, target = scratch
+    tree_now = git("rev-parse", "HEAD^{tree}").stdout.strip()
+    target.write_text("alpha: 1\nversion: \"9.9.9\"\nomega: 9\n", encoding="utf-8")
+    git("commit", "-qam", "the patched path differs, as it must")
+    moved, err = loop._base_moved_since(tree_now, ["conf.yml"])
+    assert err is None and moved == [], (
+        f"the target path was counted as drift ({moved!r}); every verdict would "
+        f"then be born stale"
     )
 
 
 def test_an_unknown_judged_tree_is_an_inability_to_ask(scratch, loop):
-    """Not 'no drift'. A sha this clone does not have is a question that failed.
+    """Not 'no drift'. A tree this clone does not have is a question that failed.
 
-    A shallow clone or a dropped branch would otherwise turn every stale verdict
+    A shallow clone or a pruned object would otherwise turn every stale verdict
     fresh — the failure mode is silent and points the wrong way.
     """
-    moved, err = loop._paths_moved_since("0" * 40, ["conf.yml"])
+    moved, err = loop._base_moved_since("0" * 40, ["conf.yml"])
     assert moved == [] and err and "not in this clone" in err
 
 

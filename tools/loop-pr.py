@@ -328,6 +328,26 @@ def _base_exists(forge: dict, base: str) -> tuple[bool, str]:
         )
 
 
+def _ci_hook_count(forge: dict) -> int | None:
+    """How many webhooks the Gitea repo carries, or None if we could not ask.
+
+    A push to a repo with no hook produces no pipeline, and a missing pipeline
+    looks exactly like a pending one to anybody reading the merge request. None
+    is returned rather than 0 on a failed question, because "we could not ask"
+    and "there are none" are the two readings this estate most often confuses.
+    """
+    url = (f"https://{forge['domain']}/api/v1/repos/"
+           f"{forge['owner']}/{forge['repo']}/hooks")
+    request = urllib.request.Request(  # noqa: S310
+        url, headers={"Authorization": f"token {forge['token']}"})
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:  # noqa: S310
+            payload = json.loads(response.read().decode("utf-8"))
+            return len(payload) if isinstance(payload, list) else None
+    except (urllib.error.URLError, OSError, ValueError):
+        return None
+
+
 def _rejudge(uuid: str, gate_set: str, timeout: int) -> tuple[str, str]:
     """Re-run the judges against today's HEAD. Returns (result, detail).
 
@@ -348,6 +368,13 @@ def _rejudge(uuid: str, gate_set: str, timeout: int) -> tuple[str, str]:
         payload = json.loads(done.stdout or "{}")
     except ValueError:
         return "indeterminate", f"nos-loop returned unparseable output (rc={done.returncode})"
+    # A refusal carries the engine's own reason and ENGINE.md is explicit that a
+    # client quotes it rather than restating it. Swallowing this cost the first
+    # live run its diagnosis: "no verdict in the response" was true and useless,
+    # where the engine had said exactly what was wrong.
+    detail = payload.get("detail")
+    if isinstance(detail, dict) and detail.get("reason"):
+        return "indeterminate", f"engine refused ({detail['reason']}): {detail.get('detail', '')}"
     result = str(payload.get("result") or payload.get("verdict", {}).get("result") or "")
     # An unrecognised result is INDETERMINATE, never a pass — the same fallback
     # `nos-loop` itself applies at the shell boundary (DECISION 6a).
@@ -358,9 +385,15 @@ def _rejudge(uuid: str, gate_set: str, timeout: int) -> tuple[str, str]:
 
 def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
          timeout: int, act: bool, log) -> int:
-    """Take one passed proposal as far as an open merge request."""
+    """Take one passed proposal as far as an open merge request.
+
+    `gate_set` is the one the PROPOSAL declared — see `_diffs_for`.
+    """
     wid = row["weakness_id"]
     state = row["state"]
+    if state == "re-judge" and rejudge and not gate_set:
+        log(f"  {wid}: the ledger row declares no gate set — cannot re-judge")
+        return 1
 
     if state == "re-judge":
         if not rejudge:
@@ -432,7 +465,23 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
                     f"{_scrub(done.stderr.strip().splitlines()[-1] if done.stderr else '')}")
                 return 1
             log(f"  {wid}: pushed {branch} → {forge['name']}")
-        log(f"  {wid}: commit {sha[:8]} — Woodpecker runs against this sha on gitea")
+        # NOT "Woodpecker runs against this sha" — that was the first version of
+        # this line and it was a claim, in a tool written to replace claims with
+        # measurements. Measured minutes later: the Gitea repo carried ZERO
+        # webhooks (the agent-forge conversion recreates the repo and drops the
+        # A16 autowire hook), so the push triggered nothing and the MR would have
+        # been reviewed as though a pipeline were pending. Ask, then say.
+        hooks = _ci_hook_count(gitea)
+        if hooks is None:
+            log(f"  {wid}: commit {sha[:8]} — could not ask Gitea whether a CI "
+                f"hook exists, so whether Woodpecker saw this is UNKNOWN")
+        elif hooks == 0:
+            log(f"  {wid}: commit {sha[:8]} — WARNING: the Gitea repo has no "
+                f"webhook, so Woodpecker did NOT see this push. The MR has no "
+                f"pipeline behind it; activate the repo in Woodpecker first")
+        else:
+            log(f"  {wid}: commit {sha[:8]} — {hooks} Gitea webhook(s) fired; "
+                f"read the verdict from Woodpecker, not from here")
 
         http, detail = _open_merge_request(gitlab, branch, base, subject, body)
         if http == 201:
@@ -459,7 +508,6 @@ def main() -> int:
     ap.add_argument("--rejudge", action="store_true",
                     help="re-run the judges on proposals whose verdict decayed")
     ap.add_argument("--base", default="dev", help="target branch (default: dev)")
-    ap.add_argument("--gate-set", default="repo")
     ap.add_argument("--timeout", type=int, default=1800,
                     help="seconds to wait for a re-judge (the repo set runs pytest)")
     args = ap.parse_args()
@@ -493,7 +541,9 @@ def main() -> int:
             f"{'acting' if args.open_mr else 'DRY RUN — nothing will be touched'}")
         worst = 0
         for row in rows:
-            row["_diff"] = diffs.get(row["uuid"], "")
+            found = diffs.get(row["uuid"], {})
+            row["_diff"] = found.get("diff", "")
+            row["_gate_set"] = found.get("gate_set", "")
             if not row["_diff"]:
                 log(f"  {row['weakness_id']}: the ledger row carries no patch")
                 continue
@@ -502,7 +552,7 @@ def main() -> int:
             # nobody chose, and the tail never gets looked at.
             try:
                 outcome = land(
-                    row, base=args.base, gate_set=args.gate_set,
+                    row, base=args.base, gate_set=row["_gate_set"],
                     rejudge=args.rejudge, timeout=args.timeout,
                     act=args.open_mr, log=log,
                 )
@@ -519,8 +569,18 @@ def main() -> int:
         return 2
 
 
-def _diffs_for(loop, uuids: list[str]) -> dict[str, str]:
-    """Patch text straight from the ledger, read-only, by uuid."""
+def _diffs_for(loop, uuids: list[str]) -> dict[str, dict]:
+    """Patch text AND declared gate set, straight from the ledger, by uuid.
+
+    THE GATE SET IS THE PROPOSAL'S, NOT THE DRIVER'S. Measured on the first
+    live run: the driver passed `--gate-set repo` and the engine refused —
+    *"proposal … declared gate set 'fast'; judging it with 'repo' would seal a
+    verdict the budget was never computed for"*. It is right. The budget, the
+    oracle paths and the min_work ratchets were all computed for the declared
+    set at propose time, so a driver that picks a different one is asking for a
+    verdict about a different question. ENGINE.md says it generally: everything
+    a client might decide, the engine already decided.
+    """
     import sqlite3  # noqa: PLC0415 — only this function needs it
 
     if not uuids:
@@ -529,9 +589,10 @@ def _diffs_for(loop, uuids: list[str]) -> dict[str, str]:
     try:
         marks = ",".join("?" * len(uuids))
         return {
-            row[0]: row[1] or ""
+            row[0]: {"diff": row[1] or "", "gate_set": row[2] or ""}
             for row in conn.execute(
-                f"SELECT uuid, diff_text FROM loop_proposals WHERE uuid IN ({marks})",
+                f"SELECT uuid, diff_text, gate_set FROM loop_proposals "
+                f"WHERE uuid IN ({marks})",
                 uuids,
             )
         }

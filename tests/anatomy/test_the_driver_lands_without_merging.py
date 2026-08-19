@@ -221,6 +221,41 @@ def test_gitea_is_pushed_before_the_merge_request_opens(drv, monkeypatch,
     )
 
 
+@pytest.mark.parametrize(("hooks", "must_say"), [
+    (0, "did NOT see"),
+    (None, "UNKNOWN"),
+    (2, "webhook(s) fired"),
+])
+def test_the_ci_claim_is_a_measurement(drv, monkeypatch, ready_row, wired,
+                                       hooks, must_say):
+    """The first version of this line asserted that Woodpecker ran. It did not.
+
+    Measured 2026-08-19, minutes after the driver's first successful end-to-end
+    run: the Gitea repo carried ZERO webhooks — the agent-forge conversion
+    recreates the repo and drops the A16 autowire hook — so the push triggered
+    nothing, and an MR with no pipeline behind it is indistinguishable from one
+    whose pipeline is still queued. A tool written to replace claims with
+    measurements had shipped a claim in its own success line.
+
+    None (could not ask) must NOT read as zero, and zero must not read as fine.
+    """
+    monkeypatch.setattr(drv.subprocess, "run", Recorder())
+    monkeypatch.setattr(drv, "_ci_hook_count", lambda forge: hooks)
+    lines: list[str] = []
+    drv.land(ready_row, base="dev", gate_set="fast", rejudge=False,
+             timeout=1, act=True, log=lines.append)
+    joined = " ".join(lines)
+    assert must_say in joined, f"expected {must_say!r} in output, got: {lines}"
+
+
+def test_an_unaskable_hook_count_is_none_not_zero(drv, monkeypatch):
+    monkeypatch.setattr(drv.urllib.request, "urlopen",
+                        lambda *a, **k: (_ for _ in ()).throw(OSError("down")))
+    assert drv._ci_hook_count(
+        {"name": "gitea", "token": "t", "domain": "d.invalid",
+         "owner": "o", "repo": "n"}) is None
+
+
 def test_it_never_merges_and_never_pushes_a_base_branch(drv, monkeypatch,
                                                         ready_row, wired):
     rec = Recorder()
