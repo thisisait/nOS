@@ -1689,7 +1689,7 @@ gitea_allow_only_external_registration: true
 gitlab_domain: "gitlab{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 gitlab_http_port: 8929          # Internal HTTP port (nginx handles SSL, forwards here)
 gitlab_ssh_port: 2224           # Git SSH (22=system, 2222=Gitea → Gitlab on 2224)
-gitlab_version: "18.11.7-ce.0"  # REM-111: Jun-24-2026 GitLab security release version-flagged 18.10.8; 18.11 patch line
+gitlab_version: "18.11.9-ce.0"  # REM-159: 18.11.8 was withdrawn upstream; 18.11.9 is the terminal 18.11.x build
 gitlab_timezone: "Europe/Prague"
 gitlab_signup_enabled: false    # Disables registration of new users
 gitlab_puma_workers: 2          # Worker processes (min 2, with 36 GB feel free to use 4)
