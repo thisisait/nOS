@@ -36,9 +36,50 @@ ledger's whole design is that those verbs live on separate classes with separate
 capabilities (`files/anatomy/bone/ledger.py`, `open_ledger(role)`); a reporter
 that could also write would collapse the split its own report depends on.
 
+THE EXIT HALF (`--awaiting`, added 2026-08-19). The paragraphs above are about
+what enters the loop. Nothing was reading what leaves it, and the cost was
+measured the day this was written:
+
+    Two proposals passed every judge on 2026-08-16 — `rem:REM-204` (wordpress
+    7.0.2 → 7.0.4) and `rem:REM-159` (gitlab 18.11.7 → 18.11.9). Three days
+    later neither patch was in the tree, both queue rows still read `pending`,
+    and no reader said so. `loop-status` reported "1p/7f" and "2p/0f/1i" — both
+    true, and both silent about the only fact worth acting on.
+
+Not applying is by DESIGN — docs/idea/11-agentic-loop-contract.md §7 non-goal 5
+says application is an operator act or a forge MR, and nothing merges on a green
+verdict. What was not designed is that the waiting had no surface. That is `docs/hidden_fees/08` one
+storey up: absence reading as success. A green verdict nobody can see is
+indistinguishable from no verdict at all.
+
+AND A VERDICT DECAYS. Both verdicts were sealed against a `tree_sha` whose
+`default.config.yml` has since changed. The judges ruled on a tree that no
+longer exists, so applying either patch to HEAD today would be an act no judge
+has blessed. `--awaiting` reports that as its own state rather than folding it
+into "ready" — the whole point of the ledger is that a verdict names the tree it
+covers, and a reader that drops the tree hands back the claim the ledger exists
+to replace.
+
+HOW THE STATE IS DERIVED — git decides, not a regex. Each state comes from
+`git apply --check` against the working tree, forward and reversed, which is the
+only oracle that cannot disagree with what would actually happen:
+
+    landed     the reverse patch applies    → the change is in the tree
+    ready      the patch applies, and no target path moved since the verdict
+    re-judge   the patch applies, but a target path moved → the verdict is on
+               another tree; a judge must rule on THIS one before it can land
+    conflict   git parsed it and it fits neither way — the tree moved under it
+    unusable   git cannot parse the patch at all (measured: proposal 074dec8a
+               is a corrupt hunk the ledger accepted; it drew `indeterminate`,
+               correctly, and would have been reported as a mere mismatch by any
+               reader that only asked "does it apply?")
+    no-diff    the row carries no patch (the 2026-08-02 fixtures)
+
 Usage:
     tools/loop-status.py              # sources, proposals, verdicts
     tools/loop-status.py --unresolved # only ids that no longer join
+    tools/loop-status.py --gap        # weaknesses nobody has proposed against
+    tools/loop-status.py --awaiting   # passed verdicts and what became of them
     tools/loop-status.py --json
 
 Exit 0 always. This reports; it does not judge.
@@ -50,9 +91,11 @@ import argparse
 import json
 import pathlib
 import sqlite3
+import subprocess
 import sys
 
 WING_DB = pathlib.Path.home() / "wing" / "app" / "data" / "wing.db"
+REPO = pathlib.Path(__file__).resolve().parents[1]
 
 #: Weakness-id prefixes the reader emits, with what each one watches. Keep in
 #: step with `files/anatomy/bone/weaknesses.py` SOURCE_ORDER — a prefix missing
@@ -152,6 +195,175 @@ def _live_weakness_ids() -> tuple[set[str], str | None]:
         _sys.path.remove(str(bone))
 
 
+def _git(*argv: str, stdin: str | None = None) -> tuple[int, str]:
+    """Run git in the repo and hand back (rc, stderr). Never raises.
+
+    A reader that dies on a host without git would report nothing where it
+    should report UNKNOWN, so every failure path here funnels into a returncode
+    the caller can classify.
+    """
+    try:
+        done = subprocess.run(  # noqa: S603 — fixed argv, no shell
+            ["git", *argv], cwd=REPO, input=stdin, text=True,
+            capture_output=True, check=False,
+        )
+    except OSError as exc:
+        return 127, f"{type(exc).__name__}: {exc}"
+    return done.returncode, done.stderr.strip()
+
+
+def _apply_state(diff_text: str) -> tuple[str, str]:
+    """Ask git whether this patch is in the tree, fits it, or neither.
+
+    Returns (state, detail). The two probes are deliberately BOTH run: a patch
+    that neither applies nor reverse-applies is a conflict, and one that git
+    refuses to parse (rc 128) is a different defect with a different owner —
+    the proposer wrote something malformed, not something stale.
+    """
+    fwd_rc, fwd_err = _git("apply", "--check", "-", stdin=diff_text)
+    if fwd_rc == 127:
+        return "unknown", fwd_err
+    rev_rc, _ = _git("apply", "--check", "-R", "-", stdin=diff_text)
+    if rev_rc == 0:
+        return "landed", ""
+    if fwd_rc == 0:
+        return "applies", ""
+    if fwd_rc >= 128:
+        return "unusable", fwd_err.splitlines()[0] if fwd_err else "git could not parse the patch"
+    return "conflict", fwd_err.splitlines()[0] if fwd_err else ""
+
+
+def _paths_moved_since(tree_sha: str | None, paths: list[str]) -> tuple[list[str], str | None]:
+    """Which target paths changed between the judged tree and HEAD.
+
+    This is what makes a verdict transferable or not. `git diff --quiet A HEAD --
+    <path>` exits 1 when the path differs; anything else (an unknown sha, a
+    detached object) is reported as an inability to ask rather than as "no
+    drift", because a silent "no drift" is how a stale verdict would read as
+    fresh.
+    """
+    if not tree_sha:
+        return [], "the proposal records no tree_sha"
+    rc, err = _git("cat-file", "-e", f"{tree_sha}^{{commit}}")
+    if rc != 0:
+        return [], f"the judged tree {tree_sha[:8]} is not in this clone"
+    moved = []
+    for path in paths:
+        rc, err = _git("diff", "--quiet", tree_sha, "HEAD", "--", path)
+        if rc == 1:
+            moved.append(path)
+        elif rc != 0:
+            return [], f"cannot compare {path}: {err or f'git exited {rc}'}"
+    return moved, None
+
+
+def _dirty(paths: list[str]) -> list[str]:
+    """Target paths with uncommitted edits — the apply probe ran against these."""
+    rc, _ = _git("rev-parse", "--git-dir")
+    if rc != 0:
+        return []
+    out = []
+    for path in paths:
+        rc, _ = _git("diff", "--quiet", "--", path)
+        if rc == 1:
+            out.append(path)
+    return out
+
+
+def awaiting() -> dict:
+    """Every proposal a judge passed, and what became of it.
+
+    Only `pass` rows. A failed proposal waiting for nothing is not a queue, and
+    an `indeterminate` one is the loop correctly declining to answer — neither
+    is an item on anybody's desk. A passed one that has not landed IS.
+    """
+    conn = _connect()
+    if conn is None:
+        return {"error": f"no ledger at {WING_DB}", "rows": []}
+
+    with conn:
+        rows = [dict(r) for r in conn.execute(
+            """
+            SELECT p.uuid, p.weakness_id, p.intent_class, p.proposer_id,
+                   p.target_paths, p.tree_sha, p.diff_text,
+                   v.result AS verdict, v.created_at AS verdict_at
+              FROM loop_proposals p
+              JOIN loop_verdicts v ON v.proposal_id = p.id
+             WHERE v.result = 'pass'
+             ORDER BY v.created_at
+            """
+        )]
+        # A verdict can be sealed with no proposal attached — `POST /loop/judge`
+        # takes an optional `proposal_uuid`, so a bare gate-set run against the
+        # working tree seals a real row with `proposal_id IS NULL`. The JOIN
+        # above drops those, which is right (there is no patch to apply) and
+        # would be dishonest to leave uncounted: a header reading "4 passed"
+        # when the chain holds 6 is the same shape of quiet arithmetic this
+        # whole file exists to complain about.
+        bare = conn.execute(
+            "SELECT COUNT(*) FROM loop_verdicts "
+            " WHERE result = 'pass' AND proposal_id IS NULL"
+        ).fetchone()[0]
+    conn.close()
+
+    out = []
+    for row in rows:
+        try:
+            paths = json.loads(row["target_paths"] or "[]")
+        except (TypeError, ValueError):
+            paths = []
+        diff = row["diff_text"]
+        if not diff:
+            state, detail = "no-diff", "the ledger row carries no patch"
+            moved, drift_error = [], None
+        else:
+            state, detail = _apply_state(diff)
+            moved, drift_error = _paths_moved_since(row["tree_sha"], paths)
+            # Only a patch that still applies can be described as ready or not;
+            # for the other states the drift is not the operative fact.
+            if state == "applies":
+                if drift_error:
+                    state = "re-judge"
+                    detail = drift_error
+                elif moved:
+                    state = "re-judge"
+                    detail = f"{', '.join(moved)} changed since the judged tree"
+                else:
+                    state = "ready"
+        out.append({
+            "uuid": row["uuid"],
+            "weakness_id": row["weakness_id"],
+            "intent_class": row["intent_class"],
+            "proposer_id": row["proposer_id"],
+            "verdict_at": row["verdict_at"],
+            "tree_sha": row["tree_sha"],
+            "target_paths": paths,
+            "state": state,
+            "detail": detail,
+            "moved_paths": moved,
+            "dirty_paths": _dirty(paths),
+        })
+
+    head_rc, _ = _git("rev-parse", "HEAD")
+    return {
+        "rows": out,
+        "head": None if head_rc != 0 else _git_head(),
+        "unlanded": [r for r in out if r["state"] in ("ready", "re-judge")],
+        "passed_without_proposal": bare,
+    }
+
+
+def _git_head() -> str | None:
+    try:
+        done = subprocess.run(  # noqa: S603
+            ["git", "rev-parse", "HEAD"], cwd=REPO, text=True,
+            capture_output=True, check=False,
+        )
+    except OSError:
+        return None
+    return done.stdout.strip() or None
+
+
 def collect() -> dict:
     conn = _connect()
     if conn is None:
@@ -212,6 +424,67 @@ def collect() -> dict:
     }
 
 
+#: What each state means for the reader, in the words they need to act on. The
+#: order is the order to act in — a ready patch is a minute's work, a conflicted
+#: one is a re-proposal.
+STATE_GLOSS = {
+    "ready": "applies to HEAD, and no target path moved since the judges ruled",
+    "re-judge": "still applies, but the judged tree is gone — no judge has ruled on THIS one",
+    "conflict": "the tree moved under the patch; it fits neither forward nor reversed",
+    "unusable": "git cannot parse the patch — the proposer wrote it malformed",
+    "landed": "the change is in the tree",
+    "no-diff": "the ledger row carries no patch",
+    "unknown": "could not ask git, so this is UNKNOWN and not 'landed'",
+}
+_STATE_ORDER = ["ready", "re-judge", "conflict", "unusable", "unknown", "no-diff", "landed"]
+
+
+def _print_awaiting(report: dict, *, as_json: bool) -> int:
+    if as_json:
+        json.dump(report, sys.stdout, indent=2, sort_keys=True, default=str)
+        sys.stdout.write("\n")
+        return 0
+
+    if report.get("error"):
+        print(report["error"])
+        return 0
+
+    rows = report["rows"]
+    if not rows:
+        print("no proposal has ever been passed by the judges")
+        return 0
+
+    pending = report["unlanded"]
+    print(f"{len(rows)} passed verdict(s) against a proposal; "
+          f"{len(pending)} have not reached the tree")
+    bare = report.get("passed_without_proposal") or 0
+    if bare:
+        print(f"  (+{bare} passed with no proposal attached — bare gate-set runs, "
+              f"nothing to apply)")
+    if report.get("head"):
+        print(f"  measured against HEAD {report['head'][:8]} by `git apply --check`\n")
+
+    rows = sorted(rows, key=lambda r: (_STATE_ORDER.index(r["state"])
+                                       if r["state"] in _STATE_ORDER else 99,
+                                       str(r["verdict_at"])))
+    for row in rows:
+        print(f"  {row['state']:<9} {row['weakness_id']:<20} {row['uuid'][:8]}  "
+              f"{row['intent_class']}  by {row['proposer_id']}")
+        gloss = STATE_GLOSS.get(row["state"], "")
+        print(f"      {gloss}")
+        if row["detail"] and row["detail"] != gloss:
+            print(f"      {row['detail']}")
+        if row["dirty_paths"]:
+            print(f"      NOTE uncommitted edits in {', '.join(row['dirty_paths'])} — "
+                  f"the probe ran against the tree as it stands")
+    if pending:
+        print("\n  Nothing lands on a green verdict by design: application is an"
+              "\n  operator act or a forge MR. This is the list that act works "
+              "from."
+              "\n  (docs/idea/11-agentic-loop-contract.md §7 non-goal 5)")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--json", action="store_true")
@@ -219,7 +492,12 @@ def main() -> int:
                     help="only weakness ids that no longer join to a source")
     ap.add_argument("--gap", action="store_true",
                     help="reported weaknesses that no proposal has ever cited")
+    ap.add_argument("--awaiting", action="store_true",
+                    help="passed verdicts and whether the patch reached the tree")
     args = ap.parse_args()
+
+    if args.awaiting:
+        return _print_awaiting(awaiting(), as_json=args.json)
 
     report = collect()
 

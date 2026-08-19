@@ -274,6 +274,46 @@ def backups() -> dict | None:
     }
 
 
+def stalled_verdicts() -> dict | None:
+    """Passed loop verdicts whose patch never reached the tree.
+
+    Added 2026-08-19, after two proposals passed every judge on 08-16 and sat
+    for three days with both queue rows still `pending` and nothing saying so.
+    The loop not applying is by design (docs/idea/11-agentic-loop-contract.md
+    §7 non-goal 5); the waiting being invisible is not, and invisible waiting is
+    exactly the state this file was written to end.
+
+    Delegates to `tools/loop-status.py::awaiting()` rather than re-deriving the
+    join — a second implementation of "is this patch in the tree" is a second
+    thing to be wrong. Returns None when that reader cannot load, so the caller
+    reports UNKNOWN instead of green.
+    """
+    sys.path.insert(0, str(REPO / "tools"))
+    try:
+        import importlib.util  # noqa: PLC0415
+
+        spec = importlib.util.spec_from_file_location(
+            "_loop_status", REPO / "tools" / "loop-status.py")
+        if spec is None or spec.loader is None:
+            return None
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        report = mod.awaiting()
+        if report.get("error"):
+            return None
+        return {
+            "unlanded": [
+                {"weakness_id": r["weakness_id"], "state": r["state"],
+                 "uuid": r["uuid"][:8], "verdict_at": r["verdict_at"]}
+                for r in report.get("unlanded", [])
+            ],
+        }
+    except Exception:  # noqa: BLE001 — any failure is the same answer: cannot ask
+        return None
+    finally:
+        sys.path.remove(str(REPO / "tools"))
+
+
 def collect() -> dict:
     report: dict = {"generated_at": _now().isoformat(), "sources_read": [], "sources_missing": []}
     conn = _connect()
@@ -291,6 +331,7 @@ def collect() -> dict:
     for label, path, fn in (
         ("security_scan", SCAN_STATE, security_scan),
         ("backups", BACKUP_STATUS, backups),
+        ("loop_verdicts", REPO / "tools" / "loop-status.py", stalled_verdicts),
     ):
         value = fn()
         if value is None:
@@ -336,6 +377,14 @@ def reds(report: dict) -> list[str]:
         out.append(
             f"{job['job']} was due {job['due_at']} and did not fire "
             f"(overdue {job['overdue_by']}, schedule `{job['schedule']}`)"
+        )
+    loop = report.get("loop_verdicts") or {}
+    if loop.get("unlanded"):
+        rows = loop["unlanded"]
+        named = ", ".join(f"{r['weakness_id']} [{r['state']}]" for r in rows[:4])
+        out.append(
+            f"{len(rows)} loop proposal(s) passed the judges and never reached "
+            f"the tree: {named}"
         )
     inbox = report.get("inbox") or {}
     if inbox.get("critical_or_high"):
