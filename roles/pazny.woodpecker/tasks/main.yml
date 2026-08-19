@@ -19,6 +19,9 @@
     mode: '0755'
   loop:
     - "{{ woodpecker_data_dir }}"
+    # agent.conf home — the agent persists its server-issued identity here so
+    # a container recreate reuses the same agent row (see compose.yml.j2).
+    - "{{ woodpecker_data_dir }}/agent"
     - "{{ ansible_facts['env']['HOME'] }}/agents/log"
 
 # Linux routes via Traefik; host-nginx per-service vhosts are macOS-only.

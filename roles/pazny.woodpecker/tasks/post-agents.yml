@@ -1,0 +1,82 @@
+---
+# ==============================================================================
+# pazny.woodpecker/tasks/post-agents.yml — sweep orphan agent rows
+#
+# SYMPTOM (measured 2026-08-19): the server held 4 agent rows for 1 running
+# container. The agent's identity file (/etc/woodpecker/agent.conf) was not
+# persisted, so every container recreate re-registered under the system token
+# and minted a new row; the server believed it had 4x the capacity it had.
+# compose.yml.j2 now persists the identity; this task reconciles the rows the
+# old behaviour already orphaned — and any future ones, idempotently.
+#
+# SAFETY CONTRACT (pinned by test_the_agent_identity_survives_recreate.py):
+#   • DELETE fires only for rows whose `created` AND `last_contact` are BOTH
+#     older than woodpecker_agent_stale_after_s (default 1h). A live agent
+#     pings every few seconds; a just-registering agent has a fresh `created`.
+#     Neither can be swept.
+#   • Gated on woodpecker_api_token — an admin PAT the operator mints in the
+#     Woodpecker UI (OAuth-derived, human-minted; a blank does NOT restore
+#     it). Without the token this file does nothing and says so.
+#   • The sweep is a deliberate writer, not a reader — it runs only inside a
+#     converge, never from a status tool (red-status/loop-status stay readers).
+# ==============================================================================
+
+- name: "[pazny.woodpecker Post] Agent-row sweep skipped (no woodpecker_api_token)"
+  ansible.builtin.debug:
+    msg: >-
+      woodpecker_api_token is empty — orphan agent rows (if any) stay. Mint an
+      admin PAT in the Woodpecker UI (user menu -> API token) into config.yml
+      to enable the sweep.
+  when: (woodpecker_api_token | default('')) | length == 0
+
+- name: "[pazny.woodpecker Post] Reconcile orphan agent rows"
+  when: (woodpecker_api_token | default('')) | length > 0
+  block:
+    - name: "[pazny.woodpecker Post] Read registered agents"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ woodpecker_port | default(8060) }}/api/agents?perPage=100"
+        headers:
+          Authorization: "Bearer {{ woodpecker_api_token }}"
+        return_content: true
+        status_code: [200]
+      register: _wp_agent_rows
+      failed_when: false
+
+    - name: "[pazny.woodpecker Post] Agent list unreadable — report, do not guess"
+      ansible.builtin.debug:
+        msg: >-
+          GET /api/agents answered {{ _wp_agent_rows.status | default('no
+          response') }} — the agent roster is UNKNOWN this run, nothing is
+          swept.
+      when: _wp_agent_rows.status | default(0) != 200
+
+    - name: "[pazny.woodpecker Post] Delete agent rows stale for over {{ woodpecker_agent_stale_after_s }}s"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ woodpecker_port | default(8060) }}/api/agents/{{ item.id }}"
+        method: DELETE
+        headers:
+          Authorization: "Bearer {{ woodpecker_api_token }}"
+        status_code: [200, 204]
+      loop: "{{ _wp_agent_rows.json | default([], true) }}"
+      loop_control:
+        label: "agent id={{ item.id }} name={{ item.name | default('?') }} last_contact={{ item.last_contact | default(0) }}"
+      when:
+        - _wp_agent_rows.status | default(0) == 200
+        # BOTH stamps must be stale: last_contact guards the live agent,
+        # created guards a row that registered seconds ago and has not
+        # contacted yet. Timestamps are unix epoch seconds.
+        - (item.last_contact | default(0) | int) < (_wp_sweep_now | int - (woodpecker_agent_stale_after_s | default(3600) | int))
+        - (item.created | default(0) | int) < (_wp_sweep_now | int - (woodpecker_agent_stale_after_s | default(3600) | int))
+      vars:
+        _wp_sweep_now: "{{ ansible_facts['date_time']['epoch'] }}"
+      changed_when: true
+      register: _wp_swept
+
+    - name: "[pazny.woodpecker Post] Agent-row sweep summary"
+      ansible.builtin.debug:
+        msg: >-
+          {{ _wp_swept.results | default([]) | selectattr('changed', 'defined')
+          | selectattr('changed') | list | length }} orphan agent row(s)
+          removed of {{ _wp_agent_rows.json | default([], true) | length }}
+          registered.
+      when: _wp_agent_rows.status | default(0) == 200

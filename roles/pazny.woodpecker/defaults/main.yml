@@ -16,6 +16,15 @@ woodpecker_port: 8060                   # Web UI
 woodpecker_grpc_port: 9060              # gRPC pro agenty (interni)
 woodpecker_open_registration: false
 woodpecker_max_workflows: 4             # Max paralelnich pipeline runu na agenta
+
+# ── Stable agent identity (2026-08-19) ──────────────────────────────────
+# Display name of the compose-managed agent (WOODPECKER_HOSTNAME). The
+# server-issued agent ID persists in {{ woodpecker_data_dir }}/agent/.
+woodpecker_agent_hostname: "nos-woodpecker-agent"
+# tasks/post-agents.yml deletes agent rows whose registration AND last
+# contact are both older than this many seconds. The live agent pings every
+# few seconds; an hour of silence is an orphan, not a busy runner.
+woodpecker_agent_stale_after_s: 3600
 woodpecker_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 woodpecker_agent_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 

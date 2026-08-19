@@ -76,9 +76,23 @@ services:
       - woodpecker-server
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      # ── Stable agent identity (2026-08-19) ──────────────────────────────
+      # On first connect the agent registers via WOODPECKER_AGENT_SECRET and
+      # the server hands back an agent ID, which the agent persists to
+      # /etc/woodpecker/agent.conf. Without this mount the ID dies with the
+      # container: every `compose up --force-recreate` re-registered a NEW
+      # agent row and orphaned the old one (measured 2026-08-19: 4 server
+      # rows, 1 running container, 3 phantom rows x capacity 4 = 12 slots
+      # that do not exist). Persisting the conf makes the identity survive
+      # recreate; tasks/post-agents.yml sweeps the rows already orphaned.
+      - {{ woodpecker_data_dir }}/agent:/etc/woodpecker
     environment:
       WOODPECKER_SERVER: "woodpecker-server:9000"
       WOODPECKER_AGENT_SECRET: "{{ woodpecker_agent_secret | default(global_password_prefix + '_pw_woodpecker') }}"
+      # Display name. Defaults to the container hostname = the Docker ID,
+      # which changes on every recreate and reads as a different machine in
+      # the server UI. A declared name makes the agent list legible.
+      WOODPECKER_HOSTNAME: "{{ woodpecker_agent_hostname | default('nos-woodpecker-agent') }}"
       WOODPECKER_MAX_WORKFLOWS: "{{ woodpecker_max_workflows | default(4) }}"
       WOODPECKER_BACKEND: docker
     networks:
