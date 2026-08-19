@@ -121,6 +121,59 @@ instance_tld: "{{ tenant_domain }}"
 
 default_admin_email: "admin@{{ tenant_domain | default('dev.local') }}"  # Fallback admin email for all services
 
+# ==============================================================================
+# DECLARED IDENTITIES — the estate's account roster (2026-08-19)
+#
+# Until now no file said WHO exists: gitea_admin_user derived from the OS
+# username, WOODPECKER_ADMIN inherited that, and akadmin lived only inside an
+# Authentik blueprint. The day the operator signed into Woodpecker as
+# `akadmin` while the list said `pazny`, "The registration is closed" was the
+# error message for an identity model that existed in four places and was
+# declared in none. This registry is the single roster; per-realm consumer
+# vars (gitea_admin_user, woodpecker_admin) DERIVE from it.
+#
+# Scope: HUMAN + service ACCOUNTS only. Machine identities keep their own
+# channel rosters — `authentik_agent_clients` (OIDC client_credentials) and
+# Bone's loopauth.IDENTITIES (loop token scopes) — because re-typing a roster
+# is how drift starts. `tools/identity-status.py` reads all three and checks
+# them against the realms; doctrine: docs/doctrine/identity.md.
+#
+# Fields: name (account username), kind (operator|user|service|agent),
+# tier (RBAC 1-4, see authentik_rbac_tiers), email, realms (where the
+# account must exist: authentik|gitea|gitlab|woodpecker|wing).
+# ==============================================================================
+
+# The local forge/OS-side admin. TODAY this defaults to the OS username so a
+# converge is byte-identical with the pre-registry estate. The TARGET model
+# (docs/doctrine/identity.md §5) makes akadmin the primary admin everywhere
+# and demotes this account to kind:user — that flip is an operator act with a
+# written runbook, never a silent default change.
+nos_primary_admin: "{{ ansible_facts['user_id'] }}"
+
+nos_identities:
+  # The SSO root. Seeded by the Authentik blueprint (00-admin-groups.yaml.j2)
+  # on every blank; listed in the Woodpecker admin allowlist so an SSO login
+  # as akadmin is never refused again (the 2026-08-19 incident).
+  - name: akadmin
+    kind: operator
+    tier: 1
+    email: "{{ default_admin_email }}"
+    realms: [authentik, woodpecker]
+  # The local Gitea admin (created by `gitea admin user create` in
+  # roles/pazny.gitea/tasks/post.yml) and historical Woodpecker admin.
+  - name: "{{ nos_primary_admin }}"
+    kind: operator
+    tier: 1
+    email: "{{ default_admin_email }}"
+    realms: [gitea, woodpecker]
+  # The ephemeral E2E tester (docs/e2e-tester-identity.md) — a service
+  # account a human never uses interactively.
+  - name: "{{ nos_tester_username | default('nos-tester') }}"
+    kind: service
+    tier: 1
+    email: "tester@{{ tenant_domain | default('dev.local') }}"
+    realms: [authentik]
+
 # ── TLD class detection (drives mkcert vs ACME, dnsmasq vs real DNS) ─────────
 # tenant_domain_is_local: true  → use mkcert + dnsmasq + /etc/resolver (dev mode)
 #                        false → use ACME (Let's Encrypt) + public DNS (prod mode)
@@ -1669,7 +1722,10 @@ n8n_admin_lastname: "nOS"
 gitea_domain: "git{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 gitea_port: 3003         # 3000=Grafana, 3001=Uptime Kuma, 3002=reserve → Gitea on 3003
 gitea_ssh_port: 2222
-gitea_admin_user: "{{ ansible_facts['user_id'] }}"
+# Derives from the declared-identities registry (nos_primary_admin, top of
+# this file) — never directly from the OS username. The registry is the one
+# place that says who the local forge admin IS.
+gitea_admin_user: "{{ nos_primary_admin }}"
 gitea_admin_password: "{{ global_password_prefix }}_pw_gitea"
 gitea_admin_email: ""                          # FILL IN!
 gitea_secret_key: "{{ global_password_prefix }}_pw_gitea_secret"
@@ -1759,13 +1815,20 @@ woodpecker_wing_deploy_url: "http://host.docker.internal:{{ wing_port | default(
 gitea_webhook_allowed_hosts: "{{ woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
 woodpecker_open_registration: false  # true = anyone can log in via Gitea
 # Comma-separated Gitea usernames Woodpecker auto-creates AND grants admin to,
-# bypassing open_registration=false. Declared here rather than living only in
-# the template's `| default(...)`: with registration closed this is the ONLY
-# list that can log in at all, so an operator who signs in under a different
-# SSO identity than gitea_admin_user meets "The registration is closed" with
-# nothing in default.config.yml to tell them which knob decides it (measured
-# 2026-08-19 — the operator arrived as `akadmin`, the list said `pazny`).
-woodpecker_admin: "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
+# bypassing open_registration=false. With registration closed this is the ONLY
+# list that can log in at all. It is DERIVED from the declared-identities
+# registry (every nos_identities entry whose realms include `woodpecker`), so
+# the incident of 2026-08-19 — the operator arrived as `akadmin`, the list
+# said `pazny` — cannot recur: both operators are in the registry, so both are
+# in this list. Add an identity to the registry, not a name to this string.
+woodpecker_admin: >-
+  {%- set _wp_names = [] -%}
+  {%- for _i in nos_identities | default([]) -%}
+  {%- if 'woodpecker' in (_i.realms | default([])) -%}
+  {%- set _ = _wp_names.append(_i.name) -%}
+  {%- endif -%}
+  {%- endfor -%}
+  {{ _wp_names | join(',') }}
 woodpecker_max_workflows: 4      # Max parallel pipeline runs per agent
 # REM-002 hardening — see roles/pazny.woodpecker/templates/compose.yml.j2 for
 # the full vessel block. Operators with vetted plugins can override

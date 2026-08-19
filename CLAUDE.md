@@ -35,6 +35,7 @@ tools/red-status.py             # what is red RIGHT NOW, across every source
 tools/agent-status.py           # what the agents did, and how the runs ended
 tools/loop-status.py            # which weakness sources produce proposals
 tools/cortex-drift.py           # the vendored organ vs ~/keap/src
+tools/identity-status.py        # declared account roster vs what each realm holds
 tools/nos-cc.sh                 # all of the above, live, in one tmux session
 ```
 

@@ -115,7 +115,15 @@ def _defined_before_core_up() -> set[str]:
 
 def _head_refs(path: pathlib.Path) -> dict[str, tuple[int, int]]:
     refs: dict[str, tuple[int, int]] = {}
-    for ln, line in enumerate(path.read_text().splitlines(), 1):
+    text = path.read_text()
+    # Names bound by `{% set x = … %}` / `{% for x in … %}` INSIDE the file are
+    # template locals — Jinja core statements resolve them during the eager
+    # `{{ vars }}` finalize (test_an_identity_is_declared_not_inherited.py
+    # renders the woodpecker_admin derivation under plain jinja2.Environment as
+    # proof). `set` itself is the statement keyword, not a reference.
+    locals_bound = set(re.findall(r"\{%-?\s*(?:set|for)\s+([a-z_]\w*)", text))
+    locals_bound.add("set")
+    for ln, line in enumerate(text.splitlines(), 1):
         for expr in re.findall(r"\{\{(.*?)\}\}", line) + re.findall(r"\{%(.*?)%\}", line):
             s = re.sub(r"'(?:[^'\\]|\\.)*'", "''", expr)
             s = re.sub(r'"(?:[^"\\]|\\.)*"', '""', s)
@@ -124,6 +132,8 @@ def _head_refs(path: pathlib.Path) -> dict[str, tuple[int, int]]:
                 rest = s[m.end():].lstrip()
                 # skip filter/function/method names and kwargs (`foo(` / `foo=`)
                 if rest.startswith("(") or rest.startswith("="):
+                    continue
+                if ident in locals_bound:
                     continue
                 cnt, _ = refs.get(ident, (0, ln))
                 refs[ident] = (cnt + 1, refs.get(ident, (0, ln))[1])
