@@ -132,6 +132,20 @@ def _source_of(weakness_id: str) -> str:
     return weakness_id.split(":", 1)[0] if ":" in weakness_id else weakness_id
 
 
+def _is_placeholder(weakness_id: str) -> bool:
+    """A colon-less id is one NO source in `weaknesses.py` SOURCE_ORDER can
+    emit — every real detector prefixes (`rem:`, `fee:`, `git:`, …), and the
+    ledger's §4 lookup now refuses an id it cannot resolve, so new ones cannot
+    be filed. The nine that exist (`w1`/`w2`, written 2026-08-02 by `agent:x`
+    while the ledger was being built) are HISTORY, not state: they stay in the
+    ledger and in `--json` untouched, but they answer no operator question, and
+    until 2026-08-19 they headed every surface that answers "is the loop
+    working" — 9 of 13 rows, `1p/7f` of `w1` above the only real work. The
+    readers segregate them; nothing deletes or rewrites them (fable review §4:
+    out of the way WITHOUT falsifying history)."""
+    return ":" not in weakness_id
+
+
 def live_weaknesses() -> tuple[list[dict], str | None]:
     """Every weakness reported RIGHT NOW, with what it says about itself.
 
@@ -375,10 +389,15 @@ def awaiting() -> dict:
         })
 
     head_rc, _ = _git("rev-parse", "HEAD")
+    real = [r for r in out if not _is_placeholder(r["weakness_id"])]
     return {
-        "rows": out,
+        "rows": real,
+        # Not dropped, MOVED: `--json` still carries every row, so history is
+        # intact — they just no longer sit above the real work (see
+        # `_is_placeholder` for the measurement that forced this).
+        "fixture_rows": [r for r in out if _is_placeholder(r["weakness_id"])],
         "head": None if head_rc != 0 else _git_head(),
-        "unlanded": [r for r in out if r["state"] in ("ready", "re-judge")],
+        "unlanded": [r for r in real if r["state"] in ("ready", "re-judge")],
         "passed_without_proposal": bare,
     }
 
@@ -444,10 +463,24 @@ def collect() -> dict:
         {_source_of(w) for w in live} - set(by_source)
     ) if resolve_error is None else []
 
+    # A source bucket's NAME is always colon-less (`_source_of` strips it), so
+    # the placeholder test runs on the ids inside — and a bucket can only ever
+    # hold one kind, because placeholders bucket under their own full id.
+    real = [s for s in by_source.values()
+            if not all(_is_placeholder(w) for w in s["weaknesses"])]
+    fixture = [s for s in by_source.values()
+               if all(_is_placeholder(w) for w in s["weaknesses"])]
     return {
         "ledger": str(WING_DB),
-        "proposals": len(proposals),
-        "sources": sorted(by_source.values(), key=lambda s: -s["proposals"]),
+        # The headline counts REAL work. It read "13 proposal(s)" while 9 were
+        # the 2026-08-02 build-time fixtures (`w1`/`w2` by `agent:x`), so the
+        # only surface answering "is the loop working" led with rows no source
+        # can emit (fable review §4). The fixtures stay in the ledger and in
+        # this report — under their own key, below the work.
+        "proposals": sum(s["proposals"] for s in real),
+        "fixture_proposals": sum(s["proposals"] for s in fixture),
+        "sources": sorted(real, key=lambda s: -s["proposals"]),
+        "fixture_sources": sorted(fixture, key=lambda s: -s["proposals"]),
         "sources_with_no_proposal": silent,
         "live_weakness_count": len(live),
         "resolve_error": resolve_error,
@@ -480,8 +513,11 @@ def _print_awaiting(report: dict, *, as_json: bool) -> int:
         return 0
 
     rows = report["rows"]
+    fixtures = report.get("fixture_rows") or []
     if not rows:
-        print("no proposal has ever been passed by the judges")
+        print("no proposal has ever been passed by the judges"
+              + (f" (excluding {len(fixtures)} build-time fixture row(s); "
+                 f"--json shows them)" if fixtures else ""))
         return 0
 
     pending = report["unlanded"]
@@ -507,6 +543,11 @@ def _print_awaiting(report: dict, *, as_json: bool) -> int:
         if row["dirty_paths"]:
             print(f"      NOTE uncommitted edits in {', '.join(row['dirty_paths'])} — "
                   f"the probe ran against the tree as it stands")
+    if fixtures:
+        ids = sorted({r["weakness_id"] for r in fixtures})
+        print(f"\n  ({len(fixtures)} build-time fixture row(s) — placeholder ids "
+              f"{', '.join(ids)} no source can emit; kept in the ledger and in "
+              f"--json, kept out of the tallies above)")
     if pending:
         print("\n  Nothing lands on a green verdict by design: application is an"
               "\n  operator act or a forge MR. This is the list that act works "
@@ -569,7 +610,9 @@ def main() -> int:
         return 0
 
     if args.unresolved:
-        rows = [(s["source"], wid) for s in report["sources"] for wid in s["unresolved_ids"]]
+        rows = [(s["source"], wid)
+                for s in report["sources"] + report.get("fixture_sources", [])
+                for wid in s["unresolved_ids"]]
         if report["resolve_error"]:
             print(f"cannot resolve — the weakness reader did not load: {report['resolve_error']}")
             print("  no id is reported as unresolvable; that would be a guess.")
@@ -583,6 +626,11 @@ def main() -> int:
         return 0
 
     print(f"{report['proposals']} proposal(s) in {report['ledger']}")
+    if report.get("fixture_proposals"):
+        ids = sorted({w for s in report["fixture_sources"] for w in s["weaknesses"]})
+        print(f"  (+{report['fixture_proposals']} build-time fixture row(s) — "
+              f"placeholder ids {', '.join(ids)} no source can emit; kept in "
+              f"the ledger and in --json, kept out of the tallies)")
     if report["resolve_error"]:
         print(f"  weakness reader unavailable ({report['resolve_error']}) — "
               "join column omitted rather than guessed")
