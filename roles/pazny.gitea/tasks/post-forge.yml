@@ -110,9 +110,47 @@
   ansible.builtin.set_fact:
     _forge_token_exists: "{{ (_forge_tokens.json | default([]) | selectattr('name', 'equalto', gitea_agent_forge_token_name) | list | length) > 0 }}"
 
-# Reuse the persisted token when it BOTH exists in Gitea AND we still hold its
-# value (loaded from ~/.nos/secrets.yml). Otherwise (fresh Gitea after blank, or
-# the value was lost) regenerate: delete the stale same-name token, then create.
+# HOLDING a token is not the same as holding a WORKING one, and this role could
+# not tell the difference until 2026-08-19. Measured that day: the Gitea
+# container had been recreated, every persisted token was dead, and the value in
+# ~/.nos/secrets.yml was still a non-empty string — so the length check below
+# read "we have it" and took the reuse path. A full converge of the gitea tag
+# reported failed=0 and changed nothing, twice, while every agent tool that
+# needed the forge got 401. The playbook cannot repair what it does not probe.
+#
+# So: ask Gitea. `GET /user` with the held token is the cheapest question that
+# distinguishes a live credential from a string. 401 is the answer that matters;
+# an unreachable Gitea is NOT treated as invalid, because regenerating on a
+# transient network failure would revoke a working token for no reason.
+# The endpoint must be one the token's SCOPES allow. `write:repository` cannot
+# read /api/v1/user — a healthy token answers 401 there, so probing it would
+# revoke and remint on every single converge. Caught before shipping by asking
+# a freshly minted token both questions: /user 401, /repos/<owner>/<repo> 200.
+- name: "[pazny.gitea Forge] Probe whether the held token still authenticates"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/repos/{{ gitea_nos_repo_owner }}/{{ gitea_nos_repo_name }}"
+    method: GET
+    headers:
+      Authorization: "token {{ gitea_api_token }}"
+    status_code: [200, 401, 403]
+  register: _forge_token_probe
+  when: (gitea_api_token | default('') | length) > 0
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+- name: "[pazny.gitea Forge] Resolve whether the held token is usable"
+  ansible.builtin.set_fact:
+    # Absent value → not usable. Probe skipped or unreachable → assume usable
+    # (fail SAFE: never revoke on a question we could not ask).
+    _forge_token_usable: >-
+      {{ (gitea_api_token | default('') | length) > 0
+         and (_forge_token_probe.status | default(200)) not in [401, 403] }}
+
+# Reuse the persisted token when it exists in Gitea AND we hold its value AND
+# that value still authenticates. Otherwise (fresh Gitea after a blank, a lost
+# value, or a recreated container that revoked it) regenerate: delete the stale
+# same-name token, then create.
 - name: "[pazny.gitea Forge] Delete stale same-name token (regenerate path)"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/users/{{ gitea_admin_user }}/tokens/{{ gitea_agent_forge_token_name }}"
@@ -122,7 +160,7 @@
     status_code: [204, 404]
   when:
     - _forge_token_exists | bool
-    - (gitea_api_token | default('') | length) == 0
+    - not (_forge_token_usable | bool)
   changed_when: true
   no_log: true
 
@@ -139,13 +177,21 @@
       scopes: "{{ gitea_agent_forge_token_scopes | default(['write:repository']) }}"
     status_code: [201]
   register: _forge_token_create
-  when: (not (_forge_token_exists | bool)) or ((gitea_api_token | default('') | length) == 0)
+  when: (not (_forge_token_exists | bool)) or (not (_forge_token_usable | bool))
+  # `uri` does not set `changed` on a POST, and the two tasks below were gated
+  # on exactly that. So this task minted a fresh token on EVERY converge and
+  # both the set_fact and the lineinfile were skipped every time — the value
+  # was created and dropped on the floor, for as long as this role has existed.
+  # The header's own note that the token "only survived because the #35
+  # wet-test wrote it out-of-band" was not history; it was the steady state.
+  # Measured 2026-08-19: probe 401, regenerate ran, secrets.yml unchanged.
+  changed_when: _forge_token_create.json.sha1 is defined
   no_log: true
 
 - name: "[pazny.gitea Forge] Load the new token into the run (set_fact)"
   ansible.builtin.set_fact:
     gitea_api_token: "{{ _forge_token_create.json.sha1 }}"
-  when: _forge_token_create.changed | default(false)
+  when: _forge_token_create.json.sha1 is defined
   no_log: true
 
 - name: "[pazny.gitea Forge] Persist the new token into ~/.nos/secrets.yml (in-role)"
@@ -160,7 +206,7 @@
     line: 'gitea_api_token: "{{ gitea_api_token }}"'
     create: true
     mode: '0600'
-  when: _forge_token_create.changed | default(false)
+  when: _forge_token_create.json.sha1 is defined
   no_log: true
 
 - name: "[pazny.gitea Forge] Status"
@@ -168,5 +214,5 @@
     msg: >-
       Gitea agent forge: repo {{ gitea_nos_repo_owner }}/{{ gitea_nos_repo_name }}
       {{ 'CREATED writable' if (_forge_repo.status == 404 or (_forge_repo_deleted.changed | default(false))) else 'present (writable)' }};
-      token {{ 'GENERATED + persisted to ~/.nos/secrets.yml' if (_forge_token_create.changed | default(false)) else 'reused' }}.
+      token {{ 'GENERATED + persisted to ~/.nos/secrets.yml' if (_forge_token_create.json.sha1 is defined) else 'reused (probed, still authenticates)' }}.
       Keep dev/master fresh from GitHub with tools/sync-trunk-to-gitea.sh.
