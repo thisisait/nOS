@@ -46,6 +46,17 @@ services:
       # too (admin-only), breaking the blank's zero-manual-signup goal; this
       # flag is the "external registration only" gate. Admin is API-provisioned.
       GITEA__service__ALLOW_ONLY_EXTERNAL_REGISTRATION: "{{ gitea_allow_only_external_registration | default(true) | string | lower }}"
+      # ── Webhook SSRF allow-list (2026-08-19) ────────────────────────────────
+      # Gitea refuses to let a webhook call a private address — a real SSRF
+      # control, and it is why the Woodpecker hook silently never fired:
+      #   deny 'ci.pazny.eu(192.168.1.64:443)'
+      # The CI host is reached through the public edge, whose A record points
+      # back at the LAN, so every hook delivery was denied while the hook itself
+      # showed active=true in the API. NARROWED, NOT DISABLED: this lists the
+      # exact CI host rather than `*` or `private`, so every other destination
+      # stays guarded. Adding a host here widens an SSRF boundary — do it for
+      # named services the estate operates, never as a blanket.
+      GITEA__webhook__ALLOWED_HOST_LIST: "{{ gitea_webhook_allowed_hosts | default(woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))) }}"
       GITEA__log__LEVEL: "Warn"
       # ── Prometheus metrics (Grafana observability epic) ────────────────────
       # Exposes /metrics with gitea_repositories / gitea_users /

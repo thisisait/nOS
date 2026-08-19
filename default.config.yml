@@ -1746,6 +1746,11 @@ woodpecker_version: "v3.17.0"           # REM-105: pin the floating v3 tag — C
 woodpecker_agent_secret: "{{ global_password_prefix }}_pw_woodpecker"
 woodpecker_gitea_client: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
 woodpecker_gitea_secret: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
+# Hosts Gitea webhooks may POST to. Gitea denies private addresses by default
+# (SSRF); the CI host resolves to the LAN through the public edge, so without
+# this every Woodpecker delivery is refused while the hook still reports
+# active=true. Comma-separated hostnames — never `*` or `private`.
+gitea_webhook_allowed_hosts: "{{ woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
 woodpecker_open_registration: false  # true = anyone can log in via Gitea
 # Comma-separated Gitea usernames Woodpecker auto-creates AND grants admin to,
 # bypassing open_registration=false. Declared here rather than living only in
