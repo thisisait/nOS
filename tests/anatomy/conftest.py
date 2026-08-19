@@ -17,3 +17,14 @@ _PULSE = os.path.join(_REPO, "files", "anatomy", "pulse")
 for _p in (_REPO, _PULSE, _HERE):
     if _p not in sys.path:
         sys.path.insert(0, _p)
+
+# The environment contract (2026-08-19): an environment that declares tools in
+# NOS_TEST_PROVIDES and lacks one ABORTS here, at import, before any test runs;
+# every skip is counted and printed as its own outcome in the terminal summary.
+# Pinned (failure branch exercised for real) by test_absence_is_counted.py.
+from _environment_contract import (  # noqa: E402
+    enforce_contract,
+    pytest_terminal_summary,  # noqa: F401 — re-exported pytest hook
+)
+
+enforce_contract()
