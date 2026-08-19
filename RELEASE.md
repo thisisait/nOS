@@ -2,7 +2,132 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.9-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.10-beta`.
+
+---
+
+## v0.11-beta (unreleased — drafted 2026-08-19)
+
+> **The estate closes a loop it cannot cheat.** ~500 commits since `v0.10-beta`,
+> and the through-line is a machine built so that no step in it can record its
+> own success: a weakness was detected by a scanner, proposed against by an
+> agent, judged by gates the proposer cannot touch, landed by a driver that
+> holds no propose scope, merged by a reviewer that asks three questions and
+> refuses on any non-answer — and whether the patch reached the tree is git's
+> answer, read back by a tool that cannot be told what to think. On 2026-08-19
+> that chain ran end to end for the first time, twice.
+
+### The agentic loop — from contract to two merged commits
+
+- **The engine** (`files/anatomy/bone/`): weakness reader over seven sources,
+  proposal ledger with WORM triggers and a hash chain, five judges with
+  `min_work` ratchets, three-valued verdicts (INDETERMINATE is an outcome, not
+  a maybe), a budget that reads the diff in both directions, and a §4 attempt
+  ceiling whose lift key is derived, never supplied. Verdicts replay:
+  `nos-loop verdict --replay` re-runs the recorded argv against the recorded
+  tree.
+- **Four identities, no overlap.** Proposer proposes and stops; the judge
+  runner is the only actor the schema lets seal a verdict; the driver
+  (`tools/loop-pr.py`) re-judges decayed verdicts, pushes, opens the MR and
+  stops; the reviewer (`tools/loop-review.py`) merges only when CI passed on
+  THIS sha, the judges passed THIS proposal, and the MR diff IS the judged
+  diff — byte-compared. Nothing in the chain writes its own outcome anywhere.
+- **§11 proof, delivered live 2026-08-19:** `rem:REM-204`
+  (wordpress `7.0.2 → 7.0.4`, merge `64bc8b1b`, pipeline #7) and `rem:REM-159`
+  (gitlab → `18.11.9-ce.0`, merge `713b015c`, pipeline #9) merged to `dev`
+  behind green Woodpecker pipelines on the local agent forge.
+  `tools/loop-status.py --awaiting` reads both as `landed` — from
+  `git apply --check -R`, not from any participant's claim.
+- **The contract corrected itself where it was unsatisfiable.** §11 had adopted
+  "the weakness leaves the list", which `budget.py`'s `docs/**` wall forbids the
+  loop from ever satisfying; the criterion is now the reachable one (judged
+  diff merged behind green CI) and the wall stays shut. The ledger gained
+  `passed-awaiting-act` so a solved weakness stops burning attempts, and the
+  readers segregate the nine 2026-08-02 build-time fixture rows that headed
+  every surface answering "is the loop working" — kept in the ledger, out of
+  the tallies.
+- **What the first live runs cost, and taught:** a re-run wedged on its own
+  branch name (now: refresh-in-place with `--force-with-lease` pinned to a tip
+  the driver PROVES it made), a leftover local ref (now: detached commits, no
+  local ref ever), GitLab 404-ing a raw branch slash where Gitea 400s the
+  encoded one (now: spelled per forge, gated), and a Gitea repo with zero
+  webhooks certifying pushes into a void (now: hook count is measured and
+  said).
+
+### Agents get a runtime they can be held to
+
+- **Bound ceremonies complete.** A14 sessions carry budget ceilings checked
+  before the spend, a terminated run reports the tokens it burned, a fallback
+  answer no longer wears the primary's name, and the grader reads a real page.
+- **A backend is a binding, not a provider.** One OpenAI-protocol adapter; the
+  MiniMax path built to the switch and no further; `mistral-eu` recorded as the
+  first EU-residency row, inert; the Pulse catalog carries no backend, ever.
+- **Agents entered the GDPR Article-30 register**, their cost is recorded per
+  run and read by a daily tally, and `ask_operator` suspends a run until a
+  human answers — on a phone, via ntfy, with approvals and questions unified
+  into `/inbox`.
+
+### The estate answers questions instead of being derived
+
+- `tools/red-status.py` (what is red RIGHT NOW, across every source — built
+  after two nightly jobs failed silently for two days), `tools/estate-status.py`
+  (host vs repo vs origin), `tools/loop-status.py`, `tools/nos-cc.sh` — a tmux
+  control centre whose one rule is that a pane shows STATE re-read by a reader,
+  never scrollback that looks identical after its writer dies.
+- The doctrine caught up: citations in code resolve to their documents or CI
+  goes red; the anatomy graph carries the law's edges; `tier` means RBAC and
+  nothing else (`docs/doctrine/layers.md`).
+
+### Security
+
+- **Secret blast radius P0/P2/P4:** the backup archive key no longer derives
+  from the global prefix; minted-but-never-persisted secrets found and fixed;
+  the audit-chain key can rotate over a key ring, sealed before minting.
+- **The audit chain earned its red twice, and both were real findings:** the
+  nightly verify caught 37 unsigned rows (a bare `php bin/run-agent.php`
+  carrying none of the daemon's env — writers now REFUSE an unsigned append to
+  a chained database) and one "content tampered" row that was actually a writer
+  signing PHP `false` where SQLite stores `"0"` — writers now type-stabilize
+  before hashing, the verifier retries exactly the two historical variants
+  (strict round-trip), and the reviewed gap is acknowledged by an operator act
+  that verifies the window is a clean chain-off before recording the anchor.
+  Live at draft time: `ok:true, checked=347637, unsigned=37, type_coerced=1`.
+- **Queue at draft, cycle-33: 204 rows — 144 resolved, 50 pending (6 HIGH /
+  25 MEDIUM / 19 LOW), 5 vendor-blocked, 4 wontfix, 1 obsolete.** Two of the
+  six HIGHs are the loop's own merges awaiting converge + rescan (REM-204,
+  REM-159). Ask `tools/rem-status.py`; do not copy these numbers forward.
+
+### Why this is a beta, stated before anyone asks
+
+The operator asked whether this tag could drop the suffix. It cannot, on
+evidence, and the notes owe the list:
+
+1. **The audit-chain fix is committed, not deployed.** The repo is not the
+   running system: the nightly verify runs the estate's copy of
+   `verify-audit-chain.php`, which predates the type-retry — it will keep
+   exiting 2 at row 339176 until a `--tags wing` converge ships it. A non-beta
+   cannot be cut while the tamper-evidence control reports broken on the box.
+2. **The restore drill's last SCHEDULED run failed** (2026-08-16: that night's
+   `keap-db.gz` was missing from the set — the drill doing exactly its job).
+   A manual drill against the 2026-08-19 set passes (`keap-db OK`,
+   `wing-db OK, events=343860`), but a backup discipline is a cadence, not a
+   good day; the proof is next Sunday's run, green, unattended.
+3. **69 unread CRITICAL/HIGH notifications, oldest 25 days.** Non-beta claims
+   an operating discipline; an attention queue this deep says the estate
+   produces more signal than its one operator consumes.
+4. **50 pending remediation rows, 6 HIGH**, plus 5 vendor-blocked CRITICALs
+   (FreePBX image abandoned upstream) that operators must accept explicitly.
+5. **The Linux wet-test still does not prove the estate comes up**
+   (`docs/hidden_fees/08` OPEN; the stack layer is unproven on the runner), and
+   FreeScout's `native_oidc` remains aspirational.
+6. **Every release to date has bypassed the master signature rule** rather than
+   satisfied it (`Found N violations`, admin bypass). A gate that only ever
+   reports its own defeat is not a gate a non-beta should ship over.
+
+What would earn the suffix's removal is mostly operational, not code: a green
+week of nightly verifies and one green scheduled drill after a converge, the
+inbox worked down, the HIGHs dispatched or ruled, and the signature rule either
+met or removed.
 
 ---
 
