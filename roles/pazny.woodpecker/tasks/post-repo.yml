@@ -59,46 +59,70 @@
       register: _woodpecker_gitea_repo
       changed_when: false
 
+    # A 200 IS NOT AN ANSWER HERE. Woodpecker's SPA serves index.html as a
+    # catch-all, so an unauthenticated call to a route that does not exist —
+    # or to one the PAT cannot reach — comes back 200 with 1679 bytes of HTML.
+    # Measured 2026-08-19: this task reported `changed` (cache refreshed!) and
+    # the check below reported "already activated", both off that same HTML,
+    # while the real API answered 401 to every route and the Gitea repo carried
+    # ZERO webhooks. The activation path silently no-opped and certified itself.
+    #
+    # So every call in this block asserts a JSON body. `return_content: true`
+    # plus a `json` key is what separates an answer from the front-end.
     - name: "[pazny.woodpecker Post Repo] Refresh forge cache (sync Gitea repo list)"
       no_log: true   # Bearer header embeds woodpecker_api_token
-      # On a fresh install Woodpecker hasn't yet pulled the operator's repo
-      # list from Gitea — so a bare /api/repos?forge_remote_id=<id> activate
-      # returns "forge repo not found". POST /api/user/repos?flush=true tells
-      # Woodpecker to re-query Gitea and rebuild the available-repos cache.
-      # TOLERANT: a persisted woodpecker_api_token (credentials.yml) references
-      # user-id 1, but on a blank Woodpecker's DB is fresh and NO user exists
-      # until the first OAuth login → this 401s. Repo activation is a post-login
-      # convenience (same as the empty-token branch above), so a failure here
-      # must NOT fatal a release run; degrade + guide the operator instead.
       ansible.builtin.uri:
         url: "{{ _woodpecker_api }}/api/user/repos?all=true&flush=true"
         method: POST
         headers:
           Authorization: "Bearer {{ woodpecker_api_token }}"
-        status_code: [200, 204]
+        status_code: [200, 204, 401, 403]
+        return_content: true
       register: _woodpecker_flush
       failed_when: false
-      changed_when: (_woodpecker_flush.status | default(0)) in [200, 204]
+      changed_when: false
 
-    - name: "[pazny.woodpecker Post Repo] Activation deferred — token not yet valid"
+    - name: "[pazny.woodpecker Post Repo] Resolve whether the PAT actually answered"
+      ansible.builtin.set_fact:
+        # JSON body → a real API answer. HTML (or no body) → the SPA, which
+        # means the call never reached the API and we know nothing.
+        _woodpecker_pat_ok: >-
+          {{ (_woodpecker_flush.status | default(0)) in [200, 204]
+             and (_woodpecker_flush.json is defined
+                  or (_woodpecker_flush.content | default('') | trim | length) == 0) }}
+
+    - name: "[pazny.woodpecker Post Repo] Activation deferred — token rejected"
       ansible.builtin.debug:
         msg: >-
-          Woodpecker repo activation skipped (flush returned
-          {{ _woodpecker_flush.status | default('unreachable') }}). The persisted
-          API token isn't valid until the operator completes the first OAuth
-          login (Woodpecker's DB is fresh on a blank). After login, re-run:
-          ansible-playbook main.yml --tags woodpecker
-      when: (_woodpecker_flush.status | default(0)) not in [200, 204]
+          WOODPECKER CI IS NOT WIRED TO THE FORGE. Repo activation skipped —
+          the API did not answer (HTTP {{ _woodpecker_flush.status | default('unreachable') }},
+          {{ 'HTML: the SPA catch-all, so the PAT never reached the API'
+             if (_woodpecker_flush.json is not defined
+                 and (_woodpecker_flush.content | default('') | trim | length) > 0)
+             else 'no JSON body' }}).
+          On a fresh blank this is expected (no user has logged in yet). On an
+          established host the PAT has expired or been revoked, and while it is
+          the Gitea repo has no webhook, so no push starts a pipeline and every
+          merge request opens with no CI behind it.
+          Re-issue: log in to Woodpecker → User Settings → Personal Access
+          Tokens → set woodpecker_api_token, then re-run
+          `ansible-playbook main.yml --tags woodpecker`.
+          Verify with: tools/loop-pr.py (it reports the Gitea webhook count).
+      when: not (_woodpecker_pat_ok | bool)
 
+    # v3 route. `/api/repos/{owner}/{name}` is NOT an API path in Woodpecker 3
+    # — it is caught by the SPA and answers 200 for anything, which is exactly
+    # how "already activated" got certified for a repo with no webhook.
     - name: "[pazny.woodpecker Post Repo] Check if repo is already activated"
-      when: (_woodpecker_flush.status | default(0)) in [200, 204]
+      when: _woodpecker_pat_ok | bool
       no_log: true   # Bearer header embeds woodpecker_api_token
       ansible.builtin.uri:
-        url: "{{ _woodpecker_api }}/api/repos/{{ woodpecker_nos_repo_owner }}/{{ woodpecker_nos_repo_name }}"
+        url: "{{ _woodpecker_api }}/api/repos/lookup/{{ woodpecker_nos_repo_owner }}/{{ woodpecker_nos_repo_name }}"
         method: GET
         headers:
           Authorization: "Bearer {{ woodpecker_api_token }}"
         status_code: [200, 404]
+        return_content: true
       register: _woodpecker_repo_check
       changed_when: false
 
@@ -111,6 +135,25 @@
           Authorization: "Bearer {{ woodpecker_api_token }}"
         status_code: [200, 201, 409]
       when:
-        - (_woodpecker_flush.status | default(0)) in [200, 204]
-        - (_woodpecker_repo_check.status | default(0)) == 404
+        - _woodpecker_pat_ok | bool
+        - (_woodpecker_repo_check.json.id | default(0)) == 0
+      changed_when: true
+
+    # ACTIVE IN WOODPECKER IS NOT THE SAME AS WIRED TO THE FORGE. The webhook
+    # lives in the Gitea repo, and the agent-forge conversion RECREATES that
+    # repo — so the hook dies with the old one while Woodpecker's own row
+    # survives, reports active, and nothing ever recreates it. That is the state
+    # measured on 2026-08-19: repo active, zero webhooks, every push silent.
+    # `repair` is Woodpecker's own verb for exactly this and it is idempotent.
+    - name: "[pazny.woodpecker Post Repo] Repair the forge webhook (idempotent)"
+      when:
+        - _woodpecker_pat_ok | bool
+        - (_woodpecker_repo_check.json.id | default(0)) | int > 0
+      no_log: true
+      ansible.builtin.uri:
+        url: "{{ _woodpecker_api }}/api/repos/{{ _woodpecker_repo_check.json.id }}/repair"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ woodpecker_api_token }}"
+        status_code: [200, 204]
       changed_when: true
