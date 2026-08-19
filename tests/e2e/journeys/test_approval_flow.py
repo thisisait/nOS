@@ -40,6 +40,7 @@ from datetime import datetime, timezone
 
 import pytest
 
+from ..lib.residue import ResidueProbe
 from ..lib.wing_csrf import csrf_post
 
 WING_URL = os.environ.get("WING_API_URL", "http://127.0.0.1:9000").rstrip("/")
@@ -166,13 +167,98 @@ def _decisions(uuid_: str) -> list[tuple[str, str]]:
     return [(a, json.loads(r or "{}").get("verdict")) for a, r in rows]
 
 
+MOCK_AGENT = "e2e-mock-agent"
+CLEANUP_OPERATOR = "e2e-cleanup"
+CLEANUP_HEADERS = {
+    "X-Authentik-Username": CLEANUP_OPERATOR,
+    "X-Authentik-Groups": "nos-providers",
+}
+
+
+def _leaked_ask_notifications() -> list[str]:
+    """READER: unread 'Agent asks: e2e-mock-agent' inbox rows.
+
+    This is the probe that would have caught the 2026-08-11..16 leak on run
+    #2 instead of leaving 29 permanent HIGH rows for a triage to find: the
+    journey filed a question, the repository filed the notification, and no
+    run ever took either back.
+    """
+    with sqlite3.connect(WING_DB) as conn:
+        rows = conn.execute(
+            "SELECT uuid FROM notifications "
+            "WHERE title = ? AND wing_inbox_read_at IS NULL",
+            (f"Agent asks: {MOCK_AGENT}",),
+        ).fetchall()
+    return [r[0] for r in rows]
+
+
+def _open_mock_questions() -> list[str]:
+    """READER: agent_questions rows the mock agent still has open."""
+    with sqlite3.connect(WING_DB) as conn:
+        rows = conn.execute(
+            "SELECT uuid FROM agent_questions "
+            "WHERE agent_name = ? AND status = 'open'",
+            (MOCK_AGENT,),
+        ).fetchall()
+    return [r[0] for r in rows]
+
+
+RESIDUE_PROBES = (
+    ResidueProbe("unread 'Agent asks' notification", _leaked_ask_notifications),
+    ResidueProbe("open e2e-mock-agent question", _open_mock_questions),
+)
+
+
+def _undo_question(question_uuid: str) -> None:
+    """Close the question IF still open — the operator path, resolve-once
+    safe. A journey that crashed before step 3 leaves it open; a completed
+    one already answered it and this is a no-op."""
+    with sqlite3.connect(WING_DB) as conn:
+        row = conn.execute(
+            "SELECT status FROM agent_questions WHERE uuid = ?",
+            (question_uuid,),
+        ).fetchone()
+    if row is None or row[0] != "open":
+        return
+    status, body, _ = csrf_post(
+        WING_URL, "/inbox", f"/inbox/answer/{question_uuid}",
+        headers=CLEANUP_HEADERS, extra_post={"answer": "reject"},
+    )
+    if status not in (302, 303):
+        raise RuntimeError(f"cleanup answer returned {status}: {body[:200]}")
+
+
+def _undo_ask_notification(question_uuid: str) -> None:
+    """Mark the paired inbox row read — the operator path (/inbox/mark-read).
+
+    This runs on SUCCESSFUL journeys too: the 29-row leak came from runs
+    that PASSED, because answering a question never marks its ask row read
+    (that pairing is bin/reconcile-inbox.php's job on the live estate; a
+    journey cleans up after itself rather than waiting for the reconciler).
+    """
+    with sqlite3.connect(WING_DB) as conn:
+        rows = conn.execute(
+            "SELECT uuid FROM notifications "
+            "WHERE title = ? AND wing_inbox_read_at IS NULL "
+            "AND metadata_json LIKE ?",
+            (f"Agent asks: {MOCK_AGENT}", f'%"{question_uuid}"%'),
+        ).fetchall()
+    for (notif_uuid,) in rows:
+        status, body, _ = csrf_post(
+            WING_URL, "/inbox", f"/inbox/mark-read/{notif_uuid}",
+            headers=CLEANUP_HEADERS,
+        )
+        if status not in (302, 303):
+            raise RuntimeError(f"mark-read {notif_uuid} returned {status}: {body[:200]}")
+
+
 def test_approval_flow_request_to_decision(journey):
     marker = uuid.uuid4().hex[:12]
-    with journey("approval_flow") as j:
+    with journey("approval_flow", residue_probes=RESIDUE_PROBES) as j:
 
         with j.step("agent_files_an_approval_question") as s:
             status, payload = _api("/api/v1/inbox/questions", "POST", {
-                "agent_name": "e2e-mock-agent",
+                "agent_name": MOCK_AGENT,
                 "prompt": f"E2E {marker}: approve me to verify the loop",
                 "kind": "approval",
                 "severity": "medium",
@@ -181,6 +267,14 @@ def test_approval_flow_request_to_decision(journey):
             assert status in (200, 201), f"filing the question returned {status}: {payload}"
             question_uuid = (payload.get("data") or payload).get("uuid")
             assert question_uuid, f"no uuid in {payload}"
+            # Register the undos NOW, not after the test passes — a crash on
+            # the very next line is exactly how orphans are born. Unwind is
+            # LIFO, so the notification (created by the question insert) is
+            # taken back first, then the question itself.
+            j.mutates("agent_question", question_uuid,
+                      lambda q=question_uuid: _undo_question(q))
+            j.mutates("ask_notification", question_uuid,
+                      lambda q=question_uuid: _undo_ask_notification(q))
             s.note = f"uuid={question_uuid[:16]}"
 
         with j.step("operator_can_see_it") as s:

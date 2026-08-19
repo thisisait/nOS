@@ -24,11 +24,47 @@ import urllib.request
 
 import pytest
 
+from ..lib.residue import ResidueProbe
 from ..lib.wing_csrf import csrf_post
 
 WING_URL = os.environ.get("WING_API_URL", "http://127.0.0.1:9000").rstrip("/")
 WING_DB = os.environ.get("WING_DB", "/Users/pazny/wing/app/data/wing.db")
 TEST_OPERATOR = "e2e-test-admin"
+
+ADMIN_HEADERS = {
+    "X-Authentik-Username": TEST_OPERATOR,
+    "X-Authentik-Groups": "nos-providers",
+}
+
+
+def _emergency_halted() -> list[str]:
+    """READER: pulse jobs still under an emergency halt. A crash between the
+    halt POST and the resume POST leaves EVERY scheduled job on the estate
+    paused — the worst residue any journey here can leave — and until
+    2026-08-19 nothing looked."""
+    with sqlite3.connect(WING_DB) as conn:
+        rows = conn.execute(
+            "SELECT id FROM pulse_jobs WHERE paused=1 "
+            "AND paused_reason LIKE 'emergency-halt:%'"
+        ).fetchall()
+    return [r[0] for r in rows]
+
+
+RESIDUE_PROBES = (
+    ResidueProbe("emergency-halted pulse job", _emergency_halted),
+)
+
+
+def _undo_halt() -> None:
+    """Resume IF an emergency halt is still in force — the same operator
+    path the journey tests. No-op when the journey already resumed."""
+    if not _emergency_halted():
+        return
+    status, body, _ = csrf_post(
+        WING_URL, "/admin", "/admin/resume", headers=ADMIN_HEADERS,
+    )
+    if status not in (302, 303):
+        raise RuntimeError(f"cleanup resume returned {status}: {body[:200]}")
 
 
 def _http(method: str, path: str, *, headers: dict | None = None,
@@ -71,7 +107,7 @@ def _require_wing():
 
 
 def test_halt_and_resume_audit_chain(journey):
-    with journey("halt_resume") as j:
+    with journey("halt_resume", residue_probes=RESIDUE_PROBES) as j:
 
         with j.step("admin_403_without_group") as s:
             status, _, _ = _http("GET", "/admin",
@@ -103,6 +139,10 @@ def test_halt_and_resume_audit_chain(journey):
                     "X-Authentik-Groups": "nos-providers",
                 },
             )
+            # Registered BEFORE the asserts: if any later step dies, the
+            # harness resumes the estate on unwind (idempotent — no-ops when
+            # the journey's own resume step already ran).
+            j.mutates("emergency_halt", "pulse_jobs", _undo_halt)
             assert status in (302, 303), f"expected 302/303 redirect, got {status}"
             assert "/admin" in loc, f"redirect should go to /admin, got {loc}"
             with sqlite3.connect(WING_DB) as conn:

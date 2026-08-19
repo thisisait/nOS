@@ -50,6 +50,11 @@ import pytest
 # Imports are guarded so the existing journeys (smoke / plugin_contract /
 # halt_resume / approval_flow) keep working even if Authentik is offline —
 # the tester_identity fixture is the only thing that requires it.
+# Journey residue guarantees (2026-08-19): preflight / undo / postflight.
+# Pure stdlib — always importable. See lib/residue.py for the doctrine and
+# tests/anatomy/test_journey_residue_contract.py for the gate.
+from .lib.residue import ResidueLeakError, ResidueLedger, ResidueProbe  # noqa: F401
+
 try:
     from .lib.tester_identity import (
         TesterIdentity,
@@ -136,6 +141,24 @@ class JourneyRecorder:
     run_id: str
     started_at: float = field(default_factory=time.time)
     steps: list[StepResult] = field(default_factory=list)
+    ledger: ResidueLedger | None = None
+
+    def mutates(self, kind: str, ref: str, undo) -> None:
+        """Register an estate mutation THE MOMENT IT IS MADE, with its undo.
+
+        The harness unwinds every registered undo on journey exit — pass or
+        fail — and then re-runs the journey's residue probes to verify the
+        estate is actually clean (cleanup never reports its own success).
+        A mutation made without registering here is the defect that put 29
+        permanent HIGH rows in the operator's inbox; don't be the 30th.
+        """
+        if self.ledger is None:
+            raise RuntimeError(
+                f"journey '{self.name}' mutates the estate ({kind} {ref}) but "
+                "was opened without residue probes — pass residue_probes= to "
+                "journey() so leaks from crashed runs are caught on the next run."
+            )
+        self.ledger.register(kind, ref, undo)
 
     @contextmanager
     def step(self, step_name: str):
@@ -182,11 +205,19 @@ def journey():
     (with aggregated step counts + total duration).
     """
     @contextmanager
-    def _factory(name: str):
+    def _factory(name: str, residue_probes=()):
         action_id = str(uuid.uuid4())
         run_id = f"e2e-{name}-{int(time.time())}"
+        ledger = ResidueLedger(journey=name, probes=tuple(residue_probes))
+        # PREFLIGHT, before anything is emitted or mutated: residue from any
+        # earlier run — including one SIGKILLed mid-journey with no chance to
+        # clean up — fails THIS run with the leak named. A crashed run cannot
+        # report itself; the next run reports it. This is the check that would
+        # have caught the 29 leaked 'Agent asks' rows on run #2.
+        ledger.preflight()
         recorder = JourneyRecorder(
             name=name, actor_action_id=action_id, run_id=run_id,
+            ledger=ledger,
         )
         _post_event({
             "ts": _now_iso(),
@@ -205,6 +236,16 @@ def journey():
             passed_overall = False
             raise
         finally:
+            # UNWIND every registered mutation, newest first — on pass and on
+            # fail alike (an aborted journey's half-made objects are exactly
+            # how orphans are born). Then POSTFLIGHT: re-run the probes, so
+            # the estate — not the cleanup code — says whether it is clean.
+            undo_errors = ledger.unwind()
+            try:
+                residue_after = ledger.postflight()
+            except Exception as exc:  # noqa: BLE001 — an unreadable probe is a finding
+                residue_after = [f"postflight probe unreadable: {exc}"]
+            leaked = bool(undo_errors or residue_after)
             duration_ms = int((time.time() - recorder.started_at) * 1000)
             passed = sum(1 for s in recorder.steps if s.status == "ok")
             failed = sum(1 for s in recorder.steps if s.status == "failed")
@@ -219,13 +260,27 @@ def journey():
                 "task": name,
                 "result": {
                     "journey": name,
-                    "status": "ok" if (passed_overall and failed == 0) else "failed",
+                    "status": "ok" if (passed_overall and failed == 0 and not leaked) else "failed",
                     "steps": len(recorder.steps),
                     "passed": passed,
                     "failed": failed,
                     "duration_ms_total": duration_ms,
+                    "cleanup": {
+                        "mutations": len(ledger.mutations),
+                        "undo_errors": undo_errors,
+                        "residue_after": residue_after,
+                    },
                 },
             })
+            # A leak fails the run even when every step passed — but never
+            # shadows the test's own exception (raising in a finally would
+            # replace it and hide the actual failure).
+            if passed_overall and leaked:
+                raise ResidueLeakError(
+                    f"journey '{name}' leaked into the live estate — "
+                    f"undo errors: {undo_errors or 'none'}; "
+                    f"residue after cleanup: {residue_after or 'none'}"
+                )
     return _factory
 
 
@@ -265,6 +320,26 @@ def tester_identity(request):
         pytest.skip(f"tester identity lib unavailable: {_IDENTITY_IMPORT_ERROR}")
 
     tier = getattr(request, "param", "user")
+
+    # PREFLIGHT (2026-08-19): orphans from a crashed earlier run fail THIS
+    # run, loudly, before minting user #61. Sixty `nos-tester-e2e-*` accounts
+    # accumulated in Authentik precisely because every cleanup path was
+    # best-effort and nothing ever looked before provisioning more. Read-only
+    # (dry_run); deletion stays an operator act — A13.6 forbids auto-sweeps.
+    try:
+        _orphans = sweep_orphans(max_age_seconds=0, dry_run=True)
+    except Exception:  # noqa: BLE001 — unreachable Authentik fails provision below with its own reason
+        _orphans = None
+    if _orphans and _orphans.get("found", 0) > 0:
+        pytest.fail(
+            f"{_orphans['found']} orphaned nos-tester-e2e-* account(s) in "
+            "Authentik — a previous run leaked and this run refuses to add "
+            "more. Review + delete via the operator-invoked "
+            "`python3 files/anatomy/scripts/sweep-orphan-testers.py --dry-run` "
+            "(then without --dry-run).",
+            pytrace=False,
+        )
+
     try:
         identity = provision_tester(tier)
     except Exception as exc:  # noqa: BLE001 — pytest-skip on infra failure, not test failure
