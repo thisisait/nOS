@@ -31,12 +31,47 @@
   failed_when: false
   no_log: true   # Basic-auth header embeds gitea_admin_password (SEC-18 gap)
 
-- name: "[pazny.woodpecker OAuth] Resolve existing 'Woodpecker CI' app id"
+- name: "[pazny.woodpecker OAuth] Resolve existing 'Woodpecker CI' app"
   ansible.builtin.set_fact:
-    _wp_oauth_app_id: >-
+    _wp_oauth_app: >-
       {{ (_wp_oauth_apps.json | default([]) | selectattr('name', 'equalto', 'Woodpecker CI')
-          | list | first | default({})).id | default(0) }}
+          | list | first | default({})) }}
   when: _wp_oauth_apps.status | default(0) == 200
+
+# AN APP WITH THE RIGHT NAME IS NOT THE RIGHT APP. This resolved an id, found
+# one, and stopped — so a Gitea whose OAuth row had been recreated (new
+# client_id) kept a Woodpecker configured with the OLD one, permanently. The
+# operator's symptom is Gitea's own login screen saying "Client ID not
+# registered", and no converge could ever repair it because the create task
+# only fired when the app was ABSENT.
+#
+# Measured 2026-08-19: gitea held c0bb8e67-…, woodpecker was configured with
+# 9642dfd4-…, and the role reported "reusing existing app id 4".
+#
+# The secret is readable only at create time, so a mismatch cannot be patched —
+# it can only be replaced. Hence delete-then-create below.
+- name: "[pazny.woodpecker OAuth] Resolve whether that app is the one in use"
+  ansible.builtin.set_fact:
+    _wp_oauth_app_id: "{{ _wp_oauth_app.id | default(0) }}"
+    _wp_oauth_matches: >-
+      {{ (woodpecker_gitea_client | default('') | length) > 0
+         and (woodpecker_gitea_secret | default('') | length) > 0
+         and _wp_oauth_app.client_id | default('') == woodpecker_gitea_client }}
+  when: _wp_oauth_apps.status | default(0) == 200
+
+- name: "[pazny.woodpecker OAuth] Delete the stale app (client_id no longer matches)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/user/applications/oauth2/{{ _wp_oauth_app_id }}"
+    method: DELETE
+    headers:
+      Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
+    status_code: [204, 404]
+  when:
+    - _wp_oauth_apps.status | default(0) == 200
+    - (_wp_oauth_app_id | int) > 0
+    - not (_wp_oauth_matches | bool)
+  changed_when: true
+  no_log: true
 
 - name: "[pazny.woodpecker OAuth] Create 'Woodpecker CI' OAuth2 app (first run only)"
   ansible.builtin.uri:
@@ -53,9 +88,10 @@
         - "https://{{ woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/authorize"
     status_code: [201]
   register: _wp_oauth_create
+  changed_when: _wp_oauth_create.json.client_id is defined
   when:
     - _wp_oauth_apps.status | default(0) == 200
-    - _wp_oauth_app_id | int == 0
+    - (_wp_oauth_app_id | int) == 0 or not (_wp_oauth_matches | bool)
   no_log: true   # Basic-auth header embeds gitea_admin_password; response carries the OAuth client secret
 
 - name: "[pazny.woodpecker OAuth] Capture client_id + secret from create response"
@@ -64,8 +100,30 @@
     # we persist it (secrets.yml.j2) and reuse it on subsequent runs.
     woodpecker_gitea_client: "{{ _wp_oauth_create.json.client_id }}"
     woodpecker_gitea_secret: "{{ _wp_oauth_create.json.client_secret }}"
-  when: _wp_oauth_create.changed | default(false)
+  when: _wp_oauth_create.json.client_id is defined
   no_log: true   # captures the OAuth client secret
+
+# ── Persist, IN-ROLE ─────────────────────────────────────────────────────────
+# The central "[Secrets] Persist runtime secrets" render runs BEFORE stack-up
+# reaches this role, so a set_fact alone dies with the play and the next
+# converge finds the OLD client_id — mismatch, delete, recreate, forever. The
+# gitea forge token was bitten by exactly this and fixed the same way
+# (roles/pazny.gitea/tasks/post-forge.yml). lineinfile, NOT a template
+# re-render, which would clobber appended break-glass lines.
+- name: "[pazny.woodpecker OAuth] Persist the OAuth pair into ~/.nos/secrets.yml"
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
+    regexp: "^{{ item.key }}:"
+    line: '{{ item.key }}: "{{ item.value }}"'
+    create: true
+    mode: '0600'
+  loop:
+    - { key: "woodpecker_gitea_client", value: "{{ woodpecker_gitea_client }}" }
+    - { key: "woodpecker_gitea_secret", value: "{{ woodpecker_gitea_secret }}" }
+  loop_control:
+    label: "{{ item.key }}"
+  when: _wp_oauth_create.json.client_id is defined
+  no_log: true
 
 # ── In-run apply (first create only) ─────────────────────────────────────────
 # The override on disk + the running server still carry empty creds; re-render
@@ -75,7 +133,7 @@
     src: compose.yml.j2
     dest: "{{ stacks_dir }}/devops/overrides/woodpecker.yml"
     mode: '0600'
-  when: _wp_oauth_create.changed | default(false)
+  when: _wp_oauth_create.json.client_id is defined
 
 - name: "[pazny.woodpecker OAuth] Find devops compose overrides (for recreate)"
   ansible.builtin.find:
@@ -83,7 +141,7 @@
     patterns: "*.yml"
     file_type: file
   register: _wp_devops_overrides
-  when: _wp_oauth_create.changed | default(false)
+  when: _wp_oauth_create.json.client_id is defined
   changed_when: false
 
 - name: "[pazny.woodpecker OAuth] Recreate woodpecker-server with OAuth creds"
@@ -93,12 +151,12 @@
     {% for f in _wp_devops_overrides.files | default([]) | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
     -p devops
     up -d --force-recreate --no-deps woodpecker-server
-  when: _wp_oauth_create.changed | default(false)
+  when: _wp_oauth_create.json.client_id is defined
   changed_when: true
 
 - name: "[pazny.woodpecker OAuth] Status"
   ansible.builtin.debug:
     msg: >-
       Woodpecker↔Gitea OAuth2:
-      {{ 'CREATED + server recreated (single-run)' if (_wp_oauth_create.changed | default(false))
-         else ('reusing existing app id ' ~ (_wp_oauth_app_id | default('?'))) }}
+      {{ 'CREATED + server recreated (single-run)' if (_wp_oauth_create.json.client_id is defined)
+         else ('reusing app id ' ~ (_wp_oauth_app_id | default('?')) ~ ', client_id verified against the running server') }}

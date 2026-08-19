@@ -524,6 +524,66 @@ row("local-llm-lfm25", "Benchmark LFM2.5-2.6B as the emitter", _TNI, "queued", "
          "Open License v1.0 is $10M-revenue-conditional and derivatives inherit it — the first "
          "non-Apache weight in the estate, and that is the operator's call, not a benchmark's.")
 
+# ── KPro: mine it, do not adopt it (2026-08-19) ────────────────────────────
+#
+# SAP's Knowledge Provider (BC-SRV-KPR, Basis-era) solved this estate's content
+# problem twenty-five years ago: one logical thing, many stores, resolved by
+# context at request time. The abstractions are sound and free; the product
+# around them — Document Modeling Workbench, document areas, ArchiveLink, ILM,
+# the certification programme — is enterprise governance a single-operator
+# estate has no use for, and importing it would be rebuild-not-reuse.
+#
+# Researched 2026-08-19. Source quality is thin and legacy (the 4.6C reference
+# PDF is HTTP 410, modern SAP Help pages are JS-rendered); what is cited below
+# came from the Content Server HTTP interface PDF and static legacy help pages.
+
+_KPRO = "2026-08-19"
+
+row("kpro", "KPro's three ideas, and nothing else from KPro", _KPRO,
+    "queued", "cortex",
+    refs="help.sap.com BC-SRV-KPR · SAP Content Server HTTP interface PDF",
+    body="Content in nOS is scattered across Nextcloud, Calibre-Web, Kiwix, WordPress, "
+         "Outline/BookStack/HedgeDoc and Paperclip with no shared identity, no shared "
+         "retrieval and no versioning story across them. KPro's answer was the "
+         "INTENSION/EXTENSION split: a logical document (meaning) has N physical "
+         "documents (format, language, release), versioned along independent axes, with "
+         "LATE BINDING deciding at request time which physical one serves a logical "
+         "request. Cortex already holds the relation layer this needs, so the work is a "
+         "table, a resolver and an id-scheme fix — not a new subsystem. "
+         "EXPLICITLY NOT ADOPTED: the Document Modeling Workbench, document areas, "
+         "ArchiveLink, ILM retention, and check-in/check-out locking, which is pointless "
+         "on a single-operator estate that already has git. Signed expiring capabilities "
+         "(KPro's secKey) are deferred rather than rejected: worth it only once agents "
+         "fetch bytes across a network hop, and the cortex organ is loopback-only today.")
+
+row("kpro-ids", "A cortex id that survives a file being moved", _KPRO,
+    "next", "cortex", parent="kpro",
+    refs="files/anatomy/cortex · KPro docId",
+    body="Cortex ids are `fs:<uid>:sha1(relPath)[:16]` — a PHYSICAL id, so moving a file "
+         "destroys its identity and forks the corpus silently. KPro's docId is opaque and "
+         "stable and the path is an ATTRIBUTE, which is the whole lesson in one sentence. "
+         "Cost is near-zero now and rises with every row added to the corpus, which is why "
+         "this is the child to do first even though it is the least visible.")
+
+row("kpro-logical", "One logical id, many manifestations", _KPRO,
+    "queued", "cortex", parent="kpro",
+    refs="files/anatomy/cortex · KEAP relations",
+    body="One `logical_id` with N manifestations (`nextcloud:`, `calibre:`, `kiwix:`, "
+         "`wp:`), each carrying format, language and source. Roughly one table plus a "
+         "resolver in the Cortex organ. WITHOUT IT the same book stays three unrelated "
+         "corpus rows for ever and dedupe is not merely unbuilt but impossible.")
+
+row("kpro-get", "get(logical_id, context) -> bytes, across every store", _KPRO,
+    "queued", "cortex", parent="kpro",
+    refs="docs/idea/03 · KEAP /agent/v1",
+    body="The measured gap: KEAP returns metadata and deep links and never content — "
+         "docs/idea/03 records it as 'Kiwix and Calibre are deep-linked, never read'. KPro "
+         "NAMES this gap (a fixed storage-agnostic verb set over any backend) but does not "
+         "close it for you: the expensive part is ZIM and EPUB readers, 1-2 weeks, not the "
+         "interface around them. Until it exists the corpus is thin BY INPUT, and further "
+         "embedding or extraction work optimises the second bottleneck while the first one "
+         "holds.")
+
 print(f"prepared {len(R)} rows")
 
 # ── Orphan gate: KEAP cannot enforce this, so the seeder must ───────────────
