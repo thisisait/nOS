@@ -380,3 +380,208 @@ def test_consent_table_migration_via_real_init_db(tmp_path):
     con.commit()
     con.close()
     assert n == 1, "the migrated legacy row must be withdrawable via the active path"
+
+
+# ── late acknowledgement of a chain-off window (2026-08-19) ──────────────────
+#
+# MEASURED LIVE: a bare `php bin/run-agent.php` inherited no chain env and the
+# librarian appended 37 unsigned rows (337463-337499) to a chained wing.db; the
+# next signed segment (337500) starts at row 337462's hash, which nothing had
+# recorded as an anchor, so `audit-chain-verify` exited 2 every night after.
+# The tail-anchor path (`backfill-event-chain.php` bare) cannot repair this —
+# by the time the gap is DISCOVERED, signed rows already follow it and the
+# current tail is not the boundary. `--acknowledge-gap-before=<id>` is the
+# operator act for exactly that; these gates pin that it verifies before it
+# writes and that it can never authorize anything but a clean chain-off window.
+
+def _gapped_db(tmp_path):
+    """A DB in the live break's exact shape: signed, unsigned window, signed."""
+    db = _fresh_db(tmp_path)
+    _chain_env(db, on=True)
+    W = _wing()
+    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "signed1"})
+    W.insert_event({"ts": "t2", "run_id": "r", "type": "task_ok", "task": "signed2"})
+    _chain_env(db, on=False)
+    W.insert_event({"ts": "t3", "run_id": "r", "type": "task_ok", "task": "gap1"})
+    W.insert_event({"ts": "t4", "run_id": "r", "type": "task_ok", "task": "gap2"})
+    _chain_env(db, on=True)
+    W.insert_event({"ts": "t5", "run_id": "r", "type": "task_ok", "task": "signed3"})
+    con = sqlite3.connect(db)
+    resumed = con.execute(
+        "SELECT MAX(id) FROM events WHERE row_hash IS NOT NULL").fetchone()[0]
+    con.close()
+    return db, resumed
+
+
+def test_a_late_gap_breaks_verify_and_the_ack_repairs_the_boundary(tmp_path):
+    db, resumed = _gapped_db(tmp_path)
+    v = _php([str(VERIFY), f"--db={db}"])
+    assert v.returncode == 2, (
+        "positive control failed: the gapped DB should verify broken, or the "
+        "acknowledgement below is repairing nothing"
+    )
+
+    a = _php([str(BACKFILL), f"--data-dir={db.parent}",
+              f"--acknowledge-gap-before={resumed}"])
+    assert a.returncode == 0, a.stderr
+    assert "2 unsigned row(s)" in a.stdout, a.stdout
+    assert "signs nothing" in a.stdout, (
+        "the acknowledgement must say what it does NOT do — it authorizes the "
+        "boundary, it never signs the window"
+    )
+
+    v = _php([str(VERIFY), f"--db={db}", "--json"])
+    assert v.returncode == 0, f"verify still broken after the ack: {v.stdout}{v.stderr}"
+    assert '"unsigned":2' in v.stdout.replace(" ", ""), (
+        "the window must STAY visibly unsigned in the verify report — an ack "
+        "that hides the count is a success marker written over history"
+    )
+
+
+def test_the_ack_refuses_an_unsigned_row_a_missing_row_and_an_empty_window(tmp_path):
+    db, resumed = _gapped_db(tmp_path)
+    con = sqlite3.connect(db)
+    inside = con.execute(
+        "SELECT MIN(id) FROM events WHERE row_hash IS NULL").fetchone()[0]
+    first_signed = con.execute(
+        "SELECT MIN(id) FROM events WHERE row_hash IS NOT NULL").fetchone()[0]
+    con.close()
+
+    r = _php([str(BACKFILL), f"--data-dir={db.parent}",
+              f"--acknowledge-gap-before={inside}"])
+    assert r.returncode == 2 and "UNSIGNED" in r.stderr, (
+        "naming a row inside the window must refuse — the anchor would land "
+        "mid-gap and authorize a boundary nobody reviewed"
+    )
+
+    r = _php([str(BACKFILL), f"--data-dir={db.parent}",
+              "--acknowledge-gap-before=99999"])
+    assert r.returncode == 2 and "no event row" in r.stderr
+
+    r = _php([str(BACKFILL), f"--data-dir={db.parent}",
+              f"--acknowledge-gap-before={first_signed + 1}"])
+    assert r.returncode == 2 and "no unsigned window" in r.stderr, (
+        "a contiguous chain has nothing to acknowledge; exit 0 here would let "
+        "a cron'd ack mint anchors forever"
+    )
+
+
+def test_the_ack_refuses_a_window_that_is_not_a_clean_chain_off(tmp_path):
+    """A signed row whose prev_hash does NOT point at the last signed row
+    before it is possible tampering, and an anchor there would authorize it."""
+    db, _ = _gapped_db(tmp_path)
+    con = sqlite3.connect(db)
+    con.execute(
+        "INSERT INTO events (ts, run_id, type, prev_hash, row_hash) "
+        "VALUES ('t9', 'r', 'task_ok', 'not-the-real-tail-hash', 'forged-hash')")
+    con.commit()
+    forged = con.execute("SELECT MAX(id) FROM events").fetchone()[0]
+    con.close()
+    r = _php([str(BACKFILL), f"--data-dir={db.parent}",
+              f"--acknowledge-gap-before={forged}"])
+    assert r.returncode == 2 and "tampering" in r.stderr, (
+        f"the ack blessed a boundary whose prev_hash matches nothing: "
+        f"{r.stdout}{r.stderr}"
+    )
+
+
+# ── writer type-stability + the verifier's strict int-retype (2026-08-19) ────
+#
+# MEASURED LIVE: events row 339176 (agent_tool_result, result_json arrived as
+# int 0) was signed over canonical bytes `0`; SQLite's TEXT column hands back
+# the string "0", which canonicalizes to `"0"`, so the nightly verify reported
+# "content tampered" on a row nobody touched. Two fixes, both pinned here: the
+# writers cast to string BEFORE signing (so this cannot recur), and the
+# verifier retries exactly one strict variant for the historical rows.
+
+def test_a_numeric_payload_field_signs_verifiably(tmp_path):
+    """The Python writer casts before hashing: an int slipped into a TEXT
+    field must produce a row the verifier can rebuild."""
+    db = _fresh_db(tmp_path)
+    _chain_env(db, on=True)
+    W = _wing()
+    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": 0})
+    v = _php([str(VERIFY), f"--db={db}", "--json"])
+    assert v.returncode == 0, (
+        f"an int-typed TEXT field broke the chain at write time: {v.stdout}{v.stderr}"
+    )
+    assert '"type_coerced":0' in v.stdout.replace(" ", ""), (
+        "the WRITER must have stabilized the type — a coerced verify here "
+        "means the retry is doing the writer's job on NEW rows"
+    )
+
+
+def _int_typed_row(db):
+    """Reproduce the historical defect exactly: sign canonical(int 0), store
+    the TEXT round-trip ('0'), exactly what the pre-fix writer did."""
+    import hmac as _hmac
+    import hashlib as _hashlib
+    W = _wing()
+    con = sqlite3.connect(db)
+    prev = con.execute(
+        "SELECT row_hash FROM events WHERE row_hash IS NOT NULL "
+        "ORDER BY id DESC LIMIT 1").fetchone()
+    prev = prev[0] if prev and prev[0] else W._GENESIS
+    values = {"ts": "t2", "run_id": "r", "type": "task_ok", "result_json": 0}
+    key = _hmac.new(SECRET.encode(), W._CHAIN_LABEL, _hashlib.sha256).hexdigest()
+    row_hash = _hmac.new(
+        key.encode(), (prev + W._canonical(values)).encode(), _hashlib.sha256
+    ).hexdigest()
+    con.execute(
+        "INSERT INTO events (ts, run_id, type, result_json, prev_hash, row_hash) "
+        "VALUES ('t2', 'r', 'task_ok', '0', ?, ?)", (prev, row_hash))
+    con.commit()
+    rid = con.execute("SELECT MAX(id) FROM events").fetchone()[0]
+    con.close()
+    return rid
+
+
+def test_the_verifier_retries_the_historical_int_typing_strictly(tmp_path):
+    db = _fresh_db(tmp_path)
+    _chain_env(db, on=True)
+    W = _wing()
+    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "a"})
+    _int_typed_row(db)
+    W.insert_event({"ts": "t3", "run_id": "r", "type": "task_ok", "task": "b"})
+
+    v = _php([str(VERIFY), f"--db={db}", "--json"])
+    assert v.returncode == 0, (
+        f"the historical int-typed row still reads as tampered: {v.stdout}{v.stderr}"
+    )
+    assert '"type_coerced":1' in v.stdout.replace(" ", ""), (
+        "the retry must be COUNTED, not silent — a coerced row the report "
+        "hides is a variant acceptance nobody reviews"
+    )
+
+
+def test_the_retype_retry_is_round_trip_strict(tmp_path):
+    """'00' coerces to int 0 under a loose cast and would collide with the
+    signed bytes; the strict round-trip must refuse it as tampering."""
+    db = _fresh_db(tmp_path)
+    _chain_env(db, on=True)
+    W = _wing()
+    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "a"})
+    rid = _int_typed_row(db)
+    con = sqlite3.connect(db)
+    # WORM permits only actor_action_id updates on chained rows — simulate the
+    # tamper the way an attacker with file access would, via a rebuilt row.
+    try:
+        con.execute("UPDATE events SET result_json='00' WHERE id=?", (rid,))
+        con.commit()
+    except (sqlite3.OperationalError, sqlite3.IntegrityError):
+        # WORM refused the in-place edit (good, and itself a positive control);
+        # drop the trigger the way the forgery test above does — offline
+        # tampering is detected, not prevented.
+        trig = con.execute(
+            "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE '%worm%'"
+        ).fetchall()
+        for (name,) in trig:
+            con.execute(f"DROP TRIGGER {name}")
+        con.execute("UPDATE events SET result_json='00' WHERE id=?", (rid,))
+        con.commit()
+    con.close()
+    v = _php([str(VERIFY), f"--db={db}", "--json"])
+    assert v.returncode == 2 and "tampered" in v.stdout + v.stderr, (
+        f"'00' was accepted by the retype retry — the round-trip guard is "
+        f"gone and the retry is now a second canonicalization: {v.stdout}"
+    )

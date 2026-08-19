@@ -248,6 +248,22 @@ final class EventRepository
 			'row_hash'         => null,
 		];
 
+		// TYPE-STABILIZE before hashing (2026-08-19). The chain hash covers
+		// canonical JSON of these values AS THIS WRITER HOLDS THEM; the
+		// verifier recomputes it from what SQLite hands back, and a TEXT
+		// column always hands back a string. A caller that passed int 0 for
+		// result_json therefore signed bytes (`0`) no verifier can rebuild
+		// (`"0"`) — measured live: events row 339176, an agent_tool_result,
+		// reported nightly as "content tampered" when nothing was tampered.
+		// Cast every TEXT-column field to string; duration_ms/changed are
+		// INTEGER columns and stay ints (mirrored in Bone's clients/wing.py).
+		foreach ($row as $f => $v) {
+			if ($f !== 'duration_ms' && $f !== 'changed'
+				&& $v !== null && !is_string($v)) {
+				$row[$f] = (string) $v;
+			}
+		}
+
 		// Default-OFF: when WING_AUDIT_CHAIN_ENABLED!='1' or no secret, take the
 		// byte-identical legacy insert (prev_hash/row_hash NULL). Chain ON:
 		// serialize the tail read + sign inside one write txn so prev_hash can't

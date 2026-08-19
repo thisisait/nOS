@@ -73,6 +73,7 @@ $res = $s->query('SELECT * FROM events ORDER BY id ASC');
 $prev = null;
 $segmentOpen = false;
 $checked = 0;
+$typeCoerced = 0;   // rows verified only via the strict int-retype retry below
 $skipped = 0;
 $break = null;
 while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
@@ -124,8 +125,55 @@ while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
     }
     $expect = \App\Model\AuditChain::rowHash((string) $prev, $row, $key);
     if (!hash_equals($expect, (string) $row['row_hash'])) {
-        $break = ['id' => $row['id'], 'why' => 'row_hash mismatch (content tampered)'];
-        break;
+        // KNOWN writer-side type instabilities, retried strictly before the
+        // tamper verdict (2026-08-19). Writers used to hash whatever type the
+        // caller passed; SQLite TEXT columns hand back strings; so a row
+        // signed over `0` (int) or `false` (bool — PDO stores it as "0") can
+        // never be rebuilt from its own read-back (`"0"`). Measured live: row
+        // 339176, ONE row in 339k — an agent_tool_result whose result_json was
+        // PHP false at write time — reported nightly as "content tampered"
+        // when nothing was.
+        //
+        // The retry substitutes ONE field at a time, and only the exact bytes
+        // the pre-fix writer could have signed: a strict-round-trip integer
+        // ((string)(int)$v === $v, so '00', '0.0', '1e3' still refuse), plus
+        // bool false/true for the two values PDO collapses them to ("0"/"1").
+        // Both writers now cast to string before signing (EventRepository /
+        // clients/wing.py), so these variants can only match historical rows.
+        $verified = false;
+        foreach (\App\Model\AuditChain::CANON_FIELDS as $f) {
+            if ($f === 'duration_ms' || $f === 'changed') {
+                continue;
+            }
+            $v = $row[$f] ?? null;
+            if (!is_string($v) || $v === '' || (string) (int) $v !== $v) {
+                continue;
+            }
+            $candidates = [(int) $v];
+            if ($v === '0') {
+                $candidates[] = false;
+            }
+            if ($v === '1') {
+                $candidates[] = true;
+            }
+            foreach ($candidates as $candidate) {
+                $alt = $row;
+                $alt[$f] = $candidate;
+                if (hash_equals(
+                    \App\Model\AuditChain::rowHash((string) $prev, $alt, $key),
+                    (string) $row['row_hash']
+                )) {
+                    $verified = true;
+                    break 2;
+                }
+            }
+        }
+        if ($verified) {
+            $typeCoerced++;
+        } else {
+            $break = ['id' => $row['id'], 'why' => 'row_hash mismatch (content tampered)'];
+            break;
+        }
     }
     $prev = (string) $row['row_hash'];
     $checked++;
@@ -217,9 +265,12 @@ if (!$tailIsCurrent) {
 
 if ($json) {
     echo json_encode(['ok' => true, 'checked' => $checked, 'unsigned' => $skipped,
+                      'type_coerced' => $typeCoerced,
                       'tail_key' => 'current']) . "\n";
 } else {
     echo "CHAIN-OK: {$checked} chained rows verified, {$skipped} unsigned rows "
-        . "skipped, newest segment signed with the current key\n";
+        . "skipped"
+        . ($typeCoerced > 0 ? ", {$typeCoerced} verified via the legacy int-retype" : "")
+        . ", newest segment signed with the current key\n";
 }
 exit(0);

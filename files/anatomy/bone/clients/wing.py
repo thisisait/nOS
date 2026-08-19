@@ -151,6 +151,18 @@ def insert_event(payload: dict[str, Any]) -> int:
         "actor_id": payload.get("actor_id"),
         "acted_at": payload.get("acted_at"),
     }
+    # TYPE-STABILIZE before hashing (2026-08-19). The hash covers canonical
+    # JSON of these values AS THE WRITER HOLDS THEM; the verifier recomputes it
+    # from values AS SQLITE HANDS THEM BACK. A TEXT column returns a string, so
+    # a writer that hashed an int has signed bytes (`0`) the verifier can never
+    # rebuild (`"0"`) — measured live: events row 339176, an agent_tool_result
+    # whose result_json arrived as int 0, reported nightly as "content
+    # tampered" when nothing was tampered. Every TEXT-column field is cast to
+    # str here so write-time bytes and read-back bytes cannot disagree
+    # (duration_ms/changed are INTEGER columns and stay ints, same as PHP).
+    for _f, _v in values.items():
+        if _f not in ("duration_ms", "changed") and _v is not None and not isinstance(_v, str):
+            values[_f] = str(_v)
     key = _chain_key()
     chain_on = os.getenv("WING_AUDIT_CHAIN_ENABLED") == "1" and key is not None
 
