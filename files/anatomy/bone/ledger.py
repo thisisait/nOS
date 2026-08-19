@@ -175,7 +175,14 @@ class ProposalRefused(LedgerError):
       content-fp-repeat   — byte-identical patch already offered, under ANY
                             fingerprint (an operator forget lifts it)
       already-failed      — attempts exhausted and the last verdict was fail
-      fingerprint-exhausted — attempts exhausted (last verdict pass/indeterminate)
+      passed-awaiting-act — a prior attempt at this fingerprint already holds
+                            a latest verdict of `pass`; the weakness waits on
+                            an act OUTSIDE the loop (merge → converge →
+                            rescan — docs/idea/11-agentic-loop-contract.md
+                            §11), not on another proposal. Lifted the
+                            same two ways as the ceiling: the weakness's
+                            evidence changes, or an operator forget
+      fingerprint-exhausted — attempts exhausted (last verdict indeterminate)
       attempt-pending     — a prior attempt has no verdict yet
       unknown-intent      — intent_class outside the closed enum
       unknown-weakness    — §4: weakness_id is not reported by any source from
@@ -912,6 +919,24 @@ class ProposerLedger(ReaderLedger):
         pending = [p for p in priors if not p["verdicts"]]
         if pending:
             return Decision(False, "attempt-pending", len(priors) + 1, pending, requires_op)
+
+        # "Passed, awaiting an act outside the loop" — checked BEFORE the
+        # attempt ceiling, and regardless of it. Measured 2026-08-19 (fable
+        # review §3.2): `rem:REM-204` held two sealed `pass` verdicts and the
+        # tree still read the old pin, and the only thing the ledger could say
+        # about it was `fingerprint-exhausted` — the same word it uses for a
+        # proposal that went nowhere. A weakness the loop already SOLVED must
+        # not consume further attempts, and its refusal must name what it
+        # waits for (merge → converge → rescan, all outside the loop —
+        # docs/idea/11-agentic-loop-contract.md §11).
+        # THE verdict of a proposal is its LATEST by rowid — the rule
+        # `tools/loop-status.py` had to invent (`ORDER BY id DESC LIMIT 1`)
+        # because nothing said; now something says.
+        passed = [p for p in priors if p["verdicts"]
+                  and p["verdicts"][-1]["result"] == "pass"]
+        if passed:
+            return Decision(False, "passed-awaiting-act", len(priors) + 1,
+                            passed, requires_op)
 
         if len(priors) >= max_attempts:
             last = priors[-1]["verdicts"][-1]

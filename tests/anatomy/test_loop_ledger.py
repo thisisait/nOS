@@ -830,6 +830,73 @@ def test_an_unjudged_attempt_blocks_the_next_one(db, proposer):
     assert e.value.reason == "attempt-pending"
 
 
+def _pass_one_attempt(prop, ev, diff: str):
+    p = propose(prop, diff_text=diff)
+    judge_set(ev, [(LINT, 0, LINT_OK)], proposal_uuid=p["uuid"])
+    return p
+
+
+def test_a_solved_weakness_is_remembered_as_awaiting_an_act(db, proposer, evaluator):
+    """Fable review §3.2, measured live: `rem:REM-204` held two sealed `pass`
+    verdicts and the tree still read the old pin, and the ledger's only word
+    for it was `fingerprint-exhausted` — the same word it uses for a proposal
+    that went nowhere. A weakness the loop SOLVED must refuse the next attempt
+    with a reason that names what it waits for (merge → converge → rescan,
+    all outside the loop), and it must do so on attempt ONE of two: the pass
+    is the operative fact, not the ceiling.
+    """
+    _pass_one_attempt(proposer, evaluator, mkdiff("b"))
+    with pytest.raises(ledger.ProposalRefused) as e:
+        propose(proposer, diff_text=mkdiff("c"))
+    assert e.value.reason == "passed-awaiting-act", (
+        f"a solved weakness was refused as {e.value.reason!r}; the state that "
+        f"says WHY it waits is the whole point of the reason enum"
+    )
+    assert e.value.status == 409
+    assert e.value.prior, "the refusal must carry the passed attempt as evidence"
+
+
+def test_awaiting_act_outranks_the_attempt_ceiling(db, proposer, evaluator):
+    """Fail then pass, ceiling reached: the answer is still the pass. A reader
+    told `fingerprint-exhausted` re-judges (measured: that is exactly what
+    happened to 6f139e22, twice, and changed nothing); a reader told
+    `passed-awaiting-act` goes to the merge queue instead."""
+    _fail_one_attempt(proposer, evaluator, mkdiff("b"))
+    _pass_one_attempt(proposer, evaluator, mkdiff("c"))
+    with pytest.raises(ledger.ProposalRefused) as e:
+        propose(proposer, diff_text=mkdiff("d"))
+    assert e.value.reason == "passed-awaiting-act"
+
+
+def test_the_latest_verdict_is_THE_verdict(db, proposer, evaluator):
+    """`tools/loop-status.py` invented `ORDER BY id DESC LIMIT 1` because
+    nothing said which verdict counts. Now the ledger says: a proposal whose
+    pass was later re-judged FAIL is not awaiting anything."""
+    p = _pass_one_attempt(proposer, evaluator, mkdiff("b"))
+    judge_set(evaluator, [(LINT, 2, LINT_OK)], proposal_uuid=p["uuid"])
+    _fail_one_attempt(proposer, evaluator, mkdiff("c"))
+    with pytest.raises(ledger.ProposalRefused) as e:
+        propose(proposer, diff_text=mkdiff("d"))
+    assert e.value.reason == "already-failed", (
+        f"got {e.value.reason!r}: a superseded pass still counted as THE "
+        f"verdict — the latest-by-rowid rule is not being applied"
+    )
+
+
+def test_awaiting_act_lifts_when_the_weakness_evidence_changes(db, proposer, evaluator):
+    """The same two lifts as the ceiling: the scanner re-scans after a converge,
+    the evidence sha moves, and the fingerprint is a different world — which is
+    exactly the honest exit (§11: merge → converge → rescan → retire)."""
+    _pass_one_attempt(proposer, evaluator, mkdiff("b"))
+    index = dict(WEAKNESS_INDEX, **{"hidden-fee:08": "sha-08-CONVERGED"})
+    lifted = ledger.open_ledger("proposer", registry=TEST_REGISTRY, weakness_index=index)
+    try:
+        ok = propose(lifted, diff_text=mkdiff("z"))
+    finally:
+        lifted.close()
+    assert ok["attempt_n"] == 1
+
+
 def test_the_block_lifts_when_the_weakness_evidence_changes(db, proposer, evaluator):
     """§4 — "or the ledger becomes a permanent scar". The remediation item's
     fix_version moved; this is a different world and deserves a new attempt.
