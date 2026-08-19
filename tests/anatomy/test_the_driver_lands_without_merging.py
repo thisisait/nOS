@@ -122,6 +122,7 @@ def wired(drv, monkeypatch):
         "name": name, "token": "FAKE_not_a_real_token", "domain": f"{name}.invalid",
         "owner": "o", "repo": "nOS",
     })
+    monkeypatch.setattr(drv, "_base_exists", lambda forge, base: (True, ""))
     opened: list[dict] = []
     monkeypatch.setattr(drv, "_open_merge_request",
                         lambda forge, branch, base, title, desc:
@@ -248,6 +249,43 @@ def test_the_branch_name_carries_the_weakness_and_the_proposal(drv, monkeypatch,
     assert "rem-204" in branch.lower() and ready_row["uuid"][:8] in branch
 
 
+def test_a_forge_that_cannot_receive_the_branch_is_refused_before_any_git(
+        drv, monkeypatch, ready_row):
+    """Measured live 2026-08-19, minutes after the driver first ran.
+
+    GitLab's `root/nOS` was `empty_repo: true` with zero branches and Gitea's
+    token answered 401. Pushing into an empty project makes the pushed branch
+    the project's DEFAULT — so the driver's first act would have installed
+    `fix/loop-rem-204-…` as the protected trunk of the review forge.
+    """
+    monkeypatch.setattr(drv, "_forge", lambda name: {
+        "name": name, "token": "FAKE_not_a_real_token", "domain": f"{name}.invalid",
+        "owner": "o", "repo": "nOS"})
+    monkeypatch.setattr(drv, "_base_exists",
+                        lambda forge, base: (False, "branch 'dev' not found"))
+    rec = Recorder()
+    monkeypatch.setattr(drv.subprocess, "run", rec)
+    lines: list[str] = []
+    rc = drv.land(ready_row, base="dev", gate_set="repo", rejudge=False,
+                  timeout=1, act=True, log=lines.append)
+    assert rc == 2, "an unreceivable forge did not stop the landing"
+    assert rec.calls == [], (
+        f"git ran anyway: {rec.argvs()}. The check is worthless unless it "
+        f"precedes the first mutation"
+    )
+    assert any("not found" in ln for ln in lines)
+
+
+def test_an_unreachable_forge_is_not_read_as_an_empty_one(drv, monkeypatch):
+    """Fail closed. A timeout is not permission to push."""
+    monkeypatch.setattr(drv.urllib.request, "urlopen",
+                        lambda *a, **k: (_ for _ in ()).throw(OSError("down")))
+    ok, why = drv._base_exists(
+        {"name": "gitea", "token": "t", "domain": "d.invalid",
+         "owner": "o", "repo": "n"}, "dev")
+    assert ok is False and "unreachable" in why
+
+
 # ── 6. the ledger stays untouched ────────────────────────────────────────────
 
 def test_the_driver_opens_the_ledger_read_only_and_writes_no_sql():
@@ -291,6 +329,7 @@ def test_a_pushed_branch_with_no_merge_request_exits_non_zero(drv, monkeypatch,
     monkeypatch.setattr(drv, "_forge", lambda name: {
         "name": name, "token": "t", "domain": f"{name}.invalid",
         "owner": "o", "repo": "nOS"})
+    monkeypatch.setattr(drv, "_base_exists", lambda forge, base: (True, ""))
     monkeypatch.setattr(drv, "_open_merge_request",
                         lambda *a, **k: (500, "forge exploded"))
     monkeypatch.setattr(drv.subprocess, "run", Recorder())
@@ -309,6 +348,7 @@ def test_a_token_never_reaches_the_output(drv, monkeypatch, ready_row):
     monkeypatch.setattr(drv, "_forge", lambda name: {
         "name": name, "token": "FAKE_not_a_real_token", "domain": f"{name}.invalid",
         "owner": "o", "repo": "nOS"})
+    monkeypatch.setattr(drv, "_base_exists", lambda forge, base: (True, ""))
     rec = Recorder(rc=1, fail_on="push",
                    stderr="fatal: could not read from "
                           "https://oauth2:FAKE_not_a_real_token@gitea.invalid/o/nOS.git")

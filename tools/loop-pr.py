@@ -282,6 +282,52 @@ def _open_merge_request(forge: dict, branch: str, base: str,
         return 0, f"{type(exc).__name__}: {_scrub(str(exc))}"
 
 
+def _base_exists(forge: dict, base: str) -> tuple[bool, str]:
+    """Does BASE exist on this forge? Returns (ok, why-not).
+
+    MEASURED THE DAY THIS WAS WRITTEN, and it is why the check is here rather
+    than left to the push: GitLab's `root/nOS` was `empty_repo: true` with zero
+    branches, and Gitea's token answered 401. Pushing into an empty project
+    makes the pushed branch the project's DEFAULT — so the driver's first act
+    would have been to install `fix/loop-rem-204-6f139e22` as the protected
+    trunk of the review forge. The sibling bash guards this for the same reason
+    (recipe-pr.sh, 2026-06-10); the driver shipped without it for about an hour.
+
+    Fails CLOSED: an unreachable forge is not permission to push.
+    """
+    if forge["name"] == "gitlab":
+        port = _yaml_lookup("gitlab_http_port", REPO / "config.yml",
+                            REPO / "default.config.yml",
+                            REPO / "roles/pazny.gitlab/defaults/main.yml") or "8929"
+        url = (f"http://127.0.0.1:{port}/api/v4/projects/"
+               f"{forge['owner']}%2F{forge['repo']}/repository/branches/{base}")
+        headers = {"PRIVATE-TOKEN": forge["token"]}
+    else:
+        url = (f"https://{forge['domain']}/api/v1/repos/"
+               f"{forge['owner']}/{forge['repo']}/branches/{base}")
+        headers = {"Authorization": f"token {forge['token']}"}
+
+    request = urllib.request.Request(url, headers=headers)  # noqa: S310
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:  # noqa: S310
+            return response.status == 200, ""
+    except urllib.error.HTTPError as exc:
+        if exc.code in (401, 403):
+            return False, (
+                f"{forge['name']} rejected the token (HTTP {exc.code}) — "
+                f"re-provision it with the {forge['name']} playbook tag"
+            )
+        return False, (
+            f"branch {base!r} not found on {forge['name']} (HTTP {exc.code}) — "
+            f"push the trunk first: tools/sync-trunk-to-{forge['name']}.sh"
+        )
+    except (urllib.error.URLError, OSError) as exc:
+        return False, (
+            f"{forge['name']} unreachable ({type(exc).__name__}) — refusing to "
+            f"push, because an unreachable forge is not an empty one"
+        )
+
+
 def _rejudge(uuid: str, gate_set: str, timeout: int) -> tuple[str, str]:
     """Re-run the judges against today's HEAD. Returns (result, detail).
 
@@ -340,6 +386,14 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
         return 0
 
     gitea, gitlab = _forge("gitea"), _forge("gitlab")
+    # Both forges must be able to receive this BEFORE any branch is cut. Half a
+    # landing — a commit on Gitea, nothing on GitLab — is worse than none: the
+    # CI goes green on a change no reviewer can see.
+    for forge in (gitea, gitlab):
+        ok, why = _base_exists(forge, base)
+        if not ok:
+            log(f"  {wid}: {why}")
+            return 2
     subject, body = _commit_message(row)
     branch = f"fix/loop-{str(wid).replace(':', '-').lower()}-{row['uuid'][:8]}"
 
