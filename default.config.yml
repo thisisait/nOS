@@ -2299,7 +2299,7 @@ erpnext_port: 8087                     # 8082 = Traefik dashboard, 8083-8086 tak
 # in this wave the result cannot be verified against `docker ps`. The tag and
 # its arm64 manifest are verified against the registry; that the service comes
 # up on it is not. First supervised `-e install_erpnext=true` run is the test.
-erpnext_version: "v15.119.0"              # supersedes CVE-2026-27471 (CVSS 9.3 unauth doc access)
+erpnext_version: "v15.119.3"              # REM-208: GHSA-6w83-8777-v93q SSTI (CVSS 9.9), floor 15.119.1 — pinned above it so the fourth overtake has margin
 # erpnext_data_dir: DEPRECATED since P0.1 migration to a named volume. Sites data
 # lives in Docker named volume `b2b_erpnext_sites` (managed for blank-reset
 # via `compose down -v` + `volume prune -f -a`). External storage can be
