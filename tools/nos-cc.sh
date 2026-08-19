@@ -80,21 +80,55 @@ fi
 
 W="$REPO_ROOT/tools/nos-watch.sh"
 
-# ── ops: what is red, and what the agents are doing ──────────────────────────
+# ── ops: readers above, two free shells below ────────────────────────────────
+#
+#   ┌───────────────┬───────────────┐
+#   │ what is red   │ agents        │   readers: state, re-run, never scrollback
+#   │               ├───────────────┤
+#   │               │ recent history│
+#   ├───────────────┴───────────────┤
+#   │ shell A       │ shell B       │   the operator's two free prompts
+#   └───────────────┴───────────────┘
+#
+# TWO shells, because one was not enough in practice: the operator drives an
+# agent session (claude / hermes / opencode) in one and still needs a prompt for
+# the ordinary shell work that watching produces. NEITHER is started for them.
+# That empty prompt is not laziness — it is what keeps the rule above true. A
+# pane that launched an agent would be a pane that keeps one alive; a pane that
+# offers a prompt is a place the operator starts one deliberately, and it ends
+# when the run ends.
+#
+# `git log` earns its place up here for the same reason it has its own window:
+# every other reader raises the question "what did we just do to ourselves". The
+# glance lives here; the `code` window keeps the long form beside an editor.
+#
+# EVERY SPLIT HAPPENS BEFORE ANY send-keys. tmux renumbers panes by POSITION on
+# each split, so a send-keys interleaved between splits addresses whichever pane
+# later slid into that index — and the layout that results is not the one the
+# code reads like. The indices below are the final ones, verified by building it.
 tmux new-session -d -s "$SESSION" -n ops -c "$REPO_ROOT"
-tmux send-keys -t "$SESSION:ops" \
-    "$W --interval 30 --title 'what is red' -- tools/red-status.py" C-m
+tmux split-window -v -t "$SESSION:ops.0" -c "$REPO_ROOT" -p 32   # the shell row
+tmux split-window -h -t "$SESSION:ops.1" -c "$REPO_ROOT" -p 50   # -> shell B
+tmux split-window -h -t "$SESSION:ops.0" -c "$REPO_ROOT" -p 45   # right column
+tmux split-window -v -t "$SESSION:ops.1" -c "$REPO_ROOT" -p 45   # -> history
 
-# Right column: agents above, an operator shell below. The shell is deliberately
-# the smaller half — this is a place to WATCH from, and the big terminals for
-# doing work are the operator's own sessions.
-tmux split-window -h -t "$SESSION:ops" -c "$REPO_ROOT" -p 45
+tmux send-keys -t "$SESSION:ops.0" \
+    "$W --interval 30 --title 'what is red' -- tools/red-status.py" C-m
 tmux send-keys -t "$SESSION:ops.1" \
     "$W --interval 20 --title 'agents' -- tools/agent-status.py --limit 8" C-m
-
-tmux split-window -v -t "$SESSION:ops.1" -c "$REPO_ROOT" -p 40
+# Truncated to ONE ROW PER COMMIT, and few enough to fit the pane.
+#
+# Both halves were found by building it and reading the result. A wrapped
+# subject costs two rows to say one thing; twelve of them in a seven-row pane
+# scrolled the NEWEST commits off the top and left the OLDEST three on screen —
+# a pane that looked like recent history while showing the opposite. That is the
+# scrollback lie in its purest form, and it shipped past a gate that only ever
+# counted panes. The `code` window carries the long, decorated form.
 tmux send-keys -t "$SESSION:ops.2" \
+    "$W --interval 60 --title 'recent history' -- git -c color.ui=always log --abbrev-commit --pretty='%C(auto)%h %<(52,trunc)%s' -6" C-m
+tmux send-keys -t "$SESSION:ops.3" \
     "tools/elsewhere-status.py; clear" C-m
+# ops.4 gets nothing typed into it at all. Deliberate: see above.
 
 # ── stuck: the quiet half. red-status says what FAILS; this says what STOPPED ─
 # Deliberately its own window rather than a pane: it is the view you open when
@@ -131,7 +165,9 @@ tmux send-keys -t "$SESSION:converge" "nos" ""
 tmux new-window -t "=$SESSION" -n service -c "$REPO_ROOT"
 
 tmux select-window -t "$SESSION:ops"
-tmux select-pane -t "$SESSION:ops.2"
+# Land on shell A — attaching should put the cursor where the operator types,
+# not in a reader they would have to leave first.
+tmux select-pane -t "$SESSION:ops.3"
 
 # ── the bar ──────────────────────────────────────────────────────────────────
 #

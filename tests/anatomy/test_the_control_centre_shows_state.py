@@ -137,6 +137,49 @@ def test_the_converge_is_offered_not_executed():
     )
 
 
+def test_ops_leaves_a_free_prompt_and_starts_no_agent():
+    """The ops window carries TWO shells: one the operator drives an agent
+    session in (claude / hermes / opencode), one for the ordinary shell work
+    that watching produces. Neither may be started FOR them.
+
+    This is the same rule as the converge window, applied where it is easiest to
+    break: a pane that launches an agent is a pane that keeps one alive, and a
+    persistent agent is a runaway with a nicer name. What persists here is the
+    VIEW of agent runs (`tools/agent-status.py`), never a run itself."""
+    code = _code(CC)
+    typed_into = set(re.findall(r'send-keys\s+-t\s+"\$SESSION:ops\.(\d+)"', code))
+    assert typed_into, "no ops pane is addressed by index — this gate stopped seeing them"
+    assert "4" not in typed_into, (
+        "ops.4 is typed into. It is the free prompt the operator starts their "
+        "own agent session in; a setup script that fills it has taken the "
+        "decision away from them."
+    )
+    for launcher in ("claude", "hermes", "opencode"):
+        assert not re.search(rf"send-keys[^\n]*\b{launcher}\b", code), (
+            f"the layout types `{launcher}` into a pane. No pane here starts an "
+            "agent — agent runs are bounded on purpose, and a pane that keeps "
+            "one alive defeats the bound."
+        )
+
+
+def test_every_reader_pane_is_a_reader_not_a_one_shot():
+    """A pane that runs its command once shows an answer that ages silently —
+    the scrollback lie wearing a different hat. Every INFORMATIVE pane goes
+    through nos-watch.sh with an interval; the shells are the exception, and
+    they are exceptions because they are prompts, not answers."""
+    code = _code(CC)
+    # `$W --interval N` is the reader invocation itself. Matched on its own and
+    # NOT anchored to `send-keys` on the same line: the calls are split across a
+    # line continuation, so an anchored pattern silently matches nothing — which
+    # is how this assertion first shipped reading zero and claiming three.
+    watched = re.findall(r"\$W --interval (\d+)", code)
+    assert len(watched) >= 3, (
+        f"only {len(watched)} pane(s) re-run a reader on an interval; the ops "
+        "window alone should carry red-status, agents and the history glance."
+    )
+    assert all(int(i) > 0 for i in watched), "a reader interval is not positive"
+
+
 def test_the_status_bar_cannot_freeze_at_a_comfortable_number():
     """A cached bar fed by a background refresher shows the last good numbers
     forever if the refresher dies — green because nothing is checking, which is
@@ -175,6 +218,26 @@ def test_the_layout_builds_without_touching_other_sessions():
             capture_output=True, text=True,
         ).stdout.split()
         assert "ops" in windows, f"no ops window; got {windows}"
+
+        # The layout ACTUALLY built, not the one the code reads like. tmux
+        # renumbers panes by position on every split, so a send-keys interleaved
+        # between splits lands somewhere else entirely — a mistake that is
+        # invisible in a diff and obvious on screen.
+        panes = subprocess.run(
+            ["tmux", "list-panes", "-t", "=nos-cc-selftest:ops",
+             "-F", "#{pane_index} #{pane_top}"],
+            capture_output=True, text=True,
+        ).stdout.split("\n")
+        panes = [p for p in panes if p.strip()]
+        assert len(panes) == 5, (
+            f"ops has {len(panes)} pane(s), expected 5 — three readers above "
+            f"two free shells; got {panes}"
+        )
+        tops = [int(p.split()[1]) for p in panes]
+        assert len(set(tops)) >= 2, (
+            f"every ops pane starts at the same row, so nothing is stacked "
+            f"above anything; got tops={tops}"
+        )
 
         # Running it again must attach/report, never rebuild.
         again = subprocess.run(
