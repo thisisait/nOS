@@ -123,6 +123,10 @@ def wired(drv, monkeypatch):
         "owner": "o", "repo": "nOS",
     })
     monkeypatch.setattr(drv, "_base_exists", lambda forge, base: (True, ""))
+    # No branch exists on either forge — the plain-push path. The refresh path
+    # has its own section below; without this stub the tip lookup would reach
+    # for a real network (the GitLab half asks 127.0.0.1, i.e. the LIVE forge).
+    monkeypatch.setattr(drv, "_remote_tip", lambda forge, branch: (None, None))
     opened: list[dict] = []
     monkeypatch.setattr(drv, "_open_merge_request",
                         lambda forge, branch, base, title, desc:
@@ -365,6 +369,7 @@ def test_a_pushed_branch_with_no_merge_request_exits_non_zero(drv, monkeypatch,
         "name": name, "token": "t", "domain": f"{name}.invalid",
         "owner": "o", "repo": "nOS"})
     monkeypatch.setattr(drv, "_base_exists", lambda forge, base: (True, ""))
+    monkeypatch.setattr(drv, "_remote_tip", lambda forge, branch: (None, None))
     monkeypatch.setattr(drv, "_open_merge_request",
                         lambda *a, **k: (500, "forge exploded"))
     monkeypatch.setattr(drv.subprocess, "run", Recorder())
@@ -384,6 +389,7 @@ def test_a_token_never_reaches_the_output(drv, monkeypatch, ready_row):
         "name": name, "token": "FAKE_not_a_real_token", "domain": f"{name}.invalid",
         "owner": "o", "repo": "nOS"})
     monkeypatch.setattr(drv, "_base_exists", lambda forge, base: (True, ""))
+    monkeypatch.setattr(drv, "_remote_tip", lambda forge, branch: (None, None))
     rec = Recorder(rc=1, fail_on="push",
                    stderr="fatal: could not read from "
                           "https://oauth2:FAKE_not_a_real_token@gitea.invalid/o/nOS.git")
@@ -456,3 +462,128 @@ def test_a_missing_nos_loop_is_indeterminate_not_a_pass(drv, monkeypatch):
     monkeypatch.setattr(drv.shutil, "which", lambda _: None)
     result, detail = drv._rejudge("uuid", "repo", 1)
     assert result == "indeterminate" and "PATH" in detail
+
+
+# ── 10. re-runs refresh the driver's own branch, and only its own ─────────────
+#
+# MEASURED 2026-08-19, the wedge this section exists for: MR !1's commit
+# f09f5860 predated the forge webhook, so no pipeline existed for it and none
+# ever would — and a re-run of the driver produced the same branch name with a
+# different commit, which a plain push refused non-fast-forward. The design is
+# refresh-in-place: one proposal = one branch = one MR for its whole life, and
+# the driver may overwrite ONLY a tip it can prove it made for this proposal.
+
+def _wire_refresh(drv, monkeypatch, *, tip, owned):
+    monkeypatch.setattr(drv, "_forge", lambda name: {
+        "name": name, "token": "FAKE_not_a_real_token",
+        "domain": f"{name}.invalid", "owner": "o", "repo": "nOS"})
+    monkeypatch.setattr(drv, "_base_exists", lambda forge, base: (True, ""))
+    monkeypatch.setattr(drv, "_remote_tip", lambda forge, branch: (tip, None))
+    monkeypatch.setattr(drv, "_owns_remote_tip",
+                        lambda tree, url, sha, uuid, diff:
+                        (owned, "" if owned else "tip is not the driver's"))
+    opened: list[tuple] = []
+    monkeypatch.setattr(drv, "_open_merge_request",
+                        lambda *a, **k: (opened.append(a), (409, ""))[1])
+    return opened
+
+
+def test_an_owned_stale_tip_is_refreshed_with_a_lease(drv, monkeypatch, ready_row):
+    rec = Recorder()
+    monkeypatch.setattr(drv.subprocess, "run", rec)
+    _wire_refresh(drv, monkeypatch, tip="0ld7ea5e" * 5, owned=True)
+    lines: list[str] = []
+    rc = drv.land(ready_row, base="dev", gate_set="repo", rejudge=False,
+                  timeout=1, act=True, log=lines.append)
+    assert rc == 0
+    pushes = rec.pushes()
+    assert len(pushes) == 2, f"expected both forges pushed, got {pushes}"
+    for push in pushes:
+        lease = [a for a in push if a.startswith("--force-with-lease=")]
+        assert lease, (
+            f"a stale owned tip was pushed without a lease: {push}; a plain "
+            f"push is refused non-fast-forward and the MR stays wedged forever"
+        )
+        assert ("0ld7ea5e" * 5) in lease[0], (
+            "the lease is not pinned to the verified remote sha — an unpinned "
+            "lease trusts whatever the local remote-tracking ref happens to say"
+        )
+        assert "--force" not in push or all(
+            a.startswith("--force-with-lease=") for a in push if a.startswith("--force")
+        ), f"a bare --force appeared: {push}"
+    assert any("MR" in ln and "tracks" in ln for ln in lines), (
+        "the operator is not told the existing MR now tracks the new commit"
+    )
+
+
+def test_a_tip_the_driver_cannot_prove_it_owns_is_never_forced(drv, monkeypatch,
+                                                               ready_row):
+    rec = Recorder()
+    monkeypatch.setattr(drv.subprocess, "run", rec)
+    _wire_refresh(drv, monkeypatch, tip="5omebody" * 5, owned=False)
+    lines: list[str] = []
+    rc = drv.land(ready_row, base="dev", gate_set="repo", rejudge=False,
+                  timeout=1, act=True, log=lines.append)
+    assert rc == 2, "an unowned tip did not stop the landing"
+    assert rec.pushes() == [], (
+        f"the driver pushed over a tip it could not prove it made: {rec.pushes()}"
+    )
+    assert any("Not forcing" in ln for ln in lines)
+
+
+def test_an_unaskable_tip_refuses_rather_than_pushing_blind(drv, monkeypatch,
+                                                            ready_row):
+    rec = Recorder()
+    monkeypatch.setattr(drv.subprocess, "run", rec)
+    monkeypatch.setattr(drv, "_forge", lambda name: {
+        "name": name, "token": "t", "domain": f"{name}.invalid",
+        "owner": "o", "repo": "nOS"})
+    monkeypatch.setattr(drv, "_base_exists", lambda forge, base: (True, ""))
+    monkeypatch.setattr(drv, "_remote_tip",
+                        lambda forge, branch: (None, f"{forge['name']} unreachable"))
+    rc = drv.land(ready_row, base="dev", gate_set="repo", rejudge=False,
+                  timeout=1, act=True, log=lambda _: None)
+    assert rc == 2 and rec.pushes() == [], (
+        "an unanswerable 'does the branch exist' was read as 'it does not'"
+    )
+
+
+def test_ownership_needs_both_the_uuid_and_the_judged_diff(drv, monkeypatch,
+                                                           tmp_path):
+    """One line of prose must not be enough to overwrite a commit.
+
+    A human who cherry-picked the driver's commit message onto real work would
+    match the uuid test; only the diff comparison protects their change.
+    """
+    answers = {"%B": "body naming 6f139e22-6793-4a88-bfa2-fc136a91506a",
+               "": "--- a/x\n+++ b/x\n@@\n-old\n+DIFFERENT\n"}
+
+    def fake_run(argv, **kw):
+        class Done:
+            returncode = 0
+            stderr = ""
+            stdout = ""
+        argv = list(argv)
+        if argv[:2] == ["git", "show"]:
+            fmt = next((a.split("=", 1)[1] for a in argv if a.startswith("--format=")), None)
+            Done.stdout = answers.get(fmt, "")
+        return Done()
+
+    monkeypatch.setattr(drv.subprocess, "run", fake_run)
+    judged = "--- a/x\n+++ b/x\n@@\n-old\n+new\n"
+    owned, why = drv._owns_remote_tip(
+        tmp_path, "https://x.invalid/r.git", "a" * 40,
+        "6f139e22-6793-4a88-bfa2-fc136a91506a", judged)
+    assert owned is False and "different change" in why
+
+    answers[""] = judged
+    owned, _ = drv._owns_remote_tip(
+        tmp_path, "https://x.invalid/r.git", "a" * 40,
+        "6f139e22-6793-4a88-bfa2-fc136a91506a", judged)
+    assert owned is True
+
+    answers["%B"] = "an unrelated body"
+    owned, why = drv._owns_remote_tip(
+        tmp_path, "https://x.invalid/r.git", "a" * 40,
+        "6f139e22-6793-4a88-bfa2-fc136a91506a", judged)
+    assert owned is False and "does not name proposal" in why

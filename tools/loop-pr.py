@@ -328,6 +328,84 @@ def _base_exists(forge: dict, base: str) -> tuple[bool, str]:
         )
 
 
+def _remote_tip(forge: dict, branch: str) -> tuple[str | None, str | None]:
+    """The sha this branch points at on the forge, or None if it does not exist.
+
+    Returns (sha, error). A forge that cannot be asked is an ERROR, never
+    "absent" — a plain push into a branch we could not see would either fail
+    non-fast-forward (the MR !1 wedge this exists to fix) or, worse, race a
+    state nobody examined. Fail closed, same doctrine as `_base_exists`.
+    """
+    if forge["name"] == "gitlab":
+        port = _yaml_lookup("gitlab_http_port", REPO / "config.yml",
+                            REPO / "default.config.yml",
+                            REPO / "roles/pazny.gitlab/defaults/main.yml") or "8929"
+        url = (f"http://127.0.0.1:{port}/api/v4/projects/"
+               f"{forge['owner']}%2F{forge['repo']}/repository/branches/{branch}")
+        headers = {"PRIVATE-TOKEN": forge["token"]}
+    else:
+        url = (f"https://{forge['domain']}/api/v1/repos/"
+               f"{forge['owner']}/{forge['repo']}/branches/{branch}")
+        headers = {"Authorization": f"token {forge['token']}"}
+    request = urllib.request.Request(url, headers=headers)  # noqa: S310
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:  # noqa: S310
+            body = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            return None, None
+        return None, f"{forge['name']} answered HTTP {exc.code} for branch {branch!r}"
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        return None, f"{forge['name']} unreachable asking for {branch!r} ({type(exc).__name__})"
+    sha = (body.get("commit") or {}).get("id") or (body.get("commit") or {}).get("sha")
+    if not sha:
+        return None, f"{forge['name']} returned no commit sha for {branch!r}"
+    return str(sha), None
+
+
+def _edit_lines(diff_text: str) -> list[str]:
+    """The +/- payload of a diff, headers dropped — same normalization as the
+    reviewer's `_same_change`, duplicated as data-shape rather than shared,
+    because the reviewer must not import the tool it audits."""
+    return [
+        line.rstrip()
+        for line in diff_text.splitlines()
+        if line[:1] in ("+", "-") and not line.startswith(("+++", "---"))
+    ]
+
+
+def _owns_remote_tip(tree: pathlib.Path, url: str, remote_sha: str,
+                     proposal_uuid: str, judged_diff: str) -> tuple[bool, str]:
+    """Is the branch tip on the forge a commit THIS driver made for THIS
+    proposal? Only then may the driver overwrite it.
+
+    Two proofs, both required:
+      1. the tip's commit message names the proposal uuid (the driver writes
+         it into every body — see `_commit_message`'s caller);
+      2. the tip's diff against its parent makes the same +/- edits as the
+         judged patch, so "a human reused our branch name for real work" can
+         never be swept away by matching one line of prose.
+
+    Anything unverifiable is NOT ours. A force that cannot prove its target
+    is the driver's own work is a force onto somebody else's.
+    """
+    fetched = subprocess.run(  # noqa: S603
+        ["git", "fetch", "-q", url, remote_sha], cwd=str(tree),
+        text=True, capture_output=True, check=False,
+    )
+    if fetched.returncode != 0:
+        return False, f"could not fetch {remote_sha[:8]} to examine it"
+    message = _git("show", "-s", "--format=%B", remote_sha, cwd=tree, check=False)
+    if proposal_uuid not in message:
+        return False, (f"tip {remote_sha[:8]} does not name proposal "
+                       f"{proposal_uuid[:8]} — not the driver's commit")
+    tip_diff = _git("show", "--format=", remote_sha, cwd=tree, check=False)
+    if _edit_lines(tip_diff) != _edit_lines(judged_diff):
+        return False, (f"tip {remote_sha[:8]} names the proposal but carries a "
+                       f"different change — refusing to overwrite it")
+    return True, ""
+
+
 def _ci_hook_count(forge: dict) -> int | None:
     """How many webhooks the Gitea repo carries, or None if we could not ask.
 
@@ -453,18 +531,48 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
 
         # Gitea FIRST — it carries the CI, and a branch on the review surface
         # with no pipeline behind it is the thing the reviewer cannot act on.
+        #
+        # RE-RUNS REFRESH IN PLACE. One proposal is one branch is one MR for
+        # its whole life: when the base moves and the driver runs again, it
+        # overwrites its OWN previous tip with `--force-with-lease` pinned to
+        # the sha it just verified, and the existing MR simply tracks the new
+        # commit — no branch-per-base proliferation, no supersede chain to
+        # garbage-collect, and nothing to close. Measured need: MR !1's commit
+        # predated the forge webhook, so no pipeline could ever exist for it,
+        # and a plain push was refused non-fast-forward. The overwrite is
+        # gated on `_owns_remote_tip`: a tip the driver cannot PROVE it made
+        # for this proposal is never forced, so a human's work under a
+        # borrowed branch name survives every unattended run.
+        refreshed = False
         for forge in (gitea, gitlab):
             url = (f"https://oauth2:{forge['token']}@{forge['domain']}"
                    f"/{forge['owner']}/{forge['repo']}.git")
+            tip, tip_err = _remote_tip(forge, branch)
+            if tip_err:
+                log(f"  {wid}: {tip_err} — refusing to push blind")
+                return 2
+            push_argv = ["git", "push", url, branch]
+            if tip and tip != sha:
+                owned, why = _owns_remote_tip(tree, url, tip, row["uuid"], row["_diff"])
+                if not owned:
+                    log(f"  {wid}: {forge['name']} already carries {branch} and "
+                        f"{why}. Not forcing; if that work is real it needs a "
+                        f"reviewer, and if it is stale the operator deletes it")
+                    return 2
+                push_argv = ["git", "push",
+                             f"--force-with-lease=refs/heads/{branch}:{tip}",
+                             url, branch]
+                refreshed = True
             done = subprocess.run(  # noqa: S603
-                ["git", "push", url, branch], cwd=str(tree),
+                push_argv, cwd=str(tree),
                 text=True, capture_output=True, check=False,
             )
             if done.returncode != 0:
                 log(f"  {wid}: push to {forge['name']} failed — "
                     f"{_scrub(done.stderr.strip().splitlines()[-1] if done.stderr else '')}")
                 return 1
-            log(f"  {wid}: pushed {branch} → {forge['name']}")
+            log(f"  {wid}: pushed {branch} → {forge['name']}"
+                f"{' (refreshed the driver’s previous tip in place)' if refreshed else ''}")
         # NOT "Woodpecker runs against this sha" — that was the first version of
         # this line and it was a claim, in a tool written to replace claims with
         # measurements. Measured minutes later: the Gitea repo carried ZERO
@@ -488,7 +596,12 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
             log(f"  {wid}: MR opened — {detail}")
             return 0
         if http == 409:
-            log(f"  {wid}: an MR for {branch} → {base} already exists")
+            if refreshed:
+                log(f"  {wid}: the existing MR for {branch} → {base} now tracks "
+                    f"{sha[:8]} — GitLab MRs follow their source branch, so the "
+                    f"refresh IS the update; CI runs on the new sha")
+            else:
+                log(f"  {wid}: an MR for {branch} → {base} already exists")
             return 0
         # A pushed branch with no MR is half-done work and must say so; a silent
         # exit 0 here left a commit stranded once already (recipe-pr, 2026-06-10).
