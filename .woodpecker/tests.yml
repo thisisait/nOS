@@ -42,7 +42,20 @@ steps:
       #   imports the pulse package which depends on httpx)
       # jinja2 + jsonschema = plugin loader render tests
       # requests = tester_identity lib (tests/e2e/lib/authentik_admin.py)
-      - pip install --quiet --no-cache-dir pytest pytest-asyncio pyyaml httpx jinja2 jsonschema requests
+      # fastapi = the loop-engine gates import it at MODULE level, so without it
+      #   pytest exits 2 on a COLLECTION error and the whole suite is skipped —
+      #   not three failures, no run at all. Found 2026-08-19 by the first CI
+      #   run this repo has had since those gates were written: CI had been dark
+      #   (no forge webhook) for the entire life of the loop engine, so nothing
+      #   ever discovered that three of its gates cannot be collected here.
+      # git: several gates build a scratch repository and ask git what would
+      #   actually happen (the apply/landed/conflict oracle, the loop ratchet's
+      #   committed-vs-worktree split). python:*-slim has no git, and without it
+      #   they ERROR rather than fail — 13 errors, 43 extra failures, measured.
+      # markdown: tools/devlog-compile.py imports it.
+      - apt-get update -qq && apt-get install -y -qq --no-install-recommends git
+      - git config --global --add safe.directory "$CI_WORKSPACE"
+      - pip install --quiet --no-cache-dir pytest pytest-asyncio pyyaml httpx jinja2 jsonschema requests fastapi markdown
       # Install pulse as editable so its package imports resolve in test
       - pip install --quiet --no-cache-dir -e files/anatomy/pulse
       # -rA summary lists FAIL/SKIP/ERROR at the very end so even a
