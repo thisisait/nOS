@@ -71,9 +71,14 @@
     # plus a `json` key is what separates an answer from the front-end.
     - name: "[pazny.woodpecker Post Repo] Refresh forge cache (sync Gitea repo list)"
       no_log: true   # Bearer header embeds woodpecker_api_token
+      # GET, not POST. `/api/user/repos` is a GET route in Woodpecker 3; POST
+      # is v1/v2 syntax and lands in the SPA catch-all, which is how this call
+      # returned 200-with-HTML and reported the forge cache refreshed. Measured
+      # 2026-08-19 with a KNOWN-GOOD token: GET -> `null` (JSON, authenticated,
+      # no repos synced yet); POST -> 1679 bytes of index.html.
       ansible.builtin.uri:
         url: "{{ _woodpecker_api }}/api/user/repos?all=true&flush=true"
-        method: POST
+        method: GET
         headers:
           Authorization: "Bearer {{ woodpecker_api_token }}"
         status_code: [200, 204, 401, 403]

@@ -1747,6 +1747,14 @@ woodpecker_agent_secret: "{{ global_password_prefix }}_pw_woodpecker"
 woodpecker_gitea_client: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
 woodpecker_gitea_secret: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
 woodpecker_open_registration: false  # true = anyone can log in via Gitea
+# Comma-separated Gitea usernames Woodpecker auto-creates AND grants admin to,
+# bypassing open_registration=false. Declared here rather than living only in
+# the template's `| default(...)`: with registration closed this is the ONLY
+# list that can log in at all, so an operator who signs in under a different
+# SSO identity than gitea_admin_user meets "The registration is closed" with
+# nothing in default.config.yml to tell them which knob decides it (measured
+# 2026-08-19 — the operator arrived as `akadmin`, the list said `pazny`).
+woodpecker_admin: "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
 woodpecker_max_workflows: 4      # Max parallel pipeline runs per agent
 # REM-002 hardening — see roles/pazny.woodpecker/templates/compose.yml.j2 for
 # the full vessel block. Operators with vetted plugins can override
