@@ -295,17 +295,23 @@ def axis_toolchain(res: Result) -> None:
         host = host_version(spec["cmd"])
         pin = declared(spec["pin_file"], spec["pin_re"])
 
+        if pin is not None and FLOATING.match(pin):
+            # RULE 2 — checked BEFORE the host probe (2026-08-19): floating is
+            # a property of the DECLARATION, not of the host. Gating it on the
+            # binary being installed meant a host without node got no floating
+            # report at all — the pin that can never warn anyone additionally
+            # went unreported exactly where nothing else could warn either.
+            host_part = f"host {host}" if host else "host not installed / not readable"
+            res.add("tool", spec["tool"],
+                    f"{host_part} · pin is '{pin}' — FLOATING, so it can never warn you",
+                    OK if host else UNREADABLE)
+            res.uncomparable.append(f"{spec['tool']} (floating pin '{pin}')")
+            continue
         if host is None:
             res.add("tool", spec["tool"], "not installed / not readable on this host", UNREADABLE)
             continue
         if pin is None:
             res.add("tool", spec["tool"], f"host {host} · nothing declares a pin")
-            continue
-        if FLOATING.match(pin):
-            # RULE 2.
-            res.add("tool", spec["tool"],
-                    f"host {host} · pin is '{pin}' — FLOATING, so it can never warn you")
-            res.uncomparable.append(f"{spec['tool']} (floating pin '{pin}')")
             continue
 
         split = KNOWN_SPLITS.get(spec["tool"])

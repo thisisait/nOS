@@ -23,6 +23,8 @@ from __future__ import annotations
 import pathlib
 import re
 
+import pytest
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PRESENTER = REPO / "files/anatomy/wing/app/Presenters/Api/PulsePresenter.php"
 CATALOG = REPO / "files/anatomy/scripts/discover-pulse-catalog.py"
@@ -55,26 +57,37 @@ def _allowed_prefixes() -> tuple[str, ...]:
 	return prefixes
 
 
-def _catalog_substitutions() -> dict[str, str]:
+def _catalog_substitutions(playbook_dir: str) -> dict[str, str]:
 	"""The REAL token→value map, imported from the catalog script.
 
 	Imported rather than mirrored on purpose: a mirrored list is a second
 	source of truth that drifts, and when it drifts the test is the thing
 	that goes green while production breaks.
+
+	``playbook_dir`` is passed EXPLICITLY (was `setdefault(str(REPO))`,
+	2026-08-19): production only ever runs with the checkout under an
+	operator home (/Users/… or /home/…), but the forge CI mounts it at /w —
+	so deriving the substitution root from where THIS checkout happens to
+	sit made the gate test the runner's mount point, not the estate. The
+	caller parametrises over both canonical placements instead, which is
+	deterministic everywhere and covers both platforms on every run.
 	"""
 	import importlib.util
 	import os
 
 	spec = importlib.util.spec_from_file_location("_pulse_catalog", CATALOG)
 	mod = importlib.util.module_from_spec(spec)
-	os.environ.setdefault("NOS_PLAYBOOK_DIR", str(REPO))
-	spec.loader.exec_module(mod)
-	subs = getattr(mod, "_build_substitutions", None)
-	assert callable(subs), (
-		f"{CATALOG.name} no longer exposes `_build_substitutions` — the map was "
-		"renamed and this gate silently stopped covering the real thing"
-	)
-	return subs()
+	os.environ["NOS_PLAYBOOK_DIR"] = playbook_dir
+	try:
+		spec.loader.exec_module(mod)
+		subs = getattr(mod, "_build_substitutions", None)
+		assert callable(subs), (
+			f"{CATALOG.name} no longer exposes `_build_substitutions` — the map was "
+			"renamed and this gate silently stopped covering the real thing"
+		)
+		return subs()
+	finally:
+		del os.environ["NOS_PLAYBOOK_DIR"]
 
 
 def test_pulse_presenter_has_validate_command():
@@ -198,10 +211,23 @@ def test_pulse_tokens_are_bare_not_filtered():
 	)
 
 
-def test_real_plugin_manifests_pass_validator():
+@pytest.mark.parametrize("playbook_dir", [
+	"/Users/operator/projects/nOS",   # macOS estate placement
+	"/home/operator/projects/nOS",    # Linux estate placement
+])
+def test_real_plugin_manifests_pass_validator(playbook_dir):
 	"""Critical: the validator must accept commands that LIVE plugin
 	manifests already register. Otherwise the next plugin-loader run
-	breaks operator's working install."""
+	breaks operator's working install.
+
+	Parametrised over BOTH canonical checkout roots (2026-08-19): a
+	{{ playbook_dir }}-rooted command only passes the validator because the
+	estate keeps the checkout under an operator home — asserting that for
+	/Users AND /home on every run is strictly stronger than asserting it
+	for wherever this particular checkout is mounted (the forge CI mounts
+	at /w, which is not, and must never be treated as, a supported estate
+	placement)."""
+	subs = _catalog_substitutions(playbook_dir)
 	plugin_files = list((REPO / "files/anatomy/plugins").rglob("plugin.yml"))
 	# Find every `command:` value under a `jobs:` block.
 	for path in plugin_files:
@@ -224,7 +250,7 @@ def test_real_plugin_manifests_pass_validator():
 			# catalog passed the literal braces through and Wing 400'd the
 			# upsert. A gate you can satisfy by editing the gate is not one.
 			cmd_rendered = cmd
-			for token, value in _catalog_substitutions().items():
+			for token, value in subs.items():
 				cmd_rendered = cmd_rendered.replace(token, value or "/Users/pazny/x")
 			# Prefix check, PARSED from the PHP rather than mirrored — see
 			# _allowed_prefixes() for what mirroring it cost.
