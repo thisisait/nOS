@@ -1750,6 +1750,12 @@ woodpecker_gitea_secret: ""      # auto-provisioned on first run (post-oauth.yml
 # (SSRF); the CI host resolves to the LAN through the public edge, so without
 # this every Woodpecker delivery is refused while the hook still reports
 # active=true. Comma-separated hostnames — never `*` or `private`.
+# Where Woodpecker's deploy-trigger step POSTs. Over the Docker host bridge,
+# not the public edge: the caller is a container on this host, so the edge would
+# add a Cloudflare hop and a forward-auth surface to a call that never leaves
+# the machine. Provisioned as the `wing_deploy_url` REPO SECRET by
+# roles/pazny.woodpecker/tasks/post-secrets.yml.
+woodpecker_wing_deploy_url: "http://host.docker.internal:{{ wing_port | default(9000) }}/api/v1/deploy-trigger"
 gitea_webhook_allowed_hosts: "{{ woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
 woodpecker_open_registration: false  # true = anyone can log in via Gitea
 # Comma-separated Gitea usernames Woodpecker auto-creates AND grants admin to,

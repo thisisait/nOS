@@ -5,6 +5,9 @@
 # Called from tasks/stacks/stack-up.yml after the devops stack is healthy.
 #  1. post-oauth.yml — autowire the Gitea OAuth2 app (always, when Gitea is on).
 #  2. post-repo.yml  — optional nOS repo mirror + activation (autowire toggle).
+#  3. post-secrets.yml — the repo secrets the committed pipelines reference.
+#     Runs inside the same toggle: a repo that is not activated has no repo to
+#     hold secrets, and post-secrets reads facts post-repo sets.
 # ==============================================================================
 
 - name: "[pazny.woodpecker Post] Autowire Gitea OAuth2 application"
@@ -15,4 +18,8 @@
 
 - name: "[pazny.woodpecker Post] Wire nOS repo into Woodpecker"
   ansible.builtin.include_tasks: post-repo.yml
+  when: install_woodpecker_autowire_nos | default(false) | bool
+
+- name: "[pazny.woodpecker Post] Provision the pipeline repo secrets"
+  ansible.builtin.include_tasks: post-secrets.yml
   when: install_woodpecker_autowire_nos | default(false) | bool
