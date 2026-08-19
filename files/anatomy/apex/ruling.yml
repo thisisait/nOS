@@ -452,6 +452,9 @@ nodes:
   "pulse:wing:audit-chain-verify": withheld
   "pulse:wing:dispatch-notifications": withheld
   "pulse:wing:dispatch-notifications-digest": withheld
+  # 2026-08-19 inbox reconciler (bin/reconcile-inbox.php) — internal hygiene
+  # job like every other pulse:wing:* node; nothing about it leaves.
+  "pulse:wing:inbox-reconcile": withheld
 
   # --- withheld: repos, resources, tables, engine, weaknesses ----------------
   "repo:gitea-forge": withheld

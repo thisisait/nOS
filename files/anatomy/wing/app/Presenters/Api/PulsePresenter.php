@@ -239,6 +239,15 @@ final class PulsePresenter extends BaseApiPresenter
 			$payload['actor_id'] = $run['actor_id'] ?? 'pulse';
 			$payload['actor_action_id'] = $run['actor_action_id'] ?? null;
 			$payload['origin_plugin'] = $originPlugin;
+			// Machine-readable identity for bin/reconcile-inbox.php — the
+			// reconciler reads pulse_runs for THIS job to decide whether the
+			// row's condition still holds. Pre-2026-08-19 rows carry the job
+			// only in the title; the reconciler's regex fallback covers those.
+			$payload['metadata'] = [
+				'job_id'    => $jobId,
+				'run_id'    => $runId,
+				'exit_code' => $exit,
+			];
 			$this->notifications->insert($payload);
 		} catch (\Throwable $e) {
 			// Best-effort only — log via error_log, never break the API.

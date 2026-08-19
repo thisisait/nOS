@@ -288,6 +288,30 @@ pulse:
         # a rotation without it — every pre-rotation row unverifiable under the
         # new key. Verify-only; the writer never reads it.
         WING_EVENTS_HMAC_SECRET_RETIRED: "{{ bone_secret_retired }}"
+    # ── Inbox reconciler (2026-08-19) ──────────────────────────────────────
+    # A notification is an EVENT, the inbox is a STATE, and until this job
+    # nothing reconciled them: markRead had one caller, the operator's mouse,
+    # and 69 unread CRITICAL/HIGH were 23 problems (8 already green). The
+    # reconciler marks a row read ONLY after reading the condition from its
+    # own source (pulse_runs / alert-relay state / backup-status.json /
+    # agent_questions) and records what it read into the row's metadata.
+    # Unreadable source → row stays unread, exit 2 → this job goes red and
+    # the state-change alarm announces it. Dry-run without --apply; the
+    # scheduled run applies because its every write carries the evidence.
+    # Gate: tests/anatomy/test_inbox_reconciler_reads_evidence.py.
+    - name: inbox-reconcile
+      category: notification
+      runner: subprocess
+      command: "/opt/homebrew/bin/php"
+      args:
+        - "{{ wing_app_dir }}/bin/reconcile-inbox.php"
+        - "--apply"
+      schedule: "*/15 * * * *"      # cheap read-mostly sweep; converges the inbox
+      jitter_min: 2
+      max_runtime_s: 60
+      max_concurrent: 1
+      env:
+        WING_DB_PATH: "{{ wing_home }}/app/data/wing.db"
     # ── Daily agent-cost tally (readiness item 2, 2026-08-12) ─────────────
     # pulse-run-agent.sh persists cost_usd + cost_basis into every
     # agent_run_end event; this job is the reader that makes the number seen.
