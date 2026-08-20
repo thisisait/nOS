@@ -79,14 +79,36 @@ def test_the_cadence_runs_the_operator_tools_verbatim(jobs):
         "would tick green nightly while doing nothing — absence as success")
 
 
-def test_the_entry_job_is_paused_and_says_why(jobs):
+def test_the_entry_job_states_its_bar_either_way(jobs):
+    """Paused with its bar named, or unpaused with the bar recorded as met.
+
+    UPDATED 2026-08-20, in the commit that records the attended run, exactly as
+    the previous version of this gate instructed. §10 step 6's bar for the
+    ENTRY half was attended cycles in the unattended shape. One ran: pointed at the
+    superset DB-login weakness, the model produced a real patch, declined the queue's own
+    first-choice remedy because the budget forbids `roles/pazny.traefik/vars`,
+    took the one layer that could hold it, and stopped without applying,
+    judging or committing. The second reason it waited — gate set `repo` could
+    not pass at all, the engine's mutex starving its own gates — is fixed and
+    `repo` now returns PASS.
+
+    So the assertion is no longer "paused". It is that the row never reads as an
+    accident in EITHER direction: a pause must name what it waits for, and an
+    un-pause must keep the reason it withdraws, because
+    `PulseRepository`'s upsert clears only a pause whose stored reason matches
+    the declared one.
+    """
     propose = jobs["propose"]
-    assert propose.get("paused") is True, (
-        "the entry half has zero attended unattended-shaped cycles; §10 step "
-        "6's bar is not met for it. If that has changed, change this gate in "
-        "the same commit that records the attended runs")
-    assert "attended" in propose.get("paused_reason", ""), (
-        "the pause must name its bar, or the row reads as an accident to unpause")
+    reason = propose.get("paused_reason", "") or ""
+    if propose.get("paused") is True:
+        assert "attended" in reason, (
+            "the pause must name its bar, or the row reads as an accident to "
+            "unpause")
+    else:
+        assert reason, (
+            "the entry job is declared unpaused with no `paused_reason`. The "
+            "upsert matches on that string to clear the pause it once set; "
+            "without it the live row stays paused for ever and nothing says so")
 
 
 def test_no_loop_job_carries_a_secret(jobs):

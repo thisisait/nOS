@@ -1,7 +1,8 @@
 """A FAIL you cannot diagnose is a claim with a number attached.
 
 THE MEASUREMENT (2026-08-20). The loop's entry half ran attended for the first
-time. It produced a real patch against `rem:REM-191`, the judges sealed FAIL,
+time. It produced a real patch against the superset DB-login weakness, the
+judges sealed FAIL,
 and the reason read:
 
     pytest-anatomy   fail   exit=1   work=14890/3690

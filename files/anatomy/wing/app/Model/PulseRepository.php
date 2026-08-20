@@ -307,6 +307,26 @@ final class PulseRepository
 				if (array_key_exists('paused_reason', $payload)) {
 					$update['paused_reason'] = $payload['paused_reason'];
 				}
+			} elseif (array_key_exists('paused', $payload) && (int) $payload['paused'] === 0) {
+				// 2026-08-20: a manifest could PAUSE and could never UNPAUSE.
+				// `loop:propose` shipped paused-by-default with a reason naming
+				// the bar it was waiting on; when the bar was met there was no
+				// supported way to clear it — no per-job resume in Wing, and
+				// /admin/resume deliberately preserves manual pauses. A
+				// declaration that is a one-way door is drift by construction.
+				//
+				// The A9.3 rule above is kept whole: a manifest may clear ONLY
+				// THE PAUSE IT SET. `paused_reason` is what tells them apart —
+				// if the stored reason is byte-identical to the one this
+				// manifest declares, nobody has re-paused this job since, and
+				// clearing it restores the declared state. An operator pause
+				// (its own reason, or an empty one) is untouched.
+				$declared = (string) ($payload['paused_reason'] ?? '');
+				$stored   = (string) ($existing->paused_reason ?? '');
+				if ($declared !== '' && $declared === $stored) {
+					$update['paused'] = 0;
+					$update['paused_reason'] = null;
+				}
 			}
 			$this->db->table('pulse_jobs')->where('id', $id)->update($update);
 		} else {

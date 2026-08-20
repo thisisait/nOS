@@ -58,7 +58,19 @@ pulse:
       max_runtime_s: 3600             # a model authoring a bounded patch
       max_concurrent: 1
       category: agents
-      paused: true
+      # UNPAUSED 2026-08-20. The bar this job shipped paused on was §10 step 6:
+      # attended cycles before a cadence. It has them — one attended entry run
+      # against the superset DB-login weakness produced a real patch, respected the budget where
+      # the queue's own first choice was forbidden, and stopped without
+      # applying, judging or committing. The other reason it waited was that
+      # gate set `repo` could not pass at all (the engine's mutex starved its
+      # own gates); that is fixed and `repo` now returns PASS.
+      #
+      # `paused_reason` is KEPT and must stay byte-identical to what was
+      # stored: the upsert clears only a pause whose reason matches the one it
+      # declared, so an operator pause set since is untouched. Once the live
+      # row reads paused=0 with a null reason, both of these lines can go.
+      paused: false
       paused_reason: "entry half has zero attended cycles (docs/idea/11-agentic-loop-contract.md §10 step 6) — run tools/loop-propose.py --invoke attended until trusted, then unpause"
       # Exit 3 = refused (nothing proposable / committed-evidence deadlock).
       # That is NEWS for the operator, not a crash: the refusal names the
