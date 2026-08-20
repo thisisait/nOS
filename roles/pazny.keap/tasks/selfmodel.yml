@@ -117,13 +117,28 @@
   changed_when: false
   check_mode: false
 
+# `extract` is a FILTER, not a TEST, so `rejectattr(attr, 'extract', vars)` was
+# never valid Jinja — it raised "No test named 'extract'" the first time this
+# path ran, which was the first FULL converge after 52cc2451 (2026-08-18). Two
+# days of green pytest and a clean --syntax-check did not touch it: neither
+# renders a role task's templates. Resolve the flags in their own step, where
+# `map('extract', vars)` is legal, and `| bool` so a string "false" is false.
+- name: "[pazny.keap] Which of those install flags resolve FALSE"
+  ansible.builtin.set_fact:
+    _keap_sm_off_flags: >-
+      {{ dict(_keap_sm_flags | zip(_keap_sm_flags | map('extract', vars) | map('bool') | list))
+         | dict2items | rejectattr('value') | map(attribute='key') | list }}
+  vars:
+    _keap_sm_flags: >-
+      {{ _keap_sm_services | selectattr('install_flag', 'defined')
+         | map(attribute='install_flag') | select('in', vars) | list }}
+
 - name: "[pazny.keap] Services that are absent by every test we can run"
   ansible.builtin.set_fact:
     _keap_sm_absent: >-
       {{ _keap_sm_services
          | selectattr('install_flag', 'defined')
-         | selectattr('install_flag', 'in', vars)
-         | rejectattr('install_flag', 'extract', vars)
+         | selectattr('install_flag', 'in', _keap_sm_off_flags)
          | map(attribute='id')
          | reject('in', _keap_sm_containers.stdout_lines | default([])
                         | map('regex_replace', '^[a-z0-9]+[-_]', '') | list)
