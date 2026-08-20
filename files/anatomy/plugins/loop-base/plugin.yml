@@ -53,7 +53,15 @@ pulse:
       runner: subprocess
       command: "{{ playbook_dir }}/tools/loop-propose.py"
       args: ["--invoke"]
-      schedule: "30 3 * * *"          # 03:30 UTC nightly, after the 03:00 scans
+      # 01:30, BEFORE the nightly security scan at 02:00. The scan rewrites
+      # docs/llm/security/* and leaves them uncommitted; `default_weakness_index`
+      # filters on `evidence_committed`, so a proposer running after it finds
+      # all 50 `rem:` weaknesses WITHHELD and refuses — every night, for ever.
+      # Measured 2026-08-20: the deadlock is real and recurs on the scan's
+      # cadence. Running first means the entry half sees the tree as the
+      # operator left it; it still refuses if nobody committed, which is honest,
+      # but it is no longer GUARANTEED to refuse.
+      schedule: "30 1 * * *"          # 03:30 UTC nightly, after the 03:00 scans
       jitter_min: 5
       max_runtime_s: 3600             # a model authoring a bounded patch
       max_concurrent: 1

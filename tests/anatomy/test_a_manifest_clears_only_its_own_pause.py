@@ -97,12 +97,17 @@ def test_it_clears_only_when_the_STORED_reason_matches_the_declared_one():
 
 def test_the_loop_propose_manifest_keeps_the_reason_it_is_withdrawing():
     """The mechanism only works while the two strings stay byte-identical."""
-    text = MANIFEST.read_text(encoding="utf-8")
-    block = text[text.index("job_name: propose") if "job_name: propose" in text
-                 else text.index("name: propose"):]
-    block = block[:1800]
-    assert "paused: false" in block, "loop:propose is paused again — deliberately?"
-    assert "paused_reason:" in block, (
+    # PARSED, not sliced. The first draft took 1800 characters from the job's
+    # name and broke the moment a comment grew above `paused_reason` — a gate
+    # that fails on formatting teaches its reader to distrust it.
+    import yaml  # noqa: PLC0415
+
+    manifest = yaml.safe_load(MANIFEST.read_text(encoding="utf-8"))
+    jobs = {j.get("name"): j for j in (manifest.get("pulse") or {}).get("jobs", [])}
+    assert "propose" in jobs, f"no `propose` job in the manifest; found {list(jobs)}"
+    job = jobs["propose"]
+    assert job.get("paused") is False, "loop:propose is paused again — deliberately?"
+    assert job.get("paused_reason"), (
         "the reason was removed while paused: false is still declared. The "
         "upsert matches on that string; without it the clear silently stops "
         "happening and nobody learns until the job does not fire."
