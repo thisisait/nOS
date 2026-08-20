@@ -197,9 +197,22 @@ services:
 {% endif %}
 
   # ── cAdvisor — Docker container resource metrics ────────────────────────
-  # Mounts the Docker socket + host cgroup paths. On macOS Docker Desktop the
-  # root "/" bind is a passthrough to the VM; cAdvisor still reports per-
-  # container CPU/RAM/net/fs from /var/lib/docker.
+  # DARWIN-GATED (REM-197, 2026-08-20). The comment that stood here claimed
+  # cAdvisor "still reports per-container CPU/RAM/net/fs from /var/lib/docker"
+  # on macOS. Measured, it does not: Prometheus holds ONE container_cpu series
+  # and ONE container_memory series, both labelled id='/' (the root cgroup),
+  # /api/v1.3/docker returns 0 containers, and the container log is an endless
+  # "failed to identify the read-write layer ID" loop — on Docker Desktop the
+  # /rootfs bind is the macOS filesystem while the real /var/lib/docker lives
+  # inside the LinuxKit VM. It is architecturally unable to do its job here.
+  #
+  # What the estate paid for that: the single highest-privilege container it
+  # runs — privileged:true, uid 0, host / at /rootfs, label=disable, and a LIVE
+  # Docker API socket (the :ro on a unix socket is cosmetic; the API is a
+  # protocol, not a file). Any code execution inside it is host root, and it
+  # sits on the flat shared_net beside ~40 peers. On the Linux port the cgroup
+  # and layerdb paths are real, so it stays there.
+{% if ansible_os_family != 'Darwin' %}
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:{{ cadvisor_version }}
     restart: unless-stopped
@@ -232,6 +245,7 @@ services:
         max-file: "3"
     mem_limit: {{ cadvisor_mem_limit | default(docker_mem_limit_standard) }}
     cpus: {{ docker_cpus_light | default('0.5') }}
+{% endif %}
 
   # ── Blackbox exporter — HTTP/TCP probes ─────────────────────────────────
   # Module definitions (http_2xx, tcp_connect, …) live in
