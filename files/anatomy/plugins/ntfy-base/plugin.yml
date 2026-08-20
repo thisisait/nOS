@@ -54,7 +54,7 @@ authentik:
   mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
   provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)
   client_id: nos-ntfy
-  client_secret: "{{ global_password_prefix }}_pw_oidc_ntfy"
+  client_secret: "{{ nos_derived_secrets.oidc_ntfy }}"
   slug: ntfy
   name: 'ntfy'
   enabled: "{{ install_ntfy | default(false) }}"

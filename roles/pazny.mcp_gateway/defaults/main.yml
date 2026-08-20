@@ -19,7 +19,7 @@
 mcpo_version: "main"          # upstream publishes only main/latest (no semver tags)
 mcpo_domain: "mcp{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 mcpo_port: 8765                                         # host port
-mcpo_api_key: "{{ global_password_prefix }}_pw_mcpo"    # bearer token for OpenWebUI
+mcpo_api_key: "{{ nos_derived_secrets.mcpo }}"    # bearer token for OpenWebUI
 mcpo_image: "ghcr.io/open-webui/mcpo"
 
 # ── Per-server toggles ────────────────────────────────────────────────────────
@@ -44,7 +44,7 @@ mcp_git_repo_path: "{{ ansible_facts['env']['HOME'] }}/projects"
 # ── PostgreSQL MCP ────────────────────────────────────────────────────────────
 # Read-only user for MCP queries (created in post.yml)
 mcp_postgres_user: "mcp_readonly"
-mcp_postgres_password: "{{ global_password_prefix }}_pw_mcp_postgres_ro"
+mcp_postgres_password: "{{ nos_derived_secrets.mcp_postgres_ro }}"
 mcp_postgres_database: "postgres"                       # default DB s read-only roli
 
 # ── Grafana MCP ───────────────────────────────────────────────────────────────

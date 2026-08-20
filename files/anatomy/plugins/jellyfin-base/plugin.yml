@@ -37,7 +37,7 @@ authentik:
   mode: native_oidc
   provider_type: native_oidc
   client_id: nos-jellyfin
-  client_secret: "{{ global_password_prefix }}_pw_oidc_jellyfin"
+  client_secret: "{{ nos_derived_secrets.oidc_jellyfin }}"
   slug: jellyfin
   name: 'Jellyfin'
   enabled: "{{ install_jellyfin | default(false) }}"

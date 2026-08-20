@@ -59,7 +59,7 @@ authentik:
   mode: native_oidc
   provider_type: native_oidc
   client_id: nos-homeassistant
-  client_secret: "{{ global_password_prefix }}_pw_oidc_homeassistant"
+  client_secret: "{{ nos_derived_secrets.oidc_homeassistant }}"
   slug: homeassistant
   name: 'Home Assistant'
   enabled: "{{ install_homeassistant | default(false) }}"

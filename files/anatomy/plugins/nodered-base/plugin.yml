@@ -60,7 +60,7 @@ authentik:
   mode: native_oidc
   provider_type: native_oidc
   client_id: nos-nodered
-  client_secret: "{{ global_password_prefix }}_pw_oidc_nodered"
+  client_secret: "{{ nos_derived_secrets.oidc_nodered }}"
   slug: nodered
   name: 'Node-RED'
   enabled: "{{ install_nodered | default(false) }}"

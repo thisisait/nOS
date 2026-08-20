@@ -18,7 +18,7 @@ services:
       OIDC_NAME: "Authentik"
       OIDC_DISPLAY_NAME_CLAIMS: "name"
       OIDC_CLIENT_ID: "nos-bookstack"
-      OIDC_CLIENT_SECRET: "{{ global_password_prefix }}_pw_oidc_bookstack"
+      OIDC_CLIENT_SECRET: "{{ nos_derived_secrets.oidc_bookstack }}"
       OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/bookstack/"
       OIDC_ISSUER_DISCOVER: "true"
       OIDC_USER_TO_GROUPS: "true"

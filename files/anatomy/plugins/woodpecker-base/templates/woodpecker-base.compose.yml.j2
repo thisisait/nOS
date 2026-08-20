@@ -20,7 +20,7 @@ services:
 
       # ── Public host + agent secret ──────────────────────────────────────────
       WOODPECKER_HOST: "https://{{ woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
-      WOODPECKER_AGENT_SECRET: "{{ woodpecker_agent_secret | default(global_password_prefix + '_pw_woodpecker') }}"
+      WOODPECKER_AGENT_SECRET: "{{ woodpecker_agent_secret | default(nos_derived_secrets.woodpecker) }}"
 
       # ── REM-002: trusted-repos / privileged-plugins hardening ───────────────
       # 1. Disable open registration (default already false; explicit for audit).
@@ -44,7 +44,7 @@ services:
       # 5. Prometheus scrape token — set even when alloy doesn't yet scrape,
       #    so when post-Q1 alloy-base plugin lands the scrape, the token is
       #    already in place (avoids a post-deploy compose restart).
-      WOODPECKER_PROMETHEUS_AUTH_TOKEN: "{{ woodpecker_prom_token | default(global_password_prefix + '_pw_wp_prom') }}"
+      WOODPECKER_PROMETHEUS_AUTH_TOKEN: "{{ woodpecker_prom_token | default(nos_derived_secrets.wp_prom) }}"
 
     extra_hosts:
       # Vessel: Woodpecker's Gitea OAuth2 callback resolves the Gitea hostname

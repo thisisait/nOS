@@ -58,7 +58,7 @@ authentik:
   mode: forward_auth
   provider_type: forward_auth
   client_id: nos-openclaw
-  client_secret: "{{ global_password_prefix }}_pw_oidc_openclaw"
+  client_secret: "{{ nos_derived_secrets.oidc_openclaw }}"
   slug: openclaw
   name: 'OpenClaw'
   enabled: "{{ install_openclaw | default(false) }}"

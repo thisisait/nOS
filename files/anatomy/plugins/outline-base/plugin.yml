@@ -63,7 +63,7 @@ depends_on:
 authentik:
   mode: native_oidc
   client_id: nos-outline
-  client_secret: "{{ global_password_prefix }}_pw_oidc_outline"
+  client_secret: "{{ nos_derived_secrets.oidc_outline }}"
   slug: outline
   name: 'Outline'
   enabled: "{{ install_outline | default(false) }}"

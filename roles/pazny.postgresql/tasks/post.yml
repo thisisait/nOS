@@ -138,21 +138,21 @@
     END $$;"
   loop: >-
     {{ ((install_outline | default(false)) | ternary(
-         [{'user': outline_db_user | default('outline'), 'pass': outline_db_password | default(global_password_prefix + '_pw_outline')}], []))
+         [{'user': outline_db_user | default('outline'), 'pass': outline_db_password | default(nos_derived_secrets.outline)}], []))
        + ((install_metabase | default(false)) | ternary(
-         [{'user': metabase_db_user | default('metabase'), 'pass': metabase_db_password | default(global_password_prefix + '_pw_metabase')}], []))
+         [{'user': metabase_db_user | default('metabase'), 'pass': metabase_db_password | default(nos_derived_secrets.metabase)}], []))
        + ((install_superset | default(false)) | ternary(
-         [{'user': superset_db_user | default('superset'), 'pass': superset_db_password | default(global_password_prefix + '_pw_superset')}], []))
+         [{'user': superset_db_user | default('superset'), 'pass': superset_db_password | default(nos_derived_secrets.superset)}], []))
        + ((install_authentik | default(false)) | ternary(
-         [{'user': authentik_db_user | default('authentik'), 'pass': authentik_db_password | default(global_password_prefix + '_pw_authentik_db')}], []))
+         [{'user': authentik_db_user | default('authentik'), 'pass': authentik_db_password | default(nos_derived_secrets.authentik_db)}], []))
        + ((install_infisical | default(false)) | ternary(
-         [{'user': infisical_db_user | default('infisical'), 'pass': infisical_db_password | default(global_password_prefix + '_pw_infisical_db')}], []))
+         [{'user': infisical_db_user | default('infisical'), 'pass': infisical_db_password | default(nos_derived_secrets.infisical_db)}], []))
        + ((install_paperclip | default(false)) | ternary(
-         [{'user': paperclip_db_user | default('paperclip'), 'pass': paperclip_db_password | default(global_password_prefix + '_pw_paperclip')}], []))
+         [{'user': paperclip_db_user | default('paperclip'), 'pass': paperclip_db_password | default(nos_derived_secrets.paperclip)}], []))
        + ((install_miniflux | default(false)) | ternary(
-         [{'user': miniflux_db_user | default('miniflux'), 'pass': miniflux_db_password | default(global_password_prefix + '_pw_miniflux')}], []))
+         [{'user': miniflux_db_user | default('miniflux'), 'pass': miniflux_db_password | default(nos_derived_secrets.miniflux)}], []))
        + ((install_hedgedoc | default(false)) | ternary(
-         [{'user': hedgedoc_db_user | default('hedgedoc'), 'pass': hedgedoc_db_password | default(global_password_prefix + '_pw_hedgedoc')}], []))
+         [{'user': hedgedoc_db_user | default('hedgedoc'), 'pass': hedgedoc_db_password | default(nos_derived_secrets.hedgedoc)}], []))
     }}
   loop_control:
     label: "USER: {{ item.user }}"

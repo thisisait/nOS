@@ -59,7 +59,7 @@ authentik:
   mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
   provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)
   client_id: nos-snappymail
-  client_secret: "{{ global_password_prefix }}_pw_oidc_snappymail"
+  client_secret: "{{ nos_derived_secrets.oidc_snappymail }}"
   slug: snappymail
   name: 'SnappyMail'
   enabled: "{{ install_snappymail | default(false) }}"

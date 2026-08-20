@@ -1,7 +1,10 @@
 # 01 — Secrets: kill the blast radius
 
-**Status: ACTIVE, highest priority.** P0/P2/P4 shipped 2026-08-02; P1 is written
-and not run; P3/P5 queued.
+**Status: P1 SHIPPED-INERT 2026-08-20** (P0/P2/P4 shipped 2026-08-02; P3/P5
+queued). The estate stays on scheme v1 (byte-identical concatenation) until a
+confirmed blank flips it to v2 (HKDF of a never-rendered master). Spec + the
+adversarial-review record: [`docs/secrets-p1-hkdf.md`](../secrets-p1-hkdf.md).
+Ask the estate, don't infer: `tools/nos-secret.py --status`.
 **Detail:** [`docs/archive/secret-blast-radius.md`](../archive/secret-blast-radius.md) ·
 **Workflow:** `.claude/workflows/p1-hkdf-derivation.js`
 

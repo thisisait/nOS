@@ -40,7 +40,7 @@ requires:
 authentik:
   mode: native_oidc
   client_id: nos-openwebui
-  client_secret: "{{ global_password_prefix }}_pw_oidc_openwebui"
+  client_secret: "{{ nos_derived_secrets.oidc_openwebui }}"
   slug: open-webui
   name: 'Open WebUI'
   enabled: "{{ install_openwebui | default(false) }}"

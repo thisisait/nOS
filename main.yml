@@ -398,6 +398,12 @@
       ansible.builtin.include_vars:
         file: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
       when: _persisted_secrets_stat.stat.exists | default(false)
+      # include_vars sets _ansible_no_log only for vault-encrypted sources; a
+      # plaintext store is echoed wholesale at -v — since P1 that would include
+      # nos_secret_master, and ~/.nos/ansible.log outlives blanks. A YAML error
+      # here is censored as a consequence; nos_secret_map's own store read
+      # re-raises it loudly (mode=resolve, no no_log) a few tasks later.
+      no_log: true
       tags: ['always']
 
     # ── The operator's file is the LAST word, and was not (fixed 2026-08-15) ──
@@ -1167,11 +1173,125 @@
         _prefix_changed: "{{ (previous_password_prefix | default('')) != (global_password_prefix | default('')) }}"
       tags: ['always']
 
-    - name: "[State] Auto-enable destroy_state when prefix changed"
+# NOTE (P1, 2026-08-20): the destroy_state auto-promote that lived here moved
+    # BELOW the scheme resolution, because it must only fire on scheme v1 — on a
+    # v2 estate the derived map does not depend on the prefix at all, so a
+    # prefix edit rotates nothing and destroying the data-encrypting secrets in
+    # exchange would be pure data loss (adversarial-review finding).
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Secrets P1 (docs/secrets-p1-hkdf.md): resolve the secret scheme and
+    # derive the credential map ONCE. Every retired `{prefix}_pw_x`
+    # declaration now reads `{{ nos_derived_secrets.<key> }}` lazily, so this
+    # must run BEFORE the earliest consumer (tasks/restore.yml) and it does —
+    # constraint 2 (values exist before core-up's eager `{{ vars }}` resolve)
+    # is satisfied with room to spare.
+    #
+    # Scheme v1 (every host converged before P1): the module reproduces the
+    # concatenation BYTE-IDENTICAL — the change is inert until a confirmed
+    # blank flips the estate to v2 (HKDF leaves of a random master). The
+    # module fails LOUDLY on the illegal transitions (forced v2 without a
+    # blank; missing store on a converged estate) rather than re-deriving 86
+    # live passwords mid-flight. Gate:
+    # tests/anatomy/test_secret_scheme_inert_until_blank.py.
+    # TWO calls, and the split is load-bearing: resolve returns NO secret
+    # material so it runs WITHOUT no_log — every SchemeError (missing store on
+    # a converged estate, forced v2 without a blank, corrupt master) arrives
+    # with its remediation text intact. The first cut did both in one no_log
+    # task and Ansible censored exactly the guidance the module exists to give.
+    - name: "[Secrets] Resolve the secret scheme (loud — no secret in this result)"
+      nos_secret_map:
+        mode: resolve
+        registry_path: "{{ playbook_dir }}/files/anatomy/secrets/registry.yml"
+        store_path: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
+        stacks_dir: "{{ stacks_dir | default(ansible_facts['env']['HOME'] + '/stacks') }}"
+        requested_scheme: "{{ nos_secret_scheme | default('') }}"
+        blanking: "{{ blank | default(false) | bool }}"
+      register: _nos_secret_scheme
+      tags: ['always']
+
+    - name: "[Secrets] Derive the credential map (P1)"
+      nos_secret_map:
+        mode: map
+        registry_path: "{{ playbook_dir }}/files/anatomy/secrets/registry.yml"
+        store_path: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
+        prefix: "{{ global_password_prefix }}"
+        tester_prefix: "{{ tester_password_prefix | default('') }}"
+        scheme: "{{ _nos_secret_scheme.scheme }}"
+        mint: "{{ _nos_secret_scheme.mint }}"
+      register: _nos_secret_map
+      no_log: true
+      tags: ['always']
+
+    # no_log because the registered map IS the credential set. The scheme and
+    # master persist via templates/secrets.yml.j2 further down, written by the
+    # existing persist task — this pair records nothing about its own success.
+    - name: "[Secrets] Expose the derived map + scheme facts"
+      ansible.builtin.set_fact:
+        nos_derived_secrets: "{{ _nos_secret_map.map }}"
+        nos_secret_scheme: "{{ _nos_secret_map.scheme }}"
+        nos_secret_master: "{{ _nos_secret_map.master }}"
+      no_log: true
+      tags: ['always']
+
+    # Drop the registered duplicate: `_nos_secret_map` holds the full map AND
+    # the master, and as a play fact it would ride `{{ vars }}` into every
+    # `template_vars:` module invocation (echoed back in invocation.module_args
+    # at -vvv). The three facts above are the designed carriers; the duplicate
+    # is not. (nos_derived_secrets/nos_secret_master still ride `{{ vars }}` —
+    # exactly as every credential did pre-P1; named as a limitation in
+    # tests/anatomy/test_no_master_in_rendered_artifacts.py.)
+    - name: "[Secrets] Drop the registered map duplicate"
+      ansible.builtin.set_fact:
+        _nos_secret_map: "consumed — see nos_derived_secrets/nos_secret_scheme facts"
+      tags: ['always']
+
+    # ── Store-shadow reconcile. ~/.nos/secrets.yml persists 16 map-backed
+    # names so Pulse `secret:<name>` refs resolve — and include_vars loads them
+    # at a precedence that OUTRANKS the vars-file declarations. Without this
+    # task a blank would flip the scheme to v2 while those 16 names silently
+    # kept their stale pre-P1 `_pw_` literals (loaded before blank-reset
+    # deleted the store), then re-persisted them: REM-144 held open for
+    # exactly the agent bearers P2 finished naming — found by the adversarial
+    # review against the LIVE store. Guard per name, lazy-regenerate style:
+    # a value that is `_pw_`-shaped and differs from the current derivation is
+    # a stale copy, never an operator override; anything else is kept.
+    # Cross-checked against secrets.yml.j2 by
+    # test_secret_scheme_inert_until_blank.py (the two lists must agree).
+    - name: "[Secrets] Reconcile store-shadowed derived names onto the map"
+      ansible.builtin.set_fact:
+        mariadb_root_password: "{% if '_pw_' in (mariadb_root_password | default('')) and mariadb_root_password != nos_derived_secrets.mariadb %}{{ nos_derived_secrets.mariadb }}{% else %}{{ mariadb_root_password | default(nos_derived_secrets.mariadb) }}{% endif %}"
+        cortex_ro_token: "{% if '_pw_' in (cortex_ro_token | default('')) and cortex_ro_token != nos_derived_secrets.cortex_ro %}{{ nos_derived_secrets.cortex_ro }}{% else %}{{ cortex_ro_token | default(nos_derived_secrets.cortex_ro) }}{% endif %}"
+        cortex_rw_token: "{% if '_pw_' in (cortex_rw_token | default('')) and cortex_rw_token != nos_derived_secrets.cortex_rw %}{{ nos_derived_secrets.cortex_rw }}{% else %}{{ cortex_rw_token | default(nos_derived_secrets.cortex_rw) }}{% endif %}"
+        cortex_capture_token: "{% if '_pw_' in (cortex_capture_token | default('')) and cortex_capture_token != nos_derived_secrets.cortex_capture %}{{ nos_derived_secrets.cortex_capture }}{% else %}{{ cortex_capture_token | default(nos_derived_secrets.cortex_capture) }}{% endif %}"
+        keap_agent_token_ro: "{% if '_pw_' in (keap_agent_token_ro | default('')) and keap_agent_token_ro != nos_derived_secrets.keap_agent_ro %}{{ nos_derived_secrets.keap_agent_ro }}{% else %}{{ keap_agent_token_ro | default(nos_derived_secrets.keap_agent_ro) }}{% endif %}"
+        keap_agent_token_rw: "{% if '_pw_' in (keap_agent_token_rw | default('')) and keap_agent_token_rw != nos_derived_secrets.keap_agent_rw %}{{ nos_derived_secrets.keap_agent_rw }}{% else %}{{ keap_agent_token_rw | default(nos_derived_secrets.keap_agent_rw) }}{% endif %}"
+        keap_agent_token_capture: "{% if '_pw_' in (keap_agent_token_capture | default('')) and keap_agent_token_capture != nos_derived_secrets.keap_agent_capture %}{{ nos_derived_secrets.keap_agent_capture }}{% else %}{{ keap_agent_token_capture | default(nos_derived_secrets.keap_agent_capture) }}{% endif %}"
+        conductor_wing_api_token: "{% if '_pw_' in (conductor_wing_api_token | default('')) and conductor_wing_api_token != nos_derived_secrets.wing_conductor %}{{ nos_derived_secrets.wing_conductor }}{% else %}{{ conductor_wing_api_token | default(nos_derived_secrets.wing_conductor) }}{% endif %}"
+        remediator_wing_api_token: "{% if '_pw_' in (remediator_wing_api_token | default('')) and remediator_wing_api_token != nos_derived_secrets.wing_remediator %}{{ nos_derived_secrets.wing_remediator }}{% else %}{{ remediator_wing_api_token | default(nos_derived_secrets.wing_remediator) }}{% endif %}"
+        scout_wing_api_token: "{% if '_pw_' in (scout_wing_api_token | default('')) and scout_wing_api_token != nos_derived_secrets.wing_scout %}{{ nos_derived_secrets.wing_scout }}{% else %}{{ scout_wing_api_token | default(nos_derived_secrets.wing_scout) }}{% endif %}"
+        surveyor_wing_api_token: "{% if '_pw_' in (surveyor_wing_api_token | default('')) and surveyor_wing_api_token != nos_derived_secrets.wing_surveyor %}{{ nos_derived_secrets.wing_surveyor }}{% else %}{{ surveyor_wing_api_token | default(nos_derived_secrets.wing_surveyor) }}{% endif %}"
+        upgrade_advisor_wing_api_token: "{% if '_pw_' in (upgrade_advisor_wing_api_token | default('')) and upgrade_advisor_wing_api_token != nos_derived_secrets.wing_upgrade_advisor %}{{ nos_derived_secrets.wing_upgrade_advisor }}{% else %}{{ upgrade_advisor_wing_api_token | default(nos_derived_secrets.wing_upgrade_advisor) }}{% endif %}"
+        upgrade_architect_wing_api_token: "{% if '_pw_' in (upgrade_architect_wing_api_token | default('')) and upgrade_architect_wing_api_token != nos_derived_secrets.wing_upgrade_architect %}{{ nos_derived_secrets.wing_upgrade_architect }}{% else %}{{ upgrade_architect_wing_api_token | default(nos_derived_secrets.wing_upgrade_architect) }}{% endif %}"
+        migration_author_wing_api_token: "{% if '_pw_' in (migration_author_wing_api_token | default('')) and migration_author_wing_api_token != nos_derived_secrets.wing_migration_author %}{{ nos_derived_secrets.wing_migration_author }}{% else %}{{ migration_author_wing_api_token | default(nos_derived_secrets.wing_migration_author) }}{% endif %}"
+        librarian_wing_api_token: "{% if '_pw_' in (librarian_wing_api_token | default('')) and librarian_wing_api_token != nos_derived_secrets.wing_librarian %}{{ nos_derived_secrets.wing_librarian }}{% else %}{{ librarian_wing_api_token | default(nos_derived_secrets.wing_librarian) }}{% endif %}"
+        curator_wing_api_token: "{% if '_pw_' in (curator_wing_api_token | default('')) and curator_wing_api_token != nos_derived_secrets.wing_curator %}{{ nos_derived_secrets.wing_curator }}{% else %}{{ curator_wing_api_token | default(nos_derived_secrets.wing_curator) }}{% endif %}"
+      no_log: true
+      tags: ['always']
+
+# ── destroy_state auto-promote (moved here so the scheme gates it, P1) ───
+    # v1: a prefix change re-derives every `{prefix}_pw_*` credential, so the
+    # data-encrypting secrets regenerate alongside ("new identity" honored in
+    # full — the original 2026 rationale). v2: the map ignores the prefix; a
+    # prefix edit changes only the HUMAN_TYPED exceptions (ntfy, nodered
+    # break-glass) and the BLOCKED restic value, so destroying Infisical's KMS
+    # key / APP_KEYs would trade real data for zero rotation. No promote.
+    - name: "[State] Auto-enable destroy_state when prefix changed (scheme v1 only)"
       ansible.builtin.set_fact:
         destroy_state: true
       when:
         - _prefix_changed | bool
+        - nos_secret_scheme == 'v1'
         - not (destroy_state | default(false) | bool)
       tags: ['always']
 
@@ -1183,7 +1303,33 @@
           encryption keys, JWT secrets) regenerate alongside the prefix-derived
           passwords. The Bluesky PDS rotation key remains preserved regardless
           (rotating it would orphan every DID — see main.yml lines 1205-1210).
-      when: _prefix_changed | bool
+      when:
+        - _prefix_changed | bool
+        - nos_secret_scheme == 'v1'
+      tags: ['always']
+
+    - name: "[State] Note a prefix change on a v2 estate (rotates almost nothing)"
+      ansible.builtin.debug:
+        msg: >-
+          Password prefix changed on a scheme-v2 estate. Derived credentials do
+          NOT rotate (they key off the random master, not the prefix); only the
+          human-typed exceptions (ntfy admin, Node-RED break-glass) and the
+          blocked restic password follow the prefix. destroy_state was NOT
+          auto-promoted. To rotate the estate's credentials, run a confirmed
+          blank (`nos --remove=data --confirm`), which mints a fresh master.
+      when:
+        - _prefix_changed | bool
+        - nos_secret_scheme == 'v2'
+      tags: ['always']
+
+    - name: "[Secrets] Report the resolved scheme (names only, never values)"
+      ansible.builtin.debug:
+        msg: >-
+          Secret scheme: {{ nos_secret_scheme }}
+          ({{ 'HKDF derivation — master minted this run' if _nos_secret_scheme.mint | default(false)
+              else ('HKDF derivation — persisted master' if nos_secret_scheme == 'v2'
+                    else 'legacy concatenation, byte-identical — inert until a confirmed blank') }});
+          {{ nos_derived_secrets | length }} credentials in the derived map.
       tags: ['always']
 
     # Part B (survive-the-wipe): a CONFIRMED keap-inclusive removal takes a

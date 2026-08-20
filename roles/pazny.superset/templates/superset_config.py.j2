@@ -24,7 +24,7 @@ SECRET_KEY = os.environ.get(
 SQLALCHEMY_DATABASE_URI = (
     "postgresql+psycopg2://"
     "{{ superset_db_user | default('superset') }}:"
-    "{{ superset_db_password | default(global_password_prefix + '_pw_superset') }}"
+    "{{ superset_db_password | default(nos_derived_secrets.superset) }}"
     "@postgresql:5432/"
     "{{ superset_db_name | default('superset') }}"
 )

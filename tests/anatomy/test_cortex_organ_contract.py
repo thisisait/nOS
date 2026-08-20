@@ -70,9 +70,13 @@ def test_plist_rendered_mode_0600():
 
 
 def test_credentials_follow_prefix_pattern():
+    # P1 (2026-08-20): the tokens ride the shared derived map now — scheme v1
+    # still resolves them to `<prefix>_pw_cortex_r{o,w}` byte-identical, but
+    # the DECLARATION must be the map reference, never fresh concatenation
+    # (docs/secrets-p1-hkdf.md; ratchet in test_secret_blast_radius.py).
     creds = (REPO / "default.credentials.yml").read_text()
-    assert 'cortex_ro_token: "{{ global_password_prefix }}_pw_cortex_ro"' in creds
-    assert 'cortex_rw_token: "{{ global_password_prefix }}_pw_cortex_rw"' in creds
+    assert 'cortex_ro_token: "{{ nos_derived_secrets.cortex_ro }}"' in creds
+    assert 'cortex_rw_token: "{{ nos_derived_secrets.cortex_rw }}"' in creds
 
 
 def test_manifest_row_is_loopback_only():

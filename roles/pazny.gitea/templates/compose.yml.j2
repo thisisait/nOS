@@ -37,7 +37,7 @@ services:
       GITEA__server__OFFLINE_MODE: "true"
       GITEA__database__DB_TYPE: "sqlite3"
       GITEA__security__INSTALL_LOCK: "true"
-      GITEA__security__SECRET_KEY: "{{ gitea_secret_key | default(global_password_prefix + '_pw_gitea_secret') }}"
+      GITEA__security__SECRET_KEY: "{{ gitea_secret_key | default(nos_derived_secrets.gitea_secret) }}"
       GITEA__service__DISABLE_REGISTRATION: "{{ gitea_disable_registration | default(false) | string | lower }}"
       # Pure-SSO onboarding: hide the local self-registration form (it was
       # publicly reachable — anyone could create a Gitea account) but STILL
@@ -66,7 +66,7 @@ services:
       # the internal :3000, reachable from Alloy via the published 127.0.0.1
       # gitea_port mapping above.
       GITEA__metrics__ENABLED: "true"
-      GITEA__metrics__TOKEN: "{{ gitea_metrics_token | default(global_password_prefix + '_pw_gitea_metrics') }}"
+      GITEA__metrics__TOKEN: "{{ gitea_metrics_token | default(nos_derived_secrets.gitea_metrics) }}"
       TZ: "Europe/Prague"
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (dev mail capture) ────────────────────────────

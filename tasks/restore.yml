@@ -313,7 +313,7 @@
         set -o pipefail
         gunzip -c {{ restore_workdir }}/{{ maria_file }} \
           | docker exec -i infra-mariadb-1 \
-              mariadb -uroot -p"{{ mariadb_root_password | default(global_password_prefix + '_pw_mariadb') }}"
+              mariadb -uroot -p"{{ mariadb_root_password | default(nos_derived_secrets.mariadb) }}"
       args:
         executable: /bin/bash
       register: maria_restore

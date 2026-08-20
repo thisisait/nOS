@@ -12,6 +12,16 @@ State after P2 (2026-08-02):
     101 credential names DECLARED as prefix-derived, of which 17 are rescued at
     runtime by main.yml's lazy-regenerate group -> 86 are TRULY derived.
 
+State after P1 (2026-08-20, docs/secrets-p1-hkdf.md):
+
+    The 86 (plus the ~43 plugin-manifest OIDC secrets this file never scanned)
+    resolve from `nos_derived_secrets`, computed by nos_secret_map from
+    files/anatomy/secrets/registry.yml. Scheme v1 keeps every value
+    byte-identical concatenation until a confirmed blank; scheme v2 is HKDF of
+    a never-rendered master. What still concatenates by DECLARATION is the
+    lazy-minted group (their `_pw_`-shape guards are load-bearing), BLOCKED
+    (restic) and HUMAN_TYPED (justified below).
+
 CROWN JEWELS are the keys whose compromise costs more than one service, because
 what they protect CONTAINS other credentials:
 
@@ -85,6 +95,28 @@ BLOCKED: dict[str, str] = {
     ),
 }
 
+#: P1's explicit, justified exceptions (docs/secrets-p1-hkdf.md §6) — the
+#: allowlist the plan's P4 anticipated. Each stays prefix-derived ON PURPOSE
+#: and is printed on every green run so the exception stays visible.
+HUMAN_TYPED: dict[str, str] = {
+    "ntfy_admin_password": (
+        "a human types it on a phone; reconstructable-from-prefix is the "
+        "feature (operator decision 2026-08-08, recorded in "
+        "default.credentials.yml — minting was tried and reverted same hour)."
+    ),
+    "nodered_local_admin_password": (
+        "break-glass local login consulted only when Authentik is DOWN — the "
+        "one moment the operator cannot look a random value up, so it must be "
+        "reconstructable from the prefix they know."
+    ),
+}
+
+#: Prefix ALIASES — not credentials. `tester_password_prefix` defaults to the
+#: prefix so operators can decouple the e2e fixture password from a prefix
+#: rotation (v1 only); the credential built from it (nos_tester_password)
+#: resolves via the derived map.
+ALIASES = {"tester_password_prefix"}
+
 #: Keys whose compromise does not cost one service, but every service — because
 #: what they protect CONTAINS other credentials.
 CROWN_JEWELS = {
@@ -96,12 +128,17 @@ CROWN_JEWELS = {
 }
 
 # ── Ratchets. Lower these as the plan lands; never raise them. ───────────────
-BLAST_RADIUS_CEILING = 86    # runtime, after lazy-regenerate. P1 drives this to 1
-DECLARED_CEILING = 102       # declaration sites; falls as defaults stop being templates
-#: 101 -> 102 on 2026-08-17: `surveyor_wing_api_token`, the per-agent Wing
-#: bearer a tenth agent needs. Raised deliberately and it should NOT become a
-#: habit — a per-agent bearer is one derived credential per agent forever,
-#: which is the shape this ceiling exists to make visible rather than to bless.
+#: P1 LANDED 2026-08-20: the 86 runtime-derived credentials (and the ~43
+#: plugin-manifest OIDC secrets this gate never scanned) resolve from
+#: `nos_derived_secrets` — scheme v1 byte-identical concatenation until a
+#: confirmed blank, HKDF after (docs/secrets-p1-hkdf.md). What remains
+#: derived-by-declaration is BLOCKED (restic) + HUMAN_TYPED (2, justified
+#: above) + the ALIASES non-credential — so the runtime ceiling is 0 with the
+#: exceptions subtracted AND NAMED on every green run below.
+BLAST_RADIUS_CEILING = 0     # runtime, after lazy-regenerate + the named exceptions
+DECLARED_CEILING = 19        # was 102 pre-P1; the survivors are the 17 lazy-minted
+#:                             declarations (their guards fire on the _pw_ shape,
+#:                             so the template default is load-bearing) + HUMAN_TYPED
 CROWN_JEWEL_CEILING = 0      # excluding BLOCKED. P2 freed one of two; the other is blocked, not done
 
 
@@ -152,7 +189,9 @@ def runtime_derived() -> set[str]:
     warns about exactly that. Both now call this.
     """
     declared, _, _ = _scan()
-    return (declared - set(BLOCKED)) - _lazy_regenerated()
+    return (
+        declared - set(BLOCKED) - set(HUMAN_TYPED) - ALIASES
+    ) - _lazy_regenerated()
 
 
 def test_blast_radius_does_not_grow():
@@ -166,16 +205,23 @@ def test_blast_radius_does_not_grow():
     # which is visible on every green run; a raised ceiling is visible to nobody.
     declared, sites, where = _scan()
     declared = declared - set(BLOCKED)
-    names = declared - _lazy_regenerated()
+    names = runtime_derived()
     assert len(declared) <= DECLARED_CEILING, (
         f"declared-derived credentials GREW to {len(declared)} "
         f"(ceiling {DECLARED_CEILING})"
     )
     assert len(names) <= BLAST_RADIUS_CEILING, (
-        f"RUNTIME blast radius GREW to {len(names)} (ceiling {BLAST_RADIUS_CEILING}). "
-        f"A new credential was minted by concatenating {MASTER}. Derive it "
-        f"instead — see docs/archive/secret-blast-radius.md P1.\n  "
-        + "\n  ".join(where)
+        f"RUNTIME blast radius GREW to {len(names)} (ceiling {BLAST_RADIUS_CEILING}): "
+        f"{sorted(names)}. A new credential was minted by concatenating "
+        f"{MASTER}. Add a registry row in files/anatomy/secrets/registry.yml "
+        f"and reference `nos_derived_secrets.<key>` instead — see "
+        f"docs/secrets-p1-hkdf.md.\n  " + "\n  ".join(where)
+    )
+    # The exceptions stay VISIBLE on every green run, not only when they grow.
+    print(
+        "\nprefix-derived by justified exception (docs/secrets-p1-hkdf.md §6):\n  "
+        + "\n  ".join(f"{k} — {v.splitlines()[0]}" for k, v in HUMAN_TYPED.items())
+        + f"\n  BLOCKED: {', '.join(BLOCKED)}"
     )
 
 

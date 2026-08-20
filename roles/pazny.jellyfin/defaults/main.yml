@@ -35,7 +35,7 @@ jellyfin_sso_plugin_url: "https://github.com/9p4/jellyfin-plugin-sso/releases/do
 # Authentik OIDC provider config (matches the jellyfin-base plugin's authentik: block).
 jellyfin_oidc_provider_name: "Authentik"
 jellyfin_oidc_client_id: "nos-jellyfin"
-jellyfin_oidc_client_secret: "{{ global_password_prefix }}_pw_oidc_jellyfin"
+jellyfin_oidc_client_secret: "{{ nos_derived_secrets.oidc_jellyfin }}"
 jellyfin_oidc_endpoint: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/jellyfin/"
 jellyfin_oidc_admin_roles:
   - "nos-admins"

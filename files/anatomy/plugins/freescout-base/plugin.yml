@@ -71,7 +71,7 @@ authentik:
   mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
   provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)
   client_id: nos-freescout
-  client_secret: "{{ global_password_prefix }}_pw_oidc_freescout"
+  client_secret: "{{ nos_derived_secrets.oidc_freescout }}"
   slug: freescout
   name: 'FreeScout'
   enabled: "{{ install_freescout | default(false) }}"

@@ -254,7 +254,7 @@ install_os_resume: true
 configure_heartbeat: false                # Heartbeat daemon for fleet reporting
 heartbeat_endpoint: ""                    # URL of the fleet management server
 heartbeat_interval: 300                   # Interval in seconds (5 minutes)
-heartbeat_api_key: "{{ global_password_prefix }}_pw_heartbeat"
+heartbeat_api_key: "{{ nos_derived_secrets.heartbeat }}"
 
 # ── Bone (local FastAPI — structure/state/dispatcher organ) ──────────────────
 # Formerly BoxAPI. See docs/anatomy.md.
@@ -1292,7 +1292,7 @@ samba_shares:
     writable: true
 
 # VNC
-vnc_password: "{{ global_password_prefix }}_pw_vnc"
+vnc_password: "{{ nos_derived_secrets.vnc }}"
 
 # ==============================================================================
 # DOCK
@@ -1325,7 +1325,7 @@ sublime_package_control:
 # IIAB – MARIADB
 # ==============================================================================
 
-mariadb_root_password: "{{ global_password_prefix }}_pw_mariadb"   # OVERRIDE in credentials.yml!
+mariadb_root_password: "{{ nos_derived_secrets.mariadb }}"   # OVERRIDE in credentials.yml!
 mariadb_version: "11.8.8"               # REM-102: CVE-2026-49261 (CVSS 10.0 RCE via wsrep_notify_cmd — not reachable single-node, patched anyway) + prior CVE-2026-32710 + CVE-2026-3494 (both patched in 11.8.6); 11.4.10 crashed FK ALTER on Apple Silicon
 mariadb_port: 3306
 
@@ -1337,7 +1337,7 @@ install_postgresql: false
 postgresql_version: "16.14-alpine"      # CVE-2026-6479 (SSL/GSS DoS, ssl=on relevant) + 16.14 patch line. Was 16.13 (CVE-2026-2004/2005/2006/2007)
 postgresql_port: 5432
 postgresql_root_user: "postgres"
-postgresql_root_password: "{{ global_password_prefix }}_pw_postgresql"
+postgresql_root_password: "{{ nos_derived_secrets.postgresql }}"
 # Live container name (compose project = stack, so <stack>-<service>-1). Used by
 # upgrade recipes' docker-exec dump/restore steps; default 'nos-postgresql' was wrong.
 postgresql_container_name: "infra-postgresql-1"
@@ -1373,26 +1373,26 @@ mariadb_users:
     password: "{{ nextcloud_db_password }}"
     priv: "nextcloud.*:ALL"
   - name: "freescout"
-    password: "{{ freescout_db_password | default(global_password_prefix + '_pw_freescout') }}"
+    password: "{{ freescout_db_password | default(nos_derived_secrets.freescout) }}"
     priv: "freescout.*:ALL"
   - name: "erpnext"
-    password: "{{ erpnext_admin_password | default(global_password_prefix + '_pw_erpnext') }}"
+    password: "{{ erpnext_admin_password | default(nos_derived_secrets.erpnext) }}"
     priv: "erpnext.*:ALL"
   - name: "asterisk"
-    password: "{{ freepbx_db_password | default(global_password_prefix + '_pw_freepbx') }}"
+    password: "{{ freepbx_db_password | default(nos_derived_secrets.freepbx) }}"
     priv: "asterisk.*:ALL"
   - name: "bookstack"
-    password: "{{ bookstack_db_password | default(global_password_prefix + '_pw_bookstack') }}"
+    password: "{{ bookstack_db_password | default(nos_derived_secrets.bookstack) }}"
     priv: "bookstack.*:ALL"
   - name: "firefly"
-    password: "{{ firefly_db_password | default(global_password_prefix + '_pw_firefly') }}"
+    password: "{{ firefly_db_password | default(nos_derived_secrets.firefly) }}"
     priv: "firefly.*:ALL"
   # mysqld-exporter (observability stack) — scraped by Grafana Alloy on the
   # observability_net via stacks_shared_network. Needs the three "slave"/monitoring
   # privileges that Percona/MariaDB's stock exporter queries require. Host "%" so
   # it works from any Docker network (exporter lives in the observability project).
   - name: "mysqld_exporter"
-    password: "{{ mysqld_exporter_password | default(global_password_prefix + '_pw_mysqld_exporter') }}"
+    password: "{{ mysqld_exporter_password | default(nos_derived_secrets.mysqld_exporter) }}"
     host: "%"
     priv: "*.*:PROCESS,REPLICATION CLIENT,SELECT"
 
@@ -1404,7 +1404,7 @@ wordpress_domain: "wordpress{{ _host_alias_seg | default('') }}.{{ tenant_domain
 wordpress_dir: "{{ ansible_facts['env']['HOME'] }}/projects/wordpress"
 wordpress_db_name: "wordpress"
 wordpress_db_user: "wordpress"
-wordpress_db_password: "{{ global_password_prefix }}_pw_wordpress"
+wordpress_db_password: "{{ nos_derived_secrets.wordpress }}"
 wordpress_db_host: "127.0.0.1"          # ignored if install_mariadb=true (uses 'mariadb' from iiab_net)
 wordpress_table_prefix: "wp_"
 wordpress_version: "7.0.4"              # wp2shell fix — the image lag that pinned 6.9.4 is over.
@@ -1433,7 +1433,7 @@ wordpress_cve_63030_mitigate: false
 wordpress_harden_unauth_surface: true   # REM-114: mu-plugin disables XML-RPC + blocks REST user enum + author enumeration (defense-in-depth; 6.9.4 core is CVE-clean)
 wordpress_port: 8084                    # Local container port (nginx proxy)
 wordpress_admin_user: "admin"
-wordpress_admin_password: "{{ global_password_prefix }}_pw_wordpress_admin"
+wordpress_admin_password: "{{ nos_derived_secrets.wordpress_admin }}"
 wordpress_admin_email: "{{ default_admin_email }}"
 
 # ── Devlog platform (docs/devlog/README.md) ──────────────────────────────────
@@ -1466,10 +1466,10 @@ nextcloud_domain: "cloud{{ _host_alias_seg | default('') }}.{{ tenant_domain | d
 nextcloud_dir: "{{ ansible_facts['env']['HOME'] }}/projects/nextcloud"
 nextcloud_db_name: "nextcloud"
 nextcloud_db_user: "nextcloud"
-nextcloud_db_password: "{{ global_password_prefix }}_pw_nextcloud"
+nextcloud_db_password: "{{ nos_derived_secrets.nextcloud }}"
 nextcloud_db_host: "127.0.0.1"         # ignored if install_mariadb=true (uses 'mariadb' from iiab_net)
 nextcloud_admin_user: "admin"
-nextcloud_admin_password: "{{ global_password_prefix }}_pw_nextcloud_admin"
+nextcloud_admin_password: "{{ nos_derived_secrets.nextcloud_admin }}"
 # MAJOR-LOCKED (C2 56e80349 completed 2026-06-10 — the C2 pin landed only in the
 # role default, which THIS line shadowed, so the live container stayed on the
 # floating "stable" tag; when stable crosses a major NC 500s on existing data).
@@ -1592,7 +1592,7 @@ gitea_version: "1.27.1"                 # REM-099: 1.25.x EOL — CVE-2026-27771
 
 # ── Grafana ───────────────────────────────────────────────────────────────────
 grafana_admin_user: "admin"
-grafana_admin_password: "{{ global_password_prefix }}_pw_grafana"
+grafana_admin_password: "{{ nos_derived_secrets.grafana }}"
 grafana_allow_embedding: false
 grafana_analytics: false    # Disable telemetry
 
@@ -1711,7 +1711,7 @@ n8n_version: "2.35.0"  # [swept 2.34.2 2026-08-11]
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
 n8n_admin_email: "{{ default_admin_email }}"
-n8n_admin_password: "{{ global_password_prefix }}_pw_n8n"
+n8n_admin_password: "{{ nos_derived_secrets.n8n }}"
 n8n_admin_firstname: "Admin"
 n8n_admin_lastname: "nOS"
 
@@ -1726,10 +1726,10 @@ gitea_ssh_port: 2222
 # this file) — never directly from the OS username. The registry is the one
 # place that says who the local forge admin IS.
 gitea_admin_user: "{{ nos_primary_admin }}"
-gitea_admin_password: "{{ global_password_prefix }}_pw_gitea"
+gitea_admin_password: "{{ nos_derived_secrets.gitea }}"
 gitea_admin_email: ""                          # FILL IN!
-gitea_secret_key: "{{ global_password_prefix }}_pw_gitea_secret"
-gitea_metrics_token: "{{ global_password_prefix }}_pw_gitea_metrics"   # bearer token guarding /metrics (Alloy scrape sends it)
+gitea_secret_key: "{{ nos_derived_secrets.gitea_secret }}"
+gitea_metrics_token: "{{ nos_derived_secrets.gitea_metrics }}"   # bearer token guarding /metrics (Alloy scrape sends it)
 gitea_disable_registration: false              # true = only admin can add users (also blocks OIDC auto-create)
 # Pure-SSO: hide the local self-registration form but still let OAuth2/OIDC
 # first-login auto-create users (Authentik onboarding). true = external-only.
@@ -1779,7 +1779,7 @@ openwebui_port: 3004             # Internal container port 8080 → host 3004
 # this is the top of the line as of 2026-08-07. Same-major, DB migration on
 # start (~minutes), and signup stays off per the pure-SSO doctrine.
 openwebui_version: "0.11.0"
-openwebui_secret_key: "{{ global_password_prefix }}_pw_openwebui"
+openwebui_secret_key: "{{ nos_derived_secrets.openwebui }}"
 openwebui_enable_signup: false   # pure-SSO: public local signup OFF (was true →
                                  # public /auth/signup first-admin race). Users
                                  # onboard via Authentik OIDC; admin is DB-seeded
@@ -1788,7 +1788,7 @@ openwebui_enable_signup: false   # pure-SSO: public local signup OFF (was true �
                                  # explicit value was the live source of truth.
 openwebui_admin_name: "Admin"
 openwebui_admin_email: "{{ default_admin_email }}"
-openwebui_admin_password: "{{ global_password_prefix }}_pw_openwebui_admin"
+openwebui_admin_password: "{{ nos_derived_secrets.openwebui_admin }}"
 
 # ==============================================================================
 # IIAB – WOODPECKER CI (CI/CD connected to Gitea)
@@ -1799,7 +1799,7 @@ woodpecker_domain: "ci{{ _host_alias_seg | default('') }}.{{ tenant_domain | def
 woodpecker_port: 8060            # Web UI
 woodpecker_grpc_port: 9060       # gRPC for agents (internal)
 woodpecker_version: "v3.17.0"           # REM-105: pin the floating v3 tag — CVE-2026-50141 auth-bypass-by-spoofing (agent_id gRPC metadata forge) fixed v3.14.1 [swept v3.14.1 2026-08-06]
-woodpecker_agent_secret: "{{ global_password_prefix }}_pw_woodpecker"
+woodpecker_agent_secret: "{{ nos_derived_secrets.woodpecker }}"
 woodpecker_gitea_client: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
 woodpecker_gitea_secret: ""      # auto-provisioned on first run (post-oauth.yml); leave empty
 # Hosts Gitea webhooks may POST to. Gitea denies private addresses by default
@@ -1835,7 +1835,7 @@ woodpecker_max_workflows: 4      # Max parallel pipeline runs per agent
 # `woodpecker_plugins_privileged` with a comma-separated allowlist of plugin
 # image refs (e.g. "plugins/docker,plugins/kaniko"). Empty = no privileged plugins.
 woodpecker_plugins_privileged: ""
-woodpecker_prom_token: "{{ global_password_prefix }}_pw_wp_prom"
+woodpecker_prom_token: "{{ nos_derived_secrets.wp_prom }}"
 
 # ==============================================================================
 # IIAB – PORTAINER CE (Docker management UI)
@@ -1844,7 +1844,7 @@ woodpecker_prom_token: "{{ global_password_prefix }}_pw_wp_prom"
 portainer_domain: "portainer{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 portainer_port: 9002                   # 9000/9001 reserved for RustFS (S3 API + console)
 portainer_version: "2.44.0"             # CVE-2025-68121 transitive (Go TLS CVSS 10.0) [swept 2.33.8 2026-08-06]
-portainer_admin_password: "{{ global_password_prefix }}_pw_portainer"
+portainer_admin_password: "{{ nos_derived_secrets.portainer }}"
 # Self-heal an admin-password DRIFT (admin exists but neither the current nor
 # previous prefix logs in — left by an interrupted/partial provisioning). true =
 # wipe Portainer's BoltDB so admin-init recreates the admin with the config
@@ -1889,7 +1889,7 @@ uptime_kuma_domain: "uptime{{ _host_alias_seg | default('') }}.{{ tenant_domain 
 uptime_kuma_port: 3001
 uptime_kuma_version: "2.5.0"        # REM-073 applied 2026-07-24 (was 1.23.13; SSTI CVE-2026-33130 full fix). Role default stays "1"-track (intentional shadow). [swept 2.2.1 2026-08-06]
 uptime_kuma_admin_user: "admin"
-uptime_kuma_admin_password: "{{ global_password_prefix }}_pw_uptime_kuma"
+uptime_kuma_admin_password: "{{ nos_derived_secrets.uptime_kuma }}"
 uptime_kuma_auto_monitors: true  # Automatically create monitors for all install_* services
 # NOTE (autologin ceiling): Kuma v1.x has NO OIDC and NO proxy-header login, so it
 # always shows its own login after the Authentik forward-auth gate. The only lever
@@ -2216,7 +2216,7 @@ nodered_enable_projects: "true"
 # mkcert root CA; otherwise Traefik forward-auth gates the service.
 nodered_native_oidc_enabled: false
 authentik_oidc_nodered_client_id: "nos-nodered"
-authentik_oidc_nodered_client_secret: "{{ global_password_prefix }}_pw_oidc_nodered"
+authentik_oidc_nodered_client_secret: "{{ nos_derived_secrets.oidc_nodered }}"
 ntfy_port: 2586
 miniflux_port: 3011
 code_server_port: 3009                  # container 8443 (HTTPS) — Traefik upstream is https://nos-host:3009
@@ -2245,7 +2245,7 @@ homeassistant_timezone: "Europe/Prague"
 homeassistant_privileged: false
 homeassistant_admin_name: "Admin"
 homeassistant_admin_user: "admin"
-homeassistant_admin_password: "{{ global_password_prefix }}_pw_homeassistant"
+homeassistant_admin_password: "{{ nos_derived_secrets.homeassistant }}"
 homeassistant_auth_oidc_version: "1.1.1"
 # REM-168. Home Assistant sets ip_ban_enabled=True by default and then never
 # bans anything: login_attempts_threshold defaults to -1, and ban.py returns
@@ -2270,7 +2270,7 @@ homeassistant_auth_oidc_version: "1.1.1"
 # rateLimit middleware on the router (REM-169), which nothing declares yet.
 homeassistant_login_attempts_threshold: 10
 authentik_oidc_homeassistant_client_id: "nos-homeassistant"
-authentik_oidc_homeassistant_client_secret: "{{ global_password_prefix }}_pw_oidc_homeassistant"
+authentik_oidc_homeassistant_client_secret: "{{ nos_derived_secrets.oidc_homeassistant }}"
 
 # ==============================================================================
 # RUSTFS – S3-compatible object storage
@@ -2280,8 +2280,8 @@ rustfs_version: "1.0.0-beta.11"         # CVE-2025-68926 baseline + alpha.91 mul
 rustfs_api_port: 9010               # S3 API (aws-cli, rclone, restic, SDK...) – 9000 taken by PHP-FPM
 rustfs_console_port: 9001           # Web console
 rustfs_domain: "fs{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-rustfs_access_key: "{{ global_password_prefix }}_pw_rustfs_access"
-rustfs_secret_key: "{{ global_password_prefix }}_pw_rustfs_secret"
+rustfs_access_key: "{{ nos_derived_secrets.rustfs_access }}"
+rustfs_secret_key: "{{ nos_derived_secrets.rustfs_secret }}"
 
 # ==============================================================================
 # B2B – ERPNEXT (CRM + ERP + HR + Accounting)
@@ -2304,7 +2304,7 @@ erpnext_version: "v15.119.3"              # REM-208: GHSA-6w83-8777-v93q SSTI (C
 # lives in Docker named volume `b2b_erpnext_sites` (managed for blank-reset
 # via `compose down -v` + `volume prune -f -a`). External storage can be
 # configured by moving the whole Docker Desktop disk image to an external SSD.
-erpnext_admin_password: "{{ global_password_prefix }}_pw_erpnext"
+erpnext_admin_password: "{{ nos_derived_secrets.erpnext }}"
 # Site name follows erpnext_domain (host_alias + tenant_domain aware).
 erpnext_site_name: "{{ erpnext_domain }}"
 erpnext_experimental_override: false
@@ -2313,7 +2313,7 @@ erpnext_experimental_override: false
 # tasks/post.yml when reading site_config.json + bench migrate. Operators
 # pointing external storage at sites use this override.
 authentik_oidc_erpnext_client_id: "nos-erpnext"
-authentik_oidc_erpnext_client_secret: "{{ global_password_prefix }}_pw_oidc_erpnext"
+authentik_oidc_erpnext_client_secret: "{{ nos_derived_secrets.oidc_erpnext }}"
 
 # ==============================================================================
 # B2B – FREESCOUT (helpdesk / ticketing)
@@ -2325,14 +2325,14 @@ freescout_port: 8090
 freescout_version: "2.1.5-php8.3"        # nfrastack (tiredofit EOL @1.17.999); app 1.8.231 — REM-142 (7 GHSA fixes, 6 unpublished)
 freescout_db_name: "freescout"
 freescout_db_user: "freescout"
-freescout_db_password: "{{ global_password_prefix }}_pw_freescout"
+freescout_db_password: "{{ nos_derived_secrets.freescout }}"
 freescout_admin_email: "{{ default_admin_email }}"
-freescout_admin_password: "{{ global_password_prefix }}_pw_freescout"
+freescout_admin_password: "{{ nos_derived_secrets.freescout }}"
 freescout_timezone: "Europe/Prague"
 freescout_admin_first_name: "Admin"
 freescout_admin_last_name: "nOS"
 authentik_oidc_freescout_client_id: "nos-freescout"
-authentik_oidc_freescout_client_secret: "{{ global_password_prefix }}_pw_oidc_freescout"
+authentik_oidc_freescout_client_secret: "{{ nos_derived_secrets.oidc_freescout }}"
 
 # ==============================================================================
 # B2B – OUTLINE (team wiki / knowledge base)
@@ -2344,7 +2344,7 @@ outline_port: 3005
 outline_version: "1.9.2"      # synced to role default; boots + runs DB migrations (1.6->1.8) [swept 1.8.1 2026-08-06]
 outline_db_name: "outline"
 outline_db_user: "outline"
-outline_db_password: "{{ global_password_prefix }}_pw_outline"
+outline_db_password: "{{ nos_derived_secrets.outline }}"
 outline_secret_key: "{{ global_password_prefix }}_pw_outline_secret"
 outline_utils_secret: "{{ global_password_prefix }}_pw_outline_utils"
 
@@ -2362,7 +2362,7 @@ freepbx_rtp_end: 10100                # RTP media end port
 freepbx_version: "latest"   # ⚠️  VENDOR-BLOCKED (REM-014/046): tiredofit/freepbx Docker image abandoned upstream 2022-04-30; latest published tag is 5.2.0 (2022). No maintained ARM64 FOSS alternative. CRITICAL CVEs (CVSS 10.0/9.3) UNFIXABLE in this image — operators running freepbx accept the risk. Track docs/llm/security/remediation-queue.json items REM-014/046 for status changes.
 freepbx_db_name: "asterisk"
 freepbx_db_user: "asterisk"
-freepbx_db_password: "{{ global_password_prefix }}_pw_freepbx"
+freepbx_db_password: "{{ nos_derived_secrets.freepbx }}"
 freepbx_timezone: "Europe/Prague"
 
 # ==============================================================================
@@ -2383,10 +2383,10 @@ metabase_port: 3002
 metabase_version: "v0.63.10"     # REM-198 CRITICAL GHSA-r495-55cx-fjh7 — the SECOND metabase advisory with NO CVE id; the repo advisory endpoint is the only channel that shows either [was v0.63.5, REM-153]
 metabase_db_name: "metabase"
 metabase_db_user: "metabase"
-metabase_db_password: "{{ global_password_prefix }}_pw_metabase"
+metabase_db_password: "{{ nos_derived_secrets.metabase }}"
 metabase_timezone: "Europe/Prague"
 metabase_admin_email: "{{ default_admin_email }}"
-metabase_admin_password: "{{ global_password_prefix }}_pw_metabase_admin"
+metabase_admin_password: "{{ nos_derived_secrets.metabase_admin }}"
 metabase_admin_first_name: "Admin"
 metabase_admin_last_name: "nOS"
 
@@ -2400,12 +2400,12 @@ superset_port: 8089
 superset_version: "6.0.0-dev"           # CVE-2026-23982 (auth bypass), CVE-2025-48912 (RLS SQLi). The -dev tag is REQUIRED: apache/superset:6.0.0 (non-dev) ships without any PostgreSQL Python driver (known upstream regression) and crash-loops with ModuleNotFoundError: psycopg2; the -dev variant bundles psycopg2 2.9.6.
 superset_db_name: "superset"
 superset_db_user: "superset"
-superset_db_password: "{{ global_password_prefix }}_pw_superset"
-superset_secret_key: "{{ global_password_prefix }}_pw_superset_secret"
+superset_db_password: "{{ nos_derived_secrets.superset }}"
+superset_secret_key: "{{ nos_derived_secrets.superset_secret }}"
 superset_admin_email: "{{ default_admin_email }}"
 superset_admin_password: "{{ global_password_prefix }}_pw_superset"
 authentik_oidc_superset_client_id: "nos-superset"
-authentik_oidc_superset_client_secret: "{{ global_password_prefix }}_pw_oidc_superset"
+authentik_oidc_superset_client_secret: "{{ nos_derived_secrets.oidc_superset }}"
 
 # ==============================================================================
 # INFRA – BLUESKY PDS (AT Protocol Personal Data Server)
@@ -2421,7 +2421,7 @@ authentik_oidc_superset_client_secret: "{{ global_password_prefix }}_pw_oidc_sup
 bluesky_pds_hostname: "{{ 'bsky.dev.lan' if (tenant_domain_is_local | default(true)) else 'bsky.' + (tenant_domain | default('dev.local')) }}"
 bluesky_pds_port: 2583
 bluesky_pds_version: "0.4"               # ghcr.io/bluesky-social/pds (no semver tags; 0.4 tracks latest)
-bluesky_pds_admin_password: "{{ global_password_prefix }}_pw_bluesky"
+bluesky_pds_admin_password: "{{ nos_derived_secrets.bluesky }}"
 bluesky_pds_jwt_secret: "{{ global_password_prefix }}_pw_bluesky_jwt"
 bluesky_pds_rotation_key: ""           # Generate: openssl rand -hex 32
 bluesky_pds_invite_required: true      # Invite-only registration (true = closed PDS)
@@ -2550,7 +2550,7 @@ paperclip_port: 3006                              # 3100 collides with Loki
 paperclip_version: "sha-b9a80dc"         # ghcr.io/paperclipai/paperclip (no semver tags published)
 paperclip_db_name: "paperclip"
 paperclip_db_user: "paperclip"
-paperclip_db_password: "{{ global_password_prefix }}_pw_paperclip"
+paperclip_db_password: "{{ nos_derived_secrets.paperclip }}"
 paperclip_deployment_mode: "authenticated"         # Docker requires 0.0.0.0 → local_trusted does not work
 paperclip_auth_secret: "{{ global_password_prefix }}_pw_paperclip_auth"
 paperclip_openclaw_url: "http://host.docker.internal:{{ openclaw_gateway_port | default(18789) }}"
@@ -2588,8 +2588,8 @@ authentik_engine: "blueprint"
 authentik_secret_key: "{{ global_password_prefix }}_pw_authentik_secret"
 authentik_db_name: "authentik"
 authentik_db_user: "authentik"
-authentik_db_password: "{{ global_password_prefix }}_pw_authentik_db"
-authentik_bootstrap_password: "{{ global_password_prefix }}_pw_authentik_admin"
+authentik_db_password: "{{ nos_derived_secrets.authentik_db }}"
+authentik_bootstrap_password: "{{ nos_derived_secrets.authentik_admin }}"
 authentik_bootstrap_email: "{{ default_admin_email }}"
 
 # ── Tester identity (Track G) ───────────────────────────────────────────────
@@ -2768,7 +2768,7 @@ authentik_agent_clients:
   - name: "nOS State Manager"
     slug: "nos-state-manager"
     client_id: "nos-state-manager"
-    client_secret: "{{ global_password_prefix }}_pw_agent_state_manager"
+    client_secret: "{{ nos_derived_secrets.agent_state_manager }}"
     capabilities:
       - "nos:state:read"
       - "nos:state:write"
@@ -2780,13 +2780,13 @@ authentik_agent_clients:
   - name: "nOS OpenClaw"
     slug: "nos-openclaw"
     client_id: "nos-openclaw"
-    client_secret: "{{ global_password_prefix }}_pw_agent_openclaw"
+    client_secret: "{{ nos_derived_secrets.agent_openclaw }}"
     capabilities: "{{ authentik_agent_scopes }}"  # full operational
 
   - name: "nOS Wing"
     slug: "nos-wing"
     client_id: "nos-wing"
-    client_secret: "{{ global_password_prefix }}_pw_agent_wing"
+    client_secret: "{{ nos_derived_secrets.agent_wing }}"
     capabilities:
       - "nos:state:read"
       - "nos:migrations:read"
@@ -2804,7 +2804,7 @@ authentik_agent_clients:
   - name: "nOS Inspektor"
     slug: "nos-inspektor"
     client_id: "nos-inspektor"
-    client_secret: "{{ global_password_prefix }}_pw_agent_inspektor"
+    client_secret: "{{ nos_derived_secrets.agent_inspektor }}"
     # Pentest agent — full security read/write + scan trigger + probe execute.
     # System-prompt source: docs/llm/security/pentest-task.md (drop-in ready).
     # Audit: every wing.db row tagged actor_id=nos-inspektor; GDPR Article 30
@@ -2819,7 +2819,7 @@ authentik_agent_clients:
   - name: "nOS Librarian"
     slug: "nos-librarian"
     client_id: "nos-librarian"
-    client_secret: "{{ global_password_prefix }}_pw_agent_librarian"
+    client_secret: "{{ nos_derived_secrets.agent_librarian }}"
     # Knowledge/RAG agent — read-only across state + security (so it can
     # surface "have we already remediated this before?" context); future
     # write scope for indexing into a RAG store post-PoC.
@@ -2833,7 +2833,7 @@ authentik_agent_clients:
   - name: "nOS Curator"
     slug: "nos-curator"
     client_id: "nos-curator"
-    client_secret: "{{ global_password_prefix }}_pw_agent_curator"
+    client_secret: "{{ nos_derived_secrets.agent_curator }}"
     # Taxonomy reconciler — librarian's active sibling. Sweeps the KEAP votable
     # zone (L>=3), lints, and PROPOSES desc/node/relation edits into the
     # moderation panel (propose-only; the moderator decides). Same read scopes as
@@ -2845,7 +2845,7 @@ authentik_agent_clients:
   - name: "nOS Scout"
     slug: "nos-scout"
     client_id: "nos-scout"
-    client_secret: "{{ global_password_prefix }}_pw_agent_scout"
+    client_secret: "{{ nos_derived_secrets.agent_scout }}"
     # Drift/visibility agent — read-only on state + security state.
     # The 20-cve-drift-check.sh hook (programmatic) is its dumb cousin;
     # Scout adds the LLM layer post-PoC (correlates drift trends across
@@ -2858,7 +2858,7 @@ authentik_agent_clients:
   - name: "nOS Upgrade Advisor"
     slug: "nos-upgrade-advisor"
     client_id: "nos-upgrade-advisor"
-    client_secret: "{{ global_password_prefix }}_pw_agent_upgrade_advisor"
+    client_secret: "{{ nos_derived_secrets.agent_upgrade_advisor }}"
     # W5-B4 upgrade-planning agent. Reads the /upgrades matrix + queues
     # applicable upgrades (Wing bearer); the queue's mismatch guard rejects
     # non-applicable recipes. Read-only on state; never applies upgrades.
@@ -2869,7 +2869,7 @@ authentik_agent_clients:
   - name: "nOS Upgrade Architect"
     slug: "nos-upgrade-architect"
     client_id: "nos-upgrade-architect"
-    client_secret: "{{ global_password_prefix }}_pw_agent_upgrade_architect"
+    client_secret: "{{ nos_derived_secrets.agent_upgrade_architect }}"
     # W5-B5 recipe-authoring agent. Reads the /upgrades matrix, DRAFTS recipes
     # for coverage gaps (in its report — operator commits), and queues
     # coexistence for breaking upgrades. Read-only; never writes files or
@@ -2882,7 +2882,7 @@ authentik_agent_clients:
   - name: "nOS Migration Author"
     slug: "nos-migration-author"
     client_id: "nos-migration-author"
-    client_secret: "{{ global_password_prefix }}_pw_agent_migration_author"
+    client_secret: "{{ nos_derived_secrets.agent_migration_author }}"
     # B4a migration-authoring agent. Promotes a MERGED recipe into the real
     # migration record (files/anatomy/migrations/) + the <service>_version bump
     # in default.config.yml, opened as a LOCAL forge MR (GATE 2). Read on
@@ -2898,7 +2898,7 @@ authentik_agent_clients:
   - name: "nOS Conductor"
     slug: "nos-conductor"
     client_id: "nos-conductor"
-    client_secret: "{{ global_password_prefix }}_pw_agent_conductor"
+    client_secret: "{{ nos_derived_secrets.agent_conductor }}"
     # Conductor agent (A8) — orchestrates the Phase 5 e2e ceremony and
     # ongoing operator automation. Full operational + security scopes so
     # it can read findings, trigger scans, and push approvals. Wing bearer
@@ -2909,7 +2909,7 @@ authentik_agent_clients:
   - name: "nOS Remediator"
     slug: "nos-remediator"
     client_id: "nos-remediator"
-    client_secret: "{{ global_password_prefix }}_pw_agent_remediator"
+    client_secret: "{{ nos_derived_secrets.agent_remediator }}"
     # Remediator agent (A9.3, 2026-05-17) — read-only security-finding
     # triage. Reads findings + file context, proposes ONE remediation per
     # finding, emits markdown report event + summary notification.
@@ -2924,7 +2924,7 @@ authentik_agent_clients:
   - name: "nOS Surveyor"
     slug: "nos-surveyor"
     client_id: "nos-surveyor"
-    client_secret: "{{ global_password_prefix }}_pw_agent_surveyor"
+    client_secret: "{{ nos_derived_secrets.agent_surveyor }}"
     # Surveyor agent (A20, 2026-08-17) — reports which of the estate deserves
     # a control surface: what changes, what a person decides on, and what is
     # decided on while being displayed nowhere. Strictly read-only; it
@@ -2940,7 +2940,7 @@ authentik_agent_clients:
   - name: "nOS Devlog"
     slug: "nos-devlog"
     client_id: "nos-devlog"
-    client_secret: "{{ global_password_prefix }}_pw_agent_devlog"
+    client_secret: "{{ nos_derived_secrets.agent_devlog }}"
     # Devlog agent (devlog epic, 2026-06-12) — publishes narrative entries to
     # WordPress (docs/devlog/README.md). The WP credential itself is an
     # Application Password (WP has no client_credentials path); this client is
@@ -2974,7 +2974,7 @@ infisical_encryption_key: "{{ global_password_prefix }}_pw_infisical_enc"
 infisical_auth_secret: "{{ global_password_prefix }}_pw_infisical_auth"
 infisical_db_name: "infisical"
 infisical_db_user: "infisical"
-infisical_db_password: "{{ global_password_prefix }}_pw_infisical_db"
+infisical_db_password: "{{ nos_derived_secrets.infisical_db }}"
 infisical_disable_signup: true                     # Admin creates all users
 
 # ── Seed: org + projects + secrets (pazny.infisical/tasks/seed.yml) ──────────
@@ -3029,32 +3029,32 @@ nos_infisical_projects:
     name: "nOS Databases"
     description: "Root passwords for PostgreSQL, MariaDB, Redis"
     secrets:
-      POSTGRESQL_ROOT_PASSWORD: "{{ postgresql_root_password | default(global_password_prefix + '_pw_postgresql') }}"
-      MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password | default(global_password_prefix + '_pw_mariadb') }}"
-      REDIS_PASSWORD: "{{ redis_password | default(global_password_prefix + '_pw_redis') }}"
+      POSTGRESQL_ROOT_PASSWORD: "{{ postgresql_root_password | default(nos_derived_secrets.postgresql) }}"
+      MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password | default(nos_derived_secrets.mariadb) }}"
+      REDIS_PASSWORD: "{{ redis_password | default(nos_derived_secrets.redis) }}"
       INFISICAL_DB_PASSWORD: "{{ infisical_db_password }}"
-      AUTHENTIK_DB_PASSWORD: "{{ authentik_db_password | default(global_password_prefix + '_pw_authentik_db') }}"
-      OUTLINE_DB_PASSWORD: "{{ outline_db_password | default(global_password_prefix + '_pw_outline') }}"
-      HEDGEDOC_DB_PASSWORD: "{{ hedgedoc_db_password | default(global_password_prefix + '_pw_hedgedoc') }}"
-      MINIFLUX_DB_PASSWORD: "{{ miniflux_db_password | default(global_password_prefix + '_pw_miniflux') }}"
-      PAPERCLIP_DB_PASSWORD: "{{ paperclip_db_password | default(global_password_prefix + '_pw_paperclip') }}"
+      AUTHENTIK_DB_PASSWORD: "{{ authentik_db_password | default(nos_derived_secrets.authentik_db) }}"
+      OUTLINE_DB_PASSWORD: "{{ outline_db_password | default(nos_derived_secrets.outline) }}"
+      HEDGEDOC_DB_PASSWORD: "{{ hedgedoc_db_password | default(nos_derived_secrets.hedgedoc) }}"
+      MINIFLUX_DB_PASSWORD: "{{ miniflux_db_password | default(nos_derived_secrets.miniflux) }}"
+      PAPERCLIP_DB_PASSWORD: "{{ paperclip_db_password | default(nos_derived_secrets.paperclip) }}"
 
   - slug: nos-identity
     name: "nOS Identity & SSO"
     description: "Authentik admin + per-service OIDC client_secret values"
     secrets:
-      AKADMIN_PASSWORD: "{{ akadmin_password | default(global_password_prefix + '_pw_akadmin') }}"
+      AKADMIN_PASSWORD: "{{ akadmin_password | default(nos_derived_secrets.akadmin) }}"
       AUTHENTIK_SECRET_KEY: "{{ authentik_secret_key | default('') }}"
       INFISICAL_ENCRYPTION_KEY: "{{ infisical_encryption_key }}"
       INFISICAL_AUTH_SECRET: "{{ infisical_auth_secret }}"
-      OIDC_OUTLINE: "{{ authentik_oidc_outline_client_secret | default(global_password_prefix + '_pw_oidc_outline') }}"
-      OIDC_GRAFANA: "{{ authentik_oidc_grafana_client_secret | default(global_password_prefix + '_pw_oidc_grafana') }}"
-      OIDC_INFISICAL: "{{ authentik_oidc_infisical_client_secret | default(global_password_prefix + '_pw_oidc_infisical') }}"
-      OIDC_PORTAINER: "{{ authentik_oidc_portainer_client_secret | default(global_password_prefix + '_pw_oidc_portainer') }}"
-      OIDC_NEXTCLOUD: "{{ authentik_oidc_nextcloud_client_secret | default(global_password_prefix + '_pw_oidc_nextcloud') }}"
-      OIDC_GITEA: "{{ authentik_oidc_gitea_client_secret | default(global_password_prefix + '_pw_oidc_gitea') }}"
-      OIDC_OPENWEBUI: "{{ authentik_oidc_openwebui_client_secret | default(global_password_prefix + '_pw_oidc_openwebui') }}"
-      OIDC_N8N: "{{ authentik_oidc_n8n_client_secret | default(global_password_prefix + '_pw_oidc_n8n') }}"
+      OIDC_OUTLINE: "{{ authentik_oidc_outline_client_secret | default(nos_derived_secrets.oidc_outline) }}"
+      OIDC_GRAFANA: "{{ authentik_oidc_grafana_client_secret | default(nos_derived_secrets.oidc_grafana) }}"
+      OIDC_INFISICAL: "{{ authentik_oidc_infisical_client_secret | default(nos_derived_secrets.oidc_infisical) }}"
+      OIDC_PORTAINER: "{{ authentik_oidc_portainer_client_secret | default(nos_derived_secrets.oidc_portainer) }}"
+      OIDC_NEXTCLOUD: "{{ authentik_oidc_nextcloud_client_secret | default(nos_derived_secrets.oidc_nextcloud) }}"
+      OIDC_GITEA: "{{ authentik_oidc_gitea_client_secret | default(nos_derived_secrets.oidc_gitea) }}"
+      OIDC_OPENWEBUI: "{{ authentik_oidc_openwebui_client_secret | default(nos_derived_secrets.oidc_openwebui) }}"
+      OIDC_N8N: "{{ authentik_oidc_n8n_client_secret | default(nos_derived_secrets.oidc_n8n) }}"
 
   - slug: nos-apps
     name: "nOS Applications"
@@ -3068,16 +3068,16 @@ nos_infisical_projects:
       HEDGEDOC_SESSION_SECRET: "{{ hedgedoc_session_secret | default('') }}"
       BLUESKY_PDS_JWT_SECRET: "{{ bluesky_pds_jwt_secret | default('') }}"
       BLUESKY_PDS_ROTATION_KEY: "{{ bluesky_pds_rotation_key | default('') }}"
-      WORDPRESS_ADMIN_PASSWORD: "{{ wordpress_admin_password | default(global_password_prefix + '_pw_wordpress_admin') }}"
-      NEXTCLOUD_ADMIN_PASSWORD: "{{ nextcloud_admin_password | default(global_password_prefix + '_pw_nextcloud_admin') }}"
-      GITEA_ADMIN_PASSWORD: "{{ gitea_admin_password | default(global_password_prefix + '_pw_gitea_admin') }}"
-      PORTAINER_ADMIN_PASSWORD: "{{ portainer_admin_password | default(global_password_prefix + '_pw_portainer_admin') }}"
+      WORDPRESS_ADMIN_PASSWORD: "{{ wordpress_admin_password | default(nos_derived_secrets.wordpress_admin) }}"
+      NEXTCLOUD_ADMIN_PASSWORD: "{{ nextcloud_admin_password | default(nos_derived_secrets.nextcloud_admin) }}"
+      GITEA_ADMIN_PASSWORD: "{{ gitea_admin_password | default(nos_derived_secrets.gitea) }}"
+      PORTAINER_ADMIN_PASSWORD: "{{ portainer_admin_password | default(nos_derived_secrets.portainer) }}"
 
   - slug: nos-observability
     name: "nOS Observability"
     description: "Grafana admin, InfluxDB token, exporter credentials"
     secrets:
-      GRAFANA_ADMIN_PASSWORD: "{{ grafana_admin_password | default(global_password_prefix + '_pw_grafana_admin') }}"
+      GRAFANA_ADMIN_PASSWORD: "{{ grafana_admin_password | default(nos_derived_secrets.grafana) }}"
       INFLUXDB_ADMIN_TOKEN: "{{ influxdb_admin_token | default('') }}"
 
 # ==============================================================================

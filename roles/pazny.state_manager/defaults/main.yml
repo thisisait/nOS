@@ -29,7 +29,7 @@ nos_state_bone_url: "http://localhost:{{ bone_port | default(8099) }}/api/state"
 # the secret is derived the same way (global_password_prefix rotation).
 nos_state_oidc_enabled: "{{ install_authentik | default(false) }}"
 nos_state_oidc_client_id: "nos-state-manager"
-nos_state_oidc_client_secret: "{{ global_password_prefix }}_pw_agent_state_manager"
+nos_state_oidc_client_secret: "{{ nos_derived_secrets.agent_state_manager }}"
 nos_state_oidc_scopes:
   - "nos:state:write"
 nos_state_oidc_token_url: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"

@@ -59,7 +59,7 @@ services:
     environment:
       # Install-internal env (admin password, server domain, anti-telemetry).
       GF_SECURITY_ADMIN_USER: "{{ grafana_admin_user | default('admin') }}"
-      GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default(global_password_prefix + '_pw_grafana') }}"
+      GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password | default(nos_derived_secrets.grafana) }}"
       GF_SERVER_DOMAIN: "{{ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       GF_SERVER_ROOT_URL: "https://{{ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
@@ -106,7 +106,7 @@ services:
     ports:
       - "127.0.0.1:{{ postgres_exporter_port | default(9187) }}:9187"
     environment:
-      DATA_SOURCE_NAME: "postgresql://{{ postgresql_root_user | default('postgres') }}:{{ (postgresql_root_password | default(global_password_prefix + '_pw_postgresql')) | urlencode }}@postgresql:5432/postgres?sslmode=prefer"
+      DATA_SOURCE_NAME: "postgresql://{{ postgresql_root_user | default('postgres') }}:{{ (postgresql_root_password | default(nos_derived_secrets.postgresql)) | urlencode }}@postgresql:5432/postgres?sslmode=prefer"
       PG_EXPORTER_EXTEND_QUERY_PATH: ""
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9187/metrics"]
@@ -145,7 +145,7 @@ services:
       - "--collect.global_variables"
       - "--collect.slave_status"
     environment:
-      MYSQLD_EXPORTER_PASSWORD: "{{ mysqld_exporter_password | default(global_password_prefix + '_pw_mysqld_exporter') }}"
+      MYSQLD_EXPORTER_PASSWORD: "{{ mysqld_exporter_password | default(nos_derived_secrets.mysqld_exporter) }}"
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9104/metrics"]
       interval: 30s
@@ -173,7 +173,7 @@ services:
       - "127.0.0.1:{{ redis_exporter_port | default(9121) }}:9121"
     environment:
       REDIS_ADDR: "redis://redis:6379"
-      REDIS_PASSWORD: "{{ redis_password | default(global_password_prefix + '_pw_redis') }}"
+      REDIS_PASSWORD: "{{ redis_password | default(nos_derived_secrets.redis) }}"
     healthcheck:
       # This probe only executes because redis_exporter_version carries the
       # `-alpine` suffix — upstream's default image went `scratch` (no wget, no

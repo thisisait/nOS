@@ -177,6 +177,52 @@
 # bridge no longer needs to consult it because the goat CLI does the
 # right thing either way.
 
+# ── P1b uid-collision guard. slugifyUid folds dash-runs and trims dashes, so
+# two DISTINCT Authentik usernames (`pazny` / `pazny-` / `paz--ny`) can share
+# one slug — and under scheme v2 a shared slug is a shared user_master: user
+# B's derived secrets WOULD BE user A's (adversarial review). The same folding
+# already governs the face VFS tree and KEAP row ownership, so a collision is
+# estate-wide wrong, not just PDS-wrong. Refuse loudly before provisioning.
+- name: "[PDS Bridge] Refuse slug-colliding usernames (P1b user-scope isolation)"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (_pds_bridge_to_create | default([]) | map(attribute='username')
+         | map('lower') | map('regex_replace', '[^a-z0-9]+', '-')
+         | map('regex_replace', '^-+|-+$', '') | list | unique | length)
+        == (_pds_bridge_to_create | default([]) | length)
+    fail_msg: >-
+      Two Authentik usernames in this bridge run collapse to the same
+      slugified uid. Under the P1b user-scope derivation a shared uid is a
+      shared secret subtree — one user's credentials would BE another's.
+      Rename one of the accounts (the same folding also governs their face
+      VFS tree and KEAP ownership). See docs/secrets-p1-hkdf.md §3.
+    quiet: true
+  when: _pds_bridge_to_create | default([]) | length > 1
+
+# ── P1b (docs/secrets-p1-hkdf.md §3): the per-user PDS password is the first
+# user-scope consumer of the derived tree. Scheme v1 keeps the historical
+# `<prefix>_pw_bsky_<username>` byte-identical (v1_suffix below); scheme v2
+# derives HKDF(user_master(slugifyUid(username)), "bsky", "password") — so a
+# compromised user account yields that user and nothing else, and nothing here
+# ever concatenates the master into a credential again.
+- name: "[PDS Bridge] Derive per-user PDS password (P1b user scope)"
+  nos_secret_map:
+    mode: user_leaf
+    scheme: "{{ nos_secret_scheme }}"
+    master: "{{ nos_secret_master | default('') }}"
+    prefix: "{{ global_password_prefix }}"
+    username: "{{ item.username }}"
+    service: "bsky"
+    purpose: "password"
+    v1_suffix: "bsky_{{ item.username }}"
+  register: _pds_bridge_leaves
+  loop: "{{ _pds_bridge_new_users | default([]) }}"
+  loop_control:
+    label: "{{ item.username }}"
+  when: _pds_bridge_new_users | default([]) | length > 0
+  no_log: true
+
 - name: "[PDS Bridge] Create PDS account"
   # SEC: username is regex-hardened in step 4; email is operator/Authentik-
   # sourced and reaches the shell, so `| quote` it (and the handle/password)
@@ -187,13 +233,15 @@
     goat pds admin account create
     --pds-host http://localhost:3000
     --admin-password {{ bluesky_pds_admin_password | quote }}
-    --handle {{ (item.username ~ '.' ~ _pds_hostname) | quote }}
-    --email {{ (item.email | default(item.username ~ '@' ~ _pds_hostname)) | quote }}
-    --password {{ (global_password_prefix ~ '_pw_bsky_' ~ item.username) | quote }} 2>&1
+    --handle {{ (item.item.username ~ '.' ~ _pds_hostname) | quote }}
+    --email {{ (item.item.email | default(item.item.username ~ '@' ~ _pds_hostname)) | quote }}
+    --password {{ item.value | quote }} 2>&1
   register: _pds_bridge_created
-  loop: "{{ _pds_bridge_new_users | default([]) }}"
+  # Loops over the derivation results: item.item is the user row, item.value
+  # the P1b-derived password (v1 byte-identical to the old concatenation).
+  loop: "{{ _pds_bridge_leaves.results | default([]) }}"
   loop_control:
-    label: "{{ item.username }}.{{ _pds_hostname }}"
+    label: "{{ item.item.username }}.{{ _pds_hostname }}"
   when: _pds_bridge_new_users | default([]) | length > 0
   no_log: true
   changed_when: "'did:' in (_pds_bridge_created.stdout | default(''))"

@@ -18,7 +18,7 @@ tofu_authentik_services:
   enabled: '{{ install_bookstack | default(false) }}'
   external_host: https://{{ bookstack_domain }}
   client_id: nos-bookstack
-  client_secret: '{{ global_password_prefix }}_pw_oidc_bookstack'
+  client_secret: '{{ nos_derived_secrets.oidc_bookstack }}'
   redirect_uris:
   - https://{{ bookstack_domain }}/oidc/callback
 - slug: calibre-web
@@ -49,7 +49,7 @@ tofu_authentik_services:
   enabled: '{{ install_erpnext | default(false) }}'
   external_host: https://{{ erpnext_domain | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-erpnext
-  client_secret: '{{ global_password_prefix }}_pw_oidc_erpnext'
+  client_secret: '{{ nos_derived_secrets.oidc_erpnext }}'
   redirect_uris:
   - https://{{ erpnext_domain | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/method/frappe.integrations.oauth2_logins.custom?provider=Authentik
 - slug: face
@@ -80,7 +80,7 @@ tofu_authentik_services:
   enabled: '{{ install_gitea | default(false) }}'
   external_host: https://{{ gitea_domain }}
   client_id: nos-gitea
-  client_secret: '{{ global_password_prefix }}_pw_oidc_gitea'
+  client_secret: '{{ nos_derived_secrets.oidc_gitea }}'
   redirect_uris:
   - https://{{ gitea_domain }}/user/oauth2/authentik/callback
 - slug: gitlab
@@ -90,7 +90,7 @@ tofu_authentik_services:
   enabled: '{{ install_gitlab | default(false) }}'
   external_host: https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-gitlab
-  client_secret: '{{ global_password_prefix }}_pw_oidc_gitlab'
+  client_secret: '{{ nos_derived_secrets.oidc_gitlab }}'
   redirect_uris:
   - https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/users/auth/openid_connect/callback
 - slug: grafana
@@ -100,7 +100,7 @@ tofu_authentik_services:
   enabled: '{{ install_observability | default(false) }}'
   external_host: https://{{ grafana_domain }}
   client_id: nos-grafana
-  client_secret: '{{ global_password_prefix }}_pw_oidc_grafana'
+  client_secret: '{{ nos_derived_secrets.oidc_grafana }}'
   redirect_uris:
   - https://{{ grafana_domain }}/login/generic_oauth
 - slug: hedgedoc
@@ -110,7 +110,7 @@ tofu_authentik_services:
   enabled: '{{ install_hedgedoc | default(false) }}'
   external_host: https://{{ hedgedoc_domain }}
   client_id: nos-hedgedoc
-  client_secret: '{{ global_password_prefix }}_pw_oidc_hedgedoc'
+  client_secret: '{{ nos_derived_secrets.oidc_hedgedoc }}'
   redirect_uris:
   - https://{{ hedgedoc_domain }}/auth/oauth2/callback
 - slug: hermes
@@ -127,7 +127,7 @@ tofu_authentik_services:
   enabled: '{{ install_homeassistant | default(false) }}'
   external_host: https://{{ homeassistant_domain | default('home' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-homeassistant
-  client_secret: '{{ global_password_prefix }}_pw_oidc_homeassistant'
+  client_secret: '{{ nos_derived_secrets.oidc_homeassistant }}'
   redirect_uris:
   - https://{{ homeassistant_domain | default('home' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/auth/oidc/callback
 - slug: infisical
@@ -151,7 +151,7 @@ tofu_authentik_services:
   enabled: '{{ install_jellyfin | default(false) }}'
   external_host: https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-jellyfin
-  client_secret: '{{ global_password_prefix }}_pw_oidc_jellyfin'
+  client_secret: '{{ nos_derived_secrets.oidc_jellyfin }}'
   redirect_uris:
   - https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/sso/OID/redirect/Authentik
 - slug: keap
@@ -189,7 +189,7 @@ tofu_authentik_services:
   enabled: '{{ install_miniflux | default(false) }}'
   external_host: https://{{ miniflux_domain }}
   client_id: nos-miniflux
-  client_secret: '{{ global_password_prefix }}_pw_oidc_miniflux'
+  client_secret: '{{ nos_derived_secrets.oidc_miniflux }}'
   redirect_uris:
   - https://{{ miniflux_domain }}/oauth2/oidc/callback
 - slug: n8n
@@ -199,7 +199,7 @@ tofu_authentik_services:
   enabled: '{{ install_n8n | default(false) }}'
   external_host: https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-n8n
-  client_secret: '{{ global_password_prefix }}_pw_oidc_n8n'
+  client_secret: '{{ nos_derived_secrets.oidc_n8n }}'
   redirect_uris:
   - https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/rest/oauth2-credential/callback
   - https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/rest/oidc/callback
@@ -210,7 +210,7 @@ tofu_authentik_services:
   enabled: '{{ install_nextcloud | default(false) }}'
   external_host: https://{{ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-nextcloud
-  client_secret: '{{ global_password_prefix }}_pw_oidc_nextcloud'
+  client_secret: '{{ nos_derived_secrets.oidc_nextcloud }}'
   redirect_uris:
   - https://{{ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/apps/user_oidc/code
 - slug: nodered
@@ -220,7 +220,7 @@ tofu_authentik_services:
   enabled: '{{ install_nodered | default(false) }}'
   external_host: https://{{ nodered_domain | default('nodered' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-nodered
-  client_secret: '{{ global_password_prefix }}_pw_oidc_nodered'
+  client_secret: '{{ nos_derived_secrets.oidc_nodered }}'
   redirect_uris:
   - https://{{ nodered_domain | default('nodered' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/auth/strategy/callback
 - slug: ntfy
@@ -244,7 +244,7 @@ tofu_authentik_services:
   enabled: '{{ install_openwebui | default(false) }}'
   external_host: https://{{ openwebui_domain | default('ai' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-openwebui
-  client_secret: '{{ global_password_prefix }}_pw_oidc_openwebui'
+  client_secret: '{{ nos_derived_secrets.oidc_openwebui }}'
   redirect_uris:
   - https://{{ openwebui_domain | default('ai' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/oauth/oidc/callback
 - slug: openclaw
@@ -261,7 +261,7 @@ tofu_authentik_services:
   enabled: '{{ install_outline | default(false) }}'
   external_host: https://{{ outline_domain | default('wiki' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-outline
-  client_secret: '{{ global_password_prefix }}_pw_oidc_outline'
+  client_secret: '{{ nos_derived_secrets.oidc_outline }}'
   redirect_uris:
   - https://{{ outline_domain | default('wiki' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/auth/oidc.callback
 - slug: paperclip
@@ -278,7 +278,7 @@ tofu_authentik_services:
   enabled: '{{ install_portainer | default(false) }}'
   external_host: https://{{ portainer_domain }}
   client_id: nos-portainer
-  client_secret: '{{ global_password_prefix }}_pw_oidc_portainer'
+  client_secret: '{{ nos_derived_secrets.oidc_portainer }}'
   redirect_uris:
   - https://{{ portainer_domain }}
 - slug: qdrant
@@ -316,7 +316,7 @@ tofu_authentik_services:
   enabled: '{{ install_superset | default(false) }}'
   external_host: https://{{ superset_domain | default('superset' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
   client_id: nos-superset
-  client_secret: '{{ global_password_prefix }}_pw_oidc_superset'
+  client_secret: '{{ nos_derived_secrets.oidc_superset }}'
   redirect_uris:
   - https://{{ superset_domain | default('superset' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/oauth-authorized/authentik
 - slug: twofauth
@@ -340,7 +340,7 @@ tofu_authentik_services:
   enabled: '{{ install_vaultwarden | default(false) }}'
   external_host: https://{{ vaultwarden_domain }}
   client_id: nos-vaultwarden
-  client_secret: '{{ global_password_prefix }}_pw_oidc_vaultwarden'
+  client_secret: '{{ nos_derived_secrets.oidc_vaultwarden }}'
   redirect_uris:
   - https://{{ vaultwarden_domain }}/identity/connect/oidc-signin
 - slug: wing
@@ -364,6 +364,6 @@ tofu_authentik_services:
   enabled: '{{ install_wordpress | default(false) }}'
   external_host: https://{{ wordpress_domain }}
   client_id: nos-wordpress
-  client_secret: '{{ global_password_prefix }}_pw_oidc_wordpress'
+  client_secret: '{{ nos_derived_secrets.oidc_wordpress }}'
   redirect_uris:
   - https://{{ wordpress_domain }}/wp-admin/admin-ajax.php?action=openid-connect-authorize

@@ -62,7 +62,7 @@ authentik:
   mode: native_oidc
   provider_type: native_oidc
   client_id: nos-grafana
-  client_secret: "{{ global_password_prefix }}_pw_oidc_grafana"
+  client_secret: "{{ nos_derived_secrets.oidc_grafana }}"
   slug: grafana
   name: 'Grafana'
   enabled: "{{ install_observability | default(false) }}"

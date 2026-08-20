@@ -19,7 +19,7 @@ services:
     environment:
       OLLAMA_BASE_URL: "http://host.docker.internal:11434"
       WEBUI_AUTH: "true"
-      WEBUI_SECRET_KEY: "{{ openwebui_secret_key | default(global_password_prefix + '_pw_openwebui') }}"
+      WEBUI_SECRET_KEY: "{{ openwebui_secret_key | default(nos_derived_secrets.openwebui) }}"
       # Pure-SSO: local signup OFF by default. It was true → the public
       # /auth/signup page let anyone self-register, and the FIRST registrant
       # becomes admin (a public first-admin race during a blank). Users onboard

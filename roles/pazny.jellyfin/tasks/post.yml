@@ -56,7 +56,7 @@
     body_format: json
     body:
       Name: "{{ jellyfin_admin_user | default('admin') }}"
-      Password: "{{ jellyfin_admin_password | default(global_password_prefix + '_pw_jellyfin') }}"
+      Password: "{{ jellyfin_admin_password | default(nos_derived_secrets.jellyfin) }}"
     status_code: [204, 200, 400, 500]
     timeout: 10
   register: _jf_user
@@ -103,7 +103,7 @@
       Authorization: 'MediaBrowser Client="nOS", Device="Ansible", DeviceId="ansible-reconverge", Version="1.0"'
     body:
       Username: "{{ jellyfin_admin_user | default('admin') }}"
-      Pw: "{{ jellyfin_admin_password | default(global_password_prefix + '_pw_jellyfin') }}"
+      Pw: "{{ jellyfin_admin_password | default(nos_derived_secrets.jellyfin) }}"
     status_code: [200, 401]
     timeout: 10
   register: _jf_auth_new
@@ -144,7 +144,7 @@
       Authorization: 'MediaBrowser Token="{{ _jf_auth_old.json.AccessToken }}"'
     body:
       CurrentPw: "{{ previous_password_prefix | default(global_password_prefix) }}_pw_jellyfin"
-      NewPw: "{{ jellyfin_admin_password | default(global_password_prefix + '_pw_jellyfin') }}"
+      NewPw: "{{ jellyfin_admin_password | default(nos_derived_secrets.jellyfin) }}"
     status_code: [200, 204]
     timeout: 10
   register: _jf_pw_reset

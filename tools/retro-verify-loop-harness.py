@@ -270,8 +270,8 @@ def ensure_schema(conn: sqlite3.Connection) -> None:""",
     (
         "the blast-radius ratchet is RAISED to make room for a new derived key",
         BLAST,
-        """BLAST_RADIUS_CEILING = 86""",
-        """BLAST_RADIUS_CEILING = 87""",
+        """BLAST_RADIUS_CEILING = 0""",
+        """BLAST_RADIUS_CEILING = 1""",
         "test_the_loop_did_not_move_the_blast_radius_ratchet",
     ),
 ]

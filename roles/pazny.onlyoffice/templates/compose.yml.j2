@@ -39,7 +39,7 @@ services:
       # ── Redis (sdileny s infra stackem; volitelne, zvysuje propustnost) ───
       REDIS_SERVER_HOST: "redis"
       REDIS_SERVER_PORT: "6379"
-      REDIS_SERVER_PWD: "{{ redis_password | default(global_password_prefix + '_pw_redis') }}"
+      REDIS_SERVER_PWD: "{{ redis_password | default(nos_derived_secrets.redis) }}"
 {% endif %}
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://127.0.0.1/healthcheck || exit 1"]

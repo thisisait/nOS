@@ -77,7 +77,7 @@ authentik:
   mode: native_oidc
   provider_type: native_oidc
   client_id: nos-erpnext
-  client_secret: "{{ global_password_prefix }}_pw_oidc_erpnext"
+  client_secret: "{{ nos_derived_secrets.oidc_erpnext }}"
   slug: erpnext
   name: 'ERPNext'
   enabled: "{{ install_erpnext | default(false) }}"

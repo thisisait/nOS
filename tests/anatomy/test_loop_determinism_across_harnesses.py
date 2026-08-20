@@ -860,7 +860,12 @@ def test_the_loop_did_not_move_the_blast_radius_ratchet():
     ceiling to lift.
     """
     blast = _blast_radius_module()
-    assert blast.BLAST_RADIUS_CEILING <= 86, (
+    # Datum lowered 86 -> 0 when P1 landed (2026-08-20, docs/secrets-p1-hkdf.md):
+    # every runtime-derived credential now resolves from the derived map, and
+    # the exceptions live in named allowlists (BLOCKED / HUMAN_TYPED), not in
+    # the ceiling. A raise past 0 means someone minted a NEW concatenated
+    # credential — the exact defect P1 closed.
+    assert blast.BLAST_RADIUS_CEILING <= 0, (
         f"the runtime blast-radius ceiling was RAISED to "
         f"{blast.BLAST_RADIUS_CEILING}; the loop must add no derived credential"
     )

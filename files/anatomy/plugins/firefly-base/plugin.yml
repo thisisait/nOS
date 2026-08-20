@@ -87,7 +87,7 @@ authentik:
   mode: header_oidc
   provider_type: header_oidc
   client_id: nos-firefly
-  client_secret: "{{ global_password_prefix }}_pw_oidc_firefly"
+  client_secret: "{{ nos_derived_secrets.oidc_firefly }}"
   slug: firefly
   name: 'Firefly III'
   enabled: "{{ install_firefly | default(false) }}"
