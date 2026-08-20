@@ -102,19 +102,41 @@ def failing_jobs(conn: sqlite3.Connection) -> list[dict]:
     Tuesday and has passed since is history, and history belongs in the
     devlog. What this answers is "is it broken now".
     """
+    # A NON-ZERO EXIT IS NOT ALWAYS A FAILURE. A job may DECLARE which codes
+    # mean "I found something" — `pulse_jobs.findings_exit_codes`, honoured by
+    # the plugin manifests and by `bin/reconcile-inbox.php`. This reader did not
+    # know the column existed, so on 2026-08-20 it called
+    # `discovery:contradiction-scan` failing for exiting 1 after doing exactly
+    # its job ("filed 1 new roadmap row(s)"). Two readers disagreeing about one
+    # fact is worse than either being wrong alone, and a reader that cries wolf
+    # is one the operator learns to discount — which is the whole thing this
+    # file was written to prevent.
     rows = conn.execute(
         """
-        SELECT r.job_id, r.fired_at, r.exit_code, r.duration_ms, r.stdout_tail
+        SELECT r.job_id, r.fired_at, r.exit_code, r.duration_ms, r.stdout_tail,
+               j.findings_exit_codes
           FROM pulse_runs r
           JOIN (SELECT job_id, MAX(fired_at) AS latest
                   FROM pulse_runs GROUP BY job_id) m
             ON r.job_id = m.job_id AND r.fired_at = m.latest
+          LEFT JOIN pulse_jobs j ON j.id = r.job_id
          WHERE r.exit_code IS NOT NULL AND r.exit_code <> 0
          ORDER BY r.fired_at DESC
         """
     ).fetchall()
     out = []
     for row in rows:
+        # Declared findings code → the job worked. Unparseable declaration is
+        # NOT read as "no codes declared": that would silently restore the old
+        # behaviour, so it falls through to reporting the job, which is the
+        # safe direction for a reader whose job is bad news.
+        declared = row["findings_exit_codes"]
+        if declared:
+            try:
+                if int(row["exit_code"]) in {int(c) for c in json.loads(declared)}:
+                    continue
+            except (TypeError, ValueError):
+                pass
         tail = [ln.strip() for ln in (row["stdout_tail"] or "").splitlines() if ln.strip()]
         # Prefer a line that says WHY over the closing banner. The banner is
         # identical every night ("=== FAILED ==="), which is exactly the line a

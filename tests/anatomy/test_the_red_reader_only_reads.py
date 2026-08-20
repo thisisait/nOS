@@ -162,3 +162,82 @@ def test_it_runs_and_exits_zero_even_when_red():
     report = json.loads(proc.stdout)
     assert "red_count" in report and "reds" in report
     assert report["red_count"] == len(report["reds"])
+
+
+def test_a_declared_findings_exit_code_is_not_a_failure(tmp_path, monkeypatch):
+    """A job may declare which non-zero codes mean "I found something".
+
+    MEASURED 2026-08-20: `discovery:contradiction-scan` declares
+    `findings_exit_codes = [1]` and exited 1 having done exactly its job
+    ("filed 1 new roadmap row(s)"). This reader did not know the column
+    existed and called it failing — while `bin/reconcile-inbox.php`, reading
+    the same two tables, called it green. Two readers disagreeing about one
+    fact is worse than either being wrong alone, and a reader that cries wolf
+    is one the operator learns to skim.
+    """
+    import importlib.util
+    import sqlite3
+
+    db = tmp_path / "wing.db"
+    with sqlite3.connect(db) as seed:
+        seed.execute("CREATE TABLE pulse_runs (job_id TEXT, fired_at TEXT, "
+                     "exit_code INT, duration_ms INT, stdout_tail TEXT)")
+        seed.execute("CREATE TABLE pulse_jobs (id TEXT, findings_exit_codes TEXT)")
+        seed.executemany("INSERT INTO pulse_runs VALUES (?,?,?,?,?)", [
+            ("finder:scan",  "2026-08-20T06:44:00+00:00", 1, 10, "filed 1 new row"),
+            ("broken:job",   "2026-08-20T06:44:00+00:00", 1, 10, "ERROR: it broke"),
+            ("undeclared:j", "2026-08-20T06:44:00+00:00", 1, 10, "ERROR: no decl"),
+        ])
+        seed.executemany("INSERT INTO pulse_jobs VALUES (?,?)", [
+            ("finder:scan", "[1]"),
+            ("broken:job", "[3]"),
+            ("undeclared:j", None),
+        ])
+
+    spec = importlib.util.spec_from_file_location("_red_findings", TOOL)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        named = {j["job"] for j in mod.failing_jobs(conn)}
+    finally:
+        conn.close()
+
+    assert "finder:scan" not in named, (
+        "a job that exited with its OWN declared findings code was reported as "
+        "failing; that is the cry-wolf shape this file exists to prevent"
+    )
+    assert "broken:job" in named, (
+        "exit 1 against a declaration of [3] is a real failure and must be "
+        "reported — otherwise the fix silences genuine breakage"
+    )
+    assert "undeclared:j" in named, (
+        "a job that declares nothing must still be reported on a non-zero exit"
+    )
+
+
+def test_an_unparseable_findings_declaration_still_reports(tmp_path):
+    """Absence of a readable declaration must not read as 'this is fine'."""
+    import importlib.util
+    import sqlite3
+
+    db = tmp_path / "wing.db"
+    with sqlite3.connect(db) as seed:
+        seed.execute("CREATE TABLE pulse_runs (job_id TEXT, fired_at TEXT, "
+                     "exit_code INT, duration_ms INT, stdout_tail TEXT)")
+        seed.execute("CREATE TABLE pulse_jobs (id TEXT, findings_exit_codes TEXT)")
+        seed.execute("INSERT INTO pulse_runs VALUES "
+                     "('j','2026-08-20T06:44:00+00:00',1,10,'ERROR: x')")
+        seed.execute("INSERT INTO pulse_jobs VALUES ('j','not json at all')")
+
+    spec = importlib.util.spec_from_file_location("_red_unparseable", TOOL)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        assert {j["job"] for j in mod.failing_jobs(conn)} == {"j"}
+    finally:
+        conn.close()
+
