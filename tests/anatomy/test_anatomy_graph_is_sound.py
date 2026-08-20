@@ -193,14 +193,18 @@ def test_a_declared_mutex_edge_is_refused(gen):
 
 def test_mutex_pairs_are_derived_from_claims(committed):
     """Eleven claude-spawning jobs share one lock (agent-run-lock.sh, commit
-    ba7a9471) and two judges share nos_entity. The pairs must exist and every
-    one must be derived, never declared."""
+    ba7a9471). The pairs must exist and every one must be derived, never
+    declared. `nos_entity` is deliberately ABSENT since 2026-08-20: the judges'
+    machine-wide mutex was retired (per-set sandboxes isolate the file, and the
+    lock starved the engine's own gates — test_the_engine_judges_its_own_gates
+    owns that claim); a mutex edge reappearing for it means someone re-declared
+    the resource without re-proving the recursion safe."""
     mutex = [e for e in committed["edges"] if e["kind"] == "mutex"]
     assert mutex, "no mutex pairs derived — the claims harvest broke"
     assert all(e.get("derived") == "claims" for e in mutex)
     resources = {e["resource"] for e in mutex}
     assert "agent-run-lock" in resources
-    assert "nos_entity" in resources
+    assert "nos_entity" not in resources
 
 
 # ── refusal 5: artifact-less data edge ────────────────────────────────────

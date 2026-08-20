@@ -204,12 +204,21 @@ unattended cycles leaves the corruption risk on every *attended* run, which is
 when the operator is most likely to have uncommitted work. And M7: that file is
 also `genome-codegen`'s output target, so the two judges corrupt each other.
 
-Corollaries, both enforced by the engine:
+Corollaries:
 
-- **The engine refuses to run `pytest-anatomy` and `genome-codegen` concurrently**,
-  and refuses either concurrently with itself. Same file, no lock upstream.
 - **Every judge runs against the sandbox tree when a proposal is under judgment**,
   so the verdict describes the *proposed* tree, not the operator's working copy.
+- ~~The engine refuses to run `pytest-anatomy` and `genome-codegen` concurrently~~
+  — **SUPERSEDED by this very decision (measured 2026-08-20).** Once EVERY judge
+  of every set runs in its own worktree, the `nos_entity.py` two runs touch are
+  two files, and the judge argv is `--check`, which writes nothing. The M7 mutex
+  guarded nothing and broke the recursion 2d creates on purpose: `pytest-anatomy`
+  judges a tree containing the loop's own gates, and 16 of them call
+  `run_gate_set` — with the machine-wide lock held by the outer judge, every one
+  went INDETERMINATE and gate set `repo` could never pass its own tree (proposal
+  `5ea07907`). The `_FileLock` mechanism stays in the engine for any future
+  genuinely-shared resource; the registry declares none. Gate:
+  `test_the_engine_judges_its_own_gates.py`.
 
 > ### DECISION 2e — Judges are invoked with their side effects suppressed by flag,
 > and the flags are part of the committed `argv`.

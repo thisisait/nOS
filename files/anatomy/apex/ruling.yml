@@ -473,7 +473,10 @@ nodes:
   "resource:cortex_token_ro": withheld
   "resource:keap_token_ro": withheld
   "resource:live_estate": withheld
-  "resource:nos_entity": withheld
+  # "resource:nos_entity" re-ruled OUT 2026-08-20: the judges' machine-wide
+  # mutex was retired (state/judge-sets.yml, test_the_engine_judges_its_own_gates)
+  # so the node left the artifact. It was withheld — nothing that ever left the
+  # machine changes. Removal recorded here so the D4 shrink is conscious.
   "table:apps": withheld
   "table:controls": withheld
   "table:layouts": withheld

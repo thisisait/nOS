@@ -496,11 +496,15 @@ def test_the_registry_is_committed_and_not_runtime_state():
 
 
 def test_both_harnesses_name_the_same_exclusive_lock(tmp_path):
-    """M7's mutex only excludes if the two harnesses name the same file.
+    """The MECHANISM: a mutex only excludes if the harnesses name the same file.
 
-    genome-codegen WRITES `nos_entity.py` and pytest-anatomy MUTATES it. If the
-    lock path were per-process (a mkdtemp, a pid, a uuid), the mutex would be a
-    no-op across harnesses and the two judges would corrupt each other's tree.
+    Since 2026-08-20 the committed registry declares NO exclusive_resource —
+    the per-set sandbox subsumed M7's mutex, and the machine-wide lock starved
+    the engine's own gates when the `repo` set judged them (see
+    test_the_engine_judges_its_own_gates.py). `_FileLock` stays in the engine
+    for any future genuinely-shared resource, and this pins its cross-harness
+    naming: were the lock path per-process (a mkdtemp, a pid, a uuid), the
+    mutex would be a no-op across harnesses.
 
     CEILING, measured and stated: the DIRECTORY is `$TMPDIR`, so harnesses that
     do not share `$TMPDIR` do not share the lock. See this module's docstring.

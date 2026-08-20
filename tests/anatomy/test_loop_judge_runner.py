@@ -609,15 +609,27 @@ def test_an_empty_gate_set_is_indeterminate_not_a_pass():
 
 
 def test_a_held_exclusive_resource_is_indeterminate_not_a_pass(tmp_path):
-    """M7 — genome-codegen WRITES the file test_genome_contract.py MUTATES.
+    """The MECHANISM: a held lock never blocks, never runs, never passes.
 
-    There is no lock upstream, so the runner supplies one. A held lock never
-    blocks and never runs anyway; it reports "we did not measure this".
+    The committed registry declares no exclusive_resource since 2026-08-20 —
+    the per-set sandbox subsumed M7's mutex, and the machine-wide lock was
+    what starved these very gates when the `repo` set judged them (see
+    test_the_engine_judges_its_own_gates.py). The RUNNER's held-lock behaviour
+    stays pinned here against a spec that declares one explicitly: the
+    assertion is unchanged, only the fixture spec stopped leaning on the
+    registry.
     """
+    import dataclasses
+
+    spec = dataclasses.replace(_spec("genome-codegen"), exclusive_resource="nos_entity")
+    registry = J.Registry(
+        judges={"genome-codegen": spec},
+        gate_sets={"fast": J.GateSetSpec(name="fast", judges=("genome-codegen",))},
+    )
     (tmp_path / "nos-loop-nos_entity.lock").write_text("999999\n")
     verdict = J.run_gate_set(
         "fast",
-        registry=_one_judge_registry("genome-codegen", "fast"),
+        registry=registry,
         repo_root=REPO,
         spawn=_fake_spawn(**{"genome-codegen": GREEN_GENOME}),
         probe=_always_true,
@@ -948,9 +960,11 @@ def test_every_judge_that_mutates_the_worktree_says_so():
     """A judge that mutates the tree without declaring it gets no sandbox."""
     reg = _registry()
     assert reg.judges["pytest-anatomy"].mutates_worktree is True
-    # M7: both writers of nos_entity.py must share one exclusive resource.
-    assert reg.judges["pytest-anatomy"].exclusive_resource == "nos_entity"
-    assert reg.judges["genome-codegen"].exclusive_resource == "nos_entity"
+    # M7's mutex is retired (2026-08-20): the per-set sandbox isolates the
+    # mutated file, and the machine-wide lock starved the engine's own gates.
+    # test_the_engine_judges_its_own_gates.py owns the registry-wide claim.
+    assert reg.judges["pytest-anatomy"].exclusive_resource is None
+    assert reg.judges["genome-codegen"].exclusive_resource is None
 
 
 #: MEASURED, and every entry has a transcript. The gate that carried this claim
@@ -1019,7 +1033,7 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 MEASURED_WORK = {
     "ansible-lint": 1500,
     "genome-codegen": 2,
-    "pytest-anatomy": 3865,
+    "pytest-anatomy": 3877,
     "cortex-corpus-diff": 1,
 }
 

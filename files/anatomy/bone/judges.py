@@ -554,13 +554,25 @@ ADAPTERS: dict[str, Callable[[JudgeSpec, Completed], tuple[Result, str]]] = {
 
 
 def _pytest_counts(text: str) -> dict[str, int] | None:
-    matches = _PYTEST_SUMMARY.findall(text or "")
-    if not matches:
-        return None
-    counts: dict[str, int] = {}
-    for number, word in matches:
-        counts[word] = counts.get(word, 0) + int(number)
-    return counts
+    """The LAST summary-shaped line, alone. One run prints one summary.
+
+    This summed every match in the whole output until 2026-08-20. MEASURED on
+    the first honest `repo` run: the judged suite contains the engine's own
+    gates, whose FAILURE output quotes inner pytest summaries and whose
+    parametrized test IDs literally contain strings like "250 skipped" — the
+    sum reported work=15450 against a true 3855, and an inner "16 failed"
+    could fail an outer run whose own summary was green. pytest writes exactly
+    one terminal summary and it is the last such line; everything above it is
+    quotation. Gate: `test_the_engine_judges_its_own_gates.py`.
+    """
+    for line in reversed((text or "").splitlines()):
+        matches = _PYTEST_SUMMARY.findall(line)
+        if matches:
+            counts: dict[str, int] = {}
+            for number, word in matches:
+                counts[word] = counts.get(word, 0) + int(number)
+            return counts
+    return None
 
 
 def _parse_json_report(stdout: str) -> dict[str, Any] | None:
@@ -800,8 +812,18 @@ def git_worktree_sandbox(repo_root: Path) -> tuple[Path, str, Callable[[], None]
 
     The sha is READ BACK OUT of the created tree rather than assumed, because
     the identity of what was judged is evidence and evidence is measured.
+
+    THE PATH IS CANONICALIZED before anything downstream sees it. MEASURED
+    2026-08-20: on macOS `mkdtemp` answers under `/var/folders/...`, a symlink
+    into `/private/var/...`. `run_gate_set` exports this path as
+    NOS_LOOP_REPO_ROOT/PLAYBOOK_DIR, and anything inside the sandbox that
+    resolves its own location (`Path(__file__).resolve()`) gets the `/private`
+    spelling — two names for the tree under judgment, and the determinism gate
+    (`test_both_harnesses_resolve_the_same_registry_from_the_source_not_the_cwd`)
+    failed on exactly that comparison, but ONLY when the engine ran it. One
+    tree, one name. Gate: `test_the_engine_judges_its_own_gates.py`.
     """
-    tmp = Path(tempfile.mkdtemp(prefix="nos-loop-sandbox-"))
+    tmp = Path(tempfile.mkdtemp(prefix="nos-loop-sandbox-")).resolve()
     target = tmp / "tree"
     proc = subprocess.run(  # noqa: S603
         ["git", "worktree", "add", "--detach", str(target), "HEAD"],

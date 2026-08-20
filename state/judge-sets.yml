@@ -75,6 +75,15 @@ judges:
     work_regex: "\\((\\d+) checked\\)"
     min_work: 2
     mutates_worktree: false
+    # M7's mutex is RETIRED HERE (2026-08-20), subsumed by DECISION 2d: every
+    # judge of every set runs in its own ephemeral worktree, so the nos_entity.py
+    # two runs touch are two files — and this judge's committed argv is --check,
+    # which writes nothing. The machine-wide lock guarded nothing and BROKE the
+    # engine's own gates: the `repo` set held it around pytest-anatomy while 16
+    # gates INSIDE that pytest called run_gate_set on sets containing this judge,
+    # found the lock held, and went INDETERMINATE — gate set `repo` could never
+    # pass a tree containing the loop's own tests. Measured, proposal 5ea07907.
+    # Gate: test_the_engine_judges_its_own_gates.py.
     requires: []
     # §5.1 — the generator, the genome it reads, and BOTH generated targets.
     # A proposal that edits a generated file makes --check red; a proposal that
@@ -84,10 +93,6 @@ judges:
       - "state/genome/**"
       - "files/anatomy/module_utils/nos_entity.py"
       - "files/anatomy/face/src/lib/contracts/entity.gen.ts"
-    # M7: this WRITES files/anatomy/module_utils/nos_entity.py, the same file
-    # test_genome_contract.py mutates. The two judges corrupt each other if
-    # they overlap, and there is no lock upstream.
-    exclusive_resource: nos_entity
 
   # ── pytest-anatomy ──────────────────────────────────────────────────────
   # Exit 0 covers "all skipped" (M3, re-confirmed at build time:
@@ -181,14 +186,24 @@ judges:
     # both-ends capture, and the custom-module shebang. Moved by the commit that
     # grew it. The cadence this file keeps insisting on is the whole mechanism:
     # a floor that moves only under compulsion has already spent its slack.
-    min_work: 3850
+    # RE-DERIVED 2026-08-20, second pass (3877 passed, 40 skipped on the
+    # operator env; the engine-judges-its-own-gates file added 3). New fact
+    # from the first PASSING `repo` verdict: the JUDGE env executes fewer —
+    # 3855 at the prior HEAD (its filtered PATH skips more host-conditional
+    # gates) — so the floor's real margin is measured against the judge env,
+    # not this line's operator number. Floor moves 3850 → 3853, keeping the
+    # judge-env margin at ~5, same as the margin that held before.
+    min_work: 3853
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,
     # and being killed is an unattended loop's normal failure mode.
     mutates_worktree: true
     requires: []
-    exclusive_resource: nos_entity
+    # M7's mutex retired 2026-08-20 with genome-codegen's (see that entry): the
+    # per-set sandbox already isolates the mutated file, and holding a machine-
+    # wide lock around THIS judge is what starved the loop-engine gates running
+    # inside it. The recursion is the design: this judge judges its own tests.
     # §5.1 — the gate bodies AND the harness that decides which of them run.
     # The `gate-add` carve-out (§5a) re-opens `tests/anatomy/**` and NOTHING
     # else here: conftest.py and pytest.ini configure collection, so a proposal
