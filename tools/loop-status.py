@@ -115,10 +115,18 @@ SOURCE_GLOSS = {
 
 
 def _connect() -> sqlite3.Connection | None:
-    if not WING_DB.is_file():
-        return None
-    conn = sqlite3.connect(f"file:{WING_DB}?mode=ro", uri=True)
-    conn.row_factory = sqlite3.Row
+    """Read-only, via the shared opener — see tools/_ledger_open.py.
+
+    `mode=ro` alone dies with "unable to open database file" whenever no writer
+    is holding the WAL sidecars, which after a converge is most of the time.
+    """
+    import importlib.util  # noqa: PLC0415
+
+    spec = importlib.util.spec_from_file_location(
+        "_ledger_open", REPO / "tools" / "_ledger_open.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    conn, _how = mod.open_ledger_ro(WING_DB)
     return conn
 
 

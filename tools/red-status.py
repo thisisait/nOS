@@ -86,12 +86,32 @@ def _age(when: datetime | None) -> str:
     return f"{delta.days} d ago"
 
 
+#: Filled by `_connect` when the ledger could only be read as a snapshot, so
+#: `collect()` can say which kind of read it got instead of implying the normal
+#: one. Empty string = the normal read-only path.
+LEDGER_READ_NOTE = ""
+
+
 def _connect() -> sqlite3.Connection | None:
-    if not WING_DB.is_file():
-        return None
-    # read-only: this tool must not be able to write even by accident
-    conn = sqlite3.connect(f"file:{WING_DB}?mode=ro", uri=True)
-    conn.row_factory = sqlite3.Row
+    """Read-only, and None rather than an exception when that is impossible.
+
+    Still `mode=ro` first — this tool must not be able to write even by
+    accident. What changed on 2026-08-20 is the failure path: `wing.db` is WAL,
+    a WAL reader needs the `-shm` index, a read-only connection may not create
+    it, and Wing does not hold the database between requests. So after every
+    converge this raised `unable to open database file` as an uncaught
+    traceback — in the one tool whose docstring promises that a missing source
+    "says so rather than treating absence as health".
+    """
+    global LEDGER_READ_NOTE
+    import importlib.util  # noqa: PLC0415 — sibling helper, not a package
+
+    spec = importlib.util.spec_from_file_location(
+        "_ledger_open", REPO / "tools" / "_ledger_open.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    conn, how = mod.open_ledger_ro(WING_DB)
+    LEDGER_READ_NOTE = how
     return conn
 
 

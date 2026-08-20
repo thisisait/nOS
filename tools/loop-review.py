@@ -59,7 +59,6 @@ import argparse
 import importlib.util
 import json
 import pathlib
-import sqlite3
 import sys
 import urllib.error
 import urllib.request
@@ -194,10 +193,18 @@ def ledger_verdict(proposal_uuid: str, mr_diff: str) -> tuple[str, str]:
     Read-only, always. Two questions in one place because they share a row and
     separating them would invite answering the first without the second.
     """
-    if not LEDGER.is_file():
-        return INDETERMINATE, f"no ledger at {LEDGER}"
-    conn = sqlite3.connect(f"file:{LEDGER}?mode=ro", uri=True)
-    conn.row_factory = sqlite3.Row
+    # Via the shared opener: `mode=ro` alone fails whenever no writer holds the
+    # WAL sidecars, and this reader answering "cannot read" is INDETERMINATE —
+    # which refuses the merge, correctly. It must never be a traceback.
+    import importlib.util  # noqa: PLC0415
+
+    spec = importlib.util.spec_from_file_location(
+        "_ledger_open", REPO / "tools" / "_ledger_open.py")
+    _lo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(_lo)
+    conn, _how = _lo.open_ledger_ro(LEDGER)
+    if conn is None:
+        return INDETERMINATE, f"the ledger could not be read: {_how}"
     try:
         row = conn.execute(
             """

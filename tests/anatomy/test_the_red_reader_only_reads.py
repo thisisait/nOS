@@ -50,11 +50,30 @@ def test_the_tool_this_gate_describes_exists():
 
 
 def test_the_connection_is_opened_read_only():
+    """The claim is unchanged; on 2026-08-20 its enforcement MOVED.
+
+    `mode=ro` alone dies with "unable to open database file" whenever no writer
+    holds wing.db's WAL sidecars — which, after a converge restarts Wing, is
+    most of the time. The open therefore lives in `tools/_ledger_open.py`, which
+    still tries read-only FIRST and falls back only to an immutable snapshot,
+    never to a writable handle. This gate follows it there rather than passing
+    because the old string is still lying around somewhere in the file.
+    """
+    opener = TOOL.parent / "_ledger_open.py"
+    assert opener.is_file(), f"{opener.name} is gone; the shared opener is the enforcement"
+    osrc = opener.read_text(encoding="utf-8")
+    assert "mode=ro" in osrc and "uri=True" in osrc, (
+        "the shared opener no longer opens read-only. Without the flag the "
+        "claim rests on nobody adding a write, which is not a guarantee."
+    )
+    assert "mode=rw" not in "\n".join(
+        ln for ln in osrc.splitlines() if "sqlite3.connect" in ln or "?mode=" in ln
+    ), "the opener reaches for a writable connection"
+
     src = TOOL.read_text(encoding="utf-8")
-    assert "mode=ro" in src and "uri=True" in src, (
-        "the wing.db connection is no longer opened read-only. The driver is "
-        "what enforces this tool's central claim; without the flag the claim "
-        "rests on nobody adding a write, which is not a guarantee."
+    assert "_ledger_open" in src, (
+        "red-status no longer routes through the shared opener; a bare "
+        "sqlite3.connect here is one converge away from a traceback"
     )
 
 
