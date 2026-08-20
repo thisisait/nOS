@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 """nos_secret_map — resolve the secret scheme and derive the credential map.
 

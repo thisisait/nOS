@@ -174,7 +174,14 @@ judges:
     # vs the 3548 record — grown by the environment-contract batch and the
     # loop bookkeeping gates (driver refresh-in-place, passed-awaiting-act,
     # fixture segregation). Moved by the same commit that grew it, for once.
-    min_work: 3690
+    #
+    # RE-DERIVED 2026-08-20 (3865 passed, 39 skipped). Fired at 3905 collected
+    # vs the 3704 record — grown by Secrets P1 and by the day's four gates:
+    # selectattr-takes-a-test, the red reader's findings codes, the judge's own
+    # both-ends capture, and the custom-module shebang. Moved by the commit that
+    # grew it. The cadence this file keeps insisting on is the whole mechanism:
+    # a floor that moves only under compulsion has already spent its slack.
+    min_work: 3850
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,
