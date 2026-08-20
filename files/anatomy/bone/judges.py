@@ -1049,7 +1049,41 @@ def aggregate(runs: Iterable[JudgeRun], gate_set: str) -> GateSetVerdict:
 # The runner
 # ─────────────────────────────────────────────────────────────────────────────
 
-STDOUT_HEAD_CHARS = 2000
+#: What a judge run keeps of its subprocess output. The ledger trims again on
+#: write (`ledger._stdout_excerpt`, 2000 head + 2000 tail), so this budget only
+#: has to be generous enough that BOTH ends survive the trip.
+#:
+#: IT WAS NOT. Until 2026-08-20 this was a flat head truncation applied HERE,
+#: before the ledger's both-ends excerpt ever saw the text — two layers each
+#: doing half the job, the outer one discarding exactly what the inner one
+#: existed to keep. Measured: proposal 4d5b6dd8 sealed FAIL with "18 failing
+#: test(s)" and `stdout_head` held 2000 characters of pytest progress dots. The
+#: verdict was true and unactionable: pytest writes its summary at the TAIL, and
+#: nobody could learn which 18. `.woodpecker/tests.yml` had already learned the
+#: same lesson in prose ("-rA … so even a truncated CI log still reports the
+#: critical info"); the engine had not.
+STDOUT_CAPTURE_CHARS = 12000
+
+#: Kept as the old name so an out-of-tree caller does not break on import.
+STDOUT_HEAD_CHARS = STDOUT_CAPTURE_CHARS
+
+
+def _capture_excerpt(text: str, budget: int = STDOUT_CAPTURE_CHARS) -> str:
+    """Both ends of a judge's output, with the middle NAMED rather than dropped.
+
+    Same shape as `ledger._stdout_excerpt`, duplicated rather than imported:
+    the ledger imports judges, so the reverse is a cycle. The duplication is
+    pinned by `test_a_judge_verdict_says_which_test_failed.py`, which asserts
+    both functions keep a tail — a shared helper that one side stopped calling
+    is how this defect existed in the first place.
+    """
+    if len(text) <= budget:
+        return text
+    half = budget // 2
+    dropped = len(text) - 2 * half
+    return (text[:half]
+            + f"\n\n[... {dropped} characters elided ...]\n\n"
+            + text[-half:])
 
 
 def run_gate_set(
@@ -1321,7 +1355,7 @@ def _spawn_and_read(
     run.finished_at = time.time()
     run.exit_code = done.exit_code
     run.stdout_sha = hashlib.sha256(done.stdout.encode("utf-8", "replace")).hexdigest()
-    run.stdout_head = done.output[:STDOUT_HEAD_CHARS]
+    run.stdout_head = _capture_excerpt(done.output)
 
     # A process that never delivered an exit status produced no verdict.
     if done.timed_out or done.exit_code is None:
