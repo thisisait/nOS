@@ -584,6 +584,143 @@ row("kpro-get", "get(logical_id, context) -> bytes, across every store", _KPRO,
          "embedding or extraction work optimises the second bottleneck while the first one "
          "holds.")
 
+row("kpro-table-access", "every DataTable deserves KPro-grade access, not just the roadmap", "2026-09-01",
+    "next", "cortex", parent="kpro",
+    refs="tools/roadmap-seed.py agent_write · docs/archive/datatables-relations.md",
+    body="OPERATOR DIRECTION 2026-08-22: all DataTables should carry MCP-like, KPro-grade "
+         "access. Measured the same night, which is what prompted it: the agent door "
+         "(/agent/v1/tables/<t>/rows) is an UPSERT KEYED ON `slug`, so it serves the roadmap "
+         "and silently INSERTS a duplicate for any table without that column; the human door "
+         "answers GET and DELETE and returns 404 to both PATCH and PUT. So a table with no "
+         "slug is write-once from every automated door — the ideas table has 55 rows, 12 of "
+         "them filed `new` with no research since creation, and nothing but the Planner UI can "
+         "ever change them. Verified by probe: one write produced 56 rows and a second copy of "
+         "the row it meant to update; the duplicate was deleted and the table restored to 55. "
+         "What KPro grade means here is what KPro already means elsewhere — a fixed, "
+         "storage-agnostic verb set (list/get/create/update/delete) over a STABLE OPAQUE id, "
+         "with the natural key an attribute rather than the address. Until then any agent "
+         "maintaining a table either duplicates or destroys createdAt to fake an update.")
+
+# ── The loop's own integrity, and one release policy (2026-08-21 review) ────
+#
+# Filed after the second Fable pass (docs/idea/19-fable-review-2.md) and a night
+# of measurement. Every row below is something a reader OBSERVED, not something
+# a plan proposed: the loop's first unattended night, the four merged diffs run
+# back through a registry probe, and a full inbox triage. The one idea this
+# session did NOT keep — freezing a per-release pin set, "nOS as a distribution"
+# — is deliberately absent: four independent critics refuted it (no backports,
+# 20 of 54 pending rows are not pins at all, and pin churn ranks fifth among
+# what actually delays a tag). What survived it is `sec-severity-floor`.
+_REV = "2026-08-25"
+
+row("loop-requires-operator", "requires_operator is stamped and read by nobody", _REV,
+    "next", "agents",
+    refs="files/anatomy/bone/ledger.py:112 · docs/idea/11-agentic-loop-contract.md §5a",
+    body="The ledger marks every gate-add proposal requires_operator=1 and contract §5a says "
+         "such a proposal is never auto-accepted. Verified 2026-08-21: only tools/loop-status.py "
+         "reads the column, and that is a READER. Neither loop-pr.py nor loop-review.py consults "
+         "it, so a gate-add that passes a judge set lands and merges unattended — the "
+         "gate-you-can-satisfy-by-editing-the-gate class, through the front door.")
+
+row("loop-pin-bump-gate", "version-pin-bump lands with no operator gate", _REV,
+    "next", "security",
+    refs="files/anatomy/bone/ledger.py:104-112 · CLAUDE.md kuma 1->2",
+    body="OPERATOR_REQUIRED_INTENTS holds only gate-add, so version-pin-bump is auto-acceptable "
+         "with NO distinction between a patch and a major crossing. The precedent is already "
+         "paid for: Kuma 1->2 moved the pin, gates stayed green, the container was healthy, and "
+         "the service ran with zero monitors for ten days because post-start automation was "
+         "never reconciled. A freeze policy that limits WHEN pins move without gating WHAT KIND "
+         "of move is automatable does not close this.")
+
+row("loop-verdict-vacuity", "a verdict with no oracle overlap must not read as pass", _REV,
+    "next", "agents",
+    refs="state/judge-sets.yml:296-308 · docs/idea/19-fable-review-2.md §3.1",
+    body="Measured: wordpress_version 9.9.9-nonexistent passes the repo set 3868/0. The set is "
+         "ansible-lint + genome-codegen + pytest-anatomy; none reads a version value. Three of "
+         "four merged diffs were version bumps, so for those three `pass` carried zero "
+         "information. Fix is the cheap half only: when no judge has an oracle_paths overlap "
+         "with the diff, record `nothing objected`, not `pass`.")
+
+row("loop-pin-resolves-refused", "pin-resolves as a gate-set judge — refused, with the count", _REV,
+    "dropped", "agents",
+    refs="docs/idea/19-fable-review-2.md §6",
+    body="The review's own settling test, run 2026-08-21 against the four merged diffs: ARM A "
+         "0 objections of 3 (all merged tags resolve). ARM B caught the hallucinated tag but "
+         "NOT gitlab-ce:18.11.8-ce.0, which returns HTTP 200 while that diff's own comment says "
+         "it was WITHDRAWN upstream — withdrawal is a vendor-advisory fact, not a registry one. "
+         "The vulnerable predecessor 7.0.2 also resolves. So the probe catches typos only and is "
+         "blind to the REM-178 class. Correctness of a version is not a property of the tree; "
+         "the signal belongs wherever fix_version is written.")
+
+row("loop-pulse-runs-poison", "the loop mines itself as a HIGH it may not fix", _REV,
+    "next", "agents",
+    refs="files/anatomy/bone/weaknesses.py:1324-1396 · tools/red-status.py:137-157",
+    body="_source_pulse_runs joins nothing (WHERE exit_code <> 0), so it ignores "
+         "findings_exit_codes and two readers of one signal now disagree on the live estate. "
+         "Worse than a false positive: loop-base declares [1, 3] where exit 3 is the "
+         "committed-evidence deadlock that recurs on the scan's cadence, severity ratchets to "
+         "HIGH at streak >= 3, and files/anatomy/bone/** is denied to the loop. Three such "
+         "nights and it mines itself. Fix is a subtraction: delegate to red-status.failing_jobs.")
+
+row("loop-queue-retires", "the queue does not learn from a converge", _REV,
+    "queued", "security",
+    refs="tools/discovery-scan.py · docs/doctrine/loops.md §7.2",
+    body="The scanner is the only retirement writer. Proven live 2026-08-21: discovery-scan "
+         "reports REM-204 still pending while iiab-wordpress-1 already runs 7.0.4 — the loop "
+         "merged that bump and the estate converged it. Twelve rows were already live at their "
+         "fix version historically, and REM-178 found a recorded fix BELOW what runs, which "
+         "re-opens a gap if anyone acts on it. The reader may only file; closing stays "
+         "deliberate.")
+
+row("sec-severity-floor", "severity floor: act on CRITICAL/HIGH, batch the rest to a release", _REV,
+    "queued", "security",
+    refs="tools/rem-status.py · files/anatomy/docs/notification-fanout.md",
+    body="What survived the refuted pin-freeze proposal, and it is arithmetic already on screen: "
+         "rem-status prints '+45 pending below HIGH' of 54, i.e. the 83% headline was always just "
+         "'stop chasing MEDIUM/LOW between releases'. Mirrors the A9 severity floors. "
+         "NON-NEGOTIABLE, because a critic found each one: deferred rows keep status=pending or "
+         "they vanish from rem-status's own filter; the reachability verdict becomes a structured "
+         "dated field, re-checked per scan cycle, not prose; GHSA-without-CVE is exempt from any "
+         "CVE-feed gate (three misses already); 'it is gated' must be falsifiable against a live "
+         "probe of the gate, since REM-048 made 13 forward-auth services anonymous when the "
+         "outpost 500'd; and an advisory that defeats the control the deferral relies on "
+         "auto-escalates.")
+
+row("sec-rem-212-disposition", "REM-212 portainer: CRITICAL with no released fix", _REV,
+    "next", "security",
+    refs="docs/llm/security/remediation-queue.json REM-212",
+    body="The queue names 2.45.0 (STS) or 2.39.7 (LTS); both are reported not to exist. This is "
+         "the one live instance of reachable + severe + UNFIXABLE, and it is what generates the "
+         "'1 CRITICAL pending' notification that fired three times unread. It needs a recorded "
+         "disposition — accept, mitigate or remove the service — not another bump attempt.")
+
+row("sec-gitleaks-noise", "gitleaks burns the HIGH channel on test fixtures", _REV,
+    "queued", "security",
+    refs="files/anatomy/face/src/lib/anatomy/pulse.test.ts:29",
+    body="Inbox row 45 sat unread 15 days as a HIGH. Triaged 2026-08-21: the finding is the "
+         "literal string FAKE_hmac_secret_for_tests_only_not_a_real_value_0000000000000000, plus "
+         "a prompt in a workflow script and a knowledge taxonomy file. A detector whose "
+         "positives cannot be told from its noise trains the operator to ignore the channel, "
+         "which is worse than not running it. Needs an allowlist, not a fix.")
+
+row("backup-drill-keap-db", "the restore drill cannot find keap-db, but the backup succeeds", _REV,
+    "next", "platform",
+    refs="~/.nos/backup-status.json · notifications 134/135",
+    body="Standing red for five days and the estate's only proof that a backup is restorable. "
+         "The drill says 'keap-db: FAIL - no object at 2026-08-16 (or it decrypted to nothing)' "
+         "while wing-db replayed 336701 events. But backup-status.json shows keap-db succeeding "
+         "nightly at 347 MB, 14 of 14 sources ok. So this is a lookup, key-format or retention "
+         "mismatch in the DRILL, not a backup that is not running — and it must be diagnosed "
+         "before the distinction stops being academic.")
+
+row("notify-body-is-prompt", "a notification whose body is its own prompt", _REV,
+    "queued", "platform",
+    refs="notifications 144/147/151 (os-resume)",
+    body="'S2 diff: 14-night ceiling reached' fired three consecutive nights; the body reads "
+         "'Report whatever the harness has, with its denominator.' That is the instruction, not "
+         "the result. Same family as a success marker written by the attempting code: the "
+         "channel carried something, so nothing looked broken.")
+
 print(f"prepared {len(R)} rows")
 
 # ── Orphan gate: KEAP cannot enforce this, so the seeder must ───────────────
