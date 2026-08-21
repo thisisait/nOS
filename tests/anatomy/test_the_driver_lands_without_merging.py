@@ -662,3 +662,63 @@ def test_ownership_needs_both_the_uuid_and_the_judged_diff(drv, monkeypatch,
         tmp_path, "https://x.invalid/r.git", "a" * 40,
         "6f139e22-6793-4a88-bfa2-fc136a91506a", judged)
     assert owned is False and "does not name proposal" in why
+
+
+# ── 10. the step that was missing ────────────────────────────────────────────
+
+def test_an_unjudged_proposal_is_judged_not_skipped(drv, monkeypatch, ready_row, wired):
+    """MEASURED 2026-08-21, the first unattended night.
+
+    `loop:propose` filed a proposal at 01:38. `loop:drive` at 06:12 reported
+    "no passed proposal is waiting to land" — true, and the reason nothing
+    happened: a fresh proposal has no verdict, and this driver only ever acted
+    on passed ones. There was no step between the one that makes a proposal and
+    the one that lands it. It never showed while attended because a human
+    judged each proposal within a minute of filing it, bridging the gap by hand.
+
+    Judging belongs to the driver and to nothing else: §3.4 gives it the
+    evaluator identity so the proposer can propose and stop.
+    """
+    ready_row["state"] = "unjudged"
+    calls = []
+    monkeypatch.setattr(drv, "_rejudge",
+                        lambda uuid, gs, to: (calls.append((uuid, gs)), ("pass", ""))[1])
+    monkeypatch.setattr(drv.subprocess, "run", Recorder())
+    rc = drv.land(ready_row, base="dev", gate_set="fast", rejudge=False,
+                  timeout=1, act=True, log=lambda _: None)
+    assert calls, (
+        "an unjudged proposal was not handed to a judge; it is then invisible "
+        "to everything downstream for ever"
+    )
+    assert calls[0][1] == "fast", "the judge was not given the proposal's gate set"
+    assert rc == 0
+
+
+def test_an_unjudged_proposal_that_fails_lands_nothing(drv, monkeypatch,
+                                                       ready_row, wired):
+    """A first verdict of fail is a refusal, not a reason to push anyway."""
+    ready_row["state"] = "unjudged"
+    monkeypatch.setattr(drv, "_rejudge", lambda *a: ("fail", "18 failing test(s)"))
+    rec = Recorder()
+    monkeypatch.setattr(drv.subprocess, "run", rec)
+    drv.land(ready_row, base="dev", gate_set="fast", rejudge=False,
+             timeout=1, act=True, log=lambda _: None)
+    assert rec.pushes() == [], "a failed first judgement still pushed a branch"
+    assert wired == [], "a failed first judgement still opened a merge request"
+
+
+def test_judging_an_unjudged_proposal_does_not_need_the_rejudge_flag(drv, monkeypatch,
+                                                                     ready_row, wired):
+    """`--rejudge` guards REFRESHING a decayed verdict — spending judge time on
+    a question already answered. A proposal nobody has ruled on is not that: if
+    the driver skipped it without the flag, the unattended cadence would file
+    proposals for ever and rule on none."""
+    ready_row["state"] = "unjudged"
+    calls = []
+    monkeypatch.setattr(drv, "_rejudge",
+                        lambda uuid, gs, to: (calls.append(uuid), ("pass", ""))[1])
+    monkeypatch.setattr(drv.subprocess, "run", Recorder())
+    drv.land(ready_row, base="dev", gate_set="fast", rejudge=False,   # <- no flag
+             timeout=1, act=True, log=lambda _: None)
+    assert calls, "an unjudged proposal was skipped for want of --rejudge"
+

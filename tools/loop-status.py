@@ -321,11 +321,21 @@ def _dirty(paths: list[str]) -> list[str]:
 
 
 def awaiting() -> dict:
-    """Every proposal a judge passed, and what became of it.
+    """Every proposal a judge passed, and what became of it — plus the unjudged.
 
-    Only `pass` rows. A failed proposal waiting for nothing is not a queue, and
-    an `indeterminate` one is the loop correctly declining to answer — neither
-    is an item on anybody's desk. A passed one that has not landed IS.
+    A failed proposal waiting for nothing is not a queue, and an
+    `indeterminate` one is the loop correctly declining to answer. Neither is an
+    item on anybody's desk, and neither is listed.
+
+    A proposal with NO VERDICT AT ALL is, and it was invisible here until
+    2026-08-21. That morning the entry half ran unattended for the first time:
+    `loop:propose` filed `813d458b` at 01:38, and `loop:drive` at 06:12 reported
+    "no passed proposal is waiting to land" — true, and the reason nothing
+    happened. This reader selected only `pass` rows, so a fresh proposal fell
+    through the floor between the step that makes one and the step that acts on
+    one. It never showed during the attended days because I judged every
+    proposal by hand within a minute of filing it, bridging the gap with my own
+    hands and never seeing it.
     """
     conn = _connect()
     if conn is None:
@@ -339,12 +349,12 @@ def awaiting() -> dict:
                    v.result AS verdict, v.created_at AS verdict_at,
                    v.tree_sha AS verdict_tree
               FROM loop_proposals p
-              JOIN loop_verdicts v ON v.id = (
+              LEFT JOIN loop_verdicts v ON v.id = (
                        SELECT id FROM loop_verdicts
                         WHERE proposal_id = p.id
                         ORDER BY id DESC LIMIT 1)
-             WHERE v.result = 'pass'
-             ORDER BY v.created_at
+             WHERE v.result = 'pass' OR v.id IS NULL
+             ORDER BY COALESCE(v.created_at, p.created_at)
             """
         )]
         # A verdict can be sealed with no proposal attached — `POST /loop/judge`
@@ -367,7 +377,13 @@ def awaiting() -> dict:
         except (TypeError, ValueError):
             paths = []
         diff = row["diff_text"]
-        if not diff:
+        if row["verdict"] is None:
+            # Filed and never ruled on. Not a failure and not a pass — an item
+            # waiting for the one identity allowed to judge it (§3.4: the
+            # driver, never the proposer).
+            state, detail = "unjudged", "no judge has ruled on this proposal yet"
+            moved, drift_error = [], None
+        elif not diff:
             state, detail = "no-diff", "the ledger row carries no patch"
             moved, drift_error = [], None
         else:
@@ -410,7 +426,11 @@ def awaiting() -> dict:
         # `_is_placeholder` for the measurement that forced this).
         "fixture_rows": [r for r in out if _is_placeholder(r["weakness_id"])],
         "head": None if head_rc != 0 else _git_head(),
-        "unlanded": [r for r in real if r["state"] in ("ready", "re-judge")],
+        # `unjudged` belongs here: red-status renders this list, and a loop that
+        # files proposals nobody rules on has stopped moving just as surely as
+        # one whose patches never land.
+        "unlanded": [r for r in real
+                     if r["state"] in ("unjudged", "ready", "re-judge")],
         "passed_without_proposal": bare,
     }
 
@@ -504,6 +524,7 @@ def collect() -> dict:
 #: order is the order to act in — a ready patch is a minute's work, a conflicted
 #: one is a re-proposal.
 STATE_GLOSS = {
+    "unjudged": "filed, and no judge has ruled on it — the driver's to pick up",
     "ready": "applies to HEAD, and no target path moved since the judges ruled",
     "re-judge": "still applies, but the judged tree is gone — no judge has ruled on THIS one",
     "conflict": "the tree moved under the patch; it fits neither forward nor reversed",
@@ -512,7 +533,8 @@ STATE_GLOSS = {
     "no-diff": "the ledger row carries no patch",
     "unknown": "could not ask git, so this is UNKNOWN and not 'landed'",
 }
-_STATE_ORDER = ["ready", "re-judge", "conflict", "unusable", "unknown", "no-diff", "landed"]
+_STATE_ORDER = ["unjudged", "ready", "re-judge", "conflict", "unusable",
+                "unknown", "no-diff", "landed"]
 
 
 def _print_awaiting(report: dict, *, as_json: bool) -> int:
@@ -534,8 +556,18 @@ def _print_awaiting(report: dict, *, as_json: bool) -> int:
         return 0
 
     pending = report["unlanded"]
-    print(f"{len(rows)} passed verdict(s) against a proposal; "
-          f"{len(pending)} have not reached the tree")
+    unjudged = [r for r in rows if r["state"] == "unjudged"]
+    judged = [r for r in rows if r["state"] != "unjudged"]
+    # Counted apart, because they are different facts and one header cannot
+    # carry both: a passed proposal is waiting on an ACT, an unjudged one is
+    # waiting on a VERDICT, and calling the second a "passed verdict" is the
+    # arithmetic this file exists to refuse.
+    print(f"{len(judged)} passed verdict(s) against a proposal; "
+          f"{len([r for r in pending if r['state'] != 'unjudged'])} "
+          f"have not reached the tree")
+    if unjudged:
+        print(f"  {len(unjudged)} proposal(s) NOT YET JUDGED — nothing downstream "
+              f"can see these until a judge rules")
     bare = report.get("passed_without_proposal") or 0
     if bare:
         print(f"  (+{bare} passed with no proposal attached — bare gate-set runs, "

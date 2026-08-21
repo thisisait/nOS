@@ -519,11 +519,34 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
     """
     wid = row["weakness_id"]
     state = row["state"]
-    if state == "re-judge" and rejudge and not gate_set:
-        log(f"  {wid}: the ledger row declares no gate set — cannot re-judge")
+    if state in ("re-judge", "unjudged") and not gate_set:
+        log(f"  {wid}: the ledger row declares no gate set — cannot judge")
         return 1
 
-    if state == "re-judge":
+    if state == "unjudged":
+        # THE STEP THAT WAS MISSING, measured 2026-08-21. `loop:propose` filed
+        # its first unattended proposal at 01:38 and `loop:drive` at 06:12 said
+        # "no passed proposal is waiting to land" — correctly, because a fresh
+        # proposal has no verdict and this driver only ever acted on passed
+        # ones. Nothing between the step that makes a proposal and the step that
+        # lands one. It never showed during the attended days because a human
+        # judged each proposal within a minute of filing it.
+        #
+        # Judging belongs HERE and nowhere else: §3.4 gives the driver the
+        # evaluator identity precisely so the proposer proposes and stops. The
+        # same call the decayed path already makes, on a row that has no verdict
+        # instead of a stale one.
+        if not act:
+            log(f"  {wid}: WOULD judge (gate set {gate_set}), then land if it passes")
+            return 0
+        log(f"  {wid}: judging for the first time (gate set {gate_set}; minutes)")
+        result, detail = _rejudge(row["uuid"], gate_set, timeout)
+        if result != "pass":
+            log(f"  {wid}: judged {result}"
+                f"{' — ' + detail if detail else ''}; nothing landed")
+            return 0
+        log(f"  {wid}: judged pass")
+    elif state == "re-judge":
         if not rejudge:
             log(f"  {wid}: verdict decayed — re-run the judges with --rejudge")
             return 0
@@ -703,7 +726,8 @@ def main() -> int:
         if report.get("error"):
             raise Refused(report["error"])
 
-        rows = [r for r in report["rows"] if r["state"] in ("ready", "re-judge")]
+        rows = [r for r in report["rows"]
+                if r["state"] in ("unjudged", "ready", "re-judge")]
         if args.uuid:
             rows = [r for r in rows if r["uuid"].startswith(args.uuid)]
             if not rows:

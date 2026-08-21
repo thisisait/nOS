@@ -423,11 +423,23 @@ def reds(report: dict) -> list[str]:
     loop = report.get("loop_verdicts") or {}
     if loop.get("unlanded"):
         rows = loop["unlanded"]
-        named = ", ".join(f"{r['weakness_id']} [{r['state']}]" for r in rows[:4])
-        out.append(
-            f"{len(rows)} loop proposal(s) passed the judges and never reached "
-            f"the tree: {named}"
-        )
+        # Two different stalls, and one sentence cannot carry both: a passed
+        # proposal waits on an ACT, an unjudged one waits on a VERDICT. Saying
+        # "passed the judges" of a row no judge has seen is the kind of quiet
+        # inaccuracy that makes a reader stop trusting the rest of the line.
+        unjudged = [r for r in rows if r["state"] == "unjudged"]
+        passed = [r for r in rows if r["state"] != "unjudged"]
+        if passed:
+            out.append(
+                f"{len(passed)} loop proposal(s) passed the judges and never "
+                f"reached the tree: "
+                + ", ".join(f"{r['weakness_id']} [{r['state']}]" for r in passed[:4])
+            )
+        if unjudged:
+            out.append(
+                f"{len(unjudged)} loop proposal(s) filed and never judged: "
+                + ", ".join(r["weakness_id"] for r in unjudged[:4])
+            )
     inbox = report.get("inbox") or {}
     if inbox.get("critical_or_high"):
         out.append(

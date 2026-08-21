@@ -291,3 +291,72 @@ def test_the_reader_cannot_write_to_the_ledger():
         f"the loop reporter contains write SQL {offenders}; propose, judge and "
         f"seal live on separate capabilities and a reporter holds none of them"
     )
+
+
+def test_a_proposal_nobody_has_judged_is_reported(loop, tmp_path, monkeypatch):
+    """The gap the first unattended night fell into.
+
+    `loop:propose` filed a proposal at 01:38 on 2026-08-21; `loop:drive` at
+    06:12 said "no passed proposal is waiting to land". Both were telling the
+    truth: this reader selected only `pass` rows, so a fresh proposal was
+    invisible between the step that makes one and the step that acts on one.
+    During the attended days a human judged each proposal within a minute of
+    filing it and bridged the gap by hand.
+    """
+    import sqlite3
+
+    db = tmp_path / "wing.db"
+    with sqlite3.connect(db) as seed:
+        seed.execute("CREATE TABLE loop_proposals (id INTEGER PRIMARY KEY, uuid TEXT, "
+                     "fingerprint TEXT, weakness_id TEXT, intent_class TEXT, "
+                     "target_paths TEXT, diff_text TEXT, proposer_id TEXT, created_at TEXT)")
+        seed.execute("CREATE TABLE loop_verdicts (id INTEGER PRIMARY KEY, "
+                     "proposal_id INTEGER, result TEXT, created_at TEXT, tree_sha TEXT)")
+        seed.execute("INSERT INTO loop_proposals VALUES (1,'aaaa1111','fp','fee:99',"
+                     "'wiring-fix','[\"x\"]',?, 'agent:x','2026-08-21 01:38')", (BUMP,))
+        # a second, already-passed proposal so the split header has both kinds
+        seed.execute("INSERT INTO loop_proposals VALUES (2,'bbbb2222','fp2','fee:98',"
+                     "'wiring-fix','[\"x\"]',?, 'agent:x','2026-08-20 01:00')", (BUMP,))
+        seed.execute("INSERT INTO loop_verdicts VALUES (1,2,'pass','2026-08-20 02:00','deadbeef')")
+    monkeypatch.setattr(loop, "WING_DB", db)
+
+    report = loop.awaiting()
+    by_uuid = {r["uuid"]: r for r in report["rows"]}
+    assert "aaaa1111" in by_uuid, (
+        "a proposal with no verdict is absent from the report; nothing "
+        "downstream can act on what nothing reports"
+    )
+    assert by_uuid["aaaa1111"]["state"] == "unjudged", (
+        f"an unruled proposal reported as {by_uuid['aaaa1111']['state']!r} — it "
+        f"is neither a pass nor a failure and must not be filed as either"
+    )
+    assert any(r["state"] == "unjudged" for r in report["unlanded"]), (
+        "an unjudged proposal is not counted among the unlanded, so red-status "
+        "stays quiet about a loop that has stopped moving"
+    )
+
+
+def test_a_failed_proposal_is_still_not_listed(loop, tmp_path, monkeypatch):
+    """Widening to unjudged must not widen to REFUSED.
+
+    A judge said no. Listing it would invite the driver to retry a question
+    already answered, which is what the attempt ceiling exists to stop.
+    """
+    import sqlite3
+
+    db = tmp_path / "wing.db"
+    with sqlite3.connect(db) as seed:
+        seed.execute("CREATE TABLE loop_proposals (id INTEGER PRIMARY KEY, uuid TEXT, "
+                     "fingerprint TEXT, weakness_id TEXT, intent_class TEXT, "
+                     "target_paths TEXT, diff_text TEXT, proposer_id TEXT, created_at TEXT)")
+        seed.execute("CREATE TABLE loop_verdicts (id INTEGER PRIMARY KEY, "
+                     "proposal_id INTEGER, result TEXT, created_at TEXT, tree_sha TEXT)")
+        seed.execute("INSERT INTO loop_proposals VALUES (1,'cccc3333','fp','fee:97',"
+                     "'wiring-fix','[\"x\"]',?, 'agent:x','2026-08-21 01:38')", (BUMP,))
+        seed.execute("INSERT INTO loop_verdicts VALUES (1,1,'fail','2026-08-21 02:00','deadbeef')")
+    monkeypatch.setattr(loop, "WING_DB", db)
+
+    assert [r["uuid"] for r in loop.awaiting()["rows"]] == [], (
+        "a proposal the judges REFUSED is listed as actionable"
+    )
+
