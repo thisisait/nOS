@@ -247,6 +247,59 @@ def unread_inbox(conn: sqlite3.Connection) -> dict:
     }
 
 
+#: An agent session opens `running` and is closed by the run that ends. If the
+#: run dies between those two writes the row stays `running` for ever, and a row
+#: that will never finish is byte-identical to one in progress.
+#:
+#: WHY THIS READER CARRIES IT, 2026-08-22. `tools/agent-status.py` already
+#: flagged surveyor `ae3b3024` — open 77 hours, no process alive, a second
+#: session opened 15 seconds after it — with the words "OPEN LONGER THAN THE
+#: WALL CLOCK; likely orphaned". It was right and nobody saw it, because
+#: CLAUDE.md tells every operator and agent to start with THIS file, and this
+#: file did not carry the fact. An orphan is a STATE, and the estate's own
+#: doctrine is that state belongs to the state reader; agent-status is the
+#: detail view you open once you know to look.
+#:
+#: The ceiling is deliberately generous. `max_runtime_s` on the agent jobs is
+#: 3600, so anything past four hours has outlived every legitimate run by an
+#: hour and is not a slow agent.
+ORPHAN_AFTER_HOURS = 4
+
+
+def orphaned_sessions(conn: sqlite3.Connection) -> list[dict]:
+    try:
+        rows = conn.execute(
+            """
+            SELECT uuid, agent_name, started_at, trigger, model_uri
+              FROM agent_sessions
+             WHERE status IN ('running', 'pending') AND ended_at IS NULL
+             ORDER BY started_at
+            """
+        ).fetchall()
+    except sqlite3.Error:
+        # The table is Wing's; an older schema is an UNKNOWN, never a green.
+        return []
+
+    out: list[dict] = []
+    for row in rows:
+        started = _parse_iso(row["started_at"])
+        if started is None:
+            continue
+        hours = (_now() - started).total_seconds() / 3600
+        if hours < ORPHAN_AFTER_HOURS:
+            continue  # still plausibly working
+        out.append({
+            "uuid": row["uuid"],
+            "agent": row["agent_name"],
+            "trigger": row["trigger"],
+            "model_uri": row["model_uri"],
+            "started_at": row["started_at"],
+            "age": _age(started),
+            "hours": round(hours, 1),
+        })
+    return out
+
+
 def audit_chain(conn: sqlite3.Connection) -> dict | None:
     row = conn.execute(
         """
@@ -368,6 +421,7 @@ def collect() -> dict:
             report["overdue_jobs"] = overdue_jobs(conn)
             report["inbox"] = unread_inbox(conn)
             report["audit_chain"] = audit_chain(conn)
+            report["orphaned_sessions"] = orphaned_sessions(conn)
         conn.close()
 
     for label, path, fn in (
@@ -445,6 +499,16 @@ def reds(report: dict) -> list[str]:
         out.append(
             f"{inbox['critical_or_high']} unread CRITICAL/HIGH in the Wing inbox "
             f"({inbox['total']} unread total, oldest {inbox['oldest_age']})"
+        )
+    for orphan in report.get("orphaned_sessions", []):
+        # Name the model_uri: an orphan on `cli:unrecorded` cannot even say
+        # which backend was answering when it stopped, which is a second fact
+        # the operator needs and the first one hides.
+        out.append(
+            f"agent session {orphan['agent']} {orphan['uuid'][:8]} still "
+            f"'running' after {orphan['hours']} h ({orphan['age']}) — "
+            f"trigger={orphan['trigger']}, model={orphan['model_uri'] or 'unrecorded'}; "
+            f"no run can close it now"
         )
     for missing in report.get("sources_missing", []):
         out.append(f"source unreadable, so its state is UNKNOWN not green: {missing}")
