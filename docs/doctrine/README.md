@@ -30,6 +30,7 @@ than kept as a rule that only ever reports its own defeat.)
 | [four-trees.md](four-trees.md) | branch vs checkout vs worktree vs estate: nothing propagates on its own; `config.yml` is a fifth surface that outranks the defaults and is not in git | ✅ v1 |
 | [layers.md](layers.md) | the `layer` axis (L0–L3, derived, `withheld` over guessed) and what the word `tier` may mean | ✅ v1 |
 | [face-app-tiers.md](face-app-tiers.md) | face-app `form` + build-complexity (F1–F4/H) axes | ✅ v1 |
+| [loops.md](loops.md) | the sequence axis: SERE + the nOS loop proper as verified Mermaid — every edge marked live/partial/target, the refusals, the missing-edge ranking, edge gates | ✅ v1 |
 | table-naming.md | DB table / column naming conventions | planned |
 | taxonomy.md | taxonomy / ontology term definitions (KEAP taxonomy depth levels, node/pillar/block, relations — NOT the service `layer` L0–L3 axis, which layers.md owns) | planned |
 | agentkit.md | agent tool-mediation, scopes, FS/RBAC gating | planned |
