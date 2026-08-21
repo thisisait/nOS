@@ -262,13 +262,24 @@ fs-s1:
 fs-peruser: >-
   ls roles/pazny.*/templates/ | grep -q "peruser\|per-user"
 
-# THE PIPE, not the file. The row's whole content is that `|` stopped being
-# punctuation, so the probe asks the executor whether stage N's rows reach
-# stage N+1 — a `$prev` that is threaded AND read, plus the one verb that was
-# always going to stay late-bound. A `test -f` on the presenter would have
-# passed on 2026-08-10, when the loop dispatched every stage side by side.
-w-exec-pipe: >-
-  grep -q 'prev = \$result->rows' files/anatomy/wing/app/Presenters/Api/CortexExecutorPresenter.php
-  && grep -q 'pipeBroken' files/anatomy/wing/app/Presenters/Api/CortexExecutorPresenter.php
-  && grep -q 'extends LateBoundHandler' files/anatomy/wing/app/Cortex/Handler/EmbedHandler.php
-  && ! grep -q 'extends LateBoundHandler' files/anatomy/wing/app/Cortex/Handler/MapHandler.php
+# NOT ADDED, AND THE REASON IS THE FINDING (2026-08-22).
+#
+# A probe for `w-exec-pipe` was written here and then removed, because
+# `test_every_probed_slug_is_a_row_someone_authored` refused it: "the catalogue
+# names rows tools/roadmap-seed.py does not author — a typo here verifies
+# nothing, quietly". The gate is right, and it is right about something larger
+# than a typo.
+#
+# The ENTIRE v0.11 ordinal ladder — w-exec-pipe, w-agentkit-spine, w-datalog,
+# w-fixture, w-release, w-keap-routes, w-keap-relations — exists ONLY in the
+# live KEAP table. No git file authors it: `roadmap-seed.py`'s `row()` has no
+# `ordinal` parameter at all, and grepping tools/ for those slugs finds nothing
+# that writes them. They were hand-authored in the Planner, so 25 of the 93 rows
+# are ungoverned by git and therefore unprobeable by construction — the same
+# shape as the ideas table, which has no update path either (`kpro-table-access`).
+#
+# The probe that was refused would have been a good one; it checked that stage
+# N's rows reach stage N+1 rather than that a file exists. It can be restored
+# the day those rows have a git-owned author. Until then, adding it would mean
+# teaching the gate to accept a slug nothing can verify — satisfying a gate by
+# editing it, which is the one thing this estate refuses.
