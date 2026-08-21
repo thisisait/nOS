@@ -850,9 +850,23 @@ def test_the_loop_tokens_are_minted_random_and_persisted():
 def test_a_prefix_derived_loop_token_authenticates_nothing(monkeypatch):
     """The repo gate keeps the declaration honest; this keeps the RUNTIME
     honest — the kept lesson of the blast-radius file about itself."""
+    # EVERY identity, not two of three. `_configured()` reads all of
+    # `IDENTITIES`, and this cleared judge and propose while leaving OPERATOR to
+    # whatever the environment happened to hold. A developer shell holds none,
+    # so it passed everywhere a human ran it; Bone's launchd job holds all
+    # three, so under the real judge `_configured()` came back non-empty and the
+    # assertion failed — on 2026-08-21 that refused the loop's FIRST unattended
+    # proposal, whose patch a faithful replay showed to be sound (3868 passed,
+    # clean and patched alike). A single non-reproducible FAIL is terminal for a
+    # proposal, so an environment-sensitive gate does not merely flake: it
+    # destroys work.
+    #
+    # Derived from IDENTITIES rather than listed, so a fourth identity cannot
+    # reintroduce the hole by being forgotten here.
+    for env_var, _scopes in loopauth.IDENTITIES.values():
+        monkeypatch.delenv(env_var, raising=False)
     derived = "changeme_pw_loop_judge" + "x" * 40
     monkeypatch.setenv("BONE_LOOP_JUDGE_TOKEN", derived)
-    monkeypatch.delenv("BONE_LOOP_PROPOSE_TOKEN", raising=False)
     assert loopauth.scopes_for_token(derived) is None
     assert loopauth._configured() == {}, "a derived token was accepted as configured"
 
