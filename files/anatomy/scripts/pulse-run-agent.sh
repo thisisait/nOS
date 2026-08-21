@@ -171,6 +171,31 @@ _post_wing_event() {
 # <severity> <title> <body_markdown>. Channels resolved by Bone via the
 # agent profile's notification: routing block (looked up by origin_agent
 # == AGENT_NAME).
+#
+# IT WENT TO THE WRONG DOOR FOR MONTHS (fixed 2026-08-22). This posted to
+# $WING_API_URL — Wing, :9000 — where `NotificationsPresenter` exposes GET
+# under Bearer auth and says so in its own docblock: "creation stays on the
+# Bone HMAC path (POST is not exposed here)". So every agent report got a
+# 401 and a WARN on stderr, and nothing else. Measured that day, against
+# `notifications` grouped by origin_agent: e2e-mock-agent 29, conductor 2
+# (both 2026-08-08), and NOT ONE row from librarian, surveyor, scout or
+# remediator — ever. The e2e path worked because it posts to Bone; the
+# production path did not because it posts to Wing.
+#
+# The signature and the secret were right the whole time: WING_EVENTS_HMAC_SECRET
+# is `{{ bone_secret }}` (line 24), which is Bone's. Only the host was wrong,
+# which is why nothing looked broken.
+#
+# Verified by probe before changing anything — same valid signature, same
+# deliberately-invalid body, both doors:
+#   Bone :8099 -> 400 "missing required field: severity"   (auth passed)
+#   Wing :9000 -> 401 "Missing or invalid Authorization header"
+#
+# `drift-watch.sh:19` already carried the comment "(Bone; 9000 is Wing)", and
+# `nos-notify.sh` is a working sender. This function was a second
+# implementation of a solved thing, wrong in one field.
+BONE_URL="${BONE_API_URL:-http://127.0.0.1:8099}"
+
 _post_wing_notification() {
     local sev="$1" title="$2" body_md="$3"
     local payload ts sig
@@ -192,9 +217,14 @@ _post_wing_notification() {
         -H "X-Wing-Signature: $sig" \
         -H "Content-Type: application/json" \
         -d "$payload" \
-        "$WING_API_URL/api/v1/notifications" 2>/dev/null) || code="000"
+        "$BONE_URL/api/v1/notifications" 2>/dev/null) || code="000"
     if [[ "$code" != "200" && "$code" != "201" ]]; then
-        echo "WARN: notification POST returned HTTP $code" >&2
+        # A WARN on stderr is what hid this for months: the agent had already
+        # done its work, the wrapper exited 0, and the only trace of a report
+        # that reached nobody was a line in a log nobody reads. Name the door
+        # so the next reader does not have to re-derive which host was meant.
+        echo "WARN: notification POST to $BONE_URL returned HTTP $code — the" \
+             "agent's report did NOT reach the operator inbox" >&2
     fi
 }
 

@@ -109,9 +109,18 @@ local-llm-bench: >-
 # mistake as reading the plan and calling it the work.
 #
 # The deliverable is a GBNF grammar for cortex-lang plus something that sends it.
+#
+# TIGHTENED 2026-08-22, and the loosening it replaces is worth keeping visible:
+# `grep "gbnf\|grammar"` passes on a bench that merely MENTIONS a grammar.
+# Measured that day — ollama's /api/generate accepts an unknown `options.grammar`
+# and silently drops it (hermes3:8b, temperature 0, byte-identical output with
+# and without). So the sending half has to name the path that cannot pretend:
+# llama-server, told at startup, where an unparsable grammar is a startup
+# failure instead of a no-op.
 local-llm-grammar: >-
   test -f state/cortex-lang.gbnf
-  && grep -rql "gbnf\|grammar" tools/local-model-bench.py
+  && grep -q 'grammar-file' tools/local-model-bench.py
+  && grep -q 'llama-server' tools/local-model-bench.py
 
 local-llm-thinkingcap: >-
   ollama list | grep -qi thinkingcap
@@ -252,3 +261,14 @@ fs-s1:
 # and proves nothing.
 fs-peruser: >-
   ls roles/pazny.*/templates/ | grep -q "peruser\|per-user"
+
+# THE PIPE, not the file. The row's whole content is that `|` stopped being
+# punctuation, so the probe asks the executor whether stage N's rows reach
+# stage N+1 — a `$prev` that is threaded AND read, plus the one verb that was
+# always going to stay late-bound. A `test -f` on the presenter would have
+# passed on 2026-08-10, when the loop dispatched every stage side by side.
+w-exec-pipe: >-
+  grep -q 'prev = \$result->rows' files/anatomy/wing/app/Presenters/Api/CortexExecutorPresenter.php
+  && grep -q 'pipeBroken' files/anatomy/wing/app/Presenters/Api/CortexExecutorPresenter.php
+  && grep -q 'extends LateBoundHandler' files/anatomy/wing/app/Cortex/Handler/EmbedHandler.php
+  && ! grep -q 'extends LateBoundHandler' files/anatomy/wing/app/Cortex/Handler/MapHandler.php
