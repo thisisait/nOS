@@ -1,0 +1,169 @@
+# =============================================================================
+# state/cortex-lang.gbnf — cortex-lang as a GBNF grammar, so a small local model
+# CANNOT emit a syntax error, an unknown opcode, a wrong arity or a namespace
+# the opcode does not accept.
+#
+# WHY THIS FILE EXISTS. Roadmap row `local-llm-grammar` (ordinal 3), measured
+# 2026-08-08: hermes3:8b scored 2/6 on state/local-model-bench.yml and THREE OF
+# THE FOUR FAILURES WERE PUNCTUATION, not comprehension — the pipeline shape was
+# right and the parentheses were missing. Constrained decoding converts that
+# class from "rarer with a better prompt" to "impossible".
+#
+# MEASURED HERE, 2026-08-22, hermes3:8b through llama-server with this file:
+#
+#     before (ollama, no grammar)   2/6 valid,  opcode correct 2/6
+#     after  (v1, shape only)       2/6 valid,  opcode correct 6/6
+#     after  (v2, this file)        see tools/local-model-bench.py --grammar
+#
+# v1 already did what it promised — ZERO syntax errors, and the opcode right
+# every time. Its two remaining `arity_error`s were the model padding a chain
+# with `| map()` and `| link() | update(...)`, and arity IS expressible in a
+# CFG, so v2 encodes it per opcode rather than leaving it to the validator.
+#
+# WHAT IT IS DERIVED FROM. Every production is transcribed from the parser that
+# judges the output — `files/anatomy/cortex/server/cortex-lang.ts` — and every
+# opcode's arity and namespace set from `cortex-opcodes.ts` CORTEX_OPCODES.
+# NOT from the primer in `state/local-model-bench.yml`: the two differ on
+# purpose, because the primer teaches 7 namespaces and 14 opcodes (a prompt that
+# teaches the whole grammar measures the prompt), while the registry publishes
+# 8 and 15. A grammar written from the primer would forbid `agent:` and
+# `delegate()` — legal cortex-lang the validator accepts.
+#
+# WHAT IT STILL DOES NOT ENFORCE, AND MUST NOT.
+#   * whether a dotted id RESOLVES (`classify(tax:default)` is shaped correctly
+#     and fails `unknown_operand` — a data question, not a grammar one)
+#   * NAMESPACE_POLICY. `kg:` is constant-rejected by KEAP, and the bench's
+#     `kg-trap` task exists precisely to see whether a model emits it anyway.
+#     `kg` is therefore KEPT everywhere the registry lists it: removing it would
+#     silently delete the estate's own refusal test.
+#   * param NAMES and types per opcode, and every CORTEX_LIMITS bound
+#     (16 stages, 16 args, 256-char dotted ids).
+# That division is the point. This file removes shape; `POST /agent/v1/validate`
+# keeps deciding meaning, so a chain that is well-formed and wrong still fails —
+# which is the failure the bench needs to stay able to see.
+#
+# TWO CONSTRAINTS OF GBNF ITSELF, both measured here rather than assumed.
+#   1. ONE LINE PER RULE. llama.cpp reads an alternative continued on the next
+#      line as a new rule and dies with `expecting name at |`.
+#   2. Arity counts ENTITY operands only; kv args are matched by name and do not
+#      count (cortex-opcodes.ts:156-158). Expressing "exactly one entity ANYWHERE
+#      in the arg list" needs every interleaving enumerated, so this grammar
+#      requires operands FIRST, then params — the canonical form the primer
+#      teaches (`insert(db:products, ?hidden=true)`). That generates a strict
+#      SUBSET of legal cortex-lang: `map(?x=1, tax:03)` is legal and this file
+#      will not produce it. A narrowing, deliberately, and recorded as one.
+#
+# CORRECTION TO THE HEADER IT CAME FROM. cortex-lang.ts:24 writes
+#   pipeline ::= source? stage ("|" stage)*
+# which would admit `@input map(tax:01)` with no pipe. The parser does not: the
+# DECISION at lines 703-706 records the expected set after a source as
+# `["|","<eof>"]`. This encodes the parser's behaviour, not the comment. A
+# source with zero stages is legal and is preserved.
+# =============================================================================
+
+root        ::= ws pipeline ws
+
+# CORTEX_LIMITS.stages = 16, and it is a SHAPE bound, so it belongs here. An
+# unbounded `(… )*` lets a model run away padding stages — measured 2026-08-22,
+# hermes3:8b answered the insert task with a chain that failed
+# `program_too_large` rather than anything about its meaning. A grammar that
+# promises "shape cannot fail" and still admits a structurally-rejected program
+# is not keeping its promise. GBNF has no {0,15} repetition, so the bound is
+# nested: pipe-N means "up to N more stages". A source does not count as a
+# stage, which is why it gets pipe16 and a leading stage gets pipe15.
+pipeline    ::= source pipe16 | stage pipe15
+pipe16      ::= (ws "|" ws stage pipe15)?
+pipe15      ::= (ws "|" ws stage pipe14)?
+pipe14      ::= (ws "|" ws stage pipe13)?
+pipe13      ::= (ws "|" ws stage pipe12)?
+pipe12      ::= (ws "|" ws stage pipe11)?
+pipe11      ::= (ws "|" ws stage pipe10)?
+pipe10      ::= (ws "|" ws stage pipe9)?
+pipe9       ::= (ws "|" ws stage pipe8)?
+pipe8       ::= (ws "|" ws stage pipe7)?
+pipe7       ::= (ws "|" ws stage pipe6)?
+pipe6       ::= (ws "|" ws stage pipe5)?
+pipe5       ::= (ws "|" ws stage pipe4)?
+pipe4       ::= (ws "|" ws stage pipe3)?
+pipe3       ::= (ws "|" ws stage pipe2)?
+pipe2       ::= (ws "|" ws stage pipe1)?
+pipe1       ::= (ws "|" ws stage)?
+
+source      ::= "@input" | "@user" | "@ctx" | "@sel" | "@prev"
+
+stage       ::= s-get | s-map | s-filter | s-rank | s-classify | s-resolve | s-embed | s-link | s-insert | s-update | s-delete | s-preserve | s-route | s-review | s-delegate
+
+# --- read-only opcodes -------------------------------------------------------
+s-get       ::= "get" ws "(" ws e-get args ws ")"
+s-map       ::= "map" ws "(" ws e-map args ws ")"
+s-filter    ::= "filter" ws "(" ws optional-e-filter ws ")"
+s-rank      ::= "rank" ws "(" ws optional-e-rank ws ")"
+s-classify  ::= "classify" ws "(" ws e-classify args ws ")"
+s-resolve   ::= "resolve" ws "(" ws e-resolve args ws ")"
+s-embed     ::= "embed" ws "(" ws optional-e-embed ws ")"
+
+# --- mutating opcodes --------------------------------------------------------
+s-link      ::= "link" ws "(" ws e-link (ws "," ws e-link)? args ws ")"
+s-insert    ::= "insert" ws "(" ws e-insert args ws ")"
+s-update    ::= "update" ws "(" ws e-update args ws ")"
+s-delete    ::= "delete" ws "(" ws e-delete args ws ")"
+s-preserve  ::= "preserve" ws "(" ws e-preserve args ws ")"
+s-route     ::= "route" ws "(" ws e-route args ws ")"
+s-review    ::= "review" ws "(" ws optional-e-review ws ")"
+s-delegate  ::= "delegate" ws "(" ws e-delegate args ws ")"
+
+# min=0 forms: empty, operand-then-params, or params alone.
+optional-e-filter ::= (e-filter args | arg args)?
+optional-e-rank   ::= (e-rank args | arg args)?
+optional-e-embed  ::= (e-embed args | arg args)?
+optional-e-review ::= (e-review args | arg args)?
+
+args        ::= (ws "," ws arg)*
+arg         ::= param | kv
+param       ::= "?" ident ws "=" ws value
+kv          ::= ident ws "=" ws value
+
+# --- operands, namespace-restricted per opcode (CORTEX_OPCODES) --------------
+e-get       ::= ("tax" | "kg" | "db" | "svc" | "doc") ":" operand
+e-map       ::= ("tax" | "ent" | "kg") ":" operand
+e-filter    ::= ("tax" | "ent" | "kg") ":" operand
+e-rank      ::= ("tax" | "kg") ":" operand
+e-classify  ::= ("tax" | "kg") ":" operand
+e-resolve   ::= ("tax" | "ent" | "kg" | "rel") ":" operand
+e-embed     ::= ("tax" | "kg" | "doc") ":" operand
+e-link      ::= ("rel" | "tax" | "kg") ":" operand
+e-insert    ::= ("db" | "svc") ":" operand
+e-update    ::= ("db" | "svc") ":" operand
+e-delete    ::= ("db" | "svc") ":" operand
+e-preserve  ::= ("kg" | "doc" | "db") ":" operand
+e-route     ::= ("svc" | "doc") ":" operand
+e-review    ::= ("tax" | "kg" | "ent") ":" operand
+e-delegate  ::= "agent" ":" operand
+
+operand     ::= dotted-id term?
+
+# entity_rest's optional bracket term. Non-ASCII is legal INSIDE brackets and a
+# syntax error outside them, which is why `[červené tričko L]` parses.
+term        ::= "[" termchar+ "]"
+termchar    ::= [^\]\\] | "\\" ("]" | "\\")
+
+value       ::= string | dotted-word
+dotted-id   ::= word ("." word)*
+dotted-word ::= word ("." word)*
+
+# WORD_CHAR = /[A-Za-z0-9_\/-]/ . `.` is deliberately NOT a word char — it is
+# its own token, which is what makes `@input.map(…)` fail on the dot rather than
+# lex as one blob.
+word        ::= [A-Za-z0-9_/-]+
+ident       ::= [A-Za-z_] [A-Za-z0-9_/-]*
+
+# STRING_ESCAPES is closed: \\ \" \' \n \t \r . An unlisted escape is a syntax
+# error carrying the legal set, so it must not be generatable here either.
+string      ::= "\"" dqchar* "\"" | "'" sqchar* "'"
+dqchar      ::= [^"\\] | escape
+sqchar      ::= [^'\\] | escape
+escape      ::= "\\" ("\\" | "\"" | "'" | "n" | "t" | "r")
+
+# The lexer skips spaces, tabs and newlines between tokens (test vector
+# '@input\n\t| map(tax:01)\n' lexes clean), so the grammar allows them too.
+ws          ::= [ \t\n]*

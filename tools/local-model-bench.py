@@ -45,10 +45,13 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
+import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -56,8 +59,32 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 TASKS = REPO / "state/local-model-bench.yml"
+GRAMMAR = REPO / "state/cortex-lang.gbnf"
 OLLAMA = "http://127.0.0.1:11434"
 KEAP = "http://127.0.0.1:8091"
+
+#: `--grammar` does NOT go through Ollama, and that is the whole reason this
+#: block exists rather than an `options: {grammar: …}` one-liner.
+#:
+#: MEASURED 2026-08-22. Ollama's /api/generate accepts unknown keys in `options`
+#: and DROPS them. hermes3:8b, temperature 0, seed 1, asked to "Say hello.":
+#:
+#:     no grammar                        -> 'Hello! How can I assist you today?'
+#:     options.grammar = root ::= "ZZZ"  -> 'Hello! How can I assist you today?'
+#:
+#: Byte-identical. A grammar passed that way is a knob that reports itself as
+#: set and constrains nothing — the estate's signature defect, and it would have
+#: been invisible here because the SCORE would have moved anyway (a better
+#: prompt also improves it). So constrained runs talk to `llama-server`, which
+#: takes --grammar-file and refuses to start if the grammar does not parse.
+#:
+#: llama-server ships INSIDE the Homebrew ollama formula rather than on PATH.
+LLAMA_SERVER_CANDIDATES = (
+    "/opt/homebrew/opt/ollama/libexec/lib/ollama/llama-server",
+    "/usr/local/opt/ollama/libexec/lib/ollama/llama-server",
+)
+OLLAMA_MANIFESTS = Path.home() / ".ollama/models/manifests/registry.ollama.ai/library"
+OLLAMA_BLOBS = Path.home() / ".ollama/models/blobs"
 
 #: Models that answer none of these tasks by design — embedders have no chat
 #: surface, and asking one to emit a chain measures nothing.
@@ -113,6 +140,110 @@ def generate(model: str, system: str, prompt: str, timeout: int) -> dict:
         "eval_tokens": data.get("eval_count", 0) or 0,
         "seconds": time.monotonic() - started,
     }
+
+
+def _llama_server_bin() -> str:
+    for path in LLAMA_SERVER_CANDIDATES:
+        if os.access(path, os.X_OK):
+            return path
+    _die("no llama-server found. It ships inside the Homebrew ollama formula "
+         f"(looked in: {', '.join(LLAMA_SERVER_CANDIDATES)}). Without it there "
+         "is no grammar-constrained path — and Ollama's API silently drops a "
+         "grammar, so there is no fallback that would be honest.")
+
+
+def _gguf_for(model: str) -> str:
+    """Resolve an ollama model name to the GGUF blob llama-server loads.
+
+    Ollama stores plain GGUF under blobs/ and names it in the manifest, so this
+    reads rather than converts. `hermes3:8b` -> manifests/hermes3/8b.
+    """
+    name, _, tag = model.partition(":")
+    manifest = OLLAMA_MANIFESTS / name / (tag or "latest")
+    if not manifest.exists():
+        _die(f"no ollama manifest at {manifest} — is {model} pulled?")
+    layers = json.loads(manifest.read_text(encoding="utf-8")).get("layers", [])
+    for layer in layers:
+        if "model" in layer.get("mediaType", ""):
+            blob = OLLAMA_BLOBS / layer["digest"].replace("sha256:", "sha256-")
+            if not blob.exists():
+                _die(f"manifest names a blob that is not there: {blob}")
+            return str(blob)
+    _die(f"{model}'s manifest declares no model layer")
+
+
+class GrammarServer:
+    """A llama-server bound to state/cortex-lang.gbnf, for one model.
+
+    It refuses to start if the grammar does not parse, which is the property
+    that makes this path honest: an unusable grammar is a startup failure here,
+    where Ollama would have accepted the run and constrained nothing.
+    """
+
+    def __init__(self, model: str, port: int = 8121, ctx: int = 2048):
+        self.model, self.port, self.ctx = model, port, ctx
+        self.proc: subprocess.Popen | None = None
+        self.log = tempfile.NamedTemporaryFile(
+            prefix="llama-server-", suffix=".log", delete=False, mode="w+")
+
+    @property
+    def url(self) -> str:
+        return f"http://127.0.0.1:{self.port}"
+
+    def __enter__(self) -> "GrammarServer":
+        self.proc = subprocess.Popen(
+            [_llama_server_bin(), "-m", _gguf_for(self.model),
+             "--host", "127.0.0.1", "--port", str(self.port),
+             "-c", str(self.ctx), "-ngl", "99",
+             "--grammar-file", str(GRAMMAR)],
+            stdout=self.log, stderr=subprocess.STDOUT)
+        deadline = time.monotonic() + 180
+        while time.monotonic() < deadline:
+            if self.proc.poll() is not None:
+                self.log.seek(0)
+                tail = "".join(self.log.readlines()[-6:]).strip()
+                _die(f"llama-server exited before serving {self.model}.\n{tail}")
+            try:
+                with urllib.request.urlopen(f"{self.url}/health", timeout=2) as resp:
+                    if json.loads(resp.read()).get("status") == "ok":
+                        return self
+            except (urllib.error.URLError, OSError, TimeoutError, ValueError):
+                time.sleep(2)
+        self.__exit__(None, None, None)
+        _die(f"llama-server never became healthy for {self.model}")
+
+    def __exit__(self, *_exc) -> None:
+        if self.proc and self.proc.poll() is None:
+            self.proc.terminate()
+            try:
+                self.proc.wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+
+    def generate(self, system: str, prompt: str, timeout: int) -> dict:
+        # ChatML, because every candidate in state/local-model-bench.yml uses it.
+        body = {
+            "prompt": (f"<|im_start|>system\n{system}<|im_end|>\n"
+                       f"<|im_start|>user\n{prompt}<|im_end|>\n"
+                       f"<|im_start|>assistant\n"),
+            "temperature": 0, "seed": 1, "n_predict": 384,
+        }
+        req = urllib.request.Request(
+            f"{self.url}/completion", data=json.dumps(body).encode(),
+            headers={"content-type": "application/json"}, method="POST")
+        started = time.monotonic()
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = json.loads(resp.read())
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            return {"error": str(exc)[:120], "seconds": time.monotonic() - started}
+        predicted = data.get("tokens_predicted", 0) or 0
+        return {
+            "text": data.get("content", ""),
+            "tokens": (data.get("tokens_evaluated", 0) or 0) + predicted,
+            "eval_tokens": predicted,
+            "seconds": time.monotonic() - started,
+        }
 
 
 def first_chain(text: str) -> str:
@@ -177,7 +308,13 @@ def main() -> int:
     ap.add_argument("--model", action="append", help="repeatable; default: all installed")
     ap.add_argument("--timeout", type=int, default=300)
     ap.add_argument("--json", metavar="PATH", help="also write the raw results")
+    ap.add_argument("--grammar", action="store_true",
+                    help="constrain decoding with state/cortex-lang.gbnf via "
+                         "llama-server (NOT ollama, which drops it silently)")
     args = ap.parse_args()
+
+    if args.grammar and not GRAMMAR.exists():
+        _die(f"--grammar asked for, and there is no grammar at {GRAMMAR}")
 
     if not TASKS.exists():
         _die(f"no task set at {TASKS}")
@@ -198,33 +335,41 @@ def main() -> int:
     results = []
     for model in models:
         rows, under_load = [], None
-        for n, task in enumerate(tasks):
-            gen = generate(model, system, task["prompt"], args.timeout)
-            # Measured once, right after the first generation, when the weights
-            # are certainly resident and the estate is competing with them.
-            if n == 0:
-                under_load = estate_latency()
-            if "error" in gen:
-                rows.append({"id": task["id"], "valid": False, "opcode_ok": False,
-                             "tokens": 0, "seconds": gen["seconds"],
-                             "error": gen["error"], "chain": ""})
-                continue
-            chain = first_chain(gen["text"])
-            verdict = validate(chain, token) if chain else {"valid": False}
-            rows.append({
-                "id": task["id"],
-                "chain": chain[:120],
-                # An unreachable judge scores nothing. Marking it False would
-                # blame the model for taking the machine, which is a separate
-                # finding with its own column.
-                "valid": bool(verdict.get("valid")) if verdict is not None else None,
-                "opcode_ok": bool(re.search(rf"\b{re.escape(task['expect_opcode'])}\s*\(", chain)),
-                "tokens": gen["tokens"],
-                "eval_tokens": gen["eval_tokens"],
-                "seconds": round(gen["seconds"], 1),
-                "errors": ([e.get("code") for e in (verdict.get("errors") or [])][:2]
-                           if verdict is not None else ["judge-unreachable"]),
-            })
+        # One server per model, torn down before the next: two resident sets on
+        # a 36 GB box with ~50 containers is how the estate latency this file
+        # measures gets ruined by the file measuring it.
+        server = GrammarServer(model) if args.grammar else None
+        with server if server else contextlib.nullcontext():
+            for n, task in enumerate(tasks):
+                gen = (server.generate(system, task["prompt"], args.timeout)
+                       if server else
+                       generate(model, system, task["prompt"], args.timeout))
+                # Measured once, right after the first generation, when the
+                # weights are certainly resident and the estate competes with
+                # them.
+                if n == 0:
+                    under_load = estate_latency()
+                if "error" in gen:
+                    rows.append({"id": task["id"], "valid": False, "opcode_ok": False,
+                                 "tokens": 0, "seconds": gen["seconds"],
+                                 "error": gen["error"], "chain": ""})
+                    continue
+                chain = first_chain(gen["text"])
+                verdict = validate(chain, token) if chain else {"valid": False}
+                rows.append({
+                    "id": task["id"],
+                    "chain": chain[:120],
+                    # An unreachable judge scores nothing. Marking it False would
+                    # blame the model for taking the machine, which is a separate
+                    # finding with its own column.
+                    "valid": bool(verdict.get("valid")) if verdict is not None else None,
+                    "opcode_ok": bool(re.search(rf"\b{re.escape(task['expect_opcode'])}\s*\(", chain)),
+                    "tokens": gen["tokens"],
+                    "eval_tokens": gen["eval_tokens"],
+                    "seconds": round(gen["seconds"], 1),
+                    "errors": ([e.get("code") for e in (verdict.get("errors") or [])][:2]
+                               if verdict is not None else ["judge-unreachable"]),
+                })
 
         ok = sum(1 for r in rows if r["valid"] is True)
         both = sum(1 for r in rows if r["valid"] is True and r["opcode_ok"])
