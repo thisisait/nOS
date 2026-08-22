@@ -1334,7 +1334,7 @@ mariadb_port: 3306
 # ==============================================================================
 
 install_postgresql: false
-postgresql_version: "16.14-alpine"      # CVE-2026-6479 (SSL/GSS DoS, ssl=on relevant) + 16.14 patch line. Was 16.13 (CVE-2026-2004/2005/2006/2007)
+postgresql_version: "16.15-alpine"      # REM-215: 16.14 is NOT clean — the previous batch told the next reader to ignore the signal that would have found it. Was 16.14 (CVE-2026-6479 SSL/GSS DoS) + 16.13 (CVE-2026-2004/2005/2006/2007). Minor within 16.x, no pg_upgrade.
 postgresql_port: 5432
 postgresql_root_user: "postgres"
 postgresql_root_password: "{{ nos_derived_secrets.postgresql }}"
@@ -1349,7 +1349,7 @@ mariadb_container_name: "infra-mariadb-1"
 # ==============================================================================
 
 redis_docker: false                    # true = Redis in Docker (for cross-stack access)
-redis_version: "8.10.0"                  # REM-103: re-pin off the EOL 8.0 branch (final 8.0.6) — May-2026 DarkReplica cluster; supersedes 7.4.6 CVE-2025-49844 (RediShell RCE) [swept 8.6.5 2026-08-06]
+redis_version: "8.10.1"                  # REM-216: coordinated ALL-BRANCH release 2026-08-17 — 8.10.1/8.8.2/8.6.6/8.4.6/8.2.9/7.4.11/7.2.16/6.2.24 published the same day; the estate sat one patch below it. Prior REM-103: re-pin off the EOL 8.0 branch, supersedes 7.4.6 CVE-2025-49844 (RediShell RCE)
 redis_container_name: "infra-redis-1"   # live <stack>-<service>-1; used by upgrade recipe docker-exec
 
 # ==============================================================================
@@ -1588,7 +1588,7 @@ prometheus_version: "v3.13.2"   # synced to role default (cleared version-pin sh
 loki_version: "3.7.6"           # synced to role default (cleared version-pin shadow) [swept 3.7.2 2026-08-06]
 
 # Gitea Docker
-gitea_version: "1.27.1"                 # REM-099: 1.25.x EOL — CVE-2026-27771 pkg-registry reads, CVE-2026-22874 SSRF, OAuth2 scope bypass; exactly 1.26.4 (1.26.3 regression). Migration 2026-07-09-gitea-1-25-5-to-1-26-4 [swept 1.27.0 2026-08-06]
+gitea_version: "1.27.2"                 # REM-213: 2FA bypass + persistent ATO via OpenID linking (CVSS 8.8) and WebAuthn bypass on OAuth2 sign-in (8.1); 1.27.2 released 2026-08-13, one day before the advisory wave. Prior REM-099: 1.25.x EOL — CVE-2026-27771 pkg-registry reads, CVE-2026-22874 SSRF, OAuth2 scope bypass; exactly 1.26.4 (1.26.3 regression). Migration 2026-07-09-gitea-1-25-5-to-1-26-4 [swept 1.27.0 2026-08-06]
 
 # ── Grafana ───────────────────────────────────────────────────────────────────
 grafana_admin_user: "admin"
