@@ -369,6 +369,55 @@ def backups() -> dict | None:
     }
 
 
+def restore_drill() -> dict | None:
+    """The drill's OWN verdict, which is not the same fact as its last Pulse run.
+
+    MEASURED 2026-08-22, and it cost six days of false red. The Sunday drill
+    failed once on 2026-08-16 07:38 — a 346 MB `keap-db` fetch aborted after ten
+    seconds while the 74 MB `wing-db` fetch beside it took six and passed, i.e.
+    transient. It was re-run BY HAND at 11:07 the same morning and passed
+    (`keap-db: OK (1710/5084/365)`), and again on 2026-08-19 (`1711/5084/367`).
+    `~/.nos/backup-verify.json` has said `success: true` for both artifacts ever
+    since.
+
+    `failing_jobs()` never saw any of that, because a manual run leaves no
+    `pulse_runs` row: it reads the last SCHEDULED run, which is still the failure.
+    For a weekly job that is up to seven days of reporting a defect that was
+    repaired within four hours — and the repair is invisible precisely because
+    the operator did it himself.
+
+    The estate's own doctrine is that a success marker must be written by a
+    reader rather than by the attempting code, and this file honours it: the
+    drill writes its result, this reads it. What was missing is that nothing
+    read the artifact at all, so the schedule was standing in for the outcome.
+
+    NOT a replacement for `failing_jobs()`. A drill that has not run in a month
+    is still a finding — hence `stale`, checked against the artifact's own
+    timestamp rather than against a job row.
+    """
+    path = pathlib.Path.home() / ".nos" / "backup-verify.json"
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return None
+    artifacts = data.get("artifacts") or []
+    failed = [a.get("name") for a in artifacts if not a.get("success")]
+    stamp = data.get("checked_at")
+    when = (datetime.fromtimestamp(stamp, timezone.utc)
+            if isinstance(stamp, (int, float)) else None)
+    return {
+        "backup_date": data.get("backup_date"),
+        "artifacts": len(artifacts),
+        "failed": failed,
+        "checked_at": when.isoformat() if when else None,
+        "age": _age(when),
+        # A weekly job gets a fortnight before absence is itself the finding.
+        "stale": when is None or when < _now() - timedelta(days=14),
+    }
+
+
 def stalled_verdicts() -> dict | None:
     """Passed loop verdicts whose patch never reached the tree.
 
@@ -428,6 +477,7 @@ def collect() -> dict:
         ("security_scan", SCAN_STATE, security_scan),
         ("backups", BACKUP_STATUS, backups),
         ("loop_verdicts", REPO / "tools" / "loop-status.py", stalled_verdicts),
+        ("restore_drill", pathlib.Path.home() / ".nos" / "backup-verify.json", restore_drill),
     ):
         value = fn()
         if value is None:
@@ -453,6 +503,26 @@ def reds(report: dict) -> list[str]:
         # reads as two problems
         if chain_broken and job["job"].endswith("audit-chain-verify"):
             continue
+        # A JOB REPAIRED BY HAND LEAVES NO `pulse_runs` ROW. The restore drill
+        # failed once on a transient fetch (2026-08-16), was re-run manually the
+        # same morning and passed, and passed again on 08-19 — and this reader
+        # kept calling it red for six days, because the last SCHEDULED run is
+        # still the failure. The drill writes its own verdict; prefer it, and say
+        # both facts rather than silently picking one.
+        if job["job"].endswith("backup-restore-drill"):
+            drill = report.get("restore_drill") or {}
+            drill_when = _parse_iso(drill.get("checked_at"))
+            job_when = _parse_iso(job.get("fired_at"))
+            newer = drill_when and job_when and drill_when > job_when
+            if newer and not drill.get("failed") and not drill.get("stale"):
+                out.append(
+                    f"{job['job']} last SCHEDULED run failed ({job['age']}) but the "
+                    f"drill has passed since — backup-verify.json says "
+                    f"{drill['artifacts']}/{drill['artifacts']} ok for backup set "
+                    f"{drill.get('backup_date')} ({drill['age']}). Not red; the next "
+                    f"scheduled run will clear the row."
+                )
+                continue
         out.append(
             f"{job['job']} failing rc={job['exit_code']} ({job['age']}) — {job['last_line']}"
         )

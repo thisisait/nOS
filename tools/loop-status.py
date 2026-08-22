@@ -165,10 +165,26 @@ def live_weaknesses() -> tuple[list[dict], str | None]:
     (`proposer_id` reads `agent:claude-opus-5`, `agent:librarian`); nothing
     walks the list.
 
-    That missing step is `loop-driver` on the roadmap and it is not built. Until
-    it is, the cheapest honest thing is to make the gap COUNTABLE and NAMED,
-    because "six detectors are silent" is a shrug and "here are the 64 findings
-    nobody has proposed against, worst first" is a queue.
+    THE STEP EXISTS NOW, AND THE GAP DOES NOT MEAN WHAT IT MEANT (2026-08-22).
+    `loop:propose` shipped 2026-08-19 (`a60516a6`) and runs nightly at 01:30; it
+    picks the worst proposable weakness and spawns one model run. So the sentence
+    this docstring carried for four days — "no step turns a weakness into a
+    proposal" — became false, and it was the THIRD place still saying it, after
+    `docs/agentic-night-runbook.md:13` and the roadmap row `loop-driver` (closed
+    2026-08-22, shipped 2026-08-19).
+
+    What the number means now is a RATE, not an absence: the entry half takes ONE
+    weakness per night, so a gap of 70 is seventy nights at the current cadence,
+    minus whatever the operator closes by hand. That is a schedulable fact.
+    "Nothing is coming" was not.
+
+    The two things that actually stop a night are worth naming here because they
+    are what the count hides: a weakness whose evidence is uncommitted is
+    WITHHELD (`[evidence uncommitted]` below), and on 2026-08-22 that was 73 of
+    78 rows — the whole queue starved because a nightly scan had written
+    `docs/llm/security/*` and nobody had committed it. And six rows carry
+    `evidence_committed=False` unconditionally, so the printed remedy is
+    unsatisfiable for them (§3.3, docs/idea/19-fable-review-2.md).
     """
     import sys as _sys
 
@@ -636,8 +652,18 @@ def main() -> int:
 
         print(f"{len(gap)} of {len(live)} reported weaknesses have never been "
               f"proposed against")
-        print("  (there is no step that turns a finding into a proposal — "
-              "`loop-driver` is not built. This is the queue it would read.)\n")
+        # A RATE, NOT AN ABSENCE. `loop:propose` has existed since 2026-08-19
+        # and takes ONE weakness per night, so this number is a backlog in
+        # nights. It read "`loop-driver` is not built" until 2026-08-22, which
+        # was four days stale and told the operator nothing was coming.
+        withheld = sum(1 for w in gap if not w.get("proposable", True))
+        print(f"  (loop:propose takes one per night, so this is ~{len(gap)} "
+              f"nights at the current cadence.")
+        if withheld:
+            print(f"   {withheld} of them are WITHHELD on uncommitted evidence "
+                  f"and cannot be picked at all until it is committed.)\n")
+        else:
+            print("   None are withheld — every one is pickable tonight.)\n")
         for w in gap[:25]:
             sev = (w["severity"] or "-")[:8]
             held = "" if w.get("proposable", True) else "  [evidence uncommitted]"

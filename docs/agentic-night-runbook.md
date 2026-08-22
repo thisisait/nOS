@@ -10,12 +10,20 @@ night. §5 of `docs/idea/11-agentic-loop.md` is the governing doctrine:
 
 **It cannot be "the whole self-improvement loop", yet.** Measured 2026-08-16:
 
-- **The loop engine has no driver.** The weakness→propose→judge surface is
-  live in Bone (`looproutes.py`, ledger, judges, deny-by-default path budget)
-  and NOTHING invokes it: no agent's ceremony or profile references
-  `/v1/proposals` (grep over `files/anatomy/agents/` — zero hits; the word
-  "proposal" appears only as prose). Roadmap row `loop-driver` is queued and
-  says the same.
+- ~~**The loop engine has no driver.**~~ **CLOSED 2026-08-19** (`a60516a6`,
+  "a cadence, an entry, a named deadlock"). It was true when measured on
+  2026-08-16 — nothing invoked the weakness→propose→judge surface. Today
+  `loop:propose` runs nightly at 01:30, `loop:drive` at 06:10 judges what
+  nobody ruled on (`f3b34a19`), and `loop:review` merges behind three YES
+  answers at 06:50. The roadmap row `loop-driver` was closed 2026-08-22 on
+  its own probe.
+
+  Kept struck through rather than deleted because the sentence outlived its
+  measurement in THREE places — here, the roadmap row, and
+  `tools/loop-status.py --gap`'s own output — and each reader found it
+  independently and believed it. What replaced it is a rate: the entry half
+  takes one weakness per night, so the gap is a backlog in nights, and the
+  thing that actually stops a night is uncommitted evidence.
 - **AgentKit's tool surface cannot reach the loop even by accident.**
   `McpBoneTool` is GET-only and requires an `/api/` path prefix; the loop
   routes are POST `/v1/*`. Double-walled off.
