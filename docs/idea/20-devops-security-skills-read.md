@@ -95,6 +95,47 @@ deliberately not taken. A converge was running while this was read, and editing
 the templates it is applying is how a half-applied estate happens. The hardening
 baseline is a Q2 item with its own ratchet, not an afternoon.
 
+## The full sweep — because the first pass was a sample, not a read
+
+The first version of this file judged 163 skills after reading **six**, and
+estimated "~90% inert" from filenames. Challenged on it, the repo was cloned and
+searched. The estimate was directionally right and is now earned:
+
+**Corpus:** 163 `SKILL.md`, 69,477 lines, median 410, min 100, max 1253.
+
+**How much of it touches this estate**, counted across every file:
+
+```
+authentik  0    gitea  0    woodpecker  0    keycloak  0    litestream  0    borg  0
+ansible    1    ← the thing nOS IS
+sqlite     2    launchd  3    traefik  3    restic  3    ollama  5    oidc  11
+nginx     28    systemd 19   docker compose 19   (generic, mostly Linux/k8s framing)
+```
+
+**The technique cluster that is real:** trivy 16 · mtls 12 · canary 10 · grype 8 ·
+seccomp 7 · cosign 6 · no-new-privileges 6 · sigstore 4 · syft 4 · slsa 4.
+
+**Two candidates chased to a clean no:**
+
+* `canary` (10 files) looked like it might serve `sec-p3`. It is **deployment**
+  canary — traffic splits, `canaryTrafficPercent`, kubectl rollouts. Not a
+  honeytoken. Nothing for us.
+* `model-supply-chain-security` (402 lines) looked like the gem: we pull four
+  models from a public registry and verify nothing about them. But it is written
+  for **publishers** — sign your own weights with cosign, SLSA provenance for
+  training, Kyverno admission control. We are consumers. Ollama stores blobs
+  content-addressed (`sha256-…`), so integrity holds by construction; what is
+  missing is *authenticity*, and upstream offers no signing for this path. The
+  skill does not close that.
+
+**And one where they are simply behind:** `gdpr-compliance` (560 lines) has nine
+sections — legal bases, Article 30 mapping, consent, DSAR, DPA, DPIA, checklist.
+Every one is already covered here, DPIA included (identified in
+`docs/compliance/gov-readiness-audit-2026q2.md`).
+
+**No gem.** The sweep was still worth its hour: it turned two maybes into
+defensible noes, and it replaced an assertion about 163 files with a count.
+
 ## A correction, recorded because the method matters
 
 The first pass of this read reported **three** privileged containers, from
