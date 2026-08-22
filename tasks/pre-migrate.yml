@@ -21,12 +21,69 @@
   check_mode: false
   tags: ['migrate']
 
+# WHY THIS IS NOT `{{ vars }}`, and it is a converge-breaking difference.
+#
+# Measured 2026-08-22 on the first FULL converge since Secrets P1 landed:
+#
+#   Error while resolving value for 'role_vars': 'nos_derived_secrets' is
+#   undefined   <- default.credentials.yml:190, rustfs_access_key
+#
+# `{{ vars }}` resolves EAGERLY, so it drags in all 73 declarations that P1
+# rewrote to read `{{ nos_derived_secrets.<key> }}` — and this file runs at
+# main.yml:966 while that fact is set at main.yml:1231. P1's own comment shows
+# the reasoning that missed it: it names `tasks/restore.yml` as the earliest
+# consumer and says the ordering holds "with room to spare" against core-up's
+# eager resolve. Core-up is not the earliest eager consumer. This task is, by
+# 265 lines.
+#
+# The secrets block CANNOT simply move earlier: its input `global_password_prefix`
+# is set at main.yml:1117 from the removal prompt, after this file.
+#
+# So the fix belongs here, and it is the direction CLAUDE.md already names as
+# strategic — stop passing `{{ vars }}` wholesale. `nos_state` reads exactly
+# three keys per service (`version_var`, `data_path_var`, `install_flag`,
+# nos_state_lib.py:418-426), all NAMED BY THE MANIFEST — 152 names across 64
+# services, not one of them a credential. `lookup('vars', …)` resolves one key
+# at a time, so an undefined credential elsewhere in the play cannot abort a
+# read that never wanted it.
+#
+# A missing name is omitted rather than defaulted: `introspect_service` tests
+# `if version_var in role_vars`, so absent and empty are already different
+# things to it, and inventing an empty string would make a service look pinned
+# to "".
+- name: "[pre-migrate] Collect the var names the manifest asks about"
+  ansible.builtin.set_fact:
+    _nos_manifest_var_names: >-
+      {{ ((lookup('file', playbook_dir ~ '/state/manifest.yml') | from_yaml).services | default([]))
+         | map('ansible.builtin.dict2items') | flatten
+         | selectattr('key', 'in', ['version_var', 'data_path_var', 'install_flag'])
+         | map(attribute='value') | select('string') | unique | list }}
+  tags: ['migrate']
+
+# ONE lookup, no `when:`. The first cut tested existence in a conditional with
+# `lookup('vars', item, default=None) is not none` and died on `mcpo_version`:
+# inside a conditional the vars lookup RAISES "No variable named …" rather than
+# returning the default. A sentinel keeps the whole decision inside the value
+# expression, where the default does apply — and it also stops the lookup
+# happening twice per key.
+- name: "[pre-migrate] Resolve only those, one key at a time"
+  ansible.builtin.set_fact:
+    _nos_manifest_vars: >-
+      {{ (_nos_manifest_vars | default({})) if _nos_v == '__nos_absent__'
+         else (_nos_manifest_vars | default({})) | combine({item: _nos_v}) }}
+  vars:
+    _nos_v: "{{ lookup('vars', item, default='__nos_absent__') }}"
+  loop: "{{ _nos_manifest_var_names }}"
+  loop_control:
+    label: "{{ item }}"
+  tags: ['migrate']
+
 - name: "[pre-migrate] Introspect services against manifest"
   nos_state:
     action: introspect
     state_path: "{{ ansible_facts['env']['HOME'] }}/.nos/state.yml"
     manifest_path: "{{ playbook_dir }}/state/manifest.yml"
-    role_vars: "{{ vars }}"
+    role_vars: "{{ _nos_manifest_vars | default({}) }}"
   register: _nos_introspect
   # runtime-state refresh; not idempotency-relevant — introspection is a read
   # that records the observed service versions + a fresh generated_at every run

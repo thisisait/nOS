@@ -98,6 +98,66 @@ _BUILTINS = {
 }
 
 
+def _uses_vars_in_code(path: pathlib.Path) -> bool:
+    """`{{ vars }}` in a VALUE, not in a comment.
+
+    The first version of this matched the raw text and reported
+    tasks/pre-migrate.yml as an eager consumer AFTER that file had been fixed —
+    because the comment explaining the fix quotes `{{ vars }}` four times. A
+    detector that reads prose is the same mistake this gate exists to catch,
+    one layer up.
+    """
+    for line in path.read_text().splitlines():
+        stripped = line.lstrip()
+        if stripped.startswith("#"):
+            continue
+        code = line.split(" #", 1)[0]
+        if "{{ vars }}" in code:
+            return True
+    return False
+
+
+def _first_eager_consumer() -> tuple[int, str]:
+    """Line in main.yml of the EARLIEST `{{ vars }}` resolve, and what it is.
+
+    DERIVED, NOT NAMED, and that distinction is the whole of hidden_fees/21.
+    This helper used to be `_defined_before_core_up()` and it collected every
+    key defined ANYWHERE in main.yml with no notion of line order — so it tested
+    existence while its name and its failure message both promised order.
+
+    Measured 2026-08-22, on the first full converge after Secrets P1: the play
+    aborted at `tasks/pre-migrate.yml` (imported at main.yml:966) with
+    `'nos_derived_secrets' is undefined`, sourced from
+    default.credentials.yml:190. That fact is set at main.yml:1231 — after the
+    consumer, and this gate was green throughout, because 1231 is "somewhere in
+    main.yml".
+
+    P1's own comment made the identical mistake in prose: it names
+    `tasks/restore.yml` as the earliest consumer and calls the ordering safe
+    "with room to spare" against core-up's eager resolve. Two independent
+    readers both assumed core-up was first. It is not, by 265 lines.
+
+    So the boundary is computed: every `{{ vars }}` in main.yml itself, plus
+    every import/include whose target file contains one, at the line of the
+    IMPORT — because that is when it runs.
+    """
+    main = (REPO / "main.yml").read_text().splitlines()
+    hits: list[tuple[int, str]] = []
+    for n, line in enumerate(main, 1):
+        if "{{ vars }}" in line.split(" #", 1)[0] and not line.lstrip().startswith("#"):
+            hits.append((n, "main.yml itself"))
+        m = re.search(r"(?:import_tasks|include_tasks):\s*\"?([\w./-]+\.yml)", line)
+        if m:
+            target = REPO / m.group(1)
+            if target.is_file() and _uses_vars_in_code(target):
+                hits.append((n, m.group(1)))
+    if not hits:
+        # No eager consumer at all is a legitimate future state, not a pass by
+        # accident — say so rather than silently checking nothing.
+        return (len(main) + 1, "none found")
+    return min(hits)
+
+
 def _defined_before_core_up() -> set[str]:
     names: set[str] = set()
     for path in VARS_FILES + [REPO / "tests" / "config.yml"]:
@@ -105,8 +165,13 @@ def _defined_before_core_up() -> set[str]:
             m = re.match(r"^([a-zA-Z_]\w*):", line)
             if m:
                 names.add(m.group(1))
-    # any key (play var or set_fact, at any indent) defined in main.yml
-    for line in (REPO / "main.yml").read_text().splitlines():
+    # Play vars and set_facts in main.yml, but ONLY those that run before the
+    # first eager resolve. A definition after it cannot help a value the
+    # resolver already walked.
+    boundary, _what = _first_eager_consumer()
+    for n, line in enumerate((REPO / "main.yml").read_text().splitlines(), 1):
+        if n >= boundary:
+            break
         m = re.match(r"^\s*([a-z_]\w*):\s", line)
         if m:
             names.add(m.group(1))
@@ -147,10 +212,12 @@ def test_varsfile_refs_resolve_before_core_up():
         for ident, (n, ln) in sorted(_head_refs(path).items()):
             if ident in known or ident.startswith("ansible_"):
                 continue
-            offenders.append(f"{path.name}:{ln} `{ident}` referenced {n}x, undefined at core-up")
+            offenders.append(f"{path.name}:{ln} `{ident}` referenced {n}x")
+    line, what = _first_eager_consumer()
     assert not offenders, (
+        f"The first eager `{{{{ vars }}}}` resolve is main.yml:{line} ({what}). "
         "A var referenced in a committed vars-file value is not defined by anything "
-        "that loads BEFORE the core-up `template_vars: \"{{ vars }}\"` loader (role "
+        "that loads BEFORE it (role "
         "defaults don't count — they load during stack-up). The eager resolution "
         "aborts on it even behind `| default()`. Add a real default in "
         "default.config.yml / default.credentials.yml. Offenders:\n  "
