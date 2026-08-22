@@ -143,9 +143,18 @@ local-llm-lfm25:
 # The deliverable is an executor that executes. While any handler is still
 # late-bound this reads `refuted` against a status of `active`, which is the
 # honest pairing: built, running, not done.
+# EMBED IS DELIBERATELY LATE-BOUND, so "no handler is late-bound" is a bar this
+# row can never clear (corrected 2026-08-22). KEAP serves GET /embeddings/pending
+# (a queue) and POST /embeddings (a write of computed vectors) and NOTHING that
+# computes an embedding for supplied text — genuinely absent upstream, recorded
+# as such in w-exec-pipe and honoured by
+# tests/anatomy/test_cortex_blocker_is_named_correctly.py, which carves out the
+# same exception. A probe that cannot go green even once the work is done is
+# worse than no probe: every reader either re-diagnoses a closed question or
+# learns to distrust the catalogue.
 cortex-exec: >-
   test -d files/anatomy/wing/app/Cortex
-  && ! grep -rql "extends LateBoundHandler" files/anatomy/wing/app/Cortex/Handler/
+  && test "$(cd files/anatomy/wing/app/Cortex/Handler && grep -l 'extends LateBoundHandler' *.php)" = EmbedHandler.php
 
 cortex-rows: >-
   grep -rql "syncRows" files/anatomy/cortex/
@@ -167,10 +176,11 @@ local-llm-corpus: >-
 # loads is a lint, not a gate), and an execution surface with no late-bound verbs
 # left. Narrowing it to the gate alone would have flipped it to `confirmed`
 # today, which is the overclaim this whole pass exists to remove.
+# Same embed carve-out as cortex-exec above, same reason.
 local-llm-executor: >-
   test -f files/anatomy/wing/app/Cortex/CortexBindingGate.php
   && grep -rql "CortexBindingGate" tests/
-  && ! grep -rql "extends LateBoundHandler" files/anatomy/wing/app/Cortex/Handler/
+  && test "$(cd files/anatomy/wing/app/Cortex/Handler && grep -l 'extends LateBoundHandler' *.php)" = EmbedHandler.php
 
 # ── face ────────────────────────────────────────────────────────────────────
 face-anatomy: >-

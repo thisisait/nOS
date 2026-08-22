@@ -84,12 +84,42 @@ def unproven(items: list[dict]) -> list[dict]:
             and not any(i.get(f) for f in EVIDENCE_FIELDS)]
 
 
+#: A row below HIGH is deferrable only if it has something to WAIT FOR. Measured
+#: 2026-08-22: of 45 pending rows below HIGH, 15 are `version_bump` and 30 are
+#: not — 21 of those 30 are `config_change`. A release boundary moves pins; it
+#: does nothing whatever for a config change, so "batch everything below HIGH to
+#: the next tag" relabels 30 actionable rows as upstream-gated and conserves no
+#: effort at all.
+#:
+#: So the lane is picked by what the row is BLOCKED ON, and severity picks only
+#: what must be noticed now. This is the whole of the severity floor that
+#: survived a four-design panel on 2026-08-22; the rest is recorded as refused
+#: in docs/doctrine/security-floor.md.
+WAITS_FOR_A_TAG = ("version_bump",)
+
+
+def lanes(items: list[dict]) -> dict[str, list[dict]]:
+    """Pending rows split by what each is actually waiting for."""
+    pending = [i for i in items if i.get("status") == "pending"]
+    act = [i for i in pending if i.get("severity") in ("CRITICAL", "HIGH")]
+    below = [i for i in pending if i not in act]
+    return {
+        "act_now": act,
+        "waits_for_a_tag": [i for i in below
+                            if i.get("remediation_type") in WAITS_FOR_A_TAG],
+        "waits_for_nobody": [i for i in below
+                             if i.get("remediation_type") not in WAITS_FOR_A_TAG],
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--all", action="store_true", help="list every pending row, not only HIGH+")
     ap.add_argument("--json", action="store_true", help="machine-readable")
     ap.add_argument("--unproven", action="store_true",
                     help="list CLOSED rows that carry no evidence at all")
+    ap.add_argument("--floor", action="store_true",
+                    help="pending rows split by what each is waiting for")
     args = ap.parse_args()
 
     items = load()
@@ -134,6 +164,22 @@ def main() -> int:
         closed = sum(1 for i in items if i.get("status") in CLOSED_STATUSES)
         print(f"  {len(bare)} of {closed} CLOSED rows carry no evidence "
               f"— `--unproven` names them")
+
+    if args.floor:
+        lane = lanes(items)
+        print()
+        print(f"  act now — CRITICAL/HIGH                      {len(lane['act_now']):>3}")
+        print(f"  below HIGH, waits for a tag (version_bump)   {len(lane['waits_for_a_tag']):>3}")
+        print(f"  below HIGH, waits for NOBODY                 {len(lane['waits_for_nobody']):>3}")
+        print()
+        print("  The third lane is the finding. A release boundary moves pins and")
+        print("  does nothing for a config change, so deferring it to the next tag")
+        print("  relabels work rather than scheduling it.\n")
+        for i in sorted(lane["waits_for_nobody"],
+                        key=lambda x: (str(x.get("remediation_type")), x.get("id", ""))):
+            print(f"  {i.get('id',''):<9} {str(i.get('severity','?')):<7} "
+                  f"{str(i.get('remediation_type','?')):<22} {str(i.get('component','?'))}")
+        return 0
 
     if args.unproven:
         print()
