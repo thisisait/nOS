@@ -48,10 +48,48 @@ def load() -> list[dict]:
     return raw["items"] if isinstance(raw, dict) and "items" in raw else raw
 
 
+#: A row is CLOSED when it stops being work. Each of these is a claim that
+#: something is no longer owed, and a claim is the thing this estate insists
+#: must carry its evidence.
+CLOSED_STATUSES = ("resolved", "wontfix", "obsolete", "vendor-blocked")
+
+#: Any ONE of these is evidence enough. The bar is deliberately low — the
+#: finding is not "the prose is thin", it is "there is nothing at all".
+EVIDENCE_FIELDS = ("resolved_by", "resolution", "resolved_detail",
+                   "blocked_reason", "decision")
+
+
+def unproven(items: list[dict]) -> list[dict]:
+    """Closed rows carrying no evidence of any kind.
+
+    WHAT THIS MEASURES, AND WHY IT IS NOT THE THING THE ROADMAP ASKED FOR.
+    `sec-queue-authorship` says the nightly scan overwrites what a human wrote,
+    citing REM-144 losing its disposition for a day. Checked 2026-08-22 across
+    all 75 commits that ever touched this file: **zero** dispositions were ever
+    lost. REM-144's own `resolved_detail` says what actually happened — the
+    record "carried a bare status+date until then, with no resolved_by and no
+    evidence". Not an overwrite. An assertion nobody had to back.
+
+    Measured the same day: 50 of 155 closed rows carry nothing — 48 `resolved`,
+    one `obsolete`, one `wontfix` — and among them are CRITICALs on portainer,
+    traefik and five n8n rows. Roughly a third of everything this queue says is
+    finished is unfalsifiable, and the cost is legible in REM-144: a reader in
+    August had to re-derive from scratch whether a CRITICAL was really closed.
+
+    So this is the honest half of that row. It is a READER: it counts and names,
+    and closing a row stays a deliberate act with the evidence written in.
+    """
+    return [i for i in items
+            if i.get("status") in CLOSED_STATUSES
+            and not any(i.get(f) for f in EVIDENCE_FIELDS)]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--all", action="store_true", help="list every pending row, not only HIGH+")
     ap.add_argument("--json", action="store_true", help="machine-readable")
+    ap.add_argument("--unproven", action="store_true",
+                    help="list CLOSED rows that carry no evidence at all")
     args = ap.parse_args()
 
     items = load()
@@ -68,6 +106,7 @@ def main() -> int:
                 "by_status": dict(by_status),
                 "pending_by_severity": dict(by_sev),
                 "scan_cycle": cycle,
+                "unproven_closures": len(unproven(items)),
                 "pending": [
                     {k: i.get(k) for k in ("id", "severity", "component",
                                            "current_version", "fix_version")}
@@ -89,6 +128,27 @@ def main() -> int:
     if extra:
         sev += " · " + " · ".join(f"{by_sev[s]} {s}" for s in extra)
     print(f"  pending by severity: {sev or 'none'}")
+
+    bare = unproven(items)
+    if bare:
+        closed = sum(1 for i in items if i.get("status") in CLOSED_STATUSES)
+        print(f"  {len(bare)} of {closed} CLOSED rows carry no evidence "
+              f"— `--unproven` names them")
+
+    if args.unproven:
+        print()
+        if not bare:
+            print("  every closed row carries evidence.")
+            return 0
+        print(f"  CLOSED WITHOUT EVIDENCE — {len(bare)} row(s), worst first.")
+        print("  Not a defect list: a list of claims nobody has to believe.\n")
+        for i in sorted(bare, key=lambda x: (SEVERITY_ORDER.index(x["severity"])
+                                             if x.get("severity") in SEVERITY_ORDER
+                                             else len(SEVERITY_ORDER), x.get("id", ""))):
+            print(f"  {i.get('id',''):<9} {str(i.get('severity','?')):<9} "
+                  f"{str(i.get('status','?')):<14} {str(i.get('component','?')):<14} "
+                  f"closed {i.get('resolved_at') or 'undated'}")
+        return 0
 
     show = pending if args.all else [i for i in pending
                                      if i.get("severity") in ("CRITICAL", "HIGH")]
