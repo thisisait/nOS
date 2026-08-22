@@ -226,10 +226,8 @@
       {{ _survivors | join(', ') }}.
       This happens when the fragment was the stack's LAST one — the base compose
       becomes `services: {}`, `docker compose up` answers "no service selected",
-      and --remove-orphans never fires. Nothing here will stop them; that is an
-      operator act. End one with:
-      `docker compose -p <stack> -f {{ stacks_dir }}/<stack>/docker-compose.yml
-      down --remove-orphans`
+      and --remove-orphans never fires. Removing them now: the opt-in that
+      authorised deleting the fragment authorises finishing the job.
   vars:
     _survivors: >-
       {{ (_running_after_prune.stdout_lines | default([]))
@@ -242,4 +240,35 @@
         | select('search', '(' ~ (_disabled_services | default(['\x00'])
                  | map('regex_replace', '_', '[-_]?') | join('|')) ~ ')')
         | list | length > 0
+  tags: ['stacks', 'core', 'always']
+
+# ── Finish the job ─────────────────────────────────────────────────────────
+#
+# A REPORT WAS THE WRONG ANSWER, corrected 2026-08-23 on operator instruction:
+# "either the playbook does it during the loop, or I run nos — nothing in
+# between." Asking a human for an ad-hoc `docker compose down` is exactly the
+# hand-poking the estate's own doctrine refuses (memory:
+# machinery-purpose-and-no-hacks, agents-drive-operator-supervises). The
+# playbook is where a destructive act belongs; what needs gating is the
+# APPROVAL, and `prune_disabled_overrides` already is that gate — it is what
+# authorised deleting the fragment three tasks ago. Stopping the container the
+# fragment described is the same decision, not a further one.
+#
+# `docker rm -f` on the NAMED survivors rather than `compose down` on the stack:
+# surgical, and it cannot take down a stack that still has live services if the
+# survivor detection is ever wrong. Data volumes are untouched — same reversible
+# teardown as the fragment removal; re-enabling the flag and converging brings
+# the service back with its data.
+- name: "[Stacks] Stop the containers whose fragments were just removed"
+  ansible.builtin.command:
+    argv: ["{{ docker_bin | default('docker') }}", "rm", "-f", "{{ item }}"]
+  loop: "{{ (_running_after_prune.stdout_lines | default([]))
+            | select('search', '(' ~ (_disabled_services | default(['\x00'])
+                     | map('regex_replace', '_', '[-_]?') | join('|')) ~ ')')
+            | list }}"
+  loop_control:
+    label: "{{ item }}"
+  register: _survivor_removal
+  changed_when: _survivor_removal.rc == 0
+  when: prune_disabled_overrides | default(false) | bool
   tags: ['stacks', 'core', 'always']
