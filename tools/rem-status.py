@@ -112,6 +112,30 @@ def lanes(items: list[dict]) -> dict[str, list[dict]]:
     }
 
 
+#: SEVERE AND UNFIXABLE IS NOT THE SAME AS HANDLED, and the default view used to
+#: treat it that way. `pending` is the filter every listing uses, so the moment a
+#: CRITICAL is correctly recorded as `vendor-blocked` — no upstream fix exists —
+#: it drops out of sight entirely.
+#:
+#: Measured 2026-08-22: REM-212 (portainer, CVSS 9.4, reachable by any tier-1
+#: OAuth user) was given its true disposition, both named fix versions having
+#: been verified absent from GitHub and Docker Hub. The tally went from
+#: "1 CRITICAL" to "4 HIGH" and the CRITICAL simply vanished — the row did not
+#: get safer, the reader got quieter.
+#:
+#: So the data stays honest and the reader carries the consequence: a closed row
+#: that is CRITICAL or HIGH and blocked rather than fixed is shown, separately,
+#: under what it actually is. FreePBX and Ollama have sat in this state for
+#: months on the same terms.
+BLOCKED_STATUSES = ("vendor-blocked",)
+
+
+def blocked_and_severe(items: list[dict]) -> list[dict]:
+    return [i for i in items
+            if i.get("status") in BLOCKED_STATUSES
+            and i.get("severity") in ("CRITICAL", "HIGH")]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--all", action="store_true", help="list every pending row, not only HIGH+")
@@ -158,6 +182,17 @@ def main() -> int:
     if extra:
         sev += " · " + " · ".join(f"{by_sev[s]} {s}" for s in extra)
     print(f"  pending by severity: {sev or 'none'}")
+
+    blocked = blocked_and_severe(items)
+    if blocked:
+        print(f"  {len(blocked)} CRITICAL/HIGH are BLOCKED, not fixed — no upstream "
+              f"remedy exists:")
+        for i in sorted(blocked, key=lambda x: (SEVERITY_ORDER.index(x["severity"])
+                                                if x.get("severity") in SEVERITY_ORDER
+                                                else 9, x.get("id",""))):
+            mit = "mitigated" if i.get("resolution") else "UNMITIGATED"
+            print(f"    {i.get('id',''):<9} {str(i.get('severity','?')):<9} "
+                  f"{str(i.get('component','?')):<14} {mit}")
 
     bare = unproven(items)
     if bare:

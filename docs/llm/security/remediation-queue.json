@@ -247,7 +247,10 @@
       "found_at": "2026-04-08T13:00:00Z",
       "scan_cycle": 0,
       "blocked_at": "2026-05-16T00:00:00Z",
-      "blocked_reason": "tiredofit/freepbx Docker image last updated 2022-04-30; latest published tag is 5.2.0 (from 2022). No actively-maintained ARM64 FOSS alternative — upstream-stale."
+      "blocked_reason": "tiredofit/freepbx Docker image last updated 2022-04-30; latest published tag is 5.2.0 (from 2022). No actively-maintained ARM64 FOSS alternative — upstream-stale.",
+      "resolution": "NOT EXPOSED, verified both ways 2026-08-22: install_freepbx resolves FALSE (default.config.yml false, config.yml false -- tools/estate-status.py --config) AND no freepbx/asterisk container exists at all (docker ps -a). This is the SOUND form of the mitigation hidden_fees/01 warns about: the unsound version reads the committed default alone, which on this host has been true while the service ran. Here the resolved flag and the runtime agree. The upstream image (tiredofit) was abandoned 2022-04-30 and the CVEs are unfixable, so exposure returns the moment the flag is flipped -- re-open all four rows before enabling freepbx, not after.",
+      "decision": "not-installed",
+      "decision_at": "2026-08-22T23:35:19+02:00"
     },
     {
       "id": "REM-015",
@@ -826,7 +829,10 @@
       "found_at": "2026-04-09T18:00:00Z",
       "scan_cycle": 5,
       "blocked_at": "2026-05-16T00:00:00Z",
-      "blocked_reason": "tiredofit/freepbx Docker image last updated 2022-04-30; latest published tag is 5.2.0 (from 2022). No actively-maintained ARM64 FOSS alternative — upstream-stale."
+      "blocked_reason": "tiredofit/freepbx Docker image last updated 2022-04-30; latest published tag is 5.2.0 (from 2022). No actively-maintained ARM64 FOSS alternative — upstream-stale.",
+      "resolution": "NOT EXPOSED, verified both ways 2026-08-22: install_freepbx resolves FALSE (default.config.yml false, config.yml false -- tools/estate-status.py --config) AND no freepbx/asterisk container exists at all (docker ps -a). This is the SOUND form of the mitigation hidden_fees/01 warns about: the unsound version reads the committed default alone, which on this host has been true while the service ran. Here the resolved flag and the runtime agree. The upstream image (tiredofit) was abandoned 2022-04-30 and the CVEs are unfixable, so exposure returns the moment the flag is flipped -- re-open all four rows before enabling freepbx, not after.",
+      "decision": "not-installed",
+      "decision_at": "2026-08-22T23:35:19+02:00"
     },
     {
       "id": "REM-047",
@@ -1914,7 +1920,10 @@
       "found_at": "2026-06-29T04:05:22+02:00",
       "scan_cycle": 16,
       "blocked_at": "2026-06-29T04:05:22+02:00",
-      "blocked_reason": "tiredofit/freepbx Docker image abandoned upstream 2022-04-30 (latest tag 5.2.0); userman 16.0.45/17.0.7 fix unreachable. No maintained ARM64 FOSS alternative. install_freepbx=false + not Traefik-routed + loopback-only mitigate at the perimeter."
+      "blocked_reason": "tiredofit/freepbx Docker image abandoned upstream 2022-04-30 (latest tag 5.2.0); userman 16.0.45/17.0.7 fix unreachable. No maintained ARM64 FOSS alternative. install_freepbx=false + not Traefik-routed + loopback-only mitigate at the perimeter.",
+      "resolution": "NOT EXPOSED, verified both ways 2026-08-22: install_freepbx resolves FALSE (default.config.yml false, config.yml false -- tools/estate-status.py --config) AND no freepbx/asterisk container exists at all (docker ps -a). This is the SOUND form of the mitigation hidden_fees/01 warns about: the unsound version reads the committed default alone, which on this host has been true while the service ran. Here the resolved flag and the runtime agree. The upstream image (tiredofit) was abandoned 2022-04-30 and the CVEs are unfixable, so exposure returns the moment the flag is flipped -- re-open all four rows before enabling freepbx, not after.",
+      "decision": "not-installed",
+      "decision_at": "2026-08-22T23:35:19+02:00"
     },
     {
       "id": "REM-114",
@@ -2216,7 +2225,10 @@
       "found_at": "2026-07-21T04:11:01+02:00",
       "scan_cycle": 16,
       "blocked_at": "2026-07-21T04:11:01+02:00",
-      "blocked_reason": "tiredofit/freepbx image abandoned upstream 2022-04-30 (last tag 5.2.0, FreePBX-15-era); UCP 17.0.9 / missedcall 17.0.6 fixes unreachable, no maintained ARM64 FOSS alternative. UCP Node ports 8001/8003 unmapped + install_freepbx=false + not Traefik-routed + loopback-only mitigate at the perimeter."
+      "blocked_reason": "tiredofit/freepbx image abandoned upstream 2022-04-30 (last tag 5.2.0, FreePBX-15-era); UCP 17.0.9 / missedcall 17.0.6 fixes unreachable, no maintained ARM64 FOSS alternative. UCP Node ports 8001/8003 unmapped + install_freepbx=false + not Traefik-routed + loopback-only mitigate at the perimeter.",
+      "resolution": "NOT EXPOSED, verified both ways 2026-08-22: install_freepbx resolves FALSE (default.config.yml false, config.yml false -- tools/estate-status.py --config) AND no freepbx/asterisk container exists at all (docker ps -a). This is the SOUND form of the mitigation hidden_fees/01 warns about: the unsound version reads the committed default alone, which on this host has been true while the service ran. Here the resolved flag and the runtime agree. The upstream image (tiredofit) was abandoned 2022-04-30 and the CVEs are unfixable, so exposure returns the moment the flag is flipped -- re-open all four rows before enabling freepbx, not after.",
+      "decision": "not-installed",
+      "decision_at": "2026-08-22T23:35:19+02:00"
     },
     {
       "id": "REM-131",
@@ -3591,14 +3603,19 @@
       "severity": "CRITICAL",
       "current_version": "2.44.0 (live: infra-portainer-1 on portainer/portainer-ce:2.44.0; pin default.config.yml:1846)",
       "fix_version": "2.45.0 (STS line) or 2.39.7 (LTS line) -- NEITHER EXISTS YET. Verified against the GitHub releases AND tags endpoints and Docker Hub on 2026-08-21: newest STS is 2.44.0 (2026-07-30), newest LTS is 2.39.6 (2026-08-12). There is no artifact to upgrade to.",
-      "remediation_type": "version_bump",
+      "remediation_type": "vendor_blocked",
       "remediation_detail": "Cycle-35 batch-57. THE BATCH'S FINDING OF RECORD, and the first row in a long while that names a CRITICAL with NO AVAILABLE PATCH. CVE-2026-72533 / GHSA-jxhm-qq8x-v4c6, published 2026-08-18 -- three days ago -- CVSS 4.0 9.4 (AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H). Affected ranges as published: >=2.39.0 <2.39.7 AND >=2.40.0 <2.45.0. The estate runs 2.44.0, which sits inside the second range. MECHANISM (from the advisory text, quoted not paraphrased): Portainer proxies the Docker API and applies its own authorization to a NORMALIZED copy of the request path, produced by stripping the Docker API version prefix. The stripping pattern recognises only TWO-component versions such as /v1.47/, while the Docker daemon accepts THREE-component versions such as /v1.47.0/. Supply a three-component version and the pattern consumes only part of it, leaving a residual segment at the front of the path; the computed routing prefix then matches neither the per-resource handler map nor the administrator-only route list, BOTH gates miss, and the request is forwarded to the daemon on its original unmodified path with no authorization applied at all. The response also skips the proxy's response rewriters, so fields normally withheld from non-administrators are returned. Precondition: any AUTHENTICATED NON-ADMINISTRATOR with access to a single Docker environment.\n\nWHY THE PRECONDITION IS SATISFIED HERE RATHER THAN HYPOTHETICAL, which is the part worth carrying forward: it is tempting to close this as 'portainer is Tier-1, only admins can reach it, therefore there are no non-administrators'. That reasoning conflates two different role systems. The Authentik tier gates who may OBTAIN a Portainer session (roles/pazny.traefik/vars/main.yml:88 -- `portainer: oidc`, tier 1, nos-providers + nos-admins). Portainer then keeps its OWN role for each account, and an OAuth-provisioned Portainer user is created as a STANDARD user, not an administrator, unless team/role mapping says otherwise. So the normal outcome of a tier-1 operator signing in through Authentik is precisely the attacker profile the advisory names. The honest bound is therefore: this is a privilege escalation available to someone who already holds Authentik tier-1 group membership -- serious, but not reachable by an unauthenticated or low-tier caller.\n\nWHAT THE BYPASS ACTUALLY REACHES ON THIS ESTATE -- measured, not assumed. Portainer does NOT hold the raw Docker socket. roles/pazny.portainer/templates/compose.yml.j2:21 runs it with `--host tcp://docker-socket-proxy:2375`, so the bypassed request lands on the socket proxy's allow-list rather than on dockerd directly. Read the proxy's LIVE env (docker inspect infra-docker-socket-proxy-1) rather than the template, because the answer is mixed: ALLOW_RESTARTS=0, ALLOW_STOP=0, ALLOW_START=0, SECRETS=0, CONFIGS=0, PLUGINS=0 -- that last one independently neutralises the older CVE-2026-44848 plugin-endpoint RCE at the proxy layer, a genuine piece of defence-in-depth this estate already had. BUT: POST=1, EXEC=1, CONTAINERS=1, IMAGES=1, VOLUMES=1, BUILD=1, NETWORKS=1. EXEC=1 together with POST=1 means POST /containers/{id}/exec is permitted, i.e. command execution inside any ALREADY-RUNNING container -- 61 of them, on the flat estate network. The start/stop/restart denials stop an attacker LAUNCHING a new privileged container, which is the classic escape, and that is a real brake; they do not stop lateral movement into the containers that are already up. So the socket proxy REDUCES this from host RCE to broad in-container command execution. It does not close it.\n\nREMEDIATION -- and this row must not be closed by a version bump that does not exist. There is nothing to upgrade to today. The available actions are: (1) WATCH: re-check the portainer releases endpoint for 2.45.0 / 2.39.7 -- this row should be re-read by the next batch regardless of rotation, because an unpatched CRITICAL is exactly the state the 14-day drift window is too slow for. (2) CONSIDER the LTS line: 2.39.6 is also unpatched (<2.39.7), so switching lines buys nothing here. (3) INTERIM, and the only thing actually available: tighten the socket proxy. EXEC=1 is what converts the bypass into lateral command execution, and nothing in the nOS Portainer workflow that this scan can see requires container exec through Portainer -- the operator's exec path is the host docker CLI, which does not traverse the proxy. Setting EXEC=0 would blunt the primary consequence while upstream ships a fix. That is a config change with a usability cost (the Portainer web console's 'Console' tab into a container stops working) and so is an operator decision, not an auto-fix. (4) DO NOT reach for forward-auth here: portainer is native_oidc, and stacking authentik@file on it is forbidden by tests/anatomy/test_forward_auth_does_not_stack.py -- and would not help anyway, since the attacker in this scenario holds a legitimate session.\n\nMETHODOLOGICAL NOTE, the recurring one: OSV returned NINE portainer advisories for 2.44.0 and this was NOT among them. All nine were false positives -- Go-module range mapping with introduced:0 -- every one fixed at 2.33.8 / 2.39.2 / 2.41.0, all below the running pin. Had this batch scanned OSV alone it would have reported 'nine hits, all false positives, portainer clean' and missed the only true one. The live CRITICAL came from the VENDOR's own GitHub Security Advisory endpoint (repos/portainer/portainer/security-advisories), published 2026-08-18 and not yet mapped into the Go vulndb. This is the third distinct time the queue has learned this lesson (metabase, n8n, authentik); it is now four.",
-      "status": "pending",
+      "status": "vendor-blocked",
       "auto_fixable": false,
       "source": "https://github.com/portainer/portainer/security/advisories/GHSA-jxhm-qq8x-v4c6 (CVE-2026-72533, published 2026-08-18) | https://api.github.com/repos/portainer/portainer/releases + /tags (no 2.45.0, no 2.39.7 as of 2026-08-21) | https://hub.docker.com/v2/repositories/portainer/portainer-ce/tags (newest: 2.39.6 2026-08-12, 2.44.0 2026-07-30) | roles/pazny.portainer/templates/compose.yml.j2:21 (--host tcp://docker-socket-proxy:2375) | docker inspect infra-docker-socket-proxy-1 (live allow-list: POST=1 EXEC=1 CONTAINERS=1 IMAGES=1 BUILD=1; ALLOW_START/STOP/RESTARTS=0, PLUGINS=0) | roles/pazny.traefik/vars/main.yml:88 (portainer: oidc, tier 1) | default.config.yml:1846 (portainer_version: 2.44.0)",
       "confidence": "high",
       "found_at": "2026-08-21T04:14:30+02:00",
-      "scan_cycle": 35
+      "scan_cycle": 35,
+      "blocked_at": "2026-08-22T23:34:22+02:00",
+      "blocked_reason": "NO UPSTREAM FIX EXISTS. Both named fix versions were verified absent from GitHub releases and Docker Hub: 2.45.0 (STS) and 2.39.7 (LTS). Reachable + severe + unfixable, so the lever is the escalation path, not the version.",
+      "decision": "accepted-interim-mitigation",
+      "decision_at": "2026-08-22T23:34:22+02:00",
+      "resolution": "INTERIM MITIGATION APPLIED 2026-08-22, operator-approved: portainer_socket_proxy_can_exec=false in config.yml, so infra-docker-socket-proxy-1 now reports EXEC=0 (verified via docker inspect). A Portainer session is no longer a `docker exec` into 61 containers. Cost accepted: no container shell in the Portainer UI. can_distribution left ON. RE-CHECK TRIGGER: every scan cycle that batches portainer, plus whenever GitHub or Docker Hub publish 2.45.0 or 2.39.7 -- at which point this returns to pending as an ordinary version_bump."
     },
     {
       "id": "REM-213",
