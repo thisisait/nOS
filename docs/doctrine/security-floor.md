@@ -77,6 +77,33 @@ Deciding whether a new mechanism defeats a cited control is prose judged against
 prose. It stays a human call; what the estate can do is make the judgement
 *legible* after the fact. Stop promising the automation.
 
+## A refusal added later, on the same evidence standard (2026-08-22)
+
+`docs/idea/19-fable-review-2.md` §3.1(a) proposed the cheap half of the vacuity
+problem: *"when no judge in the set has an `oracle_paths` overlap with the diff,
+the verdict is `nothing objected`, not `pass`"*. It was carried into the Q2 plan
+at ~1 hour and queued for the night the loop would first meet it.
+
+**It is not implementable as stated, because `oracle_paths` do not mean what the
+rule assumes.** They are not a declaration of what a judge COVERS — they are the
+deny-list input `budget.py:220` uses to stop the loop editing a judge's own
+source while being graded by it. `judges.py:238` refuses to load a judge without
+them for exactly that reason: *"a judge that declares no oracle is a judge whose
+own source the loop may edit while being graded by it."*
+
+Read them and it is obvious: `ansible-lint` declares `['.ansible-lint',
+'.yamllint']` — its own config files, not the thousands of YAML files it lints.
+`pytest-anatomy` declares `tests/anatomy/**` — the tests, not the tree they
+assert about.
+
+So the rule would mark almost every legitimate diff `nothing objected`, since a
+change to `roles/**` or `default.config.yml` overlaps no judge's own machinery.
+It happens to give the right answer for a version bump, which is the case it was
+derived from, and the wrong one everywhere else.
+
+What the rule actually needs is a per-judge COVERAGE declaration, which no judge
+has today. That is a new field and a real design question — not an hour.
+
 ## What is still owed
 
 - The three lanes are **descriptive**. Nothing yet stops a row in lane 2 from
