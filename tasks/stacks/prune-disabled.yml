@@ -50,13 +50,35 @@
 # needed for container names — a hyphen-only mapping silently misses the
 # underscore-named fragments (qgis_server, smtp_stalwart).
 #
-# ── Why removing the fragment is enough ─────────────────────────────────────
+# ── Why removing the fragment is USUALLY enough, and when it is not ─────────
 #
 # Every orchestrator runs `up -d --remove-orphans`, so once the fragment is gone
 # the service drops out of the project config and compose removes the container
 # on the next up. Data volumes are NOT touched — this is the same reversible
 # teardown `prune-retired.yml` relies on. Re-enabling the flag and converging
 # brings the service back with its data.
+#
+# EXCEPT WHEN THE FRAGMENT WAS THE STACK'S LAST ONE. Measured 2026-08-22, both
+# halves in the same converge:
+#
+#   data/        superset pruned, metabase remains -> stack comes up
+#                -> --remove-orphans fires -> data-superset-1 GONE.
+#   engineering/ qgis_server pruned, nothing remains -> the base compose is
+#                `services: {}` -> `docker compose up` answers "no service
+#                selected" and does nothing at all, --remove-orphans included
+#                -> engineering-qgis-server-1 still Up 13 days.
+#
+# So the sentence above was true for four years of stacks that hold more than
+# one service and false the first time a stack held exactly one. The container
+# that survives is the one whose whole stack was switched off — the LARGEST
+# blast radius of the cases this file exists to close, reached by the narrowest
+# path.
+#
+# This file does not stop containers: that is a destructive act and the estate's
+# rule is dry-run first, operator second (memory: feedback-destructive-op-safety).
+# What it must not do is stay quiet. The task at the end of this file reports a
+# survivor by name and prints the exact command, because a reconcile that
+# silently leaves the thing it was reconciling is worse than one that never ran.
 #
 # ── DEFAULT IS REPORT-ONLY, and that is a decision, not timidity ─────────────
 #
@@ -177,4 +199,47 @@
   loop_control:
     label: "{{ item | basename }}"
   when: prune_disabled_overrides | default(false) | bool
+  tags: ['stacks', 'core', 'always']
+
+# ── The survivor check ──────────────────────────────────────────────────────
+#
+# A reconcile that leaves the container it was reconciling is worse than one
+# that never ran: the operator reads "pruned" and the service keeps serving.
+# See the block above for the measured case (engineering/qgis_server, 13 days
+# up with its fragment already deleted).
+#
+# READ-ONLY on purpose. `docker ps` is a question; stopping is an operator act.
+- name: "[Stacks] Which disabled services still have a container"
+  ansible.builtin.command:
+    argv: ["{{ docker_bin | default('docker') }}", "ps", "--format", "{{ '{{' }}.Names{{ '}}' }}"]
+  register: _running_after_prune
+  changed_when: false
+  failed_when: false
+  when: prune_disabled_overrides | default(false) | bool
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Survivors of the prune, named with the command that ends them"
+  ansible.builtin.debug:
+    msg: >-
+      {{ _survivors | length }} disabled service(s) still have a RUNNING
+      container after their compose fragment was removed:
+      {{ _survivors | join(', ') }}.
+      This happens when the fragment was the stack's LAST one — the base compose
+      becomes `services: {}`, `docker compose up` answers "no service selected",
+      and --remove-orphans never fires. Nothing here will stop them; that is an
+      operator act. End one with:
+      `docker compose -p <stack> -f {{ stacks_dir }}/<stack>/docker-compose.yml
+      down --remove-orphans`
+  vars:
+    _survivors: >-
+      {{ (_running_after_prune.stdout_lines | default([]))
+         | select('search', '(' ~ (_disabled_services | default(['\x00'])
+                  | map('regex_replace', '_', '[-_]?') | join('|')) ~ ')')
+         | list }}
+  when:
+    - prune_disabled_overrides | default(false) | bool
+    - (_running_after_prune.stdout_lines | default([]))
+        | select('search', '(' ~ (_disabled_services | default(['\x00'])
+                 | map('regex_replace', '_', '[-_]?') | join('|')) ~ ')')
+        | list | length > 0
   tags: ['stacks', 'core', 'always']
