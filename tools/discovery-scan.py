@@ -132,6 +132,76 @@ _VERSION_VAR = re.compile(r"^([a-z0-9_]+)_version:\s*[\"']?([^\"'#\s]+)", re.MUL
 _VERSION = re.compile(r"v?(\d+(?:\.\d+)*)(?:-([a-z0-9.]+))?$", re.IGNORECASE)
 
 
+# A `fix_version` is written by a human or an LLM for a human, so it is a
+# SENTENCE as often as it is a version. `numeric()` refuses all of it, on the
+# correct ground that prose beginning with a number is prose. Measured
+# 2026-08-22 against the live estate: that refusal cost 49 of the 173 unjudged
+# pairs, and the refused set splits three ways.
+#
+#   PROSE, and the refusal is right:
+#       "latest" · "n/a (config change)" · "SEC-02 gate (arch mitigation)"
+#       "hardening only (no CVE; pin is clean)" · "digest pin + post-start …"
+#
+#   A FLOOR, which is a version plus a claim about everything after it:
+#       "1.24.7+"  "10.10.7+"  "0.59.1+"  "2026.3.02+"
+#       gitea runs 1.27.1 against a floor of 1.24.7 — SATISFIED, and the row
+#       still says pending. That is precisely the class this probe exists for,
+#       and it was invisible because of a trailing plus sign.
+#
+#   A VERSION WITH DELIMITED COMMENTARY:
+#       "8.6.3 (re-pin off EOL 8.0 branch)" · "7.0.2 (dockerized 2026-08-02)"
+#       "version-6.6.3 (security floor) -- recommend …"
+#
+# WHAT THIS DOES NOT DO, and it is the whole safety argument. It does not relax
+# `numeric()`. A wrong extraction manufactures a FALSE CONTRADICTION, and this
+# file's standing position is that a skip is honest and a false alarm is not
+# ("skips are not agreements" is printed on every run). So the delimiter must be
+# unambiguous — a `(` or a ` -- ` — and anything else is left to skip. "1.2.3 or
+# later if you can" does not parse here, deliberately.
+_FLOOR = re.compile(r"^v?(\d+(?:\.\d+)+)\s*\+$")
+_COMMENTED = re.compile(r"^(?:version-)?v?(\d+(?:\.\d+)+(?:-[a-z0-9.]+)?)\s*(?:\(|--\s)")
+_PREFIXED = re.compile(r"^version-(\d+(?:\.\d+)+(?:-[a-z0-9.]+)?)$", re.IGNORECASE)
+
+
+def read_fix(raw: str) -> tuple["Version", bool] | None:
+    """`fix_version` -> (version, is_floor), or None when it is not a version.
+
+    `is_floor` matters: "1.24.7+" is satisfied by anything at or above it, while
+    a bare "1.24.7" is a specific target and running 1.27.1 against it is a
+    different statement. Collapsing the two would report every over-shooting
+    estate as a contradiction.
+    """
+    text = raw.strip()
+    exact = numeric(text)
+    if exact is not None:
+        return exact, False
+    m = _FLOOR.match(text)
+    if m:
+        v = numeric(m.group(1))
+        return (v, True) if v else None
+    for pattern in (_COMMENTED, _PREFIXED):
+        m = pattern.match(text)
+        if m:
+            v = numeric(m.group(1))
+            if v is not None:
+                return v, False
+    return None
+
+
+def read_tag(raw: str) -> "Version | None":
+    """An image tag, allowing only the `version-` prefix `numeric()` rejects.
+
+    Firefly tags `version-6.2.21`. A digest tag (`sha-b9a80dc`) still returns
+    None and still skips — there is no version in it to read.
+    """
+    text = raw.strip()
+    exact = numeric(text)
+    if exact is not None:
+        return exact
+    m = _PREFIXED.match(text)
+    return numeric(m.group(1)) if m else None
+
+
 def declared_versions() -> dict[str, str]:
     return {m.group(1): m.group(2) for m in _VERSION_VAR.finditer(
         CONFIG.read_text(encoding="utf-8"))}
@@ -419,15 +489,28 @@ def probe_queue_vs_running(images: dict[str, str], res: ScanResult) -> None:
             continue
         name, image = hit
         tag = image_tag(image)
-        want, have = numeric(str(fix)), numeric(tag or "")
-        if tag is None or want is None or have is None:
+        parsed = read_fix(str(fix))
+        have = read_tag(tag or "")
+        if tag is None or parsed is None or have is None:
             res.skip("queue or image version not strictly numeric")
             continue
+        want, is_floor = parsed
         verdict = compare(have, want)
         if verdict is None:
             res.skip("prerelease suffix not comparable to the other side")
             continue
         res.compared += 1
+
+        # A FLOOR NEEDS NO SPECIAL CASE, and the first cut of this got it wrong
+        # by adding one. `fix_version: "1.24.7+"` means "at or above", and both
+        # branches below already test INEQUALITY rather than equality — a
+        # resolved row is a finding only when the estate is BELOW (`< 0`), a
+        # pending row only when it is at or above (`>= 0`). Over-shooting a
+        # floor was never reported. The guard written here first also suppressed
+        # `resolved` + below-floor, which is a real contradiction: the fix never
+        # reached the estate. `is_floor` is therefore read, recorded and
+        # deliberately not branched on.
+        _ = is_floor
 
         if status == "resolved" and verdict < 0:
             res.findings.append(Finding(
