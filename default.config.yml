@@ -1155,7 +1155,7 @@ mistral_small_model: ""        # -> NOS_MISTRAL_SMALL_MODEL (haiku tier)
 # Moving to it needs one operator action the playbook must not take unattended:
 #     brew uninstall ollama && brew untap pazny/local && brew install ollama
 # Models live in `ollama_models_dir` and survive it.
-ollama_version: "0.32.14"                      # what brew LINKED on 2026-08-18; `state: latest` decides, this records
+ollama_version: "0.32.15"                      # what brew LINKED on 2026-08-22; `state: latest` decides, this records. The refusal at roles/pazny.openclaw/tasks/main.yml:99 is the pin doing its job: brew moved 0.32.14 -> 0.32.15 mid-converge and the record had to follow, not the other way round.
 # RE-RECORDED 2026-08-18 after the guard stopped a converge at task 589 with
 # "the LINKED ollama keg is not the pinned 0.32.7 / linked keg: 0.32.14". The
 # guard was right and the pin was stale — brew had moved. Bookkeeping, not a
