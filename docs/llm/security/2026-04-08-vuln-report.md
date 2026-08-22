@@ -1,3 +1,206 @@
+# nOS Vulnerability Scan Addendum — 2026-08-22 (Cycle 37)
+
+**Batch:** postgres, mariadb, redis, infisical, rustfs · **Probe:** `tls_crypto_weakness`
+**Outcome:** 3 queue items added (**REM-215 HIGH**, **REM-216 HIGH**, **REM-217 HIGH** — the probe's finding of record), **2 amended** (REM-187, REM-189), **0 closed**. Pending HIGH **8 → 11**, pending total **54 → 57**.
+
+> **The batch's methodological headline, and it is a correction rather than a discovery.** Yesterday's cycle-35 entry re-confirmed `postgresql` clean for the **sixth consecutive batch**, and then wrote this to whoever read next: *"versions.json now reports 16.15 as latestMinor, so a bare latest-vs-pin comparison would flag this component and be **WRONG** — 16.15 carries no security content beyond 16.14."* It was not wrong. **16.15 is the fix line for a 28-CVE cohort published on 2026-08-13**, eight days before that sentence was written. The check itself was not lazy — it read `postgresql.org/support/security` **at source** and went past *"no new CVE"* to verify that 16.14 *was* the named fix line for the cohort it knew about. It simply confirmed the pin against **the newest cohort it had already bookmarked** rather than reading the page top-down for one it hadn't. **Reading the right source is not the same as reading it top-down** — that is the new lesson, and it is nastier than the four recorded "scan the vendor, not the feed" recurrences, because the wrong verdict came with an instruction to discount the one automated signal that was pointing straight at the answer. A wrong verdict costs one batch; a wrong verdict that disarms the correcting evidence costs every batch until someone disobeys it.
+
+---
+
+### 🟠 HIGH — [REM-215] PostgreSQL 16.14 is affected by the 2026-08-13 cohort — 26 CVEs, twelve at 8.8
+
+- **Component:** postgresql — pinned and **live** at `16.14-alpine` (`default.config.yml:1337`; `infra-postgresql-1` reports `PostgreSQL 16.14 on aarch64-unknown-linux-musl`)
+- **Cohort:** 18.5 / 17.11 / **16.15** / 15.19 / 14.24, released **2026-08-13** — 28 CVEs, of which **26 name the 16 line**
+- **Fix version:** `postgres:16.15-alpine` — **published and available** (`16.15-alpine`, `16.15-alpine3.23`, `16.15-alpine3.24`)
+- **Corroborated twice, not read once:** OSV ingested the same set as 39 `BIT-postgresql-2026-*` records on 2026-08-19; `BIT-postgresql-2026-19385` resolves to SEMVER ranges fixed at `14.24.0 / 15.19.0 / **16.15.0** / 17.11.0 / 18.5.0`
+
+**The 8.8 subset** — all "authenticated database user achieves arbitrary code execution as the server OS account", or SQL injection of equivalent effect: CVE-2026-19385 (`pg_dump` heap overflow), CVE-2026-16239 (cursor `CLOSE`+`DECLARE` type confusion), CVE-2026-15741 (SQL injection via `EXTRACT` argument), CVE-2026-15742 (`fuzzystrmatch` arbitrary-address write), CVE-2026-14680 (type confusion via `internal` arguments), CVE-2026-14677, CVE-2026-14671 (`refint` plan-cache), CVE-2026-14670 (`plperl` tied object), CVE-2026-14669 (`to_char`), CVE-2026-14664 (`regexp`), CVE-2026-14662 (`tsvector`/`tsquery`), CVE-2026-18408 (`psql \unrestrict`). Then CVE-2026-14679 (8.2), CVE-2026-14668 (8.1, `ctid` type confusion discloses a derivative of an arbitrary read), CVE-2026-6464 (8.1, `COPY FROM STDIN` early failure processes data lines as **psql commands**), CVE-2026-6471 (7.2, logical decoding can `dlopen` an arbitrary file).
+
+**One item deserves separate billing because it is not a memory bug and it fails silently.** **CVE-2026-14663** (6.5): `pgcrypto`, asked for a cipher OpenSSL has disabled, **encrypts to and decrypts from cleartext** — no error. Anything in this estate that believed it was calling `pgcrypto` for at-rest protection got none, with nothing to notice. **Not audited by this scan:** the extension is created as a matter of course during `core-up`, but *which callers use which cipher* was not measured. Establish that before assuming the answer is "nobody".
+
+**Calling the exposure honestly.** Nearly every 8.8 needs an authenticated session, and the container publishes `127.0.0.1:5432` only. This is **not** unauthenticated internet-reachable RCE and should not be written up as such. What it *is*: ~12 services hold legitimate Postgres credentials, and the cohort converts *"attacker obtains one application's DB credential"* into *"attacker executes code as the `postgres` OS account"* — inside the container holding Authentik's identity store and Infisical's vault backing store. Read alongside **REM-217** below: the credential half of that chain is measured too.
+
+**Remediation.** Bump to `16.15-alpine` and converge — same major line, container recreate against the same data directory, no `pg_upgrade`, no coexistence track. Verify with `select version();`, **not** with the pin. Separately, `documenso-db` (**REM-181**) runs `postgres:15-alpine`, a floating **major** tag governed by no `*_version` variable; `15.19` is now a security *floor* for it rather than a currency preference.
+
+---
+
+### 🟠 HIGH — [REM-216] Redis 8.10.0 sits one patch below a coordinated all-branch security release
+
+- **Component:** redis — pinned and **live** at `8.10.0` (`default.config.yml:1352`; `infra-redis-1`, healthy, **56 connected clients**)
+- **Fix version:** `8.10.1` (2026-08-17) — tags `8.10.1`, `-alpine`, `-alpine3.23`, `-trixie` all published
+
+**Why nothing flagged it, which is the part worth carrying forward.** `8.10.1 / 8.8.2 / 8.6.6 / 8.4.6 / 8.2.9 / 7.4.11 / 7.2.16 / 6.2.24` were all cut **on one day**. The notes open `Update urgency: SECURITY`. Yet the `redis/redis` GitHub security-advisories endpoint returns an **empty list — zero advisories, ever** — and of the **nine** fixes, exactly **one** carries a CVE id (CVE-2026-62356); the other eight are prose plus tracker ids. A scan phrased *"no new CVE past the pin"* is **true here and misses eight fixes**. This is the fifth recurrence of the feed blind spot, with a new variant: not "GHSA without a CVE" but **"security fix with neither"**. For this vendor the authoritative surface is the release notes, and the reliable trigger is the **cadence** — eight maintenance branches in one day *is* the signal.
+
+**Rated against this estate, not in the abstract** — three of the nine simply aren't reachable here, and saying so is what separates a finding from a changelog:
+
+| Fix | Verdict here |
+|---|---|
+| CMSketch RDB-load heap OOB write (CVE-2026-62356); `SLOT_INFO` memory corruption → possible RCE; Vector Sets RDB node validation | **Theoretical** — needs the server to load an attacker-controlled RDB. Standalone, no replication, no cluster, data dir not writable from peers |
+| TLS client-cert **auth bypass** (embedded NUL in CN truncates, authenticate as another ACL user); TLS pending-data-list UAF | **N/A** — `tls-port` is `0`. There is no TLS listener to bypass. *That is not a mitigation to be pleased about* — see REM-217 |
+| Blocked-client list UAF, unblock-client UAF, TopK heap OOB | **Exploitable from any ordinary authenticated session** — blocking commands under contention. **This is what carries the HIGH** |
+| Vector Sets `VREM`/`VSIM` UAF, negative `hnsw_search()` return | **Not measured** — no known nOS consumer issues `V*` commands. Stated as unmeasured, not absent |
+
+**REM-140's standing obligation stays discharged** (CVE-2025-62507 fixed at 8.2.3, N/A at 8.10.x) — recorded so it isn't re-litigated a third time. When bumping, **update the pin comment's `[swept 8.6.5 2026-08-06]` breadcrumb**, or the next reader inherits a sweep marker describing a version the estate no longer runs.
+
+---
+
+### 🟠 HIGH — [REM-217] Every datastore credential crosses the Docker fabric in cleartext — *while TLS is switched on*
+
+*The `tls_crypto_weakness` probe's finding of record. Filed under `mariadb`, whose version leg is **clean**, because that is where the measurement is starkest. The finding spans all three datastores.*
+
+The interesting result is not "encryption is off". It is that for MariaDB and PostgreSQL encryption is **on and demonstrably working** while the actual traffic is cleartext — the shape a checklist audit passes and a packet capture fails.
+
+**MariaDB — available, functional, unused at a ratio of 1 : 8,219.** `have_ssl=YES`, OpenSSL 3.0.13, `tls_version=TLSv1.2,TLSv1.3`, and a client that *asks* gets real `TLS_AES_256_GCM_SHA384` at TLSv1.3. But `require_secure_transport=OFF`, `ssl_cert`/`ssl_key`/`ssl_ca` all **empty** (auto-generated self-signed material — so the TLS that *is* used resists passive reading, **not** active interposition). **`Connections = 591,811`. `Ssl_accepts = 72`.** That is **0.012 %**. The live processlist corroborates directly: both FreeScout sessions report an empty `Ssl_cipher`.
+
+**PostgreSQL — `ssl=on`, and 23 of 42 sampled backends are plaintext anyway, including the secrets vault.**
+
+| Client | Container | TLS | Backends |
+|---|---|---|---|
+| `172.20.0.4` authentik | `infra-authentik-server-1` | **`f` — plaintext** | **20** |
+| `172.20.0.7` infisical | `infra-infisical-1` | **`f` — plaintext** | 1 |
+| `172.30.0.25` outline / `172.30.0.30` hedgedoc | — | **`f` — plaintext** | 1 + 1 |
+| `172.20.0.3` authentik-worker, metabase, paperclip, superset, miniflux | — | `t` TLSv1.3 | 16 |
+
+Two things, neither comfortable. **Infisical** — the central secrets vault, Tier-1, whose entire job is custody — talks to its backing store in cleartext: `DB_CONNECTION_URI` is built with **no `sslmode` parameter**, and `node-postgres` defaults ssl to **disabled** when unspecified (libpq's `sslmode=prefer` would have upgraded opportunistically; this driver does not). And **Authentik is split** — same image, two containers, one negotiates TLSv1.3 and the other sends 20 cleartext backends. A per-container difference within one service means transport is being decided by **library defaults and pool paths**, not by anything the estate declares.
+
+**REM-009 is marked `resolved` in this queue on the strength of "in-transit TLS enabled".** It *is* enabled. It is also, for the two highest-value clients in the estate, **not in use**. That is CLAUDE.md's success-marker doctrine surfacing in the transport layer: the enabling code reported its own success, and nothing ever read the effect.
+
+**Redis — no TLS at all.** `tls-port = 0`, 56 connected clients, `--requirepass` passed **on argv** and transmitted in the clear on every `AUTH`, across `infra_net` + `shared_net` + `gated_b2b_net`.
+
+**Why HIGH and not MEDIUM — the topology multiplier.** Cleartext on a Docker bridge is, alone, a defensible trade. It is not defensible *alongside what this queue already holds*. **REM-194** live-proved that a `127.0.0.1` publish constrains only **host** callers, not container peers; **REM-214** proved 23 containers reach arbitrary host ports. The three loopback publishes here (`:3306`, `:5432`, `:6379`) therefore protect against exactly the caller that was never the threat. The step from *"one app container is compromised"* to *"attacker holds the MariaDB root password, the Redis shared secret, and Authentik's and Infisical's Postgres credentials"* is **passive observation** — no vulnerability in any datastore required. Chain that to **REM-215**, whose twelve 8.8s need precisely an authenticated session, and the two rows compose into a full path.
+
+**Vectors, rated individually:** passive credential capture from MariaDB / Redis / the Infisical + Authentik Postgres flows — **exploitable, all measured**. The metabase/superset/paperclip/miniflux/authentik-worker sessions — **mitigated**, genuinely TLSv1.3. Active MITM against the MariaDB TLS that *is* used — **theoretical but unblocked**, since a self-signed auto-cert is unverifiable ("TLS is on" must not be read as "authenticated"). PostgreSQL `ssl_ciphers = HIGH:MEDIUM:+3DES:!aNULL` — **weak but not exploited**: it is upstream's own default for the 16 line, inherited rather than chosen, and it does enable 3DES (SWEET32, CVE-2016-2183) and MEDIUM, but every observed session negotiated TLSv1.3/AES-256-GCM. Cheap to fix; noted so it isn't rediscovered as news.
+
+**The edge is the one clean result — and it does *not* close REM-162.** Against `127.0.0.1:443` with SNI for `vault.pazny.eu` and `fs.pazny.eu`: TLSv1.1 **refused**; TLSv1.2 → `ECDHE-RSA-AES128-GCM-SHA256`; TLSv1.3 → `TLS_AES_128_GCM_SHA256`; an explicit `DES-CBC3-SHA:AES128-SHA` offer **rejected with handshake_failure (alert 40)**. AEAD only. But Traefik's *built-in defaults* already refuse TLS1.1 and 3DES, so this measurement is equally consistent with `modern@file` being live **and** with it being ignored. Closing REM-162 needs a **discriminating** test — a suite the default permits and `modern@file` forbids — not this one.
+
+**Remediation, cheapest-first, none of it an auto-fix.** **(1)** Redis: get the AUTH secret off argv; TLS proper needs cert + key + `tls-port` + every client moved to `rediss://` — and *do not half-do it*: setting `tls-port` while `6379` stays open changes nothing. **(2)** **Infisical first** among Postgres clients, because it is the vault — append `?sslmode=require` to `DB_CONNECTION_URI`. One line, one service, removes the estate's worst single cleartext flow; then authentik-server's 20 backends. **(3)** MariaDB `require_secure_transport=ON` is a **hard cutover** — every non-TLS client breaks at once, which is measurably almost all of them. Sequence it backwards: move clients, watch `Ssl_accepts` climb toward `Connections`, *then* flip. Replace the auto-cert with estate CA material in the same pass, or clients gain confidentiality without authentication. **(4)** Postgres: `ssl_ciphers=HIGH:!aNULL:!3DES:!MEDIUM` and `ssl_min_protocol_version=TLSv1.3` — every observed session is already 1.3, so verify against `pg_stat_ssl` after converging rather than assuming, since a client that can't do 1.3 fails closed. **(5) The durable form, and why this row outlives its individual fixes:** the estate has **no gate that distinguishes "TLS is configured" from "TLS is used"**. `pg_stat_ssl`, `Ssl_accepts`/`Connections` and `tls-port` are one query each. A `--tags verify` check reading the **effect** — percent of encrypted sessions per datastore — is the honest gate, and it is exactly the division of labour CLAUDE.md already states. **A shape gate would have passed this estate every day for months.**
+
+---
+
+### Amended — RustFS: the recorded fix was *below* the exposure
+
+**REM-187** and **REM-189** both named `1.0.0-beta.12` as the bump target. Two of the six advisories are vulnerable **through** beta.12 and first patched at **`1.0.0-rc.1`**: **CVE-2026-73288** / GHSA-j548-9grx-fh4f (Object Lock / WORM treated as absent when bucket metadata cannot be read — COMPLIANCE-mode retained objects become deletable, range `<= 1.0.0-beta.12`) and **CVE-2026-73285** / GHSA-5w8r-p896-6vq2 (OPA policy plugin omits `ExistingObjectTag` conditions, range `>= 1.0.0-alpha.64, <= 1.0.0-beta.12`). Converging to beta.12 would have produced a **green re-scan with two HIGH advisories still live** — the REM-178 failure shape, caught this time *before* anyone acted on it.
+
+The six also **now carry CVE ids**, assigned after filing: `GHSA-6r96-hmgc-726c`=CVE-2026-73286, `GHSA-v9cp-qfw9-9pfp`=CVE-2026-73289, `GHSA-j548-9grx-fh4f`=CVE-2026-73288, `GHSA-5w8r-p896-6vq2`=CVE-2026-73285, `GHSA-x298-9x87-fvjq`=CVE-2026-73290, `GHSA-g3vq-vv42-f647`=CVE-2026-73287. The original observation remains the more useful half: **they were actionable for days with no CVE id at all**, so a CVE-feed-driven scan was blind to every one. Ids arriving later does not retroactively make the feed adequate.
+
+Corrected target is **`1.0.0-rc.1`+**; upstream is at `1.0.0-rc.3` (2026-08-21). All are prereleases — a real *stability* objection to weigh, but not one that makes beta.12 a *security* answer. The live pin is still `1.0.0-beta.11`, so **all six remain open, thirteen days on**.
+
+---
+
+### Clean this batch
+
+- **mariadb `11.8.8`** — the MariaDB/server advisory endpoint shows nothing published after the 2026-06-02 Galera/wsrep wave, every item of which ends its 11.8 range at 11.8.7; and the standing disposition holds regardless, since the official image runs **standalone** with no `wsrep_on` / `wsrep_provider`. No `11.8.9` exists. *(REM-188, image-digest base-layer drift at the same semver, remains pending and was not advanced.)*
+- **infisical** — advisory endpoint still returns a **literally empty list**, sixth consecutive batch. Pin `v0.162.19` trails upstream `v0.162.24` by five releases and eleven days: **within cadence, not filed** (REM-141 existed because the gap was two whole *minor* lines). The standing caveat is why this component keeps earning a re-read rather than a permanent clean mark — Infisical discloses **privately** (security@infisical.com + Cure53) and publishes nothing, so **for this vendor version currency *is* the security control**, because no CVE will ever arrive to trigger a bump. Its transport posture is a different matter entirely — see REM-217.
+
+---
+
+# nOS Vulnerability Scan Addendum — 2026-08-21 (Cycle 35, batch-57)
+
+**Batch:** portainer, gitea, openwebui, postgresql, bluesky_pds · **Probe:** `ssrf_vector_analysis`
+**Outcome:** 3 queue items added (**REM-212 CRITICAL** — *no released patch exists*; **REM-213 HIGH**; **REM-214 HIGH** — the probe's finding of record), **0 closed**. Pending CRITICAL **0 → 1**, pending HIGH **6 → 8**, pending total **51 → 54**.
+
+> **The batch's methodological headline.** Two of the five components moved from clean to affected in the 13 days since batch-46, and **neither move was visible to OSV**. For portainer, OSV returned *nine* advisories against the running 2.44.0 and **all nine were false positives** — Go-module ranges mapped with `introduced: 0`, every one actually fixed at 2.33.8 / 2.39.2 / 2.41.0, i.e. below the pin. The one genuine CRITICAL appears only on the vendor's own GHSA endpoint. A scan phrased as "OSV is clean, and its hits are stale mappings" would have been *literally true and completely wrong*. This is the **fourth** recurrence of the scan-the-vendor-not-the-CVE-feed lesson (after metabase, n8n, authentik) and the first where the feed didn't merely stay silent — it produced nine confident wrong answers that read like diligence.
+
+---
+
+### 🔴 CRITICAL — [REM-212] Portainer's Docker-API authorization can be skipped entirely, and **there is nothing to upgrade to**
+
+- **Component:** portainer — pinned and **live** at `2.44.0` (`default.config.yml:1846`; `infra-portainer-1`)
+- **CVE-2026-72533** / [GHSA-jxhm-qq8x-v4c6](https://github.com/portainer/portainer/security/advisories/GHSA-jxhm-qq8x-v4c6) — published **2026-08-18**, three days ago — CVSS 4.0 **9.4** (`AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H`)
+- **Affected:** `>=2.39.0 <2.39.7` **and** `>=2.40.0 <2.45.0`. The estate sits in the second range.
+- **Fix version:** `2.45.0` (STS) or `2.39.7` (LTS) — **neither exists.** Verified against the GitHub releases *and* tags endpoints and Docker Hub on 2026-08-21: newest STS is `2.44.0` (2026-07-30), newest LTS is `2.39.6` (2026-08-12). **This row cannot be closed by a version bump today.**
+
+**Mechanism.** Portainer applies its authorization to a *normalised* copy of the request path, produced by stripping the Docker API version prefix. The stripping pattern recognises only two-component versions (`/v1.47/`); the daemon also accepts three-component ones (`/v1.47.0/`). Supply the latter and a residual segment is left at the front of the path, so the computed routing prefix matches **neither** the per-resource handler map **nor** the administrator-only route list. Both gates miss and the request reaches the daemon unmodified with *no authorization at all* — and skips the response rewriters on the way back, returning fields normally withheld from non-admins.
+
+**Why the precondition is met here, not hypothetically.** The tempting close is *"portainer is Tier-1, only admins reach it, so there are no non-administrators."* That conflates two role systems. Authentik's tier gates who may **obtain** a Portainer session (`roles/pazny.traefik/vars/main.yml:88` — `portainer: oidc`, tier 1). Portainer then keeps its **own** role per account, and an OAuth-provisioned account is created as a *standard user*. The normal outcome of a tier-1 operator signing in through Authentik is precisely the attacker profile the advisory names. The honest bound: **this is escalation available to someone who already holds Authentik tier-1 group membership** — serious, but not reachable unauthenticated or from a low tier.
+
+**What it reaches — measured, not assumed.** Portainer does not hold the raw socket; it runs `--host tcp://docker-socket-proxy:2375` (`roles/pazny.portainer/templates/compose.yml.j2:21`), so the bypassed request lands on the proxy's allow-list. Reading the **live** env (`docker inspect infra-docker-socket-proxy-1`) rather than the template gives a mixed answer worth stating precisely:
+
+| Denied | Permitted |
+|---|---|
+| `ALLOW_RESTARTS=0` `ALLOW_STOP=0` `ALLOW_START=0` | `POST=1` `EXEC=1` |
+| `SECRETS=0` `CONFIGS=0` `PLUGINS=0` | `CONTAINERS=1` `IMAGES=1` `VOLUMES=1` `BUILD=1` |
+
+`PLUGINS=0` independently neutralises the older CVE-2026-44848 plugin-endpoint RCE — genuine defence-in-depth the estate already had. But `EXEC=1` with `POST=1` permits `POST /containers/{id}/exec`, i.e. **command execution inside any already-running container** — 61 of them. The start/stop denials block *launching* a new privileged container, the classic escape; they do not block lateral movement into what is already up. **The socket proxy reduces this from host RCE to broad in-container command execution. It does not close it.**
+
+**Available actions** (none is an auto-fix): **(1) Watch** the releases endpoint for 2.45.0 / 2.39.7 and re-read this row *next batch regardless of rotation* — an unpatched CRITICAL is exactly what a 14-day drift window is too slow for. **(2)** Switching to the LTS line buys nothing: 2.39.6 is also unpatched. **(3) Interim, and the only thing actually available:** set `EXEC=0` on the socket proxy. That is what converts the bypass into lateral execution, and nothing in the nOS Portainer workflow this scan can see needs container exec *through Portainer* — the operator's exec path is the host `docker` CLI, which does not traverse the proxy. Cost: the web console's per-container "Console" tab stops working. Operator's call. **(4) Do not** reach for forward-auth: portainer is native_oidc, `tests/anatomy/test_forward_auth_does_not_stack.py` refuses the stack, and it would not help — the attacker holds a legitimate session.
+
+---
+
+### 🟠 HIGH — [REM-214] A `host-gateway` alias grants **every** host port, and the backup control plane behind it has auth disabled
+
+*The `ssrf_vector_analysis` probe's finding of record. Filed under openwebui — whose version is **clean** — because that is the component whose SSRF history makes the amplifier concrete. The topology is shared by **23 live containers**.*
+
+**First, the version leg, because it frames the rest.** Open WebUI shipped **30 advisories** between 2026-06-11 and 2026-08-02. `0.11.0` — our pin since `bc29d647` (2026-08-07) — is at or above **every** published fix line (the 08-02 cohort is uniformly `<0.11.0` or `<=0.10.2`; June/July are `<0.10.0`). Nothing names 0.11.0. REM-176's resolution re-confirmed, and the bump landed *exactly* on the wave's fix line.
+
+**Why the probe fired here anyway.** Three of those thirty are SSRF: [CVE-2026-70479](https://github.com/open-webui/open-webui/security/advisories/GHSA-w2rx-84hp-gg95) (Playwright web-loader sub-resource SSRF, 7.7), [CVE-2026-70485](https://github.com/open-webui/open-webui/security/advisories/GHSA-8x5v-cpv7-8jjp) (internal services **and cloud metadata** via NAT64-encoded URLs, 7.1), [CVE-2026-70480](https://github.com/open-webui/open-webui/security/advisories/GHSA-rffm-9q57-q649) (Vega/Vega-Lite client-side SSRF). Three SSRF CVEs in one release cycle makes "the next one" a forecast, not a hypothetical — so the probe measured what a future SSRF would **reach**.
+
+**The finding.** nOS protects its host organs by binding them to `127.0.0.1`. A container carrying `extra_hosts: <name>:host-gateway` is **not constrained by that** — host-gateway resolves to the Docker host's gateway address and the host's loopback services answer on it. REM-194 established one direction (a `127.0.0.1` publish constrains only *host* callers, not container peers). This is the other leg, and it is sharper, because the reach is to the **host**.
+
+**The part that is easy to miss: the alias name does not constrain the port.** Nineteen of the 23 containers carry only `auth.pazny.eu:host-gateway` — an entry added for one narrow, documented purpose: letting the container resolve the Authentik discovery URL server-side over a public TLD Docker's embedded DNS cannot answer. It *reads* like an Authentik-only grant. It is an `/etc/hosts` line mapping a **name** to the gateway IP, and every port on that IP follows. Measured from `devops-gitea-1`, which has no `host.docker.internal` entry at all:
+
+```
+http://auth.pazny.eu:12345/-/healthy  -> 200  "All Alloy components are healthy."   (Alloy admin UI)
+http://auth.pazny.eu:18789/           -> 200  OpenClaw gateway HTML                 (the DevOps agent)
+http://auth.pazny.eu:9898/            -> 200  Backrest UI HTML                      (backup control plane)
+```
+
+and from `iiab-open-webui-1`, which additionally carries `host.docker.internal`: `:11434/api/tags` → **200 with the full Ollama model inventory**; `:12345` → 200; `:9898` → 200; cortex `:8098` and bone `:8099` answering.
+
+**Worst reached target.** An unauthenticated POST from inside a peer container —
+
+```
+POST http://auth.pazny.eu:9898/v1.Backrest/GetConfig  {}
+   -> 200  {"version":6,"instance":"nos-pazny","auth":{"disabled":true}, ...}
+```
+
+— returns the backup daemon's configuration, which **states its own posture in the response body**. Backrest's config surface includes repository definitions and hook commands; a caller able to *write* there is a caller able to schedule commands. **This scan performed read-only (`GetConfig`) and attempted no mutating RPC**, so the write leg is asserted from the documented API shape and **not measured**.
+
+**Vectors, rated individually:**
+
+| Vector | Rating |
+|---|---|
+| Container → host loopback on arbitrary ports via any host-gateway alias | **exploitable** (measured: 3 services, 2 containers, 2 alias names) |
+| Unauthenticated Backrest RPC **read** (config, repo layout, sync identity) | **exploitable** (measured: 200 with body) |
+| Unauthenticated Backrest config **write** → command execution via hooks | *theoretical — not attempted.* `auth:disabled` makes it likely; likely is not measured |
+| Reaching the above from outside via SSRF in the fronting app | *theoretical today* — 0.11.0 has no open SSRF. Was **exploitable** at 0.10.2 |
+| Ollama (`:11434`) via an arbitrary alias | **partially mitigated, by accident** — 403 to `auth.pazny.eu` (Host-header origin check), **200** to `host.docker.internal`. REM-126 (vendor-blocked, no upstream fix) is reachable through it |
+
+**Remediation, in order — none an auto-fix.** **(1) Turn on Backrest auth.** Highest value, independent of everything else, and a backup control plane with auth disabled is a defect on its own terms whatever can reach it. **(2) Narrow the alias:** point the 19 `auth.<tld>` entries at Traefik's container address on the shared network instead of host-gateway, so the container reaches Authentik *through the edge* — where it was always meant to go — and gains no host reach. Needs a converge plus per-service OIDC-discovery verification. **(3) Do not** remove host-gateway from Traefik: `nos-host:host-gateway` is load-bearing **by design** (`roles/pazny.traefik/templates/compose.yml.j2:37-41`) because file-provider routers reach Tier-1 upstreams over `http://nos-host:<port>`. Traefik is the *intended* host-reacher; the problem is the other 22. **(4) A gate is the durable form** — key it on `:host-gateway` in rendered `extra_hosts` with a justified per-service allow-list, the way `test_mkcert_ca_mount_is_guarded.py` keys on the container path rather than an env-var name. **It must not read templates alone:** this batch found gitea's `host.docker.internal` line present in the template and *absent from the running container* (it sits behind a mailpit conditional that is false). The template over-reports; `docker inspect` is the truth.
+
+---
+
+### 🟠 HIGH — [REM-213] Gitea 1.27.1 carries the 2026-08-14 advisory wave; the fix is an available 1.27.2
+
+The 1.27.1 pin (advanced 2026-08-06) **did** clear both CRITICALs it was meant to — CVE-2026-60004 (`<1.27.1`) and CVE-2026-59774 (`1.22 <1.27.1`) are fixed at the running binary. Then upstream published **eight** advisories on 2026-08-14 naming 1.27.1 affected, with `v1.27.2` having shipped 2026-08-13 (the usual coordinated-disclosure ordering).
+
+| CVE | Sev | Range | Summary |
+|---|---|---|---|
+| CVE-2026-73539 | 7.5 | `<=1.27.1` | RCE via unescaped markup `Context` into external-renderer argv |
+| CVE-2026-73535 | 8.8 | `<=1.27.1` | 2FA bypass + **persistent account takeover** via OpenID identity linking |
+| CVE-2026-73278 | 8.1 | `>=1.16.0 <=1.27.1` | WebAuthn second factor bypassed on OAuth2/OpenID sign-in |
+| CVE-2026-73800 | 8.8 | `>=1.19.0` **(no upper bound)** | Secret exfiltration via reusable-workflow resolution in `pull_request_target` |
+| CVE-2026-73814 | 6.5 | `<=1.27.1` | Admin repo collaborator self-escalates to Owner, transfers the repository |
+| CVE-2026-60008 | — | `>=1.27.0 <=1.27.1` | Jupyter renderer emits attacker-controlled CSS into unsanitised output |
+
+**The fix mapping was verified, not assumed** — every one of these publishes `first_patched_version: null`, and a reader trusting that field concludes *"no fix exists"*, which is what REM-212 genuinely means and this row does **not**. Mapping v1.27.2's SECURITY section commit-by-commit: `#38885` (external render) → 73539; `#38805` (WebAuthn user verification per request) → 73278; `#38894`/`#38862` (collaborator access mode + httpsign) → 73814; `#38886` (pull_request_target at base commit) → 73800; `#38864` (markup render) → 60008. **Honest gap:** CVE-2026-73535 has no unambiguous line of its own — plausibly folded into the httpsign/auth commits, but this scan could not prove it and does not claim it. Re-verify that one specifically after the bump.
+
+**Estate-specific severity, both directions.** *Downward:* the two 2FA-bypass entries concern **Gitea's own** second factor on OIDC sign-in. nOS does not use it — MFA is enforced at Authentik, the local form is hidden, registration is external-only — so an attacker must still clear Authentik's factor to reach the callback. Practical impact is materially below the raw 8.8/8.1. *Upward, and not to be discounted:* CVE-2026-73800 lands on a forge that **is** wired to CI (Woodpecker autowired per A16; `gitea_agent_forge: true`), and its range has **no upper bound** — 1.27.2 is not confirmed to fix it. Treat it as open past the bump.
+
+**Remediation:** bump `gitea_version` `1.27.1 → 1.27.2` at `default.config.yml:1591`. Same minor line, no migration required. Standing trap: the form-hide and the OAuth-source registration live under different tags — converge with `--tags authentik,anatomy,gitea`, **never `--tags gitea` alone**, or the bump lands with SSO wiring half-applied.
+
+**SSRF leg — green.** All three of gitea's outbound primitives assessed. Webhooks are allow-listed (`compose.yml.j2:59`, `GITEA__webhook__ALLOWED_HOST_LIST` → the CI domain). Migration SSRF (CVE-2026-58442) and restore-repo SSRF (CVE-2026-58441) are both `<=1.26.4` and already fixed. Worth keeping in view: **58442's entire mechanism was a multi-answer-DNS defeat of exactly the allow-list shape leg 1 depends on** — a name-resolving allow-list is a brake with a known bypass class, not a wall.
+
+---
+
+### ✅ Clean this batch — and the clean verdicts were widened where they had been thin
+
+- **postgresql** — `16.14-alpine`, **sixth** consecutive re-confirm, and this time past "no new CVE": postgresql.org/support/security was read at source and the newest cohort (CVE-2026-6637 `refint` stack overflow + SQLi 8.8; CVE-2026-6638 `REFRESH PUBLICATION` SQLi 3.7; CVE-2026-6575 PG18-only) lists fixed-in as **18.4 / 17.10 / 16.14 / 15.18 / 14.23**. The running 16.14 **is** the fix line. *Note for the next reader:* `versions.json` now reports **16.15** as latestMinor — a bare latest-vs-pin comparison would flag this component and be **wrong**; 16.15 carries no security content beyond 16.14. Declares no host-gateway alias, so it is not among REM-214's 23. REM-181's second instance (`documenso-db` on floating `postgres:15-alpine`, floor 15.18) is still live, still outside the component list, and **not advanced by this batch**.
+- **bluesky_pds** — clean on every source, and the sources were **widened** in response to REM-177's criticism that this component keeps being certified against a string that names nothing. Checked: `bluesky-social/pds` GHSAs (none ever published), `bluesky-social/atproto` GHSAs (none), and OSV for the npm packages that actually constitute the server — `@atproto/pds`, `@atproto/xrpc-server`, `@atproto/identity`, `@atproto/oauth-provider` — all zero. Its outbound fetches are operator-pinned constants (`compose.yml.j2:33-36`), not user-supplied URLs, so there is no attacker-directed fetch primitive to rate. **No `extra_hosts` at all** — the least exposed component in the batch. **REM-177 stands and is re-affirmed, not closed:** the pin is still the moving tag `0.4` while upstream tags are `v0.4.5027`-style, so "clean" here means *no advisory exists for this software* — true and useful — and specifically **not** *the running image is the newest 0.4*. The container has been up 11 days; what `0.4` pointed at then is recorded nowhere the queue can read.
+- **openwebui** — version clean at `0.11.0` (see REM-214 above for the topology finding filed against it).
+
+---
+
 # nOS Vulnerability Scan Addendum — 2026-08-19 (Cycle 33, batch-55)
 
 **Batch:** erpnext, homeassistant, firefly, onlyoffice, ntfy · **Probe:** `version_header_leakage`
