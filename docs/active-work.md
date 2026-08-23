@@ -79,11 +79,11 @@ loader change that lets it fail — is in
   survive a removal silently; the absence assert only stats the path set.
 - **FS doctrine P3** — AgentKit tool-layer FS path-scoping; P1/P1b shipped and the
   plan header still says "DESIGN (P0) — we are here" (`docs/archive/fs-doctrine.md`).
-- **Version-pin drift wave:** counts in Snapshot (re-derive, never inherit). Gitea
-  closed via the agentic recipe path — the template. `validate_record` still lacks
-  `security` in `_SEVERITY_VALUES` (schema has it).
+- **Version-pin drift wave:** counts from `tools/rem-status.py`, never inherited.
+  Gitea closed via the agentic recipe path — the template. `validate_record` still
+  lacks `security` in `_SEVERITY_VALUES` (schema has it).
 - **PG 16→17 cutover** — pg17 verified live beside pg16; operator-gated. Security
-  backlog: counts in Snapshot; Phase C + D remain.
+  backlog: `tools/rem-status.py`; Phase C + D remain.
 - **Gov P0 (profile-gated):** ISDS + NIA/eIDAS federation (greenfield),
   retention enforcement (metadata only) — `docs/compliance/gov-readiness-audit-2026q2.md`.
 
@@ -124,26 +124,25 @@ loader change that lets it fail — is in
 - Agent actor_id naming normalization across the two upgrade agents.
 - Architect at-target recipe drafts (freescout/gitlab/grafana).
 
-## Snapshot
+## Snapshot — ask, don't inherit
 
-| Surface | State |
-|---|---|
-| Release | `v0.10-beta` tagged and published (the "tag pending" line was stale) |
-| Last verified | converge 2026-08-18 `failed=0`; 63 containers, 0 unhealthy |
-| Suites | anatomy **3579 passed / 33 skipped**; face vitest 302; cortex vitest 248 |
-| Estate | `nos_data_root` = `/Volumes/SSD1TB/nOS/data` (one lever; NOT `configure_external_storage`) |
-| CI | green on `dev` @ `efdd3b5a`. The 08-17 red was real, not flake: `forceLayout` determinism is **ISA-bound, not OS-bound** — closed by emitting whole-px coordinates |
-| Authentik | engine=tofu; self-reconcile preflight = idempotent non-blank converge |
-| Upgrades | PG17 coexistence queued |
-| Remediation queue | cycle-31: 49 pending (6 HIGH) / 143 resolved / 5 vendor-blocked / 4 wontfix / 1 obsolete of 202. REM-152 is CLOSED — it was carried here as the headline HIGH after it stopped being one |
-| Audit chain | **BROKEN** — 37 unsigned rows (agentkit, 08-16); nightly verify rc=2. Writer fixed; re-anchor is the operator's |
-| Security scan | dead on expired Claude-CLI OAuth (1.7 s, rc=1). 5 components `scan_failed`; `last_full_scan` 2026-08-16 |
-| Wing inbox | 138 unread, 68 CRITICAL/HIGH, oldest 24 d — nothing reads it |
-| Backups | keap-db present and restorable (347 MB, 08-18). The 08-16 drill failure was transient; a later drill passed |
+A 12-row state table stood here; on 2026-08-23 a review found 7 rows stale,
+including "CI green on `dev`" through four days of red (every push since
+08-20: face `graphLayout` sha pin + 2 CI-only pytest fails) — wrong in the
+REASSURING direction. A row is a copied value; the reader is the value. The
+reader roster lives in CLAUDE.md ("The repo is not the running system");
+add to it `gh run list --branch dev --limit 5` for CI and
+`tools/rem-status.py` for the queue.
+
+Knowledge, not state, survives: storage lever is `nos_data_root` (NOT
+`configure_external_storage`); Authentik engine=tofu + reconcile preflight;
+face `forceLayout` determinism is ISA-bound — its sha pin is red AGAIN, so
+"closed by whole-px coordinates" was not the end of it.
 
 ## Update protocol
 
-1. Refresh **Now** + **Snapshot** after every meaningful session.
+1. Refresh **Now** after every meaningful session. Never write a copied
+   state value here — link the reader that answers it.
 2. Closed items: delete here; the narrative goes to a devlog entry
    (`/devlog new`), decisions to the O-log, release notes to RELEASE.md.
 3. Keep ≤150 lines — the gate fails the suite otherwise.
