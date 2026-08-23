@@ -331,16 +331,37 @@ sec-transport: >-
 # `infisical` are deliberately NOT required: over the same four samples they
 # came and went, so requiring them would flap the other way, and a probe that
 # reads "not done" at random is no more honest than one that reads done.
+#
+# AND `hedgedoc` IS NOT IN THE SAMPLED SET EITHER (2026-08-23), for a stronger
+# reason: it CANNOT be. Its pool drops the connection between queries and it
+# appeared in 0 of 319 samples over 100s. It is covered by the self-test leg
+# below — the client asked about its own session — and this probe fails if
+# that self-test is anything but ENCRYPTED. Absence still never reads as
+# health; it is answered by a different question, not excused.
 sec-transport-pg: >-
-  v=$(tools/tls-uptake.py --json | python3 -c "import json,sys;
-  expected = {'authentik','hedgedoc','metabase','miniflux','paperclip'};
-  d = next(x for x in json.load(sys.stdin)['datastores'] if x['datastore'] == 'postgresql');
+  v=$(tools/tls-uptake.py --json --window 20 | python3 -c "import json,sys;
+  expected = {'authentik','metabase','miniflux','paperclip'};
+  r = json.load(sys.stdin);
+  d = next(x for x in r['datastores'] if x['datastore'] == 'postgresql');
   seen = {c['user'] for c in d.get('clients', [])};
   plain = sorted({c['user'] for c in d.get('clients', []) if not c['ssl']});
   missing = sorted(expected - seen);
+  bad = sorted(t['service'] for t in r.get('postgres_selftests', []) if t['state'] != 'ENCRYPTED');
   print('unsampled:' + ','.join(missing) if missing else
-        'plaintext:' + ','.join(plain) if plain else 'encrypted')");
+        'plaintext:' + ','.join(plain) if plain else
+        'selftest-failed:' + ','.join(bad) if bad else 'encrypted')");
   echo "$v"; test "$v" = "encrypted"
+
+# Read from the container's ARGV, the way the redis leg is: mysqld_exporter is
+# a Go binary with no self-test to run, and TLS reaches it only through
+# --config.my-cnf or --tls.insecure-skip-verify. Absent = provably plaintext,
+# which is a shape read that DETERMINES the effect rather than standing in for
+# it. Its own --help is the authority for that flag list.
+sec-transport-mysqld-exporter: >-
+  v=$(tools/tls-uptake.py --json | python3 -c "import json,sys;
+  c = [x for x in json.load(sys.stdin).get('mariadb_clients', []) if x['service'] == 'mysqld-exporter'];
+  print('not-in-the-client-table' if not c else c[0]['state'].lower())");
+  echo "$v"; test "$v" = "declared"
 
 sec-transport-redis: >-
   v=$(tools/tls-uptake.py --json | python3 -c "import json,sys;
@@ -356,20 +377,24 @@ sec-transport-mariadb: >-
 # being coherent is a pytest job (test_mariadb_client_tls.py); this asks what
 # the connections opened in the last 20 seconds actually did.
 #
-# Two conditions, and the second is the one that matters. All five clients
-# DECLARED is necessary but provably insufficient — hedgedoc declared an
-# sslmode for eight hours while an ORM allow-list dropped it (fee 28). An
-# EMPTY window reports no ratio at all and fails: nought-of-nought is not a
-# pass here any more than it was in `0/0 ready` (fee 08).
+# REWRITTEN 2026-08-23, hours after it was written, for the reason fee 29 is
+# about. The first cut thresholded the `--window` ratio at 0.9. That ratio
+# CANNOT REACH 1.0: MariaDB's own healthcheck connects over the unix socket
+# every 10 seconds, which is secure and is not a TLS handshake, and no counter
+# separates the two. A threshold on it is a guess wearing a measurement's
+# clothes — it read `partial-0.62` with every client provably encrypted.
+#
+# So the question moved to the same shape that settled hedgedoc: ask each
+# client about its OWN session, through its own option and its own driver,
+# inside its own container. Deterministic, and immune to a pool that lives for
+# one millisecond. UNKNOWN is not encrypted.
 sec-transport-mariadb-clients: >-
-  v=$(tools/tls-uptake.py --json --window 20 | python3 -c "import json,sys;
+  v=$(tools/tls-uptake.py --json | python3 -c "import json,sys;
   r = json.load(sys.stdin);
-  d = next(x for x in r['datastores'] if x['datastore'] == 'mariadb');
-  c = r.get('mariadb_clients', []);
-  ratio = d.get('window_ratio');
-  print('declared-but-unmeasured' if ratio is None else
-        'plaintext-clients-remain' if any(x['state'] != 'DECLARED' for x in c) or len(c) != 5 else
-        'encrypted' if ratio >= 0.9 else 'partial-%.2f' % ratio)");
+  t = r.get('mariadb_selftests', []);
+  bad = sorted(x['service'] for x in t if x['state'] != 'ENCRYPTED');
+  print('no-selftests' if not t else
+        'not-encrypted:' + ','.join(bad) if bad else 'encrypted')");
   echo "$v"; test "$v" = "encrypted"
 
 # Reads the LIVE config the daemon owns, not the seed template — the template
@@ -415,19 +440,23 @@ notify-supersede: >-
   print('missing:' + ','.join(missing) if missing else 'wired')");
   echo "$v"; test "$v" = "wired"
 
-# The EFFECT, not the env var: hedgedoc's env already carries an sslmode that
-# Sequelize drops. Only pg_stat_ssl can say whether the backend encrypts.
+# The EFFECT, and it took THREE shapes to get right (docs/hidden_fees/29).
 #
-# It must be PRESENT AND encrypted. The first cut counted plaintext hedgedoc
-# backends and required zero — and came back `confirmed` immediately, because
-# hedgedoc's pool was idle and a client with no live backend does not appear in
-# pg_stat_ssl at all. Absence answering as success is what this estate has paid
-# for most often (docs/hidden_fees/08), and tools/tls-uptake.py prints that
-# caveat in its own output; the probe ignored it.
+#   1. count plaintext hedgedoc backends, require zero
+#      -> `confirmed` instantly, because an idle pool has no backend at all
+#   2. require PRESENT-and-encrypted
+#      -> honest, and unanswerable: measured 2026-08-23, hedgedoc appeared in
+#         0 of 319 samples over 100 seconds, across three healthcheck cycles
+#         that each provably query the database. Its Sequelize pool opens a
+#         connection, runs a sub-millisecond count(*), and drops it. No
+#         sampling rate fixes that.
+#   3. ASK THE CLIENT ABOUT ITSELF — its own config, its own driver,
+#      `select ssl from pg_stat_ssl where pid = pg_backend_pid()`.
+#      Deterministic, and still a read.
+#
+# UNKNOWN is not `encrypted`: a client that cannot be asked fails this.
 sec-transport-hedgedoc: >-
   v=$(tools/tls-uptake.py --json | python3 -c "import json,sys;
-  d = next(x for x in json.load(sys.stdin)['datastores'] if x['datastore'] == 'postgresql');
-  rows = [c for c in d.get('clients', []) if c['user'] == 'hedgedoc'];
-  print('present-and-encrypted' if rows and all(c['ssl'] for c in rows)
-        else 'no-hedgedoc-backend-in-this-sample' if not rows else 'plaintext')");
-  echo "$v"; test "$v" = "present-and-encrypted"
+  t = [x for x in json.load(sys.stdin).get('postgres_selftests', []) if x['service'] == 'hedgedoc'];
+  print(t[0]['state'].lower() if t else 'no-selftest-declared')");
+  echo "$v"; test "$v" = "encrypted"

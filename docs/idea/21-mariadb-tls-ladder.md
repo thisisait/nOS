@@ -188,3 +188,59 @@ it is cheap: **open the config of the thing you are about to change.**
   2026-08-23, before the rung: **1 of 9**.
 - **Rung 4 stays gated absent.** `require_secure_transport` would refuse every
   client that has not moved, and a gate now fails if it appears.
+
+## Rung 3 landed, 2026-08-23 — and it took two corrections to become verifiable
+
+**All five env-configurable clients negotiate TLS.** Each was asked about its
+own session, through its own option, its own driver, inside its own container:
+
+```
+mariadb self-tests — each client's OWN option, own driver, own container
+    ok     bookstack
+    ok     freescout
+    ok     firefly
+    ok     wordpress
+    ok     nextcloud
+```
+
+### Correction A — the aggregate ratio cannot answer, and never could
+
+The first rung-3 probe thresholded `tools/tls-uptake.py --window`'s ratio at
+0.9. It read **`partial-0.62`** with every client provably encrypted, because
+**MariaDB's own healthcheck opens a unix-socket connection every 10 seconds.**
+That connection is secure — `require_secure_transport` exempts sockets — and it
+is not a TLS handshake, and no counter separates the two. A threshold on that
+ratio was a guess wearing a measurement's clothes.
+
+Worse, four of the six clients connect per-request: a 400-sample sweep across a
+minute caught wordpress, nextcloud and the exporter **once each**. Sampling
+cannot answer here at any rate.
+
+So the question changed to the one that settled HedgeDoc on the PostgreSQL
+side: ask the client about **its own session**. Deterministic, immune to a pool
+that lives for a millisecond, and still a read.
+
+### Correction B — there are six clients, not five
+
+`mysqld-exporter` connects to MariaDB roughly four times a minute, carrying the
+`mysqld_exporter` credential in clear. It was found by sampling
+`information_schema.processlist`; the ladder enumerated clients from a survey of
+the **applications**, and a metrics exporter is a database client too.
+
+> **Enumerate clients from the SERVER's connection list, not from a list of
+> applications.** The survey was careful and it had no way to see this.
+
+It takes TLS only from `--config.my-cnf` (`ssl-ca` / `ssl-mode`) or
+`--tls.insecure-skip-verify` — verified against the binary's own `--help`, not
+from documentation. Neither is set, so it is provably plaintext the way redis
+is. A `my.cnf` would also move the password off the environment, but the file
+must be readable by the exporter's **non-root** user and a 0600 host file
+appears root-owned through VirtioFS. Untested, so it is a row
+(`sec-transport-mysqld-exporter`) and not a patch.
+
+### What rung 4 now waits on
+
+Only the exporter. Every application client is encrypted, and the healthcheck's
+socket connection is already exempt from `require_secure_transport` — so the
+cliff is shorter than the 0.6% cumulative ratio makes it look. It still comes
+last, and a gate still fails if the switch appears early.

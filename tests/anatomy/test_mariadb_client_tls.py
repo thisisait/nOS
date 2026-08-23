@@ -1,4 +1,4 @@
-"""REM-217 rung 3 — the five MariaDB clients, and the five different knobs.
+"""REM-217 rung 3 — the MariaDB clients, and their different knobs.
 
 WHAT THIS IS FOR. `docs/idea/21-mariadb-tls-ladder.md` scoped rung 3 as
 "`MYSQL_ATTR_SSL_CA` per Laravel client (freescout, firefly, bookstack), and the
@@ -34,9 +34,19 @@ WHAT IS PINNED.
   5. `require_secure_transport` stays absent. That is rung 4 and it is a cliff:
      it would refuse every client that has not yet moved.
 
+AND THERE ARE SIX, not five. `mysqld-exporter` was found on 2026-08-23 by
+sampling `information_schema.processlist` — the ladder enumerated clients from
+a survey of the APPLICATIONS, and a metrics exporter is a database client too.
+It is a Go binary with no env knob and is tracked separately
+(`sec-transport-mysqld-exporter`); this file pins the five that are
+env-configurable, and pins that the sixth is NOT silently forgotten.
+
 WHAT IT CANNOT DO. It cannot say whether any client NEGOTIATED TLS. Nothing in
-pytest can — MariaDB exposes no per-session cipher to another session. That is
-`tools/tls-uptake.py --window N`, and this gate being green means only that the
+pytest can — MariaDB exposes no per-session cipher to another session, and the
+aggregate `--window` ratio cannot reach 1.0 because the server's own
+healthcheck connects over the unix socket every ten seconds. The verdict is
+`tools/tls-uptake.py`'s per-client SELF-TESTS, where each client is asked about
+its own session through its own option. This gate green means only that the
 configuration is coherent.
 """
 
@@ -176,6 +186,42 @@ def test_the_mount_and_the_knob_share_one_gate():
         assert blocks >= 1, (
             f"{rel} mentions {GATE} but not as a render gate — a variable read "
             "into a comment protects nothing")
+
+
+def test_the_sixth_client_is_not_quietly_dropped():
+    """`mysqld-exporter` is plaintext today and that is a KNOWN open row, not a
+    gap. What must not happen is it falling out of the reader's client table —
+    at which point the estate goes back to believing there are five, which is
+    how it was missed for a day in the first place."""
+    reader = (REPO / "tools/tls-uptake.py").read_text(encoding="utf-8")
+    assert "mysqld-exporter" in reader, (
+        "the sixth MariaDB client is gone from tools/tls-uptake.py. It was "
+        "found by sampling the SERVER's connection list, not by reading a "
+        "survey of applications — removing it restores the blind spot")
+    seed = (REPO / "tools/roadmap-seed.py").read_text(encoding="utf-8")
+    assert "sec-transport-mysqld-exporter" in seed, (
+        "the exporter's roadmap row is gone; a known-plaintext client with no "
+        "row is an unknown-plaintext client")
+
+
+def test_the_verdict_comes_from_a_self_test_not_from_the_declaration():
+    """A declared knob is not an encrypted session — hedgedoc declared an
+    sslmode for eight hours while an ORM dropped it (hidden fee 28). The reader
+    must carry the per-client self-test, and the probe must read THAT."""
+    reader = (REPO / "tools/tls-uptake.py").read_text(encoding="utf-8")
+    assert "MARIADB_SELFTESTS" in reader and "def mariadb_selftests" in reader, (
+        "the per-client self-tests are gone; nothing else can answer whether a "
+        "client with a one-millisecond pool encrypted anything")
+    import yaml as _yaml
+    probes = _yaml.safe_load(
+        (REPO / "state/roadmap-probes.yml").read_text(encoding="utf-8"))
+    probe = probes["sec-transport-mariadb-clients"]
+    assert "mariadb_selftests" in probe, (
+        "the rung-3 probe reads something other than the self-tests")
+    assert "window_ratio" not in probe, (
+        "the probe is back on the aggregate window ratio, which CANNOT reach "
+        "1.0: the server's healthcheck opens a unix-socket connection every "
+        "10s and no counter separates it from a plaintext TCP one")
 
 
 def test_rung_four_has_not_been_climbed_by_accident():

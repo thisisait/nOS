@@ -75,16 +75,18 @@ def _docker() -> str | None:
     return shutil.which("docker")
 
 
-def _exec(container: str, argv: list[str], user: str | None = None) -> tuple[int, str, str]:
+def _exec(container: str, argv: list[str], user: str | None = None,
+          timeout: int | None = None) -> tuple[int, str, str]:
     docker = _docker()
     if not docker:
         return 127, "", "docker not on PATH"
     pre = ["-u", user] if user else []
     try:
         p = subprocess.run([docker, "exec", *pre, container, *argv],
-                           capture_output=True, text=True, timeout=TIMEOUT)
+                           capture_output=True, text=True,
+                           timeout=timeout or TIMEOUT)
     except subprocess.TimeoutExpired:
-        return 124, "", f"timed out after {TIMEOUT}s"
+        return 124, "", f"timed out after {timeout or TIMEOUT}s"
     except OSError as exc:                                  # pragma: no cover
         return 126, "", str(exc)
     return p.returncode, p.stdout, p.stderr.strip()
@@ -231,6 +233,24 @@ MARIADB_CLIENTS = (
      "read_from": "config/config.php — no env exists; occ config:system:set",
      "note": "the only one of the five that needs a post-start call rather "
              "than a compose change"},
+    # THE SIXTH CLIENT, and the reason this table is not called "the five".
+    # Found 2026-08-23 by sampling `information_schema.processlist`, NOT by
+    # reading the ladder — which enumerated five, from a survey of the apps.
+    # A metrics exporter is a database client too, and it carries a credential
+    # across the fabric roughly four times a minute.
+    #
+    # It is a Go binary, so there is no self-test to run; its state is read
+    # from its ARGV, which determines it: mysqld_exporter 0.19 takes TLS only
+    # from `--config.my-cnf` (ssl-ca / ssl-mode) or
+    # `--tls.insecure-skip-verify`, verified against the binary's own --help.
+    # Neither present = provably plaintext, the same shape as redis's missing
+    # TLS listener.
+    {"service": "mysqld-exporter", "container": "observability-mysqld-exporter-1",
+     "argv_tls": ("--config.my-cnf", "--tls.insecure-skip-verify"),
+     "read_from": "prom/mysqld-exporter:v0.19.0 --help",
+     "note": "roadmap sec-transport-mysqld-exporter; a my.cnf carrying ssl-ca "
+             "also moves the password off the env, but the file must be "
+             "readable by the exporter's non-root user — untested, not shipped"},
 )
 
 
@@ -265,6 +285,24 @@ def mariadb_clients() -> list[dict]:
                            ["sh", "-c", f'test -r "{CLIENT_CA_PATH}" && echo yes'])
         row["ca_readable"] = out.strip() == "yes"
 
+        if spec.get("argv_tls"):
+            # Read from the container's command line, like the redis leg.
+            docker = _docker()
+            row["knob"] = " | ".join(spec["argv_tls"])
+            try:
+                import subprocess as _sp
+                cmd = _sp.run([docker, "inspect", spec["container"],
+                               "--format", "{{json .Config.Cmd}}"],
+                              capture_output=True, text=True, timeout=TIMEOUT)
+                argv = json.loads(cmd.stdout or "[]")
+            except Exception:                                   # pragma: no cover
+                argv = []
+            row["declared"] = any(any(str(a).startswith(f) for a in argv)
+                                  for f in spec["argv_tls"])
+            row["state"] = "DECLARED" if row["declared"] else "PLAIN"
+            rows.append(row)
+            continue
+
         if spec.get("env"):
             row["knob"] = spec["env"]
             rc, out, _ = _exec(spec["container"], ["printenv", spec["env"]])
@@ -296,18 +334,132 @@ def mariadb_clients() -> list[dict]:
     return rows
 
 
-def postgresql() -> dict:
+#: The per-backend question, sent once per sample. A module constant so the
+#: repeated form below is provably the same statement as the single one.
+_PG_SSL_SQL = ("select coalesce(host(a.client_addr),'local'), a.usename, s.ssl, count(*) "
+               "from pg_stat_ssl s join pg_stat_activity a using(pid) group by 1,2,3")
+
+
+#: MariaDB clients asked about their OWN session, the way `PG_SELFTESTS` asks
+#: HedgeDoc. Same reason, measured the same way: sampling cannot answer here.
+#:
+#:   * four of the six connect per-request and are gone in under a millisecond
+#:     — a 400-sample sweep over a minute caught wordpress, nextcloud and the
+#:     exporter ONCE each;
+#:   * the aggregate `--window` ratio can never reach 1.0, because MariaDB's
+#:     own healthcheck connects over the unix SOCKET every 10 seconds. That is
+#:     secure (and `require_secure_transport` exempts sockets) but it is not a
+#:     TLS handshake, and no counter separates the two. A threshold on that
+#:     ratio is therefore a guess dressed as a measurement.
+#:
+#: Each snippet reproduces the option THE APP ITSELF READS, from the same env
+#: var, inside the app's own container. It is not literally the app's own
+#: connection — that is the honest limit — but the configuration, the driver
+#: and the network path are the app's.
+#:
+#: The password never leaves the container: `getenv()` runs in there, so it
+#: appears on no host argv and in no output.
+_PDO_PROBE = (
+    '$h=getenv("%(host)s");$d=getenv("%(db)s");$u=getenv("%(user)s");$p=getenv("%(pass)s");'
+    '$ca=%(ca)s;$opt=[];if($ca)$opt[PDO::MYSQL_ATTR_SSL_CA]=$ca;'
+    'try{$c=new PDO("mysql:host=$h;port=3306;dbname=$d",$u,$p,$opt);'
+    '$r=$c->query("show status like \'Ssl_cipher\'")->fetch(PDO::FETCH_NUM);'
+    'echo $r[1]===""?"plaintext":"encrypted";}'
+    'catch(Throwable $e){echo "error:".substr($e->getMessage(),0,70);}'
+)
+
+MARIADB_SELFTESTS = (
+    {"service": "bookstack", "container": "b2b-bookstack-1",
+     "php": _PDO_PROBE % {"host": "DB_HOST", "db": "DB_DATABASE", "user": "DB_USERNAME",
+                          "pass": "DB_PASSWORD", "ca": 'getenv("MYSQL_ATTR_SSL_CA")'}},
+    {"service": "freescout", "container": "b2b-freescout-1",
+     "php": _PDO_PROBE % {"host": "DB_HOST", "db": "DB_NAME", "user": "DB_USER",
+                          "pass": "DB_PASS", "ca": 'getenv("DB_MYSQL_ATTR_SSL_CA")'}},
+    # firefly gates the WHOLE ssl block on MYSQL_USE_SSL (config/database.php:49),
+    # so the probe must gate on it too or it would report a CA the app ignores.
+    {"service": "firefly", "container": "b2b-firefly-1",
+     "php": _PDO_PROBE % {"host": "DB_HOST", "db": "DB_DATABASE", "user": "DB_USERNAME",
+                          "pass": "DB_PASSWORD",
+                          "ca": '(getenv("MYSQL_USE_SSL")==="true"?getenv("MYSQL_SSL_CA"):null)'}},
+    # WordPress has no CA — wpdb never calls mysqli_ssl_set. The flag alone is
+    # the whole control, so the probe uses the flag alone.
+    {"service": "wordpress", "container": "iiab-wordpress-1",
+     "php": '$m=mysqli_init();$ok=@mysqli_real_connect($m,getenv("WORDPRESS_DB_HOST"),'
+            'getenv("WORDPRESS_DB_USER"),getenv("WORDPRESS_DB_PASSWORD"),'
+            'getenv("WORDPRESS_DB_NAME"),3306,null,MYSQLI_CLIENT_SSL);'
+            'if(!$ok){echo "error:".substr(mysqli_connect_error(),0,70);}'
+            'else{$r=$m->query("show status like \'Ssl_cipher\'")->fetch_row();'
+            'echo $r[1]===""?"plaintext":"encrypted";}'},
+    # Nextcloud's option lives in config.php, not the environment, so the probe
+    # reads it back through occ — the same value the app loads.
+    {"service": "nextcloud", "container": "iiab-nextcloud-1",
+     "php": '$ca=trim(shell_exec("php /var/www/html/occ config:system:get dbdriveroptions 1009 2>/dev/null"));'
+            + _PDO_PROBE % {"host": "MYSQL_HOST", "db": "MYSQL_DATABASE", "user": "MYSQL_USER",
+                            "pass": "MYSQL_PASSWORD", "ca": '$ca'},
+     "user": "www-data"},
+)
+
+
+def mariadb_selftests() -> list[dict]:
+    """Ask each MariaDB client about its own session. UNKNOWN on any failure —
+    a client that cannot be asked is not a client that is encrypted."""
+    rows = []
+    for spec in MARIADB_SELFTESTS:
+        row = {"service": spec["service"], "container": spec["container"], "state": "UNKNOWN"}
+        rc, stdout, stderr = _exec(spec["container"], ["php", "-r", spec["php"]],
+                                   user=spec.get("user"), timeout=60)
+        answer = (stdout or "").strip().splitlines()[-1:] or [""]
+        answer = answer[0].strip()
+        if answer in ("encrypted", "plaintext"):
+            row["state"] = answer.upper()
+        else:
+            row["detail"] = answer or (stderr or f"exit {rc}")[:120]
+        rows.append(row)
+    return rows
+
+
+def postgresql(window: int = 0) -> dict:
     """Per-backend, live. `pg_stat_ssl` is the honest source: it reports what
-    each session NEGOTIATED, not what the server offers."""
+    each session NEGOTIATED, not what the server offers.
+
+    ONE SAMPLE IS NOT ENOUGH, and 2026-08-23 is when that stopped being a
+    caveat and became a defect. HedgeDoc's Sequelize pool closes idle
+    connections, so its backend exists only for the instant of a query: a
+    single sample sees it perhaps a quarter of the time. `sec-transport-pg`
+    read 38-of-38 = done on a sample that missed it, and the row went
+    `confirmed` on an accident (docs/hidden_fees/29).
+
+    With `window`, this samples repeatedly over N seconds THROUGH ONE psql
+    connection (`pg_sleep` between statements — a hundred `docker exec`s is
+    minutes of wall clock for the same answer) and aggregates per client:
+
+        observations  how many samples saw this user at all
+        ssl           True only if EVERY observation was encrypted
+
+    So a client that is transient is still seen, and a client that is
+    sometimes plaintext cannot hide behind a lucky sample. A user never
+    observed is simply absent — which is why the probe asks for a NAMED set
+    and reports `unsampled:<who>` rather than reading absence as health.
+    """
     out = {"datastore": "postgresql", "container": POSTGRES, "verdict": "UNKNOWN"}
-    sql = ("select coalesce(host(a.client_addr),'local'), a.usename, s.ssl, count(*) "
-           "from pg_stat_ssl s join pg_stat_activity a using(pid) group by 1,2,3")
-    rc, stdout, stderr = _exec(POSTGRES, ["psql", "-U", "postgres", "-tAF|", "-c", sql])
+    if window > 0:
+        # ~4 samples a second is enough to catch a query-lifetime backend and
+        # costs one connection.
+        rounds = max(1, int(window * 4))
+        script = f"; select pg_sleep(0.25); ".join([_PG_SSL_SQL] * rounds)
+        argv = ["psql", "-U", "postgres", "-tAF|", "-c", script]
+    else:
+        rounds = 1
+        argv = ["psql", "-U", "postgres", "-tAF|", "-c", _PG_SSL_SQL]
+
+    rc, stdout, stderr = _exec(POSTGRES, argv, timeout=max(TIMEOUT, window + 30))
     if rc != 0:
         out["error"] = stderr or f"exit {rc}"
         return out
 
-    clients, on_fabric, encrypted, local = [], 0, 0, 0
+    # user+addr -> [observations, samples_seen_encrypted, peak sessions]
+    seen: dict[tuple[str, str], list[int]] = {}
+    local = 0
     for line in stdout.splitlines():
         parts = line.split("|")
         if len(parts) != 4:
@@ -316,25 +468,94 @@ def postgresql() -> dict:
         if addr == "local":
             # A unix socket never crosses the docker fabric. Counting it as
             # cleartext would inflate the finding with the reader's own session.
-            local += count
+            local = max(local, count)
             continue
-        on_fabric += count
+        row = seen.setdefault((addr, user), [0, 0, 0])
+        row[0] += 1
         if ssl:
-            encrypted += count
-        clients.append({"addr": addr, "user": user, "ssl": ssl, "sessions": count})
+            row[1] += 1
+        row[2] = max(row[2], count)
 
+    clients = [{"addr": addr, "user": user,
+                "ssl": obs == enc,           # only if EVERY observation was TLS
+                "observations": obs,
+                "plaintext_observations": obs - enc,
+                "sessions": peak}
+               for (addr, user), (obs, enc, peak) in seen.items()]
     clients.sort(key=lambda c: (c["ssl"], -c["sessions"]))
+
+    on_fabric = sum(c["sessions"] for c in clients)
+    encrypted = sum(c["sessions"] for c in clients if c["ssl"])
     out.update(
         clients=clients,
+        samples=rounds,
         sessions_on_fabric=on_fabric,
         sessions_encrypted=encrypted,
         sessions_unix_socket=local,
         encrypted_ratio=(encrypted / on_fabric) if on_fabric else None,
-        basis="live backends, unix socket excluded",
+        basis=("live backends, unix socket excluded"
+               + (f"; {rounds} samples over ~{window}s so a short-lived pool is "
+                  "seen at all" if rounds > 1 else "; ONE sample — a client "
+                  "whose pool is idle does not appear")),
         verdict="GREEN" if on_fabric and encrypted == on_fabric else
                 "AMBER" if encrypted else "RED",
     )
     return out
+
+
+#: PostgreSQL clients whose pool is too SHORT-LIVED for sampling to see, with
+#: the one-liner that makes each one answer about ITSELF.
+#:
+#: WHY THIS EXISTS. HedgeDoc's Sequelize pool opens a connection, runs a
+#: sub-millisecond `count(*)`, and drops it. Measured 2026-08-23: 319 samples
+#: over 100 seconds, across at least three healthcheck cycles that each
+#: provably query the database — hedgedoc appeared in ZERO of them. No sampling
+#: rate fixes that; the question has to change.
+#:
+#: So the client is asked to report on its own backend, through its own config
+#: and its own driver:
+#:
+#:     select ssl from pg_stat_ssl where pid = pg_backend_pid()
+#:
+#: That is deterministic and it is the app's real contract — config.json plus
+#: CMD_DB_URL, loaded by HedgeDoc's own module. It is still a READ (one SELECT;
+#: loading Sequelize models defines them, it does not sync or migrate).
+#:
+#: WHAT IT DOES NOT PROVE: that some *other* connection the app makes is
+#: encrypted. There is one database config, so on this estate that is the whole
+#: surface — but it is an inference, not a measurement, and it is written here
+#: rather than assumed.
+PG_SELFTESTS = (
+    {"service": "hedgedoc", "container": "b2b-hedgedoc-1",
+     "why": "Sequelize pool drops the connection between queries — 0 of 319 samples",
+     "argv": ["node", "-e",
+              'process.chdir("/hedgedoc");'
+              'const m=require("/hedgedoc/lib/models");'
+              'm.sequelize.query("select ssl from pg_stat_ssl where pid = pg_backend_pid()",'
+              '{type:m.Sequelize.QueryTypes.SELECT})'
+              '.then(r=>{console.log(r[0]&&r[0].ssl?"encrypted":"plaintext");process.exit(0);})'
+              '.catch(e=>{console.log("error:"+String(e).slice(0,80));process.exit(1);});']},
+)
+
+
+def postgres_selftests() -> list[dict]:
+    """Ask each short-pool client about its own session. UNKNOWN on any failure
+    — a client that cannot be asked is not a client that is encrypted."""
+    rows = []
+    for spec in PG_SELFTESTS:
+        row = {"service": spec["service"], "container": spec["container"],
+               "why": spec["why"], "state": "UNKNOWN"}
+        rc, stdout, stderr = _exec(spec["container"], spec["argv"], timeout=60)
+        answer = (stdout or "").strip().splitlines()[-1:] or [""]
+        answer = answer[0]
+        if rc != 0 or answer.startswith("error:"):
+            row["detail"] = answer or (stderr or f"exit {rc}")[:120]
+        elif answer in ("encrypted", "plaintext"):
+            row["state"] = answer.upper()
+        else:
+            row["detail"] = f"unrecognised answer: {answer[:60]!r}"
+        rows.append(row)
+    return rows
 
 
 def redis() -> dict:
@@ -385,8 +606,10 @@ def redis() -> dict:
 
 
 def collect(window: int = 0) -> dict:
-    return {"datastores": [mariadb(window), postgresql(), redis()],
-            "mariadb_clients": mariadb_clients()}
+    return {"datastores": [mariadb(window), postgresql(window), redis()],
+            "mariadb_clients": mariadb_clients(),
+            "mariadb_selftests": mariadb_selftests(),
+            "postgres_selftests": postgres_selftests()}
 
 
 def _pct(ratio: float | None) -> str:
@@ -433,10 +656,20 @@ def render(report: dict) -> list[str]:
                          f"  ({d['sessions_unix_socket']} on the unix socket, not counted)")
             for c in d["clients"]:
                 mark = "TLS " if c["ssl"] else "PLAIN"
-                lines.append(f"      {mark:<6}{c['addr']:<14}{c['user']:<12}x{c['sessions']}")
-            lines.append("    this is ONE SAMPLE of live backends — a client whose pool is "
-                         "idle does not appear at all, so absence here is not evidence "
-                         "that it connects encrypted")
+                obs = f"  seen in {c['observations']}/{d.get('samples', 1)}" if d.get("samples", 1) > 1 else ""
+                bad = f"  ({c['plaintext_observations']} PLAINTEXT)" if c.get("plaintext_observations") else ""
+                lines.append(f"      {mark:<6}{c['addr']:<14}{c['user']:<12}x{c['sessions']}{obs}{bad}")
+            n = d.get("samples", 1)
+            if n > 1:
+                lines.append(f"    {n} samples — a pool that opens a connection only to "
+                             "run a query IS seen here; `ssl` is true only if EVERY "
+                             "observation of that client was encrypted")
+                lines.append("    a client absent from all of them is still absent, not "
+                             "encrypted — ask for a NAMED set, never for silence")
+            else:
+                lines.append("    this is ONE SAMPLE of live backends — a client whose pool "
+                             "is idle does not appear at all, so absence here is not "
+                             "evidence that it connects encrypted")
         elif d["datastore"] == "redis":
             lines.append("    no TLS listener (tls-port unset) — every one of its "
                          "sessions is cleartext by construction"
@@ -446,17 +679,29 @@ def render(report: dict) -> list[str]:
                              "readable by anything that can `docker inspect`")
         lines.append("")
 
+    for t in report.get("postgres_selftests", []):
+        mark = {"ENCRYPTED": "ok  ", "PLAINTEXT": "PLAIN", "UNKNOWN": "?   "}.get(t["state"], "?   ")
+        lines.append(f"  postgres self-test  {mark} {t['service']} — asked its own session "
+                     f"({t['why']})")
+        if t.get("detail"):
+            lines.append(f"      {t['detail']}")
+    lines.append("")
     lines.append("  mariadb clients — what each one DECLARES, not what it negotiated")
     for c in report.get("mariadb_clients", []):
         detail = c.get("detail") or c.get("knob") or ""
         mark = {"DECLARED": "ok  ", "PLAIN": "PLAIN", "BROKEN": "BROKEN",
                 "ABSENT": "-   "}.get(c["state"], "?   ")
-        lines.append(f"    {mark:<7}{c['service']:<11}{detail}")
+        lines.append(f"    {mark:<7}{c['service']:<16}{detail}")
         if c["state"] == "BROKEN":
             lines.append(f"             asks for a CA at {CLIENT_CA_PATH}, which is "
                          "NOT readable in this container")
     lines.append("    declared != encrypted: MariaDB exposes no per-session cipher to "
-                 "another session, so read this beside --window, never instead of it")
+                 "another session, so read the self-tests below, not this")
+    lines.append("")
+    lines.append("  mariadb self-tests — each client's OWN option, own driver, own container")
+    for t in report.get("mariadb_selftests", []):
+        mark = {"ENCRYPTED": "ok  ", "PLAINTEXT": "PLAIN", "UNKNOWN": "?   "}.get(t["state"], "?   ")
+        lines.append(f"    {mark:<7}{t['service']:<16}{t.get('detail', '')}")
     lines.append("")
     return lines
 
