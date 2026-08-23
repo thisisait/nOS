@@ -129,6 +129,29 @@ def nos_tofu_destroy_split(resource_changes, registry):
     if not isinstance(resource_changes, list):
         return {"declared_off": [], "unexplained": []}
 
+    # AN EMPTY REGISTRY IS NOT A VERDICT. The first live run of this filter got
+    # an empty list — `tofu_authentik_services` is TASK-SCOPED on the tfvars
+    # render, so a `| default([])` at the call site quietly supplied one — and
+    # every destroy came back "not in the registry, un-authored", which reads
+    # as a hard refusal for a reason that has nothing to do with the plan.
+    # Absence of the input must name ITSELF, never be answered as a finding
+    # about the estate.
+    if not enabled_by_slug:
+        return {
+            "declared_off": [],
+            "unexplained": [
+                {
+                    "address": (rc or {}).get("address", "?"),
+                    "service": None,
+                    "why": "the service registry did not load — this is a WIRING "
+                           "fault in the guard, not a fact about this plan",
+                }
+                for rc in resource_changes
+                if isinstance(rc, dict)
+                and "delete" in ((rc.get("change") or {}).get("actions") or [])
+            ],
+        }
+
     for rc in resource_changes:
         if not isinstance(rc, dict):
             continue

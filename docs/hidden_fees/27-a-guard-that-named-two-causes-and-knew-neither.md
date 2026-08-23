@@ -74,7 +74,52 @@ skip it.
 
 **Verified against the plan that actually failed**, not a synthetic one:
 103 resource changes, both superset deletes attributed to a flag that is off,
-zero unexplained → the run would now apply.
+zero unexplained → the run would now apply. (That first verification was itself
+wrong in a way worth reading — see below.)
+
+## The fix failed once, the same way, and that is worth more than the fix
+
+The first cut of the attribution task read
+`tofu_authentik_services | default([])`. That name is loaded **task-scoped**,
+on the tfvars render 140 lines earlier, deliberately and with the reason
+written above it — persisting it play-wide makes `nos_state`'s
+`role_vars: "{{ vars }}"` eager-finalize choke. So in the new task it was
+undefined, the fallback answered with an empty list, and every destroy came
+back *"no `superset` in the registry — un-authored, not disabled"*.
+
+The guard refused **harder** than before, for a reason with nothing to do with
+the plan.
+
+Two mistakes, and both are ones this repository already has gates for:
+
+1. **A constant fallback standing in for a value that must be loaded.** Exactly
+   [23](23-a-pin-that-never-rendered.md) — and `test_a_role_default_is_not_read
+   _across_roles.py`, written the day before, encodes precisely this rule. It
+   scans `roles/*/`. This bug was in `tasks/`.
+2. **Verified against the source file instead of the artifact.** The check ran
+   `nos_tofu_destroy_split` against `state/tofu-authentik-services.yml`, which
+   of course contains superset — while the code reads a **variable** that did
+   not. The template said one thing and the render said another, which is the
+   whole content of fee 23, committed thirty hours earlier.
+
+The second verification did it properly: `terraform/authentik/nos.auto.tfvars.json`,
+produced by that same `lookup('template')` load, holds **39 of the registry's
+44** services with superset correctly filtered out. That proves the load path
+resolves `enabled` from the live flags — evidence from an artifact the estate
+produced, not from the file I hoped it read.
+
+**Both halves are now closed.** The task carries its own `vars:` block, there is
+no `| default()` on the registry at all, and an unloadable registry returns a
+verdict that names *itself*:
+
+> the service registry did not load — this is a WIRING fault in the guard, not
+> a fact about this plan
+
+New gate `test_a_task_scoped_var_stays_in_its_task.py`: within one task file, a
+name declared on a **leaf** task may not be read by another. A `vars:` on a
+**block** is inherited and is explicitly fine — the first cut of that gate
+missed the distinction and reported fifteen correct uses of `_tf_dir` as
+offenders. Proven in the failing direction against the exact broken form.
 
 ## What is still owed
 

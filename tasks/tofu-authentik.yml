@@ -217,7 +217,21 @@
     # converge on superset, whose container this playbook had already removed.
     - name: "[tofu-authentik] Attribute each destroy to a service, or refuse to"
       ansible.builtin.set_fact:
-        _tofu_destroy_split: "{{ _tofu_changes | nos_tofu_destroy_split(tofu_authentik_services | default([])) }}"
+        _tofu_destroy_split: "{{ _tofu_changes | nos_tofu_destroy_split(tofu_authentik_services) }}"
+      # TASK-SCOPED, for the same reason as the tfvars render above: the play
+      # namespace must not carry this registry, because nos_state's
+      # `role_vars: "{{ vars }}"` eager-finalizes it.
+      #
+      # The first cut of this task omitted the block and wrote
+      # `tofu_authentik_services | default([])`. The var is defined only on the
+      # render task 140 lines up, so it resolved to an EMPTY LIST and every
+      # destroy came back "not in the registry — un-authored", which is the one
+      # verdict that refuses hardest. A constant fallback standing in for a
+      # value that has to be loaded is the shape docs/hidden_fees/23 is about,
+      # and no `| default()` belongs here now: an unloadable registry must be a
+      # loud failure, never a silent unanimous refusal.
+      vars:
+        tofu_authentik_services: "{{ (lookup('template', playbook_dir + '/state/tofu-authentik-services.yml') | from_yaml).tofu_authentik_services }}"
 
     - name: "[tofu-authentik] Diagnose — list resources the plan would destroy"
       ansible.builtin.debug:

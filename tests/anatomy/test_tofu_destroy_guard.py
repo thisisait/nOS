@@ -241,3 +241,34 @@ def test_filter_is_discoverable_by_ansible():
     # and the FilterModule actually exports the name the task calls
     mod = _load()
     assert "nos_tofu_immutable_field_updates" in mod.FilterModule().filters()
+
+
+def test_an_unloadable_registry_names_itself_instead_of_refusing_everything():
+    """The first LIVE run of the split got an EMPTY registry — the var is
+    task-scoped and the call site had `| default([])` — so all four "unknown
+    slug" branches fired and every destroy read *"not in the registry —
+    un-authored"*. That is a fact about the guard's wiring being reported as a
+    fact about the plan, and it refuses hardest of all the verdicts.
+
+    Absence of the input must name ITSELF."""
+    mod = _load()
+    changes = [_rc("authentik_application", ["delete"], {}, {},
+                   address='module.service["superset"].authentik_application.this')]
+    for empty in ([], None, "not-a-list"):
+        out = mod.nos_tofu_destroy_split(changes, empty)
+        assert out["declared_off"] == []
+        assert len(out["unexplained"]) == 1, f"registry={empty!r} lost the destroy"
+        why = out["unexplained"][0]["why"]
+        assert "registry did not load" in why and "WIRING" in why, (
+            f"registry={empty!r} blames the plan for the guard's own wiring: {why}")
+
+
+def test_a_populated_registry_does_not_take_the_unloadable_branch():
+    """Proven in the other direction, because a branch that swallowed every
+    input would pass the test above and break the whole guard."""
+    mod = _load()
+    out = mod.nos_tofu_destroy_split(
+        [_rc("authentik_application", ["delete"], {}, {},
+             address='module.service["superset"].authentik_application.this')],
+        [{"slug": "superset", "enabled": "False"}])
+    assert len(out["declared_off"]) == 1 and out["unexplained"] == []
