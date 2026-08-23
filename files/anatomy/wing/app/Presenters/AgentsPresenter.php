@@ -65,26 +65,28 @@ final class AgentsPresenter extends BasePresenter
 	}
 
 	/**
-	 * W6.3 (2026-06-10): session-cap minutes for the stale reaper + the
-	 * list-page countdown. Overridable via AGENT_SESSION_CAP_MINUTES env
-	 * (wing.plist). 45 = the ~30-min agent budget + grace; a session
-	 * legitimately running longer than this has lost its runner anyway
-	 * (Pulse max_runtime_s kills the process far earlier).
+	 * The cap now lives with the reaper (AgentSessionRepository), because the
+	 * reaper acquired callers this presenter does not know about — session
+	 * open, on both runtimes. A policy defined by one of several callers is a
+	 * policy that drifts.
 	 */
-	private const SESSION_CAP_MINUTES_DEFAULT = 45;
-
 	private function sessionCapMinutes(): int
 	{
-		$env = (int) (getenv('AGENT_SESSION_CAP_MINUTES') ?: 0);
-		return $env > 0 ? $env : self::SESSION_CAP_MINUTES_DEFAULT;
+		return $this->sessions->staleCapMinutes();
 	}
 
 	public function renderDefault(): void
 	{
 		// Lazy stale-session reaper — every catalog view sweeps orphaned
-		// `running` rows past the cap, so dead runs self-clean without a
-		// dedicated cron (the page where orphans annoy is the page that
-		// clears them).
+		// `running` rows past the cap. This used to be the ONLY caller, on the
+		// reasoning that "the page where orphans annoy is the page that clears
+		// them". That stopped being true when tools/red-status.py shipped: an
+		// orphan now annoys on a READER, which cannot write, so the complaint
+		// and the repair ended up on different surfaces and one sat for 110
+		// hours. AgentSessionRepository::startSession() and the claude-CLI
+		// event bridge now reap too; this call stays because a page view is
+		// still a free chance to catch one, and it is the only path that TELLS
+		// the operator a reap happened.
 		$cap = $this->sessionCapMinutes();
 		$reaped = $this->sessions->terminateStale($cap);
 		if ($reaped > 0) {

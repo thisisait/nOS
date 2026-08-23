@@ -18,10 +18,38 @@ final class AgentSessionRepository
 	}
 
 	/**
+	 * W6.3 (2026-06-10): session-cap minutes for the stale reaper + the
+	 * list-page countdown. Overridable via AGENT_SESSION_CAP_MINUTES env
+	 * (wing.plist). 45 = the ~30-min agent budget + grace; a session
+	 * legitimately running longer than this has lost its runner anyway
+	 * (Pulse max_runtime_s kills the process far earlier).
+	 *
+	 * Moved here from AgentsPresenter on 2026-08-23, when the reaper gained
+	 * callers that are not a page.
+	 */
+	private const SESSION_CAP_MINUTES_DEFAULT = 45;
+
+	/**
+	 * The cap, resolved once here so the reaper and every surface that reports
+	 * it cannot drift apart. `AgentsPresenter` used to own this constant and
+	 * `terminateStale()` took it as an argument, which meant the only caller
+	 * also defined the policy.
+	 */
+	public function staleCapMinutes(): int
+	{
+		$env = (int) (getenv('AGENT_SESSION_CAP_MINUTES') ?: 0);
+		return $env > 0 ? $env : self::SESSION_CAP_MINUTES_DEFAULT;
+	}
+
+	/**
 	 * @param array<string, mixed> $row
 	 */
 	public function startSession(array $row): int
 	{
+		// A successor closes what its predecessor could not. See
+		// `terminateStale()` for why this call is here and not only on a page.
+		$this->terminateStale($this->staleCapMinutes());
+
 		$insert = [
 			'uuid'          => $row['uuid'],
 			'agent_name'    => $row['agent_name'],
@@ -114,6 +142,11 @@ final class AgentSessionRepository
 			if ($existing !== null) {
 				return; // idempotent
 			}
+			// Same reconcile as the PHP runner's startSession(). This is the
+			// path the claude-CLI bridge takes, and it is the path the 2026-08
+			// orphan arrived on — so reaping only in the other one would have
+			// left exactly this case uncovered.
+			$this->terminateStale($this->staleCapMinutes());
 			$this->db->table('agent_sessions')->insert($this->synthRow($uuid, $agentName, $actorId, $ts, 'running'));
 			return;
 		}
@@ -216,6 +249,22 @@ final class AgentSessionRepository
 	}
 
 	/**
+	 * WHO CALLS THIS, AND WHY THAT CHANGED (2026-08-23). Until today the only
+	 * caller was `AgentsPresenter::renderDefault()`, on the reasoning that
+	 * "the page where orphans annoy is the page that clears them". That was
+	 * true while Wing /agents was the only surface showing them. It stopped
+	 * being true when `tools/red-status.py` shipped (2026-08-18): orphans now
+	 * annoy on a READER, which by design cannot write, so the complaint moved
+	 * to a surface that must not act and the repair stayed on one nobody had
+	 * opened. Measured cost: a surveyor session sat `running` for 110 hours and
+	 * was reported red for four days — while a LATER surveyor run started,
+	 * finished and went idle beside it without touching it.
+	 *
+	 * So it is now also called at session OPEN, on both runtimes. A successor
+	 * closes what its predecessor could not, which is the right authorship:
+	 * the row that says "this run died" is written by something that is
+	 * demonstrably alive, never by the run itself.
+	 *
 	 * W6.3 (2026-06-10): auto-terminate `running` sessions older than the
 	 * cap. Failed/killed agent runs (concurrency crash, timeout SIGKILL,
 	 * LLM socket error) never emit agent_run_end, so their row hung

@@ -28,8 +28,19 @@ def test_reaper_runs_on_catalog_view():
         "renderDefault no longer sweeps stale running sessions — orphaned "
         "rows would hang `running` forever again"
     )
-    assert "SESSION_CAP_MINUTES_DEFAULT" in src
-    assert "AGENT_SESSION_CAP_MINUTES" in src, "env override lost"
+    # The cap and its env override MOVED to AgentSessionRepository on
+    # 2026-08-23, when the reaper gained callers that are not a page (session
+    # open, on both runtimes). A policy defined by one of several callers
+    # drifts, so it now lives with the reaper — and this assertion follows it
+    # rather than pinning the old location. See
+    # tests/anatomy/test_a_dead_session_is_closed_by_a_successor.py.
+    sessions = SESSIONS.read_text()
+    assert "SESSION_CAP_MINUTES_DEFAULT" in sessions
+    assert "AGENT_SESSION_CAP_MINUTES" in sessions, "env override lost"
+    assert "staleCapMinutes" in src, (
+        "the presenter must still ASK for the cap — it shows the operator a "
+        "per-session countdown against it, and a hard-coded second copy is how "
+        "the countdown stops matching the reap")
 
 
 def test_terminate_stale_only_touches_running_past_cutoff():
