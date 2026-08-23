@@ -96,7 +96,11 @@ else
   sev="info"
 fi
 # A9/Bone fanout (wing-inbox + ntfy) — persistent + reviewable beyond the popup.
-"$HERE/nos-notify.sh" "$sev" "nOS macOS update settled (${os_before:-?} → ${os_now})" "$msg" >> "$log" 2>&1 || true
+# 5th arg: this message REPLACES the previous settle report. The machine
+# having resumed twice is one fact, not two, and 31 unread rows said
+# otherwise — the oldest 29 days old (docs/hidden_fees/26).
+"$HERE/nos-notify.sh" "$sev" "nOS macOS update settled (${os_before:-?} → ${os_now})" "$msg" \
+  "wing-inbox,ntfy" "os-resume-settled" >> "$log" 2>&1 || true
 # Native macOS popup — immediate, the operator is at the machine post-login.
 osascript -e "display notification \"${msg}\" with title \"nOS\"" >/dev/null 2>&1 || true
 echo "[nos-os-resume] settle rc=${rc}; plan archived; ${msg}" | tee -a "$log"

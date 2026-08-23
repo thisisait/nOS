@@ -484,6 +484,23 @@ $db->exec('CREATE INDEX IF NOT EXISTS idx_events_actor_action_id ON events(actor
 $addMissingColumns($db, 'notifications', [
     'mail_digest_window' => 'TEXT',
 ]);
+
+// notifications.{supersede_key,superseded_at,superseded_by} — a successor
+// retires its predecessors (2026-08-23). The live DB is 979 MB and holds 76
+// unread rows of which 60 are already false; without this sweep the column
+// exists only on fresh installs and the feature is dead on the one estate
+// that has the backlog (tests/anatomy/test_backup_reaches_the_brain.py names
+// that exact failure mode for another column).
+$addMissingColumns($db, 'notifications', [
+    'supersede_key' => 'TEXT',
+    'superseded_at' => 'TEXT',
+    'superseded_by' => 'TEXT',
+]);
+$db->exec(
+    'CREATE INDEX IF NOT EXISTS idx_notifications_supersede '
+    . 'ON notifications(supersede_key, target_actor_id) '
+    . 'WHERE supersede_key IS NOT NULL AND superseded_at IS NULL'
+);
 $db->exec(
     'CREATE INDEX IF NOT EXISTS idx_notifications_mail_digest '
     . 'ON notifications(mail_digest_window) '

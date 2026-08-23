@@ -78,6 +78,22 @@ def validate_payload(payload: dict[str, Any]) -> str | None:
             if ch not in VALID_CHANNELS:
                 return f"invalid channel: {ch}"
 
+    # supersede_key (2026-08-23) — the emitter declaring "this message
+    # REPLACES my earlier ones of the same class". Opt-in, because only the
+    # sender can know: two gitleaks findings are two secrets, two prometheus
+    # alerts two alarms, but two `os-resume` rows are one fact stated twice.
+    #
+    # Pattern-checked like `template`, and for the same reason: it becomes a
+    # WHERE key over a shared table, so a loose value silently retires
+    # another emitter's rows. Length-capped for the same reason.
+    supersede_key = payload.get("supersede_key")
+    if supersede_key is not None:
+        if not isinstance(supersede_key, str):
+            return "supersede_key must be a string"
+        if not re.match(r"^[a-z0-9][a-z0-9_.:-]{0,62}[a-z0-9]$", supersede_key):
+            return (f"supersede_key {supersede_key!r} fails "
+                    "[a-z0-9][a-z0-9_.:-]+ pattern")
+
     metadata = payload.get("metadata")
     if metadata is not None and not isinstance(metadata, dict):
         return "metadata must be an object"

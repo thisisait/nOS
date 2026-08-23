@@ -231,6 +231,10 @@ payload = {
     "body": "\n".join(lines) or "(no sources ran)",
     "actor_id": "backup",
     "origin_plugin": "backup",
+    # A nightly result REPLACES the previous nightly result. 19 unread rows, oldest 18 days, every one made false by the next night's run.
+    # This does NOT mark anything read — nobody read them; it is a
+    # third state, and the row stays reachable via include_superseded.
+    "supersede_key": "backup-nightly-result",
     "metadata": {"failed": failed, "source_count": len(sources)},
 }
 raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")

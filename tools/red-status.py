@@ -287,32 +287,75 @@ def _still_holds(row: sqlite3.Row) -> bool | None:
     return None
 
 
+def _notifications_have_supersede(conn: sqlite3.Connection) -> bool:
+    """The supersede columns arrive via init-db.php's ALTER sweep, which runs
+    on a converge. This reader must work on a host that has not had one yet —
+    and must not silently report a DIFFERENT number there without saying so.
+
+    The PRAGMA is spelled as a LITERAL, and the two queries below are written
+    out twice rather than built from a fragment, because
+    `test_the_red_reader_only_reads.py` requires every executed statement to be
+    a visible constant. That rule cost this duplication and is worth it: it is
+    what lets a gate prove the reader cannot write."""
+    try:
+        return any(r[1] == "superseded_at"
+                   for r in conn.execute("PRAGMA table_info(notifications)"))
+    except sqlite3.Error:
+        return False
+
+
 def unread_inbox(conn: sqlite3.Connection) -> dict:
-    rows = conn.execute(
-        """
-        SELECT severity, COUNT(*) AS n, MIN(created_at) AS oldest
-          FROM notifications WHERE wing_inbox_read_at IS NULL
-         GROUP BY severity
-        """
-    ).fetchall()
+    # A superseded row is not unread WORK: its successor already said the newer
+    # version of the same thing. Excluding it here is the whole point of the
+    # column — 60 of 76 unread rows on 2026-08-23 were repeating classes.
+    retired = _notifications_have_supersede(conn)
+    if retired:
+        rows = conn.execute(
+            """
+            SELECT severity, COUNT(*) AS n, MIN(created_at) AS oldest
+              FROM notifications
+             WHERE wing_inbox_read_at IS NULL AND superseded_at IS NULL
+             GROUP BY severity
+            """
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            """
+            SELECT severity, COUNT(*) AS n, MIN(created_at) AS oldest
+              FROM notifications WHERE wing_inbox_read_at IS NULL
+             GROUP BY severity
+            """
+        ).fetchall()
     by_severity = {row["severity"]: row["n"] for row in rows}
     oldest = min((row["oldest"] for row in rows), default=None)
     loud = sum(by_severity.get(sev, 0) for sev in ("critical", "high"))
 
     # Only the loud ones are re-evaluated: they are what this reader reports,
     # and re-deciding 27 `info` rows would cost more than it tells anyone.
-    superseded = 0
+    # NAMING, because the two live one screen apart and mean different things:
+    #   superseded  = a SUCCESSOR replaced this row (the DB column, above)
+    #   provably_stale = this row's own claim was RE-DECIDED against the
+    #                    queue and no longer holds (fee 26, _still_holds)
+    provably_stale = 0
     unknown = 0
-    for row in conn.execute(
+    loud_rows = conn.execute(
+        """
+        SELECT origin_plugin, origin_agent, metadata_json
+          FROM notifications
+         WHERE wing_inbox_read_at IS NULL AND superseded_at IS NULL
+           AND severity IN ('critical', 'high')
+        """
+    ).fetchall() if retired else conn.execute(
         """
         SELECT origin_plugin, origin_agent, metadata_json
           FROM notifications
          WHERE wing_inbox_read_at IS NULL AND severity IN ('critical', 'high')
         """
-    ).fetchall():
+    ).fetchall()
+    for row in loud_rows:
         verdict = _still_holds(row)
         if verdict is False:
-            superseded += 1
+            provably_stale += 1
         elif verdict is None:
             unknown += 1
 
@@ -320,9 +363,10 @@ def unread_inbox(conn: sqlite3.Connection) -> dict:
         "total": sum(by_severity.values()),
         "by_severity": by_severity,
         "critical_or_high": loud,
-        "critical_or_high_superseded": superseded,
+        "critical_or_high_provably_stale": provably_stale,
         "critical_or_high_unresolvable": unknown,
-        "critical_or_high_live": loud - superseded,
+        "critical_or_high_live": loud - provably_stale,
+        "supersede_column_present": retired,
         "oldest": oldest,
         "oldest_age": _age(_parse_iso(oldest)),
     }
@@ -653,7 +697,7 @@ def reds(report: dict) -> list[str]:
     # to render as either red or calm anywhere else.
     live = inbox.get("critical_or_high_live", inbox.get("critical_or_high", 0))
     if live:
-        stale = inbox.get("critical_or_high_superseded", 0)
+        stale = inbox.get("critical_or_high_provably_stale", 0)
         unknown = inbox.get("critical_or_high_unresolvable", 0)
         confirmed = live - unknown
         parts = []

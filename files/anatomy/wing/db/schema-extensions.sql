@@ -446,9 +446,30 @@ CREATE TABLE IF NOT EXISTS notifications (
     -- this NULL and get stamped directly.
     mail_digest_window  TEXT,
     metadata_json       TEXT NOT NULL DEFAULT '{}',     -- per-channel hints (ntfy click URL, mail recipients override, ...)
+    -- Supersession (2026-08-23). A notification is an EVENT; the inbox was
+    -- treating it as a STATE, so 60 of 76 unread rows were repeating classes
+    -- whose successor had already made them false — os-resume 27, backup 19,
+    -- prometheus-alert-relay 7, security-drift 4, oldest 29 days.
+    --
+    -- NOT `read`: nobody read them, and stamping wing_inbox_read_at would be
+    -- the estate telling itself a lie about a human. This is a third state.
+    --
+    -- OPT-IN AND EMITTER-DECLARED. supersede_key is written by the sender;
+    -- absent, a row is never superseded. Inferring the class from
+    -- origin_plugin would be wrong for exactly the emitters that most need
+    -- the inbox: two gitleaks findings are about two different secrets, and
+    -- two prometheus alerts about two different alarms. Only the sender knows
+    -- whether its new message REPLACES the old one or joins it.
+    supersede_key       TEXT,                           -- emitter's class id; NULL = never superseded
+    superseded_at       TEXT,                           -- when a successor replaced it
+    superseded_by       TEXT,                           -- uuid of that successor (audit lineage)
     created_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_notifications_unread       ON notifications(target_actor_id, wing_inbox_read_at);
+-- The supersede lookup: unread rows of one class for one target. Partial, so
+-- it stays small — the vast majority of rows carry no key at all.
+CREATE INDEX IF NOT EXISTS idx_notifications_supersede    ON notifications(supersede_key, target_actor_id)
+    WHERE supersede_key IS NOT NULL AND superseded_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_notifications_severity     ON notifications(severity);
 CREATE INDEX IF NOT EXISTS idx_notifications_actor_action ON notifications(actor_action_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at   ON notifications(created_at);

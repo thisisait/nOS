@@ -101,7 +101,15 @@ def test_every_sql_the_tool_executes_is_a_read():
     assert executed, "no .execute() calls found — this gate has stopped seeing the queries"
     for sql in executed:
         lowered = " ".join(sql.lower().split())
-        assert lowered.startswith("select"), f"a query does not start with SELECT: {sql[:70]!r}"
+        # SELECT, or one of a SHORT allow-list of statements that are reads
+        # without being selects. `pragma table_info(` is the only member: the
+        # reader must ask whether a column exists before querying it, because
+        # the supersede columns arrive with a converge and a host that has not
+        # had one would otherwise raise (2026-08-23). The prefix is matched
+        # WITH its opening paren on purpose — `pragma journal_mode = wal`
+        # would be a write, and `pragma` alone would let it through.
+        assert lowered.startswith("select") or lowered.startswith("pragma table_info("), (
+            f"a query does not start with SELECT: {sql[:70]!r}")
         for verb in WRITE_SQL:
             assert verb not in lowered, (
                 f"executed SQL contains {verb.strip()!r}. This tool reports; "

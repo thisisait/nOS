@@ -6,9 +6,14 @@
 # future recipes) can fan a notification into the canonical A9 path (wing-inbox
 # + ntfy + mail per routing) instead of only a transient macOS popup.
 #
-# Usage:  nos-notify.sh <severity> <title> <body> [channels-csv]
+# Usage:  nos-notify.sh <severity> <title> <body> [channels-csv] [supersede-key]
 #   severity : critical | high | medium | low | info
 #   channels : default "wing-inbox,ntfy"
+#   supersede-key : OPTIONAL class id. When given, this message retires the
+#     caller's earlier UNREAD messages of the same class (2026-08-23). Opt-in
+#     and per-caller on purpose: this script hardcodes origin_plugin, so every
+#     host script that uses it would otherwise share one class and retire each
+#     other's news. Omit it and nothing is ever superseded.
 #
 # Uses a LITERAL title+body+channels (NOT template+context): a template name only
 # resolves if a harvested plugin manifest registers it, and these host scripts are
@@ -24,6 +29,7 @@ sev="${1:-info}"
 title="${2:-nOS}"
 body="${3:-}"
 channels="${4:-wing-inbox,ntfy}"
+supersede="${5:-}"
 
 for t in jq openssl curl; do
   command -v "$t" >/dev/null 2>&1 || exit 0
@@ -41,9 +47,11 @@ url="${BONE_URL:-http://127.0.0.1:${BONE_PORT:-8099}}/api/v1/notifications"
 
 chan_json="$(printf '%s' "$channels" | jq -R 'split(",")')"
 payload="$(jq -nc --arg s "$sev" --arg t "$title" --arg b "$body" --argjson ch "$chan_json" \
+  --arg sk "$supersede" \
   '{severity:$s, title:$t, body:$b, channels:$ch,
     origin_plugin:"os-resume", actor_id:"agent:os-resume",
-    metadata:{source:"os-resume"}}')"
+    metadata:{source:"os-resume"}}
+   + (if $sk == "" then {} else {supersede_key:$sk} end)')"
 # -a: Bone verifies over Python json.dumps output, which escapes non-ASCII.
 # A Czech title signs clean here and 401s there without it.
 compact="$(printf '%s' "$payload" | jq -a --sort-keys -c .)"

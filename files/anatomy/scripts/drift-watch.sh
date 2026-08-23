@@ -81,6 +81,12 @@ BODY=$(jq -n \
     '{severity: $sev, title: $title,
       body: ("Pending: " + $crit + " critical, " + $high + " high. Last full scan " + $age + "h ago. Source: docs/llm/security/remediation-queue.json."),
       origin_plugin: "security-drift", actor_id: "pulse:drift-watch",
+      # The drift verdict is a SNAPSHOT of the queue, so a newer one makes
+      # the older false by construction. Four unread rows each said "1
+      # critical, 11 high pending"; all four were true when sent and none
+      # was true by the afternoon (docs/hidden_fees/26). Superseding is not
+      # marking them read — nobody read them.
+      supersede_key: "security-drift-verdict",
       actor_action_id: ("drift-" + (now | floor | tostring)),
       metadata: {pending_critical: $crit, pending_high: $high, scan_age_hours: $age}}')
 

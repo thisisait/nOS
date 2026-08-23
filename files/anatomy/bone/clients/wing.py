@@ -23,6 +23,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import logging
 import os
 import sqlite3
 from pathlib import Path
@@ -33,6 +34,8 @@ from typing import Any
 # same events table; the PHP verifier must recompute Bone-written rows). Byte
 # parity of _canonical() vs PHP AuditChain::canonical() is the load-bearing
 # invariant, pinned by tests/anatomy/test_audit_chain.py.
+_log = logging.getLogger(__name__)
+
 _CHAIN_LABEL = b"wing-events-chain-v1"
 _GENESIS = "nos-audit-chain-genesis-v1"
 _CANON_FIELDS = [
@@ -516,16 +519,44 @@ def insert_notification(payload: dict[str, Any]) -> tuple[int, str]:
         raise ValueError("metadata must be an object")
 
     uuid_ = payload.get("uuid") or _new_uuid4()
+    target = payload.get("target_actor_id") or "operator"
+
+    # A successor retires its predecessors (2026-08-23). Opt-in and
+    # emitter-declared: with no supersede_key nothing is touched, because only
+    # the sender knows whether its new message REPLACES the old one or joins
+    # it — two gitleaks findings are two different secrets, two prometheus
+    # alerts two different alarms, but two `os-resume` rows are one fact
+    # stated twice.
+    #
+    # SAME TRANSACTION as the insert, deliberately. Retiring first and
+    # crashing would empty the inbox of a live class; inserting first and
+    # crashing would leave the duplicate this exists to remove. Both halves
+    # or neither.
+    supersede_key = payload.get("supersede_key")
+    superseded = 0
 
     with _open() as conn:
+        if supersede_key:
+            cur0 = conn.execute(
+                """
+                UPDATE notifications
+                   SET superseded_at = datetime('now'), superseded_by = ?
+                 WHERE supersede_key = ?
+                   AND target_actor_id = ?
+                   AND superseded_at IS NULL
+                   AND wing_inbox_read_at IS NULL
+                """,
+                (uuid_, supersede_key, target),
+            )
+            superseded = int(cur0.rowcount or 0)
         cur = conn.execute(
             """
             INSERT INTO notifications
               (uuid, severity, title, body,
                actor_id, actor_action_id, target_actor_id,
                origin_plugin, origin_agent, source_event_id,
-               channels_json, metadata_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               channels_json, metadata_json, supersede_key)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 uuid_,
@@ -534,15 +565,19 @@ def insert_notification(payload: dict[str, Any]) -> tuple[int, str]:
                 payload.get("body"),
                 payload.get("actor_id"),
                 payload.get("actor_action_id"),
-                payload.get("target_actor_id") or "operator",
+                target,
                 payload.get("origin_plugin"),
                 payload.get("origin_agent"),
                 int(payload["source_event_id"]) if payload.get("source_event_id") is not None else None,
                 json.dumps(channels),
                 json.dumps(metadata),
+                supersede_key,
             ),
         )
         conn.commit()
+        if superseded:
+            _log.info("notification %s superseded %d predecessor(s) of class %r",
+                      uuid_, superseded, supersede_key)
         return int(cur.lastrowid or 0), uuid_
 
 
@@ -551,6 +586,7 @@ def query_notifications(
     target_actor_id: str = "operator",
     severity: str | None = None,
     unread_only: bool = False,
+    include_superseded: bool = False,
     since: str | None = None,
     actor_action_id: str | None = None,
     limit: int = 100,
@@ -567,7 +603,13 @@ def query_notifications(
         clauses.append("severity = ?")
         params.append(severity)
     if unread_only:
+        # Unread means unread WORK. A superseded row's successor already said
+        # the newer version of the same thing, so counting it would be the
+        # inbox reporting one fact as N — which is what 60 of 76 unread rows
+        # were on 2026-08-23. include_superseded=True is the audit view.
         clauses.append("wing_inbox_read_at IS NULL")
+        if not include_superseded:
+            clauses.append("superseded_at IS NULL")
     if since is not None:
         clauses.append("created_at >= ?")
         params.append(since)
@@ -584,6 +626,7 @@ def query_notifications(
             "actor_id, actor_action_id, target_actor_id, "
             "origin_plugin, origin_agent, source_event_id, "
             "channels_json, wing_inbox_read_at, "
+            "supersede_key, superseded_at, superseded_by, "
             "ntfy_dispatched_at, ntfy_error, "
             "mail_dispatched_at, mail_error, "
             "metadata_json, created_at "

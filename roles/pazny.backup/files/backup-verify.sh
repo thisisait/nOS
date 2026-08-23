@@ -252,6 +252,10 @@ payload = {
     "body": body,
     "actor_id": "backup-verify",
     "origin_plugin": "backup",
+    # Same for the restore drill: 6 unread rows saying what the next drill then re-said.
+    # This does NOT mark anything read — nobody read them; it is a
+    # third state, and the row stays reachable via include_superseded.
+    "supersede_key": "backup-restore-drill",
     "metadata": {"failed": bad, "backup_date": s.get("backup_date")},
 }
 raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")

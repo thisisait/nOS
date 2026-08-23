@@ -137,6 +137,14 @@ final class NotificationRepository
 		}
 		if (!empty($filters['unread_only'])) {
 			$query->where('wing_inbox_read_at', null);
+			// A superseded row is not unread WORK — its successor already
+			// said the newer version of the same thing (2026-08-23). It is
+			// deliberately NOT marked read: nobody read it, and stamping
+			// wing_inbox_read_at would be the estate lying to itself about a
+			// human. `include_superseded` is how the audit view sees them.
+			if (empty($filters['include_superseded'])) {
+				$query->where('superseded_at', null);
+			}
 		}
 		if (!empty($filters['since'])) {
 			$query->where('created_at >= ?', $filters['since']);
@@ -169,6 +177,22 @@ final class NotificationRepository
 		return (int) $this->db->table('notifications')
 			->where('target_actor_id', $targetActorId)
 			->where('wing_inbox_read_at', null)
+			->where('superseded_at', null)
+			->count('*');
+	}
+
+	/**
+	 * Unread rows a successor has already replaced — the badge does not count
+	 * them and the default inbox does not list them, so this is the only place
+	 * they remain visible. Kept because a supersession that hides a row with
+	 * no way to see it is indistinguishable from deleting it.
+	 */
+	public function countSuperseded(string $targetActorId = 'operator'): int
+	{
+		return (int) $this->db->table('notifications')
+			->where('target_actor_id', $targetActorId)
+			->where('wing_inbox_read_at', null)
+			->where('superseded_at IS NOT NULL')
 			->count('*');
 	}
 

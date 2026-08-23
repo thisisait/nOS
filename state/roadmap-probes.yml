@@ -394,10 +394,26 @@ sec-backrest-auth: >-
   echo "$v"; test "$v" = "0"
 
 # The deliverable is a state a notification can be moved INTO by its successor,
-# distinct from `read` — nobody read them. Probing for the column is the
-# cheapest honest test; the reader-side half already exists and is not this row.
+# distinct from `read` — nobody read them.
+#
+# STRENGTHENED 2026-08-23, the day the column landed. Grepping the schema alone
+# would go green on a DEAD feature: a column no emitter writes and no reader
+# consults renders, resolves, and changes nothing (docs/hidden_fees/28). All
+# four legs are required — declared for fresh installs, ALTER'd into the
+# existing 979 MB DB, written by at least one emitter, and excluded by the
+# reader that reports the red.
 notify-supersede: >-
-  grep -q "superseded_at" files/anatomy/wing/db/schema-extensions.sql
+  v=$(python3 -c "import pathlib;
+  r = pathlib.Path('.');
+  legs = {
+    'schema': 'superseded_at' in (r/'files/anatomy/wing/db/schema-extensions.sql').read_text(),
+    'sweep': 'superseded_at' in (r/'files/anatomy/wing/bin/init-db.php').read_text(),
+    'emitter': 'supersede_key' in (r/'files/anatomy/scripts/drift-watch.sh').read_text(),
+    'reader': 'superseded_at IS NULL' in (r/'tools/red-status.py').read_text(),
+  };
+  missing = sorted(k for k, ok in legs.items() if not ok);
+  print('missing:' + ','.join(missing) if missing else 'wired')");
+  echo "$v"; test "$v" = "wired"
 
 # The EFFECT, not the env var: hedgedoc's env already carries an sslmode that
 # Sequelize drops. Only pg_stat_ssl can say whether the backend encrypts.
