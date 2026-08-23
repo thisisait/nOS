@@ -186,27 +186,79 @@ OCC_WRITES = ("config:system:set", "config:system:delete", "config:app:set",
 
 
 def _exec_argv_strings() -> list[str]:
-    """Every string the tool actually PASSES to `_exec`, and nothing else.
+    """Every string that can REACH `_exec`, and nothing else.
 
     The first cut of this check grepped the whole source and failed on the
     tool's own comment explaining that Nextcloud needs `occ config:system:set`
     — a detector reading the description as the fact, which is this repo's most
     repeated gate defect (memory `detectors-must-read-artifacts-not-prose`).
-    Argv lists are AST list literals; prose is not.
+
+    The second cut harvested only `ast.Constant`s written INLINE in `_exec`
+    calls — and the self-test program bodies travel as `spec["php"]` /
+    `spec["argv"]` subscripts, so they were INVISIBLE: a mutation putting
+    `occ config:system:set` into the Nextcloud self-test passed this gate
+    (proven 2026-08-23 before this fix). So the harvest now follows the data:
+    it starts from the `_exec` call sites and transitively collects
+
+      * inline string constants (as before),
+      * the values under any dict KEY a call site subscripts (`spec["php"]`
+        pulls every "php" payload in the module, wherever the dict lives),
+      * assignments to any NAME a payload references (`_LARAVEL_PROBE`,
+        the local `argv`, …), to a fixpoint.
+
+    Prose keys like `read_from` — which legitimately DESCRIBE the write verb —
+    are never subscripted at a call site, so they are never harvested.
     """
-    out: list[str] = []
-    for node in ast.walk(ast.parse(source())):
-        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    tree = ast.parse(source())
+
+    assigns: dict[str, list[ast.expr]] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for tgt in node.targets:
+                if isinstance(tgt, ast.Name):
+                    assigns.setdefault(tgt.id, []).append(node.value)
+        elif (isinstance(node, ast.AnnAssign)
+              and isinstance(node.target, ast.Name) and node.value is not None):
+            assigns.setdefault(node.target.id, []).append(node.value)
+
+    strings: list[str] = []
+    names: set[str] = set()
+    keys: set[str] = set()
+
+    def collect(expr: ast.expr) -> None:
+        for sub in ast.walk(expr):
+            if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
+                strings.append(sub.value)
+            elif isinstance(sub, ast.Name):
+                names.add(sub.id)
+            elif (isinstance(sub, ast.Subscript)
+                  and isinstance(sub.slice, ast.Constant)
+                  and isinstance(sub.slice.value, str)):
+                keys.add(sub.slice.value)
+
+    for node in ast.walk(tree):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
                 and node.func.id == "_exec"):
-            continue
-        for arg in node.args:
-            for sub in ast.walk(arg):
-                if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
-                    out.append(sub.value)
-                elif isinstance(sub, ast.JoinedStr):
-                    out.extend(v.value for v in sub.values
-                               if isinstance(v, ast.Constant) and isinstance(v.value, str))
-    return out
+            for arg in node.args:
+                collect(arg)
+
+    done_names: set[str] = set()
+    done_keys: set[str] = set()
+    while (names - done_names) or (keys - done_keys):
+        for name in sorted(names - done_names):
+            done_names.add(name)
+            for expr in assigns.get(name, []):
+                collect(expr)
+        for key in sorted(keys - done_keys):
+            done_keys.add(key)
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Dict):
+                    continue
+                for k, v in zip(node.keys, node.values):
+                    if (isinstance(k, ast.Constant) and k.value == key
+                            and v is not None):
+                        collect(v)
+    return strings
 
 
 def test_the_nextcloud_read_can_never_become_a_write():
