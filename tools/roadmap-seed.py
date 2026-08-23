@@ -140,7 +140,10 @@ row("sec-backrest-auth","Backrest runs with auth disabled, reachable by 23 conta
     body="Measured: POST /v1.Backrest/GetConfig from inside devops-gitea-1 -> 200, auth:disabled. The template justified it as 'loopback only', which REM-194/214 disproved. Not a template edit: config.json is seed-once and daemon-owned, so the live file needs reconciling and a bcrypt credential minting. Config surface includes hook commands.")
 row("sec-transport-mariadb","MariaDB: cert on disk, clients, then the switch","2026-08-23","queued","security",parent="sec-transport",
     refs="docs/idea/21-mariadb-tls-ladder.md",
-    body="Root password crosses three networks. Laravel reads only MYSQL_ATTR_SSL_CA and array_filter drops an empty one, so a real cert file is the prerequisite. pazny.postgresql already has the openssl pattern to copy.")
+    body="Root password crosses three networks. Rungs 1+2 (cert on disk, server reads it) shipped 2026-08-23; rung 3 (the five clients) written the same day. THIS row is rung 4 — require_secure_transport — and it is a cliff: measured 1 of 9 NEW connections encrypted before rung 3, so flipping it early refuses the estate. It comes after tools/tls-uptake.py --window reads near-100%%, and a gate fails today if it appears.")
+row("sec-transport-mariadb-clients","The five MariaDB clients, and the five different knobs","2026-08-23","next","security",parent="sec-transport",
+    refs="tests/anatomy/test_mariadb_client_tls.py · docs/idea/21-mariadb-tls-ladder.md",
+    body="The ladder scoped this as MYSQL_ATTR_SSL_CA per Laravel client. Read in the running images, that is true of ONE of the three: bookstack MYSQL_ATTR_SSL_CA, freescout DB_MYSQL_ATTR_SSL_CA, firefly MYSQL_SSL_CA plus a second gate MYSQL_USE_SSL that this estate had set to false. WordPress can encrypt (MYSQLI_CLIENT_SSL, measured TLS_AES_256_GCM_SHA384) but cannot verify — wpdb never calls mysqli_ssl_set — so no CA is mounted for it. Nextcloud has no env at all: occ dbdriveroptions 1009. pdo_mysql fails CLOSED on a bad CA, so a half-landed rung is a visible outage, not a silent downgrade. UNVERIFIED until a converge; the probe reads the window, not the config.")
 
 # ── FILESYSTEM ─────────────────────────────────────────────────────────────
 row("fs","One filesystem","2026-08-01","active","filesystem",

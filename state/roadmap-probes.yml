@@ -154,7 +154,7 @@ local-llm-lfm25:
 # learns to distrust the catalogue.
 cortex-exec: >-
   test -d files/anatomy/wing/app/Cortex
-  && test "$(cd files/anatomy/wing/app/Cortex/Handler && grep -l 'extends LateBoundHandler' *.php)" = EmbedHandler.php
+  && v=$(cd files/anatomy/wing/app/Cortex/Handler && grep -l 'extends LateBoundHandler' *.php); echo "$v"; test "$v" = EmbedHandler.php
 
 cortex-rows: >-
   grep -rql "syncRows" files/anatomy/cortex/
@@ -180,7 +180,7 @@ local-llm-corpus: >-
 local-llm-executor: >-
   test -f files/anatomy/wing/app/Cortex/CortexBindingGate.php
   && grep -rql "CortexBindingGate" tests/
-  && test "$(cd files/anatomy/wing/app/Cortex/Handler && grep -l 'extends LateBoundHandler' *.php)" = EmbedHandler.php
+  && v=$(cd files/anatomy/wing/app/Cortex/Handler && grep -l 'extends LateBoundHandler' *.php); echo "$v"; test "$v" = EmbedHandler.php
 
 # ── face ────────────────────────────────────────────────────────────────────
 face-anatomy: >-
@@ -214,7 +214,7 @@ plat-ollama: >-
   && ! brew tap | grep -q "pazny/local"
 
 plat-signing: >-
-  test "$(git config commit.gpgsign)" = "true"
+  v=$(git config commit.gpgsign); echo "$v"; test "$v" = "true"
 
 plat-linux:
   unverifiable: >-
@@ -259,9 +259,9 @@ sec-p5: >-
 # even with every HIGH closed — it had reported `contradicted` since it was
 # filed and would have gone on reporting it after the work was done.
 sec-rem: >-
-  test "$(tools/rem-status.py --json | python3 -c "import json,sys;
+  v=$(tools/rem-status.py --json | python3 -c "import json,sys;
   s = json.load(sys.stdin)['pending_by_severity'];
-  print(s.get('CRITICAL', 0) + s.get('HIGH', 0))")" -eq 0
+  print(s.get('CRITICAL', 0) + s.get('HIGH', 0))"); echo "$v"; test "$v" -eq 0
 
 sec-queue-authorship: >-
   grep -ql "resolved_by" tools/scan-runner.sh
@@ -309,27 +309,68 @@ fs-peruser: >-
 # present in every template for nine weeks and rendered `prefer` on every host
 # (docs/hidden_fees/23), and a shape probe would have called that shipped.
 sec-transport: >-
-  test "$(tools/tls-uptake.py --json | python3 -c "import json,sys;
+  v=$(tools/tls-uptake.py --json | python3 -c "import json,sys;
   d = json.load(sys.stdin)['datastores'];
-  print(sum(1 for x in d if x['verdict'] != 'GREEN'))")" -eq 0
+  print(sum(1 for x in d if x['verdict'] != 'GREEN'))"); echo "$v"; test "$v" -eq 0
 
-# `on_fabric or 1` so an idle estate cannot report 0-of-0 as done. That is
-# hidden fee 08 — the STRICT health probe passing an empty stack as 0/0 ready.
+# CORRECTED 2026-08-23, and the correction matters more than the probe.
+#
+# The first version asked "are any sampled backends plaintext", with `on_fabric
+# or 1` so an idle estate could not report 0-of-0 as done (hidden fee 08). It
+# still FLAPPED — measured across four consecutive samples, hedgedoc's plaintext
+# backend was present in three and absent in one, and the sample that missed it
+# read 38-of-38 = done. The row went `confirmed` on an accident.
+#
+# tools/tls-uptake.py prints this caveat in its own output — "a client whose
+# pool is idle does not appear at all, so absence here is not evidence that it
+# connects encrypted" — and the probe ignored it, the second time in one day
+# (see sec-transport-hedgedoc's own note below).
+#
+# The question is now PRESENT-AND-ENCRYPTED for a NAMED set, not
+# nothing-plaintext for whatever happened to be connected. `outline` and
+# `infisical` are deliberately NOT required: over the same four samples they
+# came and went, so requiring them would flap the other way, and a probe that
+# reads "not done" at random is no more honest than one that reads done.
 sec-transport-pg: >-
-  test "$(tools/tls-uptake.py --json | python3 -c "import json,sys;
+  v=$(tools/tls-uptake.py --json | python3 -c "import json,sys;
+  expected = {'authentik','hedgedoc','metabase','miniflux','paperclip'};
   d = next(x for x in json.load(sys.stdin)['datastores'] if x['datastore'] == 'postgresql');
-  n = d.get('sessions_on_fabric', 0);
-  print(1 if not n else n - d.get('sessions_encrypted', -1))")" -eq 0
+  seen = {c['user'] for c in d.get('clients', [])};
+  plain = sorted({c['user'] for c in d.get('clients', []) if not c['ssl']});
+  missing = sorted(expected - seen);
+  print('unsampled:' + ','.join(missing) if missing else
+        'plaintext:' + ','.join(plain) if plain else 'encrypted')");
+  echo "$v"; test "$v" = "encrypted"
 
 sec-transport-redis: >-
-  test "$(tools/tls-uptake.py --json | python3 -c "import json,sys;
+  v=$(tools/tls-uptake.py --json | python3 -c "import json,sys;
   d = next(x for x in json.load(sys.stdin)['datastores'] if x['datastore'] == 'redis');
-  print(int(bool(d.get('secret_on_argv')) or not d.get('tls_listener')))")" -eq 0
+  print(int(bool(d.get('secret_on_argv')) or not d.get('tls_listener')))"); echo "$v"; test "$v" -eq 0
 
 sec-transport-mariadb: >-
-  test "$(tools/tls-uptake.py --json | python3 -c "import json,sys;
+  v=$(tools/tls-uptake.py --json | python3 -c "import json,sys;
   d = next(x for x in json.load(sys.stdin)['datastores'] if x['datastore'] == 'mariadb');
-  print(int(not d.get('require_secure_transport')))")" -eq 0
+  print(int(not d.get('require_secure_transport')))"); echo "$v"; test "$v" -eq 0
+
+# Rung 3, and it deliberately does NOT read the five env vars. Configuration
+# being coherent is a pytest job (test_mariadb_client_tls.py); this asks what
+# the connections opened in the last 20 seconds actually did.
+#
+# Two conditions, and the second is the one that matters. All five clients
+# DECLARED is necessary but provably insufficient — hedgedoc declared an
+# sslmode for eight hours while an ORM allow-list dropped it (fee 28). An
+# EMPTY window reports no ratio at all and fails: nought-of-nought is not a
+# pass here any more than it was in `0/0 ready` (fee 08).
+sec-transport-mariadb-clients: >-
+  v=$(tools/tls-uptake.py --json --window 20 | python3 -c "import json,sys;
+  r = json.load(sys.stdin);
+  d = next(x for x in r['datastores'] if x['datastore'] == 'mariadb');
+  c = r.get('mariadb_clients', []);
+  ratio = d.get('window_ratio');
+  print('declared-but-unmeasured' if ratio is None else
+        'plaintext-clients-remain' if any(x['state'] != 'DECLARED' for x in c) or len(c) != 5 else
+        'encrypted' if ratio >= 0.9 else 'partial-%.2f' % ratio)");
+  echo "$v"; test "$v" = "encrypted"
 
 # Reads the LIVE config the daemon owns, not the seed template — the template
 # is `force: false`, so an edit there proves nothing about the running daemon.
@@ -339,11 +380,18 @@ sec-transport-mariadb: >-
 # read `contradicted` forever, including after the fix landed — absence and
 # failure collapsing into one exit code is the shape fee 22 is about. It now
 # PRINTS which of the two happened, and roadmap-verify keeps stdout as evidence.
+#
+# CORRECTED 2026-08-23: it did not. Wrapped as `test "$(python3 …)"` the verdict
+# went into the command substitution and never reached stdout, so the evidence
+# roadmap-verify stored was empty — the probe was right and mute. `v=$(…);
+# echo "$v"; test …` keeps both. A one-line shape defeating a paragraph of
+# intent, found by writing the next probe the same way.
 sec-backrest-auth: >-
-  test "$(python3 -c "import json,pathlib;
+  v=$(python3 -c "import json,pathlib;
   p = pathlib.Path.home() / 'backrest/config/config.json';
   print('no-config-at ' + str(p)) if not p.exists() else
-  print(int(json.loads(p.read_text()).get('auth', {}).get('disabled', True)))")" = "0"
+  print(int(json.loads(p.read_text()).get('auth', {}).get('disabled', True)))");
+  echo "$v"; test "$v" = "0"
 
 # The deliverable is a state a notification can be moved INTO by its successor,
 # distinct from `read` — nobody read them. Probing for the column is the
@@ -361,9 +409,9 @@ notify-supersede: >-
 # for most often (docs/hidden_fees/08), and tools/tls-uptake.py prints that
 # caveat in its own output; the probe ignored it.
 sec-transport-hedgedoc: >-
-  test "$(tools/tls-uptake.py --json | python3 -c "import json,sys;
+  v=$(tools/tls-uptake.py --json | python3 -c "import json,sys;
   d = next(x for x in json.load(sys.stdin)['datastores'] if x['datastore'] == 'postgresql');
   rows = [c for c in d.get('clients', []) if c['user'] == 'hedgedoc'];
   print('present-and-encrypted' if rows and all(c['ssl'] for c in rows)
-        else 'no-hedgedoc-backend-in-this-sample' if not rows else 'plaintext')")" \
-  = "present-and-encrypted"
+        else 'no-hedgedoc-backend-in-this-sample' if not rows else 'plaintext')");
+  echo "$v"; test "$v" = "present-and-encrypted"

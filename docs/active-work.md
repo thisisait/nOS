@@ -6,12 +6,11 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-08-23 • hedgedoc written; the last pg holdout awaits a converge.
+> Last updated: 2026-08-23 • hedgedoc + mariadb rung 3 written; both await a converge.
 
 ## Now (current track)
 
-**Transport converge LANDED 2026-08-23**, 60 containers healthy. Each claim is a
-reading and names its reader.
+**Transport converge LANDED 2026-08-23**, 60 healthy. Each claim names its reader.
 
 | what | before | after | read with |
 | --- | ---: | ---: | --- |
@@ -19,31 +18,32 @@ reading and names its reader.
 | FreeScout app version | 1.8.230 | **1.8.235** | `tools/app-version.py` |
 | MariaDB cert on disk | none (ephemeral) | `CN=mariadb`, SAN `mariadb` | `show variables like 'ssl_cert'` |
 
-`sec-transport-pg` flipped `contradicted → confirmed` on its own (the probe
-reads the effect); REM-218 + REM-193 closed on the reader's output.
+`sec-transport-pg` flipped to `confirmed` on its own — **a false positive,
+corrected the same day**: the sample missed hedgedoc's idle pool and read
+38-of-38. It now needs a NAMED client set present-and-encrypted and says
+`unsampled:hedgedoc`. REM-218 + REM-193 stand, closed on reader output. Outline's
+restart loop is fixed — it validates the **libpq** enum itself, so the contract
+belongs to whoever PARSES the value (`docs/doctrine/foreign-properties.md` §5.1).
 
-**One casualty, fixed.** Outline restart-looped on `PGSSLMODE=no-verify`: it
-validates the **libpq** enum itself, so the contract belongs to whoever PARSES
-the value — `docs/doctrine/foreign-properties.md` §5.1.
+**Two rungs written today, both UNVERIFIED until a converge.** *hedgedoc* — its
+`?sslmode=` was not misread: Sequelize copies `dialectOptions` into pg through an
+allow-list holding `ssl` and not `sslmode` (§5.2), and `ssl` must be an *object*
+no query string can carry, so the control is a mounted `config.json`.
+*MariaDB rung 3* — the ladder's "one Laravel knob" was true of one of three:
+bookstack `MYSQL_ATTR_SSL_CA`, freescout `DB_MYSQL_ATTR_SSL_CA`, firefly
+`MYSQL_SSL_CA` **plus** `MYSQL_USE_SSL`. WordPress encrypts without a CA (it
+cannot name one); Nextcloud has no env at all. pdo_mysql fails CLOSED, so a
+half-landed rung is a visible outage, not a silent downgrade.
 
-**`sec-transport-hedgedoc` written, UNVERIFIED until a converge.** The last
-plaintext backend of 40. Its `?sslmode=` was not misread: Sequelize copies
-`dialectOptions` into pg through an allow-list holding `ssl` and not `sslmode`
-(§5.2). `ssl` must be an *object*, which no query string can express — so the
-control is a mounted `config.json`, the URL is clean, and a gate keeps it so.
+**Next:** (1) **a converge** — it is what makes both rungs true or false;
+`tools/tls-uptake.py --window 20` is the reader and said **1 of 9** new MariaDB
+connections encrypted beforehand. (2) `sec-transport-redis` — AUTH secret on the
+argv. (3) `sec-backrest-auth` — reachable from 23 containers. (4) MariaDB rung 4
+(`require_secure_transport`) — a cliff, gated absent.
 
-**Next, in order:**
-
-1. **`sec-transport-mariadb`** rung 3 — five clients, five contracts. Laravel
-   reads only `MYSQL_ATTR_SSL_CA`; the cert it needs now exists. Rung 4
-   (`require_secure_transport`) is a cliff and comes last.
-2. **`sec-transport-redis`** — AUTH secret on the argv; no TLS port.
-3. **`sec-backrest-auth`** — reachable from 23 containers with `auth:disabled`.
-
-**Reds (4), none new.** `loop:drive` predates the forge sync (REM-214 re-judges
-tonight); the 115 h orphan clears on the next agent run; inbox → `notify-supersede`.
-
-**38 commits ahead of GitHub** — promotion is the operator's act (`tools/forge-sync.py --apply --push-github`).
+**Reds (4), none new.** `loop:drive` predates the forge sync (REM-214 re-judges tonight);
+the 115 h orphan clears on the next agent run; inbox → `notify-supersede`.
+**41 commits ahead of GitHub** — promotion is the operator's act (`tools/forge-sync.py --apply --push-github`).
 
 ## Open follow-ups
 
@@ -89,8 +89,8 @@ loader change that lets it fail — is in
 ## Operator to-dos
 
 - **Hidden fees backlog** — [`docs/hidden_fees/`](hidden_fees/). `ls` is the count;
-  it has been carried forward stale twice ("7", then "16"). 05 + 06
-  closed. **Open:** 01 disabled-service overrides · 02 DB-blind healthchecks (closed
+  carried forward stale twice ("7", then "16"). 05 + 06 closed.
+  **Open:** 01 disabled-service overrides · 02 DB-blind healthchecks (closed
   for miniflux only, not the class) · 03 leading-digit slugs · 04 `docs/systems` drift ·
   **07 messages that outlive their mode** (4 instances paid, class unpaid; carries an
   UNDETERMINED mechanism, recorded deliberately without a guessed remedy). 07 now owns
