@@ -17,6 +17,57 @@
     state: directory
     mode: '0755'
 
+# ── TLS material (REM-217 rungs 1+2) ────────────────────────────────────────
+# Straight copy of the pazny.postgresql pattern, heal step included. That step
+# is not defensive boilerplate: it was root-caused live on 2026-07-19. If
+# `docker compose up` mounts server.crt/.key BEFORE this task writes them,
+# Docker auto-creates the host paths as DIRECTORIES, and an interrupted openssl
+# leaves them empty — either way the `creates:` guard then sees "it exists" and
+# skips regeneration forever, and the server refuses to start on a cert file
+# with no start line. A clean blank never hits it; a converge-after-crash does.
+- name: "[pazny.mariadb] Ensure certs directory exists"
+  ansible.builtin.file:
+    path: "{{ mariadb_certs_dir | default(ansible_facts['env']['HOME'] + '/mariadb/certs') }}"
+    state: directory
+    mode: '0700'
+  when: mariadb_ssl_enabled | default(false) | bool
+
+- name: "[pazny.mariadb] Heal invalid cert paths (dir-mount / empty from a crashed run)"
+  ansible.builtin.shell: |
+    set -e
+    dir="{{ mariadb_certs_dir | default(ansible_facts['env']['HOME'] + '/mariadb/certs') }}"
+    purged=0
+    for f in server.crt server.key; do
+      p="$dir/$f"
+      if [ -d "$p" ] || { [ -e "$p" ] && [ ! -s "$p" ]; }; then rm -rf "$p"; purged=1; fi
+    done
+    if [ "$purged" = 1 ]; then
+      {{ docker_bin | default('docker') }} rm -f {{ mariadb_container_name | default('infra-mariadb-1') }} >/dev/null 2>&1 || true
+      echo "purged-invalid-certs"
+    fi
+  args:
+    executable: /bin/bash
+  register: _mariadb_cert_heal
+  changed_when: "'purged-invalid-certs' in _mariadb_cert_heal.stdout"
+  when: mariadb_ssl_enabled | default(false) | bool
+
+# `mariadb` is the SAN that matters — it is the name every client on the docker
+# fabric connects to, so a client using this file as its CA verifies the host
+# name as well as the chain. The container name and loopback are carried too,
+# for a caller that reaches it another way.
+- name: "[pazny.mariadb] Generate self-signed server cert (REM-217)"
+  ansible.builtin.shell: >
+    openssl req -new -x509 -days 3650 -nodes
+    -out server.crt -keyout server.key
+    -subj "/CN=mariadb"
+    -addext "subjectAltName=DNS:mariadb,DNS:{{ mariadb_container_name | default('infra-mariadb-1') }},IP:127.0.0.1"
+    && chmod 600 server.key && chmod 644 server.crt
+  args:
+    chdir: "{{ mariadb_certs_dir | default(ansible_facts['env']['HOME'] + '/mariadb/certs') }}"
+    creates: "{{ mariadb_certs_dir | default(ansible_facts['env']['HOME'] + '/mariadb/certs') }}/server.key"
+  when: mariadb_ssl_enabled | default(false) | bool
+  notify: Restart mariadb
+
 - name: "[pazny.mariadb] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

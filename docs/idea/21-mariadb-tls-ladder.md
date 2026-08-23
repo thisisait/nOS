@@ -78,15 +78,50 @@ such SAN.
 4. **`require_secure_transport = ON`** — and only here. Today it would refuse
    99.99% of connections; it is the last rung, not the first.
 
-## Why this is not an afternoon
+## Correction, 2026-08-23: step 1 is not a new CA, and it is already built
 
-Step 1 is a new piece of estate infrastructure — a CA whose key has to live
-somewhere, be backed up, and be rotated. Steps 3 is five services with five
-different configuration contracts, each a compose change plus a converge, each
-capable of leaving a service unable to reach its database. Step 4 is a cliff.
+The ladder above called step 1 "a new piece of estate infrastructure — a CA
+whose key has to live somewhere, be backed up, and be rotated." That over-
+scoped it by reasoning from PKI first principles instead of reading the
+sibling role.
 
-What makes it worth doing anyway is the number at the top: the root password
-crosses three networks 612,542 times, and 81 of those were encrypted.
+**`roles/pazny.postgresql/tasks/main.yml` has done exactly this since June
+2026** — `openssl req -new -x509 -days 3650 -nodes -subj "/CN=postgresql"
+-addext "subjectAltName=DNS:postgresql,IP:127.0.0.1"`, `creates:`-guarded, plus
+a heal step for the dir-mount failure root-caused live on 2026-07-19. No
+collection, no key custody problem, no rotation ceremony: rotation is deleting
+the pair and re-running.
+
+And a **self-signed certificate is its own CA**. A client handed `server.crt`
+as `MYSQL_ATTR_SSL_CA` gets a chain that validates AND a host name that
+matches, provided `mariadb` is in the SAN. There was never a second object to
+build.
+
+Rungs 1 and 2 are **shipped** as of `mariadb_ssl_enabled` in
+`default.config.yml` — the cert exists on disk and the server reads it, with
+`require_secure_transport` deliberately absent and gated absent
+(`tests/anatomy/test_mariadb_tls_material.py`). What remains is rung 3, the
+five clients, and that part of the estimate stands.
+
+The lesson is cheaper than the correction: **look for the pattern in the estate
+before designing one.** The scoping pass read the Laravel source and the live
+server and did not read the role next door.
+
+## Why rung 3 is still not an afternoon
+
+Rung 3 is five services with five different configuration contracts, each a
+compose change plus a converge, each capable of leaving a service unable to
+reach its database. Rung 4 is a cliff.
+
+And rung 3 carries a trap the PostgreSQL work has already sprung once: **the
+same sslmode word means different things in different client libraries**
+(`docs/doctrine/foreign-properties.md` §5). Expect the MySQL side to have its
+own version — PDO, WordPress's `MYSQL_CLIENT_FLAGS`, and Nextcloud's
+`dbdriveroptions` are three separate contracts, not one spelled three ways.
+
+What makes it worth doing anyway is the number at the top, which has only
+grown while this was scoped: 108 encrypted handshakes out of 635,888
+connections on 2026-08-23, against 81 of 612,542 the day before.
 
 ## What was NOT done
 

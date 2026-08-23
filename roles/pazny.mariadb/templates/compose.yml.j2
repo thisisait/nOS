@@ -18,6 +18,24 @@ services:
     command:
       - "--innodb-flush-method=fsync"     # see commit history for why
       - "--skip-innodb-doublewrite"        # halves write I/O; Docker volume layer provides own ordering
+{% if mariadb_ssl_enabled | default(false) %}
+      # REM-217 rungs 1+2. Replaces MariaDB 11's EPHEMERAL in-memory material
+      # with a certificate that EXISTS ON DISK, which is the prerequisite every
+      # later rung waits on: `MYSQL_ATTR_SSL_CA` is the only knob Laravel
+      # exposes and `array_filter` drops it when empty.
+      #
+      # NO require_secure_transport here, on purpose. Every existing plaintext
+      # client keeps connecting exactly as it does today; this rung is
+      # deliberately invisible to them. Flipping the requirement before the
+      # clients move would refuse 99.98% of connections — measured, not
+      # estimated: 108 TLS handshakes out of 635,888.
+      #
+      # ssl_ca is NOT set. It would make the server verify a client certificate
+      # WHEN one is presented, which nothing here does — one more moving part
+      # for no gain on this rung.
+      - "--ssl-cert=/certs/server.crt"
+      - "--ssl-key=/certs/server.key"
+{% endif %}
     ports:
       - "127.0.0.1:{{ mariadb_port | default(3306) }}:3306"
     # IMPORTANT: data lives in a Docker NAMED VOLUME, not a bind mount.
@@ -35,6 +53,12 @@ services:
     # styles, so the blank-reset path keeps working.
     volumes:
       - mariadb_data:/var/lib/mysql
+{% if mariadb_ssl_enabled | default(false) %}
+      # Read-only, and FILES not a directory — see the heal step in tasks/main.yml
+      # for what happens when Docker gets here first and invents them as dirs.
+      - {{ mariadb_certs_dir | default(ansible_facts['env']['HOME'] + '/mariadb/certs') }}/server.crt:/certs/server.crt:ro
+      - {{ mariadb_certs_dir | default(ansible_facts['env']['HOME'] + '/mariadb/certs') }}/server.key:/certs/server.key:ro
+{% endif %}
     environment:
       MARIADB_ROOT_PASSWORD: "{{ mariadb_root_password }}"
       MARIADB_ROOT_HOST: "%"

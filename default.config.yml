@@ -1328,6 +1328,33 @@ sublime_package_control:
 mariadb_root_password: "{{ nos_derived_secrets.mariadb }}"   # OVERRIDE in credentials.yml!
 mariadb_version: "11.8.8"               # REM-102: CVE-2026-49261 (CVSS 10.0 RCE via wsrep_notify_cmd — not reachable single-node, patched anyway) + prior CVE-2026-32710 + CVE-2026-3494 (both patched in 11.8.6); 11.4.10 crashed FK ALTER on Apple Silicon
 mariadb_port: 3306
+# ── Server-side TLS material on disk (REM-217, rungs 1 and 2) ───────────────
+# MariaDB reports have_ssl=YES with ssl_cert EMPTY, because 11.x generates
+# EPHEMERAL in-memory material when none is configured. That is how a client
+# gets TLS_AES_256_GCM_SHA384 today while there is no certificate anywhere on
+# disk — and no certificate on disk means no CA file to hand a client.
+#
+# That is the actual blocker, and it is a library fact rather than a security
+# argument: Laravel — freescout, firefly and bookstack, three of the five
+# clients — reads exactly one knob, `MYSQL_ATTR_SSL_CA`, through `array_filter`,
+# which DROPS an empty value. So the supported path needs a real file path or
+# it gets nothing.
+#
+# Self-signed with `mariadb` in the SAN, mirroring what pazny.postgresql has
+# done since 2026-06. NOT mkcert (that CA's purpose is a system trust store,
+# and this is a public-TLD estate) and NOT the LE wildcard (clients reach the
+# server as `mariadb`, a compose service name; no public certificate carries
+# it). The cert is its own CA, so a client pointed at server.crt gets both
+# encryption and a name that matches.
+#
+# This rung changes NOTHING for a plaintext client. require_secure_transport
+# stays off until every client is measured on TLS — that is rung 4, and it is a
+# cliff: today it would refuse 99.98% of connections.
+#
+# At PLAY scope from the first line, deliberately. The postgres equivalent
+# spent nine weeks as a role default that no client role could see
+# (docs/hidden_fees/23), and this variable will have exactly the same readers.
+mariadb_ssl_enabled: "{{ ansible_facts['os_family'] | default('') == 'Darwin' }}"
 
 # ==============================================================================
 # INFRA – POSTGRESQL (shared DB for Authentik, Infisical, Outline, Metabase, Superset, Paperclip)
@@ -2556,6 +2583,7 @@ onlyoffice_db_dir: "{{ nos_data_root }}/platform/services/onlyoffice/db"
 onlyoffice_lib_dir: "{{ nos_data_root }}/platform/services/onlyoffice/lib"
 onlyoffice_logs_dir: "{{ nos_data_root }}/platform/services/onlyoffice/logs"
 postgresql_certs_dir: "{{ nos_data_root }}/platform/services/postgresql/certs"
+mariadb_certs_dir: "{{ nos_data_root }}/platform/services/mariadb/certs"
 code_server_workspace_dir: "{{ nos_data_root }}/platform/services/code_server/workspace"
 
 # ==============================================================================
