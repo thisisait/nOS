@@ -260,3 +260,77 @@ def test_an_unparseable_findings_declaration_still_reports(tmp_path):
     finally:
         conn.close()
 
+
+
+# ── The inbox line reports STATE, not unread count (2026-08-23) ──────────────
+#
+# This reader exists because "a notification is an EVENT and red is a STATE".
+# Its own inbox line broke that rule: it counted UNREAD CRITICAL/HIGH, and four
+# of the loudest were `security-drift` rows that were TRUE when sent and false
+# within the day. On 2026-08-22 the estate really did have 11 pending HIGH; they
+# were closed that afternoon. So the state reader was generating a red from a
+# stale event — the exact thing it was built to stop.
+#
+# It now re-decides a notification's own claim where the emitter left a
+# measurable one. What must never happen is the reverse error: a claim it
+# cannot check being reported as CLEARED.
+
+def test_an_uncheckable_notification_is_unknown_and_never_cleared():
+    """`_still_holds` has three answers and the middle one is load-bearing."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("red_status", TOOL)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    class Row(dict):
+        def __getitem__(self, k):
+            return self.get(k)
+
+    # No metadata at all — the librarian's failure notification is like this.
+    assert mod._still_holds(Row(origin_plugin="librarian", origin_agent=None,
+                               metadata_json=None)) is None
+    # Metadata present but from a class with no re-check rule.
+    assert mod._still_holds(Row(origin_plugin="os-resume", origin_agent=None,
+                                metadata_json='{"nights": "14"}')) is None
+    # Malformed metadata must not read as cleared either.
+    assert mod._still_holds(Row(origin_plugin="security-drift", origin_agent=None,
+                                metadata_json="{not json")) is None
+
+
+def test_a_drift_claim_is_decided_against_the_queue_in_both_directions():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("red_status", TOOL)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    class Row(dict):
+        def __getitem__(self, k):
+            return self.get(k)
+
+    row = Row(origin_plugin="security-drift", origin_agent=None,
+              metadata_json='{"pending_critical": "1", "pending_high": "11"}')
+
+    # The estate has at least as many as were claimed -> the alarm still holds.
+    mod._queue_pending = lambda: {"critical": 1, "high": 2}
+    assert mod._still_holds(row) is True
+    # Fewer than claimed -> the specific alarm was answered.
+    mod._queue_pending = lambda: {"critical": 0, "high": 2}
+    assert mod._still_holds(row) is False
+    # The queue itself unreadable -> UNKNOWN, never cleared. This is the branch
+    # that would quietly drain the red list if it returned False.
+    mod._queue_pending = lambda: None
+    assert mod._still_holds(row) is None
+
+
+def test_the_inbox_line_separates_superseded_from_unverifiable():
+    """Both numbers must reach the operator. Collapsing `unknown` into
+    `still true` overstates; collapsing it into `stale` hides."""
+    src = TOOL.read_text()
+    body = src[src.index("def reds("):]
+    for phrase in ("re-checked and still true", "no re-checkable claim", "true when sent"):
+        assert phrase in body, (
+            f"the inbox red no longer distinguishes its three populations "
+            f"({phrase!r} is gone) — the first version said 9 'still hold' when "
+            "all nine were merely unverifiable")

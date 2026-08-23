@@ -344,3 +344,9 @@ sec-backrest-auth: >-
   p = pathlib.Path.home() / 'backrest/config/config.json';
   print('no-config-at ' + str(p)) if not p.exists() else
   print(int(json.loads(p.read_text()).get('auth', {}).get('disabled', True)))")" = "0"
+
+# The deliverable is a state a notification can be moved INTO by its successor,
+# distinct from `read` — nobody read them. Probing for the column is the
+# cheapest honest test; the reader-side half already exists and is not this row.
+notify-supersede: >-
+  grep -q "superseded_at" files/anatomy/wing/db/schema-extensions.sql

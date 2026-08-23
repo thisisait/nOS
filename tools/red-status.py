@@ -51,6 +51,9 @@ from datetime import datetime, timedelta, timezone
 REPO = pathlib.Path(__file__).resolve().parents[1]
 WING_DB = pathlib.Path.home() / "wing" / "app" / "data" / "wing.db"
 SCAN_STATE = REPO / "docs/llm/security/scan-state.json"
+#: Read to re-decide a `security-drift` notification's own claim — see
+#: `_still_holds`. A file, like every other source here.
+REMEDIATION_QUEUE = REPO / "docs/llm/security/remediation-queue.json"
 BACKUP_STATUS = pathlib.Path.home() / ".nos" / "backup-status.json"
 
 # Backup freshness only. Job lateness is measured against each job's own
@@ -227,6 +230,63 @@ def overdue_jobs(conn: sqlite3.Connection) -> list[dict]:
     return sorted(out, key=lambda item: item["due_at"])
 
 
+def _queue_pending() -> dict[str, int] | None:
+    """Pending counts by severity, from the queue file. None if unreadable."""
+    try:
+        data = json.loads(REMEDIATION_QUEUE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    counts: dict[str, int] = {}
+    for item in data.get("items", []):
+        if item.get("status") == "pending":
+            sev = str(item.get("severity", "")).lower()
+            counts[sev] = counts.get(sev, 0) + 1
+    return counts
+
+
+def _still_holds(row: sqlite3.Row) -> bool | None:
+    """Does this notification's own claim still hold?
+
+    A notification is an EVENT and red is a STATE — the sentence this whole
+    file exists for. The inbox is where that distinction was never applied:
+    every one of the four unread CRITICAL security-drift rows was TRUE when
+    sent (on 2026-08-22 there really were 11 pending HIGH; they were closed
+    that afternoon) and every one of them is now false. Counting them as red
+    makes this reader do the thing it was built to stop — generate a red from
+    a stale event.
+
+    Re-evaluation is only possible where the emitter recorded a MEASURABLE
+    claim. `security-drift` records `{"pending_critical": "1", ...}`, which is
+    a count of rows in a file this reader may open. Where the claim is prose,
+    or the source is a daemon this reader must not touch, the honest answer is
+    None — unknown, never "cleared".
+    """
+    origin = (row["origin_plugin"] or row["origin_agent"] or "").strip()
+    try:
+        meta = json.loads(row["metadata_json"] or "{}")
+    except ValueError:
+        return None
+    if not isinstance(meta, dict) or not meta:
+        return None
+
+    if origin == "security-drift":
+        now = _queue_pending()
+        if now is None:
+            return None
+        for key, sev in (("pending_critical", "critical"), ("pending_high", "high")):
+            try:
+                claimed = int(meta[key])
+            except (KeyError, TypeError, ValueError):
+                continue
+            # Still red if the estate has AT LEAST as many as were reported.
+            # Fewer means the specific alarm was answered; more is a new
+            # problem that will have raised its own notification.
+            if claimed and now.get(sev, 0) >= claimed:
+                return True
+        return False
+    return None
+
+
 def unread_inbox(conn: sqlite3.Connection) -> dict:
     rows = conn.execute(
         """
@@ -238,10 +298,31 @@ def unread_inbox(conn: sqlite3.Connection) -> dict:
     by_severity = {row["severity"]: row["n"] for row in rows}
     oldest = min((row["oldest"] for row in rows), default=None)
     loud = sum(by_severity.get(sev, 0) for sev in ("critical", "high"))
+
+    # Only the loud ones are re-evaluated: they are what this reader reports,
+    # and re-deciding 27 `info` rows would cost more than it tells anyone.
+    superseded = 0
+    unknown = 0
+    for row in conn.execute(
+        """
+        SELECT origin_plugin, origin_agent, metadata_json
+          FROM notifications
+         WHERE wing_inbox_read_at IS NULL AND severity IN ('critical', 'high')
+        """
+    ).fetchall():
+        verdict = _still_holds(row)
+        if verdict is False:
+            superseded += 1
+        elif verdict is None:
+            unknown += 1
+
     return {
         "total": sum(by_severity.values()),
         "by_severity": by_severity,
         "critical_or_high": loud,
+        "critical_or_high_superseded": superseded,
+        "critical_or_high_unresolvable": unknown,
+        "critical_or_high_live": loud - superseded,
         "oldest": oldest,
         "oldest_age": _age(_parse_iso(oldest)),
     }
@@ -565,11 +646,31 @@ def reds(report: dict) -> list[str]:
                 + ", ".join(r["weakness_id"] for r in unjudged[:4])
             )
     inbox = report.get("inbox") or {}
-    if inbox.get("critical_or_high"):
-        out.append(
-            f"{inbox['critical_or_high']} unread CRITICAL/HIGH in the Wing inbox "
-            f"({inbox['total']} unread total, oldest {inbox['oldest_age']})"
+    # A notification is an EVENT; this file reports STATE. Where the emitter
+    # left a measurable claim it is re-decided against the estate as it is now.
+    # Three numbers, and none of them is "still true" unless a probe said so —
+    # an unverifiable row is UNKNOWN, which is exactly what this reader refuses
+    # to render as either red or calm anywhere else.
+    live = inbox.get("critical_or_high_live", inbox.get("critical_or_high", 0))
+    if live:
+        stale = inbox.get("critical_or_high_superseded", 0)
+        unknown = inbox.get("critical_or_high_unresolvable", 0)
+        confirmed = live - unknown
+        parts = []
+        if confirmed:
+            parts.append(f"{confirmed} re-checked and still true")
+        if unknown:
+            parts.append(f"{unknown} carry no re-checkable claim (UNKNOWN, not cleared)")
+        line = (
+            f"{live} unread CRITICAL/HIGH in the Wing inbox: " + ", ".join(parts)
+            + f" ({inbox['total']} unread total, oldest {inbox['oldest_age']})"
         )
+        if stale:
+            line += (
+                f". A further {stale} were true when sent and are provably not "
+                "now — nothing marks them read, so they will sit here for ever"
+            )
+        out.append(line)
     for orphan in report.get("orphaned_sessions", []):
         # Name the model_uri: an orphan on `cli:unrecorded` cannot even say
         # which backend was answering when it stopped, which is a second fact

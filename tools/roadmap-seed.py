@@ -129,6 +129,9 @@ row("sec-transport-pg","PostgreSQL clients encrypt, and the pin resolves","2026-
 row("sec-transport-redis","Redis: AUTH secret off the argv, then a TLS port","2026-08-23","queued","security",parent="sec-transport",
     refs="REM-217 remediation (1)",
     body="tls-port 0, 56 clients, secret readable by anything that can docker inspect. TLS needs every client URL moved to rediss:// — authentik, infisical, outline, freescout.")
+row("notify-supersede","A notification that stopped being true has no way to stop being unread","2026-08-23","next","platform",
+    refs="tools/red-status.py::_still_holds · docs/hidden_fees/26",
+    body="75 unread, oldest 29 days, and 60 of them are repeating classes (os-resume 31, backup 25, security-drift 4) where each new send makes the previous one false. red-status now RE-DECIDES the claim where the emitter left a measurable one, but a reader may not write, so the rows sit for ever. The fix is supersede-on-emit by the successor — same authorship rule as the session reaper — and it needs a state distinct from `read`, because nobody read them.")
 row("sec-backrest-auth","Backrest runs with auth disabled, reachable by 23 containers","2026-08-23","next","security",parent="sec",
     refs="REM-214 remediation (1) · roles/pazny.backrest/templates/config.json.j2",
     body="Measured: POST /v1.Backrest/GetConfig from inside devops-gitea-1 -> 200, auth:disabled. The template justified it as 'loopback only', which REM-194/214 disproved. Not a template edit: config.json is seed-once and daemon-owned, so the live file needs reconciling and a bcrypt credential minting. Config surface includes hook commands.")
