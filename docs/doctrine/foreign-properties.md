@@ -251,7 +251,7 @@ was dropped by two more, and the second is the instructive one.
 from a fixed set of variables. `DB_MYSQL_ATTR_SSL_CA` is not among them, so the
 value never reached the file. The image does support arbitrary passthrough —
 any `ENV_*` variable is written into `.env`
-(`/container/functions/30-laravel:212`, its README §326) — but only under that
+(`/container/functions/30-laravel:212`, README line 326) — but only under that
 prefix.
 
 **And the framework's own cache.** This is the part worth carrying:

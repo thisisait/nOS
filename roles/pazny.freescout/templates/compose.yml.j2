@@ -55,7 +55,7 @@ services:
       # reported it encrypted — a false green of my own making.
       #
       # This image's supported channel is a prefix passthrough
-      # (`/container/functions/30-laravel:212`, its README §326): an `ENV_*`
+      # (`/container/functions/30-laravel:212`, README line 326): an `ENV_*`
       # variable is written into `.env`, and `31-laravel-env_watcher` clears
       # the config cache on any `.env` change. So the value reaches the cache
       # REBUILD, which is the only place it can matter.
