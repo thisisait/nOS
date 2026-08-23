@@ -6,7 +6,7 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.10
 
 ---
 
-## v0.11-beta (unreleased — drafted 2026-08-19)
+## v0.11-beta (unreleased — drafted 2026-08-19, transport arc + re-verified claims 2026-08-23)
 
 > **The estate closes a loop it cannot cheat.** ~500 commits since `v0.10-beta`,
 > and the through-line is a machine built so that no step in it can record its
@@ -97,24 +97,67 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.10
   six HIGHs are the loop's own merges awaiting converge + rescan (REM-204,
   REM-159). Ask `tools/rem-status.py`; do not copy these numbers forward.
 
+### Datastore transport — enabled is not encrypted (REM-217, 2026-08-22/23)
+
+REM-009 was closed on "in-transit TLS enabled", and it WAS enabled — for
+months, while almost nothing negotiated it: 72 TLS handshakes against 591,811
+MariaDB connections; 23 of 42 PostgreSQL backends plaintext, including the
+secrets vault's. The estate's oldest defect in a transport hat: the code that
+enabled TLS reported its own success and nothing read the effect.
+
+- **The reader came first.** `tools/tls-uptake.py` measures before and after
+  every rung and can never repair, mark, or leak what it inspects
+  (`test_the_tls_reader_only_reads.py`). It went through two shape corrections
+  of its own (`docs/hidden_fees/29`): sampling `pg_stat_ssl` misses a pool
+  that lives a millisecond (HedgeDoc: 0 of 319 samples), and MariaDB's
+  aggregate ratio can never reach 1.0 (the healthcheck's unix socket is not a
+  TLS handshake). Both ends now ask each client about its OWN session.
+- **PostgreSQL clients moved**, including HedgeDoc — whose `?sslmode=` was
+  silently DISCARDED by a Sequelize option allow-list that copies `ssl` and
+  not `sslmode`; control moved to a mounted `config.json`.
+- **MariaDB rungs 1–3:** a certificate ON DISK (MariaDB 11's ephemeral
+  in-memory material is unpointable), then per-client CAs — three Laravel
+  forks reading three DIFFERENT env names, WordPress encrypting flag-only by
+  design, Nextcloud via `occ`. A SIXTH client no survey listed
+  (`mysqld-exporter`, credential in clear ~4×/min) was found in
+  `processlist`, not in the ladder — roadmap `sec-transport-mysqld-exporter`.
+- **A FALSE GREEN caught and closed:** the first self-test read `env(...)`;
+  Laravel caches config, so the app never sees the variable — it reported
+  `encrypted` for a FreeScout that could not connect at all. The probe now
+  boots each client's own kernel and hands PDO the RESOLVED options.
+- **Rung 4 is deliberately unclimbed.** During the work two out-of-band
+  writes against the LIVE estate — `SET GLOBAL require_secure_transport=1`
+  and a bogus Nextcloud `dbdriveroptions` CA path — took FreeScout (264 ×
+  `[3159]`) and Nextcloud down, FreeScout behind a healthcheck that stayed
+  green. A value the playbook never declared is a value no converge can
+  reconcile, so the flag is now DECLARED OFF in `roles/pazny.mariadb` and
+  gated against `=1` until every client — the exporter included — provably
+  negotiates. Recovery is a converge, the operator's act.
+- **`notify-supersede`:** a third notification state so a successor retires
+  its repeating predecessors (60 of 76 unread rows were re-statements);
+  `superseded` is not `read` — nobody read them, and the schema says so.
+
 ### Why this is a beta, stated before anyone asks
 
 The operator asked whether this tag could drop the suffix. It cannot, on
 evidence, and the notes owe the list:
 
-1. **The audit-chain fix is committed, not deployed.** The repo is not the
-   running system: the nightly verify runs the estate's copy of
-   `verify-audit-chain.php`, which predates the type-retry — it will keep
-   exiting 2 at row 339176 until a `--tags wing` converge ships it. A non-beta
-   cannot be cut while the tamper-evidence control reports broken on the box.
+1. **The audit-chain control has not yet re-earned a week of green.** The
+   verifier fix reached the box with the 2026-08-23 converge (this item
+   originally read "committed, not deployed", and was true when drafted);
+   `tools/red-status.py` no longer lists the chain, but the reviewed-gap
+   anchor is an operator act and a tamper-evidence control is a cadence —
+   the bar stays a green week of nightly verifies, not one quiet day.
 2. **The restore drill's last SCHEDULED run failed** (2026-08-16: that night's
    `keap-db.gz` was missing from the set — the drill doing exactly its job).
    A manual drill against the 2026-08-19 set passes (`keap-db OK`,
    `wing-db OK, events=343860`), but a backup discipline is a cadence, not a
    good day; the proof is next Sunday's run, green, unattended.
-3. **69 unread CRITICAL/HIGH notifications, oldest 25 days.** Non-beta claims
-   an operating discipline; an attention queue this deep says the estate
-   produces more signal than its one operator consumes.
+3. **The unread queue shrank by machinery, not by reading.** 69 unread
+   CRITICAL/HIGH at draft; `notify-supersede` retired the re-statements and
+   ~9 remain (oldest ~29 d — ask `tools/red-status.py`), every one still
+   unread by a human. Non-beta claims an operating discipline; the estate
+   still produces more signal than its one operator consumes.
 4. **50 pending remediation rows, 6 HIGH**, plus 5 vendor-blocked CRITICALs
    (FreePBX image abandoned upstream) that operators must accept explicitly.
 5. **The Linux wet-test still does not prove the estate comes up**
