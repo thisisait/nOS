@@ -6,44 +6,44 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-08-23 • transport track prepared on `dev`, awaiting a converge.
+> Last updated: 2026-08-23 • four items queued on `dev`, awaiting one converge.
 
 ## Now (current track)
 
-**Now: datastore transport. The estate has TLS everywhere and uses it almost
-nowhere.** REM-217 measured it and `tools/tls-uptake.py` (new, 08-23) is the
-reader that will say whether the fix worked — it exists BEFORE the fix so no
-rung verifies itself.
-
-Prepared on `dev`, **live effect unverified until a converge**:
-
-1. **PostgreSQL clients.** The 2026-06-14 `require`-pin read
-   `postgresql_ssl_enabled` out of scope — it was a `pazny.postgresql` role
-   default and the five readers are other roles — so every client rendered
-   `prefer` for nine weeks (`docs/hidden_fees/23`). Now at play scope, with the
-   spelling each driver family needs: `require` for libpq, `no-verify` for
-   node-postgres (`doctrine/foreign-properties.md` §5). Also `ssl_ciphers`
-   without 3DES/MEDIUM.
-2. **MariaDB rungs 1+2.** A self-signed cert with `mariadb` in the SAN now
-   exists on disk — the prerequisite for every later rung, because Laravel's
+**One converge is queued and everything below waits on it.** Nothing here is
+verified live; each item names the reader that will say.
+1. **PostgreSQL client TLS** (REM-217). The 2026-06-14 `require`-pin read
+   `postgresql_ssl_enabled` out of scope — a `pazny.postgresql` role default,
+   five readers in other roles — so every client rendered `prefer` for nine
+   weeks (fee 23). Now at play scope, spelled per driver family: `require` for
+   libpq, `no-verify` for node-postgres (`doctrine/foreign-properties.md` §5).
+   Plus `ssl_ciphers` without 3DES/MEDIUM.
+2. **MariaDB rungs 1+2** (REM-217). Self-signed cert with `mariadb` in the SAN
+   — the prerequisite for everything later, because Laravel's
    `MYSQL_ATTR_SSL_CA` is dropped by `array_filter` when empty.
-   `require_secure_transport` is deliberately absent AND gated absent.
+   `require_secure_transport` deliberately absent, and gated absent.
+3. **FreeScout 2.1.5-php8.3 → 2.2.5** (REM-218). The pin claimed `app 1.8.231`;
+   the container runs **1.8.230** and the image predates that release, so two
+   advisories read as patched were live six weeks. The php8.3 line is dead at
+   2.1.5, so this crosses a PHP minor — **the riskiest single item**.
+4. **Wing session reaper** now fires at session open on both runtimes, not only
+   on a page view (fee 25). The 110 h orphan clears on the first agent run
+   after deploy.
 
-**What the converge should show**, read with `tools/tls-uptake.py`:
-postgresql moves off **38.5%** toward 100% of fabric backends; mariadb reports
-`ssl_cert` present (the ratio is cumulative and will not move fast); redis
-unchanged, still RED. **A service that fails to start is the signal to revert
-one template** — outline and infisical carry the only genuine risk, both
-node-postgres.
+**What to check after:** `tools/tls-uptake.py` — postgresql off 46% toward
+100% of fabric backends, mariadb with `ssl_cert` present. `tools/app-version.py`
+— freescout MATCH at 1.8.235. **A service that fails to start is the signal to
+revert one template**: freescout first, then outline / infisical.
 
-**Still open:** redis AUTH secret on the argv, MariaDB clients (rung 3), the
-TLS 1.3 floor — held back so a failed converge has one candidate cause.
+**Held back** so a failed converge has one candidate cause: redis AUTH secret
+off the argv, MariaDB clients (rung 3), the TLS 1.3 floor.
 
-**Both 08-18 reds are closed.** `audit-chain-verify` is `ok:true` rc=0 (the 37
-historical unsigned rows remain recorded); the nightly scan authenticates
-again and is at cycle 38. Today's reds are the inbox backlog (13 unread
-CRITICAL/HIGH, oldest 28 d) and an orphaned surveyor session at 103 h. The
-backup restore-drill row reads red and is not — the carve-out explains it.
+**Reds.** Both 08-18 ones are closed. `red-status` now re-decides an unread
+notification's own claim, so the inbox red reads 9 unverifiable + 4 provably
+stale rather than 13 unread (fee 26) — the emitter-side half is
+`notify-supersede`. The loop judged a REM-214 patch overnight and it needs
+re-judging against today's tree; the forges are synced, so tonight's drive can
+carry it.
 
 ## Open follow-ups
 
