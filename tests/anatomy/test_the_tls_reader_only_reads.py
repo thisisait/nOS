@@ -174,3 +174,97 @@ def test_the_redis_secret_never_appears_in_the_output():
                 f"tools/tls-uptake.py {' '.join(flags)} printed the redis AUTH "
                 "secret it inspected — the reader became a second copy of the "
                 "exposure it reports")
+
+
+#: `occ` subcommands that WRITE. The reader reads Nextcloud's dbdriveroptions
+#: through `occ config:system:get`, one keystroke from the verb that would set
+#: it — and setting it is precisely the rung this reader is supposed to be
+#: independent of. Nothing else in the SQL check would catch `config:system:set`,
+#: because it contains no `select` or `show`.
+OCC_WRITES = ("config:system:set", "config:system:delete", "config:app:set",
+              "db:convert", "maintenance:mode")
+
+
+def _exec_argv_strings() -> list[str]:
+    """Every string the tool actually PASSES to `_exec`, and nothing else.
+
+    The first cut of this check grepped the whole source and failed on the
+    tool's own comment explaining that Nextcloud needs `occ config:system:set`
+    — a detector reading the description as the fact, which is this repo's most
+    repeated gate defect (memory `detectors-must-read-artifacts-not-prose`).
+    Argv lists are AST list literals; prose is not.
+    """
+    out: list[str] = []
+    for node in ast.walk(ast.parse(source())):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                and node.func.id == "_exec"):
+            continue
+        for arg in node.args:
+            for sub in ast.walk(arg):
+                if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
+                    out.append(sub.value)
+                elif isinstance(sub, ast.JoinedStr):
+                    out.extend(v.value for v in sub.values
+                               if isinstance(v, ast.Constant) and isinstance(v.value, str))
+    return out
+
+
+def test_the_nextcloud_read_can_never_become_a_write():
+    argv = " ".join(_exec_argv_strings()).lower()
+    assert argv, "no _exec call found — check this gate, not the tool"
+    offenders = [v for v in OCC_WRITES if v in argv]
+    assert not offenders, (
+        "the reader would be configuring the client whose configuration it "
+        "reports: " + ", ".join(offenders))
+    assert "config:system:get" in argv, (
+        "the nextcloud leg is gone — restore it or delete this gate "
+        "deliberately; nextcloud is the one MariaDB client with no env knob, "
+        "so nothing else can say whether it is configured")
+
+
+def test_a_client_container_that_is_not_running_is_never_reported_as_ok():
+    """The five-client table is the part most likely to be skimmed for green
+    ticks. A stopped container must read ABSENT — `docs/hidden_fees/08` is this
+    estate passing an empty stack as `0/0 ready` for weeks."""
+    tree = ast.parse(source())
+    fns = {n.name: n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
+    assert "mariadb_clients" in fns, "the per-client reader is gone"
+    body = ast.get_source_segment(source(), fns["mariadb_clients"])
+    assert '"state": "UNKNOWN"' in body, (
+        "each row must START at UNKNOWN so an unhandled path is not a pass")
+    assert 'state="ABSENT"' in body, (
+        "a container the reader cannot exec into must be ABSENT with its reason")
+
+
+def test_the_client_table_says_it_is_not_the_effect():
+    """It reports DECLARED configuration. MariaDB cannot show another session's
+    cipher, so a reader that let this table read as proof would recreate the
+    exact defect it was built for — a claim standing in for a measurement."""
+    p = subprocess.run([sys.executable, str(TOOL)],
+                       capture_output=True, text=True, timeout=180, cwd=REPO)
+    assert p.returncode == 0
+    out = p.stdout.lower()
+    if "mariadb clients" not in out:
+        pytest.skip("docker absent — no client table rendered")
+    assert "declares" in out or "declared" in out
+    assert "not what it negotiated" in out or "declared != encrypted" in out, (
+        "the client table must carry its own caveat in the human render, where "
+        "it will actually be read")
+
+
+def test_the_ca_path_the_reader_looks_for_is_the_one_the_playbook_mounts():
+    """A reader watching a different path than the renderer writes reports
+    every client unconfigured for ever — and is believed, because it is the
+    reader. This is the same join the hedgedoc config.json mount needs and the
+    reason `CLIENT_CA_PATH` is a module constant rather than five literals."""
+    import re
+
+    import yaml
+    cfg = yaml.safe_load((REPO / "default.config.yml").read_text(encoding="utf-8")) or {}
+    declared = cfg.get("mariadb_client_ca_path")
+    if declared is None:
+        pytest.skip("mariadb_client_ca_path not declared yet — rung 3 unstarted")
+    m = re.search(r'^CLIENT_CA_PATH\s*=\s*"([^"]+)"', source(), re.M)
+    assert m, "CLIENT_CA_PATH is no longer a plain module constant"
+    assert m.group(1) == declared, (
+        f"the reader looks at {m.group(1)} and the playbook mounts {declared}")

@@ -29,18 +29,26 @@ WHAT IT REFUSES TO GUESS.
   * A **unix-socket** PostgreSQL session is not a cleartext flow on the docker
     fabric and is never counted as one. The original REM-217 measurement of
     "23 of 42 plaintext" includes the measuring session itself.
-  * MariaDB's ratio is CUMULATIVE SINCE THE SERVER STARTED. It cannot fall
+  * MariaDB's ratio is CUMULATIVE SINCE THE SERVER STARTED. It cannot rise
     quickly even after every client is fixed, so the reader prints uptime
-    beside it and says what the number is. Judge a fix by the trend across two
-    reads, or by restarting the counter, not by one absolute number.
+    beside it and says what the number is. `--window N` gives the number that
+    CAN move: what fraction of the connections opened in the last N seconds
+    were encrypted. A window in which nothing connected reports no rate at
+    all — never 0, never 100.
+  * The MariaDB per-client table says what each client DECLARES. It is not the
+    effect and is labelled so in both renders: MariaDB exposes no per-session
+    cipher to another session, and the three Laravel clients read three
+    DIFFERENT env var names, so a table like this is the only place that fact
+    can live without being re-derived from memory.
   * Redis is reported from its LISTENER, because with `tls-port 0` there is no
     TLS listener and therefore provably zero encrypted sessions — a shape read
     that determines the effect. If a TLS port ever IS configured, the per-
     session split becomes genuinely unknown from outside and says so.
 
 Usage:
-    tools/tls-uptake.py            # one block per datastore
-    tools/tls-uptake.py --json     # for a caller
+    tools/tls-uptake.py              # one block per datastore, plus the clients
+    tools/tls-uptake.py --window 30  # what NEW connections did in the last 30s
+    tools/tls-uptake.py --json       # for a caller
 
 Exit 0 always, including when everything is cleartext. Reporting is the job;
 a reader that exited non-zero would be a gate, and this one cannot be a gate
@@ -54,6 +62,7 @@ import json
 import shutil
 import subprocess
 import sys
+import time
 
 MARIADB = "infra-mariadb-1"
 POSTGRES = "infra-postgresql-1"
@@ -66,12 +75,13 @@ def _docker() -> str | None:
     return shutil.which("docker")
 
 
-def _exec(container: str, argv: list[str]) -> tuple[int, str, str]:
+def _exec(container: str, argv: list[str], user: str | None = None) -> tuple[int, str, str]:
     docker = _docker()
     if not docker:
         return 127, "", "docker not on PATH"
+    pre = ["-u", user] if user else []
     try:
-        p = subprocess.run([docker, "exec", container, *argv],
+        p = subprocess.run([docker, "exec", *pre, container, *argv],
                            capture_output=True, text=True, timeout=TIMEOUT)
     except subprocess.TimeoutExpired:
         return 124, "", f"timed out after {TIMEOUT}s"
@@ -80,22 +90,23 @@ def _exec(container: str, argv: list[str]) -> tuple[int, str, str]:
     return p.returncode, p.stdout, p.stderr.strip()
 
 
-def mariadb() -> dict:
-    """Cumulative TLS uptake. The counters are the only per-connection record
-    MariaDB keeps; `performance_schema` is OFF on this build, so there is no
-    per-session cipher view to fall back on."""
-    out = {"datastore": "mariadb", "container": MARIADB, "verdict": "UNKNOWN"}
+#: The one SQL the MariaDB read sends. Kept as a module constant so the window
+#: sample and the first sample are provably the same statement.
+_MARIADB_STATUS_SQL = (
+    "select variable_name, variable_value from information_schema.global_status "
+    "where variable_name in ('CONNECTIONS','SSL_ACCEPTS','THREADS_CONNECTED','UPTIME'); "
+    "select 'REQUIRE_SECURE_TRANSPORT', @@require_secure_transport")
+
+
+def _mariadb_status() -> tuple[dict, str]:
+    """The counters, or an empty dict and the reason."""
     # The root password never leaves the container: `sh -c` expands the env var
     # inside, so it appears on no host argv and in no process list here.
-    sql = ("select variable_name, variable_value from information_schema.global_status "
-           "where variable_name in ('CONNECTIONS','SSL_ACCEPTS','THREADS_CONNECTED','UPTIME'); "
-           "select 'REQUIRE_SECURE_TRANSPORT', @@require_secure_transport")
     rc, stdout, stderr = _exec(
-        MARIADB, ["sh", "-c", f'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -N -B -e "{sql}"'])
+        MARIADB,
+        ["sh", "-c", f'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -N -B -e "{_MARIADB_STATUS_SQL}"'])
     if rc != 0:
-        out["error"] = stderr or f"exit {rc}"
-        return out
-
+        return {}, stderr or f"exit {rc}"
     vals = {}
     for line in stdout.splitlines():
         parts = line.split("\t")
@@ -105,8 +116,55 @@ def mariadb() -> dict:
             except ValueError:
                 pass
     if "CONNECTIONS" not in vals or "SSL_ACCEPTS" not in vals:
-        out["error"] = "counters missing from global_status"
+        return {}, "counters missing from global_status"
+    return vals, ""
+
+
+def mariadb(window: int = 0) -> dict:
+    """Cumulative TLS uptake, and — with `window` — the present-tense rate.
+
+    THE CUMULATIVE RATIO CANNOT SHOW A FIX. It is counted since server start,
+    so a perfect cutover today still reads ~0% against a year of plaintext.
+    That is not a nuance to remember: it is the difference between a rung of
+    REM-217 being verifiable and not, and this reader had only the unusable
+    half until 2026-08-23.
+
+    `--window N` samples the same counters twice, N seconds apart, and reports
+    the DELTA — what fraction of the connections opened *just now* were
+    encrypted. That is a statement about the present and it moves the moment a
+    client is fixed.
+
+    It is still an aggregate. MariaDB keeps no per-session cipher view another
+    session can read: `performance_schema` is OFF on this build (`@@version`
+    11.8.8), and while `performance_schema.status_by_thread` is compiled in and
+    would give exactly that, turning it on costs server memory to answer a
+    measurement question. That trade is recorded here rather than taken
+    quietly — see `mariadb_clients()` for what is answerable without it.
+
+    A window in which NOTHING connected reports `rate=None`, never 0 and never
+    100%: nought-of-nought is the reading this estate has most often mistaken
+    for success (`docs/hidden_fees/08`).
+    """
+    out = {"datastore": "mariadb", "container": MARIADB, "verdict": "UNKNOWN"}
+    vals, err = _mariadb_status()
+    if err:
+        out["error"] = err
         return out
+
+    if window > 0:
+        time.sleep(window)
+        later, err2 = _mariadb_status()
+        if err2:
+            out["window_error"] = err2
+        else:
+            d_conn = later["CONNECTIONS"] - vals["CONNECTIONS"]
+            d_tls = later["SSL_ACCEPTS"] - vals["SSL_ACCEPTS"]
+            out.update(
+                window_seconds=window,
+                window_connections=d_conn,
+                window_ssl_accepts=d_tls,
+                window_ratio=(d_tls / d_conn) if d_conn > 0 else None,
+            )
 
     total, tls = vals["CONNECTIONS"], vals["SSL_ACCEPTS"]
     # The ratio alone can never certify the end state: it is cumulative, so a
@@ -125,6 +183,117 @@ def mariadb() -> dict:
         verdict="GREEN" if required else "AMBER" if tls else "RED",
     )
     return out
+
+
+#: Where the playbook mounts the MariaDB server certificate inside a client.
+#: Must equal `mariadb_client_ca_path` in default.config.yml — pinned by
+#: tests/anatomy/test_mariadb_client_tls.py, because a reader looking at a
+#: different path than the renderer writes would report every client as
+#: unconfigured for ever, and be believed.
+CLIENT_CA_PATH = "/nos-certs/mariadb-ca.crt"
+
+#: THE FIVE MARIADB CLIENTS AND THE KNOB EACH ONE ACTUALLY READS.
+#:
+#: `docs/idea/21-mariadb-tls-ladder.md` scoped rung 3 as "MYSQL_ATTR_SSL_CA per
+#: Laravel client (freescout, firefly, bookstack)". That is true of exactly one
+#: of the three. Read from each running image on 2026-08-23:
+#:
+#:   bookstack  MYSQL_ATTR_SSL_CA       /app/www/app/Config/database.php:84
+#:   freescout  DB_MYSQL_ATTR_SSL_CA    /www/html/config/database.php:56
+#:   firefly    MYSQL_SSL_CA            /var/www/html/config/database.php:43
+#:
+#: Three forks of the same framework, three names. The scoping generalised from
+#: whichever one it happened to read — the same shortcut that put `no-verify`
+#: into Outline (doctrine/foreign-properties.md §5.1). Each entry below names
+#: the file and line it was read from; re-read them before trusting this table
+#: after an image bump.
+#:
+#: WordPress and Nextcloud are not env-configurable at all and carry their
+#: mechanism in `note`.
+MARIADB_CLIENTS = (
+    {"service": "bookstack", "container": "b2b-bookstack-1",
+     "env": "MYSQL_ATTR_SSL_CA",
+     "read_from": "/app/www/app/Config/database.php:84 (stock Laravel)"},
+    {"service": "freescout", "container": "b2b-freescout-1",
+     "env": "DB_MYSQL_ATTR_SSL_CA",
+     "read_from": "/www/html/config/database.php:56 (DB_ prefix — NOT stock)"},
+    {"service": "firefly", "container": "b2b-firefly-1",
+     "env": "MYSQL_SSL_CA",
+     "read_from": "/var/www/html/config/database.php:43 (own names entirely)"},
+    {"service": "wordpress", "container": "iiab-wordpress-1",
+     "env": "WORDPRESS_CONFIG_EXTRA", "expect": "MYSQL_CLIENT_FLAGS",
+     "read_from": "wp-config.php:127 -> class-wpdb.php:1959",
+     "note": "wpdb passes MYSQL_CLIENT_FLAGS to mysqli_real_connect and never "
+             "calls mysqli_ssl_set, so WordPress can ENCRYPT without a CA but "
+             "cannot verify from PHP alone — measured working 2026-08-23"},
+    {"service": "nextcloud", "container": "iiab-nextcloud-1",
+     "occ": "dbdriveroptions",
+     "read_from": "config/config.php — no env exists; occ config:system:set",
+     "note": "the only one of the five that needs a post-start call rather "
+             "than a compose change"},
+)
+
+
+def mariadb_clients() -> list[dict]:
+    """What each MariaDB client DECLARES, and whether the CA it would need is
+    readable where it runs.
+
+    THIS IS NOT THE EFFECT AND MUST NOT BE READ AS IT. MariaDB exposes no
+    per-session cipher to another session, so nothing here proves a client
+    negotiated TLS — only that it is configured to and could. The effect half
+    is `mariadb(window=N)`, in aggregate, and the two must be read together:
+    a client can declare a CA and still connect in clear if its framework
+    filters the value out (`array_filter` drops an empty one — that is exactly
+    how `MYSQL_ATTR_SSL_CA=""` failed) and the declaration would look fine.
+
+    A container that is not running is `absent`, never `ok`.
+    """
+    rows: list[dict] = []
+    for spec in MARIADB_CLIENTS:
+        row = {"service": spec["service"], "container": spec["container"],
+               "read_from": spec["read_from"], "state": "UNKNOWN"}
+        if spec.get("note"):
+            row["note"] = spec["note"]
+
+        rc, _, err = _exec(spec["container"], ["true"])
+        if rc != 0:
+            row.update(state="ABSENT", detail=err or f"exit {rc}")
+            rows.append(row)
+            continue
+
+        rc, out, _ = _exec(spec["container"],
+                           ["sh", "-c", f'test -r "{CLIENT_CA_PATH}" && echo yes'])
+        row["ca_readable"] = out.strip() == "yes"
+
+        if spec.get("env"):
+            row["knob"] = spec["env"]
+            rc, out, _ = _exec(spec["container"], ["printenv", spec["env"]])
+            value = out.strip() if rc == 0 else ""
+            expect = spec.get("expect")
+            declared = (expect in value) if expect else bool(value)
+            row["declared"] = declared
+            # The VALUE of a CA path is safe to print (it is a path, not a
+            # secret). WORDPRESS_CONFIG_EXTRA can hold anything, so only the
+            # presence of the token is reported, never the string.
+            row["value"] = value if (declared and not expect) else None
+        elif spec.get("occ"):
+            row["knob"] = f"occ {spec['occ']}"
+            rc, out, _ = _exec(spec["container"],
+                               ["php", "occ", "config:system:get", spec["occ"]],
+                               user="www-data")
+            row["declared"] = rc == 0 and bool(out.strip())
+            row["value"] = out.strip() or None
+
+        if row.get("declared") and row.get("ca_readable"):
+            row["state"] = "DECLARED"
+        elif row.get("declared") and spec["service"] == "wordpress":
+            row["state"] = "DECLARED"          # encrypts without a CA, by design
+        elif row.get("declared"):
+            row["state"] = "BROKEN"            # asks for a CA that is not there
+        else:
+            row["state"] = "PLAIN"
+        rows.append(row)
+    return rows
 
 
 def postgresql() -> dict:
@@ -215,8 +384,9 @@ def redis() -> dict:
     return out
 
 
-def collect() -> dict:
-    return {"datastores": [mariadb(), postgresql(), redis()]}
+def collect(window: int = 0) -> dict:
+    return {"datastores": [mariadb(window), postgresql(), redis()],
+            "mariadb_clients": mariadb_clients()}
 
 
 def _pct(ratio: float | None) -> str:
@@ -244,6 +414,15 @@ def render(report: dict) -> list[str]:
                          f"connections = {_pct(d['encrypted_ratio'])}")
             lines.append(f"    cumulative over {up // 86400}d {(up % 86400) // 3600}h of "
                          f"uptime — a fix moves the TREND, not this number")
+            if d.get("window_seconds"):
+                n, k = d["window_connections"], d["window_ssl_accepts"]
+                lines.append(
+                    f"    in the last {d['window_seconds']}s: {k} of {n} NEW connections "
+                    f"encrypted = {_pct(d['window_ratio'])}" if n > 0 else
+                    f"    in the last {d['window_seconds']}s: NOTHING connected — no rate "
+                    "to report, which is not a pass")
+            elif d.get("window_error"):
+                lines.append(f"    window sample failed: {d['window_error']}")
             lines.append("    require_secure_transport=ON — no plaintext session can exist"
                          if d.get("require_secure_transport") else
                          "    require_secure_transport=OFF — plaintext is accepted; only "
@@ -266,15 +445,31 @@ def render(report: dict) -> list[str]:
                 lines.append("    AUTH secret is on the container command line — "
                              "readable by anything that can `docker inspect`")
         lines.append("")
+
+    lines.append("  mariadb clients — what each one DECLARES, not what it negotiated")
+    for c in report.get("mariadb_clients", []):
+        detail = c.get("detail") or c.get("knob") or ""
+        mark = {"DECLARED": "ok  ", "PLAIN": "PLAIN", "BROKEN": "BROKEN",
+                "ABSENT": "-   "}.get(c["state"], "?   ")
+        lines.append(f"    {mark:<7}{c['service']:<11}{detail}")
+        if c["state"] == "BROKEN":
+            lines.append(f"             asks for a CA at {CLIENT_CA_PATH}, which is "
+                         "NOT readable in this container")
+    lines.append("    declared != encrypted: MariaDB exposes no per-session cipher to "
+                 "another session, so read this beside --window, never instead of it")
+    lines.append("")
     return lines
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--json", action="store_true", help="machine-readable")
+    ap.add_argument("--window", type=int, default=0, metavar="SECONDS",
+                    help="sample MariaDB's counters twice, N seconds apart, and "
+                         "report the DELTA — the only present-tense rate it can give")
     args = ap.parse_args()
 
-    report = collect()
+    report = collect(args.window)
     if args.json:
         json.dump(report, sys.stdout, indent=2)
         print()
