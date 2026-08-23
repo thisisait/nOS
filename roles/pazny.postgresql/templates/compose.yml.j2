@@ -36,14 +36,33 @@ services:
       # Safety net for rogue clients that open a transaction and wander off.
       - "idle_in_transaction_session_timeout={{ postgresql_idle_in_transaction_timeout_ms | default(60000) }}"
 {% if postgresql_ssl_enabled | default(false) %}
-      # REM-009 in-transit TLS — libpq clients (sslmode=prefer default)
-      # upgrade automatically once the server offers SSL.
+      # REM-009 in-transit TLS. NOTE the correction REM-217 forced on the
+      # comment that used to stand here: libpq clients do upgrade under
+      # `prefer`, but node-postgres clients do NOT, so "upgrade automatically"
+      # was true of some drivers and read as true of all of them. Each client
+      # now names its own mode; see tests/anatomy/test_postgresql_ssl.py.
       - "-c"
       - "ssl=on"
       - "-c"
       - "ssl_cert_file=/certs/server.crt"
       - "-c"
       - "ssl_key_file=/certs/server.key"
+      # REM-217 (4). The default for the 16 line is
+      # `HIGH:MEDIUM:+3DES:!aNULL` — inherited, never chosen — which offers
+      # 3DES (SWEET32, CVE-2016-2183: a 64-bit block cipher, birthday-bound at
+      # ~32 GB per key) and the whole MEDIUM grade. Nothing USES them: every
+      # session observed in pg_stat_ssl negotiated TLSv1.3 with
+      # TLS_AES_256_GCM_SHA384. They are available to a downgrade-capable
+      # ACTIVE attacker, which on a flat docker fabric with 23 host-gateway
+      # containers (REM-214) is not a remote threat model.
+      - "-c"
+      - "ssl_ciphers={{ postgresql_ssl_ciphers | default('HIGH:!aNULL:!3DES:!MEDIUM:!SHA1:!RC4:!DES') }}"
+      # ssl_min_protocol_version stays at the 1.2 default ON PURPOSE this
+      # round. Raising it to TLSv1.3 is nearly free — every observed session is
+      # already there — but this converge is also the one that first moves four
+      # cleartext clients onto TLS, and a client that fails to connect must
+      # have exactly one candidate cause. Raise the floor after
+      # tools/tls-uptake.py shows those four negotiating.
 {% endif %}
     environment:
       POSTGRES_PASSWORD: "{{ postgresql_root_password | default(nos_derived_secrets.postgresql) }}"

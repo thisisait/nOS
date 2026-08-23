@@ -120,6 +120,18 @@ row("sec-p5","P5 — OS keychain for the master only","2026-08-03","queued","sec
     body="Shrinks from 86 items to 1 AFTER P1. Verified live: a launchd agent reads the login keychain non-interactively.")
 row("sec-rem","Open HIGHs — REM-152 n8n 17-GHSA wave","2026-08-02","queued","security",parent="sec",
     refs="docs/llm/security/remediation-queue.json", body="Cycle-21, unattended nightly. 15 pending, 0 CRITICAL.")
+row("sec-transport","Datastore transport — encrypted, not merely enabled","2026-08-23","active","security",parent="sec",
+    refs="REM-217 · tools/tls-uptake.py · docs/hidden_fees/23",
+    body="REM-009 closed on 'TLS enabled'. Measured 2026-08-22: mariadb 72 handshakes / 591811 connections, 23 of 42 pg backends plaintext incl. the vault, redis tls-port 0. Ladder: pg clients -> pg ciphers -> redis argv secret -> mariadb cert -> require_secure_transport.")
+row("sec-transport-pg","PostgreSQL clients encrypt, and the pin resolves","2026-08-23","next","security",parent="sec-transport",
+    refs="docs/hidden_fees/23-a-pin-that-never-rendered.md",
+    body="The June require-pin read a role default out of scope and rendered prefer for nine weeks. Fixed at play scope + per-driver spelling. UNVERIFIED until a converge moves tools/tls-uptake.py off 38.5%.")
+row("sec-transport-redis","Redis: AUTH secret off the argv, then a TLS port","2026-08-23","queued","security",parent="sec-transport",
+    refs="REM-217 remediation (1)",
+    body="tls-port 0, 56 clients, secret readable by anything that can docker inspect. TLS needs every client URL moved to rediss:// — authentik, infisical, outline, freescout.")
+row("sec-transport-mariadb","MariaDB: cert on disk, clients, then the switch","2026-08-23","queued","security",parent="sec-transport",
+    refs="docs/idea/21-mariadb-tls-ladder.md",
+    body="Root password crosses three networks. Laravel reads only MYSQL_ATTR_SSL_CA and array_filter drops an empty one, so a real cert file is the prerequisite. pazny.postgresql already has the openssl pattern to copy.")
 
 # ── FILESYSTEM ─────────────────────────────────────────────────────────────
 row("fs","One filesystem","2026-08-01","active","filesystem",

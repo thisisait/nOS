@@ -49,11 +49,18 @@ services:
       # back to loopback.
       PAPERCLIP_BIND: "lan"
       PAPERCLIP_LISTEN_PORT: "3100"
-      # REM-009 per-client require pinning — sslmode=require fails closed on
-      # no-TLS (enforces in-transit TLS where the server offers it). prefer
-      # when postgresql_ssl_enabled is off (Linux) keeps the wet-test green:
-      # TLS-if-offered, plaintext fallback. require never verifies the CA, so
-      # the self-signed server cert is fine.
+      # REM-009 pinned `require` on 2026-06-14 and it never rendered:
+      # postgresql_ssl_enabled was a pazny.postgresql role default, out of
+      # scope here, so this took the `prefer` branch on every host — the live
+      # container's env says `sslmode=prefer` today. It is now defined at play
+      # scope in default.config.yml and this finally resolves.
+      #
+      # `require` STAYS, unlike hedgedoc/outline/infisical. Paperclip's client
+      # is libpq-family — established empirically, not from the image: under
+      # `prefer` it negotiated TLS, which a node-postgres client never does.
+      # In libpq `require` means encrypt without verifying, so the role's
+      # self-signed cert is fine. prefer on Linux (server TLS off) keeps the
+      # wet-test green.
       DATABASE_URL: "postgresql://{{ paperclip_db_user }}:{{ (paperclip_db_password) | urlencode }}@postgresql:5432/{{ paperclip_db_name }}?sslmode={{ 'require' if (postgresql_ssl_enabled | default(false)) else 'prefer' }}"
       PAPERCLIP_HOME: "/paperclip"
       PAPERCLIP_DEPLOYMENT_MODE: "authenticated"

@@ -15,7 +15,13 @@ services:
       - "127.0.0.1:{{ miniflux_port | default(3011) }}:8080"
 {% endif %}
     environment:
-      DATABASE_URL: "postgres://{{ miniflux_db_user | default('miniflux') }}:{{ (miniflux_db_password | default(nos_derived_secrets.miniflux)) | urlencode }}@postgresql:5432/{{ miniflux_db_name | default('miniflux') }}?sslmode=prefer"
+      # REM-217: `prefer` PERMITS plaintext, and measured across this estate
+      # that permission gets taken — the clients that stayed cleartext were
+      # exactly the ones offered a fallback. This client is libpq-family
+      # (it negotiated TLS under `prefer`), where `require` encrypts without
+      # verifying, so the role's self-signed cert is fine. Conditional so
+      # Linux, where the server has no TLS, still connects.
+      DATABASE_URL: "postgres://{{ miniflux_db_user | default('miniflux') }}:{{ (miniflux_db_password | default(nos_derived_secrets.miniflux)) | urlencode }}@postgresql:5432/{{ miniflux_db_name | default('miniflux') }}?sslmode={{ 'require' if (postgresql_ssl_enabled | default(false)) else 'prefer' }}"
       RUN_MIGRATIONS: "1"
       CREATE_ADMIN: "1"
       ADMIN_USERNAME: "admin"

@@ -18,12 +18,23 @@ services:
       - {{ hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads') }}:/hedgedoc/public/uploads
     environment:
       # ── Database (PostgreSQL z infra stacku) ──────────────────────────────
-      # REM-009 per-client require pinning — sslmode=require fails closed on
-      # no-TLS (enforces in-transit TLS where the server offers it). prefer
-      # when postgresql_ssl_enabled is off (Linux) keeps the wet-test green:
-      # TLS-if-offered, plaintext fallback. require never verifies the CA, so
-      # the self-signed server cert is fine.
-      CMD_DB_URL: "postgres://{{ hedgedoc_db_user | default('hedgedoc') }}:{{ (hedgedoc_db_password | default(nos_derived_secrets.hedgedoc)) | urlencode }}@postgresql:5432/{{ hedgedoc_db_name | default('hedgedoc') }}?sslmode={{ 'require' if (postgresql_ssl_enabled | default(false)) else 'prefer' }}"
+      # REM-009 pinned `require` here on 2026-06-14. It never rendered:
+      # postgresql_ssl_enabled was a pazny.postgresql ROLE default, out of
+      # scope in this role, so the conditional took the `prefer` branch on
+      # every host — confirmed in the artifact on disk, not inferred.
+      #
+      # Doctrine: docs/doctrine/foreign-properties.md §5.
+      # `no-verify`, not `require`, now that it will actually resolve. HedgeDoc
+      # is Sequelize over node-postgres, where `require` leaves
+      # rejectUnauthorized at Node's default TRUE and would reject the role's
+      # self-signed cert — so the dead pin was also a latent outage. libpq's
+      # `require` means the opposite (encrypt, do not verify); paperclip and
+      # authentik keep that spelling because their clients are libpq-family.
+      #
+      # HONEST LIMIT: Sequelize may ignore an `sslmode` query param entirely,
+      # in which case this is inert. It cannot break, and tools/tls-uptake.py
+      # says which happened. Do not read this line as the answer.
+      CMD_DB_URL: "postgres://{{ hedgedoc_db_user | default('hedgedoc') }}:{{ (hedgedoc_db_password | default(nos_derived_secrets.hedgedoc)) | urlencode }}@postgresql:5432/{{ hedgedoc_db_name | default('hedgedoc') }}?sslmode={{ 'no-verify' if (postgresql_ssl_enabled | default(false)) else 'prefer' }}"
       # ── Public URL / protocol ──────────────────────────────────────────────
       CMD_DOMAIN: "{{ hedgedoc_domain | default('hedgedoc' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       CMD_URL_ADDPORT: "false"

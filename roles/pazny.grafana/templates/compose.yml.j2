@@ -106,7 +106,13 @@ services:
     ports:
       - "127.0.0.1:{{ postgres_exporter_port | default(9187) }}:9187"
     environment:
-      DATA_SOURCE_NAME: "postgresql://{{ postgresql_root_user | default('postgres') }}:{{ (postgresql_root_password | default(nos_derived_secrets.postgresql)) | urlencode }}@postgresql:5432/postgres?sslmode=prefer"
+      # REM-217: `prefer` PERMITS plaintext, and measured across this estate
+      # that permission gets taken — the clients that stayed cleartext were
+      # exactly the ones offered a fallback. This client is libpq-family
+      # (it negotiated TLS under `prefer`), where `require` encrypts without
+      # verifying, so the role's self-signed cert is fine. Conditional so
+      # Linux, where the server has no TLS, still connects.
+      DATA_SOURCE_NAME: "postgresql://{{ postgresql_root_user | default('postgres') }}:{{ (postgresql_root_password | default(nos_derived_secrets.postgresql)) | urlencode }}@postgresql:5432/postgres?sslmode={{ 'require' if (postgresql_ssl_enabled | default(false)) else 'prefer' }}"
       PG_EXPORTER_EXTEND_QUERY_PATH: ""
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9187/metrics"]

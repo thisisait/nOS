@@ -302,3 +302,31 @@ fs-peruser: >-
 # the day those rows have a git-owned author. Until then, adding it would mean
 # teaching the gate to accept a slug nothing can verify — satisfying a gate by
 # editing it, which is the one thing this estate refuses.
+
+# ── Datastore transport (REM-217) ───────────────────────────────────────────
+# Every one of these asks tools/tls-uptake.py, which reads what the estate
+# NEGOTIATES. Deliberately not the templates: the June 2026 require-pin was
+# present in every template for nine weeks and rendered `prefer` on every host
+# (docs/hidden_fees/23), and a shape probe would have called that shipped.
+sec-transport: >-
+  test "$(tools/tls-uptake.py --json | python3 -c "import json,sys;
+  d = json.load(sys.stdin)['datastores'];
+  print(sum(1 for x in d if x['verdict'] != 'GREEN'))")" -eq 0
+
+# `on_fabric or 1` so an idle estate cannot report 0-of-0 as done. That is
+# hidden fee 08 — the STRICT health probe passing an empty stack as 0/0 ready.
+sec-transport-pg: >-
+  test "$(tools/tls-uptake.py --json | python3 -c "import json,sys;
+  d = next(x for x in json.load(sys.stdin)['datastores'] if x['datastore'] == 'postgresql');
+  n = d.get('sessions_on_fabric', 0);
+  print(1 if not n else n - d.get('sessions_encrypted', -1))")" -eq 0
+
+sec-transport-redis: >-
+  test "$(tools/tls-uptake.py --json | python3 -c "import json,sys;
+  d = next(x for x in json.load(sys.stdin)['datastores'] if x['datastore'] == 'redis');
+  print(int(bool(d.get('secret_on_argv')) or not d.get('tls_listener')))")" -eq 0
+
+sec-transport-mariadb: >-
+  test "$(tools/tls-uptake.py --json | python3 -c "import json,sys;
+  d = next(x for x in json.load(sys.stdin)['datastores'] if x['datastore'] == 'mariadb');
+  print(int(not d.get('require_secure_transport')))")" -eq 0

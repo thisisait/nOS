@@ -34,9 +34,21 @@ services:
       AUTHENTIK_REDIS__HOST: redis
       AUTHENTIK_REDIS__PASSWORD: "{{ redis_password | default(nos_derived_secrets.redis) }}"
       AUTHENTIK_POSTGRESQL__HOST: postgresql
-      # REM-009 (S3 2026-06-10): prefer = TLS when the server offers it,
-      # plaintext fallback otherwise — safe with postgresql_ssl_enabled off.
-      AUTHENTIK_POSTGRESQL__SSLMODE: "prefer"
+      # REM-009 (S3 2026-06-10) set `prefer` = TLS when the server offers it,
+      # plaintext fallback otherwise. REM-217 measured what that actually
+      # produced: on 2026-08-23 this container held 22 PLAINTEXT backends and
+      # one TLS backend, all opened within the same hour, against a server
+      # with ssl=on. Same image, same env — the worker on the identical block
+      # negotiated TLS for all six of its. So `prefer` is being read as "do not
+      # bother" by at least one client path here, and a mode that permits
+      # plaintext will be taken up on it.
+      #
+      # `require` in libpq semantics = encrypt, do NOT verify the certificate,
+      # which is what the role's self-signed cert supports. Still conditional:
+      # postgresql_ssl_enabled is false on Linux (the key-ownership leg is not
+      # done), and `require` against a server with no TLS refuses to connect.
+      # Verify the EFFECT with tools/tls-uptake.py, never by reading this line.
+      AUTHENTIK_POSTGRESQL__SSLMODE: "{{ 'require' if (postgresql_ssl_enabled | default(false)) else 'prefer' }}"
       AUTHENTIK_POSTGRESQL__USER: "{{ authentik_db_user | default('authentik') }}"
       AUTHENTIK_POSTGRESQL__NAME: "{{ authentik_db_name | default('authentik') }}"
       AUTHENTIK_POSTGRESQL__PASSWORD: "{{ authentik_db_password }}"
@@ -95,7 +107,11 @@ services:
       AUTHENTIK_REDIS__HOST: redis
       AUTHENTIK_REDIS__PASSWORD: "{{ redis_password | default(nos_derived_secrets.redis) }}"
       AUTHENTIK_POSTGRESQL__HOST: postgresql
-      AUTHENTIK_POSTGRESQL__SSLMODE: "prefer"   # REM-009 — mirrors the server block
+      # REM-217 — mirrors the server block; see the reasoning there. The worker
+      # already negotiated TLS on all its backends under `prefer`, so this
+      # change is expected to be a no-op HERE and is made anyway: two
+      # containers on one database must not differ in what they permit.
+      AUTHENTIK_POSTGRESQL__SSLMODE: "{{ 'require' if (postgresql_ssl_enabled | default(false)) else 'prefer' }}"
       AUTHENTIK_POSTGRESQL__USER: "{{ authentik_db_user | default('authentik') }}"
       AUTHENTIK_POSTGRESQL__NAME: "{{ authentik_db_name | default('authentik') }}"
       AUTHENTIK_POSTGRESQL__PASSWORD: "{{ authentik_db_password }}"

@@ -21,7 +21,18 @@ postgresql_root_user: "postgres"
 # Live-verified on Docker Desktop (TLSv1.3, key bind-mounted 0600).
 # Linux note: PG requires the key owned by postgres-uid or root — the
 # host-user-owned bind mount fails there; needs the root-chown leg first.
+# NOTE (2026-08-23): this declaration is a FALLBACK so the role stays usable on
+# its own. The value every consumer actually resolves is the one at play scope
+# in default.config.yml — five OTHER roles read this name to pick their client
+# sslmode, and a role default is invisible to them. It rendered `prefer`
+# everywhere for nine weeks; see docs/hidden_fees/23-a-pin-that-never-rendered.md.
 postgresql_ssl_enabled: "{{ ansible_os_family == 'Darwin' }}"
+
+# REM-217 (4). Upstream's 16-line default is `HIGH:MEDIUM:+3DES:!aNULL`, which
+# offers 3DES (SWEET32) and the MEDIUM grade to a downgrade-capable attacker.
+# Nothing observed negotiates them — every session in pg_stat_ssl is TLSv1.3
+# AEAD — so removing them costs nothing measurable.
+postgresql_ssl_ciphers: "HIGH:!aNULL:!3DES:!MEDIUM:!SHA1:!RC4:!DES"
 postgresql_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 postgresql_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 

@@ -20,7 +20,28 @@ services:
     environment:
       ENCRYPTION_KEY: "{{ infisical_encryption_key }}"
       AUTH_SECRET: "{{ infisical_auth_secret }}"
-      DB_CONNECTION_URI: "postgresql://{{ infisical_db_user | default('infisical') }}:{{ infisical_db_password | urlencode }}@postgresql:5432/{{ infisical_db_name | default('infisical') }}"
+      # REM-217: the SECRETS VAULT talked to its backing store in cleartext.
+      # Measured 2026-08-23 — every infisical backend in pg_stat_ssl reported
+      # ssl=f. No sslmode was set here, and node-postgres defaults to SSL OFF
+      # when unspecified (libpq would have opportunistically upgraded; this
+      # client does not).
+      #
+      # Doctrine: docs/doctrine/foreign-properties.md §5.
+      # `no-verify`, NOT `require`, and the difference is not cosmetic:
+      # node-postgres deviates from libpq. In libpq, `require` means encrypt
+      # WITHOUT verifying. In pg-connection-string, `require` leaves
+      # rejectUnauthorized at Node's default of true, so it would reject the
+      # role's self-signed certificate and the vault would fail to start. Only
+      # `no-verify` sets rejectUnauthorized=false. The same word, two client
+      # libraries, opposite failure modes — hence the different spelling from
+      # the authentik block, which is libpq.
+      #
+      # This buys confidentiality, not authentication. The supported path to
+      # both is Infisical's DB_ROOT_CERT (base64 CA), deferred because it would
+      # make this render depend on a file the postgresql role writes earlier in
+      # the same core-up pass, and a lookup('file') on a missing path fails the
+      # whole run. Rung 3 of REM-217, not this one.
+      DB_CONNECTION_URI: "postgresql://{{ infisical_db_user | default('infisical') }}:{{ infisical_db_password | urlencode }}@postgresql:5432/{{ infisical_db_name | default('infisical') }}{{ '?sslmode=no-verify' if (postgresql_ssl_enabled | default(false)) else '' }}"
       REDIS_URL: "redis://:{{ (redis_password | default(nos_derived_secrets.redis)) | urlencode }}@redis:6379"
       SITE_URL: "https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       TELEMETRY_ENABLED: "false"

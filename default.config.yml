@@ -1338,6 +1338,25 @@ postgresql_version: "16.15-alpine"      # REM-215: 16.14 is NOT clean — the pr
 postgresql_port: 5432
 postgresql_root_user: "postgres"
 postgresql_root_password: "{{ nos_derived_secrets.postgresql }}"
+# ── Server-side TLS, AT PLAY SCOPE — and it has to be here, not in the role ──
+# This began as a `pazny.postgresql` role default, which is where it belongs
+# logically and where it cannot work. Five OTHER roles read it to decide their
+# own client sslmode (authentik ×2, hedgedoc, infisical, paperclip), and a role
+# default is not in scope for a different role's render, so every one of them
+# resolved `| default(false)` and rendered the plaintext-tolerant branch.
+#
+# MEASURED 2026-08-23, in the rendered artifacts rather than the templates:
+# hedgedoc, paperclip and both authentik blocks on disk all say `sslmode=prefer`
+# on a macOS host, and the live paperclip container's env agrees — while the
+# server override two directories away says `ssl=on`. The `require`-pin commit
+# of 2026-06-14 has never once produced `require` in a render. Its gate reads
+# the template, so it passed for two months.
+#
+# The role default stays as a fallback so the role remains usable alone; this
+# line is what every consumer actually resolves. Linux is still false — the
+# key-ownership leg (PG wants the key owned by postgres-uid or root, the
+# host-user bind mount is not) is genuinely undone, not merely unset.
+postgresql_ssl_enabled: "{{ ansible_facts['os_family'] | default('') == 'Darwin' }}"
 # Live container name (compose project = stack, so <stack>-<service>-1). Used by
 # upgrade recipes' docker-exec dump/restore steps; default 'nos-postgresql' was wrong.
 postgresql_container_name: "infra-postgresql-1"
