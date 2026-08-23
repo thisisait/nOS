@@ -251,8 +251,17 @@ sec-p5: >-
 
 # Not "is the queue empty" — it never will be. The row is the open HIGHs, and
 # the estate's own reader is the probe.
+#
+# It must ask the reader's MACHINE mode. The first version counted lines of the
+# human render (`rem-status.py | grep -c 'HIGH '`) and so counted its headings:
+# the severity summary, "N CRITICAL/HIGH are BLOCKED", "+N pending below HIGH".
+# Four of the six matching lines are structural, so the probe could not reach 0
+# even with every HIGH closed — it had reported `contradicted` since it was
+# filed and would have gone on reporting it after the work was done.
 sec-rem: >-
-  test "$(python3 tools/rem-status.py | grep -c 'HIGH ')" -eq 0
+  test "$(tools/rem-status.py --json | python3 -c "import json,sys;
+  s = json.load(sys.stdin)['pending_by_severity'];
+  print(s.get('CRITICAL', 0) + s.get('HIGH', 0))")" -eq 0
 
 sec-queue-authorship: >-
   grep -ql "resolved_by" tools/scan-runner.sh

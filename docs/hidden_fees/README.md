@@ -39,7 +39,10 @@ it becomes work, or gets closed by a gate that makes it fail loudly instead.
 
 ## Entry shape
 
-One file per fee, `NN-short-slug.md`, with these headings:
+One file per fee, `NN-short-slug.md`. Four things have to be in it; since
+entry 18 they are section titles written for the specific fee rather than a
+fixed set of headings, because the interesting part of a fee is usually the
+mechanism and a fixed form kept burying it under boilerplate:
 
 - **The fee** — what is being deferred, in one paragraph.
 - **When the bill comes due** — the specific future event that charges it.
@@ -47,6 +50,8 @@ One file per fee, `NN-short-slug.md`, with these headings:
 - **How it was found** — usually "while looking at something else". Worth
   recording; it is evidence about where our blind spots are.
 - **What closes it** — the gate, fix, or decision. Not necessarily scheduled.
+  Entries that close only part of a fee say which part, and keep
+  `## What is still owed`.
 
 ## Index
 
@@ -69,3 +74,8 @@ One file per fee, `NN-short-slug.md`, with these headings:
 | [15](15-a-lineage-that-does-not-join.md) | The loop records a lineage whose first link does not join | ~~the first real autonomous run~~ | **write half paid 2026-08-16**; read half open |
 | [16](16-an-agent-is-five-declarations-nothing-names.md) | Onboarding an agent is five declarations and nothing names the set | the next agent, at runtime, as one symptom naming one layer | **gate paid 2026-08-18** (found curator); one-source open |
 | [17](17-php-tree-never-audited.md) | Wing's own dependency tree has never been audited | any CVE in it that matters more than a URL parser | open (1 paid) |
+| [18](18-a-report-that-reaches-nobody.md) | Four agents wrote reports the operator inbox never received | ~~the first night an agent finds something that matters~~ | **closed 2026-08-22** (gate + WARN on a non-200) |
+| [19](19-a-repair-the-reader-cannot-see.md) | A repair applied by hand is indistinguishable from drift | the next reader who trusts the queue over the estate | **gate paid 2026-08-22**; reconciliation open |
+| [20](20-a-third-of-the-queue-is-closed-on-its-word.md) | 50 of 165 closed findings carry no evidence at all | an audit, or the first re-opened row | **ratchet paid 2026-08-22**; 50 rows open |
+| [21](21-the-earliest-consumer-was-named-not-derived.md) | The earliest eager consumer of `{{ vars }}` was named, not derived | ~~the first full converge after a var moves~~ | **both halves paid 2026-08-22**; wholesale `{{ vars }}` open |
+| [22](22-a-probe-that-could-never-pass.md) | A roadmap probe that counts prose can never reach the state its row waits for | being paid now — `sec-rem` read `contradicted` from the day it was filed | **closed 2026-08-23** (probe + gate); decisiveness unguardable |
