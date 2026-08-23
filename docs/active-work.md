@@ -35,15 +35,15 @@ bookstack `MYSQL_ATTR_SSL_CA`, freescout `DB_MYSQL_ATTR_SSL_CA`, firefly
 cannot name one); Nextcloud has no env at all. pdo_mysql fails CLOSED, so a
 half-landed rung is a visible outage, not a silent downgrade.
 
-**Next:** (1) **a converge** — it is what makes both rungs true or false;
-`tools/tls-uptake.py --window 20` is the reader and said **1 of 9** new MariaDB
-connections encrypted beforehand. (2) `sec-transport-redis` — AUTH secret on the
-argv. (3) `sec-backrest-auth` — reachable from 23 containers. (4) MariaDB rung 4
-(`require_secure_transport`) — a cliff, gated absent.
+**Next:** (1) **a converge** — it is what makes all three pieces true or false;
+`tools/tls-uptake.py --window 20` said **1 of 9** new MariaDB connections encrypted
+beforehand. (2) `sec-transport-redis` — AUTH secret on the argv. (3) `sec-backrest-auth`
+— reachable from 23 containers. (4) MariaDB rung 4 — a cliff, gated absent.
 
-**Reds (4), none new.** `loop:drive` predates the forge sync (REM-214 re-judges tonight);
-the 115 h orphan clears on the next agent run; inbox → `notify-supersede`.
-**41 commits ahead of GitHub** — promotion is the operator's act (`tools/forge-sync.py --apply --push-github`).
+**Reds (4), none new.** `loop:drive` predates the forge sync (REM-214 re-judges tonight); the
+117 h orphan clears on the next agent run; `notify-supersede` is WRITTEN — a third state, opt-in
+per emitter — and retires 60 of 76 unread rows once a converge runs the ALTER sweep.
+**44 commits ahead of GitHub** — promotion is the operator's act (`tools/forge-sync.py --apply --push-github`).
 
 ## Open follow-ups
 
