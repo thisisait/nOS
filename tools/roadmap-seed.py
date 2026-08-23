@@ -126,6 +126,9 @@ row("sec-transport","Datastore transport — encrypted, not merely enabled","202
 row("sec-transport-pg","PostgreSQL clients encrypt, and the pin resolves","2026-08-23","next","security",parent="sec-transport",
     refs="docs/hidden_fees/23-a-pin-that-never-rendered.md",
     body="The June require-pin read a role default out of scope and rendered prefer for nine weeks. Fixed at play scope + per-driver spelling. UNVERIFIED until a converge moves tools/tls-uptake.py off 38.5%.")
+row("sec-transport-hedgedoc","HedgeDoc ignores sslmode in its connection URL","2026-08-23","next","security",parent="sec-transport",
+    refs="tools/tls-uptake.py · roles/pazny.hedgedoc/templates/compose.yml.j2",
+    body="MEASURED post-converge: the container env carries sslmode=no-verify and pg_stat_ssl still reports its backend ssl=f — it is the ONE plaintext backend left of 40, so postgresql reads 97.5%% instead of 100%%. Sequelize drops the query param; HedgeDoc needs dialectOptions.ssl, which CMD_DB_URL cannot express. The template already says this may be inert; now it is known to be.")
 row("sec-transport-redis","Redis: AUTH secret off the argv, then a TLS port","2026-08-23","queued","security",parent="sec-transport",
     refs="REM-217 remediation (1)",
     body="tls-port 0, 56 clients, secret readable by anything that can docker inspect. TLS needs every client URL moved to rediss:// — authentik, infisical, outline, freescout.")

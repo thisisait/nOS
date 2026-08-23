@@ -6,44 +6,45 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-08-23 • four items queued on `dev`, awaiting one converge.
+> Last updated: 2026-08-23 • transport converge landed; pg 97.5%, one holdout.
 
 ## Now (current track)
 
-**One converge is queued and everything below waits on it.** Nothing here is
-verified live; each item names the reader that will say.
-1. **PostgreSQL client TLS** (REM-217). The 2026-06-14 `require`-pin read
-   `postgresql_ssl_enabled` out of scope — a `pazny.postgresql` role default,
-   five readers in other roles — so every client rendered `prefer` for nine
-   weeks (fee 23). Now at play scope, spelled per driver family: `require` for
-   libpq, `no-verify` for node-postgres (`doctrine/foreign-properties.md` §5).
-   Plus `ssl_ciphers` without 3DES/MEDIUM.
-2. **MariaDB rungs 1+2** (REM-217). Self-signed cert with `mariadb` in the SAN
-   — the prerequisite for everything later, because Laravel's
-   `MYSQL_ATTR_SSL_CA` is dropped by `array_filter` when empty.
-   `require_secure_transport` deliberately absent, and gated absent.
-3. **FreeScout 2.1.5-php8.3 → 2.2.5** (REM-218). The pin claimed `app 1.8.231`;
-   the container runs **1.8.230** and the image predates that release, so two
-   advisories read as patched were live six weeks. The php8.3 line is dead at
-   2.1.5, so this crosses a PHP minor — **the riskiest single item**.
-4. **Wing session reaper** now fires at session open on both runtimes, not only
-   on a page view (fee 25). The 110 h orphan clears on the first agent run
-   after deploy.
+**Transport converge LANDED 2026-08-23.** 60 containers, none unhealthy. Every
+claim below is a reading; the tool that produced it is named.
 
-**What to check after:** `tools/tls-uptake.py` — postgresql off 46% toward
-100% of fabric backends, mariadb with `ssl_cert` present. `tools/app-version.py`
-— freescout MATCH at 1.8.235. **A service that fails to start is the signal to
-revert one template**: freescout first, then outline / infisical.
+| what | before | after | read with |
+| --- | ---: | ---: | --- |
+| PostgreSQL backends encrypted on the fabric | 38.5% | **97.5%** | `tools/tls-uptake.py` |
+| FreeScout app version | 1.8.230 | **1.8.235** | `tools/app-version.py` |
+| MariaDB cert on disk | none (ephemeral) | `CN=mariadb`, SAN `mariadb` | `show variables like 'ssl_cert'` |
 
-**Held back** so a failed converge has one candidate cause: redis AUTH secret
-off the argv, MariaDB clients (rung 3), the TLS 1.3 floor.
+`sec-transport-pg` flipped `contradicted → confirmed` on its own — the probe
+reads the effect. REM-218 + REM-193 closed on the reader's output.
 
-**Reds.** Both 08-18 ones are closed. `red-status` now re-decides an unread
-notification's own claim, so the inbox red reads 9 unverifiable + 4 provably
-stale rather than 13 unread (fee 26) — the emitter-side half is
-`notify-supersede`. The loop judged a REM-214 patch overnight and it needs
-re-judging against today's tree; the forges are synced, so tonight's drive can
-carry it.
+**One casualty, fixed.** Outline restart-looped on `PGSSLMODE=no-verify`: it
+validates the **libpq** enum and maps all but `disable` to
+`rejectUnauthorized:false` itself. The contract belongs to whoever PARSES the
+value (`doctrine/foreign-properties.md` §5.1).
+
+**Next, in order:**
+
+1. **`sec-transport-hedgedoc`** — the ONE plaintext backend left of 40. Its env
+   carries `sslmode=no-verify`; Sequelize drops it. Needs `dialectOptions.ssl`,
+   which `CMD_DB_URL` cannot express. Measured, not guessed.
+2. **`sec-transport-mariadb`** rung 3 — five clients, five contracts. Laravel
+   reads only `MYSQL_ATTR_SSL_CA`; the cert it needs now exists. Rung 4
+   (`require_secure_transport`) is a cliff and comes last.
+3. **`sec-transport-redis`** — AUTH secret on the argv; no TLS port.
+4. **`sec-backrest-auth`** — reachable from 23 containers with `auth:disabled`.
+
+**Reds (4), none new.** `loop:drive` predates the forge sync and its REM-214
+proposal re-judges tonight. The 115 h surveyor orphan clears on the first agent
+run after this deploy — the reaper now fires at session open. The inbox needs
+`notify-supersede`.
+
+**37 commits ahead of GitHub** — the promotion is the operator's act:
+`tools/forge-sync.py --apply --push-github`.
 
 ## Open follow-ups
 

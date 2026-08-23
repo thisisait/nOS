@@ -350,3 +350,20 @@ sec-backrest-auth: >-
 # cheapest honest test; the reader-side half already exists and is not this row.
 notify-supersede: >-
   grep -q "superseded_at" files/anatomy/wing/db/schema-extensions.sql
+
+# The EFFECT, not the env var: hedgedoc's env already carries an sslmode that
+# Sequelize drops. Only pg_stat_ssl can say whether the backend encrypts.
+#
+# It must be PRESENT AND encrypted. The first cut counted plaintext hedgedoc
+# backends and required zero — and came back `confirmed` immediately, because
+# hedgedoc's pool was idle and a client with no live backend does not appear in
+# pg_stat_ssl at all. Absence answering as success is what this estate has paid
+# for most often (docs/hidden_fees/08), and tools/tls-uptake.py prints that
+# caveat in its own output; the probe ignored it.
+sec-transport-hedgedoc: >-
+  test "$(tools/tls-uptake.py --json | python3 -c "import json,sys;
+  d = next(x for x in json.load(sys.stdin)['datastores'] if x['datastore'] == 'postgresql');
+  rows = [c for c in d.get('clients', []) if c['user'] == 'hedgedoc'];
+  print('present-and-encrypted' if rows and all(c['ssl'] for c in rows)
+        else 'no-hedgedoc-backend-in-this-sample' if not rows else 'plaintext')")" \
+  = "present-and-encrypted"
