@@ -31,8 +31,10 @@ WHAT IS PINNED.
      asks for a CA that is not there — and pdo_mysql fails CLOSED (measured:
      "Cannot connect to MySQL using SSL"), so half-gating is an outage, not a
      silent downgrade.
-  5. `require_secure_transport` stays absent. That is rung 4 and it is a cliff:
-     it would refuse every client that has not yet moved.
+  5. `require_secure_transport` is DECLARED, and declared OFF. Rung 4 is a
+     cliff — it would refuse every client that has not yet moved — but
+     OMISSION is not OFF: an undeclared value is whatever last touched the
+     server, and no converge can put it back (proven live 2026-08-23).
 
 AND THERE ARE SIX, not five. `mysqld-exporter` was found on 2026-08-23 by
 sampling `information_schema.processlist` — the ladder enumerated clients from
