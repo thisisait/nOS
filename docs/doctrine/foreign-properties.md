@@ -194,3 +194,50 @@ question is answerable in one command rather than from an image's language.
 
 **Not ours to fix.** The deviation is `pg-connection-string`'s, deliberate and
 years old. We can only spell each client's mode correctly.
+
+### 5.2 And a fourth: an ORM in between that discards what it does not know
+
+Learned by HedgeDoc, the same afternoon, and it is the one that breaks the
+pattern of the three above. Those are all about the value being *misread*.
+This one was never read at all.
+
+HedgeDoc's URL rendered `?sslmode=no-verify` — correct by §5, resolvable by
+scope, present in the container's environment. `pg_stat_ssl` still reported its
+backend `ssl=f`: the one plaintext PostgreSQL backend of forty.
+
+The path from that URL to the driver has a filter in it. Sequelize parses the
+query string into `dialectOptions` verbatim, and the postgres dialect then
+copies `dialectOptions` into the pg client through an **allow-list**
+(`sequelize/lib/dialects/postgres/connection-manager.js:96`):
+
+```js
+_.merge(connectionConfig, _.pick(config.dialectOptions, [
+  'application_name', 'ssl', 'client_encoding', /* … */
+]))
+```
+
+`sslmode` is not on that list. The value was picked out and dropped, in
+silence, and no layer had a reason to complain: the URL was well-formed, the
+parameter was well-spelled, and the driver simply never saw it.
+
+`ssl` **is** on the list — but it must be an object, because pg does
+`Object.assign(options, this.ssl)` for any value that is not literally `true`,
+so a string spreads into character keys and leaves `rejectUnauthorized` at
+Node's default. **A query string cannot express an object.** The setting is
+therefore not expressible in the connection URL at all, at any spelling.
+
+**The accommodation.** Where the URL cannot carry the setting, the URL must not
+appear to. HedgeDoc's is now clean and the control is a mounted `config.json`
+(`db.dialectOptions.ssl`) whose header carries this derivation; the gate class
+is `test_postgresql_ssl.py::OUT_OF_BAND`, which requires the URL to *stay*
+clean. An inert pin that reads as a control is the failure of
+`docs/hidden_fees/23`, and this line had by then been wrong three times in a
+row — each correction confident, each from a different layer of the stack.
+
+**How to settle it without guessing.** Read the layer that *consumes* the
+option, not the one that accepts it. Two greps in `node_modules` answered in
+under a minute what two rounds of reasoning about driver families got wrong.
+
+**Not ours to fix.** A defensive allow-list is a reasonable thing for an ORM to
+have. What is ours is not to keep writing configuration into a channel we have
+not checked is connected.

@@ -17,6 +17,43 @@
     state: directory
     mode: '0755'
 
+- name: "[pazny.hedgedoc] Ensure config directory exists"
+  ansible.builtin.file:
+    path: "{{ hedgedoc_config_dir }}"
+    state: directory
+    mode: '0755'
+
+# A bind-mount source that does not exist is created by Docker as a DIRECTORY,
+# and HedgeDoc `require()`s this path — a directory throws MODULE_NOT_FOUND and
+# the container crash-loops. Worse, `template:` would then silently write
+# config.json/config.json.j2 INSIDE it and report changed. Same shape as the
+# pazny.postgresql cert dir-mount root-caused 2026-07-19; a clean run never
+# hits it (this task precedes compose up), a converge after a crashed one does.
+# Drop the container too: a restart cannot switch a bind-mount's type.
+- name: "[pazny.hedgedoc] Heal an invalid config.json path (dir-mount from a crashed run)"
+  ansible.builtin.shell: |
+    set -e
+    p="{{ hedgedoc_config_dir }}/config.json"
+    if [ -d "$p" ]; then
+      rm -rf "$p"
+      {{ docker_bin | default('docker') }} rm -f b2b-hedgedoc-1 >/dev/null 2>&1 || true
+      echo "purged-invalid-config"
+    fi
+  args:
+    executable: /bin/bash
+  register: _hedgedoc_config_heal
+  changed_when: "'purged-invalid-config' in _hedgedoc_config_heal.stdout"
+
+# REM-217 / sec-transport-hedgedoc. Rendered ALWAYS, not only on the TLS
+# branch: the mount is gated, but an estate that flips postgresql_ssl_enabled
+# off must not keep serving a file that says otherwise.
+- name: "[pazny.hedgedoc] Render config.json (database TLS — see the template header)"
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "{{ hedgedoc_config_dir }}/config.json"
+    mode: '0644'
+  notify: Restart hedgedoc
+
 - name: "[pazny.hedgedoc] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

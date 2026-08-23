@@ -24,6 +24,14 @@ So the gate now pins the PROPERTY instead of the spelling:
      style choice, and the table below records it with the reason —
      `require` means opposite things in libpq and node-postgres.
 
+  4. AND A CLIENT WHOSE URL CANNOT CARRY THE SETTING AT ALL must not pretend
+     otherwise. HedgeDoc's `?sslmode=` rendered correctly, resolved correctly,
+     and was then picked out of `dialectOptions` by a Sequelize allow-list that
+     holds `ssl` and not `sslmode` — so it read as encryption while being the
+     one plaintext backend of forty. Those clients are in `OUT_OF_BAND`: the
+     URL is required to stay CLEAN and the real control is checked where it
+     lives. A dead pin that reads as a control is the shape of hidden fee 23.
+
 And the leg that would have caught the original defect: the variable every one
 of these conditionals reads must be resolvable where it is read. That is
 `tests/anatomy/test_a_role_default_is_not_read_across_roles.py`.
@@ -109,8 +117,6 @@ CLIENTS = (
      "require", "Go lib/pq → libpq semantics; live TLS under prefer", 1),
     ("roles/pazny.grafana/templates/compose.yml.j2", "DATA_SOURCE_NAME",
      "require", "postgres_exporter, Go lib/pq", 1),
-    ("roles/pazny.hedgedoc/templates/compose.yml.j2", "CMD_DB_URL",
-     "no-verify", "Sequelize → node-postgres; `require` would reject the cert", 1),
     ("roles/pazny.outline/templates/compose.yml.j2", "PGSSLMODE",
      "require", "Outline OWNS this string: validates the libpq enum (no-verify "
      "is rejected, restart-looped 2026-08-23) then maps everything except "
@@ -137,6 +143,23 @@ ACCEPTED = {
 #: principle: under `prefer` the estate measured 22 cleartext Authentik backends
 #: against a server with ssl=on.
 PERMITS_PLAINTEXT = ("disable", "prefer", "allow")
+
+#: Clients whose connection string CANNOT carry the setting at all, so pinning
+#: one there is decoration. They are held to a stricter rule than CLIENTS: the
+#: URL must stay CLEAN, and the real control is checked where it lives.
+#:
+#: HedgeDoc is the whole membership. Its URL reached Sequelize 5.22.5, which
+#: parses the query into `dialectOptions` and then copies dialectOptions into pg
+#: through `_.pick([... 'ssl' ...])` — a list without `sslmode`. So the value
+#: was not misread, it was dropped, and `tools/tls-uptake.py` measured this one
+#: backend of forty in cleartext for the eight hours the "fix" was live.
+OUT_OF_BAND = {
+    "roles/pazny.hedgedoc/templates/compose.yml.j2": {
+        "key": "CMD_DB_URL",
+        "control": "roles/pazny.hedgedoc/templates/config.json.j2",
+        "mount": "/hedgedoc/config.json",
+    },
+}
 
 
 def _client_lines(rel: str, key: str) -> list[str]:
@@ -225,3 +248,87 @@ def test_a_value_the_application_itself_validates_is_in_its_accepted_set():
                     f"refuses at startup — it accepts only {', '.join(accepted)}. "
                     "This is not a driver question: the application parses the "
                     "variable before any driver sees it")
+
+
+def _render(rel: str, **ctx) -> str:
+    import jinja2
+    path = REPO / rel
+    # trim_blocks matches ansible.builtin.template's own default. A gate that
+    # renders with different settings than the renderer under test is checking
+    # a string the estate never produces — the recurring shape here.
+    env = jinja2.Environment(  # noqa: S701 — rendering our own template, not user input
+        loader=jinja2.FileSystemLoader(str(path.parent)),
+        undefined=jinja2.StrictUndefined,
+        trim_blocks=True,
+        lstrip_blocks=False,
+        keep_trailing_newline=True,
+    )
+    return env.get_template(path.name).render(**ctx)
+
+
+def test_a_client_that_cannot_carry_sslmode_does_not_pretend_to():
+    """The URL must stay clean where the URL is not the control.
+
+    Re-adding `?sslmode=...` here would be harmless at runtime and expensive
+    the next time somebody reads it: it is the exact line that read as
+    encryption for eight hours while the backend was in cleartext."""
+    for rel, spec in OUT_OF_BAND.items():
+        for line in _client_lines(rel, spec["key"]):
+            assert "sslmode" not in line.lower(), (
+                f"{rel} {spec['key']} carries an sslmode again. Sequelize's "
+                "postgres dialect picks `ssl` out of dialectOptions and drops "
+                f"everything else — the control is {spec['control']}")
+            assert "?ssl=" not in line and "&ssl=" not in line, (
+                f"{rel} {spec['key']} carries ?ssl= — a query value is a STRING, "
+                "and pg spreads a non-`true` ssl with Object.assign, leaving "
+                "rejectUnauthorized at Node's default TRUE: the self-signed "
+                "server cert would be REFUSED and the container would not start")
+
+
+def test_the_out_of_band_control_encrypts_on_the_tls_branch():
+    import json
+    for rel, spec in OUT_OF_BAND.items():
+        on = json.loads(_render(spec["control"], postgresql_ssl_enabled=True))
+        # Keyed by NODE_ENV upstream (lib/config/index.js:14/35). A file keyed
+        # for the wrong env is READ, ignored, and reports nothing — so both
+        # keys are required rather than assumed.
+        assert set(on) >= {"production", "development"}, (
+            f"{spec['control']} must key its block by NODE_ENV for every env "
+            "HedgeDoc can start in; a wrongly-keyed file is silently ignored")
+        for env_name, block in on.items():
+            ssl = block["db"]["dialectOptions"]["ssl"]
+            assert isinstance(ssl, dict), (
+                f"{spec['control']}[{env_name}] sets ssl to {ssl!r}. It must be "
+                "an OBJECT: pg does `Object.assign(options, this.ssl)` for any "
+                "value that is not literally true, so a string spreads into "
+                "character keys and verification stays ON")
+            assert ssl.get("rejectUnauthorized") is False, (
+                f"{spec['control']}[{env_name}] would verify the CA against a "
+                "role-generated SELF-SIGNED cert — the connection fails closed")
+
+
+def test_the_out_of_band_control_is_inert_when_the_server_offers_no_tls():
+    """Linux ships without server TLS. A config that demands SSL there is not
+    a weaker guarantee, it is a service that cannot connect at all."""
+    import json
+    for rel, spec in OUT_OF_BAND.items():
+        off = json.loads(_render(spec["control"], postgresql_ssl_enabled=False))
+        assert off == {}, (
+            f"{spec['control']} still asks for SSL with the server TLS branch "
+            f"off: {off!r}")
+
+
+def test_the_out_of_band_control_is_mounted_where_the_application_reads_it():
+    """A rendered file nothing mounts is the same defect one layer along."""
+    for rel, spec in OUT_OF_BAND.items():
+        src = (REPO / rel).read_text()
+        mount = [ln for ln in src.splitlines() if spec["mount"] in ln]
+        assert mount, (
+            f"{rel} renders {spec['control']} but never mounts it at "
+            f"{spec['mount']} — the application would read the image's empty "
+            "default and connect in cleartext, saying nothing")
+        assert all(ln.rstrip().endswith(":ro") for ln in mount), (
+            f"{rel}: {spec['mount']} must mount read-only")
+        assert "postgresql_ssl_enabled" in src, (
+            f"{rel} mounts the TLS config unconditionally; on a host whose "
+            "server offers no TLS the container would fail to connect")

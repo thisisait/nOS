@@ -16,25 +16,33 @@ services:
 {% endif %}
     volumes:
       - {{ hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads') }}:/hedgedoc/public/uploads
+{% if postgresql_ssl_enabled | default(false) %}
+      # Database TLS lives HERE, not in the URL. Read templates/config.json.j2
+      # before changing either — the reason is upstream's, and it is measured.
+      - {{ hedgedoc_config_dir }}/config.json:/hedgedoc/config.json:ro
+{% endif %}
     environment:
       # ── Database (PostgreSQL z infra stacku) ──────────────────────────────
-      # REM-009 pinned `require` here on 2026-06-14. It never rendered:
-      # postgresql_ssl_enabled was a pazny.postgresql ROLE default, out of
-      # scope in this role, so the conditional took the `prefer` branch on
-      # every host — confirmed in the artifact on disk, not inferred.
+      # NO sslmode ON THIS URL, DELIBERATELY, and this is the third correction
+      # to one line — each one confident, each one from a different level of
+      # the stack:
       #
-      # Doctrine: docs/doctrine/foreign-properties.md §5.
-      # `no-verify`, not `require`, now that it will actually resolve. HedgeDoc
-      # is Sequelize over node-postgres, where `require` leaves
-      # rejectUnauthorized at Node's default TRUE and would reject the role's
-      # self-signed cert — so the dead pin was also a latent outage. libpq's
-      # `require` means the opposite (encrypt, do not verify); paperclip and
-      # authentik keep that spelling because their clients are libpq-family.
+      #   2026-06-14  `sslmode=require`   never rendered (role-default scope)
+      #   2026-08-23  `sslmode=no-verify` rendered, and was DISCARDED
       #
-      # HONEST LIMIT: Sequelize may ignore an `sslmode` query param entirely,
-      # in which case this is inert. It cannot break, and tools/tls-uptake.py
-      # says which happened. Do not read this line as the answer.
-      CMD_DB_URL: "postgres://{{ hedgedoc_db_user | default('hedgedoc') }}:{{ (hedgedoc_db_password | default(nos_derived_secrets.hedgedoc)) | urlencode }}@postgresql:5432/{{ hedgedoc_db_name | default('hedgedoc') }}?sslmode={{ 'no-verify' if (postgresql_ssl_enabled | default(false)) else 'prefer' }}"
+      # The second was right about node-postgres and still wrong, because
+      # nothing between the URL and pg ever reads `sslmode`: Sequelize copies
+      # dialectOptions through an allow-list holding `ssl` and not `sslmode`.
+      # Measured, in the running image, at
+      # sequelize/lib/dialects/postgres/connection-manager.js:96 — and by
+      # tools/tls-uptake.py, which called this the one plaintext backend of 40
+      # while this line claimed encryption.
+      #
+      # An inert pin that reads as a control is worse than no pin
+      # (docs/hidden_fees/23). The control is config.json; that file carries
+      # the whole derivation. Doctrine: docs/doctrine/foreign-properties.md §5.2
+      # — an ORM in between that discards what it does not know.
+      CMD_DB_URL: "postgres://{{ hedgedoc_db_user | default('hedgedoc') }}:{{ (hedgedoc_db_password | default(nos_derived_secrets.hedgedoc)) | urlencode }}@postgresql:5432/{{ hedgedoc_db_name | default('hedgedoc') }}"
       # ── Public URL / protocol ──────────────────────────────────────────────
       CMD_DOMAIN: "{{ hedgedoc_domain | default('hedgedoc' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       CMD_URL_ADDPORT: "false"

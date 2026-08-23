@@ -1,0 +1,63 @@
+{#
+  pazny.hedgedoc — /hedgedoc/config.json
+
+  THE ONLY PLACE HEDGEDOC CAN BE TOLD TO ENCRYPT ITS DATABASE SESSION.
+
+  `CMD_DB_URL` cannot express it, and this was measured in the running image
+  rather than assumed. HedgeDoc hands the URL to Sequelize 5.22.5, which parses
+  the query string into `dialectOptions` verbatim — and the postgres dialect
+  then copies dialectOptions into the pg client through an ALLOW-LIST
+  (node_modules/sequelize/lib/dialects/postgres/connection-manager.js:96):
+
+      _.pick(config.dialectOptions, ['application_name', 'ssl',
+                                     'client_encoding', ...])
+
+  `sslmode` is not on that list. So `?sslmode=no-verify` was not misunderstood,
+  it was picked out and dropped, which is why tools/tls-uptake.py measured this
+  one backend of forty in cleartext while the URL said otherwise.
+
+  `ssl` IS on the list, and it must be an OBJECT (`{rejectUnauthorized:false}`
+  against the role's self-signed cert). A URL query value is always a string,
+  and pg's connection.js does `Object.assign(options, this.ssl)` on anything
+  that is not literally `true` — a string would spread into character keys and
+  leave rejectUnauthorized at Node's default TRUE, i.e. a refused certificate.
+  Hence a file, not a query parameter.
+
+  MERGE ORDER, also read from lib/config/index.js: this file is merged at
+  line 42 and `environment.js` at line 45, so env wins — but lodash `merge`
+  skips undefined sources, and every CMD_DB_* is undefined here, so the `db`
+  object survives intact next to `dbURL`. lib/models/index.js:25 then calls
+  `new Sequelize(config.dbURL, cloneDeep(config.db))` — URL for the address,
+  this file for the options.
+
+  Doctrine: docs/doctrine/foreign-properties.md §5.2 — an ORM in between that
+  discards what it does not know.
+
+  Keyed by NODE_ENV (index.js:14/35, `production` in this image). Both keys are
+  rendered: an unkeyed or wrongly-keyed file is silently ignored, which is the
+  same failure this file exists to end.
+#}
+{% if postgresql_ssl_enabled | default(false) %}
+{
+  "production": {
+    "db": {
+      "dialectOptions": {
+        "ssl": {
+          "rejectUnauthorized": false
+        }
+      }
+    }
+  },
+  "development": {
+    "db": {
+      "dialectOptions": {
+        "ssl": {
+          "rejectUnauthorized": false
+        }
+      }
+    }
+  }
+}
+{% else %}
+{}
+{% endif %}

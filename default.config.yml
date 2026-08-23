@@ -60,6 +60,11 @@ gitlab_config_dir: "{{ nos_data_root }}/platform/services/gitlab/config"
 gitlab_data_dir: "{{ nos_data_root }}/platform/services/gitlab/data"
 grafana_data_dir: "{{ nos_data_root }}/platform/services/grafana/data"
 hedgedoc_data_dir: "{{ nos_data_root }}/platform/services/hedgedoc/data"
+# Rendered config.json — HedgeDoc's database TLS, which its connection URL
+# cannot express (doctrine/foreign-properties.md §5.2). Separate from data/
+# because it is a render, not state: a blank may wipe it and the next converge
+# writes it back, while compose must find a FILE there before it binds it.
+hedgedoc_config_dir: "{{ nos_data_root }}/platform/services/hedgedoc/config"
 homeassistant_config_dir: "{{ nos_data_root }}/platform/services/homeassistant/config"
 infisical_data_dir: "{{ nos_data_root }}/platform/services/infisical/data"
 influxdb_config_dir: "{{ nos_data_root }}/platform/services/influxdb/config"

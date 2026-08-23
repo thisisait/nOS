@@ -14,6 +14,10 @@ hedgedoc_domain: "hedgedoc{{ _host_alias_seg | default('') }}.{{ tenant_domain |
 hedgedoc_port: 3012
 hedgedoc_db_name: "hedgedoc"
 hedgedoc_db_user: "hedgedoc"
+# hedgedoc_config_dir is declared at PLAY scope in default.config.yml, beside
+# hedgedoc_data_dir and under nos_data_root — a path is declared once
+# (test_fs_doctrine_paths.py), and a role default would be invisible to
+# anything outside this role anyway (test_a_role_default_is_not_read_across_roles.py).
 hedgedoc_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 hedgedoc_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 # For `blank=true` it is wiped in the reset phase (tasks/stacks/external-paths.yml):
