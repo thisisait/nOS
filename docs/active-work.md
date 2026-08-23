@@ -10,40 +10,43 @@
 
 ## Now (current track)
 
-**Transport converge LANDED 2026-08-23**, 60 healthy. Each claim names its reader.
+**Transport converge LANDED 2026-08-23** (`failed=0`, 1557 tasks). Each claim
+names its reader.
 
 | what | before | after | read with |
 | --- | ---: | ---: | --- |
-| PostgreSQL backends encrypted on the fabric | 38.5% | **97.5%** | `tools/tls-uptake.py` |
+| PostgreSQL clients encrypted | 38.5% | **every one, incl. hedgedoc** | `tls-uptake.py` self-test |
+| MariaDB app clients encrypted | 0 of 5 | **5 of 5** | `tls-uptake.py` self-tests |
 | FreeScout app version | 1.8.230 | **1.8.235** | `tools/app-version.py` |
-| MariaDB cert on disk | none (ephemeral) | `CN=mariadb`, SAN `mariadb` | `show variables like 'ssl_cert'` |
 
-`sec-transport-pg` flipped to `confirmed` on its own — **a false positive,
-corrected the same day**: the sample missed hedgedoc's idle pool and read
-38-of-38. It now needs a NAMED client set present-and-encrypted and says
-`unsampled:hedgedoc`. REM-218 + REM-193 stand, closed on reader output. Outline's
-restart loop is fixed — it validates the **libpq** enum itself, so the contract
-belongs to whoever PARSES the value (`docs/doctrine/foreign-properties.md` §5.1).
+`sec-transport-pg`, `-hedgedoc`, `-mariadb-clients`, `notify-supersede`: all four
+probes **DONE**, each echoing `encrypted` / `wired` as its own evidence.
 
-**Two rungs written today, both UNVERIFIED until a converge.** *hedgedoc* — its
-`?sslmode=` was not misread: Sequelize copies `dialectOptions` into pg through an
-allow-list holding `ssl` and not `sslmode` (§5.2), and `ssl` must be an *object*
-no query string can carry, so the control is a mounted `config.json`.
-*MariaDB rung 3* — the ladder's "one Laravel knob" was true of one of three:
-bookstack `MYSQL_ATTR_SSL_CA`, freescout `DB_MYSQL_ATTR_SSL_CA`, firefly
-`MYSQL_SSL_CA` **plus** `MYSQL_USE_SSL`. WordPress encrypts without a CA (it
-cannot name one); Nextcloud has no env at all. pdo_mysql fails CLOSED, so a
-half-landed rung is a visible outage, not a silent downgrade.
+**Sampling was the wrong question, twice** (`docs/hidden_fees/29`). HedgeDoc
+appeared in **0 of 319** samples over 100s — its pool lives a millisecond — and
+MariaDB's `--window` read `partial-0.62` with every client provably encrypted,
+because the healthcheck opens a unix socket every 10s and no counter separates
+it from plaintext TCP. Both now ask the client about its OWN session.
 
-**Next:** (1) **a converge** — it is what makes all three pieces true or false;
-`tools/tls-uptake.py --window 20` said **1 of 9** new MariaDB connections encrypted
-beforehand. (2) `sec-transport-redis` — AUTH secret on the argv. (3) `sec-backrest-auth`
-— reachable from 23 containers. (4) MariaDB rung 4 — a cliff, gated absent.
+**A sixth MariaDB client**, found in `information_schema.processlist`, not in
+the ladder's survey of *applications*: `mysqld-exporter`, ~4×/min with the
+credential in clear. Row `sec-transport-mysqld-exporter` — TLS only via
+`--config.my-cnf`, whose file a non-root user must read, so a row not a patch.
 
-**Reds (4), none new.** `loop:drive` predates the forge sync (REM-214 re-judges tonight); the
-117 h orphan clears on the next agent run; `notify-supersede` is WRITTEN — a third state, opt-in
-per emitter — and retires 60 of 76 unread rows once a converge runs the ALTER sweep.
-**44 commits ahead of GitHub** — promotion is the operator's act (`tools/forge-sync.py --apply --push-github`).
+**A converge died on my own change**: an index in `schema-extensions.sql` naming
+columns the ALTER sweep adds later, and `CREATE TABLE IF NOT EXISTS` is a no-op
+on an existing DB. Invisible to every local test, which builds fresh tables.
+Gated; 9 latent siblings ratcheted.
+
+**Next:** (1) `sec-transport-redis` — AUTH secret on the argv, no TLS listener.
+(2) `sec-backrest-auth` — reachable from 23 containers. (3) the exporter.
+(4) MariaDB rung 4 — waits on the exporter alone now.
+
+**Reds (4), none new.** `loop:drive` predates the forge sync (REM-214 re-judges
+tonight); the orphan clears on the next agent run; `notify-supersede` retires
+nothing until its emitters fire — tonight's backup is the first test.
+
+**48 commits ahead of GitHub** — promotion is the operator's act (`tools/forge-sync.py --apply --push-github`).
 
 ## Open follow-ups
 
@@ -51,16 +54,14 @@ The general fix for the class below — a per-service `verify.yml` hook plus the
 loader change that lets it fail — is in
 [`nos-genome-and-organelles.md`](archive/nos-genome-and-organelles.md) §Thread D.
 
-- **FreeScout has no SSO** (survey, 08-02): both `freescout-oauth` sources 404, so
-  the `FREESCOUT_OIDC_*` env is inert and `/login` is local-form-only. Open: find a
-  reachable module source, or reclassify FreeScout as forward_auth.
+- **FreeScout has no SSO** (08-02): both `freescout-oauth` sources 404, so the
+  `FREESCOUT_OIDC_*` env is inert. Find a source, or reclassify as forward_auth.
 - **`drift-watch.sh` `exit 0`s regardless of the Bone POST**, swallowing a
   CRITICAL when the HMAC secret is unset. `genome-codegen.py` emits 2 of B1's 4.
 - **Infisical MTI render fix (S-track):** the aggregator still emits an oauth2
-  identity for infisical, so the orphan OAuth2Provider sharing the Provider base
-  row with the ProxyProvider reappears on apply; deleting it cascades the shared
-  base and kills the proxy (live-proven). Fix: suppress oauth2 render for
-  `provider_type: forward_auth`. Memory `autologin-coverage-ceilings`.
+  identity, so the orphan OAuth2Provider sharing the Provider base row with the
+  ProxyProvider reappears on apply; deleting it cascades the base and kills the
+  proxy (live-proven). Fix: suppress oauth2 render for `forward_auth`.
 - **Euro-office: full role swap after first stable** — pilot via `onlyoffice_image`
   flip; rename role+plugin+manifest once stable lands. Documenso stays.
 - **D1 `{{ vars }}` retirement flip** — design LOCKED (O25); the flip needs a
@@ -105,10 +106,9 @@ loader change that lets it fail — is in
 - **TCC grant for /Volumes/SSD1TB** — restic off-site leg fails `operation not
   permitted`, blocking the backup DR round-trip verify.
 - **Uptime Kuma: wizard no longer blocking, monitors unproven.** `/api/entry-page`
-  answers `entryPage:null` (08-18), overtaking the 07-24 claim. Whether any monitor
-  exists is NOT established — the healthcheck is a TCP connect and read `healthy`
-  through nine days of an unfinished wizard. Open `127.0.0.1:3001`, confirm, then
-  `--tags uptime_kuma`.
+  answers `entryPage:null` (08-18). Whether any monitor exists is NOT established —
+  the healthcheck is a TCP connect and read `healthy` through nine days of an
+  unfinished wizard. Open `127.0.0.1:3001`, confirm, then `--tags uptime_kuma`.
 - **`s3://backups/2026-08-03/` (14 objects, 351 MB) opens with no key.** Decide
   whether to delete — unreadable ciphertext reads as a backup. 07-26..08-02 still
   open with `{prefix}_pw_backup_encryption` (`7f4907ac`).
