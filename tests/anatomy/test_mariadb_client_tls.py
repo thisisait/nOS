@@ -229,9 +229,19 @@ def test_rung_four_has_not_been_climbed_by_accident():
     Measured 2026-08-23: 1 of 9 new connections encrypted. It is the LAST rung
     and this gate is what stops it arriving with rung 3."""
     src = (REPO / "roles/pazny.mariadb/templates/compose.yml.j2").read_text()
-    rendered = [ln for ln in src.splitlines()
-                if "require_secure_transport" in ln and not ln.lstrip().startswith("#")]
-    assert not rendered, (
-        "require_secure_transport is being rendered. Rung 4 is deliberate work "
-        "with tools/tls-uptake.py --window showing near-100% first:\n  "
-        + "\n  ".join(rendered))
+    live = [ln.strip() for ln in src.splitlines()
+            if "require-secure-transport" in ln.replace("_", "-")
+            and not ln.lstrip().startswith("#")]
+    # DECLARED OFF is required, not merely permitted (2026-08-23). Omitting the
+    # flag left the live value unowned: a `SET GLOBAL require_secure_transport=1`
+    # from outside the repository took MariaDB to refusing every plaintext
+    # connection, FreeScout logged 264 `[3159]` errors behind a healthcheck that
+    # still said healthy, and NO CONVERGE COULD UNDO IT — the playbook cannot
+    # reconcile a value it does not declare.
+    assert live, (
+        "roles/pazny.mariadb no longer declares require-secure-transport at "
+        "all. Omission is not OFF: it leaves the live value to whatever last "
+        "touched the server, and a converge cannot put it back")
+    assert all(l.endswith('=0"') for l in live), (
+        "rung 4 is being climbed here. It refuses every client that has not "
+        "moved, and the exporter has not:\n  " + "\n  ".join(live))

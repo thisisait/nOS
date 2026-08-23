@@ -316,10 +316,22 @@ def mariadb_clients() -> list[dict]:
             row["value"] = value if (declared and not expect) else None
         elif spec.get("occ"):
             row["knob"] = f"occ {spec['occ']}"
-            rc, out, _ = _exec(spec["container"],
-                               ["php", "occ", "config:system:get", spec["occ"]],
-                               user="www-data")
-            row["declared"] = rc == 0 and bool(out.strip())
+            rc, out, err = _exec(spec["container"],
+                                 ["php", "occ", "config:system:get", spec["occ"]],
+                                 user="www-data")
+            if rc != 0:
+                # A READ THAT FAILED IS NOT A DETERMINATE ANSWER. This branch
+                # used to fold a non-zero occ into `declared=False`, i.e. into
+                # PLAIN — and occ bootstraps the database, so the one situation
+                # where it cannot run is the one where the option is broken.
+                # On 2026-08-23 that printed `PLAIN nextcloud` about a service
+                # whose CA path was wrong, which reads as "no TLS configured"
+                # and was "I could not ask".
+                row.update(state="UNKNOWN",
+                           detail=(out or err or f"exit {rc}").strip()[:100])
+                rows.append(row)
+                continue
+            row["declared"] = bool(out.strip())
             row["value"] = out.strip() or None
 
         if row.get("declared") and row.get("ca_readable"):
@@ -359,6 +371,41 @@ _PG_SSL_SQL = ("select coalesce(host(a.client_addr),'local'), a.usename, s.ssl, 
 #:
 #: The password never leaves the container: `getenv()` runs in there, so it
 #: appears on no host argv and in no output.
+#: THE LARAVEL PROBE ASKS THE APPLICATION, NOT THE ENVIRONMENT.
+#:
+#: The first cut built a PDO from `getenv(<the app's var>)`. It reported
+#: `encrypted` for FreeScout while FreeScout was logging 264
+#: `[3159] Connections using insecure transport are prohibited` — a FALSE GREEN
+#: about a service that could not open a connection at all.
+#:
+#: The mechanism, measured in the container on 2026-08-23:
+#:
+#:     env("DB_MYSQL_ATTR_SSL_CA")                  '/nos-certs/mariadb-ca.crt'
+#:     config("database.connections.mysql.options") {"1013": true}
+#:
+#: Laravel CACHES its config (bootstrap/cache/config.php). Once cached, `env()`
+#: is never consulted for a config value again — so the variable resolves, and
+#: the application never sees it. `env()` and `config()` are two different
+#: questions and only the second one is the app's contract.
+#:
+#: So the probe boots the app's own kernel and hands PDO the app's own resolved
+#: options array. That is as close to "the app's own connection" as anything
+#: short of instrumenting the app can be, and it is what makes the caveat in
+#: MARIADB_SELFTESTS honest rather than decorative.
+_LARAVEL_PROBE = (
+    'require "%(root)s/vendor/autoload.php";'
+    '$app=require "%(root)s/bootstrap/app.php";'
+    '$app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();'
+    '$c=config("database.connections.mysql");'
+    'try{$dsn="mysql:host=".$c["host"].";port=".($c["port"]?:3306).";dbname=".$c["database"];'
+    '$p=new PDO($dsn,$c["username"],$c["password"],$c["options"]??[]);'
+    '$r=$p->query("show status like \'Ssl_cipher\'")->fetch(PDO::FETCH_NUM);'
+    'echo $r[1]===""?"plaintext":"encrypted";}'
+    'catch(Throwable $e){echo "error:".substr($e->getMessage(),0,70);}'
+)
+
+#: Where the app's own PDO options cannot be reached — no Laravel kernel — the
+#: probe reproduces the option the app reads. Weaker, and labelled so.
 _PDO_PROBE = (
     '$h=getenv("%(host)s");$d=getenv("%(db)s");$u=getenv("%(user)s");$p=getenv("%(pass)s");'
     '$ca=%(ca)s;$opt=[];if($ca)$opt[PDO::MYSQL_ATTR_SSL_CA]=$ca;'
@@ -369,18 +416,16 @@ _PDO_PROBE = (
 )
 
 MARIADB_SELFTESTS = (
+    # All three are Laravel, and all three are asked through their OWN kernel:
+    # the env-var differences that matter for CONFIGURING them (three names,
+    # plus firefly's MYSQL_USE_SSL gate) stop mattering once the question is
+    # "what did you resolve", which is the only question with a true answer.
     {"service": "bookstack", "container": "b2b-bookstack-1",
-     "php": _PDO_PROBE % {"host": "DB_HOST", "db": "DB_DATABASE", "user": "DB_USERNAME",
-                          "pass": "DB_PASSWORD", "ca": 'getenv("MYSQL_ATTR_SSL_CA")'}},
+     "php": _LARAVEL_PROBE % {"root": "/app/www"}},
     {"service": "freescout", "container": "b2b-freescout-1",
-     "php": _PDO_PROBE % {"host": "DB_HOST", "db": "DB_NAME", "user": "DB_USER",
-                          "pass": "DB_PASS", "ca": 'getenv("DB_MYSQL_ATTR_SSL_CA")'}},
-    # firefly gates the WHOLE ssl block on MYSQL_USE_SSL (config/database.php:49),
-    # so the probe must gate on it too or it would report a CA the app ignores.
+     "php": _LARAVEL_PROBE % {"root": "/www/html"}},
     {"service": "firefly", "container": "b2b-firefly-1",
-     "php": _PDO_PROBE % {"host": "DB_HOST", "db": "DB_DATABASE", "user": "DB_USERNAME",
-                          "pass": "DB_PASSWORD",
-                          "ca": '(getenv("MYSQL_USE_SSL")==="true"?getenv("MYSQL_SSL_CA"):null)'}},
+     "php": _LARAVEL_PROBE % {"root": "/var/www/html"}},
     # WordPress has no CA — wpdb never calls mysqli_ssl_set. The flag alone is
     # the whole control, so the probe uses the flag alone.
     {"service": "wordpress", "container": "iiab-wordpress-1",

@@ -197,13 +197,32 @@ def test_the_layout_builds_without_touching_other_sessions():
     checks idempotence, and checks that the sessions it did not create are still
     there — the property the anchoring is FOR."""
     import os
+    import shutil
+    import tempfile
 
     if subprocess.run(["which", "tmux"], capture_output=True).returncode != 0:
         import pytest
 
         pytest.skip("tmux not installed")
 
-    env = dict(os.environ, NOS_CC_SESSION="nos-cc-selftest")
+    # A PRIVATE TMUX SERVER, via TMUX_TMPDIR (2026-08-23). Until today this
+    # test built its throwaway session on the OPERATOR'S live tmux server: a
+    # test whose actions are visible in the environment it is testing, and
+    # whose result depends on it. It was careful — anchored targets, kills only
+    # its own session — and careful is not the same as isolated. Isolation is
+    # structural; carefulness is a promise re-made on every edit.
+    #
+    # The default-socket `tmux ls` before/after check is KEPT below, and with
+    # this isolation it should be trivially unchanged. That is the point: it
+    # now proves the isolation rather than the carefulness.
+    # SHORT PATH, deliberately: a unix socket path is capped near 104 bytes and
+    # pytest's tmp_path on macOS (/private/var/folders/wm/…/pytest-N/…) blows
+    # past it — the first cut of this isolation failed with `error connecting
+    # to …`, which reads like a tmux fault and is a path-length one.
+    tmux_tmpdir = tempfile.mkdtemp(prefix="nosccT", dir="/tmp")
+    env = dict(os.environ, NOS_CC_SESSION="nos-cc-selftest",
+               TMUX_TMPDIR=tmux_tmpdir)
+    iso = ["tmux", "-L", "default"]          # resolved inside TMUX_TMPDIR
     before = subprocess.run(["tmux", "ls"], capture_output=True, text=True).stdout
 
     try:
@@ -214,8 +233,8 @@ def test_the_layout_builds_without_touching_other_sessions():
         assert built.returncode == 0, built.stderr[-500:]
 
         windows = subprocess.run(
-            ["tmux", "list-windows", "-t", "=nos-cc-selftest", "-F", "#{window_name}"],
-            capture_output=True, text=True,
+            [*iso, "list-windows", "-t", "=nos-cc-selftest", "-F", "#{window_name}"],
+            capture_output=True, text=True, env=env,
         ).stdout.split()
         assert "ops" in windows, f"no ops window; got {windows}"
 
@@ -224,14 +243,18 @@ def test_the_layout_builds_without_touching_other_sessions():
         # between splits lands somewhere else entirely — a mistake that is
         # invisible in a diff and obvious on screen.
         panes = subprocess.run(
-            ["tmux", "list-panes", "-t", "=nos-cc-selftest:ops",
+            [*iso, "list-panes", "-t", "=nos-cc-selftest:ops",
              "-F", "#{pane_index} #{pane_top}"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, env=env,
         ).stdout.split("\n")
         panes = [p for p in panes if p.strip()]
         assert len(panes) == 5, (
             f"ops has {len(panes)} pane(s), expected 5 — three readers above "
-            f"two free shells; got {panes}"
+            f"two free shells; got {panes}\n"
+            f"script stderr: {built.stderr[-600:]!r}\n"
+            "(the script now exits 3 on a refused split and says which one; if "
+            "this stderr is empty the splits SUCCEEDED and the panes went "
+            "somewhere else)"
         )
         tops = [int(p.split()[1]) for p in panes]
         assert len(set(tops)) >= 2, (
@@ -252,8 +275,8 @@ def test_the_layout_builds_without_touching_other_sessions():
         # this script, because tmux refused the target and the script did not
         # look. A layout test that never reads back an option cannot see that.
         bar = subprocess.run(
-            ["tmux", "show-options", "-t", "nos-cc-selftest", "status-right"],
-            capture_output=True, text=True,
+            [*iso, "show-options", "-t", "nos-cc-selftest", "status-right"],
+            capture_output=True, text=True, env=env,
         ).stdout
         assert "nos-statusline.sh" in bar, (
             f"the session's status-right does not call the reader; got {bar!r}. "
@@ -261,8 +284,11 @@ def test_the_layout_builds_without_touching_other_sessions():
             "the script does not check, the bar is silently absent."
         )
     finally:
-        subprocess.run(["tmux", "kill-session", "-t", "=nos-cc-selftest"],
-                       capture_output=True)
+        # Kill the whole private SERVER, not just the session: an orphaned
+        # tmux server on a stale socket is what /tmp/nosccrev-46472.sock has
+        # been since 2026-08-18, five days and still running.
+        subprocess.run([*iso, "kill-server"], capture_output=True, env=env)
+        shutil.rmtree(tmux_tmpdir, ignore_errors=True)
 
     after = subprocess.run(["tmux", "ls"], capture_output=True, text=True).stdout
     before_names = {l.split(":")[0] for l in before.splitlines() if l.strip()}

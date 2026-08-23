@@ -106,11 +106,27 @@ W="$REPO_ROOT/tools/nos-watch.sh"
 # each split, so a send-keys interleaved between splits addresses whichever pane
 # later slid into that index — and the layout that results is not the one the
 # code reads like. The indices below are the final ones, verified by building it.
-tmux new-session -d -s "$SESSION" -n ops -c "$REPO_ROOT"
-tmux split-window -v -t "$SESSION:ops.0" -c "$REPO_ROOT" -p 32   # the shell row
-tmux split-window -h -t "$SESSION:ops.1" -c "$REPO_ROOT" -p 50   # -> shell B
-tmux split-window -h -t "$SESSION:ops.0" -c "$REPO_ROOT" -p 45   # right column
-tmux split-window -v -t "$SESSION:ops.1" -c "$REPO_ROOT" -p 45   # -> history
+# A SPLIT THAT FAILS MUST NOT BE SILENT. `set -uo pipefail` has no `-e`, so a
+# refused `split-window` used to leave the script running happily: it went on to
+# send-keys at pane indices that did not exist, exited 0, and produced a ONE-PANE
+# `ops` window that the operator would see and the caller would call success.
+# That is the estate's own standing rule — a step that cannot do its job must
+# not exit 0 (docs/hidden_fees/07) — and it cost a CI red whose reason was
+# nowhere in the log, because the only thing that noticed was a pane count.
+_split() {
+    local why="$1"; shift
+    if ! tmux split-window "$@" 2>&1; then
+        echo "nos-cc: split failed ($why): tmux split-window $*" >&2
+        exit 3
+    fi
+}
+
+tmux new-session -d -s "$SESSION" -n ops -c "$REPO_ROOT" || {
+    echo "nos-cc: could not create session $SESSION" >&2; exit 3; }
+_split "shell row"    -v -t "$SESSION:ops.0" -c "$REPO_ROOT" -p 32
+_split "-> shell B"   -h -t "$SESSION:ops.1" -c "$REPO_ROOT" -p 50
+_split "right column" -h -t "$SESSION:ops.0" -c "$REPO_ROOT" -p 45
+_split "-> history"   -v -t "$SESSION:ops.1" -c "$REPO_ROOT" -p 45
 
 tmux send-keys -t "$SESSION:ops.0" \
     "$W --interval 30 --title 'what is red' -- tools/red-status.py" C-m

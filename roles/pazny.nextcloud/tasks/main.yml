@@ -20,6 +20,16 @@
     - "{{ nextcloud_dir }}"
     - "{{ nextcloud_data_dir }}"
 
+- name: "[pazny.nextcloud] Render database-TLS config overlay"
+  # Rendered BEFORE compose up, into the bind-mounted config dir, so the value
+  # is present the first time the container reads it. Nextcloud merges every
+  # *.config.php over config.php (lib/private/Config.php:194), which is what
+  # lets this be authoritative without occ — and without a working database.
+  ansible.builtin.template:
+    src: nos-db-tls.config.php.j2
+    dest: "{{ nextcloud_dir }}/config/nos-db-tls.config.php"
+    mode: '0644'
+
 - name: "[pazny.nextcloud] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

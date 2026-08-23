@@ -23,12 +23,16 @@ WHAT THIS GATE PINS.
      paths before openssl writes them, Docker invents them as DIRECTORIES, the
      `creates:` guard then reports "it exists" forever, and the server refuses
      to start on a cert file with no start line.
-  3. **`require_secure_transport` is NOT set.** This is the leg that keeps the
-     rung honest. Turning it on is rung 4 and it is a cliff — today it would
-     refuse 99.98% of connections. A future edit that adds it here, before the
-     clients are measured on TLS, takes the estate's b2b databases down at
-     once. When that day comes, delete this assertion deliberately, with
-     `tools/tls-uptake.py` showing the clients already encrypted.
+  3. **`require_secure_transport` is DECLARED, and declared OFF.** Turning it
+     on is rung 4 and it is a cliff — today it would refuse 99.98% of
+     connections. This leg used to forbid the flag ENTIRELY, and that was wrong
+     in a way only the live estate could show: omission leaves the value
+     unowned. On 2026-08-23 a `SET GLOBAL require_secure_transport=1` from
+     outside this repository took FreeScout down behind a healthcheck that
+     still reported healthy, and no converge could undo it, because the
+     playbook cannot reconcile a value it never declared. When rung 4 is
+     genuinely climbed, change the `0` to a `1` here — deliberately, with
+     `tools/tls-uptake.py` showing every client already encrypted.
   4. The toggle is at PLAY scope. Its PostgreSQL twin spent nine weeks as a
      role default that no client role could see (`docs/hidden_fees/23`), and
      this variable will have exactly the same readers.
@@ -109,19 +113,34 @@ def _render(ssl: bool) -> dict:
     return yaml.safe_load(out)["services"]["mariadb"]
 
 
-def test_the_cliff_is_not_wired_yet():
-    """Rung 2 must stay invisible to every plaintext client."""
+def test_the_cliff_is_declared_and_not_climbed():
+    """Rung 2 must stay invisible to every plaintext client — and rung 4 must be
+    DECLARED OFF rather than omitted.
+
+    This gate used to forbid the flag entirely. That was wrong in a way only a
+    live estate could show: omission leaves the value UNOWNED. On 2026-08-23
+    something outside this repository ran `SET GLOBAL
+    require_secure_transport=1`, MariaDB began refusing every plaintext
+    connection, FreeScout logged 264 `[3159] Connections using insecure
+    transport are prohibited` behind a healthcheck that still said healthy, and
+    no converge could put it back — the playbook cannot reconcile a value it
+    never declared.
+
+    It also contradicted its sibling in test_mariadb_client_tls.py once that
+    one started requiring the declaration. Two gates inspecting the same
+    property for opposite things is worse than either alone: whichever runs
+    first decides, and the other reads as noise.
+    """
     svc = _render(ssl=True)
     args = [str(a) for a in svc["command"]]
     assert "--ssl-cert=/certs/server.crt" in args
     assert "--ssl-key=/certs/server.key" in args
-    for arg in args:
-        low = arg.lower().replace("_", "-")
-        assert "require-secure-transport" not in low, (
-            f"{arg} is in the rendered command. Measured 2026-08-23 that "
-            "refuses 99.98% of connections — 108 TLS handshakes out of "
-            "635,888. It is rung 4: move the clients first, watch the ratio "
-            "rise with tools/tls-uptake.py, and only then delete this check")
+
+    flags = [a for a in args if "require-secure-transport" in a.lower().replace("_", "-")]
+    assert flags == ["--require-secure-transport=0"], (
+        "rung 4 must be rendered, and rendered OFF. Measured 2026-08-23: ON "
+        "refuses 99.98% of connections (108 TLS handshakes out of 635,888) and "
+        f"the exporter still has no TLS at all. Got: {flags}")
 
 
 def test_the_mount_and_the_flags_share_one_gate():

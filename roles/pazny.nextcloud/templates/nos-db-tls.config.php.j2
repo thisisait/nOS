@@ -1,0 +1,38 @@
+<?php
+/**
+ * Database transport TLS for Nextcloud — REM-217 rung 3.
+ *
+ * WHY A CONFIG OVERLAY AND NOT `occ config:system:set`.
+ *
+ * The first cut used occ, and it deadlocked the day it was needed: occ
+ * bootstraps the server, the server opens the database, and the value being
+ * set is the one that decides whether that database can be opened. On
+ * 2026-08-23 Nextcloud sat with `dbdriveroptions[1009] = '/x'` — a CA path
+ * that does not exist — and every occ invocation, including the one meant to
+ * repair it, died with
+ *
+ *     SQLSTATE[HY000] [2002] Cannot connect to MySQL using SSL
+ *
+ * A repair that requires the thing it repairs is not a repair.
+ *
+ * lib/private/Config.php:194 reads config.php and then merges every
+ * `*.config.php` in the config directory, natsorted, later keys winning. So
+ * this file is authoritative over whatever config.php holds, is rendered by
+ * the playbook on every converge, needs no running database, and — unlike an
+ * occ call — can be reconciled in BOTH directions.
+ *
+ * 1009 is PDO::MYSQL_ATTR_SSL_CA, read from the running image rather than
+ * recalled (`php -r 'echo PDO::MYSQL_ATTR_SSL_CA;'`).
+ */
+$CONFIG = [
+{% if mariadb_ssl_enabled and install_mariadb %}
+    'dbdriveroptions' => [
+        1009 => '{{ mariadb_client_ca_path }}',
+    ],
+{% else %}
+    // Server TLS is off on this host: the certificate is not generated and the
+    // CA is not mounted, so naming one would make pdo_mysql fail CLOSED
+    // ("Cannot connect to MySQL using SSL") — an outage, not a downgrade.
+    'dbdriveroptions' => [],
+{% endif %}
+];
