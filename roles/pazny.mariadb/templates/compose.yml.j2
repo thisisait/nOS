@@ -18,32 +18,33 @@ services:
     command:
       - "--innodb-flush-method=fsync"     # see commit history for why
       - "--skip-innodb-doublewrite"        # halves write I/O; Docker volume layer provides own ordering
+      # ── require_secure_transport: DECLARED, and declared OFF ────────────────
+      # OUTSIDE the TLS gate on purpose. It is a server-side REQUIREMENT, not a
+      # certificate setting, and it is valid on a host with no certs at all.
+      #
+      # The declaration exists because omission left the value unowned: on
+      # 2026-08-23 a `SET GLOBAL require_secure_transport=1` from outside this
+      # repository made MariaDB refuse every plaintext connection, FreeScout
+      # logged 264 `[3159] Connections using insecure transport are prohibited`
+      # behind a healthcheck that still said healthy, and no converge could put
+      # it back — a playbook cannot reconcile what it never declares.
+      #
+      # The first cut of that fix put this line INSIDE `{% raw %}{% if mariadb_ssl_enabled %}{% endraw %}`,
+      # which resolves Darwin-only (default.config.yml:1362) — so on a Linux
+      # estate the value would have been unowned again, which is the whole
+      # defect. Caught by the review that judged the fix, not by the fix.
+      #
+      # OFF is still correct: rung 4 refuses every client that has not moved, and
+      # freescout + the exporter have not. tests/anatomy/test_mariadb_client_tls.py
+      # refuses a `=1` here.
+      - "--require-secure-transport=0"
+       # halves write I/O; Docker volume layer provides own ordering
 {% if mariadb_ssl_enabled | default(false) %}
       # REM-217 rungs 1+2. Replaces MariaDB 11's EPHEMERAL in-memory material
       # with a certificate that EXISTS ON DISK, which is the prerequisite every
       # later rung waits on: `MYSQL_ATTR_SSL_CA` is the only knob Laravel
       # exposes and `array_filter` drops it when empty.
       #
-      # require_secure_transport is DECLARED OFF, not merely omitted, and the
-      # difference cost two services on 2026-08-23.
-      #
-      # Omitting it left the live value unowned. Something ran
-      # `SET GLOBAL require_secure_transport=1` out of band — it is in no
-      # .cnf, in no argv, and nowhere in this repository — and MariaDB began
-      # refusing every plaintext connection. FreeScout logged 264
-      # `[3159] Connections using insecure transport are prohibited` while its
-      # own healthcheck still reported healthy, and no converge could put it
-      # back, because a value the playbook does not declare is a value the
-      # playbook cannot reconcile.
-      #
-      # Declared, a converge recreates the container and the live value returns
-      # to what this file says. That is the whole difference between a default
-      # and a declaration.
-      #
-      # OFF is still the correct value: flipping the requirement before every
-      # client moves refuses the estate. Rung 4 is a deliberate act, and
-      # tests/anatomy/test_mariadb_client_tls.py refuses a `=1` here.
-      - "--require-secure-transport=0"
       #
       # ssl_ca is NOT set. It would make the server verify a client certificate
       # WHEN one is presented, which nothing here does — one more moving part
