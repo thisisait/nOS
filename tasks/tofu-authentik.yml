@@ -200,40 +200,60 @@
              if (authentik_engine | default('blueprint')) != 'tofu'
              else 'APPLY mode.' }}
 
-    # ── APPLY — only when engine=tofu AND zero destroys ─────────────────────
-    # Operator UX: when the destroy guard is about to refuse, name the exact
-    # resource address(es) the plan would delete (not just a count) plus the
-    # paste-able supervised-apply one-liner. The guard refusing with only a
-    # number forces the operator to hand-parse the plan JSON to learn which
-    # service flipped enabled→false — this debug surfaces it before the fail.
+    # ── APPLY — engine=tofu, no UNEXPLAINED destroy, no dangerous update ────
+    # Operator UX: name the exact resource address(es) rather than a count. The
+    # guard refusing with only a number forced a hand-parse of the plan JSON to
+    # learn which service flipped enabled→false.
+    # ── Which destroys did the operator already authorise? ─────────────────
+    # The guard below used to refuse ANY delete/replace, and its own message
+    # named two causes it could not tell apart: an un-authored tenant (a real
+    # defect) and a service the operator turned OFF (a decision already made,
+    # in config.yml). The second is derivable from the registry's own
+    # `enabled` expression, which lookup('template') has already resolved.
+    #
+    # Same rule the compose prune runs on: a flag that authorises removing a
+    # service also authorises removing the SSO objects that exist only to
+    # front it. Asking twice for one decision is what stalled the 2026-08-23
+    # converge on superset, whose container this playbook had already removed.
+    - name: "[tofu-authentik] Attribute each destroy to a service, or refuse to"
+      ansible.builtin.set_fact:
+        _tofu_destroy_split: "{{ _tofu_changes | nos_tofu_destroy_split(tofu_authentik_services | default([])) }}"
+
     - name: "[tofu-authentik] Diagnose — list resources the plan would destroy"
       ansible.builtin.debug:
         msg: >-
-          DESTROY GUARD will refuse apply. {{ _tofu_destroys }} resource(s)
-          would be destroyed/replaced:
-          {{ _tofu_changes
-             | selectattr('change.actions', 'contains', 'delete')
-             | map(attribute='address') | list | join(', ') }}.
-          Cause: each is an Authentik object (provider/application/attachment)
-          for a service that flipped enabled→false (install_* off) or is not yet
-          authored in HCL. To recover after reviewing the plan, run supervised:
-          `cd {{ _tf_dir }} && tofu apply -parallelism=1 tfplan`
-          (or let the next blank converge the tenant).
+          {{ _tofu_destroys }} resource(s) would be destroyed/replaced.
+          AUTHORISED by a disabled service ({{ _tofu_destroy_split.declared_off | length }}):
+          {{ _tofu_destroy_split.declared_off | map(attribute='address') | list | join(', ') | default('none', true) }}.
+          UNEXPLAINED ({{ _tofu_destroy_split.unexplained | length }}):
+          {{ _tofu_destroy_split.unexplained | map(attribute='why') | list | join('; ') | default('none', true) }}.
+          The authorised ones are removed by this run — the same install_* flag
+          already stopped the container. Only the unexplained ones refuse.
       when:
         - (authentik_engine | default('blueprint')) == 'tofu'
         - _tofu_destroys | int > 0
 
-    - name: "[tofu-authentik] REFUSE apply — plan would destroy resources"
+    - name: "[tofu-authentik] REFUSE apply — a destroy nobody declared"
       ansible.builtin.fail:
         msg: >-
-          tofu plan would destroy/replace {{ _tofu_destroys }} resource(s) —
-          refusing to apply. Two known causes: (a) the tenant is only partially
-          authored in HCL (un-authored providers plan as destroys) — author/
-          import the full tenant (tools/tofu-authentik-adopt.sh) until the plan
-          is no-op; (b) a service flipped enabled→false (install_* off) and
-          dropped out of the registry filter — review the plan, then run the
-          supervised apply below (or let the next blank converge it).
-          RECOVER: `cd {{ _tf_dir }} && tofu apply -parallelism=1 tfplan`
+          tofu plan would destroy/replace
+          {{ _tofu_destroy_split.unexplained | length }} resource(s) that no
+          disabled service explains — refusing to apply.
+          {{ _tofu_destroy_split.unexplained
+             | map(attribute='address') | list | join(', ') }} —
+          {{ _tofu_destroy_split.unexplained
+             | map(attribute='why') | list | join('; ') }}.
+          ({{ _tofu_destroy_split.declared_off | length }} further destroy(s)
+          ARE explained by an install_* flag that is off; those are not the
+          reason for this failure and would have applied on their own.)
+          Usual cause: the tenant is only partially authored in HCL, so an
+          un-authored provider plans as a destroy — author or import it with
+          tools/tofu-authentik-adopt.sh until the plan is a no-op. If you mean
+          to remove the service, turn its install_* flag off in config.yml and
+          re-run; that is the declaration this guard reads, and it is the same
+          one that stops the container.
+          LAST RESORT, after reading the plan yourself:
+          `cd {{ _tf_dir }} && tofu apply -parallelism=1 tfplan`
           — run it from {{ _tf_dir }} (elsewhere tofu answers "No configuration
           files"), pass `tfplan` so you apply the plan you just reviewed rather
           than a fresh one, and keep `-parallelism=1`: the outpost attachment is
@@ -241,7 +261,7 @@
           orphaned 9 forward_auth services into 404s before.
       when:
         - (authentik_engine | default('blueprint')) == 'tofu'
-        - _tofu_destroys | int > 0
+        - _tofu_destroy_split.unexplained | length > 0
 
     - name: "[tofu-authentik] REFUSE apply — in-place change to an immutable field"
       ansible.builtin.fail:
@@ -276,5 +296,5 @@
       changed_when: "'0 added, 0 changed, 0 destroyed' not in _tofu_apply.stdout"
       when:
         - (authentik_engine | default('blueprint')) == 'tofu'
-        - _tofu_destroys | int == 0
+        - _tofu_destroy_split.unexplained | length == 0
         - _tofu_bad_updates | length == 0

@@ -23,10 +23,39 @@ apply imperatively** and that is by design, not a gap.
 ## The safety rail: the destroy guard
 
 `tasks/tofu-authentik.yml` parses `tofu show -json tfplan` and **refuses to
-apply if the plan contains ANY delete action.** The danger it blocks: a
-partially-authored tenant plans un-authored providers as destroys →
-catastrophic SSO outage. The guard makes any engine flip a no-op-or-nothing
-operation.
+apply a delete it cannot attribute to a service the operator turned off.** The
+danger it blocks: a partially-authored tenant plans un-authored providers as
+destroys → catastrophic SSO outage.
+
+**Refusing ANY delete was too blunt, and a converge died on it 2026-08-23.**
+The guard's own message named two causes and could act on neither: an
+un-authored tenant (a real defect) and *"a service flipped enabled→false
+(install_* off)"* — which is not a defect at all, it is a decision the operator
+already made in `config.yml`. `install_superset: false` had been set two days
+earlier, with its reasoning written into the file, and the plan wanted to delete
+superset's Authentik application and OAuth2 provider — SSO objects that exist
+only to front a container the same playbook had already stopped and removed
+(`prune_disabled_overrides`). Refusing there asks for one decision twice, and it
+is the rule CLAUDE.md already states for the compose prune: *an opt-in flag that
+authorises removing a service's fragment also authorises stopping the container
+that fragment described — same decision, not a further one.*
+
+So the guard now **attributes** each delete, via `nos_tofu_destroy_split`:
+
+| plan wants to delete | verdict |
+| --- | --- |
+| `module.service["x"]…` and `install_x` resolves **off** | authorised — applies |
+| `module.service["x"]…` and `x` is **enabled** | refuses |
+| `module.service["x"]…` and `x` is **not in the registry** | refuses — un-authored, not disabled |
+| an address that names no service module | refuses — cannot be attributed |
+
+Fail-closed on everything it cannot account for; that is what makes the
+relaxation safe, and it is the half the gate spends most of its assertions on.
+The apply and the refusal read the **same** predicate, so they cannot disagree
+about what was authorised.
+
+The guard still makes any engine flip a no-op-or-nothing operation for anything
+nobody declared.
 
 ## The five traps (all fixed + gated — archaeology)
 

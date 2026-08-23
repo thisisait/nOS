@@ -145,26 +145,91 @@ def test_task_computes_and_enforces_the_update_guard():
 
 
 def test_destroy_guard_diagnoses_which_resources_before_refusing():
-    """When the destroy guard is about to refuse (engine=tofu, destroys>0), the
-    task must surface a diagnostic that names the exact destroyed resource
-    address(es) — not just a count — plus the paste-able supervised recovery
-    one-liner, BEFORE the fail. Operators flipping install_*=false otherwise
-    have to hand-parse the plan JSON to learn which service drops out."""
+    """The diagnostic must name the exact destroyed address(es) — not just a
+    count — BEFORE the fail. Operators otherwise hand-parse the plan JSON to
+    learn which service dropped out.
+
+    RENAMED 2026-08-23: the fail is now "a destroy nobody declared", because
+    the guard distinguishes a destroy the operator authorised (install_* off)
+    from one nobody explained. See the tests below."""
     body = TASK.read_text()
-    # the diagnostic maps the deleting changes to their addresses
     assert "map(attribute='address')" in body, \
         "destroy diagnostic does not list the destroyed resource address(es)"
-    # paste-able supervised recovery command
     assert "tofu apply -parallelism=1 tfplan" in body, \
-        "destroy diagnostic does not offer the supervised-apply one-liner"
-    # the diagnostic must run BEFORE the REFUSE-apply fail (ordering matters:
-    # a debug after the fail never prints)
+        "the supervised-apply one-liner is gone; it is the last resort and the "\
+        "operator needs it spelled out when the guard genuinely refuses"
     diag = body.index("list resources the plan would destroy")
-    refuse = body.index("REFUSE apply — plan would destroy resources")
+    refuse = body.index("REFUSE apply — a destroy nobody declared")
     assert diag < refuse, "destroy diagnostic must precede the REFUSE fail"
-    # and it is gated on the same condition as the fail it precedes
-    assert body.count("_tofu_destroys | int > 0") >= 2, \
-        "destroy diagnostic not gated on engine=tofu AND destroys>0"
+
+
+# ── The two causes the old guard could not tell apart (2026-08-23) ──────────
+#
+# The refusal message NAMED both causes and could act on neither:
+#   (a) the tenant is only partially authored in HCL — a real defect;
+#   (b) a service flipped enabled->false — a decision made in config.yml.
+#
+# (b) is derivable. A converge died on it: install_superset had been false for
+# two days, with the reasoning written into config.yml, and the plan wanted to
+# delete superset's Authentik application and OAuth2 provider — SSO objects
+# that exist only to front a container this same playbook had already removed.
+# Refusing there asks for one decision twice.
+
+def test_a_destroy_explained_by_a_disabled_service_is_not_refused():
+    mod = _load()
+    registry = [{"slug": "superset", "enabled": "False"},
+                {"slug": "grafana", "enabled": "True"}]
+    changes = [_rc("authentik_application", ["delete"], {}, {},
+                   address='module.service["superset"].authentik_application.this')]
+    out = mod.nos_tofu_destroy_split(changes, registry)
+    assert len(out["declared_off"]) == 1
+    assert out["unexplained"] == [], (
+        "a destroy whose service the operator turned off is authorised by that "
+        "flag — the same flag already stopped the container")
+
+
+def test_the_filter_fails_closed_on_everything_it_cannot_attribute():
+    """Three ways to be unexplained, and all three must refuse. This is the
+    load-bearing half: the relaxation above is only safe because nothing it
+    cannot account for slips through with it."""
+    mod = _load()
+    registry = [{"slug": "grafana", "enabled": "True"}]
+    cases = {
+        "enabled service": 'module.service["grafana"].authentik_application.this',
+        "not in registry": 'module.service["ghost"].authentik_application.this',
+        "not a service module": "authentik_outpost.embedded",
+    }
+    for label, address in cases.items():
+        out = mod.nos_tofu_destroy_split(
+            [_rc("authentik_application", ["delete"], {}, {}, address=address)], registry)
+        assert out["declared_off"] == [], f"{label} must not be authorised"
+        assert len(out["unexplained"]) == 1, f"{label} must refuse"
+        assert out["unexplained"][0]["why"], f"{label} refuses without saying why"
+
+
+def test_a_replace_counts_as_a_destroy():
+    """A replace is delete+create. superset's provider planned exactly that."""
+    mod = _load()
+    out = mod.nos_tofu_destroy_split(
+        [_rc("authentik_provider_oauth2", ["delete", "create"], {}, {},
+             address='module.service["superset"].authentik_provider_oauth2.this[0]')],
+        [{"slug": "superset", "enabled": "false"}])
+    assert len(out["declared_off"]) == 1
+
+
+def test_refuse_and_apply_gate_on_the_same_predicate():
+    """If the fail and the apply disagree, the run either applies what was
+    refused or refuses what would have applied. Both must read `unexplained`,
+    and neither may still read the raw destroy count."""
+    body = TASK.read_text()
+    assert "_tofu_destroy_split.unexplained | length > 0" in body, \
+        "the refusal no longer fires on unexplained destroys"
+    assert "_tofu_destroy_split.unexplained | length == 0" in body, \
+        "the apply is not gated on the same predicate as the refusal"
+    apply_when = body[body.index("tofu apply (engine=tofu"):]
+    assert "_tofu_destroys | int == 0" not in apply_when.split("- name:")[0], (
+        "the apply still gates on the raw destroy count, so an authorised "
+        "removal would be planned, reported, and then silently skipped")
 
 
 def test_filter_is_discoverable_by_ansible():

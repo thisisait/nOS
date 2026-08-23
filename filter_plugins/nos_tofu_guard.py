@@ -71,8 +71,100 @@ def nos_tofu_immutable_field_updates(resource_changes, denylist=None):
     return findings
 
 
+# ── Which destroys did the operator already authorise? ──────────────────────
+#
+# WHY THIS EXISTS (2026-08-23). The destroy guard refuses ANY delete/replace,
+# and its own failure message names two causes it cannot tell apart:
+#
+#   (a) the tenant is only partially authored in HCL — a real defect;
+#   (b) a service flipped enabled->false and dropped out of the registry
+#       filter — a decision the operator already made, in config.yml.
+#
+# (b) is fully derivable and was being handed to a human every time. On
+# 2026-08-23 a converge died on exactly this: `install_superset: false` had
+# been set two days earlier, with the reasoning written into config.yml, and
+# the plan wanted to delete superset's Authentik application and OAuth2
+# provider. The estate had already stopped and removed the container on the
+# same authority (prune_disabled_overrides). Refusing to remove the SSO
+# objects that exist only to front it asks for the same consent twice.
+#
+# That is the rule CLAUDE.md already states for the compose prune: an opt-in
+# flag that authorises removing a service's fragment also authorises stopping
+# the container that fragment described — same decision, not a further one.
+#
+# WHAT IS STILL REFUSED, and this is the load-bearing half: a destroy whose
+# service is NOT in the registry at all, or whose `enabled` resolves TRUE, is
+# unexplained and still fails the run. Fail-closed on anything unrecognised —
+# an address this parser cannot read is unexplained, never authorised.
+
+import re
+
+#: `module.service["superset"].authentik_application.this` -> superset
+_SERVICE_KEY = re.compile(r'module\.service\["([^"]+)"\]')
+
+#: Ansible renders the registry through lookup('template'), so `enabled`
+#: arrives already resolved — but as a STRING ("False"), not a bool.
+_FALSE = {"false", "no", "off", "0", "none", ""}
+
+
+def _is_off(value):
+    if isinstance(value, bool):
+        return not value
+    return str(value).strip().lower() in _FALSE
+
+
+def nos_tofu_destroy_split(resource_changes, registry):
+    """Split planned destroys into ones a disabled service explains, and the rest.
+
+    Returns {"declared_off": [...], "unexplained": [...]}, each a list of
+    {address, service, why}.
+    """
+    enabled_by_slug = {}
+    if isinstance(registry, list):
+        for svc in registry:
+            if isinstance(svc, dict) and svc.get("slug") is not None:
+                enabled_by_slug[str(svc["slug"])] = svc.get("enabled")
+
+    declared_off, unexplained = [], []
+    if not isinstance(resource_changes, list):
+        return {"declared_off": [], "unexplained": []}
+
+    for rc in resource_changes:
+        if not isinstance(rc, dict):
+            continue
+        actions = (rc.get("change") or {}).get("actions") or []
+        if "delete" not in actions:
+            continue
+        address = rc.get("address", "?")
+        match = _SERVICE_KEY.search(address)
+        if not match:
+            unexplained.append({
+                "address": address, "service": None,
+                "why": "address does not name a service module — cannot be attributed",
+            })
+            continue
+        slug = match.group(1)
+        if slug not in enabled_by_slug:
+            unexplained.append({
+                "address": address, "service": slug,
+                "why": "no `{}` in the registry — un-authored, not disabled".format(slug),
+            })
+        elif _is_off(enabled_by_slug[slug]):
+            declared_off.append({
+                "address": address, "service": slug,
+                "why": "install flag for `{}` resolves off".format(slug),
+            })
+        else:
+            unexplained.append({
+                "address": address, "service": slug,
+                "why": "`{}` is ENABLED — a destroy here is not explained by any flag".format(slug),
+            })
+    return {"declared_off": declared_off, "unexplained": unexplained}
+
+
 class FilterModule(object):
     def filters(self):
         return {
             "nos_tofu_immutable_field_updates": nos_tofu_immutable_field_updates,
+            "nos_tofu_destroy_split": nos_tofu_destroy_split,
         }
