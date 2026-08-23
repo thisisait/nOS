@@ -204,7 +204,7 @@ CLIENT_CA_PATH = "/nos-certs/mariadb-ca.crt"
 #:
 #: Three forks of the same framework, three names. The scoping generalised from
 #: whichever one it happened to read — the same shortcut that put `no-verify`
-#: into Outline (doctrine/foreign-properties.md §5.1). Each entry below names
+#: into Outline (docs/doctrine/foreign-properties.md §5.1). Each entry below names
 #: the file and line it was read from; re-read them before trusting this table
 #: after an image bump.
 #:

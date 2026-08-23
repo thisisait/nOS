@@ -24,6 +24,17 @@ services:
     volumes:
       - {{ firefly_upload_dir }}:/var/www/html/storage/upload
       - {{ firefly_export_dir }}:/var/www/html/storage/export
+{% if mariadb_ssl_enabled and install_mariadb %}
+      # REM-217 rung 3. The MariaDB server certificate, read-only, as this
+      # client's CA. A self-signed cert IS its own CA and `mariadb` is in its
+      # SAN, so this validates the chain AND the host name — proven with
+      # `openssl s_client -verify_hostname mariadb` and a negative control on
+      # 2026-08-23, not assumed. NO `| default(false)` on either gate: these
+      # are play-scope names and a silent fallback to the plaintext branch is
+      # exactly how the PostgreSQL pin stayed dead for nine weeks
+      # (docs/hidden_fees/23).
+      - {{ mariadb_certs_dir }}/server.crt:{{ mariadb_client_ca_path }}:ro
+{% endif %}
     environment:
       APP_ENV: "production"
       APP_DEBUG: "false"
@@ -46,7 +57,17 @@ services:
       DB_DATABASE: "{{ firefly_db_name }}"
       DB_USERNAME: "{{ firefly_db_user }}"
       DB_PASSWORD: "{{ firefly_db_password }}"
+{% if mariadb_ssl_enabled and install_mariadb %}
+      # TWO knobs, and the CA alone does nothing: config/database.php:49 gates
+      # the whole SSL block on MYSQL_USE_SSL, so setting only MYSQL_SSL_CA
+      # would render, resolve, and be skipped — the shape of
+      # docs/hidden_fees/28. Names are firefly's own; neither sibling uses them.
+      MYSQL_USE_SSL: "true"
+      MYSQL_SSL_CA: "{{ mariadb_client_ca_path }}"
+      MYSQL_SSL_VERIFY_SERVER_CERT: "true"
+{% else %}
       MYSQL_USE_SSL: "false"
+{% endif %}
       # ── Cache / session (Redis z infra stacku) ────────────────────────────
       CACHE_DRIVER: "redis"
       SESSION_DRIVER: "redis"

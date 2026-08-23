@@ -119,6 +119,59 @@
   check_mode: false
   no_log: true
 
+# ── Database TLS (REM-217 rung 3) ────────────────────────────────────────
+# Nextcloud is the ONE MariaDB client of five with no environment knob at all:
+# lib/private/DB/ConnectionFactory.php:201 reads `dbdriveroptions` out of
+# config.php and there is no env that populates it. So this rung is a
+# post-start call rather than a compose line, and it must run AFTER the
+# container is up with the CA mounted — the option names a file, and a
+# Nextcloud pointed at a CA that is not there stops reaching its database.
+#
+# 1009 is PDO::MYSQL_ATTR_SSL_CA, read from the running image rather than
+# recalled (`php -r 'echo PDO::MYSQL_ATTR_SSL_CA;'`). occ addresses nested
+# keys positionally, so `dbdriveroptions 1009` is the array element.
+- name: "[pazny.nextcloud Post] Read current dbdriveroptions CA (via occ)"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    php occ config:system:get dbdriveroptions 1009 2>/dev/null || true
+  register: _nc_db_ca
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _nc_container.stdout | default('') | length > 0
+
+- name: "[pazny.nextcloud Post] Point the database driver at the MariaDB CA"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    php occ config:system:set dbdriveroptions 1009
+    --value={{ mariadb_client_ca_path | quote }}
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - mariadb_ssl_enabled
+    - install_mariadb
+    - _nc_db_ca.stdout | default('') | trim != mariadb_client_ca_path
+  changed_when: true
+  check_mode: false
+
+# The other direction, and it is not symmetry for its own sake: with the
+# server cert gone the mount goes with it, and a stale option would point at a
+# missing file — which pdo_mysql fails CLOSED on (measured: "Cannot connect to
+# MySQL using SSL"). Leaving it would turn a disabled feature into an outage.
+- name: "[pazny.nextcloud Post] Remove the CA option when server TLS is off"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    exec -T -u www-data nextcloud
+    php occ config:system:delete dbdriveroptions 1009
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - not (mariadb_ssl_enabled and install_mariadb)
+    - _nc_db_ca.stdout | default('') | trim | length > 0
+  changed_when: true
+  failed_when: false
+  check_mode: false
+
 # ── Admin password reconverge ────────────────────────────────────────────
 # occ user:resetpassword reads OC_PASS from env, runs on every run ⇒ drift
 # the prefix propagates to the existing admin user.

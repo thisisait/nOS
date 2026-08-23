@@ -20,6 +20,14 @@ services:
     volumes:
       - {{ nextcloud_dir }}:/var/www/html
       - {{ nextcloud_data_dir }}:/data
+{% if mariadb_ssl_enabled and install_mariadb %}
+      # REM-217 rung 3. Nextcloud has no env knob for this — the option that
+      # USES this file is set post-start via `occ config:system:set
+      # dbdriveroptions 1009` (tasks/post.yml). Mount and option must land
+      # together: the option names a path, and pdo_mysql fails CLOSED on a CA
+      # it cannot read rather than falling back to plaintext.
+      - {{ mariadb_certs_dir }}/server.crt:{{ mariadb_client_ca_path }}:ro
+{% endif %}
     environment:
       MYSQL_HOST: "{% if install_mariadb | default(false) %}mariadb{% else %}{{ nextcloud_db_host | default('127.0.0.1') }}{% endif %}"
       MYSQL_DATABASE: "{{ nextcloud_db_name }}"

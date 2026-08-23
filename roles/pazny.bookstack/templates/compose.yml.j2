@@ -16,6 +16,17 @@ services:
 {% endif %}
     volumes:
       - {{ bookstack_data_dir }}:/config
+{% if mariadb_ssl_enabled and install_mariadb %}
+      # REM-217 rung 3. The MariaDB server certificate, read-only, as this
+      # client's CA. A self-signed cert IS its own CA and `mariadb` is in its
+      # SAN, so this validates the chain AND the host name — proven with
+      # `openssl s_client -verify_hostname mariadb` and a negative control on
+      # 2026-08-23, not assumed. NO `| default(false)` on either gate: these
+      # are play-scope names and a silent fallback to the plaintext branch is
+      # exactly how the PostgreSQL pin stayed dead for nine weeks
+      # (docs/hidden_fees/23).
+      - {{ mariadb_certs_dir }}/server.crt:{{ mariadb_client_ca_path }}:ro
+{% endif %}
     environment:
       PUID: "{{ bookstack_puid | default(1000) }}"
       PGID: "{{ bookstack_pgid | default(1000) }}"
@@ -28,6 +39,15 @@ services:
       DB_DATABASE: "{{ bookstack_db_name | default('bookstack') }}"
       DB_USERNAME: "{{ bookstack_db_user | default('bookstack') }}"
       DB_PASSWORD: "{{ bookstack_db_password }}"
+{% if mariadb_ssl_enabled and install_mariadb %}
+      # STOCK Laravel spelling — read at /app/www/app/Config/database.php:84.
+      # Its two siblings use different names (freescout DB_MYSQL_ATTR_SSL_CA,
+      # firefly MYSQL_SSL_CA); do not copy this line between them.
+      # `array_filter` drops an EMPTY value, so the path must be real — and
+      # pdo_mysql fails CLOSED on a bad CA (measured: 'Cannot connect to MySQL
+      # using SSL'), never silently downgrading to plaintext.
+      MYSQL_ATTR_SSL_CA: "{{ mariadb_client_ca_path }}"
+{% endif %}
 {% if redis_docker | default(false) %}
       CACHE_DRIVER: "redis"
       SESSION_DRIVER: "redis"

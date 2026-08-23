@@ -129,3 +129,62 @@ No compose file was touched. The proof above was run inside a container and
 changed nothing. Turning on TLS for one client without step 1 would mean editing
 Laravel's vendored config, which is neither supported nor survivable across an
 image update.
+
+## Correction, 2026-08-23 (second): rung 3 is five contracts, not three plus two
+
+The ladder said *"`MYSQL_ATTR_SSL_CA` per Laravel client (freescout, firefly,
+bookstack), and the equivalents for WordPress and Nextcloud"*. Read in the
+running images before touching anything, that is true of **one** of the three
+Laravel apps:
+
+| client | knob | read at |
+| --- | --- | --- |
+| bookstack | `MYSQL_ATTR_SSL_CA` | `/app/www/app/Config/database.php:84` |
+| freescout | `DB_MYSQL_ATTR_SSL_CA` | `/www/html/config/database.php:56` |
+| firefly | `MYSQL_SSL_CA` **and** `MYSQL_USE_SSL` | `…/database.php:43` and `:49` |
+| wordpress | `MYSQL_CLIENT_FLAGS` via `WORDPRESS_CONFIG_EXTRA` | `class-wpdb.php:1959` |
+| nextcloud | `occ config:system:set dbdriveroptions 1009` | `ConnectionFactory.php:201` |
+
+Three forks of one framework, three names — and firefly gates the entire SSL
+block on a **second** variable, which this estate already sets to `false`. A CA
+handed to firefly without `MYSQL_USE_SSL=true` would render, resolve, appear in
+`docker inspect`, and be skipped: `docs/hidden_fees/28` in advance.
+
+The original claim came from reading one config and generalising. Same shortcut
+as `no-verify` in Outline and `?sslmode=` in HedgeDoc; the fix is the same, and
+it is cheap: **open the config of the thing you are about to change.**
+
+### What was measured before anything was written
+
+1. **The certificate validates as its own CA and the name matches.**
+   `openssl s_client -starttls mysql -CAfile server.crt -verify_hostname mariadb`
+   → `Verify return code: 0`, TLSv1.3. And from inside the fabric,
+   `mariadb -h mariadb --ssl-ca=… --ssl-verify-server-cert` → TLS_AES_256_GCM_SHA384.
+2. **Verification really engages** — pointing `--ssl-ca` at a file that is not a
+   CA is *refused* (`TLS/SSL error: no certificate or crl found`). Without that
+   control the first result proves nothing.
+3. **And `--ssl-verify-server-cert` with NO CA quietly succeeds** — the MariaDB
+   client does not verify when it has nothing to verify against. A verification
+   flag that is inert unless paired: worth knowing before trusting one.
+4. **pdo_mysql fails CLOSED.** A bad CA path gives
+   `SQLSTATE[HY000] [2002] Cannot connect to MySQL using SSL`; it never falls
+   back to plaintext. So a half-landed rung 3 is a visible outage, not a silent
+   downgrade — which is what makes shipping all five at once acceptable.
+5. **WordPress can encrypt without a CA.** `MYSQLI_CLIENT_SSL` alone, measured
+   in the running container, negotiates TLS_AES_256_GCM_SHA384. It cannot
+   *verify*: `wpdb` never calls `mysqli_ssl_set`, so no CA is mounted for it —
+   a file nothing reads is the defect, not a precaution.
+
+### What rung 3 does NOT close
+
+- **WordPress is encrypted but unauthenticated.** An active MITM on the docker
+  fabric could still impersonate `mariadb` to it. The route is php.ini
+  `mysqli.default_ca` plus `MYSQLI_CLIENT_SSL_VERIFY_SERVER_CERT`; untested,
+  so not shipped with this rung.
+- **Nothing here proves adoption.** The configuration being coherent is
+  `tests/anatomy/test_mariadb_client_tls.py`; whether a client negotiated TLS
+  is `tools/tls-uptake.py --window N`, which reports the fraction of
+  connections opened in the last N seconds that were encrypted. On
+  2026-08-23, before the rung: **1 of 9**.
+- **Rung 4 stays gated absent.** `require_secure_transport` would refuse every
+  client that has not moved, and a gate now fails if it appears.

@@ -28,6 +28,23 @@ services:
       WORDPRESS_DB_PASSWORD: "{{ wordpress_db_password }}"
       WORDPRESS_DB_NAME: "{{ wordpress_db_name }}"
       WORDPRESS_TABLE_PREFIX: "{{ wordpress_table_prefix | default('wp_') }}"
+{% if mariadb_ssl_enabled and install_mariadb %}
+      # ENCRYPTION WITHOUT AUTHENTICATION, deliberately, and it is the ceiling.
+      # wpdb passes MYSQL_CLIENT_FLAGS straight to mysqli_real_connect
+      # (wp-includes/class-wpdb.php:1959) and never calls mysqli_ssl_set, so
+      # WordPress has no way to name a CA from PHP. No CA is mounted here for
+      # that reason: a file nothing reads is the defect in hidden fee 28.
+      #
+      # MEASURED 2026-08-23 inside the running container: the flag alone
+      # negotiates TLS_AES_256_GCM_SHA384. That closes the passive read of
+      # every WordPress row crossing the fabric; an active MITM is still open,
+      # and the route to closing it is php.ini `mysqli.default_ca` plus
+      # MYSQLI_CLIENT_SSL_VERIFY_SERVER_CERT — untested, so not shipped.
+      #
+      # wp-config.php:127 evals this on every request, so it applies to an
+      # EXISTING install without regenerating the file.
+      WORDPRESS_CONFIG_EXTRA: "define('MYSQL_CLIENT_FLAGS', MYSQLI_CLIENT_SSL);"
+{% endif %}
     healthcheck:
       # WP image ships curl (wp-cli is NOT in this image — that's wordpress:cli).
       # Fresh WP `/` 302→install is <400 so `curl -f` passes once Apache serves.

@@ -20,6 +20,17 @@ services:
 {% endif %}
     volumes:
       - {{ freescout_data_dir }}:/data
+{% if mariadb_ssl_enabled and install_mariadb %}
+      # REM-217 rung 3. The MariaDB server certificate, read-only, as this
+      # client's CA. A self-signed cert IS its own CA and `mariadb` is in its
+      # SAN, so this validates the chain AND the host name — proven with
+      # `openssl s_client -verify_hostname mariadb` and a negative control on
+      # 2026-08-23, not assumed. NO `| default(false)` on either gate: these
+      # are play-scope names and a silent fallback to the plaintext branch is
+      # exactly how the PostgreSQL pin stayed dead for nine weeks
+      # (docs/hidden_fees/23).
+      - {{ mariadb_certs_dir }}/server.crt:{{ mariadb_client_ca_path }}:ro
+{% endif %}
     environment:
       CONTAINER_NAME: freescout
       DB_HOST: mariadb
@@ -27,6 +38,17 @@ services:
       DB_NAME: "{{ freescout_db_name }}"
       DB_USER: "{{ freescout_db_user }}"
       DB_PASS: "{{ freescout_db_password }}"
+{% if mariadb_ssl_enabled and install_mariadb %}
+      # DB_ PREFIX — this fork is not stock Laravel. Read at
+      # /www/html/config/database.php:56. `MYSQL_ATTR_SSL_CA`, which works for
+      # bookstack, does nothing here.
+      #
+      # Verification is NOT set: that config defaults
+      # DB_MYSQL_ATTR_SSL_VERIFY_SERVER_CERT to true, and `array_filter` would
+      # drop a `false` anyway — so the only reachable state is verify-on, which
+      # is what the SAN was built for.
+      DB_MYSQL_ATTR_SSL_CA: "{{ mariadb_client_ca_path }}"
+{% endif %}
       # nfrastack 2.x renamed SITE_URL → APP_URL (SITE_URL deprecated but still
       # read as a fallback). Set BOTH so the transition is clean either way.
       SITE_URL: "https://{{ freescout_domain }}"

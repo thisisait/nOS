@@ -2604,6 +2604,14 @@ onlyoffice_lib_dir: "{{ nos_data_root }}/platform/services/onlyoffice/lib"
 onlyoffice_logs_dir: "{{ nos_data_root }}/platform/services/onlyoffice/logs"
 postgresql_certs_dir: "{{ nos_data_root }}/platform/services/postgresql/certs"
 mariadb_certs_dir: "{{ nos_data_root }}/platform/services/mariadb/certs"
+# Where the server certificate is mounted INSIDE each MariaDB client, as its CA.
+# One string, because five templates and tools/tls-uptake.py must agree on it —
+# a reader watching a different path than the renderer writes would report every
+# client unconfigured for ever, and be believed (gate:
+# test_the_tls_reader_only_reads.py::test_the_ca_path_the_reader_looks_for...).
+# A NEW directory on purpose: mounting into /etc/ssl/certs would collide with
+# whatever each image does to its own CA bundle.
+mariadb_client_ca_path: "/nos-certs/mariadb-ca.crt"
 code_server_workspace_dir: "{{ nos_data_root }}/platform/services/code_server/workspace"
 
 # ==============================================================================
