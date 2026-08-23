@@ -38,10 +38,9 @@ value (`doctrine/foreign-properties.md` §5.1).
 3. **`sec-transport-redis`** — AUTH secret on the argv; no TLS port.
 4. **`sec-backrest-auth`** — reachable from 23 containers with `auth:disabled`.
 
-**Reds (4), none new.** `loop:drive` predates the forge sync and its REM-214
-proposal re-judges tonight. The 115 h surveyor orphan clears on the first agent
-run after this deploy — the reaper now fires at session open. The inbox needs
-`notify-supersede`.
+**Reds (4), none new.** `loop:drive` predates the forge sync; its REM-214
+proposal re-judges tonight. The 115 h orphan clears on the next agent run (the
+reaper now fires at session open). The inbox needs `notify-supersede`.
 
 **37 commits ahead of GitHub** — the promotion is the operator's act:
 `tools/forge-sync.py --apply --push-github`.
