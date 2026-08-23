@@ -466,10 +466,18 @@ CREATE TABLE IF NOT EXISTS notifications (
     created_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_notifications_unread       ON notifications(target_actor_id, wing_inbox_read_at);
--- The supersede lookup: unread rows of one class for one target. Partial, so
--- it stays small — the vast majority of rows carry no key at all.
-CREATE INDEX IF NOT EXISTS idx_notifications_supersede    ON notifications(supersede_key, target_actor_id)
-    WHERE supersede_key IS NOT NULL AND superseded_at IS NULL;
+-- The supersede lookup index is NOT here, deliberately, and this comment is
+-- the scar. `CREATE TABLE IF NOT EXISTS` is a no-op on an existing database,
+-- so on the live 979 MB one the three supersede columns do not exist when this
+-- file runs — they arrive from init-db.php's ALTER sweep AFTERWARDS. An index
+-- placed here therefore aborts the whole script with
+--     no such column: supersede_key
+-- which is what killed a converge on 2026-08-23 at `[pazny.wing] Initialize
+-- SQLite schema BEFORE daemon start`. The index lives beside its sweep, in
+-- bin/init-db.php, where the columns are guaranteed to exist.
+--
+-- Gate: tests/anatomy/test_a_successor_retires_its_predecessors.py
+--       ::test_no_index_here_depends_on_a_swept_in_column
 CREATE INDEX IF NOT EXISTS idx_notifications_severity     ON notifications(severity);
 CREATE INDEX IF NOT EXISTS idx_notifications_actor_action ON notifications(actor_action_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at   ON notifications(created_at);

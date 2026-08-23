@@ -241,3 +241,107 @@ def test_every_unread_reader_excludes_a_retired_row():
         "host whose converge has not yet run the ALTER sweep would raise, and "
         "red-status is the first thing a session runs. Keyed on the mechanism "
         "rather than a helper's name, which is what this assertion tripped on")
+
+
+def _swept_columns() -> dict[str, set[str]]:
+    """Every column init-db.php ALTERs in, per table.
+
+    Parsed from the `$addMissingColumns($db, 'table', [ 'col' => 'TYPE', ])`
+    calls rather than grepped for names, so a new sweep is covered the day it
+    is written."""
+    import re
+    php = INITDB.read_text(encoding="utf-8")
+    out: dict[str, set[str]] = {}
+    for m in re.finditer(r"\$addMissingColumns\(\$db,\s*'([a-z_]+)',\s*\[(.*?)\]\s*\)",
+                         php, re.S):
+        table, body = m.group(1), m.group(2)
+        out.setdefault(table, set()).update(re.findall(r"'([a-z_]+)'\s*=>", body))
+    return out
+
+
+#: 9 instances of this shape predate the gate, across four tables. They do
+#: NOT bite today and the reason is worth writing down rather than trusting:
+#: each column was added to the CREATE TABLE *and* to the sweep in the same
+#: commit, so a fresh DB has it from the table and this estate's DB got it from
+#: a sweep years of converges ago. Only a database old enough to lack the
+#: column AND new enough to run this file would abort — a state no host is in.
+#:
+#: They are listed, not fixed, on purpose: moving nine indexes on a 979 MB
+#: database is not work to do while a converge is broken, and every one of
+#: them has shipped for months. This is a RATCHET — the list may shrink,
+#: never grow. Roadmap: `wing-sweep-index-order`.
+KNOWN_LATENT = {
+    "index on events references 'actor_action_id', which arrives via the ALTER sweep and does not exist here",
+    "index on events references 'actor_id', which arrives via the ALTER sweep and does not exist here",
+    "index on events references 'patch_id', which arrives via the ALTER sweep and does not exist here",
+    "index on events references 'source', which arrives via the ALTER sweep and does not exist here",
+    "index on gdpr_consent references 'activity', which arrives via the ALTER sweep and does not exist here",
+    "index on gdpr_consent references 'processing_id', which arrives via the ALTER sweep and does not exist here",
+    "index on gdpr_consent references 'subject_email', which arrives via the ALTER sweep and does not exist here",
+    "index on notifications references 'mail_digest_window', which arrives via the ALTER sweep and does not exist here",
+    "index on pulse_runs references 'actor_action_id', which arrives via the ALTER sweep and does not exist here",
+}
+
+
+def test_no_index_here_depends_on_a_swept_in_column():
+    """THE BUG THAT KILLED A CONVERGE, 2026-08-23.
+
+    `CREATE TABLE IF NOT EXISTS` is a NO-OP on an existing database, so a
+    column that arrives via the ALTER sweep does NOT exist while
+    schema-extensions.sql is running — the sweep is later, in init-db.php. An
+    index in this file that names such a column aborts the entire script:
+
+        no such column: supersede_key
+
+    and the play dies at `[pazny.wing] Initialize SQLite schema BEFORE daemon
+    start`. It is invisible on a fresh database, where the CREATE TABLE really
+    did make the column, which is exactly why it survived every local test:
+    the temp-DB fixture above builds fresh tables and was green throughout.
+
+    An index on a swept-in column belongs beside its sweep, where the columns
+    are guaranteed to exist."""
+    sql = SCHEMA.read_text(encoding="utf-8")
+    swept = _swept_columns()
+    assert swept, "no $addMissingColumns calls parsed — check this gate, not the sweep"
+
+    offenders: list[str] = []
+    for stmt in sql.split(";"):
+        # STRIP COMMENTS FIRST, THEN look for the verb. The first cut checked
+        # `stmt.strip().startswith("CREATE INDEX")` on the raw chunk — and
+        # every statement in this file is preceded by a comment block, so the
+        # chunk starts with `--` and was skipped. It found nine real instances
+        # and MISSED the exact bug it was written for when that bug was
+        # re-introduced under its own explanatory comment. Proven both
+        # directions before being trusted.
+        code = "\n".join(ln for ln in stmt.splitlines()
+                         if not ln.lstrip().startswith("--")).strip()
+        if not code.upper().startswith("CREATE INDEX"):
+            continue
+        for table, columns in swept.items():
+            if f"ON {table}(" not in code and f"ON {table} (" not in code:
+                continue
+            for col in columns:
+                import re as _re
+                if _re.search(rf"(?<![\w]){_re.escape(col)}(?![\w])", code):
+                    offenders.append(
+                        f"index on {table} references {col!r}, which arrives "
+                        f"via the ALTER sweep and does not exist here")
+    offenders = [o for o in offenders if o not in KNOWN_LATENT]
+    assert not offenders, (
+        "schema-extensions.sql would abort on any EXISTING database:\n  "
+        + "\n  ".join(offenders)
+        + "\nMove the index next to its $addMissingColumns call in "
+          "bin/init-db.php. A fresh-DB test cannot see this.")
+
+
+def test_the_index_exists_where_the_columns_do():
+    """Having moved it, it must actually be somewhere — an index deleted in the
+    name of fixing this would leave the supersede lookup a table scan."""
+    php = INITDB.read_text(encoding="utf-8")
+    assert "idx_notifications_supersede" in php, (
+        "the supersede index is in neither file; it belongs beside its sweep")
+    sweep_at = php.index("'supersede_key' => 'TEXT'")
+    index_at = php.index("idx_notifications_supersede")
+    assert index_at > sweep_at, (
+        "the index is created BEFORE the columns are ALTER'd in — same failure "
+        "one file along")
