@@ -39,15 +39,30 @@ services:
       DB_USER: "{{ freescout_db_user }}"
       DB_PASS: "{{ freescout_db_password }}"
 {% if mariadb_ssl_enabled and install_mariadb %}
-      # DB_ PREFIX — this fork is not stock Laravel. Read at
-      # /www/html/config/database.php:56. `MYSQL_ATTR_SSL_CA`, which works for
-      # bookstack, does nothing here.
+      # ENV_ PREFIX, and it is the THIRD allow-list this one setting has met.
       #
-      # Verification is NOT set: that config defaults
-      # DB_MYSQL_ATTR_SSL_VERIFY_SERVER_CERT to true, and `array_filter` would
-      # drop a `false` anyway — so the only reachable state is verify-on, which
-      # is what the SAN was built for.
-      DB_MYSQL_ATTR_SSL_CA: "{{ mariadb_client_ca_path }}"
+      # `DB_MYSQL_ATTR_SSL_CA` on the container env is not enough, and the way
+      # it fails is the nastiest kind: it RESOLVES. Measured in the running
+      # container 2026-08-23 —
+      #
+      #     env("DB_MYSQL_ATTR_SSL_CA")                  '/nos-certs/…'
+      #     config("database.connections.mysql.options") {"1013": true}
+      #
+      # Laravel CACHES config (bootstrap/cache/config.php). Once cached, env()
+      # is never consulted for a config value again, so the variable is
+      # present, correct, and unread. FreeScout ran plaintext behind a
+      # healthcheck that said healthy, and a self-test that read the ENV
+      # reported it encrypted — a false green of my own making.
+      #
+      # This image's supported channel is a prefix passthrough
+      # (`/container/functions/30-laravel:212`, its README §326): an `ENV_*`
+      # variable is written into `.env`, and `31-laravel-env_watcher` clears
+      # the config cache on any `.env` change. So the value reaches the cache
+      # REBUILD, which is the only place it can matter.
+      #
+      # Verify with tools/tls-uptake.py's self-test, which boots this app's own
+      # kernel and reads what it RESOLVES — never the environment.
+      ENV_DB_MYSQL_ATTR_SSL_CA: "{{ mariadb_client_ca_path }}"
 {% endif %}
       # nfrastack 2.x renamed SITE_URL → APP_URL (SITE_URL deprecated but still
       # read as a fallback). Set BOTH so the transition is clean either way.

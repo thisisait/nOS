@@ -202,6 +202,9 @@ CLIENT_CA_PATH = "/nos-certs/mariadb-ca.crt"
 #:
 #:   bookstack  MYSQL_ATTR_SSL_CA       /app/www/app/Config/database.php:84
 #:   freescout  DB_MYSQL_ATTR_SSL_CA    /www/html/config/database.php:56
+#:              (set as ENV_DB_MYSQL_ATTR_SSL_CA — the image's .env passthrough;
+#:               the bare name resolves through env() and is still absent from
+#:               the cached config, which is where the app actually reads it)
 #:   firefly    MYSQL_SSL_CA            /var/www/html/config/database.php:43
 #:
 #: Three forks of the same framework, three names. The scoping generalised from
@@ -217,8 +220,10 @@ MARIADB_CLIENTS = (
      "env": "MYSQL_ATTR_SSL_CA",
      "read_from": "/app/www/app/Config/database.php:84 (stock Laravel)"},
     {"service": "freescout", "container": "b2b-freescout-1",
-     "env": "DB_MYSQL_ATTR_SSL_CA",
-     "read_from": "/www/html/config/database.php:56 (DB_ prefix — NOT stock)"},
+     "env": "ENV_DB_MYSQL_ATTR_SSL_CA",
+     "read_from": "/www/html/config/database.php:56, reached via the image's "
+                  "ENV_* .env passthrough — the bare name resolves and never "
+                  "enters the CACHED config"},
     {"service": "firefly", "container": "b2b-firefly-1",
      "env": "MYSQL_SSL_CA",
      "read_from": "/var/www/html/config/database.php:43 (own names entirely)"},

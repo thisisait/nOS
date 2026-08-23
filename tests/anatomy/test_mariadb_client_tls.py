@@ -67,9 +67,15 @@ CLIENTS = {
     "bookstack": ("roles/pazny.bookstack/templates/compose.yml.j2",
                   "MYSQL_ATTR_SSL_CA",
                   "/app/www/app/Config/database.php:84"),
+    # ENV_-PREFIXED: this image writes `ENV_*` into the app's .env
+    # (/container/functions/30-laravel:212) and its env-watcher clears the
+    # config cache on that change. The bare `DB_MYSQL_ATTR_SSL_CA` resolved
+    # through env() and was still absent from the CACHED config — present,
+    # correct and unread, which is how FreeScout ran plaintext while a
+    # self-test that read the env called it encrypted.
     "freescout": ("roles/pazny.freescout/templates/compose.yml.j2",
-                  "DB_MYSQL_ATTR_SSL_CA",
-                  "/www/html/config/database.php:56"),
+                  "ENV_DB_MYSQL_ATTR_SSL_CA",
+                  "/www/html/config/database.php:56 via .env passthrough"),
     "firefly": ("roles/pazny.firefly/templates/compose.yml.j2",
                 "MYSQL_SSL_CA",
                 "/var/www/html/config/database.php:43"),

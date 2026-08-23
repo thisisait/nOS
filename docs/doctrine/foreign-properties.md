@@ -241,3 +241,46 @@ under a minute what two rounds of reasoning about driver families got wrong.
 **Not ours to fix.** A defensive allow-list is a reasonable thing for an ORM to
 have. What is ours is not to keep writing configuration into a channel we have
 not checked is connected.
+
+### 5.3 A third allow-list, and the one that resolves
+
+HedgeDoc's `sslmode` was dropped by an ORM's allow-list (§5.2). FreeScout's CA
+was dropped by two more, and the second is the instructive one.
+
+**The container image's.** `nfrastack/freescout` builds the application's `.env`
+from a fixed set of variables. `DB_MYSQL_ATTR_SSL_CA` is not among them, so the
+value never reached the file. The image does support arbitrary passthrough —
+any `ENV_*` variable is written into `.env`
+(`/container/functions/30-laravel:212`, its README §326) — but only under that
+prefix.
+
+**And the framework's own cache.** This is the part worth carrying:
+
+```
+env("DB_MYSQL_ATTR_SSL_CA")                  '/nos-certs/mariadb-ca.crt'
+config("database.connections.mysql.options") {"1013": true}
+```
+
+Both measured in the running container, seconds apart. Laravel caches its
+resolved configuration (`bootstrap/cache/config.php`); once cached, `env()` is
+never consulted for a config value again. So the variable **resolves** — it is
+present, correctly spelled, and returned by the function whose name suggests it
+is the answer — and the application has never seen it.
+
+**Why this one is worse than §5.2.** A dropped parameter leaves no trace to
+find. A *resolving* one hands you a confirmation. Reading `env(...)` in the
+container returns the path; the container's environment shows the path; a probe
+built from either says `encrypted`. FreeScout ran plaintext behind all three,
+and behind a healthcheck that reported healthy, while a reader written that same
+afternoon called it green.
+
+**The accommodation, and it is a rule about probes rather than about upstreams:**
+`env()` and `config()` are two different questions and only the second is the
+application's contract. A probe must boot the application's own kernel and read
+what it **resolves** — `tools/tls-uptake.py`'s `_LARAVEL_PROBE` does — because a
+configuration value has as many plausible readings as there are layers above it,
+and only the last one is true.
+
+**Not ours to fix.** A config cache is a correct optimisation, and an image
+curating its `.env` is a defensible boundary with a documented door. What is
+ours is to stop asking the layer that is easy to reach.
