@@ -145,8 +145,44 @@ ones were Outline, HedgeDoc and **Infisical, the secrets vault** — all
 node-postgres. Nothing was misconfigured relative to the intent; the intent was
 expressed in a word that does not mean one thing.
 
-**The accommodation.** Client sslmode is chosen per driver family, not per
-estate policy, and the choice is recorded with its reason in
+### 5.1 There is a third contract: the application's own
+
+Learned by restart-looping Outline on 2026-08-23, one day after §5 was written.
+Outline was classified `no-verify` because it runs on Node. It refused to start:
+
+```
+Environment configuration is invalid, please check the following:
+- PGSSLMODE must be one of the following values:
+  disable, allow, require, prefer, verify-ca, verify-full
+```
+
+**Outline owns that string, not node-postgres.** It validates against the
+**libpq** enum — so `no-verify`, which is the only correct value for raw
+node-postgres, is rejected outright — and then maps it itself
+(`server/storage/database.ts`, v1.9.2):
+
+```ts
+const isSSLDisabled = env.PGSSLMODE === "disable";
+ssl: env.isProduction && !isSSLDisabled ? { rejectUnauthorized: false } : false
+```
+
+Every value except `disable` means the same thing there: encrypt, do not
+verify. So `require` is correct — arrived at by the libpq rule, for a Node
+application, which is exactly why the shortcut fails.
+
+**The rule that generalises: the contract belongs to whoever PARSES the string,
+not to the driver underneath it.** A connection URL handed straight to the
+driver takes the driver's contract; an env var the application reads first
+takes the application's. `PGSSLMODE` is an application variable and reads
+nothing like one.
+
+**How to settle it without guessing.** The enum in the error message is the
+application's own validator; the mapping is one grep in its source. Both were
+available before the change and neither was consulted — the classification was
+made from the runtime, which is the one fact that does not decide it.
+
+**The accommodation.** Client sslmode is chosen per PARSER, not per runtime and
+not per estate policy, and the choice is recorded with its reason in
 `tests/anatomy/test_postgresql_ssl.py::CLIENTS`. `prefer` is not an acceptable
 value on the server-TLS branch for any client, because it is precisely the mode
 whose meaning splits.

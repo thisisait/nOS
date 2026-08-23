@@ -26,9 +26,25 @@ services:
       # repo ever recorded a reason. REM-217 measured the consequence, that
       # every Outline backend reaches PostgreSQL in cleartext across the shared
       # docker fabric while the server has ssl=on two containers away.
-      # `no-verify` because Outline is node-postgres, where `require` would
-      # verify and reject the role's self-signed cert.
-      PGSSLMODE: "{{ 'no-verify' if (postgresql_ssl_enabled | default(false)) else 'disable' }}"
+      #
+      # `require`, and the first attempt at `no-verify` restart-looped the
+      # container on 2026-08-23:
+      #
+      #   PGSSLMODE must be one of the following values:
+      #   disable, allow, require, prefer, verify-ca, verify-full
+      #
+      # OUTLINE OWNS THIS STRING, not node-postgres. It validates against the
+      # LIBPQ enum — `no-verify` is not in it — and then maps it itself
+      # (server/storage/database.ts, v1.9.2):
+      #
+      #   const isSSLDisabled = env.PGSSLMODE === "disable";
+      #   ssl: env.isProduction && !isSSLDisabled ? { rejectUnauthorized: false } : false
+      #
+      # So every value except `disable` means the same thing here — encrypt,
+      # do not verify — which is what the role's self-signed cert needs. The
+      # driver underneath is node-postgres; the CONTRACT is Outline's. See
+      # docs/doctrine/foreign-properties.md §5.
+      PGSSLMODE: "{{ 'require' if (postgresql_ssl_enabled | default(false)) else 'disable' }}"
       REDIS_URL: "redis://:{{ (redis_password | default(nos_derived_secrets.redis)) | urlencode }}@redis:6379"
       URL: "https://{{ outline_domain | default('wiki' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       PORT: "3000"

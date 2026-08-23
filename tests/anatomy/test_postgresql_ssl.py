@@ -92,6 +92,14 @@ def test_compose_wires_ssl_when_enabled():
 #: Driver family is established EMPIRICALLY where possible: a client that
 #: negotiated TLS while set to `prefer` is libpq-family, because a node-postgres
 #: client never upgrades opportunistically.
+#:
+#: AND THERE IS A THIRD CASE, learned by breaking Outline on 2026-08-23. The
+#: contract belongs to WHOEVER PARSES THE STRING, which is not always the
+#: driver. Outline reads PGSSLMODE itself, validates it against the LIBPQ enum
+#: — so `no-verify`, correct for raw node-postgres, is rejected outright and
+#: the container restart-loops — and then maps every value except `disable` to
+#: `rejectUnauthorized: false`. Classifying it by its runtime (Node) instead of
+#: by its parser is what got it wrong.
 CLIENTS = (
     ("roles/pazny.authentik/templates/compose.yml.j2", "AUTHENTIK_POSTGRESQL__SSLMODE",
      "require", "psycopg → libpq", 2),
@@ -104,10 +112,26 @@ CLIENTS = (
     ("roles/pazny.hedgedoc/templates/compose.yml.j2", "CMD_DB_URL",
      "no-verify", "Sequelize → node-postgres; `require` would reject the cert", 1),
     ("roles/pazny.outline/templates/compose.yml.j2", "PGSSLMODE",
-     "no-verify", "node-postgres; was `disable`, upstream sample boilerplate", 1),
+     "require", "Outline OWNS this string: validates the libpq enum (no-verify "
+     "is rejected, restart-looped 2026-08-23) then maps everything except "
+     "`disable` to rejectUnauthorized:false itself", 1),
     ("roles/pazny.infisical/templates/compose.yml.j2", "DB_CONNECTION_URI",
      "no-verify", "knex → node-postgres; had NO sslmode at all, the vault in clear", 1),
 )
+
+#: Where the APPLICATION validates the value itself, its accepted set — copied
+#: from the validator's own error message, which is the authoritative list.
+#:
+#: Only Outline is here because only Outline has been observed refusing. The
+#: point is not coverage; it is that a value which an application will reject
+#: must fail in this file rather than in a restart loop at 03:00. Add an entry
+#: the first time a service names its enum, and never guess one: an invented
+#: set that is too NARROW blocks a correct value, which is worse than no check.
+ACCEPTED = {
+    "roles/pazny.outline/templates/compose.yml.j2": (
+        "disable", "allow", "require", "prefer", "verify-ca", "verify-full",
+    ),
+}
 
 #: Values that permit a plaintext session. `prefer` is here on evidence, not on
 #: principle: under `prefer` the estate measured 22 cleartext Authentik backends
@@ -176,3 +200,28 @@ def test_the_conditional_is_gated_on_a_resolvable_variable():
                 f"{rel} {key} decides its sslmode without consulting "
                 "postgresql_ssl_enabled — on Linux the server offers no TLS and "
                 "an unconditional encrypting mode cannot connect")
+
+
+def test_a_value_the_application_itself_validates_is_in_its_accepted_set():
+    """Outline restart-looped on 2026-08-23 with
+
+        PGSSLMODE must be one of the following values:
+        disable, allow, require, prefer, verify-ca, verify-full
+
+    `no-verify` — correct for raw node-postgres — is not in Outline's list,
+    because Outline parses the variable itself and validates against libpq's
+    enum. BOTH branches are checked: the `else` arm ships on Linux, where a
+    restart loop would be found by CI rather than by an operator."""
+    for rel, key, value, _why, _count in CLIENTS:
+        accepted = ACCEPTED.get(rel)
+        if not accepted:
+            continue
+        for line in _client_lines(rel, key):
+            rendered = re.findall(r"'([a-z-]+)'", line)
+            assert rendered, f"{rel} {key}: no literal value to check: {line.strip()[:80]}"
+            for candidate in rendered:
+                assert candidate in accepted, (
+                    f"{rel} {key} renders {candidate!r}, which the application "
+                    f"refuses at startup — it accepts only {', '.join(accepted)}. "
+                    "This is not a driver question: the application parses the "
+                    "variable before any driver sees it")
