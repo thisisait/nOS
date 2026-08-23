@@ -50,10 +50,10 @@ CREATE INDEX IF NOT EXISTS idx_events_ts        ON events(ts);
 CREATE INDEX IF NOT EXISTS idx_events_type      ON events(type);
 CREATE INDEX IF NOT EXISTS idx_events_migration ON events(migration_id);
 CREATE INDEX IF NOT EXISTS idx_events_upgrade   ON events(upgrade_id);
-CREATE INDEX IF NOT EXISTS idx_events_patch     ON events(patch_id);
-CREATE INDEX IF NOT EXISTS idx_events_source    ON events(source);
-CREATE INDEX IF NOT EXISTS idx_events_actor_id        ON events(actor_id);
-CREATE INDEX IF NOT EXISTS idx_events_actor_action_id ON events(actor_action_id);
+-- idx_events_{patch,source,actor_id,actor_action_id} live in bin/init-db.php,
+-- beside the ALTER sweeps that add their columns — an index here on a swept-in
+-- column aborts this whole script on any pre-existing database (see the
+-- notifications scar comment below). Deduplicated 2026-08-23.
 
 -- Audit-chain metadata singleton (k/v). Keys:
 --   purge_unlocked              '0'/'1' guard the WORM DELETE trigger checks
@@ -284,9 +284,9 @@ CREATE TABLE IF NOT EXISTS gdpr_consent (
     created_at          TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
-CREATE INDEX IF NOT EXISTS idx_gdpr_consent_subject    ON gdpr_consent(subject_email);
-CREATE INDEX IF NOT EXISTS idx_gdpr_consent_activity   ON gdpr_consent(activity);
-CREATE INDEX IF NOT EXISTS idx_gdpr_consent_processing ON gdpr_consent(processing_id);
+-- idx_gdpr_consent_{subject,activity,processing} live in bin/init-db.php,
+-- after the gdpr_consent ALTER sweep (same rule as the active-consent
+-- partial index, which was born there). Deduplicated 2026-08-23.
 
 -- ============================================================================
 -- Pulse — scheduled-job catalog + run history (Anatomy A4, 2026-05-03)
@@ -358,7 +358,8 @@ CREATE TABLE IF NOT EXISTS pulse_runs (
 );
 CREATE INDEX IF NOT EXISTS idx_pulse_runs_job_id            ON pulse_runs(job_id);
 CREATE INDEX IF NOT EXISTS idx_pulse_runs_fired_at          ON pulse_runs(fired_at);
-CREATE INDEX IF NOT EXISTS idx_pulse_runs_actor_action_id   ON pulse_runs(actor_action_id);
+-- idx_pulse_runs_actor_action_id lives in bin/init-db.php, after the
+-- pulse_runs ALTER sweep that adds the column. Deduplicated 2026-08-23.
 
 -- gitleaks_findings: secret-scanning findings ingested by the gitleaks plugin.
 -- Anatomy A7 (2026-05-06). The gitleaks plugin (files/anatomy/plugins/gitleaks/)
@@ -483,7 +484,9 @@ CREATE INDEX IF NOT EXISTS idx_notifications_actor_action ON notifications(actor
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at   ON notifications(created_at);
 CREATE INDEX IF NOT EXISTS idx_notifications_ntfy_pending ON notifications(ntfy_dispatched_at) WHERE ntfy_dispatched_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_notifications_mail_pending ON notifications(mail_dispatched_at) WHERE mail_dispatched_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_notifications_mail_digest  ON notifications(mail_digest_window) WHERE mail_digest_window IS NOT NULL AND mail_dispatched_at IS NULL;
+-- idx_notifications_mail_digest lives in bin/init-db.php, after the
+-- mail_digest_window ALTER sweep — same rule as the supersede index above.
+-- Deduplicated 2026-08-23.
 
 -- ============================================================================
 -- User invitations (Anatomy A15, 2026-05-17)

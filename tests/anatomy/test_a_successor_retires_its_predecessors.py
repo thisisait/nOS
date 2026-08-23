@@ -259,30 +259,6 @@ def _swept_columns() -> dict[str, set[str]]:
     return out
 
 
-#: 9 instances of this shape predate the gate, across four tables. They do
-#: NOT bite today and the reason is worth writing down rather than trusting:
-#: each column was added to the CREATE TABLE *and* to the sweep in the same
-#: commit, so a fresh DB has it from the table and this estate's DB got it from
-#: a sweep years of converges ago. Only a database old enough to lack the
-#: column AND new enough to run this file would abort — a state no host is in.
-#:
-#: They are listed, not fixed, on purpose: moving nine indexes on a 979 MB
-#: database is not work to do while a converge is broken, and every one of
-#: them has shipped for months. This is a RATCHET — the list may shrink,
-#: never grow. Roadmap: `wing-sweep-index-order`.
-KNOWN_LATENT = {
-    "index on events references 'actor_action_id', which arrives via the ALTER sweep and does not exist here",
-    "index on events references 'actor_id', which arrives via the ALTER sweep and does not exist here",
-    "index on events references 'patch_id', which arrives via the ALTER sweep and does not exist here",
-    "index on events references 'source', which arrives via the ALTER sweep and does not exist here",
-    "index on gdpr_consent references 'activity', which arrives via the ALTER sweep and does not exist here",
-    "index on gdpr_consent references 'processing_id', which arrives via the ALTER sweep and does not exist here",
-    "index on gdpr_consent references 'subject_email', which arrives via the ALTER sweep and does not exist here",
-    "index on notifications references 'mail_digest_window', which arrives via the ALTER sweep and does not exist here",
-    "index on pulse_runs references 'actor_action_id', which arrives via the ALTER sweep and does not exist here",
-}
-
-
 def test_no_index_here_depends_on_a_swept_in_column():
     """THE BUG THAT KILLED A CONVERGE, 2026-08-23.
 
@@ -299,7 +275,17 @@ def test_no_index_here_depends_on_a_swept_in_column():
     the temp-DB fixture above builds fresh tables and was green throughout.
 
     An index on a swept-in column belongs beside its sweep, where the columns
-    are guaranteed to exist."""
+    are guaranteed to exist.
+
+    This gate shipped with a KNOWN_LATENT ratchet of nine pre-existing
+    instances. All nine were verified (2026-08-23) to be exact duplicates of
+    indexes init-db.php already creates AFTER their sweeps — init-db.php is
+    this file's only executor, so the schema-extensions.sql copies were
+    deleted and the ratchet with them. The exported contract
+    (`skills/contracts/wing.db-schema.sql`) is built from the finished DB, so
+    the indexes survive in it — only their whitespace changed, because
+    sqlite_master keeps the DDL as its author spelled it and init-db.php now
+    IS the author (regenerated in the same commit)."""
     sql = SCHEMA.read_text(encoding="utf-8")
     swept = _swept_columns()
     assert swept, "no $addMissingColumns calls parsed — check this gate, not the sweep"
@@ -326,7 +312,6 @@ def test_no_index_here_depends_on_a_swept_in_column():
                     offenders.append(
                         f"index on {table} references {col!r}, which arrives "
                         f"via the ALTER sweep and does not exist here")
-    offenders = [o for o in offenders if o not in KNOWN_LATENT]
     assert not offenders, (
         "schema-extensions.sql would abort on any EXISTING database:\n  "
         + "\n  ".join(offenders)

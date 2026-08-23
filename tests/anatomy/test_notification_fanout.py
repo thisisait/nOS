@@ -166,10 +166,19 @@ def test_wing_base_registers_digest_flush_pulse_job():
 def test_notifications_schema_carries_mail_digest_window():
     """A9 daily-digest schema (2026-05-17): per-row queue marker column +
     partial index for cheap pending-flush queries.
+
+    The index moved to init-db.php (2026-08-23, beside the mail_digest_window
+    ALTER sweep): an index in schema-extensions.sql on a swept-in column
+    aborts the whole script on a pre-existing database — the bug
+    test_a_successor_retires_its_predecessors.py pins.
     """
     sql = (REPO / "files/anatomy/wing/db/schema-extensions.sql").read_text()
     assert "mail_digest_window" in sql
-    assert "idx_notifications_mail_digest" in sql
+    php = (REPO / "files/anatomy/wing/bin/init-db.php").read_text()
+    assert "idx_notifications_mail_digest" in php
+    assert php.index("'mail_digest_window' => 'TEXT'") < php.index(
+        "idx_notifications_mail_digest"), (
+        "the index is created BEFORE the column is ALTER'd in")
 
 
 def test_init_db_alters_in_mail_digest_window():

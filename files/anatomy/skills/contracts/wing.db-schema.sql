@@ -853,13 +853,13 @@ CREATE INDEX idx_events_actor_id        ON events(actor_id);
 
 CREATE INDEX idx_events_migration ON events(migration_id);
 
-CREATE INDEX idx_events_patch     ON events(patch_id);
+CREATE INDEX idx_events_patch ON events(patch_id);
 
 CREATE INDEX idx_events_row_hash ON events(row_hash);
 
 CREATE INDEX idx_events_run_id    ON events(run_id);
 
-CREATE INDEX idx_events_source    ON events(source);
+CREATE INDEX idx_events_source ON events(source);
 
 CREATE INDEX idx_events_ts        ON events(ts);
 
@@ -905,7 +905,7 @@ CREATE INDEX idx_notifications_actor_action ON notifications(actor_action_id);
 
 CREATE INDEX idx_notifications_created_at   ON notifications(created_at);
 
-CREATE INDEX idx_notifications_mail_digest  ON notifications(mail_digest_window) WHERE mail_digest_window IS NOT NULL AND mail_dispatched_at IS NULL;
+CREATE INDEX idx_notifications_mail_digest ON notifications(mail_digest_window) WHERE mail_digest_window IS NOT NULL AND mail_dispatched_at IS NULL;
 
 CREATE INDEX idx_notifications_mail_pending ON notifications(mail_dispatched_at) WHERE mail_dispatched_at IS NULL;
 
@@ -937,7 +937,7 @@ CREATE INDEX idx_pulse_jobs_due        ON pulse_jobs(paused, next_fire_at);
 
 CREATE INDEX idx_pulse_jobs_plugin     ON pulse_jobs(plugin_name);
 
-CREATE INDEX idx_pulse_runs_actor_action_id   ON pulse_runs(actor_action_id);
+CREATE INDEX idx_pulse_runs_actor_action_id ON pulse_runs(actor_action_id);
 
 CREATE INDEX idx_pulse_runs_fired_at          ON pulse_runs(fired_at);
 
