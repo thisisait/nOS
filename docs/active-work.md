@@ -6,44 +6,44 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-08-18 • v0.10-beta shipped; estate converged `failed=0`.
+> Last updated: 2026-08-23 • transport track prepared on `dev`, awaiting a converge.
 
 ## Now (current track)
 
-**Now: two reds, both waiting on the operator.** Each was notified once, to
-the inbox and to ntfy, and each notification is still unread — see the
-standing-red note below.
+**Now: datastore transport. The estate has TLS everywhere and uses it almost
+nowhere.** REM-217 measured it and `tools/tls-uptake.py` (new, 08-23) is the
+reader that will say whether the fix worked — it exists BEFORE the fix so no
+rung verifies itself.
 
-1. **The audit chain is broken.** `audit-chain-verify` rc=2 since 08-17:
-   `ok:false, checked 337462, unsigned 37`. All 37 unsigned rows were written
-   by `agent:librarian` via `source=agentkit` on 2026-08-16 11:49–11:50.
-   Last passing verify 08-16 04:19. **The writer is fixed** (`b1200d69`): the
-   chain question moved from the environment to the database, so a 38th
-   unsigned row cannot be added and a re-anchor will not be undone by the next
-   agent run. Re-anchoring itself is the operator's act, not an agent's.
-2. **The nightly security scan cannot authenticate.** Diagnosed 08-18 from
-   `pulse_runs`, not guessed: the run dies after **1.7 s** with
-   `Failed to authenticate: OAuth session expired and could not be refreshed`
-   — the Claude CLI login the scanner drives has expired. Not an exhausted
-   session mid-scan; it fails before doing any work. The last good run was
-   08-16 (18 min, rc=0). Fix is one interactive operator command: log the
-   `claude` CLI back in. The honest-marker fix works meanwhile — 5 components
-   sit at `scan_failed` and `last_full_scan` stays 2026-08-16 rather than a
-   fabricated today.
+Prepared on `dev`, **live effect unverified until a converge**:
 
-**Standing red is invisible between notifications.** Both reds notified
-correctly on first failure (inbox + ntfy), then went silent by design — the
-repeat-failure rule that stops per-minute jobs flooding the inbox. The inbox
-holds **138 unread, 68 CRITICAL/HIGH, oldest 24 days**. Detection is not the
-gap; a way to ask for the STATE is, and `tools/red-status.py` (08-18) is that
-ask. It is not yet a *surface* — that is the case for `admin.pazny.eu`, which
-is what the surveyor found independently.
+1. **PostgreSQL clients.** The 2026-06-14 `require`-pin read
+   `postgresql_ssl_enabled` out of scope — it was a `pazny.postgresql` role
+   default and the five readers are other roles — so every client rendered
+   `prefer` for nine weeks (`docs/hidden_fees/23`). Now at play scope, with the
+   spelling each driver family needs: `require` for libpq, `no-verify` for
+   node-postgres (`doctrine/foreign-properties.md` §5). Also `ssl_ciphers`
+   without 3DES/MEDIUM.
+2. **MariaDB rungs 1+2.** A self-signed cert with `mariadb` in the SAN now
+   exists on disk — the prerequisite for every later rung, because Laravel's
+   `MYSQL_ATTR_SSL_CA` is dropped by `array_filter` when empty.
+   `require_secure_transport` is deliberately absent AND gated absent.
 
-**Shipped 08-17/18** (narrative → devlog): apex site + signed ruling; d3-force
-layout, face v0.8; surveyor agent; LangGraph spiked 4/4 and NOT adopted.
-AgentKit's bound loop is **unproven** — 14 sessions, 0 completions, gated by
-`test_the_bound_agent_loop_is_unproven.py`; every ceremony that has finished
-ran the claude-CLI path.
+**What the converge should show**, read with `tools/tls-uptake.py`:
+postgresql moves off **38.5%** toward 100% of fabric backends; mariadb reports
+`ssl_cert` present (the ratio is cumulative and will not move fast); redis
+unchanged, still RED. **A service that fails to start is the signal to revert
+one template** — outline and infisical carry the only genuine risk, both
+node-postgres.
+
+**Still open:** redis AUTH secret on the argv, MariaDB clients (rung 3), the
+TLS 1.3 floor — held back so a failed converge has one candidate cause.
+
+**Both 08-18 reds are closed.** `audit-chain-verify` is `ok:true` rc=0 (the 37
+historical unsigned rows remain recorded); the nightly scan authenticates
+again and is at cycle 38. Today's reds are the inbox backlog (13 unread
+CRITICAL/HIGH, oldest 28 d) and an orphaned surveyor session at 103 h. The
+backup restore-drill row reads red and is not — the carve-out explains it.
 
 ## Open follow-ups
 
