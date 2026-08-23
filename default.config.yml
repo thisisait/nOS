@@ -2368,7 +2368,22 @@ authentik_oidc_erpnext_client_secret: "{{ nos_derived_secrets.oidc_erpnext }}"
 
 freescout_domain: "helpdesk{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 freescout_port: 8090
-freescout_version: "2.1.5-php8.3"        # nfrastack (tiredofit EOL @1.17.999); app 1.8.231 — REM-142 (7 GHSA fixes, 6 unpublished)
+# REM-218. The `-php8.3` suffix is GONE because that line is dead: nfrastack's
+# newest php8.3 tag is 2.1.5, published 2026-07-18, and every tag from 2.2.0
+# onward is php8.5-only. Verified against the registry, 165 tags enumerated —
+# not taken from the advisory.
+#
+# The `app` number below is what the CONTAINER will be asked for, not what the
+# release notes promise. The previous comment on this line said `app 1.8.231`
+# and the container ran 1.8.230 for six weeks: 1.8.231 was released 2026-07-25
+# and the image was built 2026-07-18, so the claim was impossible the day it was
+# written. REM-142 was closed on it and REM-193 filed on it, which left
+# GHSA-m4hc-rc98-38jc (a restricted agent lifting their own restriction) and
+# GHSA-cr68-27qv-p5m4 live while the queue read them as patched.
+#
+# Check it with `tools/app-version.py`, which asks the application. Until a
+# converge runs, the claim below is UNVERIFIED and the reader will say so.
+freescout_version: "2.2.5"               # nfrastack; app 1.8.235 claimed — UNVERIFIED until a converge, then `tools/app-version.py`
 freescout_db_name: "freescout"
 freescout_db_user: "freescout"
 freescout_db_password: "{{ nos_derived_secrets.freescout }}"

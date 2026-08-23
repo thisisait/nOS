@@ -104,3 +104,100 @@ recipes:
         type: backup.restore
         dst: "{{ freescout_data_dir }}"
         label: "pre-{{ upgrade_id }}"
+
+  - id: "freescout-2.1-to-2.2"
+    from_regex: "^2\\.1\\."
+    to: "2.2.5"
+    severity: security
+    release_date: "2026-08-15"
+    notes: |
+      REM-218. Two things happen at once here and the tag hides both.
+
+      THE VARIANT SUFFIX DISAPPEARS. `2.1.5-php8.3` is the LAST php8.3 image
+      nfrastack published (2026-07-18). From 2.2.0 the whole line is php8.5-only
+      — verified against the registry, 165 tags enumerated, not read off an
+      advisory. So this crosses a PHP minor AND drops the suffix the old pin was
+      written against; a naive `s/2.1.5/2.2.5/` on the suffixed form yields a
+      tag that does not exist.
+
+      THE APP JUMPS FIVE RELEASES, NOT ONE. The pinned 2.1.5 bundles FreeScout
+      **1.8.230** — measured inside the container, against a repo comment that
+      claimed 1.8.231 for six weeks. 2.2.5 is claimed to bundle 1.8.235, which
+      spans GHSA-m4hc-rc98-38jc (a restricted agent lifting their own
+      see-only-assigned restriction, patched 1.8.231), GHSA-cr68-27qv-p5m4
+      (incomplete fix for CVE-2026-40570, 1.8.231), GHSA-jvmv-2qcp-7855
+      (forgot-password throttling, 1.8.232) and GHSA-89fj-jcr7-2c68
+      (checkIsOnlyAssigned on thread edit/delete, 1.8.235).
+
+      VERIFY THE APP VERSION AFTER, NOT BEFORE. `tools/app-version.py` asks the
+      running container. The claim above is the release notes' and the whole
+      reason this row exists is that release notes were believed once already.
+
+      Migrations run forward-only on boot, as in the 1.17→2.1 track. Rollback
+      restores the pre-upgrade dump; reverting the tag alone does NOT undo a
+      Laravel migration.
+
+    coexistence_supported: false
+
+    requires:
+      min_disk_free_gb: 2
+      service_healthy: true
+
+    reset:
+      scope: container
+      estimated_sec: 180
+      affected_services: [freescout]
+      reason: >-
+        Single-app recreate on a new PHP minor. Only b2b-freescout-1 bounces;
+        shared MariaDB is a dependency, not a restarted consumer. The window is
+        wider than the 1.17→2.1 track because five app releases of migrations
+        run on first boot rather than one.
+
+    pre:
+      - id: backup_db
+        type: exec.shell
+        command: >-
+          docker exec infra-mariadb-1 mariadb-dump
+          -u root -p"{{ mariadb_root_password }}"
+          --single-transaction --routines "{{ freescout_db_name }}"
+          > ~/.nos/backups/{{ upgrade_id }}/freescout.sql
+        allow_shell: true
+      - id: backup_data
+        type: backup.volume
+        src: "{{ freescout_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: b2b
+        service: freescout
+        tag: "{{ recipe.to }}"
+        wait: true
+
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "http://127.0.0.1:{{ freescout_port | default(8090) }}/login"
+        expect_status: 200
+        timeout_sec: 420
+        interval_sec: 5
+
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: b2b
+        service: freescout
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_db
+        type: exec.shell
+        command: >-
+          docker exec -i infra-mariadb-1 mariadb
+          -u root -p"{{ mariadb_root_password }}" "{{ freescout_db_name }}"
+          < ~/.nos/backups/{{ upgrade_id }}/freescout.sql
+        allow_shell: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ freescout_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
