@@ -330,3 +330,17 @@ sec-transport-mariadb: >-
   test "$(tools/tls-uptake.py --json | python3 -c "import json,sys;
   d = next(x for x in json.load(sys.stdin)['datastores'] if x['datastore'] == 'mariadb');
   print(int(not d.get('require_secure_transport')))")" -eq 0
+
+# Reads the LIVE config the daemon owns, not the seed template — the template
+# is `force: false`, so an edit there proves nothing about the running daemon.
+#
+# The path is ~/backrest/config/config.json, from backrest_config_path in the
+# role. The first cut of this probe guessed ~/.config/backrest/ and would have
+# read `contradicted` forever, including after the fix landed — absence and
+# failure collapsing into one exit code is the shape fee 22 is about. It now
+# PRINTS which of the two happened, and roadmap-verify keeps stdout as evidence.
+sec-backrest-auth: >-
+  test "$(python3 -c "import json,pathlib;
+  p = pathlib.Path.home() / 'backrest/config/config.json';
+  print('no-config-at ' + str(p)) if not p.exists() else
+  print(int(json.loads(p.read_text()).get('auth', {}).get('disabled', True)))")" = "0"

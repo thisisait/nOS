@@ -129,6 +129,9 @@ row("sec-transport-pg","PostgreSQL clients encrypt, and the pin resolves","2026-
 row("sec-transport-redis","Redis: AUTH secret off the argv, then a TLS port","2026-08-23","queued","security",parent="sec-transport",
     refs="REM-217 remediation (1)",
     body="tls-port 0, 56 clients, secret readable by anything that can docker inspect. TLS needs every client URL moved to rediss:// — authentik, infisical, outline, freescout.")
+row("sec-backrest-auth","Backrest runs with auth disabled, reachable by 23 containers","2026-08-23","next","security",parent="sec",
+    refs="REM-214 remediation (1) · roles/pazny.backrest/templates/config.json.j2",
+    body="Measured: POST /v1.Backrest/GetConfig from inside devops-gitea-1 -> 200, auth:disabled. The template justified it as 'loopback only', which REM-194/214 disproved. Not a template edit: config.json is seed-once and daemon-owned, so the live file needs reconciling and a bcrypt credential minting. Config surface includes hook commands.")
 row("sec-transport-mariadb","MariaDB: cert on disk, clients, then the switch","2026-08-23","queued","security",parent="sec-transport",
     refs="docs/idea/21-mariadb-tls-ladder.md",
     body="Root password crosses three networks. Laravel reads only MYSQL_ATTR_SSL_CA and array_filter drops an empty one, so a real cert file is the prerequisite. pazny.postgresql already has the openssl pattern to copy.")

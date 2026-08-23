@@ -7,8 +7,13 @@
 
     <!-- backrest single Go binary. Host daemon (NOT a container) so restic can
          read macOS host paths natively — VirtioFS bind mounts are unreadable by
-         restic-in-container (Phase-0 spike, 2026-07-24). Loopback bind; the
-         Traefik forward-auth edge route is a follow-up. -->
+         restic-in-container (Phase-0 spike, 2026-07-24).
+
+         Loopback bind — and read `backrest_bind_addr`'s own comment before
+         treating that as isolation. It constrains HOST callers only. Docker
+         Desktop forwards a container's host-gateway alias to this same
+         loopback, so 23 containers reach this port today (REM-214, measured).
+         The Traefik forward-auth route guards the edge, not the fabric. -->
     <key>ProgramArguments</key>
     <array>
         <string>{{ backrest_bin }}</string>
