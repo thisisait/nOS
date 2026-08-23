@@ -33,6 +33,7 @@ than kept as a rule that only ever reports its own defeat.)
 | [loops.md](loops.md) | the sequence axis: SERE + the nOS loop proper as verified Mermaid — every edge marked live/partial/target, the refusals, the missing-edge ranking, edge gates | ✅ v1 |
 | table-naming.md | DB table / column naming conventions | planned |
 | taxonomy.md | taxonomy / ontology term definitions (KEAP taxonomy depth levels, node/pillar/block, relations — NOT the service `layer` L0–L3 axis, which layers.md owns) | planned |
+| operator-model.md | the operator's five steps + who may decide what without them | live |
 | agentkit.md | agent tool-mediation, scopes, FS/RBAC gating | planned |
 | pulse.md | scheduled-job contract (job ids, tokens, catalog substitution) | planned |
 | wing.md | Wing identity, RBAC tiers, DB-writer contract | planned |
