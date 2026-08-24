@@ -418,27 +418,45 @@ sec-backrest-auth: >-
   print(int(json.loads(p.read_text()).get('auth', {}).get('disabled', True)))");
   echo "$v"; test "$v" = "0"
 
-# The deliverable is a state a notification can be moved INTO by its successor,
-# distinct from `read` — nobody read them.
+# CORRECTED 2026-08-24, the morning after it first fired. The probe read
+# "wired" — schema + sweep + emitter + reader all present — and that was a
+# FALSE GREEN about my own work: the wiring is complete and the inbox still
+# holds 77 unread rows, 57 of them provably restated.
 #
-# STRENGTHENED 2026-08-23, the day the column landed. Grepping the schema alone
-# would go green on a DEAD feature: a column no emitter writes and no reader
-# consults renders, resolves, and changes nothing (docs/hidden_fees/28). All
-# four legs are required — declared for fresh installs, ALTER'd into the
-# existing 979 MB DB, written by at least one emitter, and excluded by the
-# reader that reports the red.
+# The mechanism is opt-in by supersede_key, and every historical row predates
+# the key. So the 01:02 backup emitted WITH its key and retired ZERO: there was
+# no keyed predecessor to match. From tonight each nightly retires exactly its
+# own predecessor, and the backlog the feature was BUILT FOR sits for ever.
+#
+# The deliverable was never "the column exists". It was "a notification that
+# stopped being true has a way to stop being unread". So the probe now counts
+# what is left: unread, un-superseded rows from an emitter that has SINCE
+# declared it repeats, where a newer row from that same emitter exists. Those
+# are restated by the emitter's own declaration, not by inference.
+#
+# It will read `restated:N` until something retires them once — see the roadmap
+# row for the path. A probe that reports the wiring of a thing that has not
+# happened is the exact defect this estate spends its days removing.
 notify-supersede: >-
-  v=$(python3 -c "import pathlib;
-  r = pathlib.Path('.');
-  legs = {
-    'schema': 'superseded_at' in (r/'files/anatomy/wing/db/schema-extensions.sql').read_text(),
-    'sweep': 'superseded_at' in (r/'files/anatomy/wing/bin/init-db.php').read_text(),
-    'emitter': 'supersede_key' in (r/'files/anatomy/scripts/drift-watch.sh').read_text(),
-    'reader': 'superseded_at IS NULL' in (r/'tools/red-status.py').read_text(),
-  };
-  missing = sorted(k for k, ok in legs.items() if not ok);
-  print('missing:' + ','.join(missing) if missing else 'wired')");
-  echo "$v"; test "$v" = "wired"
+  v=$(python3 -c "import sqlite3,pathlib;
+  db = pathlib.Path.home() / 'wing/app/data/wing.db';
+  print('no-wing-db') if not db.exists() else None;
+  c = sqlite3.connect('file:%s?mode=ro' % db, uri=True);
+  cols = {r[1] for r in c.execute(\"pragma table_info(notifications)\")};
+  print('not-wired') if 'superseded_at' not in cols else
+  print((lambda n: 'retired' if n == 0 else 'restated:%d' % n)(
+      c.execute(\"\"\"select count(*) from notifications n
+                     where n.wing_inbox_read_at is null and n.superseded_at is null
+                       and (n.origin_plugin, n.actor_id) in
+                           (values ('os-resume','agent:os-resume'),
+                                   ('backup','backup'),
+                                   ('backup','backup-verify'),
+                                   ('security-drift','pulse:drift-watch'))
+                       and exists (select 1 from notifications m
+                                    where m.origin_plugin = n.origin_plugin
+                                      and m.actor_id = n.actor_id
+                                      and m.created_at > n.created_at)\"\"\").fetchone()[0]))");
+  echo "$v"; test "$v" = "retired"
 
 # The EFFECT, and it took THREE shapes to get right (docs/hidden_fees/29).
 #

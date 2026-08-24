@@ -1,9 +1,9 @@
 {
   "initialized_at": "2026-04-08T12:00:00Z",
-  "last_full_scan": "2026-08-23T02:16:01Z",
-  "last_advisory_check": "2026-08-23T04:03:41+02:00",
+  "last_full_scan": "2026-08-24T02:26:06Z",
+  "last_advisory_check": "2026-08-24T04:14:07+02:00",
   "last_remediation_applied": "2026-04-09T12:00:00Z",
-  "scan_cycle": 39,
+  "scan_cycle": 40,
   "scanner_version": "2.0.0",
   "config": {
     "batch_size": 5,
@@ -17,13 +17,13 @@
   },
   "components": {
     "traefik": {
-      "last_checked": "2026-08-12T04:14:12+02:00",
-      "last_cve_scan": "2026-08-12T04:14:12+02:00",
+      "last_checked": "2026-08-24T04:14:07+02:00",
+      "last_cve_scan": "2026-08-24T04:14:07+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-12T04:14:12+02:00",
-      "findings_count": 9,
+      "last_attack_probe": "2026-08-24T04:14:07+02:00",
+      "findings_count": 11,
       "status": "scanned",
-      "notes": "Cycle-27 batch-50 SCAN (2026-08-12, ssrf_vector_analysis). CVE LEG CLEAN at pinned v3.7.10 (default.config.yml:2014, OSV empty). The three 2026-08-03 advisories (GHSA-fgjj-px3w-67xx CVE-2026-71327 HIGH; GHSA-6765-c87h-8mrf CVE-2026-71326 LOW; GHSA-62fc-8686-hfmq CVE-2026-71325 MED) all fix <=3.7.10 AND are Gateway-API / Kubernetes-provider scoped -> N/A to the file+docker providers this estate uses. GHSA-8rxv (fix 3.7.8) + GHSA-cxjq (fix 3.7.7) already below the pin. PROBE FINDING OF RECORD -> REM-194 (HIGH, NEW, distinct from resolved REM-144): api.insecure :8080 dashboard is reachable UNAUTHENTICATED from every peer container on infra_net/shared_net/gated_net (the 127.0.0.1:8080 host-map isolates HOST callers only, not the container fabric); GET /api/http/middlewares leaks the plaintext X-Face-Edge-Token + X-Wing-Edge-Token anti-spoof secrets; live-proven Face admin-identity spoof via a gated_net peer (calibre-web -> iiab-face-1:5090 -> HTTP 200). Also re-confirmed the still-pending config items REM-162 (modern@file TLS dead-config) and REM-169 (no rate-limit on 28/30 Tier-1 routers)."
+      "notes": "Cycle-39 batch-58 SCAN (2026-08-24, supply_chain_freshness). 2 items filed (REM-222 MEDIUM currency, REM-225 LOW gate coverage). CVE LEG NO LONGER CLEAN AT THE PIN -- and the way that was missed is the lesson. Cycle-27 recorded traefik clean at v3.7.10 on the basis that OSV was empty, which was true when written. On 2026-08-21 upstream published FOUR advisories all naming v3.0.0-v3.7.10 affected and v3.7.11 as the fix, and as of this scan NONE is in OSV (OSV's newest traefik entry is dated 2026-08-18) and THREE OF THE FOUR HAVE NO CVE ID. The worst is GHSA-5w68-77r2-r64c, CVSS v4 9.3 CRITICAL: complete authentication bypass in digestAuth, where an unknown username yields an empty-string HA1 that a client can compute a valid digest against -- unauthenticated access, arbitrary username, no password, no special configuration required. ALL FOUR ARE N/A TO THIS ESTATE, measured not reasoned: digestAuth appears zero times in the repo AND zero times in the rendered config inside the running container (the estate uses forwardAuth); the two TLS/mTLS-confusion advisories need conflicting per-router TLS options and there are none -- all 41 file-provider routers emit a bare `tls: {}` on a single-Host rule, clientAuth/caFiles have zero hits, and REM-162 already recorded every router resolving to options='default' uniformly; the two Kubernetes-Ingress advisories are N/A because the only providers configured are docker and file. NOTE THE ORDERING HAZARD: fixing REM-162 by applying modern@file per router would CREATE the heterogeneous-options condition GHSA-g55h needs, so bump to v3.7.11 first. Also re-confirmed REM-194's hardening live -- 127.0.0.1:8082 serves /ping 200 and /api/* 404, so the dashboard/API leg that produced REM-144 is shut. GENERAL LESSON: 'OSV empty' asserts the absence of a record, not of a vulnerability, and this vendor's OSV lag measured ~12 days. Read the vendor's own /security/advisories page for anything this exposed."
     },
     "nginx": {
       "last_checked": "2026-08-20T04:10:36+02:00",
@@ -234,22 +234,22 @@
       "notes": "Cycle-38 batch-57 SCAN (2026-08-23, resource_exhaustion_vectors). +REM-218 (HIGH, pending) +REM-220 (MEDIUM, pending); REM-193 AMENDED (premise disproved, kept open). CVE LEG -- NOT CLEAN, AND THE PRIOR VERDICT WAS BUILT ON A NUMBER NOBODY READ. The live container's application version is 1.8.230, measured directly (`docker exec b2b-freescout-1 grep version /www/html/config/app.php` -> \"'version' => '1.8.230'\"), not the 1.8.231 that default.config.yml:2371 and REM-142's resolution both assert. The arithmetic corroborates it: the pinned image tag 2.1.5-php8.3 was published 2026-07-18 and FreeScout 1.8.231 was released 2026-07-25, and nfrastack's own changelog puts 1.8.231 in image 2.2.1. Consequence: GHSA-m4hc-rc98-38jc (HIGH, restricted agent lifts their own 'see only assigned' restriction) and GHSA-cr68-27qv-p5m4 (MEDIUM, incomplete fix for CVE-2026-40570) are LIVE -- both patched in 1.8.231, both published 2026-08-14, both recorded here as covered. Add 1.8.232 (GHSA-jvmv-2qcp-7855) and 1.8.235 (GHSA-89fj-jcr7-2c68) and the gap is five app releases. SECOND STRUCTURAL FACT: the php8.3 tag variant is DEAD. Its newest tag is 2.1.5 (last_updated 2026-07-18); every release from 2.2.0 on ships php8.5 only. The fix (2.2.5, 2026-08-15, app 1.8.235) crosses a PHP minor and drops the suffix the pin is written against -- a supervised bump, not a patch bump. REACHABILITY: gated. The rendered edge confirms REM-192's fix -- the freescout router carries authentik@file -- so both live advisories need an Authentik session before a FreeScout agent session. HIGH, not CRITICAL, for that reason. PROBE (resource_exhaustion_vectors) -> REM-220: nginx client_max_body_size 2G + PHP post_max_size/upload_max_filesize 2G inside a 512m container (docker_mem_limit_light) with PHP memory_limit 128M and max_execution_time 0. One permitted upload is 4x the container's whole memory budget. Three legs rated separately: MEMORY mitigated (nginx spools to disk, PHP streams uploads to temp files -- the 2G does not become RSS); DISK exploitable (unquota'd host bind mount, host root has 53 GiB free, ~26 uploads fill it); WORKER OCCUPANCY exploitable (max_execution_time 0 + worker_connections 1024 + 0.5 CPU = a Slowloris-family hold using the ordinary upload path). Upstream already treated this class as a vulnerability -- CVE-2026-53596 / GHSA-ph4f-2jhx-q76w, patched 1.8.224 -- so the APPLICATION throttle is present; the 2G ceiling is IMAGE-level config underneath it."
     },
     "woodpecker": {
-      "last_checked": "2026-08-12T04:14:12+02:00",
-      "last_cve_scan": "2026-08-12T04:14:12+02:00",
+      "last_checked": "2026-08-24T04:14:07+02:00",
+      "last_cve_scan": "2026-08-24T04:14:07+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-12T04:14:12+02:00",
+      "last_attack_probe": "2026-08-24T04:14:07+02:00",
       "findings_count": 3,
       "status": "scanned",
-      "notes": "Cycle-27 batch-50 SCAN (2026-08-12, ssrf_vector_analysis). CVE LEG CLEAN at pinned v3.17.0 (default.config.yml:1686, OSV empty). Only recent advisory CVE-2026-61549 (GHSA-qf34-295c-26v8, HIGH, unrestricted serviceAccountName privesc) is KUBERNETES-BACKEND-ONLY and N/A -- compose hard-sets WOODPECKER_BACKEND=docker. REM-146's currency target (v3.16.0) is now MET live by v3.17.0 (>= fix); its stale-forward-auth disposition leg remains open, closing left to a deliberate act per doctrine. SSRF: server on devops_net+shared_net; pipeline-reaches-internal-net is by-design CI behaviour, WOODPECKER_AUTHENTICATE_PUBLIC_REPOS=false + empty PLUGINS_PRIVILEGED already gate the RCE-as-pipeline path (REM-002). No new SSRF sink."
+      "notes": "Cycle-39 batch-58 SCAN (2026-08-24, supply_chain_freshness). CLEAN on both legs; REM-146 CLOSED by measurement. v3.17.0 is live on both server and agent and is the NEWEST release upstream publishes (2026-07-31, nothing above it including prereleases), so REM-146's v3.16.0 currency target is met and exceeded. OSV returns exactly two distinct findings for go.woodpecker-ci.org/woodpecker/v3 -- CVE-2026-50141 (fix 3.14.1) and CVE-2026-61549 (fix 3.16.0) -- both below the running version, and the latter Kubernetes-backend-only and N/A regardless since compose.yml.j2 hard-sets WOODPECKER_BACKEND=docker. SUPPLY-CHAIN LEG: the only component in this batch with NO base-layer surface at all -- a 5-layer scratch image, no shell, no package manager, nothing to accumulate CVEs. Registry digests still match what runs (server 23bdea05, agent 03c7b1f7). The counter-example this batch needed: distroless/scratch is why the base-layer axis is empty here and 56 packages deep on tileserver."
     },
     "jellyfin": {
-      "last_checked": "2026-08-12T04:14:12+02:00",
-      "last_cve_scan": "2026-08-12T04:14:12+02:00",
+      "last_checked": "2026-08-24T04:14:07+02:00",
+      "last_cve_scan": "2026-08-24T04:14:07+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-12T04:14:12+02:00",
+      "last_attack_probe": "2026-08-24T04:14:07+02:00",
       "findings_count": 4,
       "status": "scanned",
-      "notes": "Cycle-27 batch-50 SCAN (2026-08-12, ssrf_vector_analysis). CVE LEG CLEAN at pinned 10.11.11 (default.config.yml:1736, OSV empty). Every advisory patched at/below the pin: the two SSRF+arbitrary-file-read chains CVE-2026-35032 (LiveTV M3U tuner) + CVE-2026-35033 (StreamOptions arg-injection) patched <10.11.7; CVE-2026-48793 (FFmpeg subtitle arg-injection, REM-119) patched 10.11.10; CVE-2026-49247/49246/49220 patched 10.11.10. REM-147 (LOW, /System/Info anon disclosure hardening) stands. SSRF NOTE: jellyfin sits on iiab_net+shared_net (fat blast radius) -- so the version currency is load-bearing; any regression of the M3U/StreamOptions SSRF would reach infra peers. Mitigated by version."
+      "notes": "Cycle-39 batch-58 SCAN (2026-08-24, supply_chain_freshness). CLEAN, no new item. APP LEG: 10.11.11 is the newest STABLE release (2026-06-06); everything published since is v12.0-rc1..rc5 prerelease and must not be chased. The whole 2026-06-10 advisory wave was re-pulled with fix versions and every one sits at or below the pin -- CVE-2026-48793 (GHSA-wwwm-px48-fpvq, HIGH 8.8, unauthenticated FFmpeg argument injection via subtitle paths) fixed 10.11.10; CVE-2026-49247 (GHSA-jg92-mrxq-vv75, MODERATE, authenticated path traversal in POST /ClientLog/Document) fixed 10.11.10; the MKV-attachment and user-management-XSS pair likewise. Nothing has been published on the repo since 2026-06-10. NOTE FOR FUTURE SCANS: none of these GHSAs resolve in OSV at all -- api.osv.dev/v1/vulns/GHSA-wwwm-px48-fpvq returns nothing, because Jellyfin is not carried in a package ecosystem OSV indexes. Same blind spot as traefik this batch, different cause: there the record was merely late, here it will never exist. BASE LEG: Debian 13 trixie, image built 2026-06-06, 20 upgradable / 14 from -security (libssl3t64, libexpat1, libssh2, util-linux family). Filed nothing -- it is the second-best base-layer result in the batch and the trixie move is exactly what REM-224 asks uptime-kuma's vendor to do. Registry digest aefb67e6 still matches what runs."
     },
     "homeassistant": {
       "last_checked": "2026-08-19T04:07:27+02:00",
@@ -262,13 +262,13 @@
       "last_scan_attempt": "2026-08-19T04:07:27+02:00"
     },
     "uptime_kuma": {
-      "last_checked": "2026-08-12T04:14:12+02:00",
-      "last_cve_scan": "2026-08-12T04:14:12+02:00",
+      "last_checked": "2026-08-24T04:14:07+02:00",
+      "last_cve_scan": "2026-08-24T04:14:07+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-12T04:14:12+02:00",
-      "findings_count": 5,
+      "last_attack_probe": "2026-08-24T04:14:07+02:00",
+      "findings_count": 6,
       "status": "scanned",
-      "notes": "Cycle-27 batch-50 SCAN (2026-08-12, ssrf_vector_analysis). CVE LEG CLEAN at pinned 2.5.0 (default.config.yml:1749, live louislam/uptime-kuma:2.5.0 per docker ps, OSV empty). REM-148 (CVE-2026-45618) already resolved by the 2.2.1->2.5.0 same-major sweep. SSRF FINDING: the two open SSRF advisories are BOTH wontfix -- GHSA-qjxc-h5jf-c7rj (authed keyword-monitor SSRF, upstream declines: 'deployment-platform issue', range *) and REM-044 (admin monitor-URL SSRF, operator-accepted). LIVE connect-probe from iiab-uptime-kuma-1 CONFIRMS it reaches every infra peer over shared_net (infisical:8080, portainer:9000, authentik:9000, postgresql:5432, redis:6379, mariadb:3306, grafana:3000, traefik:8080 all OPEN) -> REM-044's admin SSRF has a confirmed fat blast radius, AND uptime-kuma is the live SSRF sink that pivots to traefik:8080 to harvest the REM-194 edge tokens. Admin/authed-gated so not re-queued, but blast radius recorded."
+      "notes": "Cycle-39 batch-58 SCAN (2026-08-24, supply_chain_freshness). 1 item filed (REM-224, MEDIUM) -- and it is NOT the finding a tag-counting scan would have produced. THE FALSE ALARM, recorded so nobody re-raises it: upstream shipped THREE releases on 2026-08-22 (2.5.1 06:50Z, 2.5.2 08:44Z, 2.5.3 09:20Z), which reads as an emergency security train and is not one. Release notes: 2.5.1 = seven notification providers plus a SQLite enum fix and a RADIUS fix; 2.5.2 = 'Non-docker installation was broken in 2.5.1'; 2.5.3 = 'release with wrong version number'. No security content. CVE leg independently clean at 2.5.0 (OSV npm newest fixed advisory is CVE-2026-32230 at 2.2.0; vendor advisory listing shows nothing since 2026-03-16). THE ACTUAL FINDING: the image is Debian 12 bookworm -- OLDSTABLE -- and ships Chromium 148.0.7778.178, confirmed running in the live container, against 151.0.7922.137 in Debian 12 security. Three Chromium majors behind, plus libnss3 two revisions behind. Chromium exists here for the 'real-browser' monitor type; the live DB was queried read-only and has ZERO of them (http|48, port|2), so the exposure is LATENT -- a dormant renderer one operator UI action from parsing remote content. THE TRANSFERABLE FACT: this image is only 23 days old and tileserver's is 140, yet this one is oldstable-stale and both are worse than jellyfin's. IMAGE AGE DOES NOT PREDICT PACKAGE STALENESS; base-distro choice does. Ubuntu 24.04 -> 56 pending, Debian 12 -> 11, Debian 13 -> 14, Alpine -> 2 (apk-tools only), scratch -> none."
     },
     "calibreweb": {
       "last_checked": "2026-08-12T04:14:12+02:00",
@@ -307,13 +307,13 @@
       "notes": "Cycle-37 (2026-08-22, CVE scan + tls_crypto_weakness). NO NEW ADVISORY -- the rustfs/rustfs endpoint shows nothing published after the 2026-08-09 wave -- but the batch AMENDS REM-187 and REM-189 on a point that changes what the fix is. (a) The six advisories now carry CVE ids: GHSA-6r96-hmgc-726c=CVE-2026-73286, GHSA-v9cp-qfw9-9pfp=CVE-2026-73289, GHSA-j548-9grx-fh4f=CVE-2026-73288, GHSA-5w8r-p896-6vq2=CVE-2026-73285, GHSA-x298-9x87-fvjq=CVE-2026-73290, GHSA-g3vq-vv42-f647=CVE-2026-73287. The original observation still stands and is the more useful half -- they were actionable for days with no CVE at all, so a CVE-feed scan was blind to every one. (b) THE RECORDED FIX WAS BELOW THE EXPOSURE. Both rows named 1.0.0-beta.12 as the bump target. CVE-2026-73288 (Object Lock / WORM treated as absent when bucket metadata cannot be read) declares '<= 1.0.0-beta.12' and CVE-2026-73285 (OPA plugin omits ExistingObjectTag conditions) declares '>= 1.0.0-alpha.64, <= 1.0.0-beta.12' -- both first patched at 1.0.0-rc.1. Converging to beta.12 would have produced a green re-scan with two HIGH advisories still live: the REM-178 failure shape, caught this time before anyone acted. Corrected target is 1.0.0-rc.1+; upstream is at 1.0.0-rc.3 (2026-08-21), rc.2 (2026-08-14) in between, all prereleases -- a real stability objection to weigh, but not one that makes beta.12 a security answer. The live pin is still 1.0.0-beta.11 (iiab-rustfs-1, healthy), so all six remain OPEN thirteen days on. PROBE (tls_crypto_weakness): the S3/admin API is plain HTTP on 127.0.0.1:9010 with TLS terminated at Traefik, and the edge measured CLEAN for fs.pazny.eu (TLS1.1 refused, DES-CBC3-SHA rejected alert 40, TLS1.3 TLS_AES_128_GCM_SHA256). REM-190 stands unchanged and was re-confirmed incidentally: https://fs.pazny.eu/health still returns HTTP 200 anonymously over the public edge. REM-059 and REM-187/189/190 all remain pending."
     },
     "tileserver": {
-      "last_checked": "2026-08-11T04:00:09+02:00",
-      "last_cve_scan": "2026-08-11T04:00:09+02:00",
+      "last_checked": "2026-08-24T04:14:07+02:00",
+      "last_cve_scan": "2026-08-24T04:14:07+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-11T04:00:09+02:00",
-      "findings_count": 1,
+      "last_attack_probe": "2026-08-24T04:14:07+02:00",
+      "findings_count": 2,
       "status": "scanned",
-      "notes": "Cycle-26 batch-49 (2026-08-11, default_credentials_test). CLEAN / N-A. tileserver-gl is a public tile server with NO authentication surface (traefik_auth_modes.offline_maps='none'), so 'default credentials' does not apply. CVE leg re-verified CLEAN at pin v5.6.0: in-window CVEs affect other products/older versions -- CVE-2024-35627 (XSS) hits tileserver-gl <=4.4.10 (below pin), CVE-2025-44137 (directory traversal) is tileserver-PHP (a different product). A Host-header-poisoning hardening (URLs built from Host/X-Forwarded-* when run without --public_url) exists as an upstream discussion, not a CVE; low impact behind Traefik. REM-117 stays resolved."
+      "notes": "Cycle-39 batch-58 SCAN (2026-08-24, supply_chain_freshness). 1 item filed (REM-223, MEDIUM) and it is the probe's FINDING OF RECORD. APP LEG CLEAN AND UNIMPROVABLE: v5.6.0 is the newest stable release (2026-04-06); npm dist-tags latest=5.6.0, everything above is a prerelease; the GitHub security-advisories API for maptiler/tileserver-gl returns count ZERO; OSV npm carries one advisory, CVE-2020-15500, fixed in 3.1.0, six years below the pin. REM-117's verdict stands. BASE LEG NOT CLEAN: the image is Ubuntu 24.04.4 built 2026-04-06 (140 days old) and carries 64 upgradable packages, 56 from the -security pocket -- libc6, libcurl4t64 (four security revisions behind), libgnutls30t64, libgcrypt20, gzip, and a ca-certificates trust store dated 20240203, i.e. two and a half years stale. There is no version to bump; the fix is an image rebuild. MEASUREMENT NOTE, carried forward as a rule for this probe type: the first measurement returned 0 upgradable and was FALSE -- the image runs non-root, apt-get update died 'Permission denied', and the pipeline counted the empty output of a failed command as an empty result. Assert the package manager's exit status before counting. Re-run with --user 0 exited 0 and produced the figures above."
     },
     "loki": {
       "last_checked": "2026-08-13T04:04:54+02:00",
@@ -491,11 +491,11 @@
   },
   "rotation": {
     "next_batch": [
-      "tileserver",
-      "traefik",
-      "woodpecker",
-      "jellyfin",
-      "uptime_kuma"
+      "calibreweb",
+      "authentik",
+      "grafana",
+      "nextcloud",
+      "kiwix"
     ],
     "strategy": "oldest_first",
     "note": "Advanced by batch-57 (2026-08-23). The five just scanned now hold last_checked 2026-08-23T04:03:41+02:00 and rotate to the back -- with the caveat that qgis_server and superset carry a scanned timestamp for a TEMPLATE review only, because both resolve install=false and neither is running; if oldest-first is recomputed, consider whether an un-measurable component should advance the clock at all. next_batch is a PROPOSAL: the devops/collab cohort, chosen because REM-219's missing pids_limit bites hardest where the estate runs untrusted or user-supplied work -- Woodpecker agents, code-server terminals, GitLab runners and Nextcloud's preview/OCR workers are all process-spawners on the same shared VM PID space, and gitea additionally carries the Woodpecker OAuth app-auth chain. Recompute strictly oldest-first from component last_checked if that ordering is preferred."
@@ -555,9 +555,9 @@
       "cycle_mod": 7,
       "name": "supply_chain_freshness",
       "description": "Check image age, CVE delta, and registry trust",
-      "last_run": "2026-08-06T04:12:03+02:00",
+      "last_run": "2026-08-24T04:14:07+02:00",
       "findings": 4,
-      "note": "Cycle-23 batch-44 FIRST RUN of this probe type, over mailpit/nginx/vaultwarden/ollama/spacetimedb (2026-08-06). 4 items filed: REM-171 (MEDIUM, mailpit CVE), REM-172 (MEDIUM, ollama provenance), REM-173 (LOW, spacetimedb freshness), REM-174 (LOW, gate coverage). THE PROBE'S FINDING OF RECORD: looking for stale PINS surfaced stale PROVENANCE, which is the more dangerous of the two because a version scan cannot see it. Two of the four findings are cases where the version number was never wrong and the estate still could not prove it. (1) ollama: the pinned-free `state: latest` install has been the stated basis for closing REM-096 since April -- but the binary actually running is pazny/local/ollama 0.30.7_1 from an operator-authored tap the playbook has never heard of, so the freshness claim is unmeasured, and a fresh blank would install a DIFFERENT core-tap binary that cannot serve GGUF at all. The claim and the estate agreed by luck. (2) The image-pin gate: test_image_pin_hygiene.py reads variable DECLARATIONS but not the RENDER SITE, and 28 role compose templates fall back to `| default('latest')` (mailpit to an ancient v1.20). Measured honestly, 0 of the 28 are reachable today -- every var still has a declaration -- which is why it is filed LOW. But 1bc5dcbb's shadow deletion left exactly ONE declaration per pin, so a single deleted line is now the whole distance between a pinned tag and `latest`, through a gate that stays green because a deleted variable declares nothing to scan. That is the gate's own docstring warning ('scanning only one of two files is how a gate loses scope silently') one surface further out. GENERAL LESSON, the mirror of cycle-19/20's 'a GHSA with no CVE id': scanning versions answers 'is the number old', never 'is the number load-bearing'. A supply-chain scan must ask where the artifact CAME FROM and what would happen if the pin were deleted -- neither question is answerable from a version string. Counter-example kept deliberately: nginx runs the SAME unpinned `state: latest` pattern as ollama and is correctly rated CLEAN, because it is off by default and its upstream ships fixes promptly. Same mechanism, opposite verdict; the pattern is not the finding, the surrounding facts are."
+      "note": "Cycle-39 batch-58 SECOND RUN of this probe type, over tileserver/traefik/woodpecker/jellyfin/uptime_kuma (2026-08-24). 4 items filed (REM-222 traefik MEDIUM, REM-223 tileserver MEDIUM, REM-224 uptime_kuma MEDIUM, REM-225 LOW gate coverage) + REM-146 (woodpecker) CLOSED by measurement.\n\nTHE PROBE'S FINDING OF RECORD (REM-223): A VERSION NUMBER DOES NOT DESCRIBE THE ARTIFACT. tileserver-gl is at v5.6.0, which is the newest release that exists -- npm latest, zero advisories on the repo, the sole OSV entry fixed six years and two majors below the pin. Its version leg is permanently, correctly, unimprovably GREEN, and it will report green in every future cycle. Underneath it the container carries 56 pending Ubuntu -security updates including libc6, a libcurl four security revisions behind, and a ca-certificates trust store dated 20240203. There is no version to bump; the fix is an image rebuild nobody currently asks for. This is the previous run's lesson ('scanning versions answers is-the-number-old, never is-the-number-load-bearing') one turn further out: the number can be perfect and the artifact still stale, and no scanner in this estate looks inside (REM-225).\n\nTHE SECOND PATTERN, which is what makes the first actionable: IMAGE AGE DOES NOT PREDICT PACKAGE STALENESS -- BASE-DISTRO CHOICE DOES. Measured across all five, pending -security packages against image age: tileserver (Ubuntu 24.04, 140 days) 56; jellyfin (Debian 13 trixie, 79 days) 14; uptime-kuma (Debian 12 OLDSTABLE, 23 days) 11 but including Chromium three majors behind; traefik (Alpine 3.24, 24 days) 2, both apk-tools; woodpecker (scratch, 5 layers, no shell) 0 with no surface to accumulate on. The 23-day-old image is worse positioned than the 79-day-old one. So a freshness heuristic keyed on image age would have ranked these almost exactly backwards, and the useful question is not 'when was this built' but 'what is it built ON'.\n\nTHE THIRD PATTERN, on the CVE leg, and it retires a phrase this scanner has been using: 'OSV EMPTY' IS NOT A CLEAN VERDICT. Cycle-27 called traefik clean at v3.7.10 citing an empty OSV query, correctly, on 2026-08-12. Nine days later upstream published four advisories against exactly that version -- one of them CVSS v4 9.3, a complete authentication bypass in digestAuth -- and at scan time NOT ONE is in OSV, whose newest traefik record is 2026-08-18. Three of the four carry NO CVE ID. The measured OSV ingestion lag for this vendor is about twelve days. Worse, for Jellyfin the record will never arrive at all: api.osv.dev/v1/vulns/GHSA-wwwm-px48-fpvq returns nothing, because Jellyfin is not in an ecosystem OSV indexes, so its entire advisory corpus is invisible to the query this scanner leans on. Cycle-19/20 learned 'a GHSA with no CVE id'; the correction now goes one layer deeper -- the OSV MIRROR is not the vendor's advisory endpoint either, and for anything internet-facing the vendor's own /security/advisories page must be read directly.\n\nFOURTH, ON EVIDENCE STANDARDS, because the scanner caught itself: the first base-layer measurement returned 0 upgradable for tileserver and would have been filed as CLEAN. It was false. The image runs as non-root, `apt-get update` failed with 'List directory /var/lib/apt/lists/partial is missing. - Acquire (13: Permission denied)', and the counting pipeline read the empty output of a failed command as an empty result -- CLAUDE.md's success-marker class occurring inside the security scanner itself. Every figure above comes from a re-run with --user 0 where the package manager exited 0. RULE FOR THIS PROBE TYPE: assert the package manager's exit status before counting its output.\n\nFIFTH, A DELIBERATE COUNTER-EXAMPLE AND A MEASURED CLEAN. Registry Docker-Content-Digest was compared against the local RepoDigest for all six images, and all six match -- no tag has been re-pointed under the estate. That reproducibility is real but it is held by vendor good behaviour rather than by construction: nothing in the estate pins a digest for these five, and REM-224 documents a vendor that shipped three tags in 2h39m, one self-described as carrying the wrong version number. Recording the clean AS MEASURED is the point -- it is the evidence a future 'the tags are fine' assumption should have to beat.\n\n--- PRIOR: Cycle-23 batch-44 FIRST RUN of this probe type, over mailpit/nginx/vaultwarden/ollama/spacetimedb (2026-08-06). 4 items filed (REM-171, REM-172, REM-173, REM-174). Finding of record: looking for stale PINS surfaced stale PROVENANCE -- ollama's `state: latest` install was actually serving an operator-authored Homebrew tap the playbook had never heard of, and test_image_pin_hygiene.py read variable DECLARATIONS but not the RENDER SITE. General lesson recorded there: a supply-chain scan must ask where the artifact CAME FROM and what would happen if the pin were deleted -- neither answerable from a version string."
     }
   ],
   "attack_probes_completed": [
@@ -677,6 +677,27 @@
         "REM-221"
       ],
       "note": "Second run of this probe (first was cycle-30 over bone/wing/pulse/miniflux/nodered -> REM-203). It produced one estate-wide finding and two component-level ones, and the estate-wide one is the finding of record: the estate declares mem_limit on 53 of 53 compose templates and 60 of 60 running containers, and declares pids_limit or ulimits on ZERO of either -- so it controls the two axes that are easy to reason about and neither of the two a fork bomb or fd exhaustion uses, against a Docker VM whose kernel.pid_max (99999) and fs.file-max (2,379,288) are shared by all 60 containers (REM-219). The same row records that the memory control it DOES have is not an aggregate one: 54.75 GiB of mem_limit committed against 22.7 GiB of VM, 241 per cent, or 482 with Docker's implicit 2x memswap. Component-level: FreeScout accepts a 2G upload into a 512m container with max_execution_time 0, where the memory leg is mitigated by nginx/PHP spooling to disk but the disk and worker-occupancy legs are not (REM-220); and not one of 41 live Traefik routers carries a rateLimit, inFlightReq or buffering middleware, which Outline currently survives only because outlinewiki ships its limiter on by default -- a control in the dependency rather than the deployment (REM-221). COVERAGE CEILING, stated rather than implied. TWO of the five components were NOT MEASURED: qgis_server and superset both resolve install=false and neither is in docker ps, so they got template review only -- a regression in coverage from batch-48/49, which measured both running. Their latent template hazards are named in their component notes and deliberately NOT filed as rows, because a service with no deployment has no exposure. For the three live services, NO EXHAUSTION WAS EXECUTED -- no fork storm, no memory balloon, no 2G upload, no connection flood was driven against the operator's live estate. Every figure is read from the Docker daemon's own accounting, the containers' own config files, and the rendered Traefik config. Also untested on every component: disk-quota exhaustion of the host bind mounts (headroom measured at 53 GiB of 460, consumption not attempted), PostgreSQL and Redis connection-pool exhaustion from a saturating client, and any exhaustion path through the Authentik outpost that gates three of these five routers."
+    },
+    {
+      "cycle": 39,
+      "probe": "supply_chain_freshness",
+      "components": [
+        "tileserver",
+        "traefik",
+        "woodpecker",
+        "jellyfin",
+        "uptime_kuma"
+      ],
+      "at": "2026-08-24T04:14:07+02:00",
+      "findings": [
+        "REM-222",
+        "REM-223",
+        "REM-224",
+        "REM-225"
+      ],
+      "closed": [
+        "REM-146"
+      ]
     }
   ],
   "last_full_scan_summary": "2026-08-21 cycle-35 batch-57 -- portainer, gitea, openwebui, postgresql, bluesky_pds; attack probe ssrf_vector_analysis. 3 new rows (REM-212 CRITICAL portainer / REM-213 HIGH gitea / REM-214 HIGH ssrf-topology), 0 closed. REM-212 is an UNPATCHED CRITICAL: CVE-2026-72533 published 2026-08-18 affects the live 2.44.0 and no fixed release exists. REM-213 has an available fix (gitea 1.27.2). REM-214 is structural and not version-fixable. 3 components clean."
