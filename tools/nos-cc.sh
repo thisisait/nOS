@@ -113,6 +113,11 @@ W="$REPO_ROOT/tools/nos-watch.sh"
 # That is the estate's own standing rule — a step that cannot do its job must
 # not exit 0 (docs/hidden_fees/07) — and it cost a CI red whose reason was
 # nowhere in the log, because the only thing that noticed was a pane count.
+# SIZES ARE `-l N%`, NEVER `-p N` (measured 2026-08-24). tmux 3.4 — the one
+# ubuntu-24.04 ships, so the one CI runs — rejects `-p 32` outright with
+# `size missing` (a 3.4 regression; 3.2a and 3.7c both accept it). `-l N%` is
+# the documented spelling since 3.1 and works on every version the estate
+# meets. This cost three days of CI red that no local run could reproduce.
 _split() {
     local why="$1"; shift
     if ! tmux split-window "$@" 2>&1; then
@@ -123,10 +128,10 @@ _split() {
 
 tmux new-session -d -s "$SESSION" -n ops -c "$REPO_ROOT" || {
     echo "nos-cc: could not create session $SESSION" >&2; exit 3; }
-_split "shell row"    -v -t "$SESSION:ops.0" -c "$REPO_ROOT" -p 32
-_split "-> shell B"   -h -t "$SESSION:ops.1" -c "$REPO_ROOT" -p 50
-_split "right column" -h -t "$SESSION:ops.0" -c "$REPO_ROOT" -p 45
-_split "-> history"   -v -t "$SESSION:ops.1" -c "$REPO_ROOT" -p 45
+_split "shell row"    -v -t "$SESSION:ops.0" -c "$REPO_ROOT" -l 32%
+_split "-> shell B"   -h -t "$SESSION:ops.1" -c "$REPO_ROOT" -l 50%
+_split "right column" -h -t "$SESSION:ops.0" -c "$REPO_ROOT" -l 45%
+_split "-> history"   -v -t "$SESSION:ops.1" -c "$REPO_ROOT" -l 45%
 
 tmux send-keys -t "$SESSION:ops.0" \
     "$W --interval 30 --title 'what is red' -- tools/red-status.py" C-m
@@ -168,7 +173,7 @@ tmux send-keys -t "$SESSION:loop" \
 tmux new-window -t "=$SESSION" -n code -c "$REPO_ROOT"
 tmux send-keys -t "$SESSION:code" \
     "$W --interval 60 --title 'recent history' -- git -c color.ui=always log --oneline --decorate -18" C-m
-tmux split-window -h -t "$SESSION:code" -c "$REPO_ROOT" -p 50
+_split "code editor"  -h -t "$SESSION:code" -c "$REPO_ROOT" -l 50%
 tmux send-keys -t "$SESSION:code.1" "vim ." ""
 
 # ── converge: its own window, because a converge is long and worth watching ──
