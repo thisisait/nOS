@@ -68,11 +68,16 @@ CLIENTS = {
                   "MYSQL_ATTR_SSL_CA",
                   "/app/www/app/Config/database.php:84"),
     # ENV_-PREFIXED: this image writes `ENV_*` into the app's .env
-    # (/container/functions/30-laravel:212) and its env-watcher clears the
-    # config cache on that change. The bare `DB_MYSQL_ATTR_SSL_CA` resolved
-    # through env() and was still absent from the CACHED config — present,
-    # correct and unread, which is how FreeScout ran plaintext while a
-    # self-test that read the env called it encrypted.
+    # (/container/functions/30-laravel:212). The carrier is the INIT sequence,
+    # not the env-watcher: /container/init/init.d/40-freescout:41-44 calls
+    # laravel_env_passthrough and THEN `freescout:clear-cache` (which re-caches,
+    # ClearCache.php:53) + `config:clear`, so the rebuilt cache reads the new
+    # .env. The watcher starts only after 30-laravel init and inotifywaits from
+    # that point — it can never see the init-time write; it covers runtime .env
+    # edits only. (Verified in the running image 2026-08-24.) The bare
+    # `DB_MYSQL_ATTR_SSL_CA` resolved through env() and was still absent from
+    # the CACHED config — present, correct and unread, which is how FreeScout
+    # ran plaintext while a self-test that read the env called it encrypted.
     "freescout": ("roles/pazny.freescout/templates/compose.yml.j2",
                   "ENV_DB_MYSQL_ATTR_SSL_CA",
                   "/www/html/config/database.php:56 via .env passthrough"),

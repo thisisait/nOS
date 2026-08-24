@@ -56,9 +56,14 @@ services:
       #
       # This image's supported channel is a prefix passthrough
       # (`/container/functions/30-laravel:212`, README line 326): an `ENV_*`
-      # variable is written into `.env`, and `31-laravel-env_watcher` clears
-      # the config cache on any `.env` change. So the value reaches the cache
-      # REBUILD, which is the only place it can matter.
+      # variable is written into `.env`. The carrier is the INIT sequence —
+      # /container/init/init.d/40-freescout:41-44 runs laravel_env_passthrough
+      # and then `freescout:clear-cache` (clears AND re-caches config,
+      # ClearCache.php:53) + `config:clear` — so the rebuilt cache reads the
+      # new .env, which is the only place it can matter. NOT the env-watcher:
+      # `31-laravel-env_watcher` starts after 30-laravel init and inotifywaits
+      # from that point, so it can never see the init-time write; it covers
+      # runtime .env edits only. (Both read from the running image 2026-08-24.)
       #
       # Verify with tools/tls-uptake.py's self-test, which boots this app's own
       # kernel and reads what it RESOLVES — never the environment.
