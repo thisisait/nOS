@@ -37,6 +37,7 @@ from __future__ import annotations
 import importlib
 import pathlib
 import sqlite3
+import subprocess
 import sys
 
 import pytest
@@ -330,3 +331,172 @@ def test_the_index_exists_where_the_columns_do():
     assert index_at > sweep_at, (
         "the index is created BEFORE the columns are ALTER'd in — same failure "
         "one file along")
+
+
+# ── the reconciler's half: retiring what predates the mechanism ────────────
+#
+# The emitters retire their own successors from now on. They cannot retire what
+# they sent BEFORE `supersede_key` existed — the UPDATE matches on the key and
+# every historical row has none. Measured 2026-08-24, the morning after the
+# mechanism shipped: the 01:02 backup emitted WITH its key and retired ZERO,
+# and 57 rows the feature was built for sat exactly where they were.
+#
+# `bin/reconcile-inbox.php` is where that belongs. It already decides only on
+# evidence, and it now has evidence for report rows: a later message from the
+# same sender. What it must NOT do is reach for the column it already knows —
+# `wing_inbox_read_at` — because nobody read them.
+
+RECONCILER = REPO / "files/anatomy/wing/bin/reconcile-inbox.php"
+
+
+def _php() -> str | None:
+    import shutil
+    return shutil.which("php")
+
+
+def _reconciler_db(tmp_path, rows):
+    """A database with the notifications table and `rows` = (title, plugin,
+    actor, key, created_at, read_at)."""
+    db = tmp_path / "wing.db"
+    src = SCHEMA.read_text(encoding="utf-8")
+    start = src.index("CREATE TABLE IF NOT EXISTS notifications")
+    end = src.index("CREATE INDEX IF NOT EXISTS idx_notifications_created_at")
+    conn = sqlite3.connect(db)
+    conn.executescript(src[start:end])
+    for i, (title, plugin, actor, key, created, read_at) in enumerate(rows):
+        conn.execute(
+            "INSERT INTO notifications (uuid, severity, title, origin_plugin, "
+            "actor_id, supersede_key, created_at, wing_inbox_read_at, target_actor_id) "
+            "VALUES (?,?,?,?,?,?,?,?,'operator')",
+            (f"uuid-{i}", "info", title, plugin, actor, key, created, read_at))
+    conn.commit()
+    conn.close()
+    return db
+
+
+def _run_reconciler(db, *args):
+    import os
+    return subprocess.run(
+        ["php", str(RECONCILER), *args],
+        capture_output=True, text=True, timeout=120,
+        env=dict(os.environ, WING_DB_PATH=str(db)))
+
+
+def _state(db):
+    conn = sqlite3.connect(db)
+    conn.row_factory = sqlite3.Row
+    try:
+        return {r["title"]: dict(r) for r in conn.execute("SELECT * FROM notifications")}
+    finally:
+        conn.close()
+
+
+@pytest.mark.skipif(_php() is None, reason="php absent — the reconciler cannot run")
+def test_the_reconciler_retires_without_claiming_anyone_read_it():
+    """The one property that cannot be traded away. `read` is a claim about a
+    human; these rows were never read, and an inbox that records a decision the
+    operator never made is worse than one that is merely long."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        tmp = pathlib.Path(td)
+        db = _reconciler_db(tmp, [
+            ("Backup OK - 1", "backup", "backup", None, "2026-08-01 01:00:00", None),
+            ("Backup OK - 2", "backup", "backup", None, "2026-08-02 01:00:00", None),
+            ("Backup OK - 3", "backup", "backup", "backup-nightly-result",
+             "2026-08-03 01:00:00", None),
+        ])
+        out = _run_reconciler(db, "--apply")
+        assert out.returncode in (0, 2), out.stderr[-400:]
+        rows = _state(db)
+        for stale in ("Backup OK - 1", "Backup OK - 2"):
+            assert rows[stale]["superseded_at"], f"{stale} was not retired"
+            assert rows[stale]["superseded_by"] == rows["Backup OK - 3"]["uuid"], (
+                "the lineage must name the successor, or a hidden row has no "
+                "way to explain itself")
+            assert rows[stale]["wing_inbox_read_at"] is None, (
+                "the reconciler marked a retired row READ — nobody read it, and "
+                "that is the whole reason superseded_at exists")
+        assert not rows["Backup OK - 3"]["superseded_at"], (
+            "the newest row retired itself")
+
+
+@pytest.mark.skipif(_php() is None, reason="php absent — the reconciler cannot run")
+def test_it_never_runs_ahead_of_the_sender():
+    """The authority is the emitter's own ACT. An emitter that has never sent a
+    keyed row has not declared anything, and its backlog is not this tool's to
+    retire — that judgement is the sender's and `supersede_key` is where it
+    lives. A hardcoded table of 'repeating' emitters here would quietly take it
+    back."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        tmp = pathlib.Path(td)
+        db = _reconciler_db(tmp, [
+            # gitleaks has NEVER declared: two findings are two secrets.
+            ("Secret found in repo A", "gitleaks", "agent:gitleaks", None,
+             "2026-08-01 01:00:00", None),
+            ("Secret found in repo B", "gitleaks", "agent:gitleaks", None,
+             "2026-08-02 01:00:00", None),
+            # a row the OPERATOR already read, from a declared emitter
+            ("Backup OK - old", "backup", "backup", None,
+             "2026-08-01 01:00:00", "2026-08-01T09:00:00+00:00"),
+            ("Backup OK - new", "backup", "backup", "backup-nightly-result",
+             "2026-08-03 01:00:00", None),
+        ])
+        _run_reconciler(db, "--apply")
+        rows = _state(db)
+        assert not rows["Secret found in repo A"]["superseded_at"], (
+            "retired a row from an emitter that never declared it repeats — "
+            "two gitleaks findings are two different secrets")
+        # DEFENDED TWICE, and that is worth knowing rather than discovering:
+        # the sweep's SELECT excludes read rows, and the UPDATE's WHERE refuses
+        # them again. Mutating EITHER alone leaves this assertion green —
+        # verified 2026-08-24 — so it bites only when the property genuinely
+        # goes, which is what it is for. Do not "simplify" one of the two away
+        # on the grounds that a test still passes without it.
+        assert not rows["Backup OK - old"]["superseded_at"], (
+            "re-stamped a row the operator had already read; their decision "
+            "must not be overwritten by the machine's")
+
+
+@pytest.mark.skipif(_php() is None, reason="php absent — the reconciler cannot run")
+def test_the_dry_run_is_the_default_and_writes_nothing():
+    """The estate's destructive-op doctrine, and this tool hides rows."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        tmp = pathlib.Path(td)
+        db = _reconciler_db(tmp, [
+            ("Backup OK - 1", "backup", "backup", None, "2026-08-01 01:00:00", None),
+            ("Backup OK - 2", "backup", "backup", "backup-nightly-result",
+             "2026-08-03 01:00:00", None),
+        ])
+        out = _run_reconciler(db)                      # no --apply
+        assert "WOULD RETIRE" in out.stdout, out.stdout[-400:]
+        assert not _state(db)["Backup OK - 1"]["superseded_at"], (
+            "the DEFAULT invocation wrote to the database")
+
+
+def test_the_reconciler_asks_before_it_selects_the_column():
+    """`superseded_at` arrives with the ALTER sweep. A host whose converge has
+    not run must get a working reconciler, not a SQL error — and the tool must
+    not silently do nothing either, which is why the guard is a PRAGMA and not
+    a try/except swallow."""
+    src = RECONCILER.read_text(encoding="utf-8")
+    assert "PRAGMA table_info(notifications)" in src, (
+        "the reconciler selects superseded_at without asking whether it exists")
+    assert "$hasSupersede" in src
+
+
+def test_the_repeaters_are_read_from_the_database_not_listed_here():
+    """If this file ever grows a list of 'repeating' emitters, the declaration
+    has two homes and the reconciler can retire rows for an emitter that never
+    opted in."""
+    src = RECONCILER.read_text(encoding="utf-8")
+    fn = src[src.index("function declared_repeaters"):]
+    fn = fn[:fn.index("\nfunction ", 10)]
+    assert "SELECT" in fn and "supersede_key IS NOT NULL" in fn, (
+        "declared_repeaters no longer derives the classes from what emitters "
+        "have actually sent")
+    for hardcoded in EMITTERS.values():
+        assert hardcoded not in src, (
+            f"the reconciler hardcodes the class {hardcoded!r}; the emitter "
+            "already declares it by sending it")

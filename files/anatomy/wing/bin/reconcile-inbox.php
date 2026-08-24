@@ -35,9 +35,29 @@ declare(strict_types=1);
  *       source: agent_questions — status != 'open' (answered/expired/
  *       cancelled). The ask was the condition; a decided ask is not pending.
  *
+ * A SECOND VERDICT, AND A SECOND COLUMN (2026-08-24). The rules above all ask
+ * "did the CONDITION clear". Report rows have no condition — this file said so
+ * itself and left them alone — but they do have a successor, and once an
+ * emitter has declared it restates itself (by sending a `supersede_key`), a
+ * later message from that same sender is evidence about the earlier one.
+ *
+ * Such rows are RETIRED, not marked read. `wing_inbox_read_at` is a claim about
+ * a human and nobody read these; stamping it would be the estate recording a
+ * decision the operator never made. `superseded_at` + `superseded_by` say the
+ * true thing and keep the lineage.
+ *
+ * The list of emitters that restate themselves is NOT in this file. It is read
+ * from what emitters have actually sent (`declared_repeaters`), so the
+ * judgement stays with the sender — a table here could retire rows for an
+ * emitter that never opted in, and two gitleaks findings are two secrets.
+ * The consequence is deliberate: an emitter that has not fired since the
+ * mechanism shipped has no backlog cleared until it does.
+ *
  * WHAT IT REFUSES TO TOUCH, by construction:
  *   - anything it cannot classify (unknown titles/origins) — counted, listed,
  *     left unread;
+ *   - a report row whose emitter has never declared that it repeats;
+ *   - the newest row from any emitter — it is the current word, not a stale one;
  *   - a job that has never run, or has no finished run since the row — absence
  *     is not resolution;
  *   - a source it cannot read — the row stays unread, the run says so, and the
@@ -311,13 +331,118 @@ function verdict_question(SQLite3 $db, array $n): array
 	];
 }
 
+/**
+ * Emitters that have DECLARED they restate themselves, read from the database
+ * rather than from a list here.
+ *
+ * An emitter declares by ACTING: once it has sent one notification carrying a
+ * `supersede_key`, the class exists and it is the sender's own word. A table of
+ * (origin_plugin, actor_id) pairs in this file would be a second copy of a
+ * declaration that already lives in the emitters — and it would let this tool
+ * retire rows for an emitter that never opted in, which is precisely the
+ * judgement `supersede_key` exists to keep with the sender.
+ *
+ * The consequence is deliberate and self-limiting: an emitter that has not yet
+ * fired since the mechanism shipped has no entry here, and its backlog is left
+ * alone until it does. This tool never runs ahead of the sender.
+ *
+ * @return array<string, array{key:string, uuid:string, created_at:string}>
+ *         keyed "origin|actor" -> the NEWEST row that pair has produced
+ */
+function declared_repeaters(SQLite3 $db): array
+{
+	$out = [];
+	$res = $db->query(
+		"SELECT n.origin_plugin, n.actor_id, n.uuid, n.created_at,
+		        (SELECT k.supersede_key FROM notifications k
+		          WHERE k.supersede_key IS NOT NULL
+		            AND ifnull(k.origin_plugin,'') = ifnull(n.origin_plugin,'')
+		            AND ifnull(k.actor_id,'')      = ifnull(n.actor_id,'')
+		          ORDER BY k.created_at DESC, k.id DESC LIMIT 1) AS declared_key
+		   FROM notifications n
+		  WHERE n.target_actor_id = 'operator'
+		  ORDER BY n.created_at DESC, n.id DESC"
+	);
+	while (($r = $res->fetchArray(SQLITE3_ASSOC)) !== false) {
+		if (($r['declared_key'] ?? null) === null) {
+			continue;                       // this emitter never opted in
+		}
+		$pair = ($r['origin_plugin'] ?? '') . '|' . ($r['actor_id'] ?? '');
+		if (isset($out[$pair])) {
+			continue;                       // rows arrive newest-first
+		}
+		$out[$pair] = [
+			'key'        => (string) $r['declared_key'],
+			'uuid'       => (string) $r['uuid'],
+			'created_at' => (string) $r['created_at'],
+		];
+	}
+	return $out;
+}
+
+/**
+ * Has this row been RESTATED by a later one from the same emitter?
+ *
+ * This is the only verdict in this file that is not about a condition
+ * CLEARING. The others read a source and ask "is it still failing"; this one
+ * asks "has the sender said it again", which is a different question with a
+ * different answer column — see the `supersede` action in the sweep.
+ *
+ * @return array{action:'supersede'|'leave', reason:string, evidence?:array<string,mixed>}
+ */
+function verdict_restated(array $n, array $repeaters): array
+{
+	$pair = ($n['origin_plugin'] ?? '') . '|' . ($n['actor_id'] ?? '');
+	if (!isset($repeaters[$pair])) {
+		return ['action' => 'leave', 'reason' => 'emitter has not declared that it restates itself'];
+	}
+	$newest = $repeaters[$pair];
+	if ($newest['uuid'] === $n['uuid']) {
+		return ['action' => 'leave', 'reason' => 'this IS the latest word from its emitter'];
+	}
+	$mine  = parse_utc((string) $n['created_at']);
+	$their = parse_utc($newest['created_at']);
+	if ($mine === null || $their === null) {
+		return ['action' => 'leave', 'reason' => 'unparseable timestamp — refusing to compare'];
+	}
+	if ($mine >= $their) {
+		return ['action' => 'leave', 'reason' => 'no later row from this emitter'];
+	}
+	return [
+		'action'   => 'supersede',
+		'reason'   => "restated by {$newest['uuid']} at {$newest['created_at']} "
+		            . "(class '{$newest['key']}', declared by the emitter itself)",
+		'evidence' => [
+			'superseded_by'      => $newest['uuid'],
+			'successor_sent_at'  => $newest['created_at'],
+			'declared_class'     => $newest['key'],
+		],
+	];
+}
+
 // ── Main sweep ───────────────────────────────────────────────────────────────
 
 $rows = [];
+// The restated rule needs TWO columns the base table has not always had:
+// `superseded_at` (init-db.php's ALTER sweep) and `actor_id` (A10). Ask for
+// both before naming either — a bare reference aborts the WHOLE tool, taking
+// the four evidence rules down with it on an estate that is merely behind.
+// Found by breaking it: a hand-rolled minimal table in the existing gate has
+// no actor_id, and the reconciler died with exit 255 rather than doing the
+// work it could still do.
+$have = [];
+$cols = $db->query("PRAGMA table_info(notifications)");
+while (($c = $cols->fetchArray(SQLITE3_ASSOC)) !== false) {
+	$have[$c['name']] = true;
+}
+$hasSupersede = isset($have['superseded_at']) && isset($have['actor_id']);
+
 $res = $db->query(
-	"SELECT id, uuid, severity, title, origin_plugin, metadata_json, created_at
+	"SELECT id, uuid, severity, title, origin_plugin, metadata_json, created_at"
+	. ($hasSupersede ? ", actor_id" : "") . "
 	   FROM notifications
-	  WHERE target_actor_id = 'operator' AND wing_inbox_read_at IS NULL
+	  WHERE target_actor_id = 'operator' AND wing_inbox_read_at IS NULL"
+	. ($hasSupersede ? " AND superseded_at IS NULL" : "") . "
 	  ORDER BY id ASC"
 );
 while (($r = $res->fetchArray(SQLITE3_ASSOC)) !== false) {
@@ -325,7 +450,10 @@ while (($r = $res->fetchArray(SQLITE3_ASSOC)) !== false) {
 	$rows[] = $r;
 }
 
+$repeaters = $hasSupersede ? declared_repeaters($db) : [];
+
 $marked = 0;
+$superseded = 0;
 $left = 0;
 $unreadable = 0;
 $unclassified = 0;
@@ -342,13 +470,43 @@ foreach ($rows as $n) {
 		$v = verdict_backup($n, $backupStatusPath);
 	} elseif ($origin === 'agent-inbox' && isset($n['metadata']['question_uuid'])) {
 		$v = verdict_question($db, $n);
+	} elseif ($hasSupersede && ($v = verdict_restated($n, $repeaters))['action'] === 'supersede') {
+		// LAST, on purpose. The classifiers above answer "did the condition
+		// clear", which is a stronger statement than "the sender said it
+		// again" — a row they can decide should be decided by them.
 	} else {
 		$unclassified++;
 		echo "UNCLASSIFIED  {$n['uuid']}  [{$n['severity']}] {$title} — left for the operator\n";
 		continue;
 	}
 
-	if ($v['action'] === 'mark') {
+	if ($v['action'] === 'supersede') {
+		// A DIFFERENT COLUMN, and that is the whole point. Nobody read these
+		// rows; stamping wing_inbox_read_at would be the estate recording a
+		// decision the operator never made. `superseded_at` says what is true:
+		// a later message from the same sender replaced this one.
+		if ($apply) {
+			$merged = $n['metadata'];
+			$merged['reconciled'] = $v['evidence'] + [
+				'reconciled_at' => gmdate('c'),
+				'reconciled_by' => 'bin/reconcile-inbox.php',
+			];
+			$stmt = $db->prepare(
+				'UPDATE notifications
+				    SET superseded_at = :now, superseded_by = :by, metadata_json = :meta
+				  WHERE uuid = :uuid AND wing_inbox_read_at IS NULL AND superseded_at IS NULL'
+			);
+			$stmt->bindValue(':now', gmdate('c'), SQLITE3_TEXT);
+			$stmt->bindValue(':by', $v['evidence']['superseded_by'], SQLITE3_TEXT);
+			$stmt->bindValue(':meta', json_encode($merged), SQLITE3_TEXT);
+			$stmt->bindValue(':uuid', $n['uuid'], SQLITE3_TEXT);
+			$stmt->execute();
+			echo "RETIRED       {$n['uuid']}  {$title}\n              evidence: {$v['reason']}\n";
+		} else {
+			echo "WOULD RETIRE  {$n['uuid']}  {$title}\n              evidence: {$v['reason']}\n";
+		}
+		$superseded++;
+	} elseif ($v['action'] === 'mark') {
 		if ($apply) {
 			$merged = $n['metadata'];
 			$merged['reconciled'] = $v['evidence'] + [
@@ -380,7 +538,8 @@ foreach ($rows as $n) {
 
 $mode = $apply ? 'apply' : 'DRY RUN';
 echo "reconcile-inbox ({$mode}): " . count($rows) . " unread — "
-	. "{$marked} " . ($apply ? 'marked' : 'markable') . ", {$left} left on evidence, "
+	. "{$marked} " . ($apply ? 'marked read' : 'markable') . ", "
+	. "{$superseded} " . ($apply ? 'retired' : 'retirable') . ", {$left} left on evidence, "
 	. "{$unreadable} source-unreadable, {$unclassified} unclassified\n";
 
 exit($unreadable > 0 ? 2 : 0);
