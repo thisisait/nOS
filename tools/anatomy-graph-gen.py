@@ -1551,6 +1551,22 @@ def main() -> int:
     c = json.loads(text)["counts"]
     print(f"wrote {TARGET.relative_to(REPO)} + face vendored copy "
           f"({c['nodes']} nodes, {c['edges']} edges)")
+    # The face layout pin freezes positions computed FROM this artifact, so a
+    # regen that moves the default view moves the pinned hash. Say so at the
+    # moment of causing it — the gate (test_face_layout_pin_binds_the_graph.py)
+    # goes red on the sha binding, but this line is the one a human reads.
+    # The sha is NOT auto-stamped here: writing it without re-running the
+    # vitest hash would silence the gate while the position pin stays stale —
+    # the exact self-reported success this estate keeps digging out.
+    import hashlib
+    pin_path = FACE_TARGET.parent / "graphLayout.force.pin.json"
+    if pin_path.exists():
+        pin = json.loads(pin_path.read_text(encoding="utf-8"))
+        if pin.get("graphSha256") != hashlib.sha256(text.encode()).hexdigest():
+            print("anatomy-graph: the face layout pin was frozen against a "
+                  "DIFFERENT graph — re-freeze graphLayout.force.pin.json "
+                  "(see test_face_layout_pin_binds_the_graph.py for the "
+                  "ritual) or the pytest lane goes red", file=sys.stderr)
     return 0
 
 
