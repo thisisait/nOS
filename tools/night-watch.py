@@ -60,6 +60,20 @@ READERS = {
     "red": ["tools/red-status.py"],
     "queue": ["tools/rem-status.py"],
     "loop": ["tools/loop-status.py"],
+    # Container health — the reading that was MISSING on 2026-08-22, when
+    # Nextcloud and FreeScout were both down and no morning reader said so.
+    # red-status.py cannot carry this by charter (files and local SQLite only,
+    # no daemons); this tool already talks to Docker via the tls probes, so it
+    # is the honest home until container health becomes a declared source fed
+    # from a file. The summary line comes FIRST so `head` is the comparison;
+    # awk refuses an empty docker read rather than printing "0 not-clean of 0"
+    # — absence must never read as health.
+    "containers": ["bash", "-c",
+                   "docker ps -a --format '{{.Names}}\t{{.State}}\t{{.Status}}'"
+                   " | awk -F'\t' '{t++; if ($2!=\"running\" || $3 ~ /unhealthy/)"
+                   " {b++; bad=bad\" \"$1}}"
+                   " END{if(!t){print \"docker unreadable - container state UNKNOWN\"; exit 3}"
+                   " printf \"%d not-clean%s\\nof %d containers\\n\", b, bad, t}'"],
 }
 
 TIMEOUT = 300
@@ -168,13 +182,42 @@ def cmd_check() -> int:
             unexpected += 1
             lines.append(f"  UNEXPECTED  {k}: {was.get('said','')!r} -> {isnow.get('said','')!r}")
 
+    judged = set(k for k in expect if k in before["probes"] or k in now["probes"])
     for name in sorted(set(before["readers"]) | set(now["readers"])):
         w, i = before["readers"].get(name, {}), now["readers"].get(name, {})
-        if w.get("head") != i.get("head"):
+        changed = w.get("head") != i.get("head")
+        # Readers are judged through the SAME expect block, keyed `reader:<x>`.
+        # The first cut never consulted expect here, so a `reader:red`
+        # expectation was unfalsifiable by construction: the tool could report
+        # the change as UNEXPECTED but never as MET or UNMET — an authored
+        # prediction the morning could not grade.
+        want = expect.get(f"reader:{name}")
+        if want:
+            judged.add(f"reader:{name}")
+            kind = want.get("kind", "change")
+            held = (kind == "hold" and not changed) or (kind == "change" and changed)
+            if held:
+                met += 1
+                verb = "HELD" if kind == "hold" else "MET "
+                lines.append(f"  {verb}        reader:{name}: "
+                             + (f"still {i.get('head','')!r}" if kind == "hold"
+                                else f"{w.get('head','')!r} -> {i.get('head','')!r}"))
+            else:
+                unmet += 1
+                shown = (f"{w.get('head','')!r} -> {i.get('head','')!r}"
+                         if changed else f"still {i.get('head','')!r}")
+                lines.append(f"  UNMET       reader:{name}: {shown}")
+                lines.append(f"              expected to {kind}: {want.get('why', '')}")
+        elif changed:
             unexpected += 1
             lines.append(f"  UNEXPECTED  reader:{name}")
             lines.append(f"              was: {w.get('head','')}")
             lines.append(f"              now: {i.get('head','')}")
+
+    # An expectation that names nothing recorded is a prediction nobody can
+    # grade — say so rather than counting it among the authored ones silently.
+    for k in sorted(set(expect) - judged):
+        lines.append(f"  UNJUDGEABLE {k}: names no probe or reader in the record")
 
     print(f"night-watch: recorded {before.get('label','?')} at {before.get('at','?')}")
     print("\n".join(lines) if lines else "  nothing moved, and nothing was expected to")

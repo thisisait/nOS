@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-24T19:55:40+0200",
+  "at": "2026-08-24T20:12:17+0200",
   "probes": {
     "agents-evals": {
       "done": false,
@@ -39,7 +39,7 @@
     },
     "face-tree": {
       "done": false,
-      "said": "grep: files/anatomy/face/src/lib/tables/tree.ts: No such file or directory"
+      "said": ""
     },
     "fs-peruser": {
       "done": false,
@@ -123,7 +123,7 @@
     },
     "sec-queue-authorship": {
       "done": false,
-      "said": "grep: tools/scan-runner.sh: No such file or directory"
+      "said": ""
     },
     "sec-rem": {
       "done": false,
@@ -174,17 +174,21 @@
     "loop": {
       "rc": 0,
       "head": "15 proposal(s) in /Users/pazny/wing/app/data/wing.db"
+    },
+    "containers": {
+      "rc": 0,
+      "head": "0 not-clean"
     }
   },
-  "label": "pre-converge 2026-08-24, before the observable night",
+  "label": "pre-converge 2026-08-24, before the observable night (expectations judged)",
   "expect": {
     "sec-transport-mariadb-clients": {
       "kind": "change",
-      "why": "goes DONE. FreeScout is the only client not encrypted, and ce457cb2 moves its CA to the image's ENV_* .env passthrough, which the env-watcher follows with a config:clear \u2014 so the CACHE rebuilds with the CA. If this stays not-encrypted:freescout, the passthrough is a fourth allow-list and the doctrine \u00a75.3 conclusion is incomplete."
+      "why": "goes DONE (encrypted). Mechanism VERIFIED in the running image 2026-08-24, and it is not the one ce457cb2 named: the env-watcher starts after 30-laravel init and inotifywaits from that point, so it can never see the init-time write. The carrier is the init sequence itself \u2014 /container/init/init.d/40-freescout:41-44 runs laravel_env_passthrough (ENV_ prefix confirmed default, SETUP_TYPE defaults AUTO) then freescout:clear-cache (re-caches, ClearCache.php:53) + config:clear \u2014 and config/database.php:56 consults env('DB_MYSQL_ATTR_SSL_CA'). Current .env has 0 occurrences of the key, so the whole delta is the recreate. If this stays not-encrypted:freescout, check FIRST that compose actually recreated the container."
     },
     "notify-supersede": {
-      "kind": "change",
-      "why": "restated:39 -> roughly restated:36. drift-watch fires nightly and now declares security-drift-verdict, so its 3 predecessors retire. os-resume (30) needs a machine wake and backup-verify (5) the next drill \u2014 neither is due tonight, so a drop to 0 would mean something I have not predicted."
+      "kind": "hold",
+      "why": "stays restated:39 \u2014 corrected from 'change to ~36', which was wrong twice over, both measured: (1) all 4 unread drift rows carry supersede_key NULL and Bone retires only WHERE supersede_key = ? (wing.py:544; the 01:02 backup's own precedent \u2014 keyed emit, zero unkeyed retired), and (2) drift-watch will not emit tonight at all \u2014 it alerts only on pending_critical>0 or a stale scan, and the queue holds 0 pending CRITICAL with the scan 17h old against a 336h threshold. The backlog (31 os-resume, 5 backup-verify, 3 drift) retires only by another reconcile-inbox pass once each emitter has a keyed successor \u2014 tomorrow's deliberate act, not tonight's mechanism. A DROP means someone ran the reconciler; a rise to 40 means the queue gained a CRITICAL overnight and drift-watch fired. Side-prediction not gradeable here: tonight's 01:02 backup should produce the FIRST emit-time retirement ever \u2014 the keyed 2026-08-24 01:02:56 row gets superseded_at; check it with a SELECT in the morning."
     },
     "sec-transport-pg": {
       "kind": "hold",
@@ -198,9 +202,21 @@
       "kind": "hold",
       "why": "stays `plain`. Nothing was written for it. A change would mean somebody edited the exporter outside the repo \u2014 which is how two services went down on 2026-08-23."
     },
+    "sec-transport-mariadb": {
+      "kind": "hold",
+      "why": "stays 1 (require_secure_transport OFF). The repo now DECLARES it off (roles/pazny.mariadb compose command, --require-secure-transport=0), so the converge re-asserts the declared value; rung 4 waits for freescout (tonight) and the exporter (not yet written). A flip to 0 here means the requirement went ON outside the repository — the exact 2026-08-23 out-of-band SET GLOBAL shape that took FreeScout down behind a healthy healthcheck."
+    },
+    "sec-backrest-auth": {
+      "kind": "hold",
+      "why": "stays 1 (auth disabled). The live config.json is seed-once (force:false) \u2014 the converge cannot reconcile it, and the fix is a deliberate act (live reconcile + bcrypt mint) that has not been built. This hold is the OPEN-item control: if it flips to 0 overnight, something mutated live daemon config unattended, which is worse news than the red it would clear."
+    },
     "reader:red": {
       "kind": "change",
-      "why": "the two loop rows (REM-214, REM-217) either reach the tree or come back re-judged. The inbox line should fall by ~3 as drift retires its own. A NEW red is the night's most valuable output."
+      "why": "head falls 2 red -> 1 red when the loop's nightly pass lands REM-214/REM-217 in the tree. An UNMET here means a THIRD consecutive [re-judge] \u2014 at that point the finding is about the loop driver, not the rows: read tools/loop-status.py before anything else. (The earlier claim that the inbox line falls by ~3 as drift retires its own is withdrawn \u2014 see notify-supersede: no drift emission tonight, and a keyed emit cannot retire unkeyed rows.) A NEW red is still the night's most valuable output."
+    },
+    "reader:containers": {
+      "kind": "hold",
+      "why": "stays `0 not-clean`. 61 containers, all running and healthy at record time; the converge recreates several around 22:00 and every one must be back and HOLDING healthy by morning. This line exists because on 2026-08-22 Nextcloud and FreeScout were both down and no reader said so \u2014 container health was nobody's declared source. Total-count changes do not move this head by design; only a container that is not running-clean does."
     }
   }
 }

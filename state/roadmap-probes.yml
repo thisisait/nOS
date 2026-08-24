@@ -194,8 +194,13 @@ face-planner: >-
 face-styles: >-
   grep -rql "ResolvedStyle" files/anatomy/face/src/lib/components/
 
+# CORRECTED 2026-08-24: the probe named a file (tables/tree.ts) that does not
+# exist — the face rebuild reshaped the tree — so `said` carried a grep error
+# and file-absence was indistinguishable from feature-absence (the fee-22
+# shape). Scoped to the tables DIRECTORY: exits 1 cleanly while no table code
+# handles a parent, 0 when it does, whatever the file ends up being named.
 face-tree: >-
-  grep -rql "parent" files/anatomy/face/src/lib/tables/tree.ts
+  grep -rql "parent" files/anatomy/face/src/lib/tables/
 
 # ── platform ────────────────────────────────────────────────────────────────
 # The one probe here that reads the HOST rather than the tree: the row is about
@@ -263,8 +268,14 @@ sec-rem: >-
   s = json.load(sys.stdin)['pending_by_severity'];
   print(s.get('CRITICAL', 0) + s.get('HIGH', 0))"); echo "$v"; test "$v" -eq 0
 
+# CORRECTED 2026-08-24: pointed at tools/scan-runner.sh, a path that has never
+# existed in this repository's history — the runner lives at
+# files/vuln-scan/scan-runner.sh — so the probe read "not done" for the wrong
+# reason (missing file, not missing work) and its evidence was a grep error.
+# At the real path it still exits 1: the runner does not write resolved_by,
+# which is the row's actual state.
 sec-queue-authorship: >-
-  grep -ql "resolved_by" tools/scan-runner.sh
+  grep -ql "resolved_by" files/vuln-scan/scan-runner.sh
 
 # ── filesystem ──────────────────────────────────────────────────────────────
 fs-s0: >-
