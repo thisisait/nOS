@@ -1,0 +1,206 @@
+{
+  "at": "2026-08-24T19:55:40+0200",
+  "probes": {
+    "agents-evals": {
+      "done": false,
+      "said": ""
+    },
+    "agents-inbox": {
+      "done": true,
+      "said": ""
+    },
+    "cortex-exec": {
+      "done": true,
+      "said": "EmbedHandler.php"
+    },
+    "cortex-lang": {
+      "done": true,
+      "said": ""
+    },
+    "cortex-readers": {
+      "done": false,
+      "said": ""
+    },
+    "cortex-rows": {
+      "done": false,
+      "said": ""
+    },
+    "face-anatomy": {
+      "done": true,
+      "said": ""
+    },
+    "face-planner": {
+      "done": false,
+      "said": ""
+    },
+    "face-styles": {
+      "done": false,
+      "said": ""
+    },
+    "face-tree": {
+      "done": false,
+      "said": "grep: files/anatomy/face/src/lib/tables/tree.ts: No such file or directory"
+    },
+    "fs-peruser": {
+      "done": false,
+      "said": ""
+    },
+    "fs-s0": {
+      "done": false,
+      "said": ""
+    },
+    "local-llm-bench": {
+      "done": true,
+      "said": ""
+    },
+    "local-llm-corpus": {
+      "done": false,
+      "said": ""
+    },
+    "local-llm-executor": {
+      "done": true,
+      "said": "EmbedHandler.php"
+    },
+    "local-llm-grammar": {
+      "done": true,
+      "said": ""
+    },
+    "local-llm-intent": {
+      "done": false,
+      "said": ""
+    },
+    "local-llm-model": {
+      "done": false,
+      "said": ""
+    },
+    "local-llm-thinkingcap": {
+      "done": false,
+      "said": ""
+    },
+    "loop-driver": {
+      "done": true,
+      "said": ""
+    },
+    "loop-forget": {
+      "done": false,
+      "said": ""
+    },
+    "loop-operator-model": {
+      "done": true,
+      "said": ""
+    },
+    "notify-supersede": {
+      "done": false,
+      "said": "restated:39"
+    },
+    "plat-ollama": {
+      "done": true,
+      "said": ""
+    },
+    "plat-signing": {
+      "done": false,
+      "said": ""
+    },
+    "plat-v07": {
+      "done": false,
+      "said": ""
+    },
+    "sec-backrest-auth": {
+      "done": false,
+      "said": "1"
+    },
+    "sec-p1": {
+      "done": true,
+      "said": ""
+    },
+    "sec-p3": {
+      "done": false,
+      "said": ""
+    },
+    "sec-p5": {
+      "done": false,
+      "said": ""
+    },
+    "sec-queue-authorship": {
+      "done": false,
+      "said": "grep: tools/scan-runner.sh: No such file or directory"
+    },
+    "sec-rem": {
+      "done": false,
+      "said": "2"
+    },
+    "sec-transport": {
+      "done": false,
+      "said": "2"
+    },
+    "sec-transport-hedgedoc": {
+      "done": true,
+      "said": "encrypted"
+    },
+    "sec-transport-mariadb": {
+      "done": false,
+      "said": "1"
+    },
+    "sec-transport-mariadb-clients": {
+      "done": false,
+      "said": "not-encrypted:freescout"
+    },
+    "sec-transport-mysqld-exporter": {
+      "done": false,
+      "said": "plain"
+    },
+    "sec-transport-pg": {
+      "done": true,
+      "said": "encrypted"
+    },
+    "sec-transport-redis": {
+      "done": false,
+      "said": "1"
+    },
+    "sere-a": {
+      "done": true,
+      "said": ""
+    }
+  },
+  "readers": {
+    "red": {
+      "rc": 0,
+      "head": "2 red:"
+    },
+    "queue": {
+      "rc": 0,
+      "head": "docs/llm/security/remediation-queue.json \u2014 cycle 39, 220 rows"
+    },
+    "loop": {
+      "rc": 0,
+      "head": "15 proposal(s) in /Users/pazny/wing/app/data/wing.db"
+    }
+  },
+  "label": "pre-converge 2026-08-24, before the observable night",
+  "expect": {
+    "sec-transport-mariadb-clients": {
+      "kind": "change",
+      "why": "goes DONE. FreeScout is the only client not encrypted, and ce457cb2 moves its CA to the image's ENV_* .env passthrough, which the env-watcher follows with a config:clear \u2014 so the CACHE rebuilds with the CA. If this stays not-encrypted:freescout, the passthrough is a fourth allow-list and the doctrine \u00a75.3 conclusion is incomplete."
+    },
+    "notify-supersede": {
+      "kind": "change",
+      "why": "restated:39 -> roughly restated:36. drift-watch fires nightly and now declares security-drift-verdict, so its 3 predecessors retire. os-resume (30) needs a machine wake and backup-verify (5) the next drill \u2014 neither is due tonight, so a drop to 0 would mean something I have not predicted."
+    },
+    "sec-transport-pg": {
+      "kind": "hold",
+      "why": "stays DONE, saying `encrypted`. It is the control: nothing in this converge touches PostgreSQL clients, so a change here is a sampling artefact or a regression, and either is worth more than the green."
+    },
+    "sec-transport-hedgedoc": {
+      "kind": "hold",
+      "why": "stays DONE. Its answer comes from HedgeDoc's own kernel, not a sample, so unlike sec-transport-pg it should not be able to flap at all. If it does, the self-test is not as deterministic as claimed."
+    },
+    "sec-transport-mysqld-exporter": {
+      "kind": "hold",
+      "why": "stays `plain`. Nothing was written for it. A change would mean somebody edited the exporter outside the repo \u2014 which is how two services went down on 2026-08-23."
+    },
+    "reader:red": {
+      "kind": "change",
+      "why": "the two loop rows (REM-214, REM-217) either reach the tree or come back re-judged. The inbox line should fall by ~3 as drift retires its own. A NEW red is the night's most valuable output."
+    }
+  }
+}
