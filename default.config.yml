@@ -1733,7 +1733,15 @@ app_secrets: {}
 qdrant_api_key: "{{ (app_secrets | default({})).get('qdrant', {}).get('PASSWORD_API', '') }}"
 qdrant_api_key_ro: "{{ (app_secrets | default({})).get('qdrant', {}).get('PASSWORD_RO_API', '') }}"
 qdrant_url: "http://127.0.0.1:{{ qdrant_port | default(6333) }}"
-alloy_scrape_cadvisor: true
+# Derived from where the cAdvisor CONTAINER exists, not declared beside it.
+# roles/pazny.grafana/templates/compose.yml.j2:221 gates that container on
+# `ansible_os_family != 'Darwin'` — its cgroup and layerdb paths are real only
+# on Linux — and this flag was a second, independent `true`. On this Mac that
+# left Alloy scraping a dead localhost:8080: NosWarningServiceDegraded has been
+# firing since 2026-08-22 and every converge re-rendered the same dead target,
+# which is a synthetic red that would have burned through an unattended night.
+# One truth, one spelling; gate test_cadvisor_scrape_follows_its_container.py.
+alloy_scrape_cadvisor: "{{ ansible_facts['os_family'] | default('') != 'Darwin' }}"
 alloy_scrape_blackbox_self: true   # scrape blackbox-exporter's own /metrics (probe results come from prometheus rules — A2)
 
 # ── Grafana dashboards to download from grafana.com ───────────────────────────
