@@ -2503,7 +2503,8 @@
       "confidence": "high",
       "found_at": "2026-07-30T04:00:50+02:00",
       "scan_cycle": 17,
-      "resolved_at": "2026-08-24T04:14:07+02:00"
+      "resolved_at": "2026-08-24T04:14:07+02:00",
+      "resolved_by": "CLOSED cycle-39 batch-58 (2026-08-24) BY MEASUREMENT. This row asked for a currency bump to v3.16.0 while noting the CVE leg was already clean. The target is met and exceeded: `docker ps` shows devops-woodpecker-server-1 and devops-woodpecker-agent-1 both on woodpeckerci/woodpecker-agent|server:v3.17.0, and default.config.yml:1852 pins v3.17.0. v3.17.0 (released 2026-07-31) is the NEWEST release upstream has published -- there is nothing above it, prerelease or otherwise. Re-verified this batch: an OSV query for go.woodpecker-ci.org/woodpecker/v3 returns exactly two distinct findings, CVE-2026-50141 (fix 3.14.1) and CVE-2026-61549 (fix 3.16.0), both BELOW the running version, and the latter Kubernetes-backend-only and N/A regardless since compose.yml.j2 hard-sets WOODPECKER_BACKEND=docker. Supply-chain leg also clean: the image is a 5-layer scratch build with no shell and no package manager, so it carries no OS package surface to go stale -- the only component in this batch with nothing to report on the base-layer axis. Registry digest for v3.17.0 still matches what we run (server 23bdea05, agent 03c7b1f7)."
     },
     {
       "id": "REM-147",
