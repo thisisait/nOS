@@ -142,12 +142,21 @@ enabled TLS reported its own success and nothing read the effect.
 The operator asked whether this tag could drop the suffix. It cannot, on
 evidence, and the notes owe the list:
 
-1. **The audit-chain control has not yet re-earned a week of green.** The
-   verifier fix reached the box with the 2026-08-23 converge (this item
-   originally read "committed, not deployed", and was true when drafted);
-   `tools/red-status.py` no longer lists the chain, but the reviewed-gap
-   anchor is an operator act and a tamper-evidence control is a cadence —
-   the bar stays a green week of nightly verifies, not one quiet day.
+1. **The audit-chain control has not yet re-earned a week of green.** The bar
+   is a green week of nightly verifies, not one quiet day: the reviewed-gap
+   anchor is an operator act, and a tamper-evidence control is a cadence.
+   **The clock starts 2026-08-20, and this item said 08-23 until it was
+   measured** — it has now been twice wrong in the same direction, first
+   "committed, not deployed" and then a deploy dated three days late. The
+   chain, read rather than recalled: `71f41ae0` committed 08-19 19:14;
+   `[pazny.wing] Rsync app source` reported `changed` at 19:30:53 the same
+   evening; the deployed `bin/verify-audit-chain.php` is byte-identical to
+   the repo's post-fix copy; and `pulse_runs` for `wing:audit-chain-verify`
+   flips exit 2 → exit 0 on the very next nightly, 08-20 04:22, then holds
+   green 08-21, -22, -23, -24. Five nights, so the seventh is **08-26**.
+   The lesson is the estate's own and it cost four days of tag date: a
+   deployment date is a thing to READ (`ansible.log`, the deployed bytes,
+   the effect on the next scheduled run), never a thing to remember.
 2. **The restore drill's last SCHEDULED run failed** (2026-08-16: that night's
    `keap-db.gz` was missing from the set — the drill doing exactly its job).
    A manual drill against the 2026-08-19 set passes (`keap-db OK`,
