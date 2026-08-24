@@ -193,7 +193,13 @@ judges:
     # gates) — so the floor's real margin is measured against the judge env,
     # not this line's operator number. Floor moves 3850 → 3853, keeping the
     # judge-env margin at ~5, same as the margin that held before.
-    min_work: 3853
+    # 2026-08-24: operator collection MEASURED at 4085 (was 3877). The judge
+    # env's own count is NOT re-measured here — it needs a real loop run — so
+    # this floor is INFERRED from the gap that has held all along (operator
+    # 3877 / judge 3855 = -22) and set just under it. Say which is which: the
+    # 4085 is a reading, the 4060 is arithmetic on a historically stable
+    # difference, and the next `repo` verdict is what confirms or corrects it.
+    min_work: 4060
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,
