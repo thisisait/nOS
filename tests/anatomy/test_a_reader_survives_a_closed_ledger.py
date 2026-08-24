@@ -91,8 +91,29 @@ def test_a_closed_wal_database_is_still_readable(opener, wal_db):
     assert conn.execute("SELECT COUNT(*) FROM pulse_jobs").fetchone()[0] == 1
 
 
-def test_a_snapshot_read_says_it_is_one(opener, wal_db):
-    _conn, how = opener.open_ledger_ro(wal_db)
+def test_a_snapshot_read_says_it_is_one(opener, wal_db, monkeypatch):
+    """The fallback branch, driven deliberately rather than hoped for.
+
+    WHY THE ro OPEN IS FORCED TO FAIL (2026-08-24). Whether `mode=ro` on a
+    closed-WAL database fails is a property of the PLATFORM'S SQLite, not of
+    the opener: macOS's build refuses (the 2026-08-20 live condition) while
+    CI's ubuntu build opens it fine — so this test, written as a plain call,
+    asserted 'snapshot' against a read that was never one and failed only on
+    CI ('' is the NORMAL path's honest answer there). Three days red, zero
+    local reproductions. The property this file pins is the opener's: WHEN
+    the fallback runs, it announces itself. So the test now puts the opener
+    in that branch by refusing the ro open the way the estate did.
+    """
+    real_connect = sqlite3.connect
+
+    def refuse_ro(dsn, **kw):
+        if "mode=ro" in str(dsn):
+            raise sqlite3.OperationalError("unable to open database file")
+        return real_connect(dsn, **kw)
+
+    monkeypatch.setattr(opener.sqlite3, "connect", refuse_ro)
+    conn, how = opener.open_ledger_ro(wal_db)
+    assert conn is not None, f"the fallback did not produce a read ({how!r})"
     assert "snapshot" in how.lower(), (
         f"the fallback read did not announce itself ({how!r}); a caller cannot "
         f"then tell a current answer from a possibly-stale one"
