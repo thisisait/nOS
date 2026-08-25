@@ -109,7 +109,7 @@ pulse:
         # which happens to be top too, but the intent here is deliberate, not luck).
         NOS_AGENT_MODEL: "opus"
         NOS_AGENT_CLIENT_ID: "nos-migration-author"
-        NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_migration_author"
+        NOS_AGENT_CLIENT_SECRET: "secret:agent_migration_author_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/migration-author.yml"
         NOS_AGENT_TASK: |
           Promote a merged upgrade recipe into the real migration record + version bump:

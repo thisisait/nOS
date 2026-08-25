@@ -54,11 +54,12 @@ def test_the_catalog_emits_references_for_secret_shaped_values() -> None:
 def test_the_prefix_itself_is_never_turned_into_a_reference() -> None:
     """The trap that would fail every job at exec time instead of at render.
 
-    Manifests concatenate: `{{ global_password_prefix }}_pw_agent_curator`.
-    Substituting the prefix alone renders
-    `secret:global_password_prefix_pw_agent_curator` — a name nothing holds — so
-    the concatenations are matched WHOLE and replaced by a reference to a name
-    the store carries.
+    Manifests USED to concatenate `{{ global_password_prefix }}_pw_agent_<x>`
+    (they carry `secret:agent_<x>_client_secret` directly since 2026-08-25 —
+    test_agent_secret_single_spelling.py), but the rule stands for any future
+    concatenated site: substituting the prefix alone would render
+    `secret:global_password_prefix_pw_…` — a name nothing holds — failing the
+    job at exec time instead of at render.
     """
     src = CATALOG.read_text(encoding="utf-8")
     m = re.search(r'"\{\{ global_password_prefix \}\}":\s*(\S+)', src)
@@ -69,10 +70,19 @@ def test_the_prefix_itself_is_never_turned_into_a_reference() -> None:
         "which resolves to nothing and fails the job when it runs rather than "
         "when it is registered."
     )
-    whole = re.findall(r'"\{\{ global_password_prefix \}\}_pw_(\w+)":\s*"secret:', src)
-    assert whole, (
-        "no whole-literal substitutions remain, so the agent client secrets are "
-        "back to being rendered as values."
+    # The ten whole-literal `{{ global_password_prefix }}_pw_agent_<name>`
+    # bridge entries were REMOVED 2026-08-25: manifests now carry
+    # `secret:agent_<name>_client_secret` directly (one spelling, pinned by
+    # test_agent_secret_single_spelling.py). What must survive their removal
+    # is the fail-closed backstop: a stale/out-of-tree manifest that still
+    # concatenates would — via the bare-prefix VALUE substitution asserted
+    # above — render a real credential into wing.db. The catalog must refuse
+    # the whole discovery instead.
+    assert "_refuse_derived_env" in src and "SystemExit(2)" in src, (
+        "the catalog's post-expansion derived-credential guard is gone. A "
+        "manifest concatenating the prefix would render a real credential "
+        "into pulse_jobs.env_json in the clear (the 2026-08-11 class) with "
+        "nothing left to refuse it."
     )
 
 

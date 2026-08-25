@@ -68,32 +68,18 @@ def _build_substitutions() -> dict[str, str]:
     nightly backup all reach, and one row of which also reveals the prefix that
     yields the rest by construction.
 
-    `{{ global_password_prefix }}` deliberately stays a VALUE: manifests
-    concatenate it (`{{ global_password_prefix }}_pw_agent_curator`), so a
-    reference would render as `secret:global_password_prefix_pw_agent_curator`
+    `{{ global_password_prefix }}` deliberately stays a VALUE: a reference
+    would render any concatenated site as `secret:global_password_prefix_pw_…`
     — a name that does not exist, failing the job at exec time instead of at
-    render. Those sites need a named var of their own; until then they are the
-    measured remainder, not a thing this change quietly covers.
+    render. The agent client secrets used to be exactly such concatenations,
+    bridged here by ten whole-literal entries; since 2026-08-25 the manifests
+    carry `secret:agent_<name>_client_secret` directly (ONE spelling, pinned
+    by test_agent_secret_single_spelling.py) and the bridge entries are gone.
+    A stale/out-of-tree manifest that still concatenates is REFUSED by the
+    post-expansion guard in `main()` rather than rendered into wing.db.
     """
     return {
         "{{ playbook_dir }}":             _env("NOS_PLAYBOOK_DIR"),
-        # The agent client secrets, keyed on the WHOLE literal rather than on
-        # `{{ global_password_prefix }}` alone. Substituting the prefix would
-        # render `secret:global_password_prefix_pw_agent_curator` — a name that
-        # does not exist — so the concatenation is matched entire and replaced
-        # by a reference to the name the store now carries. These MUST precede
-        # the bare-prefix entry below: str.replace runs in dict order and the
-        # shorter key would consume the prefix first, leaving a broken tail.
-        "{{ global_password_prefix }}_pw_agent_conductor": "secret:agent_conductor_client_secret",
-        "{{ global_password_prefix }}_pw_agent_curator": "secret:agent_curator_client_secret",
-        "{{ global_password_prefix }}_pw_agent_librarian": "secret:agent_librarian_client_secret",
-        "{{ global_password_prefix }}_pw_agent_migration_author": "secret:agent_migration_author_client_secret",
-        "{{ global_password_prefix }}_pw_agent_remediator": "secret:agent_remediator_client_secret",
-        "{{ global_password_prefix }}_pw_agent_scout": "secret:agent_scout_client_secret",
-        "{{ global_password_prefix }}_pw_agent_surveyor": "secret:agent_surveyor_client_secret",
-        "{{ global_password_prefix }}_pw_agent_upgrade_architect": "secret:agent_upgrade_architect_client_secret",
-        "{{ global_password_prefix }}_pw_agent_upgrade_advisor": "secret:agent_upgrade_advisor_client_secret",
-        "{{ global_password_prefix }}_pw_agent_inspektor": "secret:agent_inspektor_client_secret",
         "{{ authentik_domain }}":         _env("NOS_AUTHENTIK_DOMAIN"),
         "{{ tenant_domain }}":            _env("NOS_TENANT_DOMAIN"),
         "{{ global_password_prefix }}":   _env("NOS_GLOBAL_PASSWORD_PREFIX"),
@@ -229,6 +215,33 @@ def main() -> int:
         return 2
 
     subs = _build_substitutions()
+    # Post-expansion guard: no env VALUE may carry a prefix-derived credential
+    # in the clear. The whole-literal agent-secret bridge is gone (manifests
+    # now carry `secret:agent_<name>_client_secret` refs), so a stale or
+    # out-of-tree manifest that still concatenates
+    # `{{ global_password_prefix }}_pw_…` would — via the bare-prefix VALUE
+    # substitution above — render a real credential into pulse_jobs.env_json,
+    # which wing.db, the events API and the nightly backup all reach (the
+    # 2026-08-11 nineteen-rows-in-the-clear class). Refuse the whole discovery
+    # instead: the converge fails loudly at render, naming the site, and no
+    # secret is written anywhere.
+    prefix = _env("NOS_GLOBAL_PASSWORD_PREFIX")
+    derived_marker = f"{prefix}_pw_" if prefix else None
+
+    def _refuse_derived_env(job: dict, source: str) -> None:
+        if not derived_marker:
+            return
+        for key, val in (job.get("env") or {}).items():
+            if isinstance(val, str) and derived_marker in val:
+                print(
+                    f"error: {source} env[{key}] expanded to a prefix-derived "
+                    "credential in the clear. Point it at a name instead "
+                    "(`secret:<name>` in ~/.nos/secrets.yml). Refusing the "
+                    "whole catalog — no secret was written.",
+                    file=sys.stderr,
+                )
+                raise SystemExit(2)
+
     catalog: list[dict] = []
     for path in _scan_sources(playbook_dir):
         try:
@@ -239,6 +252,7 @@ def main() -> int:
         block = doc.get("pulse") or {}
         for job in block.get("jobs") or []:
             expanded = _expand(job, subs)
+            _refuse_derived_env(expanded, path.split("/anatomy/")[-1])
             catalog.append({
                 "source": path.split("/anatomy/")[-1],
                 "plugin_name": (

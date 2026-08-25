@@ -217,7 +217,7 @@ pulse:
         NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
         NOS_AGENT_NAME: "librarian"
         NOS_AGENT_CLIENT_ID: "nos-librarian"
-        NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_librarian"
+        NOS_AGENT_CLIENT_SECRET: "secret:agent_librarian_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/librarian.yml"
         # Judgment calls need reasoning but not the flagship tier.
         NOS_AGENT_MODEL: "sonnet"
@@ -276,7 +276,7 @@ pulse:
         NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
         NOS_AGENT_NAME: "librarian"
         NOS_AGENT_CLIENT_ID: "nos-librarian"
-        NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_librarian"
+        NOS_AGENT_CLIENT_SECRET: "secret:agent_librarian_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/librarian.yml"
         # Briefs are the operator-facing articles — sonnet, not the flagship.
         NOS_AGENT_MODEL: "sonnet"
@@ -323,7 +323,7 @@ pulse:
         NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
         NOS_AGENT_NAME: "librarian"
         NOS_AGENT_CLIENT_ID: "nos-librarian"
-        NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_librarian"
+        NOS_AGENT_CLIENT_SECRET: "secret:agent_librarian_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/librarian.yml"
         # Bulk 1-3-sentence descriptions — haiku carries the whole backlog.
         NOS_AGENT_MODEL: "haiku"

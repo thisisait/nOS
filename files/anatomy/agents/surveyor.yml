@@ -127,7 +127,7 @@ pulse:
         # pin the run inherits the operator's default, which is the dearest.
         NOS_AGENT_MODEL: "sonnet"
         NOS_AGENT_CLIENT_ID: "nos-surveyor"
-        NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_surveyor"
+        NOS_AGENT_CLIENT_SECRET: "secret:agent_surveyor_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/surveyor.yml"
         # The runner hard-requires these three and dies before spending a
         # token if any is missing. WING_API_TOKEN is per-agent so the audit

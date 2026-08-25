@@ -105,7 +105,7 @@ pulse:
         # at mid cost; a pin is mandatory or it inherits the default tier.
         NOS_AGENT_MODEL: "sonnet"
         NOS_AGENT_CLIENT_ID: "nos-remediator"
-        NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_remediator"
+        NOS_AGENT_CLIENT_SECRET: "secret:agent_remediator_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/remediator.yml"
         NOS_AGENT_TASK: |
           Triage every open gitleaks finding:
