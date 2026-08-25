@@ -363,7 +363,7 @@ CLAUDE_JSON=$(
 # Extract .result (human text) + .usage tokens. On any parse failure (claude
 # died before emitting JSON, or emitted plain text) fall back to the raw
 # stdout and leave token counts empty — the event then carries 0s, not a crash.
-TOK_IN=""; TOK_OUT=""; TOK_CACHE=""; COST=""
+TOK_IN=""; TOK_OUT=""; TOK_CACHE=""; TOK_CACHE_W=""; COST=""
 CLAUDE_OUTPUT=$(printf '%s' "$CLAUDE_JSON" | python3 -c '
 import sys, json
 try:
@@ -371,13 +371,27 @@ try:
 except Exception:
     sys.exit(3)
 ' 2>/dev/null) || CLAUDE_OUTPUT="$CLAUDE_JSON"
-read -r TOK_IN TOK_OUT TOK_CACHE COST < <(printf '%s' "$CLAUDE_JSON" | python3 -c '
+# cache_creation_input_tokens is NOT optional bookkeeping: on the 2026-08-25
+# upgrade-architect run the three recorded counters priced to $1.27 of a
+# $2.32 bill — the missing $1.05 was ~168K cache-WRITE tokens this extraction
+# used to drop. The ledger's own promise ("the tokens survive either way, so
+# a future rate table can price them honestly") is void without it.
+# Counters default to 0 WHEN a usage object exists: `read` splits on IFS, so
+# an empty middle field collapses and every later value lands one slot early
+# (a usage without cache_creation put the dollar figure into TOK_CACHE_W and
+# recorded cost null — caught by the runner-attribution gate). Cost is last,
+# so its emptiness is safe; no usage at all prints nothing and every field
+# stays empty, which keeps the INFO suffix suppressed exactly as before.
+read -r TOK_IN TOK_OUT TOK_CACHE TOK_CACHE_W COST < <(printf '%s' "$CLAUDE_JSON" | python3 -c '
 import sys, json
 try:
     d = json.load(sys.stdin); u = d.get("usage") or {}
 except Exception:
     d, u = {}, {}
-print(u.get("input_tokens", ""), u.get("output_tokens", ""), u.get("cache_read_input_tokens", ""), d.get("total_cost_usd", ""))
+if u:
+    print(u.get("input_tokens", 0), u.get("output_tokens", 0), u.get("cache_read_input_tokens", 0), u.get("cache_creation_input_tokens", 0), d.get("total_cost_usd", ""))
+else:
+    print()
 ' 2>/dev/null)
 [[ -s "$CLAUDE_ERR" ]] && CLAUDE_OUTPUT+=$'\n'"$(cat "$CLAUDE_ERR")"
 rm -f "$CLAUDE_ERR"
@@ -436,7 +450,7 @@ if [[ "$CLAUDE_EXIT" -eq 0 ]]; then
     fi
 fi
 
-echo "INFO: claude exited with code $CLAUDE_EXIT${TOK_IN:+ (tokens in=$TOK_IN out=$TOK_OUT cache=$TOK_CACHE cost=${COST:+\$}${COST:-unpriced} basis=$COST_BASIS)}"
+echo "INFO: claude exited with code $CLAUDE_EXIT${TOK_IN:+ (tokens in=$TOK_IN out=$TOK_OUT cache_read=$TOK_CACHE cache_write=$TOK_CACHE_W cost=${COST:+\$}${COST:-unpriced} basis=$COST_BASIS)}"
 if [[ -n "$CLAUDE_OUTPUT" ]]; then
     echo "$CLAUDE_OUTPUT" | tail -20
 fi
@@ -459,6 +473,7 @@ _post_wing_event "$(jq -a --sort-keys -nc \
     --argjson t_in "${TOK_IN:-0}" \
     --argjson t_out "${TOK_OUT:-0}" \
     --argjson t_cache "${TOK_CACHE:-0}" \
+    --argjson t_cache_w "${TOK_CACHE_W:-0}" \
     --argjson cost "${COST:-null}" \
     --arg cost_basis "$COST_BASIS" \
     --arg backend "$BACKEND" \
@@ -467,6 +482,7 @@ _post_wing_event "$(jq -a --sort-keys -nc \
       actor_id:$actor_id, actor_action_id:$action_id, acted_at:$ts,
       result:{exit_code:$exit_code, summary:$summary,
               tokens_input:$t_in, tokens_output:$t_out, tokens_cache_read:$t_cache,
+              tokens_cache_write:$t_cache_w,
               cost_usd:$cost, cost_basis:$cost_basis,
               backend:$backend, model:$model}}')"
 
