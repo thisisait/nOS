@@ -157,12 +157,28 @@ NEWLY_QUEUED=$(sqlite3 -json "$WING_DB" \
     tail -60 "$OUTPUT_FILE"
     echo '```'
     echo
+    # The drafts do NOT live in the stdout tail above — the architect POSTs its
+    # full report (```yaml drafts included) as a conductor_report event, and on
+    # 2026-08-25 this file claimed "review the drafted YAML in the report"
+    # while holding 45 lines and zero yaml blocks. Pull the real report out of
+    # wing.db through the lossless reader (a hand extraction ate a backslash
+    # level that run — six of ten drafts failed to parse). --since scopes to
+    # THIS run so a stale report cannot masquerade as today's.
+    echo "## Architect report (from wing.db conductor_report event)"
+    echo
+    if ! WING_DB_PATH="$WING_DB" python3 "$(dirname "$0")/agent-report.py" \
+            --agent upgrade-architect --since "$RUN_START_ISO" 2>/dev/null; then
+        echo "_No conductor_report event landed for this run — the drafts are"
+        echo "NOT in this file. Check \`tools/agent-report.py --agent upgrade-architect\`"
+        echo "and the stdout tail above._"
+    fi
+    echo
     echo "## Verdict"
     echo
     if [[ "$RUN_EXIT" -eq 0 ]]; then
         echo "**GREEN** — architect exit 0. Full recipe coverage; nothing drafted or queued."
     elif [[ "$RUN_EXIT" -eq 1 ]]; then
-        echo "**REVIEW** — architect drafted recipes and/or queued coexistence. Review the drafted YAML in the report, commit each to \`upgrades/<service>.yml\`, then apply any coexistence with \`ansible-playbook main.yml --tags coexistence\` (dry-run first with \`-e coexist_dry_run=true\`)."
+        echo "**REVIEW** — architect drafted recipes and/or queued coexistence. Review the drafted YAML in the \"Architect report\" section above, commit each to \`upgrades/<service>.yml\`, then apply any coexistence with \`ansible-playbook main.yml --tags coexistence\` (dry-run first with \`-e coexist_dry_run=true\`)."
     else
         echo "**RED** — architect failed at exit \`$RUN_EXIT\` (env/auth/Wing error). Read the stdout/stderr above."
     fi
