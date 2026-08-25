@@ -37,10 +37,15 @@ import pathlib
 REPO = pathlib.Path(__file__).resolve().parents[2]
 QUEUE = REPO / "docs/llm/security/remediation-queue.json"
 
-#: Measured 2026-08-22 at cycle 37, 212 rows. LOWER THIS when rows get their
-#: evidence; never raise it. Raising it is the one edit this gate exists to make
-#: someone argue for out loud.
-UNPROVEN_CEILING = 50
+#: Measured 2026-08-22 at cycle 37, 212 rows: 50. Lowered to 0 on 2026-08-25 —
+#: the reconciliation pass re-verified every one of the 50 against the live
+#: estate (each `resolved_by` added that day says what was READ, not what was
+#: once intended) and found 0 unverifiable, 0 false closes among them. The one
+#: false close found that day (REM-159) CARRIED evidence; it was wrong for a
+#: different reason — the evidence was true and did not cover the finding,
+#: which no bare-count ratchet can see. LOWER only; never raise. Raising it is
+#: the one edit this gate exists to make someone argue for out loud.
+UNPROVEN_CEILING = 0
 
 
 def _items() -> list[dict]:

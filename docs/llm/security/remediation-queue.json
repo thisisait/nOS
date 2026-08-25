@@ -17,7 +17,8 @@
       "confidence": "high",
       "found_at": "2026-04-08T12:00:00Z",
       "scan_cycle": 0,
-      "resolved_at": "2026-05-31T08:39:14Z"
+      "resolved_at": "2026-05-31T08:39:14Z",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): infra-portainer-1 runs with CMD '--host tcp://docker-socket-proxy:2375' and its only mount is the /data dir — no docker.sock bind (docker inspect); infra-docker-socket-proxy-1 is up (docker ps). The architecture this row prescribes is live."
     },
     {
       "id": "REM-002",
@@ -105,7 +106,8 @@
       "source": "static_analysis",
       "confidence": "high",
       "found_at": "2026-04-08T12:00:00Z",
-      "scan_cycle": 0
+      "scan_cycle": 0,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): docker inspect across all 61 running containers shows HostConfig.Memory nonzero on every one — zero containers run without a mem_limit."
     },
     {
       "id": "REM-007",
@@ -157,7 +159,8 @@
       "source": "static_analysis",
       "confidence": "high",
       "found_at": "2026-04-08T12:00:00Z",
-      "scan_cycle": 0
+      "scan_cycle": 0,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): docker exec infra-postgresql-1 psql -tc 'SHOW ssl' returns 'on' — server-side SSL is live on the running instance."
     },
     {
       "id": "REM-010",
@@ -266,7 +269,8 @@
       "source": "https://github.com/traefik/traefik/security/advisories/GHSA-46wh-3698-f2cx",
       "confidence": "high",
       "found_at": "2026-04-08T13:00:00Z",
-      "scan_cycle": 0
+      "scan_cycle": 0,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): infra-traefik-1 runs traefik:v3.7.10 (docker ps), above the v3.6.12 fix this row pinned."
     },
     {
       "id": "REM-016",
@@ -447,7 +451,8 @@
       "source": "https://advisories.gitlab.com/pkg/golang/github.com/traefik/traefik/v3/CVE-2026-32595/",
       "confidence": "high",
       "found_at": "2026-04-08T18:00:00Z",
-      "scan_cycle": 1
+      "scan_cycle": 1,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): infra-traefik-1 runs traefik:v3.7.10 (docker ps), above the v3.6.12 fix floor for all three CVEs this row names."
     },
     {
       "id": "REM-026",
@@ -775,7 +780,8 @@
       "confidence": "high",
       "found_at": "2026-04-08T18:00:00Z",
       "scan_cycle": 3,
-      "resolved_at": "2026-06-06T00:00:00Z"
+      "resolved_at": "2026-06-06T00:00:00Z",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): docker inspect iiab-n8n-1 shows N8N_SSRF_PROTECTION_ENABLED=true in the live container env — the built-in SSRF guard this row enabled is active."
     },
     {
       "id": "REM-044",
@@ -920,7 +926,8 @@
       "source": "https://github.com/n8n-io/n8n/security/advisories/GHSA-58qr-rcgv-642v",
       "confidence": "high",
       "found_at": "2026-04-08T20:00:00Z",
-      "scan_cycle": 7
+      "scan_cycle": 7,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): iiab-n8n-1 runs n8nio/n8n:2.35.0 (docker ps), well above the 2.14.1 fix this row pinned."
     },
     {
       "id": "REM-052",
@@ -936,7 +943,8 @@
       "source": "https://github.com/advisories/GHSA-mxrg-77hm-89hv",
       "confidence": "high",
       "found_at": "2026-04-08T20:00:00Z",
-      "scan_cycle": 7
+      "scan_cycle": 7,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): iiab-n8n-1 runs n8nio/n8n:2.35.0 (docker ps), well above the 2.14.1 fix this row pinned."
     },
     {
       "id": "REM-057",
@@ -952,7 +960,8 @@
       "source": "https://github.com/advisories/GHSA-m63j-689w-3j35",
       "confidence": "high",
       "found_at": "2026-04-08T20:00:00Z",
-      "scan_cycle": 7
+      "scan_cycle": 7,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): iiab-n8n-1 runs n8nio/n8n:2.35.0 (docker ps), well above the 2.14.1 fix this row pinned."
     },
     {
       "id": "REM-058",
@@ -968,7 +977,8 @@
       "source": "https://github.com/advisories/GHSA-98c2-4cr3-4jc3",
       "confidence": "high",
       "found_at": "2026-04-08T20:00:00Z",
-      "scan_cycle": 7
+      "scan_cycle": 7,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): iiab-n8n-1 runs n8nio/n8n:2.35.0 (docker ps), well above the 2.14.1 fix this row pinned."
     },
     {
       "id": "REM-053",
@@ -1003,7 +1013,8 @@
       "confidence": "high",
       "found_at": "2026-04-08T20:00:00Z",
       "scan_cycle": 7,
-      "resolved_at": "2026-05-31T08:39:14Z"
+      "resolved_at": "2026-05-31T08:39:14Z",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): docker inspect iiab-open-webui-1 shows CODE_INTERPRETER_ENGINE=pyodide in the live env — the server-side jupyter path this finding targets is not in use."
     },
     {
       "id": "REM-055",
@@ -1020,7 +1031,8 @@
       "confidence": "medium",
       "found_at": "2026-04-08T20:00:00Z",
       "scan_cycle": 7,
-      "resolved_at": "2026-06-14T00:00:00Z"
+      "resolved_at": "2026-06-14T00:00:00Z",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): docker inspect iiab-open-webui-1 shows CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES=5 in the live env; gate tests/anatomy/test_openwebui_tool_call_retries_capped.py exists."
     },
     {
       "id": "REM-056",
@@ -1070,7 +1082,8 @@
       "source": "https://nvd.nist.gov/vuln/detail/CVE-2026-25922",
       "confidence": "high",
       "found_at": "2026-04-09T12:00:00Z",
-      "scan_cycle": 9
+      "scan_cycle": 9,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): infra-authentik-server-1 + worker run ghcr.io/goauthentik/server:2026.5.2 (docker ps), above the 2025.12.4 release this row records as already carrying the fix."
     },
     {
       "id": "REM-061",
@@ -1086,7 +1099,8 @@
       "source": "https://advisories.gitlab.com/pkg/golang/github.com/traefik/traefik/v3/CVE-2026-32695/",
       "confidence": "high",
       "found_at": "2026-04-09T12:00:00Z",
-      "scan_cycle": 9
+      "scan_cycle": 9,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): infra-traefik-1 runs traefik:v3.7.10 (docker ps), above the v3.6.11 fix; the Knative surface remains absent (no K8s on this estate)."
     },
     {
       "id": "REM-062",
@@ -1102,7 +1116,8 @@
       "source": "https://github.com/advisories/GHSA-v364-rw7m-3263",
       "confidence": "high",
       "found_at": "2026-04-09T12:00:00Z",
-      "scan_cycle": 9
+      "scan_cycle": 9,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): iiab-n8n-1 runs n8nio/n8n:2.35.0 (docker ps), far past the 1.121.3 fix this row records as already satisfied at 2.10.1."
     },
     {
       "id": "REM-063",
@@ -1175,7 +1190,8 @@
       "source": "https://blog.gitea.com/release-of-1.25.4/",
       "confidence": "high",
       "found_at": "2026-04-10T12:00:00Z",
-      "scan_cycle": 10
+      "scan_cycle": 10,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): devops-gitea-1 runs gitea/gitea:1.27.2 (docker ps), above the 1.25.4 fix floor for all three CVEs this row names."
     },
     {
       "id": "REM-067",
@@ -1191,7 +1207,8 @@
       "source": "https://mariadb.com/docs/server/security/cve/community-server",
       "confidence": "high",
       "found_at": "2026-04-10T12:00:00Z",
-      "scan_cycle": 10
+      "scan_cycle": 10,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): infra-mariadb-1 runs mariadb:11.8.8 (docker ps), above both floors this row names (11.4.10; the 11.8.x-only CVE-2026-3494 fixed 11.8.6)."
     },
     {
       "id": "REM-068",
@@ -1207,7 +1224,8 @@
       "source": "https://nvd.nist.gov/vuln/detail/CVE-2026-23980",
       "confidence": "high",
       "found_at": "2026-04-10T18:00:00Z",
-      "scan_cycle": 11
+      "scan_cycle": 11,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): no superset container is running and install_superset: false (config.yml:145); superset_version pins 6.0.0-dev, the fix release with the psycopg2-bundled variant (default.config.yml:2479). Closed state re-verified as absence of exposure plus a pin at the fix."
     },
     {
       "id": "REM-069",
@@ -1332,7 +1350,8 @@
       "source": "https://github.com/traefik/traefik/security/advisories/GHSA-92mv-8f8w-wq52",
       "confidence": "high",
       "found_at": "2026-04-11T12:00:00Z",
-      "scan_cycle": 13
+      "scan_cycle": 13,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): infra-traefik-1 runs traefik:v3.7.10 (docker ps), above the v3.6.9 fix."
     },
     {
       "id": "REM-076",
@@ -1348,7 +1367,8 @@
       "source": "https://advisories.gitlab.com/pkg/golang/github.com/traefik/traefik/v2/CVE-2026-26999/",
       "confidence": "high",
       "found_at": "2026-04-11T12:00:00Z",
-      "scan_cycle": 13
+      "scan_cycle": 13,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): infra-traefik-1 runs traefik:v3.7.10 (docker ps), above the v3.6.9 fix."
     },
     {
       "id": "REM-077",
@@ -1364,7 +1384,8 @@
       "source": "pentest-journal PENTEST-007",
       "confidence": "medium",
       "found_at": "2026-04-11T18:00:00Z",
-      "scan_cycle": 13
+      "scan_cycle": 13,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): roles/pazny.traefik/templates/traefik.yml.j2:44-47 ships encodedCharacters with allowEncodedSlash/BackSlash/NullCharacter: false — the hardening block this row prescribed is committed and is the rendered static config."
     },
     {
       "id": "REM-078",
@@ -1525,7 +1546,8 @@
       "confidence": "high",
       "found_at": "2026-05-31T08:13:57Z",
       "resolved_at": "2026-05-31T08:13:57Z",
-      "scan_cycle": 16
+      "scan_cycle": 16,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): iiab-n8n-1 runs n8nio/n8n:2.35.0 (docker ps), above the 2.20.7 fix this row pinned."
     },
     {
       "id": "REM-087",
@@ -1542,7 +1564,8 @@
       "confidence": "high",
       "found_at": "2026-05-31T08:13:57Z",
       "resolved_at": "2026-05-31T08:13:57Z",
-      "scan_cycle": 16
+      "scan_cycle": 16,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): iiab-ntfy-1 runs binwiederhier/ntfy:v2.26.3 (docker ps), above the v2.22.0 fix."
     },
     {
       "id": "REM-093",
@@ -1596,7 +1619,8 @@
       "confidence": "high",
       "found_at": "2026-06-21T04:03:29+02:00",
       "scan_cycle": 16,
-      "resolved_at": "2026-06-21T04:03:29+02:00"
+      "resolved_at": "2026-06-21T04:03:29+02:00",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): iiab-vaultwarden-1 runs vaultwarden/server:1.37.1 (docker ps), above the 1.35.5 fix floor for all three CVEs."
     },
     {
       "id": "REM-096",
@@ -1613,7 +1637,8 @@
       "confidence": "high",
       "found_at": "2026-06-21T04:03:29+02:00",
       "scan_cycle": 16,
-      "resolved_at": "2026-06-21T04:03:29+02:00"
+      "resolved_at": "2026-06-21T04:03:29+02:00",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): host ollama --version reports 0.32.15 from homebrew/core (brew info), far past the 0.17.1 fix; the API binds loopback (lsof shows no 0.0.0.0:11434)."
     },
     {
       "id": "REM-097",
@@ -1631,7 +1656,8 @@
       "found_at": "2026-06-21T04:03:29+02:00",
       "scan_cycle": 16,
       "resolved_at": "2026-06-21T04:03:29+02:00",
-      "rechecked_at": "2026-07-13T04:15:05+02:00"
+      "rechecked_at": "2026-07-13T04:15:05+02:00",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): devops-paperclip-1 runs ghcr.io/paperclipai/paperclip:sha-b9a80dc (docker ps), and the GitHub compare API confirms b9a80dc is a strict descendant of fix-release commit b8725c5 (status ahead, behind_by 0) — both RCE fixes are in the running build."
     },
     {
       "id": "REM-098",
@@ -1726,7 +1752,8 @@
       "found_at": "2026-06-22T04:01:33+02:00",
       "scan_cycle": 16,
       "last_reverified": "2026-07-13T04:15:05+02:00",
-      "resolved_at": "2026-07-13"
+      "resolved_at": "2026-07-13",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): infra-mariadb-1 runs mariadb:11.8.8 (docker ps), exactly the 11.8.8 fix this row names; the Galera-only attack surface additionally remains absent (standalone instance)."
     },
     {
       "id": "REM-103",
@@ -1744,7 +1771,8 @@
       "found_at": "2026-06-22T04:01:33+02:00",
       "scan_cycle": 16,
       "last_reverified": "2026-07-13T04:15:05+02:00",
-      "resolved_at": "2026-07-13"
+      "resolved_at": "2026-07-13",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): infra-redis-1 runs redis:8.10.1 (docker ps), above the 8.6.3 fix this row re-pinned off the EOL 8.0 branch."
     },
     {
       "id": "REM-104",
@@ -1780,7 +1808,8 @@
       "confidence": "high",
       "found_at": "2026-06-23T04:12:34+02:00",
       "scan_cycle": 16,
-      "resolved_at": "2026-07-13"
+      "resolved_at": "2026-07-13",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): devops-woodpecker-server-1 + agent run woodpeckerci/woodpecker:v3.17.0 (docker ps), above the v3.14.1 fix, on an explicit tag rather than the floating v3."
     },
     {
       "id": "REM-106",
@@ -1816,7 +1845,8 @@
       "confidence": "high",
       "found_at": "2026-06-25T04:00:42+02:00",
       "scan_cycle": 16,
-      "resolved_at": "2026-07-08T17:27:13Z"
+      "resolved_at": "2026-07-08T17:27:13Z",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): alloy_otlp_bind_addr: \"127.0.0.1\" (default.config.yml:499) renders into files/observability/alloy/config.alloy.j2:460/463, and the live host alloy process listens on 127.0.0.1:4317 and 127.0.0.1:4318 only (lsof)."
     },
     {
       "id": "REM-108",
@@ -1832,7 +1862,8 @@
       "source": "static_analysis: files/puter/Dockerfile (FROM ghcr.io/heyputer/puter:latest) ; https://github.com/HeyPuter/puter/security/advisories (no advisories) ; https://github.com/HeyPuter/puter",
       "confidence": "high",
       "found_at": "2026-06-25T04:00:42+02:00",
-      "scan_cycle": 16
+      "scan_cycle": 16,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): puter is fully purged: no roles/pazny.puter, no files/puter, no install_puter flag in default.config.yml, no container (docker ps) — obsolete is the correct status."
     },
     {
       "id": "REM-109",
@@ -1849,7 +1880,8 @@
       "confidence": "high",
       "found_at": "2026-06-26T04:05:40+02:00",
       "scan_cycle": 16,
-      "resolved_at": "2026-07-13"
+      "resolved_at": "2026-07-13",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): iiab-n8n-1 runs n8nio/n8n:2.35.0 (docker ps), above the 2.28.1 fix floor for the June-2026 advisory cluster."
     },
     {
       "id": "REM-110",
@@ -1866,7 +1898,8 @@
       "confidence": "high",
       "found_at": "2026-06-28T04:14:25+02:00",
       "scan_cycle": 16,
-      "resolved_at": "2026-07-08T17:27:13Z"
+      "resolved_at": "2026-07-08T17:27:13Z",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): files/anatomy/bone/main.py guards /api/services (l.175), /api/status (l.185) and /api/health/aggregate (l.147) with Depends(require_scope('nos:state:read')), and requirements pin PyJWT[crypto]>=2.13.0 — both halves of the fix are in the committed source."
     },
     {
       "id": "REM-111",
@@ -1884,7 +1917,8 @@
       "found_at": "2026-06-29T04:05:22+02:00",
       "updated_at": "2026-07-09T04:14:00+02:00",
       "scan_cycle": 16,
-      "resolved_at": "2026-07-13"
+      "resolved_at": "2026-07-13",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): devops-gitlab-1 runs gitlab/gitlab-ce:18.11.9-ce.0 (docker ps), above the 18.11.6/18.11.7 fix floor this row names for CVE-2026-10712 and companions."
     },
     {
       "id": "REM-112",
@@ -1996,7 +2030,8 @@
       "found_at": "2026-07-02T04:11:15+02:00",
       "scan_cycle": 16,
       "rechecked_at": "2026-07-13T04:15:05+02:00",
-      "resolved_at": "2026-07-28T12:00:00+02:00"
+      "resolved_at": "2026-07-28T12:00:00+02:00",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): maps_tileserver_version is pinned \"v5.6.0\" in default.config.yml:1563 (shadow resolved) and iiab-tileserver-1 runs maptiler/tileserver-gl:v5.6.0 (docker ps) — the floating-latest gap is closed."
     },
     {
       "id": "REM-118",
@@ -2013,7 +2048,8 @@
       "confidence": "high",
       "found_at": "2026-07-04T04:02:06+02:00",
       "scan_cycle": 16,
-      "resolved_at": "2026-07-08T17:27:13Z"
+      "resolved_at": "2026-07-08T17:27:13Z",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): b2b-freescout-1 runs nfrastack/freescout:2.2.5 with app 1.8.235 (docker ps + tools/app-version.py), above the 2.1.3-php8.3 / app 1.8.226 fix floor incl. the CVE-2026-53595 unauth-ATO fix at 1.8.224."
     },
     {
       "id": "REM-119",
@@ -2030,7 +2066,8 @@
       "confidence": "high",
       "found_at": "2026-07-04T04:02:06+02:00",
       "scan_cycle": 16,
-      "resolved_at": "2026-07-13"
+      "resolved_at": "2026-07-13",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): iiab-jellyfin-1 runs jellyfin/jellyfin:10.11.11 (docker ps), above the 10.11.10 fix."
     },
     {
       "id": "REM-120",
@@ -2065,7 +2102,8 @@
       "confidence": "high",
       "found_at": "2026-07-07T04:03:10+02:00",
       "scan_cycle": 16,
-      "resolved_at": "2026-07-13"
+      "resolved_at": "2026-07-13",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): b2b-hedgedoc-1 runs quay.io/hedgedoc/hedgedoc:1.11.0 (docker ps), exactly the 1.11.0 fix release."
     },
     {
       "id": "REM-122",
@@ -2100,7 +2138,8 @@
       "confidence": "high",
       "found_at": "2026-07-08T04:01:36+02:00",
       "scan_cycle": 16,
-      "resolved_at": "2026-07-28T12:00:00+02:00"
+      "resolved_at": "2026-07-28T12:00:00+02:00",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): files/anatomy/wing/composer.lock ships guzzlehttp/guzzle 7.15.2 and guzzlehttp/psr7 2.13.0, above the 7.12.1 / 2.10.2 fix floors."
     },
     {
       "id": "REM-124",
@@ -2189,7 +2228,8 @@
       "confidence": "medium",
       "found_at": "2026-07-19T04:11:26+02:00",
       "scan_cycle": 16,
-      "resolved_at": "2026-07-28T12:00:00+02:00"
+      "resolved_at": "2026-07-28T12:00:00+02:00",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): files/anatomy/bone/requirements.txt pins starlette>=1.0.1 explicitly (with the REM-128 comment) — the transitive-resolution gap this row names is closed at the committed floor."
     },
     {
       "id": "REM-129",
@@ -2245,7 +2285,8 @@
       "confidence": "high",
       "found_at": "2026-07-23T04:10:53+02:00",
       "scan_cycle": 16,
-      "resolved_at": "2026-07-28T12:00:00+02:00"
+      "resolved_at": "2026-07-28T12:00:00+02:00",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): no mailpit container is running, install_mailpit: false (config.yml:161), and mailpit_version pins v1.30.5 (roles/pazny.mailpit/defaults/main.yml:21), the fix version — absence of exposure plus a pin at the fix."
     },
     {
       "id": "REM-132",
@@ -2280,7 +2321,8 @@
       "confidence": "high",
       "found_at": "2026-07-23T04:10:53+02:00",
       "scan_cycle": 16,
-      "resolved_at": "2026-07-28T12:00:00+02:00"
+      "resolved_at": "2026-07-28T12:00:00+02:00",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): no erpnext container is running (parked service) and erpnext_version pins v15.119.3 (default.config.yml:2366), above the v15.111.0 fix this row moved the acceptance pin to."
     },
     {
       "id": "REM-134",
@@ -2332,7 +2374,8 @@
       "source": "https://github.com/dani-garcia/vaultwarden/releases/tag/1.37.0 ; https://api.github.com/repos/dani-garcia/vaultwarden/releases/tags/1.37.0 ; https://github.com/dani-garcia/vaultwarden/security/advisories",
       "confidence": "medium",
       "found_at": "2026-07-26T04:07:19+02:00",
-      "scan_cycle": 16
+      "scan_cycle": 16,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): iiab-vaultwarden-1 runs vaultwarden/server:1.37.1 (docker ps), above the 1.37.0 release bundling the nine advisories."
     },
     {
       "id": "REM-137",
@@ -2383,7 +2426,8 @@
       "source": "https://github.com/rustfs/rustfs/security/advisories/GHSA-5354-r3w2-34m8 ; https://github.com/rustfs/rustfs/security/advisories/GHSA-3ppv-fx5m-m749 ; https://github.com/rustfs/rustfs/security/advisories ; https://api.github.com/repos/rustfs/rustfs/releases",
       "confidence": "high",
       "found_at": "2026-07-28T04:02:27+02:00",
-      "scan_cycle": 16
+      "scan_cycle": 16,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): iiab-rustfs-1 runs rustfs/rustfs:1.0.0-beta.11 (docker ps), exactly the sole patched version both 2026-07-23 advisories name."
     },
     {
       "id": "REM-140",
@@ -2399,7 +2443,8 @@
       "source": "https://raw.githubusercontent.com/redis/redis/8.6/00-RELEASENOTES ; https://api.github.com/repos/redis/redis/releases ; https://redis.io/docs/latest/operate/oss_and_stack/stack-with-enterprise/release-notes/redisce/redisos-8.6-release-notes/",
       "confidence": "high",
       "found_at": "2026-07-28T04:02:27+02:00",
-      "scan_cycle": 16
+      "scan_cycle": 16,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): infra-redis-1 runs redis:8.10.1 (docker ps), above the 8.6.5 SECURITY-urgency release."
     },
     {
       "id": "REM-141",
@@ -2415,7 +2460,8 @@
       "source": "https://api.github.com/repos/Infisical/infisical/security-advisories (empty) ; https://api.github.com/repos/Infisical/infisical/releases ; https://infisical.com/docs/internals/security",
       "confidence": "high",
       "found_at": "2026-07-28T04:02:27+02:00",
-      "scan_cycle": 16
+      "scan_cycle": 16,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): infra-infisical-1 runs infisical/infisical:v0.162.19 (docker ps), above the v0.162.14 currency target."
     },
     {
       "id": "REM-142",
@@ -2431,7 +2477,8 @@
       "source": "https://github.com/freescout-help-desk/freescout/releases/tag/1.8.231 | https://github.com/freescout-help-desk/freescout/releases/tag/1.8.230 | https://github.com/freescout-help-desk/freescout/releases/tag/1.8.227 | https://github.com/nfrastack/container-freescout/blob/main/CHANGELOG.md | https://hub.docker.com/v2/repositories/nfrastack/freescout/tags | gh api repos/freescout-help-desk/freescout/security-advisories (93 published) | gh api advisories/GHSA-v8vc-cmf9-gg2c -> 404 (unpublished)",
       "confidence": "high",
       "found_at": "2026-07-29T04:02:49+02:00",
-      "scan_cycle": 16
+      "scan_cycle": 16,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): b2b-freescout-1 runs nfrastack/freescout:2.2.5 bundling app 1.8.235 (docker ps + tools/app-version.py), past all three security app-releases (1.8.227/1.8.230/1.8.231) this row names."
     },
     {
       "id": "REM-143",
@@ -2624,7 +2671,8 @@
       "source": "https://github.com/metabase/metabase/security/advisories/GHSA-cwxq-fmxq-jv8h",
       "confidence": "high",
       "found_at": "2026-08-01T04:14:42+02:00",
-      "scan_cycle": 19
+      "scan_cycle": 19,
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): data-metabase-1 runs metabase/metabase:v0.63.10 (docker ps), above the v0.61.9 fix for GHSA-cwxq-fmxq-jv8h."
     },
     {
       "id": "REM-154",
@@ -2710,21 +2758,23 @@
       "id": "REM-159",
       "finding_ref": "gitlab-18.11-line-dropped-from-2026-07-29-wave",
       "component": "gitlab",
-      "severity": "HIGH",
-      "current_version": "18.11.7-ce.0",
-      "fix_version": "19.2.2-ce.0 (or 18.11.9-ce.0 for the non-security regression fixes only)",
+      "severity": "CRITICAL",
+      "current_version": "18.11.9-ce.0 (live: devops-gitlab-1, docker ps 2026-08-25)",
+      "fix_version": "19.2.4-ce.0 (full remediation; 18.11.11-ce.0 is an in-line emergency step for CVE-2026-19478/19650 only)",
       "remediation_type": "version_bump",
-      "remediation_detail": "Cycle-21 batch-42 CVE scan (2026-08-04, tls_crypto_weakness). OVERTURNS the 2026-07-21 batch-31 'CVE-clean at the pin, 18.11.7 is STILL the latest' disposition. On 2026-07-29 GitLab shipped patch release 19.2.1 / 19.1.3 / 19.0.5 -- and the 18.11 line was NOT included. Under GitLab's maintenance policy (security backports = current stable + the previous two monthly releases) the 19.2 cut moved the supported window to 19.0/19.1/19.2; 18.11 fell out of it and reaches EOL ~2026-08-26. There is no 18.11.8 and there will not be one, so the pinned 18.11.7-ce.0 (default.config.yml:1525 + roles/pazny.gitlab/defaults/main.yml:10, in sync; live devops-gitlab-1 gitlab/gitlab-ce:18.11.7-ce.0 up 10 days) is now a TERMINAL pin carrying the whole 2026-07-29 wave unpatched. CE-AFFECTING items whose fixed-version floor (19.0.5/19.1.3/19.2.1) is above 18.11.7, from the vendor advisory table: CVE-2026-6267 (HIGH 8.5, sensitive-information exposure in Workhorse, authed, affects from 10.1.0), CVE-2026-12436 (HIGH 8.4, mass assignment in the Pipeline Schedule API, authed, from 18.0), CVE-2026-15975 (HIGH 7.5, denial of service in merge-request discussions, NO AUTH REQUIRED -- the unauth leg, from 11.8), CVE-2026-6336 (MED 5.3, improper access control in project-import status, unauth, from 16.6), CVE-2026-14341 (MED 4.9, improper authorization in project import, authed, from 12.8), CVE-2026-3093 (MED 4.7, XSS in paginated views, unauth, from 14.0), CVE-2026-14351 (MED 4.3, sensitive-information exposure in MR title generation, unauth, from 8.8), CVE-2026-4672 (MED 4.3, improper access control in the Pipeline Test Report API, authed, from 18.4), CVE-2025-14562 (LOW 3.1, incorrect authorization in MR collaboration settings, authed, from 10.6). EE-ONLY, N/A to CE: CVE-2026-13113, CVE-2026-16553, CVE-2026-15077, CVE-2026-15831. ACTION: bump gitlab_version 18.11.7-ce.0 -> 19.2.1-ce.0 in default.config.yml:1525 AND roles/pazny.gitlab/defaults/main.yml:10 together (version-pin-shadow doctrine: default.config.yml wins). arm64 CONFIRMED: gitlab/gitlab-ce:19.2.1-ce.0 published 2026-07-29T10:45:24Z with [amd64, arm64] manifests (19.1.3-ce.0 and 19.0.5-ce.0 likewise, if a more conservative minor is preferred). This crosses a MAJOR boundary (18 -> 19) -- read docs.gitlab.com/update/versions/gitlab_18_changes for upgrade stops before applying; the upgrade engine should route this through an upgrades/gitlab.yml recipe, not a bare pin edit. MITIGATED meanwhile: install_gitlab=false default (operator has it ON), traefik_auth_modes.gitlab='oidc' with signup disabled, 127.0.0.1:8929 loopback, gitlab_rails['gitlab_signup_enabled']=false.  ||  DISPOSITION AMENDED 2026-08-10; MECHANISM CORRECTED the same day — THE ORIGINAL MITIGATION CLAIM READS THE WRONG CONFIG LAYER. This row argues its severity down from `install_gitlab=false`. That is the COMMITTED DEFAULT (default.config.yml); the operator's config.yml (config.yml:116) sets install_gitlab: true, and devops-gitlab-1 (gitlab/gitlab-ce:18.11.7-ce.0) is up because the service is ENABLED. An earlier wording of this amendment attributed the running container to the lingering-fragment mechanism of docs/hidden_fees/01, claiming sixteen services had been switched off with their containers still up; that count was itself measured on the committed default alone and is false for this service — the measured instance of that mechanism on this host is mailpit (install_mailpit: false in the operator's config.yml, iiab-mailpit-1 up, both fragments on disk). TREAT THIS ROW AS FULLY EXPOSED at its stated severity until either (a) the operator disables the service in config.yml and a converge (with prune_disabled_overrides: true) confirms the container gone, or (b) the version fix lands. tasks/stacks/prune-disabled.yml reports resolved-disabled fragments on every converge (gate tests/anatomy/test_disabled_services_are_reconciled.py; probe: tools/discovery-scan.py resolved_install_flags()); removal stays opt-in. The general finding is the roadmap row `obs-disabled-services-still-running`.  ||  CYCLE-31 BATCH-54 RE-SCAN (2026-08-16) -- ONE CLAIM ABOVE IS FALSIFIED, THE CONCLUSION SURVIVES. FALSIFIED: 'There is no 18.11.8 and there will not be one, so the pinned 18.11.7-ce.0 is now a TERMINAL pin.' Both halves are wrong on the facts. GitLab shipped 18.11.8 on 2026-08-05 and then WITHDREW the omnibus package (deprecation code enabled Mattermost incorrectly, breaking 19.x upgrades), replacing it with 18.11.9 on 2026-08-06. Both container tags are live and pullable (18.11.8-ce.0 pushed 2026-08-05T12:49:42Z, 18.11.9-ce.0 pushed 2026-08-06T09:34:40Z; see REM-205, which is about the withdrawn tag still being served). So 18.11 was NOT abandoned by the vendor and 18.11.7 is NOT the terminal build of the line. SURVIVES: the SECURITY conclusion. 18.11.9 carries NO GitLab security fixes -- it is regressions and bugs, and the only security-adjacent content is a PostgreSQL server bump to 16.14 / 17.10 to pick up upstream PG patches. The 18.11 line remains outside the security-backport window: the 2026-07-29 wave (19.2.1/19.1.3/19.0.5) skipped it, and so did the 2026-08-12 wave. The pin still carries both waves unpatched. The lesson is the recorded one -- a queue row that states what the vendor 'will' do is asserting a fact it cannot have; the backport-window observation was sound, the extrapolation from it was not. NEW EXPOSURE FROM THE 2026-08-12 WAVE (19.2.2 / 19.1.4 / 19.0.6, 14 CVEs). Filtered to items that are BOTH Community-Edition-affecting AND whose 'affected from' range actually reaches 18.11.7 -- five of them, three HIGH: CVE-2026-15217 (HIGH 8.7, XSS in Analytics Dashboards table field, authed, from 18.2); CVE-2026-15216 (HIGH 8.7, XSS in Analytics Dashboards pagination, authed, from 18.2); CVE-2026-10053 (HIGH 8.5, REMOTE CODE EXECUTION in the package registry via path traversal, authed, from 18.8); CVE-2026-7427 (MED 5.3, GraphQL API denial of service, NO AUTH REQUIRED -- the unauth leg of this wave, from 18.5); CVE-2026-8667 (MED 4.3, npm dist-tags authorization, authed, from 17.6). EXPLICITLY NOT APPLICABLE, recorded so a later reader does not re-add them: CVE-2026-15423 (HIGH 8.5, CI/CD pipeline authorization) and CVE-2026-16627 (HIGH 7.7, CI job modal XSS) are introduced in 19.0 and 19.2 respectively, so 18.11.7 predates both; and CVE-2026-19228, CVE-2026-16494, CVE-2026-6821, CVE-2026-4879, CVE-2026-18244, CVE-2026-18433, CVE-2025-9486 are EE-only and this estate runs CE (live devops-gitlab-1 gitlab/gitlab-ce:18.11.7-ce.0, digest sha256:62b055a5b5ed0eac76b40a398caf9dec5d1b079f60b9cb349114caeab38f9db6, up 6 days, healthy). REVISED ACTION: the target moves 19.2.1-ce.0 -> 19.2.2-ce.0 (verified present, registry HTTP 200). The 18.11.9-ce.0 half-step buys the PG bumps, the regression fixes and -- per the vendor notes -- a fix for upgrade failures INTO 19.x, so it may be worth taking as a staging step before the major; it buys zero GitLab CVEs and is not a remediation on its own. When bumping, exclude 18.11.8-ce.0 by name (REM-205).",
-      "status": "resolved",
+      "remediation_detail": "Cycle-21 batch-42 CVE scan (2026-08-04, tls_crypto_weakness). OVERTURNS the 2026-07-21 batch-31 'CVE-clean at the pin, 18.11.7 is STILL the latest' disposition. On 2026-07-29 GitLab shipped patch release 19.2.1 / 19.1.3 / 19.0.5 -- and the 18.11 line was NOT included. Under GitLab's maintenance policy (security backports = current stable + the previous two monthly releases) the 19.2 cut moved the supported window to 19.0/19.1/19.2; 18.11 fell out of it and reaches EOL ~2026-08-26. There is no 18.11.8 and there will not be one, so the pinned 18.11.7-ce.0 (default.config.yml:1525 + roles/pazny.gitlab/defaults/main.yml:10, in sync; live devops-gitlab-1 gitlab/gitlab-ce:18.11.7-ce.0 up 10 days) is now a TERMINAL pin carrying the whole 2026-07-29 wave unpatched. CE-AFFECTING items whose fixed-version floor (19.0.5/19.1.3/19.2.1) is above 18.11.7, from the vendor advisory table: CVE-2026-6267 (HIGH 8.5, sensitive-information exposure in Workhorse, authed, affects from 10.1.0), CVE-2026-12436 (HIGH 8.4, mass assignment in the Pipeline Schedule API, authed, from 18.0), CVE-2026-15975 (HIGH 7.5, denial of service in merge-request discussions, NO AUTH REQUIRED -- the unauth leg, from 11.8), CVE-2026-6336 (MED 5.3, improper access control in project-import status, unauth, from 16.6), CVE-2026-14341 (MED 4.9, improper authorization in project import, authed, from 12.8), CVE-2026-3093 (MED 4.7, XSS in paginated views, unauth, from 14.0), CVE-2026-14351 (MED 4.3, sensitive-information exposure in MR title generation, unauth, from 8.8), CVE-2026-4672 (MED 4.3, improper access control in the Pipeline Test Report API, authed, from 18.4), CVE-2025-14562 (LOW 3.1, incorrect authorization in MR collaboration settings, authed, from 10.6). EE-ONLY, N/A to CE: CVE-2026-13113, CVE-2026-16553, CVE-2026-15077, CVE-2026-15831. ACTION: bump gitlab_version 18.11.7-ce.0 -> 19.2.1-ce.0 in default.config.yml:1525 AND roles/pazny.gitlab/defaults/main.yml:10 together (version-pin-shadow doctrine: default.config.yml wins). arm64 CONFIRMED: gitlab/gitlab-ce:19.2.1-ce.0 published 2026-07-29T10:45:24Z with [amd64, arm64] manifests (19.1.3-ce.0 and 19.0.5-ce.0 likewise, if a more conservative minor is preferred). This crosses a MAJOR boundary (18 -> 19) -- read docs.gitlab.com/update/versions/gitlab_18_changes for upgrade stops before applying; the upgrade engine should route this through an upgrades/gitlab.yml recipe, not a bare pin edit. MITIGATED meanwhile: install_gitlab=false default (operator has it ON), traefik_auth_modes.gitlab='oidc' with signup disabled, 127.0.0.1:8929 loopback, gitlab_rails['gitlab_signup_enabled']=false.  ||  DISPOSITION AMENDED 2026-08-10; MECHANISM CORRECTED the same day — THE ORIGINAL MITIGATION CLAIM READS THE WRONG CONFIG LAYER. This row argues its severity down from `install_gitlab=false`. That is the COMMITTED DEFAULT (default.config.yml); the operator's config.yml (config.yml:116) sets install_gitlab: true, and devops-gitlab-1 (gitlab/gitlab-ce:18.11.7-ce.0) is up because the service is ENABLED. An earlier wording of this amendment attributed the running container to the lingering-fragment mechanism of docs/hidden_fees/01, claiming sixteen services had been switched off with their containers still up; that count was itself measured on the committed default alone and is false for this service — the measured instance of that mechanism on this host is mailpit (install_mailpit: false in the operator's config.yml, iiab-mailpit-1 up, both fragments on disk). TREAT THIS ROW AS FULLY EXPOSED at its stated severity until either (a) the operator disables the service in config.yml and a converge (with prune_disabled_overrides: true) confirms the container gone, or (b) the version fix lands. tasks/stacks/prune-disabled.yml reports resolved-disabled fragments on every converge (gate tests/anatomy/test_disabled_services_are_reconciled.py; probe: tools/discovery-scan.py resolved_install_flags()); removal stays opt-in. The general finding is the roadmap row `obs-disabled-services-still-running`.  ||  CYCLE-31 BATCH-54 RE-SCAN (2026-08-16) -- ONE CLAIM ABOVE IS FALSIFIED, THE CONCLUSION SURVIVES. FALSIFIED: 'There is no 18.11.8 and there will not be one, so the pinned 18.11.7-ce.0 is now a TERMINAL pin.' Both halves are wrong on the facts. GitLab shipped 18.11.8 on 2026-08-05 and then WITHDREW the omnibus package (deprecation code enabled Mattermost incorrectly, breaking 19.x upgrades), replacing it with 18.11.9 on 2026-08-06. Both container tags are live and pullable (18.11.8-ce.0 pushed 2026-08-05T12:49:42Z, 18.11.9-ce.0 pushed 2026-08-06T09:34:40Z; see REM-205, which is about the withdrawn tag still being served). So 18.11 was NOT abandoned by the vendor and 18.11.7 is NOT the terminal build of the line. SURVIVES: the SECURITY conclusion. 18.11.9 carries NO GitLab security fixes -- it is regressions and bugs, and the only security-adjacent content is a PostgreSQL server bump to 16.14 / 17.10 to pick up upstream PG patches. The 18.11 line remains outside the security-backport window: the 2026-07-29 wave (19.2.1/19.1.3/19.0.5) skipped it, and so did the 2026-08-12 wave. The pin still carries both waves unpatched. The lesson is the recorded one -- a queue row that states what the vendor 'will' do is asserting a fact it cannot have; the backport-window observation was sound, the extrapolation from it was not. NEW EXPOSURE FROM THE 2026-08-12 WAVE (19.2.2 / 19.1.4 / 19.0.6, 14 CVEs). Filtered to items that are BOTH Community-Edition-affecting AND whose 'affected from' range actually reaches 18.11.7 -- five of them, three HIGH: CVE-2026-15217 (HIGH 8.7, XSS in Analytics Dashboards table field, authed, from 18.2); CVE-2026-15216 (HIGH 8.7, XSS in Analytics Dashboards pagination, authed, from 18.2); CVE-2026-10053 (HIGH 8.5, REMOTE CODE EXECUTION in the package registry via path traversal, authed, from 18.8); CVE-2026-7427 (MED 5.3, GraphQL API denial of service, NO AUTH REQUIRED -- the unauth leg of this wave, from 18.5); CVE-2026-8667 (MED 4.3, npm dist-tags authorization, authed, from 17.6). EXPLICITLY NOT APPLICABLE, recorded so a later reader does not re-add them: CVE-2026-15423 (HIGH 8.5, CI/CD pipeline authorization) and CVE-2026-16627 (HIGH 7.7, CI job modal XSS) are introduced in 19.0 and 19.2 respectively, so 18.11.7 predates both; and CVE-2026-19228, CVE-2026-16494, CVE-2026-6821, CVE-2026-4879, CVE-2026-18244, CVE-2026-18433, CVE-2025-9486 are EE-only and this estate runs CE (live devops-gitlab-1 gitlab/gitlab-ce:18.11.7-ce.0, digest sha256:62b055a5b5ed0eac76b40a398caf9dec5d1b079f60b9cb349114caeab38f9db6, up 6 days, healthy). REVISED ACTION: the target moves 19.2.1-ce.0 -> 19.2.2-ce.0 (verified present, registry HTTP 200). The 18.11.9-ce.0 half-step buys the PG bumps, the regression fixes and -- per the vendor notes -- a fix for upgrade failures INTO 19.x, so it may be worth taking as a staging step before the major; it buys zero GitLab CVEs and is not a remediation on its own. When bumping, exclude 18.11.8-ce.0 by name (REM-205).  ||  RE-OPENED 2026-08-25 (reconciliation pass). The 2026-08-22 closure cited devops-gitlab-1 running 18.11.9-ce.0 -- a version this row's own text calls 'not a remediation on its own' (it carries zero GitLab CVE fixes; the named CE-affecting CVEs incl. CVE-2026-10053 RCE fix at 19.2.2/19.1.4/19.0.6). The evidence was true and did not cover the finding; status returns to pending. SINCE THE CLOSE, THE EXPOSURE GREW: the 2026-08-17 critical patch release (19.2.4, 19.1.6, 19.0.8, 18.11.11 -- docs.gitlab.com patch-releases.xml + the 19.2.4 release page, read 2026-08-25) discloses CVE-2026-19478 (CRITICAL, CVSS 9.4, code injection via GraphQL directive, UNAUTHENTICATED remote modify/delete of public projects, affects 18.2 through 18.11.10, CE+EE) and CVE-2026-19650 (HIGH 7.1, unauthenticated GraphQL mutations via GET, same range). The live 18.11.9-ce.0 sits inside BOTH ranges. Note 18.11 DID receive 18.11.11 in this wave -- a critical-severity exception, not a return to the backport window; the 2026-07-29 and 2026-08-12 waves remain un-backported to 18.11. REVISED TARGET: 19.2.4-ce.0 (pushed 2026-08-17T15:44Z, amd64+arm64 confirmed on Docker Hub), through an upgrades/gitlab.yml recipe since 18->19 is a major boundary with upgrade stops. EMERGENCY HALF-STEP that now actually buys security, unlike 18.11.9: 18.11.11-ce.0 (arm64 confirmed) closes 19478+19650 in-line while the major move is prepared -- it still leaves the July/August waves (incl. CVE-2026-10053) open, so it stages, it does not close, this row. Still exclude 18.11.8-ce.0 (REM-205).",
+      "status": "pending",
       "auto_fixable": true,
-      "source": "https://docs.gitlab.com/releases/patches/patch-release-gitlab-19-2-1-released/ ; https://docs.gitlab.com/policy/maintenance/ ; https://hub.docker.com/v2/repositories/gitlab/gitlab-ce/tags?name=19. ; https://docs.gitlab.com/releases/patches/patch-release-gitlab-19-2-2-released/ ; https://docs.gitlab.com/releases/patches/patch-release-gitlab-18-11-9-released/ ; https://docs.gitlab.com/releases/patch-releases.xml",
+      "source": "https://docs.gitlab.com/releases/patches/patch-release-gitlab-19-2-1-released/ ; https://docs.gitlab.com/policy/maintenance/ ; https://hub.docker.com/v2/repositories/gitlab/gitlab-ce/tags?name=19. ; https://docs.gitlab.com/releases/patches/patch-release-gitlab-19-2-2-released/ ; https://docs.gitlab.com/releases/patches/patch-release-gitlab-18-11-9-released/ ; https://docs.gitlab.com/releases/patch-releases.xml ; docs.gitlab.com/releases/patch-releases.xml + patch-release-gitlab-19-2-4-released (2026-08-25) ; hub.docker.com tags 19.2.4-ce.0 / 18.11.11-ce.0 [amd64,arm64]",
       "confidence": "high",
       "found_at": "2026-08-04T04:01:35+02:00",
       "scan_cycle": 21,
       "amended_at": "2026-08-10T16:26:25+02:00",
-      "resolved_at": "2026-08-22T14:17:51+02:00",
-      "resolved_by": "devops-gitlab-1 runs gitlab/gitlab-ce:18.11.9-ce.0 (docker ps, 2026-08-22), the non-security-regression floor this row names. Landed by the loop as e7bbe9e2. discovery-scan skipped the pair: the row's fix_version is prose naming two versions.",
-      "resolution": "verified against the running estate after the 2026-08-22 converge"
+      "resolved_at": null,
+      "resolved_by": null,
+      "resolution": null,
+      "security_floor": "19.2.4-ce.0",
+      "reopened_at": "2026-08-25T12:00:00+02:00"
     },
     {
       "id": "REM-160",
@@ -2943,7 +2993,8 @@
       "found_at": "2026-08-06T04:12:03+02:00",
       "scan_cycle": 23,
       "resolved_at": null,
-      "amended_at": "2026-08-20T04:10:36+02:00"
+      "amended_at": "2026-08-20T04:10:36+02:00",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): brew info reports ollama full_name homebrew/core (the pazny/local tap is no longer in brew tap output), binary 0.32.15; roles/pazny.openclaw/tasks/main.yml:96-118 now carries the ollama_version keg assertion this row prescribed."
     },
     {
       "id": "REM-173",
@@ -2994,7 +3045,8 @@
       "current_version": "n/a",
       "fix_version": "n/a",
       "finding_ref": "commit 710be435",
-      "remediation_detail": "LIVE bone_secret committed to a PUBLIC repo and left in git history — CLOSED BY ROTATION, NOT BY REMOVAL, and this row records why. WHAT HAPPENED: building the face Anatomy/Pulse view on 2026-08-05, a real pulse_jobs row was copied out of the live database for use as a test fixture (files/anatomy/face/src/lib/anatomy/pulse.test.ts:29). Two of its three env values were replaced with obvious placeholders; the third, WING_EVENTS_HMAC_SECRET, was not. It was byte-identical to ~/.nos/secrets.yml's bone_secret and reached origin/dev on a PUBLIC GitHub repo at 13:03. DETECTED by the nightly gitleaks job at 03:01 the next morning — correctly, exit 1, one new finding, notification emitted. Fourteen hours of exposure. REMEDIATED 2026-08-06: (1) the fixture value replaced with a self-describing FAKE_ placeholder; (2) a pytest gate added (test_a_fixture_is_never_a_real_secret) that fails while the value is still in a working tree, because gitleaks cannot run before a commit exists; (3) an audit-chain KEY RING built (App\\Model\\AuditChain::chainKeys) so the secret became rotatable at all — it derives the tamper-evident chain key, so rotating it previously invalidated all 140,758 signed rows; (4) bone_secret ROTATED via `-e bone_secret_rotate=true`. Post-rotation verification, live: CHAIN-OK 145,789 rows with the ring; CHAIN-BROKEN at id=1 with the new key alone (the control that proves the ring is not merely permissive). The exposed value now signs nothing and only verifies the history it signed. WHY wontfix RATHER THAN A HISTORY REWRITE: the value remains in git history and on every clone and mirror. Removing it needs a force-push of a public branch, which breaks every clone, the Gitea mirror and Woodpecker's checkouts, and cannot un-publish what was already fetchable. Against that: the rotated-out key confers no capability. Bone binds 127.0.0.1:8099 and sits in traefik_skip_ids, so the endpoint it authenticates is unreachable off-host; forging audit rows with it additionally requires WRITE access to wing.db, and anyone holding that reads the CURRENT key out of ~/.nos/secrets.yml anyway. The rewrite would buy tidiness at the cost of every downstream checkout. WHAT WOULD REOPEN THIS: Bone binding anything other than loopback, or the audit-chain key ceasing to derive from bone_secret without the ring following it. The first is worth a gate; filed as follow-up rather than asserted here."
+      "remediation_detail": "LIVE bone_secret committed to a PUBLIC repo and left in git history — CLOSED BY ROTATION, NOT BY REMOVAL, and this row records why. WHAT HAPPENED: building the face Anatomy/Pulse view on 2026-08-05, a real pulse_jobs row was copied out of the live database for use as a test fixture (files/anatomy/face/src/lib/anatomy/pulse.test.ts:29). Two of its three env values were replaced with obvious placeholders; the third, WING_EVENTS_HMAC_SECRET, was not. It was byte-identical to ~/.nos/secrets.yml's bone_secret and reached origin/dev on a PUBLIC GitHub repo at 13:03. DETECTED by the nightly gitleaks job at 03:01 the next morning — correctly, exit 1, one new finding, notification emitted. Fourteen hours of exposure. REMEDIATED 2026-08-06: (1) the fixture value replaced with a self-describing FAKE_ placeholder; (2) a pytest gate added (test_a_fixture_is_never_a_real_secret) that fails while the value is still in a working tree, because gitleaks cannot run before a commit exists; (3) an audit-chain KEY RING built (App\\Model\\AuditChain::chainKeys) so the secret became rotatable at all — it derives the tamper-evident chain key, so rotating it previously invalidated all 140,758 signed rows; (4) bone_secret ROTATED via `-e bone_secret_rotate=true`. Post-rotation verification, live: CHAIN-OK 145,789 rows with the ring; CHAIN-BROKEN at id=1 with the new key alone (the control that proves the ring is not merely permissive). The exposed value now signs nothing and only verifies the history it signed. WHY wontfix RATHER THAN A HISTORY REWRITE: the value remains in git history and on every clone and mirror. Removing it needs a force-push of a public branch, which breaks every clone, the Gitea mirror and Woodpecker's checkouts, and cannot un-publish what was already fetchable. Against that: the rotated-out key confers no capability. Bone binds 127.0.0.1:8099 and sits in traefik_skip_ids, so the endpoint it authenticates is unreachable off-host; forging audit rows with it additionally requires WRITE access to wing.db, and anyone holding that reads the CURRENT key out of ~/.nos/secrets.yml anyway. The rewrite would buy tidiness at the cost of every downstream checkout. WHAT WOULD REOPEN THIS: Bone binding anything other than loopback, or the audit-chain key ceasing to derive from bone_secret without the ring following it. The first is worth a gate; filed as follow-up rather than asserted here.",
+      "resolved_by": "Evidence added 2026-08-25 (reconciliation): decision grounds re-verified: the leaked value in files/anatomy/face/src/lib/anatomy/pulse.test.ts is now a FAKE_ placeholder, gate tests/anatomy/test_a_fixture_is_never_a_real_secret.py exists, and the row's own text records the rotation rationale (closed by rotation, history not rewritten — wontfix is the deliberate status)."
     },
     {
       "id": "REM-176",
