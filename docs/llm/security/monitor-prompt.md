@@ -189,6 +189,24 @@ if [ -z "$EXISTS" ]; then
 fi
 ```
 
+**`fix_version` discipline (learned on REM-159, 2026-08-25).** `fix_version` is
+read by machines (`tools/discovery-scan.py`) and by closing passes, and a prose
+value naming two versions WILL have the wrong one picked: REM-159's
+`"19.2.2-ce.0 (or 18.11.9-ce.0 for the non-security regression fixes only)"`
+got closed on the second token — the one its own text disclaims — while the
+running binary sat inside an unauthenticated CRITICAL range. Rules:
+
+- One version per `fix_version`. Commentary only after a `(` or ` -- `
+  delimiter, and the version BEFORE the delimiter must be the security floor.
+- If the row genuinely needs two versions (a staging step, a regression floor,
+  an image tag beside an app version), ALSO write `"security_floor":
+  "<version>"` — the single machine-comparable version at or above which the
+  finding is fixed. discovery-scan reads it in preference to the prose, and a
+  closing pass may only close on evidence satisfying IT.
+- A row about digest drift or re-pull (same semver, different image) is not a
+  version row: say `re-pull`/`digest` in `fix_version` so the scanner refuses
+  the version comparison, and record the digest you expect.
+
 **Update scan timestamp** in scan-state.json for each component scanned (even if no findings):
 
 ```bash
