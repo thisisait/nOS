@@ -1634,7 +1634,12 @@ grafana_domain: "grafana{{ _host_alias_seg | default('') }}.{{ tenant_domain | d
 observability_hostname: "{{ ansible_facts['hostname'] }}"  # Hostname in Grafana labels
 
 # ── Docker image versions (observability + devops) ───────────────────────────
-grafana_version: "12.4.4"               # CVE-2026-27876 pin + S2 freshness 2026-06-10 (patch line)
+grafana_version: "12.4.9"               # REM-226: CVE-2026-17183, fixed in-branch 12.4.9
+                                        # (v12.4.9 release body carries a literal `### Security`
+                                        # section naming it; verified at the tag, not inferred from
+                                        # the five-release 2026-08-18 wave). Same minor as the
+                                        # 12.4.4 CVE-2026-27876 pin it replaces, so no post-start
+                                        # automation is orphaned — memory version-pins-default-config-shadow.
 prometheus_version: "v3.13.2"   # synced to role default (cleared version-pin shadow) [swept v3.11.3 2026-08-06]
 loki_version: "3.7.6"           # synced to role default (cleared version-pin shadow) [swept 3.7.2 2026-08-06]
 

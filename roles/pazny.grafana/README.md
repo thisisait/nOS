@@ -42,7 +42,7 @@ The compose override mounts the directory into the container read-only, so whene
 
 | Variable | Default | Description |
 |---|---|---|
-| `grafana_version` | `12.4.2` | Pinned for CVE-2026-27876 (CVSS 9.1 file-write → RCE) |
+| `grafana_version` | see `default.config.yml` | The pin is declared ONCE, there. This table carried `12.4.2` while the flag said `12.4.4` — a second copy of a moving value is a third wrong answer waiting (memory `version-pins-default-config-shadow`). |
 | `grafana_port` | `3000` | Exposed on `127.0.0.1` unless `services_lan_access: true` |
 | `grafana_domain` | `grafana.dev.local` | Used for `GF_SERVER_DOMAIN` and OIDC redirect URIs |
 | `grafana_data_dir` | `{{ stacks_dir }}/observability/grafana/data` | Bind mount for SQLite state |
