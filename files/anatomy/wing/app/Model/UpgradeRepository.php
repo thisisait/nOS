@@ -74,6 +74,21 @@ final class UpgradeRepository
 					$applicable[] = $r;
 				}
 			}
+			// A TARGET AT OR BELOW WHAT IS INSTALLED IS NOT AN UPGRADE.
+			// `from_pattern` alone does not establish that: gitlab's
+			// `^18\.([0-9]|[1-9][0-9])\.` matches an installed 18.11.9 and
+			// targets 18.10.3, so the row offered a downgrade as its next step.
+			// Drop those, and if nothing survives say the catalog is BEHIND the
+			// estate rather than inventing a step (2026-08-25).
+			$applicable = array_values(array_filter($applicable, static function ($r) use ($inst) {
+				$cmp = self::compareVersions($r['to_version'] ?? null, $inst);
+				return $cmp === null || $cmp > 0;
+			}));
+			$aheadOfCatalog = false;
+			if ($applicable === []) {
+				$cmp = self::compareVersions($latest, $inst);
+				$aheadOfCatalog = ($cmp !== null && $cmp <= 0);
+			}
 			$next = $applicable !== [] ? end($applicable) : $svcRecipes[0];   // lowest applicable, else highest
 			$stable = $next['to_version'] ?? $latest;
 			$sev = $next['severity'] ?? 'minor';
@@ -104,8 +119,11 @@ final class UpgradeRepository
 				'patch', 'minor'       => 'minor',
 				default                => 'unknown',
 			};
-			// At-target = installed already equals the only/next target.
-			$atTarget = $inst !== null && ($inst === $stable);
+			// At-target = installed is at or past the next target. Compared
+			// NUMERICALLY: `===` made `16.15-alpine` differ from `16` for ever,
+			// so postgresql and infisical read as upgradable indefinitely.
+			$cmpStable = self::compareVersions($inst, $stable);
+			$atTarget = $inst !== null && ($cmpStable !== null ? $cmpStable >= 0 : $inst === $stable);
 			$base = [
 				'id'               => $service,
 				'service'          => $service,
@@ -115,7 +133,13 @@ final class UpgradeRepository
 				'stable'           => $stable,
 				'stable_class'     => $atTarget ? 'current' : $sevClass,
 				'latest'           => $latest,
-				'latest_class'     => ($inst !== null && $inst === $latest) ? 'current' : $sevClass,
+				'latest_class'     => ($inst !== null
+					&& (($c = self::compareVersions($inst, $latest)) !== null ? $c >= 0 : $inst === $latest))
+					? 'current' : $sevClass,
+				// The catalog has nothing left above the running version. Not
+				// "up to date" — the RECIPES are behind, which is a different
+				// fact and the operator must not read one as the other.
+				'ahead_of_catalog' => $aheadOfCatalog,
 				'upstream'         => null,        // offline matrix — no upstream scanner (B1 decision)
 				'upstream_class'   => 'unknown',
 				'severity'         => $sev,
@@ -173,6 +197,63 @@ final class UpgradeRepository
 	 *
 	 * @return array<string,string>
 	 */
+	/**
+	 * Compare two version strings numerically. Returns -1/0/1, or null when
+	 * either side carries no digits to compare.
+	 *
+	 * WHY THIS EXISTS. The matrix compared versions with `===` and ordered the
+	 * catalog with a STRING sort. Both are wrong for versions, and both failed
+	 * in the same direction — towards "an upgrade is available":
+	 *
+	 *   `16.15-alpine` !== `16`          → postgresql read as upgradable for ever
+	 *   `v0.162.19`    !== `0.160.4`     → infisical likewise
+	 *
+	 * Measured 2026-08-25: 22 of 29 catalog targets sat AT OR BELOW the running
+	 * version, and the page presented them as the next step. For GitLab it
+	 * offered `18.10.3-ce.0` against a box running `18.11.9-ce.0` — a DOWNGRADE
+	 * shown as an upgrade, on the one service then carrying an unauthenticated
+	 * CVSS 9.4 whose floor is 19.2.4.
+	 *
+	 * Suffixes are ignored deliberately: `-ce.0`, `-alpine`, `-ls264` and a
+	 * leading `v` are packaging, not version. Where that is not true the
+	 * comparison returns null and the caller must not claim anything — the
+	 * estate's rule that an unreadable answer is UNKNOWN, never green.
+	 */
+	public static function compareVersions(?string $a, ?string $b): ?int
+	{
+		$parse = static function (?string $v): array {
+			// A VERSION STARTS WITH ITS NUMBER — after an optional `v`. That is
+			// what separates `16` (a major-only recipe target, real) from
+			// `sha-b9a80dc` (a build id, from which [9, 80, 0] could be pulled
+			// and two unrelated digests ordered with confidence). paperclip is
+			// pinned that way, and `latest` is not a version either.
+			//
+			// Requiring a DOTTED core was the first cut and it was too strict:
+			// it refused `16` and so broke the postgresql case this whole
+			// comparison exists to fix.
+			$t = ltrim(trim((string) $v), 'vV');
+			if (!preg_match('/^\d+(?:\.\d+)*/', $t, $core)) {
+				return [];
+			}
+			preg_match_all('/\d+/', $core[0], $m);
+			return array_map('intval', array_slice($m[0], 0, 4));
+		};
+		$x = $parse($a);
+		$y = $parse($b);
+		if ($x === [] || $y === []) {
+			return null;
+		}
+		$n = max(count($x), count($y));
+		for ($i = 0; $i < $n; $i++) {
+			$xi = $x[$i] ?? 0;
+			$yi = $y[$i] ?? 0;
+			if ($xi !== $yi) {
+				return $xi <=> $yi;
+			}
+		}
+		return 0;
+	}
+
 	private function installedVersionsFromState(): array
 	{
 		$path = (getenv('HOME') ?: '') . '/.nos/state.yml';
