@@ -58,6 +58,15 @@ final class UpgradeRepository
 		// the recipes). systems.version is unreliable (mostly NULL), which left
 		// the matrix "installed" column blank.
 		$installed = $this->installedVersionsFromState();
+		// Pending security rows per service (2026-08-25, REM-159). The matrix is
+		// the ONE artifact the upgrade agents read; a security floor that lives
+		// only in the remediation queue is a floor no matrix consumer can see —
+		// which is how the architect repaired gitlab's stale target to the
+		// installed 18.11.9 and made the row read "at target" for a service
+		// inside an unauthenticated CVSS 9.4 (floor 19.2.4). The agent did its
+		// brief; the wiring withheld the number. NULL map = source unreadable,
+		// reported as unavailable, never as green.
+		$securityBySvc = $this->pendingSecurityByService();
 
 		$out = [];
 		foreach ($recipes as $service => $svcRecipes) {
@@ -140,6 +149,15 @@ final class UpgradeRepository
 				// "up to date" — the RECIPES are behind, which is a different
 				// fact and the operator must not read one as the other.
 				'ahead_of_catalog' => $aheadOfCatalog,
+				// Security posture from the remediation queue. null = no pending
+				// row for this service; ['unavailable' => true] = the queue
+				// mirror could not be read (UNKNOWN, not green); otherwise
+				// {pending_ids, max_severity, floor, below_floor}. below_floor
+				// true means: whatever "at target" says, this service runs
+				// UNDER its security floor and the gap is still open.
+				'security'         => $securityBySvc === null
+					? ['unavailable' => true]
+					: self::securityPosture($inst, $securityBySvc[$service] ?? []),
 				'upstream'         => null,        // offline matrix — no upstream scanner (B1 decision)
 				'upstream_class'   => 'unknown',
 				'severity'         => $sev,
@@ -219,6 +237,96 @@ final class UpgradeRepository
 	 * comparison returns null and the caller must not claim anything — the
 	 * estate's rule that an unreadable answer is UNKNOWN, never green.
 	 */
+	/**
+	 * Pending remediation rows grouped by component_id, or NULL when the
+	 * mirror is unreadable (missing table/column on a pre-migration DB). The
+	 * caller must surface NULL as "unavailable" — an unreadable security
+	 * source must never render as "no pending findings".
+	 *
+	 * @return array<string,array<int,array{id:string,severity:string,security_floor:?string}>>|null
+	 */
+	private function pendingSecurityByService(): ?array
+	{
+		try {
+			$out = [];
+			$rows = $this->db->query(
+				"SELECT id, component_id, severity, security_floor
+				 FROM remediation_items WHERE status = 'pending' AND component_id IS NOT NULL",
+			);
+			foreach ($rows as $r) {
+				$out[(string) $r->component_id][] = [
+					'id'             => (string) $r->id,
+					'severity'       => (string) $r->severity,
+					'security_floor' => $r->security_floor !== null ? (string) $r->security_floor : null,
+				];
+			}
+			return $out;
+		} catch (\Throwable) {
+			return null;
+		}
+	}
+
+	/**
+	 * Fold a service's pending remediation rows into the matrix row's
+	 * security posture. Pure and static so the gate can exercise it without a
+	 * DB — the same testability split as compareVersions.
+	 *
+	 *   null                      — no pending rows: nothing to say.
+	 *   max_severity              — worst pending severity (CRITICAL first).
+	 *   floor                     — highest machine-readable security_floor
+	 *                               among the pending rows (versions compare
+	 *                               numerically; an uncomparable candidate
+	 *                               never displaces a comparable one).
+	 *   below_floor               — installed < floor. NULL when there is no
+	 *                               floor or the comparison refuses: UNKNOWN
+	 *                               is not false, and a consumer treating
+	 *                               null as "fine" repeats the 2026-08-25
+	 *                               blindness this field exists to end.
+	 *
+	 * @param array<int,array{id:string,severity:string,security_floor:?string}> $rows
+	 * @return array{pending_ids:array<int,string>,max_severity:?string,floor:?string,below_floor:?bool}|null
+	 */
+	public static function securityPosture(?string $installed, array $rows): ?array
+	{
+		if ($rows === []) {
+			return null;
+		}
+		$rank = ['CRITICAL' => 4, 'HIGH' => 3, 'MEDIUM' => 2, 'LOW' => 1];
+		$ids = [];
+		$maxSev = null;
+		$floor = null;
+		foreach ($rows as $r) {
+			$ids[] = $r['id'];
+			$sev = strtoupper((string) ($r['severity'] ?? ''));
+			if (($rank[$sev] ?? 0) > ($rank[$maxSev ?? ''] ?? 0)) {
+				$maxSev = $sev;
+			}
+			$cand = $r['security_floor'] ?? null;
+			if ($cand === null || $cand === '') {
+				continue;
+			}
+			if ($floor === null) {
+				$floor = $cand;
+				continue;
+			}
+			$cmp = self::compareVersions($cand, $floor);
+			if ($cmp !== null && $cmp > 0) {
+				$floor = $cand;
+			}
+		}
+		$below = null;
+		if ($floor !== null && $installed !== null) {
+			$cmp = self::compareVersions($installed, $floor);
+			$below = $cmp === null ? null : $cmp < 0;
+		}
+		return [
+			'pending_ids'  => $ids,
+			'max_severity' => $maxSev,
+			'floor'        => $floor,
+			'below_floor'  => $below,
+		];
+	}
+
 	public static function compareVersions(?string $a, ?string $b): ?int
 	{
 		$parse = static function (?string $v): array {

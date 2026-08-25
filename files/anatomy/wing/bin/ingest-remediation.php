@@ -101,10 +101,10 @@ $sql = <<<SQL
 INSERT INTO remediation_items
 	(id, finding_ref, component_id, severity, current_version, fix_version,
 	 remediation_type, remediation_detail, status, auto_fixable, source,
-	 confidence, found_at, resolved_at, scan_cycle, updated_at)
+	 confidence, found_at, resolved_at, scan_cycle, security_floor, updated_at)
 VALUES
 	(:id, :fr, :cid, :sev, :cv, :fv, :rt, :rd, :st, :af, :src, :conf,
-	 :fa, :ra, :sc, datetime('now'))
+	 :fa, :ra, :sc, :floor, datetime('now'))
 ON CONFLICT(id) DO UPDATE SET
 	finding_ref        = excluded.finding_ref,
 	component_id       = excluded.component_id,
@@ -119,6 +119,7 @@ ON CONFLICT(id) DO UPDATE SET
 	confidence         = excluded.confidence,
 	resolved_at        = excluded.resolved_at,
 	scan_cycle         = excluded.scan_cycle,
+	security_floor     = excluded.security_floor,
 	updated_at         = datetime('now')
 WHERE
 	remediation_items.finding_ref        IS NOT excluded.finding_ref
@@ -134,6 +135,7 @@ WHERE
 	OR remediation_items.confidence      IS NOT excluded.confidence
 	OR remediation_items.resolved_at     IS NOT excluded.resolved_at
 	OR remediation_items.scan_cycle      IS NOT excluded.scan_cycle
+	OR remediation_items.security_floor  IS NOT excluded.security_floor
 SQL;
 
 $db->exec('BEGIN TRANSACTION');
@@ -168,6 +170,7 @@ try {
 		$stmt->bindValue(':fa', $item['found_at'] ?? date('c'));
 		$stmt->bindValue(':ra', $item['resolved_at'] ?? null);
 		$stmt->bindValue(':sc', $item['scan_cycle'] ?? null);
+		$stmt->bindValue(':floor', $item['security_floor'] ?? null);
 		$stmt->execute();
 		$stmt->reset();
 		$upserted++;

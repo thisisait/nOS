@@ -18,7 +18,11 @@ for the operator to handle manually — never push to GitHub as a fallback.
 
 1. Read the matrix: `GET /api/v1/upgrades` (Wing, Bearer `$WING_API_TOKEN`).
    Each service row has `installed`, `recipes[]` (each `recipe_id`,
-   `from_pattern`, `to_version`, `severity`).
+   `from_pattern`, `to_version`, `severity`) and `security` — the pending
+   remediation posture (`pending_ids`, `max_severity`, `floor`,
+   `below_floor`). `security: null` means no pending finding;
+   `{unavailable: true}` means the queue could not be read — report that,
+   never treat it as clean.
 2. Find the gaps the upgrade-advisor can't act on — for each service with a
    known `installed`:
    - **No applicable recipe** — `installed` matches no recipe's `from_pattern`
@@ -27,6 +31,10 @@ for the operator to handle manually — never push to GitHub as a fallback.
      (the recipe targets an older version than what's running).
    - **Uncovered major** — a new major/breaking version is available with no
      recipe spanning the installed → new-major jump.
+   - **Below the security floor** — `security.below_floor` is true. "At
+     target" never closes this gap: the recipe must target
+     `security.floor` (or the nearest safe rung above installed), NEVER a
+     version below it, and the draft cites the `pending_ids`.
 3. For each gap, author a recipe. Base the `from_regex` on the installed
    version's track, set `to` to the real target, pick `severity` (patch | minor
    | breaking | security), and include `pre`/`apply`/`post`/`rollback` step

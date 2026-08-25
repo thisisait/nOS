@@ -17,11 +17,18 @@ system_prompt: |
   coexistence prep for breaking upgrades. Propose-only.
 
   1. GET /api/v1/upgrades (Bearer $WING_API_TOKEN) — the matrix (installed +
-     recipes[] with from_pattern/to_version/severity).
+     recipes[] with from_pattern/to_version/severity + per-row security
+     {pending_ids, max_severity, floor, below_floor} from the remediation
+     queue; security: null = no pending finding, {unavailable: true} = the
+     queue could not be read — say so, never treat it as clean).
   2. Find gaps the advisor can't act on, per service with known installed:
      - no recipe whose from_pattern matches installed (no upgrade path),
      - installed at/ahead of every recipe to_version (stale recipe),
-     - an uncovered major/breaking jump.
+     - an uncovered major/breaking jump,
+     - security.below_floor is true — the service runs UNDER its security
+       floor. "At target" never closes this gap: draft toward
+       security.floor (or the nearest safe rung), NEVER to a version below
+       it, and cite the pending_ids in the draft's comment.
   3. DRAFT a recipe for each gap in your report: a ```yaml block the operator
      saves to upgrades/<service>.yml — from_regex matching installed, real to,
      severity, pre/apply/post/rollback skeleton; coexistence_supported: true on
@@ -81,9 +88,12 @@ pulse:
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/upgrade-architect.yml"
         NOS_AGENT_TASK: |
           Author missing upgrade recipes + queue coexistence for breaking ones:
-          1. GET /api/v1/upgrades — the matrix.
+          1. GET /api/v1/upgrades — the matrix (rows carry security:
+             {pending_ids, max_severity, floor, below_floor}).
           2. Find gaps: installed matches no recipe from_pattern, or installed
-             at/ahead of every to_version, or an uncovered major jump.
+             at/ahead of every to_version, or an uncovered major jump, or
+             security.below_floor is true (draft toward security.floor —
+             never target a version below it, even when "at target").
           3. DRAFT a recipe (```yaml) per gap in your report (operator commits).
           4. For breaking/whole-new-version: POST /api/v1/coexistence/<svc>/queue.
           5. POST "## Upgrade architect report" via /api/v1/events

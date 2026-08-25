@@ -156,6 +156,7 @@ $statements = [
 		resolved_at         TEXT,
 		resolved_by         TEXT,
 		scan_cycle          INTEGER,
+		security_floor      TEXT,
 		created_at          TEXT NOT NULL DEFAULT (datetime('now')),
 		updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
 	)",
@@ -396,6 +397,18 @@ $addMissingColumns($db, 'notifications', [
 $addMissingColumns($db, 'pulse_jobs', [
 	'findings_exit_codes' => 'TEXT',
 	'category'            => 'TEXT',
+]);
+
+// remediation_items.security_floor — the machine-readable minimum safe
+// version (2026-08-25, REM-159). fix_version is prose ("19.2.4-ce.0 (full
+// remediation; 18.11.11-ce.0 is an in-line emergency step…)"), so nothing
+// downstream could COMPARE against it. The queue's security_floor field is a
+// bare version; the upgrade matrix joins it per service so "at target" can
+// never again be claimed for a service sitting under an unauthenticated 9.4
+// — the 2026-08-25 architect run declared gitlab at-target because the
+// wiring gave it no path to this number. NULL = no floor recorded.
+$addMissingColumns($db, 'remediation_items', [
+	'security_floor' => 'TEXT',
 ]);
 
 // events.patch_id — correlate events with apply-patches runs.
