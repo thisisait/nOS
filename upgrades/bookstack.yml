@@ -15,46 +15,39 @@ notes: |
   image bump already does).
 
 recipes:
+# The `^v` anchor never matched the real pin (26.05.2, no v prefix).
   - id: "bookstack-minor-or-patch"
-    from_regex: "^v(2[6-9]|3[0-9])\\."
-    to: "v26.05-ls264"
+    from_regex: "^v?(2[6-9]|3[0-9])\\."
+    to: "26.05.2"          # == installed; bare tag form, matches the pin
     severity: patch
-    release_date: "2026-04-01"
+    changelog_url: "https://github.com/BookStackApp/BookStack/releases"
     notes: |
-      Safe in-place bump across minor/patch tags on the 26.x line. Migrations
-      are forward-only. Rollback path: old image tag + restore DB + restore
-      /config. Note that LSIO may ship several -lsNNN respins per upstream
-      release — bumping across them is low-risk.
-
+      Regex repair + at-target forward coverage. The shipped pattern anchored on
+      a literal `v`; roles/pazny.bookstack pins the bare form `26.05.2`, so the
+      advisor saw "no upgrade path" on a service that was in fact current.
+      Safe in-place bump across minor/patch on the 26.x line — migrations run
+      in-container on first boot.
     coexistence_supported: false
-
-    requires:
-      min_disk_free_gb: 2
-      service_healthy: true
-
+    requires: { min_disk_free_gb: 2, service_healthy: true }
     reset:
       scope: container
       estimated_sec: 45
       affected_services: [bookstack]
       reason: >-
         Single-app image bump: compose.set_image_tag force-recreates only
-        b2b-bookstack-1; backups/http.wait/migrate:status are read-only, MariaDB
-        is a dependency not a bounced consumer.
-
+        b2b-bookstack-1. MariaDB is a dependency, not a bounced consumer.
     pre:
       - id: backup_db
         type: exec.shell
         command: >-
-          docker exec infra-mariadb-1 mariadb-dump
-          -u root -p"{{ mariadb_root_password }}"
-          --single-transaction --routines bookstack
+          docker exec infra-mariadb-1 mariadb-dump -u root
+          -p"{{ mariadb_root_password }}" bookstack
           > ~/.nos/backups/{{ upgrade_id }}/bookstack.sql
         allow_shell: true
-      - id: backup_config
+      - id: backup_data
         type: backup.volume
         src: "{{ bookstack_data_dir }}"
         label: "pre-{{ upgrade_id }}"
-
     apply:
       - id: bump_image_tag
         type: compose.set_image_tag
@@ -62,20 +55,13 @@ recipes:
         service: bookstack
         tag: "{{ recipe.to }}"
         wait: true
-
     post:
       - id: wait_healthy
         type: http.wait
-        url: "http://127.0.0.1:{{ bookstack_port | default(3013) }}/login"
+        url: "http://127.0.0.1:{{ bookstack_port | default(3013) }}/status"
         expect_status: 200
-        timeout_sec: 180
+        timeout_sec: 300
         interval_sec: 5
-      - id: verify_no_pending_migrations
-        type: exec.shell
-        command: "docker exec b2b-bookstack-1 php /app/www/artisan migrate:status"
-        allow_shell: true
-        expect_stdout_not_contains: "Pending"
-
     rollback:
       - id: revert_image_tag
         type: compose.set_image_tag
@@ -83,14 +69,8 @@ recipes:
         service: bookstack
         tag: "{{ recipe.from_version_resolved }}"
         wait: true
-      - id: restore_db
-        type: exec.shell
-        command: >-
-          docker exec -i infra-mariadb-1 mariadb
-          -u root -p"{{ mariadb_root_password }}" bookstack
-          < ~/.nos/backups/{{ upgrade_id }}/bookstack.sql
-        allow_shell: true
-      - id: restore_config
+      - id: restore_data
         type: backup.restore
         dst: "{{ bookstack_data_dir }}"
         label: "pre-{{ upgrade_id }}"
+

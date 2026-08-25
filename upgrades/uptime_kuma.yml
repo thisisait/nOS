@@ -103,3 +103,70 @@ recipes:
         type: backup.restore
         dst: "{{ uptime_kuma_data_dir }}"
         label: "pre-{{ upgrade_id }}"
+
+  - id: "uptime-kuma-2-current"
+    from_regex: "^2\\."
+    to: "2.5.0"            # == installed
+    severity: security
+    changelog_url: "https://github.com/louislam/uptime-kuma/releases"
+    notes: |
+      At-target forward coverage for the 2.x line reached by REM-073 (applied
+      2026-07-24, closing the SSTI CVE-2026-33130). In-line 2.x bumps run
+      Knex migrations against the embedded sqlite in the data dir on first boot.
+
+      READ THIS BEFORE TRUSTING A GREEN KUMA. The 1→2 major bump is the
+      standing example of a version bump ORPHANING the role's post-start
+      automation: after the major, kuma served its first-run INSTALLER for ten
+      days — healthy container, HTTP 200, zero monitors. `http.wait` on `/`
+      cannot tell those two states apart, so the post-step below asserts the
+      MONITOR COUNT via the API, not liveness. Keep that assertion in any
+      future 2.x → 3.x rung.
+      The role default is intentionally still on the "1"-track while
+      default.config.yml pins 2.5.0 — the one surviving deliberate shadow.
+    coexistence_supported: false
+    requires: { min_disk_free_gb: 2, service_healthy: true }
+    reset:
+      scope: container
+      estimated_sec: 90
+      affected_services: [uptime_kuma]
+      reason: >-
+        Single-app recreate: only iiab-uptime-kuma-1 bounces. Embedded sqlite,
+        no shared DB. Monitors resume on boot; alert history is in the volume.
+    pre:
+      - id: backup_data
+        type: backup.volume
+        src: "{{ uptime_kuma_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: iiab
+        service: uptime-kuma
+        tag: "{{ recipe.to }}"
+        wait: true
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "http://127.0.0.1:{{ uptime_kuma_port | default(3001) }}/"
+        expect_status: 200
+        timeout_sec: 300
+        interval_sec: 5
+      - id: assert_monitors_present
+        type: exec.shell
+        # NOT liveness. A first-run installer also answers 200 on /.
+        # Fails loudly if the upgrade landed on an empty/reset instance.
+        command: >-
+          test "$(sqlite3 {{ uptime_kuma_data_dir }}/kuma.db
+          'SELECT COUNT(*) FROM monitor;')" -gt 0
+        allow_shell: true
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: iiab
+        service: uptime-kuma
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ uptime_kuma_data_dir }}"
+        label: "pre-{{ upgrade_id }}"

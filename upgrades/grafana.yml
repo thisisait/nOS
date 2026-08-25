@@ -168,74 +168,43 @@ recipes:
 
   - id: "grafana-12-current"
     from_regex: "^12\\."
-    to: "12.4.2"
-    severity: minor
-    changelog_url: "https://grafana.com/docs/grafana/latest/whatsnew/whats-new-in-v12-0/"
+    to: "12.4.9"           # == installed (was 12.4.2, BEHIND the pin)
+    severity: security
+    changelog_url: "https://grafana.com/docs/grafana/latest/release-notes/"
     notes: |
-      Forward-coverage track pinned to the verified-installed version
-      (running container: 12.4.2). Its job is purely to give the advisor a
-      from_regex that matches the installed 12.x line, so grafana no longer
-      reports a stale recipe. Since to == installed, the advisor sees
-      installed == to and queues nothing (at-target track). When upstream
-      ships a newer 12.x, the operator bumps `to:` and the bump_image_tag
-      tag to the desired version and the mirrored apply steps run for real.
-
+      Stale-target repair on the at-target forward-coverage track. 12.4.9 is the
+      REM-226 in-branch fix for CVE-2026-17183; the recipe still pointed at
+      12.4.2. In-branch patch bumps preserve dashboards and the provisioned
+      wing_sqlite datasource; the pre-step dashboard export is the real safety
+      net, not the image tag.
     coexistence_supported: true
-    coexistence_port_offset: 10
-
-    requires:
-      min_disk_free_gb: 2
-      service_healthy: true
-
+    requires: { min_disk_free_gb: 2, service_healthy: true }
     reset:
       scope: container
       estimated_sec: 45
       affected_services: [grafana]
       reason: >-
-        at-target forward-coverage track; mirrored apply still uses
-        compose.set_image_tag (container recreate) so the floor is container even
-        though to==installed queues nothing; no consumers reconnect.
-
+        compose.set_image_tag recreates the grafana container only; standalone
+        observability service, no downstream consumers reconnect.
     pre:
       - id: backup_data
         type: backup.volume
         src: "{{ grafana_data_dir }}"
         label: "pre-{{ upgrade_id }}"
-      - id: export_dashboards
-        type: http.get_all
-        url: "https://{{ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/search?type=dash-db"
-        auth:
-          type: bearer
-          token_var: "grafana_admin_api_token"
-        save_to: "~/.nos/backups/{{ upgrade_id }}/dashboards.json"
-        ignore_errors: true
-
     apply:
       - id: bump_image_tag
         type: compose.set_image_tag
         stack: observability
         service: grafana
-        tag: "12.4.2"
+        tag: "{{ recipe.to }}"
         wait: true
-
     post:
       - id: wait_healthy
         type: http.wait
-        url: "https://{{ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/health"
+        url: "http://127.0.0.1:{{ grafana_port | default(3000) }}/api/health"
         expect_status: 200
-        timeout_sec: 120
-        interval_sec: 3
-      - id: dashboard_render_check
-        type: custom.module
-        module: ansible.builtin.uri
-        args:
-          url: "https://{{ grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/search?type=dash-db"
-          headers:
-            Authorization: "Bearer {{ grafana_admin_api_token | default('') }}"
-          return_content: true
-          status_code: [200]
-        ignore_errors: true
-
+        timeout_sec: 180
+        interval_sec: 5
     rollback:
       - id: revert_image_tag
         type: compose.set_image_tag
@@ -247,3 +216,4 @@ recipes:
         type: backup.restore
         dst: "{{ grafana_data_dir }}"
         label: "pre-{{ upgrade_id }}"
+

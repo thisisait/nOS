@@ -249,3 +249,74 @@ recipes:
           cp ~/.nos/backups/{{ upgrade_id }}/gitea.db
           {{ gitea_data_dir }}/gitea/gitea.db
         allow_shell: true
+
+  - id: "gitea-1.27-current"
+    from_regex: "^1\\.27\\."
+    to: "1.27.2"           # == installed
+    severity: security
+    changelog_url: "https://blog.gitea.com/"
+    notes: |
+      At-target forward coverage for the 1.27 line. In-branch patch bumps on the
+      same sqlite engine; forward-only migrations on first boot, same generous
+      health window as the 1.25→1.26 and 1.26→1.27 tracks.
+      Why this exists: with only ^1\.25\. and ^1\.26\. authored, an estate that
+      had already applied REM-137 read as "no upgrade path" — which is exactly
+      the state REM-178 warns about, where a recorded fix version below what the
+      estate runs re-opens a gap if anyone acts on it.
+      SHADOW-PIN: gitea_version is declared once (default.config.yml) since the
+      2026-08-05 shadow cleanup — bump it with any applied upgrade or the next
+      plain re-render reverts this.
+    coexistence_supported: false
+    requires: { min_disk_free_gb: 2, service_healthy: true }
+    reset:
+      scope: container
+      estimated_sec: 120
+      affected_services: [gitea]
+      reason: >-
+        Single-app recreate: only devops-gitea-1 bounces. Embedded sqlite in the
+        data volume, no shared DB, no consumer cascade.
+    pre:
+      - id: backup_db
+        type: exec.shell
+        command: >-
+          docker exec devops-gitea-1 sqlite3 /data/gitea/gitea.db
+          ".backup '/tmp/gitea-{{ upgrade_id }}.db'"
+          && docker cp devops-gitea-1:/tmp/gitea-{{ upgrade_id }}.db
+          ~/.nos/backups/{{ upgrade_id }}/gitea.db
+          && docker exec devops-gitea-1 rm -f /tmp/gitea-{{ upgrade_id }}.db
+        allow_shell: true
+      - id: backup_data
+        type: backup.volume
+        src: "{{ gitea_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitea
+        tag: "{{ recipe.to }}"
+        wait: true
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/healthz"
+        expect_status: 200
+        timeout_sec: 300
+        interval_sec: 5
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: devops
+        service: gitea
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ gitea_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: restore_db
+        type: exec.shell
+        command: >-
+          cp ~/.nos/backups/{{ upgrade_id }}/gitea.db
+          {{ gitea_data_dir }}/gitea/gitea.db
+        allow_shell: true

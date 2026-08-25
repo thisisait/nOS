@@ -201,3 +201,63 @@ recipes:
         type: backup.restore
         dst: "{{ freescout_data_dir }}"
         label: "pre-{{ upgrade_id }}"
+
+# (patterns ^2\.1\. and ^2\.2\. are disjoint, so order is not load-bearing).
+  - id: "freescout-2.2-current"
+    from_regex: "^2\\.2\\."
+    to: "2.2.5"            # == installed
+    severity: patch
+    changelog_url: "https://github.com/nfrastack/docker-freescout/releases"
+    notes: |
+      At-target forward coverage for the 2.2.x line reached by the applied
+      REM-218 hop. Same nfrastack org, same PHP 8.3 base — a patch bump inside
+      2.2 is a plain tag swap; Laravel migrations run on first boot.
+      NOTE: the app version behind this image tag is claimed 1.8.235 and is
+      UNVERIFIED until a converge — confirm with `tools/app-version.py` before
+      trusting a CVE claim keyed on the app version rather than the image tag.
+    coexistence_supported: false
+    requires: { min_disk_free_gb: 2, service_healthy: true }
+    reset:
+      scope: container
+      estimated_sec: 180
+      affected_services: [freescout]
+      reason: >-
+        Single-app recreate; only b2b-freescout-1 bounces. Shared MariaDB is a
+        dependency, not a restarted consumer.
+    pre:
+      - id: backup_db
+        type: exec.shell
+        command: >-
+          docker exec infra-mariadb-1 mariadb-dump -u root
+          -p"{{ mariadb_root_password }}" freescout
+          > ~/.nos/backups/{{ upgrade_id }}/freescout.sql
+        allow_shell: true
+      - id: backup_data
+        type: backup.volume
+        src: "{{ freescout_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: b2b
+        service: freescout
+        tag: "{{ recipe.to }}"
+        wait: true
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "http://127.0.0.1:{{ freescout_port | default(8090) }}/"
+        expect_status: 200
+        timeout_sec: 420
+        interval_sec: 5
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: b2b
+        service: freescout
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ freescout_data_dir }}"
+        label: "pre-{{ upgrade_id }}"

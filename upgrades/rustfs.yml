@@ -98,3 +98,157 @@ recipes:
           rm -rf {{ rustfs_data_dir }}
           mv {{ rustfs_data_dir }}.pre-{{ upgrade_id }} {{ rustfs_data_dir }}
         allow_shell: true
+
+# alpha recipe's regex to ^1\.0\.0-alpha\.(?!9[3-9]) if the operator wants
+# in-line alpha bumps to keep winning. As drafted the patterns are disjoint.
+  - id: "rustfs-alpha-to-beta"
+    from_regex: "^1\\.0\\.0-alpha\\.9[3-9]$"
+    to: "1.0.0-beta.11"    # == installed — NOT invented
+    severity: breaking
+    changelog_url: "https://github.com/rustfs/rustfs/releases"
+    notes: |
+      UNCOVERED LINE CHANGE. The shipped recipe tops out at 1.0.0-alpha.93; the
+      estate runs 1.0.0-beta.11 and nothing describes how it got there. A
+      pre-1.0 object store changing release line is breaking on principle — the
+      on-disk layout, the S3 auth path and the OIDC claim handling all moved
+      (the pin's own comment cites CVE-2025-68926, the alpha.91 multipart-auth
+      hardening #2411 and the OIDC claim fix #2386).
+
+      # TODO verify upstream — confirm against the rustfs release notes whether
+      # alpha.93 → beta.x migrates the on-disk object layout in place or
+      # requires a fresh volume with an S3-level copy. This recipe assumes the
+      # SAFE reading (fresh track + copy), which is why it is coexistence-only.
+
+      THIS SERVICE HOLDS THE NIGHTLY BACKUP TARGET. An in-place bump that
+      cannot read back its own buckets destroys the restore path at the same
+      moment it destroys the service. Queued: tag `rustfs-beta`, offset +10 —
+      stand beta beside alpha, verify bucket listing AND object readback of a
+      real backup artifact, then cut over.
+
+      CAVEAT: rustfs is not in `nos_coexistence`'s supported set (grafana /
+      postgres / mariadb / authentik / gitea / nextcloud / wordpress). The
+      queued row is a request for PREP; authoring the track is the work.
+    coexistence_supported: true
+    requires: { min_disk_free_gb: 20, service_healthy: true }
+    reset:
+      scope: stack
+      estimated_sec: 300
+      affected_services: [rustfs]
+      reason: >-
+        Escalated to stack: rustfs is the S3 endpoint the backup job and any
+        restic/rclone consumer writes to; a recreate that changes the release
+        line invalidates in-flight backup runs, not just HTTP sessions.
+    pre:
+      - id: backup_data
+        type: backup.volume
+        src: "{{ rustfs_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: record_bucket_inventory
+        type: exec.shell
+        # The pre-state the post-step must reproduce. Written to the backup dir
+        # so a failed cutover can be COMPARED, not guessed at.
+        command: >-
+          aws --endpoint-url http://127.0.0.1:{{ rustfs_api_port | default(9010) }}
+          s3 ls --recursive s3://
+          > ~/.nos/backups/{{ upgrade_id }}/rustfs-inventory.txt
+        allow_shell: true
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: iiab
+        service: rustfs
+        tag: "{{ recipe.to }}"
+        wait: true
+    post:
+      - id: wait_console
+        type: http.wait
+        url: "http://127.0.0.1:{{ rustfs_console_port | default(9001) }}/"
+        expect_status: 200
+        timeout_sec: 300
+        interval_sec: 5
+      - id: verify_inventory_matches
+        type: exec.shell
+        # Readback, not liveness. A rustfs that answers HTTP with an empty
+        # object store is the exact failure this whole recipe exists to catch.
+        command: >-
+          aws --endpoint-url http://127.0.0.1:{{ rustfs_api_port | default(9010) }}
+          s3 ls --recursive s3://
+          | diff - ~/.nos/backups/{{ upgrade_id }}/rustfs-inventory.txt
+        allow_shell: true
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: iiab
+        service: rustfs
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ rustfs_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+
+  - id: "rustfs-beta-current"
+    from_regex: "^1\\.0\\.0-beta\\."
+    to: "1.0.0-beta.11"    # == installed
+    severity: security
+    changelog_url: "https://github.com/rustfs/rustfs/releases"
+    notes: |
+      At-target forward coverage for the beta line the estate actually runs.
+      In-line beta bumps are a tag swap on the same on-disk layout. The
+      inventory diff is kept from the alpha→beta rung deliberately: on a
+      pre-1.0 store, "it started" is not evidence that "it still has the data".
+      Re-read this rung's severity when rustfs reaches 1.0.0 final — a stable
+      line deserves its own track, not this one widened.
+    coexistence_supported: false
+    requires: { min_disk_free_gb: 10, service_healthy: true }
+    reset:
+      scope: container
+      estimated_sec: 90
+      affected_services: [rustfs]
+      reason: >-
+        Same-line tag swap: only the rustfs container recreates. Backup
+        consumers reconnect on their next scheduled run.
+    pre:
+      - id: backup_data
+        type: backup.volume
+        src: "{{ rustfs_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+      - id: record_bucket_inventory
+        type: exec.shell
+        command: >-
+          aws --endpoint-url http://127.0.0.1:{{ rustfs_api_port | default(9010) }}
+          s3 ls --recursive s3://
+          > ~/.nos/backups/{{ upgrade_id }}/rustfs-inventory.txt
+        allow_shell: true
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: iiab
+        service: rustfs
+        tag: "{{ recipe.to }}"
+        wait: true
+    post:
+      - id: wait_console
+        type: http.wait
+        url: "http://127.0.0.1:{{ rustfs_console_port | default(9001) }}/"
+        expect_status: 200
+        timeout_sec: 300
+        interval_sec: 5
+      - id: verify_inventory_matches
+        type: exec.shell
+        command: >-
+          aws --endpoint-url http://127.0.0.1:{{ rustfs_api_port | default(9010) }}
+          s3 ls --recursive s3://
+          | diff - ~/.nos/backups/{{ upgrade_id }}/rustfs-inventory.txt
+        allow_shell: true
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: iiab
+        service: rustfs
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ rustfs_data_dir }}"
+        label: "pre-{{ upgrade_id }}"

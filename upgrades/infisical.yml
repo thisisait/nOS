@@ -175,85 +175,157 @@ recipes:
         dst: "{{ infisical_data_dir }}"
         label: "pre-{{ upgrade_id }}"
 
+# ^v?0\.160\. was too narrow; the pin is v0.162.19.
   - id: "infisical-current"
-    from_regex: "^v?0\\.160\\."   # ^v? — installed tag is v0.160.4; re-pinned from 0.159 (agent-drafted 2026-06-10)
-    to: "0.160.4"   # bare (no 'v') — siblings + advisor compare bare versions
+    from_regex: "^v?0\\.16[0-9]\\."
+    to: "v0.162.19"        # == installed
     severity: minor
     changelog_url: "https://github.com/Infisical/infisical/releases"
     notes: |
-      Forward-coverage track re-pinned to the verified-installed version
-      (running container = v0.160.4; was pinned to the 0.159.x line, so the
-      advisor saw "no matching recipe" — upgrade-architect gap, 2026-06-10).
-      Its job is to give the upgrade-advisor a matching from_regex for the
-      0.160.x line; because to == installed it is an at-target track and
-      queues nothing today. When upstream ships a newer release, the operator
-      bumps `to:` (and `infisical_version` in default.config.yml) and the same
-      mirrored apply/rollback shape carries the upgrade through.
-      # TODO verify upstream: the matrix's stable/latest metadata (0.80.0) is a
-      # stale naive-compare — installed already leads it; re-check the real
-      # upstream latest before bumping past 0.160.4.
-
+      At-target forward coverage widened from ^v?0\.160\. to the whole 0.16x
+      line. The pin is v0.162.19 (synced to the role default in the 2026-08-05
+      shadow cleanup, swept from v0.162.16 on 2026-08-11), so the narrow pattern
+      reported "no upgrade path" for a current vault.
+      Patch/minor bumps inside 0.16x run Knex migrations on boot against the
+      shared PostgreSQL. The encryption root key is env-supplied and unchanged;
+      the DB dump below is the only thing that makes a rollback real.
     coexistence_supported: false
-
-    requires:
-      min_disk_free_gb: 1
-      service_healthy: true
-      other_services_healthy: ["postgresql"]
-
+    requires: { min_disk_free_gb: 3, service_healthy: true }
     reset:
       scope: container
-      estimated_sec: 60
+      estimated_sec: 120
       affected_services: [infisical]
       reason: >-
-        At-target forward-coverage track (to == installed v0.160.4) with the same
-        apply shape: compose.set_image_tag recreates only the infisical
-        container; no shared-DB restart, no host-disruptive step, so container.
-
+        compose.set_image_tag recreates infra-infisical-1 only. PostgreSQL is a
+        dependency, not a bounced consumer — but every service resolving a
+        secret at converge time reads through this container, so schedule
+        outside a converge window.
     pre:
+      - id: backup_db
+        type: exec.shell
+        command: >-
+          docker exec infra-postgresql-1 pg_dump -U postgres -Fc infisical
+          > ~/.nos/backups/{{ upgrade_id }}/infisical.dump
+        allow_shell: true
       - id: backup_data
         type: backup.volume
         src: "{{ infisical_data_dir }}"
         label: "pre-{{ upgrade_id }}"
-      - id: backup_db
-        type: exec.shell
-        allow_shell: true
-        command: >-
-          docker exec {{ postgresql_container_name | default('nos-postgresql') }}
-          pg_dump -U postgres -d infisical --clean --if-exists
-          > {{ '~/.nos/backups/' + upgrade_id + '/infisical-db.sql' | expanduser }}
-
     apply:
       - id: bump_image_tag
         type: compose.set_image_tag
         stack: infra
         service: infisical
-        # infisical image tags ARE v-prefixed (infisical/infisical:v0.x) while
-        # `to:` is the bare version the advisor compares — so prepend the v here.
-        tag: "v{{ recipe.to }}"
+        tag: "{{ recipe.to }}"
         wait: true
-
     post:
       - id: wait_healthy
         type: http.wait
-        url: "https://{{ infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/status"
+        url: "http://127.0.0.1:{{ infisical_port | default(8075) }}/api/status"
         expect_status: 200
-        timeout_sec: 120
-        interval_sec: 3
-
+        timeout_sec: 300
+        interval_sec: 5
     rollback:
       - id: revert_image_tag
         type: compose.set_image_tag
         stack: infra
         service: infisical
         tag: "{{ recipe.from_version_resolved }}"
-        wait: false
+        wait: true
       - id: restore_db
         type: exec.shell
-        allow_shell: true
         command: >-
-          docker exec -i {{ postgresql_container_name | default('nos-postgresql') }}
-          psql -U postgres -d infisical
-          < {{ '~/.nos/backups/' + upgrade_id + '/infisical-db.sql' | expanduser }}
+          docker exec -i infra-postgresql-1 pg_restore -U postgres
+          -d infisical --clean --if-exists
+          < ~/.nos/backups/{{ upgrade_id }}/infisical.dump
+        allow_shell: true
+
+# ^v?0\.16[0-9]\. are disjoint, so the first-match rule is unambiguous.
+  - id: "infisical-0.80-to-0.160"
+    from_regex: "^v?0\\.(8[0-9]|9[0-9]|1[0-5][0-9])\\."
+    to: "0.160.4"          # existing matrix to_version — NOT invented
+    severity: breaking
+    changelog_url: "https://github.com/Infisical/infisical/releases"
+    notes: |
+      UNCOVERED LADDER JUMP. The shipped ladder runs 0.60 → 0.70 → 0.80 and then
+      stops; the next rung is ^v?0\.160\. A host anywhere in 0.80–0.159 has no
+      path at all, and the hop it needs spans ~80 minor releases of forward-only
+      Knex migrations on a SECRETS VAULT. That is breaking by blast radius even
+      though every individual release is labelled minor.
+
+      # TODO verify upstream — before this is committed, confirm against the
+      # Infisical release notes whether intermediate stops are MANDATORY (the
+      # engine's first-match rule means this recipe would otherwise jump the
+      # whole span in one boot) and whether the encryption-key / auth-method
+      # handling changed anywhere in the span. Do NOT invent intermediate
+      # versions; read them off the upstream release list and split this rung
+      # into as many hops as upstream requires.
+
+      COEXISTENCE, NOT IN-PLACE. A vault that half-migrates is a vault whose
+      secrets cannot be decrypted, and every converge reads through it. Queued:
+      tag `infisical-0160`, port offset +10. Stand the new track up beside the
+      old one, verify a decrypt of EVERY project, then cut over.
+
+      CAVEAT the operator must weigh: `nos_coexistence` ships supported tracks
+      for grafana / postgres / mariadb / authentik / gitea / nextcloud /
+      wordpress. Infisical is NOT among them, so the queued row is a REQUEST FOR
+      PREP — authoring the track is the work, not running it.
+    coexistence_supported: true
+    requires: { min_disk_free_gb: 5, service_healthy: true }
+    reset:
+      scope: stack
+      estimated_sec: 600
+      affected_services: [infisical]
+      reason: >-
+        Escalated to stack. The container floor is one recreate, but a vault
+        version change makes every secret-resolving consumer re-authenticate,
+        and a failed migration blocks the next converge estate-wide.
+    pre:
+      - id: backup_db
+        type: exec.shell
+        command: >-
+          docker exec infra-postgresql-1 pg_dump -U postgres -Fc infisical
+          > ~/.nos/backups/{{ upgrade_id }}/infisical.dump
+        allow_shell: true
+      - id: backup_data
+        type: backup.volume
+        src: "{{ infisical_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+    apply:
+      - id: bump_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: infisical
+        tag: "{{ recipe.to }}"
+        wait: true
+    post:
+      - id: wait_healthy
+        type: http.wait
+        url: "http://127.0.0.1:{{ infisical_port | default(8075) }}/api/status"
+        expect_status: 200
+        timeout_sec: 600
+        interval_sec: 10
+      - id: verify_secret_readback
+        type: exec.shell
+        # Proves DECRYPT works post-migration, not merely that HTTP answers.
+        command: >-
+          infisical secrets --projectId "{{ infisical_probe_project_id }}"
+          --env dev --silent | head -n 1
+        allow_shell: true
+    rollback:
+      - id: revert_image_tag
+        type: compose.set_image_tag
+        stack: infra
+        service: infisical
+        tag: "{{ recipe.from_version_resolved }}"
+        wait: true
+      - id: restore_db
+        type: exec.shell
+        command: >-
+          docker exec -i infra-postgresql-1 pg_restore -U postgres
+          -d infisical --clean --if-exists
+          < ~/.nos/backups/{{ upgrade_id }}/infisical.dump
+        allow_shell: true
       - id: restore_data
         type: backup.restore
         dst: "{{ infisical_data_dir }}"

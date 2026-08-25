@@ -139,35 +139,38 @@ recipes:
 
   - id: "gitlab-18-to-current"
     from_regex: "^18\\.([0-9]|[1-9][0-9])\\."
-    to: "18.10.3-ce.0"
+    to: "18.11.9-ce.0"     # == installed (was 18.10.3-ce.0, BEHIND the pin)
     severity: security
+    changelog_url: "https://about.gitlab.com/releases/"
     notes: |
-      Patch/minor bumps within 18.x. Security-flagged because 18.10.3
-      pins away from CVE-2026-5173 (websocket bypass CVSS 8.5),
-      CVE-2026-1092 (DoS), CVE-2025-12664 (GraphQL DoS).
-
+      Stale-target repair. The shipped `to` (18.10.3-ce.0) sits BELOW the pinned
+      18.11.9-ce.0, so the advisor was offering a downgrade across forward-only
+      background migrations — GitLab does not support that and it is not a
+      rollback either (rollback restores the data dir; this would not).
+      18.11.9 is the terminal 18.11.x build (REM-159: 18.11.8 was withdrawn
+      upstream). Patch/minor bumps inside 18.x are a single Omnibus recreate.
+      BEFORE the next MAJOR hop: `gitlab-rake db:background_migrations:status`
+      must read finished, per the 17.11→18.0 track's own rule.
     coexistence_supported: false
-
-    requires:
-      min_disk_free_gb: 5
-      service_healthy: true
-
+    requires: { min_disk_free_gb: 10, service_healthy: true }
     reset:
       scope: container
       estimated_sec: 540
       affected_services: [gitlab]
       reason: >-
-        Security patch/minor image bump via a single compose.set_image_tag
-        recreate of the gitlab container; pre-backup and http.wait readiness are
-        none-floor, no host or shared-stack restart.
-
+        Single compose.set_image_tag recreate of the self-contained Omnibus
+        container (PG+Redis bundled); backup and http.wait are none-floor.
     pre:
-      - id: gitlab_backup
+      - id: backup_app
         type: exec.shell
-        command: "docker exec devops-gitlab-1 gitlab-backup create STRATEGY=copy"
+        command: >-
+          docker exec devops-gitlab-1 gitlab-backup create
+          BACKUP={{ upgrade_id }} STRATEGY=copy
         allow_shell: true
-        timeout_sec: 1800
-
+      - id: backup_data
+        type: backup.volume
+        src: "{{ gitlab_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
     apply:
       - id: bump_image_tag
         type: compose.set_image_tag
@@ -175,15 +178,19 @@ recipes:
         service: gitlab
         tag: "{{ recipe.to }}"
         wait: true
-
     post:
-      - id: wait_readiness
+      - id: wait_healthy
         type: http.wait
         url: "http://127.0.0.1:{{ gitlab_http_port | default(8929) }}/-/readiness"
         expect_status: 200
         timeout_sec: 900
-        interval_sec: 15
-
+        interval_sec: 10
+      - id: background_migrations_drained
+        type: exec.shell
+        command: >-
+          docker exec devops-gitlab-1 gitlab-rake
+          db:background_migrations:status
+        allow_shell: true
     rollback:
       - id: revert_image_tag
         type: compose.set_image_tag
@@ -191,3 +198,8 @@ recipes:
         service: gitlab
         tag: "{{ recipe.from_version_resolved }}"
         wait: true
+      - id: restore_data
+        type: backup.restore
+        dst: "{{ gitlab_data_dir }}"
+        label: "pre-{{ upgrade_id }}"
+

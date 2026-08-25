@@ -120,110 +120,70 @@ recipes:
 
   - id: "mariadb-11-current"
     from_regex: "^11\\."
-    to: "11.8.6"
-    severity: patch
-    changelog_url: "https://mariadb.com/kb/en/mariadb-11-8-6-release-notes/"
-    release_date: "2026-05-30"
+    to: "11.8.8"           # == installed (was 11.8.6, BEHIND the pin)
+    severity: security
+    changelog_url: "https://mariadb.com/kb/en/release-notes/"
     notes: |
-      Forward-coverage track pinned to the verified-installed version
-      (running container infra-mariadb-1 -> mariadb:11.8.6). Because to ==
-      installed, the advisor sees installed == to and queues nothing; this
-      track exists purely to give the advisor a matching from_regex so the
-      mariadb recipe is no longer reported stale. In-major patch: the
-      mariadb-upgrade step is idempotent and is a no-op within 11.x, so it
-      stays. When upstream ships a newer 11.x, the operator bumps both `to:`
-      and the compose.set_image_tag `tag:` to the new version.
-
+      Stale-target repair. 11.8.8 carries REM-102 (CVE-2026-49261, and the
+      earlier CVE-2026-32710 / CVE-2026-3494 patched in 11.8.6); the recipe
+      still pointed one patch below the pin.
+      In-branch patch bumps on the 11.8 line: no mariadb-upgrade data-format
+      step, but `mariadb-upgrade` is run post-boot anyway because it is cheap
+      and idempotent. DO NOT widen this regex to cover a 11.8 → 12.x jump — the
+      11.4.10 FK-ALTER crash on Apple Silicon is the standing reason major
+      MariaDB moves get their own supervised rung.
     coexistence_supported: true
-    coexistence_port_offset: 100
-
-    requires:
-      min_disk_free_gb: 3
-      service_healthy: true
-
+    requires: { min_disk_free_gb: 10, service_healthy: true }
     reset:
       scope: stack
-      estimated_sec: 75
-      affected_services: [mariadb, wordpress, nextcloud, bookstack, firefly, erpnext, freescout, freepbx]
+      estimated_sec: 300
+      affected_services: [mariadb]
       reason: >-
-        In-major 11.x patch still does a full compose stop->image bump->up of the
-        shared MariaDB, taking the DB offline so all consumers reconnect.
-
+        Escalated to stack: the DB ENGINE restarts, so every MariaDB-backed
+        consumer (wordpress, nextcloud, bookstack, freescout, firefly,
+        hedgedoc...) drops its pool and reconnects.
     pre:
+      - id: backup_all_databases
+        type: exec.shell
+        command: >-
+          docker exec infra-mariadb-1 mariadb-dump -u root
+          -p"{{ mariadb_root_password }}" --all-databases --single-transaction
+          --routines --events
+          > ~/.nos/backups/{{ upgrade_id }}/mariadb-all.sql
+        allow_shell: true
       - id: backup_data
         type: backup.volume
         src: "{{ mariadb_data_dir }}"
         label: "pre-{{ upgrade_id }}"
-      - id: sql_dump_all
-        type: exec.shell
-        allow_shell: true
-        command: >-
-          docker exec {{ mariadb_container_name | default('nos-mariadb') }}
-          mariadb-dump -uroot -p"{{ mariadb_root_password }}"
-          --all-databases --events --routines --triggers
-          > {{ '~/.nos/backups/' + upgrade_id + '/mariadb-all.sql' | expanduser }}
-
     apply:
-      - id: stop_service
-        type: compose.restart_service
-        stack: infra
-        service: mariadb
-        action: stop
       - id: bump_image_tag
         type: compose.set_image_tag
         stack: infra
         service: mariadb
-        tag: "11.8.6"
-        wait: false
-      - id: start_service
-        type: compose.restart_service
-        stack: infra
-        service: mariadb
-        action: up
+        tag: "{{ recipe.to }}"
         wait: true
+    post:
       - id: run_mariadb_upgrade
         type: exec.shell
-        allow_shell: true
-        # Idempotent: mariadb-upgrade exits 0 and prints "already upgraded"
-        # on a repeat run; a no-op within 11.x.
         command: >-
-          docker exec {{ mariadb_container_name | default('nos-mariadb') }}
-          mariadb-upgrade -uroot -p"{{ mariadb_root_password }}"
-          --force
-
-    post:
-      - id: wait_ready
-        type: http.wait
-        url: "tcp://{{ mariadb_host | default('localhost') }}:{{ mariadb_port | default(3306) }}"
-        timeout_sec: 90
-        interval_sec: 2
-      - id: verify_version
+          docker exec infra-mariadb-1 mariadb-upgrade -u root
+          -p"{{ mariadb_root_password }}"
+        allow_shell: true
+      - id: verify_select
         type: exec.shell
-        allow_shell: true
         command: >-
-          docker exec {{ mariadb_container_name | default('nos-mariadb') }}
-          mariadb -uroot -p"{{ mariadb_root_password }}"
-          -e "SELECT VERSION();"
-
+          docker exec infra-mariadb-1 mariadb -u root
+          -p"{{ mariadb_root_password }}" -e "SELECT VERSION();"
+        allow_shell: true
     rollback:
-      - id: stop_service
-        type: compose.restart_service
-        stack: infra
-        service: mariadb
-        action: stop
       - id: revert_image_tag
         type: compose.set_image_tag
         stack: infra
         service: mariadb
         tag: "{{ recipe.from_version_resolved }}"
-        wait: false
+        wait: true
       - id: restore_data
         type: backup.restore
         dst: "{{ mariadb_data_dir }}"
         label: "pre-{{ upgrade_id }}"
-      - id: start_service
-        type: compose.restart_service
-        stack: infra
-        service: mariadb
-        action: up
-        wait: true
+
