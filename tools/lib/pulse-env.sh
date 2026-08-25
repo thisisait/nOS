@@ -41,3 +41,22 @@ resolve_pulse_env_json() {
     PYTHONPATH="${_PULSE_PKG_DIR}${PYTHONPATH:+:$PYTHONPATH}" \
         python3 -m pulse.secrets "$@"
 }
+
+# pulse_token_preflight <env-json>
+#
+# Ask the ONE question the old liveness probe could not: can THIS client mint
+# a token from Authentik RIGHT NOW. `/-/health/live/` returning 200 proves the
+# server answers; every agent runner shipped with only that check, so a
+# pre-flight printed "✓ Authentik … liveness → 200" and the run died moments
+# later on `invalid_grant` — a check that cannot fail the way it matters.
+#
+# ZERO-LOGIC SHIM, like resolve_pulse_env_json above and for the same reason:
+# the grant check lives in pulse/secrets.py::token_preflight beside the
+# resolver it depends on. Exit codes: 0 = grant OK · 1 = grant refused or
+# server unreachable · 2 = env carries no usable credential (fail-closed) ·
+# 3 = unresolvable secret reference. The secret never appears on argv, in a
+# message, or in a log line.
+pulse_token_preflight() {
+    printf '%s' "$1" | PYTHONPATH="${_PULSE_PKG_DIR}${PYTHONPATH:+:$PYTHONPATH}" \
+        python3 -m pulse.secrets --token-preflight
+}

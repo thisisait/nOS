@@ -114,12 +114,94 @@ def resolve_env(env: dict) -> dict:
     return out
 
 
+def token_preflight(env: dict) -> tuple[int, str]:
+    """Ask Authentik the ONE question a liveness probe cannot: can THIS
+    client mint a token RIGHT NOW.
+
+    Found 2026-08-25: every agent runner pre-flighted with
+    `GET /-/health/live/`, printed `✓ … liveness → 200`, and handed the job
+    to pulse-run-agent.sh — whose first act is a client_credentials grant
+    that can die on `invalid_grant`. The server answering says nothing about
+    whether the credential the estate holds is the one the provider holds,
+    and nothing on the estate compared the two. A check that cannot fail the
+    way it matters is the estate's signature defect.
+
+    Takes the job env (references still welcome — they are resolved here,
+    through the same code path the daemon uses), performs the actual grant,
+    and returns `(exit_code, message)`:
+
+        0 — HTTP 200; the credential is the one Authentik accepts
+        1 — the grant was REFUSED (or the server did not answer) — message
+            carries the client_id and HTTP status, never the secret
+        2 — the env carries no usable credential / no NOS_AUTHENTIK_URL —
+            fail-closed, a job this function cannot vouch for does not run
+
+    (Unresolvable references raise UnresolvableSecretError exactly like
+    resolve_env — the CLI maps that to exit 3, same as `--exports`.)
+
+    Lives HERE, beside the resolver, for the same reason the resolver does:
+    one implementation, every caller (tools/lib/pulse-env.sh is a zero-logic
+    shim; a jq-and-curl copy in shell would be the second implementation
+    that agrees today and drifts tomorrow). stdlib only — urllib is the
+    whole HTTP client, and the secret never touches argv or a log line.
+    """
+    env = resolve_env(env)  # may raise UnresolvableSecretError — see CLI
+    cid = env.get("NOS_AGENT_CLIENT_ID") or env.get("NOS_CONDUCTOR_CLIENT_ID") or ""
+    secret = (env.get("NOS_AGENT_CLIENT_SECRET")
+              or env.get("NOS_CONDUCTOR_CLIENT_SECRET") or "")
+    ak_url = env.get("NOS_AUTHENTIK_URL", "")
+    if not cid or not secret:
+        return 2, ("job env carries no agent client credential "
+                   "(NOS_AGENT_CLIENT_ID/SECRET) — refusing to vouch for it")
+    if not ak_url:
+        return 2, ("NOS_AUTHENTIK_URL is empty — cannot verify the client "
+                   "credential, refusing to proceed on hope")
+
+    import ssl
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
+    token_url = ak_url.rstrip("/") + "/application/o/token/"
+    body = urllib.parse.urlencode({
+        "grant_type": "client_credentials",
+        "client_id": cid,
+        "client_secret": secret,
+    }).encode()
+    # Local estates terminate TLS with mkcert; the runners' curl used -k.
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    try:
+        with urllib.request.urlopen(
+            urllib.request.Request(token_url, data=body, method="POST"),
+            timeout=15, context=ctx,
+        ) as resp:
+            code = resp.status
+    except urllib.error.HTTPError as exc:
+        code = exc.code
+    except (urllib.error.URLError, TimeoutError, OSError):
+        code = 0
+
+    if code == 200:
+        return 0, (f"✓ Authentik token grant for {cid} → 200 "
+                   "(credential verified, not just liveness)")
+    shown = code if code else "no answer"
+    return 1, (f"Authentik {token_url} returned {shown} for client_id={cid} "
+               "— this client cannot obtain a token. 400 means the provider "
+               "refused the credential the estate holds (store: "
+               f"{secrets_path()} vs the provider's client_secret); "
+               "'no answer' means the server is unreachable.")
+
+
 # ── CLI — the shell callers' entry point ─────────────────────────────────
 #
 #   printf '%s' "$JOB_ENV_JSON" | python3 -m pulse.secrets            # JSON out
 #   printf '%s' "$JOB_ENV_JSON" | python3 -m pulse.secrets --exports  # export lines
+#   printf '%s' "$JOB_ENV_JSON" | python3 -m pulse.secrets --token-preflight
 #
-# Exit codes: 0 resolved · 2 malformed input · 3 unresolvable reference.
+# Exit codes: 0 resolved · 2 malformed input · 3 unresolvable reference;
+# --token-preflight adds 1 = the grant was refused / server unreachable.
 # stdout carries NOTHING on failure — a partial env is worse than none.
 
 _IDENT = r"^[A-Za-z_][A-Za-z0-9_]*$"
@@ -132,13 +214,20 @@ def _main(argv: list[str]) -> int:
     import sys
 
     exports = False
+    preflight = False
     for arg in argv:
         if arg == "--exports":
             exports = True
+        elif arg == "--token-preflight":
+            preflight = True
         else:
             print(f"pulse.secrets: unknown argument {arg!r} "
-                  "(only --exports)", file=sys.stderr)
+                  "(only --exports / --token-preflight)", file=sys.stderr)
             return 2
+    if exports and preflight:
+        print("pulse.secrets: --exports and --token-preflight are separate "
+              "calls", file=sys.stderr)
+        return 2
 
     raw = sys.stdin.read().strip()
     if raw in ("", "null", "[]"):
@@ -158,6 +247,15 @@ def _main(argv: list[str]) -> int:
 
     logging.basicConfig(stream=sys.stderr, level=logging.WARNING,
                         format="pulse.secrets: %(message)s")
+    if preflight:
+        try:
+            rc, message = token_preflight(env)
+        except UnresolvableSecretError as exc:
+            print(f"pulse.secrets: {exc}", file=sys.stderr)
+            return 3
+        print(message, file=(sys.stdout if rc == 0 else sys.stderr))
+        return rc
+
     try:
         resolved = resolve_env(env)
     except UnresolvableSecretError as exc:

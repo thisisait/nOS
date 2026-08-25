@@ -24,7 +24,7 @@
 #   NOS_REPO_ROOT) + the per-run NOS_MIGRATION_SERVICE / NOS_MIGRATION_RECIPE_ID.
 #
 # Same pre-flight as tools/run-upgrade-architect.sh (Bone health + pulse_jobs
-# row + Authentik liveness), post-flight verifier, markdown report to
+# row + Authentik token grant), post-flight verifier, markdown report to
 # ~/.nos/migration-author-report-<ts>.md.
 #
 # The migration-author's Pulse row is paused=1 by default; this runs it
@@ -134,12 +134,12 @@ if [[ "$RUNTIME" == agentkit ]]; then
     echo "✓ AgentKit runner: $RUN_AGENT_BIN"
 fi
 
-AK_URL=$(echo "$JOB_ENV_JSON" | jq -r '.NOS_AUTHENTIK_URL // ""')
-if [[ -n "$AK_URL" ]]; then
-    AK_HEALTH=$(curl -sS -k -o /dev/null -w "%{http_code}" "$AK_URL/-/health/live/" 2>/dev/null || echo "000")
-    [[ "$AK_HEALTH" == "200" || "$AK_HEALTH" == "204" ]] || _die "Authentik $AK_URL liveness returned $AK_HEALTH"
-    echo "✓ Authentik $AK_URL liveness → $AK_HEALTH"
-fi
+# Token-grant pre-flight (shared: tools/lib/pulse-env.sh). Liveness alone was
+# this pre-flight's signature defect — the server answered 200 while THIS
+# client's credential died on invalid_grant moments later. Now the check IS
+# a client_credentials grant for the job's own client, and it fails closed.
+pulse_token_preflight "$JOB_ENV_JSON" \
+    || _die "Authentik token-grant pre-flight failed (see message above)"
 
 DRAFTS_BEFORE=$(sqlite3 "$WING_DB" "SELECT COUNT(*) FROM migrations_authored WHERE review_status='draft';" 2>/dev/null || echo "?")
 echo "✓ Migrations currently in draft: $DRAFTS_BEFORE"

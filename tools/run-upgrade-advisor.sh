@@ -10,7 +10,7 @@
 # `ansible-playbook main.yml --tags upgrade`.
 #
 # Same shape as tools/run-scout.sh / run-remediator.sh: pre-flight (Bone health
-# + pulse_jobs row + Authentik liveness), env from pulse_jobs.env_json,
+# + pulse_jobs row + Authentik token grant), env from pulse_jobs.env_json,
 # post-flight verifier, markdown report to ~/.nos/upgrade-advisor-report-<ts>.md.
 #
 # The advisor's Pulse row is paused=1 by default; this runs it off-schedule.
@@ -81,12 +81,12 @@ JOB_PAUSED=$(echo "$PULSE_JOB_ROW" | jq -r '.[0].paused')
 [[ -x "$JOB_CMD" ]] || _die "registered command is not executable: $JOB_CMD"
 echo "✓ pulse_jobs row found: $JOB_ID (paused=$JOB_PAUSED — manual invocation overrides)"
 
-AK_URL=$(echo "$JOB_ENV_JSON" | jq -r '.NOS_AUTHENTIK_URL // ""')
-if [[ -n "$AK_URL" ]]; then
-    AK_HEALTH=$(curl -sS -k -o /dev/null -w "%{http_code}" "$AK_URL/-/health/live/" 2>/dev/null || echo "000")
-    [[ "$AK_HEALTH" == "200" || "$AK_HEALTH" == "204" ]] || _die "Authentik $AK_URL liveness returned $AK_HEALTH"
-    echo "✓ Authentik $AK_URL liveness → $AK_HEALTH"
-fi
+# Token-grant pre-flight (shared: tools/lib/pulse-env.sh). Liveness alone was
+# this pre-flight's signature defect — the server answered 200 while THIS
+# client's credential died on invalid_grant moments later. Now the check IS
+# a client_credentials grant for the job's own client, and it fails closed.
+pulse_token_preflight "$JOB_ENV_JSON" \
+    || _die "Authentik token-grant pre-flight failed (see message above)"
 
 QUEUED_BEFORE=$(sqlite3 "$WING_DB" "SELECT COUNT(*) FROM upgrades_planned WHERE status='planned';" 2>/dev/null || echo "?")
 echo "✓ Upgrades currently queued: $QUEUED_BEFORE"

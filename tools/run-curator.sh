@@ -4,7 +4,7 @@
 #
 # Fires the curator agent's `curator-sweep` Pulse job on demand. Same shape
 # as tools/run-librarian.sh: pre-flight (KEAP health + frontier peek +
-# pulse_jobs row + Authentik liveness), env resolution from
+# pulse_jobs row + Authentik token grant), env resolution from
 # pulse_jobs.env_json, post-flight verifier (events + frontier delta),
 # markdown report to ~/.nos/curator-report-<ts>.md.
 #
@@ -111,15 +111,12 @@ INTAKE_COUNT=$(_frontier_count)
 [[ "$INTAKE_COUNT" =~ ^[0-9]+$ ]] || _die "KEAP frontier count unreadable — check $KEAP_URL reachability, the /agent/v1/curator/frontier endpoint, and KEAP_AGENT_TOKEN_RO (auth 401/403 returns a non-numeric body)."
 echo "✓ Frontier (nodes L>=3 eligible for a sweep, cooldown-skipped): $INTAKE_COUNT"
 
-AK_URL=$(echo "$JOB_ENV_JSON" | jq -r '.NOS_AUTHENTIK_URL // ""')
-if [[ -n "$AK_URL" ]]; then
-    AK_HEALTH=$(curl -sS -k -o /dev/null -w "%{http_code}" "$AK_URL/-/health/live/" 2>/dev/null || echo "000")
-    if [[ "$AK_HEALTH" == "200" || "$AK_HEALTH" == "204" ]]; then
-        echo "✓ Authentik $AK_URL liveness → $AK_HEALTH"
-    else
-        _die "Authentik $AK_URL liveness returned $AK_HEALTH"
-    fi
-fi
+# Token-grant pre-flight (shared: tools/lib/pulse-env.sh). Liveness alone was
+# this pre-flight's signature defect — the server answered 200 while THIS
+# client's credential died on invalid_grant moments later. Now the check IS
+# a client_credentials grant for the job's own client, and it fails closed.
+pulse_token_preflight "$JOB_ENV_JSON" \
+    || _die "Authentik token-grant pre-flight failed (see message above)"
 
 if [[ "$DRY_RUN" == "1" ]]; then
     echo
