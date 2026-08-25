@@ -162,6 +162,17 @@ _FLOOR = re.compile(r"^v?(\d+(?:\.\d+)+)\s*\+$")
 _COMMENTED = re.compile(r"^(?:version-)?v?(\d+(?:\.\d+)+(?:-[a-z0-9.]+)?)\s*(?:\(|--\s)")
 _PREFIXED = re.compile(r"^version-(\d+(?:\.\d+)+(?:-[a-z0-9.]+)?)$", re.IGNORECASE)
 
+# A row can ask for something a VERSION COMPARISON cannot answer. REM-188 is
+# the worked example: "SAME SEMVER, DIFFERENT IMAGE — base-layer drift a
+# version pin cannot express", fix_version "11.8.8 (re-pull)". `_COMMENTED`
+# read the 11.8.8 head and this probe reported "still pending; already runs
+# 11.8.8 >= 11.8.8 (re-pull)" — a category error: satisfying the version is
+# the row's PREMISE, not its remedy. Judging such a row means reading the
+# registry's current digest for the tag, which is a network act this offline
+# reader does not perform; the honest verdict is a named refusal.
+_DIGEST_SHAPED = re.compile(
+    r"\b(re-pull|digests?|base[- ]layer|same[- ]semver)\b", re.IGNORECASE)
+
 
 def read_fix(raw: str) -> tuple["Version", bool] | None:
     """`fix_version` -> (version, is_floor), or None when it is not a version.
@@ -489,7 +500,24 @@ def probe_queue_vs_running(images: dict[str, str], res: ScanResult) -> None:
             continue
         name, image = hit
         tag = image_tag(image)
-        parsed = read_fix(str(fix))
+        if _DIGEST_SHAPED.search(str(fix)):
+            res.skip("row wants a digest comparison, not a version — not judged")
+            continue
+        # `security_floor` is the machine-comparable half of a prose
+        # `fix_version`. REM-159 is why it exists: one field carried a security
+        # floor AND a regression floor ("19.2.2-ce.0 (or 18.11.9-ce.0 for the
+        # non-security regression fixes only)"), and the closing pass picked the
+        # branch the row's own text disclaims. When the writer has said which
+        # version is load-bearing, read that and nothing else.
+        floor_field = item.get("security_floor")
+        if floor_field is not None:
+            parsed = read_fix(str(floor_field))
+            if parsed is None:
+                res.skip("security_floor present but not strictly readable")
+                continue
+        else:
+            parsed = read_fix(str(fix))
+        fix = floor_field if floor_field is not None else fix
         have = read_tag(tag or "")
         if tag is None or parsed is None or have is None:
             res.skip("queue or image version not strictly numeric")

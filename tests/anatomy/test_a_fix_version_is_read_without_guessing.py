@@ -106,6 +106,58 @@ def test_the_tag_reader_allows_only_the_version_prefix(ds):
     assert ds.read_tag("build-42") is None
 
 
+def test_a_digest_shaped_row_is_refused_by_name(ds):
+    """REM-188's shape: "11.8.8 (re-pull)" — satisfying the version is the
+    row's PREMISE, not its remedy ("SAME SEMVER, DIFFERENT IMAGE"). Comparing
+    versions on it manufactured "already runs 11.8.8 >= 11.8.8 (re-pull)",
+    a category error measured live on 2026-08-25. The probe must skip these
+    with a named reason before `read_fix` ever sees them.
+    """
+    hit = ["11.8.8 (re-pull)",
+           "n/a (config change) -- record deployed digests",
+           "pin by digest",
+           "same-semver base-layer refresh"]
+    miss = ["8.6.3 (re-pin off EOL 8.0 branch)",   # re-PIN is a version act
+            "version-6.6.3 (security floor) -- recommend version-6.6.4",
+            "19.2.2-ce.0 (or 18.11.9-ce.0 for the non-security regression fixes only)"]
+    for raw in hit:
+        assert ds._DIGEST_SHAPED.search(raw), f"digest shape not recognised: {raw!r}"
+    for raw in miss:
+        assert not ds._DIGEST_SHAPED.search(raw), (
+            f"{raw!r} wrongly classed as digest-shaped — that would silence a "
+            f"version comparison this probe is allowed to make"
+        )
+    src = (REPO / "tools/discovery-scan.py").read_text(encoding="utf-8")
+    assert "row wants a digest comparison" in src, (
+        "the digest refusal must be a NAMED skip reason, not the generic bucket"
+    )
+
+
+def test_security_floor_outranks_fix_version_prose(ds):
+    """REM-159's lesson: one fix_version carried a security floor AND a
+    regression floor, and the closing pass picked the branch the row's own
+    text disclaims. When a row carries `security_floor`, the probe must read
+    that field and refuse the row if it is not strictly readable — never fall
+    back to guessing at the prose.
+    """
+    src = (REPO / "tools/discovery-scan.py").read_text(encoding="utf-8")
+    assert 'item.get("security_floor")' in src, (
+        "the probe no longer consults security_floor — a prose fix_version "
+        "naming two versions is back to being a coin toss"
+    )
+    assert "security_floor present but not strictly readable" in src, (
+        "an unreadable security_floor must SKIP, not fall back to the prose"
+    )
+    # The field itself parses with the same strict reader — a suffixed exact
+    # version is readable (the suffix is carried, not discarded), and cores
+    # that differ decide outright, so "18.11.9-ce.0" < "19.2.2-ce.0" holds.
+    v = ds.read_fix("19.2.2-ce.0")
+    assert v is not None and v[0].core == (19, 2, 2)
+    have = ds.read_tag("18.11.9-ce.0")
+    assert have is not None
+    assert ds.compare(have, v[0]) == -1
+
+
 def test_a_floor_is_not_branched_on(ds):
     """The comparison must stay inequality-based rather than special-casing.
 
