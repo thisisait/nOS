@@ -589,3 +589,42 @@ def test_the_sender_lets_each_caller_name_itself():
     assert 'os-resume' in src, (
         "the default must stay os-resume so the caller it was written for "
         "keeps working unchanged")
+
+
+def test_every_caller_of_the_shared_sender_names_itself():
+    """The half that stops the population regrowing.
+
+    `nos-notify.sh` now ACCEPTS a caller identity, and that alone changes
+    nothing: until each caller passes one, new rows keep arriving stamped
+    `os-resume` and the reconciler keeps refusing them as a shared sender —
+    correctly, and for ever.
+
+    Measured 2026-08-25: five emitters shared one identity and 33 live rows
+    wore it. Four of them are Pulse jobs declaring `NOS_NOTIFY_BIN` in a plugin
+    manifest; this pins that declaring the BIN without the identity is
+    incomplete.
+    """
+    import yaml as _yaml
+
+    offenders: list[str] = []
+    for manifest in sorted((REPO / "files/anatomy/plugins").glob("*/plugin.yml")):
+        raw = manifest.read_text(encoding="utf-8")
+        if "NOS_NOTIFY_BIN" not in raw:
+            continue
+        doc = _yaml.safe_load(raw) or {}
+        for job in (doc.get("pulse", {}) or {}).get("jobs", []) or []:
+            env = job.get("env") or {}
+            if "NOS_NOTIFY_BIN" not in env:
+                continue
+            missing = [k for k in ("NOS_NOTIFY_ORIGIN", "NOS_NOTIFY_ACTOR") if k not in env]
+            if missing:
+                offenders.append(
+                    f"{manifest.parent.name}/{job.get('name', '?')} declares "
+                    f"NOS_NOTIFY_BIN without {', '.join(missing)}")
+
+    assert not offenders, (
+        "these jobs send through the shared notifier without saying who they "
+        "are, so their rows land as `os-resume`:\n  " + "\n  ".join(offenders)
+        + "\n(bin/reconcile-inbox.php keys a restatement class on "
+          "(origin_plugin, actor_id); a borrowed identity makes the class "
+          "unattributable and the rows unretirable)")

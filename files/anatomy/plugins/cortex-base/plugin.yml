@@ -175,6 +175,12 @@ pulse:
         CORTEX_API_URL: "{{ cortex_fanout_url }}"
         CORTEX_AGENT_TOKEN_RW: "{{ cortex_rw_token }}"
         NOS_NOTIFY_BIN: "{{ playbook_dir }}/files/anatomy/scripts/nos-notify.sh"
+        # Its OWN identity. nos-notify.sh stamped `os-resume` for every
+        # caller until 2026-08-25, so this job's rows landed indistinguishable
+        # from an OS-update settle — and bin/reconcile-inbox.php keys a
+        # restatement class on exactly that pair.
+        NOS_NOTIFY_ORIGIN: "cortex"
+        NOS_NOTIFY_ACTOR: "pulse:cortex-fs-sync"
 
     # ── the measurement ──────────────────────────────────────────────────────
     # Reads BOTH corpora over /agent/v1 only and records one night in the ledger.
@@ -211,3 +217,9 @@ pulse:
         CORTEX_API_URL: "{{ cortex_fanout_url }}"
         CORTEX_AGENT_TOKEN_RO: "{{ cortex_ro_token }}"
         NOS_NOTIFY_BIN: "{{ playbook_dir }}/files/anatomy/scripts/nos-notify.sh"
+        # Its OWN identity. nos-notify.sh stamped `os-resume` for every
+        # caller until 2026-08-25, so this job's rows landed indistinguishable
+        # from an OS-update settle — and bin/reconcile-inbox.php keys a
+        # restatement class on exactly that pair.
+        NOS_NOTIFY_ORIGIN: "cortex"
+        NOS_NOTIFY_ACTOR: "pulse:cortex-corpus-diff"
