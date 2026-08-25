@@ -375,10 +375,36 @@ function declared_repeaters(SQLite3 $db): array
 			'key'        => (string) $r['declared_key'],
 			'uuid'       => (string) $r['uuid'],
 			'created_at' => (string) $r['created_at'],
+			// How many distinct message shapes wear this identity. >1 means a
+			// shared sender — see verdict_restated. The prefix is coarse on
+			// purpose: "Backup OK - 14 sources, 615.0 MB" and "…617.6 MB" are
+			// one shape, "S2 diff: …" and "nOS macOS update settled…" are two.
+			'shared'     => (int) shape_count($db, $r['origin_plugin'], $r['actor_id']),
 		];
 	}
 	return $out;
 }
+
+/** Distinct message shapes under one (origin_plugin, actor_id). */
+function shape_count(SQLite3 $db, ?string $origin, ?string $actor): int
+{
+	// SHAPE = the title with its DIGITS REMOVED. A restatement class differs by
+	// numbers — "Backup OK - 14 sources, 615.0 MB" and "…617.6 MB" — and never
+	// by words. The first cut compared the first 18 characters and called
+	// "Backup OK - 1" and "Backup OK - 2" two different shapes, refusing a
+	// class it should have accepted: a heuristic that fails CLOSED is still a
+	// heuristic that is wrong. Digits are the thing that varies; strip them.
+	$stmt = $db->prepare(
+		"SELECT COUNT(DISTINCT replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(title,'0',''),'1',''),'2',''),'3',''),'4',''),'5',''),'6',''),'7',''),'8',''),'9','')) FROM notifications
+		  WHERE ifnull(origin_plugin,'') = ifnull(:o,'')
+		    AND ifnull(actor_id,'')      = ifnull(:a,'')"
+	);
+	$stmt->bindValue(':o', $origin, SQLITE3_TEXT);
+	$stmt->bindValue(':a', $actor, SQLITE3_TEXT);
+	$row = $stmt->execute()->fetchArray(SQLITE3_NUM);
+	return $row === false ? 99 : (int) $row[0];   // unreadable => refuse
+}
+
 
 /**
  * Has this row been RESTATED by a later one from the same emitter?
@@ -397,6 +423,31 @@ function verdict_restated(array $n, array $repeaters): array
 		return ['action' => 'leave', 'reason' => 'emitter has not declared that it restates itself'];
 	}
 	$newest = $repeaters[$pair];
+	// `> 1`, not `!empty()`. The first cut refused every class, because
+	// !empty(1) is TRUE in PHP — a guard that fires on the healthy case is
+	// a guard that stops the feature. Caught by running it, not reading it.
+	if (($newest['shared'] ?? 99) > 1) {
+		// AN IDENTITY SHARED BY DIFFERENT MESSAGE SHAPES IS NOT A CLASS.
+		// Found by the night of 2026-08-24: `nos-notify.sh` hardcodes
+		// origin_plugin `os-resume` / actor `agent:os-resume` for EVERY caller,
+		// and it is the shared sender for the KEAP consolidator, the KEAP
+		// linter, the cortex corpus diff and a readiness probe as well as the
+		// os-update settle it was named for. Thirty-three rows wear a borrowed
+		// identity.
+		//
+		// This function keys the class on that identity. So the first real
+		// `os-resume-settled` emission would have retired S2-diff findings and
+		// KEAP batches on the strength of a declaration that has nothing to do
+		// with them — silently, in a tool the operator now runs routinely.
+		//
+		// Refuse, and say so. The detection is not inference: it is more than
+		// one distinct title shape under one identity, which no genuine
+		// restatement class produces.
+		return ['action' => 'leave',
+		        'reason' => "identity {$pair} carries {$newest['shared']} distinct "
+		                  . "message shapes — it is a shared sender, not a class; "
+		                  . "the emitters must carry their own origin_plugin"];
+	}
 	if ($newest['uuid'] === $n['uuid']) {
 		return ['action' => 'leave', 'reason' => 'this IS the latest word from its emitter'];
 	}
@@ -470,10 +521,19 @@ foreach ($rows as $n) {
 		$v = verdict_backup($n, $backupStatusPath);
 	} elseif ($origin === 'agent-inbox' && isset($n['metadata']['question_uuid'])) {
 		$v = verdict_question($db, $n);
-	} elseif ($hasSupersede && ($v = verdict_restated($n, $repeaters))['action'] === 'supersede') {
+	} elseif ($hasSupersede
+	          && ($v = verdict_restated($n, $repeaters))
+	          && ($v['action'] === 'supersede' || isset($repeaters[($n['origin_plugin'] ?? '') . '|' . ($n['actor_id'] ?? '')]))) {
 		// LAST, on purpose. The classifiers above answer "did the condition
 		// clear", which is a stronger statement than "the sender said it
 		// again" — a row they can decide should be decided by them.
+		//
+		// A `leave` from a DECLARED identity is carried through rather than
+		// folded into `unclassified`, so its reason is printed. The first cut
+		// dropped it, and the shared-sender refusal — the whole point of that
+		// guard — was invisible: the tool declined to act and said nothing,
+		// which is the defect this file exists to refuse.
+		$noop = null;
 	} else {
 		$unclassified++;
 		echo "UNCLASSIFIED  {$n['uuid']}  [{$n['severity']}] {$title} — left for the operator\n";

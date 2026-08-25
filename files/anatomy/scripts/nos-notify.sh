@@ -31,6 +31,22 @@ body="${3:-}"
 channels="${4:-wing-inbox,ntfy}"
 supersede="${5:-}"
 
+# WHO IS SENDING. This script hardcoded `os-resume` for every caller until
+# 2026-08-25, and it is the shared sender for at least five of them: the
+# os-update settle it is named for, the cortex corpus diff, the KEAP
+# consolidator, the KEAP linter and a readiness probe. Thirty-three rows in the
+# live inbox wear a borrowed identity, and `bin/reconcile-inbox.php` keys a
+# restatement CLASS on exactly that identity — so the first keyed os-resume
+# emission would have retired thirty-five unrelated rows. Measured, simulated,
+# and now refused by that tool; this is the other half, so new rows stop
+# arriving mislabelled.
+#
+# The defaults keep the os-update caller working unchanged. Every other caller
+# should set these — a Pulse job does it in its `env:` block beside
+# NOS_NOTIFY_BIN.
+origin="${NOS_NOTIFY_ORIGIN:-os-resume}"
+actor="${NOS_NOTIFY_ACTOR:-agent:os-resume}"
+
 for t in jq openssl curl; do
   command -v "$t" >/dev/null 2>&1 || exit 0
 done
@@ -47,10 +63,10 @@ url="${BONE_URL:-http://127.0.0.1:${BONE_PORT:-8099}}/api/v1/notifications"
 
 chan_json="$(printf '%s' "$channels" | jq -R 'split(",")')"
 payload="$(jq -nc --arg s "$sev" --arg t "$title" --arg b "$body" --argjson ch "$chan_json" \
-  --arg sk "$supersede" \
+  --arg sk "$supersede" --arg op "$origin" --arg aid "$actor" \
   '{severity:$s, title:$t, body:$b, channels:$ch,
-    origin_plugin:"os-resume", actor_id:"agent:os-resume",
-    metadata:{source:"os-resume"}}
+    origin_plugin:$op, actor_id:$aid,
+    metadata:{source:$op}}
    + (if $sk == "" then {} else {supersede_key:$sk} end)')"
 # -a: Bone verifies over Python json.dumps output, which escapes non-ASCII.
 # A Czech title signs clean here and 401s there without it.

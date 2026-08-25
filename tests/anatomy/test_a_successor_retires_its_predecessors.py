@@ -496,7 +496,96 @@ def test_the_repeaters_are_read_from_the_database_not_listed_here():
     assert "SELECT" in fn and "supersede_key IS NOT NULL" in fn, (
         "declared_repeaters no longer derives the classes from what emitters "
         "have actually sent")
+    # COMMENTS ARE NOT CODE. A `//` line naming a class to explain WHY it is
+    # not hardcoded is exactly what this gate wants to encourage; matching it
+    # as a violation is the detector-reads-prose defect (2026-08-25).
+    code = "\n".join(ln for ln in src.splitlines()
+                     if not ln.lstrip().startswith(("//", "*", "/*")))
     for hardcoded in EMITTERS.values():
-        assert hardcoded not in src, (
+        assert hardcoded not in code, (
             f"the reconciler hardcodes the class {hardcoded!r}; the emitter "
             "already declares it by sending it")
+
+
+# ── a shared sender is not a class ─────────────────────────────────────────
+#
+# FOUND BY THE NIGHT OF 2026-08-24, which is the point of running one.
+#
+# `files/anatomy/scripts/nos-notify.sh` hardcoded `origin_plugin: os-resume` /
+# `actor_id: agent:os-resume` for EVERY caller, and it is the shared sender for
+# at least five: the os-update settle it is named for, the cortex corpus diff,
+# the KEAP consolidator, the KEAP linter, and a readiness probe. Measured in the
+# live ledger: 33 rows wearing a borrowed identity, six distinct message shapes
+# under one name.
+#
+# `reconcile-inbox.php` keys the restatement CLASS on that identity. So the
+# first genuine `os-resume-settled` emission would have retired thirty-five
+# unrelated rows — S2-diff findings, KEAP batches, lint results — on the
+# strength of a declaration that had nothing to do with them, silently, in a
+# tool the operator now runs routinely. Simulated against a copy of the live
+# database before the fix: 35 rows would have gone.
+#
+# Both halves are gated here. The reconciler REFUSES a shared identity and says
+# so; the sender lets each caller carry its own.
+
+def test_the_reconciler_refuses_a_shared_identity():
+    src = RECONCILER.read_text(encoding="utf-8")
+    assert "shape_count" in src, (
+        "the shared-sender detection is gone. It is not inference — it counts "
+        "DISTINCT message shapes under one (origin_plugin, actor_id), and no "
+        "genuine restatement class produces more than one")
+    fn = src[src.index("function shape_count"):]
+    fn = fn[:fn.index("\n}") + 2]
+    assert "return $row === false ? 99" in fn, (
+        "an unreadable count must FAIL CLOSED — a shape_count that returns 0 "
+        "or 1 on an error turns 'I could not tell' into 'safe to retire'")
+    verdict = src[src.index("function verdict_restated"):]
+    verdict = verdict[:verdict.index("\n}") + 2]
+    assert "shared" in verdict and "'leave'" in verdict, (
+        "verdict_restated no longer consults the shared-sender flag")
+
+
+@pytest.mark.skipif(_php() is None, reason="php absent — the reconciler cannot run")
+def test_a_borrowed_identity_is_refused_and_says_so():
+    """EXERCISED. The refusal must also be VISIBLE: the first cut fired the
+    guard and folded its `leave` into `unclassified`, discarding the reason —
+    a tool declining to act and saying nothing, which is the defect this whole
+    file is against."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        tmp = pathlib.Path(td)
+        db = _reconciler_db(tmp, [
+            # two DIFFERENT emitters wearing one identity, as nos-notify.sh
+            # made them for a year
+            ("S2 diff: 3 nights of agreement", "os-resume", "agent:os-resume",
+             None, "2026-08-01 05:00:00", None),
+            ("KEAP consolidator: data batch", "os-resume", "agent:os-resume",
+             None, "2026-08-02 05:00:00", None),
+            ("nOS macOS update settled (26.1)", "os-resume", "agent:os-resume",
+             "os-resume-settled", "2026-08-03 05:00:00", None),
+        ])
+        out = _run_reconciler(db, "--apply")
+        rows = _state(db)
+        for borrowed in ("S2 diff: 3 nights of agreement", "KEAP consolidator: data batch"):
+            assert rows[borrowed]["superseded_at"] is None, (
+                f"{borrowed!r} was retired by an os-update settle message. They "
+                "share an identity because one script sends for both; they are "
+                "not the same class and one cannot restate the other")
+        assert "shared sender" in out.stdout, (
+            "the guard fired and said nothing. A refusal with no reason is "
+            f"indistinguishable from having no rows to act on:\n{out.stdout[-400:]}")
+
+
+def test_the_sender_lets_each_caller_name_itself():
+    """The other half. Without this the reconciler refuses for ever and the
+    inbox keeps filling with rows that cannot be classified."""
+    src = (REPO / "files/anatomy/scripts/nos-notify.sh").read_text(encoding="utf-8")
+    assert "NOS_NOTIFY_ORIGIN" in src and "NOS_NOTIFY_ACTOR" in src, (
+        "nos-notify.sh hardcodes its callers' identity again. It sends for at "
+        "least five different emitters; one name for all of them is what made "
+        "a restatement class unattributable")
+    assert 'origin_plugin:$op' in src.replace(" ", ""), (
+        "the payload no longer carries the caller-supplied origin")
+    assert 'os-resume' in src, (
+        "the default must stay os-resume so the caller it was written for "
+        "keeps working unchanged")
