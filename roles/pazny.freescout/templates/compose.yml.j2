@@ -67,6 +67,21 @@ services:
       #
       # Verify with tools/tls-uptake.py's self-test, which boots this app's own
       # kernel and reads what it RESOLVES — never the environment.
+      # LARAVEL_ENV_PREFIX set EXPLICITLY, not relied upon. The image defaults
+      # it to `ENV_` (/container/defaults/30-laravel:42) and
+      # `laravel_env_passthrough` returns SILENTLY when it is empty
+      # (/container/functions/30-laravel:218-221). Measured 2026-08-25: a
+      # `with-contenv` shell — which is what the init scripts run under — sees
+      # ENV_DB_MYSQL_ATTR_SSL_CA but NOT the prefix, because the default is
+      # sourced later by prepare_service. Whether that ordering is what dropped
+      # the value is NOT established; what is established is that two inits ran
+      # with the variable present and .env still carries 0 occurrences.
+      #
+      # So this line removes one candidate cause at the cost of one env var. It
+      # is the documented default, so it cannot change behaviour where the
+      # default already applied. It is NOT a claim that FreeScout is fixed —
+      # tools/tls-uptake.py's self-test is the only thing that may say that.
+      LARAVEL_ENV_PREFIX: "ENV_"
       ENV_DB_MYSQL_ATTR_SSL_CA: "{{ mariadb_client_ca_path }}"
 {% endif %}
       # nfrastack 2.x renamed SITE_URL → APP_URL (SITE_URL deprecated but still
