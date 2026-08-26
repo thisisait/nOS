@@ -141,6 +141,13 @@ def test_the_parked_profile_says_so(dir_profile: dict):
     assert meta.get("plan_ref"), (
         "a parked agent names the epic that un-parks it (metadata.plan_ref)"
     )
+    # The name must RESOLVE — this exact profile shipped 2026-08-26 pointing at
+    # docs/plans/…, a path already moved to docs/archive/, and this gate stayed
+    # green because it only asked for a non-empty string.
+    assert (REPO_ROOT / meta["plan_ref"]).is_file(), (
+        f"metadata.plan_ref names {meta['plan_ref']}, which is not a file in "
+        "this tree — a dangling pointer is a false remediation pointer"
+    )
 
 
 # ---------- (5) system prompt narrative matches the native contract ----------

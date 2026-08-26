@@ -25,7 +25,7 @@ description: |
   AgentKit contract is the ONE remaining spelling. The Authentik client
   `nos-migration-author` stays provisioned and reserved (inspektor
   pattern). Un-parking rides the agentic upgrade→migration→coexistence
-  epic (docs/plans/agentic-upgrade-migration-coexistence.md): re-declare
+  epic (docs/archive/agentic-upgrade-migration-coexistence.md): re-declare
   the bearer and a trigger deliberately.
 
 model:
@@ -78,7 +78,7 @@ metadata:
   ceremony_role: migration-authoring
   runtime: agentkit            # native AgentKit (Q8/A2); flat CLI fallback removed 2026-08-26
   runner_status: parked
-  plan_ref: docs/plans/agentic-upgrade-migration-coexistence.md
+  plan_ref: docs/archive/agentic-upgrade-migration-coexistence.md
   deferred_reason: >-
     Parked 2026-08-26 (roster close): the Q8/A2 native run path is proven
     but dormant; launcher, flat profile, pulse job and Wing bearer removed.
