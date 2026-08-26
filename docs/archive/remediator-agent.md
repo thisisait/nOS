@@ -1,9 +1,14 @@
 # nOS Remediator — security-finding triage agent
 
-> **Status:** shipped 2026-05-17. **Anatomy gate:**
-> `tests/anatomy/test_remediator_agent.py` (17 tests).
-> **AgentKit profile:** `files/anatomy/agents/remediator/{agent.yml,system.md,rubric.md}`.
-> **Pulse profile:** `files/anatomy/agents/remediator.yml`.
+> **Status: RETIRED 2026-08-26 (roster close)** — shipped 2026-05-17, one
+> live run (2026-05-17), zero events in the wing.db epoch that followed. Its
+> brief lives on as the loop's `rem` weakness source, which filed every real
+> proposal the loop has made. Profiles, launcher, gates, Authentik client and
+> secrets were all removed; git history keeps them. The generic
+> pulse-run-agent.sh gates it earned moved to
+> `tests/anatomy/test_pulse_run_agent_contract.py`; the retirement itself is
+> pinned by `tests/anatomy/test_agent_roster_close.py`. The rest of this
+> document is HISTORY.
 
 ## What it is
 

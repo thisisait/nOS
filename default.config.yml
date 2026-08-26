@@ -2884,7 +2884,7 @@ authentik_agent_clients:
 
   # ── Track G/seed: security agent identities (per-actor SSO) ───────────────
   # Distinct from `nos-tester` (smoke probe — proves apps respond after auth)
-  # and `nos-state-manager` (operational state pushes). These three are the
+  # and `nos-state-manager` (operational state pushes). These are the
   # security-research agent profiles from the bones&wings refactor (§7),
   # provisioned NOW so wing.db audit trail tags every finding/scan/probe with
   # the right actor_id from day one.
@@ -2930,29 +2930,14 @@ authentik_agent_clients:
       - "nos:state:read"
       - "nos:security:read"
 
-  - name: "nOS Scout"
-    slug: "nos-scout"
-    client_id: "nos-scout"
-    client_secret: "{{ nos_derived_secrets.agent_scout }}"
-    # Drift/visibility agent — read-only on state + security state.
-    # The 20-cve-drift-check.sh hook (programmatic) is its dumb cousin;
-    # Scout adds the LLM layer post-PoC (correlates drift trends across
-    # services + suggests prioritization). Same client_id used by the
-    # Grafana annotation push when a finding lands on a critical row.
-    capabilities:
-      - "nos:state:read"
-      - "nos:security:read"
-
-  - name: "nOS Upgrade Advisor"
-    slug: "nos-upgrade-advisor"
-    client_id: "nos-upgrade-advisor"
-    client_secret: "{{ nos_derived_secrets.agent_upgrade_advisor }}"
-    # W5-B4 upgrade-planning agent. Reads the /upgrades matrix + queues
-    # applicable upgrades (Wing bearer); the queue's mismatch guard rejects
-    # non-applicable recipes. Read-only on state; never applies upgrades.
-    capabilities:
-      - "nos:upgrades:read"
-      - "nos:state:read"
+  # RETIRED 2026-08-26 (roster close, fable review wf_72000040-d16): nos-scout
+  # (0 events ever; the brief runs as conductor:security-drift-watch + the scan),
+  # nos-upgrade-advisor (its task became a deterministic query when
+  # UpgradeRepository::compareVersions landed, cab67496/b1e92005) and
+  # nos-remediator (0 events; its brief is the loop's `rem` weakness source,
+  # which filed every real proposal). Clients leave the registry here; the next
+  # converge removes them from the live Authentik. Their derived secrets in
+  # ~/.nos/secrets.yml are orphans for the operator to sweep.
 
   - name: "nOS Upgrade Architect"
     slug: "nos-upgrade-architect"
@@ -2993,21 +2978,6 @@ authentik_agent_clients:
     # token provisioned separately (conductor_wing_api_token) for the
     # pulse-run-agent.sh script that execs claude with this identity.
     capabilities: "{{ authentik_agent_scopes }}"
-
-  - name: "nOS Remediator"
-    slug: "nos-remediator"
-    client_id: "nos-remediator"
-    client_secret: "{{ nos_derived_secrets.agent_remediator }}"
-    # Remediator agent (A9.3, 2026-05-17) — read-only security-finding
-    # triage. Reads findings + file context, proposes ONE remediation per
-    # finding, emits markdown report event + summary notification.
-    # Explicitly NO nos:security:write — operator decides what to apply.
-    capabilities:
-      - "nos:state:read"
-      - "nos:security:read"
-      - "nos:migrations:read"
-      - "nos:upgrades:read"
-      - "nos:patches:read"
 
   - name: "nOS Surveyor"
     slug: "nos-surveyor"

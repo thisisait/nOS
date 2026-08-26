@@ -1,115 +1,26 @@
-"""Anatomy gates for the Scout + Inspektor + Librarian agent profiles
-(Anatomy A9.4, 2026-05-17).
+"""Anatomy gates for the Inspektor + Librarian agent profiles.
 
-Scout ships fully (Pulse profile + AgentKit dir + runner script).
-Inspektor + Librarian ship AgentKit-side only — their Pulse runners
-are explicitly deferred until their tooling lands (trivy/grype/nuclei
-for Inspektor; Qdrant corpus pipeline for Librarian). The contract-
-only profiles still validate against the AgentKit schema and surface
-in the /agents catalog.
+Inspektor ships AgentKit-side only — its Pulse runner is explicitly
+deferred until its tooling lands (trivy/grype/nuclei substrate). The
+contract-only profile still validates against the AgentKit schema and
+surfaces in the /agents catalog. Librarian's runner is LIVE, on demand.
+
+Scout lived in this file from A9.4 (2026-05-17) until the 2026-08-26
+roster close retired it (zero agent:scout events in the wing.db epoch;
+its brief runs nightly as conductor:security-drift-watch plus the scan).
+Its gates were deleted with their subject; test_agent_roster_close.py
+pins the retirement.
 """
+
 
 from __future__ import annotations
 
 import pathlib
-import stat
-import subprocess
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 AGENTS = REPO / "files/anatomy/agents"
-
-
-# ── Scout (fully shipped) ─────────────────────────────────────────────
-
-
-def test_scout_pulse_profile_present():
-    profile = AGENTS / "scout.yml"
-    assert profile.is_file()
-    data = yaml.safe_load(profile.read_text())
-    assert data["name"] == "scout"
-    job = data["pulse"]["jobs"][0]
-    # On-demand only.
-    assert job["paused"] is True
-    assert job["name"] == "drift-scan"
-
-
-def test_scout_pulse_profile_uses_nos_agent_env():
-    data = yaml.safe_load((AGENTS / "scout.yml").read_text())
-    env = data["pulse"]["jobs"][0]["env"]
-    assert env["NOS_AGENT_NAME"] == "scout"
-    assert env["NOS_AGENT_CLIENT_ID"] == "nos-scout"
-    assert "{{ scout_wing_api_token }}" in env["WING_API_TOKEN"]
-
-
-def test_scout_capabilities_read_only():
-    data = yaml.safe_load((AGENTS / "scout.yml").read_text())
-    caps = data["capabilities"]
-    for cap in caps:
-        assert "write" not in cap, f"scout must not have write scope: {cap}"
-        assert "scan" not in cap, f"scout must not trigger scans: {cap}"
-        assert "execute" not in cap, f"scout must not execute pentest: {cap}"
-
-
-def test_scout_agentkit_dir_complete():
-    d = AGENTS / "scout"
-    for f in ("agent.yml", "system.md", "rubric.md"):
-        assert (d / f).is_file(), f"scout/{f} missing"
-    agent = yaml.safe_load((d / "agent.yml").read_text())
-    assert agent["name"] == "scout"
-
-
-def test_scout_wrapper_script_present_and_executable():
-    p = REPO / "tools/run-scout.sh"
-    assert p.is_file()
-    assert p.stat().st_mode & stat.S_IXUSR
-
-
-def test_scout_wrapper_bash_lint_clean():
-    p = REPO / "tools/run-scout.sh"
-    result = subprocess.run(["bash", "-n", str(p)], capture_output=True, text=True)
-    assert result.returncode == 0, result.stderr
-
-
-def test_scout_wing_api_token_declared():
-    src = (REPO / "default.credentials.yml").read_text()
-    assert "scout_wing_api_token" in src
-
-
-def test_wing_post_yml_provisions_scout_token():
-    src = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
-    # Token-provisioning task present.
-    assert "--name=scout" in src
-    # The playbook no longer exports the token's VALUE to the discover script:
-    # the catalog emits a reference and the daemon resolves it. Asserting the
-    # ABSENCE keeps the direction pinned — a re-added export would mean the
-    # value is travelling again.
-    assert "NOS_SCOUT_WING_API_TOKEN" not in src, (
-        "the playbook exports the scout token to the catalog task again; it is "
-        "resolved at exec time now and does not belong in that process env"
-    )
-
-
-def test_discover_pulse_catalog_points_at_the_scout_token():
-    """The token is REFERENCED, not substituted (changed 2026-08-11).
-
-    This asserted the catalog reads `NOS_SCOUT_WING_API_TOKEN` and writes the
-    VALUE into the job's env. That is what put nineteen credentials in the clear
-    into `pulse_jobs.env_json`; the catalog now emits `secret:scout_wing_api_token`
-    and `pulse/daemon.py` resolves it at exec time from the 0600 store. The env
-    var is gone from the playbook too — an unused secret in flight is still a
-    secret in flight.
-    """
-    src = (REPO / "files/anatomy/scripts/discover-pulse-catalog.py").read_text()
-    assert '{{ scout_wing_api_token }}' in src, "the substitution key is gone"
-    assert '"secret:scout_wing_api_token"' in src, (
-        "the scout token is no longer emitted as a reference — check whether it "
-        "went back to being a value"
-    )
-    assert "NOS_SCOUT_WING_API_TOKEN" not in src, (
-        "the catalog reads the token's VALUE from the environment again"
-    )
 
 
 # ── Inspektor (contract-only) + Librarian (live, on-demand) ───────────

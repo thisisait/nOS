@@ -1,9 +1,11 @@
-"""Anatomy gate — API surface the scout/remediator agents depend on (W5-A2/A3).
+"""Anatomy gate — the agent-facing API surface (W5-A2/A3).
 
-The scout's drift report surfaced two endpoints its rubric calls that weren't
-usable: GET /api/v1/notifications (404 — no route) and GET /api/v1/state (401 —
-token scope). Both made signals permanently un-evaluable. Pin the routes /
-presenter so the agent contract can't silently drift from the API.
+Originally titled for the scout/remediator agents, whose reports surfaced the
+defects pinned here (GET /api/v1/notifications 404; token-scope 401 on state).
+Both agents were retired in the 2026-08-26 roster close — the API contracts
+they surfaced outlive them, because every runner agent uses the same surface.
+Retired-agent wiring tests left with their subjects (test_agent_roster_close.py
+pins the retirement); live-agent wiring is asserted against upgrade-architect.
 """
 
 from __future__ import annotations
@@ -104,53 +106,20 @@ def test_agent_token_requests_capability_scopes():
     """W5-A3 (2026-05-27): Authentik client_credentials grants only REQUESTED
     scopes, so the runner must request the agent's capabilities in the token
     mint — otherwise the JWT scope claim is empty and every scoped Bone
-    endpoint (/api/state, migrations, upgrades) 403s. Scout must read state
-    from Bone /api/state (JWT), not Wing's HMAC proxy."""
+    endpoint (/api/state, migrations, upgrades) 403s. (The scout-profile
+    Bone-vs-Wing steer this test also pinned died with the scout, 2026-08-26;
+    the runner-side scope mint is agent-agnostic and stays.)"""
     runner = (REPO / "files/anatomy/scripts/pulse-run-agent.sh").read_text()
     assert "AGENT_SCOPES" in runner, "runner must derive the agent scopes"
     assert "scope=${AGENT_SCOPES}" in runner, "runner must request scopes in the token mint"
     assert "/^capabilities:/" in runner, "scopes derived from the profile capabilities list"
-    # Both the dir-form system.md (AgentKit runner) AND the flat profile
-    # system_prompt (the claude-CLI runner extracts THIS) must point at Bone
-    # /api/state, not Wing's /api/v1/state.
-    for p in ("scout/system.md", "scout.yml"):
-        src = (REPO / "files/anatomy/agents" / p).read_text()
-        assert "/api/state" in src, f"{p}: scout must read Bone /api/state"
-        assert "do not use wing" in src.lower(), f"{p}: scout must be steered off Wing's /api/v1/state"
-    flat = (REPO / "files/anatomy/agents/scout.yml").read_text()
-    sysprompt = flat.split("system_prompt:", 1)[-1].split("\ncapabilities:", 1)[0]
-    # The Wing path may be NAMED in the "do NOT use" steer, but must not be a
-    # listed `GET` endpoint the agent would call.
-    assert "GET /api/v1/state" not in sysprompt, "flat scout system_prompt must not list Wing GET /api/v1/state as an endpoint"
 
 
-def test_upgrade_advisor_agent_wired():
-    """W5-B4: the upgrade-advisor agent (reads /upgrades matrix → queues
-    applicable upgrades) must be fully wired — dir-form contract, flat
-    profile + pulse job, wrapper, Authentik client, and the per-agent Wing
-    token provisioning."""
-    base = REPO / "files/anatomy/agents"
-    for f in ("upgrade-advisor/agent.yml", "upgrade-advisor/system.md", "upgrade-advisor/rubric.md", "upgrade-advisor.yml"):
-        assert (base / f).is_file(), f"missing upgrade-advisor file: {f}"
-    assert (REPO / "tools/run-upgrade-advisor.sh").is_file(), "wrapper missing"
-    cfg = (REPO / "default.config.yml").read_text()
-    assert 'client_id: "nos-upgrade-advisor"' in cfg, "Authentik client not declared"
-    creds = (REPO / "default.credentials.yml").read_text()
-    assert "upgrade_advisor_wing_api_token" in creds, "Wing token credential missing"
-    post = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
-    assert "--name=upgrade-advisor" in post, "Wing token not provisioned by the role"
-    # Was `NOS_UPGRADE_ADVISOR_WING_API_TOKEN in post` and labelled "the wing
-    # daemon env" — it was the catalog task's env, and nothing ever read it as a
-    # daemon variable. What matters is that the token still PROVISIONS its
-    # api_tokens row; the value no longer travels to the catalog subprocess.
-    assert "--token={{ upgrade_advisor_wing_api_token }}" in post, (
-        "the upgrade-advisor token no longer provisions an api_tokens row, so "
-        "its bearer authenticates against nothing"
-    )
-    # Propose-only: the profile queues upgrades and never applies/forces.
-    prof = (base / "upgrade-advisor.yml").read_text()
-    assert "/queue" in prof, "advisor must queue upgrades"
-    assert "never apply" in prof and "NEVER pass force" in prof, "advisor must be propose-only (no apply, no force)"
+# test_upgrade_advisor_agent_wired was deleted with its subject (2026-08-26
+# roster close): the advisor's whole task became a deterministic query when
+# UpgradeRepository::compareVersions landed (cab67496 / b1e92005), and the
+# agent had zero sessions ever. test_agent_roster_close.py pins the absence;
+# the wiring checklist the test embodied survives on the live architect below.
 
 
 def test_agent_clients_blueprint_is_force_applied():
@@ -168,7 +137,8 @@ def test_pulse_catalog_points_at_agent_wing_tokens():
     """2026-05-27: discover-pulse-catalog.py does LITERAL substring substitution
     on a FIXED token map (no Jinja). A new agent's {{ <agent>_wing_api_token }}
     must be in that map, or its WING_API_TOKEN stays the literal placeholder and
-    every API call 401s (hit with upgrade-advisor).
+    every API call 401s (first hit by upgrade-advisor, retired 2026-08-26 —
+    the property is agent-agnostic, so it is asserted on the live architect).
 
     CHANGED 2026-08-11: the map now yields a REFERENCE (`secret:<name>`) rather
     than the value. The old shape is what put nineteen credentials in the clear
@@ -178,17 +148,17 @@ def test_pulse_catalog_points_at_agent_wing_tokens():
     `api_tokens` row a few tasks further down.
     """
     cat = (REPO / "files/anatomy/scripts/discover-pulse-catalog.py").read_text()
-    assert "{{ upgrade_advisor_wing_api_token }}" in cat, "catalog substitution map missing upgrade_advisor token"
-    assert '"secret:upgrade_advisor_wing_api_token"' in cat, (
+    assert "{{ upgrade_architect_wing_api_token }}" in cat, "catalog substitution map missing upgrade_architect token"
+    assert '"secret:upgrade_architect_wing_api_token"' in cat, (
         "the map no longer yields a reference for this token — check whether it "
         "went back to substituting the value"
     )
-    assert "NOS_UPGRADE_ADVISOR_WING_API_TOKEN" not in cat, (
+    assert "NOS_UPGRADE_ARCHITECT_WING_API_TOKEN" not in cat, (
         "the catalog reads the token's value from the environment again"
     )
     # The name must still be resolvable, or the job refuses at exec time.
     store = (REPO / "templates/secrets.yml.j2").read_text()
-    assert "upgrade_advisor_wing_api_token:" in store, (
+    assert "upgrade_architect_wing_api_token:" in store, (
         "the token is referenced but the secrets template never writes that "
         "name, so the Pulse daemon cannot resolve it"
     )
@@ -268,7 +238,8 @@ def test_agent_exit_verdict_sentinel_propagated():
     assert "NOS_AGENT_EXIT" in runner, "runner must parse the verdict sentinel"
     assert "AGENT_VERDICT" in runner and "-gt 0" in runner, "escalate-only (don't mask a real failure)"
     # Both review-capable agents, both runtime forms, must instruct the sentinel.
-    for p in ("upgrade-advisor.yml", "upgrade-advisor/system.md",
-              "upgrade-architect.yml", "upgrade-architect/system.md"):
+    # (upgrade-advisor was in this loop until its 2026-08-26 retirement —
+    # "Verified live: advisor -> exit 1" above is that agent's one live run.)
+    for p in ("upgrade-architect.yml", "upgrade-architect/system.md"):
         assert "NOS_AGENT_EXIT" in (REPO / "files/anatomy/agents" / p).read_text(), \
             f"{p}: must instruct the exit-verdict sentinel"
