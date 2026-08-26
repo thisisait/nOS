@@ -12,15 +12,18 @@ What A2 must structurally guarantee, pinned here:
      gated migration-file-write tool in its tools roster — so the native run
      can actually author — alongside its read + Wing tools. The scope was
      already provisioned (A1 gate covers that); this pins the *roster* edit.
-  2. tools/run-migration-author.sh fires the native AgentKit run-agent path
-     (php <wing>/bin/run-agent.php --agent=migration-author --trigger=operator)
-     as the DEFAULT runtime, with the legacy pulse-CLI retained as a selectable
-     fallback (--cli / NOS_MIGRATION_AUTHOR_RUNTIME) — "CLI fallback retained".
-  3. The MR-open stays a controlled post-step, NOT an LLM tool: the agent has
+  2. The MR-open stays a controlled post-step, NOT an LLM tool: the agent has
      no forge/git tool, and the native run does not push from inside the
      session. (Pinned via the agent.yml roster + the system prompt narrative.)
-  4. The flat CLI profile (files/anatomy/agents/migration-author.yml) survives
-     — both runtimes coexist by design; deleting either is a regression.
+
+ROSTER CLOSE (2026-08-26) — the agent is PARKED. A2's rule 4 ("the flat CLI
+profile survives; deleting either is a regression") is SUPERSEDED: the flat
+profile, tools/run-migration-author.sh, the pulse job and the Wing bearer are
+gone, and this gate now pins the opposite — the park must be total and honest.
+One spelling remains (the dir profile), it says `runner_status: parked`, and
+no launcher-facing apparatus survives half-removed. The Q8/A2 run-script
+tests left with the launcher; the native entry point (run-agent.php) is still
+pinned because un-parking rides it.
 
 Static inspection (regex / YAML / text), NO PHP or bash interpreter — runs in
 CI without PHP or a shell.
@@ -49,13 +52,6 @@ def dir_profile() -> dict:
     if not DIR_PROFILE.is_file():
         pytest.fail("migration-author/agent.yml is missing")
     return yaml.safe_load(DIR_PROFILE.read_text())
-
-
-@pytest.fixture(scope="module")
-def run_script() -> str:
-    if not RUN_SCRIPT.is_file():
-        pytest.fail("tools/run-migration-author.sh is missing")
-    return RUN_SCRIPT.read_text()
 
 
 # ---------- (1) the dir profile declares the write tool in its roster ----------
@@ -102,66 +98,6 @@ def test_dir_profile_has_no_forge_or_git_tool(dir_profile: dict):
     )
 
 
-# ---------- (2) run-migration-author.sh = native default + CLI fallback ----------
-
-
-def test_run_script_default_runtime_is_agentkit(run_script: str):
-    """The default runtime is AgentKit-native (was the pulse CLI). Pinned so a
-    future edit can't silently regress the primary path back to the CLI."""
-    assert re.search(
-        r'RUNTIME="?\$\{NOS_MIGRATION_AUTHOR_RUNTIME:-agentkit\}"?', run_script
-    ), (
-        "run-migration-author.sh must default RUNTIME to 'agentkit' "
-        "(NOS_MIGRATION_AUTHOR_RUNTIME:-agentkit)"
-    )
-
-
-def test_run_script_fires_native_run_agent(run_script: str):
-    """The agentkit path invokes run-agent.php for the migration-author agent
-    with --trigger=operator — the native Runner path that writes
-    agent_sessions/threads/iterations + OTel."""
-    assert "run-agent.php" in run_script, (
-        "run-migration-author.sh must invoke the Wing bin/run-agent.php (native AgentKit)"
-    )
-    assert "--agent=migration-author" in run_script, (
-        "run-migration-author.sh must run --agent=migration-author"
-    )
-    assert "--trigger=operator" in run_script, (
-        "run-migration-author.sh must pass --trigger=operator (operator-trigger lineage)"
-    )
-
-
-def test_run_script_retains_cli_fallback(run_script: str):
-    """The legacy pulse-CLI path is retained as a selectable fallback — Q8/A2
-    keeps it for operator/CI use where the deployed Wing PHP runtime is absent.
-    Both a --cli flag and the env knob must exist, and the pulse job command
-    must still be reachable."""
-    assert "--cli" in run_script, "run-migration-author.sh must keep a --cli fallback flag"
-    assert "RUNTIME=cli" in run_script, "the --cli path must select RUNTIME=cli"
-    assert "$JOB_CMD" in run_script, (
-        "the CLI fallback must still invoke the registered pulse_jobs command ($JOB_CMD)"
-    )
-
-
-def test_run_script_branches_on_runtime(run_script: str):
-    """The run block branches on the runtime — the two paths carry OPPOSITE
-    exit-1 meanings, so a single shared invocation would mis-verdict."""
-    assert re.search(r'if\s*\[\[\s*"\$RUNTIME"\s*==\s*agentkit\s*\]\]', run_script), (
-        "run-migration-author.sh must branch the run on RUNTIME == agentkit"
-    )
-
-
-def test_run_script_agentkit_preflights_the_wing_bin(run_script: str):
-    """The agentkit path pre-flights the deployed run-agent.php (fail-clear if
-    Wing isn't deployed) — directs the operator to --cli rather than crashing."""
-    assert "RUN_AGENT_BIN" in run_script, (
-        "run-migration-author.sh must resolve the Wing run-agent.php path (RUN_AGENT_BIN)"
-    )
-    assert re.search(r"use --cli", run_script), (
-        "the agentkit preflight must point the operator at the --cli fallback on failure"
-    )
-
-
 # ---------- (3) the native runner path actually exists ----------
 
 
@@ -175,19 +111,35 @@ def test_run_agent_php_exists_and_takes_trigger():
     )
 
 
-# ---------- (4) both runtimes coexist — flat CLI profile survives ----------
+# ---------- (4) the park is total and honest (roster close 2026-08-26) ----------
 
 
-def test_flat_cli_profile_survives():
-    """The flat migration-author.yml (CLI runtime) is NOT deleted — flat = CLI
-    fallback, dir = AgentKit runtime, both coexist by design."""
-    assert FLAT_PROFILE.is_file(), (
-        "files/anatomy/agents/migration-author.yml (flat CLI profile) must survive — "
-        "it is the CLI-runtime fallback"
+def test_the_park_left_one_spelling():
+    """The dual declaration is collapsed: the flat CLI profile and the
+    launcher are GONE. A resurrected copy would be the second spelling of
+    one truth — the defect class behind the cAdvisor scrape and the
+    dialectOptions bug. Un-parking re-declares deliberately (plan_ref)."""
+    assert not FLAT_PROFILE.exists(), (
+        "files/anatomy/agents/migration-author.yml reappeared — the 2026-08-26 "
+        "park removed it; un-parking must re-declare via the epic plan "
+        "(metadata.plan_ref), not resurrect the old copy"
     )
-    flat = yaml.safe_load(FLAT_PROFILE.read_text())
-    assert flat.get("name") == "migration-author", (
-        "the flat profile must still name the migration-author agent"
+    assert not RUN_SCRIPT.exists(), (
+        "tools/run-migration-author.sh reappeared — the park removed the "
+        "launcher-facing apparatus; see metadata.deferred_reason"
+    )
+
+
+def test_the_parked_profile_says_so(dir_profile: dict):
+    """A parked agent must SAY it is parked in its own file (the inspektor
+    pattern): metadata.runner_status + a plan_ref naming the un-parking epic."""
+    meta = dir_profile.get("metadata") or {}
+    assert meta.get("runner_status") == "parked", (
+        "migration-author/agent.yml metadata.runner_status must be 'parked' "
+        "while no runner apparatus exists — absence must not read as live"
+    )
+    assert meta.get("plan_ref"), (
+        "a parked agent names the epic that un-parks it (metadata.plan_ref)"
     )
 
 

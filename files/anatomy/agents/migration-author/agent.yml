@@ -9,10 +9,24 @@ description: |
   MERGE REQUEST for the operator to review + merge (GATE 2). It never merges,
   never promotes to GitHub, never runs an apply tag, never provisions a track.
   The forge MR + the operator's merge is the gate. Distinct from:
-    - upgrade-advisor: queues upgrades from EXISTING recipes.
     - upgrade-architect: drafts the recipes that don't exist yet (recipe MR).
     - migration-author: promotes a merged recipe → the real migration record +
       version bump (migration MR).
+  (upgrade-advisor, which queued upgrades from EXISTING recipes, was retired
+  2026-08-26 — that task became a deterministic query when
+  UpgradeRepository::compareVersions landed.)
+
+  **STATUS: PARKED (2026-08-26, roster close).** One real session ever
+  (2026-06; zero agent:migration-author events in the current wing.db
+  epoch). The launcher apparatus is gone — flat profile
+  files/anatomy/agents/migration-author.yml, Pulse job
+  migration-author:promote-migration, tools/run-migration-author.sh and
+  the migration_author_wing_api_token bearer were all removed; this
+  AgentKit contract is the ONE remaining spelling. The Authentik client
+  `nos-migration-author` stays provisioned and reserved (inspektor
+  pattern). Un-parking rides the agentic upgrade→migration→coexistence
+  epic (docs/plans/agentic-upgrade-migration-coexistence.md): re-declare
+  the bearer and a trigger deliberately.
 
 model:
   primary: claude-sonnet
@@ -21,16 +35,16 @@ model:
 system_prompt_path: system.md
 
 # Q8/A2 (2026-06-16): migration-author runs NATIVELY in AgentKit (was the
-# pulse-run-agent.sh CLI). tools/run-migration-author.sh now fires
-# `bin/run-agent.php --agent=migration-author --trigger=operator` so the run
-# lands in agent_sessions/threads/iterations + OTel spans → Wing /agents +
-# Grafana 22-ai-agents + Tempo. The gated migration-file-write tool (A1) is the
-# write surface (path-allowlisted to files/anatomy/migrations/ + default.config.yml,
-# scope nos.migration.write — already in capability_scopes below). The forge MR
-# (tools/migration-pr.sh) is a deterministic post-step the trigger layer runs
-# AFTER the session ends — NOT an LLM tool — so AgentKit gains visibility, not
-# git/network reach. The flat migration-author.yml profile + pulse CLI stay as
-# the operator/CI fallback (delete neither).
+# pulse-run-agent.sh CLI): `bin/run-agent.php --agent=migration-author
+# --trigger=operator`, so a run lands in agent_sessions/threads/iterations +
+# OTel spans → Wing /agents + Grafana 22-ai-agents + Tempo. The gated
+# migration-file-write tool (A1) is the write surface (path-allowlisted to
+# files/anatomy/migrations/ + default.config.yml, scope nos.migration.write —
+# already in capability_scopes below). The forge MR (tools/migration-pr.sh,
+# which STAYS) is a deterministic post-step the trigger layer runs AFTER the
+# session ends — NOT an LLM tool — so AgentKit gains visibility, not
+# git/network reach. A2's "delete neither" rule for the flat profile + pulse
+# CLI was superseded by the 2026-08-26 roster close (see STATUS below).
 tools:
   - id: bash-read-only       # cat/grep upgrades/<svc>.yml, _template.yml, migration.schema.json, state/manifest.yml
   - id: mcp-wing             # GET /api/v1/upgrades, POST /migrations/authored, POST /events
@@ -62,7 +76,13 @@ vault:
 metadata:
   ait_phase: A2
   ceremony_role: migration-authoring
-  runtime: agentkit            # native AgentKit (Q8/A2); flat profile = CLI fallback
+  runtime: agentkit            # native AgentKit (Q8/A2); flat CLI fallback removed 2026-08-26
+  runner_status: parked
+  plan_ref: docs/plans/agentic-upgrade-migration-coexistence.md
+  deferred_reason: >-
+    Parked 2026-08-26 (roster close): the Q8/A2 native run path is proven
+    but dormant; launcher, flat profile, pulse job and Wing bearer removed.
+    The agentic upgrade→migration→coexistence epic un-parks it.
 
 exit_code_semantics:
   emits_sentinel: true

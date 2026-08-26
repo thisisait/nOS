@@ -15,12 +15,18 @@ description: |
   epsilon random hops; a work-log (curator_runs + curator_visits) makes an
   overnight run resumable after a kill/OOM.
 
-  **STATUS: P0 read-only pilot (2026-07-14).** Ships desc-kind proposals
-  only, through the existing describe seam — zero new app-side proposal
-  seams. node-edit / node-delete / relation (incl. cross-domain bridges)
-  and the anchor-edit / self-tuning loops land in P1-P3 (see
-  docs/archive/keap-curator-agent.md). The Authentik client `nos-curator`
-  is provisioned alongside `nos-librarian`.
+  **STATUS: PARKED (2026-08-26, roster close).** The P0 read-only pilot
+  ran live 2026-07-14 (desc-kind proposals through the describe seam;
+  full L>=3 sweep, convergence proven) and then went quiet: zero
+  agent:curator events in the current wing.db epoch. The launcher
+  apparatus is gone — flat profile files/anatomy/agents/curator.yml,
+  Pulse job curator:curator-sweep, tools/run-curator.sh and the
+  curator_wing_api_token bearer were all removed; this AgentKit contract
+  is the ONE remaining spelling. The Authentik client `nos-curator`
+  stays provisioned and reserved (inspektor pattern). Un-parking is
+  epic-bound work (P1-P3, docs/archive/keap-curator-agent.md): re-declare
+  the pulse job, the bearer, and a launcher deliberately — do not
+  resurrect the old copies from git without re-reading the plan.
 
 model:
   primary: claude-sonnet
@@ -64,15 +70,15 @@ vault:
 metadata:
   ait_phase: curator-P0-pilot
   ceremony_role: taxonomy-reconcile
-  runner_status: on-demand
+  runner_status: parked
   plan_ref: docs/archive/keap-curator-agent.md
   deferred_reason: >-
-    P0 pilot live 2026-07-14 (flat profile files/anatomy/agents/curator.yml,
-    Pulse job curator:curator-sweep paused per on-demand doctrine;
-    tools/run-curator.sh fires it). Sweeps the curator frontier
-    (/agent/v1/curator/frontier), lints, proposes desc rewrites via
-    /agent/v1/taxonomy/describe, and checkpoints /agent/v1/curator/visit.
-    node-edit / delete / relation seams deferred to P1-P3.
+    Parked 2026-08-26 (roster close): the P0 pilot proved the sweep
+    (frontier via /agent/v1/curator/frontier, desc rewrites via
+    /agent/v1/taxonomy/describe, checkpoints via /agent/v1/curator/visit)
+    but no run since; launcher, flat profile, pulse job and Wing bearer
+    removed. P1-P3 (node-edit / delete / relation seams) is the scheduled
+    epic that un-parks it.
 
 exit_code_semantics:
   emits_sentinel: true

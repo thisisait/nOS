@@ -509,13 +509,21 @@ def test_roadmap_write_edge_is_backed_by_code(committed):
     )
 
 
-def test_forge_write_edge_is_backed_by_code(committed):
+def test_forge_write_edge_left_with_its_agent(committed):
+    """Until 2026-08-26 this pinned the promote-migration → gitlab-forge
+    write edge against the flat profile's migration-pr.sh --open-pr task.
+    The roster close parked migration-author and removed the flat profile
+    and pulse job, so the honest assertion INVERTS: a forge write edge
+    with no code behind it would describe wiring nothing performs."""
     assert ("pulse:migration-author:promote-migration", "repo:gitlab-forge") \
-        in _data_edges(committed)
-    task = (REPO / "files/anatomy/agents/migration-author.yml").read_text(encoding="utf-8")
-    assert "migration-pr.sh" in task and "--open-pr" in task, (
-        "migration-author's task no longer runs migration-pr.sh --open-pr — "
-        "the forge write edge describes wiring the agent stopped performing"
+        not in _data_edges(committed), (
+        "the promote-migration forge edge is back in the graph — if the "
+        "migration-author was un-parked, restore the positive form of this "
+        "gate (git history, 2026-08-26) so the edge is backed by code again"
+    )
+    assert not (REPO / "files/anatomy/agents/migration-author.yml").exists(), (
+        "the flat migration-author profile reappeared; see "
+        "test_agent_roster_close.py"
     )
 
 
