@@ -4,9 +4,9 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 213,
-    "edges": 252,
-    "nodes_pulse": 35,
+    "nodes": 208,
+    "edges": 206,
+    "nodes_pulse": 30,
     "nodes_judge": 5,
     "nodes_gateset": 4,
     "nodes_weakness": 7,
@@ -19,10 +19,10 @@
     "nodes_table": 15,
     "nodes_doctrine": 13,
     "nodes_faceapp": 5,
-    "edges_data": 134,
+    "edges_data": 133,
     "edges_trigger": 27,
     "edges_temporal": 5,
-    "edges_mutex": 66,
+    "edges_mutex": 21,
     "edges_governed_by": 20,
     "edges_service_dependency": 35,
     "services_survey_declared": 26,
@@ -1029,22 +1029,6 @@
       "anchor": "09",
       "description": "Pulse scheduled job (knowledge): runs cortex-fs-sync.py on cron `30 4 * * *`"
     },
-    "pulse:curator:curator-sweep": {
-      "kind": "pulse",
-      "source": "files/anatomy/agents/curator.yml",
-      "schedule": "30 5 * * *",
-      "jitter_min": 5,
-      "max_runtime_s": 1800,
-      "category": "knowledge",
-      "paused": true,
-      "findings_exit_codes": null,
-      "command_name": "pulse-run-agent.sh",
-      "claims": [
-        "agent-run-lock"
-      ],
-      "anchor": "09",
-      "description": "Pulse scheduled job (knowledge): runs pulse-run-agent.sh on cron `30 5 * * *` — PAUSED (deliberate operator decision, not a health state)"
-    },
     "pulse:discovery:contradiction-scan": {
       "kind": "pulse",
       "source": "files/anatomy/plugins/discovery/plugin.yml",
@@ -1240,22 +1224,6 @@
       "anchor": "02.02.06",
       "description": "Pulse scheduled job (platform): runs loop-review.py on cron `50 6 * * *`"
     },
-    "pulse:migration-author:promote-migration": {
-      "kind": "pulse",
-      "source": "files/anatomy/agents/migration-author.yml",
-      "schedule": "0 9 * * 0",
-      "jitter_min": 5,
-      "max_runtime_s": 300,
-      "category": "agents",
-      "paused": true,
-      "findings_exit_codes": null,
-      "command_name": "pulse-run-agent.sh",
-      "claims": [
-        "agent-run-lock"
-      ],
-      "anchor": "02.02.09",
-      "description": "Pulse scheduled job (agents): runs pulse-run-agent.sh on cron `0 9 * * 0` — PAUSED (deliberate operator decision, not a health state)"
-    },
     "pulse:npm-supply-chain:daily-ioc-scan": {
       "kind": "pulse",
       "source": "files/anatomy/plugins/npm-supply-chain/plugin.yml",
@@ -1270,60 +1238,12 @@
       "anchor": "02.02.08",
       "description": "Pulse scheduled job (security): runs npm-ioc-scan.py on cron `20 4 * * *`"
     },
-    "pulse:remediator:triage-open-findings": {
-      "kind": "pulse",
-      "source": "files/anatomy/agents/remediator.yml",
-      "schedule": "0 5 * * 0",
-      "jitter_min": 5,
-      "max_runtime_s": 300,
-      "category": "agents",
-      "paused": true,
-      "findings_exit_codes": null,
-      "command_name": "pulse-run-agent.sh",
-      "claims": [
-        "agent-run-lock"
-      ],
-      "anchor": "02.02.09",
-      "description": "Pulse scheduled job (agents): runs pulse-run-agent.sh on cron `0 5 * * 0` — PAUSED (deliberate operator decision, not a health state)"
-    },
-    "pulse:scout:drift-scan": {
-      "kind": "pulse",
-      "source": "files/anatomy/agents/scout.yml",
-      "schedule": "0 6 * * 0",
-      "jitter_min": 5,
-      "max_runtime_s": 300,
-      "category": "agents",
-      "paused": true,
-      "findings_exit_codes": null,
-      "command_name": "pulse-run-agent.sh",
-      "claims": [
-        "agent-run-lock"
-      ],
-      "anchor": "02.02.09",
-      "description": "Pulse scheduled job (agents): runs pulse-run-agent.sh on cron `0 6 * * 0` — PAUSED (deliberate operator decision, not a health state)"
-    },
     "pulse:surveyor:surface-survey": {
       "kind": "pulse",
       "source": "files/anatomy/agents/surveyor.yml",
       "schedule": "0 7 * * 0",
       "jitter_min": 5,
       "max_runtime_s": 900,
-      "category": "agents",
-      "paused": true,
-      "findings_exit_codes": null,
-      "command_name": "pulse-run-agent.sh",
-      "claims": [
-        "agent-run-lock"
-      ],
-      "anchor": "02.02.09",
-      "description": "Pulse scheduled job (agents): runs pulse-run-agent.sh on cron `0 7 * * 0` — PAUSED (deliberate operator decision, not a health state)"
-    },
-    "pulse:upgrade-advisor:upgrade-advise": {
-      "kind": "pulse",
-      "source": "files/anatomy/agents/upgrade-advisor.yml",
-      "schedule": "0 7 * * 0",
-      "jitter_min": 5,
-      "max_runtime_s": 300,
       "category": "agents",
       "paused": true,
       "findings_exit_codes": null,
@@ -2870,14 +2790,6 @@
       "expects": "succeeded"
     },
     {
-      "from": "pulse:migration-author:promote-migration",
-      "to": "repo:gitlab-forge",
-      "kind": "data",
-      "via": "forge branch + MR via tools/migration-pr.sh --open-pr (NOS_AGENT_TASK step 5 below; forge resolved from nos_agent_forge, default gitlab — default.config.yml + migration-pr.sh:147,215)",
-      "measured": "2026-08-06",
-      "declared": "writes"
-    },
-    {
       "from": "repo:gitea-forge",
       "to": "service:woodpecker",
       "kind": "data",
@@ -3696,13 +3608,6 @@
     },
     {
       "from": "pulse:conductor:self-test-001",
-      "to": "pulse:curator:curator-sweep",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:conductor:self-test-001",
       "to": "pulse:librarian:brief-taxonomy",
       "kind": "mutex",
       "resource": "agent-run-lock",
@@ -3724,27 +3629,6 @@
     },
     {
       "from": "pulse:conductor:self-test-001",
-      "to": "pulse:migration-author:promote-migration",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:conductor:self-test-001",
-      "to": "pulse:remediator:triage-open-findings",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:conductor:self-test-001",
-      "to": "pulse:scout:drift-scan",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:conductor:self-test-001",
       "to": "pulse:surveyor:surface-survey",
       "kind": "mutex",
       "resource": "agent-run-lock",
@@ -3752,21 +3636,7 @@
     },
     {
       "from": "pulse:conductor:self-test-001",
-      "to": "pulse:upgrade-advisor:upgrade-advise",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:conductor:self-test-001",
       "to": "pulse:upgrade-architect:recipe-author",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:conductor:vulnerability-scan",
-      "to": "pulse:curator:curator-sweep",
       "kind": "mutex",
       "resource": "agent-run-lock",
       "derived": "claims"
@@ -3794,27 +3664,6 @@
     },
     {
       "from": "pulse:conductor:vulnerability-scan",
-      "to": "pulse:migration-author:promote-migration",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:conductor:vulnerability-scan",
-      "to": "pulse:remediator:triage-open-findings",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:conductor:vulnerability-scan",
-      "to": "pulse:scout:drift-scan",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:conductor:vulnerability-scan",
       "to": "pulse:surveyor:surface-survey",
       "kind": "mutex",
       "resource": "agent-run-lock",
@@ -3822,76 +3671,6 @@
     },
     {
       "from": "pulse:conductor:vulnerability-scan",
-      "to": "pulse:upgrade-advisor:upgrade-advise",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:conductor:vulnerability-scan",
-      "to": "pulse:upgrade-architect:recipe-author",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:curator:curator-sweep",
-      "to": "pulse:librarian:brief-taxonomy",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:curator:curator-sweep",
-      "to": "pulse:librarian:describe-taxonomy",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:curator:curator-sweep",
-      "to": "pulse:librarian:judge-lint-queue",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:curator:curator-sweep",
-      "to": "pulse:migration-author:promote-migration",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:curator:curator-sweep",
-      "to": "pulse:remediator:triage-open-findings",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:curator:curator-sweep",
-      "to": "pulse:scout:drift-scan",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:curator:curator-sweep",
-      "to": "pulse:surveyor:surface-survey",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:curator:curator-sweep",
-      "to": "pulse:upgrade-advisor:upgrade-advise",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:curator:curator-sweep",
       "to": "pulse:upgrade-architect:recipe-author",
       "kind": "mutex",
       "resource": "agent-run-lock",
@@ -3913,35 +3692,7 @@
     },
     {
       "from": "pulse:librarian:brief-taxonomy",
-      "to": "pulse:migration-author:promote-migration",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:librarian:brief-taxonomy",
-      "to": "pulse:remediator:triage-open-findings",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:librarian:brief-taxonomy",
-      "to": "pulse:scout:drift-scan",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:librarian:brief-taxonomy",
       "to": "pulse:surveyor:surface-survey",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:librarian:brief-taxonomy",
-      "to": "pulse:upgrade-advisor:upgrade-advise",
       "kind": "mutex",
       "resource": "agent-run-lock",
       "derived": "claims"
@@ -3962,35 +3713,7 @@
     },
     {
       "from": "pulse:librarian:describe-taxonomy",
-      "to": "pulse:migration-author:promote-migration",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:librarian:describe-taxonomy",
-      "to": "pulse:remediator:triage-open-findings",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:librarian:describe-taxonomy",
-      "to": "pulse:scout:drift-scan",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:librarian:describe-taxonomy",
       "to": "pulse:surveyor:surface-survey",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:librarian:describe-taxonomy",
-      "to": "pulse:upgrade-advisor:upgrade-advise",
       "kind": "mutex",
       "resource": "agent-run-lock",
       "derived": "claims"
@@ -4004,27 +3727,6 @@
     },
     {
       "from": "pulse:librarian:judge-lint-queue",
-      "to": "pulse:migration-author:promote-migration",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:librarian:judge-lint-queue",
-      "to": "pulse:remediator:triage-open-findings",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:librarian:judge-lint-queue",
-      "to": "pulse:scout:drift-scan",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:librarian:judge-lint-queue",
       "to": "pulse:surveyor:surface-survey",
       "kind": "mutex",
       "resource": "agent-run-lock",
@@ -4032,97 +3734,6 @@
     },
     {
       "from": "pulse:librarian:judge-lint-queue",
-      "to": "pulse:upgrade-advisor:upgrade-advise",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:librarian:judge-lint-queue",
-      "to": "pulse:upgrade-architect:recipe-author",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:migration-author:promote-migration",
-      "to": "pulse:remediator:triage-open-findings",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:migration-author:promote-migration",
-      "to": "pulse:scout:drift-scan",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:migration-author:promote-migration",
-      "to": "pulse:surveyor:surface-survey",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:migration-author:promote-migration",
-      "to": "pulse:upgrade-advisor:upgrade-advise",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:migration-author:promote-migration",
-      "to": "pulse:upgrade-architect:recipe-author",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:remediator:triage-open-findings",
-      "to": "pulse:scout:drift-scan",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:remediator:triage-open-findings",
-      "to": "pulse:surveyor:surface-survey",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:remediator:triage-open-findings",
-      "to": "pulse:upgrade-advisor:upgrade-advise",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:remediator:triage-open-findings",
-      "to": "pulse:upgrade-architect:recipe-author",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:scout:drift-scan",
-      "to": "pulse:surveyor:surface-survey",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:scout:drift-scan",
-      "to": "pulse:upgrade-advisor:upgrade-advise",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:scout:drift-scan",
       "to": "pulse:upgrade-architect:recipe-author",
       "kind": "mutex",
       "resource": "agent-run-lock",
@@ -4130,20 +3741,6 @@
     },
     {
       "from": "pulse:surveyor:surface-survey",
-      "to": "pulse:upgrade-advisor:upgrade-advise",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:surveyor:surface-survey",
-      "to": "pulse:upgrade-architect:recipe-author",
-      "kind": "mutex",
-      "resource": "agent-run-lock",
-      "derived": "claims"
-    },
-    {
-      "from": "pulse:upgrade-advisor:upgrade-advise",
       "to": "pulse:upgrade-architect:recipe-author",
       "kind": "mutex",
       "resource": "agent-run-lock",
