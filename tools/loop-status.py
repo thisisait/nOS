@@ -337,11 +337,25 @@ def _dirty(paths: list[str]) -> list[str]:
 
 
 def awaiting() -> dict:
-    """Every proposal a judge passed, and what became of it — plus the unjudged.
+    """Every proposal a judge passed, and what became of it — plus the unjudged
+    and, since 2026-08-26, the ones a judge declined to answer.
 
     A failed proposal waiting for nothing is not a queue, and an
     `indeterminate` one is the loop correctly declining to answer. Neither is an
-    item on anybody's desk, and neither is listed.
+    item on anybody's desk, and neither is listed — that was this paragraph
+    until the morning of 2026-08-25 refuted exactly one half of it.
+    `state/judge-sets.yml` carried `min_work: 4060`, arrived at by ARITHMETIC
+    (operator collection 4085 minus an assumed −22 gap) where the judge env
+    measures 4032, and proposals 18/19/20 were judged indeterminate at 06:17:30
+    / 06:23:45 / 06:30:06 for the constant's sake, not their own. Because this
+    reader selected pass-or-null only, no scheduled path could ever re-judge
+    them: an indeterminate was a ONE-WAY DOOR, and correcting the floor
+    (f3f7a39b) could not bring them back. So an indeterminate IS listed now, as
+    its own state — `indeterminate` while the tree has moved since the verdict
+    (a fresh judge run can answer differently; the driver re-judges it), and
+    `indeterminate-held` once it provably has not (see the bound below). The
+    `fail` half of the sentence stands: a judge ANSWERED, and a failed proposal
+    is still not listed.
 
     A proposal with NO VERDICT AT ALL is, and it was invisible here until
     2026-08-21. That morning the entry half ran unattended for the first time:
@@ -369,7 +383,7 @@ def awaiting() -> dict:
                        SELECT id FROM loop_verdicts
                         WHERE proposal_id = p.id
                         ORDER BY id DESC LIMIT 1)
-             WHERE v.result = 'pass' OR v.id IS NULL
+             WHERE v.result IN ('pass', 'indeterminate') OR v.id IS NULL
              ORDER BY COALESCE(v.created_at, p.created_at)
             """
         )]
@@ -407,7 +421,43 @@ def awaiting() -> dict:
             moved, drift_error = _base_moved_since(row["verdict_tree"], paths)
             # Only a patch that still applies can be described as ready or not;
             # for the other states the drift is not the operative fact.
-            if state == "applies":
+            if state == "applies" and row["verdict"] == "indeterminate":
+                # THE BOUND. Without one, a proposal that is ambiguous BY ITS
+                # NATURE burns a judge run every night forever. The bound is not
+                # a retry count — a count is arbitrary — it is tree identity:
+                # `loop_verdicts.tree_sha` is the exact tree the judges ran on
+                # (base + patch, built in the sandbox), so when nothing outside
+                # the patch's own paths differs between that tree and HEAD,
+                # every input to a fresh run is byte-identical to the run that
+                # declined, and re-judging is provably pointless. The morning
+                # that motivated all this unblocks itself under this rule:
+                # `state/judge-sets.yml` is IN the tree, so the min_work
+                # correction (f3f7a39b) was a tree move, and 18/19/20 became
+                # re-judgeable the moment it landed. A drift we cannot measure
+                # (verdict records no tree, tree not in this clone) counts as
+                # moved — the refusal needs positive proof of sameness, because
+                # the failure mode of guessing "unchanged" is the one-way door
+                # this state exists to remove.
+                if drift_error is None and not moved:
+                    state = "indeterminate-held"
+                    detail = (f"judged indeterminate on "
+                              f"{(row['verdict_tree'] or '')[:8]} and nothing "
+                              f"but the patch's own paths differs from HEAD — "
+                              f"re-judging an unchanged tree cannot answer "
+                              f"differently; a commit that moves the base "
+                              f"unblocks it")
+                else:
+                    state = "indeterminate"
+                    if drift_error:
+                        detail = (f"a judge declined to answer, and whether the "
+                                  f"tree moved since cannot be measured "
+                                  f"({drift_error}) — a fresh verdict is the "
+                                  f"honest repair")
+                    else:
+                        shown = ", ".join(moved[:3])
+                        more = f" (+{len(moved) - 3} more)" if len(moved) > 3 else ""
+                        detail = (f"moved since the verdict: {shown}{more}")
+            elif state == "applies":
                 if drift_error:
                     state = "re-judge"
                     detail = drift_error
@@ -424,6 +474,11 @@ def awaiting() -> dict:
             "weakness_id": row["weakness_id"],
             "intent_class": row["intent_class"],
             "proposer_id": row["proposer_id"],
+            # The verdict RESULT rides along because state no longer implies it:
+            # a `landed` or `conflict` row may sit on a pass or on an
+            # indeterminate, and a renderer that says "passed the judges" of a
+            # row a judge declined to answer is lying by one word.
+            "verdict": row["verdict"],
             "verdict_at": row["verdict_at"],
             "verdict_tree": row["verdict_tree"],
             "target_paths": paths,
@@ -444,9 +499,13 @@ def awaiting() -> dict:
         "head": None if head_rc != 0 else _git_head(),
         # `unjudged` belongs here: red-status renders this list, and a loop that
         # files proposals nobody rules on has stopped moving just as surely as
-        # one whose patches never land.
+        # one whose patches never land. `indeterminate` belongs for the same
+        # reason since 2026-08-26 — it is the driver's to re-judge.
+        # `indeterminate-held` deliberately does NOT: it waits on a commit, not
+        # on anybody's act tonight, and its row above says what unblocks it.
         "unlanded": [r for r in real
-                     if r["state"] in ("unjudged", "ready", "re-judge")],
+                     if r["state"] in ("unjudged", "ready", "re-judge",
+                                       "indeterminate")],
         "passed_without_proposal": bare,
     }
 
@@ -543,13 +602,16 @@ STATE_GLOSS = {
     "unjudged": "filed, and no judge has ruled on it — the driver's to pick up",
     "ready": "applies to HEAD, and no target path moved since the judges ruled",
     "re-judge": "still applies, but the judged tree is gone — no judge has ruled on THIS one",
+    "indeterminate": "a judge declined to answer, and the tree moved since — the driver re-judges",
+    "indeterminate-held": "a judge declined to answer and the tree has not moved — a re-judge would re-ask the identical question",
     "conflict": "the tree moved under the patch; it fits neither forward nor reversed",
     "unusable": "git cannot parse the patch — the proposer wrote it malformed",
     "landed": "the change is in the tree",
     "no-diff": "the ledger row carries no patch",
     "unknown": "could not ask git, so this is UNKNOWN and not 'landed'",
 }
-_STATE_ORDER = ["unjudged", "ready", "re-judge", "conflict", "unusable",
+_STATE_ORDER = ["unjudged", "ready", "re-judge", "indeterminate",
+                "indeterminate-held", "conflict", "unusable",
                 "unknown", "no-diff", "landed"]
 
 
@@ -573,17 +635,24 @@ def _print_awaiting(report: dict, *, as_json: bool) -> int:
 
     pending = report["unlanded"]
     unjudged = [r for r in rows if r["state"] == "unjudged"]
-    judged = [r for r in rows if r["state"] != "unjudged"]
     # Counted apart, because they are different facts and one header cannot
-    # carry both: a passed proposal is waiting on an ACT, an unjudged one is
-    # waiting on a VERDICT, and calling the second a "passed verdict" is the
-    # arithmetic this file exists to refuse.
-    print(f"{len(judged)} passed verdict(s) against a proposal; "
-          f"{len([r for r in pending if r['state'] != 'unjudged'])} "
+    # carry all three: a passed proposal is waiting on an ACT, an unjudged one
+    # is waiting on a VERDICT, an indeterminate one on a JUDGE WHO CAN ANSWER —
+    # and calling any of them by another's name is the arithmetic this file
+    # exists to refuse. The header counts by the VERDICT, not by the state,
+    # because a landed or conflicted row may sit on either result.
+    passed = [r for r in rows if r.get("verdict") == "pass"]
+    declined = [r for r in rows if r.get("verdict") == "indeterminate"]
+    print(f"{len(passed)} passed verdict(s) against a proposal; "
+          f"{len([r for r in pending if r['state'] in ('ready', 're-judge')])} "
           f"have not reached the tree")
     if unjudged:
         print(f"  {len(unjudged)} proposal(s) NOT YET JUDGED — nothing downstream "
               f"can see these until a judge rules")
+    if declined:
+        print(f"  {len(declined)} proposal(s) judged INDETERMINATE — a judge "
+              f"declined to answer; each row below says whether a fresh run "
+              f"could answer differently")
     bare = report.get("passed_without_proposal") or 0
     if bare:
         print(f"  (+{bare} passed with no proposal attached — bare gate-set runs, "

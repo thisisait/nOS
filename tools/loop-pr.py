@@ -67,7 +67,8 @@ DRY RUN BY DEFAULT (operator doctrine — dry-run default, explicit confirm):
     tools/loop-pr.py                    # say what would happen, touch nothing
     tools/loop-pr.py --open-mr          # act on every ready proposal
     tools/loop-pr.py --open-mr --uuid <proposal>   # act on exactly one
-    tools/loop-pr.py --open-mr --rejudge           # also re-judge decayed ones
+    tools/loop-pr.py --open-mr --rejudge           # also re-judge decayed and
+                                                   # indeterminate ones
     tools/loop-pr.py --base master      # (refused — see _refuse_master)
 
 Exit 0 when it did what it said, 1 on a failure that left work half-done (a
@@ -519,7 +520,7 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
     """
     wid = row["weakness_id"]
     state = row["state"]
-    if state in ("re-judge", "unjudged") and not gate_set:
+    if state in ("re-judge", "unjudged", "indeterminate") and not gate_set:
         log(f"  {wid}: the ledger row declares no gate set — cannot judge")
         return 1
 
@@ -554,6 +555,37 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
             log(f"  {wid}: WOULD re-judge against HEAD, then land if it passes")
             return 0
         log(f"  {wid}: re-judging against HEAD (the gate set runs pytest; minutes)")
+        result, detail = _rejudge(row["uuid"], gate_set, timeout)
+        if result != "pass":
+            log(f"  {wid}: re-judge returned {result}"
+                f"{' — ' + detail if detail else ''}; nothing landed")
+            return 0
+        log(f"  {wid}: re-judged pass on HEAD")
+    elif state == "indeterminate":
+        # AN INDETERMINATE WAS A ONE-WAY DOOR until 2026-08-26. The reader
+        # selected pass-or-null only, so a proposal whose latest verdict was
+        # `indeterminate` vanished from the only list this driver walks, and no
+        # scheduled path could ever re-judge it. Measured 2026-08-25: proposals
+        # 18/19/20 drew indeterminate three runs straight because
+        # state/judge-sets.yml carried a min_work floor derived by arithmetic
+        # (4060) where the judge env measures 4032 — the verdicts were about the
+        # constant, not the proposals — and fixing the floor (f3f7a39b) could
+        # not bring them back. The reader now surfaces the state, WITH a bound
+        # (an unchanged judged tree is `indeterminate-held`, which never reaches
+        # this driver — see loop-status.py::awaiting), and this branch makes the
+        # row reachable. An indeterminate is NEVER treated as a pass: the only
+        # act here is the same _rejudge the decayed path runs, and only a fresh
+        # `pass` proceeds.
+        if not rejudge:
+            log(f"  {wid}: last verdict was indeterminate — re-run the judges "
+                f"with --rejudge")
+            return 0
+        if not act:
+            log(f"  {wid}: WOULD re-judge (a judge declined to answer and the "
+                f"tree moved since), then land if it passes")
+            return 0
+        log(f"  {wid}: re-judging an indeterminate against HEAD "
+            f"(the gate set runs pytest; minutes)")
         result, detail = _rejudge(row["uuid"], gate_set, timeout)
         if result != "pass":
             log(f"  {wid}: re-judge returned {result}"
@@ -710,7 +742,9 @@ def main() -> int:
                     help="act; without it this is a dry run and touches nothing")
     ap.add_argument("--uuid", help="act on exactly one proposal")
     ap.add_argument("--rejudge", action="store_true",
-                    help="re-run the judges on proposals whose verdict decayed")
+                    help="re-run the judges on proposals whose verdict decayed "
+                         "or came back indeterminate on a tree that has since "
+                         "moved")
     ap.add_argument("--base", default="dev", help="target branch (default: dev)")
     ap.add_argument("--timeout", type=int, default=1800,
                     help="seconds to wait for a re-judge (the repo set runs pytest)")
@@ -726,8 +760,14 @@ def main() -> int:
         if report.get("error"):
             raise Refused(report["error"])
 
+        # `indeterminate` is the driver's since 2026-08-26 (the one-way-door
+        # fix — see land()); `indeterminate-held` is deliberately NOT: the
+        # reader proved a fresh run would see byte-identical inputs, and its
+        # row already names the condition (a commit moving the base) that
+        # flips it back to `indeterminate`.
         rows = [r for r in report["rows"]
-                if r["state"] in ("unjudged", "ready", "re-judge")]
+                if r["state"] in ("unjudged", "ready", "re-judge",
+                                  "indeterminate")]
         if args.uuid:
             rows = [r for r in rows if r["uuid"].startswith(args.uuid)]
             if not rows:

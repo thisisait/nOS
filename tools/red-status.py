@@ -672,17 +672,27 @@ def reds(report: dict) -> list[str]:
     loop = report.get("loop_verdicts") or {}
     if loop.get("unlanded"):
         rows = loop["unlanded"]
-        # Two different stalls, and one sentence cannot carry both: a passed
-        # proposal waits on an ACT, an unjudged one waits on a VERDICT. Saying
-        # "passed the judges" of a row no judge has seen is the kind of quiet
-        # inaccuracy that makes a reader stop trusting the rest of the line.
+        # Three different stalls, and one sentence cannot carry them: a passed
+        # proposal waits on an ACT, an unjudged one waits on a VERDICT, and an
+        # indeterminate one (in the list since 2026-08-26, the one-way-door
+        # fix) waits on a re-judge. Saying "passed the judges" of a row no
+        # judge has seen — or of one a judge DECLINED to answer — is the kind
+        # of quiet inaccuracy that makes a reader stop trusting the line.
         unjudged = [r for r in rows if r["state"] == "unjudged"]
-        passed = [r for r in rows if r["state"] != "unjudged"]
+        declined = [r for r in rows if r["state"] == "indeterminate"]
+        passed = [r for r in rows
+                  if r["state"] not in ("unjudged", "indeterminate")]
         if passed:
             out.append(
                 f"{len(passed)} loop proposal(s) passed the judges and never "
                 f"reached the tree: "
                 + ", ".join(f"{r['weakness_id']} [{r['state']}]" for r in passed[:4])
+            )
+        if declined:
+            out.append(
+                f"{len(declined)} loop proposal(s) judged indeterminate on a "
+                f"tree that has since moved — the driver's to re-judge: "
+                + ", ".join(r["weakness_id"] for r in declined[:4])
             )
         if unjudged:
             out.append(
