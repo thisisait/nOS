@@ -63,7 +63,7 @@ Because the plist embeds that token, the rendered `~/Library/LaunchAgents/eu.thi
 Jobs are **declarative and repo-owned**. Nothing is registered by hand.
 
 - A plugin declares its jobs in a `pulse:` block in `files/anatomy/plugins/<name>/plugin.yml` — today `gitleaks`, `keap-base`, `wing-base`, `gdpr-breach-base`, `authentik-tofu-drift-base`.
-- An agent declares its jobs in a `pulse:` block in a flat profile `files/anatomy/agents/<agent>.yml` — today `conductor`, `curator`, `librarian`, `scout`, `remediator`, `migration-author`, `upgrade-advisor`, `upgrade-architect`.
+- An agent declares its jobs in a `pulse:` block in a flat profile `files/anatomy/agents/<agent>.yml` — today `conductor`, `librarian`, `surveyor`, `upgrade-architect` (five profiles left this glob in the 2026-08-26 roster close).
 - `files/anatomy/scripts/discover-pulse-catalog.py` harvests both globs into one JSON catalog.
 - `roles/pazny.wing/tasks/post.yml` POSTs each entry to `/api/v1/pulse_jobs`, idempotent on `plugin_name` + `job_name`.
 - `files/anatomy/plugins/pulse-base/plugin.yml` pins the long-term contract: it is a `composition` plugin that aggregates those blocks into `inputs.jobs`, and it declares no compose extension because Pulse is host-side.

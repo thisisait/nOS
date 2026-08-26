@@ -46,7 +46,7 @@ be attributable. The chain has **three layers**:
 - Forward-auth services see `X-Authentik-Username` / `X-Authentik-Groups`
   on every request (Traefik middleware injects from the outpost).
 - Agents authenticate via `client_credentials` → JWT bearer with
-  `name = <client_id>` (e.g. `nos-conductor`, `nos-remediator`).
+  `name = <client_id>` (e.g. `nos-conductor`, `nos-surveyor`).
 
 ### Layer 2 — Wing API stamps actor_id from the token
 
@@ -152,8 +152,12 @@ catches future remediator-class registration gaps).
   + trace_id (W3C). The audit trail is INTERNALLY consistent but doesn't
   sign rows. A future tamper-evident-log layer would HMAC each event row
   on insert.
-- **Conductor / inspektor / scout agents not yet running on schedule** —
-  remediator + conductor profile shipped; the others (inspektor, scout,
-  librarian) have Authentik clients + capability scopes pre-provisioned
-  but no Pulse jobs. They join the audit surface when their runners
-  land.
+- **Which agents are live** — this document stopped carrying the
+  roster (it was wrong in both directions within three months; a moving
+  roster does not live in prose). Ask `tools/agent-status.py` for what
+  the agents did and how their runs ended, and `tools/identity-status.py`
+  for the declared client roster vs what Authentik holds. The 2026-08-26
+  roster close retired scout / remediator / upgrade-advisor (profiles
+  deleted; git history keeps them) and parked curator / migration-author
+  (AgentKit contract only, `metadata.runner_status: parked`, Authentik
+  client reserved — the inspektor pattern).

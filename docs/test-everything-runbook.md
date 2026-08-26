@@ -78,9 +78,10 @@ backup or blank baseline first.
   `php files/anatomy/wing/bin/breach-report.php --id=<n> --format=json`. Verify
   controller + DPO header from `instance_org`/`gdpr_dpo_name`/`gdpr_dpo_contact`
   + the 72h clock.
-- **Agent loop** (pre-flight dry-run) — `bash tools/run-scout.sh --dry-run`,
-  `… run-upgrade-architect.sh --dry-run`, `… run-remediator.sh --dry-run`,
-  `… run-upgrade-advisor.sh --dry-run`. `launchctl list | grep pulse`;
+- **Agent loop** (pre-flight dry-run) — `bash tools/run-surveyor.sh --dry-run`,
+  `… run-upgrade-architect.sh --dry-run`, `… run-librarian.sh --dry-run`
+  (run-scout/run-remediator/run-upgrade-advisor left with their agents in the
+  2026-08-26 roster close). `launchctl list | grep pulse`;
   `curl http://127.0.0.1:18789/status` (OpenClaw). Full agent runs need
   `anthropic_api_key` (or a per-agent ollama override) in credentials.yml.
 - **Git forge** (local-first) — validate-only `bash tools/recipe-pr.sh grafana`;

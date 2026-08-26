@@ -48,12 +48,13 @@ finally written by the runtime that owns them.
 | librarian (brief/describe/judge-lint) | text | public knowledge corpus | **eligible — already bound** |
 | curator | text (proposals via describe seam) | knowledge corpus | **eligible** (needs its 3 edits) |
 | conductor | text report | estate metadata (events, job catalog) | eligible, operator's eyes on the transcript |
-| upgrade-advisor | text advice | component versions + advisories | eligible, operator's discretion |
-| scout | text | events + security-queue adjacency | **operator decides** — drift verdicts touch security posture |
-| remediator | text | **leak neighbourhoods + commit-author identity** | **excluded** (data axis; also opus → resolver refuses) |
 | migration-author | **authors code** | repo | **excluded** (output axis) |
 | upgrade-architect | **authors code** | repo | **excluded** (output axis) |
 | inspektor | — | — | **excluded** (`runner_status: deferred`; its register entry depends on it) |
+
+(The 2026-08-26 roster close retired scout / remediator / upgrade-advisor and
+parked curator / migration-author — rows here describe only agents that still
+exist; ask `tools/agent-status.py` for the live roster.)
 
 Every "eligible" beyond librarian needs its own three edits BEFORE its first
 routed run: primary → `anthropic-claude-sonnet-4-5`, `backend: minimax`,
