@@ -75,7 +75,9 @@ def _asks_for_a_wing_token(name: str, text: str) -> bool:
 def test_the_sweep_sees_the_profiles():
     """Positive control — an empty sweep makes everything below vacuous."""
     profiles = _profiles()
-    assert len(profiles) >= 8, (
+    # >= 4 since the 2026-08-26 roster close: conductor, librarian,
+    # surveyor, upgrade-architect (was >= 8).
+    assert len(profiles) >= 4, (
         f"only {len(profiles)} flat agent profile(s) found under {PROFILES}; "
         "this gate reasons over them, so a short sweep proves nothing."
     )

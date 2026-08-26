@@ -81,8 +81,8 @@ def test_the_agent_bridge_uses_the_house_bone_pattern() -> None:
     text = bridge.read_text(encoding="utf-8")
 
     assert re.search(r'BONE_URL="\$\{BONE_API_URL:-http://127\.0\.0\.1:8099\}"', text), (
-        "pulse-run-agent.sh must resolve Bone the way run-remediator.sh, "
-        "run-migration-author.sh and deploy-from-ci.sh already do: "
+        "pulse-run-agent.sh must resolve Bone the way the operator run-tools "
+        "and deploy-from-ci.sh already do: "
         'BONE_URL="${BONE_API_URL:-http://127.0.0.1:8099}"'
     )
 

@@ -28,7 +28,8 @@ this file holds the DECLARED DATA to the four that are decidable offline:
 Gates 1 and 3 (arming via NOS_ARMED_BACKENDS, refusal semantics) are runtime
 behaviour and belong to the resolver's own gate.
 
-ANTI-VACUITY: the sweep must FIND the agents — nine directories exist today —
+ANTI-VACUITY: the sweep must FIND the agents — seven directories exist
+since the 2026-08-26 roster close —
 and the registry must parse to at least the default backend, or every check
 above passes by absence. Both are asserted as positive controls.
 """
@@ -60,9 +61,10 @@ def _agents() -> list[tuple[str, dict]]:
         f = d / "agent.yml"
         if d.is_dir() and f.is_file():
             out.append((d.name, yaml.safe_load(f.read_text()) or {}))
-    assert len(out) >= 9, (
-        f"the agent sweep found {len(out)} agent.yml files where nine exist — "
-        "every value check below would pass by absence"
+    assert len(out) >= 7, (
+        f"the agent sweep found {len(out)} agent.yml files where seven exist "
+        "(nine until the 2026-08-26 roster close retired scout/remediator/"
+        "upgrade-advisor) — every value check below would pass by absence"
     )
     return out
 

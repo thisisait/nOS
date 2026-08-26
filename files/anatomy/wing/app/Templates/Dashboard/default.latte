@@ -13,14 +13,16 @@
 {* ── Stat row (4 KPI cards) ────────────────────────────────────────── *}
 <div class="stats">
 	{* W6.2 (2026-06-10): the sub used to echo scan_config.schedule
-	   ("hourly") — a false cadence; scans are operator-fired on-demand
-	   (tools/run-scout.sh). Show WHEN the last cycle actually ran and
-	   go warning-red past the 14-day drift threshold instead. *}
+	   ("hourly") — a false cadence; scans are operator-fired on-demand.
+	   Show WHEN the last cycle actually ran and go warning-red past the
+	   14-day drift threshold instead. (The remedy string named
+	   tools/run-scout.sh until the 2026-08-26 roster close retired the
+	   scout; files/vuln-scan/scan-runner.sh is what runs a cycle.) *}
 	<div class="stat">
 		<div class="label">Scan cycle</div>
 		<div class="value">{$state['latest_cycle'] ?? 0}</div>
 		{if $scanAgeDays === null}
-			<div class="sub" style="color: var(--color-danger)">never ran — fire tools/run-scout.sh</div>
+			<div class="sub" style="color: var(--color-danger)">never ran — fire files/vuln-scan/scan-runner.sh</div>
 		{elseif $scanStale}
 			<div class="sub" style="color: var(--color-danger)">last scan {$scanAgeDays}d ago — STALE (&gt;14d)</div>
 		{else}

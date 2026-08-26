@@ -139,7 +139,8 @@ def test_registry_refuses_colliding_service_purpose_pairs(tmp_path):
 
 def test_registry_loads_and_is_nonempty():
     reg = d.load_registry(REGISTRY)
-    assert len(reg) >= 120
+    # 119 since the 2026-08-26 roster close removed eight agent entries.
+    assert len(reg) >= 119
 
 
 # ── Scheme table (docs/secrets-p1-hkdf.md §2) ────────────────────────────────

@@ -2,8 +2,8 @@
 # =============================================================================
 # run-librarian.sh — operator-driven knowledge judgment (cortex Layer 2)
 #
-# Fires the librarian agent's `judge-lint-queue` Pulse job on demand. Same
-# shape as tools/run-scout.sh: pre-flight (KEAP health + intake peek +
+# Fires the librarian agent's `judge-lint-queue` Pulse job on demand. The
+# shared launcher shape: pre-flight (KEAP health + intake peek +
 # pulse_jobs row + Authentik token grant), env resolution from
 # pulse_jobs.env_json, post-flight verifier (events + verdict count),
 # markdown report to ~/.nos/librarian-report-<ts>.md.

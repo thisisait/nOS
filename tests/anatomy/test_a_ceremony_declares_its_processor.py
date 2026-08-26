@@ -69,7 +69,8 @@ def _agent_records() -> dict[str, dict]:
 def test_the_sweep_reaches_the_agents_at_all():
     """Positive control. A zero-length sweep would make every check below pass."""
     records = _agent_records()
-    assert len(records) >= 8, (
+    # >= 7 since the 2026-08-26 roster close (was >= 8).
+    assert len(records) >= 7, (
         f"only {len(records)} agent record(s) found. If `records_from_agents` "
         "has stopped reading `files/anatomy/agents/<name>/agent.yml`, the "
         "register is back to the shape it had on 2026-08-13: complete, green, "

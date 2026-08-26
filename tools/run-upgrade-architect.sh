@@ -10,7 +10,7 @@
 # commits each drafted YAML and applies coexistence with
 # `ansible-playbook main.yml --tags coexistence`.
 #
-# Same shape as tools/run-scout.sh / run-remediator.sh: pre-flight (Bone health
+# The shared launcher shape (see tools/run-surveyor.sh): pre-flight (Bone health
 # + pulse_jobs row + Authentik token grant), env from pulse_jobs.env_json,
 # post-flight verifier, markdown report to ~/.nos/upgrade-architect-report-<ts>.md.
 #

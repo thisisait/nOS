@@ -427,7 +427,13 @@ nodes:
   "pulse:conductor:vulnerability-scan": withheld
   "pulse:cortex:cortex-corpus-diff": withheld
   "pulse:cortex:cortex-fs-sync": withheld
-  "pulse:curator:curator-sweep": withheld
+  # 2026-08-26 roster close: pulse:curator:curator-sweep,
+  # pulse:migration-author:promote-migration (agents PARKED, pulse rows gone),
+  # pulse:scout:drift-scan, pulse:remediator:triage-open-findings,
+  # pulse:upgrade-advisor:upgrade-advise (agents RETIRED) left the artifact.
+  # All five were withheld, so the published set is unchanged — same reason
+  # the A20 addition below needed no re-signature (D4 freezes the PUBLISHED
+  # set; removals of withheld nodes publish nothing).
   "pulse:discovery:contradiction-scan": withheld
   "pulse:gdpr-breach:breach-deadline-scan": withheld
   "pulse:gitleaks:nightly-scan": withheld
@@ -444,17 +450,13 @@ nodes:
   "pulse:librarian:brief-taxonomy": withheld
   "pulse:librarian:describe-taxonomy": withheld
   "pulse:librarian:judge-lint-queue": withheld
-  "pulse:migration-author:promote-migration": withheld
   "pulse:npm-supply-chain:daily-ioc-scan": withheld
-  "pulse:remediator:triage-open-findings": withheld
-  "pulse:scout:drift-scan": withheld
   # A20, added 2026-08-17 AFTER the signature. WITHHELD, and that is why no
   # re-signature is needed: D4 freezes the PUBLISHED set, and this publishes
   # nothing — 63 atoms before, 63 after. The gate halted the build rather than
   # let an unruled node pass either way, which is the behaviour that makes the
   # frozen set mean something.
   "pulse:surveyor:surface-survey": withheld
-  "pulse:upgrade-advisor:upgrade-advise": withheld
   "pulse:upgrade-architect:recipe-author": withheld
   "pulse:wing:agent-cost-tally": withheld
   "pulse:wing:audit-chain-verify": withheld

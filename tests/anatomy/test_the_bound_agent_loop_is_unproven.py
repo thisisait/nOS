@@ -72,7 +72,8 @@ def _bound(doc: dict) -> str | None:
 def test_the_sweep_sees_the_agents():
     """Positive control — an empty sweep makes everything below vacuous."""
     agents = _agents()
-    assert len(agents) >= 10, (
+    # >= 7 since the 2026-08-26 roster close (was >= 10).
+    assert len(agents) >= 7, (
         f"only {len(agents)} agent definition(s) found; this gate reasons over "
         "what those files declare, so a short sweep proves nothing."
     )

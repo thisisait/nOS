@@ -68,7 +68,8 @@ def _agent_credentialed_jobs() -> list[tuple[str, dict]]:
 def test_there_are_agent_credentialed_jobs_at_all() -> None:
     """Positive control — an empty sweep would make every gate below vacuous."""
     jobs = _agent_credentialed_jobs()
-    assert len(jobs) >= 9, (
+    # >= 6 since the 2026-08-26 roster close (was >= 9).
+    assert len(jobs) >= 6, (
         f"only {len(jobs)} agent-credentialed Pulse jobs found under "
         "files/anatomy/agents/ — the sweep this file gates has gone missing."
     )

@@ -7,8 +7,8 @@
 # surface: what changes, what a person decides on, and what is decided on
 # regularly while being visible nowhere.
 #
-# Same shape as tools/run-scout.sh and tools/run-remediator.sh — and the
-# sameness is the point. The env comes from `pulse_jobs.env_json`, whose
+# The shared launcher shape (once tools/run-scout.sh, retired 2026-08-26)
+# — and the sameness is the point. The env comes from `pulse_jobs.env_json`, whose
 # `secret:<name>` references are resolved by the ONE shared resolver in
 # tools/lib/pulse-env.sh. A caller that builds its own environment instead
 # exports the literal `secret:agent_surveyor_client_secret` and dies on an

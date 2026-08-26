@@ -280,27 +280,15 @@
     or 'Updated' in (_wing_librarian_token.stdout | default(''))
   no_log: true
 
-- name: "[pazny.wing] Reconverge API token — scout (A9.4 drift-visibility agent)"
-  # Read-only drift detector. Same provision-token.php pattern as conductor +
-  # remediator; the Authentik client (nos-scout) was already pre-provisioned
-  # in default.config.yml::authentik_agent_clients, this hook just adds the
-  # matching api_tokens row Wing checks at request time.
-  ansible.builtin.command:
-    argv:
-      - php
-      - "{{ wing_app_dir }}/bin/provision-token.php"
-      - --db={{ wing_data_dir }}/wing.db
-      - --token={{ scout_wing_api_token }}
-      - --name=scout
-    chdir: "{{ wing_app_dir }}"
-  register: _wing_scout_token
-  changed_when: >
-    'Created' in (_wing_scout_token.stdout | default(''))
-    or 'Updated' in (_wing_scout_token.stdout | default(''))
-  no_log: true
+# Roster close 2026-08-26: the scout / upgrade-advisor / remediator token
+# tasks left with their agents (RETIRED — 0 events ever in this DB epoch);
+# curator / migration-author tokens left with the PARK (inspektor-style:
+# profile + Authentik client stay, launcher-facing apparatus goes). The live
+# api_tokens rows persist until the operator deactivates them — provision
+# only upserts, it never reconciles absence.
 
 - name: "[pazny.wing] Reconverge API token — surveyor (A20 surface-legibility agent)"
-  # Read-only surface survey. Same provision-token.php pattern as scout; the
+  # Read-only surface survey. Same provision-token.php pattern as conductor; the
   # Authentik client (nos-surveyor) is pre-provisioned in
   # default.config.yml::authentik_agent_clients, and this hook adds the
   # matching api_tokens row Wing checks at request time. Without it the agent
@@ -320,47 +308,6 @@
     or 'Updated' in (_wing_surveyor_token.stdout | default(''))
   no_log: true
 
-- name: "[pazny.wing] Reconverge API token — curator (KEAP reshaping agent)"
-  # FOUND BY GATE, 2026-08-18. curator has asked for `WING_API_TOKEN:
-  # "{{ curator_wing_api_token }}"` in its pulse env since it shipped; the
-  # secret was templated and present in default.credentials.yml, the Authentik
-  # client existed, the catalog knew the name — and this block did not exist,
-  # so the api_tokens row was never written and Wing would reject the token at
-  # request time. Four of five declarations in place is the condition
-  # docs/hidden_fees/16 describes as invisible: every gate green, one 401 at
-  # 02:00 naming the symptom instead of the missing member.
-  ansible.builtin.command:
-    argv:
-      - php
-      - "{{ wing_app_dir }}/bin/provision-token.php"
-      - --db={{ wing_data_dir }}/wing.db
-      - --token={{ curator_wing_api_token }}
-      - --name=curator
-    chdir: "{{ wing_app_dir }}"
-  register: _wing_curator_token
-  changed_when: >
-    'Created' in (_wing_curator_token.stdout | default(''))
-    or 'Updated' in (_wing_curator_token.stdout | default(''))
-  no_log: true
-
-- name: "[pazny.wing] Reconverge API token — upgrade-advisor (W5-B4)"
-  # Reads the /upgrades matrix + queues applicable upgrades. The token name
-  # is the actor_id recorded as planned_by on each queued upgrade. Authentik
-  # client (nos-upgrade-advisor) is pre-provisioned in authentik_agent_clients.
-  ansible.builtin.command:
-    argv:
-      - php
-      - "{{ wing_app_dir }}/bin/provision-token.php"
-      - --db={{ wing_data_dir }}/wing.db
-      - --token={{ upgrade_advisor_wing_api_token }}
-      - --name=upgrade-advisor
-    chdir: "{{ wing_app_dir }}"
-  register: _wing_upgrade_advisor_token
-  changed_when: >
-    'Created' in (_wing_upgrade_advisor_token.stdout | default(''))
-    or 'Updated' in (_wing_upgrade_advisor_token.stdout | default(''))
-  no_log: true
-
 - name: "[pazny.wing] Reconverge API token — upgrade-architect (W5-B5)"
   # Reads the /upgrades matrix, drafts recipes (in its report) + queues
   # coexistence. Token name = actor_id (planned_by on coexistence queues).
@@ -377,45 +324,6 @@
   changed_when: >
     'Created' in (_wing_upgrade_architect_token.stdout | default(''))
     or 'Updated' in (_wing_upgrade_architect_token.stdout | default(''))
-  no_log: true
-
-- name: "[pazny.wing] Reconverge API token — migration-author (B4a)"
-  # Promotes a MERGED recipe into the real migration record + version bump,
-  # opens a LOCAL forge MR (GATE 2). Token name = actor_id (author_agent on
-  # each migrations_authored row). Authentik client (nos-migration-author) is
-  # in authentik_agent_clients.
-  ansible.builtin.command:
-    argv:
-      - php
-      - "{{ wing_app_dir }}/bin/provision-token.php"
-      - --db={{ wing_data_dir }}/wing.db
-      - --token={{ migration_author_wing_api_token }}
-      - --name=migration-author
-    chdir: "{{ wing_app_dir }}"
-  register: _wing_migration_author_token
-  changed_when: >
-    'Created' in (_wing_migration_author_token.stdout | default(''))
-    or 'Updated' in (_wing_migration_author_token.stdout | default(''))
-  no_log: true
-
-- name: "[pazny.wing] Reconverge API token — remediator (A9.3 triage agent)"
-  # Sister to the conductor token — same pattern, separate identity for
-  # actor-attribution. Without this row in api_tokens, the remediator's
-  # POST /api/v1/events + GET /api/v1/gitleaks_findings calls return 401
-  # ("Invalid or inactive API token"). Surfaced live 2026-05-17 during
-  # the first non-operator remediator run.
-  ansible.builtin.command:
-    argv:
-      - php
-      - "{{ wing_app_dir }}/bin/provision-token.php"
-      - --db={{ wing_data_dir }}/wing.db
-      - --token={{ remediator_wing_api_token }}
-      - --name=remediator
-    chdir: "{{ wing_app_dir }}"
-  register: _wing_remediator_token
-  changed_when: >
-    'Created' in (_wing_remediator_token.stdout | default(''))
-    or 'Updated' in (_wing_remediator_token.stdout | default(''))
   no_log: true
 
 - name: "[pazny.wing] Reconverge API token — openclaw (B1: A8 agent, wing-side provisioning)"
@@ -576,9 +484,9 @@
       # script. Surfaced live 2026-05-17 on the first re-run after the
       # A9 batch landed (wing:dispatch-notifications stored args_json=[]).
       args: "{{ item.job.args | default([]) }}"
-      # A9.3 (2026-05-17): paused-by-default support. Remediator opts
-      # paused=true so it never auto-fires; operator uses
-      # tools/run-remediator.sh for on-demand triage. Repository upsert
+      # A9.3 (2026-05-17): paused-by-default support — introduced for the
+      # remediator agent (retired 2026-08-26; its launcher is gone but the
+      # pattern stays for every on-demand job). Repository upsert
       # honors paused/paused_reason on FIRST insert; preserves operator
       # manual pause state on subsequent updates.
       paused: "{{ (item.job.paused | default(false)) | bool | ternary(1, 0) }}"

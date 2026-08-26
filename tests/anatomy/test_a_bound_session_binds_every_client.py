@@ -27,7 +27,8 @@ fallback, or REFUSE them, is a design decision that belongs with the binding
 design (the fallback half was raised by its author the same day). Deciding it
 here by editing behaviour would be the cheaper and worse move. This gate holds
 the ground until then: it cannot be satisfied by editing itself, because its
-premises are what the nine agent files declare.
+premises are what the agent files declare (seven since the 2026-08-26
+roster close).
 """
 
 from __future__ import annotations
@@ -55,8 +56,9 @@ def _agent_models() -> dict[str, dict]:
 def test_the_sweep_sees_the_agents():
     """Positive control — an empty sweep would make both checks below vacuous."""
     models = _agent_models()
-    assert len(models) >= 9, (
-        f"only {len(models)} agent definition(s) found; the premises of this "
+    assert len(models) >= 7, (
+        f"only {len(models)} agent definition(s) found (seven exist since the "
+        "2026-08-26 roster close); the premises of this "
         "gate are what those files declare, so a short sweep proves nothing."
     )
 

@@ -3,9 +3,10 @@
 {block content}
 <h2 class="mb-xs" style="font-size: 18px;">Remediation queue</h2>
 <div class="text-muted text-small mb-lg">
-	CVE pins, hardening tasks, and architectural follow-ups. The remediator
-	agent (A9.3) walks open rows on demand via
-	<code>bash tools/run-remediator.sh</code> and posts a markdown report.
+	CVE pins, hardening tasks, and architectural follow-ups. Rows are
+	triaged through the loop's <code>rem</code> weakness source
+	(<code>tools/loop-propose.py</code>; the remediator agent retired
+	2026-08-26 without ever running here).
 </div>
 
 <div class="filter-bar">
@@ -54,8 +55,8 @@
 		<div class="empty-state-hint">
 			The remediation queue is empty. New rows land here from automated
 			scans (gitleaks, version-pin audits) and operator-filed manual
-			items. Run <code>bash tools/run-remediator.sh</code> to trigger
-			an on-demand triage.
+			items; the loop's <code>rem</code> weakness source proposes
+			fixes from open rows.
 		</div>
 	</div>
 {/if}

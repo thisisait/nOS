@@ -14,7 +14,7 @@
 # NOS_AGENT_* first, falls back to NOS_CONDUCTOR_* for backward compat
 # (so the existing conductor Pulse job keeps working unchanged):
 #   NOS_AUTHENTIK_URL              — e.g. https://auth.dev.local
-#   NOS_AGENT_NAME                 — e.g. conductor / remediator (default: conductor)
+#   NOS_AGENT_NAME                 — e.g. conductor / surveyor (default: conductor)
 #   NOS_AGENT_CLIENT_ID            — Authentik client_id (default: nos-<agent_name>)
 #   NOS_AGENT_CLIENT_SECRET        — Authentik client_secret (required)
 #   NOS_AGENT_PROFILE              — Path to <agent>.yml profile
@@ -430,7 +430,7 @@ EFFECTIVE_MODEL="${NOS_AGENT_MODEL:-${ANTHROPIC_MODEL:-cli-default}}"
 
 # Propagate the agent's self-declared verdict. `claude --print` exits 0 on any
 # successful run regardless of what the agent concluded, so the operator run-
-# tools (run-upgrade-advisor.sh etc.) couldn't tell REVIEW (queued/drafted)
+# tools (tools/run-*.sh) couldn't tell REVIEW (queued/drafted)
 # from GREEN. Agents end their report with a `NOS_AGENT_EXIT: N` sentinel; lift
 # it into the process exit. Only ESCALATE a clean run — never mask a real
 # claude failure (CLAUDE_EXIT already non-zero stays).

@@ -145,7 +145,7 @@ loader handles the rest.
 
 Today's `roles/pazny.authentik/templates/blueprints/30-agent-clients.yaml.j2`
 defines OAuth clients for `nos-conductor`, `nos-inspektor`, `nos-librarian`,
-`nos-scout`, etc. After thinning, **each agent profile under
+`nos-surveyor`, etc. After thinning, **each agent profile under
 `files/anatomy/agents/<n>/profile.yml` carries its own `authentik:` block**
 (symmetric to consumer plugins). The `authentik-base` plugin aggregates
 agent-side declarations the same way it aggregates plugin-side ones.

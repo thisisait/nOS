@@ -85,12 +85,8 @@ def _build_substitutions() -> dict[str, str]:
         "{{ global_password_prefix }}":   _env("NOS_GLOBAL_PASSWORD_PREFIX"),
         "{{ wing_api_token }}":           "secret:wing_api_token",
         "{{ conductor_wing_api_token }}": "secret:conductor_wing_api_token",
-        "{{ remediator_wing_api_token }}": "secret:remediator_wing_api_token",
-        "{{ scout_wing_api_token }}":      "secret:scout_wing_api_token",
         "{{ surveyor_wing_api_token }}":   "secret:surveyor_wing_api_token",
-        "{{ upgrade_advisor_wing_api_token }}": "secret:upgrade_advisor_wing_api_token",
         "{{ upgrade_architect_wing_api_token }}": "secret:upgrade_architect_wing_api_token",
-        "{{ migration_author_wing_api_token }}": "secret:migration_author_wing_api_token",
         "{{ bone_secret }}":              "secret:bone_secret",
         # The audit chain's retired-key ring (2026-08-06). Verify-only, and
         # legitimately EMPTY until the first rotation. A REFERENCE since
@@ -141,13 +137,14 @@ def _build_substitutions() -> dict[str, str]:
         "{{ keap_port }}":                _env("NOS_KEAP_PORT"),
         "{{ keap_agent_token_rw }}":      "secret:keap_agent_token_rw",
         "{{ keap_agent_token_ro }}":      "secret:keap_agent_token_ro",
+        # A declared env token MISSING from this table is stored as literal
+        # braces: curator-sweep shipped 2026-07-14 with its bearer absent here,
+        # env is not covered by the SEC-8 command validator so it never 400'd,
+        # and the agent would have 401'd silently at run time. Found
+        # 2026-08-01 by test_pulse_catalog_renders_every_token. (The curator /
+        # scout / remediator / upgrade-advisor / migration-author bearers left
+        # this table with their agents in the 2026-08-26 roster close.)
         "{{ librarian_wing_api_token }}": "secret:librarian_wing_api_token",
-        # curator-sweep shipped 2026-07-14 with this token in its env and no
-        # entry here, so Pulse stored the literal braces as the bearer. env is
-        # not covered by the SEC-8 command validator, so it never 400'd — the
-        # agent would simply have 401'd against Wing at run time, silently.
-        # Found 2026-08-01 by test_pulse_catalog_renders_every_token.
-        "{{ curator_wing_api_token }}":   "secret:curator_wing_api_token",
         "{{ keap_agent_token_capture }}": "secret:keap_agent_token_capture",
         "{{ mariadb_root_password }}":    "secret:mariadb_root_password",
         # backup-restore-drill (2026-08-01): the weekly DR round-trip.

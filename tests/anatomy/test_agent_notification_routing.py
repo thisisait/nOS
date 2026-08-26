@@ -11,9 +11,10 @@ notification block — or whose pulse job's NOS_AGENT_NAME drifts off the profil
 `name` — would page the operator ONLY into the Wing inbox: a critical/high alert
 would never reach ntfy/mail, with no error at deploy time.
 
-Per-agent spot checks already existed (test_conductor_pulse_jobs.py,
-test_remediator_agent.py::test_remediator_pulse_profile_declares_notification_
-routing) but NO parametrized gate covered *every* agent, and none proved the
+Per-agent spot checks already existed (test_conductor_pulse_jobs.py, and the
+remediator's routing check in the since-retired test_remediator_agent.py —
+gone with its agent in the 2026-08-26 roster close)
+but NO parametrized gate covered *every* agent, and none proved the
 route actually resolves through Bone's real lookup. This gate closes both:
 
   1. every file-format agent profile with a live `pulse:` runner declares a

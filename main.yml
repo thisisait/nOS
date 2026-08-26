@@ -1246,8 +1246,11 @@
         _nos_secret_map: "consumed — see nos_derived_secrets/nos_secret_scheme facts"
       tags: ['always']
 
-    # ── Store-shadow reconcile. ~/.nos/secrets.yml persists 16 map-backed
-    # names so Pulse `secret:<name>` refs resolve — and include_vars loads them
+    # ── Store-shadow reconcile. ~/.nos/secrets.yml persists the map-backed
+    # names below so Pulse `secret:<name>` refs resolve (the list shrank in
+    # the 2026-08-26 roster close: scout/remediator/upgrade-advisor retired,
+    # curator/migration-author parked without bearers) — and include_vars
+    # loads them
     # at a precedence that OUTRANKS the vars-file declarations. Without this
     # task a blank would flip the scheme to v2 while those 16 names silently
     # kept their stale pre-P1 `_pw_` literals (loaded before blank-reset
@@ -1268,14 +1271,9 @@
         keap_agent_token_rw: "{% if '_pw_' in (keap_agent_token_rw | default('')) and keap_agent_token_rw != nos_derived_secrets.keap_agent_rw %}{{ nos_derived_secrets.keap_agent_rw }}{% else %}{{ keap_agent_token_rw | default(nos_derived_secrets.keap_agent_rw) }}{% endif %}"
         keap_agent_token_capture: "{% if '_pw_' in (keap_agent_token_capture | default('')) and keap_agent_token_capture != nos_derived_secrets.keap_agent_capture %}{{ nos_derived_secrets.keap_agent_capture }}{% else %}{{ keap_agent_token_capture | default(nos_derived_secrets.keap_agent_capture) }}{% endif %}"
         conductor_wing_api_token: "{% if '_pw_' in (conductor_wing_api_token | default('')) and conductor_wing_api_token != nos_derived_secrets.wing_conductor %}{{ nos_derived_secrets.wing_conductor }}{% else %}{{ conductor_wing_api_token | default(nos_derived_secrets.wing_conductor) }}{% endif %}"
-        remediator_wing_api_token: "{% if '_pw_' in (remediator_wing_api_token | default('')) and remediator_wing_api_token != nos_derived_secrets.wing_remediator %}{{ nos_derived_secrets.wing_remediator }}{% else %}{{ remediator_wing_api_token | default(nos_derived_secrets.wing_remediator) }}{% endif %}"
-        scout_wing_api_token: "{% if '_pw_' in (scout_wing_api_token | default('')) and scout_wing_api_token != nos_derived_secrets.wing_scout %}{{ nos_derived_secrets.wing_scout }}{% else %}{{ scout_wing_api_token | default(nos_derived_secrets.wing_scout) }}{% endif %}"
         surveyor_wing_api_token: "{% if '_pw_' in (surveyor_wing_api_token | default('')) and surveyor_wing_api_token != nos_derived_secrets.wing_surveyor %}{{ nos_derived_secrets.wing_surveyor }}{% else %}{{ surveyor_wing_api_token | default(nos_derived_secrets.wing_surveyor) }}{% endif %}"
-        upgrade_advisor_wing_api_token: "{% if '_pw_' in (upgrade_advisor_wing_api_token | default('')) and upgrade_advisor_wing_api_token != nos_derived_secrets.wing_upgrade_advisor %}{{ nos_derived_secrets.wing_upgrade_advisor }}{% else %}{{ upgrade_advisor_wing_api_token | default(nos_derived_secrets.wing_upgrade_advisor) }}{% endif %}"
         upgrade_architect_wing_api_token: "{% if '_pw_' in (upgrade_architect_wing_api_token | default('')) and upgrade_architect_wing_api_token != nos_derived_secrets.wing_upgrade_architect %}{{ nos_derived_secrets.wing_upgrade_architect }}{% else %}{{ upgrade_architect_wing_api_token | default(nos_derived_secrets.wing_upgrade_architect) }}{% endif %}"
-        migration_author_wing_api_token: "{% if '_pw_' in (migration_author_wing_api_token | default('')) and migration_author_wing_api_token != nos_derived_secrets.wing_migration_author %}{{ nos_derived_secrets.wing_migration_author }}{% else %}{{ migration_author_wing_api_token | default(nos_derived_secrets.wing_migration_author) }}{% endif %}"
         librarian_wing_api_token: "{% if '_pw_' in (librarian_wing_api_token | default('')) and librarian_wing_api_token != nos_derived_secrets.wing_librarian %}{{ nos_derived_secrets.wing_librarian }}{% else %}{{ librarian_wing_api_token | default(nos_derived_secrets.wing_librarian) }}{% endif %}"
-        curator_wing_api_token: "{% if '_pw_' in (curator_wing_api_token | default('')) and curator_wing_api_token != nos_derived_secrets.wing_curator %}{{ nos_derived_secrets.wing_curator }}{% else %}{{ curator_wing_api_token | default(nos_derived_secrets.wing_curator) }}{% endif %}"
       no_log: true
       tags: ['always']
 

@@ -49,15 +49,13 @@ SHIM = REPO / "tools/lib/pulse-env.sh"
 #: 2026-08-12; the other readers are job scripts consuming already-exported
 #: vars, read-only views, and comments). A new runner belongs here the day
 #: it is written — test_every_env_json_exporter_is_listed keeps that honest.
+#: (Five launchers left this list in the 2026-08-26 roster close: run-scout,
+#: run-remediator, run-upgrade-advisor with their retired agents; run-curator
+#: and run-migration-author with the park.)
 RUNNERS = [
-    "tools/run-curator.sh",
     "tools/run-librarian.sh",
-    "tools/run-migration-author.sh",
     "tools/run-phase5-ceremony.sh",
-    "tools/run-remediator.sh",
-    "tools/run-scout.sh",
     "tools/run-surveyor.sh",
-    "tools/run-upgrade-advisor.sh",
     "tools/run-upgrade-architect.sh",
 ]
 SEED = "tools/cortex-seed-fixtures.sh"

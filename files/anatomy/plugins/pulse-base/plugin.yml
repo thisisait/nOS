@@ -105,7 +105,8 @@ gdpr:
 
     Those transfers are now declared per ceremony in
     `files/anatomy/agents/<name>/agent.yml` (`agent_*` records), where they can
-    differ honestly: `agent_curator` sends taxonomy prose, `agent_remediator`
-    sends leaked-secret context and commit-author identity. This note exists so
+    differ honestly: `agent_curator` sends taxonomy prose,
+    `agent_migration_author` sends repository source and commit-author
+    identity. This note exists so
     that reading THIS record alone cannot leave the impression that nothing
     leaves the host — which is exactly how the omission survived.
