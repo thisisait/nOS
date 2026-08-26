@@ -2935,9 +2935,11 @@ authentik_agent_clients:
   # nos-upgrade-advisor (its task became a deterministic query when
   # UpgradeRepository::compareVersions landed, cab67496/b1e92005) and
   # nos-remediator (0 events; its brief is the loop's `rem` weakness source,
-  # which filed every real proposal). Clients leave the registry here; the next
-  # converge removes them from the live Authentik. Their derived secrets in
-  # ~/.nos/secrets.yml are orphans for the operator to sweep.
+  # which filed every real proposal). Clients leave the registry here, so a
+  # blank never re-creates them — but the 30-agent-clients blueprint only
+  # UPSERTS, so the rows already living in Authentik stay until the operator
+  # deletes them there (or blanks). Their derived secrets in ~/.nos/secrets.yml
+  # are orphans for the operator to sweep.
 
   - name: "nOS Upgrade Architect"
     slug: "nos-upgrade-architect"
