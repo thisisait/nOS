@@ -179,7 +179,8 @@
         "{{ playbook_dir }}/files/anatomy/scripts/nos-notify.sh" high \
           "Off-site mirror FAILED" \
           "restic exited non-zero. Tail of ${LOG_FILE}:
-      $(tail -n 20 "${LOG_FILE}" 2>/dev/null)" || true
+      $(tail -n 20 "${LOG_FILE}" 2>/dev/null)" \
+          "wing-inbox,ntfy" "backup-offsite-mirror" || true
       }
       trap notify_fail ERR
       . "{{ ansible_facts['env']['HOME'] }}/.nos/restic.env"
@@ -199,7 +200,8 @@
           echo "WARN: restic prune failed — backup snapshot is safe, retention skipped"
           "{{ playbook_dir }}/files/anatomy/scripts/nos-notify.sh" medium \
             "Off-site retention skipped" \
-            "restic forget --prune failed; the snapshot is safe, old ones were not pruned." || true
+            "restic forget --prune failed; the snapshot is safe, old ones were not pruned." \
+            "wing-inbox,ntfy" "backup-offsite-retention" || true
         }
       echo "=== Off-site mirror finished: $(date -Iseconds) ==="
     dest: "{{ ansible_facts['env']['HOME'] }}/agents/backup-run.sh"

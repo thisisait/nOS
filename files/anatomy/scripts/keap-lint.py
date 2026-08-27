@@ -40,7 +40,9 @@ def notify(severity: str, title: str, body: str, channels: str) -> None:
     # nos-notify.sh is best-effort by contract (silent no-op on missing
     # deps/secret) — never let it fail the lint run.
     subprocess.run(  # noqa: S603 — fixed argv, no shell
-        [NOTIFY_BIN, severity, title, body, channels],
+        # A nightly lint reports the CURRENT state of the corpus; last
+        # night's count is not separate news. Key = the question it answers.
+        [NOTIFY_BIN, severity, title, body, channels, "keap-lint"],
         check=False,
         timeout=30,
     )

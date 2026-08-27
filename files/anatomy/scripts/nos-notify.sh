@@ -9,11 +9,29 @@
 # Usage:  nos-notify.sh <severity> <title> <body> [channels-csv] [supersede-key]
 #   severity : critical | high | medium | low | info
 #   channels : default "wing-inbox,ntfy"
-#   supersede-key : OPTIONAL class id. When given, this message retires the
-#     caller's earlier UNREAD messages of the same class (2026-08-23). Opt-in
-#     and per-caller on purpose: this script hardcodes origin_plugin, so every
-#     host script that uses it would otherwise share one class and retire each
-#     other's news. Omit it and nothing is ever superseded.
+#   supersede-key : class id, or the literal `none`. When a key is given, this
+#     message retires the caller's earlier UNREAD messages of the same class
+#     (2026-08-23). Per-caller on purpose: this script hardcodes origin_plugin,
+#     so every host script would otherwise share one class and retire each
+#     other's news.
+#
+#     `none` MEANS SOMETHING, AND SILENCE NO LONGER SHOULD (2026-08-27). Pass it
+#     when the message is a distinct occurrence rather than the current answer to
+#     a standing question — a macOS update settling is not a restatement of the
+#     last one, which is why nos-os-resume.sh's own key is the exception that
+#     proves the rule rather than a counter-example.
+#
+#     Measured that day: 206 of 212 rows in the inbox carried no key, and only
+#     two classes appeared in the record at all (a third call site declared one
+#     but had not fired since). The retirement machinery worked perfectly on
+#     those two — 183 retired by 194, three backup rows retired leaving exactly
+#     one live — and could not reach the other 97%. The inbox did not grow
+#     because nobody read it; it grew because almost nothing could leave.
+#
+#     Omitting the argument still sends — a lost notification is worse than an
+#     accumulating one, so this never fails its caller. It is
+#     `tests/anatomy/test_every_notifier_declares_supersession.py` that refuses an
+#     undeclared call site, at commit time, where it costs nothing.
 #
 # Uses a LITERAL title+body+channels (NOT template+context): a template name only
 # resolves if a harvested plugin manifest registers it, and these host scripts are
@@ -30,6 +48,10 @@ title="${2:-nOS}"
 body="${3:-}"
 channels="${4:-wing-inbox,ntfy}"
 supersede="${5:-}"
+# `none` is a DECLARATION that this message is a distinct occurrence, and it
+# must not reach Bone as a class id — the regex there would accept it and every
+# caller that passed it would then share one class and retire each other.
+[ "$supersede" = "none" ] && supersede=""
 
 # WHO IS SENDING. This script hardcoded `os-resume` for every caller until
 # 2026-08-25, and it is the shared sender for at least five of them: the

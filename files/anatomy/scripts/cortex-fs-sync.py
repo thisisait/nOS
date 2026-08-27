@@ -87,7 +87,9 @@ LEDGER = Path(os.environ.get("CORTEX_DIFF_STATE", str(Path.home() / ".nos" / "co
 
 def notify(severity: str, title: str, body: str) -> None:
     if NOTIFY_BIN and os.path.exists(NOTIFY_BIN):
-        subprocess.run([NOTIFY_BIN, severity, title, body, "wing-inbox"], check=False, timeout=30)
+        # Standing state, restated each run — supersede the previous answer.
+        subprocess.run([NOTIFY_BIN, severity, title, body, "wing-inbox",
+                        "cortex-fs-sync"], check=False, timeout=30)
 
 
 def halted() -> bool:

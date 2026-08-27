@@ -520,7 +520,9 @@ def main() -> int:
                  f"{', '.join(t.name for t in degraded)} did not take the full sweep "
                  f"({breakdown}). The incumbent is unaffected; the next run retries only "
                  "what the failed target missed.",
-                 "wing-inbox"],
+                 # A degraded target is a standing condition the sweep re-reports
+                 # each run, not fresh news each night.
+                 "wing-inbox", "keap-consolidate-degraded"],
                 check=False, timeout=30,
             )
         elif total >= 10:
@@ -528,7 +530,7 @@ def main() -> int:
                 [NOTIFY_BIN, "medium", "KEAP consolidator: data batch registered",
                  f"{total} new datapoints queued for review (fs {fs_new}, sql {db_new}){capped}. "
                  f"Targets: {breakdown}. They embed on the next keap-embed-sync run.",
-                 "wing-inbox"],
+                 "wing-inbox", "keap-consolidate-batch"],
                 check=False, timeout=30,
             )
 
@@ -553,7 +555,7 @@ def main() -> int:
                  f"{incumbent.reason}. {incumbent.sent} capture(s) landed before it stopped answering; "
                  f"the sweep continued for the remaining targets ({breakdown}). Nothing was lost — the "
                  "next run re-offers what KEAP did not acknowledge.",
-                 "wing-inbox"],
+                 "wing-inbox", "keap-consolidate-incumbent"],
                 check=False, timeout=30,
             )
         return 2

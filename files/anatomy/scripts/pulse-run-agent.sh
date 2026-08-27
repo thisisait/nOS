@@ -205,7 +205,8 @@ _post_wing_notification() {
         --arg actor "$ACTOR_ID" --arg action_id "$ACTOR_ACTION_ID" \
         '{severity: $sev, title: $title, body: $body,
           origin_agent: $agent, actor_id: ("agent:" + $actor),
-          actor_action_id: $action_id}')
+          actor_action_id: $action_id,
+          supersede_key: ("agent-run:" + $agent)}')
     ts=$(date +%s)
     sig=$(printf '%s.%s' "$ts" "$payload" \
           | openssl dgst -sha256 -hmac "$WING_EVENTS_HMAC_SECRET" \

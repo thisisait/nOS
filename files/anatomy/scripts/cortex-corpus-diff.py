@@ -1556,8 +1556,18 @@ def save_state(path: Path, state: dict) -> None:
 
 
 def notify(bin_path: str, severity: str, title: str, body: str) -> None:
+    """One key for every verdict this harness emits, and one is right.
+
+    All four call sites below — void, HALT, N nights of agreement, three
+    disagreeing nights — answer the same standing question: what does the S2
+    corpus comparison currently say? Only the newest answer can be true, so the
+    newest retires the rest. Measured 2026-08-27: six identical `S2 diff` rows
+    had accumulated over six nights, three of them unread for nine days, because
+    this call passed no key and nothing could retire them.
+    """
     if bin_path and os.path.exists(bin_path):
-        subprocess.run([bin_path, severity, title, body, "wing-inbox"], check=False, timeout=30)
+        subprocess.run([bin_path, severity, title, body, "wing-inbox",
+                        "cortex-corpus-diff"], check=False, timeout=30)
 
 
 # ── entry point ──────────────────────────────────────────────────────────────
