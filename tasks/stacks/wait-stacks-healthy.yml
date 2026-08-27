@@ -34,8 +34,10 @@
   loop: "{{ range(0, ((stack_up_wait_timeout | default(540) | int) // (stack_wait_tick_interval | default(15) | int)) + 1) | list }}"
   loop_control:
     loop_var: _tick
-    # Post-ready ticks are no-ops; saying "tick N/36" claimed a wait (fee 07).
-    label: "{{ 'already ready — no-op' if (_wait_done | default(false) | bool) else ('tick ' ~ _tick ~ '/' ~ ((stack_up_wait_timeout | default(540) | int) // (stack_wait_tick_interval | default(15) | int)) ~ ' — ' ~ (_wait_stacks | join(','))) }}"
+    # A `_wait_done` conditional here is DEAD: labels for a looped
+    # include_tasks are templated before any iteration runs (measured
+    # 2026-08-27 — 81 labels, all "tick N/80", 6 probes). See fee 07 A.
+    label: "tick {{ _tick }}/{{ ((stack_up_wait_timeout | default(540) | int) // (stack_wait_tick_interval | default(15) | int)) }} — {{ _wait_stacks | join(',') }}"
 
 - name: "[Stacks] Health-wait result ({{ _wait_stacks | join(', ') }})"
   tags: ['stacks', 'core', 'always']

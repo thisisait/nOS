@@ -39,7 +39,10 @@ mcp_filesystem_paths:
   - "{{ ansible_facts['env']['HOME'] }}/agents/log"
 
 # ── Git MCP ───────────────────────────────────────────────────────────────────
-mcp_git_repo_path: "{{ ansible_facts['env']['HOME'] }}/projects"
+# ONE repository, not the directory holding them: mcp_server_git refuses
+# `/data/repos is not a valid Git repository` and mcpo then starts healthy
+# with the git toolset silently absent (measured 2026-08-27).
+mcp_git_repo_path: "{{ ansible_facts['env']['HOME'] }}/projects/nOS"
 
 # ── PostgreSQL MCP ────────────────────────────────────────────────────────────
 # Read-only user for MCP queries (created in post.yml)
