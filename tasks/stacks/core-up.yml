@@ -451,6 +451,38 @@
     msg: "infra: rc={{ _core_infra_result.rc | default('?') }} {{ (_core_infra_result.stdout_lines | default([]))[-3:] | join(' | ') }}"
   when: _core_infra_result is defined and _core_infra_result.rc is defined
 
+# `failed_when: false` above is deliberate — it hands the failure MESSAGE to
+# this task (full compose stdout/stderr in scope) instead of Ansible's generic
+# "non-zero return code", the same reason stack-up.yml's remaining-stacks `up
+# -d` carries it (see the fail-fast assert there). But until now nothing ever
+# consumed the rc it captured: DB post-start below, the infra health-wait, and
+# every downstream role ran anyway, and a `docker ps` empty result after a
+# failed `up -d` reads to stack-health-probe.py as "0/0 ready — stack empty by
+# configuration" (indistinguishable from the legitimate all-toggled-off case)
+# — hidden_fees/08. infra is the documented always-first invariant; every
+# post-start task below assumes MariaDB/PostgreSQL/Authentik/Traefik/Infisical
+# are reachable. Stop HERE, not 8 minutes later at a health-wait timeout that
+# can't explain why nothing ever became healthy.
+- name: "[Core] Infra bring-up failed — stop the run"
+  tags: ['core', 'always']
+  ansible.builtin.fail:
+    msg: |
+      Stack 'infra' failed `docker compose up -d` (rc={{ _core_infra_result.rc }}).
+      This is a bring-up (START) failure, not a health timeout — infra never
+      reached the point of having containers to wait on. Every post-start
+      task below (MariaDB/PostgreSQL setup, Authentik, Infisical, Bluesky PDS,
+      Portainer, the infra health-wait itself) assumes infra is reachable and
+      would either hang on connection-refused retries or silently no-op.
+      ── stdout (last 40 lines) ──────────────────────────────────────────────
+      {{ (_core_infra_result.stdout_lines | default([]))[-40:] | join('\n') }}
+      ── diagnose with ───────────────────────────────────────────────────────
+      {{ docker_bin }} compose -f {{ stacks_dir }}/infra/docker-compose.yml -p infra config
+      {{ docker_bin }} compose -p infra logs --tail=200
+  when:
+    - _core_infra_enabled | bool
+    - _core_infra_result is defined
+    - _core_infra_result.rc | default(1) != 0
+
 # ── DB post-start setup — MUST run BEFORE the infra health-wait below ───────
 # A19 fix (2026-05-23): the mariadb/postgresql post tasks each pg_isready /
 # ping-wait for their own engine (retries 18×5s), so they run fine straight
@@ -512,6 +544,28 @@
   ansible.builtin.debug:
     msg: "observability: rc={{ _core_obs_result.rc | default('?') }} {{ (_core_obs_result.stdout_lines | default([]))[-3:] | join(' | ') }}"
   when: _core_obs_result is defined and _core_obs_result.rc is defined
+
+# Same shape as the infra fail-fast above — `failed_when: false` on the up
+# task hands the message to this task; nothing consumed the rc before. Grafana
+# admin post-start (below, after the health-wait) assumes Grafana answers;
+# observability is required-by-default (install_observability defaults true).
+- name: "[Core] Observability bring-up failed — stop the run"
+  tags: ['core', 'always']
+  ansible.builtin.fail:
+    msg: |
+      Stack 'observability' failed `docker compose up -d` (rc={{ _core_obs_result.rc }}).
+      This is a bring-up (START) failure, not a health timeout — observability
+      never reached the point of having containers to wait on. Grafana /
+      InfluxDB post-start (below) assume it is reachable.
+      ── stdout (last 40 lines) ──────────────────────────────────────────────
+      {{ (_core_obs_result.stdout_lines | default([]))[-40:] | join('\n') }}
+      ── diagnose with ───────────────────────────────────────────────────────
+      {{ docker_bin }} compose -f {{ stacks_dir }}/observability/docker-compose.yml -p observability config
+      {{ docker_bin }} compose -p observability logs --tail=200
+  when:
+    - _core_observability_enabled | bool
+    - _core_obs_result is defined
+    - _core_obs_result.rc | default(1) != 0
 
 - name: "[Core] Wait for OBSERVABILITY stack healthy (in-stream heartbeat)"
   tags: ['core', 'always']
