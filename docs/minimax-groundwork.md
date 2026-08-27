@@ -1,6 +1,24 @@
-# MiniMax backend — prepared, not armed
+# MiniMax backend — armed
 
-**Status: PREPARED, NOT ARMED (2026-08-12).** Every piece of plumbing to route the
+**Status: ARMED (measured 2026-08-27).** `minimax_enabled: true` in config.yml,
+the key resolves, and the live wing.plist carries `NOS_ARMED_BACKENDS=minimax`
+with `NOS_MINIMAX_MODEL=MiniMax-M2`. Four agents declare the binding —
+librarian, surveyor (2026-08-15) and conductor, curator (2026-08-27), each with
+its own Article-30 MiniMax processor entry. Ruling 1 still holds the two
+code-authoring, opus-pinned ceremonies (`recipe-author`, `promote-migration`)
+on the default backend.
+
+`NOS_MINIMAX_SMALL_MODEL` is EMPTY, so the haiku tier refuses at resolution
+rather than sending a blank model id. No bound agent pins haiku today, so
+nothing is broken by it — but a haiku-tier binding would refuse until the
+operator decides that pin.
+
+Everything below this line is the groundwork as written before arming; the
+credential path and the rulings are unchanged and still describe what runs.
+
+---
+
+**Status when written: PREPARED, NOT ARMED (2026-08-12).** Every piece of plumbing to route the
 scheduled agents through MiniMax's Anthropic-compatible endpoint is in place and
 inert. Arming it is deliberately left to the operator because two decisions on
 this page are the operator's to make, not an agent's — and because the switch
