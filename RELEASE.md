@@ -8,7 +8,7 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.10
 
 ## v0.11-beta (unreleased — drafted 2026-08-19, transport arc 2026-08-23, loop + roster + fee 08 on 2026-08-27)
 
-> **The estate closes a loop it cannot cheat.** 453 commits since `v0.10-beta`
+> **The estate closes a loop it cannot cheat.** 458 commits since `v0.10-beta`
 > (1181 files, +134k/−10k),
 > and the through-line is a machine built so that no step in it can record its
 > own success: a weakness was detected by a scanner, proposed against by an
@@ -37,8 +37,11 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.10
   (wordpress `7.0.2 → 7.0.4`, merge `64bc8b1b`, pipeline #7) and `rem:REM-159`
   (gitlab → `18.11.9-ce.0`, merge `713b015c`, pipeline #9) merged to `dev`
   behind green Woodpecker pipelines on the local agent forge.
-  `tools/loop-status.py --awaiting` reads both as `landed` — from
-  `git apply --check -R`, not from any participant's claim.
+  `tools/loop-status.py --awaiting` read both as `landed` — from
+  `git apply --check -R`, not from any participant's claim. (By 08-27 the
+  tree had moved under the REM-204 patch and the reader answers `conflict`
+  for that row; the pin it delivered, wordpress `7.0.4`, is still in the
+  tree — the reader reports patch-fit, not history.)
 - **The contract corrected itself where it was unsatisfiable.** §11 had adopted
   "the weakness leaves the list", which `budget.py`'s `docs/**` wall forbids the
   loop from ever satisfying; the criterion is now the reachable one (judged
