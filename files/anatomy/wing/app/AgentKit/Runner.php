@@ -695,7 +695,7 @@ final class Runner
 				task: "agent:{$agent->name}/llm.call.{$call}",
 				result: [
 					'stop_reason' => $response->stopReason,
-					'text_preview' => substr($response->textOutput(), 0, 240),
+					'text_preview' => mb_strcut($response->textOutput(), 0, 240, 'UTF-8'),
 					// Full assistant text — the operator /agents session view
 					// renders the verbatim LLM chat history from this field;
 					// text_preview is retained for lean digest consumers.
@@ -779,7 +779,7 @@ final class Runner
 				}
 				$toolSpan->setAttributes($toolResult->metadata);
 				if ($toolResult->isError) {
-					$toolSpan->setError(substr($toolResult->content, 0, 200));
+					$toolSpan->setError(mb_strcut($toolResult->content, 0, 200, 'UTF-8'));
 				}
 				$toolSpan->end();
 				$spans[] = $toolSpan;
@@ -792,7 +792,7 @@ final class Runner
 					result: [
 						'tool_use_id' => $use['id'],
 						'is_error' => $toolResult->isError,
-						'content_preview' => substr($toolResult->content, 0, 240),
+						'content_preview' => mb_strcut($toolResult->content, 0, 240, 'UTF-8'),
 						// Full tool output — rendered verbatim in the session
 						// transcript; content_preview kept for digest consumers.
 						'content' => $toolResult->content,
@@ -958,7 +958,7 @@ final class Runner
 				result: [
 					'iteration' => $iteration,
 					'grader_result' => $grade['result'],
-					'feedback_preview' => substr($grade['feedback'], 0, 240),
+					'feedback_preview' => mb_strcut($grade['feedback'], 0, 240, 'UTF-8'),
 				],
 				traceId: $traceId,
 			);
@@ -1103,7 +1103,7 @@ final class Runner
 				task: "agent:{$agent->name}/llm.call.synthesis",
 				result: [
 					'stop_reason' => 'ceiling_synthesis',
-					'text_preview' => substr($response->textOutput(), 0, 240),
+					'text_preview' => mb_strcut($response->textOutput(), 0, 240, 'UTF-8'),
 					'text' => $response->textOutput(),
 					'compacted_from' => count($conversation),
 					'compacted_to' => count($compacted),
@@ -1345,7 +1345,7 @@ final class Runner
 					if (!is_string($content)) {
 						$content = json_encode($content) ?: '';
 					}
-					$toolResults[] = substr($content, 0, 400);
+					$toolResults[] = mb_strcut($content, 0, 400, 'UTF-8');
 				}
 			}
 			$body = trim(implode("\n", array_filter([
@@ -1355,7 +1355,17 @@ final class Runner
 			])));
 			$lines[] = "[{$i}] {$role}:\n{$body}";
 		}
-		return implode("\n\n", $lines);
+		// This string becomes the GRADER's request body, so one invalid byte
+		// anywhere in the run kills the session AFTER the work is done — the
+		// librarian died here twice, at 118k and 121k tokens, on KEAP's Czech
+		// corpus. mb_strcut above stops us MANUFACTURING one; this catches
+		// bytes that were already invalid upstream. Same guard, same reason,
+		// as BashReadOnlyTool (2026-08-17).
+		$out = implode("\n\n", $lines);
+		return mb_check_encoding($out, 'UTF-8')
+			? $out
+			: mb_convert_encoding($out, 'UTF-8', 'UTF-8')
+				. "\n...[some bytes were not valid UTF-8 and were replaced]";
 	}
 
 	private static function uuid(): string

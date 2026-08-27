@@ -52,7 +52,11 @@ def test_the_output_path_this_gate_describes_still_exists():
 
 
 def test_a_tool_result_is_forced_into_valid_utf8():
-    src = _src()
+    """MOVED 2026-08-27 to the chokepoint. Guarding BashReadOnlyTool alone let
+    the librarian die the same death on a different tool nine days later, so
+    the check now lives in ToolResult's constructor — the one point every
+    tool, present and future, routes through."""
+    src = (REPO / "files/anatomy/wing/app/AgentKit/Tools/ToolResult.php").read_text(encoding="utf-8")
     assert "mb_check_encoding" in src, (
         "the tool no longer checks its output's encoding. One `tree`, `cat` or "
         "`grep` over a file with non-UTF-8 bytes again kills the session on "
@@ -175,4 +179,22 @@ def test_the_two_primitives_actually_differ():
     assert out.returncode == 0, out.stderr
     assert out.stdout.strip() == "SUBSTR-BROKEN STRCUT-OK", (
         f"the two primitives no longer differ as this gate assumes: {out.stdout!r}"
+    )
+
+
+def test_the_grader_transcript_cannot_carry_invalid_utf8():
+    """The transcript IS the grader's request body, so one bad byte kills the
+    session AFTER the work is done — librarian, 2026-08-27, twice, at 118k and
+    121k tokens on KEAP's Czech corpus. The mb_strcut in the MCP tools did not
+    cover it: this cut is in Runner, at 400 bytes, per tool result."""
+    src = (REPO / "files/anatomy/wing/app/AgentKit/Runner.php").read_text(encoding="utf-8")
+    body = src[src.index("private function summariseConversation"):]
+    body = body[: body.index("\n\tprivate static function uuid")]
+    assert "substr(" not in body, (
+        "summariseConversation cuts bytes with substr(); a cut mid-codepoint "
+        "manufactures invalid UTF-8 in the grader's own request body"
+    )
+    assert "mb_check_encoding" in body, (
+        "the assembled transcript is not scrubbed — mb_strcut stops us "
+        "manufacturing bad bytes but not bytes that arrived that way"
     )
