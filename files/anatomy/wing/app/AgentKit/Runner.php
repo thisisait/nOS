@@ -979,10 +979,17 @@ final class Runner
 					'final_text' => $finalText,
 				];
 			}
-			// needs_revision -> append grader feedback as a user message and loop
+			// needs_revision -> carry the attempt AND the critique into the next
+			// iteration. "Please revise" with nothing to revise made the
+			// surveyor re-explore from zero three times and never write
+			// (2026-08-27: 261k in, 7.4k out, max_iterations_reached).
 			$conversation[] = Message::userText(
-				"GRADER FEEDBACK (iteration {$iteration}, result=needs_revision):\n\n" .
-				$grade['feedback'] . "\n\nPlease revise."
+				"YOUR PREVIOUS ATTEMPT (iteration {$iteration}):\n\n" .
+				($finalText !== '' ? $finalText
+					: '(you produced no final text — you spent the iteration on tool calls '
+					. 'and never wrote the deliverable; write it this time)') .
+				"\n\nGRADER FEEDBACK (result=needs_revision):\n\n" .
+				$grade['feedback'] . "\n\nRevise the attempt above."
 			);
 		}
 
