@@ -223,14 +223,20 @@ describe('spotlight — the widget-sized projection', () => {
 				if (e.kind === 'mutex') mutexOnly.set(end, (mutexOnly.get(end) ?? 0) + 1);
 			}
 		}
-		// The most-locked node shares one mkdir mutex with ten peers. Under a
-		// raw-degree rule it would outrank most of the real wiring — and every
-		// one of its neighbours would too, so the seven would be a clique that
-		// says nothing except "these run one at a time".
+		// The most-locked node shares one mkdir mutex with its peers. Under a
+		// raw-degree rule it would outrank real wiring — and so would every one
+		// of its neighbours, so the seven would be a clique that says nothing
+		// except "these run one at a time".
+		//
+		// Asserted as the MECHANISM, not as a magnitude: discounting the mutex
+		// is what removes it. The earlier form compared raw degree against the
+		// lowest chosen, which held only while the roster was large — the
+		// 2026-08-26 roster close took that node from 11 mutex peers to 6 and
+		// the two numbers met at 7.
 		const [locked, lockDeg] = [...mutexOnly.entries()].sort((a, b) => b[1] - a[1])[0];
 		expect(lockDeg).toBeGreaterThan(3);
 		const lowestChosen = Math.min(...spot.nodes.map((n) => spot.degree.get(n.id) ?? 0));
-		expect(raw.get(locked)!).toBeGreaterThan(lowestChosen);
+		expect(raw.get(locked)! - lockDeg).toBeLessThan(lowestChosen);
 		expect(spot.nodes.map((n) => n.id)).not.toContain(locked);
 
 		const degrees = spot.nodes.map((n) => spot.degree.get(n.id) ?? 0);

@@ -634,6 +634,7 @@ CREATE TABLE remediation_items (
 		resolved_at         TEXT,
 		resolved_by         TEXT,
 		scan_cycle          INTEGER,
+		security_floor      TEXT,
 		created_at          TEXT NOT NULL DEFAULT (datetime('now')),
 		updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
 	);

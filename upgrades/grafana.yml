@@ -216,4 +216,3 @@ recipes:
         type: backup.restore
         dst: "{{ grafana_data_dir }}"
         label: "pre-{{ upgrade_id }}"
-

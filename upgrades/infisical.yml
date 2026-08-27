@@ -308,9 +308,14 @@ recipes:
       - id: verify_secret_readback
         type: exec.shell
         # Proves DECRYPT works post-migration, not merely that HTTP answers.
+        # Refuses rather than defaults: an empty projectId would make this
+        # "verification" pass without decrypting anything.
         command: >-
-          infisical secrets --projectId "{{ infisical_probe_project_id }}"
-          --env dev --silent | head -n 1
+          pid="{{ infisical_probe_project_id | default('') }}";
+          if [ -z "$pid" ]; then
+          echo "infisical_probe_project_id is unset — decrypt is NOT proven"; exit 1;
+          fi;
+          infisical secrets --projectId "$pid" --env dev --silent | head -n 1
         allow_shell: true
     rollback:
       - id: revert_image_tag

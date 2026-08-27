@@ -202,4 +202,3 @@ recipes:
         type: backup.restore
         dst: "{{ gitlab_data_dir }}"
         label: "pre-{{ upgrade_id }}"
-

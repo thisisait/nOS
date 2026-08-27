@@ -73,4 +73,3 @@ recipes:
         type: backup.restore
         dst: "{{ bookstack_data_dir }}"
         label: "pre-{{ upgrade_id }}"
-

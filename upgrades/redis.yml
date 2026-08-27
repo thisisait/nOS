@@ -152,4 +152,3 @@ recipes:
         type: backup.restore
         dst: "{{ redis_data_dir }}"
         label: "pre-{{ upgrade_id }}"
-
