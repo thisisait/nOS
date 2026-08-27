@@ -31,12 +31,10 @@ def test_pulse_run_agent_hmac_uses_canonical_json():
     produces a signature that never matches and Bone 401's silently.
     """
     src = (REPO / "files/anatomy/scripts/pulse-run-agent.sh").read_text()
-    # The callers that build agent_run_start/end bodies must use jq, not
-    # printf '...' — AND must pass -a. 2026-05-17 taught that an unsorted body
-    # never matches; 2026-07-27 taught that an unescaped one does not either:
-    # Bone's json.dumps defaults to ensure_ascii=True, so a raw UTF-8 byte signs
-    # different bytes than it verifies. Sorting was half the canonical form.
-    # Tightened, not relaxed: the old literal is a strict prefix of this one.
+    # Bodies must be built with jq AND -a: an unsorted body never matches
+    # (2026-05-17) and an unescaped one does not either (2026-07-27 — Bone's
+    # json.dumps is ensure_ascii=True, so a raw UTF-8 byte signs different
+    # bytes than it verifies). The old literal is a strict prefix of this one.
     assert "jq -a --sort-keys -nc" in src
     assert "jq --sort-keys -nc" not in src.replace("jq -a --sort-keys -nc", ""), (
         "a builder still canonicalises without -a; see tests/anatomy/"
@@ -75,30 +73,12 @@ def test_pulse_run_agent_awk_uses_last_field():
     assert "awk '{print $NF}'" in src
 
 
-# test_approvals_presenter_canonicalizes_payload was deleted with its subject:
-# ApprovalsPresenter retired 2026-08-08 (A11 → agents-inbox; the retirement is
-# pinned by test_approval_queue_event_backed.py). The property it pinned —
-# canonical JSON before HMAC signing — matters only for BONE-verified writes
-# (Bone re-canonicalizes the parsed dict before computing the expected HMAC).
-# The one surviving in-app signer, AdminPresenter::postAuditEvent, posts to
-# Wing's /api/v1/events, whose verifier HMACs the RAW body (EventsPresenter),
-# so signing the exact string sent is correct there and needs no canonical
-# form. Question answers no longer sign anything: AgentQuestionRepository
-# emits the decision event in-process, which is what removed the 401-in-silence
-# failure mode this test was guarding the edges of.
-
-
-# test_approvals_presenter_canonicalizes_payload was deleted with its subject:
-# ApprovalsPresenter retired 2026-08-08 (A11 → agents-inbox; the retirement is
-# pinned by test_approval_queue_event_backed.py). The property it pinned —
-# canonical JSON before HMAC signing — matters only for BONE-verified writes
-# (Bone re-canonicalizes the parsed dict before computing the expected HMAC).
-# The one surviving in-app signer, AdminPresenter::postAuditEvent, posts to
-# Wing's /api/v1/events, whose verifier HMACs the RAW body (EventsPresenter),
-# so signing the exact string sent is correct there and needs no canonical
-# form. Question answers no longer sign anything: AgentQuestionRepository
-# emits the decision event in-process, which is what removed the 401-in-silence
-# failure mode this test was guarding the edges of.
+# test_approvals_presenter_canonicalizes_payload was deleted with its subject
+# (ApprovalsPresenter retired 2026-08-08, pinned by
+# test_approval_queue_event_backed.py). Canonical-JSON-before-HMAC matters
+# only for Bone-verified writes; the surviving in-app signer posts to Wing's
+# /api/v1/events, whose verifier HMACs the RAW body, so signing the exact
+# string sent is correct there.
 
 
 def test_pulse_run_agent_reads_nos_agent_env():

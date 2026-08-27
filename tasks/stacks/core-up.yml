@@ -331,16 +331,11 @@
 # ── Build list of core stacks actually enabled ──────────────────────────────
 #
 # THIS LIST AND THE INFRA RENDER'S `when:` (above) MUST NAME THE SAME SERVICES.
-# `install_bone` sat here and not there from 3eace4a9 — when track-a ran Bone as
-# a compose service — and survived anatomy A3a returning Bone to host launchd.
-# roles/pazny.bone/templates/ holds one file, bone.plist.j2: Bone renders NO
-# container and cannot make this stack non-empty. So an estate with install_bone
-# on and the rest of infra off skipped the render and then ran `up -f` against a
-# file nobody had written — rc=1, and the probe called it `0/0 ready`. That is
-# docs/hidden_fees/08 reached by CONFIG, on any platform, no Linux bug needed.
-# Untidy while it only mis-set a flag; a stopped run since the bring-up assert
-# below began reading that rc. Removed 2026-08-27.
-# Gate: tests/anatomy/test_infra_enabled_matches_the_render.py
+# `install_bone` sat here but not there (3eace4a9, when Bone was a container)
+# and survived A3a's return to host launchd: Bone renders NO container, so
+# bone-only infra skipped the render, then ran `up -f` against a file nobody
+# wrote — rc=1, probed as `0/0 ready` (hidden_fees/08 reached by CONFIG).
+# Removed 2026-08-27. Gate: test_infra_enabled_matches_the_render.py
 
 - name: "[Core] Resolve which core stacks to bring up"
   ansible.builtin.set_fact:
@@ -463,18 +458,12 @@
     msg: "infra: rc={{ _core_infra_result.rc | default('?') }} {{ (_core_infra_result.stdout_lines | default([]))[-3:] | join(' | ') }}"
   when: _core_infra_result is defined and _core_infra_result.rc is defined
 
-# `failed_when: false` above is deliberate — it hands the failure MESSAGE to
-# this task (full compose stdout/stderr in scope) instead of Ansible's generic
-# "non-zero return code", the same reason stack-up.yml's remaining-stacks `up
-# -d` carries it (see the fail-fast assert there). But until now nothing ever
-# consumed the rc it captured: DB post-start below, the infra health-wait, and
-# every downstream role ran anyway, and a `docker ps` empty result after a
-# failed `up -d` reads to stack-health-probe.py as "0/0 ready — stack empty by
-# configuration" (indistinguishable from the legitimate all-toggled-off case)
-# — hidden_fees/08. infra is the documented always-first invariant; every
-# post-start task below assumes MariaDB/PostgreSQL/Authentik/Traefik/Infisical
-# are reachable. Stop HERE, not 8 minutes later at a health-wait timeout that
-# can't explain why nothing ever became healthy.
+# `failed_when: false` above hands the full compose stderr to this task
+# instead of Ansible's generic "non-zero return code" — but the rc must then
+# be consumed HERE: a failed `up -d` leaves `docker ps` empty, which the probe
+# reads as "0/0 ready — stack empty by configuration" (hidden_fees/08), and
+# every post-start task below assumes infra is reachable. Stop now, not 8
+# minutes later at a health-wait timeout that cannot say why.
 - name: "[Core] Infra bring-up failed — stop the run"
   tags: ['core', 'always']
   ansible.builtin.fail:

@@ -1247,10 +1247,8 @@
       tags: ['always']
 
     # ── Store-shadow reconcile. ~/.nos/secrets.yml persists the map-backed
-    # names below so Pulse `secret:<name>` refs resolve (the list shrank in
-    # the 2026-08-26 roster close: scout/remediator/upgrade-advisor retired,
-    # curator/migration-author parked without bearers) — and include_vars
-    # loads them
+    # names below so Pulse `secret:<name>` refs resolve (list shrank in the
+    # 2026-08-26 roster close) — and include_vars loads them
     # at a precedence that OUTRANKS the vars-file declarations. Without this
     # task a blank would flip the scheme to v2 while those 16 names silently
     # kept their stale pre-P1 `_pw_` literals (loaded before blank-reset

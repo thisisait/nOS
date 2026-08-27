@@ -231,13 +231,10 @@ def main(argv: list[str]) -> int:
     for stack in stacks:
         rows = _docker_ps(stack)
         if not rows:
-            # No containers for this project. The caller only health-waits
-            # AFTER `docker compose up -d`, so an empty result here means
-            # EITHER "every service in this stack is toggled off" (fine) OR
-            # "the bring-up never produced anything" (not fine) — the two are
-            # indistinguishable from container state alone. Consult the
-            # rendered compose inputs for the missing denominator (see module
-            # docstring "ZERO CONTAINERS" and _expected_service_count).
+            # Zero containers is EITHER "everything toggled off" (fine) OR
+            # "bring-up produced nothing" (not fine) — indistinguishable from
+            # container state alone, so the rendered compose inputs supply
+            # the denominator (module docstring "ZERO CONTAINERS").
             expected, reason, names = _expected_service_count(stack)
             if expected is None:
                 print(f"{stack}: 0/? ready (expected service count UNKNOWN — {reason})")
@@ -277,14 +274,11 @@ def main(argv: list[str]) -> int:
         if failed:
             line += f" FAILED: {', '.join(failed)}"
         print(line)
-    # Marker the tick loop keys on. PENDING wins over FAILED (still moving, give
-    # it time to converge); FAILED wins over UNKNOWN (a definite break is more
-    # actionable than an indeterminate one); UNKNOWN only when nothing pending
-    # or failed but at least one zero-container stack couldn't be classified;
-    # ALL_READY when every container across every stack is ready. Note UNKNOWN
-    # is never folded into ALL_READY — the tick loop only short-circuits on
-    # the literal string "ALL_READY", so it keeps polling to the full budget
-    # and then surfaces via wait-stacks-healthy.yml's timeout failure.
+    # Marker the tick loop keys on: PENDING > FAILED > UNKNOWN > ALL_READY
+    # (still-moving beats a definite break beats an indeterminate one).
+    # UNKNOWN is never folded into ALL_READY — the tick loop short-circuits
+    # only on the literal "ALL_READY", so an unclassifiable stack polls to
+    # the full budget and surfaces via wait-stacks-healthy.yml's timeout.
     if any_pending:
         print("PENDING")
     elif any_failed:

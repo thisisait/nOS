@@ -34,17 +34,13 @@ model:
 
 system_prompt_path: system.md
 
-# Q8/A2 (2026-06-16): migration-author runs NATIVELY in AgentKit (was the
-# pulse-run-agent.sh CLI): `bin/run-agent.php --agent=migration-author
-# --trigger=operator`, so a run lands in agent_sessions/threads/iterations +
-# OTel spans → Wing /agents + Grafana 22-ai-agents + Tempo. The gated
-# migration-file-write tool (A1) is the write surface (path-allowlisted to
-# files/anatomy/migrations/ + default.config.yml, scope nos.migration.write —
-# already in capability_scopes below). The forge MR (tools/migration-pr.sh,
-# which STAYS) is a deterministic post-step the trigger layer runs AFTER the
-# session ends — NOT an LLM tool — so AgentKit gains visibility, not
-# git/network reach. A2's "delete neither" rule for the flat profile + pulse
-# CLI was superseded by the 2026-08-26 roster close (see STATUS below).
+# Q8/A2 (2026-06-16): runs NATIVELY in AgentKit (`bin/run-agent.php
+# --agent=migration-author --trigger=operator`), so runs land in
+# agent_sessions + OTel. Writes only via the gated migration-file-write tool
+# (path-allowlisted, scope nos.migration.write); the forge MR
+# (tools/migration-pr.sh) is a deterministic post-step, NOT an LLM tool, so
+# AgentKit gains visibility, not git/network reach. A2's "delete neither"
+# rule was superseded by the 2026-08-26 roster close (see STATUS below).
 tools:
   - id: bash-read-only       # cat/grep upgrades/<svc>.yml, _template.yml, migration.schema.json, state/manifest.yml
   - id: mcp-wing             # GET /api/v1/upgrades, POST /migrations/authored, POST /events

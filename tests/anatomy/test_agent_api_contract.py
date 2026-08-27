@@ -116,10 +116,9 @@ def test_agent_token_requests_capability_scopes():
 
 
 # test_upgrade_advisor_agent_wired was deleted with its subject (2026-08-26
-# roster close): the advisor's whole task became a deterministic query when
-# UpgradeRepository::compareVersions landed (cab67496 / b1e92005), and the
-# agent had zero sessions ever. test_agent_roster_close.py pins the absence;
-# the wiring checklist the test embodied survives on the live architect below.
+# roster close; deterministic since UpgradeRepository::compareVersions,
+# cab67496/b1e92005). test_agent_roster_close.py pins the absence; the
+# wiring checklist survives on the live architect below.
 
 
 def test_agent_clients_blueprint_is_force_applied():

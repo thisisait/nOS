@@ -137,13 +137,10 @@ def _build_substitutions() -> dict[str, str]:
         "{{ keap_port }}":                _env("NOS_KEAP_PORT"),
         "{{ keap_agent_token_rw }}":      "secret:keap_agent_token_rw",
         "{{ keap_agent_token_ro }}":      "secret:keap_agent_token_ro",
-        # A declared env token MISSING from this table is stored as literal
-        # braces: curator-sweep shipped 2026-07-14 with its bearer absent here,
-        # env is not covered by the SEC-8 command validator so it never 400'd,
-        # and the agent would have 401'd silently at run time. Found
-        # 2026-08-01 by test_pulse_catalog_renders_every_token. (The curator /
-        # scout / remediator / upgrade-advisor / migration-author bearers left
-        # this table with their agents in the 2026-08-26 roster close.)
+        # A declared env token MISSING here is stored as literal braces and
+        # 401s silently at run time — curator-sweep shipped that way
+        # 2026-07-14 (env is outside the SEC-8 validator, so no 400). Gate:
+        # test_pulse_catalog_renders_every_token, found it 2026-08-01.
         "{{ librarian_wing_api_token }}": "secret:librarian_wing_api_token",
         "{{ keap_agent_token_capture }}": "secret:keap_agent_token_capture",
         "{{ mariadb_root_password }}":    "secret:mariadb_root_password",

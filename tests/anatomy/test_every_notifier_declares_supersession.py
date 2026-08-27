@@ -66,23 +66,19 @@ def _shell_sites() -> list[tuple[pathlib.Path, int, str]]:
             for i, line in enumerate(lines):
                 if NOTIFIER not in line or line.lstrip().startswith("#"):
                     continue
-                # NOT EVERY MENTION IS A CALL, and the first cut of this gate
-                # reported four that were not: `NOS_NOTIFY_BIN: "<path>"` in two
-                # plugin manifests (an env declaration) and a bare path in a
-                # `files:` list (something to copy). A reference is not an
-                # invocation, and a gate that cannot tell them apart sends its
-                # reader to fix code that is already right.
+                # NOT EVERY MENTION IS A CALL: env declarations
+                # (`NOS_NOTIFY_BIN: <path>`) and `files:` list entries name
+                # the path without invoking it — flagging them sends a reader
+                # to fix code that is already right.
                 stripped = line.strip()
                 if re.match(r"^[A-Z_]+:\s", stripped):        # env assignment
                     continue
                 if re.match(r"^-\s*\S*" + re.escape(NOTIFIER) + r"\s*$", stripped):
                     continue                                   # YAML list entry
-                # Join until the command actually ends. TWO ways it continues,
-                # and the first cut only knew one: a trailing backslash, AND an
-                # unclosed quote. tasks/backup.yml's body carries a real newline
-                # inside its quoted string (the `Tail of ${LOG_FILE}:` line has
-                # no backslash), so stopping at the first unescaped line-end read
-                # a five-argument call as a three-argument one.
+                # Join until the command actually ends — trailing backslash OR
+                # unclosed quote. tasks/backup.yml carries a real newline
+                # inside a quoted argument, so stopping at line-end reads a
+                # five-argument call as three.
                 cmd, j = line, i
                 while j + 1 < len(lines) and (
                         cmd.rstrip().endswith("\\") or cmd.count('"') % 2):
@@ -106,11 +102,9 @@ def _args(cmd: str) -> list[str]:
     tail = cmd.split(NOTIFIER, 1)[1]
     if tail.startswith('"'):
         tail = tail[1:]
-    # `$( … )` IS OPAQUE. tasks/backup.yml's body embeds
-    # `$(tail -n 20 "${LOG_FILE}" 2>/dev/null)`; its inner quote closed the body
-    # early and its `2>` then terminated the scan, so the first cut of this
-    # tokenizer saw three arguments where there are five. A substitution is one
-    # blob of text as far as argument counting goes.
+    # `$( … )` IS OPAQUE — one blob of text for argument counting.
+    # tasks/backup.yml embeds `$(tail … 2>/dev/null)` whose inner quote and
+    # `2>` otherwise end the scan early (five arguments read as three).
     depth, out_chars = 0, []
     i = 0
     while i < len(tail):
@@ -180,22 +174,18 @@ def _python_sites() -> list[tuple[pathlib.Path, int, list[str]]]:
                 # `bin_path` at the S2 emitter, which takes it as a parameter.
                 by_name = isinstance(name, str) and re.search(
                     r"(?i)notify_bin|notifier|bin_path", name) is not None
-                # AND BY SHAPE, because the name is not always there. The S2
-                # emitter — the one this whole gate exists for — wraps the call
-                # in `def notify(bin_path, …)` and builds `[bin_path, severity,
-                # …]`. A first cut matched only the NOTIFY_BIN spelling, so
-                # deleting that emitter's key left the suite GREEN. The mutation
-                # is what found it; without running one, this file would have
-                # shipped as a gate that could not see its own motivating case.
+                # AND BY SHAPE, because the name is not always there: the S2
+                # emitter — this gate's motivating case — builds `[bin_path,
+                # severity, …]` with no NOTIFY_BIN spelling, so name-matching
+                # alone left the suite green when its key was deleted
+                # (found by mutation, not review).
                 sev = (node.elts[1].value
                        if len(node.elts) > 1 and isinstance(node.elts[1], ast.Constant)
                        else None)
-                # The head must be a VARIABLE. `["diskutil", "info", …]` matched
-                # the severity rule on its own — `info` is both a severity and a
-                # diskutil subcommand — and every real notifier call in this tree
-                # passes the binary through a name (NOTIFY_BIN, bin_path), never
-                # a literal path. That is the discriminator, found by the false
-                # positive rather than reasoned about in advance.
+                # The head must be a VARIABLE: `["diskutil", "info", …]`
+                # matched the severity rule alone (`info` is both a severity
+                # and a subcommand), and every real notifier call passes the
+                # binary through a name, never a literal path.
                 by_shape = (sev in ("critical", "high", "medium", "low", "info")
                             and isinstance(head, ast.Name))
                 if not (by_name or by_shape):

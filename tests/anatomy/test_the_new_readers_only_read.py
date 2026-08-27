@@ -47,10 +47,8 @@ READERS = {
 }
 
 #: Verbs that CHANGE something, per tool family. Matched against the argv
-#: literals the source actually builds — not against prose, because a comment
-#: naming `brew upgrade` as the thing we are avoiding must not fail the gate
-#: that avoids it. (The first cut of this file grepped the raw text and failed
-#: on its own docstring.)
+#: literals the source builds, never against prose — a comment naming
+#: `brew upgrade` as the thing avoided must not fail the gate that avoids it.
 FORBIDDEN = {
     "brew": {"install", "upgrade", "uninstall", "reinstall", "pin", "unpin",
              "untap", "tap", "cleanup"},
@@ -102,12 +100,10 @@ def test_the_reader_opens_nothing_for_writing(key):
         if isinstance(node, ast.Call):
             fn = node.func
             name = getattr(fn, "attr", None) or getattr(fn, "id", None)
-            # UNAMBIGUOUS names only. `replace`, `rename` and `chmod` are also
-            # str/os methods, and the first cut of this gate failed on
-            # `when.replace("Z", "+00:00")` — a timestamp parse, not a file
-            # move. Matching a bare attribute name is the same defect this
-            # tree keeps paying for one level down: a detector reading a token
-            # without its receiver. Those three are caught below, qualified.
+            # UNAMBIGUOUS names only. `replace`/`rename`/`chmod` are also str
+            # methods — a bare-attribute match fails on
+            # `when.replace("Z", "+00:00")`, a timestamp parse, not a file
+            # move. Those three are caught below, receiver-qualified.
             if name in ("write_text", "write_bytes", "mkdir", "rmtree", "touch",
                         "unlink"):
                 raise AssertionError(

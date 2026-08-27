@@ -280,10 +280,8 @@
     or 'Updated' in (_wing_librarian_token.stdout | default(''))
   no_log: true
 
-# Roster close 2026-08-26: the scout / upgrade-advisor / remediator token
-# tasks left with their agents (RETIRED — 0 events ever in this DB epoch);
-# curator / migration-author tokens left with the PARK (inspektor-style:
-# profile + Authentik client stay, launcher-facing apparatus goes). The live
+# Roster close 2026-08-26: scout/upgrade-advisor/remediator token tasks left
+# with their RETIRED agents, curator/migration-author with the PARK. Live
 # api_tokens rows persist until the operator deactivates them — provision
 # only upserts, it never reconciles absence.
 

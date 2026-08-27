@@ -130,12 +130,9 @@ def test_parked_agents_are_contract_only_and_say_so():
             "its own file (inspektor pattern); if it is live again, its "
             "launcher and pulse apparatus must exist too"
         )
-        # A plan_ref that names a file nobody can open is a false remediation
-        # pointer — the defect class 9b2a9201 removed from the Authentik note.
-        # Found live on 2026-08-26: migration-author shipped its park pointing
-        # at docs/plans/agentic-upgrade-migration-coexistence.md, a path that
-        # had already moved to docs/archive/. Non-empty is not enough; the
-        # pointer must RESOLVE.
+        # A plan_ref must RESOLVE, not just be non-empty (defect class
+        # 9b2a9201): found live 2026-08-26 — migration-author's park pointed
+        # at a plan doc that had already moved to docs/archive/.
         plan_ref = meta.get("plan_ref")
         if plan_ref:
             assert (REPO / plan_ref).is_file(), (
