@@ -497,7 +497,7 @@ jobs:
         # -e ansible_python_interpreter (extra-vars, highest precedence) forces the
         # module interpreter past macOS's custom-module discovery cache, which
         # ignores the env + cfg pins. $PY has ansible-core + pyyaml (main-site).
-        run: ansible-playbook main.yml -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
+        run: ansible-playbook main.yml -e allow_weak_prefix=true -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
         env:
           ANSIBLE_FORCE_COLOR: '1'
           ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
@@ -620,11 +620,13 @@ jobs:
           print("sys.path:", [p for p in sys.path if p][:8])
           PY
 
+      # allow_weak_prefix: a runner has no credentials.yml, so the P0 prefix
+      # guard (main.yml, 2026-08-02) refuses — this is the sandbox it names.
       - name: Test the playbook (Linux).
         # -e ansible_python_interpreter (extra-vars, highest precedence) forces the
         # module interpreter past macOS's custom-module discovery cache, which
         # ignores the env + cfg pins. $PY has ansible-core + pyyaml (main-site).
-        run: ansible-playbook main.yml -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
+        run: ansible-playbook main.yml -e allow_weak_prefix=true -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
         env:
           ANSIBLE_FORCE_COLOR: '1'
           ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
