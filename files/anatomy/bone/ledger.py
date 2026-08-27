@@ -440,9 +440,7 @@ def fingerprint(weakness_id: str, target_paths: Iterable[str],
     one level down.
     """
     if intent_class not in INTENT_CLASSES:
-        # NAME the enum. The propose skill promises the refusal does; it used
-        # to echo back only the rejected guess, so nine wrong guesses taught a
-        # proposer nothing nine times (2026-08-27, REM-229 on MiniMax).
+        # Name the enum; echoing back the rejected guess taught nobody.
         raise ProposalRefused(
             "unknown-intent",
             f"{intent_class!r} is not one of: {', '.join(sorted(INTENT_CLASSES))}",

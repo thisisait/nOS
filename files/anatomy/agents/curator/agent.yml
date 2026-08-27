@@ -29,9 +29,8 @@ description: |
   resurrect the old copies from git without re-reading the plan.
 
 model:
-  # `anthropic-*` selects the SDK adapter — the CLI one cannot be handed the
-  # four tool schemas below. Ruling 1 admits this ceremony: it reads KEAP APIs
-  # and writes text, and authors no code.
+  # `anthropic-*` = SDK adapter (tool schemas). Ruling 1 admits this ceremony:
+  # reads KEAP, writes text, authors no code.
   primary: anthropic-claude-sonnet-4-5
   backend: minimax
   fallback: openclaw-qwen2.5-coder:32b

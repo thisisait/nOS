@@ -186,14 +186,9 @@ class Budget:
 
         return {
             "gate_set": self.gate_set,
-            # THE CLOSED intent_class ENUM, because the proposer skill sends the
-            # proposer HERE for it ("the response is the authority ... this
-            # document lists none of them, deliberately") and until 2026-08-27
-            # the response did not carry it — the only enum present was the
-            # gate-add carve-out's two. A MiniMax-served proposer tried nine
-            # plausible words for REM-229, was refused nine times with a detail
-            # that echoed its own guess, and gave up correctly. Every proposal
-            # authored before this was a lucky guess or an operator typing.
+            # The propose skill sends the proposer here for the enum; until
+            # 2026-08-27 the response did not carry it (REM-229: nine guesses,
+            # nine refusals).
             "intent_classes": sorted(ledger.INTENT_CLASSES),
             "judges": list(self.judges),
             "allowed_roots": list(self.allowed_roots),

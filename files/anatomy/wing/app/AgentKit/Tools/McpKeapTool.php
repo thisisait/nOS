@@ -167,11 +167,9 @@ final class McpKeapTool implements ToolInterface
 
 		$status = $response->getStatusCode();
 		$payload = (string) $response->getBody();
-		// mb_strcut, not substr: same byte budget, never splits a codepoint.
-		// A byte cut through KEAP's Czech corpus manufactures invalid UTF-8,
-		// json_encode then refuses the NEXT request body, and the session dies
-		// (librarian, 2026-08-27, "Malformed UTF-8 characters" after 118k
-		// tokens). Same defect BashReadOnlyTool recorded on 2026-08-17.
+		// mb_strcut, not substr: a byte cut mid-codepoint manufactures invalid
+		// UTF-8, json_encode then refuses the next request (librarian died so,
+		// 2026-08-27). Same defect BashReadOnlyTool recorded 2026-08-17.
 		if (strlen($payload) > self::MAX_RESPONSE_BYTES) {
 			$payload = mb_strcut($payload, 0, self::MAX_RESPONSE_BYTES, 'UTF-8') . '…[truncated]';
 		}

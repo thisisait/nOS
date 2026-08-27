@@ -10,11 +10,9 @@ description: |
   resulting wing.db rows pass the Phase-5 verification gate.
 
 model:
-  # `anthropic-*` selects the SDK adapter, the only one that can be handed the
-  # three tool schemas below (`spine-tools-vs-cli-refusal`). Unbound this URI
-  # wants ANTHROPIC_API_KEY, which the estate does not set — so disarming
-  # MiniMax makes the BOUND path refuse rather than fall back. The CLI ceremony
-  # (conductor:self-test, NOS_AGENT_MODEL=haiku) never reads this block.
+  # `anthropic-*` = SDK adapter, the only one that takes tool schemas.
+  # Unbound it wants ANTHROPIC_API_KEY the estate does not set, so disarming
+  # MiniMax makes the bound path refuse. The CLI ceremony ignores this block.
   primary: anthropic-claude-sonnet-4-5
   backend: minimax
   fallback: openclaw-qwen2.5-coder:32b
@@ -53,8 +51,7 @@ vault:
 metadata:
   ait_phase: A8
   ceremony_role: first-non-operator-write
-  # The CLI ceremony (conductor:self-test) runs weekly and works. This says
-  # nothing about the bound path, which has never served this agent.
+  # The weekly CLI ceremony works; the bound path has never served this agent.
   runner_status: unproven
 
 exit_code_semantics:
