@@ -6,8 +6,25 @@ the artifacts 2026-08-27: the probe now carries a denominator
 (`_expected_service_count`, gate `test_stack_health_probe_absence_has_denominator.py`),
 `core-up.yml` fails fast on a non-zero `up` (gate
 `test_core_up_fails_fast_on_bring_up.py`), and the CLAUDE.md claim is
-qualified. **Items 3 (Linux `infra` non-render, still undiagnosed) and 5
-(smoke fail-ratio floor, not built) remain open.**
+qualified. **Items 3 (Linux `infra` non-render) and 5 (smoke fail-ratio floor,
+not built) remain open.**
+
+**ITEM 3 RE-MEASURED 2026-08-27, on the first Linux wet-test to get past
+preflight in four weeks** (PR #27; the run had been aborting at the P0 password
+guard since 2026-08-02, and `integration-linux` is skipped on pushes to `dev`,
+so nothing surfaced it). What the log shows:
+
+  * `iiab: 3/3 ready` and `apps: 5/5 ready` — real containers, health-waited.
+  * **Zero** occurrences of `0/0 ready`, `bring-up produced no containers`, or
+    `expected service count UNKNOWN` anywhere in the run.
+  * ok=537 changed=139 unreachable=0; the only failure is `nos-smoke.py`, where
+    7 of 9 targets are `*.dev.local` URLs a runner cannot resolve.
+
+So the symptom this item was written from — an empty `infra` passed as ready —
+did NOT occur. But the run contains **no health-wait line for `infra` or
+`observability` at all**, so their readiness is not positively demonstrated
+either. That is UNKNOWN, not fixed: the item stays open until a Linux run shows
+those two stacks' own ratios.
 
 ## The fee
 
