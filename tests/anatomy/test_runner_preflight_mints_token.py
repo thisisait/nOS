@@ -155,7 +155,13 @@ def test_the_shell_shim_reaches_the_same_implementation(tmp_path, stub_server):
         ["bash", "-c", f'source "{LIB}" && pulse_token_preflight "$1"',
          "bash", json.dumps(_env(stub_server))],
         capture_output=True, text=True, timeout=30,
-        env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"},
+        # A DELIBERATELY MINIMAL PATH, plus the interpreter running this test.
+        # Pinning it to /usr/bin:/bin alone assumed a filesystem layout: on the
+        # Woodpecker image python3 lives elsewhere, the shim died `command not
+        # found` (127), and the gate read a missing interpreter as a broken
+        # shim — CI red on dev from 2026-08-2x until measured here.
+        env={"HOME": str(tmp_path),
+             "PATH": f"{pathlib.Path(sys.executable).parent}:/usr/bin:/bin"},
     )
     assert proc.returncode == 1, (proc.stdout, proc.stderr)
     assert "nos-unit-agent" in proc.stderr
