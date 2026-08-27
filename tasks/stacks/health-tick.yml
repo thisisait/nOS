@@ -24,6 +24,11 @@
     argv: "{{ ['python3', playbook_dir ~ '/files/anatomy/scripts/stack-health-probe.py'] + _wait_stacks }}"
   environment:
     NOS_DOCKER_BIN: "{{ docker_bin | default('docker') }}"
+    # Absence needs a denominator (docs/hidden_fees/08-empty-stack-reads-as-success.md):
+    # a 0-container stack is only PASS if its rendered inputs also declare 0
+    # services. Without this the probe cannot read {{ stacks_dir }} and falls
+    # back to UNKNOWN for every empty stack rather than guessing PASS.
+    NOS_STACKS_DIR: "{{ stacks_dir }}"
   register: _tick_probe
   changed_when: false
   check_mode: false

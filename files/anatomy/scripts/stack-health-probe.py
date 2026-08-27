@@ -21,6 +21,43 @@ Output (stdout), one line per stack then a marker line:
   PENDING              # at least one container still starting / not yet up
   -- or --
   FAILED               # at least one container Exited/Dead/unhealthy (and none pending)
+  -- or --
+  UNKNOWN              # a zero-container stack whose expected count could not
+                        # be determined (see below) — never ALL_READY
+
+ZERO CONTAINERS — absence needs a denominator (doctrine:
+docs/hidden_fees/08-empty-stack-reads-as-success.md). `docker ps` returning
+nothing for a stack is ambiguous on its own: it means either "every service in
+this stack is toggled off" (fine) or "the bring-up never produced anything"
+(not fine), and a plain container count cannot tell the two apart. This probe
+resolves the ambiguity from an artifact it CAN read without a live Docker
+daemon or the Ansible-side `up` result: the rendered compose inputs
+themselves — `{{ stacks_dir }}/<stack>/docker-compose.yml` plus every
+role-rendered `{{ stacks_dir }}/<stack>/overrides/*.yml` — the same files
+`docker compose up` itself consumes (env var `NOS_STACKS_DIR` points at
+`stacks_dir`; set by tasks/stacks/health-tick.yml).
+
+  - rendered inputs declare 0 services  -> legitimately empty, PASS silently
+    ("stack empty by configuration").
+  - rendered inputs declare N>0 services but 0 containers exist -> FAIL
+    ("bring-up failed"), regardless of any `up` rc — the artifact alone
+    disambiguates this case.
+  - the base compose file is flat-out MISSING -> UNKNOWN, not FAIL. A probe
+    reading only rendered artifacts cannot tell "this stack's render was
+    never even attempted because it's disabled" from "the render step ran
+    and failed to produce output" (the measured CI case: no compose file, rc=1
+    from `up`). Consulting the `up` rc — a different, complementary layer —
+    is what turns this UNKNOWN into a precise verdict; this probe alone
+    cannot and must not guess.
+  - `NOS_STACKS_DIR` unset, or PyYAML unavailable, or the artifact unreadable
+    -> UNKNOWN for the same reason: guessing either verdict here would repeat
+    the defect this file exists to close.
+
+UNKNOWN is deliberately NOT folded into ALL_READY or silently dropped: the
+tick loop only ever short-circuits on the literal string "ALL_READY", so an
+UNKNOWN stack keeps the health-wait polling for its full budget and then
+surfaces loudly via wait-stacks-healthy.yml's timeout failure, with "UNKNOWN"
+visible in the last snapshot — never read as success.
 
 Exit code is always 0 — the marker line carries the state (the tick loop reads
 stdout, never the rc, so a transient docker hiccup never aborts the wait).
@@ -106,6 +143,68 @@ def blob_says_check_could_not_run(blob: str) -> bool:
     return any(marker in low for marker in CANNOT_RUN)
 
 
+def _expected_service_count(stack: str) -> tuple[int | None, str, list[str]]:
+    """How many services the stack's RENDERED inputs declare — the absent
+    denominator (docs/hidden_fees/08-empty-stack-reads-as-success.md).
+
+    Reads exactly the files `docker compose up` itself would read for this
+    project: `{{ stacks_dir }}/<stack>/docker-compose.yml` plus every
+    `{{ stacks_dir }}/<stack>/overrides/*.yml` role fragment. Says nothing
+    about whether `up` ran or what its rc was — this is the artifact side of
+    the probe, a COMPLEMENT to consulting the bring-up result, not a
+    replacement for it.
+
+    Returns (expected, reason, names):
+      expected is None  -> UNKNOWN. `reason` says why (env unset, no PyYAML,
+                            base file missing, or a file could not be parsed).
+                            Guessing a verdict here would repeat the defect
+                            this function exists to close — see module
+                            docstring "ZERO CONTAINERS".
+      expected is an int -> the count of distinct service names found across
+                            every file that COULD be read. 0 is a legitimate,
+                            common answer (nothing in this stack is enabled);
+                            `reason` is '' in that case. `names` is the sorted
+                            list backing a >0 verdict's FAILED message.
+    """
+    base_dir = os.environ.get("NOS_STACKS_DIR")
+    if not base_dir:
+        return None, "NOS_STACKS_DIR not set — probe run outside the playbook", []
+
+    try:
+        import yaml  # local import: only this path needs it
+    except ImportError:
+        return None, "PyYAML not importable — cannot read rendered compose", []
+
+    compose_path = os.path.join(base_dir, stack, "docker-compose.yml")
+    if not os.path.isfile(compose_path):
+        return None, (
+            f"{compose_path} does not exist — cannot tell a stack that was "
+            "never enabled from one whose render failed"
+        ), []
+
+    override_dir = os.path.join(base_dir, stack, "overrides")
+    files = [compose_path]
+    if os.path.isdir(override_dir):
+        files += [
+            os.path.join(override_dir, fname)
+            for fname in sorted(os.listdir(override_dir))
+            if fname.endswith((".yml", ".yaml"))
+        ]
+
+    names: set[str] = set()
+    for path in files:
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                doc = yaml.safe_load(fh)
+        except Exception as exc:  # unreadable or unparsable — indeterminate
+            return None, f"{path}: could not parse ({exc})", []
+        if isinstance(doc, dict):
+            services = doc.get("services")
+            if isinstance(services, dict):
+                names.update(services.keys())
+    return len(names), "", sorted(names)
+
+
 def _classify(status: str) -> str:
     """ready | pending | failed, from a `docker ps` Status string."""
     s = status.lower()
@@ -124,15 +223,34 @@ def _classify(status: str) -> str:
 def main(argv: list[str]) -> int:
     stacks = argv or []
     any_pending = False   # at least one container still starting
-    any_failed = False    # at least one container Exited/Dead/unhealthy
+    any_failed = False    # at least one container Exited/Dead/unhealthy, or a
+                           # zero-container stack whose rendered inputs prove
+                           # something was expected
+    any_unknown = False   # a zero-container stack whose expected count could
+                           # not be determined from the rendered artifacts
     for stack in stacks:
         rows = _docker_ps(stack)
         if not rows:
-            # No containers for this project. The caller only health-waits AFTER
-            # `docker compose up -d` (which blocks until containers are created),
-            # so an empty result here means the stack legitimately has none
-            # (e.g. every service in it is toggled off) — nothing to wait for.
-            print(f"{stack}: 0/0 ready (no containers — stack empty)")
+            # No containers for this project. The caller only health-waits
+            # AFTER `docker compose up -d`, so an empty result here means
+            # EITHER "every service in this stack is toggled off" (fine) OR
+            # "the bring-up never produced anything" (not fine) — the two are
+            # indistinguishable from container state alone. Consult the
+            # rendered compose inputs for the missing denominator (see module
+            # docstring "ZERO CONTAINERS" and _expected_service_count).
+            expected, reason, names = _expected_service_count(stack)
+            if expected is None:
+                print(f"{stack}: 0/? ready (expected service count UNKNOWN — {reason})")
+                any_unknown = True
+            elif expected == 0:
+                print(f"{stack}: 0/0 ready (stack empty by configuration)")
+            else:
+                print(
+                    f"{stack}: 0/{expected} ready FAILED: bring-up produced no "
+                    f"containers, but the rendered compose declares {expected} "
+                    f"service(s): {', '.join(names)}"
+                )
+                any_failed = True
             continue
         ready_n = 0
         waiting, failed = [], []
@@ -160,12 +278,19 @@ def main(argv: list[str]) -> int:
             line += f" FAILED: {', '.join(failed)}"
         print(line)
     # Marker the tick loop keys on. PENDING wins over FAILED (still moving, give
-    # it time to converge); FAILED only when nothing is pending but something is
-    # broken; ALL_READY when every container across every stack is ready.
+    # it time to converge); FAILED wins over UNKNOWN (a definite break is more
+    # actionable than an indeterminate one); UNKNOWN only when nothing pending
+    # or failed but at least one zero-container stack couldn't be classified;
+    # ALL_READY when every container across every stack is ready. Note UNKNOWN
+    # is never folded into ALL_READY — the tick loop only short-circuits on
+    # the literal string "ALL_READY", so it keeps polling to the full budget
+    # and then surfaces via wait-stacks-healthy.yml's timeout failure.
     if any_pending:
         print("PENDING")
     elif any_failed:
         print("FAILED")
+    elif any_unknown:
+        print("UNKNOWN")
     else:
         print("ALL_READY")
     return 0
