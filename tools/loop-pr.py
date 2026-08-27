@@ -562,20 +562,14 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
             return 0
         log(f"  {wid}: re-judged pass on HEAD")
     elif state == "indeterminate":
-        # AN INDETERMINATE WAS A ONE-WAY DOOR until 2026-08-26. The reader
-        # selected pass-or-null only, so a proposal whose latest verdict was
-        # `indeterminate` vanished from the only list this driver walks, and no
-        # scheduled path could ever re-judge it. Measured 2026-08-25: proposals
-        # 18/19/20 drew indeterminate three runs straight because
-        # state/judge-sets.yml carried a min_work floor derived by arithmetic
-        # (4060) where the judge env measures 4032 — the verdicts were about the
-        # constant, not the proposals — and fixing the floor (f3f7a39b) could
-        # not bring them back. The reader now surfaces the state, WITH a bound
-        # (an unchanged judged tree is `indeterminate-held`, which never reaches
-        # this driver — see loop-status.py::awaiting), and this branch makes the
-        # row reachable. An indeterminate is NEVER treated as a pass: the only
-        # act here is the same _rejudge the decayed path runs, and only a fresh
-        # `pass` proceeds.
+        # AN INDETERMINATE WAS A ONE-WAY DOOR until 2026-08-26: awaiting()
+        # selected pass-or-null only, so no scheduled path could re-judge the
+        # row. Measured 2026-08-25: proposals 18/19/20 sat unreachable on a
+        # min_work floor derived by arithmetic (4060) where the judge env
+        # measures 4032 (state/judge-sets.yml, f3f7a39b). Bounded now — an
+        # unchanged judged tree is `indeterminate-held` and never reaches this
+        # driver (loop-status.py::awaiting). NEVER a pass: only a fresh
+        # _rejudge `pass` proceeds.
         if not rejudge:
             log(f"  {wid}: last verdict was indeterminate — re-run the judges "
                 f"with --rejudge")
@@ -760,11 +754,10 @@ def main() -> int:
         if report.get("error"):
             raise Refused(report["error"])
 
-        # `indeterminate` is the driver's since 2026-08-26 (the one-way-door
-        # fix — see land()); `indeterminate-held` is deliberately NOT: the
-        # reader proved a fresh run would see byte-identical inputs, and its
-        # row already names the condition (a commit moving the base) that
-        # flips it back to `indeterminate`.
+        # `indeterminate` is the driver's since 2026-08-26 (one-way-door fix,
+        # see land()); `indeterminate-held` is deliberately NOT — a fresh run
+        # would see byte-identical inputs, and the row already names what
+        # flips it back (a commit moving the base).
         rows = [r for r in report["rows"]
                 if r["state"] in ("unjudged", "ready", "re-judge",
                                   "indeterminate")]

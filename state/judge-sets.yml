@@ -200,23 +200,16 @@ judges:
     # 4085 is a reading, the 4060 is arithmetic on a historically stable
     # difference, and the next `repo` verdict is what confirms or corrects it.
     #
-    # IT CORRECTED IT. 2026-08-25, three times in one morning tick:
-    #   06:17:30 / 06:23:45 / 06:30:06  pytest-anatomy  work_count=4032
-    #   "exit says pass but tests_executed=4032 < min_work=4060 — scope shrank"
-    # The judge env runs 4032, not the ~4063 the arithmetic assumed: the
-    # operator/judge gap is -53 now, not -22, because the gates added since
-    # skew host-conditional. Every judgement since 06:17 was wedged into
-    # indeterminate by this line, and an indeterminate verdict is a ONE-WAY
-    # DOOR — loop-status.awaiting() selects `v.result='pass' OR v.id IS NULL`,
-    # so the driver (the only identity that re-judges) can never see the row
-    # again. Proposals 18/19/20 left the queue that way, not on their merits.
+    # IT CORRECTED IT. 2026-08-25, three ticks in one morning: the judge env
+    # measured work_count=4032, not the ~4063 the arithmetic assumed (gap -53,
+    # not -22 — newer gates skew host-conditional). Every verdict wedged into
+    # indeterminate, then a one-way door (tools/loop-pr.py, fixed 2026-08-26)
+    # kept proposals 18/19/20 out of the queue on the constant, not their merits.
     #
-    # THE RULE, so the next editor does not repeat the arithmetic: this floor
-    # is derived from the JUDGE env's own recorded readings in `loop_judge_runs`
-    # — never from an operator collection minus an assumed gap. Recorded minimum
-    # is 4020 (2026-08-24, the last passing verdict); 3900 sits 120 below it,
-    # which still catches a scope shrink of ~3% of the suite while leaving room
-    # for the gap to drift again. Read the record before moving it:
+    # THE RULE: derive this floor from the judge env's own readings in
+    # `loop_judge_runs` — never operator collection minus an assumed gap.
+    # Recorded minimum 4020 (2026-08-24); 3900 sits 120 below it, still
+    # catching a ~3% scope shrink. Read the record before moving it:
     #   sqlite3 "file:$HOME/wing/app/data/wing.db?mode=ro" \
     #     "SELECT started_at, work_count, min_work, outcome FROM loop_judge_runs
     #       WHERE judge_name='pytest-anatomy' ORDER BY id DESC LIMIT 10"

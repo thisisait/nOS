@@ -422,22 +422,14 @@ def awaiting() -> dict:
             # Only a patch that still applies can be described as ready or not;
             # for the other states the drift is not the operative fact.
             if state == "applies" and row["verdict"] == "indeterminate":
-                # THE BOUND. Without one, a proposal that is ambiguous BY ITS
-                # NATURE burns a judge run every night forever. The bound is not
-                # a retry count — a count is arbitrary — it is tree identity:
-                # `loop_verdicts.tree_sha` is the exact tree the judges ran on
-                # (base + patch, built in the sandbox), so when nothing outside
-                # the patch's own paths differs between that tree and HEAD,
-                # every input to a fresh run is byte-identical to the run that
-                # declined, and re-judging is provably pointless. The morning
-                # that motivated all this unblocks itself under this rule:
-                # `state/judge-sets.yml` is IN the tree, so the min_work
-                # correction (f3f7a39b) was a tree move, and 18/19/20 became
-                # re-judgeable the moment it landed. A drift we cannot measure
-                # (verdict records no tree, tree not in this clone) counts as
-                # moved — the refusal needs positive proof of sameness, because
-                # the failure mode of guessing "unchanged" is the one-way door
-                # this state exists to remove.
+                # THE BOUND, so an inherently ambiguous proposal does not burn
+                # a judge run nightly forever. It is tree identity, not a retry
+                # count: when nothing outside the patch's own paths differs
+                # between `loop_verdicts.tree_sha` and HEAD, a fresh run's
+                # inputs are byte-identical and re-judging is provably
+                # pointless. Unmeasurable drift counts as moved — the refusal
+                # needs positive proof of sameness, or this recreates the
+                # one-way door it exists to remove (see loop-pr.py::land).
                 if drift_error is None and not moved:
                     state = "indeterminate-held"
                     detail = (f"judged indeterminate on "
@@ -635,12 +627,10 @@ def _print_awaiting(report: dict, *, as_json: bool) -> int:
 
     pending = report["unlanded"]
     unjudged = [r for r in rows if r["state"] == "unjudged"]
-    # Counted apart, because they are different facts and one header cannot
-    # carry all three: a passed proposal is waiting on an ACT, an unjudged one
-    # is waiting on a VERDICT, an indeterminate one on a JUDGE WHO CAN ANSWER —
-    # and calling any of them by another's name is the arithmetic this file
-    # exists to refuse. The header counts by the VERDICT, not by the state,
-    # because a landed or conflicted row may sit on either result.
+    # Counted apart: a passed proposal waits on an ACT, an unjudged one on a
+    # VERDICT, an indeterminate one on a judge who can answer. The header
+    # counts by the VERDICT, not the state, because a landed or conflicted
+    # row may sit on either result.
     passed = [r for r in rows if r.get("verdict") == "pass"]
     declined = [r for r in rows if r.get("verdict") == "indeterminate"]
     print(f"{len(passed)} passed verdict(s) against a proposal; "

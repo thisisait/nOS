@@ -672,12 +672,10 @@ def reds(report: dict) -> list[str]:
     loop = report.get("loop_verdicts") or {}
     if loop.get("unlanded"):
         rows = loop["unlanded"]
-        # Three different stalls, and one sentence cannot carry them: a passed
-        # proposal waits on an ACT, an unjudged one waits on a VERDICT, and an
-        # indeterminate one (in the list since 2026-08-26, the one-way-door
-        # fix) waits on a re-judge. Saying "passed the judges" of a row no
-        # judge has seen — or of one a judge DECLINED to answer — is the kind
-        # of quiet inaccuracy that makes a reader stop trusting the line.
+        # Three different stalls, named apart: a passed proposal waits on an
+        # ACT, an unjudged one on a VERDICT, an indeterminate one (listed
+        # since the 2026-08-26 one-way-door fix) on a re-judge. Saying
+        # "passed the judges" of the other two is a quiet inaccuracy.
         unjudged = [r for r in rows if r["state"] == "unjudged"]
         declined = [r for r in rows if r["state"] == "indeterminate"]
         passed = [r for r in rows
