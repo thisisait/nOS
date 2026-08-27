@@ -63,9 +63,14 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.10
 - **Bound ceremonies complete.** A14 sessions carry budget ceilings checked
   before the spend, a terminated run reports the tokens it burned, a fallback
   answer no longer wears the primary's name, and the grader reads a real page.
-- **A backend is a binding, not a provider.** One OpenAI-protocol adapter; the
-  MiniMax path built to the switch and no further; `mistral-eu` recorded as the
-  first EU-residency row, inert; the Pulse catalog carries no backend, ever.
+  MEASURED 2026-08-27, the first bound runs to finish: surveyor 129 s on
+  MiniMax-M2 with no ceiling (August's attempts all died on one), librarian
+  killed at 118k tokens by a byte-truncated UTF-8 payload — both fixed, and
+  neither fix is deployed until the next converge.
+- **A backend is a binding, not a provider.** One OpenAI-protocol adapter;
+  MiniMax ARMED with four agents bound and the two code-authoring, opus-pinned
+  ceremonies held on the default backend by ruling 1; `mistral-eu` recorded as
+  the first EU-residency row, inert; the Pulse catalog carries no backend, ever.
 - **Agents entered the GDPR Article-30 register**, their cost is recorded per
   run and read by a daily tally, and `ask_operator` suspends a run until a
   human answers — on a phone, via ntfy, with approvals and questions unified
