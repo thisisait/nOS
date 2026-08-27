@@ -75,8 +75,10 @@ final class McpBoneTool implements ToolInterface
 
 		$status = $response->getStatusCode();
 		$payload = (string) $response->getBody();
+		// mb_strcut, not substr — see McpKeapTool: a byte cut mid-codepoint
+		// manufactures invalid UTF-8 and json_encode then kills the session.
 		if (strlen($payload) > self::MAX_RESPONSE_BYTES) {
-			$payload = substr($payload, 0, self::MAX_RESPONSE_BYTES) . '…[truncated]';
+			$payload = mb_strcut($payload, 0, self::MAX_RESPONSE_BYTES, 'UTF-8') . '…[truncated]';
 		}
 
 		return new ToolResult(

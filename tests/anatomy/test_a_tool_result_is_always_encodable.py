@@ -126,3 +126,53 @@ def test_the_model_is_told_where_its_commands_run():
         "there is no branch for the unset case — an agent would be told "
         "nothing rather than told to establish where it is."
     )
+
+
+#: The three MCP tools that cap a remote payload the same way BashReadOnlyTool
+#: caps command output. Named, not globbed: a new tool must be added here
+#: deliberately, and the positive control below refuses an empty list.
+MCP_TOOLS = ("McpKeapTool.php", "McpWingTool.php", "McpBoneTool.php")
+
+
+@pytest.mark.parametrize("name", MCP_TOOLS)
+def test_an_mcp_payload_is_cut_on_a_character_boundary(name):
+    """The 2026-08-17 lesson above was applied to ONE file and stopped there.
+
+    MEASURED 2026-08-27: the librarian, bound to MiniMax, read KEAP's Czech
+    corpus and died `Malformed UTF-8 characters` at 118,775 input tokens —
+    same death, same "every path out fails identically", different tool. The
+    cut was `substr()` at MAX_RESPONSE_BYTES, straight through a codepoint.
+    """
+    src = (REPO / "files/anatomy/wing/app/AgentKit/Tools" / name).read_text(encoding="utf-8")
+    assert "MAX_RESPONSE_BYTES" in src, f"{name}: the cap is gone; this gate's premise has changed"
+    cut = [ln.strip() for ln in src.splitlines()
+           if "MAX_RESPONSE_BYTES" in ln and ("substr(" in ln or "mb_strcut(" in ln)]
+    assert cut, f"{name}: no truncation statement found — did the cap stop being applied?"
+    for line in cut:
+        assert "mb_strcut(" in line and "= substr(" not in line, (
+            f"{name} truncates with substr(): {line}\nA byte cut through a "
+            "multi-byte codepoint manufactures invalid UTF-8 out of a clean "
+            "API response, and json_encode then refuses the whole next request."
+        )
+
+
+@pytest.mark.skipif(shutil.which("php") is None, reason="php not in PATH")
+def test_the_two_primitives_actually_differ():
+    """Proof the choice above is load-bearing, not a style preference.
+
+    Without this, the gate asserts a spelling. With it, the gate carries the
+    reason: the same cut, on the same Czech bytes, at the same budget.
+    """
+    out = subprocess.run(
+        ["php", "-r",
+         '$s = str_repeat("ěščřžýá", 100);'
+         '$n = 11;'  # lands inside a two-byte codepoint
+         'echo mb_check_encoding(substr($s,0,$n),"UTF-8") ? "SUBSTR-OK" : "SUBSTR-BROKEN";'
+         'echo " ";'
+         'echo mb_check_encoding(mb_strcut($s,0,$n,"UTF-8"),"UTF-8") ? "STRCUT-OK" : "STRCUT-BROKEN";'],
+        capture_output=True, text=True, timeout=30,
+    )
+    assert out.returncode == 0, out.stderr
+    assert out.stdout.strip() == "SUBSTR-BROKEN STRCUT-OK", (
+        f"the two primitives no longer differ as this gate assumes: {out.stdout!r}"
+    )
