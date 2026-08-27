@@ -2,31 +2,19 @@
 # ==============================================================================
 # skills.yml — put the skill library on every reader's shelf, unequally.
 #
-# `files/anatomy/skills/<name>/SKILL.md` is the one copy. This file links it
-# into each consumer's skill directory. SYMLINKS, never copies: a copy becomes a
-# fork the first time the source changes, and with six destinations nobody finds
-# out which of them went stale. Omarchy reached the same conclusion for the same
-# reason.
+# `files/anatomy/skills/<name>/SKILL.md` is the one copy, SYMLINKED into each
+# consumer's skill dir — a copy forks the first time the source changes. Two
+# consumer kinds (files/anatomy/skills/README.md): `main` (human-driven harness)
+# gets EVERY skill as an invariant; `agent` (autonomous runner) gets only skills
+# whose `metadata.nos.audience` names it.
 #
-# TWO KINDS OF CONSUMER, and the whole point is that they do not get the same
-# shelf (files/anatomy/skills/README.md):
+# A destination is only written if its harness's parent dir exists (measured
+# 2026-08-27: only ~/.openclaw and ~/.hermes did) — a skills dir for a harness
+# nobody installed reads later as evidence the harness is set up. This file
+# creates only the `skills/` child, never the harness's own home.
 #
-#   main   — the harness a human is driving. Gets EVERY skill, as an invariant
-#            rather than a list, so a new skill needs no edit here.
-#   agent  — an autonomous runner. Gets only the skills whose
-#            `metadata.nos.audience` names it. An agent that can do fewer things
-#            wrongly is worth more than one that has read everything.
-#
-# A DESTINATION IS ONLY WRITTEN IF ITS HARNESS IS THERE. Measured 2026-08-27 on
-# this host: ~/.claude/skills, ~/.codex/skills, ~/.gemini, ~/.pi and ~/.agents
-# did not exist, while ~/.openclaw and ~/.hermes did. Creating a skills dir for
-# a harness nobody installed is litter, and litter shaped like configuration is
-# worse than absence — someone later reads it as evidence Codex is set up.
-# The parent must exist; this file creates the `skills/` child inside it, never
-# the harness's own home.
-#
-# Ask what actually landed with `tools/skill-status.py` — it reads and repairs
-# nothing, so it can disagree with this file, which is the point of having it.
+# Ask what actually landed with `tools/skill-status.py` — a pure reader, so it
+# can disagree with this file, which is the point of having it.
 # ==============================================================================
 
 - name: "[Skills] Discover the library"
@@ -38,11 +26,9 @@
   register: _skill_files
   tags: ['skills', 'anatomy']
 
-# The audience lives in the skill's own frontmatter, so it is read from the
-# artifact rather than restated in a table here. A skill whose frontmatter
-# cannot be parsed is REPORTED and then treated as operator-only — the safe
-# direction, because the failure mode of guessing wide is an autonomous runner
-# holding a procedure nobody meant it to have.
+# The audience is read from the skill's own frontmatter, never restated here.
+# Unparseable frontmatter is REPORTED and treated as operator-only — guessing
+# wide hands an autonomous runner a procedure nobody meant it to have.
 - name: "[Skills] Read each skill's declared audience"
   ansible.builtin.set_fact:
     _skills: >-

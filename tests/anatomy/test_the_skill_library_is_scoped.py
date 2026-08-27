@@ -131,11 +131,9 @@ def test_main_takes_the_whole_library_as_an_invariant():
 def test_the_hermes_role_no_longer_renders_its_own_copy():
     """The migration seam. Two owners of one skill is the defect this estate
     pays for most often; the role must not resurrect its template."""
-    # PARSE THE TASKS, do not grep the file. The first cut matched the literal
-    # `skills/nos/SKILL.md.j2` anywhere in the text and failed on the migration
-    # COMMENT that explains why the template is gone — a detector reporting a
-    # description as the fact, which is this repository's most repeated defect
-    # and the third instance found in a single day (2026-08-27).
+    # PARSE THE TASKS, do not grep: a text match fails on the migration
+    # COMMENT that explains why the template is gone — a detector reporting
+    # a description as the fact (third instance in one day, 2026-08-27).
     role = REPO / "roles/pazny.hermes/tasks/main.yml"
     tasks = yaml.safe_load(role.read_text(encoding="utf-8")) or []
     for task in tasks:

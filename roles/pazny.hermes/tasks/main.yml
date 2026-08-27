@@ -153,21 +153,11 @@
     mode: '0644'
     force: "{{ hermes_force_memory_reset | default(false) }}"   # 2nd+ run preserves user memories
 
-# THE SKILL MOVED TO THE LIBRARY, 2026-08-27. This role used to own the estate's
-# only skill — `skills/nos/SKILL.md.j2`, rendered here and delivered to Hermes
-# alone. It had drifted with nobody reading it back: four references to
-# `~/projects/mac-dev-playbook`, a repository name retired in the nOS rebrand.
-#
-# It now lives at files/anatomy/skills/nos-devops/ and `tasks/skills.yml` links
-# it onto every shelf whose audience names it — Hermes among them. A role that
-# also rendered its own copy would put TWO nOS skills on this shelf under two
-# names, which is the same defect as the cAdvisor scrape and the dual agent
-# declaration: one truth, two spellings, no way to stay in agreement.
-#
-# The stale `skills/nos/` directory from before the move is removed so the shelf
-# does not carry both. Hermes's ~28 upstream bundled skills are NOT touched —
-# they are not ours, and tools/skill-status.py reports them as FOREIGN rather
-# than tidying them away.
+# THE SKILL MOVED TO THE LIBRARY, 2026-08-27. The role-owned skills/nos/
+# SKILL.md.j2 had drifted unread — four mac-dev-playbook references since the
+# rebrand. It now lives at files/anatomy/skills/nos-devops/, linked by
+# tasks/skills.yml; this removes the stale copy so the shelf never carries two.
+# Hermes's ~28 upstream bundled skills are FOREIGN and untouched.
 - name: "[Hermes] Remove the role's superseded nOS skill (now library-owned)"
   ansible.builtin.file:
     path: "{{ hermes_config_dir }}/skills/nos"
