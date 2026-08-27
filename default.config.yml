@@ -1797,7 +1797,7 @@ n8n_port: 5678
 # 2.32.7 is the queue's number and sits above that floor, with six days of soak;
 # 2.34.2 shipped today and buys nothing — no advisory has been published since
 # 2026-07-22. Same-major, migrate-on-start. arm64 tag confirmed on the registry.
-n8n_version: "2.35.0"  # [swept 2.34.2 2026-08-11]
+n8n_version: "2.35.7"  # [swept 2.34.2 2026-08-11] REM-229: clears the <2.35.4 floor
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
 n8n_admin_email: "{{ default_admin_email }}"
