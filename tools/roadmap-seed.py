@@ -192,12 +192,24 @@ row("face-styles","Style picker in the panel + per-style settings","2026-08-03",
     body="Style chosen at table creation; a dropdown beside +Add row to switch back to grid; per-blog column selection and ellipsis length; a view modal with copy-to-clipboard.")
 row("face-tree","Tree rendering for nested tables","2026-08-04","queued","face",parent="face",
     refs="this table", body="Roadmap rows nest via `parent`. KEAP has no rowRef kind, so integrity is seed-gated, not schema-enforced.")
+row("face-tauri","face2tauri — one shell recipe for macOS, Linux and Windows","2026-08-27","queued","face",parent="face",
+    refs="Omarchy 4.0 Quattro (2026-08-14) · quickshell.org · files/anatomy/face",
+    body="Studied 2026-08-27 after the operator asked whether Quickshell could give one UI recipe for Linux and Windows. It cannot: Quickshell is Wayland/X11 only, and its author's own words on the ports are 'I have not done much research yet and do not plan to until the Linux version is in a state I am happy with', with Windows/macOS planned as a PAID tier. An unresearched intention gated behind another platform's maturity is not a foundation. The cross-platform answer nOS already has is face — a browser runtime renders identically on all three. What face cannot be is the HOST SHELL (bar, launcher, lock screen, polkit agent), which is what Quickshell is for. So this row is NOT 'port face to Quickshell': it is Tauri (Rust + system webview) WRAPPING the existing face, one binary per OS, reusing what is built rather than replacing it. Quickshell would only ever be a Linux-side host-shell layer above that, and only if nOS decides it wants to own the host shell at all — which is a product decision nobody has made.")
+row("face-app-builder","A builder where a tenant creates apps that cannot violate the standards","2026-08-27","queued","face",parent="face",
+    refs="apps/_template.yml · files/anatomy/module_utils/nos_app_parser · docs/tier2-app-onboarding.md",
+    body="Operator ask 2026-08-27, framed as 'something like Lovable, so a user can create custom apps that keep hard standards'. The standards half already exists and is the hard part: nos_app_parser REFUSES a manifest without a complete Article-30 gdpr block, and the runner derives routing, SSO, secrets and observability from the manifest rather than trusting the author. What is missing is only the surface — today authoring an app means editing YAML and knowing what a legal_basis enum is. The build is therefore a GUIDED EDITOR over apps/<name>.yml whose validity check is the parser itself, not a re-implementation of it: one schema, two front doors. Two things it must not become: a generator that emits manifests the parser would reject (the standards stop being hard the moment a second definition exists), and a chat box that writes YAML unvalidated. Pairs with [agents-nos-skill] — the skill is the same contract for an agent, the builder is it for a human.")
 
 # ── PLATFORM ───────────────────────────────────────────────────────────────
 row("plat","Platform truth","2026-08-02","active","platform",refs="docs/hidden_fees/",
     body="The layers that report success they did not earn.")
 row("plat-linux","Linux estate must actually serve","2026-08-05","blocked","platform",parent="plat",
     refs="docs/hidden_fees/08", body="Playbook completes (ok=550) and 1/8 smoke probes pass. Infra stack does not come up. The gate is honest now; the port is not done.")
+row("plat-brew-lag","A pin that lags upstream instead of chasing it","2026-08-27","next","platform",parent="plat",
+    refs="roles/pazny.openclaw/tasks/main.yml:99 · default.config.yml ollama_version · Omarchy update channels",
+    body="The ollama pin guard has now fired three times (0.32.14->15 on 08-22, 0.32.15->0.33.0 mid-converge on 08-27) and every time the RECORD followed brew, after a failed converge. That is `state: latest` deciding and the repo transcribing. Omarchy's answer is a stable channel deliberately running a month behind Arch, 'so we can catch incompatibilities before they cause problems' — and mise ships the same primitive as MISE_MINIMUM_RELEASE_AGE. For brew there is no lagged mirror, so the lever is `state: present` plus a deliberate advance: a reader reports which pins have a newer version that has been out longer than the lag window, and moving the pin becomes an act with a commit rather than a surprise mid-run. THE TRADE, which must be stated wherever this lands: `present` means a security fix does not arrive by itself. The carve-out is the security floor already in docs/doctrine/security-floor.md — a CVE advances the pin immediately, lag or no lag.")
+row("plat-preconverge-snapshot","A snapshot before the converge, and an honest account of what it covers","2026-08-27","next","platform",parent="plat",
+    refs="tools/snapshot-status.py · tmutil localsnapshot · Omarchy limine-snapper-restore",
+    body="Omarchy snapshots via snapper before every update and keeps five, so a bad update is a reboot away from undone. nOS has backups (14 sources, restic copy #2 at /Volumes/SSD1TB/nos-restic) and a drill that genuinely replays them, but nothing atomic and nothing one step. MEASURED 2026-08-27, and it decides the shape: ~/wing, ~/keap, ~/stacks and ~/.nos are all on /dev/disk3s5, the APFS Data volume — snapshottable. nos_data_root is /Volumes/SSD1TB/nOS/data on /dev/disk7s2, which is Case-sensitive Journaled HFS+ and CANNOT be snapshotted at all. So this covers the ledger, the WORM audit chain and the KEAP knowledge DB, and does not cover the external data volume or RustFS copy #1 that lives on it. The preflight must NAME the uncovered paths rather than report a snapshot and let the operator infer coverage — a converge that believes it has a net and does not is worse than one that knows it has none. Recovery is mount_apfs read-only plus a copy, not a bootloader pick; say so. Reformatting SSD1TB to APFS would close the gap and is the operator's call, not a step of this row. THE PREREQUISITE IS ALSO NOT MET: `tmutil destinationinfo` reports no Time Machine destination on this host, and `tmutil localsnapshot` is documented to need one — the only local snapshots present are macOS's own com.apple.os.update-*. So the ordering is configure TM (or find a snapshot path that does not need it), THEN wire the preflight. tools/snapshot-status.py already reports all of this and is committed ahead of the mechanism deliberately: knowing there is no net is worth more than a net nobody has verified.")
 row("plat-ollama","Ollama 0.30.7 -> 0.32.6, drop the local tap","2026-08-03","next","platform",parent="plat",
     refs="technosideas/swama.md · default.config.yml ollama_version",
     body="VERIFIED not assumed (2026-08-08): homebrew-core 0.32.6 builds llama-server "
@@ -509,6 +521,23 @@ row("agents", "Agents that can ask, and be graded", _TNI, "next", "agents",
     body="Two capabilities the runtime lacks, both found by auditing other people's tools rather "
          "than by reading our own. AgentKit can act and can report; it cannot pause for consent, "
          "and nothing measures whether a prompt change made an agent better or worse.")
+
+row("agents-nos-skill", "nOS ships no skill teaching an agent to extend it", "2026-08-27",
+    "next", "agents", parent="agents",
+    refs=".claude/skills/ · Omarchy manual/17-ai.md · docs/tier2-app-onboarding.md",
+    body="MEASURED 2026-08-27: this repo has exactly ONE committed skill, `devlog`, and seven "
+         "workflows. Every one of them is an INTERNAL development procedure — author history, "
+         "run a review, build a face view. Nothing is shipped to the operator or a tenant. "
+         "Omarchy ships a skill for tailoring the system and symlinks it into ~/.claude/skills, "
+         "~/.codex/skills, ~/.pi/agent/skills, ~/.gemini/config/skills and ~/.agents/skills, so "
+         "the USER's own agent knows how to change their desktop correctly rather than guessing. "
+         "nOS has the stronger version of the thing a skill would protect — nos_app_parser "
+         "refuses a manifest that skips Article 30, plugin manifests derive the wiring — and no "
+         "text that hands an agent those rules. Scope: a skill for authoring an apps/<name>.yml "
+         "and a plugin, installed by the playbook into the agent skill dirs (harness-agnostic, "
+         "the way Omarchy does it), whose validity claim is the parser rather than prose. "
+         "Carry their caveat too, which is honest and ours would need: treat it as experimental, "
+         "different models use it to different effect. Human half is [face-app-builder].")
 
 row("agents-inbox", "An agent can ask, and suspend until answered", _TNI, "queued", "agents",
     parent="agents", refs="technosideas/openworker.md · technosideas/cloudflare-os.md",
