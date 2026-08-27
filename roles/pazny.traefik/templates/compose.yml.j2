@@ -31,7 +31,22 @@ services:
       DOCKER_HOST: "tcp://docker-socket-proxy:2375"
     networks:
 {% for net in (traefik_networks | default(['infra_net', stacks_shared_network | default('shared_net')])) %}
-      - {{ net }}
+{% if net == (stacks_shared_network | default('shared_net')) and (install_authentik | default(false)) %}
+      # REM-214: the `auth.<tld>:host-gateway` entries 19 other containers carry
+      # exist to resolve ONE name, but an /etc/hosts line maps a NAME to the
+      # gateway IP — every host loopback port comes with it (measured from a
+      # peer: Alloy :12345, OpenClaw :18789, Backrest :9898, all 200). Answering
+      # that name ON THE FABRIC gives Docker's embedded DNS something to return,
+      # so the per-service alias can be dropped without OIDC discovery losing its
+      # terminator: same Traefik, same certificate, one hop shorter.
+      # This alias REMOVES NO REACH BY ITSELF — /etc/hosts still wins in every
+      # container that has the entry. It is the prerequisite for removing them.
+      {{ net }}:
+        aliases:
+          - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+{% else %}
+      {{ net }}: {}
+{% endif %}
 {% endfor %}
     extra_hosts:
       # Cross-platform host loopback alias — file-provider routers use
