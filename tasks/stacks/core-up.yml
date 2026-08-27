@@ -329,6 +329,18 @@
   check_mode: false
 
 # ── Build list of core stacks actually enabled ──────────────────────────────
+#
+# THIS LIST AND THE INFRA RENDER'S `when:` (above) MUST NAME THE SAME SERVICES.
+# `install_bone` sat here and not there from 3eace4a9 — when track-a ran Bone as
+# a compose service — and survived anatomy A3a returning Bone to host launchd.
+# roles/pazny.bone/templates/ holds one file, bone.plist.j2: Bone renders NO
+# container and cannot make this stack non-empty. So an estate with install_bone
+# on and the rest of infra off skipped the render and then ran `up -f` against a
+# file nobody had written — rc=1, and the probe called it `0/0 ready`. That is
+# docs/hidden_fees/08 reached by CONFIG, on any platform, no Linux bug needed.
+# Untidy while it only mis-set a flag; a stopped run since the bring-up assert
+# below began reading that rc. Removed 2026-08-27.
+# Gate: tests/anatomy/test_infra_enabled_matches_the_render.py
 
 - name: "[Core] Resolve which core stacks to bring up"
   ansible.builtin.set_fact:
@@ -337,7 +349,7 @@
          (install_mariadb | default(false)) or (install_postgresql | default(false)) or
          (redis_docker | default(false)) or (install_bluesky_pds | default(false)) or
          (install_authentik | default(false)) or (install_infisical | default(false)) or
-         (install_spacetimedb | default(false)) or (install_bone | default(false)) }}
+         (install_spacetimedb | default(false)) }}
     _core_observability_enabled: "{{ install_observability | default(true) | bool }}"
   # tags: always ensures partial runs (e.g. `--tags traefik,authentik`)
   # still set this fact — every conditional task downstream gates on it
