@@ -6,9 +6,10 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.10
 
 ---
 
-## v0.11-beta (unreleased — drafted 2026-08-19, transport arc + re-verified claims 2026-08-23)
+## v0.11-beta (unreleased — drafted 2026-08-19, transport arc 2026-08-23, loop + roster + fee 08 on 2026-08-27)
 
-> **The estate closes a loop it cannot cheat.** ~500 commits since `v0.10-beta`,
+> **The estate closes a loop it cannot cheat.** 453 commits since `v0.10-beta`
+> (1181 files, +134k/−10k),
 > and the through-line is a machine built so that no step in it can record its
 > own success: a weakness was detected by a scanner, proposed against by an
 > agent, judged by gates the proposer cannot touch, landed by a driver that
@@ -137,49 +138,126 @@ enabled TLS reported its own success and nothing read the effect.
   its repeating predecessors (60 of 76 unread rows were re-statements);
   `superseded` is not `read` — nobody read them, and the schema says so.
 
+### The loop stops losing proposals (2026-08-25/27)
+
+- **A wedged constant, and the run that found it.** `state/judge-sets.yml` held
+  `min_work: 4060`, arrived at by arithmetic on an assumed operator/judge gap;
+  the judge env runs 4032. Every judgement from 08-25 06:17 was forced to
+  INDETERMINATE. The file's own comment had predicted this ("the next `repo`
+  verdict is what confirms or corrects it") — the verdict came three times in
+  thirteen minutes and nobody read it. The floor is now derived from the
+  recorded readings in `loop_judge_runs`, never from a subtraction.
+- **INDETERMINATE was a one-way door.** `awaiting()` selected
+  `result='pass' OR NULL`, and `--rejudge` acts only on what `awaiting()`
+  returns — so a proposal judged indeterminate left every queue permanently.
+  Three did, on a miscalibrated constant rather than on their merits. The
+  driver now re-judges them, bounded by TREE IDENTITY rather than an attempt
+  count: an unchanged tree cannot answer differently, so the row says so and
+  names the commit that would unblock it. Five previously invisible rows
+  surfaced; two passed on the next unattended tick.
+- Gates: `test_an_indeterminate_is_not_a_one_way_door.py`,
+  `test_the_upgrade_matrix_compares_versions.py`.
+
+### The roster closes, and the estate ships a skill library
+
+- **Three agents retired, two parked.** scout, remediator and upgrade-advisor
+  had emitted zero events in this DB epoch; the first two run nightly under
+  other names, and the third's whole task became `compareVersions` plus a 409
+  guard. curator and migration-author are parked inspektor-style — profile and
+  honest `runner_status`, no launcher. CLAUDE.md's "Scout, Remediator,
+  Conductor are live" is replaced by a pointer to `tools/agent-status.py`.
+- **Orphans are named, not tidied away.** A converge will NOT delete the live
+  Authentik clients (the blueprint upserts), the `api_tokens` rows or the
+  paused pulse rows; `tools/identity-status.py` now reports them as UNDECLARED
+  and the operator decides.
+- **A skill library with unequal shares** (`files/anatomy/skills/`). Operator
+  harnesses get every skill as an invariant; an autonomous runner gets only
+  what its frontmatter names — `audience: []` means operator-only, not nobody.
+  Symlinked into `~/.claude`, `~/.codex`, `~/.gemini`, `~/.pi`,
+  `~/.config/opencode`, `~/.agents`, `~/.hermes`, `~/.openclaw`, and only where
+  the harness exists. Replaces one skill that lived in `pazny.hermes`, reached
+  one consumer, and had pointed at `~/projects/mac-dev-playbook` since the
+  rebrand.
+
+### Hidden fee 08 paid — an empty stack can fail again
+
+- `docker compose up` returning non-zero for `infra` or `observability` now
+  stops the run at the failure, not eight minutes later at a health probe that
+  cannot see why. `stack-up.yml` has had this since May; `core-up.yml` never
+  got it, and that asymmetry was the whole defect.
+- The probe gives absence a denominator: it reads the rendered compose inputs
+  and distinguishes *empty by configuration* from *bring-up failed*, with
+  UNKNOWN as a real third answer.
+- **A second reproduction path, config-only:** `install_bone` enabled the infra
+  stack but not its compose render — a leftover from when Bone was a container.
+  A bone-only estate rendered nothing, ran `up -f` against a missing file, and
+  read `0/0 ready`. Gate: `test_infra_enabled_matches_the_render.py`.
+
+### The inbox can empty again
+
+206 of 212 rows carried no `supersede_key`. The retirement machinery was exact
+where used — one live row per class — and reached 3% of the traffic. Six
+emitters now declare a class, and `nos-notify.sh` takes the literal `none` so a
+distinct occurrence is a decision rather than a silence.
+`test_every_notifier_declares_supersession.py` refuses an undeclared call site
+at commit time; the sender still sends, because a lost notification is worse
+than an accumulating one.
+
+### Readers shipped ahead of their mechanisms
+
+- `tools/brew-pin-status.py` — `state: latest` adopted ollama 0.33.0 one day
+  after it landed in homebrew-core, unattended, after failing the converge.
+  The role now installs `present`, and the reader says how long a version has
+  been out before anyone adopts it. nginx stays on `latest` by design (REM-134).
+- `tools/snapshot-status.py` — reports what a pre-converge snapshot would hold.
+  It would cover `~/wing`, `~/keap`, `~/stacks`, `~/.nos` (APFS) and NOT
+  `nos_data_root`, which is HFS+. Time Machine has no destination on this host,
+  so the net does not exist yet. Knowing that is worth more than a net nobody
+  has verified.
+- `tools/skill-status.py`, `tools/agent-token-status.py`,
+  `tools/night-watch.py` — the same shape: read, report UNKNOWN honestly,
+  exit 0, repair nothing.
+
 ### Why this is a beta, stated before anyone asks
 
 The operator asked whether this tag could drop the suffix. It cannot, on
 evidence, and the notes owe the list:
 
-1. **The audit-chain control has not yet re-earned a week of green.** The bar
-   is a green week of nightly verifies, not one quiet day: the reviewed-gap
-   anchor is an operator act, and a tamper-evidence control is a cadence.
-   **The clock starts 2026-08-20, and this item said 08-23 until it was
-   measured** — it has now been twice wrong in the same direction, first
-   "committed, not deployed" and then a deploy dated three days late. The
-   chain, read rather than recalled: `71f41ae0` committed 08-19 19:14;
-   `[pazny.wing] Rsync app source` reported `changed` at 19:30:53 the same
-   evening; the deployed `bin/verify-audit-chain.php` is byte-identical to
-   the repo's post-fix copy; and `pulse_runs` for `wing:audit-chain-verify`
-   flips exit 2 → exit 0 on the very next nightly, 08-20 04:22, then holds
-   green 08-21, -22, -23, -24. Five nights, so the seventh is **08-26**.
-   The lesson is the estate's own and it cost four days of tag date: a
-   deployment date is a thing to READ (`ansible.log`, the deployed bytes,
-   the effect on the next scheduled run), never a thing to remember.
-2. **The restore drill's last SCHEDULED run failed** (2026-08-16: that night's
-   `keap-db.gz` was missing from the set — the drill doing exactly its job).
-   A manual drill against the 2026-08-19 set passes (`keap-db OK`,
-   `wing-db OK, events=343860`), but a backup discipline is a cadence, not a
-   good day; the proof is next Sunday's run, green, unattended.
-3. **The unread queue shrank by machinery, not by reading.** 69 unread
-   CRITICAL/HIGH at draft; `notify-supersede` retired the re-statements and
-   ~9 remain (oldest ~29 d — ask `tools/red-status.py`), every one still
-   unread by a human. Non-beta claims an operating discipline; the estate
-   still produces more signal than its one operator consumes.
-4. **50 pending remediation rows, 6 HIGH**, plus 5 vendor-blocked CRITICALs
-   (FreePBX image abandoned upstream) that operators must accept explicitly.
-5. **The Linux wet-test still does not prove the estate comes up**
-   (`docs/hidden_fees/08` OPEN; the stack layer is unproven on the runner), and
-   FreeScout's `native_oidc` remains aspirational.
+Two of the six items below were open at the 08-23 draft and are now **MET**.
+They are kept, marked, rather than deleted — a bar that vanishes once cleared
+leaves no record that it was ever the bar.
+
+1. ~~**The audit-chain control has not re-earned a week of green.**~~ **MET
+   2026-08-26.** `pulse_runs` for `wing:audit-chain-verify`: exit 2 on 08-19,
+   then exit 0 every night 08-20 through 08-27 — eight consecutive, one more
+   than the bar. The clock start cost four days of tag date to establish,
+   because it was twice recalled and twice wrong; a deployment date is a thing
+   to read, never to remember.
+2. ~~**The restore drill's last SCHEDULED run failed.**~~ **MET 2026-08-23.**
+   The Sunday 07:33 run exited 0 with both artifacts verified by content, not
+   existence: `keap-db` 1711 nodes / 5084 relations / 345 objects, `wing-db`
+   replayed with 356,882 events. Unattended, on the cadence, after a converge.
+3. **The unread queue grew.** 64 unread, 11 CRITICAL/HIGH, oldest 33 days —
+   worse than the 9 this list claimed at draft. The cause was found on 08-27
+   and is now fixed at the source (206 of 212 rows could never be retired), but
+   the fix cannot reach rows already filed, and no machinery reads a message
+   for the operator. Ask `tools/red-status.py`.
+4. **63 pending remediation rows, 1 CRITICAL and 4 HIGH**, plus 6
+   vendor-blocked CRITICAL/HIGH that operators must accept explicitly. The one
+   live CRITICAL is REM-159 (GitLab 18.11.9 inside an unauthenticated CVSS 9.4;
+   the fix version exists and no recipe reaches it).
+5. **`docs/hidden_fees/08` is half paid.** The probe and the bring-up assert
+   landed 08-27, so a failed stack now stops the run — but item (3) of that
+   fee, why `stacks/infra/docker-compose.yml` is not rendered on the Linux
+   runner, is still undiagnosed and the wet-test still does not prove the
+   estate comes up. FreeScout's `native_oidc` remains aspirational.
 6. **Every release to date has bypassed the master signature rule** rather than
    satisfied it (`Found N violations`, admin bypass). A gate that only ever
    reports its own defeat is not a gate a non-beta should ship over.
 
-What would earn the suffix's removal is mostly operational, not code: a green
-week of nightly verifies and one green scheduled drill after a converge, the
-inbox worked down, the HIGHs dispatched or ruled, and the signature rule either
-met or removed.
+What would earn the suffix's removal is now mostly items 3–6: the inbox worked
+down by a human, REM-159 closed or ruled, the Linux lane actually proving the
+playbook, and the signature rule either met or removed.
 
 ---
 
