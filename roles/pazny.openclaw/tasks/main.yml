@@ -6,10 +6,29 @@
 
 # -- 1. Ollama (local LLM inference) ─────────────────────────────────────────
 
-- name: "[Ollama] Install/upgrade Ollama via Homebrew (0.19+ = MLX backend on Apple Silicon)"
+# `state: present`, NOT `latest` — changed 2026-08-27 after the pin guard below
+# fired for the third time. Each time the sequence was identical: brew moved,
+# the converge failed on a record mismatch, the operator transcribed the new
+# number. The last one adopted a formula that had been in homebrew-core for ONE
+# DAY (`ollama 0.33.0`, 2026-08-26T03:01:09Z), unattended, at whatever hour the
+# run reached this task. `state: latest` is what decided that; nobody else did.
+#
+# Borrowed from Omarchy, whose stable channel tracks an Arch mirror deliberately
+# a MONTH behind "so we can catch any new incompatibilities … before they cause
+# problems for people", and from mise's MISE_MINIMUM_RELEASE_AGE. Homebrew has
+# no lagged mirror, so the lag has to be a decision: `present` stops the silent
+# upgrade, and `tools/brew-pin-status.py` says when a newer version has been out
+# long enough to be worth adopting. Advancing the pin is then a commit.
+#
+# THE COST, stated where it is paid: a security fix no longer arrives by itself.
+# The carve-out is the security floor (docs/doctrine/security-floor.md) — a CVE
+# advances the pin immediately, lag or no lag. `tasks/nginx.yml:34` is the live
+# precedent and deliberately keeps `state: latest` for REM-134.
+- name: "[Ollama] Install Ollama via Homebrew (0.19+ = MLX backend on Apple Silicon)"
   community.general.homebrew:
     name: ollama
-    state: latest
+    state: present
+  register: _ollama_install
   when: nos_pkg_manager == 'homebrew'
 
 # `state: latest` upgrades to the latest of WHICHEVER FORMULA WINS THE NAME, and
@@ -121,6 +140,33 @@
     - nos_pkg_manager == 'homebrew'
     - ollama_version | default('') | length > 0
     - (_ollama_keg.stdout | default('') | trim) not in ('', ollama_version)
+    # A FIRST INSTALL IS NOT DRIFT, and refusing it would break the one run this
+    # whole change exists to protect. On a genuinely clean host brew has exactly
+    # one version of ollama to give, so a keg above the record is not something
+    # anybody chose wrongly — it is the only thing that could have happened. The
+    # refusal below is for the other case: the keg moved while this playbook
+    # installed nothing, which means something outside the playbook moved it.
+    # `state: present` reports changed only on that first install, so the module's
+    # own result is the signal, not a marker this task writes about itself.
+    - not (_ollama_install.changed | default(false))
+
+# The half the refusal above deliberately does not cover. Loud, and it does not
+# stop the run: the operator cannot act on it mid-converge and a from-zero
+# install must be able to finish.
+- name: "[Ollama] First install landed a version the record does not name"
+  ansible.builtin.debug:
+    msg: |
+      ollama was installed fresh at {{ _ollama_keg.stdout | default('(none)') | trim }},
+      and default.config.yml records {{ ollama_version }}. That is not drift —
+      brew had one version to give. RECORD IT: set ollama_version to the keg
+      above and commit, so the next run has something to refuse against.
+      Ask `tools/brew-pin-status.py` how old that version is before adopting it
+      anywhere else.
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - ollama_version | default('') | length > 0
+    - (_ollama_keg.stdout | default('') | trim) not in ('', ollama_version)
+    - _ollama_install.changed | default(false)
 
 - name: "[Ollama] Ensure models directory exists (persistent across --blank)"
   ansible.builtin.file:

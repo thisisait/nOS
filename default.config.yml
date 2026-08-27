@@ -468,6 +468,47 @@ install_dotnet: true              # .NET SDK (C#, F#) + EF CLI
 install_openclaw: true            # OpenClaw (Inspektor Klepitko, Ollama, no API key)
 install_hermes: false             # Hermes Agent (Nous) – Python daemon, MCP client, cross-channel gateway
 install_opencode: false           # OpenCode AI coding TUI (sst.dev) with local Ollama provider
+
+# ── Skill library (2026-08-27) ────────────────────────────────────────────────
+# One shelf at files/anatomy/skills/, symlinked onto every reader that should
+# hold it. Contract + the audience rule: files/anatomy/skills/README.md.
+#
+# `kind` decides the share, and the split is the whole design:
+#   main  — a harness a human is driving. Gets EVERY skill, as an invariant, so
+#           adding a skill needs no edit here.
+#   agent — an autonomous runner. Gets only skills whose frontmatter names it.
+#           `id` must match the name used in a skill's metadata.nos.audience.
+#
+# `dir`'s PARENT must already exist or the entry is skipped: creating
+# ~/.codex/skills on a host with no Codex is litter, and litter shaped like
+# configuration gets read later as evidence the harness is set up.
+nos_install_skills: true
+nos_skill_consumers:
+  # Operator harnesses — the full library.
+  - { id: claude,   kind: main,  dir: "{{ ansible_facts['env']['HOME'] }}/.claude/skills" }
+  - { id: codex,    kind: main,  dir: "{{ ansible_facts['env']['HOME'] }}/.codex/skills" }
+  - { id: gemini,   kind: main,  dir: "{{ ansible_facts['env']['HOME'] }}/.gemini/config/skills" }
+  - { id: pi,       kind: main,  dir: "{{ ansible_facts['env']['HOME'] }}/.pi/agent/skills" }
+  - { id: opencode, kind: main,  dir: "{{ ansible_facts['env']['HOME'] }}/.config/opencode/skills" }
+  # The harness-agnostic location, so a reader nobody has wired still finds one.
+  - { id: agents,   kind: main,  dir: "{{ ansible_facts['env']['HOME'] }}/.agents/skills" }
+  # Autonomous runners — only what names them.
+  # LITERAL, and deliberately NOT a reference to the role variable
+  # hermes_config_dir. That var is a ROLE default, role defaults load during
+  # stack-up, and the eager vars resolve at main.yml:1345 happens first — so
+  # referencing it from a committed vars-file aborts the run even behind a
+  # default() filter. CLAUDE.md documents the trap; test_config_stock_jinja_only
+  # caught this exact line within a minute of it being written.
+  #
+  # (That gate scans raw text, so it also fires on a COMMENT that merely spells
+  # the reference with braces — which is why this paragraph names the variable
+  # in prose instead. Worth knowing before someone tries to document the trap
+  # using its own syntax and reads the failure as a real one.)
+  #
+  # The literal must therefore agree with the role default by hand, and
+  # test_the_skill_library_is_scoped.py pins that it does.
+  - { id: hermes,   kind: agent, dir: "{{ ansible_facts['env']['HOME'] }}/.hermes/skills" }
+  - { id: openclaw, kind: agent, dir: "{{ ansible_facts['env']['HOME'] }}/.openclaw/skills" }
 install_pi_agents: false          # PI agent framework + pi-autoresearch extension (pi.dev)
 install_backup: true             # pazny.backup — nightly DB + volumes + blueprints → RustFS (launchd agent)
 install_backrest: false          # pazny.backrest — restic UI + scheduler as a host launchd daemon (off-site orchestrator + restore UI); opt-in

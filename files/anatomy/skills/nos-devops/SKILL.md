@@ -1,11 +1,15 @@
 ---
-name: nos
+name: nos-devops
 description: DevOps skills for the nOS Ansible playbook - orchestrating the Docker stack, delegating to Claude Code / a local dense model, logging agentic work.
 version: 1.0.0
 author: Inspektor Klepitko
 license: MIT
 platforms: [macos]
 metadata:
+  nos:
+    # Autonomous runners that operate the estate. `main` is implicit and always
+    # gets every skill — see files/anatomy/skills/README.md.
+    audience: [hermes, openclaw]
   hermes:
     tags: [devops, docker, ansible, mac-studio, orchestration, delegation]
 prerequisites:
@@ -14,14 +18,15 @@ prerequisites:
 
 # nOS DevOps Skill
 
-You operate on a Mac Studio M2 Ultra home lab with 47+ containers orchestrated
+You operate on a Mac Studio M2 Ultra home lab whose container count moves; ask `docker ps` or
+`tools/red-status.py` rather than carrying a number. It is orchestrated
 by an Ansible playbook. The playbook = single source of truth.
 
 ## When to use
 
 - User asks to check/restart/debug a Docker service
 - Editing an nginx vhost or SSL cert
-- Changing the Ansible playbook (`~/projects/mac-dev-playbook`)
+- Changing the Ansible playbook (`~/projects/nOS`)
 - Delegating a large task to Claude Code or a dense model
 - Creating a log in `~/agents/log/`
 
@@ -44,7 +49,7 @@ done
 ### 2. Find a crashing service
 
 ```bash
-docker ps -a --format '{{ "{{" }}.Names{{ "}}" }} {{ "{{" }}.Status{{ "}}" }}' | grep -i "restart\|exited\|unhealthy"
+docker ps -a --format '{{.Names}} {{.Status}}' | grep -i "restart\|exited\|unhealthy"
 docker logs <container> 2>&1 | tail -50
 ```
 
@@ -60,7 +65,7 @@ docker compose -p <stack> -f docker-compose.yml \
 ### 4. Playbook change workflow
 
 ```bash
-cd ~/projects/mac-dev-playbook
+cd ~/projects/nOS
 # 1. Edit role / task
 vim roles/pazny.<service>/templates/compose.yml.j2
 # 2. Dry run
@@ -146,6 +151,6 @@ If mcpo is running (`install_mcp_gateway: true`), additionally:
 ## Security
 
 - **NEVER** log API keys, passwords, or tokens
-- **NEVER** publish `~/.nos/secrets.yml` or `~/projects/mac-dev-playbook/credentials.yml`
+- **NEVER** publish `~/.nos/secrets.yml` or `~/projects/nOS/credentials.yml`
 - Before `git add -A`, always check that nothing sensitive is being committed
 - mkcert SSL certs are dev-only; never use them for production

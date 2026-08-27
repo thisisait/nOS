@@ -1,3 +1,93 @@
+# nOS Vulnerability Scan Addendum — 2026-08-26 (Cycle 42)
+
+**Batch:** loki, mcp_gateway, n8n, metabase, tempo · **Probe:** `default_credentials_test`
+**Outcome:** 4 queue items added (**REM-229 HIGH**, **REM-230 HIGH**, **REM-231 MEDIUM**, **REM-232 MEDIUM**), 0 amended, 0 closed. Pending HIGH **3 → 5**, pending total **56 → 60** (counts per `tools/rem-status.py`, which excludes the 6 vendor-blocked/mitigated CRITICAL+HIGH rows from the pending tally — do not copy these forward, ask the reader). **Nothing in this batch is rated CRITICAL** — the two HIGHs are written up here because one is a *measured, executed* unauthenticated exploit against the live estate and the other is an eight-record advisory wave that every automated channel we run reports as clean.
+
+> **The batch's methodological headline: the CVE-less-GHSA blind spot bit for the fifth time, and this time the estate had a written prediction of it.** CLAUDE.md already says *"scan the vendor's advisory endpoint, not the CVE feed"*, earned across REM-152, REM-153 and REM-198. On 2026-08-19 n8n published **eight** advisories — six HIGH, two of them host RCE — and **not one carries a CVE id**. At the pinned `2.35.0`, an NVD query returns nothing and a version-aware OSV query for `n8n@2.35.0` returns the literal string `NO VULNS`. Both are true. Both are useless. Only `gh api repos/n8n-io/n8n/security-advisories` shows the wave, and only its *metadata* (`vulnerable_version_range: < 2.35.4`) shows that the estate is below the floor on all eight — the prose of the advisories never names a version. **The rule was known, written down, and would still have failed if this scan had trusted its version-aware queries**, because a clean OSV answer at a specific version reads exactly like diligence.
+>
+> **Its twin, found in the same batch and not previously recorded:** a version-aware OSV query on a module **cannot see the dependency CVEs a patch release ships**. `tempo@2.10.3` returns the same two records it has returned for three batches, and that leg genuinely is clean — while `v2.10.6` and `v2.10.8` quietly shipped Go 1.26.5, grpc, `x/net`, `x/text` and otel bumps carrying nine named CVEs between them. The direct leg reading clean is what let the pin drift five patch releases. **Read the release bodies, not just the vulnerability database.**
+
+---
+
+### 🟠 HIGH — [REM-230] `mcp-grafana` accepts unauthenticated MCP sessions from any container on `shared_net`
+
+- **Component:** mcp_gateway — `grafana/mcp-grafana:1.1.0` live as `iiab-mcp-grafana-1` (digest-pinned, `roles/pazny.mcp_gateway/defaults/main.yml:86`)
+- **Probe result: exploitable — confirmed by execution, not by reading the template**
+- **Repo-wide grep for `MCP_GRAFANA_SERVER_TOKEN`: zero hits**
+
+This is the strongest result `default_credentials_test` can return, and it is not a default credential — it is **no credential**. From a throwaway `curlimages/curl` container attached to `shared_net`:
+
+```
+GET  /sse                    → 200, session endpoint issued, no token presented
+POST initialize              → 202
+POST notifications/initialized → 202
+POST tools/list              → 202  →  65 tools enumerated
+POST tools/call list_datasources → live estate data returned
+```
+
+The returned payload lists all five Grafana datasources by id/uid/name/type — including **`wing_sqlite`**, the Wing audit and agent-session store, and `keap_sqlite`, the cortex knowledge store. The unauthenticated caller is served **using the estate's own Grafana service-account token**, which the sidecar holds in `GRAFANA_SERVICE_ACCOUNT_TOKEN`.
+
+**Why the existing controls do not cover it.** `--allowed-hosts mcp-grafana:8000` — added in batch-51 to make mcpo's dial work at all — is a **Host-header allowlist, not authentication**; the probe sent the allowed Host and walked through. The mcpo **gateway** is correctly locked: the same probe against `http://mcpo:8000/grafana/list_datasources` returned **401**, and `mcpo_api_key` derives from `nos_derived_secrets.mcpo` with no default value anywhere in tree. The finding is that **the sidecar is reachable directly on the fabric, bypassing mcpo entirely**.
+
+**Scope, stated honestly.** No Traefik route, no host port publish — this needs a foothold in one of the **51 containers** currently on `shared_net`. That is not internet-reachable, and it is precisely the threat model SEC-02 already accepted as real when it moved the header-trust backends off the flat network.
+
+**The write leg is real but held back by one control.** Among the 65 tools: `create_datasource`, `create_folder`, `create_annotation`, `create_incident`, `delete_snapshot`, `alerting_manage_rules`, `alerting_manage_routing`. Server-side authorization rests **entirely** on the service account being provisioned role `Viewer` (`roles/pazny.mcp_gateway/tasks/post.yml:42`) — Grafana, not mcp-grafana, is what refuses those writes. The day anyone raises that role for a dashboard-provisioning convenience, every write tool becomes reachable by any container on the fabric with no second gate. **This scan did not exercise a write tool**; mutating the live estate is not the probe's job.
+
+**It was foreseen in-tree.** The compose template's own comment (lines 88–91) records the deferral, including the forward hazard: upstream will make the missing token a **startup error** in a future release. So wiring `MCP_GRAFANA_SERVER_TOKEN` is both the security fix *and* the thing that keeps this container booting past the next image bump. `v1.2.0` (2026-08-25) is the first bump that could carry it. Not auto-fixable — the token and mcpo's matching `Authorization` header must land in the **same** converge, or the grafana toolset is silently dropped (batch-51 spent a scan diagnosing exactly that failure: mcpo logs `403 forbidden: host not allowed`, starts **healthy** anyway, serves zero tools).
+
+---
+
+### 🟠 HIGH — [REM-229] n8n 2.35.0 is below the fix floor on eight advisories published 2026-08-19
+
+- **Component:** n8n — pinned and live at `2.35.0` (`default.config.yml:1774`, marked `[swept 2.34.2 2026-08-11]`; `iiab-n8n-1` healthy)
+- **Fix version:** **2.35.7** (2026-08-21, head of the 2.35 line) — smallest change clearing all eight floors. 2.36.7 / 2.37.1 exist if a minor bump is acceptable.
+- **Every one of the eight has no CVE id.** Source: `repos/n8n-io/n8n/security-advisories`.
+
+Batch-52 recorded this component's CVE leg **clean at 2.35.0** on 2026-08-14. That was correct when written and was stale five days later.
+
+| GHSA | Sev | Summary |
+|---|---|---|
+| `GHSA-mwp5-2m32-r54h` | HIGH | **Git node RCE** via incomplete repository-local configuration neutralization |
+| `GHSA-9x83-43r8-5hwc` | HIGH | **Expression-sandbox escape → host RCE** via `$fromAI` prototype leak |
+| `GHSA-fg85-4wv2-p98j` | HIGH | Sandbox `SpreadElement` bypass → persistent cross-evaluation native-object pollution |
+| `GHSA-4r56-g65c-fm83` | HIGH | Shared-workflow editor exfiltrates credentials via inline sub-workflow Tool node |
+| `GHSA-vrv8-j27g-g7cr` | HIGH | Strapi/SeaTable/Mailcheck nodes leak **decrypted** credential secrets into persisted execution data |
+| `GHSA-95ph-833c-4wrp` | HIGH | Gmail/Brevo nodes accept non-string content → local file read + SSRF |
+| `GHSA-wxwj-8wv6-vpw2` | MEDIUM | Query injection in Elasticsearch and Google Cloud Firestore nodes |
+| `GHSA-jmmj-93rg-6j39` | MEDIUM | Insights API missing per-project authorization exposes workflow names + execution data |
+
+Each lists `< 2.35.4` alongside `< 2.36.2`. **A ninth same-day advisory does not apply and is recorded so nobody re-derives it:** `GHSA-jp9j-jr97-w9pj` ranges `< 2.34.1` only — already patched at 2.35.0.
+
+**Exposure, called honestly.** n8n binds `127.0.0.1:5678` behind Authentik native OIDC; **none of the eight is anonymously reachable** and every one needs a logged-in workflow author. That is why upstream rates them HIGH rather than CRITICAL and why this row does the same. It does not reduce urgency: `GHSA-vrv8-j27g-g7cr` writes **decrypted** credential material into execution records, which compounds **REM-202** — the unmanaged n8n encryption key sitting in the same volume as the ciphertext. Together, a reader of that volume gets the ciphertext *and*, for three node types, the plaintext.
+
+---
+
+### 🟡 MEDIUM — [REM-231] Loki serves the entire log corpus to any of the 51 containers on `shared_net`, unauthenticated
+
+`GET http://loki:3100/loki/api/v1/labels` from an unrelated throwaway container → **200**, live label set returned, no credential presented or demanded. Via Alloy this corpus includes nginx, PHP and **agent** logs — prompts, tool arguments, error payloads — so a foothold in any single container yields durable cross-service secret harvesting rather than a one-shot read.
+
+**`auth_enabled: true` would not fix this.** Loki OSS has no built-in authenticator; that flag turns on `X-Scope-OrgID` multi-tenancy, a header any caller can set. **Network placement is the control** and the SEC-02 gated-network pattern is the fix shape. Not auto-fixable: detaching Loki from `shared_net` breaks any member dialling it directly, and mcp-grafana reaches Loki *through* Grafana's datasource proxy — plan alongside REM-230.
+
+Sibling of the pending **REM-201** (tempo, same shape), filed separately because the data at risk differs in kind. Notably, this component had carried `findings_count: 0` since it was first scanned, and **that zero was the defect**. Scope: `127.0.0.1:3100` publish, `port_var` with **no** `domain_var` in `state/manifest.yml`, so Traefik derives no router — peer-container reachable, not internet reachable. The ingest/forgery leg is exploitable by symmetry and was **deliberately not exercised**: writing fabricated lines into the estate's own log corpus would corrupt the evidence base this queue depends on. CVE leg **clean** at 3.7.6.
+
+---
+
+### 🟡 MEDIUM — [REM-232] Tempo 2.10.3 is five patch releases behind 2.10.8, which carries nine dependency CVEs
+
+The direct leg is unchanged and clean — the two OSV records for `tempo@2.10.3` are the familiar bare-module-path artifact (`introduced: 0`, no `fixed` event, so *every* version matches, including ones carrying the fix commits the records themselves link). The **transitive** leg is what a version-aware query cannot see: `v2.10.6` shipped thrift `v0.23.0` + `x/crypto` `v0.52.0` + `x/net` `v0.55.0`, and `v2.10.8` (2026-08-13) shipped Go 1.26.5 (CVE-2026-39822, ‑27145, ‑42504, ‑42505, ‑42507), grpc `v1.82.1` (GHSA-hrxh-6v49-42gf), `x/net` `v0.56.0` (CVE-2026-46600), `x/text` `v0.39.0` (CVE-2026-56852) and otel `v1.44.0` (CVE-2026-41178).
+
+Those ids are transcribed from the vendor's release bodies as **their** statement of what the bump carries; **per-dependency reachability from Tempo's code paths was not independently assessed**, which is why this is MEDIUM and not higher. Fix is a patch-level bump within the same minor. Orthogonal to REM-201 — that one is a network-placement fix, this one is a pin bump; neither closes the other.
+
+---
+
+### ✅ Clean — metabase
+
+Both legs, no rows. The advisory endpoint — the only channel that has ever surfaced a Metabase item here, two of the last three having **no CVE id** — returns nothing published since 2026-08-12. `GHSA-r495-55cx-fjh7` (REM-198) lists `>= x.63.0, < x.63.10`; the pin and the live binary are `v0.63.10`, **at the floor**, re-verified rather than carried. `v0.63.14` (2026-08-20) exists but the `.11`–`.14` release bodies carry no security wording and no advisory maps to them — routine currency, not a queue row. Probe: `has-user-setup: true`, `setup-token: null` — the first-boot window that would let any reacher claim admin is **closed**; `MB_DB_PASS` derives from `nos_derived_secrets.metabase`.
+
+*(`last_full_scan` in `scan-state.json` was deliberately left untouched — this was a five-component batch, not a full scan, and stamping it would fabricate the freshness the drift watcher reads.)*
+
+---
+
 # nOS Vulnerability Scan Addendum — 2026-08-22 (Cycle 37)
 
 **Batch:** postgres, mariadb, redis, infisical, rustfs · **Probe:** `tls_crypto_weakness`

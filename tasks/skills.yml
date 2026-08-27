@@ -1,0 +1,94 @@
+---
+# ==============================================================================
+# skills.yml — put the skill library on every reader's shelf, unequally.
+#
+# `files/anatomy/skills/<name>/SKILL.md` is the one copy. This file links it
+# into each consumer's skill directory. SYMLINKS, never copies: a copy becomes a
+# fork the first time the source changes, and with six destinations nobody finds
+# out which of them went stale. Omarchy reached the same conclusion for the same
+# reason.
+#
+# TWO KINDS OF CONSUMER, and the whole point is that they do not get the same
+# shelf (files/anatomy/skills/README.md):
+#
+#   main   — the harness a human is driving. Gets EVERY skill, as an invariant
+#            rather than a list, so a new skill needs no edit here.
+#   agent  — an autonomous runner. Gets only the skills whose
+#            `metadata.nos.audience` names it. An agent that can do fewer things
+#            wrongly is worth more than one that has read everything.
+#
+# A DESTINATION IS ONLY WRITTEN IF ITS HARNESS IS THERE. Measured 2026-08-27 on
+# this host: ~/.claude/skills, ~/.codex/skills, ~/.gemini, ~/.pi and ~/.agents
+# did not exist, while ~/.openclaw and ~/.hermes did. Creating a skills dir for
+# a harness nobody installed is litter, and litter shaped like configuration is
+# worse than absence — someone later reads it as evidence Codex is set up.
+# The parent must exist; this file creates the `skills/` child inside it, never
+# the harness's own home.
+#
+# Ask what actually landed with `tools/skill-status.py` — it reads and repairs
+# nothing, so it can disagree with this file, which is the point of having it.
+# ==============================================================================
+
+- name: "[Skills] Discover the library"
+  ansible.builtin.find:
+    paths: "{{ playbook_dir }}/files/anatomy/skills"
+    patterns: "SKILL.md"
+    recurse: true
+    file_type: file
+  register: _skill_files
+  tags: ['skills', 'anatomy']
+
+# The audience lives in the skill's own frontmatter, so it is read from the
+# artifact rather than restated in a table here. A skill whose frontmatter
+# cannot be parsed is REPORTED and then treated as operator-only — the safe
+# direction, because the failure mode of guessing wide is an autonomous runner
+# holding a procedure nobody meant it to have.
+- name: "[Skills] Read each skill's declared audience"
+  ansible.builtin.set_fact:
+    _skills: >-
+      {{ _skills | default([]) + [{
+           'name': (item.path | dirname | basename),
+           'src': (item.path | dirname),
+           'audience': ((lookup('file', item.path).split('---')[1] | from_yaml)
+                        .get('metadata', {}).get('nos', {}).get('audience', []) | default([], true))
+         }] }}
+  loop: "{{ _skill_files.files | default([]) | sort(attribute='path') }}"
+  loop_control:
+    label: "{{ item.path | dirname | basename }}"
+  tags: ['skills', 'anatomy']
+
+- name: "[Skills] Report the library"
+  ansible.builtin.debug:
+    msg: >-
+      {{ _skills | default([]) | length }} skill(s):
+      {{ _skills | default([]) | map(attribute='name') | join(', ') }}
+      — main consumers receive all of them; agents receive only what names them.
+  tags: ['skills', 'anatomy']
+
+- name: "[Skills] Ensure the skills dir exists for every PRESENT consumer"
+  ansible.builtin.file:
+    path: "{{ item.dir }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ nos_skill_consumers }}"
+  loop_control:
+    label: "{{ item.id }} ({{ item.kind }})"
+  when: (item.dir | dirname) is directory
+  tags: ['skills', 'anatomy']
+
+# `force: true` because the link must follow a rename of the library entry;
+# `state: link` on an existing correct link is a no-op, so this stays idempotent.
+- name: "[Skills] Link each skill onto the shelves that should hold it"
+  ansible.builtin.file:
+    src: "{{ item.0.src }}"
+    dest: "{{ item.1.dir }}/{{ item.0.name }}"
+    state: link
+    force: true
+  loop: "{{ (_skills | default([])) | product(nos_skill_consumers) | list }}"
+  loop_control:
+    label: "{{ item.0.name }} -> {{ item.1.id }}"
+  when:
+    - (item.1.dir | dirname) is directory
+    # main takes everything; an agent takes only what named it.
+    - item.1.kind == 'main' or item.1.id in (item.0.audience | default([]))
+  tags: ['skills', 'anatomy']

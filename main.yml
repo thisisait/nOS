@@ -2150,6 +2150,15 @@
       when: install_opencode | default(false)
       tags: ['opencode', 'ai']
 
+    # The skill library goes on every reader's shelf AFTER the agents exist, so
+    # a harness installed in this same run gets its shelf in this same run
+    # rather than the next one. Main harnesses take the whole library; agents
+    # take only the skills that name them. files/anatomy/skills/README.md.
+    - name: "Skill library — link onto each consumer's shelf"
+      ansible.builtin.import_tasks: tasks/skills.yml
+      when: nos_install_skills | default(true) | bool
+      tags: ['skills', 'anatomy', 'ai']
+
     # ──────────────────────────────────────────────────────────────────────────
     # Cortex — the reasoning organ (P-4, 2026-07-25). Loopback Node 22 daemon
     # built in-place from files/anatomy/cortex/ (vendored KEAP v1.27.0 cortex
