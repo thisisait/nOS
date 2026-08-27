@@ -221,6 +221,42 @@ than an accumulating one.
   `tools/night-watch.py` — the same shape: read, report UNKNOWN honestly,
   exit 0, repair nothing.
 
+### The face grows screens for the machinery underneath it
+
+78 files, +13k. The web-desktop stops being a table browser: the **Anatomy app**
+(Pulse, Bone, Wing — every scheduled job with its run history, the event stream,
+the loop ledger), a **runs screen** that draws each judge as a ring over the
+ledger and shows how close a pass sat to its floor, and an **anatomy-graph
+definition screen** on a d3-force layout pinned to whole pixels so the same
+graph renders identically twice. A claim is drawn as a claim rather than a box —
+the surface refuses to make an assertion look like a fact.
+
+### cortex-lang: Wing can execute a validated chain
+
+The ontology-typed pipeline stops being a design document — Wing now runs a
+chain the cortex validated, the smoke catalog calls one end to end, and the
+audit chain underneath gained a **key ring** so its signing key can rotate. That
+last one matters more than it reads: the chain had been verifying its own
+consistency for fifteen nights while signed by a retired key, and a check that
+compares an artifact with itself is blind to a uniformly wrong input.
+
+### apex: the operator signs a public ruling
+
+A ruling site the operator signs, rather than a page the estate asserts about
+itself, cut from 1.9 MB to 596 kB. Withheld rulings stay withheld and say so.
+
+### Security — REM-192, the auth mode that did not exist
+
+Worth naming beside the FreeScout item in the beta list. `traefik_auth_modes`
+declared FreeScout as `oidc`, so its auto-derived edge router carried **no**
+forward-auth middleware — on the grounds that native OIDC handled login. Native
+OIDC does not exist on that image (the module's two upstream sources are 404),
+so `/login` served a bare local password form at an internet-facing edge. Fixed
+2026-08-11. This is why the beta list still calls FreeScout's `native_oidc`
+aspirational, and why `test_forward_auth_does_not_stack.py` now refuses the
+contradiction across all four attachment paths — including the silent one, where
+an unlisted id falls through to `proxy`.
+
 ### Why this is a beta, stated before anyone asks
 
 The operator asked whether this tag could drop the suffix. It cannot, on
