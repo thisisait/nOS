@@ -68,10 +68,8 @@ final class Grader
 			$messages = [Message::userText($userMessage)];
 			if ($attempt > 0) {
 				$messages[] = Message::assistantText($lastFeedback);
-				// Say which of the two things was wrong. Telling a model its
-				// well-formed JSON "was not strict JSON" asks it to fix what it
-				// got right: MiniMax answered {"result":"unsatisfied"} three
-				// times and the run died `failed` (surveyor, 2026-08-27).
+				// Name which fault it was; "not strict JSON" over a bad enum
+				// asks the model to fix what it got right (2026-08-27).
 				$messages[] = Message::userText($lastBadResult !== null
 					? "\"{$lastBadResult}\" is not one of the three permitted "
 						. 'values. Reply with the SAME feedback but set "result" to '

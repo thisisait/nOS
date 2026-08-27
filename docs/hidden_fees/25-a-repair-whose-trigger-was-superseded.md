@@ -87,9 +87,9 @@ only one.
 
 ## What is still owed
 
-- **The existing orphan is still open.** The fix ships in Wing's source; it
-  reaches the daemon on the next converge, and the row closes on the first agent
-  run after that. Until then `red-status` is right to keep saying so.
+- ~~**The existing orphan is still open.**~~ PAID 2026-08-27: the converge
+  landed the reaper and the runs since have left no session `running` past the
+  stale cap. `red-status` no longer reports an orphan.
 - **`stop_reason` is `interrupted` for both an operator kill and a reap** —
   they differ only by `error_json.by`. Pre-existing, and it means the timeline
   cannot cheaply tell "someone stopped this" from "nobody was there".

@@ -89,16 +89,16 @@ rather than trusting the advisory. Recipe track `freescout-2.1-to-2.2` added.
 
 ## What is still owed
 
-- **The bump is unverified.** `2.2.5` is *claimed* to bundle 1.8.235 and that
-  claim comes from release notes — the same kind of source that was believed
-  once already. `tools/app-version.py` will say, after a converge, and until
-  then it correctly reports MISMATCH.
+- ~~**The bump is unverified.**~~ PAID 2026-08-27, after the converge:
+  `tools/app-version.py` reads `freescout MATCH — image tag 2.2.5 · app
+  reports 1.8.235 · pin claims 1.8.235`. The app was asked; the release notes
+  were not believed.
 - **Four services are in the table; the estate runs about sixty.** Absence from
   it is not a claim of health. The entry cost is three lines, and the moment to
   pay it is when a pin's comment starts asserting a bundled version.
 - **Nothing checks the arithmetic** — that a claimed app version postdates the
   image's publish date. Both numbers are available from the registry API and
   neither is in the repo. That check would have caught this without a container.
-- **PHP 8.3 → 8.5 crosses a minor.** FreeScout 1.8.235 on PHP 8.5 is upstream's
-  own supported line (they consolidated to php8.5-only at 2.2.0), but this
-  estate has not run it. The STRICT health gate is what will say.
+- ~~**PHP 8.3 → 8.5 crosses a minor.**~~ PAID 2026-08-27: the estate has now
+  run it — `b2b-freescout-1` is `healthy` on `nfrastack/freescout:2.2.5`, so
+  the STRICT health gate said what it was there to say.

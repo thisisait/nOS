@@ -979,10 +979,8 @@ final class Runner
 					'final_text' => $finalText,
 				];
 			}
-			// needs_revision -> carry the attempt AND the critique into the next
-			// iteration. "Please revise" with nothing to revise made the
-			// surveyor re-explore from zero three times and never write
-			// (2026-08-27: 261k in, 7.4k out, max_iterations_reached).
+			// "Please revise" with nothing to revise made the surveyor
+			// re-explore from zero three times and never write (2026-08-27).
 			$conversation[] = Message::userText(
 				"YOUR PREVIOUS ATTEMPT (iteration {$iteration}):\n\n" .
 				($finalText !== '' ? $finalText
@@ -1355,12 +1353,8 @@ final class Runner
 			])));
 			$lines[] = "[{$i}] {$role}:\n{$body}";
 		}
-		// This string becomes the GRADER's request body, so one invalid byte
-		// anywhere in the run kills the session AFTER the work is done — the
-		// librarian died here twice, at 118k and 121k tokens, on KEAP's Czech
-		// corpus. mb_strcut above stops us MANUFACTURING one; this catches
-		// bytes that were already invalid upstream. Same guard, same reason,
-		// as BashReadOnlyTool (2026-08-17).
+		// This IS the grader's request body — one bad byte kills the session
+		// after the work is done (librarian, 2026-08-27, twice).
 		$out = implode("\n\n", $lines);
 		return mb_check_encoding($out, 'UTF-8')
 			? $out

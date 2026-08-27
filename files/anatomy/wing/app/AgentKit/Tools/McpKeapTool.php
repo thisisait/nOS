@@ -167,9 +167,7 @@ final class McpKeapTool implements ToolInterface
 
 		$status = $response->getStatusCode();
 		$payload = (string) $response->getBody();
-		// mb_strcut, not substr: a byte cut mid-codepoint manufactures invalid
-		// UTF-8, json_encode then refuses the next request (librarian died so,
-		// 2026-08-27). Same defect BashReadOnlyTool recorded 2026-08-17.
+		// mb_strcut, not substr: a byte cut mid-codepoint breaks UTF-8.
 		if (strlen($payload) > self::MAX_RESPONSE_BYTES) {
 			$payload = mb_strcut($payload, 0, self::MAX_RESPONSE_BYTES, 'UTF-8') . '…[truncated]';
 		}

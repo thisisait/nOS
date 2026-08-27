@@ -10,9 +10,7 @@ description: |
   resulting wing.db rows pass the Phase-5 verification gate.
 
 model:
-  # `anthropic-*` = SDK adapter, the only one that takes tool schemas.
-  # Unbound it wants ANTHROPIC_API_KEY the estate does not set, so disarming
-  # MiniMax makes the bound path refuse. The CLI ceremony ignores this block.
+  # `anthropic-*` = SDK adapter (tool schemas); unbound it refuses.
   primary: anthropic-claude-sonnet-4-5
   backend: minimax
   fallback: openclaw-qwen2.5-coder:32b

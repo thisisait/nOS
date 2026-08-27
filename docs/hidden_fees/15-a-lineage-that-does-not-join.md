@@ -1,6 +1,9 @@
 # 15 — the loop records a lineage whose first link does not join
 
-**Status: WRITE HALF PAID 2026-08-16, verified 2026-08-18. Read half open.**
+**Status: PAID. Write half 2026-08-16 (verified 2026-08-18); read half
+2026-08-18 — `tools/loop-status.py` answers "which weakness sources produce
+proposals", including the sources that report and are never proposed against.
+Re-verified 2026-08-27.**
 
 > **The fee below describes the estate as it was on 2026-08-07 and is kept for
 > the reasoning, not the facts.** Re-measured 2026-08-18 before touching
@@ -26,11 +29,11 @@
 > accepted — and closing this fee was a side effect nobody recorded. The nine
 > `w1`/`w2` rows are pilot residue from one day in August, not a live defect.
 >
-> **What remains is the half this entry named last and buried:** *"Which
-> weakness sources actually produce proposals?"* is still unanswerable, because
-> nothing reads the join even now that it resolves. A source that has never led
-> anywhere still looks exactly like one that leads everywhere. See
-> `tools/loop-status.py` (2026-08-18) for the reader, and "What paying it looks
+> **The half this entry named last and buried is now paid too:** *"Which
+> weakness sources actually produce proposals?"* is answered by
+> `tools/loop-status.py` (2026-08-18), which reads the join and names the
+> sources that report weaknesses and are never proposed against — the case a
+> count alone hides. See "What paying it looks
 > like" below for why a gate was deliberately not the answer.
 
 ## The fee (as measured 2026-08-07)
@@ -79,8 +82,9 @@ property that makes this invisible.
   choice, and may not notice it is making one.
 - **Judging the loop's own quality.** "Which weakness sources actually produce
   proposals?" is the question that tells you whether a detector earns its run.
-  It is unanswerable today, so a source that has never once led anywhere looks
-  exactly like one that leads everywhere.
+  It was unanswerable when this was written; `tools/loop-status.py` answers it
+  now, and reports the never-proposed-against sources as information rather
+  than as a defect.
 
 ## How it was found
 

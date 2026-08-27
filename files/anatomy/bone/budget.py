@@ -186,9 +186,7 @@ class Budget:
 
         return {
             "gate_set": self.gate_set,
-            # The propose skill sends the proposer here for the enum; until
-            # 2026-08-27 the response did not carry it (REM-229: nine guesses,
-            # nine refusals).
+            # The propose skill sends the proposer here for the enum.
             "intent_classes": sorted(ledger.INTENT_CLASSES),
             "judges": list(self.judges),
             "allowed_roots": list(self.allowed_roots),

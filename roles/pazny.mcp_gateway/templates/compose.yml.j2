@@ -91,10 +91,8 @@ services:
     environment:
       GRAFANA_URL: "{{ mcp_grafana_url }}"
       GRAFANA_SERVICE_ACCOUNT_TOKEN: "{{ mcp_grafana_sa_token | default('placeholder-set-in-post') }}"
-    # REM-230: NOT on shared_net. Unauthenticated (no token of any kind), it
-    # served 65 tools — incl. writes — to any container on the fabric, using
-    # the estate's own Grafana token. mcpo is its only caller and reaches it
-    # over iiab_net. --allowed-hosts is a Host allowlist, not authentication.
+    # REM-230: NOT shared_net — unauthenticated it served 65 tools to the
+    # whole fabric. mcpo is its only caller and reaches it over iiab_net.
     networks:
       - iiab_net
     logging:

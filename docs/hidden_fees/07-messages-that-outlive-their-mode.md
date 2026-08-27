@@ -1,7 +1,9 @@
 # 07 — Operator-facing text that outlived the mode it was written for
 
-**Status:** OPEN. One instance paid (`d8c7e63c` — the blank-reset ENTER box +
-completion banner); the class is unpaid and the estate is not yet swept.
+**Status:** OPEN as a class. Two instances paid — `d8c7e63c` (the blank-reset
+ENTER box + completion banner) and the post-ready tick label (2026-08-27,
+item A below). The class is unpaid: the estate is still not swept, and nothing
+notices when the next sentence outlives its mode.
 
 ## The fee
 
@@ -102,7 +104,11 @@ different and, for an operator watching a live run, worse — the log describes
 the wrong *present*. Both surfaced on the 2026-07-22 all-on install
 (`failed=0`, 63 containers), both while nothing was actually wrong.
 
-**A. Post-ready no-op ticks print as polling.** `wait-stacks-healthy.yml` loops
+**A. Post-ready no-op ticks print as polling. PAID 2026-08-27** — the label is
+now conditional on `_wait_done` and says `already ready — no-op`. The account
+below is kept because it is the reasoning, not the state.
+
+`wait-stacks-healthy.yml` loops
 the full time budget by construction — a `when:` on a *looped* `include_tasks`
 cannot short-circuit, so the early exit lives inside `health-tick.yml`, where
 every task is gated on `not _wait_done`. Correct. But `loop_control.label`

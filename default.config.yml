@@ -2427,7 +2427,7 @@ freescout_port: 8090
 #
 # Check it with `tools/app-version.py`, which asks the application. Until a
 # converge runs, the claim below is UNVERIFIED and the reader will say so.
-freescout_version: "2.2.5"               # nfrastack; app 1.8.235 claimed — UNVERIFIED until a converge, then `tools/app-version.py`
+freescout_version: "2.2.5"               # nfrastack; app 1.8.235 — VERIFIED 2026-08-27 by `tools/app-version.py` (asked the app, not the notes)
 freescout_db_name: "freescout"
 freescout_db_user: "freescout"
 freescout_db_password: "{{ nos_derived_secrets.freescout }}"

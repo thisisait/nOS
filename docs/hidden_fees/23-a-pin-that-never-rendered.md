@@ -101,17 +101,18 @@ line and they name the four templates.
 
 ## What is still owed
 
-- **None of this is verified live.** Every claim above is about what will
-  render on the next converge. `tools/tls-uptake.py` says what is negotiated,
-  and today it says 38.5% of fabric backends. The fix is believable when that
-  number moves, not when this file is committed.
-- **The 22 cleartext Authentik backends are still not explained.** The same
-  container opens both TLS and plaintext backends minutes apart under one
-  config — a second client path inside the image, not a setting. `require`
-  should close it whatever the path; if the number does not move, the path
-  ignores the env and that is a different finding.
-- **HedgeDoc's `no-verify` may be inert.** Sequelize may drop an `sslmode`
-  query parameter entirely. It cannot break; it may simply do nothing.
+- ~~**None of this is verified live.**~~ PAID 2026-08-27: `tools/tls-uptake.py
+  --window 20` reads `postgresql GREEN — 34 of 34 backends on the fabric =
+  100.0%` (one more on the unix socket, not counted). The number moved from
+  38.5%.
+- ~~**The 22 cleartext Authentik backends are still not explained.**~~ Closed
+  by the same read: `authentik x20 seen 80/80` and `authentik x5 seen 80/80`,
+  no plaintext row. The second client path honours `require`, so the "different
+  finding" branch did not happen.
+- ~~**HedgeDoc's `no-verify` may be inert.**~~ Not inert: `postgres self-test
+  ok hedgedoc` — the reader asked HedgeDoc's own session, because its Sequelize
+  pool drops the connection between queries and never appears in a sample.
+  Fee 28 replaced the URL parameter with `config.json`'s `dialectOptions.ssl`.
 - **Linux still has no PostgreSQL TLS at all.** `postgresql_ssl_enabled` is
   false there because PG refuses a host-user-owned key. That leg is undone, not
   unset, and on Linux every one of these clients is cleartext by design.

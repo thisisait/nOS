@@ -1,7 +1,13 @@
 # 08 — "No containers" read as "nothing to wait for"
 
-**Status:** OPEN. Found 2026-07-22 in the v0.9-beta release PR. Two defects,
-one visible, one structural; neither is fixed yet.
+**Status:** OPEN in part. Found 2026-07-22 in the v0.9-beta release PR. Three
+of the five payoff items below were paid 2026-08-26 and re-verified against
+the artifacts 2026-08-27: the probe now carries a denominator
+(`_expected_service_count`, gate `test_stack_health_probe_absence_has_denominator.py`),
+`core-up.yml` fails fast on a non-zero `up` (gate
+`test_core_up_fails_fast_on_bring_up.py`), and the CLAUDE.md claim is
+qualified. **Items 3 (Linux `infra` non-render, still undiagnosed) and 5
+(smoke fail-ratio floor, not built) remain open.**
 
 ## The fee
 
