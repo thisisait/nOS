@@ -29,7 +29,11 @@ description: |
   resurrect the old copies from git without re-reading the plan.
 
 model:
-  primary: claude-sonnet
+  # `anthropic-*` selects the SDK adapter — the CLI one cannot be handed the
+  # four tool schemas below. Ruling 1 admits this ceremony: it reads KEAP APIs
+  # and writes text, and authors no code.
+  primary: anthropic-claude-sonnet-4-5
+  backend: minimax
   fallback: openclaw-qwen2.5-coder:32b
 
 system_prompt_path: system.md
@@ -99,8 +103,12 @@ gdpr:
     - operators
   retention_days: -1
   processors:
+    - name: "MiniMax"
+      role: "LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony."
+      country: "unverified — international endpoint api.minimax.io; entity and seat not established"
+      safeguard: "None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support."
     - name: "Anthropic, PBC"
-      role: "LLM inference for the ceremony's reasoning (claude CLI, --print)"
+      role: "LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print)"
       country: "US"
       safeguard: "None claimed. Assess SCCs / Art. 46 before this is relied on."
   eu_residency: false

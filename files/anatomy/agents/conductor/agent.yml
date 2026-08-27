@@ -10,7 +10,13 @@ description: |
   resulting wing.db rows pass the Phase-5 verification gate.
 
 model:
-  primary: claude-sonnet
+  # `anthropic-*` selects the SDK adapter, the only one that can be handed the
+  # three tool schemas below (`spine-tools-vs-cli-refusal`). Unbound this URI
+  # wants ANTHROPIC_API_KEY, which the estate does not set — so disarming
+  # MiniMax makes the BOUND path refuse rather than fall back. The CLI ceremony
+  # (conductor:self-test, NOS_AGENT_MODEL=haiku) never reads this block.
+  primary: anthropic-claude-sonnet-4-5
+  backend: minimax
   fallback: openclaw-qwen2.5-coder:32b
 
 system_prompt_path: system.md
@@ -47,6 +53,9 @@ vault:
 metadata:
   ait_phase: A8
   ceremony_role: first-non-operator-write
+  # The CLI ceremony (conductor:self-test) runs weekly and works. This says
+  # nothing about the bound path, which has never served this agent.
+  runner_status: unproven
 
 exit_code_semantics:
   emits_sentinel: false
@@ -69,8 +78,12 @@ gdpr:
     - operators
   retention_days: -1              # findings persist as events in wing.db
   processors:
+    - name: "MiniMax"
+      role: "LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony."
+      country: "unverified — international endpoint api.minimax.io; entity and seat not established"
+      safeguard: "None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support."
     - name: "Anthropic, PBC"
-      role: "LLM inference for the ceremony's reasoning (claude CLI, --print)"
+      role: "LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print)"
       country: "US"
       safeguard: "None claimed. Assess SCCs / Art. 46 before this is relied on."
   eu_residency: false
