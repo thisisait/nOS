@@ -63,14 +63,21 @@ final class Grader
 		$totalIn = 0;
 		$totalOut = 0;
 		$lastFeedback = '';
+		$lastBadResult = null;
 		for ($attempt = 0; $attempt <= self::MAX_FORMAT_RETRIES; $attempt++) {
 			$messages = [Message::userText($userMessage)];
 			if ($attempt > 0) {
 				$messages[] = Message::assistantText($lastFeedback);
-				$messages[] = Message::userText(
-					'Your previous reply was not strict JSON. Reply with ONLY ' .
-					'{"result": "...", "feedback": "..."} — no markdown fences, no preamble.'
-				);
+				// Say which of the two things was wrong. Telling a model its
+				// well-formed JSON "was not strict JSON" asks it to fix what it
+				// got right: MiniMax answered {"result":"unsatisfied"} three
+				// times and the run died `failed` (surveyor, 2026-08-27).
+				$messages[] = Message::userText($lastBadResult !== null
+					? "\"{$lastBadResult}\" is not one of the three permitted "
+						. 'values. Reply with the SAME feedback but set "result" to '
+						. 'exactly one of: satisfied, needs_revision, failed.'
+					: 'Your previous reply was not strict JSON. Reply with ONLY '
+						. '{"result": "...", "feedback": "..."} — no markdown fences, no preamble.');
 			}
 			$response = $this->llm->send($system, $messages, [], 1024);
 			$totalIn += $response->tokensInput;
@@ -79,6 +86,7 @@ final class Grader
 			$lastFeedback = $text;
 			$decoded = $this->parseStrictJson($text);
 			if ($decoded === null) {
+				$lastBadResult = null;
 				continue;
 			}
 			$result = $decoded['result'] ?? '';
@@ -91,6 +99,7 @@ final class Grader
 					'tokens_output' => $totalOut,
 				];
 			}
+			$lastBadResult = is_string($result) ? $result : '(not a string)';
 		}
 
 		// Format-retry budget exhausted
