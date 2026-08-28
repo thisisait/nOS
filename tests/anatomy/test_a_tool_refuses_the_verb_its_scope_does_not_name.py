@@ -33,7 +33,11 @@ The assertions, each failing independently:
      is grandfathered from measured use in
      docs/plans/rsi-research/artifacts/wing-write-grants.json;
   6. `ToolRegistry::forAgent()` refuses to hand a write tool to an agent whose
-     capability_scopes lack the write scope — admission control, one layer up.
+     capability_scopes lack the write scope — admission control, one layer up;
+  7. the AGENTS holding the write plane equal the agents that measurement
+     granted. Assertions 1-6 all pin WHICH ROUTES; none pinned WHO, so handing
+     the plane to an agent with no measured call was invisible to every gate
+     in the estate.
 
 NEGATIVE CONTROL: a write tool must ACCEPT its granted route. Without it every
 assertion here is satisfied by a tool that refuses everything, which is the
@@ -56,9 +60,12 @@ import subprocess
 from pathlib import Path
 
 import pytest
+import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+AGENTS = REPO / "files/anatomy/agents"
 WING = REPO / "files/anatomy/wing"
+TOOLS_DIR = WING / "app/AgentKit/Tools"
 AUTOLOAD = WING / "vendor/autoload.php"
 COMMON_NEON = WING / "app/config/common.neon"
 GRANTS = REPO / "docs/plans/rsi-research/artifacts/wing-write-grants.json"
@@ -456,6 +463,60 @@ def test_the_registry_refuses_the_write_tool_without_the_write_scope():
     )
     assert got["write_roster_gets_write_tool"] == {"loaded": ["mcp-wing-write"]}, (
         f"wing.write does not load the write plane: {got['write_roster_gets_write_tool']}"
+    )
+
+
+def wing_write_tool_ids() -> set[str]:
+    """Tool ids that ask for `wing.write` — read off requiredScopes(), so a
+    second write plane added tomorrow is covered without editing this file."""
+    ids = set()
+    for php in sorted(TOOLS_DIR.glob("*.php")):
+        src = php.read_text(encoding="utf-8")
+        scopes = re.search(r"function requiredScopes\(\): array\s*\{(.*?)\n\t?\}", src, re.S)
+        ident = re.search(r"function id\(\): string\s*\{\s*return '([^']+)'", src)
+        if scopes and ident and "'wing.write'" in scopes.group(1):
+            ids.add(ident.group(1))
+    return ids
+
+
+def agents_holding(tool_ids: set[str]) -> set[str]:
+    holders = set()
+    for manifest in sorted(AGENTS.glob("*/agent.yml")):
+        doc = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
+        declared = {t.get("id") for t in (doc.get("tools") or []) if isinstance(t, dict)}
+        if declared & tool_ids:
+            holders.add(doc.get("name") or manifest.parent.name)
+    return holders
+
+
+def test_the_agents_holding_the_write_plane_are_the_agents_measured_writing():
+    """The grant is per-AGENT, not only per-ROUTE.
+
+    Found by this phase's own verifier: it added `mcp-wing-write` + `wing.write`
+    to conductor — an agent with ZERO measured calls, named in the artifact's
+    own `no_grant` finding — and the whole corpus stayed green, 4135 passed.
+    Every gate pinned WHICH ROUTES the plane reaches and none pinned WHO holds
+    it, so the widening the artifact exists to prevent was invisible.
+
+    Equality, so it fails in both directions: an agent handed the write plane
+    without a measured call is a widening; an agent that was measured writing
+    and no longer holds it is an agent silently muted.
+    """
+    grants = json.loads(GRANTS.read_text(encoding="utf-8"))
+    measured = {a["agent"] for a in grants["grants"]}
+    tool_ids = wing_write_tool_ids()
+    assert tool_ids, (
+        "no tool asks for wing.write — either the split was reverted or "
+        "requiredScopes() moved, and this gate is measuring nothing"
+    )
+    holders = agents_holding(tool_ids)
+    assert holders == measured, (
+        f"agents holding {sorted(tool_ids)}: {sorted(holders)}; agents the "
+        f"measurement granted: {sorted(measured)}. Extra holders "
+        f"({sorted(holders - measured)}) were never recorded writing — a prompt "
+        "asking for a POST is not a grant. Missing holders "
+        f"({sorted(measured - holders)}) were measured writing and can no longer "
+        f"file their report. Re-measure {GRANTS.name} before changing either side."
     )
 
 
