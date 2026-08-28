@@ -231,10 +231,10 @@ DAEMON_DESC = {
 }
 
 
-#: Commands that spawn a claude CLI go through the one mkdir mutex
-#: (files/anatomy/scripts/agent-run-lock.sh). Derived, not declared: the claim
-#: is a fact about the code, and the code has exactly two spawn sites.
-AGENT_LOCK_COMMANDS = ("pulse-run-agent.sh", "scan-runner.sh")
+#: Commands that take the one mkdir mutex (files/anatomy/scripts/agent-run-lock.sh).
+#: Derived, not declared: the claim is a fact about the code, and the code has
+#: exactly three call sites — two claude-CLI spawns and the bound AgentKit runner.
+AGENT_LOCK_COMMANDS = ("pulse-run-agent.sh", "scan-runner.sh", "run-agent.sh")
 AGENT_LOCK_RESOURCE = "agent-run-lock"
 
 EDGE_KINDS = ("data", "trigger", "temporal")

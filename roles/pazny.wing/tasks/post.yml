@@ -453,6 +453,17 @@
   ansible.builtin.set_fact:
     _pulse_catalog: "{{ _pulse_catalog_raw.stdout | from_json }}"
 
+- name: "[pazny.wing] Drop Pulse jobs of retired agents"
+  # Runs BEFORE the upsert, so an id that is still declared wins.
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ wing_port | default(9000) }}/api/v1/pulse_jobs/{{ item }}"
+    method: DELETE
+    headers:
+      Authorization: "Bearer {{ wing_api_token }}"
+    status_code: [200, 404]
+  loop: "{{ wing_pulse_retired_jobs }}"
+  changed_when: false
+
 - name: "[pazny.wing] Register discovered Pulse jobs (idempotent upsert)"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ wing_port | default(9000) }}/api/v1/pulse_jobs"

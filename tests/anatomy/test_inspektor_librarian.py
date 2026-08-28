@@ -3,7 +3,7 @@
 Inspektor ships AgentKit-side only — its Pulse runner is explicitly
 deferred until its tooling lands (trivy/grype/nuclei substrate). The
 contract-only profile still validates against the AgentKit schema and
-surfaces in the /agents catalog. Librarian's runner is LIVE, on demand.
+surfaces in the /agents catalog. Librarian's runner is LIVE and, since 2026-08-28, nightly.
 
 Scout lived in this file from A9.4 (2026-05-17) until the 2026-08-26
 roster close retired it (zero agent:scout events in the wing.db epoch;
@@ -23,7 +23,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 AGENTS = REPO / "files/anatomy/agents"
 
 
-# ── Inspektor (contract-only) + Librarian (live, on-demand) ───────────
+# ── Inspektor (contract-only) + Librarian (live, nightly) ─────────────
 
 
 def test_inspektor_agentkit_only():
@@ -51,8 +51,8 @@ def test_inspektor_agentkit_only():
 
 def test_librarian_runner_live_on_demand():
     """Librarian's runner went LIVE 2026-07-11 (cortex Layer 2): flat
-    Pulse profile librarian.yml + AgentKit profile, fired on demand by
-    tools/run-librarian.sh — the Pulse row stays paused by doctrine.
+    Pulse profile librarian.yml + AgentKit profile. Unpaused 2026-08-28:
+    the three ceremonies run nightly through the bound runner.
     This gate pins the whole shape so neither half regresses to the
     pre-runner state (and the ceremony keeps its taxonomy-growth leg)."""
     d = AGENTS / "librarian"
@@ -66,7 +66,7 @@ def test_librarian_runner_live_on_demand():
     flat = yaml.safe_load(flat_path.read_text())
     jobs = ((flat.get("pulse") or {}).get("jobs")) or []
     by_name = {j.get("name"): j for j in jobs}
-    # All three ceremonies must exist, stay paused (on-demand), and pin a
+    # All three ceremonies must exist, run on the bound runner, and pin a
     # cost-tier model — dropping NOS_AGENT_MODEL silently reverts a bulk job
     # to the operator's flagship default (the point of the model-tier commit).
     expected_tiers = {
@@ -77,9 +77,15 @@ def test_librarian_runner_live_on_demand():
     for name, tier in expected_tiers.items():
         job = by_name.get(name)
         assert job, f"librarian.yml must declare the {name} pulse job"
-        assert job.get("paused") is True, (
-            f"{name} must stay paused=true (on-demand doctrine — "
-            "tools/run-librarian.sh is the trigger, not cron)"
+        # Unpaused 2026-08-28. What replaces the pause as the property worth
+        # pinning: a SCHEDULED ceremony must go through the runner that can
+        # receive the backend binding. The claude CLI cannot, so a nightly job
+        # on that path spends on the default backend for ever, unasked.
+        assert job.get("command", "").endswith("/tools/run-agent.sh"), (
+            f"{name} runs on a schedule, so it must use the bound runner"
+        )
+        assert "--agent=librarian" in (job.get("args") or []), (
+            f"{name} must name its agent — run-agent.sh has no default"
         )
         assert (job.get("env") or {}).get("NOS_AGENT_MODEL") == tier, (
             f"{name} must pin NOS_AGENT_MODEL={tier} so the bulk ceremony "
@@ -95,7 +101,7 @@ def test_librarian_runner_live_on_demand():
     )
     agent = yaml.safe_load((d / "agent.yml").read_text())
     meta = agent.get("metadata") or {}
-    assert meta.get("runner_status") == "on-demand"
+    assert meta.get("runner_status") == "scheduled"
 
 
 def test_inspektor_carries_write_scope():

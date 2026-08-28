@@ -359,6 +359,12 @@ final class PulseRepository
 		return $row ? $row->toArray() : null;
 	}
 
+	/** Drop a job row. False when the id was not there. */
+	public function deleteJob(string $id): bool
+	{
+		return $this->db->table('pulse_jobs')->where('id', $id)->delete() > 0;
+	}
+
 	/**
 	 * List all non-removed jobs, ordered by plugin then job name.
 	 *

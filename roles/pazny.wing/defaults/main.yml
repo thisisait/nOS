@@ -53,3 +53,11 @@ wing_launchd_label: "eu.thisisait.nos.wing"
 # FrankenPHP binary path (Homebrew default). The role installs this via
 # `community.general.homebrew` if missing — see tasks/main.yml.
 frankenphp_bin: "/opt/homebrew/bin/frankenphp"
+
+# Pulse rows of agents the 2026-08-26 roster close retired (and migration-author,
+# which never had a launcher). No profile on disk = the job can never run.
+wing_pulse_retired_jobs:
+  - "scout:drift-scan"
+  - "remediator:triage-open-findings"
+  - "upgrade-advisor:upgrade-advise"
+  - "migration-author:promote-migration"

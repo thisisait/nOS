@@ -5,7 +5,7 @@
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
     "nodes": 208,
-    "edges": 206,
+    "edges": 210,
     "nodes_pulse": 30,
     "nodes_judge": 5,
     "nodes_gateset": 4,
@@ -20,7 +20,7 @@
     "nodes_doctrine": 13,
     "nodes_faceapp": 5,
     "edges_data": 133,
-    "edges_trigger": 27,
+    "edges_trigger": 31,
     "edges_temporal": 5,
     "edges_mutex": 21,
     "edges_governed_by": 20,
@@ -1134,50 +1134,50 @@
     "pulse:librarian:brief-taxonomy": {
       "kind": "pulse",
       "source": "files/anatomy/agents/librarian.yml",
-      "schedule": "50 6 * * 0",
+      "schedule": "10 3 * * *",
       "jitter_min": 5,
       "max_runtime_s": 900,
       "category": "knowledge",
-      "paused": true,
+      "paused": false,
       "findings_exit_codes": null,
-      "command_name": "pulse-run-agent.sh",
+      "command_name": "run-agent.sh",
       "claims": [
         "agent-run-lock"
       ],
       "anchor": "09",
-      "description": "Pulse scheduled job (knowledge): runs pulse-run-agent.sh on cron `50 6 * * 0` — PAUSED (deliberate operator decision, not a health state)"
+      "description": "Pulse scheduled job (knowledge): runs run-agent.sh on cron `10 3 * * *`"
     },
     "pulse:librarian:describe-taxonomy": {
       "kind": "pulse",
       "source": "files/anatomy/agents/librarian.yml",
-      "schedule": "45 6 * * 0",
+      "schedule": "10 2 * * *",
       "jitter_min": 5,
       "max_runtime_s": 900,
       "category": "knowledge",
-      "paused": true,
+      "paused": false,
       "findings_exit_codes": null,
-      "command_name": "pulse-run-agent.sh",
+      "command_name": "run-agent.sh",
       "claims": [
         "agent-run-lock"
       ],
       "anchor": "09",
-      "description": "Pulse scheduled job (knowledge): runs pulse-run-agent.sh on cron `45 6 * * 0` — PAUSED (deliberate operator decision, not a health state)"
+      "description": "Pulse scheduled job (knowledge): runs run-agent.sh on cron `10 2 * * *`"
     },
     "pulse:librarian:judge-lint-queue": {
       "kind": "pulse",
       "source": "files/anatomy/agents/librarian.yml",
-      "schedule": "30 6 * * 0",
+      "schedule": "10 5 * * *",
       "jitter_min": 5,
       "max_runtime_s": 600,
       "category": "knowledge",
-      "paused": true,
+      "paused": false,
       "findings_exit_codes": null,
-      "command_name": "pulse-run-agent.sh",
+      "command_name": "run-agent.sh",
       "claims": [
         "agent-run-lock"
       ],
       "anchor": "09",
-      "description": "Pulse scheduled job (knowledge): runs pulse-run-agent.sh on cron `30 6 * * 0` — PAUSED (deliberate operator decision, not a health state)"
+      "description": "Pulse scheduled job (knowledge): runs run-agent.sh on cron `10 5 * * *`"
     },
     "pulse:loop:drive": {
       "kind": "pulse",
@@ -1241,18 +1241,18 @@
     "pulse:surveyor:surface-survey": {
       "kind": "pulse",
       "source": "files/anatomy/agents/surveyor.yml",
-      "schedule": "0 7 * * 0",
+      "schedule": "10 1 * * *",
       "jitter_min": 5,
       "max_runtime_s": 900,
       "category": "agents",
-      "paused": true,
+      "paused": false,
       "findings_exit_codes": null,
-      "command_name": "pulse-run-agent.sh",
+      "command_name": "run-agent.sh",
       "claims": [
         "agent-run-lock"
       ],
       "anchor": "02.02.09",
-      "description": "Pulse scheduled job (agents): runs pulse-run-agent.sh on cron `0 7 * * 0` — PAUSED (deliberate operator decision, not a health state)"
+      "description": "Pulse scheduled job (agents): runs run-agent.sh on cron `10 1 * * *`"
     },
     "pulse:upgrade-architect:recipe-author": {
       "kind": "pulse",
@@ -3930,6 +3930,27 @@
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:librarian:brief-taxonomy",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:librarian:describe-taxonomy",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:librarian:judge-lint-queue",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:loop:drive",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
@@ -3952,6 +3973,13 @@
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:npm-supply-chain:daily-ioc-scan",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:surveyor:surface-survey",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
       "derived": "daemon-dispatch"

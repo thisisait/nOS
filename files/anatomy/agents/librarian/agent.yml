@@ -80,11 +80,11 @@ vault:
 metadata:
   ait_phase: A9.4-contract-only
   ceremony_role: rag-recall
-  runner_status: on-demand
+  runner_status: scheduled
   deferred_reason: >-
-    runner live 2026-07-11 (flat profile files/anatomy/agents/librarian.yml,
-    Pulse job librarian:judge-lint-queue paused per on-demand doctrine;
-    tools/run-librarian.sh fires it). Intake = KEAP lint overlap-review /
+    runner live 2026-07-11 (flat profile files/anatomy/agents/librarian.yml);
+    unpaused 2026-08-28, nightly through tools/run-agent.sh (AgentKit), which
+    is the runner that can receive the MiniMax binding. Intake = KEAP lint overlap-review /
     near-duplicate findings; verdicts via /agent/v1/lint/verdict.
 
 exit_code_semantics:

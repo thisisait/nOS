@@ -42,6 +42,17 @@ final class PulsePresenter extends BaseApiPresenter
 	 */
 	public function actionJobs(?string $id = null): void
 	{
+		if ($id !== null && $this->getMethod() === 'DELETE') {
+			// A row whose agent was retired can never run and still reads as a
+			// job. Safe by construction: a job the catalog still declares is
+			// re-upserted by the same converge that deleted it.
+			if (!$this->pulse->deleteJob($id)) {
+				$this->sendError("Unknown pulse job: $id", 404);
+			}
+			$this->sendSuccess(['deleted' => $id]);
+			return;
+		}
+
 		if ($id !== null) {
 			$this->requireMethod('GET');
 			$job = $this->pulse->getJob($id);

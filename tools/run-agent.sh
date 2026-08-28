@@ -137,10 +137,23 @@ if [[ ${#PASSTHRU[@]} -eq 0 ]]; then
     exit 2
 fi
 
+# A Pulse job carries its ceremony in NOS_AGENT_TASK (the CLI runner's spelling)
+# because the catalog's arg-regex bans whitespace — a prompt cannot be an arg.
+if [[ -n "${NOS_AGENT_TASK:-}" ]] \
+   && ! printf '%s\n' ${PASSTHRU[@]+"${PASSTHRU[@]}"} | grep -q '^--prompt='; then
+    PASSTHRU+=("--prompt=$NOS_AGENT_TASK")
+fi
+
 # A bound run is about to spend real money at a third party. Say which backend
 # before it happens, so the operator watching can stop it if it is the wrong one.
 echo "[run-agent] armed backends: ${NOS_ARMED_BACKENDS:-<none>}"
 echo "[run-agent] ceilings: tokens=${NOS_AGENT_SESSION_TOKEN_CEILING:-<default>} wall=${NOS_AGENT_SESSION_WALL_CLOCK_S:-<default>}s"
 
+# The same mutex the CLI path takes. Not `exec` below: exec would drop the
+# release trap and leak the lock for the rest of the night.
+# shellcheck source=../files/anatomy/scripts/agent-run-lock.sh
+source "$REPO_ROOT/files/anatomy/scripts/agent-run-lock.sh"
+nos_agent_lock_acquire "${NOS_AGENT_NAME:-agentkit}" 300 || exit 2
+
 cd "$WING_APP"
-exec php bin/run-agent.php "${PASSTHRU[@]}"
+php bin/run-agent.php "${PASSTHRU[@]}"

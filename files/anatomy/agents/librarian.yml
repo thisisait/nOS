@@ -200,18 +200,23 @@ notification:
   on_low:      []
   on_info:     []
 
-# ── Pulse job (on-demand doctrine: paused, tools/run-librarian.sh fires it) ──
+# ── Pulse jobs — UNPAUSED 2026-08-28, nightly, through AgentKit ─────────────
+# The CLI path cannot receive a backend binding, so these ran on the default
+# backend or not at all; `tools/run-agent.sh` is the bound one. Every
+# `paused_reason` below stays byte-identical — PulseRepository clears only the
+# pause whose reason still matches, so an operator pause survives a converge.
 pulse:
   jobs:
     - name: judge-lint-queue
       category: knowledge
       runner: subprocess
-      command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
-      schedule: "30 6 * * 0"               # placeholder — paused by default
+      command: "{{ playbook_dir }}/tools/run-agent.sh"
+      args: ["--agent=librarian", "--trigger=pulse"]
+      schedule: "10 5 * * *"
       jitter_min: 5
       max_runtime_s: 600
       max_concurrent: 1
-      paused: true
+      paused: false
       paused_reason: "librarian is on-demand; tools/run-librarian.sh fires it"
       env:
         NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
@@ -265,12 +270,13 @@ pulse:
     - name: brief-taxonomy
       category: knowledge
       runner: subprocess
-      command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
-      schedule: "50 6 * * 0"               # placeholder — paused by default
+      command: "{{ playbook_dir }}/tools/run-agent.sh"
+      args: ["--agent=librarian", "--trigger=pulse"]
+      schedule: "10 3 * * *"
       jitter_min: 5
       max_runtime_s: 900
       max_concurrent: 1
-      paused: true
+      paused: false
       paused_reason: "brief sweep is operator-paced; tools/run-librarian.sh --brief fires it"
       env:
         NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
@@ -312,12 +318,13 @@ pulse:
     - name: describe-taxonomy
       category: knowledge
       runner: subprocess
-      command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
-      schedule: "45 6 * * 0"               # placeholder — paused by default
+      command: "{{ playbook_dir }}/tools/run-agent.sh"
+      args: ["--agent=librarian", "--trigger=pulse"]
+      schedule: "10 2 * * *"
       jitter_min: 5
       max_runtime_s: 900
       max_concurrent: 1
-      paused: true
+      paused: false
       paused_reason: "K1 is operator-paced; tools/run-librarian.sh --describe fires it"
       env:
         NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"

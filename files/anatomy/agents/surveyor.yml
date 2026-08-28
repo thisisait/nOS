@@ -100,24 +100,25 @@ notification:
   on_low: []
   on_info: []
 
-# ── Pulse job — the row exists so the runner has an env to read ─────────────
-# PAUSED, and it stays paused. The row is not a schedule here: every on-demand
-# agent in this estate keeps one because `tools/run-<agent>.sh` resolves its
-# environment from `pulse_jobs.env_json`, which is also where the `secret:`
-# references get resolved by one shared resolver instead of by each caller.
-# A cadence would make an unproven ceremony spend money weekly with nobody
-# reading the result; add a schedule when a run is worth repeating.
+# ── Pulse job ──────────────────────────────────────────────────────────────
+# UNPAUSED 2026-08-28. The bar was "unproven ceremony"; it was met on 08-27 —
+# the first bound run finished in 129 s on MiniMax. Now nightly, and through
+# `tools/run-agent.sh` (AgentKit) rather than the claude CLI, which cannot
+# receive the binding and so left MiniMax at zero spend.
+# `paused_reason` stays byte-identical: PulseRepository clears only the pause
+# whose reason still matches, so an operator pause is never trampled.
 pulse:
   jobs:
     - name: surface-survey
       category: agents
       runner: subprocess
-      command: "{{ playbook_dir }}/files/anatomy/scripts/pulse-run-agent.sh"
-      schedule: "0 7 * * 0"                # placeholder — paused by default
+      command: "{{ playbook_dir }}/tools/run-agent.sh"
+      args: ["--agent=surveyor", "--trigger=pulse"]
+      schedule: "10 1 * * *"
       jitter_min: 5
       max_runtime_s: 900
       max_concurrent: 1
-      paused: true
+      paused: false
       paused_reason: "surveyor is on-demand; tools/run-surveyor.sh fires it"
       env:
         NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"

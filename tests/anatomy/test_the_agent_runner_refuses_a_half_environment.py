@@ -88,9 +88,11 @@ def test_it_announces_the_backend_before_spending():
     """A supervised run is supervised only if the operator can see, before the
     spend, which third party is about to receive the prompt."""
     src = _src()
-    idx_exec = src.index("exec php bin/run-agent.php")
-    announce = src.rindex("armed backends", 0, idx_exec)
-    assert announce < idx_exec, "the backend is announced after the run starts"
+    # Not `exec` since 2026-08-28: the runner takes the agent-run mutex, and
+    # exec would drop the release trap.
+    idx_run = src.index("php bin/run-agent.php")
+    announce = src.rindex("armed backends", 0, idx_run)
+    assert announce < idx_run, "the backend is announced after the run starts"
 
 
 def test_redaction_matches_anywhere_in_the_name():

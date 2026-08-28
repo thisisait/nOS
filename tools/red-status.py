@@ -23,10 +23,13 @@ written by the code that attempted the work. A reader that could also repair
 would eventually be asked to certify its own repair. Repair belongs to the
 playbook and to the operator.
 
-Every source is a file or a local SQLite read — no network, no Docker, no
-daemon. If a source is missing it says so rather than treating absence as
-health, because "no data" and "no problem" are the two readings this estate has
-most often confused.
+Every source is a file or a local SQLite read, EXCEPT the two GitHub ones
+(`gh` CLI, added 2026-08-28): CI conclusions and Dependabot alerts. They earned
+the exception — CI on `dev` was red for two days and the Linux wet-test had been
+failing at preflight for four weeks, and both surfaced only when a human opened
+a PR. Off the network they are not a state anybody can ask for. If a source is
+missing it says so rather than treating absence as health, because "no data" and
+"no problem" are the two readings this estate has most often confused.
 
 Usage:
     tools/red-status.py           # every red, grouped by source
@@ -45,6 +48,7 @@ import argparse
 import json
 import pathlib
 import sqlite3
+import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 
@@ -583,6 +587,62 @@ def stalled_verdicts() -> dict | None:
         sys.path.remove(str(REPO / "tools"))
 
 
+def _gh(*args: str) -> list | dict | None:
+    """`gh` with a short leash. Any failure is None — UNKNOWN, never green."""
+    try:
+        out = subprocess.run(
+            ("gh", *args), capture_output=True, text=True, timeout=30, cwd=REPO)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if out.returncode != 0 or not out.stdout.strip():
+        return None
+    try:
+        return json.loads(out.stdout)
+    except json.JSONDecodeError:
+        return None
+
+
+def ci_runs() -> dict | None:
+    """Newest run per workflow on each long-lived branch, and its conclusion.
+
+    A run is an event; the branch's CI state is the NEWEST run per workflow.
+    Older failures under a newer success are history, not red.
+    """
+    branches: dict[str, list[dict]] = {}
+    for branch in ("dev", "master"):
+        runs = _gh("run", "list", "--branch", branch, "--limit", "40",
+                   "--json", "name,conclusion,status,headSha,createdAt")
+        if runs is None:
+            return None
+        newest: dict[str, dict] = {}
+        for run in runs:
+            if run["name"] not in newest:
+                newest[run["name"]] = run
+        branches[branch] = [
+            {"workflow": name, "conclusion": r["conclusion"] or r["status"],
+             "sha": (r["headSha"] or "")[:8], "at": r["createdAt"]}
+            for name, r in sorted(newest.items())
+            if r["conclusion"] not in ("success", "skipped", None)
+            or r["status"] not in ("completed", "in_progress", "queued")
+        ]
+    return branches
+
+
+def dependabot() -> dict | None:
+    """Open Dependabot alerts, counted by severity."""
+    alerts = _gh("api", "repos/:owner/:repo/dependabot/alerts?state=open&per_page=100",
+                 "--jq", '[.[] | {sev: .security_advisory.severity, '
+                         'pkg: .dependency.package.name}]')
+    if alerts is None:
+        return None
+    counts: dict[str, int] = {}
+    for a in alerts:
+        counts[a["sev"]] = counts.get(a["sev"], 0) + 1
+    top = sorted({a["pkg"] for a in alerts
+                  if a["sev"] in ("critical", "high")})
+    return {"counts": counts, "serious_packages": top}
+
+
 def collect() -> dict:
     report: dict = {"generated_at": _now().isoformat(), "sources_read": [], "sources_missing": []}
     conn = _connect()
@@ -603,6 +663,8 @@ def collect() -> dict:
         ("backups", BACKUP_STATUS, backups),
         ("loop_verdicts", REPO / "tools" / "loop-status.py", stalled_verdicts),
         ("restore_drill", pathlib.Path.home() / ".nos" / "backup-verify.json", restore_drill),
+        ("ci", pathlib.Path("gh run list"), ci_runs),
+        ("dependabot", pathlib.Path("gh api dependabot/alerts"), dependabot),
     ):
         value = fn()
         if value is None:
@@ -733,6 +795,20 @@ def reds(report: dict) -> list[str]:
             f"trigger={orphan['trigger']}, model={orphan['model_uri'] or 'unrecorded'}; "
             f"no run can close it now"
         )
+    for branch, failures in (report.get("ci") or {}).items():
+        for f in failures:
+            out.append(
+                f"CI {f['workflow']} on {branch} is {f['conclusion']} "
+                f"({f['sha']}, {_age(_parse_iso(f['at']))}) — newest run of that "
+                "workflow, so this is the branch's state, not one bad run"
+            )
+    dep = report.get("dependabot")
+    if dep and dep["counts"]:
+        tally = ", ".join(f"{n} {sev}" for sev, n in sorted(dep["counts"].items()))
+        line = f"{sum(dep['counts'].values())} open Dependabot alert(s): {tally}"
+        if dep["serious_packages"]:
+            line += " — critical/high in " + ", ".join(dep["serious_packages"][:6])
+        out.append(line)
     for missing in report.get("sources_missing", []):
         out.append(f"source unreadable, so its state is UNKNOWN not green: {missing}")
     return out
