@@ -259,6 +259,12 @@ phase('Grant')
 // principle — every later capability presents a principal this phase creates. Items 1+2 of
 // 01-architecture.md; truth before capability.
 //
+// ALSO MEASURED (§6): an agent-filed report carries actor_action_id NULL — the librarian's
+// 201 (event 373987) is the only conductor_report an AgentKit session ever wrote and the
+// only one with no session id. The architecture promises one SELECT reconstructs a run; for
+// agent-filed events it does not. Same provenance problem as loop_proposals.session_uuid,
+// so the Ledger phase should close both.
+//
 // MEASURED (07-first-bound-night.md §4): the gap is wider than "the grants are implicit".
 // `McpBoneTool` sends NO Authorization header at all (McpBoneTool.php:63-68), so every Bone
 // endpoint behind require_scope() (bone/auth.py:180-205) answers 401 — session 505e0f11 got
@@ -337,6 +343,16 @@ phase('Oracle')
 //       recorded state, and the session row must say which. Do not paper over it with a
 //       sterner prompt — a prompt change that fixes this would prove it was never a harness
 //       problem, and that claim needs the measurement, not the hope.
+//
+//   (a2) SATISFIED WITHOUT THE DELIVERABLE — measured after this note was first written
+//       (07-first-bound-night.md §6, session 5fd9074a). The surveyor re-run reached the
+//       write step, its POST /api/v1/events failed 400 'Invalid JSON body', no
+//       conductor_report event was ever written — and the grader returned `satisfied` with
+//       EMPTY feedback, because surveyor/rubric.md never mentions filing. A run that lost
+//       its whole deliverable to malformed JSON reads green today. This is this phase's
+//       FIRST job, not a refinement of it: a ceremony whose deliverable is an event may not
+//       be satisfied unless that event EXISTS and names the session. It is also the live
+//       case for Q9's parser — the survey was lost to a bracket, not to a judgement.
 //
 //   (b) SATISFIED ON AN EMPTY INTAKE. df2a5477 was satisfied for handling an empty queue
 //       honestly — correct, and indistinguishable from satisfied after work. The gate_run_id
