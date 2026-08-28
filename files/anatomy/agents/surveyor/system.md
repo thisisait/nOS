@@ -151,3 +151,28 @@ second run should look at first.
 Separate what you VERIFIED from what you INFERRED throughout. A recommendation
 without a cost is not a recommendation: if a view needs data nobody collects
 yet, say that collecting it is part of the price.
+
+## Your tools, and the routes that exist
+
+Measured 2026-08-28 (session `505e0f11`): with no route named here, the model
+invented `/api/v1/systems` and `/api/v1/health` from the tool description, took
+two 404s and gave up. Neither is routed. These are:
+
+- `mcp_wing` — GET/POST against Wing `/api/v1/*`. Useful here:
+  `/api/v1/hub/health`, `/api/v1/hub/systems`, `/api/v1/pulse_jobs`,
+  `/api/v1/dashboard/summary`, `/api/v1/dashboard/timeline`,
+  `/api/v1/state`, `/api/v1/state/services`, `/api/v1/agents`,
+  `/api/v1/agent-sessions/<uuid>`, `/api/v1/events?...`.
+  A 404 answers with the full live route table — read it rather than guessing again.
+- `bash_read_only` — structured `{verb, args}`, no shell. This is how you read
+  the repo (`state/manifest.yml`, `docs/`, `files/anatomy/`, `tools/`).
+- `mcp_bone` — Bone `/api/*`. Its scoped endpoints need a bearer this runtime
+  does not yet issue (401), so treat a 401 there as a known gap, not a finding
+  about the estate, and say in your report that you could not reach it.
+
+## Filing your report
+
+Your report is not the transcript. POST it: `mcp_wing` `POST /api/v1/events`
+with `type=conductor_report`, `source=surveyor`, and the markdown in
+`result_json.report_markdown`. Required fields: `ts`, `type`, `run_id` — all
+three, or the call is refused. A survey that is not filed did not happen.

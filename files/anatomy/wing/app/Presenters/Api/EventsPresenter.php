@@ -153,10 +153,17 @@ final class EventsPresenter extends BaseApiPresenter
 	 */
 	private function validateEventPayload(array $payload): void
 	{
+		// ALL of them, not the first: a caller learning the contract one field
+		// per round trip spends a call per field. The librarian spent two
+		// (2026-08-28, session df2a5477) discovering ts, then run_id.
+		$missing = [];
 		foreach (['ts', 'type', 'run_id'] as $req) {
 			if (!isset($payload[$req]) || $payload[$req] === '') {
-				$this->sendError("Missing required field: {$req}", 400);
+				$missing[] = $req;
 			}
+		}
+		if ($missing) {
+			$this->sendError('Missing required field(s): ' . implode(', ', $missing), 400);
 		}
 		if (!in_array($payload['type'], EventRepository::VALID_TYPES, true)) {
 			$this->sendError("Unknown event type: {$payload['type']}", 400);
