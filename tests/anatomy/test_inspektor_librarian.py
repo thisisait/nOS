@@ -20,6 +20,8 @@ import re
 
 import yaml
 
+from test_agentkit_keap_tool import PROPOSAL_ONLY_POST_PATHS, keap_post_allowlist
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
 AGENTS = REPO / "files/anatomy/agents"
 
@@ -129,11 +131,18 @@ def test_librarian_is_read_only():
     already named. Add a second route to that allowlist and this gate goes red,
     which is the point: the scope's meaning lives in the allowlist, so the
     doctrine has to be checked there rather than in the scope's spelling.
+
+    `keap.write` (2026-08-29) is the same argument for the cortex. It is not
+    new capability: this agent has filed lint verdicts and briefs into KEAP's
+    moderation queue since 2026-08-16 under `keap.read`, because mcp-keap
+    served POST without asking for a scope that named it. Declaring the scope
+    made the write visible; it did not create it. The condition is that every
+    writable KEAP path stays a PROPOSAL a moderator decides — no approve path.
     """
     agent = yaml.safe_load((AGENTS / "librarian/agent.yml").read_text())
     scopes = (agent.get("audit") or {}).get("capability_scopes") or []
     for s in scopes:
-        assert "write" not in s or s in ("events.write", "wing.write"), (
+        assert "write" not in s or s in ("events.write", "wing.write", "keap.write"), (
             f"librarian must not have write scope: {s}"
         )
         assert "scan" not in s
@@ -149,4 +158,13 @@ def test_librarian_is_read_only():
             f"librarian holds wing.write and the write plane now reaches {routes}. "
             "That is a widening past 'files its own report', which is the only "
             "write this agent is allowed."
+        )
+
+    if "keap.write" in scopes:
+        # The list is imported, not restated: a widening has to be argued in
+        # the one place that pins it, and it reds here too.
+        assert keap_post_allowlist() == PROPOSAL_ONLY_POST_PATHS, (
+            "librarian holds keap.write and mcp-keap's POST allowlist has "
+            f"drifted to {keap_post_allowlist()}. The scope is allowed only "
+            "while every writable path is a proposal a moderator decides."
         )

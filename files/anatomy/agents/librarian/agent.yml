@@ -70,6 +70,10 @@ audit:
     - wing.write
     - bone.read
     - keap.read
+    # This agent files lint verdicts and briefs into KEAP's moderation queue —
+    # it has always written. mcp-keap now asks for the scope that names the
+    # verb (2026-08-28), so the grant is declared rather than assumed.
+    - keap.write
     - events.write
     - audit.read
   pii_classification: none

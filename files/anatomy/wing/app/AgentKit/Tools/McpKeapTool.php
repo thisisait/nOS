@@ -74,9 +74,16 @@ final class McpKeapTool implements ToolInterface
 		return 'mcp-keap';
 	}
 
+	/**
+	 * `keap.write` because this tool POSTs. Until 2026-08-28 it asked only for
+	 * `keap.read` and served every path in POST_ALLOWLIST anyway — a read scope
+	 * that could write, the same defect the Wing split closed. Not split into
+	 * two tools: no agent wants KEAP read without write.
+	 * ponytail: split into read/write planes the day one does.
+	 */
 	public function requiredScopes(): array
 	{
-		return ['mcp.tool_use', 'keap.read'];
+		return ['mcp.tool_use', 'keap.read', 'keap.write'];
 	}
 
 	public function schema(): ToolSchema
@@ -129,7 +136,10 @@ final class McpKeapTool implements ToolInterface
 			return ToolResult::error("path must start with /agent/v1/; got {$path}");
 		}
 		if ($method === 'POST' && !in_array($path, self::POST_ALLOWLIST, true)) {
-			return ToolResult::error('POST is allowed only to: ' . implode(', ', self::POST_ALLOWLIST));
+			return ToolResult::error(
+				'POST is allowed only to: ' . implode(', ', self::POST_ALLOWLIST),
+				['refused_reason' => 'path_not_in_post_allowlist', 'path' => $path],
+			);
 		}
 
 		$token = $method === 'POST' ? $this->tokenRw : $this->tokenRo;

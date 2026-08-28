@@ -7,29 +7,44 @@ scope roster never mentioned a verb. `wing.read` was, in practice, `wing.*`.
 
 The split is only real if the READ plane actually refuses a POST. That is a
 claim about behaviour, so this gate does not grep: it instantiates every tool
-class the DI container registers, hands each one a POST payload under a
-read-only scope roster, and asserts `ToolResult::error`. A gate that read the
-source could be satisfied by a comment; this one can only be satisfied by a
-refusal that happens.
+class the DI container registers, hands each one a POST **at a path that tool
+actually serves**, and asserts the refusal.
 
-Three separate refusals are pinned, because they fail independently:
+That emphasis is this file's own scar. The first version of this gate probed
+every tool with `/api/v1/events`, a Wing path. `mcp-keap` — scopes
+`['mcp.tool_use','keap.read']`, well inside the read-only roster — answered
+"path must start with /agent/v1/", and the gate counted that as a refusal. It
+was a TRANSPORT rejection standing in for a VERB rejection: driven at
+`/agent/v1/captures`, a path KEAP serves, the same read-only roster got
+`isError=false`, HTTP 200, `{"WROTE":true}`. A probe that cannot reach the
+code proves nothing, so every probe path below is checked to REACH the tool's
+own gate before its refusal is believed (`test_the_probe_reaches_each_tools_own_gate`).
 
-  1. the READ tool refuses POST at the verb (`refused_reason=verb_not_in_scope`);
-  2. the WRITE tool refuses a route that is not in its grant
-     (`refused_reason=route_not_granted`) — the grant is grandfathered from
-     measured use in docs/plans/rsi-research/artifacts/wing-write-grants.json;
-  3. `ToolRegistry::forAgent()` refuses to hand the write tool to an agent whose
-     capability_scopes lack `wing.write` — the admission control that stops an
-     agent holding the tool at all.
+The assertions, each failing independently:
 
-NEGATIVE CONTROL: the write tool must ACCEPT its granted route. Without that,
-every assertion here is satisfiable by a tool that refuses everything, which is
-the failure mode a security gate is most likely to ship green.
+  1. every registered tool has a declared probe path, and every tool that takes
+     an HTTP client — an estate plane — has a real one, not a `None`;
+  2. that path reaches the tool's own gate rather than a path-shape check;
+  3. a POST that is SERVED requires a `*.write` scope (THE gate — this is what
+     `wing.read`, and later `keap.read`, did not enforce);
+  4. a read-scoped tool refuses at the verb and SAYS so
+     (`refused_reason=verb_not_in_scope`), for every tool in the registry;
+  5. a write-scoped tool refuses a path outside its grant — for Wing the grant
+     is grandfathered from measured use in
+     docs/plans/rsi-research/artifacts/wing-write-grants.json;
+  6. `ToolRegistry::forAgent()` refuses to hand a write tool to an agent whose
+     capability_scopes lack the write scope — admission control, one layer up.
+
+NEGATIVE CONTROL: a write tool must ACCEPT its granted route. Without it every
+assertion here is satisfied by a tool that refuses everything, which is the
+failure mode a security gate is most likely to ship green.
 
 The bridge is the one the suite already uses for PHP-effect gates
 (tests/anatomy/test_bound_agent_can_file_its_report.py): write a probe into the
 wing tree, run it with the local `php` against the composer autoload, read JSON
-off stdout. It SKIPS, naming what is missing, when php or vendor/ is absent.
+off stdout. On CI the vendor tree is DECLARED (NOS_TEST_PROVIDES carries the
+autoload path) so its absence aborts the session rather than skipping the half
+of this file that actually calls a tool.
 """
 
 from __future__ import annotations
@@ -63,12 +78,28 @@ def registered_tool_classes() -> list[str]:
     return re.findall(r"register\(@(App\\AgentKit\\Tools\\\w+)\)", factory)
 
 
-# A roster that can read everything and write nothing. `wing.write` is the one
-# scope deliberately absent — its absence is what the read plane must respect.
+# A roster that can read everything and write nothing. The `*.write` estate
+# scopes are the ones deliberately absent — their absence is what the read
+# plane must respect.
 READ_ONLY_SCOPES = [
     "bash.read", "mcp.tool_use", "wing.read", "bone.read",
     "keap.read", "events.write", "audit.read", "inbox.ask",
 ]
+
+# Per-tool probe paths. `served` is a path THAT TOOL ROUTES — without it the
+# probe dies at a path-shape check and proves nothing (the mcp-keap hole).
+# `unserved` is a path the tool routes the shape of but must refuse to write.
+# A tool that takes no HTTP path at all declares `None`, and assertion 1 makes
+# that declaration a decision someone has to make rather than an omission.
+PROBE_PATHS: dict[str, dict[str, str | None]] = {
+    "mcp-wing-read": {"served": "/api/v1/events", "unserved": None},
+    "mcp-wing-write": {"served": "/api/v1/events", "unserved": "/api/v1/pentest/findings"},
+    "mcp-bone": {"served": "/api/health", "unserved": None},
+    "mcp-keap": {"served": "/agent/v1/captures", "unserved": "/agent/v1/taxonomy/approve"},
+    "bash-read-only": {"served": None, "unserved": None},
+    "migration-file-write": {"served": None, "unserved": None},
+    "ask-operator": {"served": None, "unserved": None},
+}
 
 _PROBE = r"""
 require __DIR__ . '/vendor/autoload.php';
@@ -80,12 +111,18 @@ use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 
-[$_, $classesJson, $scopesJson] = $argv;
+[$_, $classesJson, $scopesJson, $pathsJson] = $argv;
+
+// Tokens present, so a missing-credential error can never masquerade as a
+// scope refusal. A refusal below is the tool's own gate or nothing.
+putenv('KEAP_AGENT_TOKEN_RO=probe-ro');
+putenv('KEAP_AGENT_TOKEN_RW=probe-rw');
+putenv('NOS_AGENT_WING_TOKEN=probe-wing');
 
 // Every mock request succeeds. A refusal in the output therefore came from the
 // tool's own gate, never from a transport failure standing in for one.
 function client(): Client {
-    $responses = array_fill(0, 20, new Response(200, [], '{"ok":true}'));
+    $responses = array_fill(0, 20, new Response(200, [], '{"WROTE":true}'));
     return new Client(['handler' => HandlerStack::create(new MockHandler($responses))]);
 }
 
@@ -116,47 +153,64 @@ function build(string $class): ToolInterface {
     return new $class(...$args);
 }
 
+function call(ToolInterface $tool, string $method, string $path, ToolContext $ctx): array {
+    $input = ['method' => $method, 'path' => $path];
+    if ($method === 'POST') {
+        $input['body'] = ['ts' => '2026-08-28T00:00:00Z', 'type' => 'gate_probe'];
+    }
+    $r = $tool->execute($input, $ctx);
+    return [
+        'is_error' => $r->isError,
+        'reason' => $r->metadata['refused_reason'] ?? null,
+        'content' => substr($r->content, 0, 200),
+    ];
+}
+
 $ctx = new ToolContext('s-1', 'th-1', 'tr-1', 'sp-1', 'agent:probe', 'tu-1');
 $scopes = json_decode($scopesJson, true);
+$paths = json_decode($pathsJson, true);
 $out = [];
 
 foreach (json_decode($classesJson, true) as $class) {
     $row = ['class' => $class];
     try {
         $tool = build($class);
-        $row['id'] = $tool->id();
+        $row['id'] = $id = $tool->id();
         $row['scopes'] = $tool->requiredScopes();
         $row['within_read_only_roster'] = array_diff($tool->requiredScopes(), $scopes) === [];
-        $r = $tool->execute(
-            ['method' => 'POST', 'path' => '/api/v1/events', 'body' => ['ts' => 'x']],
-            $ctx,
-        );
-        $row['post_is_error'] = $r->isError;
-        $row['post_content'] = substr($r->content, 0, 200);
-        $row['post_refused_reason'] = $r->metadata['refused_reason'] ?? null;
+        // Taking a Guzzle client means this tool talks to an estate HTTP
+        // plane, so it MUST carry a real probe path. Derived from the
+        // constructor, not from the table, so a new plane cannot declare
+        // itself out of scope. (BASE_URL would miss McpKeapTool, which
+        // resolves its base URL into a property at construct time.)
+        $ctor = (new ReflectionClass($tool))->getConstructor();
+        $row['talks_http'] = false;
+        foreach ($ctor?->getParameters() ?? [] as $p) {
+            $t = $p->getType() instanceof ReflectionNamedType ? $p->getType()->getName() : null;
+            if ($t === Client::class) {
+                $row['talks_http'] = true;
+            }
+        }
+        $served = $paths[$id]['served'] ?? null;
+        if ($served !== null) {
+            $row['get'] = call($tool, 'GET', $served, $ctx);
+            $row['post'] = call($tool, 'POST', $served, $ctx);
+            // Reach = whichever verb this tool does answer. If BOTH come back
+            // without a refused_reason and still error, the path never landed.
+            $row['reach'] = $row['get']['reason'] === null && !$row['get']['is_error']
+                ? $row['get'] : $row['post'];
+            $unserved = $paths[$id]['unserved'] ?? null;
+            if ($unserved !== null) {
+                $row['unserved'] = call($tool, 'POST', $unserved, $ctx);
+            }
+        }
     } catch (Throwable $e) {
         $row['build_error'] = get_class($e) . ': ' . $e->getMessage();
     }
     $out[] = $row;
 }
 
-// The write plane, driven directly: an un-granted route, then a granted one.
-$write = build(App\AgentKit\Tools\McpWingWriteTool::class);
-$ungranted = $write->execute(
-    ['method' => 'POST', 'path' => '/api/v1/pentest/findings', 'body' => []], $ctx);
-$granted = $write->execute(
-    ['method' => 'POST', 'path' => '/api/v1/events', 'body' => ['ts' => 'x']], $ctx);
-$readVerb = $write->execute(['method' => 'GET', 'path' => '/api/v1/events'], $ctx);
-$out2 = [
-    'ungranted' => ['is_error' => $ungranted->isError,
-                    'reason' => $ungranted->metadata['refused_reason'] ?? null,
-                    'content' => substr($ungranted->content, 0, 200)],
-    'granted'   => ['is_error' => $granted->isError, 'content' => substr($granted->content, 0, 80)],
-    'read_verb' => ['is_error' => $readVerb->isError,
-                    'reason' => $readVerb->metadata['refused_reason'] ?? null],
-];
-
-echo json_encode(['tools' => $out, 'write_plane' => $out2]);
+echo json_encode($out);
 """
 
 _REGISTRY_PROBE = r"""
@@ -202,7 +256,7 @@ echo json_encode([
 """
 
 
-def _run(src: str, name: str, *args: str) -> dict:
+def _run(src: str, name: str, *args: str) -> dict | list:
     probe = WING / name
     probe.write_text("<?php\n" + src, encoding="utf-8")
     try:
@@ -217,12 +271,23 @@ def _run(src: str, name: str, *args: str) -> dict:
 
 
 @pytest.fixture(scope="module")
-def driven() -> dict:
-    classes = registered_tool_classes()
+def driven() -> list[dict]:
     return _run(
         _PROBE, "verb-scope-probe.php",
-        json.dumps(classes), json.dumps(READ_ONLY_SCOPES),
+        json.dumps(registered_tool_classes()),
+        json.dumps(READ_ONLY_SCOPES),
+        json.dumps(PROBE_PATHS),
     )
+
+
+def _by_id(driven: list[dict], tool_id: str) -> dict:
+    row = next((r for r in driven if r.get("id") == tool_id), None)
+    assert row is not None, f"{tool_id} is no longer registered; the probe drove {driven}"
+    return row
+
+
+def _has_write_scope(row: dict) -> bool:
+    return any(s.endswith(".write") for s in row["scopes"])
 
 
 def test_the_registry_still_registers_the_two_planes():
@@ -242,71 +307,133 @@ def test_the_registry_still_registers_the_two_planes():
 
 
 @needs_php
-def test_every_registered_tool_is_buildable(driven: dict):
+def test_every_registered_tool_is_buildable(driven: list[dict]):
     """A tool this harness cannot construct is a tool it cannot drive, and an
     undriven tool is an untested one. Fail rather than silently skip it."""
-    unbuilt = {r["class"]: r["build_error"] for r in driven["tools"] if "build_error" in r}
+    unbuilt = {r["class"]: r["build_error"] for r in driven if "build_error" in r}
     assert not unbuilt, f"registered tools could not be instantiated: {unbuilt}"
 
 
 @needs_php
-def test_a_read_scoped_tool_refuses_a_post(driven: dict):
-    """THE gate. Every tool whose required scopes fit inside a read-only roster
-    is handed a POST; each must return ToolResult::error.
+def test_every_registered_tool_declares_a_probe_path(driven: list[dict]):
+    """A tool with no entry here is a tool this file never drives. Declaring
+    `None` is allowed, but it is a DECISION — and one the tool itself can
+    contradict: anything taking an HTTP client reaches an estate plane and must
+    name a path the probe can reach."""
+    ids = {r["id"] for r in driven}
+    assert ids == set(PROBE_PATHS), (
+        f"PROBE_PATHS covers {sorted(PROBE_PATHS)} but the registry builds "
+        f"{sorted(ids)}. Every registered tool must state how to make it write."
+    )
+    undeclared = [r["id"] for r in driven
+                  if r["talks_http"] and PROBE_PATHS[r["id"]]["served"] is None]
+    assert not undeclared, (
+        f"{undeclared} reach an estate HTTP plane (they take a Guzzle client) but "
+        "declare no served path, so no POST of theirs is ever driven"
+    )
 
-    This is what `wing.read` meant before the split and did not enforce.
-    """
-    offenders = []
-    for row in driven["tools"]:
-        if not row.get("within_read_only_roster"):
+
+@needs_php
+def test_the_probe_reaches_each_tools_own_gate(driven: list[dict]):
+    """THE lesson of this file. A refusal is only evidence if the request got
+    past the transport checks to the scope check. `mcp-keap` refused
+    `/api/v1/events` with "path must start with /agent/v1/" — a path-shape
+    complaint, no `refused_reason` — and the gate read that as a scope refusal
+    for four days."""
+    for row in driven:
+        if PROBE_PATHS[row["id"]]["served"] is None:
             continue
-        if not row["post_is_error"]:
-            offenders.append((row["id"], row["scopes"], row["post_content"]))
+        reach = row["reach"]
+        assert not (reach["is_error"] and reach["reason"] is None), (
+            f"{row['id']}: the probe path {PROBE_PATHS[row['id']]['served']!r} never "
+            f"reached the tool's gate — it failed with no refused_reason: {reach}. "
+            "Give it a path this tool actually serves."
+        )
+
+
+@needs_php
+def test_a_served_post_requires_a_write_scope(driven: list[dict]):
+    """THE gate. Any tool that ACCEPTS a POST must ask for a scope that names
+    writing. `wing.read` did not, and neither did `keap.read` — both served a
+    write to any agent that could read."""
+    offenders = [
+        (r["id"], r["scopes"], r["post"]["content"])
+        for r in driven
+        if PROBE_PATHS[r["id"]]["served"] is not None
+        and not r["post"]["is_error"] and not _has_write_scope(r)
+    ]
     assert not offenders, (
-        "a tool loadable under a read-only scope roster accepted a POST: "
-        f"{offenders}. A scope that does not name a verb cannot refuse it."
+        f"a tool served a POST without asking for a write scope: {offenders}. "
+        "A scope that does not name a verb cannot refuse it."
     )
 
 
 @needs_php
-def test_the_read_plane_refuses_at_the_verb_not_at_the_transport(driven: dict):
-    """The refusal must be the tool's own, and say so. A POST that fails
-    because a mock ran out of responses, or because the path was malformed,
-    would satisfy the assertion above while proving nothing."""
-    read = next(r for r in driven["tools"] if r.get("id") == "mcp-wing-read")
-    assert read["post_refused_reason"] == "verb_not_in_scope", (
-        f"mcp-wing-read refused for the wrong reason: {read!r}"
-    )
+def test_a_read_scoped_tool_refuses_a_post_at_the_verb(driven: list[dict]):
+    """Every tool whose required scopes fit inside a read-only roster is handed
+    a POST at a path it serves; each must refuse, and the refusal must be its
+    OWN — `refused_reason=verb_not_in_scope`, not a transport complaint.
+
+    Generalised over the registry (it was hardcoded to mcp-wing-read): a tool
+    added tomorrow is driven without anyone remembering to add it here.
+    """
+    for row in driven:
+        if PROBE_PATHS[row["id"]]["served"] is None or not row["within_read_only_roster"]:
+            continue
+        assert row["post"]["is_error"], (
+            f"{row['id']} is loadable under a read-only roster and accepted a "
+            f"POST: {row['post']}"
+        )
+        assert row["post"]["reason"] == "verb_not_in_scope", (
+            f"{row['id']} refused the POST for the wrong reason: {row['post']}. "
+            "A transport rejection is not a scope refusal."
+        )
 
 
 @needs_php
-def test_the_write_plane_refuses_a_route_it_was_not_granted(driven: dict):
+def test_a_write_only_tool_refuses_a_get(driven: list[dict]):
+    """Symmetry, and not cosmetic: a tool holding `X.write` without `X.read`
+    that also reads re-opens the door from the other side — one grant, two
+    verbs."""
+    for row in driven:
+        if PROBE_PATHS[row["id"]]["served"] is None:
+            continue
+        planes = {s.rsplit(".", 1)[0] for s in row["scopes"] if s.endswith(".write")}
+        if not any(f"{p}.read" not in row["scopes"] for p in planes):
+            continue
+        assert row["get"]["is_error"] and row["get"]["reason"] == "verb_not_in_scope", (
+            f"{row['id']} holds a write scope with no matching read scope but "
+            f"served a GET: {row['get']}"
+        )
+
+
+@needs_php
+def test_a_write_tool_refuses_a_path_it_was_not_granted(driven: list[dict]):
     """/api/v1/pentest/findings is a real Wing route that inspektor's prompt
-    asks for and that NO agent was ever measured calling. The allowlist is
-    grandfathered from measurement, so it must refuse."""
-    w = driven["write_plane"]["ungranted"]
-    assert w["is_error"] is True, f"the write plane accepted an un-granted route: {w}"
-    assert w["reason"] == "route_not_granted", f"refused for the wrong reason: {w}"
+    asks for and that NO agent was ever measured calling; /agent/v1/taxonomy/approve
+    is the KEAP route that would turn a proposal into a decision. Both are
+    reachable in shape and both must be refused by name."""
+    probed = [r for r in driven if "unserved" in r]
+    assert probed, "no tool is driven with an un-granted path — the grant is untested"
+    for row in probed:
+        u = row["unserved"]
+        assert u["is_error"], (
+            f"{row['id']} accepted the un-granted path "
+            f"{PROBE_PATHS[row['id']]['unserved']}: {u}"
+        )
+        assert u["reason"] in ("route_not_granted", "path_not_in_post_allowlist"), (
+            f"{row['id']} refused the un-granted path for the wrong reason: {u}"
+        )
 
 
 @needs_php
-def test_the_write_plane_accepts_the_route_it_was_granted(driven: dict):
+def test_the_write_plane_accepts_the_route_it_was_granted(driven: list[dict]):
     """NEGATIVE CONTROL — without it, a tool that refuses everything passes
     every other assertion in this file."""
-    g = driven["write_plane"]["granted"]
+    g = _by_id(driven, "mcp-wing-write")["post"]
     assert g["is_error"] is False, (
         f"the write plane refused its own granted route: {g}. Both agents that "
         "hold it file their report through /api/v1/events; refusing it silences them."
-    )
-
-
-@needs_php
-def test_the_write_plane_refuses_a_get(driven: dict):
-    """Symmetry, and not cosmetic: a write tool that also reads re-opens the
-    door from the other side — one grant, two verbs."""
-    r = driven["write_plane"]["read_verb"]
-    assert r["is_error"] is True and r["reason"] == "verb_not_in_scope", (
-        f"the write plane served a GET: {r}"
     )
 
 

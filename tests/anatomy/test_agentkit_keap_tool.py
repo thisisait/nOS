@@ -30,6 +30,27 @@ LIBRARIAN = REPO_ROOT / "files" / "anatomy" / "agents" / "librarian" / "agent.ym
 WING_PLIST = REPO_ROOT / "roles" / "pazny.wing" / "templates" / "wing.plist.j2"
 WING_ENV = REPO_ROOT / "roles" / "pazny.wing" / "templates" / "wing.env.j2"
 
+# The whole writable KEAP surface, and every entry is a PROPOSAL a moderator
+# decides. test_inspektor_librarian.py imports this to justify librarian
+# holding `keap.write` — one list, two readers, so the doctrine cannot be
+# widened in one file and still look narrow in the other.
+PROPOSAL_ONLY_POST_PATHS = [
+    "/agent/v1/captures",
+    "/agent/v1/lint/verdict",
+    "/agent/v1/objects",
+    "/agent/v1/promotions",
+    "/agent/v1/taxonomy/brief",
+    "/agent/v1/taxonomy/describe",
+    "/agent/v1/taxonomy/propose",
+]
+
+
+def keap_post_allowlist() -> list[str]:
+    """POST_ALLOWLIST as the tool actually declares it."""
+    m = re.search(r"POST_ALLOWLIST = \[([^\]]*)\]", TOOL_PHP.read_text(), re.DOTALL)
+    assert m, "McpKeapTool must declare POST_ALLOWLIST"
+    return sorted(re.findall(r"'(/[^']+)'", m.group(1)))
+
 
 def test_tool_class_exists_with_id_and_scopes():
     src = TOOL_PHP.read_text()
@@ -48,18 +69,8 @@ def test_tool_write_surface_is_allowlisted():
     (embeddings, lint run, admin) must NOT go through an LLM tool; widening
     this list is a doctrine change, not a refactor."""
     src = TOOL_PHP.read_text()
-    m = re.search(r"POST_ALLOWLIST = \[([^\]]*)\]", src, re.DOTALL)
-    assert m, "McpKeapTool must declare POST_ALLOWLIST"
-    paths = sorted(re.findall(r"'(/[^']+)'", m.group(1)))
-    assert paths == [
-        "/agent/v1/captures",
-        "/agent/v1/lint/verdict",
-        "/agent/v1/objects",
-        "/agent/v1/promotions",
-        "/agent/v1/taxonomy/brief",
-        "/agent/v1/taxonomy/describe",
-        "/agent/v1/taxonomy/propose",
-    ], f"POST allowlist drifted: {paths}"
+    paths = keap_post_allowlist()
+    assert paths == PROPOSAL_ONLY_POST_PATHS, f"POST allowlist drifted: {paths}"
     assert "in_array($path, self::POST_ALLOWLIST, true)" in src, (
         "McpKeapTool must enforce the POST allowlist"
     )
