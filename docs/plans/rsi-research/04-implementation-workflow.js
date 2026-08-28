@@ -341,6 +341,12 @@ enter('Grant')
 await pipeline([1],
   () => A(
     `${RULES}
+     ITEM 1 — ALREADY ON THE BRANCH (commit 8e77cc4a, McpWingReadTool.php +
+     McpWingWriteTool.php + test_a_tool_refuses_the_verb_its_scope_does_not_name.py).
+     DO NOT REDO IT. Your job is to VERIFY it is intact and complete only what is
+     missing against the spec below — read the commit first, and if it already
+     satisfies a clause, say so and move on. Re-authoring work that exists is how a
+     branch grows two answers to one question.
      ITEM 1 — split mcp-wing (files/anatomy/wing/app/AgentKit/Tools/McpWingTool.php) into
      mcp-wing-read (GET only, scope wing.read) and mcp-wing-write (POST, scope wing.write,
      per-route allowlist). Register both in app/config/common.neon.
@@ -364,6 +370,13 @@ await pipeline([1],
     { label: 'grant:tool-split', phase: 'Grant', effort: 'high' }),
   () => A(
     `${RULES}
+     ITEM 2 — ALREADY ON THE BRANCH (commit 3298ba04, TokenRepository +
+     BaseApiPresenter + provision-token.php + test_the_token_that_called_is_the_agent_that_ran.py).
+     DO NOT REDO IT — verify and complete only the gaps, per ITEM 1's note.
+     ONE GAP IS KNOWN AND OPEN: the bound path performs NO Authentik
+     client_credentials exchange at all, so a bound agent still presents nothing to
+     Bone (measured, 07-first-bound-night.md §4). A scoped Wing token on a runtime
+     that never authenticates to Bone is half a principal. Close that half.
      ITEM 2 — per-agent Wing principal. api_tokens gains a scopes column (idempotent ALTER in
      schema-extensions.sql, same sweep pattern as the P1 events ALTERs); BaseApiPresenter::
      startup() enforces route-class vs token scopes; McpWingTool subclasses read a per-agent
