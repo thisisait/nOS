@@ -777,6 +777,99 @@ row("notify-body-is-prompt", "a notification whose body is its own prompt", _REV
          "the result. Same family as a success marker written by the attempting code: the "
          "channel carried something, so nothing looked broken.")
 
+# ── Agentic planes — the RSI-research programme, answered 2026-08-28 ────────
+#
+# Sixteen operator answers (docs/plans/rsi-research/03-questionnaire.md) closed
+# the research; the workflow encodes them and REFUSES a questionnaire whose
+# answers drift. One row per build phase; Answers/Review are workflow control
+# steps, not estate work, and get no row.
+_PLANES = "2026-08-28"
+
+row("planes", "Two planes — sere finishing + nos-ops groundwork", _PLANES,
+    "queued", "agents",
+    refs="docs/plans/rsi-research/ · 04-implementation-workflow.js",
+    body="Sixteen answers in, three overruling the recommendation (Q8 no agent memory ever, "
+         "Q5 embryos deferred, Q12 mutex widens now). Truth before capability: identity, "
+         "oracle-written satisfaction, the output contract and the ledger join land before "
+         "any plane work; the ops harness MEASURES the 1B-vs-3-7B boundary rather than "
+         "building the plane. Deliverable is commits on a feat/ branch; the operator "
+         "converges.")
+
+row("planes-prune", "Agent memory deleted entirely, with a gate against return", _PLANES,
+    "queued", "agents", parent="planes",
+    refs="Q8 · tests/anatomy/test_agent_memory_does_not_return.py (to ship)",
+    body="Q8=c: KEAP is the estate's memory; a second memory beside the cortex is a second "
+         "truth. Dreamer, MemoryStore, dream-agent, the agent_memory_stores TABLE and "
+         "test_agentkit_dreams.py all go in one commit, and a new gate fails if any of them "
+         "reappear. Coordinator/ProcessPool (~800 unreachable lines) go with them.")
+
+row("planes-mutex", "One lock, three slots: AgentKit N=3, claude-CLI exclusive", _PLANES,
+    "queued", "agents", parent="planes",
+    refs="Q12 · files/anatomy/scripts/agent-run-lock.sh",
+    body="Operator overruled the wait: AgentKit runs are PHP in-process, a different failure "
+         "mode from the 2026-05-27 CLI crashes, and may run three abreast. A CLI spawn takes "
+         "ALL THREE slots — still meets nobody. Per-slot stale reclaim kept; a second lock "
+         "for the CLI path is explicitly forbidden. N=3 defended on evidence: wing.db is "
+         "WAL (read live 2026-08-28) and Wing web + Pulse already write it concurrently; "
+         "the real fix is a busy_timeout where AgentKit opens the DB, so writers queue "
+         "instead of erroring. Gate executes the script, not its text.")
+
+row("planes-grant", "mcp-wing split + per-agent principals, grants from measured use", _PLANES,
+    "queued", "agents", parent="planes",
+    refs="Q14 · arch items 1-2 · McpWingTool.php",
+    body="Read/write tool split with per-route allowlists; api_tokens gains enforced scopes. "
+         "Q14=b as amended: write routes grandfathered from the FULL agent_tool_use history "
+         "— no hardcoded window — with the query output COMMITTED and stating the span it "
+         "covered, so every grant is traceable to a measurement whose extent is visible. A "
+         "route nobody called is not granted, and that absence is a finding.")
+
+row("planes-oracle", "Oracle-written satisfaction + the three-stage output contract", _PLANES,
+    "queued", "agents", parent="planes",
+    refs="Q9 Q10 · arch items 3-4 · Runner.php",
+    body="satisfied requires a gate_run_id, constraint in the SCHEMA. Q10=b: no grader to "
+         "start — oracle raw output is the revision signal; the same-model fallback is "
+         "deleted. Q9: hardcoded shape parser, then ONE format-only re-ask, else UNPARSEABLE "
+         "— and any repair sets output_repaired, because silent repair is a success marker "
+         "written by the thing that failed. Best iteration reported, not last.")
+
+row("planes-ledger", "Proposer onto AgentKit; every proposal names a session", _PLANES,
+    "queued", "agents", parent="planes",
+    refs="Q13 · arch item 5 · tools/loop-propose.py",
+    body="The bypassPermissions claude --print spawn is replaced by a session with ceilings, "
+         "scope gate and lineage; loop_proposals gains session_uuid. Q13=a: existing "
+         "ceilings. Also cuts the Q6 seam: 'harness' joins INTENT_CLASSES as "
+         "declared-but-disabled, refused by name. Until this lands, 'AgentKit-driven "
+         "nos-loop' is two systems sharing a string.")
+
+row("planes-surface", "Agent nodes, /questions, and the loop editor with its off toggle", _PLANES,
+    "queued", "agents", parent="planes",
+    refs="Q6 Q7 Q15 · 02-visualisation.md",
+    body="agent:<name> becomes the 14th node kind; /questions is Wing UI only with expiry = "
+         "refuse (an approval channel is an authentication surface). Q6: the loop editor "
+         "renders every harness read-only plus every intent class incl. the disabled "
+         "harness kind; harness_proposals_enabled is a KEAP DataTable row with a committed "
+         "default-OFF fixture, its table path denylisted — you cannot consent to what you "
+         "cannot see, and a permission a system can grant itself is not a permission.")
+
+row("planes-ops-harness", "The nos-ops measurement harness — where is the tier boundary", _PLANES,
+    "queued", "agents", parent="planes",
+    refs="Q3 Q4 · state/llm-backends.yml",
+    body="Q3=a: the plane's go/no-go is a measurement. mode: one_shot plus a harness over a "
+         "model-size RANGE — the question is not 'is 1B enough' but where the boundary sits "
+         "between the ~1B chain tier and the ~3-7B tool-use tier fine-tuned on nos-lang:1B "
+         "output. Code oracle scores labels; the model never self-assesses. No tenant DBs, "
+         "no embryos this cycle (Q11, Q5).")
+
+row("planes-harness-kind", "The guarded 'harness' proposal kind — after the surface", _PLANES,
+    "queued", "agents", parent="planes",
+    refs="Q6 · 01-architecture.md deferred",
+    body="NOT built this cycle, but its seams ARE: 'harness' enters the closed "
+         "INTENT_CLASSES enum as declared-but-disabled (refusal names the toggle), the "
+         "KEAP toggle row exists default OFF, and the editor already renders the disabled "
+         "kind. The later cycle's one change is wiring the ledger's refusal to READ the "
+         "live toggle. Judge B's edit-the-gate objection stands until the operator throws "
+         "the switch. Unblocks on planes-surface shipping and the operator having seen it.")
+
 print(f"prepared {len(R)} rows")
 
 # ── Orphan gate: KEAP cannot enforce this, so the seeder must ───────────────

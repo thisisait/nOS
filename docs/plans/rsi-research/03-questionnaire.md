@@ -278,6 +278,14 @@ SELECT over `agent_tool_use` events.
 > the grant must be traceable to the measurement that justified it. A route
 > nobody called is not granted, and that absence is a finding worth reporting,
 > not a gap to fill.
+>
+> **AMENDMENT (operator, 2026-08-28, second pass): no hardcoded window.** "I
+> would hate to have hardcoded logic somewhere waiting 90 days." The query uses
+> the FULL available `agent_tool_use` history and the committed output STATES
+> the span it covered (MIN/MAX timestamp + row count) — a grant justified by
+> "the last 90 days" when the table is three weeks old is a measurement that
+> reads bigger than it is. If a bound is ever needed, it is a parameter whose
+> default derives from the data, never a constant.
 
 **Q15. The `/questions` surface: answer channels and expiry policy.**
 - Channels day one: (a) Wing UI only (b) Wing + ntfy actions (c) Wing + ntfy + telegram.
