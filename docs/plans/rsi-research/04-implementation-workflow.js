@@ -108,7 +108,12 @@ const EXPECTED = {
 
 const RULES = `
 HARD CONSTRAINTS
-- Work on a feat/ branch off dev. Commit per completed unit, Conventional Commits, surgeon
+- Work on the branch `feat/planes-build`, off dev, and ONLY that one. Create it if it does
+  not exist, otherwise check it out — never `git switch -c` a name of your own. Two writers
+  in the same phase run in PARALLEL and share it: commit only the files your item names, and
+  if the branch has moved under you, rebase onto it rather than branching away. (Measured
+  2026-08-28: with no branch named, two Grant writers made two branches, neither containing
+  the other.) Commit per completed unit, Conventional Commits, surgeon
   tone, subject <= 50 chars. NO push to any remote. NO converge: never run ansible-playbook,
   tools/nos-stacks.sh, docker compose, launchctl. The repo is not the running system.
 - A gate ships in the same commit as the machinery it pins, and it must read the ARTIFACT
@@ -160,13 +165,31 @@ if (drift.length) {
 }
 log('answers ok — client plane: nos-ops, ops plane: measure-first (Q3=a)')
 
+// A phase whose stages never ran is the failure this workflow already shipped once: a
+// falsy pipeline item skipped Prune and Mutex entirely and the run continued as if they
+// had passed (measured 2026-08-28 — pipeline([null]) invoked its stage zero times).
+// `ran()` makes that impossible to do quietly: every phase counts its own invocations and
+// throws if the count is zero.
+// Reads the RESULTS rather than counting calls: a phase whose stages never ran
+// returns nothing to look at, which is exactly the state that must stop the run.
+const mustHaveRun = (name, results) => {
+  const got = [results].flat(9).filter((r) => r !== null && r !== undefined).length
+  if (got === 0) {
+    throw new Error(`phase ${name} produced NOTHING — no stage ran, or every one died. ` +
+                    `A phase that did not happen must stop the workflow, not be skipped ` +
+                    `in silence (2026-08-28: a falsy pipeline item skipped two phases).`)
+  }
+  log(`phase ${name}: ${got} agent result(s)`)
+  return results
+}
+
 phase('Prune')
 
 // 2 agents (writer + verifier). Why first: deletions cannot break a runtime path that was
 // never reachable, and removing the gravity well (three corpus reports recommended building
 // ON Dreams) before any build phase prevents the workflow's own agents rediscovering it.
 // Q8=c makes this TOTAL: no agent memory ever — table included, and a gate against return.
-await pipeline([null],
+mustHaveRun('Prune', await pipeline([1],
   () => agent(
     `${RULES}
      DELETE agent memory ENTIRELY (Q8=c: no agent memory ever; KEAP is the estate's memory)
@@ -216,7 +239,7 @@ phase('Mutex')
 // a writer whose busy_timeout is 0 — which is what the writer below must close. What
 // would CHANGE N: measured SQLITE_BUSY / lock-wait rates from three real concurrent runs,
 // not a feeling.
-await pipeline([null],
+mustHaveRun('Mutex', await pipeline([1],
   () => agent(
     `${RULES}
      Q12 — widen files/anatomy/scripts/agent-run-lock.sh to a SLOT DIRECTORY of N=3:
@@ -273,7 +296,7 @@ phase('Grant')
 // the tool; a scoped Wing token on a runtime that never authenticates to Bone is half a
 // principal. Whatever this phase ships, a bound run must end able to reach a scoped Bone
 // endpoint — verify that, do not infer it.
-await parallel([
+mustHaveRun('Grant', await parallel([
   () => agent(
     `${RULES}
      ITEM 1 — split mcp-wing (files/anatomy/wing/app/AgentKit/Tools/McpWingTool.php) into
@@ -356,7 +379,7 @@ phase('Oracle')
 //       constraint this phase adds must therefore also carry what the run ACTED ON (rows
 //       judged, files written, records posted: zero is a legitimate value that must be
 //       STORED, not absent). "Nothing to do" and "did the thing" may not render alike.
-await pipeline([null],
+mustHaveRun('Oracle', await pipeline([1],
   () => agent(
     `${RULES}
      ITEMS 3+4 + the Q9 output contract — oracle-written satisfaction, no grader to start:
@@ -404,7 +427,7 @@ phase('Ledger')
 
 // 2 agents. Why: joins the two provenance systems — until a proposal names a session,
 // "AgentKit-driven nos-loop" is two systems sharing a string. Q13=a: existing ceilings.
-await pipeline([null],
+mustHaveRun('Ledger', await pipeline([1],
   () => agent(
     `${RULES}
      ITEM 5 — join the ledgers (Q13=a, existing ceilings):
@@ -443,7 +466,7 @@ phase('Surface')
 // cannot supervise a loop they cannot see (02-visualisation.md) — and Q6's build order is
 // SURFACE FIRST: the loop editor where harnesses are visible, the toggle with it (default
 // OFF, denylisted), and only after that may a later cycle add the 'harness' proposal kind.
-await parallel([
+mustHaveRun('Surface', await parallel([
   () => agent(
     `${RULES}
      Graph model: tools/anatomy-graph-gen.py emits agent:<name> as a 14th node kind from
@@ -517,7 +540,7 @@ phase('Ops harness')
 // phase builds the instrument, not the plane. Q4: the instrument is parameterised over a
 // model-size RANGE, because the question is not "is 1B enough" but "where is the boundary
 // between the ~1B chain tier and the ~3-7B tool-use tier".
-await pipeline([null],
+mustHaveRun('Ops harness', await pipeline([1],
   () => agent(
     `${RULES}
      one_shot mode + the nos-ops measurement harness (Q3=a, Q4 two-tier):
@@ -585,4 +608,4 @@ const review = await agent(
     } })
 
 log(`done: ${review.gatesPassed} gates green, ${review.gatesFailed} red, ` +
-    `${review.commitsWithoutGates.length} unpinned commits — operator steps in 06-build-report.md`)
+    `${review.commitsWithoutGates.length} unpinned commits — operator steps in 06-build-report.md`))))))))

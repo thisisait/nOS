@@ -84,7 +84,13 @@ def test_master_name_is_referenced_only_where_designed():
         }:
             continue
         rel = str(path.relative_to(REPO))
-        if rel.startswith((".git/", ".ci-venv/", "tests/", "docs/devlog/")):
+        # `.claude/worktrees/` is a CHECKOUT OF THIS REPO, created by isolated
+        # agents. Scanning it re-reports the main tree's own files under a second
+        # path and makes the verdict depend on which worktrees happen to be left
+        # lying about — this gate went red on 2026-08-28 for exactly that, with
+        # nine hits that were all one agent's sibling checkout.
+        if rel.startswith((".git/", ".ci-venv/", "tests/", "docs/devlog/",
+                           ".claude/worktrees/")):
             continue
         if rel in _MASTER_NAME_ALLOWED:
             continue
