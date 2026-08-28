@@ -73,6 +73,25 @@ final class McpWingTool implements ToolInterface
 		);
 	}
 
+	/** The live route table, derived from the router the request just missed. */
+	private static function routes(): string
+	{
+		static $cached = null;
+		if ($cached !== null) {
+			return $cached;
+		}
+		$router = __DIR__ . '/../../Core/RouterFactory.php';
+		if (!is_readable($router)) {
+			// Fail soft and SAY so — a silently empty hint would read as
+			// "there are no other routes", which is the worse wrong answer.
+			return $cached = '  (route table unreadable at ' . $router . ')';
+		}
+		preg_match_all("/addRoute\('(api\/v1[^']*)'/", (string) file_get_contents($router), $m);
+		$paths = array_unique($m[1] ?? []);
+		sort($paths);
+		return $cached = '  /' . implode("\n  /", $paths);
+	}
+
 	public function execute(array $input, ToolContext $context): ToolResult
 	{
 		$method = strtoupper((string) ($input['method'] ?? 'GET'));
@@ -122,6 +141,14 @@ final class McpWingTool implements ToolInterface
 		// mb_strcut, not substr: a byte cut mid-codepoint breaks UTF-8.
 		if (strlen($payload) > self::MAX_RESPONSE_BYTES) {
 			$payload = mb_strcut($payload, 0, self::MAX_RESPONSE_BYTES, 'UTF-8') . '…[truncated]';
+		}
+
+		// A 404 is the model guessing a plausible path out of this tool's prose
+		// description — it invented /api/v1/systems and /api/v1/health, then gave
+		// up (surveyor, 2026-08-28). Answer with the routes that exist, read from
+		// the router rather than restated here, so the hint cannot drift from it.
+		if ($status === 404) {
+			$payload .= "\n\nThat path is not routed. Routes that exist:\n" . self::routes();
 		}
 
 		return new ToolResult(

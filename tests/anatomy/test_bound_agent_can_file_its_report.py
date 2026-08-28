@@ -19,6 +19,23 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 WING = REPO / "files/anatomy/wing"
 
+PROBE_404 = r"""
+require __DIR__ . '/vendor/autoload.php';
+
+use App\AgentKit\Tools\McpWingTool;
+use App\AgentKit\Tools\ToolContext;
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Response;
+
+$stack = HandlerStack::create(new MockHandler([new Response(404, [], '<html>not found</html>')]));
+$tool = new McpWingTool(new Client(['handler' => $stack]), 'probe-token');
+$ctx = new ToolContext('s-1', 'th-1', 't-1', 'sp-1', 'probe', 'tu-1');
+$r = $tool->execute(['method' => 'GET', 'path' => '/api/v1/systems'], $ctx);
+echo json_encode(['content' => $r->content]);
+"""
+
 PROBE = r"""
 require __DIR__ . '/vendor/autoload.php';
 
@@ -73,3 +90,29 @@ def test_post_is_hmac_signed_over_the_bytes_sent() -> None:
         b"probe-secret", f"{got['ts']}.{got['raw']}".encode(), hashlib.sha256
     ).hexdigest()
     assert got["sig"] == expected, "signature does not verify over the raw body sent"
+
+
+def _run(src: str, name: str) -> dict:
+    probe = WING / name
+    probe.write_text("<?php\n" + src, encoding="utf-8")
+    try:
+        out = subprocess.run(["php", probe.name], cwd=WING,
+                             capture_output=True, text=True, timeout=60)
+    finally:
+        probe.unlink(missing_ok=True)
+    assert out.returncode == 0, out.stderr
+    return json.loads(out.stdout)
+
+
+def test_a_404_answers_with_the_routes_that_exist() -> None:
+    """The surveyor invented /api/v1/systems and /api/v1/health out of this
+    tool's prose description, got two 404s and gave up (2026-08-28, session
+    505e0f11). A 404 now answers with the live route table — read from the
+    router the request just missed, so the hint cannot drift from it.
+    """
+    content = _run(PROBE_404, "hmac-probe-404.php")["content"]
+    assert "not routed" in content, "a 404 no longer tells the model what exists"
+    for route in ("/api/v1/events", "/api/v1/pulse_jobs", "/api/v1/hub/health"):
+        assert route in content, f"the route hint omits {route}"
+    assert "unreadable" not in content, "the tool could not find the router"
+    assert "/api/v1/systems\n" not in content
