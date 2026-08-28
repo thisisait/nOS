@@ -7,10 +7,9 @@ into a green *skip* instead of a failure, hiding a regression. This gate closes
 the hole: the core AgentKit contract files MUST exist, or CI fails loudly.
 
 Scope = the load-bearing contract surface the other AgentKit tests skip-guard
-(LLM client interface + adapters, Coordinator/ProcessPool/Runner/Loader, the
-Dreams memory subsystem, vault resolver, OTel exporter, the MCP tool, the
-webhook dispatcher, the two CLIs, the conductor profile). Added 2026-05-26 in
-the reality-vs-promises review.
+(LLM client interface + adapters, Runner/Loader, the vault resolver, OTel
+exporter, the MCP tool, the webhook dispatcher, the CLI, the conductor
+profile). Added 2026-05-26 in the reality-vs-promises review.
 """
 
 from __future__ import annotations
@@ -33,21 +32,16 @@ WING_TASKS = REPO / "roles" / "pazny.wing" / "tasks" / "main.yml"
 
 SHIPPED = [
     AK / "Agent.php",
-    AK / "Coordinator.php",
-    AK / "ProcessPool.php",
     AK / "Runner.php",
     AK / "AgentLoader.php",
     AK / "LLMClient" / "LLMClientInterface.php",
     AK / "LLMClient" / "AnthropicAdapter.php",
     AK / "LLMClient" / "OpenClawAdapter.php",
-    AK / "Memory" / "Dreamer.php",
-    AK / "Memory" / "MemoryStore.php",
     AK / "Vault" / "CredentialResolver.php",
     AK / "Telemetry" / "OtelExporter.php",
     AK / "Tools" / "McpWingTool.php",
     AK / "Webhook" / "WebhookDispatcher.php",
     WING_BIN / "run-agent.php",
-    WING_BIN / "dream-agent.php",
     REPO / "files" / "anatomy" / "agents" / "conductor" / "agent.yml",
 ]
 

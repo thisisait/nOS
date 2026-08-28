@@ -346,15 +346,13 @@ final class AgentSessionRepository
 	}
 
 	/**
-	 * Coordinator pre-creates a child agent_threads row in 'pending' status
-	 * BEFORE spawning the subprocess. Status flips pending → running on
-	 * spawn confirmation, then to idle / error / terminated on subprocess
-	 * exit (handled by markChildThreadStatus / endChildThread).
+	 * Pre-create a child agent_threads row in 'pending' status BEFORE spawning
+	 * a subprocess. Callers MUST set role='child' and parent_thread_uuid;
+	 * startThread() stays the canonical primary-thread path.
 	 *
-	 * Why a separate method: keeps the multi-agent path explicit so future
-	 * archaeology of "where do child threads come from?" lands on this entry
-	 * point. Callers MUST set role='child' and parent_thread_uuid; the
-	 * existing startThread() pattern stays the canonical primary-thread path.
+	 * NO CALLER since 2026-08-28 — Coordinator/ProcessPool were deleted (every
+	 * manifest is multiagent.type: solo). Kept with the historic rows they
+	 * wrote; delete with them if the child-thread columns ever go.
 	 *
 	 * @param array<string, mixed> $row
 	 */
@@ -401,11 +399,9 @@ final class AgentSessionRepository
 
 	/**
 	 * Close a child thread row when its subprocess exits. status surfaces
-	 * one of idle | error | terminated mirroring ProcessPoolResult.status.
-	 * Optional childSessionUuid links the parent thread row to the child's
-	 * own agent_sessions row (the child runs Runner::run() which creates
-	 * its own session uuid + trace_id; we capture it here so /agents UI
-	 * can deep-link from coordinator → child).
+	 * one of idle | error | terminated. Optional childSessionUuid links the
+	 * parent thread row to the child's own agent_sessions row so /agents UI
+	 * can deep-link parent → child. No caller since 2026-08-28 (see above).
 	 */
 	public function endChildThread(
 		string $threadUuid,

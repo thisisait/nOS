@@ -67,18 +67,16 @@ def _strip_php_comments_and_strings(src: str) -> str:
 
 
 def test_tool_id_is_migration_file_write(src: str):
-    """The tool id is migration-file-write, NEVER bash-write. bash-write is a
-    forbidden/negative token in test_agentkit_dreams.py; registering a real
-    bash-write would tangle that gate AND advertise a general shell-write
-    capability this tool deliberately does not have."""
+    """The tool id is migration-file-write, NEVER bash-write. Registering a
+    real bash-write would advertise a general shell-write capability this tool
+    deliberately does not have."""
     assert re.search(
         r"function\s+id\s*\(\s*\)\s*:\s*string\s*\{\s*return\s+'migration-file-write'\s*;",
         src,
     ), "id() must return 'migration-file-write'"
     # bash-write must NOT be the id of this tool.
     assert "'bash-write'" not in src, (
-        "MigrationWriteTool.php must not reference 'bash-write' — wrong id, "
-        "tangles the dreams gate"
+        "MigrationWriteTool.php must not reference 'bash-write' — wrong id"
     )
 
 
