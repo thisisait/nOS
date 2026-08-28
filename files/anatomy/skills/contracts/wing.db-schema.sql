@@ -162,7 +162,8 @@ CREATE TABLE api_tokens (
 		created_by  TEXT,
 		created_at  TEXT NOT NULL DEFAULT (datetime('now')),
 		last_used_at TEXT,
-		active      INTEGER NOT NULL DEFAULT 1
+		active      INTEGER NOT NULL DEFAULT 1,
+		scopes      TEXT
 	, cortex_verbs TEXT, cortex_namespaces TEXT, cortex_tenants TEXT);
 
 CREATE TABLE attack_probes (

@@ -43,6 +43,31 @@ final class TokenRepository
 
 
 	/**
+	 * Does a token's `scopes` list permit this HTTP method?
+	 *
+	 * ROUTE CLASS IS THE METHOD. At startup() — before any action runs — the
+	 * only thing known about what the caller is about to do is the verb, and
+	 * every API presenter here branches on exactly that. So GET/HEAD is the
+	 * read class and everything else is the write class; no second table of
+	 * route names to drift from the router.
+	 *
+	 * NULL/'' = unscoped = UNRESTRICTED. See the column's note in
+	 * bin/init-db.php for why this default is the opposite of cortex's.
+	 */
+	public static function permits(?string $scopes, string $method): bool
+	{
+		$granted = array_filter(array_map('trim', explode(',', (string) $scopes)));
+		if (!$granted) {
+			return true;
+		}
+		if (in_array(strtoupper($method), ['GET', 'HEAD'], true)) {
+			return (bool) array_intersect($granted, ['wing.read', 'wing.write']);
+		}
+		return in_array('wing.write', $granted, true);
+	}
+
+
+	/**
 	 * Create a new API token. Stores SHA-256 hash, not plaintext.
 	 */
 	public function create(string $token, string $name = 'default', ?string $createdBy = null): void

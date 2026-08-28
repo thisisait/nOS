@@ -43,10 +43,12 @@ WING_APP="${WING_APP:-$HOME/wing/app}"
 LABEL="${WING_LAUNCHD_LABEL:-eu.thisisait.nos.wing}"
 
 SHOW_ENV=0
+AGENT_NAME=""
 PASSTHRU=()
 for arg in "$@"; do
     case "$arg" in
         --show-env)            SHOW_ENV=1 ;;
+        --agent=*)             AGENT_NAME="${arg#*=}"; PASSTHRU+=("$arg") ;;
         --ceiling-tokens=*)    export NOS_AGENT_SESSION_TOKEN_CEILING="${arg#*=}" ;;
         --ceiling-seconds=*)   export NOS_AGENT_SESSION_WALL_CLOCK_S="${arg#*=}" ;;
         *)                     PASSTHRU+=("$arg") ;;
@@ -99,8 +101,32 @@ done < <(printf '%s\n' "$LOADED" | sed -n 's/^[[:space:]]*\([A-Z][A-Z0-9_]*\) =>
 # other than itself (a TypeError in the DI container; an unbound resolve
 # demanding a key nobody sets).
 REQUIRED=(NOS_REPO_ROOT)
-REPORTED=(NOS_ARMED_BACKENDS NOS_MINIMAX_MODEL WING_API_TOKEN \
+REPORTED=(NOS_ARMED_BACKENDS NOS_MINIMAX_MODEL WING_API_TOKEN NOS_AGENT_WING_TOKEN \
           KEAP_AGENT_TOKEN_RO WING_EVENTS_HMAC_SECRET)
+
+# ── The agent's OWN Wing principal ───────────────────────────────────────────
+# The passthrough above just handed this process the daemon's WING_API_TOKEN —
+# the OPERATOR's admin bearer. An agent presenting it is recorded as the
+# operator: every event it writes carries actor_id 'ansible-provisioned', and
+# "which agent did this" has no answer. Its own api_tokens row already exists
+# (roles/pazny.wing/tasks/post.yml provisions one per agent, named after it);
+# what the CLI path lacked was any way to present it.
+#
+# Absence is a WARN and not a refusal: on a pre-converge estate the per-agent
+# secret is not persisted yet, and refusing would break the runner over an
+# attribution defect it is fixing. McpWingTool logs the same fallback.
+SECRETS_FILE="${NOS_SECRETS_FILE:-$HOME/.nos/secrets.yml}"
+if [[ -n "$AGENT_NAME" ]]; then
+    secret_key="${AGENT_NAME//-/_}_wing_api_token"
+    agent_token="$(python3 -c 'import sys,yaml;print((yaml.safe_load(open(sys.argv[1])) or {}).get(sys.argv[2]) or "")' \
+        "$SECRETS_FILE" "$secret_key" 2>/dev/null || true)"
+    if [[ -n "$agent_token" ]]; then
+        export NOS_AGENT_WING_TOKEN="$agent_token"
+    else
+        echo "[run-agent] WARN: no ${secret_key} in ${SECRETS_FILE} — Wing will" >&2
+        echo "[run-agent] attribute this run to the operator token, not to ${AGENT_NAME}." >&2
+    fi
+fi
 
 missing=()
 for name in "${REQUIRED[@]}"; do

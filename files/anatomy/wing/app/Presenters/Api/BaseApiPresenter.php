@@ -38,6 +38,13 @@ abstract class BaseApiPresenter extends Presenter
 		}
 
 		$this->requireTokenAuth();
+
+		if (!TokenRepository::permits($this->validatedToken['scopes'] ?? null, $this->getMethod())) {
+			$this->sendError(
+				'Token scope does not permit ' . $this->getMethod() . ' on the ops plane',
+				IResponse::S403_Forbidden,
+			);
+		}
 	}
 
 	private function requireTokenAuth(): void

@@ -27,9 +27,26 @@ abstract class McpWingTool implements ToolInterface
 		?string $bearerToken = null,
 	) {
 		// Resolve at construct time so DI doesn't need a parameter binding.
-		// CLI runs export WING_API_TOKEN directly; daemon mode picks it up from
-		// the launchd plist environment block.
-		$this->bearerToken = (string) ($bearerToken ?? getenv('WING_API_TOKEN') ?: '');
+		//
+		// NOS_AGENT_WING_TOKEN FIRST — it is the running agent's OWN principal,
+		// so `events.actor_id` names the agent that ran. WING_API_TOKEN is the
+		// operator's admin bearer, and tools/run-agent.sh exports the whole
+		// daemon environment, which means a CLI run silently borrows it and
+		// every event the agent writes is attributed to 'ansible-provisioned'.
+		// The fallback stays so a pre-converge estate keeps working — but it
+		// says so, because a wrong-but-plausible actor is the expensive kind.
+		if ($bearerToken === null) {
+			$bearerToken = getenv('NOS_AGENT_WING_TOKEN') ?: null;
+			if ($bearerToken === null) {
+				$bearerToken = getenv('WING_API_TOKEN') ?: '';
+				error_log(
+					'[mcp-wing] WARN: no NOS_AGENT_WING_TOKEN — falling back to the '
+					. 'operator WING_API_TOKEN. Wing will attribute this run to that '
+					. 'token, not to this agent.'
+				);
+			}
+		}
+		$this->bearerToken = (string) $bearerToken;
 	}
 
 	/** The one HTTP verb this tool's scope names. */

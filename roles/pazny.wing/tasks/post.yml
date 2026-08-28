@@ -226,6 +226,10 @@
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ conductor_wing_api_token }}
       - --name=conductor
+      # Ops-plane route class. Written even where it grants everything a NULL
+      # would: an unscoped row cannot be told apart from one nobody has got
+      # round to scoping, and that ambiguity is what makes a widening invisible.
+      - --scopes=wing.read,wing.write
     chdir: "{{ wing_app_dir }}"
   register: _wing_conductor_token
   changed_when: >
@@ -273,6 +277,7 @@
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ librarian_wing_api_token }}
       - --name=librarian
+      - --scopes=wing.read,wing.write
     chdir: "{{ wing_app_dir }}"
   register: _wing_librarian_token
   changed_when: >
@@ -299,6 +304,10 @@
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ surveyor_wing_api_token }}
       - --name=surveyor
+      # The one agent whose whole contract is read-only, so the token says so.
+      # Its report reaches Wing over the HMAC events path, which takes no
+      # bearer at all — this refuses every OTHER write it could reach for.
+      - --scopes=wing.read
     chdir: "{{ wing_app_dir }}"
   register: _wing_surveyor_token
   changed_when: >
@@ -317,6 +326,7 @@
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ upgrade_architect_wing_api_token }}
       - --name=upgrade-architect
+      - --scopes=wing.read,wing.write
     chdir: "{{ wing_app_dir }}"
   register: _wing_upgrade_architect_token
   changed_when: >
@@ -332,6 +342,7 @@
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ openclaw_wing_api_token }}
       - --name=openclaw
+      - --scopes=wing.read,wing.write
     chdir: "{{ wing_app_dir }}"
   register: _wing_openclaw_token
   changed_when: >
