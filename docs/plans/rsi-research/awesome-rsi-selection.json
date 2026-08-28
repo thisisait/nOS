@@ -1,0 +1,394 @@
+[
+ {
+  "section": "Fundamentals & Getting Started",
+  "sub": null,
+  "title": "A Survey of Self-Evolving Agents: On Path to Artificial Super Intelligence",
+  "url": "https://arxiv.org/abs/2507.21046",
+  "note": "Surveys what, when, and how foundation-model agents can evolve across models, memory, tools, and architectures. (TMLR 2026)"
+ },
+ {
+  "section": "Fundamentals & Getting Started",
+  "sub": null,
+  "title": "Recursive Self-Improvement in AI: From Bounded Self-Refinement to Autonomous Research Loops",
+  "url": "https://arxiv.org/abs/2607.07663",
+  "note": "Surveys recent self-improvement work by update target and loop closure while separating bounded refinement from open-ended RSI. (arXiv 2026)"
+ },
+ {
+  "section": "Model-level RSI",
+  "sub": "Self-Training & Self-Reward",
+  "title": "EvoLM: Self-Evolving Language Models through Co-Evolved Discriminative Rubrics",
+  "url": "https://arxiv.org/abs/2605.03871",
+  "note": "Alternately trains one model to generate discriminative rubrics and improve its policy from rubric-conditioned rewards without human annotations or external reward models. (arXiv 2026)"
+ },
+ {
+  "section": "Model-level RSI",
+  "sub": "Self-Training & Self-Reward",
+  "title": "RLAIF vs. RLHF: Scaling Reinforcement Learning from Human Feedback with AI Feedback",
+  "url": "https://arxiv.org/abs/2309.00267",
+  "note": "Studies reinforcement learning from AI-generated preferences as a scalable alternative to direct human feedback. (ICML 2024)"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Prompt & Program Optimization",
+  "title": "Automated Design of Agentic Systems",
+  "url": "https://arxiv.org/abs/2408.08435",
+  "note": "Uses a meta-agent to invent and iteratively improve agent architectures represented as executable code. (ICLR 2025)"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Prompt & Program Optimization",
+  "title": "TextGrad: Automatic \"Differentiation\" via Text",
+  "url": "https://arxiv.org/abs/2406.07496",
+  "note": "Backpropagates textual feedback through compound AI systems to optimize prompts, code, and other textual variables. (Nature 2025)"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Prompt & Program Optimization",
+  "title": "Language Agent Tree Search Unifies Reasoning, Acting, and Planning in Language Models",
+  "url": "https://arxiv.org/abs/2310.04406",
+  "note": "Combines Monte Carlo tree search, model-based value estimates, environment feedback, and self-reflection without updating base weights. (ICML 2024)"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Prompt & Program Optimization",
+  "title": "Large Language Models as Optimizers",
+  "url": "https://arxiv.org/abs/2309.03409",
+  "note": "Introduces OPRO, which iteratively proposes and evaluates natural-language solutions and prompts from a history of scored attempts. (ICLR 2024)"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Prompt & Program Optimization",
+  "title": "Promptbreeder: Self-Referential Self-Improvement Via Prompt Evolution",
+  "url": "https://arxiv.org/abs/2309.16797",
+  "note": "Evolves both task prompts and the mutation prompts that generate future prompt improvements. (ICML 2024)"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Prompt & Program Optimization",
+  "title": "Self-Taught Optimizer (STOP): Recursively Self-Improving Code Generation",
+  "url": "https://arxiv.org/abs/2310.02304",
+  "note": "Demonstrates an LLM-written scaffolding program that improves the program responsible for making further improvements. (COLM 2024)"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Prompt & Program Optimization",
+  "title": "DSPy: Compiling Declarative Language Model Calls into Self-Improving Pipelines",
+  "url": "https://arxiv.org/abs/2310.03714",
+  "note": "Compiles declarative LM programs by optimizing prompts and demonstrations against a user-defined metric. (NeurIPS 2023 R0-FoMo Workshop)"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Context & Memory Evolution",
+  "title": "Agentic Context Engineering: Evolving Contexts for Self-Improving Language Models",
+  "url": "https://arxiv.org/abs/2510.04618",
+  "note": "Evolves context as a structured playbook through generation, reflection, and curation while avoiding destructive context collapse. (ICLR 2026)"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Context & Memory Evolution",
+  "title": "EvolveR: Self-Evolving LLM Agents through an Experience-Driven Lifecycle",
+  "url": "https://arxiv.org/abs/2510.16079",
+  "note": "Distills interaction trajectories into reusable strategic principles, retrieves them during future tasks, and reinforces the agent policy in a closed experience loop. (ICML 2026)"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Context & Memory Evolution",
+  "title": "From Procedural Skills to Strategy Genes: Towards Experience-Driven Test-Time Evolution",
+  "url": "https://arxiv.org/abs/2604.15097",
+  "note": "Compares experience representations across 4,590 controlled trials and finds that compact, editable Genes provide stronger test-time control and carry accumulated failure history better than documenta"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Context & Memory Evolution",
+  "title": "Learning to Continually Learn via Meta-learning Agentic Memory Designs",
+  "url": "https://arxiv.org/abs/2602.07755",
+  "note": "Uses a meta-agent to discover executable memory schemas and retrieval and update mechanisms that continually improve from experience. (arXiv 2026)"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Context & Memory Evolution",
+  "title": "A-MEM: Agentic Memory for LLM Agents",
+  "url": "https://arxiv.org/abs/2502.12110",
+  "note": "Builds a dynamically linked note network whose organization evolves as an agent accumulates new experiences. (NeurIPS 2025)"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Context & Memory Evolution",
+  "title": "ExpeL: LLM Agents Are Experiential Learners",
+  "url": "https://arxiv.org/abs/2308.10144",
+  "note": "Extracts reusable insights from successful and failed trajectories and transfers them to future tasks without weight updates. (AAAI 2024)"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Context & Memory Evolution",
+  "title": "MemoryBank: Enhancing Large Language Models with Long-Term Memory",
+  "url": "https://arxiv.org/abs/2305.10250",
+  "note": "Maintains and selectively forgets long-term interaction memories so an agent can adapt its responses over time. (AAAI 2024)"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Context & Memory Evolution",
+  "title": "Reflexion: Language Agents with Verbal Reinforcement Learning",
+  "url": "https://arxiv.org/abs/2303.11366",
+  "note": "Improves agents across trials by storing natural-language reflections derived from task feedback. (NeurIPS 2023)"
+ },
+ {
+  "section": "Harness-level RSI",
+  "sub": "Harness & Scaffold Evolution",
+  "title": "Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses",
+  "url": "https://arxiv.org/abs/2604.25850",
+  "note": "Autonomously evolves tools, middleware, memory, and prompts through observable edits whose predictions are verified on later tasks. (arXiv 2026)"
+ },
+ {
+  "section": "Multi-Agent Self-Improvement",
+  "sub": "Co-Evolution",
+  "title": "Agent0: Unleashing Self-Evolving Agents from Zero Data via Tool-Integrated Reasoning",
+  "url": "https://arxiv.org/abs/2511.16043",
+  "note": "Co-evolves curriculum and executor agents initialized from the same base model to improve tool-using reasoning without human-curated data. (arXiv 2025)"
+ },
+ {
+  "section": "Multi-Agent Self-Improvement",
+  "sub": "Co-Evolution",
+  "title": "DEBATE, TRAIN, EVOLVE: Self Evolution of Language Model Reasoning",
+  "url": "https://arxiv.org/abs/2505.15734",
+  "note": "Fine-tunes a model on its own multi-agent debate traces and repeats the debate-training loop without ground-truth labels. (EMNLP 2025)"
+ },
+ {
+  "section": "Multi-Agent Self-Improvement",
+  "sub": "Co-Evolution",
+  "title": "EvoAgent: Towards Automatic Multi-Agent Generation via Evolutionary Algorithms",
+  "url": "https://arxiv.org/abs/2406.14228",
+  "note": "Applies mutation, crossover, and selection to expand a specialized agent into a diverse multi-agent system. (NAACL 2025)"
+ },
+ {
+  "section": "Multi-Agent Self-Improvement",
+  "sub": "Co-Evolution",
+  "title": "SOTOPIA-\u03c0: Interactive Learning of Socially Intelligent Language Agents",
+  "url": "https://arxiv.org/abs/2403.08715",
+  "note": "Improves an agent policy through behavior cloning and self-reinforcement on filtered multi-agent social interactions. (ACL 2024)"
+ },
+ {
+  "section": "Coding / Software-Engineering Self-Improvement",
+  "sub": "Self-Modifying Coding Agents",
+  "title": "Darwin G\u00f6del Machine: Open-Ended Evolution of Self-Improving Agents",
+  "url": "https://arxiv.org/abs/2505.22954",
+  "note": "Evolves a coding agent by modifying its own code and retaining empirically validated improvements in an open-ended archive. (ICLR 2026)"
+ },
+ {
+  "section": "Coding / Software-Engineering Self-Improvement",
+  "sub": "Self-Modifying Coding Agents",
+  "title": "A Self-Improving Coding Agent",
+  "url": "https://arxiv.org/abs/2504.15228",
+  "note": "Demonstrates a coding agent that edits its own implementation and empirically improves on SWE-bench Verified. (ICLR 2025 SSI-FM Workshop)"
+ },
+ {
+  "section": "Coding / Software-Engineering Self-Improvement",
+  "sub": "Iterative Repair & Training",
+  "title": "Training Software Engineering Agents and Verifiers with SWE-Gym",
+  "url": "https://arxiv.org/abs/2412.21139",
+  "note": "Supplies executable repository tasks and trajectories for training both SWE agents and inference-time verifiers. (ICML 2025)"
+ },
+ {
+  "section": "Coding / Software-Engineering Self-Improvement",
+  "sub": "Iterative Repair & Training",
+  "title": "Teaching Large Language Models to Self-Debug",
+  "url": "https://arxiv.org/abs/2304.05128",
+  "note": "Teaches models to inspect execution results, explain their code, and repair failures through iterative prompting. (ICLR 2024)"
+ },
+ {
+  "section": "Automated AI R&D",
+  "sub": null,
+  "title": "AutoResearch: Insight In, Hallucination Out",
+  "url": "https://arxiv.org/abs/2608.17906",
+  "note": "Connects grounded idea generation with coordinated execution agents that implement, diagnose, and independently review experiments before accepting research conclusions. (arXiv 2026)"
+ },
+ {
+  "section": "Automated AI R&D",
+  "sub": null,
+  "title": "Frontis-MA1: Training an AI4AI Model towards Recursive Self-Improvement in Machine Learning Engineering",
+  "url": "https://arxiv.org/abs/2607.28568",
+  "note": "Connects execution-grounded operator training with long-horizon evolution in the open OpenMLE stack, using machine-learning engineering as an AI4AI testbed for RSI. (arXiv 2026)"
+ },
+ {
+  "section": "Automated AI R&D",
+  "sub": null,
+  "title": "FT-Dojo: Towards Autonomous LLM Fine-Tuning with Language Agents",
+  "url": "https://arxiv.org/abs/2603.01712",
+  "note": "Turns data collection, training, evaluation, diagnosis, and strategy revision into an executable environment for autonomous fine-tuning agents. (arXiv 2026)"
+ },
+ {
+  "section": "Automated AI R&D",
+  "sub": null,
+  "title": "MLEvolve: A Self-Evolving Framework for Automated Machine Learning Algorithm Discovery",
+  "url": "https://arxiv.org/abs/2606.06473",
+  "note": "Combines progressive graph search, retrospective memory, and hierarchical code generation for long-horizon end-to-end machine-learning algorithm discovery. (arXiv 2026)"
+ },
+ {
+  "section": "Evolutionary & Open-Ended RSI",
+  "sub": null,
+  "title": "PACEvolve: Enabling Long-Horizon Progress-Aware Consistent Evolution",
+  "url": "https://arxiv.org/abs/2601.10657",
+  "note": "Combines hierarchical context management, backtracking, and adaptive sampling to sustain collaborative long-horizon evolutionary search. (arXiv 2026)"
+ },
+ {
+  "section": "Evolutionary & Open-Ended RSI",
+  "sub": null,
+  "title": "AlphaEvolve: A Coding Agent for Scientific and Algorithmic Discovery",
+  "url": "https://arxiv.org/abs/2506.13131",
+  "note": "Combines language-model code generation, automated evaluation, and evolutionary search to improve algorithms, including components used in AI training. (arXiv 2025)"
+ },
+ {
+  "section": "Evolutionary & Open-Ended RSI",
+  "sub": null,
+  "title": "Higher Order and Self-Referential Evolution for Population-based Methods",
+  "url": "https://openreview.net/forum?id=3tk6AES1Aj",
+  "note": "Evolves mutation rates and higher-order meta-mutation rates, including a self-referential top-level parameter that modifies itself. (ICML 2024 AutoRL Workshop)"
+ },
+ {
+  "section": "Safety, Alignment & Theory",
+  "sub": null,
+  "title": "The Economics of Recursive Self-Improvement",
+  "url": "https://elasticity.institute/rsi-paper.pdf",
+  "note": "Models the AI capability to AI R&D to stronger capability feedback path as an elasticity network and derives conditions for self-sustaining acceleration. (Elasticity Institute 2026)"
+ },
+ {
+  "section": "Safety, Alignment & Theory",
+  "sub": null,
+  "title": "SAHOO: Safeguarded Alignment for High-Order Optimization Objectives in Recursive Self-Improvement",
+  "url": "https://arxiv.org/abs/2603.06333",
+  "note": "Monitors alignment drift during recursive self-improvement through goal-drift detection, constraint-preservation checks, and regression-risk analysis. (ICLR 2026 RSI Workshop)"
+ },
+ {
+  "section": "Safety, Alignment & Theory",
+  "sub": null,
+  "title": "TamperBench: Systematically Stress-Testing LLM Safety Under Fine-Tuning and Tampering",
+  "url": "https://arxiv.org/abs/2602.06911",
+  "note": "Systematically stress-tests whether safety alignment is preserved under fine-tuning, weight-space modification, and representation tampering. (arXiv 2026)"
+ },
+ {
+  "section": "Safety, Alignment & Theory",
+  "sub": null,
+  "title": "Your Agent May Misevolve: Emergent Risks in Self-evolving LLM Agents",
+  "url": "https://arxiv.org/abs/2509.26354",
+  "note": "Studies harmful drift across model, memory, tool, and workflow evolution pathways and proposes the concept of misevolution. (ICLR 2026)"
+ },
+ {
+  "section": "Safety, Alignment & Theory",
+  "sub": null,
+  "title": "Escaping Model Collapse via Synthetic Data Verification: Near-term Improvements and Long-term Convergence",
+  "url": "https://arxiv.org/abs/2510.16657",
+  "note": "Studies when iterative training on self-generated data collapses and shows how external verification can stabilize self-improvement while exposing long-run limits. (arXiv 2025)"
+ },
+ {
+  "section": "Safety, Alignment & Theory",
+  "sub": null,
+  "title": "Evaluating Goal Drift in Language Model Agents",
+  "url": "https://arxiv.org/abs/2505.02709",
+  "note": "Measures whether long-horizon agents gradually deviate from their assigned objectives under competing environmental pressures. (arXiv 2025)"
+ },
+ {
+  "section": "Introspection & Self-Modeling",
+  "sub": null,
+  "title": "Emergent Introspective Awareness in Large Language Models",
+  "url": "https://arxiv.org/abs/2601.01828",
+  "note": "Probes whether language models can detect, report, and deliberately influence their own internal representations rather than merely infer properties of themselves from text. (arXiv 2026)"
+ },
+ {
+  "section": "Introspection & Self-Modeling",
+  "sub": null,
+  "title": "Self-Reference in Large Language Models: The Introspection Threshold for Recursive Self-Improvement",
+  "url": "https://arxiv.org/abs/2607.04277",
+  "note": "Argues that sustainable recursive self-improvement requires systems to model their own operations and identifies introspective self-reference as a potential threshold for recursive improvement. (arXiv"
+ },
+ {
+  "section": "Introspection & Self-Modeling",
+  "sub": null,
+  "title": "Structure Enables Effective Self-Localization of Errors in LLMs",
+  "url": "https://arxiv.org/abs/2602.02416",
+  "note": "Shows that structured reasoning enables models to identify where their own reasoning first goes wrong and use that localization for autonomous correction. (ICLR 2026)"
+ },
+ {
+  "section": "Benchmarks & Evaluations",
+  "sub": "Direct RSI & Self-Improvement Evaluations",
+  "title": "LongWoF-Bench: Evaluating EvoMap Genes for Verifiable Long-Workflow Tasks",
+  "url": "https://arxiv.org/abs/2608.23200",
+  "note": "Provides 778 machine-verifiable long-workflow tasks and shows that Genes consolidated from verifier-confirmed trajectories outperform Skill packages across seven models, linking the gains to verified "
+ },
+ {
+  "section": "Benchmarks & Evaluations",
+  "sub": "Direct RSI & Self-Improvement Evaluations",
+  "title": "PostTrainBench: Can LLM Agents Automate LLM Post-Training?",
+  "url": "https://arxiv.org/abs/2603.08640",
+  "note": "Gives autonomous agents one base model, one H100 GPU, and ten hours to research and execute the strongest post-training strategy they can find. (ICML 2026)"
+ },
+ {
+  "section": "Benchmarks & Evaluations",
+  "sub": "Direct RSI & Self-Improvement Evaluations",
+  "title": "RSI-Bench",
+  "url": "https://github.com/sunghunkwag/rsi-bench",
+  "note": "Provides an open-source six-axis framework for measuring self-modification depth, improvement trajectories, operator discovery, adaptation, safety, and goal generation. (community framework 2026)"
+ },
+ {
+  "section": "Benchmarks & Evaluations",
+  "sub": "Direct RSI & Self-Improvement Evaluations",
+  "title": "RSIBench-Data",
+  "url": "https://arxiv.org/abs/2607.25886",
+  "note": "Isolates data-centric RSI by asking agents to iteratively improve training-data strategies against checkpoint feedback under a fixed post-training stack. (arXiv 2026)"
+ },
+ {
+  "section": "Frameworks & Tools",
+  "sub": "Self-Modifying / Self-Evolving Systems",
+  "title": "AgentFactory",
+  "url": "https://github.com/zzatpku/AgentFactory",
+  "note": "Self-evolving framework that accumulates and reuses executable subagents to improve future task solving."
+ },
+ {
+  "section": "Frameworks & Tools",
+  "sub": "Self-Modifying / Self-Evolving Systems",
+  "title": "Darwin G\u00f6del Machine",
+  "url": "https://github.com/jennyzzt/dgm",
+  "note": "Official self-modifying coding-agent implementation with open-ended archive-based evolution."
+ },
+ {
+  "section": "Frameworks & Tools",
+  "sub": "Self-Modifying / Self-Evolving Systems",
+  "title": "G\u00f6del Agent",
+  "url": "https://github.com/Arvid-pku/Godel_Agent",
+  "note": "Official implementation of G\u00f6del Agent: A Self-Referential Agent Framework for Recursive Self-Improvement."
+ },
+ {
+  "section": "Frameworks & Tools",
+  "sub": "Self-Modifying / Self-Evolving Systems",
+  "title": "Hermes Agent",
+  "url": "https://github.com/NousResearch/hermes-agent",
+  "note": "Self-improving personal agent with a built-in learning loop that creates and refines skills from experience."
+ },
+ {
+  "section": "Frameworks & Tools",
+  "sub": "Self-Modifying / Self-Evolving Systems",
+  "title": "HyperAgents",
+  "url": "https://github.com/facebookresearch/HyperAgents",
+  "note": "Self-referential agent framework in which an editable meta-agent improves itself and the task agent for computable objectives."
+ },
+ {
+  "section": "Frameworks & Tools",
+  "sub": "Self-Modifying / Self-Evolving Systems",
+  "title": "SEAL",
+  "url": "https://github.com/Continual-Intelligence/SEAL",
+  "note": "Official code for language models that generate their own adaptation data and update instructions."
+ },
+ {
+  "section": "Frameworks & Tools",
+  "sub": "Self-Modifying / Self-Evolving Systems",
+  "title": "SIA",
+  "url": "https://github.com/hexo-ai/sia",
+  "note": "Self-improving AI framework that iteratively updates an agent harness and, when configured, the target model's weights."
+ },
+ {
+  "section": "Frameworks & Tools",
+  "sub": "Harness / Memory / Skill Evolution",
+  "title": "ACE",
+  "url": "https://github.com/ace-agent/ace",
+  "note": "Official implementation of Agentic Context Engineering: Evolving Contexts for Self-Improving Language Models."
+ }
+]
