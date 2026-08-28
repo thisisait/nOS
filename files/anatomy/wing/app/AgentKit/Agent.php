@@ -79,6 +79,13 @@ final class Agent
 		 */
 		public readonly int $maxOutputTokens = 4096,
 		public readonly array $gdpr = [],
+		/**
+		 * `outcomes.gateset` — the named gate set in state/judge-sets.yml whose
+		 * exit code decides whether this agent's run is satisfied. Required
+		 * wherever an outcome loop exists: an outcome with no oracle is a model
+		 * marking its own work.
+		 */
+		public readonly ?string $gateset = null,
 	) {
 	}
 
@@ -87,9 +94,18 @@ final class Agent
 		return $this->multiagentType === 'coordinator';
 	}
 
+	/**
+	 * An outcome exists when an ORACLE exists. Was `rubric !== null`, which
+	 * made the loop turn on a document the graded model could also read.
+	 */
 	public function hasOutcome(): bool
 	{
-		return $this->rubric !== null;
+		return $this->gateset !== null;
+	}
+
+	public function hasGrader(): bool
+	{
+		return $this->modelGraderUri !== null;
 	}
 }
 

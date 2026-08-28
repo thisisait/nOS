@@ -48,11 +48,16 @@ properties:
         type: string
         pattern: "^(anthropic|claude|openai|openclaw)-[A-Za-z0-9._:/-]{1,96}$"
         description: |
-          OPTIONAL model for the outcome Grader. When absent the grader reuses
-          the agent's own client, which means the judge and the proposer share
-          an identity — the exact arrangement the Bone loop engine forbids
-          ("The judge is code. The proposer is a model."). Set this on any
-          agent whose grade actually gates something.
+          OPTIONAL model that writes REVISION FEEDBACK. It does not decide
+          satisfaction — outcomes.gateset does. Absent means no grader call at
+          all: the gate set's own output is the feedback. There is no longer a
+          fallback to the agent's own client, because a model asked to judge
+          its own work agrees with itself (arXiv:2510.16657).
+
+          When declared it MUST differ from model.primary and model.backend.
+          Cross-field comparison is not expressible in draft-07, so the refusal
+          lives in App\AgentKit\AgentLoader and is pinned by
+          tests/anatomy/test_satisfaction_is_written_by_a_gate_run.py.
       fallback:
         type: string
         pattern: "^(anthropic|claude|openai|openclaw)-[A-Za-z0-9._:/-]{1,96}$"
@@ -155,10 +160,28 @@ properties:
   outcomes:
     type: object
     additionalProperties: false
+    required:
+      - gateset
     properties:
+      gateset:
+        type: string
+        pattern: "^[a-z][a-z0-9-]{0,30}$"
+        description: |
+          REQUIRED. Names an entry in state/judge-sets.yml `gate_sets:` whose
+          exit code decides whether the run is satisfied. The membership check
+          is cross-file and therefore lives in App\AgentKit\AgentLoader
+          (draft-07 cannot reference another document); the loader refuses an
+          unknown name at load time.
+
+          An outcome loop with no gate set has nobody to ask but the model that
+          produced the work.
       rubric_path:
         type: string
-        description: "Markdown rubric, relative to agent.yml dir."
+        description: |
+          OPTIONAL markdown rubric, relative to agent.yml dir. Feedback only —
+          it is what a declared `model.grader` writes revision notes against.
+          It has never decided satisfaction and no longer looks as though it
+          might.
       max_iterations:
         type: integer
         minimum: 1

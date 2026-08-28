@@ -8,23 +8,21 @@ use App\AgentKit\LLMClient\LLMClientInterface;
 use App\AgentKit\LLMClient\Message;
 
 /**
- * LLM-as-judge grader. Borrowed straight from Anthropic Managed Agents'
- * outcome model — a SEPARATE LLM call evaluates the agent's artifact
- * against the rubric, in an isolated context window so it can't be
- * influenced by the working agent's reasoning.
+ * LLM-as-judge grader — FEEDBACK ONLY. It does not decide satisfaction; the
+ * agent's declared gate set does (GateOracle). A separate LLM call evaluates
+ * the artifact against the rubric in an isolated context window, and an agent
+ * that declares no `model.grader` gets no call here at all.
  *
- * Output discipline: the grader returns strict JSON
+ * Output discipline: strict JSON
  *   {"result": "satisfied|needs_revision|failed", "feedback": "markdown bullets"}
- * — we re-prompt with a strong format reminder if parsing fails. After 2
- * format-failure attempts we treat the iteration as `failed` and move on.
+ * run through the Q9 three-stage contract in OutputRepair — deterministic
+ * shape repair, then ONE format-only re-ask, then UNPARSEABLE.
  */
 final class Grader
 {
 	private const RESULT_SATISFIED       = 'satisfied';
 	private const RESULT_NEEDS_REVISION  = 'needs_revision';
 	private const RESULT_FAILED          = 'failed';
-
-	private const MAX_FORMAT_RETRIES = 2;
 
 	private const SYSTEM_TEMPLATE = <<<MD
 		You are an outcome grader. You evaluate the agent's most recent work
@@ -50,9 +48,25 @@ final class Grader
 	}
 
 	/**
+	 * The ONLY construction path, so "no grader declared" cannot mean "grader
+	 * on the proposer's own client". That fallback stood in Runner until
+	 * 2026-08-29 and made every ungraded agent its own judge.
+	 *
+	 * Null in, null out, and the resolver is never called — a caller with no
+	 * `model.grader` makes no grader call at all. The gate set is what says
+	 * satisfied; the grader, when an agent declares one, only writes feedback.
+	 *
+	 * @param ?callable(string): LLMClientInterface $clientFor
+	 */
+	public static function forUri(?string $graderUri, callable $clientFor): ?self
+	{
+		return $graderUri === null ? null : new self($clientFor($graderUri));
+	}
+
+	/**
 	 * @param string $taskDescription   from user.define_outcome
 	 * @param string $transcript        markdown summary of what the agent did
-	 * @return array{result: string, feedback: string, tokens_input: int, tokens_output: int}
+	 * @return array{result: string, feedback: string, tokens_input: int, tokens_output: int, repaired: bool}
 	 */
 	public function grade(string $taskDescription, Rubric $rubric, string $transcript): array
 	{
@@ -62,66 +76,67 @@ final class Grader
 
 		$totalIn = 0;
 		$totalOut = 0;
-		$lastFeedback = '';
-		$lastBadResult = null;
-		for ($attempt = 0; $attempt <= self::MAX_FORMAT_RETRIES; $attempt++) {
-			$messages = [Message::userText($userMessage)];
-			if ($attempt > 0) {
-				$messages[] = Message::assistantText($lastFeedback);
-				// Name which fault it was; "not strict JSON" over a bad enum
-				// asks the model to fix what it got right (2026-08-27).
-				$messages[] = Message::userText($lastBadResult !== null
-					? "\"{$lastBadResult}\" is not one of the three permitted "
-						. 'values. Reply with the SAME feedback but set "result" to '
-						. 'exactly one of: satisfied, needs_revision, failed.'
-					: 'Your previous reply was not strict JSON. Reply with ONLY '
-						. '{"result": "...", "feedback": "..."} — no markdown fences, no preamble.');
-			}
-			$response = $this->llm->send($system, $messages, [], 1024);
-			$totalIn += $response->tokensInput;
-			$totalOut += $response->tokensOutput;
-			$text = trim($response->textOutput());
-			$lastFeedback = $text;
-			$decoded = $this->parseStrictJson($text);
-			if ($decoded === null) {
-				$lastBadResult = null;
-				continue;
-			}
-			$result = $decoded['result'] ?? '';
-			$feedback = (string) ($decoded['feedback'] ?? '');
-			if (in_array($result, [self::RESULT_SATISFIED, self::RESULT_NEEDS_REVISION, self::RESULT_FAILED], true)) {
-				return [
-					'result' => $result,
-					'feedback' => $feedback,
-					'tokens_input' => $totalIn,
-					'tokens_output' => $totalOut,
-				];
-			}
-			$lastBadResult = is_string($result) ? $result : '(not a string)';
+		$response = $this->llm->send($system, [Message::userText($userMessage)], [], 1024);
+		$totalIn += $response->tokensInput;
+		$totalOut += $response->tokensOutput;
+		$text = trim($response->textOutput());
+
+		// Q9: shape repair first (no model), then ONE format-only re-ask, then
+		// UNPARSEABLE. The old shape was three full re-grades, each free to
+		// reconsider the verdict while it was "fixing the format".
+		$parsed = OutputRepair::parse($text, function (string $original) use (&$totalIn, &$totalOut): string {
+			$retry = $this->llm->send(
+				'You reformat. You do not evaluate, summarise or change wording.',
+				[Message::userText(
+					"The content below was meant to be strict JSON of the shape "
+					. '{"result": "...", "feedback": "..."} and is not. Return the SAME '
+					. "content as strict JSON — no markdown fences, no preamble, no "
+					. "edits to the wording.\n\n" . $original
+				)],
+				[],
+				1024,
+			);
+			$totalIn += $retry->tokensInput;
+			$totalOut += $retry->tokensOutput;
+			return trim($retry->textOutput());
+		});
+		$repaired = $parsed['status'] === OutputRepair::REPAIRED;
+
+		if ($parsed['status'] === OutputRepair::UNPARSEABLE) {
+			return [
+				'result' => self::RESULT_FAILED,
+				'feedback' => 'UNPARSEABLE: the grader returned no usable JSON after the '
+					. 'shape parser and one format-only re-ask: ' . substr($text, 0, 500),
+				'tokens_input' => $totalIn,
+				'tokens_output' => $totalOut,
+				'repaired' => false,
+			];
 		}
 
-		// Format-retry budget exhausted
+		$decoded = $parsed['value'] ?? [];
+		$result = $decoded['result'] ?? '';
+		if (!in_array($result, [self::RESULT_SATISFIED, self::RESULT_NEEDS_REVISION, self::RESULT_FAILED], true)) {
+			// A bad enum is a CONTENT fault, not a shape one, so it gets no
+			// re-ask: the second answer would be free to differ from the first.
+			// The FEEDBACK still travels — measured 2026-08-27, a grader that
+			// said "unsatisfied" instead of "needs_revision" had its whole
+			// critique thrown away for one word outside the enum.
+			return [
+				'result' => self::RESULT_FAILED,
+				'feedback' => trim((string) ($decoded['feedback'] ?? '')) . "\n\n"
+					. '(grader returned result=' . var_export($result, true)
+					. ', not one of satisfied|needs_revision|failed)',
+				'tokens_input' => $totalIn,
+				'tokens_output' => $totalOut,
+				'repaired' => $repaired,
+			];
+		}
 		return [
-			'result' => self::RESULT_FAILED,
-			'feedback' => 'grader returned non-conforming output after ' .
-				(self::MAX_FORMAT_RETRIES + 1) . ' attempts: ' . substr($lastFeedback, 0, 500),
+			'result' => $result,
+			'feedback' => (string) ($decoded['feedback'] ?? ''),
 			'tokens_input' => $totalIn,
 			'tokens_output' => $totalOut,
+			'repaired' => $repaired,
 		];
-	}
-
-	/**
-	 * @return array<string, mixed>|null
-	 */
-	private function parseStrictJson(string $text): ?array
-	{
-		// Strip optional ```json fences (defensive — graders sometimes wrap)
-		$text = preg_replace('/^```(?:json)?\s*|\s*```$/m', '', $text) ?? $text;
-		$text = trim($text);
-		if ($text === '') {
-			return null;
-		}
-		$decoded = json_decode($text, true);
-		return is_array($decoded) ? $decoded : null;
 	}
 }

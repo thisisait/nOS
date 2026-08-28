@@ -24,9 +24,12 @@ SECOND DEFECT, same audit: `new Grader($llm)` reused the agent's own client,
 with a trailing comment saying so — "grader uses the same LLM family". The
 proposer graded its own work. Bone's loop engine states the opposite rule
 outright ("The judge is code. The proposer is a model."), and this layer simply
-did not follow it. `model.grader` in agent.yml now splits them; sharing is
-still permitted but must be a per-agent choice rather than a property of the
-code.
+did not follow it.
+
+CLOSED 2026-08-29, further than this gate originally asked: the sharing is not
+a per-agent choice any more, it is refused. Satisfaction is the exit code of
+the agent's declared gate set (outcomes.gateset), the grader only writes
+revision notes, and an agent that declares none gets no grader call at all.
 
 WHAT THIS GATE IS AND IS NOT. Wing has no PHP unit harness (only Playwright
 e2e), so these are source-level assertions — weaker than executing the loop.
@@ -86,17 +89,22 @@ def test_the_grader_transcript_is_built_from_the_loop_output(runner_src):
     )
 
 
-def test_the_grader_client_is_not_unconditionally_the_agents_own(runner_src):
-    """Judge and proposer must not share an identity by default of the code."""
-    m = re.search(r"new Grader\(([^)]*)\)", runner_src)
-    assert m, "the Grader is no longer constructed in Runner"
-    arg = m.group(1).strip()
-    assert arg != "$llm", (
-        "`new Grader($llm)` hands the grader the very client that produced the "
-        "work it is grading. Resolve a separate client when the agent declares "
-        "`model.grader`, so sharing is a per-agent decision rather than a "
-        "property of the code."
+def test_the_grader_client_is_never_the_agents_own(runner_src):
+    """Judge and proposer must not share an identity — at all, since 2026-08-29.
+
+    The permitted-but-declared arrangement this gate used to allow is gone:
+    `Grader::forUri` returns null when no `model.grader` is declared, and the
+    loader refuses a grader equal to model.primary/backend. Satisfaction moved
+    to the gate set entirely, so there is nothing left for a self-grade to win.
+    Behaviour is pinned by test_satisfaction_is_written_by_a_gate_run.py; this
+    stays a source assertion that Runner has no second construction path.
+    """
+    assert "new Grader(" not in runner_src, (
+        "Runner constructs a Grader directly again — that is the path the "
+        "`$llm` fallback lived on. Use Grader::forUri, which returns null on "
+        "the absent path instead of handing over the proposer's own client."
     )
+    assert "Grader::forUri" in runner_src, "Runner no longer resolves a grader at all"
 
 
 def test_a_separate_grader_model_can_actually_be_declared(runner_src):

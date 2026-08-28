@@ -720,6 +720,35 @@ $addMissingColumns($db, 'upgrade_recipes', [
 	'reset_json'            => 'TEXT',
 ]);
 
+// The oracle's verdict, and the flag that says an output was repaired.
+// Both swept in here because CREATE TABLE IF NOT EXISTS is a no-op on the
+// agent tables of every DB that already ran a session.
+$addMissingColumns($db, 'agent_iterations', [
+	'gate_run_id' => 'TEXT',
+]);
+$addMissingColumns($db, 'agent_sessions', [
+	'output_repaired' => 'INTEGER NOT NULL DEFAULT 0',
+]);
+
+// SATISFACTION IS WRITTEN BY A GATE RUN, NOT BY THE THING BEING GRADED.
+// Created here rather than in schema-extensions.sql for the same reason as the
+// events WORM triggers: gate_run_id arrives via the sweep above, so a trigger
+// referencing it in that file would abort the whole script on any pre-existing
+// wing.db. UPDATE is guarded too — otherwise a row lands as needs_revision and
+// is promoted afterwards, with nothing to promote it against.
+$db->exec(<<<'SQL'
+DROP TRIGGER IF EXISTS agent_iterations_satisfied_insert;
+CREATE TRIGGER agent_iterations_satisfied_insert BEFORE INSERT ON agent_iterations FOR EACH ROW
+  WHEN NEW.grader_result = 'satisfied'
+   AND (NEW.gate_run_id IS NULL OR TRIM(NEW.gate_run_id) = '')
+  BEGIN SELECT RAISE(ABORT, 'agent_iterations: satisfied requires gate_run_id'); END;
+DROP TRIGGER IF EXISTS agent_iterations_satisfied_update;
+CREATE TRIGGER agent_iterations_satisfied_update BEFORE UPDATE ON agent_iterations FOR EACH ROW
+  WHEN NEW.grader_result = 'satisfied'
+   AND (NEW.gate_run_id IS NULL OR TRIM(NEW.gate_run_id) = '')
+  BEGIN SELECT RAISE(ABORT, 'agent_iterations: satisfied requires gate_run_id'); END;
+SQL);
+
 $db->close();
 
 $status = $isNew ? 'Created' : 'Verified';

@@ -464,6 +464,10 @@ final class AgentSessionRepository
 		int $durationMs,
 		int $tokensIn,
 		int $tokensOut,
+		/** The gate run that decided this iteration. The DB refuses a
+		 *  'satisfied' row without one — see the agent_iterations_satisfied_*
+		 *  triggers in bin/init-db.php. */
+		?string $gateRunId = null,
 	): void {
 		$this->db->table('agent_iterations')->insert([
 			'session_uuid'    => $sessionUuid,
@@ -474,7 +478,21 @@ final class AgentSessionRepository
 			'duration_ms'     => $durationMs,
 			'tokens_input'    => $tokensIn,
 			'tokens_output'   => $tokensOut,
+			'gate_run_id'     => $gateRunId,
 		]);
+	}
+
+	/**
+	 * Stamp that SOMETHING in this session's structured output had to be
+	 * repaired before a consumer could read it — by the deterministic shape
+	 * parser or by the one format-only re-ask. Idempotent: many repairs, one
+	 * flag. Written by the reader of the repair, never by the repair itself.
+	 */
+	public function markOutputRepaired(string $sessionUuid): void
+	{
+		$this->db->table('agent_sessions')
+			->where('uuid', $sessionUuid)
+			->update(['output_repaired' => 1]);
 	}
 
 	/**

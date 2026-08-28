@@ -107,7 +107,10 @@ final class AgentsPresenter extends BaseApiPresenter
 				'max_concurrent_threads' => $a->maxConcurrentThreads,
 			],
 			'outcomes' => $a->hasOutcome() ? [
-				'rubric_path' => $a->rubric->sourcePath,
+				// The gate set is what decides satisfaction; the rubric is
+				// optional feedback material and may be absent.
+				'gateset' => $a->gateset,
+				'rubric_path' => $a->rubric?->sourcePath,
 				'max_iterations' => $a->maxIterations,
 			] : null,
 			'audit' => [

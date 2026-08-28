@@ -27,7 +27,7 @@
 	<div style="flex:1; min-width:240px; padding:16px; border:1px solid var(--border); border-radius:8px;">
 		<div style="font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px;">Outcome</div>
 		<div style="font-size:14px; margin-top:4px;">
-			{if $agent->hasOutcome()}rubric ({$agent->maxIterations} iters max)
+			{if $agent->hasOutcome()}gate set <code>{$agent->gateset}</code> ({$agent->maxIterations} iters max)
 			{else}—{/if}
 		</div>
 		<div n:if="$agent->hasOutcome()" style="font-size:11px; color:var(--text2); margin-top:6px;">

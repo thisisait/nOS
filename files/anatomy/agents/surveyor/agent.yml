@@ -44,6 +44,8 @@ multiagent:
   max_concurrent_threads: 1
 
 outcomes:
+  # surveys the running estate, not the checkout.
+  gateset: live
   rubric_path: rubric.md
   max_iterations: 3
 

@@ -31,6 +31,8 @@ multiagent:
   max_concurrent_threads: 1
 
 outcomes:
+  # reads the checkout; repo judges are what its findings are about.
+  gateset: repo
   rubric_path: rubric.md
   max_iterations: 3
 

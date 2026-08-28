@@ -33,6 +33,35 @@ final class AgentLoader
 	}
 
 	/**
+	 * The gate sets an agent may name. Read from the committed registry — the
+	 * same file the judges read — so a typo is refused at the door instead of
+	 * surfacing as an unrunnable outcome loop three hours into a session.
+	 *
+	 * An unreadable registry is a REFUSAL, not an empty allow-list: absence of
+	 * an oracle is UNKNOWN, and UNKNOWN must not resolve to satisfied.
+	 *
+	 * @return array<int, string>
+	 * @throws AgentLoadException
+	 */
+	private static function knownGateSets(): array
+	{
+		$root = (string) getenv('NOS_REPO_ROOT');
+		$path = $root . '/state/judge-sets.yml';
+		if ($root === '' || !is_file($path)) {
+			throw new AgentLoadException(
+				"outcomes.gateset cannot be checked: state/judge-sets.yml not readable "
+				. "(NOS_REPO_ROOT=" . var_export($root, true) . ")"
+			);
+		}
+		try {
+			$registry = Yaml::parseFile($path);
+		} catch (\Throwable $exc) {
+			throw new AgentLoadException("state/judge-sets.yml parse failed: " . $exc->getMessage(), previous: $exc);
+		}
+		return array_keys((array) ($registry['gate_sets'] ?? []));
+	}
+
+	/**
 	 * @throws AgentLoadException
 	 */
 	public function load(string $name): Agent
@@ -72,6 +101,23 @@ final class AgentLoader
 		$fallback = $raw['model']['fallback'] ?? null;
 		if ($fallback !== null && (!is_string($fallback) || !$this->isValidModelUri($fallback))) {
 			throw new AgentLoadException("agent.yml model.fallback invalid: " . var_export($fallback, true));
+		}
+		// A grader that IS the proposer is not a second opinion — a model asked
+		// to judge its own output agrees with itself (arXiv:2510.16657), so the
+		// same-model arrangement is refused rather than tolerated. `backend` is
+		// where the primary's traffic is pointed; naming it here would route the
+		// grader to the very endpoint that produced the work.
+		$grader = $raw['model']['grader'] ?? null;
+		if ($grader !== null) {
+			if (!is_string($grader) || !$this->isValidModelUri($grader)) {
+				throw new AgentLoadException("agent.yml model.grader invalid: " . var_export($grader, true));
+			}
+			$backend = $raw['model']['backend'] ?? null;
+			if ($grader === $primary || ($backend !== null && $grader === $backend)) {
+				throw new AgentLoadException(
+					"agent.yml model.grader must differ from model.primary and model.backend; got '{$grader}'"
+				);
+			}
 		}
 
 		// System prompt (optional)
@@ -130,7 +176,23 @@ final class AgentLoader
 			);
 		}
 		$maxIterations = 3;
+		$gateset = null;
 		if (!empty($raw['outcomes'])) {
+			// THE ORACLE IS MANDATORY. An outcome loop with no gate set has
+			// nothing to ask but the model that produced the work.
+			$gateset = $raw['outcomes']['gateset'] ?? null;
+			if (!is_string($gateset) || $gateset === '') {
+				throw new AgentLoadException(
+					'agent.yml outcomes.gateset is required — name a gate set from state/judge-sets.yml'
+				);
+			}
+			$known = self::knownGateSets();
+			if (!in_array($gateset, $known, true)) {
+				throw new AgentLoadException(
+					"agent.yml outcomes.gateset '{$gateset}' is not in state/judge-sets.yml "
+					. '(known: ' . implode(', ', $known) . ')'
+				);
+			}
 			if (!empty($raw['outcomes']['rubric_path'])) {
 				$rubricPath = $dir . '/' . $raw['outcomes']['rubric_path'];
 				if (!is_file($rubricPath)) {
@@ -227,6 +289,7 @@ final class AgentLoader
 				? (string) $raw['model']['backend'] : null,
 			gdpr: (array) ($raw['gdpr'] ?? []),
 			maxOutputTokens: $maxOutputTokens,
+			gateset: $gateset,
 		);
 
 		// Idempotent webhook registration — only when wired in production.

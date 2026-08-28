@@ -53,6 +53,8 @@ multiagent:
   max_concurrent_threads: 1
 
 outcomes:
+  # writes files into the tree — ansible-lint + codegen + pytest judge them.
+  gateset: repo
   rubric_path: rubric.md
   max_iterations: 3
 

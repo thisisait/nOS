@@ -565,6 +565,11 @@ CREATE TABLE IF NOT EXISTS agent_sessions (
     model_uri       TEXT NOT NULL,                    -- e.g. anthropic-claude-opus-4-7
     outcome_id      TEXT,                             -- present iff outcome-driven session
     outcome_result  TEXT,                             -- satisfied | needs_revision | max_iterations_reached | failed | interrupted
+    -- 1 iff ANY structured output this session was repaired before a consumer
+    -- read it — by the deterministic shape parser or by the one format-only
+    -- re-ask. Silent repair is a success marker written by the thing that
+    -- failed. Swept in by bin/init-db.php for pre-existing DBs.
+    output_repaired INTEGER NOT NULL DEFAULT 0,
     started_at      TEXT NOT NULL,
     ended_at        TEXT,
     stop_reason     TEXT,                             -- end_turn | max_tokens | tool_use | error | interrupted
@@ -616,6 +621,11 @@ CREATE TABLE IF NOT EXISTS agent_iterations (
     grader_result   TEXT NOT NULL,                    -- satisfied | needs_revision | failed
     grader_feedback TEXT,                             -- markdown bullets
     grader_model    TEXT NOT NULL,
+    -- The gate-set run that decided this iteration: GateSetVerdict.digest().
+    -- 'satisfied' without one is refused by the agent_iterations_satisfied_*
+    -- triggers in bin/init-db.php — satisfaction is an oracle's verdict, never
+    -- the proposer's opinion of its own work.
+    gate_run_id     TEXT,
     duration_ms     INTEGER,
     tokens_input    INTEGER,
     tokens_output   INTEGER,

@@ -13,6 +13,7 @@ use App\AgentKit\LLMClient\LLMPermanentError;
 use App\AgentKit\LLMClient\LLMTransientError;
 use App\AgentKit\LLMClient\Message;
 use App\AgentKit\LLMClient\ToolSchema;
+use App\AgentKit\Outcome\GateOracle;
 use App\AgentKit\Outcome\Grader;
 use App\AgentKit\Telemetry\AuditEmitter;
 use App\AgentKit\Telemetry\OtelExporter;
@@ -37,12 +38,15 @@ use App\Model\AgentVaultRepository;
  *       call LLM again
  *   }
  *
- * Outcome iteration loop (when agent has a rubric):
+ * Outcome iteration loop (when agent declares outcomes.gateset):
  *   for iteration in 0..max_iterations:
  *       run the conversation to end_turn
- *       call grader on the transcript
- *       if satisfied: end
- *       else: prepend grader feedback to next user message and retry
+ *       run the named gate set; its EXIT is the verdict
+ *       if it passed: end
+ *       else: feed the gate's own output back (plus a declared grader's
+ *             feedback, when the agent has one) and retry
+ *       stop one iteration after a peak that was not beaten
+ *   report the BEST-scored iteration, not the last one
  *
  * Errors:
  *  - LLMTransientError: retry with backoff up to 3 attempts; then fall
@@ -126,9 +130,10 @@ final class Runner
 	 * than it is would be worse than none:
 	 *   * the wall clock is checked before every Runner-driven LLM call AND at
 	 *     the top of every outcome iteration, so it bounds the grader too;
-	 *   * the token ceiling counts only what Runner itself drives. The Grader
-	 *     holds its own client (`new Grader($graderLlm)`) and its spend is
-	 *     bounded by maxIterations and by the clock, not by this number.
+	 *   * the token ceiling counts only what Runner itself drives. A declared
+	 *     grader (`Grader::forUri`) holds its own client and its spend is
+	 *     bounded by maxIterations and by the clock, not by this number. The
+	 *     gate-set subprocess spends no tokens at all — it is code.
 	 */
 	private const SESSION_WALL_CLOCK_S = 3600;
 	private const SESSION_TOKEN_CEILING = 250000;
@@ -832,24 +837,26 @@ final class Runner
 		string $actorId,
 		array &$spans,
 	): array {
-		// The judge and the proposer must not share an identity. Bone's loop
-		// engine states it outright ("The judge is code. The proposer is a
-		// model."); this layer said the opposite in a trailing comment — "grader
-		// uses the same LLM family" — and meant it literally: the same client
-		// instance graded the work it had just produced.
+		// THE JUDGE IS CODE. The proposer is a model. Satisfaction is the exit
+		// code of the agent's declared gate set, read by this loop — never a
+		// model's opinion of the work it just produced.
 		//
-		// `model.grader` in agent.yml splits them. When it is absent the old
-		// behaviour stands, because forcing a second model on every agent would
-		// change cost for agents whose grade gates nothing; but the sharing is now
-		// a declared choice per agent instead of a property of the code.
-		$graderLlm = $agent->modelGraderUri !== null
-			? $this->llmFactory->fromUri($agent->modelGraderUri)
-			: $llm;
-		$grader = new Grader($graderLlm);
+		// The fallback that used to sit here handed the Grader the PROPOSER'S
+		// OWN CLIENT whenever `model.grader` was absent, which was always. A
+		// model asked to judge its own output agrees with itself
+		// (arXiv:2510.16657), so every `satisfied` written before 2026-08-29
+		// was the agent's own signature. `Grader::forUri` returns null on the
+		// absent path: no grader declared means no grader call.
+		$grader = Grader::forUri(
+			$agent->modelGraderUri,
+			fn (string $uri) => $this->llmFactory->fromUri($uri),
+		);
+		$oracle = new GateOracle((string) getenv('NOS_REPO_ROOT'));
 		$totalIn = 0;
 		$totalOut = 0;
 		$result = 'failed';
 		$finalText = '';
+		$stoppedAtPeak = false;
 		$outcomeId = 'outcome_' . substr($sessionUuid, 0, 8);
 
 		for ($iteration = 0; $iteration < $agent->maxIterations; $iteration++) {
@@ -873,8 +880,7 @@ final class Runner
 				if ($iteration === 0) {
 					throw $exc;   // nothing produced yet; the ceiling IS the outcome
 				}
-				$result = 'max_iterations_reached';
-				break;
+				break;   // reported as max_iterations_reached, on the best iteration so far
 			}
 			$iterStart = (int) (microtime(true) * 1000);
 			$loopOut = $this->runToolUseLoop(
@@ -916,17 +922,39 @@ final class Runner
 			);
 			$gradeSpan->setAttributes([
 				'grader.iteration' => $iteration,
-				'grader.rubric_path' => $agent->rubric->sourcePath,
+				'grader.gateset' => (string) $agent->gateset,
+				'grader.rubric_path' => $agent->rubric?->sourcePath ?? '',
 			]);
 
-			$grade = $grader->grade($agent->description, $agent->rubric, $transcript);
-			$totalIn += $grade['tokens_input'];
-			$totalOut += $grade['tokens_output'];
+			// The verdict. Everything below only records or explains it.
+			$verdict = $oracle->judge($iteration, (string) $agent->gateset, $finalText);
+			$result = $verdict['satisfied'] ? 'satisfied' : 'needs_revision';
+			$feedback = $verdict['detail'];
+
+			// A declared grader writes the REVISION NOTES against the rubric.
+			// It cannot make a failing gate set pass, and its absence costs
+			// nothing but prose: the gate's own output is the feedback.
+			if ($grader !== null && $agent->rubric !== null && !$verdict['satisfied']) {
+				$grade = $grader->grade($agent->description, $agent->rubric, $transcript);
+				$totalIn += $grade['tokens_input'];
+				$totalOut += $grade['tokens_output'];
+				$feedback .= "\n\nGRADER NOTES:\n" . $grade['feedback'];
+				// A repair is recorded by whoever READ it, not by the code that
+				// performed it — otherwise the failing thing marks its own
+				// recovery and the session looks clean.
+				if ($grade['repaired']) {
+					$this->sessions->markOutputRepaired($sessionUuid);
+				}
+				$gradeSpan->setAttributes([
+					'grader.tokens_input' => $grade['tokens_input'],
+					'grader.tokens_output' => $grade['tokens_output'],
+				]);
+			}
 
 			$gradeSpan->setAttributes([
-				'grader.result' => $grade['result'],
-				'grader.tokens_input' => $grade['tokens_input'],
-				'grader.tokens_output' => $grade['tokens_output'],
+				'grader.result' => $result,
+				'grader.gate_run_id' => $verdict['gate_run_id'] ?? '',
+				'grader.gate_score' => $verdict['score'],
 			]);
 			$gradeSpan->end();
 			$spans[] = $gradeSpan;
@@ -935,12 +963,13 @@ final class Runner
 			$this->sessions->recordIteration(
 				$sessionUuid,
 				$iteration,
-				$grade['result'],
-				$grade['feedback'],
+				$result,
+				$feedback,
 				$llm->identifier(),
 				$durationMs,
-				$grade['tokens_input'],
-				$grade['tokens_output'],
+				$loopOut['tokens_input'],
+				$loopOut['tokens_output'],
+				$verdict['gate_run_id'],
 			);
 			$this->audit->emit(
 				type: 'agent_grader_decision',
@@ -949,8 +978,10 @@ final class Runner
 				task: "agent:{$agent->name}/grader.{$iteration}",
 				result: [
 					'iteration' => $iteration,
-					'grader_result' => $grade['result'],
-					'feedback_preview' => mb_strcut($grade['feedback'], 0, 240, 'UTF-8'),
+					'grader_result' => $result,
+					'gate_set' => $agent->gateset,
+					'gate_run_id' => $verdict['gate_run_id'],
+					'feedback_preview' => mb_strcut($feedback, 0, 240, 'UTF-8'),
 				],
 				traceId: $traceId,
 			);
@@ -958,18 +989,24 @@ final class Runner
 				'session_id' => $sessionUuid,
 				'outcome_id' => $outcomeId,
 				'iteration' => $iteration,
-				'result' => $grade['result'],
+				'result' => $result,
 			]);
 
-			$result = $grade['result'];
-			if ($result === 'satisfied' || $result === 'failed') {
+			if ($verdict['satisfied']) {
 				return [
-					'outcome_result' => $result,
+					'outcome_result' => 'satisfied',
 					'iterations' => $iteration + 1,
 					'tokens_input' => $totalIn,
 					'tokens_output' => $totalOut,
 					'final_text' => $finalText,
 				];
+			}
+			// One iteration past a peak that was not beaten, then stop: 78.26%
+			// of self-continued searches end below their own peak
+			// (arXiv:2607.25886), and the peak is what gets reported anyway.
+			if (!$oracle->shouldContinue()) {
+				$stoppedAtPeak = true;
+				break;
 			}
 			// "Please revise" with nothing to revise made the surveyor
 			// re-explore from zero three times and never write (2026-08-27).
@@ -978,17 +1015,22 @@ final class Runner
 				($finalText !== '' ? $finalText
 					: '(you produced no final text — you spent the iteration on tool calls '
 					. 'and never wrote the deliverable; write it this time)') .
-				"\n\nGRADER FEEDBACK (result=needs_revision):\n\n" .
-				$grade['feedback'] . "\n\nRevise the attempt above."
+				"\n\nWHY IT IS NOT DONE:\n\n" .
+				$feedback . "\n\nRevise the attempt above."
 			);
 		}
 
+		// BEST, NOT LAST. The final attempt is the one the model stopped on,
+		// which is the best one only by accident.
+		$best = $oracle->best();
 		return [
-			'outcome_result' => 'max_iterations_reached',
-			'iterations' => $agent->maxIterations,
+			// Two different endings, kept distinguishable: the budget ran out,
+			// or the search was stopped one step past its own peak.
+			'outcome_result' => $stoppedAtPeak ? 'needs_revision' : 'max_iterations_reached',
+			'iterations' => $best !== null ? $best['iteration'] + 1 : $agent->maxIterations,
 			'tokens_input' => $totalIn,
 			'tokens_output' => $totalOut,
-			'final_text' => $finalText,
+			'final_text' => $best !== null ? $best['final_text'] : $finalText,
 		];
 	}
 
