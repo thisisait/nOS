@@ -291,7 +291,8 @@ $statements = [
 		created_by  TEXT,
 		created_at  TEXT NOT NULL DEFAULT (datetime('now')),
 		last_used_at TEXT,
-		active      INTEGER NOT NULL DEFAULT 1
+		active      INTEGER NOT NULL DEFAULT 1,
+		scopes      TEXT
 	)",
 
 	// Users (populated from Authentik proxy auth headers)
@@ -380,6 +381,16 @@ $addMissingColumns($db, 'api_tokens', [
 	'cortex_verbs' => 'TEXT',
 	'cortex_namespaces' => 'TEXT',
 	'cortex_tenants' => 'TEXT',
+	// api_tokens.scopes — ops-plane route-class scoping (2026-08-28).
+	// Comma-separated `wing.read` / `wing.write`, checked in
+	// BaseApiPresenter::startup() via TokenRepository::permits().
+	//
+	// NULL means UNRESTRICTED here, the OPPOSITE of the cortex axes above,
+	// and the difference is which door each guards. Cortex was a new door
+	// with no incumbents, so "granted to nobody" was free. This is the door
+	// every token already came through — defaulting them closed would 403
+	// the whole estate on the converge that adds the column.
+	'scopes' => 'TEXT',
 ]);
 
 // notifications.{ntfy,mail}_attempts — delivery retry counters (2026-08-01).
