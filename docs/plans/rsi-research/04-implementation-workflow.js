@@ -65,7 +65,11 @@
 //  - sequencing: truth before capability — identity, oracle satisfaction, the parser
 //    contract and the ledger join land before any plane work; the ops harness measures,
 //    it does not build the plane;
-//  - agent budget: 19 agents total (counted per phase comment).
+//  - agent budget: 20 agents, ALL SERIAL. No parallel writers — the two that ran
+//    concurrently on 2026-08-28 made two divergent branches, and a phase whose halves
+//    cannot see each other cannot be verified as one thing.
+//  - MANAGED: args.only names the phases an invocation may run. The operator drives it
+//    one phase at a time and reads the result before the next.
 
 export const meta = {
   name: 'agentic-planes-build',
@@ -128,12 +132,34 @@ HARD CONSTRAINTS
 - Doctrine: success markers are written by readers; absence is UNKNOWN, not green.
 `
 
-phase('Answers')
+// SERIAL AND MANAGED (operator, 2026-08-28, after the first run lost two phases and
+// forked the branch). Two changes, both a reaction to measurement:
+//   * NO parallel writers. The two that ran concurrently made two divergent branches, and
+//     a phase whose halves cannot see each other cannot be verified as one thing.
+//   * `args.only` names the phases this invocation may run. The operator drives the run
+//     one phase at a time and reads the result before the next — so a phase that goes
+//     wrong costs one phase, not a night. Omit it and every phase runs, which is the
+//     unattended mode and is NOT what today's evidence supports.
+const ONLY = args.only ? [args.only].flat() : null
+const PHASES = meta.phases.map((p) => p.title)
+if (ONLY) {
+  const unknown = ONLY.filter((n) => !PHASES.includes(n))
+  if (unknown.length) {
+    throw new Error(`args.only names phases this script does not have: ${unknown.join(', ')}. ` +
+                    `Known: ${PHASES.join(', ')}`)
+  }
+  log(`MANAGED RUN — only: ${ONLY.join(', ')}`)
+}
+// `Answers` is never skipped: every phase encodes an operator decision, so a run that did
+// not re-check the questionnaire is a run against assumptions.
+const wants = (name) => !ONLY || name === 'Answers' || ONLY.includes(name)
+
+enter('Answers')
 
 // 1 agent. Why: every later phase encodes an operator decision; if the questionnaire the
 // operator holds has changed since 2026-08-28, running this script would silently enact
 // stale decisions — the exact thing this workflow must not do.
-const answers = await agent(
+const answers = await A(
   `Read the answered questionnaire at ${args.answers} (context: ${RSI}/00-terminology.md,
    ${RSI}/01-architecture.md). For each of Q1-Q16 extract the chosen option from its
    '> **ANSWER (operator...)**' block as a single letter (for Q15, which has two sub-answers,
@@ -170,27 +196,43 @@ log('answers ok — client plane: nos-ops, ops plane: measure-first (Q3=a)')
 // had passed (measured 2026-08-28 — pipeline([null]) invoked its stage zero times).
 // `ran()` makes that impossible to do quietly: every phase counts its own invocations and
 // throws if the count is zero.
-// Reads the RESULTS rather than counting calls: a phase whose stages never ran
-// returns nothing to look at, which is exactly the state that must stop the run.
-const mustHaveRun = (name, results) => {
-  const got = [results].flat(9).filter((r) => r !== null && r !== undefined).length
-  if (got === 0) {
-    throw new Error(`phase ${name} produced NOTHING — no stage ran, or every one died. ` +
-                    `A phase that did not happen must stop the workflow, not be skipped ` +
-                    `in silence (2026-08-28: a falsy pipeline item skipped two phases).`)
-  }
-  log(`phase ${name}: ${got} agent result(s)`)
-  return results
+// A phase that ran nothing must STOP the run. Counted at the agent, checked when the
+// NEXT phase opens (and once at the end), so the failure surfaces one phase later at
+// worst instead of never — which is what happened on 2026-08-28, when a falsy pipeline
+// item skipped Prune and Mutex in silence and the run carried on as if they had passed.
+//
+// Counting at the agent rather than wrapping each phase's call is deliberate: the first
+// attempt wrapped them by hand and nested every phase inside the previous one as an extra
+// pipeline STAGE. It parsed, and it was nonsense. Single-line edits only.
+const SEEN = {}
+let CURRENT = null
+const A = (prompt, opts) => {
+  const k = (opts && opts.phase) || CURRENT
+  // The managed gate lives HERE, not around each phase's call: guarding the call
+  // itself is what nested the phases into each other. A phase the operator did not
+  // name spends nothing and its stages see a marker instead of a result.
+  if (!wants(k)) return Promise.resolve({ skipped: k })
+  SEEN[k] = (SEEN[k] || 0) + 1
+  return agent(prompt, opts)
 }
+const settle = (name) => {
+  if (!name || !wants(name)) return
+  if (!SEEN[name]) {
+    throw new Error(`phase ${name} started no agents — a phase that did not happen must ` +
+                    `stop the workflow, not be skipped in silence (2026-08-28).`)
+  }
+  log(`phase ${name}: ${SEEN[name]} agent(s) ran`)
+}
+const enter = (name) => { settle(CURRENT); CURRENT = name; phase(name) }
 
-phase('Prune')
+enter('Prune')
 
-// 2 agents (writer + verifier). Why first: deletions cannot break a runtime path that was
+// 2 agents, serial (writer + verifier). Why first: deletions cannot break a runtime path that was
 // never reachable, and removing the gravity well (three corpus reports recommended building
 // ON Dreams) before any build phase prevents the workflow's own agents rediscovering it.
 // Q8=c makes this TOTAL: no agent memory ever — table included, and a gate against return.
-mustHaveRun('Prune', await pipeline([1],
-  () => agent(
+await pipeline([1],
+  () => A(
     `${RULES}
      DELETE agent memory ENTIRELY (Q8=c: no agent memory ever; KEAP is the estate's memory)
      plus the dead multi-agent machinery — ALL in coherent commits:
@@ -213,7 +255,7 @@ mustHaveRun('Prune', await pipeline([1],
      artifact here.)
      Update composer autoload if needed; run the wing lockfile-sync gate.`,
     { label: 'prune:write', phase: 'Prune', effort: 'high' }),
-  () => agent(
+  () => A(
     `${RULES}
      VERIFY the prune commit(s) you did NOT write: read the diff on the feat branch.
      - grep the whole repo for Dreamer, MemoryStore, dream-agent, agent_memory_stores,
@@ -225,9 +267,9 @@ mustHaveRun('Prune', await pipeline([1],
     { label: 'prune:verify', phase: 'Prune', effort: 'medium' }),
 )
 
-phase('Mutex')
+enter('Mutex')
 
-// 2 agents (writer + verifier). Why now (Q12=b, operator overruled the recommendation):
+// 2 agents, serial (writer + verifier). Why now (Q12=b, operator overruled the recommendation):
 // bound AgentKit runs are PHP in-process — a different failure mode from the claude-CLI
 // crashes (2026-05-27) the lock exists for — and may run three abreast. ONE lock stays the
 // law: two locks for one invariant is the estate's signature defect, and
@@ -239,8 +281,8 @@ phase('Mutex')
 // a writer whose busy_timeout is 0 — which is what the writer below must close. What
 // would CHANGE N: measured SQLITE_BUSY / lock-wait rates from three real concurrent runs,
 // not a feeling.
-mustHaveRun('Mutex', await pipeline([1],
-  () => agent(
+await pipeline([1],
+  () => A(
     `${RULES}
      Q12 — widen files/anatomy/scripts/agent-run-lock.sh to a SLOT DIRECTORY of N=3:
      - AgentKit (in-process PHP) acquisition takes ONE slot; a claude-CLI spawn
@@ -264,7 +306,7 @@ mustHaveRun('Mutex', await pipeline([1],
      a CLI acquire returns 2; kill an owner PID, assert its slot is reclaimed. The gate
      EXECUTES the shell script — it does not read its text.`,
     { label: 'mutex:write', phase: 'Mutex', effort: 'high' }),
-  () => agent(
+  () => A(
     `${RULES}
      VERIFY the Mutex commit you did not write: run the new gate + full suite; grep the repo
      for any second lock path serving agent runs (the defect the file exists to end);
@@ -273,9 +315,9 @@ mustHaveRun('Mutex', await pipeline([1],
     { label: 'mutex:verify', phase: 'Mutex', effort: 'medium' }),
 )
 
-phase('Grant')
+enter('Grant')
 
-// 3 agents (2 writers in parallel-safe files + 1 verifier). Why: identity is the ordering
+// 4 agents, serial (3 writers + 1 verifier). Why: identity is the ordering
 // principle — every later capability presents a principal this phase creates. Items 1+2 of
 // 01-architecture.md; truth before capability.
 //
@@ -296,8 +338,8 @@ phase('Grant')
 // the tool; a scoped Wing token on a runtime that never authenticates to Bone is half a
 // principal. Whatever this phase ships, a bound run must end able to reach a scoped Bone
 // endpoint — verify that, do not infer it.
-mustHaveRun('Grant', await parallel([
-  () => agent(
+await pipeline([1],
+  () => A(
     `${RULES}
      ITEM 1 — split mcp-wing (files/anatomy/wing/app/AgentKit/Tools/McpWingTool.php) into
      mcp-wing-read (GET only, scope wing.read) and mcp-wing-write (POST, scope wing.write,
@@ -320,7 +362,7 @@ mustHaveRun('Grant', await parallel([
      roster, assert ToolResult::error (via the php test bridge the suite already uses for
      presenter gates; find it, do not invent a new bridge).`,
     { label: 'grant:tool-split', phase: 'Grant', effort: 'high' }),
-  () => agent(
+  () => A(
     `${RULES}
      ITEM 2 — per-agent Wing principal. api_tokens gains a scopes column (idempotent ALTER in
      schema-extensions.sql, same sweep pattern as the P1 events ALTERs); BaseApiPresenter::
@@ -331,21 +373,55 @@ mustHaveRun('Grant', await parallel([
      reader over a fixture events DB asserting recorded token name == owning session agent,
      plus the 403 negative (read-scoped token on a write presenter).`,
     { label: 'grant:principal', phase: 'Grant', effort: 'high' }),
-])
-await agent(
+  () => A(
+    `${RULES}
+     ITEM 3 — close the three holes the FIRST attempt's own verifier found. It failed the
+     phase on them; this run closes them or reports, per hole, why it cannot.
+
+     HOLE 1 — a read-scoped tool that accepts POST. `McpKeapTool::requiredScopes()` is
+     ['mcp.tool_use','keap.read'] — inside READ_ONLY_SCOPES — and it accepts POST. The gate
+     `test_a_read_scoped_tool_refuses_a_post` passed over it FOR THE WRONG REASON: its probe
+     sends path=/api/v1/events, which KEAP rejects with 'path must start with /agent/v1/'
+     and refused_reason=NULL. A transport rejection stood in for a verb rejection. Measured:
+     the same read-only roster with a path KEAP SERVES returns isError=false, HTTP 200,
+     {"WROTE":true}. Fix both halves — the tool must refuse the verb its scope does not
+     name, AND the gate must drive every registered tool with a path that tool actually
+     serves, because a probe that cannot reach the code proves nothing. Its sibling
+     `test_the_read_plane_refuses_at_the_verb_not_at_the_transport` is hardcoded to
+     mcp-wing-read; generalise it over the registry.
+
+     HOLE 2 — the grants are pinned per-ROUTE, not per-AGENT. The verifier added
+     `mcp-wing-write` + `wing.write` to conductor (zero measured calls, named in the
+     artifact's own `no_grant` finding) and the FULL corpus stayed green: 4135 passed, 0
+     failed. The widening the artifact exists to prevent is invisible to every gate in this
+     estate. Pin the agent set as well: the manifests holding a write tool must equal the
+     agents the measurement granted, and adding one with no measured call must go red.
+
+     HOLE 3 — the behavioural core does not run in CI, and this is estate-wide. The gate
+     skipifs on files/anatomy/wing/vendor/autoload.php, and NO workflow under
+     .github/workflows/ ever runs `composer install` — so a fresh checkout has no vendor and
+     7 of 9 assertions skip, every one that actually calls a tool. NOS_TEST_PROVIDES does
+     not bind it: the contract verifies PATH, and vendor is not on PATH. Either make CI
+     install the vendor tree, or make its absence a hard failure for any gate claiming to
+     exercise PHP behaviour. A gate whose behavioural half silently skips in CI is a gate
+     the estate does not have. Prove your choice against a `git archive` of the tree the way
+     the verifier did — do not assert it.
+`,
+    { label: 'grant:holes', phase: 'Grant', effort: 'high' }),
+  () => A(
   `${RULES}
-   VERIFY the Grant phase (you wrote none of it): read both diffs; run the two new gates plus
+   VERIFY the Grant phase (you wrote none of it): read all three diffs; run the two new gates plus
    the full tests/anatomy suite; then attempt the bypass BOTH gates must catch: (1) call the
    write tool with only wing.read in the roster, (2) hit a write presenter with a read-scoped
    token fixture. Also verify Q14's traceability: every granted route in the six manifests
    appears in the committed wing-write-grants.json, and the artifact carries its span block
    (MIN/MAX timestamp + row count — no fixed window anywhere in the query; or the commit
    says zero-grants fallback). If any check fails, the phase FAILED — report the hole, do not patch it.`,
-  { label: 'grant:verify', phase: 'Grant', effort: 'high' })
+  { label: 'grant:verify', phase: 'Grant', effort: 'high' }))
 
-phase('Oracle')
+enter('Oracle')
 
-// 2 agents (writer + verifier). Why: makes outcome_satisfied mean something a reader wrote
+// 2 agents, serial (writer + verifier). Why: makes outcome_satisfied mean something a reader wrote
 // (items 3+4) and makes the output CONTRACT honest (Q9) — the precondition for every
 // success-rate surface. Q10=b: no grader to start; the oracle's raw output is the revision
 // signal.
@@ -379,8 +455,8 @@ phase('Oracle')
 //       constraint this phase adds must therefore also carry what the run ACTED ON (rows
 //       judged, files written, records posted: zero is a legitimate value that must be
 //       STORED, not absent). "Nothing to do" and "did the thing" may not render alike.
-mustHaveRun('Oracle', await pipeline([1],
-  () => agent(
+await pipeline([1],
+  () => A(
     `${RULES}
      ITEMS 3+4 + the Q9 output contract — oracle-written satisfaction, no grader to start:
      - agent.schema.yaml: outcomes: requires gateset: naming an entry in state/judge-sets.yml.
@@ -412,7 +488,7 @@ mustHaveRun('Oracle', await pipeline([1],
      repaired content AND output_repaired set; feed an unfixable one with a stub re-ask that
      also fails, assert UNPARSEABLE and not satisfied).`,
     { label: 'oracle:write', phase: 'Oracle', effort: 'high' }),
-  () => agent(
+  () => A(
     `${RULES}
      VERIFY Oracle phase: run the three new gates + full suite; try to write satisfied
      without a gate_run_id through every code path that touches outcome_result (grep them
@@ -423,12 +499,12 @@ mustHaveRun('Oracle', await pipeline([1],
     { label: 'oracle:verify', phase: 'Oracle', effort: 'high' }),
 )
 
-phase('Ledger')
+enter('Ledger')
 
 // 2 agents. Why: joins the two provenance systems — until a proposal names a session,
 // "AgentKit-driven nos-loop" is two systems sharing a string. Q13=a: existing ceilings.
-mustHaveRun('Ledger', await pipeline([1],
-  () => agent(
+await pipeline([1],
+  () => A(
     `${RULES}
      ITEM 5 — join the ledgers (Q13=a, existing ceilings):
      - files/anatomy/bone/ledger.py: loop_proposals gains session_uuid (idempotent ALTER);
@@ -450,7 +526,7 @@ mustHaveRun('Ledger', await pipeline([1],
      point against temp Bone+Wing DBs, assert the JOIN: every new loop_proposals row has a
      matching agent_sessions.uuid whose model_uri resolved through BindingResolver.`,
     { label: 'ledger:write', phase: 'Ledger', effort: 'high' }),
-  () => agent(
+  () => A(
     `${RULES}
      VERIFY Ledger phase: run the new gate + full suite; grep tools/loop-propose.py for any
      surviving 'bypassPermissions' or bare 'claude --print'; confirm loop-pr.py and
@@ -460,14 +536,14 @@ mustHaveRun('Ledger', await pipeline([1],
     { label: 'ledger:verify', phase: 'Ledger', effort: 'medium' }),
 )
 
-phase('Surface')
+enter('Surface')
 
-// 4 agents (3 writers, 1 verifier). Why: renders what is already recorded — the operator
+// 4 agents, serial (3 writers + 1 verifier). Why: renders what is already recorded — the operator
 // cannot supervise a loop they cannot see (02-visualisation.md) — and Q6's build order is
 // SURFACE FIRST: the loop editor where harnesses are visible, the toggle with it (default
 // OFF, denylisted), and only after that may a later cycle add the 'harness' proposal kind.
-mustHaveRun('Surface', await parallel([
-  () => agent(
+await pipeline([1],
+  () => A(
     `${RULES}
      Graph model: tools/anatomy-graph-gen.py emits agent:<name> as a 14th node kind from
      files/anatomy/agents/*/agent.yml (charter/runner_status/mode attrs; edges: agent->tool,
@@ -479,7 +555,7 @@ mustHaveRun('Surface', await parallel([
      SHIP THE GATE: test_every_agent_directory_has_a_node.py — reads the EMITTED json against
      the filesystem.`,
     { label: 'surface:graph', phase: 'Surface', effort: 'high' }),
-  () => agent(
+  () => A(
     `${RULES}
      /questions surface, per Q15 (channels: Wing UI ONLY — no ntfy actions, no telegram, an
      approval channel is an authentication surface; default_on_expiry: ALWAYS refuse):
@@ -490,7 +566,7 @@ mustHaveRun('Surface', await parallel([
      (reconcile-inbox.php) is not yours to touch.
      SHIP THE GATE: extend the presenter-gate contract test to cover QuestionsPresenter.`,
     { label: 'surface:questions', phase: 'Surface', effort: 'high' }),
-  () => agent(
+  () => A(
     `${RULES}
      Q6 — the LOOP EDITOR surface + the harness-enhancement toggle, default OFF:
      - a Wing presenter (/loop-editor or nested under the loop views) that renders every
@@ -521,8 +597,7 @@ mustHaveRun('Surface', await parallel([
      definition + fixture, and the denylist entry), asserts the fixture default is OFF and
      that the toggle's table path appears on the denylist.`,
     { label: 'surface:loop-editor', phase: 'Surface', effort: 'high' }),
-])
-await agent(
+  () => A(
   `${RULES}
    VERIFY Surface phase: run the new gates + suite; open the regenerated anatomy-graph.json
    and hand-check surveyor's node (charter attr present? tools edges = its manifest roster?
@@ -532,16 +607,16 @@ await agent(
    the denylist, and that the editor lists the disabled harness intent; render the new views via the wing live-verify recipe (memory: port
    9000 + edge token headers) ONLY if a deployed Wing exists on this host, else latte-lint
    the templates. Report.`,
-  { label: 'surface:verify', phase: 'Surface', effort: 'medium' })
+  { label: 'surface:verify', phase: 'Surface', effort: 'medium' }))
 
-phase('Ops harness')
+enter('Ops harness')
 
 // 2 agents. Why (Q3=a): the ops plane's go/no-go is a measurement, not a feeling — this
 // phase builds the instrument, not the plane. Q4: the instrument is parameterised over a
 // model-size RANGE, because the question is not "is 1B enough" but "where is the boundary
 // between the ~1B chain tier and the ~3-7B tool-use tier".
-mustHaveRun('Ops harness', await pipeline([1],
-  () => agent(
+await pipeline([1],
+  () => A(
     `${RULES}
      one_shot mode + the nos-ops measurement harness (Q3=a, Q4 two-tier):
      - agent.schema.yaml + Runner.php: mode: one_shot — bind, ONE call, validate the emitted
@@ -561,7 +636,7 @@ mustHaveRun('Ops harness', await pipeline([1],
      SHIP THE GATE: test_one_shot_mode_makes_one_call.py — stub client, assert exactly one
      send() and that a schema-invalid chain records failed, never satisfied.`,
     { label: 'ops:harness', phase: 'Ops harness', effort: 'high' }),
-  () => agent(
+  () => A(
     `${RULES}
      VERIFY Ops harness: run the gate + suite; run the harness against the fixture set with
      STUB bindings at two declared sizes (no real model call needed to prove the plumbing);
@@ -572,7 +647,7 @@ mustHaveRun('Ops harness', await pipeline([1],
     { label: 'ops:verify', phase: 'Ops harness', effort: 'medium' }),
 )
 
-phase('Review')
+if (wants('Review')) enter('Review')
 
 // MEASURED-CLAIM CHECK (07-first-bound-night.md): the final reader must state, for each of
 // the two findings this run was designed against, whether it is CLOSED, OPEN or UNKNOWN —
@@ -582,7 +657,7 @@ phase('Review')
 
 // 1 agent, read-only. Why: a final reader that wrote nothing — the workflow's own success
 // marker is written by a non-writer, per doctrine.
-const review = await agent(
+const review = await A(
   `${RULES}
    READ-ONLY final review. You wrote nothing in this workflow. On the feat branch:
    - run the FULL gate suite (pytest tests/anatomy -q) and report the exact counts;
@@ -607,5 +682,8 @@ const review = await agent(
       },
     } })
 
-log(`done: ${review.gatesPassed} gates green, ${review.gatesFailed} red, ` +
-    `${review.commitsWithoutGates.length} unpinned commits — operator steps in 06-build-report.md`))))))))
+if (review && !review.skipped) {
+  log(`done: ${review.gatesPassed} gates green, ${review.gatesFailed} red, ` +
+      `${review.commitsWithoutGates.length} unpinned commits — operator steps in 06-build-report.md`)
+}
+settle(CURRENT)
