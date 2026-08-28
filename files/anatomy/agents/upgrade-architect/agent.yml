@@ -21,6 +21,8 @@ system_prompt_path: system.md
 tools:
   - id: bash-read-only
   - id: mcp-wing
+  - id: migration-file-write  # 2026-08-28 — writes upgrades/<service>.yml; the
+                              # runner's post-step opens the MR from it
 
 multiagent:
   type: solo
@@ -37,6 +39,7 @@ audit:
     - wing.write
     - events.write
     - audit.read
+    - nos.migration.write
   pii_classification: none
 
 vault:

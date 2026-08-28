@@ -44,6 +44,9 @@ final class MigrationWriteTool implements ToolInterface
     /** Migration YAML home, repo-relative. The ONLY writable subdir. */
     private const MIGRATIONS_SUBDIR = 'files/anatomy/migrations';
 
+    /** Upgrade-recipe home. The upgrade-architect's write target (2026-08-28). */
+    private const UPGRADES_SUBDIR = 'upgrades';
+
     /** The ONLY writable repo-root file. */
     private const CONFIG_BASENAME = 'default.config.yml';
 
@@ -56,6 +59,9 @@ final class MigrationWriteTool implements ToolInterface
      * convention (anatomy A1). Anchored — no path separators can sneak in.
      */
     private const MIGRATION_NAME_RE = '/^\d{4}-\d{2}-\d{2}-[a-z0-9][a-z0-9-]*\.yml$/';
+
+    /** Recipe filename shape: <service>.yml, matching upgrades/<service>.yml. */
+    private const UPGRADE_NAME_RE = '/^[a-z][a-z0-9_-]*\.yml$/';
 
     private string $repoRoot;
 
@@ -86,8 +92,9 @@ final class MigrationWriteTool implements ToolInterface
     {
         return new ToolSchema(
             name: 'migration_file_write',
-            description: 'Write ONE file into the nOS working tree. Allowed targets are exactly two: ' .
+            description: 'Write ONE file into the nOS working tree. Allowed targets are exactly three: ' .
                 'a migration YAML at `files/anatomy/migrations/<YYYY-MM-DD>-<slug>.yml`, ' .
+                'an upgrade recipe at `upgrades/<service>.yml`, ' .
                 'OR `default.config.yml` (for a `<service>_version` bump). ' .
                 'Provide `path` (repo-relative; no `..`, no absolute, no nested subdir) and ' .
                 '`content` (the FULL file content; the tool creates/overwrites atomically; max 256 KiB). ' .
@@ -173,9 +180,10 @@ final class MigrationWriteTool implements ToolInterface
             }
         }
 
-        // 5. Classify against the allowlist — EXACTLY two arms.
+        // 5. Classify against the allowlist — one root file, two directories.
         $arm = null;
         $target = null;
+        $armSubdir = null;
         if ($path === self::CONFIG_BASENAME) {
             // Arm (b): the one writable repo-root file.
             $arm = 'config';
@@ -200,11 +208,33 @@ final class MigrationWriteTool implements ToolInterface
                 );
             }
             $arm = 'migration';
+            $armSubdir = self::MIGRATIONS_SUBDIR;
+            $target = $root . '/' . $path;
+        } elseif (str_starts_with($path, self::UPGRADES_SUBDIR . '/')) {
+            // Arm (c): an upgrade recipe, one level deep, <service>.yml.
+            $rest = substr($path, strlen(self::UPGRADES_SUBDIR) + 1);
+            if ($rest === '' || str_contains($rest, '/')) {
+                return $this->refuse(
+                    'recipe path must be upgrades/<service>.yml (no nested subdirectory)',
+                    'allowlist',
+                    $path,
+                );
+            }
+            if (preg_match(self::UPGRADE_NAME_RE, $rest) !== 1) {
+                return $this->refuse(
+                    'recipe filename must be a lowercase <service>.yml (e.g. gitlab.yml)',
+                    'allowlist',
+                    $path,
+                );
+            }
+            $arm = 'upgrade';
+            $armSubdir = self::UPGRADES_SUBDIR;
             $target = $root . '/' . $path;
         } else {
             return $this->refuse(
                 'path is outside the allowlist. The ONLY writable targets are ' .
-                "'" . self::MIGRATIONS_SUBDIR . "/<YYYY-MM-DD>-<slug>.yml' and " .
+                "'" . self::MIGRATIONS_SUBDIR . "/<YYYY-MM-DD>-<slug>.yml', " .
+                "'" . self::UPGRADES_SUBDIR . "/<service>.yml' and " .
                 "'" . self::CONFIG_BASENAME . "'.",
                 'allowlist',
                 $path,
@@ -234,27 +264,27 @@ final class MigrationWriteTool implements ToolInterface
                 );
             }
         } else {
-            // The migrations dir itself must (a) resolve, (b) be inside the
-            // repo root, and (c) BE the target's parent. (c) catches a
-            // symlinked `migrations` dir pointing outside the tree.
-            $migrationsReal = realpath($root . '/' . self::MIGRATIONS_SUBDIR);
-            if ($migrationsReal === false) {
+            // The arm's dir must (a) resolve, (b) be inside the repo root,
+            // and (c) BE the target's parent. (c) catches a symlinked dir
+            // pointing outside the tree.
+            $dirReal = realpath($root . '/' . $armSubdir);
+            if ($dirReal === false) {
                 return $this->refuse(
-                    'the migrations directory does not resolve under the repo root',
+                    "the {$armSubdir} directory does not resolve under the repo root",
                     'symlink_escape',
                     $path,
                 );
             }
-            if (!str_starts_with($migrationsReal . '/', $root . '/')) {
+            if (!str_starts_with($dirReal . '/', $root . '/')) {
                 return $this->refuse(
-                    'the migrations directory resolves OUTSIDE the repo root (symlink escape)',
+                    "the {$armSubdir} directory resolves OUTSIDE the repo root (symlink escape)",
                     'symlink_escape',
                     $path,
                 );
             }
-            if ($parentReal !== $migrationsReal) {
+            if ($parentReal !== $dirReal) {
                 return $this->refuse(
-                    'the target parent does not resolve to the migrations directory (symlink escape)',
+                    "the target parent does not resolve to the {$armSubdir} directory (symlink escape)",
                     'symlink_escape',
                     $path,
                 );

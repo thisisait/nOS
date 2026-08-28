@@ -155,5 +155,33 @@ echo "[run-agent] ceilings: tokens=${NOS_AGENT_SESSION_TOKEN_CEILING:-<default>}
 source "$REPO_ROOT/files/anatomy/scripts/agent-run-lock.sh"
 nos_agent_lock_acquire "${NOS_AGENT_NAME:-agentkit}" 300 || exit 2
 
+SUMMARY_FILE="$(mktemp -t nos-agent-summary)"
+trap 'nos_agent_lock_release; rm -f "$SUMMARY_FILE"' EXIT
+
 cd "$WING_APP"
-php bin/run-agent.php "${PASSTHRU[@]}"
+php bin/run-agent.php "${PASSTHRU[@]}" | tee "$SUMMARY_FILE"
+
+# ── MR post-step ─────────────────────────────────────────────────────────────
+# The agent has no forge tool and must not get one: a session that can push is a
+# session that can merge its own work. It writes into the working tree with
+# `migration_file_write`, and THIS reads what the tool itself recorded —
+# `metadata.path_written` on the agent_tool_result event — rather than trusting
+# the model's prose about what it wrote. recipe-pr.sh re-validates through the
+# recipe gates and refuses to open an MR that does not pass; a human merges.
+#
+# Recipes only. A migration write needs migration-pr.sh with a migration-id and
+# a version bump in the same MR, and that path is NOT wired here — say so rather
+# than open a half MR.
+SESSION_UUID="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("session_uuid") or "")' "$SUMMARY_FILE" 2>/dev/null || true)"
+if [[ -n "$SESSION_UUID" && -x "$REPO_ROOT/tools/recipe-pr.sh" ]]; then
+    while IFS= read -r recipe; do
+        svc="$(basename "$recipe" .yml)"
+        echo "[run-agent] $recipe was written — opening an MR via recipe-pr.sh $svc"
+        (cd "$REPO_ROOT" && ./tools/recipe-pr.sh "$svc" --open-pr) \
+            || echo "WARN: recipe-pr.sh refused $svc — the recipe is in the tree, NO MR was opened" >&2
+    done < <(sqlite3 -readonly "${WING_DB_PATH:-$HOME/wing/app/data/wing.db}" \
+        "SELECT DISTINCT json_extract(result_json, '\$.metadata.path_written')
+           FROM events
+          WHERE type = 'agent_tool_result' AND actor_action_id = '$SESSION_UUID'
+            AND json_extract(result_json, '\$.metadata.path_written') LIKE 'upgrades/%'" 2>/dev/null || true)
+fi

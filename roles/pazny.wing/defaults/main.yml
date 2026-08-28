@@ -61,3 +61,5 @@ wing_pulse_retired_jobs:
   - "remediator:triage-open-findings"
   - "upgrade-advisor:upgrade-advise"
   - "migration-author:promote-migration"
+  # curator is parked contract-only: no pulse block declares this row.
+  - "curator:curator-sweep"
