@@ -6,6 +6,20 @@
 // below — a workflow hardcodes its answers' consequences, so different answers need a
 // different workflow, not a silent reinterpretation.
 //
+// MEASURED EVIDENCE, added 2026-08-28 after this script was written. Three ceremonies were
+// fired through the Pulse daemon on the real estate; the record is
+// docs/plans/rsi-research/07-first-bound-night.md and every phase below that it touches
+// cites it. It changed nothing about WHAT to build and a great deal about WHY, because two
+// of this script's phases were designed against inference and now stand on measurement:
+//   * the HMAC fix works and the first AgentKit session ever reached outcome_satisfied
+//     (df2a5477) — so Q8/Q10's unblocking condition is met;
+//   * across the two runs with real intake the model made 40 tool calls, ALL READS, and
+//     zero writes. It does not transition from reading to writing. That is the Oracle
+//     phase's real target, and it is a harness problem, not a prompt typo;
+//   * bound agents have NO principal: no Authentik exchange on this path at all, so
+//     `actor_id` is an assertion. That is the Grant phase's target, now measured;
+//   * `satisfied` on an EMPTY intake is today indistinguishable from satisfied after work.
+//
 // Answers consumed (see EXPECTED below for the exact set):
 //   Q1/Q2/Q16 — names land NOW: the client plane is `nos-ops`, the split is a `plane`;
 //   Q3/Q4 — measure first; the harness is parameterised over a model-size RANGE and
@@ -244,6 +258,18 @@ phase('Grant')
 // 3 agents (2 writers in parallel-safe files + 1 verifier). Why: identity is the ordering
 // principle — every later capability presents a principal this phase creates. Items 1+2 of
 // 01-architecture.md; truth before capability.
+//
+// MEASURED (07-first-bound-night.md §4): the gap is wider than "the grants are implicit".
+// `McpBoneTool` sends NO Authorization header at all (McpBoneTool.php:63-68), so every Bone
+// endpoint behind require_scope() (bone/auth.py:180-205) answers 401 — session 505e0f11 got
+// exactly that. And it is not one tool's bug: the CLI path does an Authentik
+// client_credentials exchange requesting the agent's declared scopes
+// (pulse-run-agent.sh:232-252) and the bound path does NONE — neither tools/run-agent.sh nor
+// bin/run-agent.php contains the string. So a bound agent presents nothing to Bone and the
+// DAEMON'S SHARED WING_API_TOKEN to Wing. The writer must close the exchange, not just split
+// the tool; a scoped Wing token on a runtime that never authenticates to Bone is half a
+// principal. Whatever this phase ships, a bound run must end able to reach a scoped Bone
+// endpoint — verify that, do not infer it.
 await parallel([
   () => agent(
     `${RULES}
@@ -297,6 +323,26 @@ phase('Oracle')
 // (items 3+4) and makes the output CONTRACT honest (Q9) — the precondition for every
 // success-rate surface. Q10=b: no grader to start; the oracle's raw output is the revision
 // signal.
+//
+// MEASURED (07-first-bound-night.md §2+§3), and it reframes this phase. Two findings:
+//
+//   (a) THE READ/WRITE TRANSITION IS THE DEFECT. In 40 tool calls across two runs with real
+//       intake, every call was a read and every one returned 200; the model paged through
+//       198 unpromoted captures and issued no POST. Token ratio ~40:1 in/out. The 2026-08-17
+//       note called this "a preamble, a tool call, repeated until the budget ends"; it is
+//       sharper than that — the loop does not fail to produce, it fails to ACT. Q9's
+//       three-stage output contract only helps if a write is attempted at all, so this
+//       phase must also make the absence of a write a FIRST-CLASS OUTCOME: a run that read
+//       and wrote nothing is not `outcome_failed` for a rubric reason, it is a distinct
+//       recorded state, and the session row must say which. Do not paper over it with a
+//       sterner prompt — a prompt change that fixes this would prove it was never a harness
+//       problem, and that claim needs the measurement, not the hope.
+//
+//   (b) SATISFIED ON AN EMPTY INTAKE. df2a5477 was satisfied for handling an empty queue
+//       honestly — correct, and indistinguishable from satisfied after work. The gate_run_id
+//       constraint this phase adds must therefore also carry what the run ACTED ON (rows
+//       judged, files written, records posted: zero is a legitimate value that must be
+//       STORED, not absent). "Nothing to do" and "did the thing" may not render alike.
 await pipeline(
   () => agent(
     `${RULES}
@@ -491,6 +537,12 @@ await pipeline(
 )
 
 phase('Review')
+
+// MEASURED-CLAIM CHECK (07-first-bound-night.md): the final reader must state, for each of
+// the two findings this run was designed against, whether it is CLOSED, OPEN or UNKNOWN —
+// (1) can a bound run reach a scoped Bone endpoint as itself, (2) is a read-only run now a
+// distinct recorded outcome. UNKNOWN is a permitted answer and the honest one if no bound
+// run happened; what is forbidden is silence, which would read as closed.
 
 // 1 agent, read-only. Why: a final reader that wrote nothing — the workflow's own success
 // marker is written by a non-writer, per doctrine.
