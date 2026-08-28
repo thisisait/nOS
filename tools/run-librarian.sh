@@ -9,7 +9,7 @@
 # markdown report to ~/.nos/librarian-report-<ts>.md.
 #
 # The librarian's Pulse row is paused=1 by default (on-demand doctrine —
-# see files/anatomy/agents/librarian.yml). Judgment makes sense right after
+# see files/anatomy/agents/librarian/agent.yml). Judgment makes sense right after
 # the nightly keap-lint filled the intake, or after a curation batch — not
 # on a fixed cron.
 #

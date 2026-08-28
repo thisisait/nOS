@@ -127,7 +127,7 @@ FACE_TARGET = REPO / "files" / "anatomy" / "face" / "src" / "lib" / "anatomy" / 
 FACE_REGISTRY = REPO / "files" / "anatomy" / "face" / "src" / "lib" / "apps" / \
     "native" / "registry.ts"
 
-JOB_SOURCES = ("files/anatomy/plugins/*/plugin.yml", "files/anatomy/agents/*.yml")
+JOB_SOURCES = ("files/anatomy/plugins/*/plugin.yml", "files/anatomy/agents/*/agent.yml")
 JUDGE_SETS = REPO / "state" / "judge-sets.yml"
 WEAKNESSES = REPO / "files" / "anatomy" / "bone" / "weaknesses.py"
 MANIFEST = REPO / "state" / "manifest.yml"

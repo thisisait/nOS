@@ -477,7 +477,7 @@ def test_scan_data_write_edge_is_backed_by_code(committed):
     # passes no --push: the manifest's job entry must carry no args.
     import yaml
     doc = yaml.safe_load(
-        (REPO / "files/anatomy/agents/conductor.yml").read_text(encoding="utf-8"))
+        (REPO / "files/anatomy/agents/conductor/agent.yml").read_text(encoding="utf-8"))
     job = next(j for j in doc["pulse"]["jobs"] if j["name"] == "scan-state-record")
     assert not job.get("args"), (
         "scan-state-record now passes args — if one of them is --push, the "

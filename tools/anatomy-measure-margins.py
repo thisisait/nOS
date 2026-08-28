@@ -59,7 +59,7 @@ REPO = Path(__file__).resolve().parents[1]
 
 #: Same walk as tests/anatomy/test_every_job_declares_what_it_is.py — both
 #: sources, because a temporal edge in an agent profile must not be invisible.
-SOURCES = ("files/anatomy/plugins/*/plugin.yml", "files/anatomy/agents/*.yml")
+SOURCES = ("files/anatomy/plugins/*/plugin.yml", "files/anatomy/agents/*/agent.yml")
 
 DEFAULT_DB = Path.home() / "wing" / "app" / "data" / "wing.db"
 

@@ -49,13 +49,13 @@ AGENTS = REPO / "files" / "anatomy" / "agents"
 def _agents_with_a_ceremony() -> set[str]:
     """Agents whose flat profile declares a Pulse job — i.e. that actually run."""
     out: set[str] = set()
-    for f in sorted(AGENTS.glob("*.yml")):
+    for f in sorted(AGENTS.glob("*/agent.yml")):
         try:
             m = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
         except yaml.YAMLError:
             continue
         if isinstance(m, dict) and m.get("pulse"):
-            out.add(f.stem)
+            out.add(f.parent.name)
     return out
 
 

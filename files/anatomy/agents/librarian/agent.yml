@@ -82,16 +82,16 @@ metadata:
   ceremony_role: rag-recall
   runner_status: scheduled
   deferred_reason: >-
-    runner live 2026-07-11 (flat profile files/anatomy/agents/librarian.yml);
+    runner live 2026-07-11;
     unpaused 2026-08-28, nightly through tools/run-agent.sh (AgentKit), which
     is the runner that can receive the MiniMax binding. Intake = KEAP lint overlap-review /
     near-duplicate findings; verdicts via /agent/v1/lint/verdict.
 
 exit_code_semantics:
-  emits_sentinel: false
+  emits_sentinel: true
   exit_0: "Contract-only (no live runner). Reserved: RAG recall completed, context posted as events."
   exit_1: "Does not emit exit 1 today (runner deferred). Reserved: surfaced prior-art requiring operator review."
-  exit_2: "Environment / auth / Wing error inside pulse-run-agent.sh. Fires a CRITICAL A9 notification."
+  exit_2: "Environment / auth / Wing error inside the runner. Fires a CRITICAL A9 notification."
 # ── Article 30 ────────────────────────────────────────────────────────────────
 gdpr:
   purpose: |
@@ -128,3 +128,167 @@ gdpr:
       safeguard: "None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer."
   eu_residency: false
   transfers_outside_eu: true
+
+capabilities:
+  - nos:state:read
+  - nos:security:read
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+pulse:
+  jobs:
+    - name: judge-lint-queue
+      category: knowledge
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/run-agent.sh"
+      args: ["--agent=librarian", "--trigger=pulse"]
+      schedule: "10 5 * * *"
+      jitter_min: 5
+      max_runtime_s: 600
+      max_concurrent: 1
+      paused: false
+      paused_reason: "librarian is on-demand; tools/run-librarian.sh fires it"
+      env:
+        NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
+        NOS_AGENT_NAME: "librarian"
+        NOS_AGENT_CLIENT_ID: "nos-librarian"
+        NOS_AGENT_CLIENT_SECRET: "secret:agent_librarian_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
+        NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/librarian/agent.yml"
+        # Judgment calls need reasoning but not the flagship tier.
+        NOS_AGENT_MODEL: "sonnet"
+        NOS_AGENT_TASK: |
+          Work the KEAP lint intake queue:
+          1. GET /agent/v1/lint?check=overlap-review&unjudged=1&limit=20
+             and ?check=near-duplicate&unjudged=1&limit=20.
+          2. For each finding fetch both texts (objects/notes; skip
+             captures unless names are decisive).
+          3. Rule fine|duplicate|contradiction per the judgment procedure;
+             POST each verdict to /agent/v1/lint/verdict.
+          4. Then work the PROMOTION intake: up to 5 datapoints from
+             GET /agent/v1/captures?unpromoted=1 — for knowledge-worthy
+             ones find taxonomy anchors (semantic search + node verify)
+             and POST /agent/v1/promotions with a synthesized object
+             draft + rationale. You propose; the moderator decides.
+          5. If the best anchor is too generic for a datapoint, grow the
+             tree per the taxonomy-growth procedure: POST
+             /agent/v1/taxonomy/propose (load-bearing description; max 3
+             per run; anchor-core refusals are final, anchor shallow).
+          6. POST your "## Librarian report" (add "Proposals" +
+             "Taxonomy" sections)
+             via Wing /api/v1/events type=conductor_report source=librarian.
+          End the report with a final line `NOS_AGENT_EXIT: N` (the runner
+          reads this — a bare exit code is NOT propagated): 1 when any
+          duplicate/contradiction verdict was issued (the operator must
+          review a knowledge conflict); otherwise 0 — an empty queue, all
+          `fine`, or routine promotion/node proposals awaiting moderation
+          are the normal outcome and do NOT escalate.
+        WING_API_URL: "http://127.0.0.1:9000"
+        WING_API_TOKEN: "{{ librarian_wing_api_token }}"
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
+        KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
+        KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
+        KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
+
+    # taxonomy-brief (skills/taxonomy-brief in nos-keap). Paused, on-demand:
+    # tools/run-librarian.sh --brief fires one ~10-node batch, root-first.
+    # SWEEP SCOPE: maxLevel=9 — FULL sweep (all ~432 remaining L3+ nodes),
+    # approved 2026-07-13 after the L0-2 waves landed. Root-first ordering
+    # means each run still fills the shallowest pending nodes first. Move this
+    # AND run-librarian.sh's intake count together.
+    # HISTORY: pilot maxLevel=0 (12 categories) → L0-1 anchor core → L0-2 →
+    # now full. The operator moderates each batch in Admin › Moderace.
+    - name: brief-taxonomy
+      category: knowledge
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/run-agent.sh"
+      args: ["--agent=librarian", "--trigger=pulse"]
+      schedule: "10 3 * * *"
+      jitter_min: 5
+      max_runtime_s: 900
+      max_concurrent: 1
+      paused: false
+      paused_reason: "brief sweep is operator-paced; tools/run-librarian.sh --brief fires it"
+      env:
+        NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
+        NOS_AGENT_NAME: "librarian"
+        NOS_AGENT_CLIENT_ID: "nos-librarian"
+        NOS_AGENT_CLIENT_SECRET: "secret:agent_librarian_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
+        NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/librarian/agent.yml"
+        # Briefs are the operator-facing articles — sonnet, not the flagship.
+        NOS_AGENT_MODEL: "sonnet"
+        NOS_AGENT_TASK: |
+          Work ONE batch of the taxonomy-brief skill (root taxonomy sweep):
+          1. GET /agent/v1/taxonomy/brief/pending?limit=10&maxLevel=9 —
+             nodes (full sweep, all levels, root-first) lacking an
+             article, with server context (path, K1 description,
+             childNames, siblingNames).
+          2. Write briefs per the brief procedure AND the house style:
+             2-4 paragraphs en + real cs translation, 2-5 [[node-id]]
+             vazby (mandatory), 1-3 durable external links, building
+             on the K1 description.
+          3. POST /agent/v1/taxonomy/brief with ALL items in one batch;
+             report per-item errors verbatim.
+          4. POST your "## Librarian report" (sections Summary — batch
+             size, proposed, errors, remaining total — and Taxonomy)
+             via Wing /api/v1/events type=conductor_report source=librarian.
+          End the report with a final line `NOS_AGENT_EXIT: 0` (the runner
+          reads this — a bare exit code is NOT propagated). Proposals await
+          the moderator, but that is the normal outcome — do NOT escalate;
+          use 1 only if the batch could not run at all.
+        WING_API_URL: "http://127.0.0.1:9000"
+        WING_API_TOKEN: "{{ librarian_wing_api_token }}"
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
+        KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
+        KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
+        KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
+
+    # K1 taxonomy-describe (skills/taxonomy-describe in nos-keap). Paused,
+    # on-demand: tools/run-librarian.sh --describe fires one ~40-node batch;
+    # the ~778-node backlog is ~20 supervised runs, not a cron.
+    - name: describe-taxonomy
+      category: knowledge
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/run-agent.sh"
+      args: ["--agent=librarian", "--trigger=pulse"]
+      schedule: "10 2 * * *"
+      jitter_min: 5
+      max_runtime_s: 900
+      max_concurrent: 1
+      paused: false
+      paused_reason: "K1 is operator-paced; tools/run-librarian.sh --describe fires it"
+      env:
+        NOS_AUTHENTIK_URL: "https://{{ authentik_domain }}"
+        NOS_AGENT_NAME: "librarian"
+        NOS_AGENT_CLIENT_ID: "nos-librarian"
+        NOS_AGENT_CLIENT_SECRET: "secret:agent_librarian_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
+        NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/librarian/agent.yml"
+        # Bulk 1-3-sentence descriptions — haiku carries the whole backlog.
+        NOS_AGENT_MODEL: "haiku"
+        NOS_AGENT_TASK: |
+          Work ONE batch of the K1 taxonomy-describe skill:
+          1. GET /agent/v1/taxonomy/describe/pending?limit=40 — nodes
+             lacking a load-bearing description, with server context
+             (path, childNames, siblingNames).
+          2. Write descriptions per the description procedure AND the
+             house style: concept not label, sibling-carving boundaries,
+             1-3 dense sentences, en canonical + cs real translation.
+          3. POST /agent/v1/taxonomy/describe with ALL items in one
+             batch; report per-item errors verbatim.
+          4. POST your "## Librarian report" (sections Summary — batch
+             size, proposed, errors, remaining total — and Taxonomy)
+             via Wing /api/v1/events type=conductor_report source=librarian.
+          End the report with a final line `NOS_AGENT_EXIT: 0` (the runner
+          reads this — a bare exit code is NOT propagated). Proposals await
+          the moderator, but that is the normal outcome — do NOT escalate;
+          use 1 only if the batch could not run at all.
+        WING_API_URL: "http://127.0.0.1:9000"
+        WING_API_TOKEN: "{{ librarian_wing_api_token }}"
+        WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
+        KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
+        KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
+        KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"

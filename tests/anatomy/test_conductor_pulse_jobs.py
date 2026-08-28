@@ -1,7 +1,7 @@
 """Anatomy gate — Conductor scheduled Pulse jobs are live + resolvable.
 
 The scheduled closed-loop Conductor is the read-only-health half of the
-A8 nerve: three Pulse jobs declared in ``files/anatomy/agents/conductor.yml``
+A8 nerve: three Pulse jobs declared in ``files/anatomy/agents/conductor/agent.yml``
 that fire on cron via the Pulse daemon (launchd ``eu.thisisait.nos.pulse``):
 
   - self-test-001       weekly  Sun 04:00 UTC  (Phase 5 ceremony)
@@ -36,7 +36,7 @@ import stat
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-CONDUCTOR = REPO / "files/anatomy/agents/conductor.yml"
+CONDUCTOR = REPO / "files/anatomy/agents/conductor/agent.yml"
 DISCOVER = REPO / "files/anatomy/scripts/discover-pulse-catalog.py"
 
 # Canonical contract — name → (cron schedule, runner). Pinning the cron string

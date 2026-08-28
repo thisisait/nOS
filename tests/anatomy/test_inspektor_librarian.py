@@ -58,12 +58,12 @@ def test_librarian_runner_live_on_demand():
     d = AGENTS / "librarian"
     for f in ("agent.yml", "system.md", "rubric.md"):
         assert (d / f).is_file(), f"librarian/{f} missing"
-    flat_path = AGENTS / "librarian.yml"
-    assert flat_path.is_file(), (
-        "librarian.yml (flat Pulse profile) missing — the runner shipped "
-        "2026-07-11; removing it silently kills tools/run-librarian.sh"
+    profile_path = AGENTS / "librarian/agent.yml"
+    assert profile_path.is_file(), (
+        "librarian/agent.yml missing — one file per agent since 2026-08-28; "
+        "removing it kills both the AgentKit contract and the Pulse schedule"
     )
-    flat = yaml.safe_load(flat_path.read_text())
+    flat = yaml.safe_load(profile_path.read_text())
     jobs = ((flat.get("pulse") or {}).get("jobs")) or []
     by_name = {j.get("name"): j for j in jobs}
     # All three ceremonies must exist, run on the bound runner, and pin a
@@ -76,7 +76,7 @@ def test_librarian_runner_live_on_demand():
     }
     for name, tier in expected_tiers.items():
         job = by_name.get(name)
-        assert job, f"librarian.yml must declare the {name} pulse job"
+        assert job, f"librarian/agent.yml must declare the {name} pulse job"
         # Unpaused 2026-08-28. What replaces the pause as the property worth
         # pinning: a SCHEDULED ceremony must go through the runner that can
         # receive the backend binding. The claude CLI cannot, so a nightly job
@@ -91,7 +91,10 @@ def test_librarian_runner_live_on_demand():
             f"{name} must pin NOS_AGENT_MODEL={tier} so the bulk ceremony "
             "never inherits the operator's flagship default"
         )
-    prompt = flat.get("system_prompt") or ""
+    # The prompt lives in system.md — the ONE spelling since the merge. The
+    # dir copy used to describe an abandoned Qdrant RAG contract while the real
+    # ceremony sat in the flat file, so a bound run read the wrong prompt.
+    prompt = (d / "system.md").read_text(encoding="utf-8")
     # The three ceremony legs: verdicts, promotions, taxonomy growth.
     assert "/agent/v1/lint/verdict" in prompt
     assert "/agent/v1/promotions" in prompt

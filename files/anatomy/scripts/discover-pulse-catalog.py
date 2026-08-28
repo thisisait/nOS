@@ -198,7 +198,7 @@ def _expand(value, subs: dict[str, str]):
 def _scan_sources(playbook_dir: str) -> list[str]:
     return (
         glob.glob(f"{playbook_dir}/files/anatomy/plugins/*/plugin.yml")
-        + glob.glob(f"{playbook_dir}/files/anatomy/agents/*.yml")
+        + glob.glob(f"{playbook_dir}/files/anatomy/agents/*/agent.yml")
     )
 
 

@@ -438,3 +438,25 @@ properties:
           report with the `NOS_AGENT_EXIT: N` sentinel that pulse-run-agent.sh
           lifts into the process exit. False for prose-only agents (conductor)
           that always exit 0 unless the runner itself errors.
+
+  # ── Merged in from the retired flat agents/<name>.yml (2026-08-28) ─────────
+  # One file is the agent's identity: AgentKit contract, Authentik scopes,
+  # notification routing and the Pulse schedule. Shapes stay loose here — the
+  # authorities are Authentik, the wing-base routing aggregator and
+  # discover-pulse-catalog.py, and a second strict copy would only drift.
+  capabilities:
+    type: array
+    items: {type: string}
+    description: "Authentik OAuth scopes the run requests (nos:*). Distinct from audit.capability_scopes, which are AgentKit tool scopes."
+  notification:
+    type: object
+    description: "Per-severity channel routing, harvested into notification-routing.json."
+  pulse:
+    type: object
+    required: [jobs]
+    properties:
+      jobs:
+        type: array
+        items:
+          type: object
+          required: [name, command, schedule]

@@ -352,7 +352,7 @@ def test_conductor_profile_declares_notification_routing():
     """Second live consumer (agent path): conductor agent profile pins
     its severity routing so pulse-run-agent.sh failures escalate."""
     profile = yaml.safe_load(
-        (REPO / "files/anatomy/agents/conductor.yml").read_text()
+        (REPO / "files/anatomy/agents/conductor/agent.yml").read_text()
     )
     notif = profile.get("notification") or {}
     assert notif.get("on_critical") == ["wing-inbox", "ntfy", "mail"]

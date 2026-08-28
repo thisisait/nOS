@@ -41,7 +41,7 @@ PARKED_STATUSES = {"parked", "deferred"}  # inspektor predates the close
 def test_the_premise_agents_exist_at_all():
     """Positive control — if the agents tree moved, absence below would be
     vacuous. The live roster's anchor profiles must be present."""
-    assert (AGENTS / "conductor.yml").is_file()
+    assert (AGENTS / "conductor/agent.yml").is_file()
     assert (AGENTS / "surveyor" / "agent.yml").is_file()
 
 

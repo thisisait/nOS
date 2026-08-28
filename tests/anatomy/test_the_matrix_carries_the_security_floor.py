@@ -44,7 +44,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 REPOSITORY = REPO / "files/anatomy/wing/app/Model/UpgradeRepository.php"
 INIT_DB = REPO / "files/anatomy/wing/bin/init-db.php"
 INGEST = REPO / "files/anatomy/wing/bin/ingest-remediation.php"
-PROFILE = REPO / "files/anatomy/agents/upgrade-architect.yml"
+PROFILE = REPO / "files/anatomy/agents/upgrade-architect/system.md"
 
 
 def _php() -> str | None:

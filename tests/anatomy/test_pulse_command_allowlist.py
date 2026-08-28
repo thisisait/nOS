@@ -185,7 +185,7 @@ def test_pulse_tokens_are_bare_not_filtered():
 
 	filtered = re.compile(r"\{\{[^}]*\|[^}]*\}\}")
 	manifests = list((REPO / "files/anatomy/plugins").rglob("plugin.yml")) \
-		+ list((REPO / "files/anatomy/agents").glob("*.yml"))
+		+ list((REPO / "files/anatomy/agents").glob("*/agent.yml"))
 	offenders = []
 	for path in manifests:
 		plugin = path.parent.name if path.parent.name != "agents" else path.stem

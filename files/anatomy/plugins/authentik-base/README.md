@@ -87,7 +87,7 @@ plugin overlays without conflict.
   `10-oidc-apps.yaml.j2` with `inputs.clients` iteration once 35
   consumer plugins declare their own `authentik:` blocks.
 - **A8 conductor**: add conductor agent profile under
-  `files/anatomy/agents/conductor.yml` with its own `authentik:` block;
+  `files/anatomy/agents/conductor/agent.yml` with its own `authentik:` block;
   the agent_profile aggregator picks it up automatically.
 - **A10 audit trail**: Authentik client_id becomes the `actor_id` FK
   for every wing.db write; this plugin will surface the

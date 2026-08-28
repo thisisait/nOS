@@ -170,7 +170,7 @@ def test_upgrade_architect_agent_wired():
     Authentik client, wing token: credentials + catalog substitution + post
     provision + env). Propose-only — never writes files or provisions."""
     base = REPO / "files/anatomy/agents"
-    for f in ("upgrade-architect/agent.yml", "upgrade-architect/system.md", "upgrade-architect/rubric.md", "upgrade-architect.yml"):
+    for f in ("upgrade-architect/agent.yml", "upgrade-architect/system.md", "upgrade-architect/rubric.md", "upgrade-architect/agent.yml"):
         assert (base / f).is_file(), f"missing: {f}"
     assert (REPO / "tools/run-upgrade-architect.sh").is_file()
     assert 'client_id: "nos-upgrade-architect"' in (REPO / "default.config.yml").read_text()
@@ -184,7 +184,7 @@ def test_upgrade_architect_agent_wired():
     # and is asserted directly.
     assert "--name=upgrade-architect" in post
     assert "--token={{ upgrade_architect_wing_api_token }}" in post
-    prof = (base / "upgrade-architect.yml").read_text()
+    prof = (base / "upgrade-architect/agent.yml").read_text()
     assert "/coexistence/" in prof and "queue" in prof, "architect must queue coexistence"
     assert "never write" in prof.lower() or "propose-only" in prof.lower() or "never write/commit" in prof.lower()
 
@@ -239,6 +239,6 @@ def test_agent_exit_verdict_sentinel_propagated():
     # Both review-capable agents, both runtime forms, must instruct the sentinel.
     # (upgrade-advisor was in this loop until its 2026-08-26 retirement —
     # "Verified live: advisor -> exit 1" above is that agent's one live run.)
-    for p in ("upgrade-architect.yml", "upgrade-architect/system.md"):
+    for p in ("upgrade-architect/agent.yml", "upgrade-architect/system.md"):
         assert "NOS_AGENT_EXIT" in (REPO / "files/anatomy/agents" / p).read_text(), \
             f"{p}: must instruct the exit-verdict sentinel"

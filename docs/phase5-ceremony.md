@@ -3,7 +3,7 @@
 > **Status:** CLI shipped 2026-05-17. **Anatomy gate:**
 > `tests/anatomy/test_phase5_ceremony.py` (8 tests).
 > **Source-of-truth for the ceremony task:**
-> `files/anatomy/agents/conductor.yml::pulse.jobs[0]`.
+> `files/anatomy/agents/conductor/agent.yml::pulse.jobs[0]`.
 
 ## Why
 

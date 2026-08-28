@@ -100,7 +100,7 @@ def test_no_pulse_job_claims_a_reserved_code_as_a_finding():
     """A job may declare "this code means I found something" — but not for a
     code that means "you never ran me"."""
     offenders = []
-    for pattern in ("files/anatomy/plugins/*/plugin.yml", "files/anatomy/agents/*.yml"):
+    for pattern in ("files/anatomy/plugins/*/plugin.yml", "files/anatomy/agents/*/agent.yml"):
         for path in sorted(REPO.glob(pattern)):
             try:
                 doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}

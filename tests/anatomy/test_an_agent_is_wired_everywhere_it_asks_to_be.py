@@ -56,16 +56,19 @@ CONFIG = REPO / "default.config.yml"
 
 
 def _profiles() -> dict[str, str]:
-    """`{agent name: flat pulse profile text}`.
+    """`{agent name: agent.yml text}` for agents that actually run.
 
-    The flat `agents/<name>.yml` is the Pulse-facing declaration — the file
-    `pulse-run-agent.sh` reads as `NOS_AGENT_PROFILE`. An agent without one is
-    contract-only (`inspektor`) and has nothing to wire.
+    One file per agent since 2026-08-28 (the flat `agents/<name>.yml` merged
+    into `agents/<name>/agent.yml`). A profile with no `pulse:` block is
+    contract-only (`inspektor`, `curator`) — nothing is scheduled, so there is
+    nothing to wire.
     """
-    return {
-        path.stem: path.read_text(encoding="utf-8")
-        for path in sorted(PROFILES.glob("*.yml"))
-    }
+    out = {}
+    for path in sorted(PROFILES.glob("*/agent.yml")):
+        text = path.read_text(encoding="utf-8")
+        if "\npulse:" in text:
+            out[path.parent.name] = text
+    return out
 
 
 def _asks_for_a_wing_token(name: str, text: str) -> bool:
@@ -78,7 +81,7 @@ def test_the_sweep_sees_the_profiles():
     # >= 4 since the 2026-08-26 roster close: conductor, librarian,
     # surveyor, upgrade-architect (was >= 8).
     assert len(profiles) >= 4, (
-        f"only {len(profiles)} flat agent profile(s) found under {PROFILES}; "
+        f"only {len(profiles)} scheduled agent profile(s) found under {PROFILES}; "
         "this gate reasons over them, so a short sweep proves nothing."
     )
     assert any(_asks_for_a_wing_token(n, t) for n, t in profiles.items()), (

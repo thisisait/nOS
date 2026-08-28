@@ -58,7 +58,7 @@ def _live_runner_profiles() -> list[tuple[str, dict]]:
     one `pulse:` job — i.e. an agent with a LIVE pulse-run-agent.sh runner that
     can actually POST a notification. Returns [(name, parsed-doc), …]."""
     out: list[tuple[str, dict]] = []
-    for f in sorted(AGENTS_DIR.glob("*.yml")):
+    for f in sorted(AGENTS_DIR.glob("*/agent.yml")):
         doc = yaml.safe_load(f.read_text()) or {}
         if ((doc.get("pulse") or {}).get("jobs")):
             out.append((f.name, doc))

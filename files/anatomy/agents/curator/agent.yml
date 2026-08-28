@@ -86,7 +86,7 @@ exit_code_semantics:
   emits_sentinel: true
   exit_0: "Sweep completed; visits checkpointed. Any desc proposals await the moderator — the normal, non-escalating outcome."
   exit_1: "Structural findings queued for operator review (a duplicate / contradiction / misparent the moderator must adjudicate)."
-  exit_2: "Environment / auth / Wing or KEAP error inside pulse-run-agent.sh. Fires a CRITICAL A9 notification."
+  exit_2: "Environment / auth / Wing or KEAP error inside the runner. Fires a CRITICAL A9 notification."
 # ── Article 30 ────────────────────────────────────────────────────────────────
 gdpr:
   purpose: |

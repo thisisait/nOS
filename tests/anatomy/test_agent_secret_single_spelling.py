@@ -41,7 +41,7 @@ import sys
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-AGENTS = sorted((REPO / "files/anatomy/agents").glob("*.yml"))
+AGENTS = sorted((REPO / "files/anatomy/agents").glob("*/agent.yml"))
 PLUGINS = sorted(REPO.glob("files/anatomy/plugins/*/plugin.yml"))
 STORE_TEMPLATE = REPO / "templates/secrets.yml.j2"
 CONFIG = REPO / "default.config.yml"
@@ -61,7 +61,7 @@ def _agent_credentialed_jobs() -> list[tuple[str, dict]]:
         for job in _pulse_jobs(path):
             env = job.get("env") or {}
             if "NOS_AGENT_CLIENT_ID" in env or "NOS_AGENT_CLIENT_SECRET" in env:
-                out.append((f"{path.name}:{job.get('name')}", env))
+                out.append((f"{path.parent.name}:{job.get('name')}", env))
     return out
 
 
@@ -184,7 +184,7 @@ def test_the_catalog_refuses_a_manifest_that_still_concatenates(tmp_path) -> Non
     reference spelling must sail through with the ref untouched.
     """
     agents = tmp_path / "files/anatomy/agents"
-    agents.mkdir(parents=True)
+    (agents / "stale").mkdir(parents=True)  # agents/<name>/agent.yml since 2026-08-28
     (tmp_path / "files/anatomy/plugins").mkdir(parents=True)
     base_env = {
         **os.environ,
@@ -199,7 +199,7 @@ def test_the_catalog_refuses_a_manifest_that_still_concatenates(tmp_path) -> Non
         )
 
     # Broken direction first — the stale concatenation.
-    (agents / "stale.yml").write_text(
+    (agents / "stale/agent.yml").write_text(
         "pulse:\n  jobs:\n    - name: j\n      env:\n"
         "        NOS_AGENT_CLIENT_ID: nos-stale\n"
         '        NOS_AGENT_CLIENT_SECRET: "{{ global_password_prefix }}_pw_agent_stale"\n'
@@ -215,7 +215,7 @@ def test_the_catalog_refuses_a_manifest_that_still_concatenates(tmp_path) -> Non
     )
 
     # Fixed direction — the reference passes through untouched.
-    (agents / "stale.yml").write_text(
+    (agents / "stale/agent.yml").write_text(
         "pulse:\n  jobs:\n    - name: j\n      env:\n"
         "        NOS_AGENT_CLIENT_ID: nos-stale\n"
         '        NOS_AGENT_CLIENT_SECRET: "secret:agent_stale_client_secret"\n'

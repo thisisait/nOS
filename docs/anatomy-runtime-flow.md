@@ -125,7 +125,7 @@ files/anatomy/scripts/pulse-run-agent.sh
    ↓ POST /application/o/token/  (client_credentials grant)
 Authentik nos-conductor client → JWT
    ↓ exec claude --print --system-prompt … --permission-mode bypassPermissions
-files/anatomy/agents/conductor.yml + NOS_CONDUCTOR_TASK
+files/anatomy/agents/conductor/agent.yml + NOS_CONDUCTOR_TASK
    ↓ inside claude: bash + curl with WING_API_TOKEN + WING_EVENTS_HMAC_SECRET
 Wing /api/v1/events  (HMAC for POST, Bearer for GET)
    ↓ insert with actor_id=nos-conductor + actor_action_id=<uuid>
@@ -337,7 +337,7 @@ the whole run as a coherent story.
 | Bone events ingest with full audit | `files/anatomy/bone/clients/wing.py`, `files/anatomy/wing/app/Presenters/Api/EventsPresenter.php` |
 | Wing API surface (87 paths, contract-pinned) | `files/anatomy/skills/contracts/wing.openapi.yml` |
 | Pulse daemon + cron parser | `files/anatomy/pulse/pulse/daemon.py` |
-| Conductor agent profile + runner | `files/anatomy/agents/conductor.yml`, `files/anatomy/scripts/pulse-run-agent.sh` |
+| Conductor agent profile + runner | `files/anatomy/agents/conductor/agent.yml`, `files/anatomy/scripts/pulse-run-agent.sh` |
 | Plugin loader aggregator (consumer_block, agent_profile, app_manifest) | `files/anatomy/module_utils/load_plugins.py`, `tools/aggregator-dry-run.py` |
 | A10 attribution columns + presenter | `files/anatomy/wing/db/schema-extensions.sql`, `files/anatomy/wing/app/Presenters/AuditPresenter.php` |
 | Phase 5 ceremony PASS | this doc + `wing.db` rows 4-7 (run_id `conductor-phase5-ceremony-1778141913`) |
@@ -354,7 +354,7 @@ If you have 30 minutes, read these in order:
    actor attribution, VALID_TYPES gate.
 3. `files/anatomy/pulse/pulse/daemon.py` — cron parsing, subprocess fork,
    pulse_runs roundtrip.
-4. `files/anatomy/agents/conductor.yml` — system prompt, capabilities,
+4. `files/anatomy/agents/conductor/agent.yml` — system prompt, capabilities,
    Pulse job declaration.
 5. `docs/ait-runtime-architecture.md` — the AIT / AgentKit runtime
    architecture that frames why all the above exists.

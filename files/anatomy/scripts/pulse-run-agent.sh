@@ -345,7 +345,7 @@ CLAUDE_ARGS=(--print --output-format json --permission-mode bypassPermissions)
 #
 # WING_EVENTS_HMAC_SECRET stays, deliberately, and the groundwork doc's claim
 # that it "need not reach the child" is FALSE today: the conductor profile
-# (files/anatomy/agents/conductor.yml:43) instructs the ceremony to POST its
+# (files/anatomy/agents/conductor/agent.yml) instructs the ceremony to POST its
 # own attributed events, Bone's /api/v1/events accepts only HMAC, and the
 # live conductor_report rows sit BETWEEN agent_run_start and agent_run_end
 # (2026-08-09T04:04:25Z) — the child signed them. Withholding it is real

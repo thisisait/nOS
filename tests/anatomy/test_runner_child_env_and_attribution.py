@@ -10,7 +10,7 @@ TWO MEASUREMENTS, 2026-08-13, both against the live estate's runner path.
    (docs/minimax-groundwork.md, "what must happen before arming" item 3).
    The same doc claims `WING_EVENTS_HMAC_SECRET` is equally withholdable, and
    that half is FALSE today, measured: the conductor profile
-   (files/anatomy/agents/conductor.yml:43) instructs the ceremony to POST its
+   (files/anatomy/agents/conductor/agent.yml:43) instructs the ceremony to POST its
    own events, Bone's /api/v1/events accepts only HMAC, and the live
    conductor_report row of 2026-08-09T04:04:25Z sits between agent_run_start
    (04:01:16) and agent_run_end (04:04:57) — the CHILD signed it. So this gate

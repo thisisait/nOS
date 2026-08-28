@@ -943,7 +943,7 @@
     },
     "pulse:conductor:scan-state-record": {
       "kind": "pulse",
-      "source": "files/anatomy/agents/conductor.yml",
+      "source": "files/anatomy/agents/conductor/agent.yml",
       "schedule": "30 3 * * *",
       "jitter_min": 5,
       "max_runtime_s": 120,
@@ -957,7 +957,7 @@
     },
     "pulse:conductor:security-drift-watch": {
       "kind": "pulse",
-      "source": "files/anatomy/agents/conductor.yml",
+      "source": "files/anatomy/agents/conductor/agent.yml",
       "schedule": "0 6 * * *",
       "jitter_min": 10,
       "max_runtime_s": 120,
@@ -971,23 +971,23 @@
     },
     "pulse:conductor:self-test-001": {
       "kind": "pulse",
-      "source": "files/anatomy/agents/conductor.yml",
+      "source": "files/anatomy/agents/conductor/agent.yml",
       "schedule": "0 4 * * 0",
       "jitter_min": 5,
       "max_runtime_s": 300,
       "category": "agents",
       "paused": false,
       "findings_exit_codes": null,
-      "command_name": "pulse-run-agent.sh",
+      "command_name": "run-agent.sh",
       "claims": [
         "agent-run-lock"
       ],
       "anchor": "02.02.09",
-      "description": "Pulse scheduled job (agents): runs pulse-run-agent.sh on cron `0 4 * * 0`"
+      "description": "Pulse scheduled job (agents): runs run-agent.sh on cron `0 4 * * 0`"
     },
     "pulse:conductor:vulnerability-scan": {
       "kind": "pulse",
-      "source": "files/anatomy/agents/conductor.yml",
+      "source": "files/anatomy/agents/conductor/agent.yml",
       "schedule": "0 2 * * *",
       "jitter_min": 15,
       "max_runtime_s": 1800,
@@ -1133,7 +1133,7 @@
     },
     "pulse:librarian:brief-taxonomy": {
       "kind": "pulse",
-      "source": "files/anatomy/agents/librarian.yml",
+      "source": "files/anatomy/agents/librarian/agent.yml",
       "schedule": "10 3 * * *",
       "jitter_min": 5,
       "max_runtime_s": 900,
@@ -1149,7 +1149,7 @@
     },
     "pulse:librarian:describe-taxonomy": {
       "kind": "pulse",
-      "source": "files/anatomy/agents/librarian.yml",
+      "source": "files/anatomy/agents/librarian/agent.yml",
       "schedule": "10 2 * * *",
       "jitter_min": 5,
       "max_runtime_s": 900,
@@ -1165,7 +1165,7 @@
     },
     "pulse:librarian:judge-lint-queue": {
       "kind": "pulse",
-      "source": "files/anatomy/agents/librarian.yml",
+      "source": "files/anatomy/agents/librarian/agent.yml",
       "schedule": "10 5 * * *",
       "jitter_min": 5,
       "max_runtime_s": 600,
@@ -1240,7 +1240,7 @@
     },
     "pulse:surveyor:surface-survey": {
       "kind": "pulse",
-      "source": "files/anatomy/agents/surveyor.yml",
+      "source": "files/anatomy/agents/surveyor/agent.yml",
       "schedule": "10 1 * * *",
       "jitter_min": 5,
       "max_runtime_s": 900,
@@ -1256,19 +1256,19 @@
     },
     "pulse:upgrade-architect:recipe-author": {
       "kind": "pulse",
-      "source": "files/anatomy/agents/upgrade-architect.yml",
+      "source": "files/anatomy/agents/upgrade-architect/agent.yml",
       "schedule": "0 8 * * 0",
       "jitter_min": 5,
       "max_runtime_s": 300,
       "category": "agents",
       "paused": true,
       "findings_exit_codes": null,
-      "command_name": "pulse-run-agent.sh",
+      "command_name": "run-agent.sh",
       "claims": [
         "agent-run-lock"
       ],
       "anchor": "02.02.09",
-      "description": "Pulse scheduled job (agents): runs pulse-run-agent.sh on cron `0 8 * * 0` — PAUSED (deliberate operator decision, not a health state)"
+      "description": "Pulse scheduled job (agents): runs run-agent.sh on cron `0 8 * * 0` — PAUSED (deliberate operator decision, not a health state)"
     },
     "pulse:wing:agent-cost-tally": {
       "kind": "pulse",

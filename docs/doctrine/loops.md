@@ -159,7 +159,7 @@ analyzer can see (§7.4).
 
 All times as committed in the manifests (one shared clock; the load-bearing
 facts are the *order* and the *margins*, not the wall time). Verified against
-`files/anatomy/plugins/*/plugin.yml` and `files/anatomy/agents/conductor.yml`.
+`files/anatomy/plugins/*/plugin.yml` and `files/anatomy/agents/conductor/agent.yml`.
 
 ```mermaid
 sequenceDiagram

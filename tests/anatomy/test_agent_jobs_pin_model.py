@@ -21,17 +21,17 @@ import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 AGENTS_DIR = REPO / "files" / "anatomy" / "agents"
-RUNNER = "pulse-run-agent.sh"
+RUNNER = "run-agent.sh"   # matches both the bound runner and the legacy CLI one
 # Aliases the claude CLI --model flag accepts; the librarian precedent uses these.
 VALID_TIERS = {"haiku", "sonnet", "opus"}
 
 
 def _agent_files() -> list[pathlib.Path]:
-    return sorted(AGENTS_DIR.glob("*.yml"))
+    return sorted(AGENTS_DIR.glob("*/agent.yml"))
 
 
 def _agent_runner_jobs():
-    """Yield (file, job) for every pulse job that forks pulse-run-agent.sh."""
+    """Yield (file, job) for every pulse job that runs an agent ceremony."""
     for f in _agent_files():
         doc = yaml.safe_load(f.read_text()) or {}
         pulse = doc.get("pulse") or {}
@@ -55,12 +55,12 @@ def test_every_agent_job_pins_a_model():
         model = env.get("NOS_AGENT_MODEL")
         if not model:
             offenders.append(
-                f"{f.name}:{job.get('name')} — no NOS_AGENT_MODEL; falls to the "
+                f"{f.parent.name}:{job.get('name')} — no NOS_AGENT_MODEL; falls to the "
                 f"operator default (the most expensive tier)"
             )
         elif str(model).strip() not in VALID_TIERS:
             offenders.append(
-                f"{f.name}:{job.get('name')} — NOS_AGENT_MODEL={model!r} is not a "
+                f"{f.parent.name}:{job.get('name')} — NOS_AGENT_MODEL={model!r} is not a "
                 f"known tier {sorted(VALID_TIERS)}"
             )
     assert not offenders, "Unpinned or invalid agent model tiers:\n  " + "\n  ".join(

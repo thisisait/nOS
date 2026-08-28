@@ -41,7 +41,7 @@ REPO = Path(__file__).resolve().parents[2]
 #: taxonomy with a bucket per job groups nothing.
 CATEGORIES = {"security", "compliance", "knowledge", "platform", "notification", "agents"}
 
-SOURCES = ("files/anatomy/plugins/*/plugin.yml", "files/anatomy/agents/*.yml")
+SOURCES = ("files/anatomy/plugins/*/plugin.yml", "files/anatomy/agents/*/agent.yml")
 
 
 def _jobs() -> list[tuple[str, str, dict]]:

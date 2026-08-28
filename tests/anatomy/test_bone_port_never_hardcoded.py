@@ -4,7 +4,7 @@ The same one-line defect has now been introduced three separate times:
 
   * `files/anatomy/plugins/gitleaks/plugin.yml`   — fixed 2026-07-08
   * `files/anatomy/plugins/authentik-tofu-drift-base/plugin.yml` — fixed the same day
-  * `files/anatomy/agents/conductor.yml`          — found 2026-07-30, seventeen
+  * `files/anatomy/agents/conductor/agent.yml`          — found 2026-07-30, seventeen
     days later, having silently 401'd every night in between
 
 Each time the shape is identical: an emitter sets `BONE_API_URL` to
@@ -90,7 +90,7 @@ def test_agent_profiles_render_bone_port_from_the_variable():
     """Agent profiles are harvested into the same Pulse catalog as manifests."""
     offenders = []
     agents = REPO / "files" / "anatomy" / "agents"
-    for p in agents.glob("*.yml"):
+    for p in agents.glob("*/agent.yml"):
         for i, line in enumerate(p.read_text(errors="replace").splitlines(), 1):
             if line.lstrip().startswith("#"):
                 continue
@@ -108,7 +108,8 @@ def test_the_scan_actually_covers_the_known_emitters():
     seen = set()
     for p in _files():
         if BONE_URL_ASSIGN.search(p.read_text(errors="replace")):
-            seen.add(p.name)
+            # an agent is agents/<name>/agent.yml since 2026-08-28; name it by its dir
+            seen.add(f"{p.parent.name}.yml" if p.name == "agent.yml" else p.name)
     for expected in ("conductor.yml", "drift-watch.sh", "gitleaks/plugin.yml".split("/")[-1]):
         assert expected in seen, (
             f"{expected} no longer matches the Bone-URL pattern — the scan may "

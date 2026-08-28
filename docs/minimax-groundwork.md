@@ -305,7 +305,7 @@ The write-time stamp (backend + effective model in `agent_run_end`) shipped
    exchanges it for a scoped token before the spawn) and is now withheld from
    the child — gate `tests/anatomy/test_runner_child_env_and_attribution.py`.
    But `WING_EVENTS_HMAC_SECRET` is NOT withholdable today, measured: the
-   conductor profile (`files/anatomy/agents/conductor.yml:43`) instructs the
+   conductor profile (`files/anatomy/agents/conductor/agent.yml`) instructs the
    ceremony to POST its own attributed events, Bone's `/api/v1/events` accepts
    only HMAC, and the live `conductor_report` of 2026-08-09T04:04:25Z sits
    between `agent_run_start` and `agent_run_end` — the child signed it with

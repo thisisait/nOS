@@ -119,7 +119,10 @@ def main() -> None:
     if agent_root and pathlib.Path(agent_root).is_dir():
         import yaml
         for ap_dir in sorted(pathlib.Path(agent_root).iterdir()):
-            ap_yml = ap_dir / "profile.yml"
+            # agent.yml, not profile.yml: nothing has ever been named
+            # profile.yml, so this harvest ran empty and every agent's
+            # notification block missed notification-routing.json.
+            ap_yml = ap_dir / "agent.yml"
             if ap_yml.is_file():
                 with open(ap_yml) as fh:
                     agent_profiles.append(yaml.safe_load(fh) or {})

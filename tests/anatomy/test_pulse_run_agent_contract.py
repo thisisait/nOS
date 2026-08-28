@@ -114,7 +114,7 @@ def test_pulse_run_agent_bash_lint_clean():
 def test_conductor_uses_nos_agent_env():
     """Conductor profile must use the canonical NOS_AGENT_* shape."""
     profile = yaml.safe_load(
-        (REPO / "files/anatomy/agents/conductor.yml").read_text()
+        (REPO / "files/anatomy/agents/conductor/agent.yml").read_text()
     )
     env = (profile["pulse"]["jobs"][0].get("env") or {})
     assert env.get("NOS_AGENT_NAME") == "conductor"
