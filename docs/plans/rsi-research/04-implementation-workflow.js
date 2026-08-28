@@ -391,33 +391,33 @@ await pipeline([1],
      ITEM 3 — close the three holes the FIRST attempt's own verifier found. It failed the
      phase on them; this run closes them or reports, per hole, why it cannot.
 
-     HOLE 1 — a read-scoped tool that accepts POST. `McpKeapTool::requiredScopes()` is
+     HOLE 1 — a read-scoped tool that accepts POST. 'McpKeapTool::requiredScopes()' is
      ['mcp.tool_use','keap.read'] — inside READ_ONLY_SCOPES — and it accepts POST. The gate
-     `test_a_read_scoped_tool_refuses_a_post` passed over it FOR THE WRONG REASON: its probe
+     'test_a_read_scoped_tool_refuses_a_post' passed over it FOR THE WRONG REASON: its probe
      sends path=/api/v1/events, which KEAP rejects with 'path must start with /agent/v1/'
      and refused_reason=NULL. A transport rejection stood in for a verb rejection. Measured:
      the same read-only roster with a path KEAP SERVES returns isError=false, HTTP 200,
      {"WROTE":true}. Fix both halves — the tool must refuse the verb its scope does not
      name, AND the gate must drive every registered tool with a path that tool actually
      serves, because a probe that cannot reach the code proves nothing. Its sibling
-     `test_the_read_plane_refuses_at_the_verb_not_at_the_transport` is hardcoded to
+     'test_the_read_plane_refuses_at_the_verb_not_at_the_transport' is hardcoded to
      mcp-wing-read; generalise it over the registry.
 
      HOLE 2 — the grants are pinned per-ROUTE, not per-AGENT. The verifier added
-     `mcp-wing-write` + `wing.write` to conductor (zero measured calls, named in the
-     artifact's own `no_grant` finding) and the FULL corpus stayed green: 4135 passed, 0
+     'mcp-wing-write' + 'wing.write' to conductor (zero measured calls, named in the
+     artifact's own 'no_grant' finding) and the FULL corpus stayed green: 4135 passed, 0
      failed. The widening the artifact exists to prevent is invisible to every gate in this
      estate. Pin the agent set as well: the manifests holding a write tool must equal the
      agents the measurement granted, and adding one with no measured call must go red.
 
      HOLE 3 — the behavioural core does not run in CI, and this is estate-wide. The gate
      skipifs on files/anatomy/wing/vendor/autoload.php, and NO workflow under
-     .github/workflows/ ever runs `composer install` — so a fresh checkout has no vendor and
+     .github/workflows/ ever runs 'composer install' — so a fresh checkout has no vendor and
      7 of 9 assertions skip, every one that actually calls a tool. NOS_TEST_PROVIDES does
      not bind it: the contract verifies PATH, and vendor is not on PATH. Either make CI
      install the vendor tree, or make its absence a hard failure for any gate claiming to
      exercise PHP behaviour. A gate whose behavioural half silently skips in CI is a gate
-     the estate does not have. Prove your choice against a `git archive` of the tree the way
+     the estate does not have. Prove your choice against a 'git archive' of the tree the way
      the verifier did — do not assert it.
 `,
     { label: 'grant:holes', phase: 'Grant', effort: 'high' }),
