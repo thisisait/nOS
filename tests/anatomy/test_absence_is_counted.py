@@ -33,6 +33,9 @@ import yaml
 REPO = pathlib.Path(__file__).resolve().parents[2]
 ANATOMY = REPO / "tests" / "anatomy"
 CHEAP_TARGET = "tests/anatomy/test_active_work_slim.py"
+# A declaration that is a PATH, not a name. Both CIs must carry it or the ~150
+# PHP behavioural gates run on the operator's Mac and nowhere else.
+WING_VENDOR = "files/anatomy/wing/vendor/autoload.php"
 
 
 def _pytest(args, env_overrides, cwd=REPO):
@@ -62,6 +65,22 @@ def test_a_broken_promise_aborts_before_any_test_runs():
         "a test ran (and passed) in an environment that broke its contract — "
         "the abort must come BEFORE the first test, or a partial green leaks"
     )
+
+
+def test_a_missing_declared_PATH_aborts_too():
+    """The same failure branch for the OTHER kind of declaration.
+
+    A build artifact is never on PATH, so `which` could not bind it and the
+    contract had no grip on the wing vendor tree: no workflow ran `composer
+    install`, and the AgentKit behavioural gates skipped 7 of 9 assertions on
+    every GitHub run — measured against a `git archive` of the tree, 2026-08-29.
+    """
+    r = _pytest([CHEAP_TARGET, "-q"], {"NOS_TEST_PROVIDES": "files/anatomy/nope/absent.php"})
+    assert r.returncode != 0, "a declared-but-missing PATH must fail the session"
+    out = r.stdout + r.stderr
+    assert "ENVIRONMENT CONTRACT BROKEN" in out, out[-2000:]
+    assert "files/anatomy/nope/absent.php" in out, "the missing path must be NAMED"
+    assert " passed" not in out, "the abort must come BEFORE the first test"
 
 
 def test_a_kept_promise_runs_clean():
@@ -143,7 +162,7 @@ def test_the_forge_declares_and_installs_what_the_gates_need():
     step = _woodpecker_pytest_step()
     declared = {t.strip() for t in
                 str((step.get("environment") or {}).get("NOS_TEST_PROVIDES", "")).split(",") if t.strip()}
-    assert {"git", "ansible-playbook", "php", "jq", "sqlite3"} <= declared, (
+    assert {"git", "ansible-playbook", "php", "jq", "sqlite3", WING_VENDOR} <= declared, (
         f"forge pytest step declares only {sorted(declared)} — a tool removed "
         "from the declaration is a hundred gates quietly demoted to skips on "
         "the ONLY CI the pzny branch ever reaches"
@@ -162,13 +181,18 @@ def test_github_pytest_job_declares_and_pins():
     doc = yaml.safe_load((REPO / ".github" / "workflows" / "ci.yml").read_text())
     job = doc["jobs"]["pytest"]
     declared = {t.strip() for t in str((job.get("env") or {}).get("NOS_TEST_PROVIDES", "")).split(",") if t.strip()}
-    assert {"git", "ansible-playbook", "php", "composer"} <= declared, (
+    assert {"git", "ansible-playbook", "php", "composer", WING_VENDOR} <= declared, (
         f"GitHub pytest job declares only {sorted(declared)} — a runner-image "
         "update dropping a tool must go red, not demote gates to skips"
     )
     runs = "\n".join(str(s.get("run", "")) for s in job["steps"])
     assert ". tools/ci-freeze.env" in runs and "$NOS_ANSIBLE_CORE" in runs, (
         "GitHub pytest job stopped installing ansible-core from the frozen pin"
+    )
+    assert "composer install" in runs and "files/anatomy/wing" in runs, (
+        "GitHub pytest job does not install the wing vendor tree, so the PHP "
+        "behavioural gates skip here. The declaration above now aborts the "
+        "session instead — put the install back rather than dropping it."
     )
 
 

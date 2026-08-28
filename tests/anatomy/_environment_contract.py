@@ -12,10 +12,12 @@ Two rules close it:
 
   1. PROMISED PRESENCE IS ENFORCED. An environment that is SUPPOSED to run the
      php/jq/ansible-gated gates declares so via the env var NOS_TEST_PROVIDES
-     (comma-separated tool names). If a declared tool does not resolve on
-     PATH, the whole session ABORTS before a single test runs — a runner
-     image quietly dropping a tool must never demote a hundred gates into
-     skips that nobody reads.
+     (comma-separated tool names, and — since 2026-08-29 — repo-relative
+     paths, which is how a build artifact like the wing vendor tree gets
+     bound; it is never on PATH). If a declaration is not kept, the whole
+     session ABORTS before a single test runs — a runner image quietly
+     dropping a tool, or a missing `composer install`, must never demote a
+     hundred gates into skips that nobody reads.
   2. UNDECLARED ABSENCE IS COUNTED. Every skip is grouped by reason and
      printed as its own outcome in the terminal summary, with the declaration
      (or its absence) named. A skip may be honest; an unreported one is not.
@@ -32,9 +34,11 @@ per-test) and re-exports pytest_terminal_summary from here.
 from __future__ import annotations
 
 import os
+import pathlib
 import shutil
 
 ENV_VAR = "NOS_TEST_PROVIDES"
+REPO = pathlib.Path(__file__).resolve().parents[2]
 
 
 def declared_tools(environ: dict | None = None) -> list[str]:
@@ -43,8 +47,23 @@ def declared_tools(environ: dict | None = None) -> list[str]:
 
 
 def broken_promises(environ: dict | None = None, which=shutil.which) -> list[str]:
-    """Tools the environment PROMISED that do not resolve on PATH."""
-    return [t for t in declared_tools(environ) if which(t) is None]
+    """Promises the environment does not keep.
+
+    A declaration is a NAME to resolve on PATH, or — if it contains "/" — a
+    repo-relative PATH that must exist. The path form was added 2026-08-29:
+    the AgentKit tool-scope gates run PHP against files/anatomy/wing/vendor,
+    no CI workflow installed it, and vendor is not on PATH, so the contract
+    could not bind it. Seven of nine assertions — every one that actually
+    calls a tool — skipped on every GitHub run. A gate whose behavioural half
+    silently skips in CI is a gate the estate does not have.
+
+    Anchored on this file's own location, not cwd: a gate that runs pytest
+    from a tmp dir must still be measured against the real tree.
+    """
+    return [
+        t for t in declared_tools(environ)
+        if not ((REPO / t).exists() if "/" in t else which(t) is not None)
+    ]
 
 
 def enforce_contract() -> None:
@@ -59,7 +78,8 @@ def enforce_contract() -> None:
 
         raise pytest.UsageError(
             f"ENVIRONMENT CONTRACT BROKEN: {ENV_VAR} declares "
-            f"{', '.join(missing)} but the tool(s) do not resolve on PATH. "
+            f"{', '.join(missing)} — not on PATH (a name), or absent from the "
+            "repo (a path). "
             "This environment is supposed to run the gates that need them; "
             "running without would silently demote those gates to skips. "
             "Fix the environment (or its declaration in the CI config) — "

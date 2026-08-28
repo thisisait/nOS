@@ -126,7 +126,13 @@ jobs:
       # if a runner-image update drops one of these, the run must go red
       # loudly, not demote those gates into skips nobody reads. Pinned by
       # tests/anatomy/test_absence_is_counted.py.
-      NOS_TEST_PROVIDES: git,ansible-playbook,php,composer,jq,sqlite3,openssl
+      # The last entry is a PATH, not a name: the AgentKit/Wing behavioural
+      # gates run PHP against the wing vendor tree, which no workflow used to
+      # install, and vendor is never on PATH so nothing could bind it. Seven
+      # of nine assertions in the tool-scope gate — every one that actually
+      # calls a tool — skipped on every run here. Declared, so a failed or
+      # deleted `composer install` aborts instead of going quietly green.
+      NOS_TEST_PROVIDES: git,ansible-playbook,php,composer,jq,sqlite3,openssl,files/anatomy/wing/vendor/autoload.php
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v6
@@ -149,6 +155,15 @@ jobs:
           php-version: '8.3'
           tools: composer:v2
           coverage: none
+
+      # ~150 wing/agentkit gates execute PHP against this tree — the tool
+      # scope-split, the bound-agent report path, the presenter gates. The
+      # forge has installed it since 2026-05 (its composer-validate step
+      # shares the workspace); GitHub never did, so those gates ran on the
+      # operator's Mac and nowhere else. Declared above, so this step failing
+      # is a red run rather than a hundred skips.
+      - name: Install the wing vendor tree.
+        run: composer install --no-progress --no-interaction --no-scripts -d files/anatomy/wing
 
       # fastapi: tests/bone_vfs mounts the Bone VFS router on a throwaway app to
       # exercise the containment + filename-hardening gates (nOS-face v0.2).

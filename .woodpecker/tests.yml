@@ -44,7 +44,12 @@ steps:
       # skips: absence in a promising environment is a red run, not a quiet
       # green one. Declaration pinned by test_absence_is_counted.py — do not
       # remove a tool here to go green; install it below instead.
-      NOS_TEST_PROVIDES: git,ansible-playbook,php,jq,sqlite3
+      # The last entry is a PATH, not a name: the wing vendor tree the
+      # composer-validate step installs into this shared workspace. It is
+      # never on PATH, so until it was declared (2026-08-29) a composer step
+      # that silently did nothing would have demoted every PHP behavioural
+      # gate to a skip while the run stayed green.
+      NOS_TEST_PROVIDES: git,ansible-playbook,php,jq,sqlite3,files/anatomy/wing/vendor/autoload.php
     commands:
       # pytest + pyyaml = anatomy test runner + yaml-based gates
       # httpx + pytest-asyncio = Pulse daemon test fixtures (test_pulse_daemon.py
