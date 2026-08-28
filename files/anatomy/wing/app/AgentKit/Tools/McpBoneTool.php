@@ -18,9 +18,30 @@ final class McpBoneTool implements ToolInterface
 	private const BASE_URL = 'http://127.0.0.1:8099';
 	private const MAX_RESPONSE_BYTES = 16_384;
 
+	private readonly string $bearerToken;
+
+
 	public function __construct(
 		private readonly HttpClient $http,
+		?string $bearerToken = null,
 	) {
+		// The agent's OWN Authentik token, minted per --agent by
+		// tools/run-agent.sh (the CLI path has always exported this spelling).
+		// Without it this tool sent NO Authorization header at all and every
+		// Bone endpoint behind require_scope() answered 401 — measured on the
+		// first bound night, docs/plans/rsi-research/07-first-bound-night.md §4.
+		// Absent is announced, never silent: a 401 that looks like a broken
+		// endpoint costs a whole ceremony to diagnose.
+		if ($bearerToken === null) {
+			$bearerToken = getenv('NOS_AUTHENTIK_TOKEN') ?: '';
+			if ($bearerToken === '') {
+				error_log(
+					'[mcp-bone] WARN: no NOS_AUTHENTIK_TOKEN — this run presents no '
+					. 'principal to Bone, so every scoped endpoint will answer 401.'
+				);
+			}
+		}
+		$this->bearerToken = $bearerToken;
 	}
 
 	public function id(): string
@@ -70,12 +91,16 @@ final class McpBoneTool implements ToolInterface
 		}
 
 		try {
+			$headers = [
+				'Accept' => 'application/json',
+				'X-AgentKit-Session' => $context->sessionUuid,
+				'X-AgentKit-Trace' => $context->traceId,
+			];
+			if ($this->bearerToken !== '') {
+				$headers['Authorization'] = 'Bearer ' . $this->bearerToken;
+			}
 			$response = $this->http->request('GET', self::BASE_URL . $path, [
-				'headers' => [
-					'Accept' => 'application/json',
-					'X-AgentKit-Session' => $context->sessionUuid,
-					'X-AgentKit-Trace' => $context->traceId,
-				],
+				'headers' => $headers,
 				'timeout' => 10,
 				'http_errors' => false,
 			]);

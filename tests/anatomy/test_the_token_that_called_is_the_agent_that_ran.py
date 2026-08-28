@@ -33,15 +33,29 @@ WHAT THIS FILE PINS, in the order the request travels:
 4. The reader: for every agent session, the events it owns must carry the
    agent's own name. Run against the FIXED fixture and against the broken one
    — a reader that cannot see the defect it was written for is not a reader.
+
+6. THE OTHER HALF OF THE PRINCIPAL (added 2026-08-28). A scoped Wing token on
+   a runtime that never authenticates to Bone is half a principal. Measured on
+   the first bound night (`docs/plans/rsi-research/07-first-bound-night.md`
+   §4): the CLI runner exchanges the agent's client_credentials and hands the
+   child `NOS_AUTHENTIK_TOKEN`; the BOUND path performed no exchange at all,
+   `McpBoneTool` sent no `Authorization` header, and every Bone endpoint
+   behind `require_scope()` answered 401. Pinned by running the mint against a
+   stub token endpoint (the token, and the scopes Authentik only grants when
+   asked) and by driving the real `McpBoneTool` over a mocked transport —
+   with the tokenless case run too, because that is the state that shipped.
 """
 
 from __future__ import annotations
 
+import http.server
 import json
 import re
 import shutil
 import sqlite3
 import subprocess
+import sys
+import threading
 from pathlib import Path
 
 import pytest
@@ -334,4 +348,176 @@ def test_the_runner_mints_the_agents_token():
         "tools/run-agent.sh no longer resolves the per-agent Wing bearer "
         "from ~/.nos/secrets.yml — nothing else on the CLI path can, and "
         "the export loop above it hands the agent the operator's token."
+    )
+
+
+# ── 6. the other half: a principal Bone accepts ──────────────────────────────
+
+PULSE_PKG = REPO / "files/anatomy/pulse"
+BONE_TOOL = WING / "app/AgentKit/Tools/McpBoneTool.php"
+
+vendor_only = pytest.mark.skipif(
+    not (WING / "vendor/autoload.php").exists(),
+    reason="wing composer vendor/ not installed on this runner",
+)
+
+
+class _StubToken(http.server.BaseHTTPRequestHandler):
+    """Authentik's token endpoint, as much of it as the grant touches."""
+
+    code = 200
+    seen: list[str] = []
+
+    def do_POST(self):  # noqa: N802
+        _StubToken.seen.append(
+            self.rfile.read(int(self.headers.get("Content-Length", 0))).decode()
+        )
+        self.send_response(_StubToken.code)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(
+            b'{"error": "invalid_grant"}' if _StubToken.code >= 400
+            else b'{"access_token": "FAKE-minted-agent-jwt", "token_type": "Bearer"}'
+        )
+
+    def log_message(self, *_):
+        pass
+
+
+@pytest.fixture()
+def stub_authentik():
+    _StubToken.seen = []
+    srv = http.server.HTTPServer(("127.0.0.1", 0), _StubToken)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    yield f"http://127.0.0.1:{srv.server_port}"
+    srv.shutdown()
+
+
+def _mint(env: dict, home: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [sys.executable, "-m", "pulse.secrets", "--mint-token"],
+        input=json.dumps(env), capture_output=True, text=True, timeout=30,
+        env={"HOME": str(home), "PYTHONPATH": str(PULSE_PKG), "PATH": "/usr/bin:/bin"},
+    )
+
+
+def test_the_mint_returns_the_token_and_asks_for_the_agents_scopes(tmp_path, stub_authentik):
+    """The pre-flight performs this exact grant and throws the token away.
+    Requesting no scope is not a smaller version of this: Authentik grants
+    only what is asked for, so an unscoped JWT 403s every scoped Bone call."""
+    _StubToken.code = 200
+    proc = _mint({
+        "NOS_AUTHENTIK_URL": stub_authentik,
+        "NOS_AGENT_CLIENT_ID": "nos-unit-agent",
+        "NOS_AGENT_CLIENT_SECRET": "FAKE-unit-secret-value",
+        "NOS_AGENT_SCOPES": "nos:state:read nos:security:read",
+    }, tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip() == "FAKE-minted-agent-jwt", (
+        f"--mint-token did not return the access_token: {proc.stdout!r}"
+    )
+    body = _StubToken.seen[0]
+    assert "grant_type=client_credentials" in body
+    assert "scope=nos%3Astate%3Aread+nos%3Asecurity%3Aread" in body, (
+        "the grant requested no scopes — Authentik issues a JWT with an empty "
+        f"scope claim and every require_scope() endpoint 403s. Sent: {body!r}"
+    )
+
+
+def test_a_refused_grant_prints_no_token(tmp_path, stub_authentik):
+    """Run against the failing state: the caller EXPORTS what it reads, so a
+    diagnostic on stdout would become a bearer."""
+    _StubToken.code = 400
+    proc = _mint({
+        "NOS_AUTHENTIK_URL": stub_authentik,
+        "NOS_AGENT_CLIENT_ID": "nos-unit-agent",
+        "NOS_AGENT_CLIENT_SECRET": "FAKE-unit-secret-value",
+    }, tmp_path)
+    assert proc.returncode == 1, proc.stdout
+    assert proc.stdout == "", f"a refusal wrote to stdout: {proc.stdout!r}"
+    assert "FAKE-unit-secret-value" not in proc.stdout + proc.stderr
+
+
+def test_the_preflight_still_verifies_the_credential(tmp_path, stub_authentik):
+    """The mint shares the grant with `--token-preflight`; the refactor that
+    joined them must not have changed what the pre-flight decides."""
+    _StubToken.code = 400
+    proc = subprocess.run(
+        [sys.executable, "-m", "pulse.secrets", "--token-preflight"],
+        input=json.dumps({
+            "NOS_AUTHENTIK_URL": stub_authentik,
+            "NOS_AGENT_CLIENT_ID": "nos-unit-agent",
+            "NOS_AGENT_CLIENT_SECRET": "FAKE-unit-secret-value",
+        }),
+        capture_output=True, text=True, timeout=30,
+        env={"HOME": str(tmp_path), "PYTHONPATH": str(PULSE_PKG), "PATH": "/usr/bin:/bin"},
+    )
+    assert proc.returncode == 1 and "nos-unit-agent" in proc.stderr
+
+
+# The tool, driven for real over a mocked transport: what did it put on the
+# wire. `$history` is Guzzle's own record of the sent request, so this cannot
+# pass against a class that merely mentions the header in a comment.
+BONE_TOOL_DRIVER = r"""
+require '%(wing)s/vendor/autoload.php';
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
+use GuzzleHttp\Psr7\Response;
+use App\AgentKit\Tools\McpBoneTool;
+use App\AgentKit\Tools\ToolContext;
+
+$history = [];
+$stack = HandlerStack::create(new MockHandler([new Response(200, [], '{}')]));
+$stack->push(Middleware::history($history));
+$tool = new McpBoneTool(new Client(['handler' => $stack]));
+$tool->execute(['path' => '/api/state/services'], new ToolContext(
+    's-uuid', 't-uuid', 'trace', 'span', 'agent:unit', 'tu-1'));
+echo json_encode(['auth' => $history[0]['request']->getHeaderLine('Authorization')]);
+"""
+
+
+def _drive_bone_tool(token: str | None) -> str:
+    env = {"PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin"}
+    if token is not None:
+        env["NOS_AUTHENTIK_TOKEN"] = token
+    proc = subprocess.run(
+        ["php", "-r", BONE_TOOL_DRIVER % {"wing": WING}],
+        capture_output=True, text=True, timeout=60, cwd=str(WING), env=env,
+    )
+    assert proc.returncode == 0, f"driving McpBoneTool failed:\n{proc.stderr}"
+    return json.loads(proc.stdout)["auth"]
+
+
+@php_only
+@vendor_only
+def test_the_bone_tool_presents_the_minted_token():
+    assert _drive_bone_tool("FAKE-minted-agent-jwt") == "Bearer FAKE-minted-agent-jwt", (
+        "McpBoneTool sent no (or a different) Authorization header while "
+        "NOS_AUTHENTIK_TOKEN was set. Bone's require_scope() answers 401 to "
+        "an anonymous caller, which is what the first bound night measured."
+    )
+
+
+@php_only
+@vendor_only
+def test_without_a_token_the_tool_is_anonymous_and_says_so():
+    """The shipped state, run on purpose. Anonymous is allowed (Bone has
+    unscoped endpoints) — silent is not: the WARN is what turns a 401 from a
+    mystery into a missing export."""
+    assert _drive_bone_tool(None) == ""
+    src = code_only(BONE_TOOL.read_text(encoding="utf-8"))
+    assert re.search(r"error_log\(\s*\n?\s*'\[mcp-bone\] WARN", src), (
+        "the tokenless path is silent; a 401 then reads as a broken endpoint."
+    )
+
+
+def test_the_runner_mints_the_agents_authentik_token():
+    src = (REPO / "tools/run-agent.sh").read_text(encoding="utf-8")
+    assert "pulse_mint_agent_token" in src and "NOS_AUTHENTIK_TOKEN" in src, (
+        "tools/run-agent.sh no longer mints the agent's Authentik token — the "
+        "bound path is back to presenting nothing to Bone (§4 of the first "
+        "bound night). The grant belongs to pulse/secrets.py; a second curl "
+        "here would be the copy that agrees today and drifts tomorrow."
     )

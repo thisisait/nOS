@@ -145,53 +145,110 @@ def token_preflight(env: dict) -> tuple[int, str]:
     that agrees today and drifts tomorrow). stdlib only — urllib is the
     whole HTTP client, and the secret never touches argv or a log line.
     """
+    creds = _client_creds(env)  # may raise UnresolvableSecretError — see CLI
+    if isinstance(creds, str):
+        return 2, creds
+    cid, secret, ak_url = creds
+    code, _body = _grant(ak_url, cid, secret)
+    if code == 200:
+        return 0, (f"✓ Authentik token grant for {cid} → 200 "
+                   "(credential verified, not just liveness)")
+    return 1, _grant_refused(ak_url, cid, code)
+
+
+def mint_agent_token(env: dict) -> tuple[int, str]:
+    """The SAME grant as token_preflight, keeping the token it throws away.
+
+    Found 2026-08-28 (docs/plans/rsi-research/07-first-bound-night.md §4): the
+    CLI path exchanges the agent's client_credentials and hands the child
+    NOS_AUTHENTIK_TOKEN; the BOUND path performed no exchange at all, so
+    McpBoneTool sent no Authorization header and every scoped Bone endpoint
+    answered 401. A scoped Wing token on a runtime that cannot authenticate to
+    Bone is half a principal.
+
+    Returns `(0, access_token)` or `(1|2, message)` with the same exit-code
+    meanings as token_preflight. The token is returned, never logged.
+
+    Scopes come from `NOS_AGENT_SCOPES` in the env — Authentik grants ONLY
+    what is explicitly requested, so an unscoped grant yields a JWT whose
+    scope claim is empty and whose every scoped call 403s.
+    """
+    creds = _client_creds(env)
+    if isinstance(creds, str):
+        return 2, creds
+    cid, secret, ak_url = creds
+    code, body = _grant(ak_url, cid, secret, str(env.get("NOS_AGENT_SCOPES") or ""))
+    if code != 200:
+        return 1, _grant_refused(ak_url, cid, code)
+    import json as _json
+    try:
+        token = str((_json.loads(body) or {}).get("access_token") or "")
+    except ValueError:
+        token = ""
+    if not token:
+        return 1, (f"Authentik answered 200 for client_id={cid} with no "
+                   "access_token — the body is not a token response")
+    return 0, token
+
+
+def _client_creds(env: dict):
+    """(client_id, secret, authentik_url) — or a refusal message as a str."""
     env = resolve_env(env)  # may raise UnresolvableSecretError — see CLI
     cid = env.get("NOS_AGENT_CLIENT_ID") or env.get("NOS_CONDUCTOR_CLIENT_ID") or ""
     secret = (env.get("NOS_AGENT_CLIENT_SECRET")
               or env.get("NOS_CONDUCTOR_CLIENT_SECRET") or "")
     ak_url = env.get("NOS_AUTHENTIK_URL", "")
     if not cid or not secret:
-        return 2, ("job env carries no agent client credential "
-                   "(NOS_AGENT_CLIENT_ID/SECRET) — refusing to vouch for it")
+        return ("job env carries no agent client credential "
+                "(NOS_AGENT_CLIENT_ID/SECRET) — refusing to vouch for it")
     if not ak_url:
-        return 2, ("NOS_AUTHENTIK_URL is empty — cannot verify the client "
-                   "credential, refusing to proceed on hope")
+        return ("NOS_AUTHENTIK_URL is empty — cannot verify the client "
+                "credential, refusing to proceed on hope")
+    return cid, secret, ak_url
 
+
+def _grant(ak_url: str, cid: str, secret: str, scopes: str = "") -> tuple[int, bytes]:
+    """One client_credentials POST. `(status or 0 for no answer, body)`."""
     import ssl
     import urllib.error
     import urllib.parse
     import urllib.request
 
-    token_url = ak_url.rstrip("/") + "/application/o/token/"
-    body = urllib.parse.urlencode({
+    fields = {
         "grant_type": "client_credentials",
         "client_id": cid,
         "client_secret": secret,
-    }).encode()
+    }
+    if scopes:
+        fields["scope"] = scopes
+    body = urllib.parse.urlencode(fields).encode()
     # Local estates terminate TLS with mkcert; the runners' curl used -k.
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
     try:
         with urllib.request.urlopen(
-            urllib.request.Request(token_url, data=body, method="POST"),
+            urllib.request.Request(_token_url(ak_url), data=body, method="POST"),
             timeout=15, context=ctx,
         ) as resp:
-            code = resp.status
+            return resp.status, resp.read()
     except urllib.error.HTTPError as exc:
-        code = exc.code
+        return exc.code, b""
     except (urllib.error.URLError, TimeoutError, OSError):
-        code = 0
+        return 0, b""
 
-    if code == 200:
-        return 0, (f"✓ Authentik token grant for {cid} → 200 "
-                   "(credential verified, not just liveness)")
+
+def _token_url(ak_url: str) -> str:
+    return ak_url.rstrip("/") + "/application/o/token/"
+
+
+def _grant_refused(ak_url: str, cid: str, code: int) -> str:
     shown = code if code else "no answer"
-    return 1, (f"Authentik {token_url} returned {shown} for client_id={cid} "
-               "— this client cannot obtain a token. 400 means the provider "
-               "refused the credential the estate holds (store: "
-               f"{secrets_path()} vs the provider's client_secret); "
-               "'no answer' means the server is unreachable.")
+    return (f"Authentik {_token_url(ak_url)} returned {shown} for "
+            f"client_id={cid} — this client cannot obtain a token. 400 means "
+            "the provider refused the credential the estate holds (store: "
+            f"{secrets_path()} vs the provider's client_secret); "
+            "'no answer' means the server is unreachable.")
 
 
 # ── CLI — the shell callers' entry point ─────────────────────────────────
@@ -199,10 +256,13 @@ def token_preflight(env: dict) -> tuple[int, str]:
 #   printf '%s' "$JOB_ENV_JSON" | python3 -m pulse.secrets            # JSON out
 #   printf '%s' "$JOB_ENV_JSON" | python3 -m pulse.secrets --exports  # export lines
 #   printf '%s' "$JOB_ENV_JSON" | python3 -m pulse.secrets --token-preflight
+#   printf '%s' "$JOB_ENV_JSON" | python3 -m pulse.secrets --mint-token
 #
 # Exit codes: 0 resolved · 2 malformed input · 3 unresolvable reference;
-# --token-preflight adds 1 = the grant was refused / server unreachable.
-# stdout carries NOTHING on failure — a partial env is worse than none.
+# --token-preflight and --mint-token add 1 = the grant was refused / server
+# unreachable. stdout carries NOTHING on failure — a partial env is worse
+# than none, and for --mint-token a message on stdout would be exported as
+# if it were a bearer.
 
 _IDENT = r"^[A-Za-z_][A-Za-z0-9_]*$"
 
@@ -215,18 +275,21 @@ def _main(argv: list[str]) -> int:
 
     exports = False
     preflight = False
+    mint = False
     for arg in argv:
         if arg == "--exports":
             exports = True
         elif arg == "--token-preflight":
             preflight = True
+        elif arg == "--mint-token":
+            mint = True
         else:
-            print(f"pulse.secrets: unknown argument {arg!r} "
-                  "(only --exports / --token-preflight)", file=sys.stderr)
+            print(f"pulse.secrets: unknown argument {arg!r} (only --exports "
+                  "/ --token-preflight / --mint-token)", file=sys.stderr)
             return 2
-    if exports and preflight:
-        print("pulse.secrets: --exports and --token-preflight are separate "
-              "calls", file=sys.stderr)
+    if sum((exports, preflight, mint)) > 1:
+        print("pulse.secrets: --exports, --token-preflight and --mint-token "
+              "are separate calls", file=sys.stderr)
         return 2
 
     raw = sys.stdin.read().strip()
@@ -255,6 +318,18 @@ def _main(argv: list[str]) -> int:
             return 3
         print(message, file=(sys.stdout if rc == 0 else sys.stderr))
         return rc
+
+    if mint:
+        try:
+            rc, out = mint_agent_token(env)
+        except UnresolvableSecretError as exc:
+            print(f"pulse.secrets: {exc}", file=sys.stderr)
+            return 3
+        if rc != 0:
+            print(f"pulse.secrets: {out}", file=sys.stderr)
+            return rc
+        sys.stdout.write(out)          # the token, alone, no newline noise
+        return 0
 
     try:
         resolved = resolve_env(env)

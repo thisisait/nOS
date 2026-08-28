@@ -102,7 +102,7 @@ done < <(printf '%s\n' "$LOADED" | sed -n 's/^[[:space:]]*\([A-Z][A-Z0-9_]*\) =>
 # demanding a key nobody sets).
 REQUIRED=(NOS_REPO_ROOT)
 REPORTED=(NOS_ARMED_BACKENDS NOS_MINIMAX_MODEL WING_API_TOKEN NOS_AGENT_WING_TOKEN \
-          KEAP_AGENT_TOKEN_RO WING_EVENTS_HMAC_SECRET)
+          NOS_AUTHENTIK_TOKEN KEAP_AGENT_TOKEN_RO WING_EVENTS_HMAC_SECRET)
 
 # ── The agent's OWN Wing principal ───────────────────────────────────────────
 # The passthrough above just handed this process the daemon's WING_API_TOKEN —
@@ -126,6 +126,66 @@ if [[ -n "$AGENT_NAME" ]]; then
         echo "[run-agent] WARN: no ${secret_key} in ${SECRETS_FILE} — Wing will" >&2
         echo "[run-agent] attribute this run to the operator token, not to ${AGENT_NAME}." >&2
     fi
+fi
+
+# ── The agent's OWN Bone principal ───────────────────────────────────────────
+# Measured on the first bound night
+# (docs/plans/rsi-research/07-first-bound-night.md §4): the CLI path
+# exchanges the agent's client_credentials for a scoped Authentik token and
+# hands the child NOS_AUTHENTIK_TOKEN; THIS path performed no exchange at all,
+# so McpBoneTool sent no Authorization header and every Bone endpoint behind
+# require_scope() answered 401. A scoped Wing token on a runtime that cannot
+# authenticate to Bone is half a principal.
+#
+# The grant is pulse/secrets.py — the same implementation the daemon and every
+# other runner use, not a second curl. Scopes are the agent's `capabilities:`,
+# because Authentik grants only what is explicitly requested.
+#
+# WARN, not refuse, for the same reason as the Wing token above: a
+# pre-converge estate has no agent client secret yet, and the tools the run
+# does not need still work. It says so, so a 401 is never a mystery.
+# shellcheck source=lib/pulse-env.sh
+source "$REPO_ROOT/tools/lib/pulse-env.sh"
+if [[ -n "$AGENT_NAME" && -z "${NOS_AUTHENTIK_TOKEN:-}" ]]; then
+    grant_env=$(AGENT_NAME="$AGENT_NAME" \
+        NOS_AGENT_PROFILE="${NOS_AGENT_PROFILE:-$REPO_ROOT/files/anatomy/agents/$AGENT_NAME/agent.yml}" \
+        python3 - <<'PY' 2>/dev/null || true
+import json, os, yaml
+name = os.environ["AGENT_NAME"]
+profile = os.environ["NOS_AGENT_PROFILE"]
+scopes = os.environ.get("NOS_AGENT_SCOPES", "")
+if not scopes:
+    try:
+        with open(profile) as fh:
+            scopes = " ".join(yaml.safe_load(fh).get("capabilities") or [])
+    except Exception:
+        scopes = ""
+print(json.dumps({
+    "NOS_AUTHENTIK_URL": os.environ.get("NOS_AUTHENTIK_URL", ""),
+    "NOS_AGENT_CLIENT_ID": os.environ.get("NOS_AGENT_CLIENT_ID") or f"nos-{name}",
+    # A pointer, resolved by the same store reader the daemon uses. The Pulse
+    # path already sets this to exactly this spelling.
+    "NOS_AGENT_CLIENT_SECRET": (os.environ.get("NOS_AGENT_CLIENT_SECRET")
+                                or f"secret:agent_{name.replace('-', '_')}_client_secret"),
+    "NOS_AGENT_SCOPES": scopes,
+}))
+PY
+    )
+    mint_err="$(mktemp -t nos-agent-mint)"
+    if agent_ak_token="$(pulse_mint_agent_token "$grant_env" 2>"$mint_err")" \
+       && [[ -n "$agent_ak_token" ]]; then
+        export NOS_AUTHENTIK_TOKEN="$agent_ak_token"
+        echo "[run-agent] minted an Authentik token for nos-${AGENT_NAME}"
+    else
+        # Print the mint's OWN reason. "No token" is not a diagnosis, and the
+        # operator shell reaches here for a mundane one — NOS_AUTHENTIK_URL is
+        # in the Pulse job env, not in the daemon environment this script
+        # inherits — which reads as a broken credential unless it says so.
+        echo "[run-agent] WARN: no Authentik token for ${AGENT_NAME} — Bone" >&2
+        echo "[run-agent] endpoints behind require_scope() will answer 401." >&2
+        sed 's/^/[run-agent]   /' "$mint_err" >&2
+    fi
+    rm -f "$mint_err"
 fi
 
 missing=()

@@ -60,3 +60,17 @@ pulse_token_preflight() {
     printf '%s' "$1" | PYTHONPATH="${_PULSE_PKG_DIR}${PYTHONPATH:+:$PYTHONPATH}" \
         python3 -m pulse.secrets --token-preflight
 }
+
+# pulse_mint_agent_token <env-json>  →  the access_token on stdout
+#
+# The same grant as the pre-flight, keeping the token instead of throwing it
+# away. The bound runtime had no exchange at all
+# (docs/plans/rsi-research/07-first-bound-night.md §4),
+# so McpBoneTool presented nothing and every scoped Bone endpoint answered
+# 401. Scopes come from NOS_AGENT_SCOPES in the env — Authentik grants only
+# what is asked for. Exit codes as above; stdout is EMPTY on failure, because
+# a caller exports what it reads.
+pulse_mint_agent_token() {
+    printf '%s' "$1" | PYTHONPATH="${_PULSE_PKG_DIR}${PYTHONPATH:+:$PYTHONPATH}" \
+        python3 -m pulse.secrets --mint-token
+}
