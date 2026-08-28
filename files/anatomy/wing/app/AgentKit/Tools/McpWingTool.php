@@ -96,8 +96,19 @@ final class McpWingTool implements ToolInterface
 			'timeout' => 10,
 			'http_errors' => false,
 		];
-		if ($method === 'POST' && $body !== null) {
-			$opts['json'] = $body;
+		if ($method === 'POST') {
+			// Wing signs the RAW body (EventsPresenter::checkHmac), so encode
+			// once and send that exact string — Guzzle's `json` would re-encode.
+			$raw = json_encode($body ?? new \stdClass);
+			$ts = (string) time();
+			$opts['body'] = $raw;
+			$opts['headers']['Content-Type'] = 'application/json';
+			$opts['headers']['X-Wing-Timestamp'] = $ts;
+			$opts['headers']['X-Wing-Signature'] = hash_hmac(
+				'sha256',
+				$ts . '.' . $raw,
+				(string) (getenv('WING_EVENTS_HMAC_SECRET') ?: ''),
+			);
 		}
 
 		try {
