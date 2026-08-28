@@ -42,7 +42,13 @@ keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # earlier created_at than their root and single-pass boot registration drops the
 # WHOLE TREE without a word. v1.21.0 fixes the point and tests both iteration
 # directions. Pinned by tests/anatomy/test_keap_pin_not_cancelled.py.
-keap_repo_ref: "v1.40.1"
+# v1.41.0 carries the `view` block's generative keys (facets / highlights /
+# offer) AND the two doors that were shut without it: the agent create mapping
+# never forwarded `view`, and `GET /api/tables/:id` omitted what `PATCH`
+# accepted. Below this ref, `tools/roadmap-apply-view.py --confirm` writes a
+# block KEAP silently strips and then cannot read back — it refuses rather than
+# reporting success, but the pin is what makes the apply clean.
+keap_repo_ref: "v1.41.0"
 
 # ── The cortex cutover (KEAP P-5) ────────────────────────────────────────────
 # false ⇒ KEAP answers /agent/v1/validate with its OWN typechecker (the shipped
