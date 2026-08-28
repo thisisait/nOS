@@ -69,10 +69,7 @@
 
 export const meta = {
   name: 'agentic-planes-build',
-  description:
-    'Build nos-sere finishing work (identity, oracle satisfaction, output contract, ' +
-    'ledger join, surfaces incl. the loop editor) and the Q3-gated nos-ops measurement ' +
-    'harness. Writers and verifiers are disjoint. No converge — commits only.',
+  description: 'Build sere-plane finishing work (identity, oracle satisfaction, output contract, ledger join, surfaces incl. the loop editor) and the Q3-gated nos-ops measurement harness. Writers and verifiers are disjoint. No converge — commits only.',
   phases: [
     { title: 'Answers', detail: 'parse the questionnaire; refuse unanswered or changed' },
     { title: 'Prune', detail: 'delete agent memory entirely (Q8) + Coordinator/ProcessPool; gate the non-return' },
