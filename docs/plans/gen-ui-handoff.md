@@ -17,6 +17,12 @@ for a second writer before I started committing.
 |---|---|---|
 | `d7f27225` | docs(roadmap): Tauri elevated to next… | 7 of 9 |
 | `63eba4a2` | fix(nos-cc): mouse on… | 2 of 3 |
+| `ef2ae628` | fix(workflow): helpers must precede… | 1 of 2 |
+
+Full sweep, `git log dev..HEAD` — the first version of this note listed two
+commits because I hand-picked which to check. That is the same error as the one
+above, one layer up: a list I assembled instead of one the repository answered.
+The table is now generated from every commit on the branch.
 
 `d7f27225` carries ~1090 lines of yours:
 
@@ -32,11 +38,11 @@ for a second writer before I started committing.
 `63eba4a2` carries `contracts/index.ts` and `tables/view.ts` as well — an
 earlier snapshot of the same two files.
 
-## What is still UNCOMMITTED and is yours
+## `state/keap-tables/roadmap.table.yml` — swept twice, now committed
 
-`state/keap-tables/roadmap.table.yml` — 18 insertions, 13 deletions, the
-`highlights` rewrite. I deliberately left it in the working tree rather than
-commit it under another wrong message. It carries a finding worth keeping in
+I left it in the working tree deliberately, and then `ef2ae628` took it anyway
+on the next commit. It is in the tree and safe; it is filed under a workflow
+fix. It carries a finding worth keeping in
 whatever commit you give it: the highlight was authored as
 `status eq shipped AND verified eq contradicted` and, evaluated against the 122
 live rows, matched **zero** — all 11 shipped rows are `confirmed`, and every one
