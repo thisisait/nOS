@@ -137,9 +137,10 @@ def test_a_dead_owner_does_not_wedge_the_estate(tmp_path):
     liveness check, one killed agent would stop every later one forever —
     a worse outage than the race it prevents."""
     lock = tmp_path / "agent-run.lock"
-    lock.mkdir()
-    # PID 0 is never a live process we can signal; simulate a crashed owner.
-    (lock / "owner").write_text("999999 dead-agent 2026-01-01T00:00:00Z\n", encoding="utf-8")
+    # Q12: the claim lives in a SLOT under the lock path, one per holder.
+    (lock / "slot.1").mkdir(parents=True)
+    # PID 999999 is never a live process we can signal; simulate a crashed owner.
+    (lock / "slot.1" / "owner").write_text("999999 dead-agent 2026-01-01T00:00:00Z\n", encoding="utf-8")
 
     probe = tmp_path / "probe.sh"
     probe.write_text(f'source "{HELPER}"\nnos_agent_lock_acquire reclaimer 0 || exit 2\necho HELD\n',

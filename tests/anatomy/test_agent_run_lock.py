@@ -48,11 +48,13 @@ def test_the_runner_still_goes_through_the_mutex():
 
 
 def test_atomic_mkdir_lock_acquired():
-    """The mutex uses an atomic mkdir lock (macOS has no flock)."""
+    """The mutex uses an atomic mkdir lock (macOS has no flock). Since Q12
+    the unit acquired is a SLOT under that path; exclusion is proven by
+    execution in test_cli_lock_excludes_agentkit_slots.py, not here."""
     body = _body()
     assert "NOS_AGENT_LOCK" in body, "no agent-run lock variable"
-    assert 'mkdir "$NOS_AGENT_LOCK"' in body, \
-        "lock must be acquired with atomic `mkdir` (no flock on macOS)"
+    assert 'mkdir "$slot"' in body, \
+        "a slot must be acquired with atomic `mkdir` (no flock on macOS)"
 
 
 def test_lock_released_on_exit():

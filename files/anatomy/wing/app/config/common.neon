@@ -25,6 +25,10 @@ session:
 	expiration: 14 days
 
 database:
+	# Q12 (2026-08-28): three AgentKit slots may hold the agent-run lock at
+	# once, so wing.db needs a busy timeout or they race the WAL writer.
+	# pdo_sqlite already opens with busy_timeout=60000ms (measured, not
+	# assumed: PRAGMA busy_timeout on a bare `new PDO`) — nothing to set.
 	dsn: 'sqlite:%dataDir%/wing.db'
 
 services:

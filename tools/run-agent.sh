@@ -179,7 +179,7 @@ echo "[run-agent] ceilings: tokens=${NOS_AGENT_SESSION_TOKEN_CEILING:-<default>}
 # release trap and leak the lock for the rest of the night.
 # shellcheck source=../files/anatomy/scripts/agent-run-lock.sh
 source "$REPO_ROOT/files/anatomy/scripts/agent-run-lock.sh"
-nos_agent_lock_acquire "${NOS_AGENT_NAME:-agentkit}" 300 || exit 2
+nos_agent_lock_acquire "${NOS_AGENT_NAME:-agentkit}" 300 agentkit || exit 2
 
 SUMMARY_FILE="$(mktemp -t nos-agent-summary)"
 trap 'nos_agent_lock_release; rm -f "$SUMMARY_FILE"' EXIT

@@ -175,7 +175,7 @@ emit_event "scan.batch_started" "$(jq -nc \
 # works because the launchd job overrides it.
 # shellcheck source=../anatomy/scripts/agent-run-lock.sh
 source "$(dirname "$0")/../anatomy/scripts/agent-run-lock.sh"
-if ! nos_agent_lock_acquire "vulnscan:${SCAN_RUN_ID}" 600; then
+if ! nos_agent_lock_acquire "vulnscan:${SCAN_RUN_ID}" 600 cli; then
     log "ERROR: another claude-CLI agent holds the agent-run lock — scan not dispatched"
     emit_event "scan.batch_refused" '{"reason":"agent-run lock held"}' >> "$LOG_FILE"
     exit 2

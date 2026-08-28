@@ -100,7 +100,7 @@ fi
 # terminal. The 02:00 scan waits instead, because nobody is watching it.
 # shellcheck source=agent-run-lock.sh
 source "$(dirname "${BASH_SOURCE[0]}")/agent-run-lock.sh"
-nos_agent_lock_acquire "$AGENT_NAME" 0 || exit 2
+nos_agent_lock_acquire "$AGENT_NAME" 0 cli || exit 2
 
 # ── HMAC helper ───────────────────────────────────────────────────────────────
 
