@@ -104,12 +104,26 @@ ENGINE_ACTOR = "engine:judge-runner"
 #: §4 — closed enum; an unknown intent_class is refused at propose time.
 INTENT_CLASSES = frozenset({
     "version-pin-bump", "config-fix", "render-fix",
-    "wiring-fix", "gate-add", "dependency-bump",
+    "wiring-fix", "gate-add", "dependency-bump", "harness",
 })
 
 #: §5a — `gate-add` writes the oracle's own directory, so it is never
 #: auto-accepted. Set by the ledger from intent_class; NOT caller-supplied.
 OPERATOR_REQUIRED_INTENTS = frozenset({"gate-add"})
+
+#: Declared, and refused. `harness` names a proposal that would change the
+#: apparatus a run is judged BY rather than the estate it is judged ON — a
+#: kind the surface must be able to SAY before the engine is taught to accept
+#: it, or the first one arrives as an unknown-intent 409 nobody can read.
+#: Same mechanism as the set above, one more set: membership here refuses at
+#: propose time, and the refusal names the toggle that will one day govern it.
+#: The toggle is NOT read here — wiring the ledger to a live config row is the
+#: later cycle's one change, and a toggle with no reader cannot half-arm.
+DISABLED_INTENTS = frozenset({"harness"})
+
+#: Where that toggle lives, quoted verbatim into the refusal. An operator who
+#: reads "refused" and not "refused, and here is the switch" opens the ledger.
+DISABLED_INTENT_TOGGLE = "the KEAP config table, row `harness_proposals_enabled`"
 
 #: Three-valued, deliberately. `judges.Result` is the enum; this is the SQL
 #: vocabulary the CHECK constraints pin, kept as data so a test can read it.
@@ -444,6 +458,16 @@ def fingerprint(weakness_id: str, target_paths: Iterable[str],
         raise ProposalRefused(
             "unknown-intent",
             f"{intent_class!r} is not one of: {', '.join(sorted(INTENT_CLASSES))}",
+        )
+    if intent_class in DISABLED_INTENTS:
+        # Here, beside the enum check, because this is the same question one
+        # bit further on — is this kind proposable AT ALL — and it must be
+        # asked before any state is consulted, so a disabled kind can never
+        # spend an attempt, hit the weakness reader, or reach the budget.
+        raise ProposalRefused(
+            "intent-disabled",
+            f"{intent_class!r} is a declared but disabled intent class; it is "
+            f"refused until {DISABLED_INTENT_TOGGLE} enables it",
         )
     payload = {
         "weakness_id": str(weakness_id),
