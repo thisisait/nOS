@@ -38,7 +38,7 @@ system_prompt_path: system.md
 
 tools:
   - id: bash-read-only
-  - id: mcp-wing
+  - id: mcp-wing-read
   - id: mcp-bone
   - id: mcp-keap
 

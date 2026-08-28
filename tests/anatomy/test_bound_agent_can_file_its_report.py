@@ -1,7 +1,7 @@
 """A bound agent's POST must carry the same HMAC the shell path carries.
 
 The bound AgentKit loop ran, MiniMax served it, and every ceremony still failed
-the rubric: `McpWingTool` sent a bearer token only, so `POST /api/v1/events`
+the rubric: the Wing MCP tool sent a bearer token only, so `POST /api/v1/events`
 returned 401 (`EventsPresenter::checkHmac`) and no run could file its report.
 
 This test does not grep for a header name — it runs the tool against a Guzzle
@@ -22,7 +22,7 @@ WING = REPO / "files/anatomy/wing"
 PROBE_404 = r"""
 require __DIR__ . '/vendor/autoload.php';
 
-use App\AgentKit\Tools\McpWingTool;
+use App\AgentKit\Tools\McpWingReadTool;
 use App\AgentKit\Tools\ToolContext;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
@@ -30,7 +30,7 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 
 $stack = HandlerStack::create(new MockHandler([new Response(404, [], '<html>not found</html>')]));
-$tool = new McpWingTool(new Client(['handler' => $stack]), 'probe-token');
+$tool = new McpWingReadTool(new Client(['handler' => $stack]), 'probe-token');
 $ctx = new ToolContext('s-1', 'th-1', 't-1', 'sp-1', 'probe', 'tu-1');
 $r = $tool->execute(['method' => 'GET', 'path' => '/api/v1/systems'], $ctx);
 echo json_encode(['content' => $r->content]);
@@ -39,7 +39,7 @@ echo json_encode(['content' => $r->content]);
 PROBE = r"""
 require __DIR__ . '/vendor/autoload.php';
 
-use App\AgentKit\Tools\McpWingTool;
+use App\AgentKit\Tools\McpWingWriteTool;
 use App\AgentKit\Tools\ToolContext;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
@@ -52,7 +52,7 @@ putenv('WING_EVENTS_HMAC_SECRET=probe-secret');
 $sent = [];
 $stack = HandlerStack::create(new MockHandler([new Response(201, [], '{"ok":true}')]));
 $stack->push(Middleware::history($sent));
-$tool = new McpWingTool(new Client(['handler' => $stack]), 'probe-token');
+$tool = new McpWingWriteTool(new Client(['handler' => $stack]), 'probe-token');
 
 $ctx = new ToolContext('s-1', 'th-1', 't-1', 'sp-1', 'probe', 'tu-1');
 $tool->execute([

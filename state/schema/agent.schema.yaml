@@ -111,7 +111,8 @@ properties:
             - bash-read-only
             - bash-write            # reserved placeholder, no impl (kept)
             - migration-file-write  # gated, path-allowlisted (Q8/A1, 2026-06-16)
-            - mcp-wing
+            - mcp-wing-read         # GET only, scope wing.read
+            - mcp-wing-write        # POST, scope wing.write, route-allowlisted
             - mcp-bone
             - mcp-pulse
             - mcp-keap              # KEAP cortex /agent/v1 (read + captures-only write)

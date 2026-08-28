@@ -1,0 +1,63 @@
+{
+  "measurement": "Every POST any agent ever made through the un-split mcp-wing tool.",
+  "why": "Q14=b — write grants are grandfathered from measured use, not from what a prompt asks for. A route nobody called is not granted.",
+  "query": "SELECT substr(task,7,instr(task,'/tool:')-7) AS agent, json_extract(result_json,'$.input.path') AS path, COUNT(*), MIN(ts), MAX(ts) FROM events WHERE type='agent_tool_use' AND task LIKE '%/tool:mcp_wing' AND json_extract(result_json,'$.input.method')='POST' GROUP BY agent, path",
+  "source": {
+    "db": "~/wing/app/data/wing.db",
+    "access": "read-only copy via sqlite3 'file:...?mode=ro' VACUUM INTO, taken 2026-08-28T20:05Z",
+    "host": "the operator's Mac; the repo is not the running system"
+  },
+  "span": {
+    "note": "NO WINDOW WAS APPLIED. This is the full extent of the table, stated so a grant cannot read bigger than its evidence.",
+    "agent_tool_use_rows_total": 401,
+    "agent_tool_use_first_ts": "2026-08-16T11:49:17+00:00",
+    "agent_tool_use_last_ts": "2026-08-28T17:54:30+00:00",
+    "agent_tool_use_span_days": 12.25,
+    "mcp_wing_rows": 87,
+    "mcp_wing_first_ts": "2026-08-16T11:49:23+00:00",
+    "mcp_wing_last_ts": "2026-08-28T17:54:30+00:00",
+    "mcp_wing_post_rows": 12,
+    "mcp_wing_post_first_ts": "2026-08-16T11:49:26+00:00",
+    "mcp_wing_post_last_ts": "2026-08-28T17:54:30+00:00",
+    "events_table_rows_total": 375350,
+    "caveat": "The events TABLE is far older than the agent_tool_use TYPE. Tool calls were only recorded from 2026-08-16, so this is twelve days of evidence, not the estate's lifetime. A grant justified here is justified by twelve days."
+  },
+  "grants": [
+    {
+      "agent": "librarian",
+      "routes": [
+        {"method": "POST", "path": "/api/v1/events", "calls": 11,
+         "first_ts": "2026-08-16T11:49:26+00:00", "last_ts": "2026-08-28T16:55:33+00:00"}
+      ]
+    },
+    {
+      "agent": "surveyor",
+      "routes": [
+        {"method": "POST", "path": "/api/v1/events", "calls": 1,
+         "first_ts": "2026-08-28T17:54:30+00:00", "last_ts": "2026-08-28T17:54:30+00:00"}
+      ]
+    }
+  ],
+  "granted_routes_union": ["/api/v1/events"],
+  "findings": [
+    {
+      "kind": "no_grant",
+      "agents": ["conductor", "curator", "inspektor", "migration-author", "upgrade-architect"],
+      "detail": "Five of the seven agents that declared mcp-wing have ZERO measured tool calls of any kind in this span, so they receive no write plane. Absence of evidence is recorded as absence, not read as 'read-only by design'."
+    },
+    {
+      "kind": "prompt_asks_for_a_route_nobody_called",
+      "detail": "Four system prompts instruct a POST that the grandfather does not grant: conductor and migration-author are told to POST /api/v1/events (report), inspektor POST /api/v1/pentest/findings, upgrade-architect POST /api/v1/coexistence/<service>/queue. Under Q14=b these prompts are now unsatisfiable. This is deliberate and it is a decision for the operator: either the ceremony gets an explicit grant, or the prompt stops asking. It is NOT something to fix by widening the allowlist to what the prose assumes.",
+      "affected": ["conductor", "inspektor", "migration-author", "upgrade-architect"]
+    },
+    {
+      "kind": "scope_held_without_use",
+      "agents": ["inspektor", "migration-author", "upgrade-architect"],
+      "detail": "These three already carried wing.write in audit.capability_scopes before the split, with no measured write. The scope is left in place (removing it is outside this item) but it now grants nothing, because no write TOOL is in their roster."
+    },
+    {
+      "kind": "route_never_called",
+      "detail": "Across the whole span the ONLY POST path any agent ever used is /api/v1/events. Every other write route on Wing's /api/v1 surface is un-granted to every agent."
+    }
+  ]
+}

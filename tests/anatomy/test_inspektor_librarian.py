@@ -16,6 +16,7 @@ pins the retirement.
 from __future__ import annotations
 
 import pathlib
+import re
 
 import yaml
 
@@ -120,13 +121,32 @@ def test_inspektor_carries_write_scope():
 
 
 def test_librarian_is_read_only():
-    """Librarian surfaces context, never writes findings or proposes
-    fixes. Read-only scopes only."""
+    """Librarian surfaces context, never writes findings or proposes fixes.
+
+    `wing.write` (2026-08-28) is NOT a widening and is allowed only under a
+    condition asserted here: it loads `mcp-wing-write`, whose route allowlist
+    is `/api/v1/events` and nothing else — the report leg `events.write`
+    already named. Add a second route to that allowlist and this gate goes red,
+    which is the point: the scope's meaning lives in the allowlist, so the
+    doctrine has to be checked there rather than in the scope's spelling.
+    """
     agent = yaml.safe_load((AGENTS / "librarian/agent.yml").read_text())
     scopes = (agent.get("audit") or {}).get("capability_scopes") or []
     for s in scopes:
-        assert "write" not in s or s == "events.write", (
+        assert "write" not in s or s in ("events.write", "wing.write"), (
             f"librarian must not have write scope: {s}"
         )
         assert "scan" not in s
         assert "pentest" not in s
+
+    if "wing.write" in scopes:
+        src = (
+            REPO / "files/anatomy/wing/app/AgentKit/Tools/McpWingWriteTool.php"
+        ).read_text(encoding="utf-8")
+        block = src[src.index("GRANTED_ROUTES = ["):]
+        routes = re.findall(r"'(/api/[^']+)'", block[: block.index("]")])
+        assert routes == ["/api/v1/events"], (
+            f"librarian holds wing.write and the write plane now reaches {routes}. "
+            "That is a widening past 'files its own report', which is the only "
+            "write this agent is allowed."
+        )

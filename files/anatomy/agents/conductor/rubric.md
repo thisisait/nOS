@@ -15,7 +15,7 @@ only when every criterion is met.
 ## Evidence discipline
 
 - Every `Findings` bullet references the tool call that produced the
-  evidence (e.g. `mcp_wing GET /api/v1/hub/health → 200`). A bullet without
+  evidence (e.g. `mcp_wing_read GET /api/v1/hub/health → 200`). A bullet without
   a tool-call reference is `needs_revision`.
 - Status codes / error messages are quoted verbatim, not paraphrased.
 - The agent did not draw conclusions beyond what the tool calls returned
@@ -25,9 +25,9 @@ only when every criterion is met.
 
 The agent ran at least these checks (per system.md):
 
-- `mcp_wing GET /api/v1/hub/health`
-- `mcp_wing GET /api/v1/pulse_jobs`
-- `mcp_wing GET /api/v1/events?limit=5`
+- `mcp_wing_read GET /api/v1/hub/health`
+- `mcp_wing_read GET /api/v1/pulse_jobs`
+- `mcp_wing_read GET /api/v1/events?limit=5`
 - one `bash_read_only` git status check
 - one `bash_read_only` sqlite3 events-last-24h query
 

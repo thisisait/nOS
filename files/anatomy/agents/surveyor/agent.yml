@@ -33,7 +33,10 @@ system_prompt_path: system.md
 
 tools:
   - id: bash-read-only
-  - id: mcp-wing
+  - id: mcp-wing-read
+  # Grandfathered 2026-08-28 from 1 measured POST, to /api/v1/events — the
+  # report write. Extent: wing-write-grants.json.
+  - id: mcp-wing-write
   - id: mcp-bone
 
 multiagent:
@@ -49,6 +52,7 @@ audit:
     - bash.read
     - mcp.tool_use
     - wing.read
+    - wing.write
     - bone.read
     - events.write
     - audit.read

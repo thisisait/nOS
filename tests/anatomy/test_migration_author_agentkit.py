@@ -73,7 +73,12 @@ def test_dir_profile_keeps_read_and_wing_tools(dir_profile: dict):
     rewrite)."""
     tool_ids = {t.get("id") for t in (dir_profile.get("tools") or [])}
     assert "bash-read-only" in tool_ids, "bash-read-only must remain in the roster"
-    assert "mcp-wing" in tool_ids, "mcp-wing must remain in the roster"
+    assert "mcp-wing-read" in tool_ids, "mcp-wing-read must remain in the roster"
+    assert "mcp-wing-write" not in tool_ids, (
+        "the 2026-08-28 grandfather granted this agent no write plane — it has "
+        "never been measured POSTing (docs/plans/rsi-research/artifacts/"
+        "wing-write-grants.json). Adding one is an operator decision."
+    )
 
 
 def test_dir_profile_scope_covers_the_write_tool(dir_profile: dict):

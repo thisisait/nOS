@@ -54,6 +54,16 @@ final class McpBoneTool implements ToolInterface
 
 	public function execute(array $input, ToolContext $context): ToolResult
 	{
+		// A `method` this tool does not do was silently served as a GET and
+		// answered HTTP 200 — the model asked to write and was told it worked.
+		$method = strtoupper((string) ($input['method'] ?? 'GET'));
+		if ($method !== 'GET') {
+			return ToolResult::error(
+				"mcp-bone only does GET; got {$method}. It has no write plane.",
+				['refused_reason' => 'verb_not_in_scope', 'method' => $method],
+			);
+		}
+
 		$path = (string) ($input['path'] ?? '');
 		if (!str_starts_with($path, '/api/')) {
 			return ToolResult::error("path must start with /api/; got {$path}");

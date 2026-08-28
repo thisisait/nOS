@@ -4,24 +4,21 @@ declare(strict_types=1);
 
 namespace App\AgentKit\Tools;
 
-use App\AgentKit\LLMClient\ToolSchema;
 use GuzzleHttp\Client as HttpClient;
 use GuzzleHttp\Exception\GuzzleException;
 
 /**
- * MCP-style wrapper around Wing's REST API. Exposes a single tool the LLM
- * can call to issue GET/POST requests to /api/v1/* endpoints. Authorization
- * is via the agent's session bearer token (resolved from vault, scope=mcp-wing
- * or fallback wing-internal token at runtime).
+ * Shared transport for the two Wing MCP tools. Abstract: never registered.
  *
- * The tool is intentionally narrow: only Wing's own /api/v1/* surface, only
- * via the loopback URL. Anything broader belongs in a separate tool with
- * its own scope.
+ * Until 2026-08-28 one tool carried GET and POST behind a single `wing.read`
+ * scope, so every agent that could read the estate could also write to it —
+ * a scope that does not name a verb cannot refuse it. Each subclass names
+ * exactly one verb, and the write plane names its routes too.
  */
-final class McpWingTool implements ToolInterface
+abstract class McpWingTool implements ToolInterface
 {
-	private const BASE_URL = 'http://127.0.0.1:9000';
-	private const MAX_RESPONSE_BYTES = 16_384;
+	protected const BASE_URL = 'http://127.0.0.1:9000';
+	protected const MAX_RESPONSE_BYTES = 16_384;
 
 	private string $bearerToken;
 
@@ -35,42 +32,18 @@ final class McpWingTool implements ToolInterface
 		$this->bearerToken = (string) ($bearerToken ?? getenv('WING_API_TOKEN') ?: '');
 	}
 
-	public function id(): string
-	{
-		return 'mcp-wing';
-	}
+	/** The one HTTP verb this tool's scope names. */
+	abstract protected function verb(): string;
 
-	public function requiredScopes(): array
+	/**
+	 * Routes this tool may reach — exact match on the path with the query
+	 * stripped. Empty means the whole /api/v1/ surface.
+	 *
+	 * @return array<int, string>
+	 */
+	protected function allowedPaths(): array
 	{
-		return ['mcp.tool_use', 'wing.read'];
-	}
-
-	public function schema(): ToolSchema
-	{
-		return new ToolSchema(
-			name: 'mcp_wing',
-			description: 'Issue a GET or POST against Wing /api/v1/*. Use for health probes, ' .
-				'event queries, pulse-job lookups, system listings. Path must start with /api/v1/. ' .
-				'Returns up to 16 KiB of the JSON response body verbatim.',
-			inputSchema: [
-				'type' => 'object',
-				'required' => ['method', 'path'],
-				'properties' => [
-					'method' => [
-						'type' => 'string',
-						'enum' => ['GET', 'POST'],
-					],
-					'path' => [
-						'type' => 'string',
-						'description' => 'Path beginning with /api/v1/.',
-					],
-					'body' => [
-						'type' => 'object',
-						'description' => 'JSON body (POST only).',
-					],
-				],
-			],
-		);
+		return [];
 	}
 
 	/** The live route table, derived from the router the request just missed. */
@@ -94,15 +67,28 @@ final class McpWingTool implements ToolInterface
 
 	public function execute(array $input, ToolContext $context): ToolResult
 	{
-		$method = strtoupper((string) ($input['method'] ?? 'GET'));
+		$method = strtoupper((string) ($input['method'] ?? $this->verb()));
 		$path = (string) ($input['path'] ?? '');
 		$body = $input['body'] ?? null;
 
-		if (!in_array($method, ['GET', 'POST'], true)) {
-			return ToolResult::error("method must be GET or POST; got {$method}");
+		if ($method !== $this->verb()) {
+			return ToolResult::error(
+				"{$this->id()} only does {$this->verb()}; got {$method}. Call the tool "
+				. 'whose scope names that verb — this one cannot be talked into it.',
+				['refused_reason' => 'verb_not_in_scope', 'method' => $method],
+			);
 		}
 		if (!str_starts_with($path, '/api/v1/')) {
 			return ToolResult::error("path must start with /api/v1/; got {$path}");
+		}
+
+		$route = explode('?', $path, 2)[0];
+		$granted = $this->allowedPaths();
+		if ($granted !== [] && !in_array($route, $granted, true)) {
+			return ToolResult::error(
+				"{$this->id()} is not granted {$route}. Granted: " . implode(', ', $granted),
+				['refused_reason' => 'route_not_granted', 'path' => $route],
+			);
 		}
 
 		$opts = [
@@ -131,7 +117,7 @@ final class McpWingTool implements ToolInterface
 		}
 
 		try {
-			$response = $this->http->request($method, self::BASE_URL . $path, $opts);
+			$response = $this->http->request($method, static::BASE_URL . $path, $opts);
 		} catch (GuzzleException $exc) {
 			return ToolResult::error('Wing API HTTP error: ' . $exc->getMessage());
 		}
@@ -139,8 +125,8 @@ final class McpWingTool implements ToolInterface
 		$status = $response->getStatusCode();
 		$payload = (string) $response->getBody();
 		// mb_strcut, not substr: a byte cut mid-codepoint breaks UTF-8.
-		if (strlen($payload) > self::MAX_RESPONSE_BYTES) {
-			$payload = mb_strcut($payload, 0, self::MAX_RESPONSE_BYTES, 'UTF-8') . '…[truncated]';
+		if (strlen($payload) > static::MAX_RESPONSE_BYTES) {
+			$payload = mb_strcut($payload, 0, static::MAX_RESPONSE_BYTES, 'UTF-8') . '…[truncated]';
 		}
 
 		// A 404 is the model guessing a plausible path out of this tool's prose

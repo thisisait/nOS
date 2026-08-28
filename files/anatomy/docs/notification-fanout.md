@@ -179,7 +179,7 @@ curl -sS -X POST http://127.0.0.1:9000/api/v1/notifications \
   -d "$BODY"
 ```
 
-From an agent (PHP, via the `mcp_wing` tool):
+From an agent (PHP, via the `mcp_wing_write` tool — POST, scope `wing.write`):
 
 ```php
 $client->post('/api/v1/notifications', [

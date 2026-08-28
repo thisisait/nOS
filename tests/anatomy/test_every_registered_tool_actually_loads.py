@@ -92,9 +92,20 @@ def test_the_tool_class_materialises(tool: str, tmp_path: Path):
 
     requires = "\n".join(f"require '{WING_APP}/{p}';" for p in PRELUDE)
     script = tmp_path / "load.php"
+    # Autoload siblings in the Tools dir the way composer does. A tool built on
+    # an abstract base (McpWingRead/WriteTool, 2026-08-28) would otherwise fail
+    # for a missing parent rather than for anything wrong with it — and the
+    # covariance check this gate exists to provoke still runs either way.
     script.write_text(textwrap.dedent(f"""\
         <?php
         {requires}
+        spl_autoload_register(function ($class) {{
+            $short = substr($class, strrpos($class, '\\\\') + 1);
+            $file = '{TOOLS_DIR}/' . $short . '.php';
+            if (str_starts_with($class, 'App\\\\AgentKit\\\\Tools\\\\') && is_file($file)) {{
+                require $file;
+            }}
+        }});
         require '{path}';
         echo class_exists('App\\\\AgentKit\\\\Tools\\\\{tool}', false) ? 'OK' : 'MISSING';
     """), encoding="utf-8")

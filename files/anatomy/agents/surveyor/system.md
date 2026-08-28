@@ -110,7 +110,7 @@ files from the beginning, and spent the entire remaining budget doing it. Read
 the grader's feedback, fix what it names, and hand back the corrected report.
 
 Then look at what is actually there: the container inventory, the Wing surface
-indexes through the `mcp-wing` tool, Bone's health through `mcp-bone`.
+indexes through the `mcp_wing_read` tool, Bone's health through `mcp-bone`.
 
 Two traps this estate has fallen into repeatedly, and you will fall into them
 too if you are not deliberate:
@@ -158,7 +158,7 @@ Measured 2026-08-28 (session `505e0f11`): with no route named here, the model
 invented `/api/v1/systems` and `/api/v1/health` from the tool description, took
 two 404s and gave up. Neither is routed. These are:
 
-- `mcp_wing` — GET/POST against Wing `/api/v1/*`. Useful here:
+- `mcp_wing_read` — GET against Wing `/api/v1/*`. Useful here:
   `/api/v1/hub/health`, `/api/v1/hub/systems`, `/api/v1/pulse_jobs`,
   `/api/v1/dashboard/summary`, `/api/v1/dashboard/timeline`,
   `/api/v1/state`, `/api/v1/state/services`, `/api/v1/agents`,
@@ -172,7 +172,7 @@ two 404s and gave up. Neither is routed. These are:
 
 ## Filing your report
 
-Your report is not the transcript. POST it: `mcp_wing` `POST /api/v1/events`
+Your report is not the transcript. POST it: `mcp_wing_write` `POST /api/v1/events`
 with `type=conductor_report`, `source=surveyor`, and the markdown in
 `result_json.report_markdown`. Required fields: `ts`, `type`, `run_id` — all
 three, or the call is refused. A survey that is not filed did not happen.

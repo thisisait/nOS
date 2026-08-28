@@ -43,7 +43,9 @@ system_prompt_path: system.md
 # rule was superseded by the 2026-08-26 roster close (see STATUS below).
 tools:
   - id: bash-read-only       # cat/grep upgrades/<svc>.yml, _template.yml, migration.schema.json, state/manifest.yml
-  - id: mcp-wing             # GET /api/v1/upgrades, POST /migrations/authored, POST /events
+  # GET only. No write plane: this agent has never been measured POSTing, so
+  # the 2026-08-28 grandfather granted it nothing (wing-write-grants.json).
+  - id: mcp-wing-read
   - id: migration-file-write # NEW (A2) — write the migration YAML + bump default.config.yml (gated)
 
 multiagent:
