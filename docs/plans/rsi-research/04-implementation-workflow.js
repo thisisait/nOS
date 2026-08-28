@@ -141,7 +141,12 @@ HARD CONSTRAINTS
 //     wrong costs one phase, not a night. Omit it and every phase runs, which is the
 //     unattended mode and is NOT what today's evidence supports.
 const ONLY = args.only ? [args.only].flat() : null
-const PHASES = meta.phases.map((p) => p.title)
+// The titles, spelled again rather than read from `meta`: the runtime lifts the meta
+// export out of the script's scope, so referencing it here throws 'meta is not defined'
+// before a single agent starts (measured 2026-08-28). Keep this list and meta.phases in
+// step — tools/workflow-lint.py compares them.
+const PHASES = ['Answers', 'Prune', 'Mutex', 'Grant', 'Oracle', 'Ledger', 'Surface',
+                'Ops harness', 'Review']
 if (ONLY) {
   const unknown = ONLY.filter((n) => !PHASES.includes(n))
   if (unknown.length) {

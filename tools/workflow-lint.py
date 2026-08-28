@@ -210,6 +210,27 @@ def check_nondeterminism(src: str) -> list[str]:
     return errs
 
 
+def check_meta_not_read(src: str) -> list[str]:
+    """The body may DECLARE `meta`; it may not READ it.
+
+    The runtime lifts the meta export out of the script's scope, so
+    `meta.phases.map(...)` in the body throws `meta is not defined` before a
+    single agent starts — measured 2026-08-28. Unlike the backtick problem this
+    one is exact, not a heuristic: any `meta` token outside the export
+    declaration is the bug.
+    """
+    errs = []
+    decl = re.search(r"export\s+const\s+meta\s*=", src)
+    for m in re.finditer(r"\bmeta\b", src):
+        if decl and decl.start() <= m.start() < decl.end():
+            continue
+        line = src[:m.start()].count("\n") + 1
+        errs.append(f"line {line}: the body reads `meta` — the runtime lifts it out of "
+                    f"scope, so this throws 'meta is not defined' before any agent runs. "
+                    f"Spell the value out instead.")
+    return errs
+
+
 def check_phases(src: str) -> list[str]:
     """A phase() with no meta entry gets its own progress group — legal, and
     usually a typo. Report the mismatch rather than guessing which side is right."""
@@ -234,7 +255,8 @@ def lint(path: pathlib.Path) -> list[str]:
     errs = node_check(path)
     code = code_only(src)
     errs += check_meta(src)
-    for check in (check_collection_first, check_nondeterminism, check_phases):
+    for check in (check_collection_first, check_nondeterminism, check_phases,
+                  check_meta_not_read):
         errs += check(code)
     return errs
 
