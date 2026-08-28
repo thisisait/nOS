@@ -8,7 +8,7 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.10
 
 ## v0.11-beta (unreleased — drafted 2026-08-19, transport arc 2026-08-23, loop + roster + fee 08 on 2026-08-27)
 
-> **The estate closes a loop it cannot cheat.** 476 commits since `v0.10-beta`
+> **The estate closes a loop it cannot cheat.** 480 commits since `v0.10-beta`
 > (1192 files, +134k/−10k),
 > and the through-line is a machine built so that no step in it can record its
 > own success: a weakness was detected by a scanner, proposed against by an
@@ -286,7 +286,7 @@ leaves no record that it was ever the bar.
    and is now fixed at the source (206 of 212 rows could never be retired), but
    the fix cannot reach rows already filed, and no machinery reads a message
    for the operator. Ask `tools/red-status.py`.
-4. **63 pending remediation rows, 1 CRITICAL and 4 HIGH**, plus 6
+4. **62 pending remediation rows, 1 CRITICAL and 3 HIGH** (cycle 45), plus 6
    vendor-blocked CRITICAL/HIGH that operators must accept explicitly. The one
    live CRITICAL is REM-159 (GitLab 18.11.9 inside an unauthenticated CVSS 9.4;
    the fix version exists and no recipe reaches it).
