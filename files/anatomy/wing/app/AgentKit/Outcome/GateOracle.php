@@ -75,7 +75,7 @@ final class GateOracle
 			? $payload['verdict']
 			: [];
 
-		$gateRunId = isset($verdict['uuid']) && is_string($verdict['uuid']) && $verdict['uuid'] !== ''
+		$gateRunId = isset($verdict['uuid']) && is_string($verdict['uuid']) && trim($verdict['uuid']) !== ''
 			? $verdict['uuid']
 			: null;
 		$result = is_string($verdict['result'] ?? null) ? $verdict['result'] : '';
@@ -83,7 +83,11 @@ final class GateOracle
 		// process exited 0, the sealed verdict says pass, and it has an
 		// identity. Any one of them missing is a run nobody can stand behind.
 		$satisfied = $done['exit'] === 0 && $result === 'pass' && $gateRunId !== null;
-		$score = $satisfied ? self::RANK['pass'] : (self::RANK[$result] ?? 0);
+		// Only a SATISFIED iteration may hold the pass rank. A `pass` that lost
+		// one of the three — no uuid, or a client that exited non-zero after
+		// printing it — used to score 2 here, which outranked a clean fail and
+		// tripped the peak-stop on a verdict nobody can stand behind.
+		$score = $satisfied ? self::RANK['pass'] : min(self::RANK[$result] ?? 0, self::RANK['fail']);
 		$detail = $this->detail($gateset, $done, $verdict, $satisfied);
 
 		$this->history[$iteration] = [

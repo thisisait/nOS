@@ -151,16 +151,32 @@ echo json_encode(['satisfied' => $v['satisfied'], 'score' => $v['score'], 'detai
 
 
 def test_a_pass_without_a_verdict_uuid_is_not_satisfaction(tmp_path):
-    """A gate run nobody can name is a gate run nobody can replay."""
+    """A gate run nobody can name is a gate run nobody can replay — and it does
+    not get to hold the pass RANK either. Scoring it 2 outranked a clean fail
+    and tripped the peak-stop on a verdict nobody can stand behind."""
     got = _drive(tmp_path, """
+$blank = new GateOracle('/nonexistent-repo', fn (array $argv) => [
+    'exit' => 0, 'stdout' => '{"state":"done","verdict":{"result":"pass","uuid":"  "}}', 'stderr' => '',
+]);
 $o = new GateOracle('/nonexistent-repo', fn (array $argv) => [
     'exit' => 0, 'stdout' => '{"state":"done","verdict":{"result":"pass"}}', 'stderr' => '',
 ]);
+$crashed = new GateOracle('/nonexistent-repo', fn (array $argv) => [
+    'exit' => 3, 'stdout' => '{"state":"done","verdict":{"result":"pass","uuid":"v-1"}}', 'stderr' => '',
+]);
 $v = $o->judge(0, 'fast', 'x');
-echo json_encode(['satisfied' => $v['satisfied'], 'id' => $v['gate_run_id']]);
+echo json_encode([
+    'satisfied' => $v['satisfied'], 'id' => $v['gate_run_id'], 'score' => $v['score'],
+    'blank_id' => $blank->judge(0, 'fast', 'x')['gate_run_id'],
+    'crashed' => $crashed->judge(0, 'fast', 'x'),
+]);
 """)
     assert got["id"] is None
     assert got["satisfied"] is False
+    assert got["blank_id"] is None, "a whitespace uuid names nothing, but was kept as an identity"
+    assert got["crashed"]["satisfied"] is False, "a client that exited 3 still passed"
+    for label, score in (("unnamed", got["score"]), ("crashed", got["crashed"]["score"])):
+        assert score < 2, f"an unsatisfied {label} verdict holds the pass rank ({score})"
 
 
 def test_unreadable_client_output_is_not_satisfaction(tmp_path):

@@ -75,10 +75,13 @@ def test_the_db_refuses_a_satisfied_row_with_no_gate_run(tmp_path):
     assert "gate_run_id" in str(exc.value)
     con.rollback()
 
-    # An empty string is the same claim with a value in the column.
-    with pytest.raises(sqlite3.Error):
-        _insert(con, _row(gate_run_id="   "))
-    con.rollback()
+    # Whitespace is the same claim with a value in the column. Tabs and
+    # newlines are here because SQLite's ONE-ARG TRIM() strips ASCII space and
+    # nothing else — "\t\n" wrote the row until 2026-08-29.
+    for blank in ("   ", "\t\n", "\r", " \t "):
+        with pytest.raises(sqlite3.Error):
+            _insert(con, _row(gate_run_id=blank))
+        con.rollback()
 
     # Promotion after the fact is the same hole with an UPDATE in it.
     _insert(con, _row(grader_result="needs_revision"))

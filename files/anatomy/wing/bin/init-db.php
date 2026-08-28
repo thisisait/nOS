@@ -736,16 +736,22 @@ $addMissingColumns($db, 'agent_sessions', [
 // referencing it in that file would abort the whole script on any pre-existing
 // wing.db. UPDATE is guarded too — otherwise a row lands as needs_revision and
 // is promoted afterwards, with nothing to promote it against.
+//
+// TRIM TAKES A CHARSET. One-arg TRIM() strips ASCII SPACE and nothing else, so
+// a gate_run_id of "\t\n" satisfied the guard and wrote the row — measured in
+// the verify pass, 2026-08-29, against the very DB this file builds.
 $db->exec(<<<'SQL'
 DROP TRIGGER IF EXISTS agent_iterations_satisfied_insert;
 CREATE TRIGGER agent_iterations_satisfied_insert BEFORE INSERT ON agent_iterations FOR EACH ROW
   WHEN NEW.grader_result = 'satisfied'
-   AND (NEW.gate_run_id IS NULL OR TRIM(NEW.gate_run_id) = '')
+   AND (NEW.gate_run_id IS NULL
+        OR TRIM(NEW.gate_run_id, char(32)||char(9)||char(10)||char(13)) = '')
   BEGIN SELECT RAISE(ABORT, 'agent_iterations: satisfied requires gate_run_id'); END;
 DROP TRIGGER IF EXISTS agent_iterations_satisfied_update;
 CREATE TRIGGER agent_iterations_satisfied_update BEFORE UPDATE ON agent_iterations FOR EACH ROW
   WHEN NEW.grader_result = 'satisfied'
-   AND (NEW.gate_run_id IS NULL OR TRIM(NEW.gate_run_id) = '')
+   AND (NEW.gate_run_id IS NULL
+        OR TRIM(NEW.gate_run_id, char(32)||char(9)||char(10)||char(13)) = '')
   BEGIN SELECT RAISE(ABORT, 'agent_iterations: satisfied requires gate_run_id'); END;
 SQL);
 
