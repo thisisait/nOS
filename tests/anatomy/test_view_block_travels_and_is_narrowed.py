@@ -185,6 +185,49 @@ def test_a_declared_view_honours_the_caps_both_runtimes_enforce(path, defn):
         assert len(offer["label"]) <= 120, f"{path.name}: offer label over 120 chars"
 
 
+def test_every_declared_view_has_something_that_applies_it():
+    """A `view:` in git with no applier is a declaration that reaches nothing.
+
+    THIS IS THE GATE THAT WAS MISSING, and its absence has a receipt:
+    `test_the_roadmap_declares_the_table_it_fills.py` opens by reporting that the
+    roadmap definition "has never been applied. Nothing applies it" — a finding
+    made by hand on 2026-08-07, which nothing then pinned. The column half was
+    later applied by hand too, so the next unapplied field (the `view:` block,
+    2026-08-28) would have gone the same way: green in git, absent in the estate.
+
+    Two appliers are legitimate, matching the split `UNSEEDED` already records:
+      * the playbook seeder, for the `face-*` config tables;
+      * a tool in the roadmap family, for the tables whose rows a tool owns.
+
+    WHAT THIS CANNOT DO, said plainly: it proves an applier EXISTS, never that it
+    RAN. Only a reader can say whether the block is live — `roadmap-apply-view.py`
+    with no flags reports live-vs-declared and writes nothing. That is the
+    standing division of labour (CLAUDE.md): pytest owns the shape, the reader
+    owns the effect, and neither may claim the other's job.
+    """
+    seeder = (REPO / "roles/pazny.keap/tasks/seed-face-tables.yml").read_text(encoding="utf-8")
+    tools = REPO / "tools"
+    unapplied = []
+    for path, _ in _defs_with_view():
+        name = path.name.replace(".table.yml", "")
+        if f'slug: "face-{name}"' in seeder or f'slug: "{name}"' in seeder:
+            continue
+        # A tool applies it if it reads this definition file AND can write a view.
+        applied_by = [
+            t.name
+            for t in tools.glob("*.py")
+            if path.name in t.read_text(encoding="utf-8")
+            and '"view"' in t.read_text(encoding="utf-8")
+        ]
+        if not applied_by:
+            unapplied.append(name)
+    assert not unapplied, (
+        "these definitions declare a `view:` block that NOTHING applies — it is "
+        f"git-green and estate-absent: {unapplied}. Add a seeder entry, or a tool "
+        "in the roadmap family that PATCHes it and verifies by reading back."
+    )
+
+
 def test_the_offer_action_is_one_the_face_implements():
     """The cross-repo half of the closed catalog, checked where both are visible.
 
