@@ -6,9 +6,9 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.10
 
 ---
 
-## v0.11-beta (unreleased — drafted 2026-08-19, transport arc 2026-08-23, loop + roster + fee 08 on 2026-08-27)
+## v0.11-beta (2026-08-28)
 
-> **The estate closes a loop it cannot cheat.** 480 commits since `v0.10-beta`
+> **The estate closes a loop it cannot cheat.** 481 commits since `v0.10-beta`
 > (1192 files, +134k/−10k),
 > and the through-line is a machine built so that no step in it can record its
 > own success: a weakness was detected by a scanner, proposed against by an
