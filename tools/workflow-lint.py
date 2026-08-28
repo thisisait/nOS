@@ -13,11 +13,21 @@ None of that needed the runtime to discover. `node --check` passes all three —
 they are valid JavaScript that violates the workflow contract, which is a
 different thing.
 
-WHAT IT CANNOT SEE, said plainly so a green run is not over-read. This reads the
-source text; it does not build a scope graph. An identifier that is never
-defined (the research workflow's actual bug) still gets through, and so does any
-error that only exists at runtime. It catches the contract violations that are
-visible in the text, which is the class that cost this estate three launches.
+WHAT IT CANNOT SEE, said plainly so a green run is not over-read.
+
+  * An identifier that is never defined — the research workflow's actual bug.
+    That needs a scope graph; this reads text.
+  * A BACKTICK INSIDE A PROMPT, which ends the template it lives in. A rule
+    spelling a branch name in backticks made the runtime refuse a script at line
+    115 while `node --check` stayed happy, because the ticks were PAIRED and the
+    template merely ended early. Two heuristics were tried and both were worse
+    than nothing: counting ticks per file cannot see it, and flagging ticks in
+    indented prose reds 7 of 8 legitimate scripts, because a code template with
+    `${...}` in it looks identical by that measure. Telling them apart needs a
+    scanner that tracks template state across lines and through nested `${}` —
+    real work, not a regex. Until then the failure is loud and immediate at
+    launch, which is the cheapest place it can happen.
+  * Anything that only exists at runtime.
 
 Usage:
     tools/workflow-lint.py <script.js> [<script.js> ...]

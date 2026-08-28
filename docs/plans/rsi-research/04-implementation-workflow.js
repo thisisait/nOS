@@ -112,8 +112,8 @@ const EXPECTED = {
 
 const RULES = `
 HARD CONSTRAINTS
-- Work on the branch `feat/planes-build`, off dev, and ONLY that one. Create it if it does
-  not exist, otherwise check it out — never `git switch -c` a name of your own. Two writers
+- Work on the branch 'feat/planes-build', off dev, and ONLY that one. Create it if it does
+  not exist, otherwise check it out — never 'git switch -c' a name of your own. Two writers
   in the same phase run in PARALLEL and share it: commit only the files your item names, and
   if the branch has moved under you, rebase onto it rather than branching away. (Measured
   2026-08-28: with no branch named, two Grant writers made two branches, neither containing
