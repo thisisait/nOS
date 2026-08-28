@@ -175,24 +175,30 @@ view:
   facets: [track, status]
 
   highlights:
-    # The row this table exists to make findable. Not a heuristic — it is the
-    # thesis in this file's own header: "a row whose status says done and whose
-    # verified says contradicted is the most useful row this table can hold".
-    - label: "claimed done, probe disagrees"
+    # THE MEASUREMENT THAT REWROTE THIS BLOCK. It was authored as
+    # `status eq shipped AND verified eq contradicted` — the pair this file's
+    # own header calls "the most useful row this table can hold" — and evaluated
+    # against the 122 live rows it matched ZERO. The cross-tab says why, and the
+    # news is good: all 11 shipped rows are `confirmed`, and every one of the 27
+    # contradictions sits on a row someone had already moved BACK to queued (17),
+    # next (5), active (4) or parked (1). The pair the doctrine warns about is
+    # the pair the estate is already clearing.
+    #
+    # So the honest class is the observation alone. A declaration checked only
+    # against the schema would have shipped the four-word version and rendered
+    # an empty strip that looks exactly like a table with nothing wrong in it.
+    - label: "a probe disagrees"
       when:
-        - { column: status,   op: eq, value: shipped }
         - { column: verified, op: eq, value: contradicted }
     # Work in flight, which is the other question an operator opens this for.
-    # `active`, NOT `doing`, and the difference cost a measurement: the options
-    # list above declares BOTH (see its own comment — the last three values are
-    # the live board, added after the fact), and `tools/roadmap-seed.py` writes
-    # `active`. Authored against the declaration alone, this highlight matched
-    # 0 of 122 rows and rendered as nothing — a navigation aid that is absent is
-    # indistinguishable from one whose class is empty.
+    # `active`, NOT `doing`: the options list above declares BOTH (see its own
+    # comment — the last three values are the live board, added after the fact)
+    # and `tools/roadmap-seed.py` writes `active`. The `doing` spelling matched
+    # 0 of 122 rows, from the same measurement.
     - label: "in flight"
       when:
         - { column: status, op: eq, value: active }
-    # Blocked work is the one state that does not resolve itself by waiting.
+    # The one state that does not resolve itself by waiting.
     - label: "blocked"
       when:
         - { column: status, op: eq, value: blocked }
@@ -210,5 +216,4 @@ view:
     label: "Rows here claim to be done while a probe disagrees."
     action: focus-highlight
     when:
-      - { column: status,   op: eq, value: shipped }
       - { column: verified, op: eq, value: contradicted }
