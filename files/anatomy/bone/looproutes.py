@@ -95,6 +95,9 @@ class ProposalIn(BaseModel):
     # cap and the content-fingerprint dedup, all while returning 201.
     diff_text: str = Field(..., min_length=1)
     proposer_model: str | None = None
+    # The AgentKit session that authored this. Optional, because a proposal
+    # filed by hand genuinely has none — see the ledger's column comment.
+    session_uuid: str | None = None
 
 
 class JudgeIn(BaseModel):
@@ -153,6 +156,7 @@ def post_proposal(body: ProposalIn,
             proposer_id=body.proposer_id,
             diff_text=body.diff_text,
             proposer_model=body.proposer_model,
+            session_uuid=body.session_uuid,
         )
     except ledger.ProposalRefused as exc:
         raise HTTPException(status_code=409, detail={

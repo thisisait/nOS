@@ -12,10 +12,22 @@ one.
 
 WHAT IT DOES. Picks the worst weakness that (a) no proposal has ever cited,
 (b) the ledger will accept (evidence committed — see the deadlock below), and
-(c) belongs to a source whose fix surface the budget permits. Then it spawns
-ONE `claude` run pointed at the nos-loop `propose` skill for exactly that
-weakness, serialised through the estate's one agent mutex, and reads back —
-from the ledger, read-only — whether a proposal now cites it.
+(c) belongs to a source whose fix surface the budget permits. Then it opens ONE
+AgentKit session for exactly that weakness — `tools/run-agent.sh`, i.e.
+`bin/run-agent.php` with the daemon's environment, the agent's own principals
+and ONE slot of the Q12 agent lock (kind `agentkit`, so three may run abreast
+and a claude-CLI run still meets nobody) — and reads back, from the ledger,
+read-only, whether a proposal now cites it AND names that session.
+
+WHY AGENTKIT AND NOT `claude --print` (2026-08-29). The old spawn was
+`claude --print --permission-mode bypassPermissions`: an unattended run with
+the operator's own session, the operator's identity in every event it wrote,
+no session row, no token tally, no ceiling, and no binding — so the loop's
+entry was the one step of the loop with no record of its own cost. The
+proposal it produced named no author. It now runs on the ANTHROPIC adapter,
+which is the only adapter that keeps tools through a binding
+(state/llm-backends.yml:26-28), because a proposer with no tools cannot read
+the budget it must stay inside.
 
 WHAT IT DELIBERATELY IS NOT
 
@@ -63,6 +75,7 @@ import pathlib
 import sqlite3
 import subprocess
 import sys
+import uuid as _uuid
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
@@ -73,13 +86,27 @@ UNFIXABLE_SOURCES = {
     "fee": "closes only by writing docs/**, which every gate set's budget forbids",
 }
 
-#: The one mutex every claude-CLI spawn on this host goes through — same path
-#: as files/anatomy/scripts/agent-run-lock.sh, because two locks with one
-#: invariant is the estate's signature defect (that file's own header).
-LOCK_DIR = pathlib.Path(os.environ.get("NOS_AGENT_LOCK_DIR",
-                                       str(pathlib.Path.home() / ".nos" / "agent-run.lock")))
+#: The AgentKit entry point, and the reason there is no mutex in this file any
+#: more: run-agent.sh sources files/anatomy/scripts/agent-run-lock.sh and takes
+#: ONE slot as kind `agentkit`. The Python reimplementation that used to live
+#: here still did `mkdir` on the lock's PARENT directory — the N=1 contract
+#: from before Q12 — so it and the shell holder could not see each other's
+#: claims. Two locks with one invariant is the estate's signature defect; this
+#: is now one implementation with two callers, which is the same rule.
+RUNNER = pathlib.Path(os.environ.get(
+    "NOS_LOOP_AGENT_RUNNER", str(REPO / "tools" / "run-agent.sh")))
 
-WING_DB = pathlib.Path.home() / "wing" / "app" / "data" / "wing.db"
+#: The agent whose profile the session runs under. Configurable because this
+#: runner must not hard-code a roster the roster owns.
+PROPOSER_AGENT = os.environ.get("NOS_LOOP_PROPOSER_AGENT", "proposer")
+
+
+def wing_db() -> pathlib.Path:
+    """Resolved per call, from the SAME env the ledger reads. It used to be a
+    module constant on the hard-coded home path, so a test (or a second estate)
+    pointed the ledger at one database and read back from another."""
+    return pathlib.Path(os.environ.get(
+        "WING_DB_PATH", str(pathlib.Path.home() / "wing" / "app" / "data" / "wing.db")))
 
 
 class Refused(Exception):
@@ -150,43 +177,9 @@ def pick(status_mod, wanted: str | None) -> dict:
     return candidates[0]
 
 
-# ── the mutex ────────────────────────────────────────────────────────────────
-
-def _acquire_lock() -> None:
-    """Atomic mkdir, PID-liveness reclaim — the agent-run-lock.sh contract in
-    Python, on the same path, so both callers demonstrably share one law."""
-    LOCK_DIR.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        LOCK_DIR.mkdir()
-    except FileExistsError:
-        owner = LOCK_DIR / "owner"
-        try:
-            pid = int(owner.read_text().split()[0])
-            os.kill(pid, 0)
-            raise Refused(f"another agent run holds {LOCK_DIR} (pid {pid}) — "
-                          f"refusing to run two claude agents at once") from None
-        except (OSError, ValueError, IndexError):
-            # Stale: the recorded owner is dead or unreadable. Reclaim.
-            try:
-                owner.unlink(missing_ok=True)
-                LOCK_DIR.rmdir()
-                LOCK_DIR.mkdir()
-            except OSError as exc:
-                raise Refused(f"could not reclaim stale lock {LOCK_DIR}: {exc}") from None
-    (LOCK_DIR / "owner").write_text(f"{os.getpid()} loop-propose\n", encoding="utf-8")
-
-
-def _release_lock() -> None:
-    try:
-        (LOCK_DIR / "owner").unlink(missing_ok=True)
-        LOCK_DIR.rmdir()
-    except OSError:
-        pass
-
-
 # ── the model run ────────────────────────────────────────────────────────────
 
-def _task_prompt(weakness: dict) -> str:
+def _task_prompt(weakness: dict, session_uuid: str) -> str:
     return (
         f"You are the nOS loop's PROPOSER, invoked unattended.\n"
         f"Work in the repository at {REPO}.\n\n"
@@ -197,54 +190,81 @@ def _task_prompt(weakness: dict) -> str:
         f"weakness `{weakness['id']}` ({weakness['severity']}: "
         f"{weakness['title']}). Read the budget first; author ONE bounded "
         f"patch inside it; record the proposal BEFORE editing anything.\n"
-        f"3. Obey every refusal the engine returns — quote it and stop.\n"
-        f"4. Do NOT judge, do NOT run nos-loop judge, do NOT commit, push, or "
+        f"3. Your POST to /loop/proposals MUST carry "
+        f"\"session_uuid\": \"{session_uuid}\" — this session. A proposal that "
+        f"names no session cannot be traced to what it cost.\n"
+        f"4. Obey every refusal the engine returns — quote it and stop.\n"
+        f"5. Do NOT judge, do NOT run nos-loop judge, do NOT commit, push, or "
         f"open a merge request. The driver holds that identity, not you.\n"
-        f"5. When the proposal is recorded (201), report its uuid and stop."
+        f"6. When the proposal is recorded (201), report its uuid and stop."
     )
 
 
-def _proposals_citing(weakness_id: str) -> int:
-    if not WING_DB.is_file():
-        return 0
-    conn = sqlite3.connect(f"file:{WING_DB}?mode=ro", uri=True)
+def _proposals_citing(weakness_id: str) -> list[dict]:
+    """Every proposal row citing this weakness — id and the session it names.
+
+    Read-only, and read from the LEDGER: what the model says it did is a claim,
+    a row is a fact (the module header's own rule).
+    """
+    db = wing_db()
+    if not db.is_file():
+        return []
+    conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
     try:
-        return conn.execute(
-            "SELECT COUNT(*) FROM loop_proposals WHERE weakness_id = ?",
-            (weakness_id,)).fetchone()[0]
+        conn.row_factory = sqlite3.Row
+        return [dict(r) for r in conn.execute(
+            "SELECT id, uuid, session_uuid FROM loop_proposals "
+            "WHERE weakness_id = ? ORDER BY id", (weakness_id,))]
+    except sqlite3.OperationalError:
+        return []  # no ledger yet — absence, not zero proposals
     finally:
         conn.close()
 
 
+def runner_argv(weakness: dict, session_uuid: str) -> list[str]:
+    """The spawn, as data, so a gate can read what would be run."""
+    return [str(RUNNER), f"--agent={PROPOSER_AGENT}",
+            f"--session-uuid={session_uuid}", "--trigger=pulse",
+            f"--prompt={_task_prompt(weakness, session_uuid)}"]
+
+
 def invoke(weakness: dict, log) -> int:
-    before = _proposals_citing(weakness["id"])
-    model = os.environ.get("NOS_AGENT_MODEL", "opus")
-    argv = ["claude", "--print", "--permission-mode", "bypassPermissions",
-            "--model", model, _task_prompt(weakness)]
+    if not RUNNER.is_file():
+        raise Refused(f"the AgentKit runner {RUNNER} does not exist — the "
+                      f"proposer runs through it, not through `claude`")
+    before = {p["id"] for p in _proposals_citing(weakness["id"])}
+    session_uuid = str(_uuid.uuid4())
+    argv = runner_argv(weakness, session_uuid)
 
-    _acquire_lock()
-    try:
-        log(f"invoking claude ({model}) for {weakness['id']} — serialised on {LOCK_DIR}")
-        done = subprocess.run(  # noqa: S603 — fixed argv, no shell
-            argv, cwd=str(REPO), text=True, capture_output=True, check=False)
-    finally:
-        _release_lock()
+    # No lock taken here: run-agent.sh acquires one `agentkit` slot of the Q12
+    # lock and releases it on EXIT. Taking a second one around it would deadlock
+    # against the CLI kind, which claims all three.
+    log(f"opening an AgentKit session {session_uuid} on agent "
+        f"{PROPOSER_AGENT!r} for {weakness['id']}")
+    done = subprocess.run(  # noqa: S603 — fixed argv, no shell
+        argv, cwd=str(REPO), text=True, capture_output=True, check=False)
 
-    tail = (done.stdout or "").strip().splitlines()[-6:]
-    for line in tail:
+    for line in (done.stdout or "").strip().splitlines()[-6:]:
         log(f"  | {line}")
 
-    # NOT self-reported: the ledger is the engine's record of what arrived,
-    # read back read-only. The model saying "done" is a claim; a row is a fact.
-    after = _proposals_citing(weakness["id"])
-    if after > before:
-        log(f"the ledger now holds {after - before} new proposal(s) citing "
-            f"{weakness['id']} — next: tools/loop-pr.py (the driver judges and lands)")
-        return 0
-    log(f"no proposal citing {weakness['id']} appeared in the ledger "
-        f"(claude exit {done.returncode}) — the run bought nothing; "
-        f"read tools/loop-status.py --gap before retrying")
-    return 1
+    new = [p for p in _proposals_citing(weakness["id"]) if p["id"] not in before]
+    if not new:
+        log(f"no proposal citing {weakness['id']} appeared in the ledger "
+            f"(runner exit {done.returncode}) — the run bought nothing; "
+            f"read tools/loop-status.py --gap before retrying")
+        return 1
+    orphans = [p["uuid"] for p in new if p["session_uuid"] != session_uuid]
+    if orphans:
+        # A proposal that arrived without its session is not a success: the
+        # cost of the run it came from is unattributable, which is the exact
+        # defect this path was rewritten to close.
+        log(f"{len(orphans)} new proposal(s) name no session (or the wrong "
+            f"one): {', '.join(orphans)} — expected {session_uuid}")
+        return 1
+    log(f"the ledger now holds {len(new)} new proposal(s) citing "
+        f"{weakness['id']}, all naming session {session_uuid} — next: "
+        f"tools/loop-pr.py (the driver judges and lands)")
+    return 0
 
 
 def main() -> int:

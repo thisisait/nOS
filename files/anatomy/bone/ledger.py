@@ -400,6 +400,12 @@ _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("loop_judge_runs", "interpreter", "TEXT"),
     ("loop_judge_runs", "base_sha", "TEXT"),
     ("loop_proposals", "diff_text", "TEXT"),
+    # The AgentKit session that authored it — `agent_sessions.uuid`, same
+    # wing.db. Not a FOREIGN KEY: the ledger's connections run under an
+    # authorizer that denies every table but its own, and a constraint that
+    # reads a denied table fails the INSERT rather than the join. The join is
+    # asserted by a gate instead (test_every_proposal_names_a_session.py).
+    ("loop_proposals", "session_uuid", "TEXT"),
 )
 
 
@@ -1052,6 +1058,7 @@ class ProposerLedger(ReaderLedger):
                         intent_class: str, gate_set: str, tree_sha: str,
                         proposer_id: str, diff_text: str,
                         proposer_model: str | None = None,
+                        session_uuid: str | None = None,
                         max_attempts: int = DEFAULT_MAX_ATTEMPTS) -> dict[str, Any]:
         """201 on acceptance; raises ProposalRefused (409) otherwise.
 
@@ -1099,8 +1106,8 @@ class ProposerLedger(ReaderLedger):
             "INSERT INTO loop_proposals "
             "(uuid, fingerprint, content_fp, weakness_id, weakness_evidence_sha, "
             " intent_class, gate_set, target_paths, tree_sha, proposer_id, "
-            " proposer_model, attempt_n, requires_operator, diff_text) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " proposer_model, attempt_n, requires_operator, diff_text, session_uuid) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (u, fp, cfp, weakness_id, weakness_evidence_sha, intent_class, gate_set,
              _canonical_json(paths), tree_sha, proposer_id, proposer_model,
              decision.attempt_n,
@@ -1110,10 +1117,15 @@ class ProposerLedger(ReaderLedger):
              1 if intent_class in OPERATOR_REQUIRED_INTENTS else 0,
              # The artifact, verbatim (A1 needs the bytes to judge; §11 needs
              # them to replay). The hash alone is a claim with no preimage.
-             diff_text))
+             diff_text,
+             # The run that authored it. Nullable, because a proposal filed by
+             # hand has no session and pretending otherwise would put a dead
+             # uuid in the join; a NULL is legible as "not an agent run".
+             session_uuid))
         return {"uuid": u, "fingerprint": fp, "content_fp": cfp,
                 "attempt_n": decision.attempt_n,
-                "requires_operator": decision.requires_operator}
+                "requires_operator": decision.requires_operator,
+                "session_uuid": session_uuid}
 
 
 class EvaluatorLedger(ReaderLedger):
