@@ -166,7 +166,7 @@ phase('Prune')
 // never reachable, and removing the gravity well (three corpus reports recommended building
 // ON Dreams) before any build phase prevents the workflow's own agents rediscovering it.
 // Q8=c makes this TOTAL: no agent memory ever — table included, and a gate against return.
-await pipeline(
+await pipeline([null],
   () => agent(
     `${RULES}
      DELETE agent memory ENTIRELY (Q8=c: no agent memory ever; KEAP is the estate's memory)
@@ -216,7 +216,7 @@ phase('Mutex')
 // a writer whose busy_timeout is 0 — which is what the writer below must close. What
 // would CHANGE N: measured SQLITE_BUSY / lock-wait rates from three real concurrent runs,
 // not a feeling.
-await pipeline(
+await pipeline([null],
   () => agent(
     `${RULES}
      Q12 — widen files/anatomy/scripts/agent-run-lock.sh to a SLOT DIRECTORY of N=3:
@@ -356,7 +356,7 @@ phase('Oracle')
 //       constraint this phase adds must therefore also carry what the run ACTED ON (rows
 //       judged, files written, records posted: zero is a legitimate value that must be
 //       STORED, not absent). "Nothing to do" and "did the thing" may not render alike.
-await pipeline(
+await pipeline([null],
   () => agent(
     `${RULES}
      ITEMS 3+4 + the Q9 output contract — oracle-written satisfaction, no grader to start:
@@ -404,7 +404,7 @@ phase('Ledger')
 
 // 2 agents. Why: joins the two provenance systems — until a proposal names a session,
 // "AgentKit-driven nos-loop" is two systems sharing a string. Q13=a: existing ceilings.
-await pipeline(
+await pipeline([null],
   () => agent(
     `${RULES}
      ITEM 5 — join the ledgers (Q13=a, existing ceilings):
@@ -517,7 +517,7 @@ phase('Ops harness')
 // phase builds the instrument, not the plane. Q4: the instrument is parameterised over a
 // model-size RANGE, because the question is not "is 1B enough" but "where is the boundary
 // between the ~1B chain tier and the ~3-7B tool-use tier".
-await pipeline(
+await pipeline([null],
   () => agent(
     `${RULES}
      one_shot mode + the nos-ops measurement harness (Q3=a, Q4 two-tier):
