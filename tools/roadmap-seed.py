@@ -135,6 +135,27 @@ row("sec-transport-mysqld-exporter","The sixth MariaDB client, which the survey 
 row("sec-transport-redis","Redis: AUTH secret off the argv, then a TLS port","2026-08-23","queued","security",parent="sec-transport",
     refs="REM-217 remediation (1)",
     body="tls-port 0, 56 clients, secret readable by anything that can docker inspect. TLS needs every client URL moved to rediss:// — authentik, infisical, outline, freescout.")
+row("obs-loop-dashboard", "The loop is a ledger nothing renders", "2026-08-29",
+    "shipped", "platform",
+    refs="files/anatomy/plugins/grafana-base/provisioning/dashboards/25-loop.json · docs/hidden_fees/32",
+    body="loop_proposals/loop_judge_runs/loop_verdicts and agent_sessions hold 22/154/67/55 rows "
+         "and no surface read them; tools/loop-status.py answers in a terminal and Grafana said "
+         "nothing. 25-loop.json joins them on session_uuid. Two numbers it exists to make "
+         "visible: 22 of 22 proposals name no session (the lineage fix is live and no proposal "
+         "has been made since), and `ended_with_no_verdict` — a third of agent runs — which the "
+         "old `Success rate` panel counted as success (fee 32; 72.7%% claimed vs 20.0%% honest).")
+
+row("obs-cortex-dashboard", "cortex-lang runs 390 chains and none of them is a pipeline", "2026-08-29",
+    "shipped", "cortex",
+    refs="files/anatomy/plugins/grafana-base/provisioning/dashboards/26-cortex.json",
+    body="The executor emits cortex_stage_begin/finish with the opcode, the chain id and the "
+         "stage's effect, 390 of each, and nothing rendered them. MEASURED WHILE BUILDING IT: "
+         "every one of the 390 chains is a SINGLE STAGE — the typed pipeline IR has never "
+         "executed a pipeline. Not a fault in the executor (it runs what callers ask for), but "
+         "the composition half of the language is unexercised, which is worth knowing before "
+         "anyone trains a model to emit compositions. Pairs with local-llm-corpus, which found "
+         "the validator does not constrain composition either.")
+
 row("notify-supersede","A notification that stopped being true has no way to stop being unread","2026-08-23","next","platform",
     refs="tools/red-status.py::_still_holds · docs/hidden_fees/26 · bin/reconcile-inbox.php",
     body="MEASURED THE MORNING AFTER IT SHIPPED, and the wiring being complete was a false green about my own work. Schema, ALTER sweep, four emitters and the reader all landed; the 01:02 backup emitted WITH its supersede_key and retired ZERO rows, because the mechanism matches on the key and every historical row predates it. From tonight each nightly retires exactly its own predecessor and the 57-row backlog the feature was built for sits for ever. The probe now counts the deliverable — unread, un-superseded rows from an emitter that has SINCE declared it repeats, where a newer row from that emitter exists — and reads `restated:57`: os-resume 30, backup 19, backup-verify 5, security-drift 3. THE PATH IS NOT A BACKFILL OF THE KEY, which would be me guessing a class on the sender's behalf; it is bin/reconcile-inbox.php, which already marks rows read only on evidence and deliberately leaves report rows alone. It now HAS evidence for them: a newer row from the same declared-repeating emitter. That extension needs it to write superseded_at rather than wing_inbox_read_at — nobody read them — which is a decision about which tool owns which state, deliberately not taken at 05:40.")

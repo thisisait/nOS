@@ -1,0 +1,398 @@
+{
+  "uid": "nos-26-cortex",
+  "title": "nOS \u2014 cortex-lang (execution)",
+  "description": "What the cortex executor ran, from the events it emits. Companion to 25-loop (the self-improvement ledger) and to files/anatomy/cortex/scripts/corpus-gen.ts (the grammar's shape).",
+  "tags": [
+    "nos",
+    "cortex",
+    "cortex-lang",
+    "agents"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 0,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5m",
+  "style": "dark",
+  "weekStart": "",
+  "liveNow": false,
+  "fiscalYearStartMonth": 0,
+  "id": null,
+  "links": [],
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**cortex-lang, as the executor actually runs it.** Every panel reads the `cortex_stage_*` events the executor emits \u2014 `task` is the opcode, `actor_action_id` is the chain (`cx-\u2026`), and `result_json` carries the stage index, its effect and its row count.\n\nThis is the RUNTIME half. Whether a chain is *well-formed* is decided before it gets here, by `analyzeCortex` \u2014 and that check constrains stages, never their order (`files/anatomy/cortex/scripts/corpus-gen.ts` measures it: 20 306 of 20 306 composed chains validate). So nothing on this page should be read as evidence that a chain was a good idea."
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Chains executed",
+      "description": "",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(DISTINCT actor_action_id) AS chains FROM events WHERE type='cortex_stage_begin'",
+          "queryText": "SELECT COUNT(DISTINCT actor_action_id) AS chains FROM events WHERE type='cortex_stage_begin'",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Stages executed",
+      "description": "",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS stages FROM events WHERE type='cortex_stage_finish'",
+          "queryText": "SELECT COUNT(*) AS stages FROM events WHERE type='cortex_stage_finish'",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Stages that began and never finished",
+      "description": "A begin with no matching finish is a stage the executor entered and never left. Zero is the good state; it is computed by set difference rather than by comparing two counts, because equal counts can hide a lost pair.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS unfinished FROM (\n  SELECT actor_action_id, task, json_extract(result_json,'$.index') AS ix\n    FROM events WHERE type='cortex_stage_begin'\n  EXCEPT\n  SELECT actor_action_id, task, json_extract(result_json,'$.index')\n    FROM events WHERE type='cortex_stage_finish')",
+          "queryText": "SELECT COUNT(*) AS unfinished FROM (\n  SELECT actor_action_id, task, json_extract(result_json,'$.index') AS ix\n    FROM events WHERE type='cortex_stage_begin'\n  EXCEPT\n  SELECT actor_action_id, task, json_extract(result_json,'$.index')\n    FROM events WHERE type='cortex_stage_finish')",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Dispatch rejects",
+      "description": "A chain the executor refused to dispatch. The gate that refused it is in the table below.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS rejects FROM events WHERE type='cortex_dispatch_reject'",
+          "queryText": "SELECT COUNT(*) AS rejects FROM events WHERE type='cortex_dispatch_reject'",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Chains by length \u2014 the panel this page was built to show",
+      "description": "MEASURED 2026-08-29: 390 chains, every one of them a SINGLE STAGE. cortex-lang is a pipeline IR and no pipeline has ever run through it. That is not a fault in the executor \u2014 it is what the callers ask for \u2014 but it means the composition half of the language is unexercised, and a row here with stages_in_chain > 1 is the first evidence otherwise.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT stages AS stages_in_chain, COUNT(*) AS chains FROM (\n  SELECT actor_action_id, COUNT(*) AS stages\n    FROM events WHERE type='cortex_stage_begin' GROUP BY actor_action_id\n) GROUP BY stages ORDER BY stages",
+          "queryText": "SELECT stages AS stages_in_chain, COUNT(*) AS chains FROM (\n  SELECT actor_action_id, COUNT(*) AS stages\n    FROM events WHERE type='cortex_stage_begin' GROUP BY actor_action_id\n) GROUP BY stages ORDER BY stages",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "table",
+      "title": "Opcodes \u2014 what the estate actually calls",
+      "description": "Read beside the registry: an opcode the registry declares and this table never shows is a capability nothing has ever exercised.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT task AS opcode, COUNT(*) AS stages,\n       SUM(json_extract(result_json,'$.effect')='read') AS read_effect,\n       SUM(json_extract(result_json,'$.code') IS NOT NULL) AS returned_a_code,\n       SUM(COALESCE(json_extract(result_json,'$.rows'),0)) AS rows_returned\n  FROM events WHERE type='cortex_stage_finish'\n GROUP BY task ORDER BY stages DESC",
+          "queryText": "SELECT task AS opcode, COUNT(*) AS stages,\n       SUM(json_extract(result_json,'$.effect')='read') AS read_effect,\n       SUM(json_extract(result_json,'$.code') IS NOT NULL) AS returned_a_code,\n       SUM(COALESCE(json_extract(result_json,'$.rows'),0)) AS rows_returned\n  FROM events WHERE type='cortex_stage_finish'\n GROUP BY task ORDER BY stages DESC",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "table",
+      "title": "Recent chains",
+      "description": "",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT b.actor_action_id AS chain, MIN(b.ts) AS started, COUNT(*) AS stages,\n       group_concat(b.task, ' | ') AS pipeline,\n       CAST((julianday(MAX(f.ts)) - julianday(MIN(b.ts))) * 86400000 AS INT) AS ms\n  FROM events b\n  LEFT JOIN events f ON f.actor_action_id = b.actor_action_id\n                    AND f.type = 'cortex_stage_finish'\n WHERE b.type = 'cortex_stage_begin'\n GROUP BY b.actor_action_id ORDER BY started DESC LIMIT 40",
+          "queryText": "SELECT b.actor_action_id AS chain, MIN(b.ts) AS started, COUNT(*) AS stages,\n       group_concat(b.task, ' | ') AS pipeline,\n       CAST((julianday(MAX(f.ts)) - julianday(MIN(b.ts))) * 86400000 AS INT) AS ms\n  FROM events b\n  LEFT JOIN events f ON f.actor_action_id = b.actor_action_id\n                    AND f.type = 'cortex_stage_finish'\n WHERE b.type = 'cortex_stage_begin'\n GROUP BY b.actor_action_id ORDER BY started DESC LIMIT 40",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "table",
+      "title": "Refusals, by the gate that refused",
+      "description": "Empty means no chain was ever refused, which is not the same as none being refusable.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT json_extract(result_json,'$.gate') AS gate, task AS opcode,\n       COUNT(*) AS refusals, MAX(ts) AS last_seen\n  FROM events WHERE type='cortex_dispatch_reject'\n GROUP BY gate, opcode ORDER BY refusals DESC",
+          "queryText": "SELECT json_extract(result_json,'$.gate') AS gate, task AS opcode,\n       COUNT(*) AS refusals, MAX(ts) AS last_seen\n  FROM events WHERE type='cortex_dispatch_reject'\n GROUP BY gate, opcode ORDER BY refusals DESC",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    }
+  ]
+}

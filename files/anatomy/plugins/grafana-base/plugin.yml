@@ -147,6 +147,8 @@ provisioning:
       # The loop as its own tables record it (2026-08-29). Sibling of
       # 22-ai-agents: that one is the daemons, this one is the ledger.
       - 25-loop.json
+      # cortex-lang as the executor runs it (2026-08-29).
+      - 26-cortex.json
       # Shipped 2026-05-07 with the E2E journey layer, documented in
       # docs/e2e-tester-identity.md as "surfaces in Grafana dashboard
       # 40-e2e-journeys" — and never added here, so the loader has never

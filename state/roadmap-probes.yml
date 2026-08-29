@@ -561,3 +561,16 @@ cc-approvals: >-
 local-llm-corpus: >-
   test -f files/anatomy/cortex/scripts/corpus-gen.ts
   && test -f tests/anatomy/test_the_cortex_oracle_filters_syntax_not_sense.py
+
+# ── observability of the loop and of cortex-lang (2026-08-29) ────────────────
+# The deliverable is a dashboard that is PROVISIONED, not one that exists in the
+# repo: 40-e2e-journeys.json sat in the directory for four months, documented as
+# live, and was never in plugin.yml's copy list. So both halves are asserted.
+obs-loop-dashboard: >-
+  test -f files/anatomy/plugins/grafana-base/provisioning/dashboards/25-loop.json
+  && grep -q '25-loop.json' files/anatomy/plugins/grafana-base/plugin.yml
+  && test -f tests/anatomy/test_a_dashboard_panel_asks_a_question_that_runs.py
+
+obs-cortex-dashboard: >-
+  test -f files/anatomy/plugins/grafana-base/provisioning/dashboards/26-cortex.json
+  && grep -q '26-cortex.json' files/anatomy/plugins/grafana-base/plugin.yml
