@@ -272,16 +272,6 @@ $statements = [
 		updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 	)",
 
-	// Report types (future extensibility)
-	"CREATE TABLE IF NOT EXISTS report_types (
-		id              TEXT PRIMARY KEY,
-		name            TEXT NOT NULL,
-		api_namespace   TEXT NOT NULL UNIQUE,
-		table_name      TEXT NOT NULL,
-		template        TEXT,
-		enabled         INTEGER NOT NULL DEFAULT 1,
-		created_at      TEXT NOT NULL DEFAULT (datetime('now'))
-	)",
 
 	// API tokens (for CLI/agent authentication)
 	"CREATE TABLE IF NOT EXISTS api_tokens (
@@ -295,16 +285,6 @@ $statements = [
 		scopes      TEXT
 	)",
 
-	// Users (populated from Authentik proxy auth headers)
-	"CREATE TABLE IF NOT EXISTS users (
-		id              INTEGER PRIMARY KEY AUTOINCREMENT,
-		username        TEXT NOT NULL UNIQUE,
-		email           TEXT,
-		display_name    TEXT,
-		groups          TEXT,
-		last_login      TEXT,
-		created_at      TEXT NOT NULL DEFAULT (datetime('now'))
-	)",
 ];
 
 foreach ($statements as $stmt) {
@@ -764,12 +744,13 @@ CREATE TRIGGER agent_iterations_satisfied_update BEFORE UPDATE ON agent_iteratio
   BEGIN SELECT RAISE(ABORT, 'agent_iterations: satisfied requires gate_run_id'); END;
 SQL);
 
+// Counted, not recited. The hand-written list this replaces named 17 tables
+// when the file held 45, and still named `report_types` after it was deleted —
+// a summary that has to be edited alongside the schema is a summary that lies.
+$n = (int) $db->querySingle(
+	"SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'");
 $db->close();
 
 $status = $isNew ? 'Created' : 'Verified';
 echo "$status database schema at $dbPath\n";
-echo "Tables: components, scan_cycles, component_scan_state, scan_config, attack_probes,\n";
-echo "        remediation_items, advisories, pentest_targets, pentest_areas_tested,\n";
-echo "        pentest_areas_planned, pentest_findings, patches, report_types,\n";
-echo "        events, migrations_applied, upgrades_applied, patches_applied,\n";
-echo "        coexistence_tracks\n";
+echo "Tables: $n\n";

@@ -8,7 +8,7 @@
 PRAGMA foreign_keys = ON;
 
 -- ============================================================
--- TABLES (45)
+-- TABLES (43)
 -- ============================================================
 
 CREATE TABLE advisories (
@@ -736,16 +736,6 @@ CREATE TABLE remediation_items (
 		updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
 	);
 
-CREATE TABLE report_types (
-		id              TEXT PRIMARY KEY,
-		name            TEXT NOT NULL,
-		api_namespace   TEXT NOT NULL UNIQUE,
-		table_name      TEXT NOT NULL,
-		template        TEXT,
-		enabled         INTEGER NOT NULL DEFAULT 1,
-		created_at      TEXT NOT NULL DEFAULT (datetime('now'))
-	);
-
 CREATE TABLE scan_config (
 		id                              INTEGER PRIMARY KEY CHECK (id = 1),
 		batch_size                      INTEGER NOT NULL DEFAULT 5,
@@ -884,16 +874,6 @@ CREATE TABLE user_invitations (
     provisioning_json   TEXT NOT NULL DEFAULT '{}',     -- A18 Cesta B: Infisical + Stalwart provisioning result snapshot
     created_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
-
-CREATE TABLE users (
-		id              INTEGER PRIMARY KEY AUTOINCREMENT,
-		username        TEXT NOT NULL UNIQUE,
-		email           TEXT,
-		display_name    TEXT,
-		groups          TEXT,
-		last_login      TEXT,
-		created_at      TEXT NOT NULL DEFAULT (datetime('now'))
-	);
 
 -- ============================================================
 -- VIEWS (1)

@@ -40,7 +40,6 @@ ACTOR_ID_EXEMPT_TABLES = {
     "component_scan_state",# scan-state mirror keyed off systems
     "scan_config",         # config table, no per-action writes
     "attack_probes",       # static catalog
-    "report_types",        # static catalog
     "advisories",          # generated-by-pipeline (event_run_id carries lineage)
     "migrations_applied",  # event_run_id carries lineage
     "upgrades_applied",    # event_run_id carries lineage
