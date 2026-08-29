@@ -452,6 +452,41 @@
     },
     {
       "type": "table",
+      "title": "Runs that can be traced to what they did",
+      "description": "`pulse_runs.actor_action_id` was declared in 2026-05-08 and NULL on all 56 051 rows until 2026-08-29 \u2014 the daemon never sent one, so a nightly job could not be joined to the session it started or the rows it wrote. It now carries the run's own uuid, which the child already receives as PULSE_RUN_ID and an AgentKit run adopts as its session uuid. `events` and `session` count what that key reaches. A run with 0 in both is honest: most jobs are plain subprocesses that emit nothing.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT r.job_id AS job, r.fired_at AS fired, (SELECT COUNT(*) FROM events e WHERE e.actor_action_id = r.actor_action_id) AS events, (SELECT COUNT(*) FROM agent_sessions s WHERE s.uuid = r.actor_action_id) AS session FROM pulse_runs r WHERE r.actor_action_id IS NOT NULL ORDER BY r.fired_at DESC LIMIT 20",
+          "queryText": "SELECT r.job_id AS job, r.fired_at AS fired, (SELECT COUNT(*) FROM events e WHERE e.actor_action_id = r.actor_action_id) AS events, (SELECT COUNT(*) FROM agent_sessions s WHERE s.uuid = r.actor_action_id) AS session FROM pulse_runs r WHERE r.actor_action_id IS NOT NULL ORDER BY r.fired_at DESC LIMIT 20",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "table",
       "title": "Where the 56 000 rows are",
       "description": "Not a health question \u2014 a cost one. `pulse_runs` is the second-largest table in wing.db, and one per-minute job owns most of it. Read this beside `tools/wing-status.py --cost` before proposing a retention rule.",
       "datasource": {
@@ -462,7 +497,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 54
       },
       "targets": [
         {
