@@ -65,6 +65,11 @@ components:
           - type: string
           - type: 'null'
           title: Proposer Model
+        session_uuid:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Uuid
         target_paths:
           items:
             type: string

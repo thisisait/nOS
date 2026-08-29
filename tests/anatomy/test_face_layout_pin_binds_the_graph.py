@@ -69,3 +69,37 @@ def test_the_two_graph_copies_are_one_artifact():
         "state/anatomy-graph.json and the face vendored copy diverge — "
         "run tools/anatomy-graph-gen.py"
     )
+
+
+# ── and the file the pytest lane rewrites must survive the FACE lane ────────
+#
+# MEASURED 2026-08-29, one hour after the gate above did its job. The regen
+# went red here, the pin was re-frozen with `json.dumps(indent=2)`, this file
+# went green — and CI failed anyway, in the face lane, on `prettier --check`:
+# the shell's config is `useTabs: true` and Python had written spaces.
+#
+# That is the SAME defect this file was written to close, one layer along: the
+# duty lives in the lane that causes the change (pytest, which regenerates)
+# and the complaint arrives in a different one (face, which formats). So the
+# formatting half moves here too, checked the only way that is honest without
+# running node — against the repo's own declared prettier options rather than
+# against a remembered convention.
+
+import json as _json
+
+
+def test_the_pin_is_written_the_way_the_face_lane_will_check_it() -> None:
+    prettierrc = _json.loads((FACE.parents[2] / ".prettierrc").read_text(encoding="utf-8"))
+    if not prettierrc.get("useTabs"):
+        return  # the shell changed its mind; prettier --check is then the only judge
+    body = PIN.read_text(encoding="utf-8")
+    offenders = [i + 1 for i, line in enumerate(body.splitlines())
+                 if line.startswith(" ")]
+    assert not offenders, (
+        f"{PIN.name} is space-indented at line(s) {offenders}; the face lane runs "
+        "`prettier --check` with useTabs:true and will fail. Re-freeze with "
+        "`npx prettier --write` after writing it, or edit it by hand — a "
+        "`json.dumps(indent=2)` re-freeze passes every gate in THIS lane and "
+        "reddens the other one."
+    )
+    assert body.endswith("\n"), f"{PIN.name} has no trailing newline; prettier requires one"
