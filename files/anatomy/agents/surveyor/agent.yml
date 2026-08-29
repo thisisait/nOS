@@ -169,7 +169,6 @@ pulse:
         # Model pin: the walk is judgement over prose and structure, not
         # authoring. sonnet is the tier that can rank and refuse; without a
         # pin the run inherits the operator's default, which is the dearest.
-        NOS_AGENT_MODEL: "sonnet"
         NOS_AGENT_CLIENT_ID: "nos-surveyor"
         NOS_AGENT_CLIENT_SECRET: "secret:agent_surveyor_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/surveyor/agent.yml"

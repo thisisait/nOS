@@ -69,15 +69,15 @@ def test_librarian_runner_live_on_demand():
     flat = yaml.safe_load(profile_path.read_text())
     jobs = ((flat.get("pulse") or {}).get("jobs")) or []
     by_name = {j.get("name"): j for j in jobs}
-    # All three ceremonies must exist, run on the bound runner, and pin a
-    # cost-tier model — dropping NOS_AGENT_MODEL silently reverts a bulk job
-    # to the operator's flagship default (the point of the model-tier commit).
-    expected_tiers = {
-        "judge-lint-queue": "sonnet",
-        "describe-taxonomy": "haiku",
-        "brief-taxonomy": "sonnet",
-    }
-    for name, tier in expected_tiers.items():
+    # All three ceremonies must exist and run on the bound runner.
+    # THE TIER PIN IS GONE, 2026-08-29. These jobs carried NOS_AGENT_MODEL and
+    # the bound runner never reached it — `ClaudeCliAdapter` passes `--model`
+    # only when there is no binding (ruling 3), and every scheduled ceremony is
+    # bound. `describe-taxonomy` said haiku and ran on the sonnet-tier model.
+    # The tier now lives where it is read: agent.yml `model.primary` plus the
+    # backend's model_env table, pinned by
+    # test_the_effective_model_is_decided_where_it_is_read.py.
+    for name in ("judge-lint-queue", "describe-taxonomy", "brief-taxonomy"):
         job = by_name.get(name)
         assert job, f"librarian/agent.yml must declare the {name} pulse job"
         # Unpaused 2026-08-28. What replaces the pause as the property worth
@@ -90,9 +90,9 @@ def test_librarian_runner_live_on_demand():
         assert "--agent=librarian" in (job.get("args") or []), (
             f"{name} must name its agent — run-agent.sh has no default"
         )
-        assert (job.get("env") or {}).get("NOS_AGENT_MODEL") == tier, (
-            f"{name} must pin NOS_AGENT_MODEL={tier} so the bulk ceremony "
-            "never inherits the operator's flagship default"
+        assert "NOS_AGENT_MODEL" not in (job.get("env") or {}), (
+            f"{name} carries a model pin the bound runner does not read; it "
+            "reads like a cost guarantee and decides nothing"
         )
     # The prompt lives in system.md — the ONE spelling since the merge. The
     # dir copy used to describe an abandoned Qdrant RAG contract while the real

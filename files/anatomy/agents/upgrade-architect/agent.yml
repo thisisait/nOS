@@ -113,7 +113,6 @@ pulse:
         # committable recipes is high-value and error-prone, so it earns the
         # strongest tier; a pin is mandatory or it inherits the default anyway,
         # but here the intent is explicitly the top tier, not a fallback.
-        NOS_AGENT_MODEL: "opus"
         NOS_AGENT_CLIENT_ID: "nos-upgrade-architect"
         NOS_AGENT_CLIENT_SECRET: "secret:agent_upgrade_architect_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/upgrade-architect/agent.yml"

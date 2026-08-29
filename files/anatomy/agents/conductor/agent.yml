@@ -132,7 +132,6 @@ pulse:
         # a 0/1 exit — mechanical read-and-tabulate, no authoring, no open-ended
         # reasoning. haiku is the right (cheapest) tier; without a pin it would
         # inherit the operator's default (the most expensive tier).
-        NOS_AGENT_MODEL: "haiku"
         NOS_AGENT_CLIENT_ID: "nos-conductor"
         NOS_AGENT_CLIENT_SECRET: "secret:agent_conductor_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/conductor/agent.yml"

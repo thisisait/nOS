@@ -175,7 +175,6 @@ pulse:
         NOS_AGENT_CLIENT_SECRET: "secret:agent_librarian_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/librarian/agent.yml"
         # Judgment calls need reasoning but not the flagship tier.
-        NOS_AGENT_MODEL: "sonnet"
         NOS_AGENT_TASK: |
           Work the KEAP lint intake queue:
           1. GET /agent/v1/lint?check=overlap-review&unjudged=1&limit=20
@@ -237,7 +236,6 @@ pulse:
         NOS_AGENT_CLIENT_SECRET: "secret:agent_librarian_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/librarian/agent.yml"
         # Briefs are the operator-facing articles — sonnet, not the flagship.
-        NOS_AGENT_MODEL: "sonnet"
         NOS_AGENT_TASK: |
           Work ONE batch of the taxonomy-brief skill (root taxonomy sweep):
           1. GET /agent/v1/taxonomy/brief/pending?limit=10&maxLevel=9 —
@@ -289,7 +287,6 @@ pulse:
         NOS_AGENT_CLIENT_SECRET: "secret:agent_librarian_client_secret"  # pointer into ~/.nos/secrets.yml — the ONE spelling; never re-derive from the prefix (gate: test_agent_secret_single_spelling.py)
         NOS_AGENT_PROFILE: "{{ playbook_dir }}/files/anatomy/agents/librarian/agent.yml"
         # Bulk 1-3-sentence descriptions — haiku carries the whole backlog.
-        NOS_AGENT_MODEL: "haiku"
         NOS_AGENT_TASK: |
           Work ONE batch of the K1 taxonomy-describe skill:
           1. GET /agent/v1/taxonomy/describe/pending?limit=40 — nodes
