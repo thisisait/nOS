@@ -6,47 +6,48 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-08-23 • hedgedoc + mariadb rung 3 written; both await a converge.
+> Last updated: 2026-08-29 • Wing measured, the vein bounded, the lineage joined.
 
 ## Now (current track)
 
-**Transport converge LANDED 2026-08-23** (`failed=0`, 1557 tasks). Each claim
-names its reader.
+**The night of 2026-08-29 — the organs got joined, and Wing got a reader.**
+The operator's report was that Wing has become hard to get hold of. It was an
+unanswerable question until `tools/wing-status.py` existed; every claim below
+names the reader or gate that holds it.
 
-| what | before | after | read with |
-| --- | ---: | ---: | --- |
-| PostgreSQL clients encrypted | 38.5% | **every one, incl. hedgedoc** | `tls-uptake.py` self-test |
-| MariaDB app clients encrypted | 0 of 5 | **5 of 5** | `tls-uptake.py` self-tests |
-| FreeScout app version | 1.8.230 | **1.8.235** | `tools/app-version.py` |
+| what | finding | now |
+| --- | --- | --- |
+| `wing.db` | **1223 MB, 97% one table** | `tools/wing-status.py --cost` |
+| ledger payload | 921 MB of `result_json` no organ reads | mean 10 425 B → **1 242 B** live |
+| audit anchors | one minted **per converge**, 99 in five weeks | minted only on a real gap |
+| `pulse_runs.actor_action_id` | NULL on **all 56 051** rows | run → session → ledger, one key |
+| `--tags wing --check` | refused on a healthy host, twice | **438 ok, 0 failed** |
 
-`sec-transport-pg`, `-hedgedoc`, `-mariadb-clients`, `notify-supersede`: all four
-probes **DONE**, each echoing `encrypted` / `wired` as its own evidence.
+Four fees paid: [33](hidden_fees/33-a-retention-horizon-measured-in-days.md) a
+retention horizon that can never fire ·
+[34](hidden_fees/34-the-answer-was-already-in-a-column.md) a new panel judging
+`exit_code <> 0` while `findings_exit_codes` already said otherwise ·
+[35](hidden_fees/35-an-authorised-discontinuity-per-converge.md) 99 authorised
+chain discontinuities · [36](hidden_fees/36-a-dry-run-that-invents-failures.md)
+a dry run refusing on evidence it never gathered.
 
-**Sampling was the wrong question, twice** (`docs/hidden_fees/29`). HedgeDoc
-appeared in **0 of 319** samples over 100s — its pool lives a millisecond — and
-MariaDB's `--window` read `partial-0.62` with every client provably encrypted,
-because the healthcheck opens a unix socket every 10s and no counter separates
-it from plaintext TCP. Both now ask the client about its OWN session.
+Two dashboards and a pane: `27-pulse.json` (the scheduled-job organ had none),
+the lineage panel over the join above, and `nos-pane.py wing`.
 
-**A sixth MariaDB client**, found in `information_schema.processlist`, not in
-the ladder's survey of *applications*: `mysqld-exporter`, ~4×/min with the
-credential in clear. Row `sec-transport-mysqld-exporter` — TLS only via
-`--config.my-cnf`, whose file a non-root user must read, so a row not a patch.
+**Two tables deleted** — `users` and `report_types`, 0 rows / 0 writers /
+0 readers. Wing's identity has been stateless forward-auth since A3.5.
 
-**A converge died on my own change**: an index in `schema-extensions.sql` naming
-columns the ALTER sweep adds later, and `CREATE TABLE IF NOT EXISTS` is a no-op
-on an existing DB. Invisible to every local test, which builds fresh tables.
-Gated; 9 latent siblings ratcheted.
+**The wing.db contract now describes the whole file.** Bone creates the `loop_*`
+tables in Wing's database and only Wing exported a schema, so the committed
+artifact named 41 of 45 tables and three gates imported `ledger._DDL` to cope.
 
 **Next:** (1) `sec-transport-redis` — AUTH secret on the argv, no TLS listener.
-(2) `sec-backrest-auth` — reachable from 23 containers. (3) the exporter.
-(4) MariaDB rung 4 — waits on the exporter alone now.
-
-**Reds (4), none new.** `loop:drive` predates the forge sync (REM-214 re-judges
-tonight); the orphan clears on the next agent run; `notify-supersede` retires
-nothing until its emitters fire — tonight's backup is the first test.
-
-**48 commits ahead of GitHub** — promotion is the operator's act (`tools/forge-sync.py --apply --push-github`).
+(2) `sec-backrest-auth` — reachable from 23 containers. (3) `mysqld-exporter`,
+a sixth MariaDB client found in `processlist` and not in the survey of
+*applications* — ~4×/min with the credential in clear, TLS only via
+`--config.my-cnf`, whose file a non-root user must read. (4)
+`dry-run-evidence-sweep` — twenty more refusals of the fee-36 shape, **none
+measured**, to be checked one at a time.
 
 ## Open follow-ups
 
