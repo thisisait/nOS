@@ -1009,7 +1009,10 @@ final class Runner
 				$iteration,
 				$result,
 				$feedback,
-				$llm->identifier(),
+				// WHO DECIDED, not who was judged. This passed the PROPOSER's
+				// own model id into `grader_model`, so every row since the
+				// oracle cutover named the graded model as its own grader.
+				'gate:' . (string) $agent->gateset,
 				$durationMs,
 				$loopOut['tokens_input'],
 				$loopOut['tokens_output'],

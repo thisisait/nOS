@@ -16,6 +16,7 @@ from __future__ import annotations
 import pathlib
 
 import pytest
+import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 WING = REPO / "files" / "anatomy" / "wing"
@@ -67,6 +68,17 @@ def test_memory_classes_are_absent_from_the_tree():
         WING / "bin" / "dream-agent.php",
     ):
         assert not path.exists(), f"{path.relative_to(REPO)} is back — see Q8=c."
+
+
+def test_the_manifest_schema_declares_no_dream_block():
+    """A schema is a contract an author reads. It kept a whole `dream:` block —
+    tool_roster, max_entries, "the Dreamer prunes oldest first" — so a manifest
+    could declare the deleted subsystem, validate, and silently do nothing."""
+    schema = yaml.safe_load((REPO / "state/schema/agent.schema.yaml").read_text(encoding="utf-8"))
+    assert "dream" not in (schema.get("properties") or {}), (
+        "agent.schema.yaml declares `dream:` again — the machinery behind it "
+        "was deleted (Q8=c); a manifest that opts in would be accepted and ignored."
+    )
 
 
 @pytest.mark.parametrize("ident", FORBIDDEN_IDENTIFIERS)

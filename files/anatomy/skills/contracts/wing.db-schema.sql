@@ -8,7 +8,7 @@
 PRAGMA foreign_keys = ON;
 
 -- ============================================================
--- TABLES (42)
+-- TABLES (41)
 -- ============================================================
 
 CREATE TABLE advisories (
@@ -42,22 +42,15 @@ CREATE TABLE agent_iterations (
     grader_result   TEXT NOT NULL,                    -- satisfied | needs_revision | failed
     grader_feedback TEXT,                             -- markdown bullets
     grader_model    TEXT NOT NULL,
+    -- The gate-set run that decided this iteration: GateSetVerdict.digest().
+    -- 'satisfied' without one is refused by the agent_iterations_satisfied_*
+    -- triggers in bin/init-db.php — satisfaction is an oracle's verdict, never
+    -- the proposer's opinion of its own work.
+    gate_run_id     TEXT,
     duration_ms     INTEGER,
     tokens_input    INTEGER,
     tokens_output   INTEGER,
     created_at      TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE TABLE agent_memory_stores (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-    uuid                TEXT NOT NULL UNIQUE,
-    agent_name          TEXT NOT NULL,
-    title               TEXT NOT NULL,
-    content             TEXT NOT NULL,            -- markdown / text body
-    source_session_uuid TEXT,                     -- session that produced/updated this entry
-    trace_id            TEXT,                     -- W3C trace_id for cross-link
-    created_at          TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE agent_questions (
@@ -99,7 +92,12 @@ CREATE TABLE agent_sessions (
     trace_id        TEXT NOT NULL,                    -- W3C Trace Context (32 hex chars)
     model_uri       TEXT NOT NULL,                    -- e.g. anthropic-claude-opus-4-7
     outcome_id      TEXT,                             -- present iff outcome-driven session
-    outcome_result  TEXT,                             -- satisfied | needs_revision | max_iterations_reached | failed | interrupted
+    outcome_result  TEXT,                             -- satisfied | needs_revision | max_iterations_reached | indeterminate | failed | interrupted
+    -- 1 iff ANY structured output this session was repaired before a consumer
+    -- read it — by the deterministic shape parser or by the one format-only
+    -- re-ask. Silent repair is a success marker written by the thing that
+    -- failed. Swept in by bin/init-db.php for pre-existing DBs.
+    output_repaired INTEGER NOT NULL DEFAULT 0,
     started_at      TEXT NOT NULL,
     ended_at        TEXT,
     stop_reason     TEXT,                             -- end_turn | max_tokens | tool_use | error | interrupted
@@ -810,7 +808,7 @@ CREATE VIEW components AS
 		FROM systems;
 
 -- ============================================================
--- INDEXS (87)
+-- INDEXS (85)
 -- ============================================================
 
 CREATE INDEX idx_adv_date ON advisories(date);
@@ -888,10 +886,6 @@ CREATE INDEX idx_gitleaks_rule_id           ON gitleaks_findings(rule_id);
 CREATE INDEX idx_gitleaks_scan_id           ON gitleaks_findings(scan_id);
 
 CREATE INDEX idx_gitleaks_severity          ON gitleaks_findings(severity, resolved_at);
-
-CREATE INDEX idx_memory_agent_name ON agent_memory_stores (agent_name);
-
-CREATE INDEX idx_memory_updated    ON agent_memory_stores (updated_at);
 
 CREATE INDEX idx_mig_authored_service ON migrations_authored (service);
 
@@ -988,8 +982,20 @@ CREATE UNIQUE INDEX uq_gitleaks_fingerprint ON gitleaks_findings(fingerprint);
 CREATE UNIQUE INDEX uq_pulse_jobs_name ON pulse_jobs(plugin_name, job_name);
 
 -- ============================================================
--- TRIGGERS (2)
+-- TRIGGERS (4)
 -- ============================================================
+
+CREATE TRIGGER agent_iterations_satisfied_insert BEFORE INSERT ON agent_iterations FOR EACH ROW
+  WHEN NEW.grader_result = 'satisfied'
+   AND (NEW.gate_run_id IS NULL
+        OR TRIM(NEW.gate_run_id, char(32)||char(9)||char(10)||char(13)) = '')
+  BEGIN SELECT RAISE(ABORT, 'agent_iterations: satisfied requires gate_run_id'); END;
+
+CREATE TRIGGER agent_iterations_satisfied_update BEFORE UPDATE ON agent_iterations FOR EACH ROW
+  WHEN NEW.grader_result = 'satisfied'
+   AND (NEW.gate_run_id IS NULL
+        OR TRIM(NEW.gate_run_id, char(32)||char(9)||char(10)||char(13)) = '')
+  BEGIN SELECT RAISE(ABORT, 'agent_iterations: satisfied requires gate_run_id'); END;
 
 CREATE TRIGGER events_worm_delete BEFORE DELETE ON events FOR EACH ROW
   WHEN OLD.row_hash IS NOT NULL
