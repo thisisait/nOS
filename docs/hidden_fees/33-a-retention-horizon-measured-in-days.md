@@ -61,6 +61,17 @@ Gate: `tests/anatomy/test_the_ledger_does_not_carry_the_arguments.py`, retro-
 verified against five broken states including dropping silently and bounding
 before scrubbing.
 
+**Confirmed live** the same evening, on the 581 rows a `--tags wing` converge
+wrote afterwards:
+
+| | mean `result_json` |
+| --- | --- |
+| 87 942 rows before | **10 425 bytes** |
+| 581 rows after | **1 242 bytes** |
+
+and the marker arrives as designed — `{"keys": ["invocation"], "bytes": 476,
+"cap": 16384}` — so a reader of any bounded row can see what it cost.
+
 ## Not closed
 
 **The existing 1.19 GB stays.** `result_json` is one of the columns
