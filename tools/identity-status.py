@@ -17,6 +17,7 @@ Realms asked (the estate, loopback only, GET only):
   • Authentik  /api/v3/core/users/          (bearer: authentik_bootstrap_token)
   • Gitea      /api/v1/admin/users          (token: gitea_api_token)
   • Woodpecker /api/users + /api/agents     (bearer: woodpecker_api_token)
+  • Wing       api_tokens (sqlite, read-only) — the bearer rows themselves
 
 STRICTLY A READER. It holds no write verb, changes nothing, and exits 0
 whatever it finds — pinned by test_the_identity_reader_only_reads.py. The
@@ -165,6 +166,35 @@ def realm_accounts(merged: dict, secrets: dict) -> dict[str, list[str] | None]:
     return out
 
 
+def wing_tokens() -> list[dict] | None:
+    """The api_tokens rows, as the estate holds them.
+
+    Why here: minting is declared in roles/pazny.wing/tasks/post.yml, and
+    provision-token.php only UPSERTS — it never reconciles absence. So the
+    2026-08-26 roster close retired scout / remediator / upgrade-advisor and
+    parked curator / migration-author, and every one of their bearer rows is
+    still live. NULL scopes is not "unset", it is UNRESTRICTED
+    (TokenRepository::permits returns true on an empty list), so a retired
+    agent's row is the widest credential in the estate.
+    """
+    db = Path.home() / "wing/app/data/wing.db"
+    if not db.is_file():
+        return None
+    import sqlite3
+
+    try:
+        conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
+        with conn:
+            rows = conn.execute(
+                "SELECT name, scopes, last_used_at FROM api_tokens ORDER BY name"
+            ).fetchall()
+        conn.close()
+    except sqlite3.Error:
+        return None
+    return [dict(r) for r in rows]
+
+
 def main() -> int:
     roster, merged = declared_roster()
     secrets = _yaml(SECRETS)
@@ -221,6 +251,31 @@ def main() -> int:
         print("? woodpecker agent rows unreadable")
     else:
         print(f"woodpecker agent rows ({len(agents)}): " + "; ".join(agents))
+
+    tokens = wing_tokens()
+    if tokens is None:
+        print("? wing api_tokens unreadable — bearer rows UNKNOWN, not assumed clean")
+    else:
+        live_agents = {p.parent.name for p in
+                       (REPO / "files/anatomy/agents").glob("*/agent.yml")}
+        # Names that are not agent profiles at all — a daemon, the playbook's
+        # own token, the cortex door. Their absence from files/anatomy/agents
+        # is correct, not orphanhood.
+        non_agents = {"ansible-provisioned", "cortex-executor", "openclaw"}
+        print(f"wing api_tokens ({len(tokens)}):")
+        for t in tokens:
+            flags = []
+            if not (t["scopes"] or "").strip():
+                flags.append("UNRESTRICTED (NULL scopes)")
+            if t["name"] not in live_agents and t["name"] not in non_agents:
+                flags.append("no agent.yml — retired or parked")
+            if t["last_used_at"] is None:
+                flags.append("never authenticated")
+            print(f"  {t['name']:<24} scopes={t['scopes'] or '(null)':<22}"
+                  + ("  " + "; ".join(flags) if flags else ""))
+        print("  note: deactivating a row is a WRITE and belongs to the "
+              "operator — provision-token.php upserts, it never reconciles "
+              "absence")
 
     # The machine rosters are declared elsewhere on purpose; count them so
     # this report names every identity channel, without re-typing them.

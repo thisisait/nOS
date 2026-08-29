@@ -14,7 +14,7 @@ use App\Model\MigrationRepository;
 /** Fake BoneClient that always returns 502 so repo falls back to SQLite. */
 final class DeadBox extends BoneClient
 {
-	public function __construct() { parent::__construct('http://127.0.0.1:1', 'x', 1); }
+	public function __construct() { parent::__construct('http://127.0.0.1:1', null, 1); }
 	public function get(string $path, array $query = []): array
 	{
 		return ['status' => 502, 'body' => ['error' => 'down']];

@@ -8,9 +8,15 @@ namespace App\Model;
  * Thin HTTP client for Bone, the local FastAPI (files/bone/main.py).
  * Formerly known as BoxApiClient. See docs/anatomy.md for the organ metaphor.
  *
- * Reads BONE_URL (default http://127.0.0.1:8069) and BONE_SECRET from
- * environment — both populated by the pazny.bone Ansible role and surfaced
- * to PHP via the nginx fastcgi_param block.
+ * Reads BONE_URL (default http://127.0.0.1:8069) from environment.
+ *
+ * AUTH IS A BEARER, not a key. Bone retired the shared X-API-Key channel with
+ * decision O4 (2026-04-26) and every operational route now depends on
+ * `require_scope(...)`, which refuses anything that is not `Authorization:
+ * Bearer`. This client kept sending `X-API-Key` for four months, so every
+ * proxy through it — /api/v1/state and the whole state surface — answered 401.
+ * AgentIdentity already did the client_credentials dance against Authentik and
+ * had no caller; it does now.
  *
  * All methods return decoded JSON. On non-2xx or network errors, returns
  * ['error' => string, 'status' => int] so presenters can proxy verbatim.
@@ -18,13 +24,13 @@ namespace App\Model;
 class BoneClient
 {
 	private string $baseUrl;
-	private string $secret;
 	private int $timeout;
+	private ?\App\Core\AgentIdentity $identity;
 
-	public function __construct(?string $baseUrl = null, ?string $secret = null, int $timeout = 30)
+	public function __construct(?string $baseUrl = null, ?\App\Core\AgentIdentity $identity = null, int $timeout = 30)
 	{
 		$this->baseUrl = rtrim($baseUrl ?? getenv('BONE_URL') ?: 'http://127.0.0.1:8069', '/');
-		$this->secret  = $secret ?? (string) (getenv('BONE_SECRET') ?: '');
+		$this->identity = $identity;
 		$this->timeout = $timeout;
 	}
 
@@ -49,6 +55,16 @@ class BoneClient
 	 */
 	private function send(string $method, string $url, ?array $body): array
 	{
+		try {
+			$token = ($this->identity ??= \App\Core\AgentIdentity::fromEnv())->getToken();
+		} catch (\Throwable $e) {
+			// No token means no call. Saying so beats a 401 the caller has to
+			// reverse-engineer into "Authentik would not mint for nos-wing".
+			return ['status' => 503, 'body' => [
+				'error' => 'Bone identity unavailable', 'detail' => $e->getMessage(),
+			]];
+		}
+
 		$ch = curl_init();
 		curl_setopt_array($ch, [
 			CURLOPT_URL            => $url,
@@ -59,7 +75,7 @@ class BoneClient
 			CURLOPT_HTTPHEADER     => [
 				'Content-Type: application/json',
 				'Accept: application/json',
-				'X-API-Key: ' . $this->secret,
+				'Authorization: Bearer ' . $token,
 			],
 		]);
 		if ($body !== null) {

@@ -334,7 +334,11 @@
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ upgrade_architect_wing_api_token }}
       - --name=upgrade-architect
-      - --scopes=wing.read,wing.write
+      # NARROWED 2026-08-29. It writes to the TREE (migration-file-write) and
+      # opens the MR from a post-step; it holds no mcp-wing-write tool, so the
+      # write half was unspendable. Live row: last_used_at NULL — the token has
+      # never once authenticated.
+      - --scopes=wing.read
     chdir: "{{ wing_app_dir }}"
   register: _wing_upgrade_architect_token
   changed_when: >
@@ -350,7 +354,13 @@
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ openclaw_wing_api_token }}
       - --name=openclaw
-      - --scopes=wing.read,wing.write
+      # NARROWED 2026-08-29 on the artifact, not on absence: TokenRepository
+      # stamps last_used_at on every successful validation, and this row's is
+      # NULL — no request has ever authenticated with it. The gitleaks ingest,
+      # the one POST an OpenClaw skill makes, runs under the generic
+      # `wing_api_token`, not this one. If a write does surface it 403s loudly;
+      # widen this line back and say what asked.
+      - --scopes=wing.read
     chdir: "{{ wing_app_dir }}"
   register: _wing_openclaw_token
   changed_when: >

@@ -70,8 +70,15 @@
              read by app/Model/BoneClient.php. -->
         <key>BONE_URL</key>
         <string>{{ bone_url | default('http://127.0.0.1:' + (bone_port | default(8099) | string)) }}</string>
-        <key>BONE_SECRET</key>
-        <string>{{ bone_secret | default('') }}</string>
+        <!-- Bone takes an Authentik client_credentials Bearer (decision O4);
+             the shared key it used to take is gone from both sides. These are
+             what App\Core\AgentIdentity reads. -->
+        <key>WING_AGENT_CLIENT_ID</key>
+        <string>nos-wing</string>
+        <key>WING_AGENT_CLIENT_SECRET</key>
+        <string>{{ nos_derived_secrets.agent_wing | default('') }}</string>
+        <key>WING_AGENT_SCOPES</key>
+        <string>nos:state:read nos:migrations:read nos:upgrades:read nos:patches:read nos:coexistence:read</string>
 
 {% if install_keap | default(false) %}
         <!-- KEAP cortex agent surface (loopback :{{ keap_port | default(8091) }}).
@@ -87,7 +94,7 @@
 {% endif %}
 
         <!-- HMAC secret for /api/v1/events POST (callback plugin + conductor
-             agent_run_start/end events). Same value as BONE_SECRET — Bone
+             agent_run_start/end events). Same value as `bone_secret` — Bone
              signs outbound, Wing verifies inbound. EventsPresenter::checkHmac()
              reads this via getenv(). Without it, every /events POST → 500. -->
         <key>WING_EVENTS_HMAC_SECRET</key>

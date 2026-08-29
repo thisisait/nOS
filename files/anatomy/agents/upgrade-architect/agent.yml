@@ -35,7 +35,6 @@ audit:
   capability_scopes:
     - mcp.tool_use
     - wing.read
-    - wing.write
     - events.write
     - audit.read
     - nos.migration.write
