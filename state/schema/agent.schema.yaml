@@ -147,6 +147,7 @@ properties:
             - mcp-bone
             - mcp-pulse
             - mcp-keap              # KEAP cortex /agent/v1 (read + captures-only write)
+            - mcp-loop              # nos-loop: weaknesses/budget/propose/history — never judge
         config:
           type: object
           description: "Tool-specific config; opaque to the schema."

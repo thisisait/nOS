@@ -262,6 +262,7 @@ def cmd_propose(args: argparse.Namespace) -> int:
             "tree_sha": tree_sha,
             "proposer_id": args.proposer_id,
             "proposer_model": args.proposer_model,
+            "session_uuid": args.session_uuid,
             "diff_text": diff,
         })
     except (urllib.error.URLError, OSError) as exc:
@@ -436,6 +437,14 @@ def main(argv: list[str] | None = None) -> int:
                       help="who authored the diff. The default says the human at "
                            "this terminal did; pass the agent's id when it did not")
     prop.add_argument("--proposer-model", default=None)
+    # The AgentKit session that authored this. Bone has accepted the field since
+    # the ledger join landed (bone/looproutes.py:100,159) and this client never
+    # sent it, so every one of the 22 proposals on record carries
+    # session_uuid NULL — the join the field exists for could not be made from
+    # either end. Measured 2026-08-29.
+    prop.add_argument("--session-uuid", default=None,
+                      help="the AgentKit session that authored the diff; without "
+                           "it the proposal cannot be traced to what it cost")
     prop.set_defaults(fn=cmd_propose)
 
     jud = _json_flag(sub.add_parser(

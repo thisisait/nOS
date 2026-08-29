@@ -20,10 +20,10 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 88 (77 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (82)
-- **Transfers outside the EU:** 7 activities
-- **Activities engaging a third-party processor:** 7
+- **Processing activities:** 89 (77 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (83)
+- **Transfers outside the EU:** 8 activities
+- **Activities engaging a third-party processor:** 8
 
 ## Transfers & processors (audit-sensitive subset)
 
@@ -33,6 +33,7 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 | curator (`agent_curator`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
 | librarian (`agent_librarian`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer. |
 | migration-author (`agent_migration-author`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
+| proposer (`agent_proposer`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer. |
 | surveyor (`agent_surveyor`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
 | upgrade-architect (`agent_upgrade-architect`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
 | Loop (`svc_loop`) | **Yes** | `Anthropic (US) — claude CLI backend, authoring proposals when the propose job runs` |
@@ -1016,6 +1017,17 @@ commit metadata.
 - **Recipients / processors:** **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.
 - **Transfers outside EU:** **Yes**
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### proposer — `agent_proposer`
+- **Purpose:** Authoring a bounded change to this estate's own source in response to a weakness it found in itself. No personal data is read or transmitted.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `none`
+- **Data categories:** `source_code`; `defect_records`
+- **Recipients / processors:** **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer.
+- **Transfers outside EU:** **Yes**
+- **Retention:** transient (not persisted)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 

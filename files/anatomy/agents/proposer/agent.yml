@@ -1,0 +1,102 @@
+name: proposer
+version: 1
+description: >-
+  The loop's entry. Takes ONE weakness, reads the budget it must stay inside,
+  authors one bounded patch and RECORDS it with the engine before editing
+  anything. Proposes and stops: it never judges, never commits, never opens a
+  merge request.
+
+model:
+  # sonnet tier; the backend's model_env decides which model that is
+  # (state/llm-backends.yml). Authoring a patch is judgement over code.
+  primary: anthropic-claude-sonnet-4-5
+  backend: minimax
+
+system_prompt_path: system.md
+
+tools:
+  - id: bash-read-only     # read the tree it proposes against
+  - id: mcp-loop           # weaknesses / budget / propose / history — never judge
+  - id: mcp-wing-read      # read its own prior runs
+
+multiagent:
+  type: solo
+  max_concurrent_threads: 1
+
+outcomes:
+  # The deliverable is a LEDGER ROW, not an event: `loop-propose.py` reads
+  # loop_proposals back through a read-only connection and that is the fact.
+  # No `deliverable:` here for the same reason — this ceremony's artifact does
+  # not live in `events`, and declaring a type it never writes would refuse
+  # every run. The runner's own reader is what checks it landed.
+  gateset: live
+  rubric_path: rubric.md
+  max_iterations: 2
+
+audit:
+  capability_scopes:
+    - bash.read
+    - mcp.tool_use
+    - loop.propose
+    - wing.read
+    - events.write
+    - audit.read
+  pii_classification: none
+
+vault:
+  required_credentials:
+    - scope: anthropic-api
+    - scope: mcp-loop
+
+metadata:
+  ait_phase: loop-entry
+  ceremony_role: propose
+  # Its first run has never happened: the agent did not exist until 2026-08-29,
+  # while `loop-propose.py` had been spawning `--agent=proposer` since the
+  # AgentKit cutover. `unproven` until a session records a proposal.
+  runner_status: unproven
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: >-
+    A proposal was recorded, or the engine refused it and the refusal was
+    quoted. Both are complete runs — a refusal is the engine working.
+  exit_1: >-
+    Does not emit exit 1; a proposal the engine rejects is exit 0 with the
+    refusal in the report.
+  exit_2: "Environment / auth / engine error inside the runner. Fires a CRITICAL A9 notification."
+
+gdpr:
+  purpose: >-
+    Authoring a bounded change to this estate's own source in response to a
+    weakness it found in itself. No personal data is read or transmitted.
+  legal_basis: legitimate_interests
+  data_categories: [source_code, defect_records]
+  data_subjects: [none]
+  # Proposal rows are the loop's memory of what it already tried; they are
+  # retained with the ledger rather than aged out, so 0 = no expiry.
+  retention_days: 0
+  processors:
+    - name: MiniMax
+      role: LLM inference via the Anthropic-compatible endpoint (SDK adapter,
+        tool loop driven by AgentKit)
+      country: "unverified — international endpoint api.minimax.io; entity and seat not established"
+      safeguard: >-
+        None claimed, and none assessed. No SCCs, adequacy finding or derogation
+        has been identified for this transfer.
+  eu_residency: false
+  transfers_outside_eu: true
+  notes: |
+    The transfer is the diff and the weakness text — this estate's own code and
+    its own defect records. It is a property of the CEREMONY, not the harness.
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+capabilities:
+  - nos:state:read
+  - nos:security:read

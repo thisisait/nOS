@@ -181,6 +181,7 @@ services:
 	    - register(@App\AgentKit\Tools\McpWingWriteTool)
 	    - register(@App\AgentKit\Tools\McpBoneTool)
 	    - register(@App\AgentKit\Tools\McpKeapTool)
+	    - register(@App\AgentKit\Tools\McpLoopTool)
 	    # Q8/A1: gated migration file-write tool (path-allowlisted to
 	    # files/anatomy/migrations/ + default.config.yml; escape-refused).
 	    - register(@App\AgentKit\Tools\MigrationWriteTool)
@@ -196,6 +197,7 @@ services:
 	- App\AgentKit\Tools\McpWingWriteTool
 	- App\AgentKit\Tools\McpBoneTool
 	- App\AgentKit\Tools\McpKeapTool
+	- App\AgentKit\Tools\McpLoopTool
 	# Q8/A1: %nosRepoRoot% is the repo working-tree root (NOS_REPO_ROOT env).
 	- App\AgentKit\Tools\MigrationWriteTool(%nosRepoRoot%)
 	- App\AgentKit\Tools\AskOperatorTool

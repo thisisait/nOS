@@ -414,6 +414,7 @@ nodes:
   "agent:inspektor": withheld
   "agent:librarian": withheld
   "agent:migration-author": withheld
+  "agent:proposer": withheld
   "agent:surveyor": withheld
   "agent:upgrade-architect": withheld
 
@@ -427,6 +428,7 @@ nodes:
   "resource:bash-read-only": withheld
   "resource:mcp-bone": withheld
   "resource:mcp-keap": withheld
+  "resource:mcp-loop": withheld
   "resource:mcp-wing-read": withheld
   "resource:mcp-wing-write": withheld
   "resource:migration-file-write": withheld

@@ -4,23 +4,23 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 236,
-    "edges": 266,
+    "nodes": 238,
+    "edges": 270,
     "nodes_pulse": 30,
     "nodes_judge": 5,
     "nodes_gateset": 4,
     "nodes_weakness": 7,
     "nodes_daemon": 12,
     "nodes_service": 64,
-    "nodes_resource": 13,
+    "nodes_resource": 14,
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 55,
     "nodes_table": 16,
     "nodes_doctrine": 13,
     "nodes_faceapp": 5,
-    "nodes_agent": 7,
-    "edges_data": 183,
+    "nodes_agent": 8,
+    "edges_data": 187,
     "edges_trigger": 37,
     "edges_temporal": 5,
     "edges_mutex": 21,
@@ -127,6 +127,23 @@
       ],
       "anchor": "02.02.09",
       "description": "Agent ceremony 'migration-author' (migration-authoring), mode=solo, runner_status=parked — primary claude-sonnet on backend anthropic (the register default, undeclared)"
+    },
+    "agent:proposer": {
+      "kind": "agent",
+      "source": "files/anatomy/agents/proposer/agent.yml",
+      "charter": "propose",
+      "runner_status": "unproven",
+      "mode": "solo",
+      "primary_model": "anthropic-claude-sonnet-4-5",
+      "backend": "minimax",
+      "backend_declared": true,
+      "tools": [
+        "bash-read-only",
+        "mcp-loop",
+        "mcp-wing-read"
+      ],
+      "anchor": "02.02.09",
+      "description": "Agent ceremony 'proposer' (propose), mode=solo, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:surveyor": {
       "kind": "agent",
@@ -1793,6 +1810,12 @@
       "anchor": "02.02.06",
       "description": "Agent tool 'mcp-keap' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
     },
+    "resource:mcp-loop": {
+      "kind": "resource",
+      "source": "derived from agent tools",
+      "anchor": "02.02.06",
+      "description": "Agent tool 'mcp-loop' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
+    },
     "resource:mcp-wing-read": {
       "kind": "resource",
       "source": "derived from agent tools",
@@ -3294,6 +3317,13 @@
     },
     {
       "from": "resource:backend-minimax",
+      "to": "agent:proposer",
+      "kind": "data",
+      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend"
+    },
+    {
+      "from": "resource:backend-minimax",
       "to": "agent:surveyor",
       "kind": "data",
       "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
@@ -3332,6 +3362,13 @@
       "to": "agent:migration-author",
       "kind": "data",
       "via": "tool grant `bash-read-only` declared in files/anatomy/agents/migration-author/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:bash-read-only",
+      "to": "agent:proposer",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/proposer/agent.yml tools[]",
       "derived": "agent-tools"
     },
     {
@@ -3419,6 +3456,13 @@
       "derived": "agent-tools"
     },
     {
+      "from": "resource:mcp-loop",
+      "to": "agent:proposer",
+      "kind": "data",
+      "via": "tool grant `mcp-loop` declared in files/anatomy/agents/proposer/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
       "from": "resource:mcp-wing-read",
       "to": "agent:conductor",
       "kind": "data",
@@ -3451,6 +3495,13 @@
       "to": "agent:migration-author",
       "kind": "data",
       "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/migration-author/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-wing-read",
+      "to": "agent:proposer",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/proposer/agent.yml tools[]",
       "derived": "agent-tools"
     },
     {

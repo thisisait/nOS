@@ -103,6 +103,11 @@ PROBE_PATHS: dict[str, dict[str, str | None]] = {
     "mcp-wing-write": {"served": "/api/v1/events", "unserved": "/api/v1/pentest/findings"},
     "mcp-bone": {"served": "/api/health", "unserved": None},
     "mcp-keap": {"served": "/agent/v1/captures", "unserved": "/agent/v1/taxonomy/approve"},
+    # mcp-loop takes no path: its plane is a SUBCOMMAND allowlist, and the
+    # thing it refuses by name is `judge` — the proposer reaching its own
+    # verdict. Pinned by test_the_proposer_cannot_reach_its_own_verdict.py,
+    # which drives the allowlist rather than an HTTP path.
+    "mcp-loop": {"served": None, "unserved": None},
     "bash-read-only": {"served": None, "unserved": None},
     "migration-file-write": {"served": None, "unserved": None},
     "ask-operator": {"served": None, "unserved": None},
