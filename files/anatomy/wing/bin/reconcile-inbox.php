@@ -93,6 +93,14 @@ try {
 	$db = new SQLite3($wingDb, $apply ? SQLITE3_OPEN_READWRITE : SQLITE3_OPEN_READONLY);
 	$db->busyTimeout(5000);
 	$db->enableExceptions(true);
+	// SHAPE = the title with its digits removed. A restatement class differs by
+	// NUMBERS — "Backup OK - 14 sources, 615.0 MB" and "…617.6 MB" — never by
+	// words. One definition, registered once, so the two callers that compare
+	// shapes cannot drift into two answers (it was ten nested replace() calls
+	// inline in a query, which is the same rule written where nobody could
+	// reuse it).
+	$db->createFunction('shape', static fn (?string $t): string
+		=> preg_replace('/\d+/', '', (string) $t) ?? '', 1);
 } catch (\Throwable $exc) {
 	fwrite(STDERR, "fatal: cannot open wing.db: {$exc->getMessage()}\n");
 	exit(1);
@@ -395,7 +403,7 @@ function shape_count(SQLite3 $db, ?string $origin, ?string $actor): int
 	// class it should have accepted: a heuristic that fails CLOSED is still a
 	// heuristic that is wrong. Digits are the thing that varies; strip them.
 	$stmt = $db->prepare(
-		"SELECT COUNT(DISTINCT replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(title,'0',''),'1',''),'2',''),'3',''),'4',''),'5',''),'6',''),'7',''),'8',''),'9','')) FROM notifications
+		"SELECT COUNT(DISTINCT shape(title)) FROM notifications
 		  WHERE ifnull(origin_plugin,'') = ifnull(:o,'')
 		    AND ifnull(actor_id,'')      = ifnull(:a,'')"
 	);
@@ -471,6 +479,92 @@ function verdict_restated(array $n, array $repeaters): array
 	];
 }
 
+/**
+ * The same question, for a row whose emitter has since CHANGED ITS NAME.
+ *
+ * MEASURED 2026-08-29: 33 of 63 unread rows sit under `os-resume`, the identity
+ * `nos-notify.sh` hardcoded for every caller until 2026-08-25. The emitters have
+ * since been given their own — `NOS_NOTIFY_ORIGIN: keap`, `: cortex` — and each
+ * now declares a supersede_key. So the class exists, the sender opted in, and
+ * the backlog is stranded on the far side of a rename: `verdict_restated` keys
+ * on (origin_plugin, actor_id), which no longer matches.
+ *
+ * This bridges it WITHOUT backfilling anything. The evidence is a later message
+ * with the IDENTICAL shape (title, digits stripped — the same comparison
+ * `shape_count` uses) from an emitter that has declared it restates itself. The
+ * old row is not reclassified; it is retired because the thing it says has been
+ * said again, later, by someone who says they repeat.
+ *
+ * Three guards, and each one is the difference between evidence and a guess:
+ *   - the shape must be produced by EXACTLY ONE declared emitter. Two senders
+ *     using one title is ambiguity, and ambiguity here retires the wrong row.
+ *   - the successor must be strictly newer.
+ *   - the shape must not be this row's own newest (that row is the current
+ *     word) — inherited from `verdict_restated` by construction, since a row
+ *     is only offered here after that one declined.
+ *
+ * @return array{action:'supersede'|'leave', reason:string, evidence?:array<string,mixed>}
+ */
+function verdict_restated_by_shape(SQLite3 $db, array $n, array $repeaters): array
+{
+	$declared = [];
+	foreach ($repeaters as $pair => $meta) {
+		[$origin, $actor] = array_pad(explode('|', (string) $pair, 2), 2, '');
+		$declared[] = ['origin' => $origin, 'actor' => $actor, 'key' => $meta['key']];
+	}
+	if ($declared === []) {
+		return ['action' => 'leave', 'reason' => 'no emitter has declared a restatement class'];
+	}
+
+	$stmt = $db->prepare(
+		"SELECT uuid, created_at, origin_plugin, actor_id, supersede_key
+		   FROM notifications
+		  WHERE shape(title) = shape(:t)
+		    AND created_at > :ts
+		    AND supersede_key IS NOT NULL
+		  ORDER BY created_at DESC, id DESC"
+	);
+	$stmt->bindValue(':t', (string) $n['title'], SQLITE3_TEXT);
+	$stmt->bindValue(':ts', (string) $n['created_at'], SQLITE3_TEXT);
+	$res = $stmt->execute();
+
+	$successor = null;
+	$emitters  = [];
+	while (($r = $res->fetchArray(SQLITE3_ASSOC)) !== false) {
+		$emitters[($r['origin_plugin'] ?? '') . '|' . ($r['actor_id'] ?? '')] = true;
+		$successor ??= $r;
+	}
+	if ($successor === null) {
+		// Nothing to say: no sender has ever restated this shape. `speak` is
+		// false so the sweep files it as unclassified with the other rows
+		// nobody has a rule for, rather than adding a line that means "no".
+		return ['action' => 'leave', 'speak' => false,
+		        'reason' => 'no later row of this shape carries a declared class'];
+	}
+	if (count($emitters) > 1) {
+		// A REFUSAL THE OPERATOR MUST SEE. Something restated this shape and
+		// this tool declined anyway — that is a judgement, and a judgement that
+		// prints nothing is indistinguishable from not having looked.
+		return ['action' => 'leave', 'speak' => true,
+		        'reason' => 'this shape is sent by ' . count($emitters) . ' declared '
+		                  . 'emitters — ambiguous, refusing to pick one'];
+	}
+	return [
+		'action'   => 'supersede',
+		'reason'   => "restated by {$successor['uuid']} at {$successor['created_at']} "
+		            . "(same shape, class '{$successor['supersede_key']}'; this row "
+		            . "predates the emitter's own origin_plugin)",
+		'evidence' => [
+			'superseded_by'     => $successor['uuid'],
+			'successor_sent_at' => $successor['created_at'],
+			'declared_class'    => $successor['supersede_key'],
+			'matched_on'        => 'title shape, across an emitter rename',
+			'row_identity'      => ($n['origin_plugin'] ?? '') . '|' . ($n['actor_id'] ?? ''),
+			'successor_identity'=> ($successor['origin_plugin'] ?? '') . '|' . ($successor['actor_id'] ?? ''),
+		],
+	];
+}
+
 // ── Main sweep ───────────────────────────────────────────────────────────────
 
 $rows = [];
@@ -523,7 +617,15 @@ foreach ($rows as $n) {
 		$v = verdict_question($db, $n);
 	} elseif ($hasSupersede
 	          && ($v = verdict_restated($n, $repeaters))
-	          && ($v['action'] === 'supersede' || isset($repeaters[($n['origin_plugin'] ?? '') . '|' . ($n['actor_id'] ?? '')]))) {
+	          && ($v['action'] === 'supersede'
+	              || isset($repeaters[($n['origin_plugin'] ?? '') . '|' . ($n['actor_id'] ?? '')])
+	              // The identity did not match — try the SHAPE, which is how a
+	              // row stranded by an emitter rename still finds its successor
+	              // (2026-08-29). Only consulted when the identity rule declined,
+	              // so it can never override a shared-sender refusal for an
+	              // emitter that DOES still own its name.
+	              || (($v = verdict_restated_by_shape($db, $n, $repeaters))['action'] === 'supersede'
+	                  || ($v['speak'] ?? false)))) {
 		// LAST, on purpose. The classifiers above answer "did the condition
 		// clear", which is a stronger statement than "the sender said it
 		// again" — a row they can decide should be decided by them.
