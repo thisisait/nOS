@@ -139,30 +139,6 @@ final class AgentLoader
 			$tools[] = new ToolSpec($toolRaw['id'], (array) ($toolRaw['config'] ?? []));
 		}
 
-		// Multiagent
-		$mType = $raw['multiagent']['type'] ?? 'solo';
-		if (!in_array($mType, ['solo', 'coordinator'], true)) {
-			throw new AgentLoadException("agent.yml multiagent.type must be solo|coordinator; got {$mType}");
-		}
-		$roster = [];
-		foreach (($raw['multiagent']['roster'] ?? []) as $i => $rosterRaw) {
-			if (!isset($rosterRaw['name']) || !is_string($rosterRaw['name'])) {
-				throw new AgentLoadException("agent.yml multiagent.roster[{$i}].name missing");
-			}
-			$roster[] = new RosterEntry(
-				$rosterRaw['name'],
-				isset($rosterRaw['version']) ? (int) $rosterRaw['version'] : null,
-			);
-		}
-		// Range-check only: there is no in-process parallelism since the
-		// Coordinator/ProcessPool deletion (2026-08-28) and every manifest is
-		// multiagent.type: solo. Kept so a stale agent.yml gets a clear error
-		// rather than a silently ignored field.
-		$maxThreads = (int) ($raw['multiagent']['max_concurrent_threads'] ?? 4);
-		if ($maxThreads < 1 || $maxThreads > 16) {
-			throw new AgentLoadException("max_concurrent_threads must be 1..16; got {$maxThreads}");
-		}
-
 		// Outcomes
 		$rubric = null;
 		// Per-agent output cap for one model call. Absent -> the old
@@ -320,9 +296,6 @@ final class AgentLoader
 			modelGraderUri: isset($raw['model']['grader']) ? (string) $raw['model']['grader'] : null,
 			systemPrompt: $systemPrompt,
 			tools: $tools,
-			multiagentType: $mType,
-			roster: $roster,
-			maxConcurrentThreads: $maxThreads,
 			rubric: $rubric,
 			maxIterations: $maxIterations,
 			capabilityScopes: array_values($capabilityScopes),

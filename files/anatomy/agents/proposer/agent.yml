@@ -19,9 +19,6 @@ tools:
   - id: mcp-loop           # weaknesses / budget / propose / history — never judge
   - id: mcp-wing-read      # read its own prior runs
 
-multiagent:
-  type: solo
-  max_concurrent_threads: 1
 
 outcomes:
   # The deliverable is a LEDGER ROW, not an event: `loop-propose.py` reads

@@ -42,9 +42,6 @@ tools:
   - id: mcp-bone
   - id: mcp-keap
 
-multiagent:
-  type: solo
-  max_concurrent_threads: 1
 
 outcomes:
   # reshapes the KEAP corpus — cortex-corpus-diff is the oracle for that.

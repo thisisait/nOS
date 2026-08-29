@@ -279,7 +279,7 @@ final class AgentsPresenter extends BasePresenter
 	}
 
 	/**
-	 * @return array<int, array{name: string, version: int, description: string, model_primary: string, multiagent_type: string, has_outcome: bool, sessions_recent: int, error: ?string}>
+	 * @return array<int, array{name: string, version: int, description: string, model_primary: string, has_outcome: bool, sessions_recent: int, error: ?string}>
 	 */
 	private function buildCatalog(): array
 	{
@@ -293,7 +293,6 @@ final class AgentsPresenter extends BasePresenter
 					'version' => $agent->version,
 					'description' => $agent->description,
 					'model_primary' => $agent->modelPrimaryUri,
-					'multiagent_type' => $agent->multiagentType,
 					'has_outcome' => $agent->hasOutcome(),
 					'sessions_recent' => $recent,
 					'error' => null,
@@ -304,7 +303,6 @@ final class AgentsPresenter extends BasePresenter
 					'version' => 0,
 					'description' => '(failed to load)',
 					'model_primary' => '?',
-					'multiagent_type' => '?',
 					'has_outcome' => false,
 					'sessions_recent' => 0,
 					'error' => $exc->getMessage(),

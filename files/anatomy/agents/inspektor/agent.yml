@@ -26,9 +26,6 @@ tools:
   - id: mcp-wing-read
   - id: mcp-bone
 
-multiagent:
-  type: solo
-  max_concurrent_threads: 1
 
 outcomes:
   # reads the checkout; repo judges are what its findings are about.

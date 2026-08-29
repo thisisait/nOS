@@ -45,7 +45,6 @@
       "source": "files/anatomy/agents/conductor/agent.yml",
       "charter": "first-non-operator-write",
       "runner_status": "unproven",
-      "mode": "solo",
       "primary_model": "anthropic-claude-sonnet-4-5",
       "backend": "minimax",
       "backend_declared": true,
@@ -55,14 +54,13 @@
         "mcp-wing-read"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'conductor' (first-non-operator-write), mode=solo, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
+      "description": "Agent ceremony 'conductor' (first-non-operator-write), mode=None, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:curator": {
       "kind": "agent",
       "source": "files/anatomy/agents/curator/agent.yml",
       "charter": "taxonomy-reconcile",
       "runner_status": "parked",
-      "mode": "solo",
       "primary_model": "anthropic-claude-sonnet-4-5",
       "backend": "minimax",
       "backend_declared": true,
@@ -73,14 +71,13 @@
         "mcp-wing-read"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'curator' (taxonomy-reconcile), mode=solo, runner_status=parked — primary anthropic-claude-sonnet-4-5 on backend minimax"
+      "description": "Agent ceremony 'curator' (taxonomy-reconcile), mode=None, runner_status=parked — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:inspektor": {
       "kind": "agent",
       "source": "files/anatomy/agents/inspektor/agent.yml",
       "charter": "pentest-survey",
       "runner_status": "deferred",
-      "mode": "solo",
       "primary_model": "claude-sonnet",
       "backend": "anthropic",
       "backend_declared": false,
@@ -90,14 +87,13 @@
         "mcp-wing-read"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'inspektor' (pentest-survey), mode=solo, runner_status=deferred — primary claude-sonnet on backend anthropic (the register default, undeclared)"
+      "description": "Agent ceremony 'inspektor' (pentest-survey), mode=None, runner_status=deferred — primary claude-sonnet on backend anthropic (the register default, undeclared)"
     },
     "agent:librarian": {
       "kind": "agent",
       "source": "files/anatomy/agents/librarian/agent.yml",
       "charter": "rag-recall",
       "runner_status": "scheduled",
-      "mode": "solo",
       "primary_model": "anthropic-claude-sonnet-4-5",
       "backend": "minimax",
       "backend_declared": true,
@@ -109,14 +105,13 @@
         "mcp-wing-write"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'librarian' (rag-recall), mode=solo, runner_status=scheduled — primary anthropic-claude-sonnet-4-5 on backend minimax"
+      "description": "Agent ceremony 'librarian' (rag-recall), mode=None, runner_status=scheduled — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:migration-author": {
       "kind": "agent",
       "source": "files/anatomy/agents/migration-author/agent.yml",
       "charter": "migration-authoring",
       "runner_status": "parked",
-      "mode": "solo",
       "primary_model": "claude-sonnet",
       "backend": "anthropic",
       "backend_declared": false,
@@ -126,14 +121,13 @@
         "migration-file-write"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'migration-author' (migration-authoring), mode=solo, runner_status=parked — primary claude-sonnet on backend anthropic (the register default, undeclared)"
+      "description": "Agent ceremony 'migration-author' (migration-authoring), mode=None, runner_status=parked — primary claude-sonnet on backend anthropic (the register default, undeclared)"
     },
     "agent:proposer": {
       "kind": "agent",
       "source": "files/anatomy/agents/proposer/agent.yml",
       "charter": "propose",
       "runner_status": "unproven",
-      "mode": "solo",
       "primary_model": "anthropic-claude-sonnet-4-5",
       "backend": "minimax",
       "backend_declared": true,
@@ -143,14 +137,13 @@
         "mcp-wing-read"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'proposer' (propose), mode=solo, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
+      "description": "Agent ceremony 'proposer' (propose), mode=None, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:surveyor": {
       "kind": "agent",
       "source": "files/anatomy/agents/surveyor/agent.yml",
       "charter": "surface-legibility",
       "runner_status": "unproven",
-      "mode": "solo",
       "primary_model": "anthropic-claude-sonnet-4-5",
       "backend": "minimax",
       "backend_declared": true,
@@ -161,14 +154,13 @@
         "mcp-wing-write"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'surveyor' (surface-legibility), mode=solo, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
+      "description": "Agent ceremony 'surveyor' (surface-legibility), mode=None, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:upgrade-architect": {
       "kind": "agent",
       "source": "files/anatomy/agents/upgrade-architect/agent.yml",
       "charter": "recipe-authoring",
       "runner_status": null,
-      "mode": "solo",
       "primary_model": "claude-sonnet",
       "backend": "anthropic",
       "backend_declared": false,
@@ -178,7 +170,7 @@
         "migration-file-write"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'upgrade-architect' (recipe-authoring), mode=solo, runner_status=UNDECLARED (not a green state) — primary claude-sonnet on backend anthropic (the register default, undeclared)"
+      "description": "Agent ceremony 'upgrade-architect' (recipe-authoring), mode=None, runner_status=UNDECLARED (not a green state) — primary claude-sonnet on backend anthropic (the register default, undeclared)"
     },
     "authentik:backrest": {
       "kind": "authentik",

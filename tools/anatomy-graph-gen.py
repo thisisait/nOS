@@ -817,7 +817,6 @@ def harvest_agents(nodes: dict, edges: list) -> None:
             # No default. An undeclared runner_status is UNKNOWN and reads as
             # UNKNOWN — `state/schema/agent.schema.yaml` holds the vocabulary.
             "runner_status": meta.get("runner_status"),
-            "mode": (doc.get("multiagent") or {}).get("type"),
             "primary_model": model.get("primary"),
             "backend": backend,
             "backend_declared": declared is not None,

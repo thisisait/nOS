@@ -123,3 +123,42 @@ def test_the_table_is_gone_from_the_live_database() -> None:
         "but a table nothing writes is still a second place an answer can live. "
         "bin/init-db.php drops it; closing this needs a converge (--tags wing)."
     )
+
+
+# ---------------------------------------------------------------------------
+# The coordinator surface, deleted 2026-08-29 for the same reason one layer on.
+#
+# Coordinator/ProcessPool went on 2026-08-28; the DECLARATIONS outlived them by
+# a day — `multiagent.type` in eight manifests, `roster`/`max_concurrent_threads`
+# in the schema, `RosterEntry`, `Agent::isCoordinator()`, `startChildThread()`
+# ("NO CALLER" in its own docblock), and both /agents presenters reporting a
+# roster that was always []. A manifest field with no runtime behind it reads to
+# the next author as a feature to use.
+
+FORBIDDEN_COORDINATOR = ("RosterEntry", "isCoordinator", "startChildThread",
+                         "multiagentType", "maxConcurrentThreads")
+
+
+def test_the_coordinator_surface_stays_deleted() -> None:
+    offenders = [
+        f"{p.relative_to(REPO)}: {ident}"
+        for p in list(AGENTKIT.rglob("*.php")) + list(MODEL.rglob("*.php"))
+        + list((WING / "app" / "Presenters").rglob("*.php"))
+        for ident in FORBIDDEN_COORDINATOR
+        if ident in p.read_text(encoding="utf-8")
+    ]
+    assert not offenders, (
+        "the coordinator surface is back: " + ", ".join(offenders) + ". There is "
+        "no multi-agent runtime — Coordinator and ProcessPool were deleted "
+        "2026-08-28. Declaring the fields again offers a capability nothing "
+        "implements."
+    )
+
+
+def test_no_manifest_declares_a_multiagent_block() -> None:
+    offenders = [p.parent.name for p in (REPO / "files/anatomy/agents").glob("*/agent.yml")
+                 if "multiagent" in (yaml.safe_load(p.read_text(encoding="utf-8")) or {})]
+    assert not offenders, (
+        f"{offenders} declare multiagent:, which the loader no longer parses — "
+        "the field would be silently ignored rather than honoured."
+    )

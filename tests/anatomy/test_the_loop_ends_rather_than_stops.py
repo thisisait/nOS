@@ -146,11 +146,18 @@ def test_the_ceiling_also_gets_a_wrap_up_turn():
 
     Both bounds must therefore end rather than stop, and the token one needs
     its own headroom: `assertSessionCeiling` measures the WORKING budget
-    against `ceiling - SYNTHESIS_TOKEN_RESERVE`, and the wrap-up asks to be
-    measured against the hard ceiling instead.
+    against `ceiling - reserve`, and the wrap-up asks to be measured against
+    the hard ceiling instead.
+
+    This assertion used to be `"SYNTHESIS_TOKEN_RESERVE" in src` — the NAME of
+    the flat 20 000 reserve, which the code itself had already disproved
+    ("at the tightened test ceiling of 30 000 it ate two thirds of the
+    budget"). The constant survived as a declaration nothing read, and this
+    gate held it there: green on the presence of a word. It now reads the
+    subtraction the runtime performs.
     """
     src = _src()
-    assert "SYNTHESIS_TOKEN_RESERVE" in src, (
+    assert re.search(r"\$tokenCeiling\s*=\s*max\(1,\s*\$tokenCeiling\s*-\s*\$reserve\)", src), (
         "no tokens are held back from the session ceiling, so a run that hits "
         "it has nothing left to write a report with — the exact shape the "
         "first bound run demonstrated."
@@ -173,7 +180,7 @@ def test_the_wrap_up_is_measured_against_the_hard_ceiling():
     assert re.search(r"assertSessionCeiling\('synthesis',\s*false\)", src), (
         "the wrap-up no longer re-checks the HARD ceiling before spending. "
         "Without it the reserve becomes an extension anyone can claim, and the "
-        "session's real bound moves by SYNTHESIS_TOKEN_RESERVE."
+        "session's real bound moves by the reserve."
     )
     assert re.search(r"bool \$reserveHeadroom = true", src), (
         "assertSessionCeiling no longer distinguishes the working budget from "

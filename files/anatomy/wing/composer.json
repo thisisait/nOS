@@ -5,6 +5,7 @@
   "license": "AGPL-3.0-only",
   "require": {
     "php": ">=8.3",
+    "ext-mbstring": "*",
     "nette/application": "^3.2",
     "nette/bootstrap": "^3.2",
     "nette/caching": "^3.3",
@@ -18,9 +19,6 @@
     "nette/robot-loader": "^4.0",
     "dragonmantank/cron-expression": "^3.4",
     "anthropic-ai/sdk": "^0.20",
-    "open-telemetry/sdk": "^1.14",
-    "open-telemetry/exporter-otlp": "^1.4",
-    "open-telemetry/sem-conv": "^1.30",
     "guzzlehttp/guzzle": "^7.12.1",
     "guzzlehttp/psr7": "^2.10.2",
     "php-http/guzzle7-adapter": "^1.0",

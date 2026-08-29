@@ -151,39 +151,6 @@ properties:
         config:
           type: object
           description: "Tool-specific config; opaque to the schema."
-  multiagent:
-    type: object
-    additionalProperties: false
-    required: [type]
-    properties:
-      type:
-        type: string
-        enum: [solo, coordinator]
-      roster:
-        type: array
-        description: "Names of agents this coordinator may delegate to."
-        items:
-          type: object
-          additionalProperties: false
-          required: [name]
-          properties:
-            name:
-              type: string
-              pattern: "^[a-z][a-z0-9-]{1,38}[a-z0-9]$"
-            version:
-              type: integer
-              minimum: 1
-              description: "Pin to a specific version, else latest is used."
-      max_concurrent_threads:
-        type: integer
-        minimum: 1
-        maximum: 16
-        default: 4
-        description: |
-          Cap on parallel sub-agent threads (Coordinator::runWithChildren).
-          ProcessPool clamps silently into [1, 16]. Default 4 is the
-          A14-multiagent-followup baseline; bump for batch consolidation
-          jobs (Dreams / Pulse fan-out) where more parallelism helps.
   outcomes:
     type: object
     additionalProperties: false

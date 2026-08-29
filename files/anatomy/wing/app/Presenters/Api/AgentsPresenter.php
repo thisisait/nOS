@@ -72,7 +72,6 @@ final class AgentsPresenter extends BaseApiPresenter
 						'description' => $a->description,
 						'model_primary' => $a->modelPrimaryUri,
 						'model_fallback' => $a->modelFallbackUri,
-						'multiagent_type' => $a->multiagentType,
 						'has_outcome' => $a->hasOutcome(),
 						'capability_scopes' => $a->capabilityScopes,
 						'pii_classification' => $a->piiClassification,
@@ -101,11 +100,6 @@ final class AgentsPresenter extends BaseApiPresenter
 				'fallback' => $a->modelFallbackUri,
 			],
 			'tools' => array_map(static fn ($t) => $t->id, $a->tools),
-			'multiagent' => [
-				'type' => $a->multiagentType,
-				'roster' => array_map(static fn ($r) => ['name' => $r->name, 'version' => $r->version], $a->roster),
-				'max_concurrent_threads' => $a->maxConcurrentThreads,
-			],
 			'outcomes' => $a->hasOutcome() ? [
 				// The gate set is what decides satisfaction; the rubric is
 				// optional feedback material and may be absent.

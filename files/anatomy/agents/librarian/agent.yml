@@ -54,9 +54,6 @@ tools:
   - id: mcp-bone
   - id: mcp-keap
 
-multiagent:
-  type: solo
-  max_concurrent_threads: 1
 
 outcomes:
   # The survey is an ARTIFACT, not prose in a transcript. Measured 2026-08-29

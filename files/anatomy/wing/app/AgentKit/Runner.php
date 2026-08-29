@@ -68,23 +68,6 @@ final class Runner
 	private const SYNTHESIS_CALLS_RESERVED = 1;
 
 	/**
-	 * Tokens held back from the session ceiling for the compacted wrap-up.
-	 *
-	 * MEASURED, not chosen: the surveyor's ceiling run spent 260 745 INPUT
-	 * tokens producing 2 558 of output, because every turn resends the whole
-	 * conversation and the conversation is mostly tool results — file bodies,
-	 * directory listings, API payloads. A wrap-up that replayed all of that
-	 * would cost another quarter-million and could not fit under any reserve
-	 * worth the name.
-	 *
-	 * `compactForSynthesis()` therefore drops the tool traffic and keeps what
-	 * the model itself wrote, which for that run was those same 2 558 tokens.
-	 * 20 000 is roughly 8× the largest such transcript observed, leaving room
-	 * for the report itself.
-	 */
-	private const SYNTHESIS_TOKEN_RESERVE = 20000;
-
-	/**
 	 * Floor for the headroom, and the whole of it before any call has been
 	 * measured. Sized for the COMPACTED wrap-up (2 558 tokens was the largest
 	 * such transcript observed, and the report itself is a few thousand more),
@@ -306,7 +289,6 @@ final class Runner
 			'agent.version' => $agent->version,
 			'agent.model_primary' => $agent->modelPrimaryUri,
 			'agent.backend' => $decision->backendName(),
-			'agent.multiagent_type' => $agent->multiagentType,
 			'agent.has_outcome' => $agent->hasOutcome(),
 			'agent.trigger' => $trigger,
 			'session.uuid' => $sessionUuid,

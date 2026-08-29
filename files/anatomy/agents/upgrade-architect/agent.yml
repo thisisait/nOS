@@ -24,9 +24,6 @@ tools:
   - id: migration-file-write  # 2026-08-28 — writes upgrades/<service>.yml; the
                               # runner's post-step opens the MR from it
 
-multiagent:
-  type: solo
-  max_concurrent_threads: 1
 
 outcomes:
   # authors upgrades/*.yml in the tree.

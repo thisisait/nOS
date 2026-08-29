@@ -76,7 +76,6 @@ function shotAgent(array $schema): Agent
         name: 'ops-probe', version: 1, description: 'one shot probe agent',
         modelPrimaryUri: 'openclaw-stub-1b', modelFallbackUri: null,
         modelGraderUri: null, systemPrompt: 'extract', tools: [],
-        multiagentType: 'solo', roster: [], maxConcurrentThreads: 1,
         rubric: null, maxIterations: 3, capabilityScopes: ['llm.call'],
         piiClassification: 'none', requiredCredentials: [], subscriptions: [],
         metadata: [], sourceDir: '/tmp', mode: 'one_shot', oneShotSchema: $schema,

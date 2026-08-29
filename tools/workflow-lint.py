@@ -267,9 +267,6 @@ def check_phases(src: str) -> list[str]:
     return errs
 
 
-CHECKS = (node_check, None)  # node_check takes a path; the rest take source
-
-
 def lint(path: pathlib.Path) -> list[str]:
     if not path.is_file():
         return [f"{path} does not exist"]

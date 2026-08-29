@@ -89,7 +89,6 @@ def test_the_node_repeats_the_profile_rather_than_asserting(graph, profiles):
         meta, model = doc.get("metadata") or {}, doc.get("model") or {}
         assert n["charter"] == meta.get("ceremony_role"), nid
         assert n["runner_status"] == meta.get("runner_status"), nid
-        assert n["mode"] == (doc.get("multiagent") or {}).get("type"), nid
         assert n["primary_model"] == model.get("primary"), nid
         assert n["backend_declared"] is (model.get("backend") is not None), nid
         assert n["tools"] == sorted({t["id"] for t in doc.get("tools") or []}), nid

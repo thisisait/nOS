@@ -345,44 +345,6 @@ final class AgentSessionRepository
 		$this->db->table('agent_threads')->where('uuid', $threadUuid)->update($update);
 	}
 
-	/**
-	 * Pre-create a child agent_threads row in 'pending' status BEFORE spawning
-	 * a subprocess. Callers MUST set role='child' and parent_thread_uuid;
-	 * startThread() stays the canonical primary-thread path.
-	 *
-	 * NO CALLER since 2026-08-28 — Coordinator/ProcessPool were deleted (every
-	 * manifest is multiagent.type: solo). Kept with the historic rows they
-	 * wrote; delete with them if the child-thread columns ever go.
-	 *
-	 * @param array<string, mixed> $row
-	 */
-	public function startChildThread(array $row): int
-	{
-		if (($row['role'] ?? null) !== 'child') {
-			throw new \InvalidArgumentException(
-				'startChildThread requires role=child; got ' . var_export($row['role'] ?? null, true)
-			);
-		}
-		if (empty($row['parent_thread_uuid'])) {
-			throw new \InvalidArgumentException(
-				'startChildThread requires non-empty parent_thread_uuid'
-			);
-		}
-		$insert = [
-			'uuid'              => $row['uuid'],
-			'session_uuid'      => $row['session_uuid'],
-			'parent_thread_uuid'=> $row['parent_thread_uuid'],
-			'agent_name'        => $row['agent_name'],
-			'agent_version'     => (int) ($row['agent_version'] ?? 1),
-			'role'              => 'child',
-			'status'            => 'pending',
-			'trace_id'          => $row['trace_id'],
-			'span_id'           => $row['span_id'],
-			'started_at'        => gmdate('c'),
-		];
-		$this->db->table('agent_threads')->insert($insert);
-		return (int) $this->db->getConnection()->getPdo()->lastInsertId();
-	}
 
 	/**
 	 * Flip a pre-created child thread's status — pending → running on spawn

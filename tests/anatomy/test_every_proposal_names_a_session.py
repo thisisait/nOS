@@ -271,8 +271,7 @@ use App\AgentKit\Vault\CredentialResolver;
 $agent = new Agent(
     name: 'proposer', version: 1, description: 'the loop proposer',
     modelPrimaryUri: $primaryUri, modelFallbackUri: null, modelGraderUri: null,
-    systemPrompt: null, tools: [], multiagentType: 'solo', roster: [],
-    maxConcurrentThreads: 1, rubric: null, maxIterations: 1,
+    systemPrompt: null, tools: [], rubric: null, maxIterations: 1,
     capabilityScopes: [], piiClassification: 'none', requiredCredentials: [],
     subscriptions: [], metadata: [], sourceDir: '/nonexistent',
     backendName: null,

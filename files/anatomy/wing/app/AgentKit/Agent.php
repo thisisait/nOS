@@ -24,9 +24,6 @@ final class Agent
 	 * @param ?string $modelFallbackUri      e.g. 'openclaw-qwen-coder-32b'
 	 * @param ?string $systemPrompt          loaded from system_prompt_path or null
 	 * @param array<int, ToolSpec> $tools
-	 * @param string $multiagentType         'solo' | 'coordinator'
-	 * @param array<int, RosterEntry> $roster non-empty iff multiagentType=coordinator
-	 * @param int    $maxConcurrentThreads
 	 * @param ?Outcome\Rubric $rubric        loaded from rubric_path or null
 	 * @param int    $maxIterations          1..10, default 3
 	 * @param array<int, string> $capabilityScopes
@@ -54,9 +51,6 @@ final class Agent
 		public readonly ?string $modelGraderUri,
 		public readonly ?string $systemPrompt,
 		public readonly array $tools,
-		public readonly string $multiagentType,
-		public readonly array $roster,
-		public readonly int $maxConcurrentThreads,
 		public readonly ?Outcome\Rubric $rubric,
 		public readonly int $maxIterations,
 		public readonly array $capabilityScopes,
@@ -118,11 +112,6 @@ final class Agent
 		return $this->mode === 'one_shot';
 	}
 
-	public function isCoordinator(): bool
-	{
-		return $this->multiagentType === 'coordinator';
-	}
-
 	/**
 	 * An outcome exists when an ORACLE exists. Was `rubric !== null`, which
 	 * made the loop turn on a document the graded model could also read.
@@ -150,31 +139,6 @@ final class ToolSpec
 	public function __construct(
 		public readonly string $id,
 		public readonly array $config = [],
-	) {
-	}
-}
-
-/**
- * One coordinator-roster entry. `version` may be null to mean "use latest".
- */
-final class RosterEntry
-{
-	public function __construct(
-		public readonly string $name,
-		public readonly ?int $version = null,
-	) {
-	}
-}
-
-/**
- * One required credential. `optional=true` means the session starts without
- * it but tools that need this scope will fail-soft.
- */
-final class VaultRequirement
-{
-	public function __construct(
-		public readonly string $scope,
-		public readonly bool $optional = false,
 	) {
 	}
 }

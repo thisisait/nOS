@@ -187,7 +187,6 @@ nos_identities:
 # Override with `-e tenant_domain_is_local=false` if you want to force ACME on
 # a custom local TLD (e.g. if you have your own internal CA).
 tenant_domain_is_local: "{{ (tenant_domain | default('')).endswith(('.local', '.lan', '.test', '.localhost')) or (tenant_domain | default('')) == 'localhost' }}"
-instance_tld_is_local: "{{ tenant_domain_is_local }}"  # Backwards-compat shim
 
 # ── TLS cert paths ───────────────────────────────────────────────────────────
 # Cert tree lives under the infra stack dir. mkcert writes here for local
@@ -230,7 +229,6 @@ instance_org: ""                          # Client organization name
 gdpr_controller_name: "{{ instance_org | default('') }}"   # Art-30(1)(a)/Art-33(3) controller identity
 gdpr_dpo_name: ""                                          # Art-33(3)(b) DPO / contact-point name
 gdpr_dpo_contact: "{{ default_admin_email }}"              # Art-33(3)(b) DPO contact (defaults to admin email)
-instance_location: ""                     # Location (e.g. "Prague, CZ")
 instance_role: "standalone"               # standalone | headquarters | factory | office | division
 instance_parent: ""                       # Slug of parent box (for hierarchy)
 
@@ -336,8 +334,6 @@ install_smtp_stalwart: false
 # When enabled it'll need: PostgreSQL + Redis (already on) + dedicated S3
 # bucket (rustfs or external) + DNS for mastodon.<tenant_domain> +
 # ACME wildcard cert. See docs/operator-domain-switch.md for prep.
-install_mastodon: false
-mastodon_domain: "social{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 
 # ── Watchtower (Docker image freshness watcher) ──────────────────────────────
 # Default ON in NOTIFY-ONLY mode — surfaces stale images in Mailpit without
@@ -347,8 +343,6 @@ install_watchtower: true                  # Docker image drift watcher
 watchtower_mode: "notify"                 # notify | apply (per-host opt-in)
 
 # ── Provider Access ──────────────────────────────────────────────────────────
-provider_admin_email: ""                  # Provider (thisisait.eu) email — same rights as CEO
-provider_tailscale_tag: "tag:provider"    # Tailscale ACL tag for the provider
 
 # ── Backup (Restic) ──────────────────────────────────────────────────────────
 configure_backup: false
@@ -387,8 +381,6 @@ restic_launchd_label: "eu.thisisait.nos.backup.offsite"
 
 # ── Vulnerability Scanner (NOS Security Auditor) ─────────────────────────────
 configure_vulnerability_scan: false
-vulnscan_schedule_hours: [6, 18]          # 2x per day: 06:00 and 18:00
-vulnscan_batch_size: 5                    # Number of components per scan run
 
 # ── Version Policy ────────────────────────────────────────────────────────────
 # "stable" = pinned CVE-patched versions (default, recommended for production)
@@ -498,7 +490,6 @@ install_pi_agents: false          # PI agent framework + pi-autoresearch extensi
 install_backup: true             # pazny.backup — nightly DB + volumes + blueprints → RustFS (launchd agent)
 install_backrest: false          # pazny.backrest — restic UI + scheduler as a host launchd daemon (off-site orchestrator + restore UI); opt-in
 install_wing: true           # Wing Security Dashboard + Hub (Nette PHP + SQLite) [requires: php, nginx]
-install_playwright_tests: false   # Playwright e2e tests under files/anatomy/wing/tests (smoke + first-admin provisioning)
 
 # ── macOS system configuration ────────────────────────────────────────────────
 configure_dotfiles: false         # Dotfiles – requires your own repo! Set dotfiles_repo in credentials.yml
@@ -612,7 +603,6 @@ install_bluesky_pds: true        # Bluesky PDS – AT Protocol identity server (
 # READ docs/break-glass-runbook.md before enabling.
 sso_autologin: false                       # SAFE DEFAULT (opt-in; the whole mechanism stays dormant)
 sso_enable_custom_preloader: false         # Wing /hub branded splash + session pre-warmer (optional)
-sso_autologin_local_fallback_enabled: false  # render ALLOW_LOCAL_LOGIN-style break-glass env when on
 sso_autologin_timeout_ms: 5000             # preloader / redirect fallback timeout (ms)
 # Per-tier / per-service overrides (precedence: svc > min_tier > global > false).
 # NOTE: the tier var is named sso_autologin_min_tier_<N> to avoid collision/
@@ -889,13 +879,6 @@ mas_password: ""
 # NGINX
 # ==============================================================================
 
-nginx_worker_processes: "auto"
-nginx_worker_connections: 2048
-nginx_keepalive_timeout: 65
-nginx_client_max_body_size: "100m"
-nginx_gzip: true
-nginx_ssl_protocols: "TLSv1.2 TLSv1.3"
-nginx_ssl_ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
 
 # Nginx sites – activated AUTOMATICALLY based on install_* flags.
 # For manual override set nginx_sites_enabled in config.yml.
@@ -1139,7 +1122,6 @@ ollama_flash_attention: 1      # Flash attention for MLX (faster, less memory)
 # secret nos:minimax_api_key; the cost_basis honesty path in
 # pulse-run-agent.sh is unchanged (foreign backend → dollar figure dropped).
 minimax_enabled: false
-minimax_base_url: "https://api.minimax.io/anthropic"   # Anthropic-compatible endpoint
 # The tier remaps: AgentKit tiers (claude-haiku/-sonnet primaries) map through
 # these to MiniMax model ids. EMPTY by default — the operator fills them from
 # MiniMax's catalog when arming; an armed backend with an empty model id
@@ -1290,7 +1272,6 @@ macos_dock_tilesize: 48              # Icon size (pixels)
 macos_dock_minimize_effect: "scale"  # genie | scale
 
 # ── Safari (developer) ────────────────────────────────────────────────────────
-macos_safari_show_status_bar: true        # Show status bar
 macos_safari_show_full_url: true          # Show full URL
 macos_safari_developer_menu: true         # Enable Developer menu
 # Note: Userscripts (Return YouTube Dislike) must be installed manually
@@ -1300,7 +1281,6 @@ macos_terminal_secure_keyboard: true  # Secure keyboard entry
 
 # ── System ────────────────────────────────────────────────────────────────────
 macos_computer_name: ""               # NetBIOS computer name; empty = use ansible_hostname
-macos_disable_gatekeeper: false       # NOT RECOMMENDED – leave false for security
 # Full Disk Access for Terminal: CANNOT be automated (SIP protected)
 # The installer will ask for it on first run
 
@@ -1699,7 +1679,6 @@ tempo_storage_path: "{{ nos_data_root }}/platform/services/tempo/storage"
 alloy_scrape_nginx: "{{ install_nginx | default(false) }}"
 alloy_scrape_phpfpm: "{{ install_nginx | default(false) }}"
 phpfpm_exporter_port: 9253         # Port of php-fpm_exporter
-alloy_scrape_mariadb: false        # MariaDB metrics (enable if install_mariadb: true)
 alloy_scrape_redis: true           # Redis metrics → Prometheus
 redis_port: 6379                   # Redis port
 alloy_tail_nginx_logs: true        # Nginx access+error logs → Loki
@@ -1740,7 +1719,6 @@ alloy_scrape_redis_exporter: "{{ redis_docker | default(false) }}"
 # operator can flip in config.yml if Qdrant runs without observability scrape.
 alloy_scrape_qdrant: "{{ install_qdrant | default(false) }}"
 qdrant_port: 6333
-qdrant_domain: "qdrant.{{ apps_subdomain | default('apps') }}{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 # install_qdrant flips true when apps/qdrant.yml is present in the apps
 # catalog. apps_runner sets this fact dynamically; default is false so a
 # stripped-down build doesn't trigger Qdrant-dependent wiring spuriously.
@@ -2018,8 +1996,6 @@ snappymail_image: "djmaze/snappymail:v2.38.2"
 # Services then available via: http://mac-studio.<tailnet>.ts.net:<PORT>
 # ==============================================================================
 
-tailscale_accept_routes: false    # Accept subnet routes from other nodes
-tailscale_exit_node: false        # Use this Mac as an exit node
 # tailscale_auth_key: ""          # Pre-auth key for non-interactive setup (from admin console)
 tailscale_hostname: ""            # Tailscale FQDN (e.g. mac-studio.tailnet-abc.ts.net) – homepage → Grafana
 services_lan_access: false        # true = Docker services on 0.0.0.0 (access via Tailscale/LAN by ports)
@@ -2239,7 +2215,6 @@ nos_smoke_max_fail_ratio: 0.5
 coexistence_secondary_ttl_days: 7
 
 # Backward compatibility – old monolithic compose dir (will be removed after migration)
-iiab_compose_dir: "{{ stacks_dir }}/iiab"
 
 # ── Traefik ────────────────────────────────────────────────────────────────────
 traefik_image_version: "v3.7.10"        # REM-145 GHSA-3ccp-42pg-hgv6 (CWE-444 CONNECT response poisoning); REM-127 CVE-2026-54763/54764 [swept v3.6.24 2026-08-06]
@@ -3058,7 +3033,6 @@ infisical_auth_secret: "{{ global_password_prefix }}_pw_infisical_auth"
 infisical_db_name: "infisical"
 infisical_db_user: "infisical"
 infisical_db_password: "{{ nos_derived_secrets.infisical_db }}"
-infisical_disable_signup: true                     # Admin creates all users
 
 # ── Seed: org + projects + secrets (pazny.infisical/tasks/seed.yml) ──────────
 # After Infisical is healthy, `seed.yml` bootstraps an admin user + organization
