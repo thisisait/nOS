@@ -77,15 +77,23 @@ class WingClient:
     # ── Run lifecycle ───────────────────────────────────────────────────
 
     def post_run_start(self, job_id: str, run_id: str,
-                       fired_at_iso: str) -> bool:
+                       fired_at_iso: str,
+                       actor_action_id: str | None = None) -> bool:
         # Wing PulsePresenter::actionRuns dispatches POST /pulse_runs (no
         # /start suffix) → recordStart. The earlier /start path was a
         # misalignment with the spec'd contract, surfaced 2026-05-07.
-        return self._post("/api/v1/pulse_runs", {
-            "job_id": job_id,
-            "run_id": run_id,
-            "fired_at": fired_at_iso,
-        })
+        #
+        # actor_action_id (2026-08-29). `pulse_runs.actor_action_id` is
+        # declared in the schema as "A10: UUID grouping start/finish events
+        # with this run", PulseRepository has accepted it since 2026-05-08 —
+        # and this call never sent one, so it was NULL on all 56 051 rows. The
+        # agent half of that lineage works (54 of 55 sessions join to events by
+        # it); the scheduler half was severed, which meant a nightly job could
+        # not be traced to the session it started or the rows it wrote.
+        body = {"job_id": job_id, "run_id": run_id, "fired_at": fired_at_iso}
+        if actor_action_id:
+            body["actor_action_id"] = actor_action_id
+        return self._post("/api/v1/pulse_runs", body)
 
     def post_run_finish(self, run_id: str, *, finished_at_iso: str,
                         exit_code: int, stdout_tail: str = "",

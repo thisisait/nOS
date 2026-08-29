@@ -244,6 +244,22 @@ nos_agent_lock_acquire "${NOS_AGENT_NAME:-agentkit}" 300 agentkit || exit 2
 SUMMARY_FILE="$(mktemp -t nos-agent-summary)"
 trap 'nos_agent_lock_release; rm -f "$SUMMARY_FILE"' EXIT
 
+# THE SCHEDULER'S RUN AND THE AGENT'S SESSION ARE ONE THING (2026-08-29).
+# The Pulse daemon hands its run's uuid4 down as PULSE_RUN_ID and records the
+# same value as `pulse_runs.actor_action_id`; adopting it as the session uuid
+# closes the last link, because the Runner already stamps the session uuid as
+# `actor_action_id` on every event it writes. Without this the nightly run and
+# the session it produced were two unrelated rows.
+#
+# Guarded on the UUID shape because bin/run-agent.php refuses anything else,
+# and only when the caller has not already chosen one.
+if [[ -n "${PULSE_RUN_ID:-}" ]] \
+   && [[ "$PULSE_RUN_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]] \
+   && [[ ! " ${PASSTHRU[*]} " == *" --session-uuid="* ]]; then
+    PASSTHRU+=("--session-uuid=$PULSE_RUN_ID")
+    echo "[run-agent] session uuid adopted from PULSE_RUN_ID — the run and the session are one row"
+fi
+
 cd "$WING_APP"
 php bin/run-agent.php "${PASSTHRU[@]}" | tee "$SUMMARY_FILE"
 

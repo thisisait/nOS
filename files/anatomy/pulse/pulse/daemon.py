@@ -186,7 +186,15 @@ class PulseDaemon:
                        env: dict[str, str] | None = None) -> None:
         thread = threading.current_thread()
         try:
-            self.wing.post_run_start(job_id, run_id, _now_iso())
+            # THE RUN IS ITS OWN ACTION. `run_id` is already a uuid4 and is
+            # already handed to the child as PULSE_RUN_ID, so using it as the
+            # action id makes the whole lineage one key: pulse_runs.run_id ==
+            # pulse_runs.actor_action_id == agent_sessions.uuid ==
+            # events.actor_action_id, and a single SELECT reconstructs
+            # scheduler -> agent -> ledger. Minting a second id here would
+            # have given the join a key nothing else could produce.
+            self.wing.post_run_start(job_id, run_id, _now_iso(),
+                                     actor_action_id=run_id)
             log.info("job %s start (run_id=%s)", job_id, run_id)
             if self.config.dry_run:
                 log.info("DRY RUN: would exec %s %r", command, args)
