@@ -229,7 +229,15 @@
       # Ops-plane route class. Written even where it grants everything a NULL
       # would: an unscoped row cannot be told apart from one nobody has got
       # round to scoping, and that ambiguity is what makes a widening invisible.
-      - --scopes=wing.read,wing.write
+      #
+      # NARROWED 2026-08-29, measured after the converge: this minted
+      # wing.read,wing.write while conductor/agent.yml holds no write tool and
+      # no wing.write scope. The agent could not have used it — but a grant
+      # nothing can spend is still a grant, and the widening was invisible
+      # because THREE declarations exist (the manifest, this task, the live
+      # api_tokens row) and the gate compared only the first two.
+      # test_the_mint_matches_the_manifest.py now compares all three.
+      - --scopes=wing.read
     chdir: "{{ wing_app_dir }}"
   register: _wing_conductor_token
   changed_when: >

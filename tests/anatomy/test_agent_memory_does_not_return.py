@@ -76,3 +76,38 @@ def test_memory_machinery_is_not_wired_in_di(ident: str):
         f"{ident} is registered in common.neon — the DI container would "
         "instantiate memory machinery that no longer exists."
     )
+
+
+# ── The half that reads the ESTATE, not the repo ─────────────────────────────
+#
+# Added 2026-08-29. Everything above reads committed files, and on the day the
+# deletion shipped every one of those checks was green while `agent_memory_stores`
+# was still sitting in `~/wing/app/data/wing.db`. Removing a CREATE from
+# schema-extensions.sql does nothing to a database that already ran it, and this
+# file's subject — "no agent memory, EVER" — is a claim about the estate, not
+# about the SQL. So the claim gets a reader pointed at the estate.
+#
+# UNKNOWN where there is no database: CI has no wing.db, and a skip there is the
+# honest answer. It is the operator's machine that can settle this one.
+
+import sqlite3
+
+WING_DB = pathlib.Path.home() / "wing" / "app" / "data" / "wing.db"
+
+
+@pytest.mark.skipif(not WING_DB.is_file(),
+                    reason="no wing.db on this host — the live half is UNKNOWN, not green")
+def test_the_table_is_gone_from_the_live_database() -> None:
+    conn = sqlite3.connect(f"file:{WING_DB}?mode=ro&immutable=1", uri=True)
+    try:
+        found = conn.execute(
+            "SELECT name FROM sqlite_master WHERE name = 'agent_memory_stores'"
+        ).fetchall()
+    finally:
+        conn.close()
+    assert not found, (
+        "agent_memory_stores still exists in wing.db. The CREATE is gone from "
+        "schema-extensions.sql, which is why every offline check above passes — "
+        "but a table nothing writes is still a second place an answer can live. "
+        "bin/init-db.php drops it; closing this needs a converge (--tags wing)."
+    )

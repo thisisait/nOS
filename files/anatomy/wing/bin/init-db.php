@@ -428,6 +428,15 @@ $addMissingColumns($db, 'events', [
 ]);
 $db->exec('CREATE INDEX IF NOT EXISTS idx_events_patch ON events(patch_id)');
 
+// agent_memory_stores — DROPPED, and dropped HERE because removing its CREATE
+// from schema-extensions.sql does nothing to a database that already has it.
+// Measured 2026-08-29, right after the converge that shipped Q8: the table was
+// gone from the SQL, gone from the class tree, and still sitting in wing.db —
+// with the gate that forbids its return reading the SQL file and staying green.
+// Q8 is "no agent memory, EVER; KEAP is the estate's memory", and a table
+// nothing writes is still a second place for an answer to live.
+$db->exec('DROP TABLE IF EXISTS agent_memory_stores');
+
 // events.{prev_hash,row_hash} — tamper-evident audit hash-chain (gov P1).
 // Existing DBs pick these up here (schema-extensions.sql CREATE TABLE is a
 // no-op on an existing table). NULL on every legacy / chain-off row, so the
