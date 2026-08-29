@@ -119,6 +119,27 @@ abstract class McpWingTool implements ToolInterface
 			'http_errors' => false,
 		];
 		if ($method === 'POST') {
+			// Attribution is the TOOL's job, not the model's. An agent-authored
+			// events POST that omits source / actor_action_id used to land as
+			// an orphan row (event 377830, 2026-08-29: conductor_report with
+			// every attribution column empty) and the promise that one
+			// `SELECT WHERE actor_action_id=?` reconstructs a run broke for
+			// exactly the reports that matter. Default — never overwrite —
+			// from the context this call already carries.
+			// Gate: test_agent_filed_events_carry_attribution.py.
+			if ($route === '/api/v1/events' && is_array($body)) {
+				if (($body['actor_action_id'] ?? '') === '') {
+					$body['actor_action_id'] = $context->sessionUuid;
+				}
+				if (($body['actor_id'] ?? '') === '') {
+					$body['actor_id'] = $context->actorId;
+				}
+				if (($body['source'] ?? '') === '') {
+					// 'agent:nos-conductor' → 'conductor', the spelling the
+					// pulse-run reports already use.
+					$body['source'] = preg_replace('/^(agent:)?(nos-)?/', '', $context->actorId) ?: $context->actorId;
+				}
+			}
 			// Wing signs the RAW body (EventsPresenter::checkHmac), so encode
 			// once and send that exact string — Guzzle's `json` would re-encode.
 			$raw = json_encode($body ?? new \stdClass);
