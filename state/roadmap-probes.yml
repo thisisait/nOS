@@ -571,3 +571,41 @@ obs-loop-dashboard: >-
 obs-cortex-dashboard: >-
   test -f files/anatomy/plugins/grafana-base/provisioning/dashboards/26-cortex.json
   && grep -q '26-cortex.json' files/anatomy/plugins/grafana-base/plugin.yml
+
+# ── the night of 2026-08-29 (organs joined) ─────────────────────────────────
+# Each probe names the DELIVERABLE, not the plan: the reader that answers the
+# question, the gate that pins it. A probe that greps prose confirms the
+# description, which is how two of these were got wrong on 2026-08-28.
+wing-map: >-
+  test -x tools/wing-status.py
+  && tools/nos-pane.py --list | grep -q '^wing'
+  && test -f tests/anatomy/test_the_wing_map_reads_both_dialects.py
+
+ledger-payload-bound: >-
+  grep -q 'def bound_result' callback_plugins/wing_telemetry.py
+  && grep -qc 'result=bound_result(res_dict)' callback_plugins/wing_telemetry.py
+  && test -f tests/anatomy/test_the_ledger_does_not_carry_the_arguments.py
+
+audit-anchor-earned: >-
+  grep -q 'no OFF->ON boundary to authorize' files/anatomy/wing/bin/backfill-event-chain.php
+  && test -f tests/anatomy/test_an_anchor_is_earned_by_a_gap.py
+
+# Both ends of the chain, because either alone leaves the join severed.
+pulse-lineage: >-
+  grep -q 'actor_action_id=run_id' files/anatomy/pulse/pulse/daemon.py
+  && grep -q -- '--session-uuid=$PULSE_RUN_ID' tools/run-agent.sh
+
+# The file AND its provisioning entry: 40-e2e-journeys.json sat on disk for
+# four months, documented as live, and was never in plugin.yml's copy list.
+obs-pulse-dashboard: >-
+  test -f files/anatomy/plugins/grafana-base/provisioning/dashboards/27-pulse.json
+  && grep -q '27-pulse.json' files/anatomy/plugins/grafana-base/plugin.yml
+
+# The SHIPPED half only. The row's open half is twenty unmeasured refusals
+# elsewhere in the tree, and no command distinguishes "not yet checked" from
+# "checked and fine" — a probe that grepped the fee's prose for the number
+# would be confirming the description, which this file's header forbids. So it
+# asserts the two cases that were measured and fixed, and nothing else.
+dry-run-evidence: >-
+  test -f tests/anatomy/test_a_dry_run_gathers_its_own_evidence.py
+  && [ "$(grep -c 'check_mode: false' roles/pazny.wing/tasks/main.yml)" -ge 3 ]

@@ -156,6 +156,80 @@ row("obs-cortex-dashboard", "cortex-lang runs 390 chains and none of them is a p
          "anyone trains a model to emit compositions. Pairs with local-llm-corpus, which found "
          "the validator does not constrain composition either.")
 
+# ── the night of 2026-08-29: the organs get joined ──────────────────────────
+row("wing-map", "Wing had no reader, so every question about it was a grep", "2026-08-29",
+    "shipped", "platform",
+    refs="tools/wing-status.py · tests/anatomy/test_the_wing_map_reads_both_dialects.py",
+    body="The operator's words were that Wing is becoming a hard organ to get hold of. That is "
+         "an unanswerable question, not a vague complaint: 33k lines of PHP, 48 presenters, 27 "
+         "CLI scripts and 45 tables covering nine unrelated concerns, with nothing able to say "
+         "which tables carry anything or what any of it costs. The reader answers per table — "
+         "rows, bytes, writers, readers — and found on its first run that 97% of the organ is "
+         "one table and 16 more hold nothing. Its detector reads BOTH dialects this codebase "
+         "uses: a first draft matched raw SQL only and called ten tables write-only, most of "
+         "them falsely, because Wing's repositories use Nette's fluent builder.")
+
+row("ledger-payload-bound", "The vein carried 921 MB no organ has ever read", "2026-08-29",
+    "shipped", "platform",
+    refs="callback_plugins/wing_telemetry.py · docs/hidden_fees/33",
+    body="wing.db held 380 248 events in 1.19 GB, of which 921 MB was result_json and 657 MB of "
+         "that was task_ok alone — the full Ansible module result for every task that did "
+         "nothing, single rows reaching 4.1 MB. The largest key across the sample was "
+         "`invocation`: Ansible echoing back the module's own ARGUMENTS, the input filed as "
+         "though it were the outcome. bound_result drops it and caps what remains at 16 KB, "
+         "naming every omission in the row itself. Live the same evening: mean result_json "
+         "10 425 bytes before, 1 242 after. The retention policy that should have caught the "
+         "growth is expressed in days (365) on a ledger that reached a gigabyte in 36, so it "
+         "could never once have fired.")
+
+row("audit-anchor-earned", "One authorised discontinuity per converge, 99 of them", "2026-08-29",
+    "shipped", "security",
+    refs="files/anatomy/wing/bin/backfill-event-chain.php · docs/hidden_fees/35",
+    body="A segment anchor is the verifier's permission to resume the hash chain at a prev_hash "
+         "it cannot derive. The tool that records one says it must run after each OFF->ON "
+         "toggle; post.yml ran it on every converge where the chain was merely ON, and the only "
+         "idempotence guard compared the recorded anchor to the tail, which always moved. "
+         "Ninety-nine anchors in five weeks, of which two or three were earned, and the nightly "
+         "verify reports ok:true across all of them. The chain's entire value is that a "
+         "discontinuity is remarkable. Now minted only when the tail is actually unsigned; the "
+         "99 stay because each signs real history.")
+
+row("pulse-lineage", "A scheduled run could not name the session it started", "2026-08-29",
+    "shipped", "agents",
+    refs="files/anatomy/pulse/pulse/daemon.py · tools/run-agent.sh",
+    body="pulse_runs.actor_action_id is declared in the schema as the A10 key grouping a run "
+         "with its events, and PulseRepository has accepted it since 2026-05-08. The daemon "
+         "never sent one: NULL on all 56 051 rows. The agent half of the same lineage worked "
+         "(54 of 55 sessions join to events by it), so the estate had one half of an audit "
+         "trail and no way to see the join was severed. The daemon now sends its run_id — "
+         "already handed to the child as PULSE_RUN_ID, so no second key is minted — and "
+         "run-agent.sh adopts it as the session uuid. run_id == actor_action_id == session "
+         "uuid == events.actor_action_id, and one SELECT reconstructs scheduler to ledger.")
+
+row("obs-pulse-dashboard", "56 000 runs of the scheduled-job organ, unobserved", "2026-08-29",
+    "shipped", "platform",
+    refs="files/anatomy/plugins/grafana-base/provisioning/dashboards/27-pulse.json · docs/hidden_fees/34",
+    body="Pulse runs every nightly job the estate has and had no Grafana surface at all. Its "
+         "headline asks what a notification cannot: which declared job has gone quiet, since a "
+         "nightly that stops firing looks exactly like one with nothing to report. Its first "
+         "draft made fee 32's mistake one organ over — ranking discovery:contradiction-scan top "
+         "of the failure list at 66.7% when all 16 were contradictions FOUND, and "
+         "pulse_jobs.findings_exit_codes had said which codes mean that for months. The answer "
+         "was already in a column and the new reader did not ask.")
+
+row("dry-run-evidence", "20 refusals decide on evidence a --check never gathers", "2026-08-29",
+    "next", "platform",
+    refs="docs/hidden_fees/36 · tests/anatomy/test_a_dry_run_gathers_its_own_evidence.py",
+    body="`command` and `uri` perform nothing under --check; the registered result is empty, "
+         "`| default(0)` turns the absence into a measurement, and the preflight refuses. "
+         "MEASURED: --tags wing --check failed twice on a healthy host — wrong frankenphp "
+         "version on a host running exactly the pin, dead daemon on one answering 403. Both "
+         "fixed and gated; the role now dry-runs clean at 438 ok. A scan finds twenty more of "
+         "the same shape in restore, patch, dnsmasq, ollama, superset, keap and gitea paths, "
+         "and NONE was measured — a full --check of main.yml stops at task 29 needing sudo, so "
+         "nothing proves those twenty are reached. They are listed rather than edited on "
+         "suspicion. The open work is checking them one at a time, not a sweep.")
+
 row("notify-supersede","A notification that stopped being true has no way to stop being unread","2026-08-23","next","platform",
     refs="tools/red-status.py::_still_holds · docs/hidden_fees/26 · bin/reconcile-inbox.php",
     body="MEASURED THE MORNING AFTER IT SHIPPED, and the wiring being complete was a false green about my own work. Schema, ALTER sweep, four emitters and the reader all landed; the 01:02 backup emitted WITH its supersede_key and retired ZERO rows, because the mechanism matches on the key and every historical row predates it. From tonight each nightly retires exactly its own predecessor and the 57-row backlog the feature was built for sits for ever. The probe now counts the deliverable — unread, un-superseded rows from an emitter that has SINCE declared it repeats, where a newer row from that emitter exists — and reads `restated:57`: os-resume 30, backup 19, backup-verify 5, security-drift 3. THE PATH IS NOT A BACKFILL OF THE KEY, which would be me guessing a class on the sender's behalf; it is bin/reconcile-inbox.php, which already marks rows read only on evidence and deliberately leaves report rows alone. It now HAS evidence for them: a newer row from the same declared-repeating emitter. That extension needs it to write superseded_at rather than wing_inbox_read_at — nobody read them — which is a decision about which tool owns which state, deliberately not taken at 05:40.")
