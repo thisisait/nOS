@@ -709,8 +709,15 @@ row("loop-verdict-vacuity", "a verdict with no oracle overlap must not read as p
     body="Measured: wordpress_version 9.9.9-nonexistent passes the repo set 3868/0. The set is "
          "ansible-lint + genome-codegen + pytest-anatomy; none reads a version value. Three of "
          "four merged diffs were version bumps, so for those three `pass` carried zero "
-         "information. Fix is the cheap half only: when no judge has an oracle_paths overlap "
-         "with the diff, record `nothing objected`, not `pass`.")
+         "information. THE FIX THIS ROW USED TO NAME IS WITHDRAWN (2026-08-29): it said "
+         "\"when no judge has an oracle_paths overlap with the diff, record nothing objected\", "
+         "and oracle_paths are exactly what budget_for() FORBIDS to a proposal in that set — "
+         "so for any proposal that exists the overlap is empty by construction, and the check "
+         "would call every verdict vacuous. Measured + kept runnable in "
+         "tests/anatomy/test_oracle_overlap_cannot_measure_vacuity.py. What the finding "
+         "actually needs is an oracle that READS THE VALUE, which is loop-pin-resolves-refused "
+         "(dropped: a network read is not deterministic). The two rows settle together or "
+         "neither does; whoever picks this up owes a decision on that, not a path test.")
 
 row("loop-pin-resolves-refused", "pin-resolves as a gate-set judge — refused, with the count", _REV,
     "dropped", "agents",
