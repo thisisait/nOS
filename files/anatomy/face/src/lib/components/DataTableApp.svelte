@@ -18,8 +18,8 @@
 	import { loadTable, tablesUpsertRow } from '$lib/api/tables';
 	import { ApiError } from '$lib/api/client';
 	import RowEditor from './RowEditor.svelte';
-	import { resolveView, orderRows, formatWhen } from '$lib/tables/view';
-	import { StatusNote, Badge } from './ui';
+	import { resolveView, orderRows, formatWhen, matchRow } from '$lib/tables/view';
+	import { StatusNote, Badge, prefersReducedMotion } from './ui';
 
 	let { table }: { table: DataTable | null } = $props();
 
@@ -34,7 +34,104 @@
 	let saveErr = $state('');
 
 	const view = $derived(data ? resolveView(data) : null);
-	const rows = $derived(data && view ? orderRows(data.rows, view) : []);
+	const ordered = $derived(data && view ? orderRows(data.rows, view) : []);
+
+	// ── Facets: the two filter levels ────────────────────────────────────────
+	//
+	// Native `<select>`, not a tab strip: `track` has 7 values and `status` 11,
+	// and a shell that has no Menu primitive would otherwise be growing one for
+	// a filter. The second level is scoped by the first — that IS the nesting;
+	// the declaration stays a flat pair of column keys so a renderer affording
+	// only one level can honour `facets[0]` and ignore the rest.
+	let picked = $state<Record<string, string>>({});
+	// A facet selection belongs to a table, not to the window. Switching tables
+	// with `status=blocked` still applied would show an empty list that looks
+	// like the table is empty.
+	$effect(() => {
+		void data?.slug;
+		picked = {};
+		dismissed = false;
+	});
+
+	const cellOf = (row: DataTableRow, key: string): string =>
+		row[key] === null || row[key] === undefined ? '' : String(row[key]);
+
+	/** Rows passing every facet ABOVE `level` — what level `level`'s counts are
+	 *  computed over, and what makes the second level a refinement of the first. */
+	function upTo(level: number): DataTableRow[] {
+		if (!view) return ordered;
+		return ordered.filter((r) =>
+			view.facets.slice(0, level).every((f) => !picked[f.key] || cellOf(r, f.key) === picked[f.key])
+		);
+	}
+
+	/** Value → count, for one facet, over the rows the levels above left. A value
+	 *  with no rows is not offered: a filter that can only empty the list is not
+	 *  a choice, it is a trap. */
+	function optionsFor(level: number, key: string): [string, number][] {
+		const tally = new Map<string, number>();
+		for (const r of upTo(level)) {
+			const v = cellOf(r, key);
+			if (v) tally.set(v, (tally.get(v) ?? 0) + 1);
+		}
+		return [...tally].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+	}
+
+	const rows = $derived(view ? upTo(view.facets.length) : ordered);
+
+	// ── Highlights: navigation, not decoration ───────────────────────────────
+	//
+	// Counted over the rows actually on screen, so a click always lands. A
+	// highlight matching nothing is DROPPED rather than rendered as a zero —
+	// `Badge` already refuses to print a 0, and a strip of empty labels is how a
+	// navigation aid stops being read.
+	const hits = $derived(
+		(view?.highlights ?? [])
+			.map((h) => ({ ...h, rows: rows.filter((r) => matchRow(r, h.when)) }))
+			.filter((h) => h.rows.length > 0)
+	);
+
+	// ── The offer ────────────────────────────────────────────────────────────
+	let dismissed = $state(false);
+	let root = $state<HTMLDivElement | null>(null);
+	let flashed = $state('');
+
+	const offer = $derived(view?.offer ?? null);
+	const offerRows = $derived(offer ? rows.filter((r) => matchRow(r, offer.when)) : []);
+	const offerRow = $derived(offerRows[0] ?? null);
+	const showOffer = $derived(!dismissed && !!offer && !!offerRow);
+
+	const rowDomId = (id: unknown) => `dt-row-${String(id)}`;
+
+	/**
+	 * Where the offer sits: at the row it is about.
+	 *
+	 * `offsetTop` against the positioned `.dt` root, NOT `getBoundingClientRect`
+	 * — the offer is inside the scrolling body, so a viewport rectangle would be
+	 * correct once and wrong after the first scroll, drag or window resize, and
+	 * would need three listeners to stay right. An offset against an ancestor is
+	 * layout, and layout already recomputes itself.
+	 */
+	const offerTop = $derived.by(() => {
+		void rows;
+		if (!showOffer || !root || !offerRow) return 0;
+		const el = root.querySelector<HTMLElement>(`#${CSS.escape(rowDomId(offerRow.id))}`);
+		return el ? Math.max(0, el.offsetTop - 6) : 0;
+	});
+
+	/** The one action in VIEW_ACTIONS. Scroll to the row and mark it — the offer
+	 *  navigates; it does not write, and there is deliberately no arm here that
+	 *  could. */
+	function focusHighlight(row: DataTableRow | null) {
+		if (!row || !root) return;
+		const el = root.querySelector<HTMLElement>(`#${CSS.escape(rowDomId(row.id))}`);
+		el?.scrollIntoView({
+			behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+			block: 'center'
+		});
+		flashed = String(row.id);
+		setTimeout(() => (flashed = ''), 1600);
+	}
 	/** Grid columns: everything. The other styles claim specific columns and
 	 *  show the rest only inside the editor — a card that reprinted all 23
 	 *  columns would be a grid with rounded corners. */
@@ -100,10 +197,16 @@
 	}
 </script>
 
+<svelte:window
+	onkeydown={(e) => {
+		if (e.key === 'Escape' && showOffer) dismissed = true;
+	}}
+/>
+
 {#if !data || !view}
 	<StatusNote kind="empty">No table.</StatusNote>
 {:else}
-	<div class="dt">
+	<div class="dt" bind:this={root}>
 		<header class="dt-head">
 			<strong>{data.title}</strong>
 			{#if data.source === 'fallback'}
@@ -124,13 +227,72 @@
 					{view.degradedFrom} view unavailable
 				</Badge>
 			{/if}
+			{#if data.viewDropped?.length}
+				<!-- The declared block lost part of itself on the way in. Saying so
+				     is the same rule as `degradedFrom`: a half-applied declaration
+				     renders as a working one. -->
+				<Badge
+					tone="warn"
+					outline
+					count={data.viewDropped.length}
+					title="Dropped from the view block (unknown column, op or action): {data.viewDropped.join(
+						', '
+					)}"
+				>
+					dropped
+				</Badge>
+			{/if}
 			<span class="spacer"></span>
 			{#if data.canWrite}
 				<button class="add" onclick={() => open(null)}>＋ Add row</button>
 			{/if}
 		</header>
 
-		{#if rows.length === 0}
+		<!-- ── FACETS — two levels, outer→inner ─────────────────────────────── -->
+		{#if view.facets.length}
+			<div class="facets">
+				{#each view.facets as f, level (f.key)}
+					{@const opts = optionsFor(level, f.key)}
+					<label class="facet">
+						<span class="facet-label">{f.label}</span>
+						<select bind:value={picked[f.key]}>
+							<option value="">All ({upTo(level).length})</option>
+							{#each opts as [value, n] (value)}
+								<option {value}>{value} ({n})</option>
+							{/each}
+						</select>
+					</label>
+				{/each}
+				{#if Object.values(picked).some(Boolean)}
+					<button class="edit" onclick={() => (picked = {})}>clear</button>
+					<span class="when">{rows.length} of {ordered.length}</span>
+				{/if}
+			</div>
+		{/if}
+
+		<!-- ── HIGHLIGHTS — the fast navigation ─────────────────────────────── -->
+		{#if hits.length}
+			<nav class="highlights" aria-label="Key entries">
+				{#each hits as h (h.label)}
+					<button
+						class="hl"
+						type="button"
+						onclick={() => focusHighlight(h.rows[0])}
+						title="Jump to the first of {h.rows.length}: {heading(h.rows[0])}"
+					>
+						<Badge tone="info" count={h.rows.length}>{h.label}</Badge>
+					</button>
+				{/each}
+			</nav>
+		{/if}
+
+		{#if rows.length === 0 && ordered.length > 0}
+			<!-- Filtered to nothing is NOT an empty table, and rendering the same
+			     note for both is how a filter starts reading as missing data. -->
+			<StatusNote kind="empty">
+				No rows match this filter — {ordered.length} in the table.
+			</StatusNote>
+		{:else if rows.length === 0}
 			<StatusNote kind="empty">No rows.</StatusNote>
 
 			<!-- ── GRID ─────────────────────────────────────────────────────── -->
@@ -147,7 +309,7 @@
 					</thead>
 					<tbody>
 						{#each rows as row (row.id)}
-							<tr>
+							<tr id={rowDomId(row.id)} class:flash={flashed === String(row.id)}>
 								{#each gridCols as col (col.key)}
 									<td>{cell(row, col)}</td>
 								{/each}
@@ -168,7 +330,7 @@
 		{:else if view.style === 'blog'}
 			<div class="feed">
 				{#each rows as row (row.id)}
-					<article class="post">
+					<article class="post" id={rowDomId(row.id)} class:flash={flashed === String(row.id)}>
 						<h3>{heading(row)}</h3>
 						{#if view.meta.length || view.date}
 							<p class="meta">
@@ -193,7 +355,7 @@
 		{:else if view.style === 'timeline'}
 			<ol class="timeline">
 				{#each rows as row (row.id)}
-					<li>
+					<li id={rowDomId(row.id)} class:flash={flashed === String(row.id)}>
 						<span class="dot" aria-hidden="true"></span>
 						<div class="entry">
 							<p class="when">{view.date ? formatWhen(row[view.date.key]) : '—'}</p>
@@ -220,6 +382,8 @@
 				{#each rows as row (row.id)}
 					<button
 						class="tile"
+						id={rowDomId(row.id)}
+						class:flash={flashed === String(row.id)}
 						onclick={() => data?.canWrite && open(row)}
 						disabled={!data.canWrite}
 						type="button"
@@ -238,6 +402,27 @@
 					</button>
 				{/each}
 			</div>
+		{/if}
+
+		<!-- ── THE OFFER ────────────────────────────────────────────────────
+		     Anchored to the row it is about, inside the scrolling body — so it
+		     needs no z-band above the shell chrome, no scroll/drag/resize
+		     listeners, and it cannot outlive the surface that owns it.
+		     `role="status"` because it appears without the user asking. -->
+		{#if showOffer && offer}
+			<aside class="offer" style="top:{offerTop}px" role="status">
+				<span class="offer-text">{offer.label}</span>
+				<span class="offer-n">{offerRows.length}</span>
+				<button class="offer-go" type="button" onclick={() => focusHighlight(offerRow)}>
+					Show
+				</button>
+				<button
+					class="offer-x"
+					type="button"
+					aria-label="Dismiss suggestion"
+					onclick={() => (dismissed = true)}>✕</button
+				>
+			</aside>
 		{/if}
 	</div>
 
@@ -263,6 +448,113 @@
 		flex-direction: column;
 		gap: 10px;
 		font-size: 13px;
+		/* The offer's offsetParent. Nothing else depends on it. */
+		position: relative;
+	}
+
+	/* ── facets + highlights + offer ───────────────────────────────────── */
+	.facets {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px;
+	}
+	.facet {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+	.facet-label {
+		color: var(--muted, #9aa4b2);
+		font-size: 11px;
+	}
+	.facet select {
+		background: rgba(255, 255, 255, 0.06);
+		color: var(--fg, #e8ecf3);
+		border: 1px solid var(--glass-brd, rgba(255, 255, 255, 0.1));
+		border-radius: 7px;
+		padding: 3px 7px;
+		font: inherit;
+		font-size: 12px;
+	}
+	.highlights {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+	.hl {
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		font: inherit;
+	}
+	.hl:focus-visible {
+		outline: 2px solid rgba(90, 150, 255, 0.8);
+		outline-offset: 2px;
+		border-radius: 999px;
+	}
+	.offer {
+		position: absolute;
+		right: 0;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		max-width: min(340px, 90%);
+		padding: 7px 9px;
+		border-radius: 10px;
+		background: rgba(24, 30, 42, 0.92);
+		border: 1px solid rgba(90, 150, 255, 0.35);
+		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+		font-size: 12px;
+		backdrop-filter: blur(6px);
+	}
+	.offer-text {
+		overflow-wrap: anywhere;
+	}
+	.offer-n {
+		flex: none;
+		color: var(--muted, #9aa4b2);
+		font-variant-numeric: tabular-nums;
+	}
+	.offer-go {
+		flex: none;
+		background: rgba(90, 150, 255, 0.85);
+		color: #fff;
+		border: none;
+		border-radius: 7px;
+		padding: 3px 10px;
+		font: inherit;
+		font-size: 11px;
+		cursor: pointer;
+	}
+	.offer-x {
+		flex: none;
+		background: none;
+		border: none;
+		color: var(--muted, #9aa4b2);
+		cursor: pointer;
+		font-size: 12px;
+		line-height: 1;
+	}
+	/* The landing mark. `focus-highlight` scrolls; without this the row it
+	   scrolled to is indistinguishable from the four around it. */
+	.flash {
+		animation: flash 1.6s ease-out;
+	}
+	@keyframes flash {
+		from {
+			background: rgba(90, 150, 255, 0.22);
+		}
+		to {
+			background: transparent;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.flash {
+			animation: none;
+			outline: 2px solid rgba(90, 150, 255, 0.7);
+		}
 	}
 	.dt-head {
 		display: flex;

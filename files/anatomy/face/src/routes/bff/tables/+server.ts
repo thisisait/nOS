@@ -20,6 +20,7 @@ import {
 } from '$lib/server/upstream';
 import { canWriteTables } from '$lib/security/tier';
 import { toTableSummaries, type TableSummary } from '$lib/tables/summary';
+import { narrowView } from '$lib/tables/view';
 import type { DataTable, DataTableRow, ColumnSpec } from '$lib/contracts';
 import { FACE_LAYOUTS, FACE_WALLPAPERS, FACE_CONTROLS } from '$lib/server/defaults';
 
@@ -184,7 +185,19 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 				if (cols.length > 0) table.columns = cols;
 				// The render style rides the same def fetch — one call, and a
 				// table that declares no style simply has no key.
-				if (def && typeof def === 'object' && def.view) table.view = def.view;
+				//
+				// NARROWED, not assigned. This is the ONE seam where a view block
+				// enters the shell, so an author's block and a model's proposal
+				// pass the same check: a facet or predicate naming a column this
+				// table does not have is dropped whole and reported, never
+				// coerced. Narrowing against `table.columns` — the columns that
+				// were just resolved above — is the point; the block and the
+				// schema it renders come from the same fetch.
+				if (def && typeof def === 'object' && def.view) {
+					const { view, dropped } = narrowView(def.view, table.columns);
+					if (view) table.view = view;
+					if (dropped.length) table.viewDropped = dropped;
+				}
 			} catch {
 				/* keep fallback columns */
 			}

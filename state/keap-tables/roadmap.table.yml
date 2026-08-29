@@ -141,3 +141,68 @@ schema:
 
     # ── the cortex ───────────────────────────────────────────────────────────
     - { key: anchor,      label: "Anchor",       kind: taxonomyRef, role: dimension, concept: graph.anchor }
+
+# =============================================================================
+# HOW IT ASKS TO BE RENDERED
+#
+# The whole reason `view` lives on the TABLE and not in a client: three
+# renderers (the Svelte face today, a native one later, whatever reads
+# /agent/v1/tables/:slug) inherit this one declaration and each decides for
+# itself whether a facet is a <select>, a segmented control or an NSPopUpButton.
+# Nothing below names a pixel, a chip or a component.
+#
+# NO MODEL IS INVOLVED, AND THAT IS THE POINT. The generative path exists
+# (`buildViewProposalPrompt` in the face) and it is DESIGN-TIME: a model may
+# propose a block for a table nobody has authored one for, an operator reads it
+# and pastes it here. For THIS table the answer was already in the columns —
+# `status` is a claim and `verified` is an observation, and the pair that
+# disagrees is what the header of this file has said since it was written. A
+# model call on every open, to re-derive four lines of YAML, would be slower,
+# non-deterministic, and no more correct.
+#
+# WHY THESE TWO FACETS AND NOT THE OBVIOUS ONES. `track` (122/122 rows, 7
+# values) and `status` (122/122, 11 declared) are the only columns dense enough
+# to filter by. `severity` and `effort` are populated on ONE row each and `kind`
+# on 13 — a filter keyed on them renders a control that empties the list, which
+# reads as a broken table rather than as a filter that found nothing.
+view:
+  style: timeline
+  titleColumn: title
+  # `target` is the intention. A shipped row carries `occurred_at` instead and
+  # sinks to the bottom rather than vanishing — `orderRows` never drops a row.
+  dateColumn: target
+  metaColumns: [status, track, release]
+  facets: [track, status]
+
+  highlights:
+    # The row this table exists to make findable. Not a heuristic — it is the
+    # thesis in this file's own header: "a row whose status says done and whose
+    # verified says contradicted is the most useful row this table can hold".
+    - label: "claimed done, probe disagrees"
+      when:
+        - { column: status,   op: eq, value: shipped }
+        - { column: verified, op: eq, value: contradicted }
+    # Work in flight, which is the other question an operator opens this for.
+    - label: "in flight"
+      when:
+        - { column: status, op: eq, value: doing }
+    # Blocked work is the one state that does not resolve itself by waiting.
+    - label: "blocked"
+      when:
+        - { column: status, op: eq, value: blocked }
+    # The roots: what the tree hangs from, when the nesting is what you want.
+    - label: "top level"
+      when:
+        - { column: parent, op: eq, value: "" }
+
+  # ONE offer, and it navigates — it does not write. `focus-highlight` is the
+  # single member of the face's VIEW_ACTIONS catalog, which lives in code
+  # precisely so a table (or a model filling this block) can say WHICH of the
+  # things a renderer already does is worth doing, and can never teach it a new
+  # one. A renderer that does not implement this id refuses it and shows nothing.
+  offer:
+    label: "Rows here claim to be done while a probe disagrees."
+    action: focus-highlight
+    when:
+      - { column: status,   op: eq, value: shipped }
+      - { column: verified, op: eq, value: contradicted }

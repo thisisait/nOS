@@ -18,7 +18,6 @@ import type {
 	DataTable,
 	DataTableRow,
 	HighlightSpec,
-	OfferSpec,
 	RowOp,
 	RowPredicate,
 	TableView
@@ -48,7 +47,11 @@ const ROW_OPS: readonly RowOp[] = ['eq', 'neq', 'lt', 'lte', 'gt', 'gte', 'conta
 const MAX_FACETS = 2;
 const MAX_HIGHLIGHTS = 4;
 const MAX_PREDICATES = 4;
+/** A highlight label is a chip. An offer label is a sentence. The two limits
+ *  match KEAP's `highlightSpecSchema` / `offerSpecSchema` — a cap that is
+ *  tighter here would truncate, at render, a label the store accepted. */
 const MAX_LABEL = 48;
+const MAX_OFFER_LABEL = 120;
 
 export interface ResolvedHighlight {
 	label: string;
@@ -150,8 +153,237 @@ export function resolveView(table: DataTable): ResolvedView {
 		date,
 		media,
 		meta,
+		facets,
+		highlights,
+		offer,
 		...(degraded ? { degradedFrom: degraded } : {})
 	};
+}
+
+// ── The trust boundary ───────────────────────────────────────────────────────
+//
+// ONE DOOR. `narrowView` is called at the single seam where a view block enters
+// the shell (`routes/bff/tables/+server.ts`), so a block authored in KEAP and a
+// block proposed by a model arrive through the same check. That is the only
+// reason this is a boundary and not a decoration: a second, gentler entrance
+// makes the first one advice.
+//
+// REFUSE, DO NOT REPAIR. A predicate naming an unknown column or an unknown op
+// is dropped WHOLE and named in `dropped`; it is never coerced, never partially
+// kept. Coercion is how untrusted input starts steering: a repaired predicate
+// still filters rows, just not the ones anybody declared.
+//
+// WHAT A MODEL MAY INFLUENCE: which existing column a facet or predicate names,
+// which of the seven ops, a scalar value, a label string, which action id from
+// VIEW_ACTIONS, the order of highlights.
+// WHAT IT MAY NEVER PRODUCE: a column that is not in `columns`, an op outside
+// the enum, an action not in VIEW_ACTIONS, a URL, a command, markup, a style,
+// or more than the caps above. Labels render through Svelte's `{expr}`; there
+// is no sanitiser in this shell and there must not need to be.
+
+const str = (v: unknown, max = MAX_LABEL): string | null =>
+	typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null;
+
+function narrowPredicate(raw: unknown, keys: Set<string>): RowPredicate | null {
+	if (!raw || typeof raw !== 'object') return null;
+	const p = raw as Record<string, unknown>;
+	const column = typeof p.column === 'string' ? p.column : '';
+	const op = typeof p.op === 'string' ? p.op : '';
+	const value = p.value;
+	if (!keys.has(column)) return null;
+	if (!(ROW_OPS as readonly string[]).includes(op)) return null;
+	// Scalars only. An object value is the shape that could carry markup, and a
+	// null one makes `contains` mean something different from `eq`.
+	if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
+		return null;
+	}
+	return {
+		column,
+		op: op as RowOp,
+		value: typeof value === 'string' ? value.slice(0, 256) : value
+	};
+}
+
+/**
+ * Narrow an untrusted `view` block to what these columns can actually render.
+ *
+ * Returns the surviving block plus what was thrown away. `dropped` is not
+ * diagnostics — it reaches the header as a warn badge, for the same reason
+ * `degradedFrom` does: a block that silently lost half of itself renders as a
+ * working one.
+ */
+export function narrowView(
+	raw: unknown,
+	columns: ColumnSpec[]
+): { view: TableView | undefined; dropped: string[] } {
+	const dropped: string[] = [];
+	if (!raw || typeof raw !== 'object') return { view: undefined, dropped };
+	const v = raw as Record<string, unknown>;
+	const keys = new Set(columns.map((c) => c.key));
+
+	// The five original keys are passed through untouched: `resolveView` already
+	// resolves an unknown column to null and degrades the style, and that
+	// behaviour predates this function. Narrowing them here would change what a
+	// KEAP-authored block does today for no gain.
+	const out: TableView = {
+		style: (['grid', 'blog', 'timeline', 'tiles'] as const).includes(v.style as ResolvedStyle)
+			? (v.style as ResolvedStyle)
+			: 'grid',
+		...(typeof v.titleColumn === 'string' ? { titleColumn: v.titleColumn } : {}),
+		...(typeof v.bodyColumn === 'string' ? { bodyColumn: v.bodyColumn } : {}),
+		...(typeof v.dateColumn === 'string' ? { dateColumn: v.dateColumn } : {}),
+		...(typeof v.mediaColumn === 'string' ? { mediaColumn: v.mediaColumn } : {}),
+		...(Array.isArray(v.metaColumns)
+			? { metaColumns: v.metaColumns.filter((c): c is string => typeof c === 'string').slice(0, 4) }
+			: {})
+	};
+	if (v.style !== undefined && out.style !== v.style) dropped.push(`style:${String(v.style)}`);
+
+	if (Array.isArray(v.facets)) {
+		const facets: string[] = [];
+		for (const f of v.facets) {
+			if (typeof f !== 'string' || !keys.has(f)) dropped.push(`facet:${String(f)}`);
+			else if (facets.length >= MAX_FACETS) dropped.push(`facet:${f} (over ${MAX_FACETS})`);
+			else facets.push(f);
+		}
+		if (facets.length) out.facets = facets;
+	}
+
+	if (Array.isArray(v.highlights)) {
+		const highlights: HighlightSpec[] = [];
+		for (const h of v.highlights) {
+			const spec = h as Record<string, unknown>;
+			const label = str(spec?.label);
+			const when = Array.isArray(spec?.when)
+				? spec.when.slice(0, MAX_PREDICATES).map((p) => narrowPredicate(p, keys))
+				: [];
+			// One bad predicate voids the whole highlight. A partially applied AND
+			// selects a DIFFERENT set of rows and labels it with the author's words.
+			if (!label || !when.length || when.some((p) => p === null)) {
+				dropped.push(`highlight:${label ?? '?'}`);
+			} else if (highlights.length >= MAX_HIGHLIGHTS) {
+				dropped.push(`highlight:${label} (over ${MAX_HIGHLIGHTS})`);
+			} else {
+				highlights.push({ label, when: when as RowPredicate[] });
+			}
+		}
+		if (highlights.length) out.highlights = highlights;
+	}
+
+	if (v.offer && typeof v.offer === 'object') {
+		const o = v.offer as Record<string, unknown>;
+		const label = str(o.label, MAX_OFFER_LABEL);
+		const action = typeof o.action === 'string' ? o.action : '';
+		const when = Array.isArray(o.when)
+			? o.when.slice(0, MAX_PREDICATES).map((p) => narrowPredicate(p, keys))
+			: [];
+		if (
+			label &&
+			(VIEW_ACTIONS as readonly string[]).includes(action) &&
+			when.length &&
+			!when.some((p) => p === null)
+		) {
+			out.offer = { label, action, when: when as RowPredicate[] };
+		} else {
+			dropped.push(`offer:${action || '?'}`);
+		}
+	}
+
+	return { view: out, dropped };
+}
+
+// ── Predicates over rows ─────────────────────────────────────────────────────
+
+/** One predicate against one row. Comparison is on the cell's own type where
+ *  both sides are numbers, and on lowercased strings otherwise — a `select`
+ *  column holds strings and an author writing `shipped` means `Shipped` too. */
+export function matchPredicate(row: DataTableRow, p: RowPredicate): boolean {
+	const cell = row[p.column];
+	if (typeof cell === 'number' && typeof p.value === 'number') {
+		switch (p.op) {
+			case 'eq':
+				return cell === p.value;
+			case 'neq':
+				return cell !== p.value;
+			case 'lt':
+				return cell < p.value;
+			case 'lte':
+				return cell <= p.value;
+			case 'gt':
+				return cell > p.value;
+			case 'gte':
+				return cell >= p.value;
+			case 'contains':
+				return String(cell).includes(String(p.value));
+		}
+	}
+	// An absent cell is the empty string, so `{op: eq, value: ""}` is how a
+	// declaration asks for "this row has no parent" — the roadmap's roots.
+	const a = (cell === null || cell === undefined ? '' : String(cell)).toLowerCase();
+	const b = String(p.value).toLowerCase();
+	switch (p.op) {
+		case 'eq':
+			return a === b;
+		case 'neq':
+			return a !== b;
+		case 'lt':
+			return a < b;
+		case 'lte':
+			return a <= b;
+		case 'gt':
+			return a > b;
+		case 'gte':
+			return a >= b;
+		case 'contains':
+			return b !== '' && a.includes(b);
+	}
+}
+
+/** Every predicate must hold (AND). An empty list matches nothing, never
+ *  everything — `narrowView` refuses one, and a bug that produced one must not
+ *  silently select the whole table. */
+export const matchRow = (row: DataTableRow, when: RowPredicate[]): boolean =>
+	when.length > 0 && when.every((p) => matchPredicate(row, p));
+
+// ── The generative half ──────────────────────────────────────────────────────
+
+/**
+ * Prompt a local model to PROPOSE a view block for a table that has none.
+ *
+ * DESIGN-TIME, NOT REQUEST-TIME, and that is the whole judgement here. For the
+ * roadmap the answer is already in the columns — `status` says what someone
+ * CLAIMS and `verified` says what a PROBE OBSERVED, so "shipped AND
+ * contradicted" is the most useful row class the table can hold, and it is four
+ * lines of YAML rather than a model call on every open. A model that fills a
+ * contract nobody has proven useful is a fill for an empty form.
+ *
+ * So the loop is: `ask(buildViewProposalPrompt(t))` → `narrowView(JSON.parse(…))`
+ * → the operator reads the surviving block and pastes it into the table's
+ * `.table.yml`, where it is reviewable, diffable and identical for every
+ * renderer. Same parser, same caps, same door as an authored block — which is
+ * why there is no second code path here, and no cache, and no BFF route.
+ */
+export function buildViewProposalPrompt(table: DataTable): string {
+	const cols = (table.columns ?? [])
+		.filter((c) => c.kind !== 'vector')
+		.map((c) => `${c.key} (${c.kind}${c.options?.length ? `: ${c.options.join('|')}` : ''})`)
+		.join('\n');
+	return [
+		`Table "${table.title}" has these columns:`,
+		cols,
+		'',
+		`Propose a JSON view block. Reply with JSON ONLY, no prose, no code fence:`,
+		`{"style":"grid|blog|timeline|tiles","titleColumn":"…","dateColumn":"…",`,
+		` "facets":["col","col"],`,
+		` "highlights":[{"label":"…","when":[{"column":"…","op":"eq|neq|lt|lte|gt|gte|contains","value":"…"}]}],`,
+		` "offer":{"label":"…","action":"${VIEW_ACTIONS[0]}","when":[…]}}`,
+		'',
+		`Rules: every "column" MUST be one of the keys listed above.`,
+		`At most ${MAX_FACETS} facets (low-cardinality dimensions), ${MAX_HIGHLIGHTS} highlights.`,
+		`A highlight names rows an operator would want to jump to — prefer a pair of`,
+		`columns that can DISAGREE (a claim beside an observation) over a single status.`,
+		`"action" must be exactly one of: ${VIEW_ACTIONS.join(', ')}.`
+	].join('\n');
 }
 
 /** Rows in the order the style wants them. Only timeline reorders; every other

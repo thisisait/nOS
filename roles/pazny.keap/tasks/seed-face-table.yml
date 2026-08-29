@@ -46,6 +46,13 @@
       visibility: "{{ _face_tbl.def.visibility | default('tier-users') }}"
       anchors: "{{ _face_tbl.def.anchors | default([]) }}"
       columns: "{{ _face_tbl.def.schema.columns }}"
+      # Render metadata (style / facets / highlights / offer). `omit` rather than
+      # `{}`: KEAP preserves a card's prior view block when the key is absent, so
+      # a table that never declared one must send nothing rather than an empty
+      # object that would overwrite it. Added 2026-08-28 with the two KEAP-side
+      # halves — before all three, a `view:` in the definition file validated in
+      # git and reached no converged install, silently.
+      view: "{{ _face_tbl.def.view | default(omit) }}"
     # 409 = the definition asks for something destructive (a dropped column or a
     # changed kind). That is an AUTHORING error in the .table.yml, not a
     # transient — it is surfaced by the next task rather than silently tolerated.

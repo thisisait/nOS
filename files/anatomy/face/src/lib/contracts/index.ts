@@ -218,6 +218,10 @@ export interface DataTable {
 	 *  client — a `research` column holding paragraphs is unreadable in a
 	 *  nowrap grid, and that is knowable once rather than per surface. */
 	view?: TableView;
+	/** What `narrowView` threw away from the declared block, server-side. Reaches
+	 *  the header as a warn badge — a block that quietly lost half of itself
+	 *  renders as a working one. Empty/absent = nothing was dropped. */
+	viewDropped?: string[];
 }
 
 /** The comparison vocabulary. Not invented here — it is KEAP's `filterOpSchema`
