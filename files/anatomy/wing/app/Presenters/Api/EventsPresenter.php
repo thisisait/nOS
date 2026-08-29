@@ -165,6 +165,37 @@ final class EventsPresenter extends BaseApiPresenter
 		if ($missing) {
 			$this->sendError('Missing required field(s): ' . implode(', ', $missing), 400);
 		}
+		// A REPORT WITH NOWHERE TO PUT ITS BODY IS REFUSED, NOT ACCEPTED.
+		//
+		// Measured 2026-08-29, session be9d107f: the librarian did the work —
+		// four brief proposals POSTed to KEAP — then filed its report twice,
+		// got 201 both times, and both rows stored `length(result_json) = 0`.
+		// It had put the markdown under `body`; two other calls wrapped the
+		// whole thing in `event`. With `result` and `result_json` that is FOUR
+		// spellings for one field, and adding a fourth alias only teaches the
+		// next model that a fifth would be fine.
+		//
+		// So the door refuses instead. A 201 that stores nothing is the
+		// success marker written by the thing that failed — the defect this
+		// estate is named after — and the agent demonstrably acts on a 400: it
+		// read "Missing required field(s)" and fixed the fields on its retry.
+		if ($payload['type'] === 'conductor_report') {
+			$hasBody = false;
+			foreach (['result', 'result_json'] as $key) {
+				if (isset($payload[$key]) && is_array($payload[$key]) && $payload[$key] !== []) {
+					$hasBody = true;
+				}
+			}
+			if (!$hasBody) {
+				$this->sendError(
+					'a conductor_report must carry its body in `result_json` (or `result`) '
+					. 'as an object — e.g. {"result_json": {"report_markdown": "…"}}. '
+					. 'Fields outside those two are not stored, so this report would have '
+					. 'been recorded empty.',
+					400,
+				);
+			}
+		}
 		if (!in_array($payload['type'], EventRepository::VALID_TYPES, true)) {
 			$this->sendError("Unknown event type: {$payload['type']}", 400);
 		}

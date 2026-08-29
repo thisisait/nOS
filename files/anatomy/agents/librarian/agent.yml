@@ -195,7 +195,9 @@ pulse:
              per run; anchor-core refusals are final, anchor shallow).
           6. POST your "## Librarian report" (add "Proposals" +
              "Taxonomy" sections)
-             via Wing /api/v1/events type=conductor_report source=librarian.
+             via Wing /api/v1/events type=conductor_report source=librarian,
+             with the full markdown in result_json.report_markdown — a body
+             under any other key is refused rather than stored empty.
           End the report with a final line `NOS_AGENT_EXIT: N` (the runner
           reads this — a bare exit code is NOT propagated): 1 when any
           duplicate/contradiction verdict was issued (the operator must
@@ -250,7 +252,11 @@ pulse:
              report per-item errors verbatim.
           4. POST your "## Librarian report" (sections Summary — batch
              size, proposed, errors, remaining total — and Taxonomy)
-             via Wing /api/v1/events type=conductor_report source=librarian.
+             via Wing /api/v1/events type=conductor_report source=librarian,
+             with the full markdown in result_json.report_markdown. That
+             field name is not a suggestion: a body under any other key is
+             refused, because a report the door cannot store would be
+             recorded empty (measured 2026-08-29, session be9d107f).
           End the report with a final line `NOS_AGENT_EXIT: 0` (the runner
           reads this — a bare exit code is NOT propagated). Proposals await
           the moderator, but that is the normal outcome — do NOT escalate;
@@ -296,7 +302,11 @@ pulse:
              batch; report per-item errors verbatim.
           4. POST your "## Librarian report" (sections Summary — batch
              size, proposed, errors, remaining total — and Taxonomy)
-             via Wing /api/v1/events type=conductor_report source=librarian.
+             via Wing /api/v1/events type=conductor_report source=librarian,
+             with the full markdown in result_json.report_markdown. That
+             field name is not a suggestion: a body under any other key is
+             refused, because a report the door cannot store would be
+             recorded empty (measured 2026-08-29, session be9d107f).
           End the report with a final line `NOS_AGENT_EXIT: 0` (the runner
           reads this — a bare exit code is NOT propagated). Proposals await
           the moderator, but that is the normal outcome — do NOT escalate;

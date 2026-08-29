@@ -143,6 +143,10 @@ pulse:
           3. GET /api/v1/pulse_jobs from Wing — verify nightly-scan is registered.
           4. GET /api/v1/events?source=conductor&limit=5 — show my last 5 runs.
           5. Report: summary table of findings + job catalog + event history.
+             FILE IT: POST to /api/v1/events type=conductor_report
+             source=conductor, with the full markdown in
+             result_json.report_markdown. A body under any other key is
+             refused rather than stored empty (2026-08-29, be9d107f).
           Exit 0 if all checks passed. Exit 1 if any check failed or findings need attention.
         WING_API_URL: "http://127.0.0.1:9000"
         WING_API_TOKEN: "{{ conductor_wing_api_token }}"
