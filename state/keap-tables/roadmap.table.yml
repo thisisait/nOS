@@ -183,9 +183,15 @@ view:
         - { column: status,   op: eq, value: shipped }
         - { column: verified, op: eq, value: contradicted }
     # Work in flight, which is the other question an operator opens this for.
+    # `active`, NOT `doing`, and the difference cost a measurement: the options
+    # list above declares BOTH (see its own comment — the last three values are
+    # the live board, added after the fact), and `tools/roadmap-seed.py` writes
+    # `active`. Authored against the declaration alone, this highlight matched
+    # 0 of 122 rows and rendered as nothing — a navigation aid that is absent is
+    # indistinguishable from one whose class is empty.
     - label: "in flight"
       when:
-        - { column: status, op: eq, value: doing }
+        - { column: status, op: eq, value: active }
     # Blocked work is the one state that does not resolve itself by waiting.
     - label: "blocked"
       when:
