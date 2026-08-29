@@ -1,0 +1,48 @@
+# =============================================================================
+# KEAP DataTable definition — "Loop configuration"
+#
+# The operator-config table for the agentic loop. One row today:
+# `harness_proposals_enabled`, default OFF (state/fixtures/loop-config.seed.yml).
+#
+# WHY A DATATABLE AND NOT A default.config.yml FLAG. Operator answer 2026-08-28:
+# configuration belongs in KEAP DataTables with fixtures committed in the repo.
+# None of the fifteen existing definitions is an operator-config table —
+# `controls` is the face icon grid — so this is the first, and it is deliberately
+# tiny: a slug, a name, a boolean, and a note saying who reads it.
+#
+# WHY IT IS ON THE DENYLIST. The row it holds decides whether the loop may
+# propose changes to the apparatus that judges it (`harness`, declared and
+# refused in files/anatomy/bone/ledger.py). A permission a system can grant
+# itself is not a permission, so this file, its fixture, and the row address
+# `(loop-config, harness_proposals_enabled)` are named in §5.2 of
+# docs/idea/11-agentic-loop-contract.md and enforced by budget.ALWAYS_FORBIDDEN.
+# Gate: tests/anatomy/test_the_harness_toggle_defaults_off.py.
+#
+# WHY IT IS NOT SEEDED YET (UNSEEDED in test_keap_table_concepts.py). Nothing
+# reads the toggle — the ledger refuses `harness` unconditionally and says so.
+# Seeding the row would put a switch in front of the operator that flips
+# nothing, which is the fabricated-affordance shape this estate keeps paying
+# for. The repo fixture IS the value Wing /loop-editor renders; wiring the rows
+# through the playbook happens in the cycle that teaches the ledger to read it.
+# =============================================================================
+
+title: "Loop configuration"
+description: >-
+  Operator switches for the agentic loop. Committed default-OFF fixtures in the
+  repo are the source of truth; a row here is a decision the operator has taken,
+  never one the loop may take for itself.
+driver: libsql
+visibility: tier-managers
+anchors: ["nos.loop"]
+
+schema:
+  columns:
+    - { key: slug,        label: "Slug",        kind: text,    role: dimension, required: true, concept: identity.slug }
+    - { key: name,        label: "Name",        kind: text,    role: dimension, required: true, concept: identity.name }
+    - { key: description, label: "What it does", kind: text,   role: attribute, concept: identity.description }
+    # The value. `boolean` and not a select: a switch with three spellings of
+    # off is a switch nobody can gate on.
+    - { key: enabled,     label: "Enabled",     kind: boolean, role: dimension, concept: lifecycle.status }
+    # Who will read the row, named rather than assumed — a config row whose
+    # reader nobody can point at is how a toggle ends up half-armed.
+    - { key: read_by,     label: "Read by",     kind: text,    role: attribute, concept: prov.ref }

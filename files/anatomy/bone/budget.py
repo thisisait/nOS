@@ -144,6 +144,15 @@ ALWAYS_FORBIDDEN: tuple[Rule, ...] = (
     Rule("default.credentials.yml", "secrets", "§5.2"),
     Rule("credentials.yml", "secrets", "§5.2"),
     Rule("templates/secrets.yml.j2", "secrets", "§5.2"),
+    # Q7 addendum (operator, 2026-08-28), written rather than assumed: the
+    # harness-enhancement toggle governs whether `harness` proposals are ever
+    # accepted (DISABLED_INTENTS in ledger.py). A permission a system can grant
+    # itself is not a permission. Both halves of its KEAP home are named — the
+    # definition and the committed fixture holding the value — because either
+    # one, edited, moves the switch. Row address: (loop-config,
+    # harness_proposals_enabled).
+    Rule("state/keap-tables/loop-config.table.yml", "operator-consent", "§5.2"),
+    Rule("state/fixtures/loop-config.seed.yml", "operator-consent", "§5.2"),
 )
 
 

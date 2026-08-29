@@ -74,6 +74,8 @@
 			<a class="tab{if $activeTab === 'audit'} active{/if}" href="/audit" data-tab="audit">Audit <span class="tab-key">6</span></a>
 			<a class="tab{if $activeTab === 'pulse'} active{/if}" href="/pulse" data-tab="pulse">Pulse</a>
 			<a class="tab{if $activeTab === 'agents'} active{/if}" href="/agents" data-tab="agents">Agents <span class="tab-key">7</span></a>
+			{* /agents is what they DID; /loop-editor is what they are ALLOWED to do. *}
+			<a class="tab{if $activeTab === 'loop-editor'} active{/if}" href="/loop-editor" data-tab="loop-editor">Loop editor</a>
 		</div>
 
 		<div class="nav-overlay-group">

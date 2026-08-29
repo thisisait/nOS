@@ -246,6 +246,11 @@ final class RouterFactory
 		// answered, and a second decision path is a second thing to audit.
 		$router->addRoute('questions', 'Questions:default');
 
+		// Q6 (2026-08-28): every agent's harness, read-only — you cannot
+		// consent to what you cannot see. No verb routes: an editor that
+		// WRITES the harness is the `harness` proposal kind wearing a browser.
+		$router->addRoute('loop-editor', 'LoopEditor:default');
+
 		// A10.c / X.1.c (2026-05-08): actor-attributed event browser.
 		// Phase 5 ceremony pass criterion uses this view to verify the
 		// conductor self-test produced rows with actor_id=conductor.

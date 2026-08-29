@@ -190,6 +190,13 @@ def test_declared_concepts_exist_in_the_vendored_vocabulary():
 UNSEEDED = {
     "apps": "fed by the app generator, not the playbook seeder — wiring it is a decision",
     "systems": "fed by the service registry — same",
+    "loop-config": "the one row (harness_proposals_enabled) has NO READER — "
+                   "ledger.py refuses `harness` unconditionally. Seeding it puts "
+                   "a flippable switch in front of the operator that changes "
+                   "nothing, which is the fabricated-affordance shape this estate "
+                   "keeps paying for. The committed fixture is the value Wing "
+                   "/loop-editor renders; wiring the rows through the playbook "
+                   "belongs to the cycle that teaches the ledger to read it.",
     "roadmap": "rows come from tools/roadmap-seed.py, not the playbook seeder — "
                "same split as apps and systems. The DEFINITION is git-owned here; "
                "wiring the rows through the playbook is a decision, not an oversight.",

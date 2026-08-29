@@ -481,6 +481,12 @@ For each judge in the set, its **oracle paths** are forbidden:
 - `roles/pazny.traefik/vars/main.yml` — the skip list and auth modes.
 - **Secrets:** `default.credentials.yml`, `credentials.yml`, `~/.nos/secrets.yml`,
   and anything outside the repo root.
+- **The harness-enhancement toggle** (Q7 addendum, operator 2026-08-28):
+  `state/keap-tables/loop-config.table.yml` and `state/fixtures/loop-config.seed.yml`,
+  which together hold row `(loop-config, harness_proposals_enabled)` — the switch
+  that will one day decide whether a `harness` proposal is accepted at all.
+  *The loop may not propose enabling its own harness editing. A permission a
+  system can grant itself is not a permission.*
 
 ### 5.3 Allowed roots (still subject to every deny above)
 

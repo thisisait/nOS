@@ -1,0 +1,22 @@
+# =============================================================================
+# Loop configuration — SEED ROWS (committed default, repo is the source of truth)
+#
+# Definition: state/keap-tables/loop-config.table.yml.
+# Rendered read-only by Wing /loop-editor; NOT seeded into KEAP yet, and the
+# definition's header says why (nothing reads the toggle, so a flippable row
+# would be an affordance that does nothing).
+#
+# `enabled: false` is the shipped answer, not a placeholder. With it off the
+# loop behaves exactly as it did before this file existed — which is the whole
+# reason shipping the surface ahead of the `harness` proposal kind is safe.
+# =============================================================================
+
+loop-config:
+  - slug: harness_proposals_enabled
+    name: "Harness proposals"
+    description: >-
+      Whether the loop may propose changes to the apparatus it is judged BY —
+      agent definitions, prompts, tool rosters, gate sets — rather than to the
+      estate it is judged ON.
+    enabled: false
+    read_by: "nobody yet — files/anatomy/bone/ledger.py refuses `harness` unconditionally (DISABLED_INTENTS)"

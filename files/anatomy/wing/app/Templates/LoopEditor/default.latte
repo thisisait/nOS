@@ -1,0 +1,134 @@
+{block title}Loop editor{/block}
+
+{block content}
+<h2 style="margin-bottom:4px; font-size:18px;">Loop editor</h2>
+<div style="color:var(--text2); font-size:13px; margin-bottom:20px;">
+	Every agent's <strong>harness</strong> — the definition, the system prompt, the tool
+	roster, the measured write grants, the gate set it is judged by. Read-only, and it
+	stays read-only: an editor that writes the harness is the <code>harness</code> proposal
+	kind wearing a browser. This page exists so consent is possible before a switch is
+	thrown, not to throw one.
+</div>
+
+{if $repoRoot === ''}
+	<div class="badge badge-warning" style="margin-bottom:20px;">
+		NOS_REPO_ROOT is unset — the harness is UNREADABLE from here. That is not the same
+		fact as "no agents"; nothing below could be read.
+	</div>
+{/if}
+
+{* ── the toggle ──────────────────────────────────────────────────────────── *}
+<h3 style="font-size:15px; margin-bottom:10px;">Harness enhancement</h3>
+<table style="margin-bottom:8px;">
+	<thead><tr><th>Toggle</th><th>State</th><th>Address</th><th>Source</th></tr></thead>
+	<tbody>
+		<tr>
+			<td style="font-size:12px;">{$toggle['row']['name'] ?? 'harness_proposals_enabled'}</td>
+			<td>
+				{if !$toggle['found']}
+					<span class="badge badge-warning">UNKNOWN — row not found</span>
+				{elseif $toggle['enabled']}
+					<span class="badge badge-critical">ON</span>
+				{else}
+					<span class="badge">OFF</span>
+				{/if}
+			</td>
+			<td style="font-size:11px; color:var(--text2)">{$toggleAddress}</td>
+			<td style="font-size:11px; color:var(--text2)">{$toggle['path']}</td>
+		</tr>
+	</tbody>
+</table>
+<div style="color:var(--text2); font-size:12px; margin-bottom:24px;">
+	{if $toggle['found']}{$toggle['row']['description'] ?? ''}{/if}
+	The committed fixture is the value; there is no control here because the loop may not
+	propose a change to it and neither may a browser session — the toggle's paths are on
+	the denylist floor (docs/idea/11-agentic-loop-contract.md §5.2). A permission a system can grant itself is not a permission.
+</div>
+
+{* ── Q6 seam (3): the intent classes, disabled ones marked ───────────────── *}
+<h3 style="font-size:15px; margin-bottom:10px;">Proposal intent classes</h3>
+{if count($intents['classes']) === 0}
+	<div class="badge badge-warning" style="margin-bottom:24px;">
+		UNKNOWN — could not read the enum from {$intents['source']}. Not "no intent classes".
+	</div>
+{else}
+	<table style="margin-bottom:8px;">
+		<thead><tr><th>Intent</th><th>Accepted?</th></tr></thead>
+		<tbody>
+			{foreach $intents['classes'] as $i}
+				<tr>
+					<td style="font-size:12px;"><code>{$i['name']}</code></td>
+					<td style="font-size:11px;">
+						{if $i['disabled']}
+							<span class="badge badge-warning">refused</span>
+							{if $intents['toggleNote']}<span style="color:var(--text2)"> — governed by {$intents['toggleNote']}</span>{/if}
+						{else}
+							accepted
+						{/if}
+					</td>
+				</tr>
+			{/foreach}
+		</tbody>
+	</table>
+	<div style="color:var(--text2); font-size:11px; margin-bottom:24px;">
+		Read from {$intents['source']} at render time, not restated here — a second copy of a
+		closed enum is the copy that drifts.
+	</div>
+{/if}
+
+{* ── the harnesses ───────────────────────────────────────────────────────── *}
+<h3 style="font-size:15px; margin-bottom:10px;">Harnesses ({count($harnesses)})</h3>
+{if count($harnesses) === 0}
+	<div style="color:var(--text2); font-size:13px;">
+		No agent definition was readable{if $repoRoot === ''} — see the unset repo root above{/if}.
+	</div>
+{else}
+	{foreach $harnesses as $h}
+		<details style="margin-bottom:14px; border:1px solid var(--border, #333); padding:10px;">
+			<summary style="cursor:pointer; font-size:14px;">
+				<strong>{$h['name']}</strong>
+				<span style="color:var(--text2); font-size:11px;">
+					gateset {$h['gateset'] ?? '—'}
+					· {count($h['tools'])} tool{if count($h['tools']) !== 1}s{/if}
+					· {count($h['capabilities'])} capabilit{if count($h['capabilities']) !== 1}ies{else}y{/if}
+					{if $h['runnerStatus']} · runner {$h['runnerStatus']}{/if}
+				</span>
+			</summary>
+
+			<div style="font-size:12px; margin:10px 0;">
+				<strong>Tools:</strong>
+				{if count($h['tools']) === 0}<span style="color:var(--text2)">none declared</span>
+				{else}{implode(', ', $h['tools'])}{/if}
+			</div>
+			<div style="font-size:12px; margin:10px 0;">
+				<strong>Capabilities:</strong>
+				{if count($h['capabilities']) === 0}<span style="color:var(--text2)">none declared</span>
+				{else}{implode(', ', $h['capabilities'])}{/if}
+			</div>
+			<div style="font-size:12px; margin:10px 0;">
+				<strong>Measured write grants:</strong>
+				{if $h['grants'] === null}
+					<span class="badge badge-warning">UNKNOWN — grants artifact unreadable</span>
+				{elseif count($h['grants']) === 0}
+					<span style="color:var(--text2)">none — no write this agent made was grandfathered</span>
+				{else}
+					{implode(', ', $h['grants'])}
+				{/if}
+			</div>
+
+			<div style="font-size:12px; margin-top:12px;">
+				<strong>agent.yml</strong>
+				{if !$h['agentYmlParsed']}<span class="badge badge-warning">did not parse</span>{/if}
+			</div>
+			<pre style="max-height:340px; overflow:auto; font-size:11px;">{$h['agentYml']}</pre>
+
+			<div style="font-size:12px; margin-top:12px;"><strong>{$h['systemPromptPath']}</strong></div>
+			{if $h['systemPrompt'] === null}
+				<div class="badge badge-warning">absent — the agent runs with no system prompt on disk</div>
+			{else}
+				<pre style="max-height:340px; overflow:auto; font-size:11px;">{$h['systemPrompt']}</pre>
+			{/if}
+		</details>
+	{/foreach}
+{/if}
+{/block}

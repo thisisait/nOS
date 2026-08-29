@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 235,
+    "nodes": 236,
     "edges": 266,
     "nodes_pulse": 30,
     "nodes_judge": 5,
@@ -16,7 +16,7 @@
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 55,
-    "nodes_table": 15,
+    "nodes_table": 16,
     "nodes_doctrine": 13,
     "nodes_faceapp": 5,
     "nodes_agent": 7,
@@ -2703,6 +2703,13 @@
       "title": "Face Layouts",
       "anchor": "02.02.05",
       "description": "KEAP DataTable definition 'Face Layouts' (state/keap-tables/layouts.table.yml)"
+    },
+    "table:loop-config": {
+      "kind": "table",
+      "source": "state/keap-tables/loop-config.table.yml",
+      "title": "Loop configuration",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Loop configuration' (state/keap-tables/loop-config.table.yml)"
     },
     "table:party": {
       "kind": "table",

@@ -540,6 +540,11 @@ nodes:
   "table:apps": withheld
   "table:controls": withheld
   "table:layouts": withheld
+  # Q6 loop-config, added 2026-08-29 AFTER the signature. WITHHELD like every
+  # other table node, so the published set is unchanged and no re-signature is
+  # needed. It holds one operator switch that ships OFF; which switches an
+  # estate has is not a fact the public projection owes anyone.
+  "table:loop-config": withheld
   "table:party": withheld
   "table:party-address": withheld
   "table:party-contact": withheld

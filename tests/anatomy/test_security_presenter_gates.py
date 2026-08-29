@@ -107,6 +107,19 @@ _PRIVILEGED_PRESENTERS: list[tuple[str, Path, list[str]]] = [
         [],
     ),
     (
+        # LoopEditorPresenter (Q6, 2026-08-28) — renders every agent's HARNESS:
+        # agent.yml, the system prompt, the tool roster, the measured write
+        # grants, the gate set. Read-only, and the empty mutator list is the
+        # load-bearing half: an action* method here would be the `harness`
+        # proposal kind wearing a browser, and the sibling gate below (no
+        # action* on a read-only presenter) goes red the moment one appears.
+        # Tier-1 via `$minAccessTier = 1` — this page names every capability
+        # and write grant in the estate in one place.
+        "LoopEditorPresenter",
+        PRESENTERS / "LoopEditorPresenter.php",
+        [],
+    ),
+    (
         # GdprPresenter (S4) — the /gdpr browser view lists the Art-30 register,
         # the DSAR log, and the breach register: EVERY data subject's email +
         # request history. Same sensitivity as BreachesPresenter (which gates the
@@ -282,6 +295,34 @@ def test_state_changing_actions_require_post(name, path, actions):
         assert "requirePostMethod()" in body, (
             f"{name}::{action} does not call requirePostMethod() — "
             f"GET-based state mutation is exploitable as CSRF / phishing-link."
+        )
+
+
+def test_loop_editor_has_no_write_path():
+    """/loop-editor renders the harness and may never change it.
+
+    Q6's build order is surface FIRST, guarded proposal kind LATER, and the
+    surface is only safe ahead of the kind because it cannot write. A write
+    path added here would be the `harness` intent — refused by
+    ledger.DISABLED_INTENTS — reachable through a browser session instead,
+    which is the refusal routed around rather than satisfied.
+
+    Empty-mutator-list alone would not catch it: the list is authored by the
+    same person adding the action. This reads the SOURCE.
+    """
+    src = (PRESENTERS / "LoopEditorPresenter.php").read_text()
+    actions = re.findall(r"function\s+(action[A-Z]\w*)\s*\(", src)
+    assert not actions, (
+        "LoopEditorPresenter declares action methods: "
+        + ", ".join(actions)
+        + " — /loop-editor is read-only by design. If the operator really is "
+        "to edit harnesses from Wing, that is the `harness` proposal kind and "
+        "its toggle, decided deliberately, not an action method added here."
+    )
+    for writer in ("file_put_contents", "unlink", "->query(", "->execute("):
+        assert writer not in src, (
+            f"LoopEditorPresenter contains {writer!r} — the read-only harness "
+            f"view has grown a writer."
         )
 
 
