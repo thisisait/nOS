@@ -159,6 +159,36 @@ if (ONLY) {
 // not re-check the questionnaire is a run against assumptions.
 const wants = (name) => !ONLY || name === 'Answers' || ONLY.includes(name)
 
+// A phase that ran nothing must STOP the run. Counted at the agent, checked when the
+// NEXT phase opens (and once at the end), so the failure surfaces one phase later at
+// worst instead of never — which is what happened on 2026-08-28, when a falsy pipeline
+// item skipped Prune and Mutex in silence and the run carried on as if they had passed.
+//
+// Counting at the agent rather than wrapping each phase's call is deliberate: the first
+// attempt wrapped them by hand and nested every phase inside the previous one as an extra
+// pipeline STAGE. It parsed, and it was nonsense. Single-line edits only.
+const SEEN = {}
+let CURRENT = null
+const A = (prompt, opts) => {
+  const k = (opts && opts.phase) || CURRENT
+  // The managed gate lives HERE, not around each phase's call: guarding the call
+  // itself is what nested the phases into each other. A phase the operator did not
+  // name spends nothing and its stages see a marker instead of a result.
+  if (!wants(k)) return Promise.resolve({ skipped: k })
+  SEEN[k] = (SEEN[k] || 0) + 1
+  return agent(prompt, opts)
+}
+const settle = (name) => {
+  if (!name || !wants(name)) return
+  if (!SEEN[name]) {
+    throw new Error(`phase ${name} started no agents — a phase that did not happen must ` +
+                    `stop the workflow, not be skipped in silence (2026-08-28).`)
+  }
+  log(`phase ${name}: ${SEEN[name]} agent(s) ran`)
+}
+const enter = (name) => { settle(CURRENT); CURRENT = name; phase(name) }
+
+
 enter('Answers')
 
 // 1 agent. Why: every later phase encodes an operator decision; if the questionnaire the
@@ -201,34 +231,7 @@ log('answers ok — client plane: nos-ops, ops plane: measure-first (Q3=a)')
 // had passed (measured 2026-08-28 — pipeline([null]) invoked its stage zero times).
 // `ran()` makes that impossible to do quietly: every phase counts its own invocations and
 // throws if the count is zero.
-// A phase that ran nothing must STOP the run. Counted at the agent, checked when the
-// NEXT phase opens (and once at the end), so the failure surfaces one phase later at
-// worst instead of never — which is what happened on 2026-08-28, when a falsy pipeline
-// item skipped Prune and Mutex in silence and the run carried on as if they had passed.
-//
-// Counting at the agent rather than wrapping each phase's call is deliberate: the first
-// attempt wrapped them by hand and nested every phase inside the previous one as an extra
-// pipeline STAGE. It parsed, and it was nonsense. Single-line edits only.
-const SEEN = {}
-let CURRENT = null
-const A = (prompt, opts) => {
-  const k = (opts && opts.phase) || CURRENT
-  // The managed gate lives HERE, not around each phase's call: guarding the call
-  // itself is what nested the phases into each other. A phase the operator did not
-  // name spends nothing and its stages see a marker instead of a result.
-  if (!wants(k)) return Promise.resolve({ skipped: k })
-  SEEN[k] = (SEEN[k] || 0) + 1
-  return agent(prompt, opts)
-}
-const settle = (name) => {
-  if (!name || !wants(name)) return
-  if (!SEEN[name]) {
-    throw new Error(`phase ${name} started no agents — a phase that did not happen must ` +
-                    `stop the workflow, not be skipped in silence (2026-08-28).`)
-  }
-  log(`phase ${name}: ${SEEN[name]} agent(s) ran`)
-}
-const enter = (name) => { settle(CURRENT); CURRENT = name; phase(name) }
+
 
 enter('Prune')
 

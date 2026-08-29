@@ -231,6 +231,28 @@ def check_meta_not_read(src: str) -> list[str]:
     return errs
 
 
+def check_use_before_declared(src: str) -> list[str]:
+    """A top-level call to a `const` declared further down throws at line one.
+
+    Measured 2026-08-28: `enter('Answers')` sat 30 lines above `const enter = …`
+    and the run died with "Cannot access 'enter' before initialization" — no
+    agent started. Deliberately narrow: only TOP-LEVEL calls (column 0) against
+    TOP-LEVEL const declarations. A reference inside a function body is legal
+    however it is ordered, and flagging those would red every valid script.
+    """
+    decl = {}
+    for m in re.finditer(r"^const\s+([A-Za-z_]\w*)\s*=", src, re.M):
+        decl.setdefault(m.group(1), m.start())
+    errs = []
+    for m in re.finditer(r"^([A-Za-z_]\w*)\s*\(", src, re.M):
+        name = m.group(1)
+        if name in decl and m.start() < decl[name]:
+            line = src[:m.start()].count("\n") + 1
+            errs.append(f"line {line}: `{name}()` is called above its `const {name} =` — "
+                        f"the run dies before any agent starts")
+    return errs
+
+
 def check_phases(src: str) -> list[str]:
     """A phase() with no meta entry gets its own progress group — legal, and
     usually a typo. Report the mismatch rather than guessing which side is right."""
@@ -256,7 +278,7 @@ def lint(path: pathlib.Path) -> list[str]:
     code = code_only(src)
     errs += check_meta(src)
     for check in (check_collection_first, check_nondeterminism, check_phases,
-                  check_meta_not_read):
+                  check_meta_not_read, check_use_before_declared):
         errs += check(code)
     return errs
 
