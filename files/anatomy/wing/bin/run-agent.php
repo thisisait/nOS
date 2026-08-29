@@ -103,6 +103,9 @@ $summary = [
 	'stop_reason' => $result->stopReason,
 	'tokens' => ['input' => $result->tokensInput, 'output' => $result->tokensOutput],
 	'error' => $result->error,
+	// one_shot: the validated chain, so a harness can score it without
+	// reopening wing.db. Null on every loop run and on a failed validation.
+	'chain' => $result->result['chain'] ?? null,
 ];
 echo json_encode($summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
 exit($result->error === null ? 0 : 1);

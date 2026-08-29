@@ -411,7 +411,17 @@ final class Runner
 		$spans = [$rootSpan];
 
 		try {
-			if ($agent->hasOutcome()) {
+			if ($agent->isOneShot()) {
+				// ONE call, no retry: a retried send is a second call, and the
+				// number of calls is the measurement. A transient failure is
+				// not a measurement — it falls through to `terminated`.
+				$result = OneShot::run($llm, $agent, $initialPrompt);
+				$totalIn = $result['tokens_input'];
+				$totalOut = $result['tokens_output'];
+				$this->sessionTokensIn += $totalIn;
+				$this->sessionTokensOut += $totalOut;
+				$stopReason = 'one_shot_' . $result['verdict'];
+			} elseif ($agent->hasOutcome()) {
 				$result = $this->runOutcomeLoop(
 					$agent,
 					$llm,

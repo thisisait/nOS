@@ -86,7 +86,21 @@ final class Agent
 		 * marking its own work.
 		 */
 		public readonly ?string $gateset = null,
+		/**
+		 * 'loop' (tool-use / outcome, the default) or 'one_shot': bind, ONE
+		 * call, validate the emitted chain against $oneShotSchema, record.
+		 * The ops plane measures small local models, and a loop measures the
+		 * harness as much as the model.
+		 */
+		public readonly string $mode = 'loop',
+		/** Decoded one_shot.schema_path — the shape the single answer must have. */
+		public readonly array $oneShotSchema = [],
 	) {
+	}
+
+	public function isOneShot(): bool
+	{
+		return $this->mode === 'one_shot';
 	}
 
 	public function isCoordinator(): bool

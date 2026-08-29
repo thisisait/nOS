@@ -206,6 +206,38 @@ final class AgentLoader
 			}
 		}
 
+		// mode: one_shot is the ops plane's measurement shape — ONE call, no
+		// loop of any kind. Declaring a loop's apparatus alongside it is a
+		// contradiction, not a preference, so both are refused here.
+		$mode = $raw['mode'] ?? 'loop';
+		$oneShotSchema = [];
+		if (!in_array($mode, ['loop', 'one_shot'], true)) {
+			throw new AgentLoadException("agent.yml mode must be loop|one_shot; got " . var_export($mode, true));
+		}
+		if ($mode === 'one_shot') {
+			if ($tools !== []) {
+				throw new AgentLoadException('agent.yml mode: one_shot cannot declare tools — one call, no tool-use loop');
+			}
+			if ($gateset !== null) {
+				throw new AgentLoadException('agent.yml mode: one_shot cannot declare outcomes — one call, no outcome loop');
+			}
+			$schemaPath = $raw['one_shot']['schema_path'] ?? null;
+			if (!is_string($schemaPath) || $schemaPath === '') {
+				throw new AgentLoadException('agent.yml mode: one_shot requires one_shot.schema_path — an unvalidated chain records nothing');
+			}
+			$schemaFile = $dir . '/' . $schemaPath;
+			if (!is_file($schemaFile)) {
+				throw new AgentLoadException("one_shot.schema_path missing: {$schemaFile}");
+			}
+			$decoded = json_decode((string) file_get_contents($schemaFile), true);
+			if (!is_array($decoded) || $decoded === []) {
+				throw new AgentLoadException("one_shot.schema_path is not a non-empty JSON object: {$schemaFile}");
+			}
+			$oneShotSchema = $decoded;
+		} elseif (isset($raw['one_shot'])) {
+			throw new AgentLoadException('agent.yml one_shot declared without mode: one_shot');
+		}
+
 		// Audit
 		$capabilityScopes = $raw['audit']['capability_scopes'] ?? null;
 		if (!is_array($capabilityScopes) || $capabilityScopes === []) {
@@ -290,6 +322,8 @@ final class AgentLoader
 			gdpr: (array) ($raw['gdpr'] ?? []),
 			maxOutputTokens: $maxOutputTokens,
 			gateset: $gateset,
+			mode: (string) $mode,
+			oneShotSchema: $oneShotSchema,
 		);
 
 		// Idempotent webhook registration — only when wired in production.

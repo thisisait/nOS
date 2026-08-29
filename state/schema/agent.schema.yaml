@@ -97,6 +97,32 @@ properties:
           opus-primary agents outright. The registry file documents all six
           gates; tests/anatomy/test_a_binding_reads_the_register.py holds the
           declared values to them.
+  mode:
+    type: string
+    enum: [loop, one_shot]
+    default: loop
+    description: |
+      `loop` (default) is the tool-use / outcome runtime. `one_shot` is the
+      ops plane's (nos-ops) measurement shape: bind, ONE model call, validate
+      the emitted chain against `one_shot.schema_path`, record the verdict.
+      No tools, no retry, no outcome iteration — a loop measures the harness
+      as much as it measures the model, and the ops plane is measuring models.
+      The contradictions (tools / outcomes declared alongside it) are refused
+      by App\AgentKit\AgentLoader; draft-07 cannot express the cross-field
+      rule. Gate: tests/anatomy/test_one_shot_mode_makes_one_call.py.
+  one_shot:
+    type: object
+    additionalProperties: false
+    required: [schema_path]
+    description: "Required iff mode: one_shot; refused otherwise (loader)."
+    properties:
+      schema_path:
+        type: string
+        description: |
+          Path relative to the agent.yml directory of a JSON Schema the single
+          emitted answer must satisfy. Validated by App\AgentKit\OneShot
+          against a subset (type / required / properties / items / enum) — the
+          verdict is the reader's, never the model's.
   system_prompt_path:
     type: string
     description: |
