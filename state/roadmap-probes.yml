@@ -609,3 +609,10 @@ obs-pulse-dashboard: >-
 dry-run-evidence: >-
   test -f tests/anatomy/test_a_dry_run_gathers_its_own_evidence.py
   && [ "$(grep -c 'check_mode: false' roles/pazny.wing/tasks/main.yml)" -ge 3 ]
+
+# The row is the two measured cases; the twenty are its child, and that child
+# is unverifiable by construction — see its body.
+dry-run-evidence-sweep:
+  unverifiable: >-
+    no command distinguishes a refusal nobody has checked from one checked and
+    found fine; the twenty are a reading list, and reading is a person's job

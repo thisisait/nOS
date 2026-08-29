@@ -217,8 +217,8 @@ row("obs-pulse-dashboard", "56 000 runs of the scheduled-job organ, unobserved",
          "pulse_jobs.findings_exit_codes had said which codes mean that for months. The answer "
          "was already in a column and the new reader did not ask.")
 
-row("dry-run-evidence", "20 refusals decide on evidence a --check never gathers", "2026-08-29",
-    "next", "platform",
+row("dry-run-evidence", "A dry run refused on evidence it never gathered", "2026-08-29",
+    "shipped", "platform",
     refs="docs/hidden_fees/36 · tests/anatomy/test_a_dry_run_gathers_its_own_evidence.py",
     body="`command` and `uri` perform nothing under --check; the registered result is empty, "
          "`| default(0)` turns the absence into a measurement, and the preflight refuses. "
@@ -229,6 +229,20 @@ row("dry-run-evidence", "20 refusals decide on evidence a --check never gathers"
          "and NONE was measured — a full --check of main.yml stops at task 29 needing sudo, so "
          "nothing proves those twenty are reached. They are listed rather than edited on "
          "suspicion. The open work is checking them one at a time, not a sweep.")
+
+row("dry-run-evidence-sweep", "Twenty more refusals of that shape, none measured", "2026-09-30",
+    "next", "platform", parent="dry-run-evidence",
+    refs="docs/hidden_fees/36 §Not closed",
+    body="The scan lists twenty refusals in restore, patch, dnsmasq, ollama, superset, keap and "
+         "gitea paths whose condition reads a register a --check never fills. NOT ONE WAS "
+         "MEASURED: a full --check of main.yml stops at task 29 needing sudo, so nothing proves "
+         "any of them is reached in a dry run, and editing twenty files on suspicion turns a "
+         "small true finding into a large unverified diff. One was already checked and cleared "
+         "this way — tasks/removal-verify.yml reads alarming on the list and is unaffected, "
+         "because the `nos --remove` dry run is its own inventory mechanism and not Ansible "
+         "check mode. The work is nineteen more of those, one at a time, by whoever needs the "
+         "path. Deliberately UNVERIFIABLE: no command distinguishes not-yet-checked from "
+         "checked-and-fine.")
 
 row("notify-supersede","A notification that stopped being true has no way to stop being unread","2026-08-23","next","platform",
     refs="tools/red-status.py::_still_holds · docs/hidden_fees/26 · bin/reconcile-inbox.php",
