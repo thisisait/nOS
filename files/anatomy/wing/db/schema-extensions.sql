@@ -564,7 +564,7 @@ CREATE TABLE IF NOT EXISTS agent_sessions (
     trace_id        TEXT NOT NULL,                    -- W3C Trace Context (32 hex chars)
     model_uri       TEXT NOT NULL,                    -- e.g. anthropic-claude-opus-4-7
     outcome_id      TEXT,                             -- present iff outcome-driven session
-    outcome_result  TEXT,                             -- satisfied | needs_revision | max_iterations_reached | failed | interrupted
+    outcome_result  TEXT,                             -- satisfied | needs_revision | max_iterations_reached | indeterminate | failed | interrupted
     -- 1 iff ANY structured output this session was repaired before a consumer
     -- read it — by the deterministic shape parser or by the one format-only
     -- re-ask. Silent repair is a success marker written by the thing that

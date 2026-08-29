@@ -1011,6 +1011,13 @@ final class Runner
 					'final_text' => $finalText,
 				];
 			}
+			// Score 0 on the FIRST attempt means the environment could not
+			// judge at all (requirement absent, no sealed verdict) — revising
+			// blind burns tokens on work nobody measured. Stop now; the
+			// oracle's outcome() will say `indeterminate`, not failed work.
+			if ($iteration === 0 && $verdict['score'] === 0) {
+				break;
+			}
 			// One iteration past a peak that was not beaten, then stop: 78.26%
 			// of self-continued searches end below their own peak
 			// (arXiv:2607.25886), and the peak is what gets reported anyway.
@@ -1034,9 +1041,11 @@ final class Runner
 		// which is the best one only by accident.
 		$best = $oracle->best();
 		return [
-			// Two different endings, kept distinguishable: the budget ran out,
-			// or the search was stopped one step past its own peak.
-			'outcome_result' => $stoppedAtPeak ? 'needs_revision' : 'max_iterations_reached',
+			// Three different endings, kept distinguishable: the budget ran
+			// out, the search stopped one step past its own peak, or NO judge
+			// ever reached a verdict — `indeterminate`, because a judge that
+			// cannot run is not work that failed (GateOracle::outcome).
+			'outcome_result' => $oracle->outcome($stoppedAtPeak),
 			'iterations' => $best !== null ? $best['iteration'] + 1 : $agent->maxIterations,
 			'tokens_input' => $totalIn,
 			'tokens_output' => $totalOut,
