@@ -645,6 +645,19 @@ def work_count(spec: JudgeSpec, done: Completed) -> int | None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+#: Credential requirements → the env var that satisfies them. Judges run as
+#: subprocesses of the BONE daemon, so these must be in Bone's launchd env
+#: (roles/pazny.bone/templates/bone.plist.j2) — putting them anywhere else
+#: (wing.plist, a Pulse job env) satisfies nothing the engine can see. The
+#: first bound ceremony (2026-08-29) skipped cortex-corpus-diff on exactly
+#: this: both tokens persisted in ~/.nos/secrets.yml, neither in Bone's env.
+#: Gate: tests/anatomy/test_judge_requirements_have_a_home.py.
+REQUIREMENT_ENV: dict[str, str] = {
+    "keap_token_ro": "KEAP_AGENT_TOKEN_RO",
+    "cortex_token_ro": "CORTEX_AGENT_TOKEN_RO",
+}
+
+
 def default_requirement_probe(requirement: str) -> bool:
     """Is a declared requirement satisfied? Unknown requirement → False.
 
@@ -652,10 +665,8 @@ def default_requirement_probe(requirement: str) -> bool:
     requirement name resolves to absent, so a typo makes a judge INDETERMINATE
     rather than silently unguarded.
     """
-    if requirement == "keap_token_ro":
-        return bool(os.environ.get("KEAP_AGENT_TOKEN_RO", "").strip())
-    if requirement == "cortex_token_ro":
-        return bool(os.environ.get("CORTEX_AGENT_TOKEN_RO", "").strip())
+    if requirement in REQUIREMENT_ENV:
+        return bool(os.environ.get(REQUIREMENT_ENV[requirement], "").strip())
     if requirement == "docker":
         return shutil.which("docker") is not None
     if requirement == "live_estate":

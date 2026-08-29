@@ -38,6 +38,15 @@ INLINE launchd reload + re-verify, right then — not "it'll clear on the next c
 pointers resolved at session-open; plaintext lives only in function-local memory. Same
 spirit here: `secrets.yml` is the one resolved store, everything else references it.
 
+**A credential lives in the env of the process that USES it — trace the runtime,
+not the workflow.** The loop's judges are subprocesses of the BONE daemon, so a
+judge's `requires:` credential (state/judge-sets.yml → `judges.REQUIREMENT_ENV`)
+must be in `bone.plist.j2` — the same secret sitting in wing.plist, a Pulse
+job's env and `~/.nos/secrets.yml` satisfies nothing the engine can see, and the
+judge is skipped "requirement(s) absent" on every run (first bound ceremony,
+2026-08-29). Before adding a token to a plist, name the process that will
+actually read it. Gate: `test_judge_requirements_have_a_home.py`.
+
 **Beware the eager-resolve / stock-Jinja trap.** The plugin loader passes
 `template_vars: "{{ vars }}"`; a secret whose value uses a non-stock filter, or a
 before-core-up undefined ref that slips past `default()`, aborts the whole run. See

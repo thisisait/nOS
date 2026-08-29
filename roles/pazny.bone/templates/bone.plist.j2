@@ -100,6 +100,17 @@
         <key>BONE_LOOP_OPERATOR_TOKEN</key>
         <string>{{ loop_operator_token | default('') }}</string>
 
+        <!-- Judge credential requirements (state/judge-sets.yml `requires`,
+             judges.REQUIREMENT_ENV). Judges are subprocesses of THIS daemon,
+             so their credentials live here — a token in wing.plist or a Pulse
+             job env is invisible to the engine, and the judge is skipped as
+             "requirement(s) absent" (2026-08-29 first bound ceremony).
+             Gate: tests/anatomy/test_judge_requirements_have_a_home.py -->
+        <key>KEAP_AGENT_TOKEN_RO</key>
+        <string>{{ keap_agent_token_ro | default('') }}</string>
+        <key>CORTEX_AGENT_TOKEN_RO</key>
+        <string>{{ cortex_ro_token | default('') }}</string>
+
         {% if install_authentik | default(false) %}
         <!-- Track B JWT auth: Bone validates incoming tokens against Authentik. -->
         <!-- In host mode, Bone reaches Authentik via the public Traefik path -->
