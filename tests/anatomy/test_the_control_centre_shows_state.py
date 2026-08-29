@@ -267,7 +267,7 @@ def test_the_layout_builds_without_touching_other_sessions():
         # invisible in a diff and obvious on screen.
         panes = subprocess.run(
             [*iso, "list-panes", "-t", "=nos-cc-selftest:ops",
-             "-F", "#{pane_index} #{pane_top}"],
+             "-F", "#{pane_index} #{pane_top} #{pane_left} #{pane_height}"],
             capture_output=True, text=True, env=env,
         ).stdout.split("\n")
         panes = [p for p in panes if p.strip()]
@@ -283,6 +283,33 @@ def test_the_layout_builds_without_touching_other_sessions():
         assert len(set(tops)) >= 2, (
             f"every ops pane starts at the same row, so nothing is stacked "
             f"above anything; got tops={tops}"
+        )
+
+        # THE SHAPE, not just the count (2026-08-29). The first arrangement
+        # passed every assertion above while two of its reader panes were six
+        # and seven rows tall — a header, a rule and two rows of data. The
+        # operator called them unusable and no gate could have disagreed,
+        # because "six panes, some stacked" was all anyone had ever checked.
+        #
+        # Three rows of two, and the four readers equal. Heights are compared
+        # with a ±1 tolerance: tmux spends the odd row on a divider, so an
+        # exact match would fail on any window with an odd row count.
+        geom = {}
+        for row in panes:
+            idx, top, left, height = (int(x) for x in row.split())
+            geom[idx] = (top, left, height)
+        rows = sorted({g[0] for g in geom.values()})
+        assert len(rows) == 3, (
+            f"ops is not three rows of panes; pane tops were {rows}"
+        )
+        for r in rows:
+            assert len([g for g in geom.values() if g[0] == r]) == 2, (
+                f"row at y={r} does not hold exactly two panes: {geom}"
+            )
+        reader_heights = [h for (top, _, h) in geom.values() if top in rows[:2]]
+        assert max(reader_heights) - min(reader_heights) <= 1, (
+            f"the four reader panes are not equal-height: {reader_heights}. "
+            "An asymmetric grid is how the middle panes became unusable."
         )
 
         # Running it again must attach/report, never rebuild.

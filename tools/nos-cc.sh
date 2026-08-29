@@ -90,11 +90,11 @@ fi
 # ── ops: readers above, two free shells below ────────────────────────────────
 #
 #   ┌───────────────┬───────────────┐
-#   │ what is red   │ agents        │   readers: state, re-run, never scrollback
-#   │               ├───────────────┤
-#   │               │ recent history│
+#   │ what is red   │ agents        │  60%  readers: state, re-read, never
+#   ├───────────────┼───────────────┤       scrollback. Each is a TUI; ctrl+p
+#   │ awaiting you  │ recent history│       changes what THIS pane shows.
 #   ├───────────────┴───────────────┤
-#   │ shell A       │ shell B       │   the operator's two free prompts
+#   │ shell A       │ shell B       │  40%  the operator's two free prompts
 #   └───────────────┴───────────────┘
 #
 # TWO shells, because one was not enough in practice: the operator drives an
@@ -135,16 +135,25 @@ _split() {
 
 tmux new-session -d -s "$SESSION" -n ops -c "$REPO_ROOT" || {
     echo "nos-cc: could not create session $SESSION" >&2; exit 3; }
-_split "shell row"    -v -t "$SESSION:ops.0" -c "$REPO_ROOT" -l 32%
-_split "-> shell B"   -h -t "$SESSION:ops.1" -c "$REPO_ROOT" -l 50%
-_split "right column" -h -t "$SESSION:ops.0" -c "$REPO_ROOT" -l 45%
-_split "-> history"   -v -t "$SESSION:ops.1" -c "$REPO_ROOT" -l 45%
+# SYMMETRIC 2x3 (2026-08-29, second layout). The first arrangement grew one
+# pane at a time and it showed: the two middle panes ended up 6 and 7 rows tall,
+# which is a header, a column rule and two rows of data. A TUI in seven rows is
+# not a small view of the table, it is an unusable one — the operator called
+# them exactly that. Nothing about the pane fixed it; the geometry had to.
+#
+# The bottom row is split off FIRST, so its 40% is 40% of the window rather
+# than 40% of whatever was left; then each half is halved. Every percentage is
+# taken from the pane being split, so the order below is the arithmetic.
+_split "shell row"     -v -t "$SESSION:ops.0" -c "$REPO_ROOT" -l 40%
+_split "-> shell B"    -h -t "$SESSION:ops.1" -c "$REPO_ROOT" -l 50%
+_split "reader row 2"  -v -t "$SESSION:ops.0" -c "$REPO_ROOT" -l 50%
+_split "-> agents"     -h -t "$SESSION:ops.0" -c "$REPO_ROOT" -l 50%
 # The operator's own queue, under `what is red` and beside the history. Red is
 # what BROKE; this is what cannot proceed without a person — a judged proposal
 # that never landed is not red, an agent that stopped to ask is working as
 # designed, and a ruling amended after signing is neither. Until 2026-08-29
 # nothing collected them, so each was found by remembering to look.
-_split "-> awaiting"  -v -t "$SESSION:ops.0" -c "$REPO_ROOT" -l 38%
+_split "-> history"    -h -t "$SESSION:ops.2" -c "$REPO_ROOT" -l 50%
 
 # EVERY READER PANE IS A TUI (2026-08-29). `nos-watch.sh` re-ran a reader and
 # replaced the pane, which was right about STATE and offered nothing else: the
@@ -155,8 +164,8 @@ _split "-> awaiting"  -v -t "$SESSION:ops.0" -c "$REPO_ROOT" -l 38%
 # returned. `--dump text` gives `tmux capture-pane -p` (and an LLM) the same
 # rows the screen has, so the machine-readable view is not a second answer.
 tmux send-keys -t "$SESSION:ops.0" "tools/nos-pane.py red" C-m
-tmux send-keys -t "$SESSION:ops.1" "tools/nos-pane.py awaiting" C-m
-tmux send-keys -t "$SESSION:ops.2" "tools/nos-pane.py agents" C-m
+tmux send-keys -t "$SESSION:ops.1" "tools/nos-pane.py agents" C-m
+tmux send-keys -t "$SESSION:ops.2" "tools/nos-pane.py awaiting" C-m
 # ONE ROW PER COMMIT, and the pane can be scrolled now that it is a table —
 # the decorated `git log` tail wrapped every long subject onto two lines and
 # scrolled the NEWEST commits off the top, leaving the OLDEST three on screen.
