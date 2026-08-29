@@ -19,6 +19,11 @@ declare(strict_types=1);
  * Idempotent: prints 'now holds 0' when the recorded anchor already matches the
  * current tail (post.yml keys changed_when on that). Exit 0 always (best-effort).
  *
+ * IT WRITES NOTHING WHEN THE TAIL IS SIGNED (2026-08-29). post.yml calls this on
+ * every converge, not only after a toggle, and until now every call minted a
+ * fresh anchor because the tail had moved — 99 authorised discontinuities in
+ * five weeks. An anchor is only earned by an actual chain-off window.
+ *
  * --acknowledge-gap-before=<id> — the OPERATOR act for a gap discovered LATE,
  * i.e. after signed rows already follow it, so the tail-anchor path above can
  * no longer authorize the historical boundary. Measured 2026-08-16..19: a bare
@@ -109,6 +114,35 @@ if ($ackBefore !== null) {
         . " ({$meta['t0']} .. {$meta['t1']}; source(s) {$meta['sources']}; actor(s) {$meta['actors']})\n";
     echo "recorded segment anchor at row {$before['id']}'s hash; the window stays UNSIGNED "
         . "in every verify report — this authorizes the boundary, it signs nothing\n";
+    $s->close();
+    exit(0);
+}
+
+// AN ANCHOR IS ONLY EARNED BY A CHAIN-OFF WINDOW (2026-08-29).
+//
+// This file's own contract says it "MUST run after each flag OFF->ON toggle".
+// post.yml runs it on EVERY converge where the chain is enabled, and the only
+// idempotence guard compared the recorded anchor to the current tail — which
+// always moved between converges. So the estate minted one authorised
+// discontinuity per converge: 99 of them in five weeks, found by giving Pulse
+// a dashboard and asking why audit-chain-verify had exited 2 four times.
+//
+// An anchor is the verifier's permission to resume at a prev_hash it cannot
+// derive. That permission is needed exactly when the tail is UNSIGNED — the
+// chain was off, rows landed with row_hash NULL, and the next signed row will
+// start a new segment. When the last row is signed, the next insert simply
+// continues the segment and no authorisation is required; an anchor written
+// there authorises nothing that was going to happen and weakens the only
+// property the chain has.
+//
+// Existing anchors are left alone. They are load-bearing for the history
+// already signed under them, and deleting one would break verification of the
+// segment it opens — the fix is to stop minting, not to rewrite.
+$lastSigned = $s->querySingle("SELECT id FROM events WHERE row_hash IS NOT NULL ORDER BY id DESC LIMIT 1");
+$lastRow = $s->querySingle("SELECT id FROM events ORDER BY id DESC LIMIT 1");
+$chainIsOff = $lastRow !== null && $lastSigned !== $lastRow;
+if ($lastRow !== null && !$chainIsOff) {
+    echo "chain tail is signed — no OFF->ON boundary to authorize; now holds 0 rows to backfill\n";
     $s->close();
     exit(0);
 }
