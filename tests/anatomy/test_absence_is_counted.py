@@ -148,6 +148,31 @@ def test_the_real_conftest_carries_the_wiring():
     assert "pytest_terminal_summary" in src, "the absence-report hook re-export was removed"
 
 
+def test_every_php_gate_guards_the_vendor_tree():
+    """A fresh worktree has no vendor/ (gitignored). Every gate that spawns
+    php against the wing autoload must SKIP (counted) there, never error —
+    two gates hard-failed on 2026-08-29. In CI the declaration above makes
+    the same absence a session abort, so the skip certifies nothing away."""
+    exempt = {
+        "test_absence_is_counted.py",       # this file (strings only)
+        "test_migration_promote_merge.py",  # bypasses vendor via spl_autoload_register
+    }
+    guard = re.compile(r"vendor/autoload\.php[\"')/ ]*\)?\.(is_file|exists)\(\)"
+                       r"|AUTOLOAD\.(is_file|exists)\(\)")
+    unguarded = [
+        p.name for p in sorted(ANATOMY.glob("test_*.py"))
+        if p.name not in exempt
+        and "vendor/autoload" in (src := p.read_text(encoding="utf-8"))
+        and "subprocess" in src
+        and not guard.search(src)
+    ]
+    assert not unguarded, (
+        f"{unguarded} spawn php against the wing vendor tree without an "
+        "autoload existence guard — on a fresh worktree they ERROR instead of "
+        "skipping with a counted reason"
+    )
+
+
 # ── the declarations, pinned where they live ────────────────────────────────
 
 

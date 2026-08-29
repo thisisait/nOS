@@ -13,11 +13,22 @@ actually sent, not over a re-encoding of them.
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parents[2]
 WING = REPO / "files/anatomy/wing"
+
+# Honest only outside a declaring environment: CI declares php + the vendor
+# path via NOS_TEST_PROVIDES, so there the contract aborts the session instead.
+pytestmark = pytest.mark.skipif(
+    shutil.which("php") is None or not (WING / "vendor/autoload.php").is_file(),
+    reason="php binary or wing vendor/autoload.php missing — run `composer "
+           "install` in files/anatomy/wing",
+)
 
 PROBE_404 = r"""
 require __DIR__ . '/vendor/autoload.php';

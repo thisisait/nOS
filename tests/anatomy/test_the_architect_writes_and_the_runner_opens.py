@@ -21,9 +21,11 @@ What is pinned:
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
@@ -70,6 +72,14 @@ def _probe() -> dict:
     return json.loads(out.stdout)
 
 
+# Only the probe needs php+vendor; the yaml/shell gates below keep running.
+# In a declaring environment the contract aborts instead — this skip is honest
+# only on a fresh worktree with no NOS_TEST_PROVIDES.
+@pytest.mark.skipif(
+    shutil.which("php") is None or not (WING / "vendor/autoload.php").is_file(),
+    reason="php binary or wing vendor/autoload.php missing — run `composer "
+           "install` in files/anatomy/wing",
+)
 def test_a_recipe_path_is_writable_and_everything_else_is_not() -> None:
     got = _probe()
     assert got["recipe"]["error"] is False, "upgrades/<service>.yml must be writable"
