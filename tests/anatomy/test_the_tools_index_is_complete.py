@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import pathlib
 import re
+import subprocess
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TOOLS = REPO / "tools"
@@ -34,8 +35,21 @@ def _listed() -> set[str]:
 
 
 def _present() -> set[str]:
-    return {p.name for p in TOOLS.iterdir()
-            if p.is_file() and (p.suffix in {".py", ".sh"} or p.name == "nos")}
+    """What a CHECKOUT has, which is `git ls-files` and not the filesystem.
+
+    The index is a promise to whoever clones the repo. Reading the directory
+    instead made the gate depend on the operator's untracked files, and it went
+    red in CI the day the README picked up `calibre-sync.py` — real on this
+    machine, gitignored, and absent from every other. Either half of that is a
+    false answer: a tool nobody but the author can run does not belong in an
+    index, and a gate that reports the author's working tree is not testing the
+    repository.
+    """
+    out = subprocess.run(["git", "ls-files", "tools"], cwd=REPO,
+                         capture_output=True, text=True, check=True)
+    return {pathlib.Path(p).name for p in out.stdout.split()
+            if pathlib.Path(p).parent.name == "tools"
+            and (pathlib.Path(p).suffix in {".py", ".sh"} or pathlib.Path(p).name == "nos")}
 
 
 def test_every_tool_is_listed() -> None:

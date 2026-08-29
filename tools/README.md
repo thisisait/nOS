@@ -125,7 +125,6 @@ worse than none, because it reads as complete.
 - `sync-trunk-to-gitlab.sh` — tools/sync-trunk-to-gitlab.sh — keep the GitLab agent forge's trunk
 
 ## Provisioning, secrets, identity
-- `calibre-sync.py` — calibre-sync.py — idempotentní import knih z e-readeru do Calibre v Dockeru.
 - `fetch-authentik-bootstrap-token.py` — Retrieve the ``nos-api`` Authentik token and persist it to secrets.yml.
 - `nos-secret.py` — nos-secret — the operator's reader for the derived credential map (P1).
 

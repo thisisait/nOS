@@ -166,9 +166,6 @@ cortex-lang: >-
 cortex-readers: >-
   grep -rqil "epub" files/anatomy/face/src/lib/apps/native/
 
-local-llm-corpus: >-
-  ls tools/ | grep -q "cortex-corpus-gen"
-
 # This row and cortex-exec are close enough to be one row wearing two slugs, and
 # pointing both at the same `test -d` is what hid that. Not papering over it with
 # an invented distinction: the row says "authorisation AND execution", so it asks

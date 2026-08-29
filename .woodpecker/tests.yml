@@ -83,7 +83,7 @@ steps:
       #   the last gates that should ever be allowed to quietly not run.
       - apt-get update -qq && apt-get install -y -qq --no-install-recommends git php-cli php-sqlite3 php-xml php-mbstring jq sqlite3
       - git config --global --add safe.directory "$CI_WORKSPACE"
-      - . tools/ci-freeze.env && pip install --quiet --no-cache-dir pytest pytest-asyncio pyyaml httpx jinja2 jsonschema requests fastapi "markdown==3.10.2" "$NOS_ANSIBLE_CORE"
+      - . tools/ci-freeze.env && pip install --quiet --no-cache-dir pytest pytest-asyncio pyyaml httpx jinja2 jsonschema requests fastapi textual "markdown==3.10.2" "$NOS_ANSIBLE_CORE"
       # Install pulse as editable so its package imports resolve in test
       - pip install --quiet --no-cache-dir -e files/anatomy/pulse
       # -rA summary lists FAIL/SKIP/ERROR at the very end so even a

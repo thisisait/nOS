@@ -173,8 +173,13 @@ jobs:
       # must run against a version this repo declares, not one the image
       # happens to carry this month. markdown==3.10.2 must equal MARKDOWN_PIN
       # in tools/devlog-compile.py (gated by test_absence_is_counted.py).
+      # textual: the control-centre panes are a Textual app, and its two gates
+      # drive it headless through `run_test()` — they have already caught a
+      # palette that never showed and panes that read once and sat there. Both
+      # import tools/cc/app.py at module level, so without this the estate's
+      # only check on its operator surface is a collection error.
       - name: Install test dependencies.
-        run: . tools/ci-freeze.env && pip3 install pytest pyyaml jsonschema httpx jinja2 requests markdown==3.10.2 fastapi "$NOS_ANSIBLE_CORE"
+        run: . tools/ci-freeze.env && pip3 install pytest pyyaml jsonschema httpx jinja2 requests markdown==3.10.2 fastapi textual "$NOS_ANSIBLE_CORE"
 
       - name: Run pytest suite.
         run: >
