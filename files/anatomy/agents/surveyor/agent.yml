@@ -183,8 +183,21 @@ pulse:
         WING_API_URL: "http://127.0.0.1:9000"
         WING_API_TOKEN: "{{ surveyor_wing_api_token }}"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
+        # THE FILING STEP LIVES HERE, not only in system.md. Measured
+        # 2026-08-29 across four runs: the librarian names the POST as a
+        # numbered step in its TASK and files every time; the surveyor named
+        # it only at system.md:175, under 170 lines of read-budget advice, and
+        # filed twice out of four — once with an empty body, once not at all
+        # after being told twice. The task is the turn the model answers.
         NOS_AGENT_TASK: |
           Walk the estate and report which of it deserves a control surface.
           Follow your system prompt exactly — including the ~15-read budget
           and every required section. The operator is designing an admin
           control centre and needs to know what belongs on it.
+
+          THEN FILE IT. The survey is not done until it is an artifact:
+          POST your "## Surveyor report" via mcp_wing_write to
+          /api/v1/events with type=conductor_report, source=surveyor, and the
+          full markdown in result_json.report_markdown. Required fields:
+          ts, type, run_id — all three or the call is refused.
+          A survey that lives only in this transcript did not happen.
