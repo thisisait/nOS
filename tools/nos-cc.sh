@@ -132,10 +132,18 @@ _split "shell row"    -v -t "$SESSION:ops.0" -c "$REPO_ROOT" -l 32%
 _split "-> shell B"   -h -t "$SESSION:ops.1" -c "$REPO_ROOT" -l 50%
 _split "right column" -h -t "$SESSION:ops.0" -c "$REPO_ROOT" -l 45%
 _split "-> history"   -v -t "$SESSION:ops.1" -c "$REPO_ROOT" -l 45%
+# The operator's own queue, under `what is red` and beside the history. Red is
+# what BROKE; this is what cannot proceed without a person — a judged proposal
+# that never landed is not red, an agent that stopped to ask is working as
+# designed, and a ruling amended after signing is neither. Until 2026-08-29
+# nothing collected them, so each was found by remembering to look.
+_split "-> awaiting"  -v -t "$SESSION:ops.0" -c "$REPO_ROOT" -l 38%
 
 tmux send-keys -t "$SESSION:ops.0" \
     "$W --interval 30 --title 'what is red' -- tools/red-status.py" C-m
 tmux send-keys -t "$SESSION:ops.1" \
+    "$W --interval 45 --title 'awaiting you' -- tools/awaiting-operator.py" C-m
+tmux send-keys -t "$SESSION:ops.2" \
     "$W --interval 20 --title 'agents' -- tools/agent-status.py --limit 8" C-m
 # Truncated to ONE ROW PER COMMIT, and few enough to fit the pane.
 #
@@ -145,9 +153,9 @@ tmux send-keys -t "$SESSION:ops.1" \
 # a pane that looked like recent history while showing the opposite. That is the
 # scrollback lie in its purest form, and it shipped past a gate that only ever
 # counted panes. The `code` window carries the long, decorated form.
-tmux send-keys -t "$SESSION:ops.2" \
-    "$W --interval 60 --title 'recent history' -- git -c color.ui=always log --abbrev-commit --pretty='%C(auto)%h %<(52,trunc)%s' -6" C-m
 tmux send-keys -t "$SESSION:ops.3" \
+    "$W --interval 60 --title 'recent history' -- git -c color.ui=always log --abbrev-commit --pretty='%C(auto)%h %<(52,trunc)%s' -6" C-m
+tmux send-keys -t "$SESSION:ops.4" \
     "tools/elsewhere-status.py; clear" C-m
 # ops.4 gets nothing typed into it at all. Deliberate: see above.
 
@@ -188,7 +196,7 @@ tmux new-window -t "=$SESSION" -n service -c "$REPO_ROOT"
 tmux select-window -t "$SESSION:ops"
 # Land on shell A — attaching should put the cursor where the operator types,
 # not in a reader they would have to leave first.
-tmux select-pane -t "$SESSION:ops.3"
+tmux select-pane -t "$SESSION:ops.5"
 
 # ── the bar ──────────────────────────────────────────────────────────────────
 #

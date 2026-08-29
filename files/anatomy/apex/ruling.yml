@@ -39,6 +39,22 @@ proposed: 2026-08-17
 signed: 2026-08-17        # every organ title and all 63 `speaks:` phrases read
 artifact: state/anatomy-graph.json
 
+# THE SIGNATURE IS A FLAG, NOT A PROMISE — until this line exists.
+#
+# `status: SIGNED` + `signed_by:` says someone once signed something; it does
+# not say they signed THIS. Measured 2026-08-29: a session added two `withheld`
+# node rulings to a SIGNED file and every gate stayed green, because nothing
+# compared the content to what the signer read. Two withheld rows publish
+# nothing, so no harm was done — and nothing would have said so either way.
+#
+# `signed_digest` is sha256 over this file with this line removed. Amend the
+# ruling and it stops matching; `tools/awaiting-operator.py` then reports the
+# file as AMENDED AFTER SIGNING and asks for a fresh signature. To re-sign:
+#   python3 tools/apex-sign.py            # prints the diff since the last sign
+#   python3 tools/apex-sign.py --confirm  # writes the new digest
+signed_digest: 08c9a00b67a24865528a7503fa7b4be25c42ccce2b97edf3412bccee2638f5ed
+
+
 # The declared split. The gate recounts the table below and refuses to run
 # if the actual split differs — so a ruling change is always a conscious
 # edit of BOTH the row and this ledger line.

@@ -149,8 +149,11 @@ def test_ops_leaves_a_free_prompt_and_starts_no_agent():
     code = _code(CC)
     typed_into = set(re.findall(r'send-keys\s+-t\s+"\$SESSION:ops\.(\d+)"', code))
     assert typed_into, "no ops pane is addressed by index — this gate stopped seeing them"
-    assert "4" not in typed_into, (
-        "ops.4 is typed into. It is the free prompt the operator starts their "
+    # ops.5 since 2026-08-29: the `awaiting you` reader took an index and the
+    # free prompts moved down. ops.4 IS typed into — one line that prints
+    # elsewhere-status and clears — so the LAST index is the free one.
+    assert "5" not in typed_into, (
+        "ops.5 is typed into. It is the free prompt the operator starts their "
         "own agent session in; a setup script that fills it has taken the "
         "decision away from them."
     )
@@ -248,8 +251,8 @@ def test_the_layout_builds_without_touching_other_sessions():
             capture_output=True, text=True, env=env,
         ).stdout.split("\n")
         panes = [p for p in panes if p.strip()]
-        assert len(panes) == 5, (
-            f"ops has {len(panes)} pane(s), expected 5 — three readers above "
+        assert len(panes) == 6, (
+            f"ops has {len(panes)} pane(s), expected 6 — four readers above "
             f"two free shells; got {panes}\n"
             f"script stderr: {built.stderr[-600:]!r}\n"
             "(the script now exits 3 on a refused split and says which one; if "
