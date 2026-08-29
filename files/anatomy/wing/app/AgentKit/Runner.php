@@ -25,6 +25,7 @@ use App\AgentKit\Tools\ToolRegistry;
 use App\AgentKit\Vault\CredentialResolver;
 use App\AgentKit\Webhook\WebhookDispatcher;
 use App\Model\AgentSessionRepository;
+use App\Model\EventRepository;
 use App\Model\AgentVaultRepository;
 
 /**
@@ -154,6 +155,11 @@ final class Runner
 		// means no agent can route anywhere but the default backend, which is
 		// the fail-closed shape the whole binding layer inherits.
 		private readonly ?BindingResolver $bindingResolver = null,
+		// Optional, and a READER only: asked whether the artifact a ceremony
+		// declared as its deliverable is on record for this session. Null keeps
+		// every existing construction site byte-identical — an agent that
+		// declares no deliverable never reaches it.
+		private readonly ?EventRepository $events = null,
 	) {
 	}
 
@@ -861,7 +867,19 @@ final class Runner
 			$agent->modelGraderUri,
 			fn (string $uri) => $this->llmFactory->fromUri($uri),
 		);
-		$oracle = new GateOracle((string) getenv('NOS_REPO_ROOT'));
+		// The deliverable reader is a READER: it asks the events table whether the
+		// artifact this ceremony owes is on record, keyed to this session. It never
+		// writes, and it is not asked at all unless the agent declared one.
+		$oracle = new GateOracle(
+			(string) getenv('NOS_REPO_ROOT'),
+			null,
+			($agent->deliverableEvent === null || $this->events === null) ? null : function () use ($agent, $sessionUuid): bool {
+				return $this->events->query([
+					'type' => $agent->deliverableEvent,
+					'actor_action_id' => $sessionUuid,
+				], 1) !== [];
+			},
+		);
 		$totalIn = 0;
 		$totalOut = 0;
 		$result = 'failed';

@@ -87,6 +87,21 @@ final class Agent
 		 */
 		public readonly ?string $gateset = null,
 		/**
+		 * `outcomes.deliverable` — the event type this ceremony must have
+		 * FILED before its gate set may certify it.
+		 *
+		 * Measured 2026-08-29, session 53de6409: the surveyor passed both
+		 * judges and was `outcome_satisfied` having posted nothing at all.
+		 * The gate set judges the TREE (nos-smoke, cortex-corpus-diff); it has
+		 * no opinion about whether the agent did its own work, and a prose
+		 * report in a transcript is not an artifact anyone can check.
+		 *
+		 * Null means the ceremony's deliverable is the tree itself (a writer
+		 * whose gate set reads what it wrote). Naming a type here says: the
+		 * work is an artifact, and it must EXIST, keyed to this session.
+		 */
+		public readonly ?string $deliverableEvent = null,
+		/**
 		 * 'loop' (tool-use / outcome, the default) or 'one_shot': bind, ONE
 		 * call, validate the emitted chain against $oneShotSchema, record.
 		 * The ops plane measures small local models, and a loop measures the

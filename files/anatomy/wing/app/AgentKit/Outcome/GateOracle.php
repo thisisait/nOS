@@ -53,9 +53,16 @@ final class GateOracle
 	 *        Replaces the PROCESS, never the verdict — the reader below still
 	 *        computes satisfaction from what the process returned.
 	 */
+	/**
+	 * @param ?callable(): bool $deliverableExists
+	 *        Asked ONLY when the agent declared one. Returns whether the
+	 *        artifact this ceremony owes is on record for THIS session. A
+	 *        reader, never the thing that produced the work.
+	 */
 	public function __construct(
 		private readonly string $repoRoot,
 		private readonly mixed $spawn = null,
+		private readonly mixed $deliverableExists = null,
 	) {
 	}
 
@@ -83,12 +90,29 @@ final class GateOracle
 		// process exited 0, the sealed verdict says pass, and it has an
 		// identity. Any one of them missing is a run nobody can stand behind.
 		$satisfied = $done['exit'] === 0 && $result === 'pass' && $gateRunId !== null;
+		// FOURTH THING, and it is about the AGENT rather than the tree.
+		// Measured 2026-08-29 (session 53de6409): the surveyor passed both
+		// judges and was satisfied having filed nothing. `nos-smoke` and
+		// `cortex-corpus-diff` say the estate is healthy; neither has an
+		// opinion about whether this ceremony did its own work. Where the
+		// agent declared its deliverable, its ABSENCE unmakes satisfaction —
+		// and the detail says so, so the revision has something to act on
+		// instead of guessing which judge was unhappy.
+		$missingDeliverable = false;
+		if ($satisfied && is_callable($this->deliverableExists)) {
+			$missingDeliverable = ($this->deliverableExists)() === false;
+			$satisfied = !$missingDeliverable;
+		}
 		// Only a SATISFIED iteration may hold the pass rank. A `pass` that lost
 		// one of the three — no uuid, or a client that exited non-zero after
 		// printing it — used to score 2 here, which outranked a clean fail and
 		// tripped the peak-stop on a verdict nobody can stand behind.
 		$score = $satisfied ? self::RANK['pass'] : min(self::RANK[$result] ?? 0, self::RANK['fail']);
-		$detail = $this->detail($gateset, $done, $verdict, $satisfied);
+		$detail = $missingDeliverable
+			? 'the gate set passed, but this ceremony filed no deliverable. The gates '
+			  . 'judge the tree; the work you owe is an artifact keyed to this session. '
+			  . 'File it, then the run can be satisfied.'
+			: $this->detail($gateset, $done, $verdict, $satisfied);
 
 		$this->history[$iteration] = [
 			'score' => $score,

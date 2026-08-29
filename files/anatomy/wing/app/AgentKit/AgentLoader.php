@@ -177,6 +177,7 @@ final class AgentLoader
 		}
 		$maxIterations = 3;
 		$gateset = null;
+		$deliverableEvent = null;
 		if (!empty($raw['outcomes'])) {
 			// THE ORACLE IS MANDATORY. An outcome loop with no gate set has
 			// nothing to ask but the model that produced the work.
@@ -199,6 +200,19 @@ final class AgentLoader
 					throw new AgentLoadException("outcomes.rubric_path missing: {$rubricPath}");
 				}
 				$rubric = new Rubric((string) file_get_contents($rubricPath), $rubricPath);
+			}
+			// The deliverable, if the ceremony's work is an ARTIFACT rather
+			// than the tree. Validated here so a typo is a load error, not a
+			// ceremony that can never be satisfied and never says why.
+			$deliverable = $raw['outcomes']['deliverable'] ?? null;
+			if ($deliverable !== null) {
+				$deliverableEvent = is_array($deliverable) ? ($deliverable['event'] ?? null) : null;
+				if (!is_string($deliverableEvent) || $deliverableEvent === '') {
+					throw new AgentLoadException(
+						'agent.yml outcomes.deliverable must be {event: <type>} — the event '
+						. 'type this ceremony has to file before a gate set may certify it'
+					);
+				}
 			}
 			$maxIterations = (int) ($raw['outcomes']['max_iterations'] ?? 3);
 			if ($maxIterations < 1 || $maxIterations > 10) {
@@ -322,6 +336,7 @@ final class AgentLoader
 			gdpr: (array) ($raw['gdpr'] ?? []),
 			maxOutputTokens: $maxOutputTokens,
 			gateset: $gateset,
+			deliverableEvent: $deliverableEvent,
 			mode: (string) $mode,
 			oneShotSchema: $oneShotSchema,
 		);

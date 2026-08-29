@@ -59,6 +59,11 @@ multiagent:
   max_concurrent_threads: 1
 
 outcomes:
+  # The survey is an ARTIFACT, not prose in a transcript. Measured 2026-08-29
+  # (session 53de6409): both judges passed and the run was satisfied having
+  # filed nothing at all.
+  deliverable:
+    event: conductor_report
   # writes into the live cortex; the corpus differ is what can contradict it.
   gateset: live
   rubric_path: rubric.md

@@ -201,6 +201,29 @@ properties:
 
           An outcome loop with no gate set has nobody to ask but the model that
           produced the work.
+      deliverable:
+        type: object
+        additionalProperties: false
+        required: [event]
+        properties:
+          event:
+            type: string
+            description: |
+              The event TYPE this ceremony must have filed, keyed to its own
+              session, before the gate set may certify it.
+
+              MEASURED 2026-08-29 (session 53de6409): the surveyor passed both
+              judges and was `outcome_satisfied` having posted nothing. The gate
+              set judges the TREE — `nos-smoke` says the estate is healthy,
+              `cortex-corpus-diff` that the corpus agrees — and neither has an
+              opinion about whether the agent did its own work. A prose report
+              living only in a transcript is not an artifact anyone can check.
+
+              Omit it when the ceremony's deliverable IS the tree (a writer
+              whose gate set reads what it wrote). Declaring it says: the work
+              is an artifact, and its absence unmakes satisfaction.
+        description: |
+          What this ceremony owes, as a thing that can be looked up.
       rubric_path:
         type: string
         description: |
