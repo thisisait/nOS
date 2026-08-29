@@ -5,7 +5,7 @@ Constraint C: "a gate you can satisfy by editing the gate is not one. Every gate
 you write must be RETRO-VERIFIED: reintroduce the defect, watch it go red,
 restore." A gate that was never seen to fail is decoration.
 
-Sibling of ``tools/retro-verify-loop-harness.py``, which retro-verifies the
+Sibling of ``tools/retro-verify/loop-harness.py``, which retro-verifies the
 cross-harness determinism gate. This one covers the eight defects found by an
 adversarial review of the engine core — every one of which was *reproduced
 end-to-end* against the real modules before it was fixed, and every one of which
@@ -39,7 +39,7 @@ For each mutation this script:
 Any mutation that does NOT go red is reported as DECORATION and the script
 exits non-zero.
 
-Usage:  python3 tools/retro-verify-loop-capture.py
+Usage:  python3 tools/retro-verify/loop-capture.py
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ import pathlib
 import subprocess
 import sys
 
-REPO = pathlib.Path(__file__).resolve().parents[1]
+REPO = pathlib.Path(__file__).resolve().parents[2]
 BONE = REPO / "files" / "anatomy" / "bone"
 
 JUDGES = BONE / "judges.py"

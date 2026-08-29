@@ -14,9 +14,9 @@ A mutation that does NOT go red is reported as DECORATION. A gate that has
 never been seen to fail is not evidence of anything — it is a comment with a
 test runner attached.
 
-Sibling harness: tools/retro-verify-loop-judges.py (build step 1).
+Sibling harness: tools/retro-verify/loop-judges.py (build step 1).
 
-Usage:  python3 tools/retro-verify-weakness-reader.py
+Usage:  python3 tools/retro-verify/weakness-reader.py
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ import pathlib
 import subprocess
 import sys
 
-REPO = pathlib.Path(__file__).resolve().parents[1]
+REPO = pathlib.Path(__file__).resolve().parents[2]
 
 READER = REPO / "files" / "anatomy" / "bone" / "weaknesses.py"
 LOOPAUTH = REPO / "files" / "anatomy" / "bone" / "loopauth.py"

@@ -14,7 +14,7 @@ Any mutation that does NOT go red is reported as DECORATION — a gate that
 cannot fail is not evidence of anything. The script exits non-zero if any gate
 is decoration, or if the tree is not restored exactly.
 
-Usage:  python3 tools/retro-verify-loop-judges.py
+Usage:  python3 tools/retro-verify/loop-judges.py
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ import pathlib
 import subprocess
 import sys
 
-REPO = pathlib.Path(__file__).resolve().parents[1]
+REPO = pathlib.Path(__file__).resolve().parents[2]
 JUDGES = REPO / "files" / "anatomy" / "bone" / "judges.py"
 REGISTRY = REPO / "state" / "judge-sets.yml"
 TESTFILE = "tests/anatomy/test_loop_judge_runner.py"

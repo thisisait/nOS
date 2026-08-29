@@ -197,7 +197,7 @@ def test_loop_tokens_reach_both_service_managers():
     RETRO-VERIFY NOTE: the first version of this test used substring checks
     (`env_var in plist`), and renaming the key to `BONE_LOOP_JUDGE_TOKEN_DISABLED`
     kept it GREEN — the old name is a substring of the new one. It was caught by
-    tools/retro-verify-weakness-reader.py as DECORATION. These assertions now
+    tools/retro-verify/weakness-reader.py as DECORATION. These assertions now
     pin the KEY-to-VALUE pairing, which is the thing that actually has to hold.
     """
     plist = BONE_PLIST.read_text(encoding="utf-8")

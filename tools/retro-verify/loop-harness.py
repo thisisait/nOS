@@ -20,7 +20,7 @@ vars/templates) and ONE ratchet constant that lives in a test file
 (`BLAST_RADIUS_CEILING`). The ratchet is the datum for constraint D — raising
 it is the defect being reintroduced — so it is mutated where it is declared.
 
-Usage:  python3 tools/retro-verify-loop-harness.py
+Usage:  python3 tools/retro-verify/loop-harness.py
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ import pathlib
 import subprocess
 import sys
 
-REPO = pathlib.Path(__file__).resolve().parents[1]
+REPO = pathlib.Path(__file__).resolve().parents[2]
 BONE = REPO / "files" / "anatomy" / "bone"
 
 JUDGES = BONE / "judges.py"

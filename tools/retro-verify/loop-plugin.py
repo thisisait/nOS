@@ -5,13 +5,13 @@ A gate that was never seen to fail is decoration. This reintroduces each defect
 the gate claims to catch, runs the gate, asserts it goes RED, and restores the
 tree byte-for-byte — verified by sha256, not by "it looked fine".
 
-    python3 tools/retro-verify-loop-plugin.py            # all mutations
-    python3 tools/retro-verify-loop-plugin.py -k budget  # substring filter
+    python3 tools/retro-verify/loop-plugin.py            # all mutations
+    python3 tools/retro-verify/loop-plugin.py -k budget  # substring filter
 
 Exit 0 only if EVERY mutation was caught and EVERY file was restored.
 
 Two things learned the hard way in this file's sibling
-(tools/retro-verify-loop-judges.py) and carried over deliberately:
+(tools/retro-verify/loop-judges.py) and carried over deliberately:
 
   * `PYTHONDONTWRITEBYTECODE=1` + a bytecode purge before every run. A `.pyc` is
     validated on (mtime, size) with ONE-SECOND resolution, so two mutations of
@@ -34,7 +34,7 @@ import shutil
 import subprocess
 import sys
 
-REPO = pathlib.Path(__file__).resolve().parents[1]
+REPO = pathlib.Path(__file__).resolve().parents[2]
 PLUGIN = REPO / ".claude" / "plugins" / "nos-loop"
 GATE = "tests/anatomy/test_loop_plugin_is_thin.py"
 GITIGNORE = REPO / ".gitignore"
