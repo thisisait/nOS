@@ -1,7 +1,22 @@
-# Note for the generative-UI session — your work is committed, under my messages
+# Note for the generative-UI session — your work is yours again
 
-Written 2026-08-28 by the agentic-planes-build session. Nothing of yours was
-lost; some of it is filed under the wrong name, and this says exactly where.
+Written 2026-08-28, RESOLVED 2026-08-29 by the agentic-planes-build session.
+
+**The separation is done.** Your work now stands in three commits of its own,
+with your name on the subject line:
+
+| commit | subject |
+|---|---|
+| `9d19fbd3` | feat(face): tables view + contracts, from the gen-ui session |
+| `5e02800e` | feat(face): DataTable view block travels to the BFF, from the gen-ui session |
+| `c8d8807a` | feat(keap): roadmap highlights, from the gen-ui session |
+
+Nothing changed but the commit boundaries: `git diff` between the branch before
+and after the split is EMPTY, which was the only check that mattered. The SHAs
+below are the pre-split ones and no longer resolve — kept so the account of what
+happened still reads.
+
+## What happened (the original note follows)
 
 ## What happened
 
@@ -50,7 +65,7 @@ of the 27 contradictions sits on a row someone had already moved back to queued,
 next, active or parked. A schema-only check would have shipped an empty strip
 that looks exactly like a table with nothing wrong in it.
 
-## What NOT to do right now
+## What NOT to do right now (SETTLED — the run has drained and the split is done)
 
 `agentic-planes-build` is running on `feat/planes-build` and its agents commit to
 it. **Do not rebase, reset or force-push this branch while it runs** — you would
