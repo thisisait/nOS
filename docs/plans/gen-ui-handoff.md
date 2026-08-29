@@ -1,9 +1,15 @@
-# Note for the generative-UI session — your work is yours again
+# Handoff to the generative-UI session — 2026-08-29
 
-Written 2026-08-28, RESOLVED 2026-08-29 by the agentic-planes-build session.
+Written by the agentic-planes-build session. Two things happened while you were
+running: I swept some of your work into my commits, and then I rebased the
+branch you had already branched from. Both are mine. This says where everything
+is and what the cheapest way forward looks like.
 
-**The separation is done.** Your work now stands in three commits of its own,
-with your name on the subject line:
+## 1. The sweep — resolved, nothing for you to do
+
+On 2026-08-28 I committed with `git add -A` while we shared the working tree,
+and three of my commits carried your files. That is separated: your work stands
+in three commits of its own on `feat/planes-build`, with your name on the subject.
 
 | commit | subject |
 |---|---|
@@ -11,71 +17,92 @@ with your name on the subject line:
 | `5e02800e` | feat(face): DataTable view block travels to the BFF, from the gen-ui session |
 | `c8d8807a` | feat(keap): roadmap highlights, from the gen-ui session |
 
-Nothing changed but the commit boundaries: `git diff` between the branch before
-and after the split is EMPTY, which was the only check that mattered. The SHAs
-below are the pre-split ones and no longer resolve — kept so the account of what
-happened still reads.
+The split changed no bytes — `git diff` between the branch before and after was
+empty, which was the only check that mattered.
 
-## What happened (the original note follows)
+## 2. The rebase — this one needs a decision from you
 
-## What happened
+`feat/face-lens` branched off `feat/planes-build`, and I then rewrote that
+branch's history under you. The merge-base is now `63036e6d`, and your branch
+carries **13 commits, of which 8 are old copies of mine** under SHAs that exist
+nowhere else. Your five:
 
-We were both working in `/Users/pazny/projects/nOS` at the same time, on the
-same branch (`feat/planes-build`), and I committed with `git add -A`. That is a
-broom, not a staging command: it swept your in-flight files into commits whose
-messages describe something else entirely. My fault, not yours — I did not check
-for a second writer before I started committing.
+```
+f7f216d9 docs(doctrine): generative UI — fill the contract, never extend it
+f641b00f feat(contracts): a reader that compares the two view contracts
+c1308a49 chore(keap): pin v1.41.0 — the view block's transport
+79527abb feat(roadmap): an applier for the definition's view block
+2802f1e0 feat(roadmap): declare the view block the face renders
+```
 
-## Where your work is
+Cheapest way to land them — replay only yours onto the current branch:
 
-| commit | its message (mine) | your files in it |
-|---|---|---|
-| `d7f27225` | docs(roadmap): Tauri elevated to next… | 7 of 9 |
-| `63eba4a2` | fix(nos-cc): mouse on… | 2 of 3 |
-| `ef2ae628` | fix(workflow): helpers must precede… | 1 of 2 |
+```bash
+git tag pre-rebase-face-lens feat/face-lens      # so the before-state is nameable
+git rebase --onto feat/planes-build 63036e6d feat/face-lens
+```
 
-Full sweep, `git log dev..HEAD` — the first version of this note listed two
-commits because I hand-picked which to check. That is the same error as the one
-above, one layer up: a list I assembled instead of one the repository answered.
-The table is now generated from every commit on the branch.
+Expect conflicts where we both edited: `state/keap-tables/roadmap.table.yml`,
+`tools/roadmap-seed.py`, possibly `files/anatomy/face/src/lib/tables/view.ts` —
+because the three commits in §1 already carry an earlier snapshot of your work.
+Where a hunk looks like your own change arriving twice, it is; take the later one.
 
-`d7f27225` carries ~1090 lines of yours:
+Verify it the way I verified mine: diff the result against the tag and satisfy
+yourself that nothing moved except what you meant to move.
 
-- `files/anatomy/face/src/lib/components/DataTableApp.svelte` (+308)
-- `files/anatomy/face/src/lib/tables/view.ts` (+234)
-- `files/anatomy/face/src/lib/tables/lens.test.ts` (new, 256)
-- `tests/anatomy/test_view_block_travels_and_is_narrowed.py` (new, 206)
-- `files/anatomy/face/src/lib/contracts/index.ts`
-- `files/anatomy/face/src/routes/bff/tables/+server.ts`
-- `roles/pazny.keap/tasks/seed-face-table.yml`
-- `state/keap-tables/roadmap.table.yml` (the view block)
+## 3. What has already been converged — do not repeat it
 
-`63eba4a2` carries `contracts/index.ts` and `tables/view.ts` as well — an
-earlier snapshot of the same two files.
+You left five steps. Two are done, and one of those is done WRONG for your
+purposes:
 
-## `state/keap-tables/roadmap.table.yml` — swept twice, now committed
+| step | state |
+|---|---|
+| `ansible-playbook main.yml --tags keap` | ran 2026-08-29, `failed=0` — but **without your v1.41.0 pin**, see below |
+| `tools/view-contract-drift.py` | not on `feat/planes-build`; it exists only on your branch |
+| `tools/roadmap-apply-view.py` (dry run) | same |
+| `tools/roadmap-apply-view.py --confirm` | **the operator's act.** It writes a live store outside the playbook and nothing re-derives it |
+| `ansible-playbook main.yml --tags face` | ran 2026-08-29, `failed=0`, smoke 47/47 |
 
-I left it in the working tree deliberately, and then `ef2ae628` took it anyway
-on the next commit. It is in the tree and safe; it is filed under a workflow
-fix. It carries a finding worth keeping in
-whatever commit you give it: the highlight was authored as
-`status eq shipped AND verified eq contradicted` and, evaluated against the 122
-live rows, matched **zero** — all 11 shipped rows are `confirmed`, and every one
-of the 27 contradictions sits on a row someone had already moved back to queued,
-next, active or parked. A schema-only check would have shipped an empty strip
-that looks exactly like a table with nothing wrong in it.
+Both converges ran against `feat/planes-build`, which does not contain your five
+commits. So KEAP was rebuilt, but not at `v1.41.0` (`c1308a49`) — if that pin is
+what carries the view block's transport, **the converge you actually wanted has
+not happened**. Land your branch first, then re-run `--tags keap`, then the drift
+reader. I can run tagged converges now (granted 2026-08-29); `sudo` and a full
+`nos` still stop at the operator.
 
-## What NOT to do right now (SETTLED — the run has drained and the split is done)
+## 4. The estate moved under you — four things that may bite
 
-`agentic-planes-build` is running on `feat/planes-build` and its agents commit to
-it. **Do not rebase, reset or force-push this branch while it runs** — you would
-rewrite history under a process that is appending to it. Separating your commits
-is a `git rebase -i` job for after the run drains; the planes session owns that
-cleanup and has it queued.
+- **Agent memory is gone, permanently.** Q8 was answered "no agent memory, EVER;
+  KEAP is the estate's memory." `Dreamer`, `MemoryStore`, `bin/dream-agent.php`
+  and the `agent_memory_stores` table are deleted, with a gate that fails if they
+  return — including one that reads the live `wing.db`, because removing a CREATE
+  does nothing to a database that already ran it.
+- **`mcp-wing` split into read and write planes**, and `api_tokens` gained a
+  `scopes` column. A bearer POST now needs `wing.write` — unless the route sits
+  in its presenter's `publicActions`, like `/api/v1/events`, which is HMAC-gated
+  and takes no bearer at all. Note the trap: `wing.write` in `agent.yml` means
+  *may load the write tool*; in `api_tokens` it means *may POST to a scoped
+  route*. Two axes, one spelling — a gate of mine got that wrong first.
+- **`satisfied` is no longer a model's opinion.** Two DB triggers refuse to write
+  it without a `gate_run_id`.
+- **`state/anatomy-graph.json` is regenerated** (236 nodes, 266 edges) and the
+  face layout pin re-frozen. If you touch the graph, run
+  `tools/anatomy-graph-gen.py` and re-freeze the pin, or the pytest lane reds.
 
-If you need to commit before then: stage by path (`git add <file>`), never
-`git add -A`, and say in the message that the branch is shared. If you would
-rather not share it at all, `git worktree add` your own checkout — that is what
-either of us should have done at the start.
+## 5. Two conventions that would have saved us both a day
 
-## Delete this file when the separation is done.
+- **Stage by path.** `git add -A` in a shared tree is a broom, not a staging
+  command. Everything in §1 came from it.
+- **Take a worktree.** `git worktree add` costs one command and makes §1 and §2
+  impossible. Either of us should have done it at the start; I noticed second.
+
+## 6. Your own finding, so it survives into whatever you write next
+
+`c8d8807a` carries it: the roadmap highlight authored as `status eq shipped AND
+verified eq contradicted` matched **zero** of 122 live rows — all 11 shipped rows
+are `confirmed`, and every one of the 27 contradictions sits on a row someone had
+already moved back to queued, next, active or parked. A declaration checked only
+against the schema would have shipped an empty strip that looks exactly like a
+table with nothing wrong in it.
+
+## Delete this file once your branch has landed.
