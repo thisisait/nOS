@@ -1,0 +1,22 @@
+{"id": "s01", "input": "INVOICE 2026-0417\nAcme Doors s.r.o.\nDue 2026-09-01\nTotal: 1240.00 EUR", "expect": {"invoice_no": "2026-0417", "total": 1240.0, "currency": "EUR"}}
+{"id": "s02", "input": "Faktura c. FV-88213\nDodavatel: Kovo Brno\nCelkem k uhrade: 15 400,50 Kc", "expect": {"invoice_no": "FV-88213", "total": 15400.5, "currency": "CZK"}}
+{"id": "s03", "input": "Invoice No: INV/2026/0091\nSubtotal 800.00\nVAT 21% 168.00\nTOTAL DUE 968.00 EUR", "expect": {"invoice_no": "INV/2026/0091", "total": 968.0, "currency": "EUR"}}
+{"id": "s04", "input": "Danovy doklad 4400012987\nZaklad 10 000,00 Kc\nDPH 2 100,00 Kc\nCelkem 12 100,00 Kc", "expect": {"invoice_no": "4400012987", "total": 12100.0, "currency": "CZK"}}
+{"id": "s05", "input": "Billing statement\nRef # A-7781\nAmount payable: 49.99 EUR\nThank you for your business.", "expect": {"invoice_no": "A-7781", "total": 49.99, "currency": "EUR"}}
+{"id": "s06", "input": "FAKTURA 2026/117\nVariabilni symbol 2026117\nK uhrade: 3 250 Kc", "expect": {"invoice_no": "2026/117", "total": 3250.0, "currency": "CZK"}}
+{"id": "s07", "input": "Invoice 90-B\nItems: 3\nShipping 12.00 EUR\nGrand total 212.40 EUR", "expect": {"invoice_no": "90-B", "total": 212.4, "currency": "EUR"}}
+{"id": "s08", "input": "Vyuctovani sluzeb\nCislo faktury: 20260800345\nCastka celkem 899,00 Kc\nSplatnost 14 dni", "expect": {"invoice_no": "20260800345", "total": 899.0, "currency": "CZK"}}
+{"id": "s09", "input": "INVOICE\nnumber .......... 0007\ntotal ............ 5.00 EUR", "expect": {"invoice_no": "0007", "total": 5.0, "currency": "EUR"}}
+{"id": "s10", "input": "Faktura FA2026-0002 (opravny danovy doklad)\nCelkem: -1 200,00 Kc", "expect": {"invoice_no": "FA2026-0002", "total": -1200.0, "currency": "CZK"}}
+{"id": "s11", "input": "Rechnung? No — Invoice IT-4519\nNet 1 000,00\nTotal payable 1 210,00 EUR", "expect": {"invoice_no": "IT-4519", "total": 1210.0, "currency": "EUR"}}
+{"id": "s12", "input": "Faktura c. 55\nZa dodavku materialu\nCelkem k platbe 100 000,00 Kc", "expect": {"invoice_no": "55", "total": 100000.0, "currency": "CZK"}}
+{"id": "s13", "input": "Invoice ID INV-2026-08-29-XZ\nPO 44120 (not the invoice number)\nTotal 76.10 EUR", "expect": {"invoice_no": "INV-2026-08-29-XZ", "total": 76.1, "currency": "EUR"}}
+{"id": "s14", "input": "DOKLAD 9912\nZalohova faktura 9911 byla uhrazena\nDoplatek celkem 4 500,00 Kc", "expect": {"invoice_no": "9912", "total": 4500.0, "currency": "CZK"}}
+{"id": "s15", "input": "Invoice: 2026/CZ/0006\nAmount 250,00 EUR\nPaid by card ending 4242", "expect": {"invoice_no": "2026/CZ/0006", "total": 250.0, "currency": "EUR"}}
+{"id": "s16", "input": "Faktura - danovy doklad\nCislo: FV 2026 0301\nCelkem vcetne DPH: 27 830,25 Kc", "expect": {"invoice_no": "FV 2026 0301", "total": 27830.25, "currency": "CZK"}}
+{"id": "s17", "input": "Invoice no. 12\nLine 1: 10.00 EUR\nLine 2: 10.00 EUR\nTotal: 20.00 EUR", "expect": {"invoice_no": "12", "total": 20.0, "currency": "EUR"}}
+{"id": "s18", "input": "Prijmovy doklad k fakture 771/2026\nUhrazeno hotove\nCelkem 1 999,00 Kc", "expect": {"invoice_no": "771/2026", "total": 1999.0, "currency": "CZK"}}
+{"id": "s19", "input": "INVOICE #ABC-0001\nDiscount -5.00 EUR\nTotal after discount 45.00 EUR", "expect": {"invoice_no": "ABC-0001", "total": 45.0, "currency": "EUR"}}
+{"id": "s20", "input": "Faktura 2026-1\nPocet polozek 7\nMezisoucet 8 000,00 Kc\nDPH 1 680,00 Kc\nCelkem 9 680,00 Kc", "expect": {"invoice_no": "2026-1", "total": 9680.0, "currency": "CZK"}}
+{"id": "s21", "input": "Invoice 33/A\nTotal: EUR 1.234,56", "expect": {"invoice_no": "33/A", "total": 1234.56, "currency": "EUR"}}
+{"id": "s22", "input": "Faktura cislo 606060\nCelkem 0,00 Kc (storno)", "expect": {"invoice_no": "606060", "total": 0.0, "currency": "CZK"}}

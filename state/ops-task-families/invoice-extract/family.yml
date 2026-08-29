@@ -1,0 +1,23 @@
+# One ops-plane task family: extract three fields from an invoice blob.
+#
+# The labels in samples.jsonl were written BY HAND. A model may not label a
+# sample set it is later scored against — that measures agreement between two
+# models, which is the failure arXiv:2510.16657 describes, not accuracy.
+#
+# Scored by tools/nos-ops-harness.py: exact reproduction of `expect`, decided
+# by the code oracle. The model never assesses itself.
+name: invoice-extract
+description: >
+  Three fields (invoice_no, total, currency) out of a short invoice text, in
+  the layouts a small business actually receives them: EN and CS, comma and
+  dot decimals, symbol and code currencies, noise lines around the numbers.
+prompt_template: |
+  Extract these three fields from the invoice below:
+    invoice_no  — the invoice number, exactly as printed
+    total       — the total amount due, as a number (no thousands separator)
+    currency    — one of EUR, CZK
+
+  Answer with ONE JSON object and nothing else.
+
+  INVOICE:
+  {input}
