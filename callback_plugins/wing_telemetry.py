@@ -27,6 +27,8 @@ Configuration (environment variables)
 ``WING_EVENTS_FLUSH_INTERVAL_SEC`` default ``5``
 ``WING_EVENTS_DEBUG``            ``1`` prints each event to stderr and
                                       flushes immediately (no batching).
+``WING_EVENTS_RESULT_CAP``       default ``16384``; max serialised bytes of one
+                                      module result. See ``bound_result``.
 """
 
 from __future__ import absolute_import, division, print_function
@@ -147,6 +149,71 @@ def scrub(obj, _depth=0):
         return obj
     except (TypeError, ValueError):
         return repr(obj)
+
+
+# A single module result, serialised, may not exceed this. The env override is
+# for a diagnostic run that genuinely wants the whole blob; the default is what
+# every ordinary converge writes.
+try:
+    _RESULT_CAP = int(os.environ.get("WING_EVENTS_RESULT_CAP", "16384"))
+except ValueError:
+    _RESULT_CAP = 16384
+
+
+def bound_result(obj, cap=None):
+    """Scrub a module result and bound what the ledger has to carry.
+
+    MEASURED 2026-08-29, on the estate's own wing.db. The shared ledger held
+    380 248 events in 1.19 GB, of which 921 MB was `result_json` and 657 MB of
+    that was `task_ok` alone — the full Ansible module result for every task
+    that did nothing. Single rows reached 4.1 MB. Nothing reads it: the only
+    consumers of `result_json` in the tree are agent reports, migration
+    payloads and DSAR records, never a task's.
+
+    Two rules, in this order, and together they took the two biggest event
+    types from 230 MB to 25 MB on 20 000 real rows:
+
+    `invocation` goes, always. It is Ansible echoing back the module's OWN
+    ARGUMENTS, the single largest key by total bytes, and the event already
+    carries the task and role that produced them. It is the input, filed as
+    though it were the outcome.
+
+    Then, if what remains is still over `cap`, the largest top-level keys are
+    dropped until it fits.
+
+    NOTHING IS DROPPED SILENTLY. Whatever goes, goes into an `_omitted` key
+    naming it, with the byte count and the cap that caused it. This estate has
+    spent months on absence being read as success; a result that quietly lost
+    its `stdout` would be the same defect one layer down, and the operator
+    reading a row needs to know they are looking at a bounded record.
+    """
+    obj = scrub(obj)
+    if not isinstance(obj, dict):
+        return obj
+    cap = cap if cap is not None else _RESULT_CAP
+    omitted, dropped = [], 0
+
+    if "invocation" in obj:
+        dropped += len(json.dumps(obj.pop("invocation"), default=repr))
+        omitted.append("invocation")
+
+    # Sized once, biggest first, rather than re-serialising the whole result on
+    # every iteration — a 4 MB blob with 30 keys would otherwise be 30 passes.
+    if len(json.dumps(obj, default=repr)) > cap:
+        by_size = sorted(((len(json.dumps(v, default=repr)), k)
+                          for k, v in obj.items()), reverse=True)
+        kept = len(json.dumps(obj, default=repr))
+        for size, key in by_size:
+            if kept <= cap:
+                break
+            obj.pop(key, None)
+            omitted.append(key)
+            dropped += size
+            kept -= size
+
+    if omitted:
+        obj["_omitted"] = {"keys": omitted, "bytes": dropped, "cap": cap}
+    return obj
 
 
 def hmac_signature(secret, body_bytes):
@@ -1108,7 +1175,7 @@ class CallbackModule(CallbackBase):
             host=self._host_of(result),
             duration_ms=self._task_duration_ms(task) if task else None,
             changed=changed,
-            result=scrub(res_dict),
+            result=bound_result(res_dict),
         )
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
@@ -1123,7 +1190,7 @@ class CallbackModule(CallbackBase):
             host=self._host_of(result),
             duration_ms=self._task_duration_ms(task) if task else None,
             changed=bool(res_dict.get("changed", False)),
-            result=scrub(res_dict),
+            result=bound_result(res_dict),
         )
 
     def v2_runner_on_skipped(self, result):
@@ -1154,7 +1221,7 @@ class CallbackModule(CallbackBase):
             task=task_name,
             role=self._role_for(task) if task is not None else None,
             host=self._host_of(result),
-            result=scrub(res_dict),
+            result=bound_result(res_dict),
         )
 
     def v2_playbook_on_stats(self, stats):
