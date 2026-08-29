@@ -26,6 +26,7 @@ import { SERVICE_LAYERS, type ServiceLayer } from '$lib/contracts';
 
 export type NodeKind =
 	| 'pulse'
+	| 'agent'
 	| 'judge'
 	| 'gateset'
 	| 'weakness'
@@ -43,6 +44,7 @@ export type EdgeKind = 'data' | 'trigger' | 'temporal' | 'mutex' | 'governed_by'
 
 export const NODE_KINDS: readonly NodeKind[] = [
 	'pulse',
+	'agent',
 	'daemon',
 	'judge',
 	'gateset',
@@ -62,6 +64,7 @@ export const NODE_KINDS: readonly NodeKind[] = [
  *  how one node ends up wearing two icons. */
 export const KIND_GLYPH: Record<NodeKind, string> = {
 	pulse: '⏱',
+	agent: '🤖',
 	daemon: '⚙',
 	judge: '⚖',
 	gateset: '▦',

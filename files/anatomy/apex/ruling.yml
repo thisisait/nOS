@@ -45,7 +45,7 @@ artifact: state/anatomy-graph.json
 splits:
   verbatim: 6
   transformed: 9
-  withheld: 57
+  withheld: 69
 
 # -----------------------------------------------------------------------------
 # STANDING DECISIONS — operator rulings, recorded as decisions with reasons,
@@ -101,8 +101,8 @@ decisions:
       count on the page is recomputed over the published set only.
 
 # -----------------------------------------------------------------------------
-# FIELD RULINGS — all 72 fields the artifact carries today: 8 top-level,
-# 47 node fields, 17 edge fields. The gate diffs this table against the
+# FIELD RULINGS — all 84 fields the artifact carries today: 8 top-level,
+# 59 node fields, 17 edge fields. The gate diffs this table against the
 # artifact's actual key census, both directions.
 # -----------------------------------------------------------------------------
 fields:
@@ -164,6 +164,22 @@ fields:
     guards:            { ruling: WITHHELD, why: "names the estate's own guard rails" }
     registry:          { ruling: WITHHELD, why: "file path" }
     required:          { ruling: WITHHELD, why: "weakness metadata" }
+    # The agent kind (2026-08-29). Every field WITHHELD: taken together these
+    # name the estate's autonomous actors, what each may call, and which
+    # vendor endpoint serves it — the automation map, which is D2's rule one
+    # level in from services.
+    charter:           { ruling: WITHHELD, why: "names what an automated actor is for" }
+    runner_status:     { ruling: WITHHELD, why: "says which ceremonies do not actually run" }
+    primary_model:     { ruling: WITHHELD, why: "vendor + model pin" }
+    backend:           { ruling: WITHHELD, why: "names the orchestrator serving the estate" }
+    backend_declared:  { ruling: WITHHELD, why: "discloses which agents run on an unreviewed default" }
+    tools:             { ruling: WITHHELD, why: "capability grants — the blast radius of one agent" }
+    runs_agent:        { ruling: WITHHELD, why: "job→agent dispatch map" }
+    capabilities:      { ruling: WITHHELD, why: "OIDC scope roster per machine identity" }
+    protocol:          { ruling: WITHHELD, why: "LLM backend wire protocol" }
+    eu_resident:       { ruling: WITHHELD, why: "residency posture of a third-party processor" }
+    enabled_flag:      { ruling: WITHHELD, why: "config namespace" }
+    is_default:        { ruling: WITHHELD, why: "names the default orchestrator" }
 
   edge:
     kind:                { ruling: VERBATIM, note: "relationship vocabulary (`data`, `trigger`, ...); only leaves on veins between published organs" }
@@ -370,6 +386,50 @@ nodes:
   "authentik:wing": withheld
   "authentik:woodpecker": withheld
   "authentik:wordpress": withheld
+
+  # --- withheld: machine identities (2026-08-29) ----------------------------
+  # The client_credentials clients the automated actors authenticate as. Same
+  # rule as the SSO clients above, one level in: naming them publishes the
+  # roster of what runs unattended here.
+  "authentik:nos-conductor": withheld
+  "authentik:nos-curator": withheld
+  "authentik:nos-devlog": withheld
+  "authentik:nos-inspektor": withheld
+  "authentik:nos-librarian": withheld
+  "authentik:nos-migration-author": withheld
+  "authentik:nos-openclaw": withheld
+  "authentik:nos-state-manager": withheld
+  "authentik:nos-surveyor": withheld
+  "authentik:nos-upgrade-architect": withheld
+  "authentik:nos-wing": withheld
+
+  # --- withheld: agent ceremonies (2026-08-29) ------------------------------
+  # An agent node carries its charter, its tool grants and its orchestrator
+  # binding. Published, the set would say which parts of this estate act
+  # without a human, when, and through whose endpoint. Withheld entirely —
+  # `service:openclaw` and `service:hermes` already speak for the wits organ
+  # in prose a stranger may read.
+  "agent:conductor": withheld
+  "agent:curator": withheld
+  "agent:inspektor": withheld
+  "agent:librarian": withheld
+  "agent:migration-author": withheld
+  "agent:surveyor": withheld
+  "agent:upgrade-architect": withheld
+
+  # --- withheld: tool grants and LLM backends (2026-08-29) ------------------
+  # Capability resources on the agents' side of the graph. The tool ids name
+  # the estate's internal APIs; the backend rows name third-party inference
+  # endpoints and which of them is armed.
+  "resource:backend-anthropic": withheld
+  "resource:backend-minimax": withheld
+  "resource:backend-mistral-eu": withheld
+  "resource:bash-read-only": withheld
+  "resource:mcp-bone": withheld
+  "resource:mcp-keap": withheld
+  "resource:mcp-wing-read": withheld
+  "resource:mcp-wing-write": withheld
+  "resource:migration-file-write": withheld
 
   # --- withheld: host daemons (the estate's launchd organs) -----------------
   "daemon:eu.thisisait.nos.acme-renew": withheld

@@ -28,6 +28,10 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
                             (matches wing.db pulse_jobs id, e.g. keap:keap-lint)
     judge:<name>            state/judge-sets.yml key
     gateset:<name>          state/judge-sets.yml gate_sets key
+    agent:<name>            files/anatomy/agents/<name>/agent.yml — the ceremony
+                            itself, addressed apart from the pulse jobs that
+                            fire it; in-edges are its tools, its backend
+                            binding and the identity it authenticates as
     weakness:<id>           files/anatomy/bone/weaknesses.py SOURCE_ORDER
     daemon:<launchd label>  eu.thisisait.nos.* labels from role defaults
     service:<manifest id>   state/manifest.yml services[].id
@@ -128,11 +132,22 @@ FACE_REGISTRY = REPO / "files" / "anatomy" / "face" / "src" / "lib" / "apps" / \
     "native" / "registry.ts"
 
 JOB_SOURCES = ("files/anatomy/plugins/*/plugin.yml", "files/anatomy/agents/*/agent.yml")
+AGENT_PROFILES = "files/anatomy/agents/*/agent.yml"
 JUDGE_SETS = REPO / "state" / "judge-sets.yml"
 WEAKNESSES = REPO / "files" / "anatomy" / "bone" / "weaknesses.py"
 MANIFEST = REPO / "state" / "manifest.yml"
 TOFU_REGISTRY = REPO / "state" / "tofu-authentik-services.yml"
 KEAP_TABLES = REPO / "state" / "keap-tables"
+#: The permitted-orchestrator list — one row per (adapter, backend) an agent
+#: may be bound to. Read here as the register it is; the binding itself is
+#: `model.backend` in each agent.yml.
+LLM_BACKENDS = REPO / "state" / "llm-backends.yml"
+DEFAULT_CONFIG = REPO / "default.config.yml"
+#: The blueprint that actually creates the agent OIDC clients. Named so the
+#: `authentik:<slug>` nodes minted from the roster die with the code that
+#: applies them, rather than outliving it (repair before declare).
+AGENT_CLIENT_BLUEPRINT = REPO / "files" / "anatomy" / "plugins" / "authentik-base" / \
+    "blueprints" / "30-agent-clients.yaml.j2"
 
 #: The git surfaces the estate's jobs and operator tools touch (operator ask,
 #: 2026-08-06). Curated because no committed file declares remotes — each node
@@ -196,6 +211,7 @@ SERVICE_ANCHORS = {
     "storage": "11.04",
 }
 KIND_ANCHORS = {
+    "agent": "02.02.09",          # Artificial Intelligence
     "judge": "02.02.04", "gateset": "02.02.04",
     "weakness": "02.02.08",
     "daemon": "02.02.06",
@@ -307,6 +323,15 @@ def _owner(doc: dict, path: Path) -> str:
     return re.sub(r"-base$", "", str(doc.get("name") or doc.get("agent_id") or path.stem))
 
 
+def _dispatched_agent(job: dict) -> str | None:
+    """Which agent ceremony this job fires, read the way the runner reads it."""
+    for arg in job.get("args") or []:
+        m = re.fullmatch(r"--agent=(\S+)", str(arg))
+        if m:
+            return m.group(1)
+    return (job.get("env") or {}).get("NOS_AGENT_NAME") or None
+
+
 def harvest_pulse(nodes: dict, raw_edges: list, raw_writes: list) -> None:
     for pattern in JOB_SOURCES:
         for path in sorted(REPO.glob(pattern)):
@@ -338,6 +363,7 @@ def harvest_pulse(nodes: dict, raw_edges: list, raw_writes: list) -> None:
                     # allow-list judgement the face's pulse projection makes).
                     "command_name": cmd.rsplit("/", 1)[-1] or None,
                     "claims": claims,
+                    "runs_agent": _dispatched_agent(job),
                 }
                 for dep in job.get("depends_on") or []:
                     raw_edges.append((nid, dep, str(path.relative_to(REPO))))
@@ -427,8 +453,23 @@ def _describe(nid: str, n: dict) -> str:
     if kind == "service":
         return (f"Docker service '{local}' ({n.get('category')}) in the "
                 f"{n.get('stack')} compose stack, toggled by {n.get('install_flag')}")
+    if kind == "agent":
+        return (f"Agent ceremony '{local}' ({n.get('charter') or 'no declared charter'}), "
+                f"mode={n.get('mode')}, runner_status="
+                f"{n.get('runner_status') or 'UNDECLARED (not a green state)'} — "
+                f"primary {n.get('primary_model')} on backend {n.get('backend')}"
+                f"{'' if n.get('backend_declared') else ' (the register default, undeclared)'}")
     if kind == "resource":
-        if "requires" in str(n.get("source")):
+        src = str(n.get("source"))
+        if src.startswith("state/llm-backends.yml"):
+            return (f"LLM backend '{local.removeprefix('backend-')}' — a permitted "
+                    f"orchestrator row (protocol {n.get('protocol')}, "
+                    f"eu_resident={n.get('eu_resident')}), armed by "
+                    f"{n.get('enabled_flag') or 'no flag — this is the default backend'}")
+        if "agent tools" in src:
+            return (f"Agent tool '{local}' — a capability grant an agent's runtime may "
+                    f"call; declared per agent in tools[], enforced by the tool's own scope")
+        if "requires" in src:
             return (f"Capability resource '{local}' — required by judges, satisfied "
                     f"or not, never exclusive")
         return (f"Exclusion resource '{local}' — nodes claiming it are pairwise "
@@ -440,6 +481,13 @@ def _describe(nid: str, n: dict) -> str:
                 f"over Authentik providers/applications/outposts; plan daily, "
                 f"apply only at converge behind the destroy-guard")
     if kind == "authentik":
+        if n.get("mode") == "client_credentials":
+            caps = n.get("capabilities")
+            scope = (f"scoped to {len(caps)} declared capabilities" if isinstance(caps, list)
+                     else "scoped by a config template resolved at converge")
+            return (f"Authentik machine identity '{n.get('client_id')}' — the "
+                    f"client_credentials client an automated actor authenticates as, "
+                    f"{scope}; {n.get('managed_by')}")
         svc = (f"gates service:{n['service']}" if n.get("service")
                else "no manifest service (Tier-2 app or excluded install)")
         return (f"Authentik {n.get('mode')} client '{n.get('client_id')}' "
@@ -682,6 +730,153 @@ def harvest_authentik(nodes: dict) -> None:
         }
 
 
+def harvest_agent_clients(nodes: dict) -> None:
+    """The machine identities the automated actors authenticate as.
+
+    A SECOND authentik source beside the tofu registry, because these rows are
+    applied by a blueprint rather than by OpenTofu — and until they were
+    addresses, every agent node's identity edge pointed at nothing. Gated on
+    the blueprint that creates them: if it moves, the nodes go with it rather
+    than outliving the code (repair before declare).
+    """
+    if not AGENT_CLIENT_BLUEPRINT.exists():
+        return
+    doc = yaml.safe_load(DEFAULT_CONFIG.read_text(encoding="utf-8")) or {}
+    for row in doc.get("authentik_agent_clients") or []:
+        if not (isinstance(row, dict) and row.get("slug")):
+            continue
+        caps = row.get("capabilities")
+        nodes[f"authentik:{row['slug']}"] = {
+            "kind": "authentik",
+            "source": "default.config.yml authentik_agent_clients",
+            "mode": "client_credentials",
+            "tier": None,
+            "client_id": row.get("client_id"),
+            "service": None,
+            # A `{{ authentik_agent_scopes }}` value is a converge-time
+            # template, not a roster this compiler may count.
+            "capabilities": sorted(caps) if isinstance(caps, list) else None,
+            "managed_by": str(AGENT_CLIENT_BLUEPRINT.relative_to(REPO)),
+        }
+
+
+# ── harvest: LLM backends + agents ────────────────────────────────────────
+
+
+def harvest_backends(nodes: dict) -> None:
+    """Every row of the permitted-orchestrator list, bound or not.
+
+    `resource:` and not a kind of its own: a backend is exactly what the judge
+    `requires:` resources already are — something an actor needs in order to
+    run, satisfied or not, never exclusive. A prepared-not-armed row (mistral)
+    is a node with no in-edges, which is the honest picture of it.
+    """
+    doc = yaml.safe_load(LLM_BACKENDS.read_text(encoding="utf-8")) or {}
+    backends = doc.get("backends") or {}
+    if not backends:
+        _die("state/llm-backends.yml declares no backends — the register moved, update "
+             "harvest_backends rather than shipping agents with no orchestrator")
+    for name, b in backends.items():
+        nodes[f"resource:backend-{name}"] = {
+            "kind": "resource",
+            "source": "state/llm-backends.yml",
+            "protocol": b.get("protocol"),
+            "eu_resident": (b.get("residency") or {}).get("eu"),
+            "enabled_flag": b.get("enabled_flag"),
+            "is_default": bool(b.get("default")),
+        }
+
+
+def harvest_agents(nodes: dict, edges: list) -> None:
+    """agent:<name> — one node per ceremony profile, with its three in-edges.
+
+    DIRECTION, since the brief spells the relations the other way round: every
+    edge here runs UPSTREAM → CONSUMER, the estate's one convention (a judge's
+    `requires:` resource points AT the judge). Inverted, an agent would be a
+    root nothing depends on — the same calm lie `derive_authentik_hosting`
+    exists to correct for Authentik.
+    """
+    default_backend = next(
+        (nid.removeprefix("resource:backend-") for nid, n in sorted(nodes.items())
+         if n.get("is_default")), None)
+    for path in sorted(REPO.glob(AGENT_PROFILES)):
+        doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        name = str(doc.get("name") or path.parent.name)
+        src = str(path.relative_to(REPO))
+        nid = f"agent:{name}"
+        meta = doc.get("metadata") or {}
+        model = doc.get("model") or {}
+        declared = model.get("backend")
+        backend = declared or default_backend
+        tools = sorted({t["id"] for t in doc.get("tools") or []
+                        if isinstance(t, dict) and t.get("id")})
+        nodes[nid] = {
+            "kind": "agent",
+            "source": src,
+            "charter": meta.get("ceremony_role"),
+            # No default. An undeclared runner_status is UNKNOWN and reads as
+            # UNKNOWN — `state/schema/agent.schema.yaml` holds the vocabulary.
+            "runner_status": meta.get("runner_status"),
+            "mode": (doc.get("multiagent") or {}).get("type"),
+            "primary_model": model.get("primary"),
+            "backend": backend,
+            "backend_declared": declared is not None,
+            "tools": tools,
+        }
+        for t in tools:
+            rid = f"resource:{t}"
+            nodes.setdefault(rid, {"kind": "resource",
+                                   "source": "derived from agent tools"})
+            edges.append({
+                "from": rid, "to": nid, "kind": "data",
+                "via": f"tool grant `{t}` declared in {src} tools[]",
+                "derived": "agent-tools",
+            })
+        rid = f"resource:backend-{backend}" if backend else None
+        if rid and rid in nodes:
+            edges.append({
+                "from": rid, "to": nid, "kind": "data",
+                "via": (f"`model.backend: {declared}` binding" if declared else
+                        "the register's default backend — this agent declares none")
+                       + ", resolved through state/llm-backends.yml at session open",
+                "derived": "agent-backend",
+            })
+        elif rid:
+            _die(f"{nid}: backend {backend!r} is not a row in state/llm-backends.yml")
+        client = f"authentik:nos-{name}"
+        if client in nodes:
+            edges.append({
+                "from": client, "to": nid, "kind": "data",
+                "via": f"the identity this ceremony authenticates as "
+                       f"(client_credentials client nos-{name})",
+                "derived": "agent-identity",
+            })
+
+
+def derive_agent_triggers(nodes: dict) -> list[dict]:
+    """pulse:<owner>:<job> → agent:<name>, from the job's OWN declaration.
+
+    Not from ownership: a job stored under an agent's profile is not proof it
+    runs that agent, and `--agent=` / `NOS_AGENT_NAME` is what the runner
+    actually reads.
+    """
+    out = []
+    for nid, n in sorted(nodes.items()):
+        target = n.get("runs_agent") if n.get("kind") == "pulse" else None
+        if not target:
+            continue
+        if f"agent:{target}" not in nodes:
+            _die(f"{nid}: dispatches agent {target!r}, which has no profile under "
+                 f"files/anatomy/agents/")
+        out.append({
+            "from": nid, "to": f"agent:{target}", "kind": "trigger",
+            "via": f"{n.get('command_name')} dispatches the {target} ceremony "
+                   f"(--agent= / NOS_AGENT_NAME in the job's own declaration)",
+            "derived": "agent-dispatch",
+        })
+    return out
+
+
 def derive_authentik_hosting(nodes: dict) -> list[dict]:
     """service:authentik → authentik:<slug>, one per registry row.
 
@@ -712,7 +907,7 @@ def derive_authentik_hosting(nodes: dict) -> list[dict]:
             "kind": "data",
             "via": f"provider+application object hosted by Authentik "
                    f"(mode={n.get('mode')}) — applied into the running service by "
-                   f"terraform/authentik from state/tofu-authentik-services.yml",
+                   f"{n.get('managed_by')} from {n['source']}",
             "derived": "authentik-hosting",
         })
     return out
@@ -1451,6 +1646,9 @@ def build() -> dict:
     harvest_service_deps(nodes, raw)   # after services — resolves against them
     harvest_repos_and_tofu(nodes)
     harvest_authentik(nodes)   # after services — slug→service binding needs them
+    harvest_agent_clients(nodes)
+    harvest_backends(nodes)
+    harvest_agents(nodes, agent_edges := [])   # after clients+backends — edges resolve
     harvest_tables(nodes)
     harvest_faceapps(nodes)
 
@@ -1468,7 +1666,8 @@ def build() -> dict:
     annotate_nodes(nodes)
     hosting = derive_authentik_hosting(nodes)
     all_edges = (declared + writes + edges + bindings + substrate + face
-                 + structural + doctrine + mutex + hosting)
+                 + structural + doctrine + mutex + hosting + agent_edges
+                 + derive_agent_triggers(nodes))
     derive_layers(nodes, all_edges)
 
     # Per-kind cycles are a compile error (§2c-2): there is no legitimate
@@ -1489,7 +1688,7 @@ def build() -> dict:
     all_edges.sort(key=lambda e: (e["kind"], e["from"], e["to"]))
     counts = {"nodes": len(nodes), "edges": len(all_edges)}
     for k in ("pulse", "judge", "gateset", "weakness", "daemon", "service", "resource",
-              "repo", "tofu", "authentik", "table", "doctrine", "faceapp"):
+              "repo", "tofu", "authentik", "table", "doctrine", "faceapp", "agent"):
         counts[f"nodes_{k}"] = sum(1 for n in nodes.values() if n["kind"] == k)
     for k in EDGE_KINDS + ("mutex", "governed_by"):
         counts[f"edges_{k}"] = sum(1 for e in all_edges if e["kind"] == k)

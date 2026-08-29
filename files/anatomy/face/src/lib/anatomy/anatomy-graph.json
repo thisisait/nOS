@@ -4,23 +4,24 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 208,
-    "edges": 210,
+    "nodes": 235,
+    "edges": 266,
     "nodes_pulse": 30,
     "nodes_judge": 5,
     "nodes_gateset": 4,
     "nodes_weakness": 7,
     "nodes_daemon": 12,
     "nodes_service": 64,
-    "nodes_resource": 4,
+    "nodes_resource": 13,
     "nodes_repo": 4,
     "nodes_tofu": 1,
-    "nodes_authentik": 44,
+    "nodes_authentik": 55,
     "nodes_table": 15,
     "nodes_doctrine": 13,
     "nodes_faceapp": 5,
-    "edges_data": 133,
-    "edges_trigger": 31,
+    "nodes_agent": 7,
+    "edges_data": 183,
+    "edges_trigger": 37,
     "edges_temporal": 5,
     "edges_mutex": 21,
     "edges_governed_by": 20,
@@ -39,6 +40,129 @@
     "union-kind cycle (feedback loop, review-not-refuse): pulse:cortex:cortex-fs-sync -> pulse:keap:keap-embed-sync -> pulse:cortex:cortex-corpus-diff -> pulse:cortex:cortex-fs-sync"
   ],
   "nodes": {
+    "agent:conductor": {
+      "kind": "agent",
+      "source": "files/anatomy/agents/conductor/agent.yml",
+      "charter": "first-non-operator-write",
+      "runner_status": "unproven",
+      "mode": "solo",
+      "primary_model": "anthropic-claude-sonnet-4-5",
+      "backend": "minimax",
+      "backend_declared": true,
+      "tools": [
+        "bash-read-only",
+        "mcp-bone",
+        "mcp-wing-read"
+      ],
+      "anchor": "02.02.09",
+      "description": "Agent ceremony 'conductor' (first-non-operator-write), mode=solo, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
+    },
+    "agent:curator": {
+      "kind": "agent",
+      "source": "files/anatomy/agents/curator/agent.yml",
+      "charter": "taxonomy-reconcile",
+      "runner_status": "parked",
+      "mode": "solo",
+      "primary_model": "anthropic-claude-sonnet-4-5",
+      "backend": "minimax",
+      "backend_declared": true,
+      "tools": [
+        "bash-read-only",
+        "mcp-bone",
+        "mcp-keap",
+        "mcp-wing-read"
+      ],
+      "anchor": "02.02.09",
+      "description": "Agent ceremony 'curator' (taxonomy-reconcile), mode=solo, runner_status=parked — primary anthropic-claude-sonnet-4-5 on backend minimax"
+    },
+    "agent:inspektor": {
+      "kind": "agent",
+      "source": "files/anatomy/agents/inspektor/agent.yml",
+      "charter": "pentest-survey",
+      "runner_status": "deferred",
+      "mode": "solo",
+      "primary_model": "claude-sonnet",
+      "backend": "anthropic",
+      "backend_declared": false,
+      "tools": [
+        "bash-read-only",
+        "mcp-bone",
+        "mcp-wing-read"
+      ],
+      "anchor": "02.02.09",
+      "description": "Agent ceremony 'inspektor' (pentest-survey), mode=solo, runner_status=deferred — primary claude-sonnet on backend anthropic (the register default, undeclared)"
+    },
+    "agent:librarian": {
+      "kind": "agent",
+      "source": "files/anatomy/agents/librarian/agent.yml",
+      "charter": "rag-recall",
+      "runner_status": "scheduled",
+      "mode": "solo",
+      "primary_model": "anthropic-claude-sonnet-4-5",
+      "backend": "minimax",
+      "backend_declared": true,
+      "tools": [
+        "bash-read-only",
+        "mcp-bone",
+        "mcp-keap",
+        "mcp-wing-read",
+        "mcp-wing-write"
+      ],
+      "anchor": "02.02.09",
+      "description": "Agent ceremony 'librarian' (rag-recall), mode=solo, runner_status=scheduled — primary anthropic-claude-sonnet-4-5 on backend minimax"
+    },
+    "agent:migration-author": {
+      "kind": "agent",
+      "source": "files/anatomy/agents/migration-author/agent.yml",
+      "charter": "migration-authoring",
+      "runner_status": "parked",
+      "mode": "solo",
+      "primary_model": "claude-sonnet",
+      "backend": "anthropic",
+      "backend_declared": false,
+      "tools": [
+        "bash-read-only",
+        "mcp-wing-read",
+        "migration-file-write"
+      ],
+      "anchor": "02.02.09",
+      "description": "Agent ceremony 'migration-author' (migration-authoring), mode=solo, runner_status=parked — primary claude-sonnet on backend anthropic (the register default, undeclared)"
+    },
+    "agent:surveyor": {
+      "kind": "agent",
+      "source": "files/anatomy/agents/surveyor/agent.yml",
+      "charter": "surface-legibility",
+      "runner_status": "unproven",
+      "mode": "solo",
+      "primary_model": "anthropic-claude-sonnet-4-5",
+      "backend": "minimax",
+      "backend_declared": true,
+      "tools": [
+        "bash-read-only",
+        "mcp-bone",
+        "mcp-wing-read",
+        "mcp-wing-write"
+      ],
+      "anchor": "02.02.09",
+      "description": "Agent ceremony 'surveyor' (surface-legibility), mode=solo, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
+    },
+    "agent:upgrade-architect": {
+      "kind": "agent",
+      "source": "files/anatomy/agents/upgrade-architect/agent.yml",
+      "charter": "recipe-authoring",
+      "runner_status": null,
+      "mode": "solo",
+      "primary_model": "claude-sonnet",
+      "backend": "anthropic",
+      "backend_declared": false,
+      "tools": [
+        "bash-read-only",
+        "mcp-wing-read",
+        "migration-file-write"
+      ],
+      "anchor": "02.02.09",
+      "description": "Agent ceremony 'upgrade-architect' (recipe-authoring), mode=solo, runner_status=UNDECLARED (not a green state) — primary claude-sonnet on backend anthropic (the register default, undeclared)"
+    },
     "authentik:backrest": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
@@ -324,6 +448,184 @@
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
       "description": "Authentik native_oidc client 'nos-nodered' (RBAC tier 2) — gates service:nodered; provider+application managed by OpenTofu from the committed registry"
+    },
+    "authentik:nos-conductor": {
+      "kind": "authentik",
+      "source": "default.config.yml authentik_agent_clients",
+      "mode": "client_credentials",
+      "tier": null,
+      "client_id": "nos-conductor",
+      "service": null,
+      "capabilities": null,
+      "managed_by": "files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2",
+      "anchor": "02.02.08",
+      "description": "Authentik machine identity 'nos-conductor' — the client_credentials client an automated actor authenticates as, scoped by a config template resolved at converge; files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2"
+    },
+    "authentik:nos-curator": {
+      "kind": "authentik",
+      "source": "default.config.yml authentik_agent_clients",
+      "mode": "client_credentials",
+      "tier": null,
+      "client_id": "nos-curator",
+      "service": null,
+      "capabilities": [
+        "nos:security:read",
+        "nos:state:read"
+      ],
+      "managed_by": "files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2",
+      "anchor": "02.02.08",
+      "description": "Authentik machine identity 'nos-curator' — the client_credentials client an automated actor authenticates as, scoped to 2 declared capabilities; files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2"
+    },
+    "authentik:nos-devlog": {
+      "kind": "authentik",
+      "source": "default.config.yml authentik_agent_clients",
+      "mode": "client_credentials",
+      "tier": null,
+      "client_id": "nos-devlog",
+      "service": null,
+      "capabilities": [
+        "nos:devlog:write"
+      ],
+      "managed_by": "files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2",
+      "anchor": "02.02.08",
+      "description": "Authentik machine identity 'nos-devlog' — the client_credentials client an automated actor authenticates as, scoped to 1 declared capabilities; files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2"
+    },
+    "authentik:nos-inspektor": {
+      "kind": "authentik",
+      "source": "default.config.yml authentik_agent_clients",
+      "mode": "client_credentials",
+      "tier": null,
+      "client_id": "nos-inspektor",
+      "service": null,
+      "capabilities": [
+        "nos:pentest:execute",
+        "nos:security:read",
+        "nos:security:scan",
+        "nos:security:write",
+        "nos:state:read"
+      ],
+      "managed_by": "files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2",
+      "anchor": "02.02.08",
+      "description": "Authentik machine identity 'nos-inspektor' — the client_credentials client an automated actor authenticates as, scoped to 5 declared capabilities; files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2"
+    },
+    "authentik:nos-librarian": {
+      "kind": "authentik",
+      "source": "default.config.yml authentik_agent_clients",
+      "mode": "client_credentials",
+      "tier": null,
+      "client_id": "nos-librarian",
+      "service": null,
+      "capabilities": [
+        "nos:migrations:read",
+        "nos:patches:read",
+        "nos:security:read",
+        "nos:state:read",
+        "nos:upgrades:read"
+      ],
+      "managed_by": "files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2",
+      "anchor": "02.02.08",
+      "description": "Authentik machine identity 'nos-librarian' — the client_credentials client an automated actor authenticates as, scoped to 5 declared capabilities; files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2"
+    },
+    "authentik:nos-migration-author": {
+      "kind": "authentik",
+      "source": "default.config.yml authentik_agent_clients",
+      "mode": "client_credentials",
+      "tier": null,
+      "client_id": "nos-migration-author",
+      "service": null,
+      "capabilities": [
+        "nos:coexistence:read",
+        "nos:migration:write",
+        "nos:migrations:read",
+        "nos:state:read",
+        "nos:upgrades:read"
+      ],
+      "managed_by": "files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2",
+      "anchor": "02.02.08",
+      "description": "Authentik machine identity 'nos-migration-author' — the client_credentials client an automated actor authenticates as, scoped to 5 declared capabilities; files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2"
+    },
+    "authentik:nos-openclaw": {
+      "kind": "authentik",
+      "source": "default.config.yml authentik_agent_clients",
+      "mode": "client_credentials",
+      "tier": null,
+      "client_id": "nos-openclaw",
+      "service": null,
+      "capabilities": null,
+      "managed_by": "files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2",
+      "anchor": "02.02.08",
+      "description": "Authentik machine identity 'nos-openclaw' — the client_credentials client an automated actor authenticates as, scoped by a config template resolved at converge; files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2"
+    },
+    "authentik:nos-state-manager": {
+      "kind": "authentik",
+      "source": "default.config.yml authentik_agent_clients",
+      "mode": "client_credentials",
+      "tier": null,
+      "client_id": "nos-state-manager",
+      "service": null,
+      "capabilities": [
+        "nos:coexistence:read",
+        "nos:migrations:read",
+        "nos:patches:read",
+        "nos:state:read",
+        "nos:state:write",
+        "nos:upgrades:read"
+      ],
+      "managed_by": "files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2",
+      "anchor": "02.02.08",
+      "description": "Authentik machine identity 'nos-state-manager' — the client_credentials client an automated actor authenticates as, scoped to 6 declared capabilities; files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2"
+    },
+    "authentik:nos-surveyor": {
+      "kind": "authentik",
+      "source": "default.config.yml authentik_agent_clients",
+      "mode": "client_credentials",
+      "tier": null,
+      "client_id": "nos-surveyor",
+      "service": null,
+      "capabilities": [
+        "nos:coexistence:read",
+        "nos:migrations:read",
+        "nos:security:read",
+        "nos:state:read",
+        "nos:upgrades:read"
+      ],
+      "managed_by": "files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2",
+      "anchor": "02.02.08",
+      "description": "Authentik machine identity 'nos-surveyor' — the client_credentials client an automated actor authenticates as, scoped to 5 declared capabilities; files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2"
+    },
+    "authentik:nos-upgrade-architect": {
+      "kind": "authentik",
+      "source": "default.config.yml authentik_agent_clients",
+      "mode": "client_credentials",
+      "tier": null,
+      "client_id": "nos-upgrade-architect",
+      "service": null,
+      "capabilities": [
+        "nos:coexistence:read",
+        "nos:state:read",
+        "nos:upgrades:read"
+      ],
+      "managed_by": "files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2",
+      "anchor": "02.02.08",
+      "description": "Authentik machine identity 'nos-upgrade-architect' — the client_credentials client an automated actor authenticates as, scoped to 3 declared capabilities; files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2"
+    },
+    "authentik:nos-wing": {
+      "kind": "authentik",
+      "source": "default.config.yml authentik_agent_clients",
+      "mode": "client_credentials",
+      "tier": null,
+      "client_id": "nos-wing",
+      "service": null,
+      "capabilities": [
+        "nos:coexistence:read",
+        "nos:migrations:read",
+        "nos:patches:read",
+        "nos:state:read",
+        "nos:upgrades:read"
+      ],
+      "managed_by": "files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2",
+      "anchor": "02.02.08",
+      "description": "Authentik machine identity 'nos-wing' — the client_credentials client an automated actor authenticates as, scoped to 5 declared capabilities; files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2"
     },
     "authentik:ntfy": {
       "kind": "authentik",
@@ -910,6 +1212,7 @@
       "findings_exit_codes": null,
       "command_name": "prometheus-alert-relay.py",
       "claims": [],
+      "runs_agent": null,
       "anchor": "02.02.06",
       "description": "Pulse scheduled job (platform): runs prometheus-alert-relay.py on cron `*/15 * * * *`"
     },
@@ -924,6 +1227,7 @@
       "findings_exit_codes": null,
       "command_name": "run-tofu-drift.sh",
       "claims": [],
+      "runs_agent": null,
       "anchor": "02.02.08",
       "description": "Pulse scheduled job (security): runs run-tofu-drift.sh on cron `30 5 * * *`"
     },
@@ -938,6 +1242,7 @@
       "findings_exit_codes": null,
       "command_name": "{{ backup_verify_script_path }}",
       "claims": [],
+      "runs_agent": null,
       "anchor": "02.02.06",
       "description": "Pulse scheduled job (platform): runs {{ backup_verify_script_path }} on cron `30 7 * * 0`"
     },
@@ -952,6 +1257,7 @@
       "findings_exit_codes": null,
       "command_name": "scan-state-snapshot.py",
       "claims": [],
+      "runs_agent": null,
       "anchor": "02.02.08",
       "description": "Pulse scheduled job (security): runs scan-state-snapshot.py on cron `30 3 * * *`"
     },
@@ -966,6 +1272,7 @@
       "findings_exit_codes": null,
       "command_name": "drift-watch.sh",
       "claims": [],
+      "runs_agent": null,
       "anchor": "02.02.08",
       "description": "Pulse scheduled job (security): runs drift-watch.sh on cron `0 6 * * *`"
     },
@@ -982,6 +1289,7 @@
       "claims": [
         "agent-run-lock"
       ],
+      "runs_agent": "conductor",
       "anchor": "02.02.09",
       "description": "Pulse scheduled job (agents): runs run-agent.sh on cron `0 4 * * 0`"
     },
@@ -998,6 +1306,7 @@
       "claims": [
         "agent-run-lock"
       ],
+      "runs_agent": null,
       "anchor": "02.02.08",
       "description": "Pulse scheduled job (security): runs scan-runner.sh on cron `0 2 * * *`"
     },
@@ -1012,6 +1321,7 @@
       "findings_exit_codes": null,
       "command_name": "cortex-corpus-diff.py",
       "claims": [],
+      "runs_agent": null,
       "anchor": "09",
       "description": "Pulse scheduled job (knowledge): runs cortex-corpus-diff.py on cron `30 5 * * *`"
     },
@@ -1026,6 +1336,7 @@
       "findings_exit_codes": null,
       "command_name": "cortex-fs-sync.py",
       "claims": [],
+      "runs_agent": null,
       "anchor": "09",
       "description": "Pulse scheduled job (knowledge): runs cortex-fs-sync.py on cron `30 4 * * *`"
     },
@@ -1042,6 +1353,7 @@
       ],
       "command_name": "discovery-scan.py",
       "claims": [],
+      "runs_agent": null,
       "anchor": "02.02.08",
       "description": "Pulse scheduled job (security): runs discovery-scan.py on cron `40 6 * * *` — exits [1] mean findings, not failure"
     },
@@ -1056,6 +1368,7 @@
       "findings_exit_codes": null,
       "command_name": "php",
       "claims": [],
+      "runs_agent": null,
       "anchor": "04.06",
       "description": "Pulse scheduled job (compliance): runs php on cron `0 * * * *`"
     },
@@ -1072,6 +1385,7 @@
       ],
       "command_name": "run-gitleaks.sh",
       "claims": [],
+      "runs_agent": null,
       "anchor": "02.02.08",
       "description": "Pulse scheduled job (security): runs run-gitleaks.sh on cron `0 3 * * *` — exits [1] mean findings, not failure"
     },
@@ -1086,6 +1400,7 @@
       "findings_exit_codes": null,
       "command_name": "keap-consolidate.py",
       "claims": [],
+      "runs_agent": null,
       "anchor": "09",
       "description": "Pulse scheduled job (knowledge): runs keap-consolidate.py on cron `15 4 * * *`"
     },
@@ -1100,6 +1415,7 @@
       "findings_exit_codes": null,
       "command_name": "keap-embed-sync.py",
       "claims": [],
+      "runs_agent": null,
       "anchor": "09",
       "description": "Pulse scheduled job (knowledge): runs keap-embed-sync.py on cron `45 4 * * *`"
     },
@@ -1114,6 +1430,7 @@
       "findings_exit_codes": null,
       "command_name": "keap-features-sync.py",
       "claims": [],
+      "runs_agent": null,
       "anchor": "09",
       "description": "Pulse scheduled job (knowledge): runs keap-features-sync.py on cron `0 5 * * *`"
     },
@@ -1128,6 +1445,7 @@
       "findings_exit_codes": null,
       "command_name": "keap-lint.py",
       "claims": [],
+      "runs_agent": null,
       "anchor": "09",
       "description": "Pulse scheduled job (knowledge): runs keap-lint.py on cron `15 5 * * *`"
     },
@@ -1144,6 +1462,7 @@
       "claims": [
         "agent-run-lock"
       ],
+      "runs_agent": "librarian",
       "anchor": "09",
       "description": "Pulse scheduled job (knowledge): runs run-agent.sh on cron `10 3 * * *`"
     },
@@ -1160,6 +1479,7 @@
       "claims": [
         "agent-run-lock"
       ],
+      "runs_agent": "librarian",
       "anchor": "09",
       "description": "Pulse scheduled job (knowledge): runs run-agent.sh on cron `10 2 * * *`"
     },
@@ -1176,6 +1496,7 @@
       "claims": [
         "agent-run-lock"
       ],
+      "runs_agent": "librarian",
       "anchor": "09",
       "description": "Pulse scheduled job (knowledge): runs run-agent.sh on cron `10 5 * * *`"
     },
@@ -1190,6 +1511,7 @@
       "findings_exit_codes": null,
       "command_name": "loop-pr.py",
       "claims": [],
+      "runs_agent": null,
       "anchor": "02.02.06",
       "description": "Pulse scheduled job (platform): runs loop-pr.py on cron `10 6 * * *`"
     },
@@ -1207,6 +1529,7 @@
       ],
       "command_name": "loop-propose.py",
       "claims": [],
+      "runs_agent": null,
       "anchor": "02.02.09",
       "description": "Pulse scheduled job (agents): runs loop-propose.py on cron `30 1 * * *` — exits [1, 3] mean findings, not failure"
     },
@@ -1221,6 +1544,7 @@
       "findings_exit_codes": null,
       "command_name": "loop-review.py",
       "claims": [],
+      "runs_agent": null,
       "anchor": "02.02.06",
       "description": "Pulse scheduled job (platform): runs loop-review.py on cron `50 6 * * *`"
     },
@@ -1235,6 +1559,7 @@
       "findings_exit_codes": null,
       "command_name": "npm-ioc-scan.py",
       "claims": [],
+      "runs_agent": null,
       "anchor": "02.02.08",
       "description": "Pulse scheduled job (security): runs npm-ioc-scan.py on cron `20 4 * * *`"
     },
@@ -1251,6 +1576,7 @@
       "claims": [
         "agent-run-lock"
       ],
+      "runs_agent": "surveyor",
       "anchor": "02.02.09",
       "description": "Pulse scheduled job (agents): runs run-agent.sh on cron `10 1 * * *`"
     },
@@ -1267,6 +1593,7 @@
       "claims": [
         "agent-run-lock"
       ],
+      "runs_agent": "upgrade-architect",
       "anchor": "02.02.09",
       "description": "Pulse scheduled job (agents): runs run-agent.sh on cron `0 8 * * 0` — PAUSED (deliberate operator decision, not a health state)"
     },
@@ -1281,6 +1608,7 @@
       "findings_exit_codes": null,
       "command_name": "agent-cost-tally.py",
       "claims": [],
+      "runs_agent": null,
       "anchor": "02.02.06",
       "description": "Pulse scheduled job (platform): runs agent-cost-tally.py on cron `23 6 * * *`"
     },
@@ -1295,6 +1623,7 @@
       "findings_exit_codes": null,
       "command_name": "php",
       "claims": [],
+      "runs_agent": null,
       "anchor": "04.06",
       "description": "Pulse scheduled job (compliance): runs php on cron `17 4 * * *`"
     },
@@ -1309,6 +1638,7 @@
       "findings_exit_codes": null,
       "command_name": "php",
       "claims": [],
+      "runs_agent": null,
       "anchor": "03.08",
       "description": "Pulse scheduled job (notification): runs php on cron `* * * * *`"
     },
@@ -1323,6 +1653,7 @@
       "findings_exit_codes": null,
       "command_name": "php",
       "claims": [],
+      "runs_agent": null,
       "anchor": "03.08",
       "description": "Pulse scheduled job (notification): runs php on cron `{{ mail_digest_cron }}`"
     },
@@ -1337,6 +1668,7 @@
       "findings_exit_codes": null,
       "command_name": "php",
       "claims": [],
+      "runs_agent": null,
       "anchor": "03.08",
       "description": "Pulse scheduled job (notification): runs php on cron `*/15 * * * *`"
     },
@@ -1395,6 +1727,42 @@
       "anchor": "02.02.06",
       "description": "Exclusion resource 'agent-run-lock' — nodes claiming it are pairwise mutually exclusive (mutex edges derived from claims)"
     },
+    "resource:backend-anthropic": {
+      "kind": "resource",
+      "source": "state/llm-backends.yml",
+      "protocol": "anthropic",
+      "eu_resident": false,
+      "enabled_flag": null,
+      "is_default": true,
+      "anchor": "02.02.06",
+      "description": "LLM backend 'anthropic' — a permitted orchestrator row (protocol anthropic, eu_resident=False), armed by no flag — this is the default backend"
+    },
+    "resource:backend-minimax": {
+      "kind": "resource",
+      "source": "state/llm-backends.yml",
+      "protocol": "anthropic",
+      "eu_resident": false,
+      "enabled_flag": "minimax_enabled",
+      "is_default": false,
+      "anchor": "02.02.06",
+      "description": "LLM backend 'minimax' — a permitted orchestrator row (protocol anthropic, eu_resident=False), armed by minimax_enabled"
+    },
+    "resource:backend-mistral-eu": {
+      "kind": "resource",
+      "source": "state/llm-backends.yml",
+      "protocol": "openai",
+      "eu_resident": true,
+      "enabled_flag": "mistral_enabled",
+      "is_default": false,
+      "anchor": "02.02.06",
+      "description": "LLM backend 'mistral-eu' — a permitted orchestrator row (protocol openai, eu_resident=True), armed by mistral_enabled"
+    },
+    "resource:bash-read-only": {
+      "kind": "resource",
+      "source": "derived from agent tools",
+      "anchor": "02.02.06",
+      "description": "Agent tool 'bash-read-only' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
+    },
     "resource:cortex_token_ro": {
       "kind": "resource",
       "source": "derived from judge-sets requires",
@@ -1412,6 +1780,36 @@
       "source": "derived from judge-sets requires",
       "anchor": "02.02.06",
       "description": "Capability resource 'live_estate' — required by judges, satisfied or not, never exclusive"
+    },
+    "resource:mcp-bone": {
+      "kind": "resource",
+      "source": "derived from agent tools",
+      "anchor": "02.02.06",
+      "description": "Agent tool 'mcp-bone' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
+    },
+    "resource:mcp-keap": {
+      "kind": "resource",
+      "source": "derived from agent tools",
+      "anchor": "02.02.06",
+      "description": "Agent tool 'mcp-keap' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
+    },
+    "resource:mcp-wing-read": {
+      "kind": "resource",
+      "source": "derived from agent tools",
+      "anchor": "02.02.06",
+      "description": "Agent tool 'mcp-wing-read' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
+    },
+    "resource:mcp-wing-write": {
+      "kind": "resource",
+      "source": "derived from agent tools",
+      "anchor": "02.02.06",
+      "description": "Agent tool 'mcp-wing-write' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
+    },
+    "resource:migration-file-write": {
+      "kind": "resource",
+      "source": "derived from agent tools",
+      "anchor": "02.02.06",
+      "description": "Agent tool 'migration-file-write' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
     },
     "service:alloy": {
       "kind": "service",
@@ -2629,6 +3027,55 @@
       "derived": "tofu-authentik-registry"
     },
     {
+      "from": "authentik:nos-conductor",
+      "to": "agent:conductor",
+      "kind": "data",
+      "via": "the identity this ceremony authenticates as (client_credentials client nos-conductor)",
+      "derived": "agent-identity"
+    },
+    {
+      "from": "authentik:nos-curator",
+      "to": "agent:curator",
+      "kind": "data",
+      "via": "the identity this ceremony authenticates as (client_credentials client nos-curator)",
+      "derived": "agent-identity"
+    },
+    {
+      "from": "authentik:nos-inspektor",
+      "to": "agent:inspektor",
+      "kind": "data",
+      "via": "the identity this ceremony authenticates as (client_credentials client nos-inspektor)",
+      "derived": "agent-identity"
+    },
+    {
+      "from": "authentik:nos-librarian",
+      "to": "agent:librarian",
+      "kind": "data",
+      "via": "the identity this ceremony authenticates as (client_credentials client nos-librarian)",
+      "derived": "agent-identity"
+    },
+    {
+      "from": "authentik:nos-migration-author",
+      "to": "agent:migration-author",
+      "kind": "data",
+      "via": "the identity this ceremony authenticates as (client_credentials client nos-migration-author)",
+      "derived": "agent-identity"
+    },
+    {
+      "from": "authentik:nos-surveyor",
+      "to": "agent:surveyor",
+      "kind": "data",
+      "via": "the identity this ceremony authenticates as (client_credentials client nos-surveyor)",
+      "derived": "agent-identity"
+    },
+    {
+      "from": "authentik:nos-upgrade-architect",
+      "to": "agent:upgrade-architect",
+      "kind": "data",
+      "via": "the identity this ceremony authenticates as (client_credentials client nos-upgrade-architect)",
+      "derived": "agent-identity"
+    },
+    {
       "from": "authentik:ntfy",
       "to": "service:ntfy",
       "kind": "data",
@@ -2797,6 +3244,104 @@
       "derived": "role-config"
     },
     {
+      "from": "resource:backend-anthropic",
+      "to": "agent:inspektor",
+      "kind": "data",
+      "via": "the register's default backend — this agent declares none, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend"
+    },
+    {
+      "from": "resource:backend-anthropic",
+      "to": "agent:migration-author",
+      "kind": "data",
+      "via": "the register's default backend — this agent declares none, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend"
+    },
+    {
+      "from": "resource:backend-anthropic",
+      "to": "agent:upgrade-architect",
+      "kind": "data",
+      "via": "the register's default backend — this agent declares none, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend"
+    },
+    {
+      "from": "resource:backend-minimax",
+      "to": "agent:conductor",
+      "kind": "data",
+      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend"
+    },
+    {
+      "from": "resource:backend-minimax",
+      "to": "agent:curator",
+      "kind": "data",
+      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend"
+    },
+    {
+      "from": "resource:backend-minimax",
+      "to": "agent:librarian",
+      "kind": "data",
+      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend"
+    },
+    {
+      "from": "resource:backend-minimax",
+      "to": "agent:surveyor",
+      "kind": "data",
+      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend"
+    },
+    {
+      "from": "resource:bash-read-only",
+      "to": "agent:conductor",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/conductor/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:bash-read-only",
+      "to": "agent:curator",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/curator/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:bash-read-only",
+      "to": "agent:inspektor",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/inspektor/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:bash-read-only",
+      "to": "agent:librarian",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/librarian/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:bash-read-only",
+      "to": "agent:migration-author",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/migration-author/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:bash-read-only",
+      "to": "agent:surveyor",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:bash-read-only",
+      "to": "agent:upgrade-architect",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/upgrade-architect/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
       "from": "resource:cortex_token_ro",
       "to": "judge:cortex-corpus-diff",
       "kind": "data",
@@ -2818,311 +3363,514 @@
       "derived": "judge-sets.requires"
     },
     {
+      "from": "resource:mcp-bone",
+      "to": "agent:conductor",
+      "kind": "data",
+      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/conductor/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-bone",
+      "to": "agent:curator",
+      "kind": "data",
+      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/curator/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-bone",
+      "to": "agent:inspektor",
+      "kind": "data",
+      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/inspektor/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-bone",
+      "to": "agent:librarian",
+      "kind": "data",
+      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/librarian/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-bone",
+      "to": "agent:surveyor",
+      "kind": "data",
+      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-keap",
+      "to": "agent:curator",
+      "kind": "data",
+      "via": "tool grant `mcp-keap` declared in files/anatomy/agents/curator/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-keap",
+      "to": "agent:librarian",
+      "kind": "data",
+      "via": "tool grant `mcp-keap` declared in files/anatomy/agents/librarian/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-wing-read",
+      "to": "agent:conductor",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/conductor/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-wing-read",
+      "to": "agent:curator",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/curator/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-wing-read",
+      "to": "agent:inspektor",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/inspektor/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-wing-read",
+      "to": "agent:librarian",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/librarian/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-wing-read",
+      "to": "agent:migration-author",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/migration-author/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-wing-read",
+      "to": "agent:surveyor",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-wing-read",
+      "to": "agent:upgrade-architect",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/upgrade-architect/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-wing-write",
+      "to": "agent:librarian",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-write` declared in files/anatomy/agents/librarian/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-wing-write",
+      "to": "agent:surveyor",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-write` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:migration-file-write",
+      "to": "agent:migration-author",
+      "kind": "data",
+      "via": "tool grant `migration-file-write` declared in files/anatomy/agents/migration-author/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:migration-file-write",
+      "to": "agent:upgrade-architect",
+      "kind": "data",
+      "via": "tool grant `migration-file-write` declared in files/anatomy/agents/upgrade-architect/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
       "from": "service:authentik",
       "to": "authentik:backrest",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:bookstack",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:calibre-web",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:code-server",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:documenso",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:erpnext",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:face",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:firefly",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=header_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=header_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:freescout",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:gitea",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:gitlab",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:grafana",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:hedgedoc",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:hermes",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:homeassistant",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:infisical",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:influxdb",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:jellyfin",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:keap",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=header_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=header_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:kiwix",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:mailpit",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:metabase",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:miniflux",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:n8n",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:nextcloud",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:nodered",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:nos-conductor",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:nos-curator",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:nos-devlog",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:nos-inspektor",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:nos-librarian",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:nos-migration-author",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:nos-openclaw",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:nos-state-manager",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:nos-surveyor",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:nos-upgrade-architect",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
+      "derived": "authentik-hosting"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:nos-wing",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:ntfy",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:onlyoffice",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:open-webui",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:openclaw",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:outline",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:paperclip",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:portainer",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:qdrant",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:roundcube",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:snappymail",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:spacetimedb",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:superset",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:twofauth",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:uptime-kuma",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:vaultwarden",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:wing",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:woodpecker",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
       "from": "service:authentik",
       "to": "authentik:wordpress",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by terraform/authentik from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting"
     },
     {
@@ -4027,11 +4775,53 @@
       "derived": "face-click-through"
     },
     {
+      "from": "pulse:conductor:self-test-001",
+      "to": "agent:conductor",
+      "kind": "trigger",
+      "via": "run-agent.sh dispatches the conductor ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
+      "derived": "agent-dispatch"
+    },
+    {
       "from": "pulse:cortex:cortex-corpus-diff",
       "to": "pulse:cortex:cortex-fs-sync",
       "kind": "trigger",
       "measured": "2026-08-06",
       "via": "night ledger `halted` flag (~/.nos/cortex-corpus-diff.json) — read at start, refuse with exit 4; cleared only by --clear-halt"
+    },
+    {
+      "from": "pulse:librarian:brief-taxonomy",
+      "to": "agent:librarian",
+      "kind": "trigger",
+      "via": "run-agent.sh dispatches the librarian ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
+      "derived": "agent-dispatch"
+    },
+    {
+      "from": "pulse:librarian:describe-taxonomy",
+      "to": "agent:librarian",
+      "kind": "trigger",
+      "via": "run-agent.sh dispatches the librarian ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
+      "derived": "agent-dispatch"
+    },
+    {
+      "from": "pulse:librarian:judge-lint-queue",
+      "to": "agent:librarian",
+      "kind": "trigger",
+      "via": "run-agent.sh dispatches the librarian ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
+      "derived": "agent-dispatch"
+    },
+    {
+      "from": "pulse:surveyor:surface-survey",
+      "to": "agent:surveyor",
+      "kind": "trigger",
+      "via": "run-agent.sh dispatches the surveyor ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
+      "derived": "agent-dispatch"
+    },
+    {
+      "from": "pulse:upgrade-architect:recipe-author",
+      "to": "agent:upgrade-architect",
+      "kind": "trigger",
+      "via": "run-agent.sh dispatches the upgrade-architect ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
+      "derived": "agent-dispatch"
     }
   ]
 }

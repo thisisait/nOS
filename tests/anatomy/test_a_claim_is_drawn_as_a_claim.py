@@ -44,11 +44,15 @@ def test_the_collapse_is_worth_making():
     edges, the hexagon would be ceremony rather than a simplification, and this
     gate should be re-derived instead of defended."""
     g = _graph()
-    resources = [n for n in g["nodes"] if n.startswith("resource:")]
     mutex = [e for e in g["edges"] if e.get("kind") == "mutex"]
-    assert resources, "no resource nodes — the mutex layer has no claims to collapse to"
-    assert len(mutex) > 2 * len(resources), (
-        f"{len(mutex)} mutex edges over {len(resources)} resources — the "
+    # The denominator is the CLAIMED resources, not every resource node. Since
+    # 2026-08-29 the address space also holds capability resources that are
+    # never exclusive (agent tools, LLM backend rows) — counting those made a
+    # ratio about exclusion answer with things that exclude nothing.
+    claimed = {e["resource"] for e in mutex}
+    assert claimed, "no claimed resources — the mutex layer has no claims to collapse to"
+    assert len(mutex) > 2 * len(claimed), (
+        f"{len(mutex)} mutex edges over {len(claimed)} claimed resources — the "
         f"pairwise form is no longer the thing worth collapsing"
     )
 

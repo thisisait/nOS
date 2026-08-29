@@ -322,6 +322,25 @@ properties:
     type: object
     additionalProperties: true
     description: "Free-form key/value pairs, surfaced in Wing /agents UI."
+    properties:
+      runner_status:
+        type: string
+        description: |
+          How this ceremony actually runs — the one metadata key that is NOT
+          free-form, because other code branches on it: the binding resolver
+          refuses `deferred` outright, and the anatomy graph publishes it on
+          every `agent:` node. Free text let five spellings of the same state
+          coexist; the enum makes a sixth a schema error.
+
+            unproven   apparatus exists, no completed run proves it
+            scheduled  a pulse job fires it on a cadence
+            parked     contract-only: no launcher, no pulse job (deliberate)
+            deferred   declared, never performed — refuses a backend binding
+            proven     completed runs on record
+
+          ABSENT is not a sixth value and not "fine": it is UNKNOWN, and the
+          graph renders it as UNKNOWN rather than as any of the above.
+        enum: [unproven, scheduled, parked, deferred, proven]
   gdpr:
     type: object
     additionalProperties: false
