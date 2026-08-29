@@ -324,12 +324,20 @@ row("local-llm-executor", "Wing executor — authorisation + execution (phase 2)
 
 row("local-llm-corpus", "Corpus generator: opcodes + validator as a free oracle", _FILED,
     "queued", "cortex", parent="local-llm",
-    body="Synthesise chains from the opcode registry, run them through cortex-validate, keep "
-         "the valid ones, and have a large model back-translate each into the sentence a user "
-         "would have said. Distillation where the teacher runs once and the correctness "
-         "filter is code. This is an unusually good starting position — most fine-tuning "
-         "projects have no oracle to filter on. Do this SECOND: it also measures how large "
-         "the space actually is, which decides whether a small model is worth training.")
+    refs="files/anatomy/cortex/scripts/corpus-gen.ts · tests/anatomy/test_the_cortex_oracle_filters_syntax_not_sense.py",
+    body="GENERATOR BUILT AND RUN 2026-08-29; the premise needs correcting. 142 stage forms "
+         "over 15 opcodes; at depth 2, 20306 of 20306 composed chains VALIDATE — a 100%% pass "
+         "rate. `analyzeCortex` rejects STAGE-LOCAL faults (unknown opcode, unknown param, "
+         "arity) and imposes no compositional rule at all: `insert | classify` and "
+         "`classify | insert` both pass, `rank()` four times passes. So \"the correctness "
+         "filter is code\" is TRUE ABOUT SYNTAX AND FALSE ABOUT SENSE, and a corpus filtered "
+         "on validity alone is a grammar drill — grammar being the one thing the validator "
+         "already checks at inference time without a model. The space size the row asked for: "
+         "|stages|=142, unconstrained, so 142^n (20306 at n=2, ~2.9M at n=3). WHAT IS LEFT "
+         "THAT IS REAL: the warning set is the only thing that discriminates between chains "
+         "(deferred_namespace 15105, deferred_program 12296, mutating_default_dry_run 9975, "
+         "commit_requires_confirm_gate 5985), and the natural-language pairing still needs a "
+         "model. Both are work; the free lunch is not.")
 
 row("local-llm-model", "The small local model", _FILED,
     "queued", "agents", parent="local-llm",
