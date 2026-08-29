@@ -73,6 +73,40 @@ if (!is_file($dbPath)) {
 		fwrite(STDERR, "init-db.php did not produce $dbPath\n");
 		exit(1);
 	}
+
+	// TWO ORGANS WRITE THIS FILE (2026-08-29). Bone creates the `loop_*` tables
+	// in Wing's database, and only Wing exported a contract — so the artifact
+	// called "the wing.db schema" described 41 of the 45 tables that exist, and
+	// three gates building fixtures from it had to reach into `ledger._DDL`
+	// themselves. Found by `tools/wing-status.py`, which buckets a table present
+	// in the db and absent from the contract as UNDECLARED.
+	//
+	// Bone's `ensure_schema()` is the same idempotent DDL production runs, so
+	// the artifact is what the file actually is. A FAILURE HERE IS FATAL: half
+	// a contract that still calls itself the contract is worse than none.
+	$bone = $repoRoot . '/files/anatomy/bone';
+	$py = <<<'PY'
+import sqlite3, sys
+sys.path.insert(0, sys.argv[1])
+import ledger
+conn = sqlite3.connect(sys.argv[2])
+ledger.ensure_schema(conn)
+conn.close()
+PY;
+	$proc = proc_open(['python3', '-c', $py, $bone, $dbPath],
+		[1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+	if (!is_resource($proc)) {
+		fwrite(STDERR, "Failed to launch python3 for Bone's ledger DDL\n");
+		exit(1);
+	}
+	$out = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
+	fclose($pipes[1]);
+	fclose($pipes[2]);
+	if (proc_close($proc) !== 0) {
+		fwrite(STDERR, "Bone ledger DDL failed; refusing to export a partial "
+			. "schema for a file two organs write:\n$out\n");
+		exit(1);
+	}
 }
 
 $db = new SQLite3($dbPath, SQLITE3_OPEN_READONLY);

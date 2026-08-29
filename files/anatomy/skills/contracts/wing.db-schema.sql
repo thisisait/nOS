@@ -8,7 +8,7 @@
 PRAGMA foreign_keys = ON;
 
 -- ============================================================
--- TABLES (41)
+-- TABLES (45)
 -- ============================================================
 
 CREATE TABLE advisories (
@@ -360,6 +360,104 @@ CREATE TABLE gitleaks_findings (
     resolved_by   TEXT,                         -- Authentik client_id or free-text note
     created_at    TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE loop_forgets (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    fingerprint          TEXT NOT NULL,
+    through_proposal_id  INTEGER NOT NULL,
+    actor                TEXT NOT NULL CHECK (actor = 'operator'),
+    created_at           TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE loop_judge_runs (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid         TEXT NOT NULL UNIQUE,
+    proposal_id  INTEGER,
+    gate_set     TEXT NOT NULL,
+    judge_name   TEXT NOT NULL,
+    argv         TEXT NOT NULL,
+    sandbox_path TEXT,
+    status       TEXT NOT NULL CHECK (status IN ('running','exited','crashed','skipped')),
+    started_at   TEXT NOT NULL,
+    finished_at  TEXT,
+    exit_code    INTEGER,
+    work_count   INTEGER,
+    min_work     INTEGER,
+    outcome      TEXT CHECK (outcome IN ('pass','fail','indeterminate')),
+    -- The tree THIS judge observed, read out of its sandbox by
+    -- `judges.git_worktree_sandbox` — or, for an attached run, the
+    -- `git write-tree` id of base + the proposal's stored diff (A1). The
+    -- verdict's tree_sha is derived from these; it is not a caller's label.
+    tree_sha     TEXT,
+    -- The ENGINE-chosen base the diff was applied to: the repo's HEAD at run
+    -- time, never the proposer's declared tree_sha. Equal to tree_sha on
+    -- baseline runs. Without it a replay cannot reconstruct the judged tree
+    -- from the stored diff.
+    base_sha     TEXT,
+    stdout_sha   TEXT,
+    stdout_head  TEXT,
+    -- WHY a judge reached its outcome, and the only field that makes a SKIP
+    -- actionable. It was computed by `judges._executable_present`, carried on
+    -- the in-memory JudgeRun, and dropped here: the first real turn of the loop
+    -- (2026-08-03) sealed `reason: "ansible-lint: "` — it knew WHICH judge had
+    -- not run and could not say that the binary was missing from the daemon's
+    -- PATH. A record that loses the actionable half is the defect this ledger
+    -- exists to catch, one level in.
+    reason       TEXT,
+    -- WHAT actually ran (A4): argv[0] as resolved under the judge env, and
+    -- that binary's `--version` line, both measured by the engine. The
+    -- literal argv ("python3") named the dev pyenv AND Bone's pytest-less
+    -- venv with one identity, so a §11 replay could not tell "same result"
+    -- from "same mistake". Persisted for the same reason `reason` is: a
+    -- field computed in judges.py and dropped at this boundary is how the
+    -- skip reason was lost the first time.
+    resolved_argv0 TEXT,
+    interpreter    TEXT,
+    -- §2.4 DECISION 2b, as a STORAGE constraint: a PASS that cannot show its
+    -- work is not storable. Closes M2 (nos-smoke "zero entries", exit 0) and
+    -- M3 (pytest "2 skipped", exit 0) at a layer no runner can forget.
+    CHECK (outcome IS NULL OR outcome <> 'pass' OR (
+              status = 'exited' AND work_count IS NOT NULL
+              AND min_work IS NOT NULL AND work_count >= min_work))
+);
+
+CREATE TABLE loop_proposals (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid                  TEXT NOT NULL UNIQUE,
+    fingerprint           TEXT NOT NULL,
+    content_fp            TEXT,
+    weakness_id           TEXT NOT NULL,
+    weakness_evidence_sha TEXT,
+    intent_class          TEXT NOT NULL CHECK (intent_class IN (
+                              'version-pin-bump','config-fix','render-fix',
+                              'wiring-fix','gate-add','dependency-bump')),
+    gate_set              TEXT NOT NULL,
+    target_paths          TEXT NOT NULL,
+    tree_sha              TEXT NOT NULL,
+    proposer_id           TEXT NOT NULL,
+    proposer_model        TEXT,
+    attempt_n             INTEGER NOT NULL DEFAULT 1,
+    requires_operator     INTEGER NOT NULL DEFAULT 0,
+    -- The artifact itself (A1/A2). content_fp is a hash of this, and a hash
+    -- whose preimage is discarded cannot be audited, replayed, or ever judged:
+    -- the sandbox that will apply a proposal needs the bytes, not the digest.
+    diff_text             TEXT,
+    created_at            TEXT NOT NULL DEFAULT (datetime('now'))
+, session_uuid TEXT);
+
+CREATE TABLE loop_verdicts (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid         TEXT NOT NULL UNIQUE,
+    proposal_id  INTEGER,
+    gate_set     TEXT NOT NULL,
+    result       TEXT NOT NULL CHECK (result IN ('pass','fail','indeterminate')),
+    actor        TEXT NOT NULL CHECK (actor = 'engine:judge-runner'),
+    tree_sha     TEXT NOT NULL,
+    evidence     TEXT NOT NULL,
+    prev_hash    TEXT,
+    row_hash     TEXT,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE migrations_applied (
@@ -808,7 +906,7 @@ CREATE VIEW components AS
 		FROM systems;
 
 -- ============================================================
--- INDEXS (85)
+-- INDEXS (92)
 -- ============================================================
 
 CREATE INDEX idx_adv_date ON advisories(date);
@@ -886,6 +984,21 @@ CREATE INDEX idx_gitleaks_rule_id           ON gitleaks_findings(rule_id);
 CREATE INDEX idx_gitleaks_scan_id           ON gitleaks_findings(scan_id);
 
 CREATE INDEX idx_gitleaks_severity          ON gitleaks_findings(severity, resolved_at);
+
+CREATE INDEX idx_loop_forgets_fp ON loop_forgets (fingerprint);
+
+CREATE INDEX idx_loop_prop_cfp    ON loop_proposals (content_fp);
+
+CREATE INDEX idx_loop_prop_fp     ON loop_proposals (fingerprint);
+
+CREATE INDEX idx_loop_prop_weak   ON loop_proposals (weakness_id);
+
+CREATE INDEX idx_loop_runs_prop ON loop_judge_runs (proposal_id);
+
+CREATE UNIQUE INDEX idx_loop_verdicts_prev
+    ON loop_verdicts (prev_hash) WHERE prev_hash IS NOT NULL;
+
+CREATE INDEX idx_loop_verdicts_prop ON loop_verdicts (proposal_id);
 
 CREATE INDEX idx_mig_authored_service ON migrations_authored (service);
 
@@ -982,7 +1095,7 @@ CREATE UNIQUE INDEX uq_gitleaks_fingerprint ON gitleaks_findings(fingerprint);
 CREATE UNIQUE INDEX uq_pulse_jobs_name ON pulse_jobs(plugin_name, job_name);
 
 -- ============================================================
--- TRIGGERS (4)
+-- TRIGGERS (8)
 -- ============================================================
 
 CREATE TRIGGER agent_iterations_satisfied_insert BEFORE INSERT ON agent_iterations FOR EACH ROW
@@ -1013,4 +1126,20 @@ CREATE TRIGGER events_worm_update BEFORE UPDATE ON events FOR EACH ROW
     OR NEW.source IS NOT OLD.source OR NEW.actor_id IS NOT OLD.actor_id OR NEW.acted_at IS NOT OLD.acted_at
     OR NEW.row_hash IS NOT OLD.row_hash OR NEW.prev_hash IS NOT OLD.prev_hash)
   BEGIN SELECT RAISE(ABORT, 'events WORM: only actor_action_id may change on a chained row'); END;
+
+CREATE TRIGGER loop_judge_runs_worm_delete BEFORE DELETE ON loop_judge_runs
+FOR EACH ROW
+BEGIN SELECT RAISE(ABORT, 'loop_judge_runs WORM: evidence is append-only'); END;
+
+CREATE TRIGGER loop_judge_runs_worm_update BEFORE UPDATE ON loop_judge_runs
+FOR EACH ROW WHEN OLD.status <> 'running'
+BEGIN SELECT RAISE(ABORT, 'loop_judge_runs WORM: a finished run is immutable'); END;
+
+CREATE TRIGGER loop_verdicts_worm_delete BEFORE DELETE ON loop_verdicts
+FOR EACH ROW WHEN OLD.row_hash IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'loop_verdicts WORM: verdict rows are append-only'); END;
+
+CREATE TRIGGER loop_verdicts_worm_update BEFORE UPDATE ON loop_verdicts
+FOR EACH ROW WHEN OLD.row_hash IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'loop_verdicts WORM: verdict rows are append-only'); END;
 

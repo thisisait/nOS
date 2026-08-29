@@ -24,12 +24,10 @@ ended with no outcome at all, so the panel read 72.7% where the honest figure is
 
 from __future__ import annotations
 
-import contextlib
 import json
 import pathlib
 import re
 import sqlite3
-import sys
 
 import pytest
 
@@ -59,12 +57,12 @@ def _dashboards() -> list[pathlib.Path]:
 def _empty_wing_db() -> sqlite3.Connection:
     """Every CREATE TABLE the estate puts in wing.db, and no rows.
 
-    TWO WRITERS, ONE FILE. Wing owns most of the schema (the committed
-    contract artifact); Bone owns the `loop_*` tables and creates them in the
-    same database. A dashboard joining `loop_proposals` to `agent_sessions`
-    crosses that line, which is exactly why the loop is worth a dashboard — so
-    the fixture has to cross it too. Bone keeps its DDL and its later columns
-    as importable data, in its own words "so the gate can read it".
+    TWO WRITERS, ONE FILE — and until 2026-08-29 only one of them declared it.
+    Bone creates the `loop_*` tables in Wing's database, and the committed
+    contract described 41 of the 45 tables that exist, so this fixture had to
+    import `ledger._DDL` itself to build a database a loop dashboard could be
+    prepared against. `bin/export-schema.php` now applies Bone's DDL too and
+    refuses to emit a partial artifact, which is why that import is gone.
 
     Rows would make this a test of the estate's data; the question here is only
     whether the query can be prepared at all.
@@ -73,14 +71,6 @@ def _empty_wing_db() -> sqlite3.Connection:
     for stmt in re.findall(r"CREATE TABLE (?:IF NOT EXISTS )?.*?\n\);",
                            SCHEMA.read_text(encoding="utf-8"), re.S):
         conn.executescript(stmt)
-
-    sys.path.insert(0, str(REPO / "files/anatomy/bone"))
-    import ledger  # noqa: PLC0415 — imported for its DDL, not its behaviour
-
-    conn.executescript(ledger._DDL)
-    for table, column, decl in ledger._ADDED_COLUMNS:
-        with contextlib.suppress(sqlite3.OperationalError):   # already present
-            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
     return conn
 
 
