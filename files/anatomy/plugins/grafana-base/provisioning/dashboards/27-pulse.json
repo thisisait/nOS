@@ -36,14 +36,14 @@
       "type": "text",
       "title": "What this dashboard is",
       "gridPos": {
-        "h": 6,
+        "h": 7,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "options": {
         "mode": "markdown",
-        "content": "**Pulse \u2014 the estate's scheduled-job organ, from `pulse_jobs` and `pulse_runs`.** 56 000 runs had accumulated with no Grafana surface at all; `tools/red-status.py` answers *what is red now*, and this answers *what has been happening*.\n\nThe question it exists for is the one CLAUDE.md tells the story of: **a nightly job that stops firing looks exactly like a nightly job with nothing to report.** A notification is an event and silence is a state, so the first row counts jobs that are declared, unpaused, and quiet \u2014 and a paused job is shown separately with its reason, because a deliberate pause is not a failure and must not be summed with one.\n\n`exit_code = 0` is a real oracle here, unlike an agent's `status`: a subprocess that exits zero did its job. A run with `finished_at IS NULL` is counted as neither."
+        "content": "**Pulse \u2014 the estate's scheduled-job organ, from `pulse_jobs` and `pulse_runs`.** 56 000 runs had accumulated with no Grafana surface at all; `tools/red-status.py` answers *what is red now*, and this answers *what has been happening*.\n\nThe question it exists for is the one CLAUDE.md tells the story of: **a nightly job that stops firing looks exactly like a nightly job with nothing to report.** A notification is an event and silence is a state, so the first row counts jobs that are declared, unpaused, and quiet \u2014 and a paused job is shown separately with its reason, because a deliberate pause is not a failure and must not be summed with one.\n\n**A non-zero exit is not always a failure.** `pulse_jobs.findings_exit_codes` lists the codes a job uses to mean *I found something* \u2014 `discovery:contradiction-scan` exits 1 on a contradiction, which is the detector working. Every panel here reads that column; the first draft did not, and put a healthy detector at the top of the failure list. A run with `finished_at IS NULL` is counted as neither."
       }
     },
     {
@@ -58,7 +58,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 6
+        "y": 7
       },
       "targets": [
         {
@@ -110,7 +110,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 6
+        "y": 7
       },
       "targets": [
         {
@@ -166,7 +166,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 6
+        "y": 7
       },
       "targets": [
         {
@@ -222,7 +222,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 6
+        "y": 7
       },
       "targets": [
         {
@@ -278,14 +278,14 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 11
       },
       "targets": [
         {
           "refId": "A",
           "queryType": "table",
-          "rawQueryText": "SELECT substr(fired_at,1,10) AS day, SUM(CASE WHEN exit_code = 0 THEN 1 ELSE 0 END) AS ok, SUM(CASE WHEN exit_code IS NOT NULL AND exit_code <> 0 THEN 1 ELSE 0 END) AS failed, SUM(CASE WHEN finished_at IS NULL THEN 1 ELSE 0 END) AS unfinished FROM pulse_runs WHERE julianday(fired_at) > julianday('now') - 30 GROUP BY day ORDER BY day",
-          "queryText": "SELECT substr(fired_at,1,10) AS day, SUM(CASE WHEN exit_code = 0 THEN 1 ELSE 0 END) AS ok, SUM(CASE WHEN exit_code IS NOT NULL AND exit_code <> 0 THEN 1 ELSE 0 END) AS failed, SUM(CASE WHEN finished_at IS NULL THEN 1 ELSE 0 END) AS unfinished FROM pulse_runs WHERE julianday(fired_at) > julianday('now') - 30 GROUP BY day ORDER BY day",
+          "rawQueryText": "SELECT substr(r.fired_at,1,10) AS day, SUM(CASE WHEN r.exit_code = 0 THEN 1 ELSE 0 END) AS ok, SUM(CASE WHEN r.exit_code IS NOT NULL AND r.exit_code <> 0 AND ',' || REPLACE(REPLACE(REPLACE(COALESCE(j.findings_exit_codes, '[]'), '[', ''), ']', ''), ' ', '') || ',' LIKE '%,' || r.exit_code || ',%' THEN 1 ELSE 0 END) AS found, SUM(CASE WHEN r.exit_code IS NOT NULL AND r.exit_code <> 0 AND NOT ',' || REPLACE(REPLACE(REPLACE(COALESCE(j.findings_exit_codes, '[]'), '[', ''), ']', ''), ' ', '') || ',' LIKE '%,' || r.exit_code || ',%' THEN 1 ELSE 0 END) AS failed, SUM(CASE WHEN r.finished_at IS NULL THEN 1 ELSE 0 END) AS unfinished FROM pulse_runs r LEFT JOIN pulse_jobs j ON j.id = r.job_id WHERE julianday(r.fired_at) > julianday('now') - 30 GROUP BY day ORDER BY day",
+          "queryText": "SELECT substr(r.fired_at,1,10) AS day, SUM(CASE WHEN r.exit_code = 0 THEN 1 ELSE 0 END) AS ok, SUM(CASE WHEN r.exit_code IS NOT NULL AND r.exit_code <> 0 AND ',' || REPLACE(REPLACE(REPLACE(COALESCE(j.findings_exit_codes, '[]'), '[', ''), ']', ''), ' ', '') || ',' LIKE '%,' || r.exit_code || ',%' THEN 1 ELSE 0 END) AS found, SUM(CASE WHEN r.exit_code IS NOT NULL AND r.exit_code <> 0 AND NOT ',' || REPLACE(REPLACE(REPLACE(COALESCE(j.findings_exit_codes, '[]'), '[', ''), ']', ''), ' ', '') || ',' LIKE '%,' || r.exit_code || ',%' THEN 1 ELSE 0 END) AS failed, SUM(CASE WHEN r.finished_at IS NULL THEN 1 ELSE 0 END) AS unfinished FROM pulse_runs r LEFT JOIN pulse_jobs j ON j.id = r.job_id WHERE julianday(r.fired_at) > julianday('now') - 30 GROUP BY day ORDER BY day",
           "timeColumns": [
             "day"
           ]
@@ -313,7 +313,7 @@
     {
       "type": "table",
       "title": "Failure rate by job (30 d), worst first",
-      "description": "Ordered by PERCENTAGE, not by count: a job that fails 16 of 24 runs is a broken job, and one that fails 158 of 2303 is a noisy but working one. Sorting by absolute failures would put the second on top.",
+      "description": "A NON-ZERO EXIT IS NOT ALWAYS A FAILURE, and `pulse_jobs` already said so: `findings_exit_codes` lists the codes a job uses to mean *I found something*. The first draft of this panel ignored that column and reported `discovery:contradiction-scan` as failing 16 of 24 runs \u2014 a working detector, top of the list, on the surface an operator uses to decide what to fix. `found` and `failed` are separate columns here and the sort is on `failed`.",
       "datasource": {
         "type": "frser-sqlite-datasource",
         "uid": "wing_sqlite"
@@ -322,14 +322,14 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 19
       },
       "targets": [
         {
           "refId": "A",
           "queryType": "table",
-          "rawQueryText": "SELECT r.job_id AS job, COUNT(*) AS runs, SUM(CASE WHEN r.exit_code = 0 THEN 0 ELSE 1 END) AS failed, ROUND(100.0 * SUM(CASE WHEN r.exit_code = 0 THEN 0 ELSE 1 END) / COUNT(*), 1) AS pct, MAX(r.fired_at) AS last_fired FROM pulse_runs r WHERE julianday(r.fired_at) > julianday('now') - 30 GROUP BY r.job_id HAVING failed > 0 ORDER BY pct DESC, failed DESC LIMIT 20",
-          "queryText": "SELECT r.job_id AS job, COUNT(*) AS runs, SUM(CASE WHEN r.exit_code = 0 THEN 0 ELSE 1 END) AS failed, ROUND(100.0 * SUM(CASE WHEN r.exit_code = 0 THEN 0 ELSE 1 END) / COUNT(*), 1) AS pct, MAX(r.fired_at) AS last_fired FROM pulse_runs r WHERE julianday(r.fired_at) > julianday('now') - 30 GROUP BY r.job_id HAVING failed > 0 ORDER BY pct DESC, failed DESC LIMIT 20",
+          "rawQueryText": "SELECT r.job_id AS job, COUNT(*) AS runs, SUM(CASE WHEN r.exit_code = 0 THEN 1 ELSE 0 END) AS ok, SUM(CASE WHEN r.exit_code IS NOT NULL AND r.exit_code <> 0 AND ',' || REPLACE(REPLACE(REPLACE(COALESCE(j.findings_exit_codes, '[]'), '[', ''), ']', ''), ' ', '') || ',' LIKE '%,' || r.exit_code || ',%' THEN 1 ELSE 0 END) AS found, SUM(CASE WHEN r.exit_code IS NOT NULL AND r.exit_code <> 0 AND NOT ',' || REPLACE(REPLACE(REPLACE(COALESCE(j.findings_exit_codes, '[]'), '[', ''), ']', ''), ' ', '') || ',' LIKE '%,' || r.exit_code || ',%' THEN 1 ELSE 0 END) AS failed, MAX(r.fired_at) AS last_fired FROM pulse_runs r LEFT JOIN pulse_jobs j ON j.id = r.job_id WHERE julianday(r.fired_at) > julianday('now') - 30 GROUP BY r.job_id HAVING failed + found > 0 ORDER BY failed DESC, found DESC LIMIT 20",
+          "queryText": "SELECT r.job_id AS job, COUNT(*) AS runs, SUM(CASE WHEN r.exit_code = 0 THEN 1 ELSE 0 END) AS ok, SUM(CASE WHEN r.exit_code IS NOT NULL AND r.exit_code <> 0 AND ',' || REPLACE(REPLACE(REPLACE(COALESCE(j.findings_exit_codes, '[]'), '[', ''), ']', ''), ' ', '') || ',' LIKE '%,' || r.exit_code || ',%' THEN 1 ELSE 0 END) AS found, SUM(CASE WHEN r.exit_code IS NOT NULL AND r.exit_code <> 0 AND NOT ',' || REPLACE(REPLACE(REPLACE(COALESCE(j.findings_exit_codes, '[]'), '[', ''), ']', ''), ' ', '') || ',' LIKE '%,' || r.exit_code || ',%' THEN 1 ELSE 0 END) AS failed, MAX(r.fired_at) AS last_fired FROM pulse_runs r LEFT JOIN pulse_jobs j ON j.id = r.job_id WHERE julianday(r.fired_at) > julianday('now') - 30 GROUP BY r.job_id HAVING failed + found > 0 ORDER BY failed DESC, found DESC LIMIT 20",
           "timeColumns": []
         }
       ],
@@ -357,7 +357,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 28
       },
       "targets": [
         {
@@ -392,7 +392,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 36
+        "y": 37
       },
       "targets": [
         {
@@ -427,7 +427,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 36
+        "y": 37
       },
       "targets": [
         {
@@ -462,7 +462,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 45
       },
       "targets": [
         {
