@@ -167,20 +167,40 @@ def test_ops_leaves_a_free_prompt_and_starts_no_agent():
 
 def test_every_reader_pane_is_a_reader_not_a_one_shot():
     """A pane that runs its command once shows an answer that ages silently —
-    the scrollback lie wearing a different hat. Every INFORMATIVE pane goes
-    through nos-watch.sh with an interval; the shells are the exception, and
-    they are exceptions because they are prompts, not answers."""
+    the scrollback lie wearing a different hat. Every INFORMATIVE pane re-reads;
+    the shells are the exception, and they are exceptions because they are
+    prompts, not answers.
+
+    TWO MECHANISMS SINCE 2026-08-29, and the gate must accept both or it pins
+    the implementation rather than the rule. `nos-watch.sh --interval N` re-runs
+    a plain command; `tools/nos-pane.py <id>` is a TUI whose pane declares
+    REFRESH and re-reads on a timer. The first version of that TUI read once
+    and sat there — this assertion is what caught it, so the interval half is
+    checked at the pane modules, not taken on the launcher's word.
+    """
     code = _code(CC)
-    # `$W --interval N` is the reader invocation itself. Matched on its own and
-    # NOT anchored to `send-keys` on the same line: the calls are split across a
-    # line continuation, so an anchored pattern silently matches nothing — which
-    # is how this assertion first shipped reading zero and claiming three.
     watched = re.findall(r"\$W --interval (\d+)", code)
-    assert len(watched) >= 3, (
-        f"only {len(watched)} pane(s) re-run a reader on an interval; the ops "
-        "window alone should carry red-status, agents and the history glance."
+    panes = re.findall(r"tools/nos-pane\.py (\w+)", code)
+    assert len(watched) + len(panes) >= 3, (
+        f"only {len(watched) + len(panes)} pane(s) re-read; the ops window "
+        "alone should carry red, agents and the history glance."
     )
     assert all(int(i) > 0 for i in watched), "a reader interval is not positive"
+
+    if panes:
+        import sys
+        sys.path.insert(0, str(REPO / "tools"))
+        from cc import panes as registry
+        from cc.app import ControlCentreApp
+
+        known = registry.all_panes()
+        for pane_id in panes:
+            assert pane_id in known, f"nos-cc.sh opens `{pane_id}`, which no module declares"
+            secs = getattr(known[pane_id], "REFRESH", ControlCentreApp.DEFAULT_REFRESH)
+            assert isinstance(secs, (int, float)) and secs > 0, (
+                f"pane `{pane_id}` has no positive REFRESH, so it reads once and "
+                "then shows an answer that ages silently"
+            )
 
 
 def test_the_status_bar_cannot_freeze_at_a_comfortable_number():

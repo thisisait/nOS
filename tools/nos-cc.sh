@@ -5,7 +5,8 @@
 # One tmux session that shows what the estate IS, beside the places you act on
 # it. Built 2026-08-18, after the surveyor's first completed ceremony named the
 # gap itself: *"The control centre does not exist yet — this is the primary
-# finding."*
+# finding."* Every reader pane became a TUI on 2026-08-29 (`tools/nos-pane.py`):
+# same rule, plus Ctrl+P to change what a pane shows and Enter to open a row.
 #
 # ── THE RULE THIS IS BUILT ON ────────────────────────────────────────────────
 #
@@ -14,8 +15,9 @@
 # ran for two days with two failing nightly jobs while nothing appeared wrong:
 # the notifications were delivered, correctly, on the first night — and a
 # notification is an EVENT while red is a STATE. Every pane here re-runs a
-# READER (`tools/nos-watch.sh`) and replaces its own contents, so a reader that
-# stops answering says so instead of preserving the last good answer.
+# READER — `tools/nos-pane.py`, or `tools/nos-watch.sh` for a pane that is a
+# plain command — and replaces its own contents, so a reader that stops
+# answering says so instead of preserving the last good answer.
 #
 # ── PERSISTENT VISIBILITY, NOT PERSISTENT AGENTS ─────────────────────────────
 #
@@ -37,6 +39,13 @@
 #   tools/nos-cc.sh            # create or attach
 #   tools/nos-cc.sh --rebuild  # kill ONLY this session and rebuild it
 #   tools/nos-cc.sh --print    # show the layout without touching tmux
+#
+# Ctrl+P inside any reader pane swaps its content (tools/nos-pane.py --list).
+# For the two SHELL panes there is no binding here on purpose: a tmux key table
+# is GLOBAL, and this script does not write the operator's config. If you want
+# one, it is one line in ~/.tmux.conf:
+#   bind-key P display-menu -T "pane" r "red" "respawn-pane -k tools/nos-pane.py red" \
+#                                    a "awaiting" "respawn-pane -k tools/nos-pane.py awaiting"
 # =============================================================================
 set -uo pipefail
 
@@ -77,8 +86,6 @@ if tmux has-session -t "=$SESSION" 2>/dev/null; then
     echo "$SESSION already exists — attach with: tmux attach -t $SESSION"
     exit 0
 fi
-
-W="$REPO_ROOT/tools/nos-watch.sh"
 
 # ── ops: readers above, two free shells below ────────────────────────────────
 #
@@ -139,22 +146,22 @@ _split "-> history"   -v -t "$SESSION:ops.1" -c "$REPO_ROOT" -l 45%
 # nothing collected them, so each was found by remembering to look.
 _split "-> awaiting"  -v -t "$SESSION:ops.0" -c "$REPO_ROOT" -l 38%
 
-tmux send-keys -t "$SESSION:ops.0" \
-    "$W --interval 30 --title 'what is red' -- tools/red-status.py" C-m
-tmux send-keys -t "$SESSION:ops.1" \
-    "$W --interval 45 --title 'awaiting you' -- tools/awaiting-operator.py" C-m
-tmux send-keys -t "$SESSION:ops.2" \
-    "$W --interval 20 --title 'agents' -- tools/agent-status.py --limit 8" C-m
-# Truncated to ONE ROW PER COMMIT, and few enough to fit the pane.
-#
-# Both halves were found by building it and reading the result. A wrapped
-# subject costs two rows to say one thing; twelve of them in a seven-row pane
-# scrolled the NEWEST commits off the top and left the OLDEST three on screen —
-# a pane that looked like recent history while showing the opposite. That is the
-# scrollback lie in its purest form, and it shipped past a gate that only ever
-# counted panes. The `code` window carries the long, decorated form.
-tmux send-keys -t "$SESSION:ops.3" \
-    "$W --interval 60 --title 'recent history' -- git -c color.ui=always log --abbrev-commit --pretty='%C(auto)%h %<(52,trunc)%s' -6" C-m
+# EVERY READER PANE IS A TUI (2026-08-29). `nos-watch.sh` re-ran a reader and
+# replaced the pane, which was right about STATE and offered nothing else: the
+# content was fixed at layout time, a long table could not be read past its
+# first screen, and a row could not be opened. `tools/nos-pane.py <id>` keeps
+# the re-read and adds the two things the operator asked for — Ctrl+P swaps
+# what THIS pane shows from the registry, Enter opens the row the reader
+# returned. `--dump text` gives `tmux capture-pane -p` (and an LLM) the same
+# rows the screen has, so the machine-readable view is not a second answer.
+tmux send-keys -t "$SESSION:ops.0" "tools/nos-pane.py red" C-m
+tmux send-keys -t "$SESSION:ops.1" "tools/nos-pane.py awaiting" C-m
+tmux send-keys -t "$SESSION:ops.2" "tools/nos-pane.py agents" C-m
+# ONE ROW PER COMMIT, and the pane can be scrolled now that it is a table —
+# the decorated `git log` tail wrapped every long subject onto two lines and
+# scrolled the NEWEST commits off the top, leaving the OLDEST three on screen.
+# A pane that looked like recent history while showing the opposite.
+tmux send-keys -t "$SESSION:ops.3" "tools/nos-pane.py history" C-m
 tmux send-keys -t "$SESSION:ops.4" \
     "tools/elsewhere-status.py; clear" C-m
 # ops.4 gets nothing typed into it at all. Deliberate: see above.
@@ -165,13 +172,11 @@ tmux send-keys -t "$SESSION:ops.4" \
 # long enough that squeezing it beside something else would truncate the part
 # that matters (the oldest rows are at the bottom of each list).
 tmux new-window -t "=$SESSION" -n stuck -c "$REPO_ROOT"
-tmux send-keys -t "$SESSION:stuck" \
-    "$W --interval 300 --title 'what has stopped moving' -- tools/stuck-status.py" C-m
+tmux send-keys -t "$SESSION:stuck" "tools/nos-pane.py stuck" C-m
 
 # ── loop: the self-improvement ledger, which nothing else displays ───────────
 tmux new-window -t "=$SESSION" -n loop -c "$REPO_ROOT"
-tmux send-keys -t "$SESSION:loop" \
-    "$W --interval 120 --title 'weakness -> proposal -> verdict' -- tools/loop-status.py" C-m
+tmux send-keys -t "$SESSION:loop" "tools/nos-pane.py loop" C-m
 
 # ── code: what changed, and the ability to go and look ───────────────────────
 # `git log` is a READER too, and it is the one that answers "what did we just
@@ -179,8 +184,7 @@ tmux send-keys -t "$SESSION:loop" \
 # left unopened beside it: a window that launches vim on attach is a window you
 # fight before you can read anything.
 tmux new-window -t "=$SESSION" -n code -c "$REPO_ROOT"
-tmux send-keys -t "$SESSION:code" \
-    "$W --interval 60 --title 'recent history' -- git -c color.ui=always log --oneline --decorate -18" C-m
+tmux send-keys -t "$SESSION:code" "tools/nos-pane.py history" C-m
 _split "code editor"  -h -t "$SESSION:code" -c "$REPO_ROOT" -l 50%
 tmux send-keys -t "$SESSION:code.1" "vim ." ""
 

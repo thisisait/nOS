@@ -53,7 +53,12 @@ centre those readers feed — built 2026-08-18 after the first bound ceremony ev
 to complete named the gap as its own primary finding. Its one design rule is
 worth carrying anywhere a surface gets built: a tailed log looks healthy right up
 until its writer stops, and then it looks exactly the same, so every pane re-runs
-a reader (`tools/nos-watch.sh`) and says so when the reader itself fails. It owns
+a reader and says so when the reader itself fails. Since 2026-08-29 the reader
+panes are TUIs — `tools/nos-pane.py <id>`, one Textual app whose CONTENT comes
+from a registry (`tools/cc/panes/`, `--list`); Ctrl+P swaps what a pane shows,
+Enter opens a row, `--dump text|json` gives an LLM the same rows the screen has.
+A pane declares `REFRESH`; reading once and sitting there is the same stale
+answer in a nicer face, and the gate below catches it. It owns
 one tmux session, anchors every target with `=` (tmux matches by PREFIX, so an
 unanchored `-t nos` reaches the operator's own sessions), and never starts a
 converge for you. Gate: `test_the_control_centre_shows_state.py`.
