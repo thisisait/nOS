@@ -120,6 +120,22 @@ final class GateOracle
 	}
 
 	/**
+	 * The unsatisfied run's outcome word. A JUDGE THAT CANNOT RUN MUST NOT BE
+	 * REPORTED AS WORK THAT FAILED: a peak score of 0 means no gate set ever
+	 * reached a real verdict (requirements absent, sandbox failure, no uuid) —
+	 * absence is UNKNOWN, never a verdict on the work. Only a peak that saw a
+	 * genuine FAIL may say `needs_revision`/`max_iterations_reached`.
+	 * Gate: test_an_unrunnable_judge_is_not_failed_work.py.
+	 */
+	public function outcome(bool $stoppedAtPeak): string
+	{
+		if ($this->peakScore <= 0) {
+			return 'indeterminate';
+		}
+		return $stoppedAtPeak ? 'needs_revision' : 'max_iterations_reached';
+	}
+
+	/**
 	 * The iteration to report: highest score, earliest on a tie.
 	 *
 	 * @return ?array{iteration:int,score:int,satisfied:bool,gate_run_id:?string,detail:string,final_text:string}
@@ -170,7 +186,16 @@ final class GateOracle
 			return "gate set `{$gateset}` passed on tree {$tree}.";
 		}
 		$result = is_string($verdict['result'] ?? null) ? $verdict['result'] : 'no verdict';
-		$evidence = is_array($verdict['evidence'] ?? null) ? $verdict['evidence'] : [];
+		// The sealed verdict stores evidence as a canonical-JSON STRING
+		// (ledger.seal_verdict `_canonical_json`), and this method used to
+		// accept only an array — so every real feedback ended at the colon
+		// and the agent revised blind (ceremony ea044f04, 2026-08-29).
+		// Gate: test_gate_oracle_reads_sealed_evidence.py.
+		$evidence = $verdict['evidence'] ?? null;
+		if (is_string($evidence)) {
+			$evidence = json_decode($evidence, true);
+		}
+		$evidence = is_array($evidence) ? $evidence : [];
 		$reason = is_string($evidence['reason'] ?? null) && $evidence['reason'] !== ''
 			? $evidence['reason']
 			: trim($done['stderr']);
