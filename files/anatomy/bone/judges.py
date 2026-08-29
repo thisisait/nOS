@@ -650,7 +650,7 @@ def work_count(spec: JudgeSpec, done: Completed) -> int | None:
 #: (roles/pazny.bone/templates/bone.plist.j2) — putting them anywhere else
 #: (wing.plist, a Pulse job env) satisfies nothing the engine can see. The
 #: first bound ceremony (2026-08-29) skipped cortex-corpus-diff on exactly
-#: this: both tokens persisted in ~/.nos/secrets.yml, neither in Bone's env.
+#: this: both tokens persisted in the secrets store, neither in Bone's env.
 #: Gate: tests/anatomy/test_judge_requirements_have_a_home.py.
 REQUIREMENT_ENV: dict[str, str] = {
     "keap_token_ro": "KEAP_AGENT_TOKEN_RO",
