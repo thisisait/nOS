@@ -141,3 +141,39 @@ reason the wet-test never tested what it claimed."* It tested very little
 because the run died early, not only because of the probe's tolerance. Getting
 226 → 550 tasks turned it into an instrument that finds real defects. The probe
 weakness (items 1, 2, 5) is unchanged and still needs paying.
+
+---
+
+## The probe half, paid — and a fan-out with three of four answers discarded
+
+**2026-08-29.** The probe weakness above is closed. Zero containers is no longer
+one case: `stack-health-probe.py` derives the EXPECTED service count from the
+rendered compose inputs, so `0/0 ready (stack empty by configuration)` is now a
+claim with evidence behind it, `0/? ready (expected service count UNKNOWN)` is
+what it says when it cannot tell, and UNKNOWN is never folded into ALL_READY —
+the health-wait keeps polling and then fails loudly. `core-up.yml` stops the run
+on a non-zero `docker compose up -d` instead of registering the rc, printing it
+and discarding it. Gates:
+`test_stack_health_probe_absence_has_denominator.py`,
+`test_core_up_fails_fast_on_bring_up.py`.
+
+**How it was built, which is the part worth recording.** Four agents worked the
+same fee in parallel worktrees. Two produced what landed. One left a dirty tree
+and no commit. The fourth produced a complete, well-argued alternative: the
+caller passes its `up` rc to the probe through `NOS_STACK_UP_RC`, and a stack
+missing from that map reads UNKNOWN. It was **rejected on doctrine, not on
+quality** — it asks the code that attempted the bring-up to certify the
+bring-up, and this estate has paid repeatedly for success markers written by the
+attempting code (`dispatched_at` stamped by the sender; `status=scanned` stamped
+by a scan that never ran). Counting the services the compose file declares reads
+an artifact instead. Kept as `archive/wf-de1-4-up-rc` so the reasoning survives
+the branch.
+
+Three of four answers discarded is not waste — it is what a fan-out is for. What
+would have been waste is leaving them in worktrees for a month, where the next
+reader finds four unmerged attempts and cannot tell landed from rejected from
+abandoned.
+
+**Still open**, and the reason this fee is not closed: the Linux wet-test
+completing end-to-end is not the same as the Linux estate serving. That is
+`plat-linux`, and it is blocked on the estate, not on the probe.
