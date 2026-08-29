@@ -199,6 +199,12 @@
   register: _wing_frankenphp_ver
   changed_when: false
   failed_when: false
+  # `command` does not execute under --check, so stdout comes back empty with
+  # rc 0 — and the refusal below reads that as "reported the wrong version".
+  # Measured 2026-08-29: `--tags wing --check` failed here on a host running
+  # exactly the pinned 1.12.4. A preflight that cannot tell NOT MEASURED from
+  # MEASURED WRONG is this estate's signature defect in its loudest form.
+  check_mode: false
 
 - name: "[pazny.wing] Refuse on frankenphp version mismatch"
   ansible.builtin.fail:
@@ -514,6 +520,13 @@
   delay: 1
   until: _wing_post_bootstrap_probe.status | default(0) | int > 0
   failed_when: false
+  # `uri` is skipped under --check, so `.status` comes back undefined, the
+  # `default(0)` reads 0, and the refusal below announces a dead daemon on a
+  # host where Wing is answering 403 on the port it names. A read-only GET is
+  # safe to perform in a dry run and is the only way this preflight can tell
+  # NOT MEASURED from MEASURED DEAD. Same defect as the frankenphp version
+  # read above; see docs/hidden_fees/36.
+  check_mode: false
 
 - name: "[pazny.wing] Diagnose dead daemon (only if probe never landed)"
   # macOS launchctl/lsof diagnostics; Linux uses `journalctl --user -u wing`.
