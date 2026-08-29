@@ -85,6 +85,29 @@ def merge_config(*paths: pathlib.Path) -> dict:
     return out
 
 
+def apply_runtime_tld_fallback(
+    vars_dict: dict,
+    config_path: pathlib.Path,
+    state_path: pathlib.Path | None = None,
+) -> None:
+    """When config.yml is absent, take tenant_domain from ~/.nos/state.yml.
+
+    The loop engine judges an EPHEMERAL worktree, which never contains the
+    gitignored config.yml — so this script rendered `dev.local` while the
+    estate served `pazny.eu`, every probe 404'd, and gate set `live` failed
+    every bound ceremony on the wrong universe (measured 2026-08-29, judge run
+    81dd74b6). The runtime sidecar's `instance.tld` is the estate's own
+    resolved answer. CLI --tenant-domain still wins (applied after this).
+    """
+    if config_path.exists():
+        return
+    state_path = state_path or pathlib.Path(os.path.expanduser("~/.nos/state.yml"))
+    state = load_yaml(state_path)
+    tld = str(((state.get("instance") or {}).get("tld") or "")).strip()
+    if tld:
+        vars_dict["tenant_domain"] = tld
+
+
 def resolve_jinja_lite(text: str, vars_dict: dict, depth: int = 0) -> str:
     """Resolve `{{ var }}` and `{{ var | default('x') }}` against vars_dict.
 
@@ -838,6 +861,7 @@ def main() -> int:
         REPO / "default.config.yml",
         REPO / "config.yml",      # gitignored operator override
     )
+    apply_runtime_tld_fallback(vars_dict, REPO / "config.yml")
 
     # ── Track F: apply CLI overrides BEFORE helper computation ───────────────
     # These mirror Ansible -e flags. Without them, the subprocess can't see
