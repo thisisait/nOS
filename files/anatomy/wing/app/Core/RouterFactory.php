@@ -240,6 +240,12 @@ final class RouterFactory
 		// curl result). Pinned by test_approval_queue_event_backed.py.
 		$router->addRoute('approvals', 'Inbox:approvals');
 
+		// /questions (2026-08-28) — READ-ONLY ledger of the same rows: who
+		// answered, via which channel, and how many expired unanswered. No
+		// verb routes, by design: /inbox is the only place a question is
+		// answered, and a second decision path is a second thing to audit.
+		$router->addRoute('questions', 'Questions:default');
+
 		// A10.c / X.1.c (2026-05-08): actor-attributed event browser.
 		// Phase 5 ceremony pass criterion uses this view to verify the
 		// conductor self-test produced rows with actor_id=conductor.

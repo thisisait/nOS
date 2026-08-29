@@ -96,6 +96,17 @@ _PRIVILEGED_PRESENTERS: list[tuple[str, Path, list[str]]] = [
         [],
     ),
     (
+        # QuestionsPresenter (2026-08-28) — READ-ONLY ledger over the same
+        # agent_questions rows InboxPresenter gates at Tier-1, plus the
+        # identities of the operators who answered. Read-only is not a reason
+        # to skip the gate: this page names who approved what. Mutator list is
+        # empty by design — /inbox owns answering, and if a verb ever lands
+        # here the sibling gate below (no action* methods) goes red first.
+        "QuestionsPresenter",
+        PRESENTERS / "QuestionsPresenter.php",
+        [],
+    ),
+    (
         # GdprPresenter (S4) — the /gdpr browser view lists the Art-30 register,
         # the DSAR log, and the breach register: EVERY data subject's email +
         # request history. Same sensitivity as BreachesPresenter (which gates the

@@ -453,6 +453,52 @@ final class AgentQuestionRepository
 			->count('*');
 	}
 
+	/**
+	 * The /questions ledger: every question newest-first, each resolved
+	 * through the same deadline rule poll() applies. Nothing sweeps this
+	 * table, so a past-deadline row still says `open` in the column while
+	 * being expired in fact — a ledger that reprinted the column would
+	 * report the queue as attended when it was not.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function listRecent(int $limit = 200): array
+	{
+		$out = [];
+		$rows = $this->db->table('agent_questions')
+			->order('created_at DESC')
+			->limit($limit)
+			->fetchAll();
+		foreach ($rows as $row) {
+			$r = $this->hydrate($row);
+			if ($r['status'] === 'open' && $this->isPastDeadline($r)) {
+				$r['status'] = 'expired';
+				$r['answer'] = $r['default_on_expiry'];
+				$r['expired_by_deadline'] = true;
+			}
+			$out[] = $this->public($r);
+		}
+		return $out;
+	}
+
+	/**
+	 * How often the loop outran the operator: questions that reached a
+	 * deadline unanswered. Counts the unswept ones too — counting only
+	 * `status='expired'` would read as zero forever, since the only writer
+	 * of that value is an answer arriving too late.
+	 */
+	public function countExpired(): int
+	{
+		return $this->db->table('agent_questions')
+			->where(
+				"status = ? OR (status = ? AND expires_at IS NOT NULL AND expires_at <= ?)",
+				'expired',
+				'open',
+				gmdate('Y-m-d\TH:i:s\Z'),
+			)
+			->count('*');
+	}
+
 	/** Withdraw a question the agent no longer needs answered. */
 	public function cancel(string $uuid, string $reason = ''): bool
 	{

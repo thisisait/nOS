@@ -1,0 +1,84 @@
+{block title}Questions{/block}
+
+{block content}
+<h2 style="margin-bottom:4px; font-size:18px;">
+	Agent questions
+	{if count($open) > 0}
+		<span class="badge badge-critical" style="font-size:13px; margin-left:8px;">{count($open)} blocking</span>
+	{/if}
+	{if $expiredCount > 0}
+		<span class="badge badge-warning" style="font-size:13px; margin-left:8px;">{$expiredCount} expired</span>
+	{/if}
+</h2>
+<div style="color:var(--text2); font-size:13px; margin-bottom:20px;">
+	The ledger of what agents asked and how it ended. Answering happens on
+	<a href="/inbox">/inbox</a> — Wing is the only channel that may answer, because
+	an approval channel is an authentication surface.
+</div>
+
+{* Expired first: it is the only number here nothing else in the estate reports.
+   Nothing sweeps agent_questions, so an unanswered question still reads `open`
+   in the column; this count is derived at read time from the deadline. *}
+<div style="margin-bottom:24px; font-size:13px;">
+	<strong>{$expiredCount}</strong> question{if $expiredCount !== 1}s{/if} reached a deadline
+	unanswered — the loop deciding without the operator, on the default the agent declared.
+</div>
+
+<h3 style="font-size:15px; margin-bottom:10px;">Open</h3>
+{if count($open) === 0}
+	<div style="color:var(--text2); font-size:13px; margin-bottom:24px;">
+		No agent is waiting on an answer.
+	</div>
+{else}
+	<table style="margin-bottom:24px;">
+		<thead>
+			<tr><th>Agent</th><th>Question</th><th>Kind</th><th>Asked</th><th>Deadline</th><th>On expiry</th></tr>
+		</thead>
+		<tbody>
+			{foreach $open as $q}
+				<tr>
+					<td style="font-size:12px;">{$q['agent_name']}</td>
+					<td><div style="max-width:520px;">{$q['prompt']}</div></td>
+					<td style="font-size:11px; color:var(--text2)">{$q['kind']}</td>
+					<td style="font-size:11px; color:var(--text2)">{($q['created_at'] ?? '')|substr:0,19}</td>
+					<td style="font-size:11px; color:var(--text2)">{if !empty($q['expires_at'])}{$q['expires_at']|substr:0,19}{else}—{/if}</td>
+					<td style="font-size:11px; color:var(--text2)">{$q['default_on_expiry'] ?? '—'}</td>
+				</tr>
+			{/foreach}
+		</tbody>
+	</table>
+{/if}
+
+<h3 style="font-size:15px; margin-bottom:10px;">Resolved</h3>
+{if count($resolved) === 0}
+	<div style="color:var(--text2); font-size:13px;">
+		Nothing resolved yet. Empty because no question has ended, not because the
+		question ledger is unreadable — the open queue above came from the same read.
+	</div>
+{else}
+	<table>
+		<thead>
+			<tr><th>Agent</th><th>Question</th><th>Outcome</th><th>Answer</th><th>By</th><th>Via</th><th>When</th></tr>
+		</thead>
+		<tbody>
+			{foreach $resolved as $q}
+				<tr>
+					<td style="font-size:12px;">{$q['agent_name']}</td>
+					<td><div style="max-width:420px;">{$q['prompt']}</div></td>
+					<td style="font-size:11px;">
+						{$q['status']}{if !empty($q['expired_by_deadline'])} <span style="color:var(--text2)">(unswept)</span>{/if}
+					</td>
+					<td style="font-size:12px;">{$q['answer'] ?? '—'}</td>
+					<td style="font-size:11px; color:var(--text2)">{$q['answered_by'] ?? '—'}</td>
+					<td style="font-size:11px; color:var(--text2)">{$q['answered_via'] ?? '—'}</td>
+					<td style="font-size:11px; color:var(--text2)">{($q['answered_at'] ?? $q['updated_at'] ?? '')|substr:0,19}</td>
+				</tr>
+			{/foreach}
+		</tbody>
+	</table>
+{/if}
+
+<div style="color:var(--text2); font-size:11px; margin-top:16px;">
+	Showing the {$shown} most recent questions; the expired count is over the whole table.
+</div>
+{/block}
