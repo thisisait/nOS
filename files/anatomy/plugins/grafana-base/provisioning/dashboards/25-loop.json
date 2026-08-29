@@ -1,0 +1,448 @@
+{
+  "uid": "nos-25-loop",
+  "title": "nOS \u2014 Loop (weakness, proposal, verdict, session)",
+  "description": "The self-improvement loop as its tables record it. Companion to tools/loop-status.py and tools/agent-status.py, which answer the same questions in a terminal.",
+  "tags": [
+    "nos",
+    "loop",
+    "agents",
+    "agentkit",
+    "cortex"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 0,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "style": "dark",
+  "weekStart": "",
+  "liveNow": false,
+  "fiscalYearStartMonth": 0,
+  "id": null,
+  "links": [],
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "What this dashboard is",
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**The self-improvement loop, from the tables that record it** \u2014 `loop_proposals` \u2192 `loop_judge_runs` \u2192 `loop_verdicts`, beside the `agent_sessions` that produced them.\n\nEvery panel is a `SELECT` against `wing.db`; nothing here is derived twice. Two questions it deliberately does **not** answer: *did a passing proposal reach the tree* (that is a git question \u2014 `tools/loop-status.py` owns the join, and a second implementation of it would be a second answer), and *is a chain any good* (no oracle in the estate scores that)."
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Proposals on record",
+      "description": "",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS proposals FROM loop_proposals",
+          "queryText": "SELECT COUNT(*) AS proposals FROM loop_proposals",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Judge runs",
+      "description": "",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS runs FROM loop_judge_runs",
+          "queryText": "SELECT COUNT(*) AS runs FROM loop_judge_runs",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Verdicts sealed",
+      "description": "",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS verdicts FROM loop_verdicts",
+          "queryText": "SELECT COUNT(*) AS verdicts FROM loop_verdicts",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Proposals naming no session",
+      "description": "The lineage gap. `nos-loop propose --session-uuid` shipped 2026-08-29; every proposal recorded BEFORE it carries NULL and always will. This trends to a constant, not to zero \u2014 a rising number means the runner stopped stamping.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT SUM(session_uuid IS NULL) AS nameless FROM loop_proposals",
+          "queryText": "SELECT SUM(session_uuid IS NULL) AS nameless FROM loop_proposals",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Weakness -> proposal -> verdict -> the session that made it",
+      "description": "One row per (proposal, verdict). A proposal with two verdicts appears twice \u2014 that is the record, not a rendering bug: a re-seal is a fact.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT p.created_at AS at, p.weakness_id, p.intent_class, p.gate_set,\n       COALESCE(v.result,'(unjudged)') AS verdict,\n       COALESCE(s.agent_name,'(no session)') AS agent,\n       COALESCE(s.outcome_result,'') AS agent_outcome\n  FROM loop_proposals p\n  LEFT JOIN loop_verdicts v ON v.proposal_id = p.id\n  LEFT JOIN agent_sessions s ON s.uuid = p.session_uuid\n ORDER BY p.id DESC LIMIT 40",
+          "queryText": "SELECT p.created_at AS at, p.weakness_id, p.intent_class, p.gate_set,\n       COALESCE(v.result,'(unjudged)') AS verdict,\n       COALESCE(s.agent_name,'(no session)') AS agent,\n       COALESCE(s.outcome_result,'') AS agent_outcome\n  FROM loop_proposals p\n  LEFT JOIN loop_verdicts v ON v.proposal_id = p.id\n  LEFT JOIN agent_sessions s ON s.uuid = p.session_uuid\n ORDER BY p.id DESC LIMIT 40",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "table",
+      "title": "Judges: what each one actually did",
+      "description": "`least_work_seen` beside `ratchet` is the panel worth reading: a judge whose smallest observed work count is near its floor is one silent scope loss away from passing on nothing.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT judge_name,\n       COUNT(*) AS runs,\n       SUM(outcome='pass') AS pass,\n       SUM(outcome='fail') AS fail,\n       SUM(outcome NOT IN ('pass','fail')) AS indeterminate,\n       MIN(work_count) AS least_work_seen,\n       MAX(min_work) AS ratchet\n  FROM loop_judge_runs GROUP BY judge_name ORDER BY runs DESC",
+          "queryText": "SELECT judge_name,\n       COUNT(*) AS runs,\n       SUM(outcome='pass') AS pass,\n       SUM(outcome='fail') AS fail,\n       SUM(outcome NOT IN ('pass','fail')) AS indeterminate,\n       MIN(work_count) AS least_work_seen,\n       MAX(min_work) AS ratchet\n  FROM loop_judge_runs GROUP BY judge_name ORDER BY runs DESC",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "text",
+      "title": "Agents",
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**The runs behind the proposals.** `outcome_result` is the verdict an oracle wrote; `status` only says the process ended."
+      }
+    },
+    {
+      "type": "table",
+      "title": "Sessions by agent, scored on the OUTCOME and not on having finished",
+      "description": "`ended_with_no_verdict` is the column this dashboard exists for. A run that stopped without an oracle saying anything is not a success, and any panel that counts `status='idle'` as one is reporting the process, not the work.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT agent_name,\n       COUNT(*) AS runs,\n       SUM(outcome_result='satisfied') AS satisfied,\n       SUM(outcome_result='needs_revision') AS needs_revision,\n       SUM(outcome_result IS NULL AND ended_at IS NOT NULL) AS ended_with_no_verdict,\n       SUM(ended_at IS NULL) AS still_open,\n       SUM(COALESCE(tokens_input,0)+COALESCE(tokens_output,0)) AS tokens\n  FROM agent_sessions GROUP BY agent_name ORDER BY runs DESC",
+          "queryText": "SELECT agent_name,\n       COUNT(*) AS runs,\n       SUM(outcome_result='satisfied') AS satisfied,\n       SUM(outcome_result='needs_revision') AS needs_revision,\n       SUM(outcome_result IS NULL AND ended_at IS NOT NULL) AS ended_with_no_verdict,\n       SUM(ended_at IS NULL) AS still_open,\n       SUM(COALESCE(tokens_input,0)+COALESCE(tokens_output,0)) AS tokens\n  FROM agent_sessions GROUP BY agent_name ORDER BY runs DESC",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "table",
+      "title": "Iterations \u2014 where a run spent its turns",
+      "description": "",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT i.session_uuid, s.agent_name, i.iteration, i.grader_result,\n       i.tokens_input, i.tokens_output, i.duration_ms, i.created_at\n  FROM agent_iterations i LEFT JOIN agent_sessions s ON s.uuid = i.session_uuid\n ORDER BY i.id DESC LIMIT 40",
+          "queryText": "SELECT i.session_uuid, s.agent_name, i.iteration, i.grader_result,\n       i.tokens_input, i.tokens_output, i.duration_ms, i.created_at\n  FROM agent_iterations i LEFT JOIN agent_sessions s ON s.uuid = i.session_uuid\n ORDER BY i.id DESC LIMIT 40",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "table",
+      "title": "Open questions \u2014 what is waiting on a person",
+      "description": "Empty is the good state and is not the same as 'no agent ever asked'.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT created_at, agent_name, severity, substr(prompt,1,110) AS asked\n  FROM agent_questions WHERE answered_at IS NULL ORDER BY created_at DESC LIMIT 20",
+          "queryText": "SELECT created_at, agent_name, severity, substr(prompt,1,110) AS asked\n  FROM agent_questions WHERE answered_at IS NULL ORDER BY created_at DESC LIMIT 20",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    }
+  ]
+}

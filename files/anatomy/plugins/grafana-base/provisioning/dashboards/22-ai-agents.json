@@ -3,7 +3,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -23,11 +26,16 @@
     {
       "type": "text",
       "id": 1,
-      "title": "AI agents — data sources",
-      "gridPos": {"h": 3, "w": 24, "x": 0, "y": 0},
+      "title": "AI agents \u2014 data sources",
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
       "options": {
         "mode": "markdown",
-        "content": "OpenClaw writes JSONL to `~/.openclaw/metrics.jsonl` (Alloy tails → Loki). Paperclip stats come from its PostgreSQL database. The header stat row is a **Wave 2 placeholder** — full tokens/latency metrics arrive when OpenClaw + Open WebUI push to **InfluxDB**. Wing telemetry (`callback_plugins/wing_telemetry.py`) streams agent runs to Loki today."
+        "content": "OpenClaw writes JSONL to `~/.openclaw/metrics.jsonl` (Alloy tails \u2192 Loki). Paperclip stats come from its PostgreSQL database. The header stat row is a **Wave 2 placeholder** \u2014 full tokens/latency metrics arrive when OpenClaw + Open WebUI push to **InfluxDB**. Wing telemetry (`callback_plugins/wing_telemetry.py`) streams agent runs to Loki today."
       }
     },
     {
@@ -35,8 +43,16 @@
       "id": 2,
       "title": "Agent sessions last 1h",
       "description": "Count of AgentKit sessions started in the last hour (agent_sessions table, Wing SQLite).",
-      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
-      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 3},
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 3
+      },
       "targets": [
         {
           "refId": "A",
@@ -46,35 +62,111 @@
           "timeColumns": []
         }
       ],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
-      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "none"}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
     },
     {
       "type": "stat",
       "id": 3,
-      "title": "Success rate",
-      "description": "Percentage of agent_sessions that completed idle (vs terminated). All-time.",
-      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
-      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 3},
+      "title": "Runs an oracle called satisfied",
+      "description": "WAS `status = 'idle'`, which is 'the process ended' \u2014 18 of 55 sessions ended with no outcome at all and every one of them counted as a success. `outcome_result = 'satisfied'` is the verdict something actually wrote. Denominator is ended runs only, so a run still going does not depress it.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 3
+      },
       "targets": [
         {
           "refId": "A",
           "queryType": "table",
-          "rawQueryText": "SELECT ROUND(100.0 * SUM(CASE WHEN status = 'idle' THEN 1 ELSE 0 END) / COUNT(*), 1) AS success_rate FROM agent_sessions",
-          "queryText": "SELECT ROUND(100.0 * SUM(CASE WHEN status = 'idle' THEN 1 ELSE 0 END) / COUNT(*), 1) AS success_rate FROM agent_sessions",
+          "rawQueryText": "SELECT ROUND(100.0 * SUM(outcome_result = 'satisfied') / NULLIF(COUNT(*), 0), 1) AS satisfied_rate FROM agent_sessions WHERE ended_at IS NOT NULL",
+          "queryText": "SELECT ROUND(100.0 * SUM(outcome_result = 'satisfied') / NULLIF(COUNT(*), 0), 1) AS satisfied_rate FROM agent_sessions WHERE ended_at IS NOT NULL",
           "timeColumns": []
         }
       ],
-      "fieldConfig": {"defaults": {"unit": "percent", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "orange", "value": 50}, {"color": "green", "value": 80}]}}, "overrides": []},
-      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "none"}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
     },
     {
       "type": "stat",
       "id": 4,
       "title": "Avg session duration",
       "description": "Average agent session wallclock (ended_at - started_at) in milliseconds, across completed sessions.",
-      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
-      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 3},
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 3
+      },
       "targets": [
         {
           "refId": "A",
@@ -84,16 +176,50 @@
           "timeColumns": []
         }
       ],
-      "fieldConfig": {"defaults": {"unit": "ms", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
-      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "none"}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
     },
     {
       "type": "stat",
       "id": 5,
       "title": "Tokens used (24h)",
       "description": "Sum of tokens_input + tokens_output across agent_sessions started in the last 24h.",
-      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
-      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 3},
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 3
+      },
       "targets": [
         {
           "refId": "A",
@@ -103,108 +229,395 @@
           "timeColumns": []
         }
       ],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "purple", "value": null}]}}, "overrides": []},
-      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "none"}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "purple",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
     },
     {
       "type": "timeseries",
       "id": 6,
       "title": "Ansible task rate (Wing events)",
       "description": "Per-minute count of Ansible task events reaching Wing SQLite. Covers any playbook run emitting wing_telemetry callback events (gated on NOS_TELEMETRY_ENABLED=1).",
-      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 7},
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
       "targets": [
         {
           "refId": "A",
           "queryType": "time series",
           "rawQueryText": "SELECT strftime('%s', ts) * 1 AS time, type AS metric, COUNT(*) AS value FROM events WHERE type IN ('task_ok','task_changed','task_failed','task_skipped') AND ts >= datetime('now','-6 hours') GROUP BY strftime('%Y-%m-%d %H:%M', ts), type ORDER BY time ASC",
           "queryText": "SELECT strftime('%s', ts) * 1 AS time, type AS metric, COUNT(*) AS value FROM events WHERE type IN ('task_ok','task_changed','task_failed','task_skipped') AND ts >= datetime('now','-6 hours') GROUP BY strftime('%Y-%m-%d %H:%M', ts), type ORDER BY time ASC",
-          "timeColumns": ["time"]
+          "timeColumns": [
+            "time"
+          ]
         }
       ],
-      "fieldConfig": {"defaults": {"unit": "ops", "color": {"mode": "palette-classic"}}, "overrides": []},
-      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
     },
     {
       "type": "timeseries",
       "id": 7,
       "title": "OpenClaw tool calls / hour (log parse)",
       "description": "Tails ~/.openclaw/metrics.jsonl via Alloy into Loki.",
-      "datasource": {"type": "loki", "uid": "loki"},
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 7},
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 7
+      },
       "targets": [
-        {"refId": "A", "expr": "sum by (tool) (count_over_time({job=\"openclaw\"} |~ \"tool_call\" | json [1h]))", "legendFormat": "{{tool}}"}
+        {
+          "refId": "A",
+          "expr": "sum by (tool) (count_over_time({job=\"openclaw\"} |~ \"tool_call\" | json [1h]))",
+          "legendFormat": "{{tool}}"
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "ops", "color": {"mode": "palette-classic"}}, "overrides": []},
-      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
     },
     {
       "type": "stat",
       "id": 8,
-      "title": "Paperclip accounts (CEOs) — placeholder (Wave 2 PG exporter)",
-      "description": "select count(*) from account — requires postgres_exporter custom query in Wave 2.",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "gridPos": {"h": 4, "w": 8, "x": 0, "y": 15},
-      "targets": [{"refId": "A", "expr": "paperclip_accounts_total", "legendFormat": "accounts"}],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "noValue": "Wave 2"}, "overrides": []},
-      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+      "title": "Paperclip accounts (CEOs) \u2014 placeholder (Wave 2 PG exporter)",
+      "description": "select count(*) from account \u2014 requires postgres_exporter custom query in Wave 2.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 15
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "paperclip_accounts_total",
+          "legendFormat": "accounts"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "Wave 2"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
     },
     {
       "type": "stat",
       "id": 9,
-      "title": "Paperclip agents — placeholder (Wave 2 PG exporter)",
+      "title": "Paperclip agents \u2014 placeholder (Wave 2 PG exporter)",
       "description": "select count(*) from agents.",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "gridPos": {"h": 4, "w": 8, "x": 8, "y": 15},
-      "targets": [{"refId": "A", "expr": "paperclip_agents_total", "legendFormat": "agents"}],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}, "noValue": "Wave 2"}, "overrides": []},
-      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 15
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "paperclip_agents_total",
+          "legendFormat": "agents"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "Wave 2"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
     },
     {
       "type": "stat",
       "id": 10,
-      "title": "Pending approvals — placeholder (Wave 2 PG exporter)",
+      "title": "Pending approvals \u2014 placeholder (Wave 2 PG exporter)",
       "description": "select count(*) from approvals where status='pending'.",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "gridPos": {"h": 4, "w": 8, "x": 16, "y": 15},
-      "targets": [{"refId": "A", "expr": "paperclip_approvals_pending", "legendFormat": "pending"}],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 5}, {"color": "red", "value": 20}]}, "noValue": "Wave 2"}, "overrides": []},
-      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "auto", "colorMode": "value", "graphMode": "area"}
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 15
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "paperclip_approvals_pending",
+          "legendFormat": "pending"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
+            ]
+          },
+          "noValue": "Wave 2"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
     },
     {
       "type": "timeseries",
       "id": 11,
-      "title": "Container resources — Paperclip",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 19},
+      "title": "Container resources \u2014 Paperclip",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
       "targets": [
-        {"refId": "A", "expr": "rate(container_cpu_usage_seconds_total{name=~\".*paperclip.*\"}[5m]) * 100", "legendFormat": "cpu% {{name}}"},
-        {"refId": "B", "expr": "container_memory_usage_bytes{name=~\".*paperclip.*\"} / 1024 / 1024", "legendFormat": "mem MiB {{name}}"}
+        {
+          "refId": "A",
+          "expr": "rate(container_cpu_usage_seconds_total{name=~\".*paperclip.*\"}[5m]) * 100",
+          "legendFormat": "cpu% {{name}}"
+        },
+        {
+          "refId": "B",
+          "expr": "container_memory_usage_bytes{name=~\".*paperclip.*\"} / 1024 / 1024",
+          "legendFormat": "mem MiB {{name}}"
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "palette-classic"}}, "overrides": []},
-      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
     },
     {
       "type": "timeseries",
       "id": 12,
       "title": "OpenClaw daemon resources (launchd process via Alloy)",
       "description": "Requires Alloy prometheus.exporter.process for the openclaw daemon (Wave 1+).",
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 19},
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
       "targets": [
-        {"refId": "A", "expr": "namedprocess_namegroup_cpu_seconds_total{groupname=\"openclaw\"}", "legendFormat": "cpu"},
-        {"refId": "B", "expr": "namedprocess_namegroup_memory_bytes{groupname=\"openclaw\"}", "legendFormat": "mem"}
+        {
+          "refId": "A",
+          "expr": "namedprocess_namegroup_cpu_seconds_total{groupname=\"openclaw\"}",
+          "legendFormat": "cpu"
+        },
+        {
+          "refId": "B",
+          "expr": "namedprocess_namegroup_memory_bytes{groupname=\"openclaw\"}",
+          "legendFormat": "mem"
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "palette-classic"}}, "overrides": []},
-      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
     },
     {
       "type": "bargauge",
       "id": 13,
       "title": "Agent sessions by model URI",
       "description": "Session count bucketed by model_uri (e.g. claude-cli, anthropic-*, openclaw-*) from agent_sessions.",
-      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
-      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 27},
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
       "targets": [
         {
           "refId": "A",
@@ -214,30 +627,78 @@
           "timeColumns": []
         }
       ],
-      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "palette-classic"}}, "overrides": []},
-      "options": {"orientation": "horizontal", "displayMode": "gradient", "reduceOptions": {"calcs": ["lastNotNull"]}, "showUnfilled": true}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "showUnfilled": true
+      }
     },
     {
       "type": "logs",
       "id": 14,
       "title": "Agent event stream (recent)",
-      "datasource": {"type": "loki", "uid": "loki"},
-      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 33},
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
       "targets": [
-        {"refId": "A", "expr": "{job=~\"openclaw|paperclip\"}", "maxLines": 300}
+        {
+          "refId": "A",
+          "expr": "{job=~\"openclaw|paperclip\"}",
+          "maxLines": 300
+        }
       ],
-      "options": {"showTime": true, "showLabels": true, "showCommonLabels": false, "wrapLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"}
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
     }
   ],
   "refresh": "30s",
   "schemaVersion": 39,
   "style": "dark",
-  "tags": ["nos", "ai", "openclaw", "paperclip", "agents"],
-  "templating": {"list": []},
-  "time": {"from": "now-6h", "to": "now"},
+  "tags": [
+    "nos",
+    "ai",
+    "openclaw",
+    "paperclip",
+    "agents"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "",
-  "title": "nOS — AI Agents (OpenClaw + Paperclip)",
+  "title": "nOS \u2014 AI Agents (OpenClaw + Paperclip)",
   "uid": "nos-22-ai-agents",
   "version": 1,
   "weekStart": ""

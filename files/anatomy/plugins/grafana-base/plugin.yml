@@ -144,6 +144,14 @@ provisioning:
       - 22-ai-agents.json
       - 23-chat.json
       - 24-qdrant.json
+      # The loop as its own tables record it (2026-08-29). Sibling of
+      # 22-ai-agents: that one is the daemons, this one is the ledger.
+      - 25-loop.json
+      # Shipped 2026-05-07 with the E2E journey layer, documented in
+      # docs/e2e-tester-identity.md as "surfaces in Grafana dashboard
+      # 40-e2e-journeys" — and never added here, so the loader has never
+      # copied it to a host. Found 2026-08-29 by the gate that reads this list.
+      - 40-e2e-journeys.json
       - 30-collab.json
       - 31-home-lab.json
       - 32-finance.json
