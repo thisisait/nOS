@@ -1129,14 +1129,62 @@ def test_ledger_opens_no_socket_and_runs_no_subprocess():
         assert forbidden not in code, forbidden
 
 
+#: The committed wing.db schema contract. NOT a second declaration — since
+#: 2026-08-29 `bin/export-schema.php` builds it by RUNNING `ledger.ensure_schema()`
+#: against a throwaway database, so its loop_* DDL is a rendering of the file
+#: below and cannot disagree with it. It had to be added because the artifact
+#: called "the wing.db schema" described 41 of the 45 tables that exist, and
+#: three gates building fixtures from it had to import `ledger._DDL` themselves.
+GENERATED_CONTRACT = REPO / "files/anatomy/skills/contracts/wing.db-schema.sql"
+
+
 def test_loop_schema_is_declared_in_exactly_one_place():
     """A twin schema drifts. Bone owns these tables; Wing reads them."""
     hits = []
     for f in list((REPO / "files").rglob("*.sql")) + list((REPO / "files").rglob("*.php")):
+        if f == GENERATED_CONTRACT:
+            continue
         if re.search(r"CREATE TABLE[^;]*loop_verdicts", f.read_text(errors="replace"), re.I):
             hits.append(str(f.relative_to(REPO)))
     assert hits == [], f"loop_* declared outside bone/ledger.py: {hits}"
     assert LEDGER_SRC.count("CREATE TABLE IF NOT EXISTS loop_verdicts") == 1
+
+
+def test_the_generated_contract_is_generated_and_not_authored():
+    """The exemption above has to earn itself, or it is a hole in the rule.
+
+    Two things make the contract a rendering rather than a twin: it says so in
+    its own first line, and its loop_* column set is exactly the one
+    `ledger._DDL` declares. A hand-edited copy would pass the first check and
+    fail the second the moment it drifted, which is the failure the original
+    rule exists to prevent.
+    """
+    body = GENERATED_CONTRACT.read_text(encoding="utf-8")
+    assert body.lstrip().startswith("-- AUTO-GENERATED"), (
+        "the contract no longer declares itself generated — if it is now "
+        "hand-written, it IS a second declaration and the exemption is wrong")
+
+    # Compared by BUILDING both, not by parsing either. A regex over CREATE
+    # TABLE text is defeated by whitespace, by a comment containing a comma,
+    # and — as the first draft of this proved — by two adjacent tables; sqlite
+    # is the only reader of this dialect that cannot be wrong about it.
+    def built(apply) -> dict[str, list]:
+        conn = sqlite3.connect(":memory:")
+        apply(conn)
+        return {t: [(c[1], c[2], c[3], c[5]) for c in
+                    conn.execute(f"PRAGMA table_info({t})")]
+                for t in ("loop_proposals", "loop_verdicts", "loop_judge_runs",
+                          "loop_forgets")}
+
+    from_bone = built(ledger.ensure_schema)
+    from_contract = built(lambda c: c.executescript(body))
+    for table, want in from_bone.items():
+        assert from_contract[table] == want, (
+            f"{table} in the contract does not match what Bone builds.\n"
+            f"  contract: {from_contract[table]}\n  ledger:   {want}\n"
+            "Regenerate with `php files/anatomy/wing/bin/export-schema.php "
+            "--db=/nonexistent/wing.db`; if that does not fix it, the contract "
+            "has been hand-edited and is now a twin.")
 
 
 def test_worm_triggers_are_created_never_dropped_and_recreated():

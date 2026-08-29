@@ -1,0 +1,489 @@
+{
+  "uid": "nos-27-pulse",
+  "title": "nOS \u2014 Pulse (scheduled jobs, and the ones that stopped)",
+  "description": "Every declared job and every run, from pulse_jobs and pulse_runs. Companion to tools/red-status.py, which answers what is red now rather than what has happened.",
+  "tags": [
+    "nos",
+    "pulse",
+    "jobs",
+    "anatomy"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 0,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5m",
+  "style": "dark",
+  "weekStart": "",
+  "liveNow": false,
+  "fiscalYearStartMonth": 0,
+  "id": null,
+  "links": [],
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "What this dashboard is",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Pulse \u2014 the estate's scheduled-job organ, from `pulse_jobs` and `pulse_runs`.** 56 000 runs had accumulated with no Grafana surface at all; `tools/red-status.py` answers *what is red now*, and this answers *what has been happening*.\n\nThe question it exists for is the one CLAUDE.md tells the story of: **a nightly job that stops firing looks exactly like a nightly job with nothing to report.** A notification is an event and silence is a state, so the first row counts jobs that are declared, unpaused, and quiet \u2014 and a paused job is shown separately with its reason, because a deliberate pause is not a failure and must not be summed with one.\n\n`exit_code = 0` is a real oracle here, unlike an agent's `status`: a subprocess that exits zero did its job. A run with `finished_at IS NULL` is counted as neither."
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Live jobs",
+      "description": "Declared, not removed, not paused.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS jobs FROM pulse_jobs WHERE removed_at IS NULL AND paused = 0",
+          "queryText": "SELECT COUNT(*) AS jobs FROM pulse_jobs WHERE removed_at IS NULL AND paused = 0",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Declared and silent",
+      "description": "Unpaused jobs that have NEVER produced a run. A schedule nothing fires is the estate's signature defect: it looks identical to a job with nothing to say. Zero is the only acceptable value.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS never_ran FROM pulse_jobs j WHERE j.removed_at IS NULL AND j.paused = 0 AND NOT EXISTS (SELECT 1 FROM pulse_runs r WHERE r.job_id = j.id)",
+          "queryText": "SELECT COUNT(*) AS never_ran FROM pulse_jobs j WHERE j.removed_at IS NULL AND j.paused = 0 AND NOT EXISTS (SELECT 1 FROM pulse_runs r WHERE r.job_id = j.id)",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Overdue by a day",
+      "description": "Wing computes `next_fire_at`. A live job whose next fire is more than a day in the past has stopped being scheduled \u2014 the daemon is down, the cron is unparsable, or the job errored out of its own loop.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS overdue FROM pulse_jobs WHERE removed_at IS NULL AND paused = 0 AND next_fire_at IS NOT NULL AND julianday(next_fire_at) < julianday('now') - 1",
+          "queryText": "SELECT COUNT(*) AS overdue FROM pulse_jobs WHERE removed_at IS NULL AND paused = 0 AND next_fire_at IS NOT NULL AND julianday(next_fire_at) < julianday('now') - 1",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Runs that never finished",
+      "description": "Fired over an hour ago, `finished_at` still NULL. The runner died between fire and finish, so nothing wrote an exit code \u2014 and a run with no exit code is not a failure anyone was told about.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS never_finished FROM pulse_runs WHERE finished_at IS NULL AND julianday(fired_at) < julianday('now') - 0.05",
+          "queryText": "SELECT COUNT(*) AS never_finished FROM pulse_runs WHERE finished_at IS NULL AND julianday(fired_at) < julianday('now') - 0.05",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Runs per day, by outcome (30 d)",
+      "description": "Stacked. `unfinished` is its own band rather than folded into either side \u2014 it is the shape a crashing runner makes.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT substr(fired_at,1,10) AS day, SUM(CASE WHEN exit_code = 0 THEN 1 ELSE 0 END) AS ok, SUM(CASE WHEN exit_code IS NOT NULL AND exit_code <> 0 THEN 1 ELSE 0 END) AS failed, SUM(CASE WHEN finished_at IS NULL THEN 1 ELSE 0 END) AS unfinished FROM pulse_runs WHERE julianday(fired_at) > julianday('now') - 30 GROUP BY day ORDER BY day",
+          "queryText": "SELECT substr(fired_at,1,10) AS day, SUM(CASE WHEN exit_code = 0 THEN 1 ELSE 0 END) AS ok, SUM(CASE WHEN exit_code IS NOT NULL AND exit_code <> 0 THEN 1 ELSE 0 END) AS failed, SUM(CASE WHEN finished_at IS NULL THEN 1 ELSE 0 END) AS unfinished FROM pulse_runs WHERE julianday(fired_at) > julianday('now') - 30 GROUP BY day ORDER BY day",
+          "timeColumns": [
+            "day"
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "type": "table",
+      "title": "Failure rate by job (30 d), worst first",
+      "description": "Ordered by PERCENTAGE, not by count: a job that fails 16 of 24 runs is a broken job, and one that fails 158 of 2303 is a noisy but working one. Sorting by absolute failures would put the second on top.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT r.job_id AS job, COUNT(*) AS runs, SUM(CASE WHEN r.exit_code = 0 THEN 0 ELSE 1 END) AS failed, ROUND(100.0 * SUM(CASE WHEN r.exit_code = 0 THEN 0 ELSE 1 END) / COUNT(*), 1) AS pct, MAX(r.fired_at) AS last_fired FROM pulse_runs r WHERE julianday(r.fired_at) > julianday('now') - 30 GROUP BY r.job_id HAVING failed > 0 ORDER BY pct DESC, failed DESC LIMIT 20",
+          "queryText": "SELECT r.job_id AS job, COUNT(*) AS runs, SUM(CASE WHEN r.exit_code = 0 THEN 0 ELSE 1 END) AS failed, ROUND(100.0 * SUM(CASE WHEN r.exit_code = 0 THEN 0 ELSE 1 END) / COUNT(*), 1) AS pct, MAX(r.fired_at) AS last_fired FROM pulse_runs r WHERE julianday(r.fired_at) > julianday('now') - 30 GROUP BY r.job_id HAVING failed > 0 ORDER BY pct DESC, failed DESC LIMIT 20",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "table",
+      "title": "Time since each job last fired",
+      "description": "The staleness column. A weekly job at 6 days is fine; the same job at 20 is a job that has quietly stopped, and no notification would have said so \u2014 the repeat-failure rule that stops a per-minute job flooding the inbox also stops a weekly one repeating news that still holds.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT j.id AS job, j.schedule, COALESCE(MAX(r.fired_at), 'never') AS last_fired, CAST(julianday('now') - julianday(MAX(r.fired_at)) AS INT) AS days_since FROM pulse_jobs j LEFT JOIN pulse_runs r ON r.job_id = j.id WHERE j.removed_at IS NULL AND j.paused = 0 GROUP BY j.id ORDER BY days_since DESC LIMIT 20",
+          "queryText": "SELECT j.id AS job, j.schedule, COALESCE(MAX(r.fired_at), 'never') AS last_fired, CAST(julianday('now') - julianday(MAX(r.fired_at)) AS INT) AS days_since FROM pulse_jobs j LEFT JOIN pulse_runs r ON r.job_id = j.id WHERE j.removed_at IS NULL AND j.paused = 0 GROUP BY j.id ORDER BY days_since DESC LIMIT 20",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "table",
+      "title": "Paused jobs, and why",
+      "description": "A pause is an operator decision and belongs beside the failures, not in them. A row here with no reason is a job somebody switched off and did not write down \u2014 which becomes indistinguishable from a bug.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT id AS job, schedule, COALESCE(paused_reason, '\u2014 no reason given \u2014') AS why FROM pulse_jobs WHERE removed_at IS NULL AND paused = 1 ORDER BY id",
+          "queryText": "SELECT id AS job, schedule, COALESCE(paused_reason, '\u2014 no reason given \u2014') AS why FROM pulse_jobs WHERE removed_at IS NULL AND paused = 1 ORDER BY id",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "table",
+      "title": "Runtime against the declared budget",
+      "description": "`max_runtime_s` is the SIGKILL line (exit -9). A job whose worst run is already past half its budget is one slow night from being killed mid-work, which reads downstream as a failure with no output.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT j.id AS job, j.max_runtime_s AS budget_s, ROUND(MAX(r.duration_ms) / 1000.0, 1) AS worst_s, COUNT(CASE WHEN r.exit_code = -9 THEN 1 END) AS killed FROM pulse_jobs j JOIN pulse_runs r ON r.job_id = j.id WHERE j.removed_at IS NULL AND r.duration_ms IS NOT NULL GROUP BY j.id HAVING worst_s > j.max_runtime_s * 0.5 ORDER BY worst_s / j.max_runtime_s DESC LIMIT 15",
+          "queryText": "SELECT j.id AS job, j.max_runtime_s AS budget_s, ROUND(MAX(r.duration_ms) / 1000.0, 1) AS worst_s, COUNT(CASE WHEN r.exit_code = -9 THEN 1 END) AS killed FROM pulse_jobs j JOIN pulse_runs r ON r.job_id = j.id WHERE j.removed_at IS NULL AND r.duration_ms IS NOT NULL GROUP BY j.id HAVING worst_s > j.max_runtime_s * 0.5 ORDER BY worst_s / j.max_runtime_s DESC LIMIT 15",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "type": "table",
+      "title": "Where the 56 000 rows are",
+      "description": "Not a health question \u2014 a cost one. `pulse_runs` is the second-largest table in wing.db, and one per-minute job owns most of it. Read this beside `tools/wing-status.py --cost` before proposing a retention rule.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "wing_sqlite"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT job_id AS job, COUNT(*) AS rows_held, ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM pulse_runs), 1) AS pct_of_table, MIN(fired_at) AS oldest FROM pulse_runs GROUP BY job_id ORDER BY rows_held DESC LIMIT 12",
+          "queryText": "SELECT job_id AS job, COUNT(*) AS rows_held, ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM pulse_runs), 1) AS pct_of_table, MIN(fired_at) AS oldest FROM pulse_runs GROUP BY job_id ORDER BY rows_held DESC LIMIT 12",
+          "timeColumns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    }
+  ]
+}

@@ -149,6 +149,10 @@ provisioning:
       - 25-loop.json
       # cortex-lang as the executor runs it (2026-08-29).
       - 26-cortex.json
+      # Pulse: 56 000 runs of the estate's scheduled-job organ, unobserved
+      # here until 2026-08-29. Its first question is the one a notification
+      # cannot answer — which declared job has gone quiet.
+      - 27-pulse.json
       # Shipped 2026-05-07 with the E2E journey layer, documented in
       # docs/e2e-tester-identity.md as "surfaces in Grafana dashboard
       # 40-e2e-journeys" — and never added here, so the loader has never
