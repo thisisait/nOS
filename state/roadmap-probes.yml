@@ -489,3 +489,75 @@ sec-transport-hedgedoc: >-
   t = [x for x in json.load(sys.stdin).get('postgres_selftests', []) if x['service'] == 'hedgedoc'];
   print(t[0]['state'].lower() if t else 'no-selftest-declared')");
   echo "$v"; test "$v" = "encrypted"
+
+# ── planes, and the control centre (probes written 2026-08-29) ───────────────
+#
+# Eight `planes-*` rows were seeded `queued` describing work that had already
+# landed. Moving them on my own recollection would be exactly the defect hidden
+# fee 20 measures — 50 of 165 closed findings carrying no evidence at all — so
+# each gets a probe first and the status follows the verdict, not the memory.
+#
+# Every probe below names the GATE, not the feature. A gate file is the estate's
+# own evidence that the thing was not only built but pinned; asserting the
+# implementation alone would confirm a deletion of the gate as progress.
+
+# Named the gate's PROSE on the first cut and it came back contradicted: the
+# function is `test_the_coordinator_surface_stays_deleted`, underscores not
+# spaces. Ask for the constant the gate actually enforces with.
+planes-prune: >-
+  grep -q 'FORBIDDEN_COORDINATOR' tests/anatomy/test_agent_memory_does_not_return.py
+  && grep -q 'agent_memory_stores' tests/anatomy/test_agent_memory_does_not_return.py
+
+planes-mutex: >-
+  grep -q 'ponytail:' files/anatomy/scripts/agent-run-lock.sh
+  && grep -qE 'slot|SLOT' files/anatomy/scripts/agent-run-lock.sh
+
+planes-grant: >-
+  test -f files/anatomy/wing/app/AgentKit/Tools/McpWingWriteTool.php
+  && test -f docs/plans/rsi-research/artifacts/wing-write-grants.json
+  && test -f tests/anatomy/test_the_mint_matches_the_manifest.py
+
+planes-oracle: >-
+  grep -q 'deliverableExists' files/anatomy/wing/app/AgentKit/Outcome/GateOracle.php
+  && grep -q 'deliverableEvent' files/anatomy/wing/app/AgentKit/Runner.php
+
+planes-ledger: >-
+  test -f files/anatomy/agents/proposer/agent.yml
+  && test -f files/anatomy/wing/app/AgentKit/Tools/McpLoopTool.php
+  && test -f tests/anatomy/test_a_proposal_can_name_its_session.py
+
+planes-surface: >-
+  test -f files/anatomy/wing/app/Presenters/LoopEditorPresenter.php
+  && test -f tests/anatomy/test_the_harness_toggle_defaults_off.py
+  && grep -q '"agent:' state/anatomy-graph.json
+
+planes-ops-harness: >-
+  test -x tools/nos-ops-harness.py
+
+# The row is the guarded proposal KIND, so the probe asks for the guard rather
+# than the word: a `harness` string in a presenter proves a label, not a gate.
+planes-harness-kind: >-
+  grep -q 'harness' files/anatomy/wing/app/Presenters/LoopEditorPresenter.php
+  && test -f tests/anatomy/test_the_harness_toggle_defaults_off.py
+
+# Five prototypes, built to be CHOSEN BETWEEN — so the deliverable includes the
+# choosing. Live branches would mean the choice was never made; archive tags are
+# what a decided fan-out leaves behind.
+cc-tui-variants: >-
+  test "$(git tag -l 'archive/[a-e]-*' | wc -l | tr -d ' ')" -ge 5
+  && test -z "$(git branch --list 'tui/*')"
+
+# ALSO WRONG ON THE FIRST CUT, and more usefully so: it grepped nos-cc.sh for
+# the string `awaiting-operator`, which the control centre stopped containing
+# the day its panes became TUIs — the capability moved into the pane registry
+# and the probe reported the rename as a regression. Ask the registry.
+cc-approvals: >-
+  test -x tools/awaiting-operator.py
+  && tools/nos-pane.py --list | grep -q '^awaiting'
+
+# The corpus row's deliverable is the generator AND the measurement that
+# corrected its premise; the generator alone would confirm the plan, not the
+# finding.
+local-llm-corpus: >-
+  test -f files/anatomy/cortex/scripts/corpus-gen.ts
+  && test -f tests/anatomy/test_the_cortex_oracle_filters_syntax_not_sense.py
