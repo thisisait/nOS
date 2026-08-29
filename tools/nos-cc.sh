@@ -205,7 +205,12 @@ tmux select-pane -t "$SESSION:ops.3"
 #
 # The `|| echo` is not decoration. The whole reason this needed finding is that
 # tmux reported the failure and nothing was listening.
-for opt in "status-interval 15" \
+# `mouse on` is session-scoped, so it does not touch the operator's other
+# sessions. Without it a pane's scrollback is unreachable without the prefix
+# dance — measured 2026-08-28: the workflow pane rendered a 60-line tree into a
+# 48-row pane and the top of it could not be reached at all.
+for opt in "mouse on" \
+           "status-interval 15" \
            "status-left #[bold] nOS #[default]" \
            "status-right #($REPO_ROOT/tools/nos-statusline.sh) #[dim]%H:%M" \
            "status-right-length 60"; do
