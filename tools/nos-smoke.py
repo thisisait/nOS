@@ -85,19 +85,22 @@ def merge_config(*paths: pathlib.Path) -> dict:
     return out
 
 
-def apply_runtime_tld_fallback(
+def apply_runtime_estate_fallback(
     vars_dict: dict,
     config_path: pathlib.Path,
     state_path: pathlib.Path | None = None,
+    manifest: dict | None = None,
 ) -> None:
-    """When config.yml is absent, take tenant_domain from ~/.nos/state.yml.
+    """When config.yml is absent, resolve tld + enablement from ~/.nos/state.yml.
 
     The loop engine judges an EPHEMERAL worktree, which never contains the
     gitignored config.yml — so this script rendered `dev.local` while the
-    estate served `pazny.eu`, every probe 404'd, and gate set `live` failed
-    every bound ceremony on the wrong universe (measured 2026-08-29, judge run
-    81dd74b6). The runtime sidecar's `instance.tld` is the estate's own
-    resolved answer. CLI --tenant-domain still wins (applied after this).
+    estate served `pazny.eu` and every probe 404'd; with the tld fixed it
+    still probed mailpit/superset, which the operator's config.yml disables
+    (measured 2026-08-29, judge run 81dd74b6 and the worktree re-run after).
+    The runtime sidecar is the estate's own resolved answer for both:
+    `instance.tld` and `services.<id>.enabled`. CLI --tenant-domain and an
+    operator checkout's config.yml still win.
     """
     if config_path.exists():
         return
@@ -106,6 +109,22 @@ def apply_runtime_tld_fallback(
     tld = str(((state.get("instance") or {}).get("tld") or "")).strip()
     if tld:
         vars_dict["tenant_domain"] = tld
+    services = state.get("services") or {}
+    if not services:
+        return
+    # id → install flag, from the committed manifest (present in any worktree).
+    flags = {
+        s.get("id"): s.get("install_flag")
+        for s in (manifest or {}).get("services", [])
+        if s.get("install_flag")
+    }
+    for sid, body in services.items():
+        enabled = (body or {}).get("enabled")
+        if enabled is None:
+            continue
+        flag = flags.get(sid) or f"install_{sid}"
+        if flag in vars_dict:
+            vars_dict[flag] = bool(enabled)
 
 
 def resolve_jinja_lite(text: str, vars_dict: dict, depth: int = 0) -> str:
@@ -861,7 +880,10 @@ def main() -> int:
         REPO / "default.config.yml",
         REPO / "config.yml",      # gitignored operator override
     )
-    apply_runtime_tld_fallback(vars_dict, REPO / "config.yml")
+    apply_runtime_estate_fallback(
+        vars_dict, REPO / "config.yml",
+        manifest=load_yaml(REPO / "state" / "manifest.yml"),
+    )
 
     # ── Track F: apply CLI overrides BEFORE helper computation ───────────────
     # These mirror Ansible -e flags. Without them, the subprocess can't see
