@@ -220,8 +220,60 @@ export interface DataTable {
 	view?: TableView;
 }
 
-/** Render style + the columns each one needs. Mirrors KEAP's `viewMetaSchema`
- *  (shared/contracts/table.ts) — KEAP validates, this only renders. */
+/** The comparison vocabulary. Not invented here — it is KEAP's `filterOpSchema`
+ *  (shared/contracts/table.ts), already validated author-side, so a predicate
+ *  written for a view block and one written for a query mean the same thing. */
+export type RowOp = 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte' | 'contains';
+
+/** One comparison against one column. Scalars only — a predicate that could
+ *  carry an object is a predicate that could carry markup. */
+export interface RowPredicate {
+	column: string;
+	op: RowOp;
+	value: string | number | boolean;
+}
+
+/** A named class of rows worth jumping to. Predicates AND together. */
+export interface HighlightSpec {
+	label: string;
+	when: RowPredicate[];
+}
+
+/**
+ * A suggested next step, offered when `when` matches.
+ *
+ * `action` is an ID FROM A CLOSED CATALOG THE RENDERER OWNS (`VIEW_ACTIONS` in
+ * `$lib/tables/view`), never a command, URL or handler. This is the genome's
+ * own rule pointed at the face: `state/genome/entity.schema.json` keeps opcodes
+ * and handlers as code "per runtime, hash-compared", precisely so a capability
+ * cannot be added by data. A table — or a model filling this block — may say
+ * WHICH of the things this renderer can already do is worth doing. It may not
+ * teach it a new one.
+ */
+export interface OfferSpec {
+	label: string;
+	action: string;
+	/** REQUIRED, unlike a highlight's — an offer that is always on is not an
+	 *  offer, it is a button, and a suggestion that appears when it cannot help
+	 *  is how a surface stops being read. */
+	when: RowPredicate[];
+}
+
+/**
+ * Render style + the columns each one needs. Mirrors KEAP's `viewMetaSchema`
+ * (shared/contracts/table.ts) — KEAP validates, this only renders.
+ *
+ * `facets` / `highlights` / `offer` are the generative-UI seam (2026-08-28).
+ * They name COLUMN KEYS, COMPARISON OPS AND LABELS — nothing about chips, tabs,
+ * pixels, DOM or Svelte — which is what makes one declaration inheritable by a
+ * future native renderer reading the identical JSON from KEAP's
+ * `GET /agent/v1/tables/:slug`. It decides for itself whether a facet is a
+ * `<select>`, a segmented control or an `NSPopUpButton`.
+ *
+ * All three are OPTIONAL and absent means byte-identical to the render before
+ * they existed. They are filled by an author today and may be filled by a model
+ * tomorrow — same block, same door (`narrowView`), same degrade.
+ */
 export interface TableView {
 	style: 'grid' | 'blog' | 'timeline' | 'tiles';
 	titleColumn?: string;
@@ -229,6 +281,13 @@ export interface TableView {
 	dateColumn?: string;
 	mediaColumn?: string;
 	metaColumns?: string[];
+	/** ≤2 column keys, outer→inner. "Two levels" is `facets.length === 2`, not a
+	 *  nesting structure — a renderer that only affords one honours the first. */
+	facets?: string[];
+	/** ≤4 row classes for fast navigation. */
+	highlights?: HighlightSpec[];
+	/** ≤1. See OfferSpec — the action is chosen from the renderer's catalog. */
+	offer?: OfferSpec;
 }
 
 // ── Catalog (Wing /hub/systems) ───────────────────────────────────────────────

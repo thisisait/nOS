@@ -13,9 +13,53 @@
  * like the style is working. So a style whose REQUIRED column cannot be
  * resolved falls back to the grid, and says so in `degradedFrom`.
  */
-import type { ColumnSpec, DataTable, TableView } from '$lib/contracts';
+import type {
+	ColumnSpec,
+	DataTable,
+	DataTableRow,
+	HighlightSpec,
+	OfferSpec,
+	RowOp,
+	RowPredicate,
+	TableView
+} from '$lib/contracts';
 
 export type ResolvedStyle = 'grid' | 'blog' | 'timeline' | 'tiles';
+
+/**
+ * Every action this renderer can offer. A CLOSED CATALOG, in code.
+ *
+ * `TableView.offer.action` selects from this list; it never carries a command,
+ * a URL or a handler. That split is not local caution — it is the rule
+ * `state/genome/entity.schema.json` states for the whole estate ("a capability
+ * must not be addable by data, so opcodes and handlers stay code, per
+ * runtime"), and the reason a model may fill this block at all.
+ *
+ * ONE MEMBER, deliberately, and the fail-closed ordering is the genome's too:
+ * the handler ships first and the id joins this list second. A member with no
+ * arm in the renderer is a declaration that validates and does nothing.
+ */
+export const VIEW_ACTIONS = ['focus-highlight'] as const;
+export type ViewAction = (typeof VIEW_ACTIONS)[number];
+
+const ROW_OPS: readonly RowOp[] = ['eq', 'neq', 'lt', 'lte', 'gt', 'gte', 'contains'] as const;
+
+/** Caps. A declaration that can grow without bound is a layout that can. */
+const MAX_FACETS = 2;
+const MAX_HIGHLIGHTS = 4;
+const MAX_PREDICATES = 4;
+const MAX_LABEL = 48;
+
+export interface ResolvedHighlight {
+	label: string;
+	when: RowPredicate[];
+}
+
+export interface ResolvedOffer {
+	label: string;
+	action: ViewAction;
+	when: RowPredicate[];
+}
 
 export interface ResolvedView {
 	style: ResolvedStyle;
@@ -24,6 +68,12 @@ export interface ResolvedView {
 	date: ColumnSpec | null;
 	media: ColumnSpec | null;
 	meta: ColumnSpec[];
+	/** The two filter levels, outer→inner. Resolved columns, ≤2. */
+	facets: ColumnSpec[];
+	/** Row classes worth jumping to. ≤4, each with ≥1 resolvable predicate. */
+	highlights: ResolvedHighlight[];
+	/** The single suggestion, or null. */
+	offer: ResolvedOffer | null;
 	/** Set when a declared style could not be honoured — the UI says so rather
 	 *  than quietly rendering something that looks intentional. */
 	degradedFrom?: ResolvedStyle;
@@ -60,6 +110,31 @@ export function resolveView(table: DataTable): ResolvedView {
 	const meta = (v.metaColumns ?? [])
 		.map((k) => byKey(cols, k))
 		.filter((c): c is ColumnSpec => c !== null);
+
+	// The three generative keys resolve the same way every other one does: a
+	// name that resolves to nothing is DROPPED, never guessed at. `narrowView`
+	// has usually already removed these at the BFF; resolving again here is what
+	// keeps the offline-fallback path (a stale block beside changed columns)
+	// from rendering a facet over a column that is gone.
+	const facets = (v.facets ?? [])
+		.slice(0, MAX_FACETS)
+		.map((k) => byKey(cols, k))
+		.filter((c): c is ColumnSpec => c !== null);
+
+	const keys = new Set(cols.map((c) => c.key));
+	const resolvable = (w: RowPredicate[]): boolean =>
+		w.length > 0 && w.every((p) => keys.has(p.column));
+
+	const highlights = (v.highlights ?? [])
+		.slice(0, MAX_HIGHLIGHTS)
+		.filter((h) => resolvable(h.when ?? []))
+		.map((h) => ({ label: h.label, when: h.when }));
+
+	const o = v.offer;
+	const offer: ResolvedOffer | null =
+		o && (VIEW_ACTIONS as readonly string[]).includes(o.action) && resolvable(o.when ?? [])
+			? { label: o.label, action: o.action as ViewAction, when: o.when }
+			: null;
 
 	const want = v.style ?? 'grid';
 	// vector cells are never renderable inline (they are 768 floats); a style
