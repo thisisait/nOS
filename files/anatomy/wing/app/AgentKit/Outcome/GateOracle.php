@@ -109,7 +109,8 @@ final class GateOracle
 		// tripped the peak-stop on a verdict nobody can stand behind.
 		$score = $satisfied ? self::RANK['pass'] : min(self::RANK[$result] ?? 0, self::RANK['fail']);
 		$detail = $missingDeliverable
-			? 'the gate set passed, but this ceremony filed no deliverable. The gates '
+			? 'the gate set passed, but this ceremony filed no deliverable — or filed '
+			  . 'an empty one. The gates '
 			  . 'judge the tree; the work you owe is an artifact keyed to this session. '
 			  . 'File it, then the run can be satisfied.'
 			: $this->detail($gateset, $done, $verdict, $satisfied);

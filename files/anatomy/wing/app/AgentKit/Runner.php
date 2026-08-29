@@ -874,10 +874,17 @@ final class Runner
 			(string) getenv('NOS_REPO_ROOT'),
 			null,
 			($agent->deliverableEvent === null || $this->events === null) ? null : function () use ($agent, $sessionUuid): bool {
-				return $this->events->query([
+				// EXISTS AND CARRIES SOMETHING. A row whose result_json is
+				// null satisfies "the artifact is on record" and tells a
+				// reader nothing — which is how session 461db38c filed a full
+				// survey, stored it as NULL, and passed the existence check.
+				$rows = $this->events->query([
 					'type' => $agent->deliverableEvent,
 					'actor_action_id' => $sessionUuid,
-				], 1) !== [];
+				], 1);
+				$body = $rows[0]['result_json'] ?? null;
+				return is_string($body) && trim($body) !== '' && trim($body) !== '[]'
+					&& trim($body) !== '{}';
 			},
 		);
 		$totalIn = 0;

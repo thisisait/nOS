@@ -203,6 +203,23 @@ final class EventRepository
 	 * Insert an event row. Returns the new event id.
 	 * Caller must have validated payload shape already.
 	 */
+	/**
+	 * The payload's result body under either spelling, encoded, or null.
+	 *
+	 * Null only when NEITHER key carried an array — an empty artifact and a
+	 * dropped one look identical downstream, which is what made the 461db38c
+	 * defect invisible.
+	 */
+	private static function resultJson(array $payload): ?string
+	{
+		foreach (['result', 'result_json'] as $key) {
+			if (isset($payload[$key]) && is_array($payload[$key])) {
+				return json_encode($payload[$key]);
+			}
+		}
+		return null;
+	}
+
 	public function insert(array $payload): int
 	{
 		$row = [
@@ -218,9 +235,16 @@ final class EventRepository
 			'changed'      => array_key_exists('changed', $payload)
 				? ((bool) $payload['changed'] ? 1 : 0)
 				: null,
-			'result_json'  => isset($payload['result']) && is_array($payload['result'])
-				? json_encode($payload['result'])
-				: null,
+			// TWO SPELLINGS, ONE FIELD. In-process writers (AuditEmitter,
+			// Runner) send `result`; every agent PROMPT in this estate says
+			// `result_json.report_markdown`, because that is the column's name.
+			// The insert read only `result`, so an agent's report arrived
+			// complete over HTTP and was stored as NULL — measured 2026-08-29,
+			// session 461db38c: a full survey POSTed, `length(result_json) = 0`
+			// on the row. This is the `source` defect of 2026-05-05 (see the
+			// comment below) repeated one field along, so accept both rather
+			// than rename a spelling four prompts already use.
+			'result_json'  => self::resultJson($payload),
 			'migration_id' => $payload['migration_id'] ?? null,
 			'upgrade_id'   => $payload['upgrade_id']   ?? null,
 			'patch_id'     => $payload['patch_id']     ?? null,
