@@ -878,11 +878,20 @@ final class Runner
 				// null satisfies "the artifact is on record" and tells a
 				// reader nothing — which is how session 461db38c filed a full
 				// survey, stored it as NULL, and passed the existence check.
-				$rows = $this->events->query([
+				// `query()` returns ['items' => rows, 'total' => n], NOT a flat
+				// list — and this reader got that wrong TWICE in one morning,
+				// in both directions. `!== []` was always true (the wrapper is
+				// never the empty array), so nothing was ever refused and an
+				// empty report satisfied 461db38c. `$rows[0]` was always null,
+				// so everything was refused and 245cf5e9 was told it had filed
+				// nothing while its 4409-byte report sat in the table. Both
+				// passed a gate that stubbed this callable instead of running
+				// it — the fixture matched the belief, not the artifact.
+				$found = $this->events->query([
 					'type' => $agent->deliverableEvent,
 					'actor_action_id' => $sessionUuid,
-				], 1);
-				$body = $rows[0]['result_json'] ?? null;
+				], 1)['items'] ?? [];
+				$body = $found === [] ? null : ($found[0]['result_json'] ?? null);
 				return is_string($body) && trim($body) !== '' && trim($body) !== '[]'
 					&& trim($body) !== '{}';
 			},

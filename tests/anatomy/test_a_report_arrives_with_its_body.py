@@ -74,6 +74,19 @@ foreach ([
     $row = $conn->fetch('SELECT result_json FROM events WHERE id = ?', $id);
     $out[$label] = $row->result_json;
 }
+
+// THE READER ITSELF, against this real database — the predicate the Runner
+// builds, transcribed. Stubbing it is how it shipped wrong twice.
+$reader = static function (string $session) use ($repo): bool {
+    $found = $repo->query(['type' => 'conductor_report', 'actor_action_id' => $session], 1)['items'] ?? [];
+    $body = $found === [] ? null : ($found[0]['result_json'] ?? null);
+    return is_string($body) && trim($body) !== '' && trim($body) !== '[]' && trim($body) !== '{}';
+};
+$out['reader'] = [
+    'with_body'    => $reader('s-agent_spelling'),
+    'without_body' => $reader('s-no_body'),
+    'no_such_run'  => $reader('s-never-happened'),
+];
 echo json_encode($out);
 """
 
@@ -112,16 +125,29 @@ def test_no_body_stores_null_rather_than_an_empty_object() -> None:
     assert _probe()["no_body"] in (None, "")
 
 
-def test_the_deliverable_check_requires_a_body() -> None:
-    """The Runner's reader is what turns a stored NULL into a refusal. Read the
-    predicate rather than the prose around it: an existence-only check is what
-    let 461db38c through."""
+def test_the_deliverable_reader_answers_correctly_on_a_real_database() -> None:
+    """The reader, RUN — not stubbed, not grepped.
+
+    It shipped wrong twice in one morning and both times a gate was green,
+    because the gate replaced this callable with a stub and then asserted about
+    the stub. `query()` returns `['items' => rows, 'total' => n]`: `!== []` is
+    therefore always true (461db38c: an empty report satisfied) and `$rows[0]`
+    is always null (245cf5e9: a 4409-byte report was called missing).
+    """
+    got = _probe()["reader"]
+    assert got["with_body"] is True, (
+        "a report that IS in the table reads as absent — this is 245cf5e9, "
+        "where the agent revised twice against work it had already filed"
+    )
+    assert got["without_body"] is False, "an empty artifact counts as filed — 461db38c"
+    assert got["no_such_run"] is False, "a session with no report at all reads as satisfied"
+
+
+def test_the_runner_uses_that_shape() -> None:
+    """And the transcription above matches the code it stands in for."""
     src = (REPO / "files/anatomy/wing/app/AgentKit/Runner.php").read_text(encoding="utf-8")
     i = src.index("deliverableEvent === null")
-    body = src[i:i + 1400]
-    assert "result_json" in body, (
-        "the deliverable reader no longer looks at the artifact's body; an "
-        "empty report satisfies again"
-    )
+    body = src[i:i + 1800]
+    assert "['items']" in body, "the reader no longer unwraps query()'s envelope"
     for empty in ("'[]'", "'{}'"):
         assert empty in body, f"an artifact of {empty} counts as filed"
