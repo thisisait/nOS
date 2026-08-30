@@ -6,6 +6,20 @@
 #
 # Scored by tools/nos-ops-harness.py: exact reproduction of `expect`, decided
 # by the code oracle. The model never assesses itself.
+#
+# ONE RUN IS NOT A MEASUREMENT, and this family is where that was found out.
+# The same 22 samples, the same model, the same code, hours apart:
+#
+#   hermes3:8b    17/22   then   14/22        <- three samples of drift
+#   qwen3:14b     22/22   then   22/22
+#   MiniMax-M2.7  20/22   then   21/22
+#
+# The 8B's spread is ±3 on twenty-two, and the 14B's is zero — so a gap of one
+# or two between two subjects on a single run says nothing at all, while
+# 14 vs 22 survives any amount of that noise. Nothing here averages runs yet;
+# the honest reading is to treat differences smaller than the observed spread
+# as unmeasured, and to say which run a quoted number came from. The reports
+# in state/ops-harness/ are the LAST run, not the best one.
 name: invoice-extract
 # The agent whose one_shot schema these labels are written against. The
 # harness takes --agent as a flag, so a family could be scored against a

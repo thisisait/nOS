@@ -8,14 +8,38 @@
   },
   "family": "invoice-extract",
   "samples": 22,
-  "generated_at": "2026-08-30T13:24:32+00:00",
+  "generated_at": "2026-08-30T15:02:37+00:00",
   "registry": "/Users/pazny/projects/nOS/state/llm-backends.yml",
   "agent": "ops-extract",
+  "reference": {
+    "status": "measured",
+    "backend": "minimax",
+    "model": "MiniMax-M2.7",
+    "attempted": 22,
+    "exact": 21,
+    "invalid_chain": 0,
+    "wrong_labels": 1,
+    "runner_errors": 0,
+    "accuracy": 0.9545,
+    "misses": [
+      {
+        "id": "s19",
+        "why": "label not reproduced",
+        "got": {
+          "invoice_no": "#ABC-0001",
+          "total": 45,
+          "currency": "EUR"
+        }
+      }
+    ],
+    "not_a_rung": "a hosted model has no size this tool can know; it is scored by the same oracle and kept out of the ladder on purpose"
+  },
   "declared_sizes_b": [
     8.0,
     14.0
   ],
   "armed_backends": [
+    "minimax",
     "ollama"
   ],
   "by_model_size_b": {
@@ -24,12 +48,26 @@
       "backend": "ollama",
       "model": "hermes3:8b",
       "attempted": 22,
-      "exact": 18,
-      "invalid_chain": 1,
-      "wrong_labels": 3,
+      "exact": 14,
+      "invalid_chain": 3,
+      "wrong_labels": 5,
       "runner_errors": 0,
-      "accuracy": 0.8182,
+      "accuracy": 0.6364,
       "misses": [
+        {
+          "id": "s02",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "Faktura c. FV-88213",
+            "total": 15400.5,
+            "currency": "CZK"
+          }
+        },
+        {
+          "id": "s04",
+          "why": "no valid chain",
+          "detail": "$.currency: 'Kc' is not in the declared enum"
+        },
         {
           "id": "s06",
           "why": "label not reproduced",
@@ -40,9 +78,9 @@
           }
         },
         {
-          "id": "s08",
+          "id": "s12",
           "why": "no valid chain",
-          "detail": "$.currency: 'K\u010d' is not in the declared enum"
+          "detail": "$.currency: 'Kc' is not in the declared enum"
         },
         {
           "id": "s14",
@@ -54,6 +92,15 @@
           }
         },
         {
+          "id": "s18",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "Prijmovy doklad k fakture 771/2026",
+            "total": 999,
+            "currency": "CZK"
+          }
+        },
+        {
           "id": "s20",
           "why": "label not reproduced",
           "got": {
@@ -61,6 +108,11 @@
             "total": 9680,
             "currency": "CZK"
           }
+        },
+        {
+          "id": "s22",
+          "why": "no valid chain",
+          "detail": "$.currency: 'Kc' is not in the declared enum"
         }
       ]
     },

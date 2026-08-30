@@ -71,6 +71,13 @@
 #   qwen3:14b      16/20  (0.80)   invalid 0   wrong 4
 #   MiniMax-M2.7   17/20  (0.85)   invalid 0   wrong 3   (hosted, not a rung)
 #
+# READ THAT AGAINST THE NOISE FLOOR, which was measured the same evening and
+# is written up in invoice-extract/family.yml: re-running the SAME 22 samples
+# against the SAME 8B moved it 17/22 → 14/22. A spread of three on twenty-two
+# means 17 vs 16 vs 17 here is not a ranking, it is three numbers inside the
+# noise. That does not weaken the finding below — it IS the finding. Nothing
+# separated.
+#
 # THE THREE ARE INDISTINGUISHABLE, and the 8B is not the worst of them. On
 # invoice-extract the same three subjects separated cleanly (17 / 22 / 20 out
 # of 22) and on invoice-absent they separated further (4 / 9 / 8 out of 10).
