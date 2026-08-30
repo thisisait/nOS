@@ -1478,7 +1478,7 @@
     "pulse:librarian:describe-taxonomy": {
       "kind": "pulse",
       "source": "files/anatomy/agents/librarian/agent.yml",
-      "schedule": "10 2 * * *",
+      "schedule": "30 2 * * *",
       "jitter_min": 5,
       "max_runtime_s": 900,
       "category": "knowledge",
@@ -1490,7 +1490,7 @@
       ],
       "runs_agent": "librarian",
       "anchor": "09",
-      "description": "Pulse scheduled job (knowledge): runs run-agent.sh on cron `10 2 * * *`"
+      "description": "Pulse scheduled job (knowledge): runs run-agent.sh on cron `30 2 * * *`"
     },
     "pulse:librarian:judge-lint-queue": {
       "kind": "pulse",
