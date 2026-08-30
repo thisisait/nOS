@@ -144,6 +144,28 @@ final class ToolSpec
 }
 
 /**
+ * One required credential. `optional=true` means the session starts without
+ * it but tools that need this scope will fail-soft.
+ *
+ * DELETED IN ERROR 2026-08-29 and restored 2026-08-30. It shared a file with
+ * `RosterEntry`, the coordinator surface that WAS dead, and went out with it —
+ * while `AgentLoader::load()` still constructs one per `vault:` block, which
+ * all eight agent manifests carry. The whole suite stayed green because
+ * nothing loaded a real manifest through the real loader; the estate found out
+ * only when a converge pushed the source to the host and every scheduled agent
+ * run died with `Class "App\AgentKit\VaultRequirement" not found`.
+ * Gate: tests/anatomy/test_every_agent_manifest_loads.py.
+ */
+final class VaultRequirement
+{
+	public function __construct(
+		public readonly string $scope,
+		public readonly bool $optional = false,
+	) {
+	}
+}
+
+/**
  * One subscribe: entry. Declares that the owning agent wants to be re-run
  * whenever an event of $eventType is dispatched whose payload exactly
  * matches every (key, value) pair in $filter. SubscriptionRegistrar maps
