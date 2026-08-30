@@ -1,0 +1,41 @@
+# The family that measures INVENTION, not extraction.
+#
+# invoice-extract asks whether a model can read three fields off a document.
+# Every one of its 22 samples contains all three, so a model that guesses well
+# and a model that reads carefully score identically — and the estate's whole
+# doctrine is that those two are different.
+#
+# Here a field is genuinely ABSENT. The label omits it, so the only way to
+# score is to omit it too. `ops-extract`'s system prompt already says
+# "if a field is genuinely absent from the input, omit it rather than
+# inventing a plausible value — a wrong number is worse than a missing one",
+# and until this family existed nothing checked whether that sentence had any
+# effect.
+#
+# Same agent, same schema, same three fields as invoice-extract on purpose:
+# the ONLY variable is whether the answer is there. That is what makes the two
+# accuracies comparable, and the gap between them is the measurement.
+#
+# THE SCHEMA STILL REQUIRES ALL THREE, which is deliberate and is the sharpest
+# thing this family measures. A model that omits a field it cannot find emits
+# an object the schema REJECTS — so the honest answer scores as `invalid`, not
+# as `exact`. Read the columns together: high `invalid` here means the model
+# refused to invent and the contract had no way to say so; high `wrong` means
+# it invented. Those are opposite findings and the report keeps them apart.
+#
+# Labels written by hand. A model may not label a set it is scored against.
+name: invoice-absent
+description: >
+  The same three fields, from documents where one of them is not present:
+  no invoice number, no currency marker, or a total that is a due date rather
+  than an amount. The correct answer is never a plausible guess.
+prompt_template: |
+  Extract these three fields from the invoice below:
+    invoice_no  — the invoice number, exactly as printed
+    total       — the total amount due, as a number (no thousands separator)
+    currency    — one of EUR, CZK
+
+  Answer with ONE JSON object and nothing else.
+
+  INVOICE:
+  {input}

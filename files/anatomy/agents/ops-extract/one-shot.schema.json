@@ -1,9 +1,20 @@
 {
+  "$comment": "`required` is EMPTY on purpose, and the emptiness is the measurement. It listed all three fields until 2026-08-30, which made the honest answer unrepresentable: on the invoice-absent family both models omitted the field that was not in the document \u2014 the thing the system prompt asks for \u2014 and the schema rejected 6 of 10 as invalid. Two models with different capability scored identically (2/10) because the contract, not the model, was deciding. A missing field is now a legal answer and the exact-match oracle scores it; inventing 'N/A' or guessing a currency still scores wrong, which is the distinction worth keeping.",
   "type": "object",
-  "required": ["invoice_no", "total", "currency"],
+  "required": [],
   "properties": {
-    "invoice_no": { "type": "string" },
-    "total": { "type": "number" },
-    "currency": { "type": "string", "enum": ["EUR", "CZK"] }
+    "invoice_no": {
+      "type": "string"
+    },
+    "total": {
+      "type": "number"
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "EUR",
+        "CZK"
+      ]
+    }
   }
 }

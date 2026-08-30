@@ -119,7 +119,12 @@ def run_one(cmd: list[str], agent: str, prompt: str, binding: dict, timeout: int
         summary = json.loads(proc.stdout)
     except json.JSONDecodeError:
         return {"chain": None, "error": f"runner emitted no JSON summary: {proc.stderr[:200]}"}
-    return {"chain": summary.get("chain"), "error": summary.get("error"),
+    return {"chain": summary.get("chain"),
+            # chain_error is the SCHEMA's reason; error is the session's. A
+            # rejected answer has the first and not the second, and reporting
+            # `detail: null` for it hid whether the model omitted a field or
+            # answered in prose.
+            "error": summary.get("error") or summary.get("chain_error"),
             "stop_reason": summary.get("stop_reason")}
 
 

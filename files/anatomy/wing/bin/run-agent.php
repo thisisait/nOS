@@ -106,6 +106,12 @@ $summary = [
 	// one_shot: the validated chain, so a harness can score it without
 	// reopening wing.db. Null on every loop run and on a failed validation.
 	'chain' => $result->result['chain'] ?? null,
+	// WHY the chain is null, which the summary used to drop. A harness saw
+	// `chain: null, error: null` and could not tell "omitted a field the
+	// schema required" from "answered in prose" — two findings that call for
+	// opposite fixes. OneShot has always returned the reason; nothing carried
+	// it out.
+	'chain_error' => $result->result['error'] ?? null,
 ];
 echo json_encode($summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
 exit($result->error === null ? 0 : 1);

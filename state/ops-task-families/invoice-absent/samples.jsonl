@@ -1,0 +1,10 @@
+{"id": "a01", "input": "Dodaci list\nKovo Brno s.r.o.\nPolozky: 4x pant, 2x zamek\nCelkem k uhrade: 3 200,00 Kc", "expect": {"total": 3200.0, "currency": "CZK"}}
+{"id": "a02", "input": "INVOICE 2026-0912\nAcme Doors\nDelivery scheduled 2026-10-04\nPayment terms: 30 days net", "expect": {"invoice_no": "2026-0912"}}
+{"id": "a03", "input": "Faktura c. FV-40119\nDodavatel: Stavo Plzen\nCelkem: 8 750,00", "expect": {"invoice_no": "FV-40119", "total": 8750.0}}
+{"id": "a04", "input": "Receipt\nCafe Slavia\nTable 7\nThank you for your visit", "expect": {}}
+{"id": "a05", "input": "INVOICE\nNordwind Logistics GmbH\nTotal due: 412.60 EUR\nRef: see attached schedule", "expect": {"total": 412.6, "currency": "EUR"}}
+{"id": "a06", "input": "Zalohova faktura 2026/551\nSplatnost 2026-09-30\nCastka bude doplnena po dodani", "expect": {"invoice_no": "2026/551"}}
+{"id": "a07", "input": "CREDIT NOTE CN-7788\nAcme Doors s.r.o.\nRefund 240.00 EUR against invoice 2026-0417", "expect": {"invoice_no": "CN-7788", "total": 240.0, "currency": "EUR"}}
+{"id": "a08", "input": "Objednavka\nZakaznik: Novak\nDodani do 14 dnu\nCena dle ceniku", "expect": {}}
+{"id": "a09", "input": "Invoice 2026-1130\nSubtotal 900.00\nVAT 21%\nTOTAL 1089.00 EUR", "expect": {"invoice_no": "2026-1130", "total": 1089.0, "currency": "EUR"}}
+{"id": "a10", "input": "Faktura FV-90002\nKovo Brno\nCelkem k uhrade: 0,00 Kc\n(dobropis vyrovnan)", "expect": {"invoice_no": "FV-90002", "total": 0.0, "currency": "CZK"}}
