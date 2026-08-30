@@ -30,6 +30,7 @@ import datetime as dt
 import json
 import os
 import pathlib
+import re
 import shlex
 import subprocess
 import sys
@@ -182,8 +183,20 @@ def reference_binding(registry: pathlib.Path, backend: str) -> dict:
         return {"error": f"backend {backend!r} is local — it belongs on the ladder"}
     # The model id lives in the env the registry names, as for any binding.
     env_name = (row.get("model_env") or {}).get("sonnet")
+    # FROM THE RUNNING DAEMON, not from this process. The model id lives in
+    # wing's plist and reaches the child through run-agent.sh's passthrough —
+    # this process never has it, so the first report named its own subject
+    # "(unset)" while correctly measuring MiniMax-M2.7. A report that cannot
+    # say which model it scored is not a comparison.
+    model = os.environ.get(str(env_name), "")
+    if not model:
+        loaded = subprocess.run(
+            ["launchctl", "print", f"gui/{os.getuid()}/eu.thisisait.nos.wing"],
+            capture_output=True, text=True, timeout=20).stdout
+        found = re.search(rf"^\s*{re.escape(str(env_name))} => (.*)$", loaded, re.M)
+        model = (found.group(1).strip() if found else "")
     return {"backend": backend, "size_b": None, "model_env": env_name,
-            "model": os.environ.get(str(env_name), "") or "(unset)",
+            "model": model or "(unset — the daemon does not carry it either)",
             "armed": backend in armed_backends()}
 
 
