@@ -145,7 +145,13 @@ row("obs-loop-dashboard", "The loop is a ledger nothing renders", "2026-08-29",
          "has been made since), and `ended_with_no_verdict` — a third of agent runs — which the "
          "old `Success rate` panel counted as success (fee 32; 72.7%% claimed vs 20.0%% honest).")
 
-row("obs-cortex-dashboard", "cortex-lang runs 390 chains and none of them is a pipeline", "2026-08-29",
+# TITLE CORRECTED 2026-08-30. It read "cortex-lang runs 390 chains and none of
+# them is a pipeline" — the claim the body below withdraws, left standing in the
+# one field every listing renders. The body had been fixed the same day and the
+# title had not, so `tools/roadmap-status.py` printed the refuted sentence and
+# the correction was two clicks away. A retraction that does not reach the
+# headline is not a retraction.
+row("obs-cortex-dashboard", "A cortex dashboard, and the wrong reading it produced first", "2026-08-29",
     "shipped", "cortex",
     refs="files/anatomy/plugins/grafana-base/provisioning/dashboards/26-cortex.json",
     body="The executor emits cortex_stage_begin/finish with the opcode, the chain id and the "
@@ -225,7 +231,13 @@ row("obs-pulse-dashboard", "56 000 runs of the scheduled-job organ, unobserved",
          "pulse_jobs.findings_exit_codes had said which codes mean that for months. The answer "
          "was already in a column and the new reader did not ask.")
 
-row("dry-run-evidence", "A dry run refused on evidence it never gathered", "2026-08-29",
+# TITLE ADOPTED FROM THE TABLE 2026-08-30. git owns the title, so `--sync`
+# would have overwritten the sharper sentence someone had already put in the
+# live row with this file's vaguer one. The drift direction is worth naming:
+# git-owned does not mean git-is-right, it means git is where the edit has to
+# land — and an improvement made in the Planner is lost the moment anyone
+# syncs unless it is carried back here.
+row("dry-run-evidence", "20 refusals decide on evidence a --check never gathers", "2026-08-29",
     "shipped", "platform",
     refs="docs/hidden_fees/36 · tests/anatomy/test_a_dry_run_gathers_its_own_evidence.py",
     body="`command` and `uri` perform nothing under --check; the registered result is empty, "
@@ -1118,6 +1130,40 @@ print("orphan check: OK · duplicate check: OK")
 # out of scope — this script adds, and a change to a filed row belongs to the
 # planner, not to a re-seed.
 DRY_RUN = "--dry-run" in sys.argv
+
+# ── Three rows that existed only in the live table (authored 2026-08-30) ────
+#
+# 13 of 148 rows had NO git author: nothing in tools/ writes them, so they
+# could not be probed (test_a_probe_cannot_match_its_own_description.py
+# refuses a probe for a slug nobody authors) and would not survive a rebuild.
+# These three are the ones expressible with the current `row()` signature.
+#
+# THE REMAINING TEN STAY UNAUTHORED, and the reason is structural rather than
+# lazy: rel-011 and the seven `w-*` ladder rows carry an `ordinal`, which
+# `row()` has no parameter for. Authoring them without it would silently drop
+# the ladder order — the one field they exist to carry. That needs a signature
+# change and a look at what else reads `ordinal`, which is its own piece of
+# work, not a footnote to this one.
+#
+# BODIES ARE VERBATIM FROM THE LIVE TABLE. git owns title/parent/track/refs/
+# body, so `--sync` would OVERWRITE the live text with whatever stands here —
+# a summarised body would have destroyed the measurement each row was written
+# to preserve. They are copied, not paraphrased.
+
+row("spine-tools-vs-cli-refusal", "Bound loop runs and MiniMax serves it; the bound agent cannot FILE its report (McpWingTool sends no HMAC — 401 on /api/v1/events)",
+    "2026-08-30", "shipped", "agents",
+    parent="w-agentkit-spine", refs="",
+    body="MEASURED 2026-08-15 BY EXECUTION, preparing the supervised parallel night for librarian:brief-taxonomy.\n\nAll NINE agent definitions declare tools (2-4 each). Runner builds schemas from them unconditionally (Runner.php:401) and passes them to the client. ClaudeCliAdapter REFUSES a non-empty tool schema with LLMCapabilityError -- deliberately: `claude --print` runs its own tool loop, and a dropped schema would let an agent believe it had tools nobody offered. Runner rethrows a capability error without fallback, also deliberately.\n\nEach decision is right alone; together they make the spine unreachable. NO agent runs through AgentKit today, so the parallel night is blocked for every ceremony, not just librarian. Probe against the repo tree:\n  new ClaudeCliAdapter('claude-sonnet','sonnet')->send('sys',[msg],[schema])\n  -> REFUSED: 'the claude CLI backend cannot be handed a tool schema'\n\nThe refusal names both exits: a backend that speaks the tool protocol (an Anthropic API adapter, needing a key this estate does not set), or a ceremony written so the CLI calls the surfaces itself -- which is exactly what pulse-run-agent.sh does today. The second implies deciding whether agent.yml `tools:` is a SCHEMA to pass or a REQUIREMENT to check; adding acceptsToolSchemas() would widen the two-method protocol that test_agentkit_naming.py pins.\n\nSeparately: deployed ~/wing/app/app/AgentKit has neither serveFallback nor BindingResolver -- repo-only until Wing converges. The night needs that converge too, but it would not have helped; this blocker is upstream of it.")
+
+row("gdpr-agent-processors", "Agent ceremonies declare their processor and their EU exit",
+    "2026-08-12", "shipped", "security",
+    parent="rel-011", refs="",
+    body="MEASURED 2026-08-12, and it is false TODAY — independent of MiniMax. state/dpa-register.md:25-30 asserts 'Transfers outside the EU: 0' and 'None. Every processing activity is fully EU-resident and self-hosted with no third-party processor.' All Art-30 records declare processors: []; git log -S shows none was ever added. Meanwhile the nightly ceremonies have shipped prompts and tool results to Anthropic since they began, and pulse-base/plugin.yml — the plugin whose jobs fork the agent runner — affirmatively asserts processors: [], eu_residency: true, 'no tenant end-user data is processed'. WHY IT WAS INVISIBLE: nos_gdpr.all_records() reads plugins/ and apps/ only; no file under files/anatomy/agents/ carries a gdpr: key, and the design promising auto-included processors: [anthropic] rows per agent profile (docs/bones-and-wings-refactor.md:850-854) was never built. test_gdpr_register_coverage.py checks parity and completeness, never VALUES — so a register can be complete and wrong. SCOPE: author the agent-runtime Art-30 activity (Anthropic now, MiniMax pre-drafted), correct pulse-base's assertion, regenerate via tools/gdpr-dpa-register.py. The repo has zero occurrences of SCC, adequacy, third country or Chapter V, so the transfer-mechanism vocabulary does not exist yet. NOT ONLY A MINIMAX PREREQUISITE: docs/idea/15-business-fixture.md:60-71 makes the register entry the gate before the fixture may hold real people. One afternoon serves both.")
+
+row("wing-events-chain-aware-retention", "Chain-aware retention for the wing.db events table",
+    "2026-08-12", "queued", "platform",
+    parent="", refs="callback_plugins/wing_telemetry.py; files/anatomy/wing/app/Model/AuditChain.php; tests/callback/test_task_noise_gate.py",
+    body="Measured 2026-08-12: events held 332,506 rows / 698 MB; task_start+task_skipped were 86% (~108k rows per converge day). The TAP is now gated (task noise off by default, NOS_TELEMETRY_TASK_VERBOSE=1 restores), but the accumulated table remains: every row is WORM-triggered and HMAC-chained, so pruning is a design problem, not a DELETE — it needs an anchor-and-reseal step (the shape the key-rotation machinery already performs) that seals a segment, archives it verifiably, and re-anchors the chain. Until designed, wing.db only grows and nightly chain verification walks every historical skip row.")
 
 # ── Preflight: does the live table have the columns this script writes? ──────
 #

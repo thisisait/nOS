@@ -634,3 +634,66 @@ dry-run-evidence-sweep:
 backup-drill-keap-db: >-
   grep -q 'keap_verify_js' roles/pazny.backup/files/backup.sh
   && test -f tests/anatomy/test_a_snapshot_is_opened_before_it_is_uploaded.py
+
+# ── The five security rows nobody had ever checked (2026-08-30) ─────────────
+#
+# WHY THEY EXISTED WITHOUT PROBES, which is the finding rather than the fix:
+# 25 of 62 `shipped` rows carried NO verdict at all. Nothing contradicted them,
+# because nothing had ever asked. "Zero contradicted" over a probed subset is
+# not the same sentence as "zero contradicted" — and the difference is exactly
+# the 25 rows where a claim had never met a reader.
+#
+# All five were checked by hand the night these were written and all five held.
+# The value is not tonight's answer; it is that the answer is recomputable.
+#
+# THESE READ RUNTIME WHERE RUNTIME IS THE CLAIM. `sec-pulse-env` is about what
+# an API RETURNS, so it asks the API; `sec-p2` is about what the live key IS,
+# so it reads the store. A source grep would pass on both while the estate
+# served something else — which is how `docs/hidden_fees/23` happened (a pin
+# present in every template and `prefer` on every host for nine weeks).
+#
+# NONE OF THEM PRINTS A SECRET. roadmap-verify.py stores stdout as evidence in
+# a table the face renders, so each prints a COUNT or a WORD. The two that
+# touch the secret store compare digests. Getting this wrong would turn the
+# verification of a leak fix into the leak.
+#
+# EACH IS ONE PHYSICAL LINE, and that is not style. A `>-` folded scalar keeps
+# relative indentation, so a pretty multi-line `python3 -c` folds into a body
+# with leading spaces and dies on IndentationError — which exits non-zero,
+# which this file's own semantics render as **contradicted**. Written the
+# readable way first, all four python probes reported the security fixes as
+# REVERTED when nothing had been reverted. A probe that fails closed on its own
+# formatting is worse than no probe: it spends the operator's attention on a
+# false alarm and teaches them to distrust the column.
+
+# The API returned 57 live credential VALUES across 23 of 25 jobs. Fixed by
+# stripping values and keeping key names. Two assertions: the value-bearing
+# field is gone, AND no value from the operator's own store appears anywhere in
+# the response — the second would catch a re-leak through some other field.
+sec-pulse-env: >-
+  python3 -c "import json,os,urllib.request,yaml,sys; t=(yaml.safe_load(open(os.path.expanduser('~/.nos/secrets.yml'))) or {}); r=urllib.request.Request('http://127.0.0.1:9000/api/v1/pulse_jobs', headers={'Authorization':'Bearer '+str(t.get('wing_api_token',''))}); b=urllib.request.urlopen(r,timeout=10).read().decode(); d=json.loads(b); j=d['jobs']; bad=[k for x in j.values() for k in x if k=='env_json']; leak=[k for k,v in t.items() if isinstance(v,(str,int)) and len(str(v))>=12 and str(v) in b]; print(len(j),'jobs,',len(bad),'env_json field(s),',len(leak),'secret value(s) present'); sys.exit(0 if not bad and not leak else 1)"
+
+# The archive key stopped deriving from the password prefix. Compared as
+# DIGESTS: if the live passphrase equals the old derived form, the rotation
+# never happened on this host whatever the template says.
+sec-p2: >-
+  python3 -c "import hashlib,os,yaml,sys; s=yaml.safe_load(open(os.path.expanduser('~/.nos/secrets.yml'))) or {}; live=str(s.get('backup_encryption_passphrase','')); d=str(s.get('global_password_prefix',''))+'_pw_backup_encryption'; same=bool(live) and hashlib.sha256(live.encode()).digest()==hashlib.sha256(d.encode()).digest(); print('key is','PREFIX-DERIVED' if same else ('independent' if live else 'ABSENT')); sys.exit(1 if same or not live else 0)"
+
+# The local-dev carve-out is gone from the gate's CONDITION, not from a comment
+# beside it. Parsed out of main.yml rather than grepped: the paragraph above
+# that task described the carve-out for two months after it was removed, so a
+# text match could read either sentence and call it either way.
+sec-p0: >-
+  python3 -c "import yaml,sys; t=[x for p in yaml.safe_load(open('main.yml')) for x in (p.get('tasks') or [])]; g=[x for x in t if 'weak password prefix' in str(x.get('name',''))]; assert len(g)==1, 'expected one weak-prefix gate, found %d' % len(g); w=str(g[0].get('when','')).replace(chr(10),' '); print('gate condition:', w[:80]); sys.exit(1 if 'tenant_domain_is_local' in w else 0)"
+
+# The register asserted 'Transfers outside the EU: 0' while the nightly
+# ceremonies had been shipping prompts abroad since they began — the generator
+# read plugins/ and apps/ and never files/anatomy/agents/. So this counts the
+# agents that DECLARE an exit and demands the register know about that many.
+gdpr-agent-processors: >-
+  python3 -c "import pathlib,re,yaml,sys; a=[p for p in pathlib.Path('files/anatomy/agents').glob('*/agent.yml') if ((yaml.safe_load(p.read_text()) or {}).get('gdpr') or {}).get('transfers_outside_eu')]; g=pathlib.Path('state/dpa-register.md').read_text(); m=re.search(r'Transfers outside the EU:..\s*(\d+)', g); n=int(m.group(1)) if m else -1; print(len(a),'agent(s) declare an EU exit; register says',n); sys.exit(0 if n>=len(a)>0 else 1)"
+
+# The blast-radius ratchet has a gate of its own; the probe is that it passes.
+# A named file, not a word: the gate IS what this row shipped.
+sec-p4: >-
+  python3 -m pytest tests/anatomy/test_secret_blast_radius.py -q >/dev/null 2>&1
