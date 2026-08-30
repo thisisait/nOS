@@ -103,6 +103,8 @@ import datetime as dt
 import json
 import re
 import sys
+import datetime
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -1732,6 +1734,9 @@ def render(graph: dict) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser(description="compile state/anatomy-graph.json")
     ap.add_argument("--check", action="store_true", help="exit 1 if the artifact is stale")
+    ap.add_argument("--refreeze", action="store_true",
+                    help="re-stamp the face layout pin — runs the vitest "
+                         "positions check first and refuses if they moved")
     args = ap.parse_args()
     text = render(build())
     if args.check:
@@ -1761,10 +1766,34 @@ def main() -> int:
     if pin_path.exists():
         pin = json.loads(pin_path.read_text(encoding="utf-8"))
         if pin.get("graphSha256") != hashlib.sha256(text.encode()).hexdigest():
-            print("anatomy-graph: the face layout pin was frozen against a "
-                  "DIFFERENT graph — re-freeze graphLayout.force.pin.json "
-                  "(see test_face_layout_pin_binds_the_graph.py for the "
-                  "ritual) or the pytest lane goes red", file=sys.stderr)
+            if not args.refreeze:
+                print("anatomy-graph: the face layout pin was frozen against a "
+                      "DIFFERENT graph — re-freeze graphLayout.force.pin.json "
+                      "(--refreeze, or see test_face_layout_pin_binds_the_graph.py "
+                      "for the manual ritual) or the pytest lane goes red",
+                      file=sys.stderr)
+                return 0
+            # --refreeze does the ritual, INCLUDING the step the paragraph above
+            # refuses to skip: it runs the vitest positions check first and
+            # stamps nothing if that fails. Added 2026-08-30 after the third
+            # regen in two days — four hand commands where forgetting the vitest
+            # one silences the gate, which is exactly what the comment warns of.
+            face = FACE_TARGET.parent.parents[2]
+            got = subprocess.run(
+                ["npx", "vitest", "run", "src/lib/anatomy/graphLayout.test.ts"],
+                cwd=face, capture_output=True, text=True, timeout=900)
+            if got.returncode != 0:
+                print("anatomy-graph: --refreeze REFUSED — the layout positions "
+                      "moved, so this is not a re-stamp but a re-pin a human "
+                      "must look at:\n" + got.stdout[-700:], file=sys.stderr)
+                return 1
+            pin["graphSha256"] = hashlib.sha256(text.encode()).hexdigest()
+            pin["pinnedAt"] = datetime.date.today().isoformat()
+            pin_path.write_text(json.dumps(pin, indent=2) + "\n", encoding="utf-8")
+            subprocess.run(["npx", "prettier", "--write", str(pin_path)],
+                           cwd=face, capture_output=True, timeout=120)
+            print(f"anatomy-graph: pin re-frozen ({pin['graphSha256'][:12]}…), "
+                  "positions unchanged", file=sys.stderr)
     return 0
 
 
