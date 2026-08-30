@@ -1,0 +1,115 @@
+{
+  "header": {
+    "question": "at which model size does one_shot chain emission stop reproducing labels",
+    "read_this_as": "a size nobody ran is UNKNOWN \u2014 never a pass, never green",
+    "scored_by": "code oracle (exact label match); the model never assesses itself",
+    "ops_plane_tool_surface": "CLOSED",
+    "closed_because": "no armed local binding has produced a number for the 3-7B tier"
+  },
+  "family": "invoice-extract",
+  "samples": 22,
+  "generated_at": "2026-08-30T12:30:10+00:00",
+  "registry": "/Users/pazny/projects/nOS/state/llm-backends.yml",
+  "agent": "ops-extract",
+  "declared_sizes_b": [
+    8.0,
+    14.0
+  ],
+  "armed_backends": [
+    "ollama"
+  ],
+  "by_model_size_b": {
+    "8.0": {
+      "status": "measured",
+      "backend": "ollama",
+      "model": "hermes3:8b",
+      "attempted": 22,
+      "exact": 14,
+      "invalid_chain": 3,
+      "wrong_labels": 5,
+      "runner_errors": 0,
+      "accuracy": 0.6364,
+      "misses": [
+        {
+          "id": "s01",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "INVOICE 2026-0417",
+            "total": 1240,
+            "currency": "EUR"
+          }
+        },
+        {
+          "id": "s02",
+          "why": "no valid chain",
+          "detail": null
+        },
+        {
+          "id": "s05",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "Ref # A-7781",
+            "total": 49.99,
+            "currency": "EUR"
+          }
+        },
+        {
+          "id": "s06",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "FAKTURA 2026/117",
+            "total": 3250,
+            "currency": "CZK"
+          }
+        },
+        {
+          "id": "s12",
+          "why": "no valid chain",
+          "detail": null
+        },
+        {
+          "id": "s14",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "DOKLAD 9912",
+            "total": 4500,
+            "currency": "CZK"
+          }
+        },
+        {
+          "id": "s18",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "k fakture 771/2026",
+            "total": 1999,
+            "currency": "CZK"
+          }
+        },
+        {
+          "id": "s20",
+          "why": "no valid chain",
+          "detail": null
+        }
+      ]
+    },
+    "14.0": {
+      "status": "measured",
+      "backend": "ollama",
+      "model": "qwen3:14b",
+      "attempted": 22,
+      "exact": 22,
+      "invalid_chain": 0,
+      "wrong_labels": 0,
+      "runner_errors": 0,
+      "accuracy": 1.0,
+      "misses": []
+    }
+  },
+  "boundary": {
+    "threshold": 0.9,
+    "status": "MEASURED",
+    "chain_tier_floor_b": 14.0,
+    "unmeasured_sizes_b": [],
+    "note": "smallest size at or above the threshold"
+  }
+}
