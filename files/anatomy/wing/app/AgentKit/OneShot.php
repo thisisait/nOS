@@ -100,6 +100,25 @@ final class OneShot
 					return "{$at}." . (string) $key . ': required key missing';
 				}
 			}
+			// UNDECLARED KEYS, when the schema says so. Added 2026-08-30 and
+			// the reason is worth the four lines: `ops-extract`'s schema had
+			// just dropped `required` so an omitted field could be a legal
+			// answer, and MiniMax-M2.7 replied to an invoice prompt with
+			// {"business_name": "Cafe Slavia", "table_number": 7} — an object
+			// sharing no key with the contract — which validated. Empty
+			// `required` without this check is not a contract; it accepts any
+			// object at all, and the exact-match oracle then scores a
+			// completely different answer as merely `wrong` rather than as
+			// refused. Absent `additionalProperties` still means "unchecked",
+			// so no existing schema changes behaviour.
+			if (($schema['additionalProperties'] ?? null) === false) {
+				$declared = array_keys((array) ($schema['properties'] ?? []));
+				foreach (array_keys($value) as $key) {
+					if (!in_array($key, $declared, true)) {
+						return "{$at}." . (string) $key . ': key is not in the schema';
+					}
+				}
+			}
 			foreach ((array) ($schema['properties'] ?? []) as $key => $sub) {
 				if (is_array($sub) && array_key_exists($key, $value)) {
 					$error = self::against($value[$key], $sub, "{$at}." . (string) $key);

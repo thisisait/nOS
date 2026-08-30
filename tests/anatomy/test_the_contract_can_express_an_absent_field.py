@@ -38,11 +38,16 @@ from __future__ import annotations
 
 import json
 import pathlib
+import shutil
+import subprocess
+
+import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 SCHEMA = REPO / "files/anatomy/agents/ops-extract/one-shot.schema.json"
 FAMILIES = REPO / "state/ops-task-families"
 RUNNER = REPO / "files/anatomy/wing/bin/run-agent.php"
+WING = REPO / "files/anatomy/wing"
 
 
 def test_no_extraction_field_is_required() -> None:
@@ -52,6 +57,54 @@ def test_no_extraction_field_is_required() -> None:
         "not print a field then has no representable correct answer, and the "
         "harness scores the honest omission as `invalid` — measured 2026-08-30 "
         "as two models of different capability both landing on 2/10.")
+
+
+def test_undeclared_keys_are_refused() -> None:
+    """THE OTHER HALF, and it was found the same afternoon by the first hosted
+    run. With `required: []` and no `additionalProperties: false`, a schema
+    accepts ANY object: MiniMax-M2.7 answered an invoice prompt with
+    `{"business_name": "Cafe Slavia", "table_number": 7}` — sharing no key with
+    the contract — and OneShot validated it. Empty `required` without this is
+    not a loosened contract, it is no contract."""
+    for path in (SCHEMA, SCHEMA.parent.parent / "ops-extract-cloud/one-shot.schema.json"):
+        schema = json.loads(path.read_text(encoding="utf-8"))
+        assert schema.get("additionalProperties") is False, (
+            f"{path.parent.name}: required is empty and undeclared keys are "
+            "allowed, so any object at all validates")
+    # BEHAVIOUR, not the word. A first draft asserted `"additionalProperties"
+    # in OneShot.php` and stayed green when the guard was deleted, because the
+    # comment above it still said the word — the same prose-detector trap this
+    # estate has paid for three times in a day.
+    if shutil.which("php") is None or not (WING / "vendor/autoload.php").exists():
+        pytest.skip("php or the wing vendor tree is absent")
+    cases = {
+        "invented keys": ('{"business_name":"Cafe Slavia","table_number":7}', False),
+        "honest omission": ('{"invoice_no":"FV-1"}', True),
+        "empty object": ("{}", True),
+        "wrong currency": ('{"currency":"USD"}', False),
+        "total as string": ('{"total":"1240"}', False),
+        "full correct": ('{"invoice_no":"A","total":1,"currency":"EUR"}', True),
+    }
+    php = """
+require __DIR__ . '/vendor/autoload.php';
+$m = new ReflectionMethod(App\\AgentKit\\OneShot::class, 'check');
+$schema = json_decode(file_get_contents($argv[1]), true);
+$out = [];
+foreach (json_decode($argv[2], true) as $label => $raw) {
+    $chain = null;
+    $out[$label] = $m->invokeArgs(null, [$raw, $schema, &$chain]) === null;
+}
+echo json_encode($out);
+"""
+    done = subprocess.run(
+        ["php", "-r", php, str(SCHEMA), json.dumps({k: v[0] for k, v in cases.items()})],
+        capture_output=True, text=True, timeout=60, cwd=WING)
+    assert done.returncode == 0, done.stderr[-400:]
+    got = json.loads(done.stdout)
+    for label, (_raw, want_accepted) in cases.items():
+        assert got[label] is want_accepted, (
+            f"{label}: schema {'refused' if want_accepted else 'ACCEPTED'} it; "
+            f"expected {'accepted' if want_accepted else 'refused'}")
 
 
 def test_the_answer_shape_is_still_constrained() -> None:

@@ -1,0 +1,100 @@
+name: ops-extract-cloud
+version: 1
+description: >-
+  `ops-extract`'s cloud twin: byte-identical prompt and schema, routed to a
+  hosted model instead of a local one. It exists for ONE comparison — does a
+  larger model do dramatically better on the same two families — and it is a
+  SEPARATE agent rather than a flag because the difference is not a setting.
+  Sending the same document off this machine is a different Article-30 record,
+  and BindingResolver gate 8 makes that structural: `ops-extract` declares
+  transfers_outside_eu: false and therefore CANNOT be pointed at a cloud
+  backend, however anyone configures it. Two records, two agents.
+
+model:
+  # SONNET tier, and the asymmetry is deliberate but must be read: the estate
+  # pins NOS_MINIMAX_MODEL (MiniMax-M2.7) and leaves NOS_MINIMAX_SMALL_MODEL
+  # empty, so haiku-tier would refuse at gate 6 rather than send a blank model
+  # id. This therefore compares a SMALL LOCAL model against a LARGE HOSTED one
+  # — which is the operator's actual question, and not a like-for-like size
+  # curve. Any report that drops that sentence is overclaiming.
+  primary: anthropic-claude-sonnet-4-5
+  backend: minimax
+
+system_prompt_path: system.md
+
+# ONE call, no loop of any kind. The loader refuses tools: or outcomes: here,
+# and rightly — the number of calls IS the measurement, so an apparatus that
+# could make a second one would change what is being measured.
+mode: one_shot
+one_shot:
+  schema_path: one-shot.schema.json
+
+audit:
+  capability_scopes:
+    - llm.one_shot
+  pii_classification: low
+
+vault:
+  required_credentials:
+    # Declared for the shape; the local backend resolves an empty token by
+    # design (BindingResolver gate 7) because there is nobody to show a key to.
+    - scope: anthropic-api
+
+metadata:
+  ait_phase: ops-plane
+  ceremony_role: measurement-subject-cloud
+  runner_status: unproven
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: >-
+    The one call completed. The answer may be valid or invalid against the
+    schema — BOTH are results, and the harness scores which. A run that emitted
+    nonsense did its job as a measurement.
+  exit_1: >-
+    Does not emit exit 1. An answer the schema rejects is exit 0 with
+    stop_reason one_shot_failed; that is data, not an error.
+  exit_2: "Binding, auth or runner error — nothing was measured."
+
+gdpr:
+  purpose: >-
+    Measuring how well a HOSTED model extracts fields from short business
+    documents, against the identical task the local twin runs, so the estate
+    can decide whether the cloud is worth the transfer. The inputs are the
+    hand-written fixtures in state/ops-task-families/, not customer documents
+    — which is what makes this transfer proportionate to run at all.
+  legal_basis: legitimate_interests
+  data_categories: [business_document_fixtures]
+  data_subjects: [none]
+  # Nothing is retained by this agent; the harness writes its own report and
+  # the session rows age with the ledger.
+  retention_days: 0
+  processors:
+    - name: MiniMax
+      role: LLM inference via the Anthropic-compatible endpoint (SDK adapter,
+        single call, no tool loop)
+      country: "unverified — international endpoint api.minimax.io; entity and seat not established"
+      safeguard: >-
+        None claimed, and none assessed. No SCCs, adequacy finding or
+        derogation has been identified for this transfer.
+  eu_residency: false
+  # TRUE, and it is why this file exists at all. The local twin's `false` is
+  # enforced by gate 8; saying `true` here is the disclosure that buys the
+  # comparison. The fixtures are invented, so the transfer carries no personal
+  # data — that is the only reason it is proportionate.
+  transfers_outside_eu: true
+  notes: |
+    Fixtures only, and here that is load-bearing rather than a caveat: this
+    agent SENDS ITS INPUT ABROAD. Pointing it at a real customer document
+    would make the register above false at the moment the first prompt leaves.
+    If that is ever wanted, rewrite the record first — the register is the
+    input to routing, not a description of it.
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox]
+  on_medium:   []
+  on_low:      []
+  on_info:     []
+
+capabilities: []

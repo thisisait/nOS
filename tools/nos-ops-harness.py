@@ -165,8 +165,31 @@ def score(binding: dict, samples: list[dict], meta: dict, agent: str,
     }
 
 
+def reference_binding(registry: pathlib.Path, backend: str) -> dict:
+    """A HOSTED model as a reference line, never a rung on the size ladder.
+
+    The ladder answers "at which local SIZE does this stop working"; a hosted
+    model has no size we can know and folding it in would corrupt
+    `chain_tier_floor_b` with a number that means something else. It is scored
+    by the same oracle over the same samples and reported separately, which is
+    what makes it comparable and what stops it being mistaken for a rung.
+    """
+    row = (yaml.safe_load(registry.read_text(encoding="utf-8")) or {}).get(
+        "backends", {}).get(backend)
+    if not isinstance(row, dict):
+        return {"error": f"backend {backend!r} is not in the registry"}
+    if row.get("local"):
+        return {"error": f"backend {backend!r} is local — it belongs on the ladder"}
+    # The model id lives in the env the registry names, as for any binding.
+    env_name = (row.get("model_env") or {}).get("sonnet")
+    return {"backend": backend, "size_b": None, "model_env": env_name,
+            "model": os.environ.get(str(env_name), "") or "(unset)",
+            "armed": backend in armed_backends()}
+
+
 def build_report(family: pathlib.Path, agent: str | None, registry: pathlib.Path,
-                 threshold: float, cmd: list[str], timeout: int, limit: int | None) -> dict:
+                 threshold: float, cmd: list[str], timeout: int, limit: int | None,
+                 ref_backend: str | None = None, ref_agent: str | None = None) -> dict:
     meta, samples = load_family(family)
     if limit:
         samples = samples[:limit]
@@ -184,6 +207,22 @@ def build_report(family: pathlib.Path, agent: str | None, registry: pathlib.Path
                             "reason": "no --agent given: nothing to run in one_shot mode"}
         else:
             by_size[key] = score(binding, samples, meta, agent, cmd, timeout)
+
+    reference = None
+    if ref_backend:
+        binding = reference_binding(registry, ref_backend)
+        if binding.get("error"):
+            reference = {"status": "UNKNOWN", "reason": binding["error"]}
+        elif not binding["armed"]:
+            reference = {"status": "UNKNOWN", "backend": ref_backend,
+                         "reason": f"{ref_backend} is not in NOS_ARMED_BACKENDS"}
+        elif not (ref_agent or agent):
+            reference = {"status": "UNKNOWN", "reason": "no agent to run"}
+        else:
+            reference = score(binding, samples, meta, ref_agent or agent, cmd, timeout)
+            reference["not_a_rung"] = (
+                "a hosted model has no size this tool can know; it is scored by "
+                "the same oracle and kept out of the ladder on purpose")
 
     measured = {float(k): v for k, v in by_size.items() if v.get("status") == "measured"}
     passing = sorted(s for s, v in measured.items() if (v["accuracy"] or 0) >= threshold)
@@ -208,6 +247,7 @@ def build_report(family: pathlib.Path, agent: str | None, registry: pathlib.Path
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "registry": str(registry),
         "agent": agent,
+        "reference": reference,
         "declared_sizes_b": sorted({b["size_b"] for b in bindings}),
         "armed_backends": sorted(armed_backends()),
         "by_model_size_b": by_size,
@@ -237,11 +277,14 @@ def main() -> int:
     ap.add_argument("--threshold", type=float, default=0.9)
     ap.add_argument("--timeout", type=int, default=180, help="seconds per sample")
     ap.add_argument("--limit", type=int, help="score only the first N samples")
+    ap.add_argument("--reference-backend", help="also score a HOSTED backend as a reference line")
+    ap.add_argument("--reference-agent", help="agent for the reference run (its gdpr record must permit the transfer)")
     args = ap.parse_args()
 
     cmd = shlex.split(os.environ.get("NOS_OPS_HARNESS_CMD", DEFAULT_CMD))
     report = build_report(args.family, args.agent, args.registry,
-                          args.threshold, cmd, args.timeout, args.limit)
+                          args.threshold, cmd, args.timeout, args.limit,
+                          args.reference_backend, args.reference_agent)
     out = args.out or (REPO / "state" / "ops-harness" / f"{report['family']}-report.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2, sort_keys=False) + "\n", encoding="utf-8")
