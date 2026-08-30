@@ -1,0 +1,148 @@
+{
+  "header": {
+    "question": "at which model size does one_shot chain emission stop reproducing labels",
+    "read_this_as": "a size nobody ran is UNKNOWN \u2014 never a pass, never green",
+    "scored_by": "code oracle (exact label match); the model never assesses itself",
+    "ops_plane_tool_surface": "CLOSED",
+    "closed_because": "no armed local binding has produced a number for the 3-7B tier"
+  },
+  "family": "weakness-triage",
+  "samples": 20,
+  "generated_at": "2026-08-30T14:47:03+00:00",
+  "registry": "/Users/pazny/projects/nOS/state/llm-backends.yml",
+  "agent": "ops-triage",
+  "reference": {
+    "status": "measured",
+    "backend": "minimax",
+    "model": "MiniMax-M2.7",
+    "attempted": 20,
+    "exact": 17,
+    "invalid_chain": 0,
+    "wrong_labels": 3,
+    "runner_errors": 0,
+    "accuracy": 0.85,
+    "misses": [
+      {
+        "id": "t12",
+        "why": "label not reproduced",
+        "got": {
+          "fix_surface": "pin",
+          "blocked_by": "operator"
+        }
+      },
+      {
+        "id": "t19",
+        "why": "label not reproduced",
+        "got": {
+          "fix_surface": "code",
+          "blocked_by": "evidence"
+        }
+      },
+      {
+        "id": "t20",
+        "why": "label not reproduced",
+        "got": {
+          "fix_surface": "code",
+          "blocked_by": "none"
+        }
+      }
+    ],
+    "not_a_rung": "a hosted model has no size this tool can know; it is scored by the same oracle and kept out of the ladder on purpose"
+  },
+  "declared_sizes_b": [
+    8.0,
+    14.0
+  ],
+  "armed_backends": [
+    "minimax",
+    "ollama"
+  ],
+  "by_model_size_b": {
+    "8.0": {
+      "status": "measured",
+      "backend": "ollama",
+      "model": "hermes3:8b",
+      "attempted": 20,
+      "exact": 17,
+      "invalid_chain": 1,
+      "wrong_labels": 2,
+      "runner_errors": 0,
+      "accuracy": 0.85,
+      "misses": [
+        {
+          "id": "t08",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "host",
+            "blocked_by": "none"
+          }
+        },
+        {
+          "id": "t09",
+          "why": "no valid chain",
+          "detail": "$.fix_surface: 'evidence' is not in the declared enum"
+        },
+        {
+          "id": "t19",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "code",
+            "blocked_by": "evidence"
+          }
+        }
+      ]
+    },
+    "14.0": {
+      "status": "measured",
+      "backend": "ollama",
+      "model": "qwen3:14b",
+      "attempted": 20,
+      "exact": 16,
+      "invalid_chain": 0,
+      "wrong_labels": 4,
+      "runner_errors": 0,
+      "accuracy": 0.8,
+      "misses": [
+        {
+          "id": "t02",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "pin",
+            "blocked_by": "vendor"
+          }
+        },
+        {
+          "id": "t08",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "host",
+            "blocked_by": "none"
+          }
+        },
+        {
+          "id": "t17",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "config",
+            "blocked_by": "none"
+          }
+        },
+        {
+          "id": "t19",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "host",
+            "blocked_by": "evidence"
+          }
+        }
+      ]
+    }
+  },
+  "boundary": {
+    "threshold": 0.9,
+    "status": "UNKNOWN",
+    "chain_tier_floor_b": null,
+    "unmeasured_sizes_b": [],
+    "note": "every measured size fell below the threshold; the floor is above what was run"
+  }
+}

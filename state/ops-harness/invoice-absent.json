@@ -8,14 +8,45 @@
   },
   "family": "invoice-absent",
   "samples": 10,
-  "generated_at": "2026-08-30T13:09:16+00:00",
+  "generated_at": "2026-08-30T14:15:58+00:00",
   "registry": "/Users/pazny/projects/nOS/state/llm-backends.yml",
   "agent": "ops-extract",
+  "reference": {
+    "status": "measured",
+    "backend": "minimax",
+    "model": "MiniMax-M2.7",
+    "attempted": 10,
+    "exact": 8,
+    "invalid_chain": 0,
+    "wrong_labels": 2,
+    "runner_errors": 0,
+    "accuracy": 0.8,
+    "misses": [
+      {
+        "id": "a03",
+        "why": "label not reproduced",
+        "got": {
+          "invoice_no": "FV-40119",
+          "total": 8750,
+          "currency": "CZK"
+        }
+      },
+      {
+        "id": "a06",
+        "why": "label not reproduced",
+        "got": {
+          "invoice_no": "Zalohova faktura 2026/551"
+        }
+      }
+    ],
+    "not_a_rung": "a hosted model has no size this tool can know; it is scored by the same oracle and kept out of the ladder on purpose"
+  },
   "declared_sizes_b": [
     8.0,
     14.0
   ],
   "armed_backends": [
+    "minimax",
     "ollama"
   ],
   "by_model_size_b": {
@@ -24,20 +55,16 @@
       "backend": "ollama",
       "model": "hermes3:8b",
       "attempted": 10,
-      "exact": 2,
+      "exact": 4,
       "invalid_chain": 4,
-      "wrong_labels": 4,
+      "wrong_labels": 2,
       "runner_errors": 0,
-      "accuracy": 0.2,
+      "accuracy": 0.4,
       "misses": [
         {
           "id": "a01",
-          "why": "label not reproduced",
-          "got": {
-            "invoice_no": "Dodaci list",
-            "total": 3200,
-            "currency": "CZK"
-          }
+          "why": "no valid chain",
+          "detail": "$.currency: 'K\u010d' is not in the declared enum"
         },
         {
           "id": "a02",
@@ -54,11 +81,6 @@
           }
         },
         {
-          "id": "a04",
-          "why": "label not reproduced",
-          "got": []
-        },
-        {
           "id": "a05",
           "why": "label not reproduced",
           "got": {
@@ -69,11 +91,6 @@
         },
         {
           "id": "a06",
-          "why": "no valid chain",
-          "detail": "$.total: expected number, got null"
-        },
-        {
-          "id": "a08",
           "why": "no valid chain",
           "detail": "$.total: expected number, got null"
         },
@@ -89,17 +106,12 @@
       "backend": "ollama",
       "model": "qwen3:14b",
       "attempted": 10,
-      "exact": 7,
+      "exact": 9,
       "invalid_chain": 0,
-      "wrong_labels": 3,
+      "wrong_labels": 1,
       "runner_errors": 0,
-      "accuracy": 0.7,
+      "accuracy": 0.9,
       "misses": [
-        {
-          "id": "a04",
-          "why": "label not reproduced",
-          "got": []
-        },
         {
           "id": "a07",
           "why": "label not reproduced",
@@ -108,20 +120,15 @@
             "total": 240,
             "currency": "EUR"
           }
-        },
-        {
-          "id": "a08",
-          "why": "label not reproduced",
-          "got": []
         }
       ]
     }
   },
   "boundary": {
     "threshold": 0.9,
-    "status": "UNKNOWN",
-    "chain_tier_floor_b": null,
+    "status": "MEASURED",
+    "chain_tier_floor_b": 14.0,
     "unmeasured_sizes_b": [],
-    "note": "every measured size fell below the threshold; the floor is above what was run"
+    "note": "smallest size at or above the threshold"
   }
 }
