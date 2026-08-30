@@ -305,7 +305,12 @@ def main() -> int:
     report = build_report(args.family, args.agent, args.registry,
                           args.threshold, cmd, args.timeout, args.limit,
                           args.reference_backend, args.reference_agent)
-    out = args.out or (REPO / "state" / "ops-harness" / f"{report['family']}-report.json")
+    # ONE STABLE NAME PER FAMILY. Passing --out for each run left four report
+    # files for two families by 2026-08-30, three of them superseded and none
+    # of them saying so — the estate's signature defect wearing a filename.
+    # The default overwrites; a run that supersedes a measurement should
+    # replace it, not sit beside it.
+    out = args.out or (REPO / "state" / "ops-harness" / f"{report['family']}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2, sort_keys=False) + "\n", encoding="utf-8")
     print(json.dumps(report["boundary"], indent=2))
