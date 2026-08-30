@@ -301,9 +301,21 @@ fs-peruser: >-
 # w-fixture, w-release, w-keap-routes, w-keap-relations — exists ONLY in the
 # live KEAP table. No git file authors it: `roadmap-seed.py`'s `row()` has no
 # `ordinal` parameter at all, and grepping tools/ for those slugs finds nothing
-# that writes them. They were hand-authored in the Planner, so 25 of the 93 rows
-# are ungoverned by git and therefore unprobeable by construction — the same
-# shape as the ideas table, which has no update path either (`kpro-table-access`).
+# that writes them. They were hand-authored in the Planner, so they are
+# ungoverned by git and therefore unprobeable by construction — the same shape
+# as the ideas table, which has no update path either (`kpro-table-access`).
+#
+# THE COUNT, RE-DERIVED 2026-08-30: **13 of 148**. This paragraph said "25 of
+# the 93" and both halves had drifted — the table has grown, and the earlier
+# figure swept in the `obs-*` rows, which ARE git-governed (authored by
+# tools/discovery-scan.py from live state, and exempted by name in
+# test_a_probe_cannot_match_its_own_description.py). The ungoverned set is the
+# seven `w-*` ladder rows plus rel-011, spine-tools-vs-cli-refusal,
+# gdpr-agent-processors and wing-events-chain-aware-retention. Do not carry
+# this number forward by hand either — it is one command:
+#
+#   tools/roadmap-status.py --json | python3 -c "…slug not in roadmap-seed.py
+#   and not slug.startswith('obs-')…"
 #
 # The probe that was refused would have been a good one; it checked that stage
 # N's rows reach stage N+1 rather than that a file exists. It can be restored
