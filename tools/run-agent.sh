@@ -90,10 +90,29 @@ resolve() {
 # looks exactly like an unconfigured service. The running job is the authority
 # on what the runtime holds; this passes it through and checks only the names
 # whose ABSENCE has a specific, misleading symptom.
+# THE MEASUREMENT KNOBS, and only these, may be set by the caller.
+#
+# The passthrough exists because a terminal inherits none of the daemon's
+# environment, and it overwrites unconditionally on purpose — a caller's stale
+# WING_API_TOKEN winning over the daemon's current one is a bug that looks like
+# an auth failure somewhere else. But tools/nos-ops-harness.py has to vary the
+# BACKEND and the MODEL ID per run; that is the whole measurement, and with an
+# unconditional overwrite every size ran on whatever the plist pinned while the
+# report labelled it otherwise. None of these three is a credential.
+# A space-padded string, not an associative array: /bin/bash on macOS is 3.2
+# and `declare -A` is a syntax error there — which this script found the first
+# time it ran after the change.
+CALLER_WINS=" "
+for k in NOS_ARMED_BACKENDS NOS_LOCAL_MODEL NOS_LOCAL_SMALL_MODEL; do
+    eval "v=\${$k:-}"
+    [ -n "$v" ] && CALLER_WINS="${CALLER_WINS}${k} "
+done
+
 while IFS= read -r line; do
     name="${line%% => *}"
     value="${line#* => }"
     [[ "$name" =~ ^[A-Z][A-Z0-9_]*$ ]] || continue
+    case "$CALLER_WINS" in *" $name "*) continue ;; esac
     export "$name=$value"
 done < <(printf '%s\n' "$LOADED" | sed -n 's/^[[:space:]]*\([A-Z][A-Z0-9_]*\) => \(.*\)$/\1 => \2/p')
 

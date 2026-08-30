@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "required": ["invoice_no", "total", "currency"],
+  "properties": {
+    "invoice_no": { "type": "string" },
+    "total": { "type": "number" },
+    "currency": { "type": "string", "enum": ["EUR", "CZK"] }
+  }
+}

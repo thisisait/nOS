@@ -1,0 +1,97 @@
+name: ops-extract
+version: 1
+description: >-
+  The ops plane's measurement subject: ONE model call that turns a short
+  business document into a typed JSON object, and nothing else. It exists to be
+  scored by tools/nos-ops-harness.py against hand-written labels, so that "at
+  which model SIZE does one_shot extraction stop working" becomes a number
+  rather than an opinion. It is not a service and nothing schedules it.
+
+model:
+  # haiku tier: the ops plane's whole question is whether the SMALL end works,
+  # so pinning the small tier is the measurement, not a cost saving. Which
+  # model that is comes from the backend's model_env — the harness moves it
+  # per size (state/llm-backends.yml `sizes_b`).
+  primary: openai-local-haiku
+  backend: ollama
+
+system_prompt_path: system.md
+
+# ONE call, no loop of any kind. The loader refuses tools: or outcomes: here,
+# and rightly — the number of calls IS the measurement, so an apparatus that
+# could make a second one would change what is being measured.
+mode: one_shot
+one_shot:
+  schema_path: one-shot.schema.json
+
+audit:
+  capability_scopes:
+    - llm.one_shot
+  pii_classification: low
+
+vault:
+  required_credentials:
+    # Declared for the shape; the local backend resolves an empty token by
+    # design (BindingResolver gate 7) because there is nobody to show a key to.
+    - scope: ollama-local
+      optional: true
+
+metadata:
+  ait_phase: ops-plane
+  ceremony_role: measurement-subject
+  runner_status: unproven
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: >-
+    The one call completed. The answer may be valid or invalid against the
+    schema — BOTH are results, and the harness scores which. A run that emitted
+    nonsense did its job as a measurement.
+  exit_1: >-
+    Does not emit exit 1. An answer the schema rejects is exit 0 with
+    stop_reason one_shot_failed; that is data, not an error.
+  exit_2: "Binding, auth or runner error — nothing was measured."
+
+gdpr:
+  purpose: >-
+    Measuring how well a locally-hosted model extracts fields from short
+    business documents, so the estate can decide which model size its ops plane
+    needs. The inputs are the hand-written fixtures in
+    state/ops-task-families/, not customer documents.
+  legal_basis: legitimate_interests
+  data_categories: [business_document_fixtures]
+  data_subjects: [none]
+  # Nothing is retained by this agent; the harness writes its own report and
+  # the session rows age with the ledger.
+  retention_days: 0
+  processors:
+    - name: on-device (operator's own hardware)
+      role: >-
+        LLM inference on this host via ollama's OpenAI-compatible surface on
+        loopback. There is no third party: the prompt does not leave the
+        machine, so there is no processor in the Article-28 sense and this
+        entry exists to say so rather than leave the field blank.
+      country: "CZ — this host"
+      safeguard: >-
+        Not applicable. No transfer occurs, which is a stronger position than
+        any safeguard could describe.
+  eu_residency: true
+  # THE CLAIM THAT ONLY A LOCAL BACKEND CAN CARRY. BindingResolver gate 8 turns
+  # this line into a mechanism: with it false, this agent refuses to route to
+  # any non-EU backend AND refuses to degrade to the default when its own is
+  # disarmed. Both refusals are the residency property rather than a promise.
+  transfers_outside_eu: false
+  notes: |
+    Fixtures only. If this agent is ever pointed at real documents, the
+    data_categories and data_subjects above are wrong and must be rewritten
+    before the first run — the register is the input to routing here, not a
+    description of it.
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox]
+  on_medium:   []
+  on_low:      []
+  on_info:     []
+
+capabilities: []

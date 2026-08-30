@@ -62,6 +62,11 @@ def declared_bindings(registry: pathlib.Path) -> list[dict]:
                 "size_b": float(size),
                 "model": str(model),
                 "armed": name in armed,
+                # The env var the RESOLVER reads for this tier, taken from the
+                # row rather than guessed. ops-extract is haiku-tier (the whole
+                # question is the small end), and setting anything else leaves
+                # the binding refusing with "armed but <VAR> is empty".
+                "model_env": (row.get("model_env") or {}).get("haiku"),
             })
     return sorted(out, key=lambda b: (b["size_b"], b["backend"]))
 
@@ -79,11 +84,19 @@ def load_family(family: pathlib.Path) -> tuple[dict, list[dict]]:
 def run_one(cmd: list[str], agent: str, prompt: str, binding: dict, timeout: int) -> dict:
     """One one_shot run. Returns the validated chain, or why there is none."""
     env = dict(os.environ)
+    # THE VAR THE RESOLVER ACTUALLY READS. Until 2026-08-30 this set only
+    # NOS_OPS_* — three variables nothing in the tree consumed — so a run
+    # resolved whatever the plist had pinned, and the size column was a label
+    # rather than a measurement. The registry names the var per tier; setting
+    # that one is what makes the ladder real.
     env.update({
+        "NOS_ARMED_BACKENDS": binding["backend"],
         "NOS_OPS_BACKEND": binding["backend"],
         "NOS_OPS_MODEL": binding["model"],
         "NOS_OPS_SIZE_B": str(binding["size_b"]),
     })
+    if binding.get("model_env"):
+        env[str(binding["model_env"])] = binding["model"]
     try:
         proc = subprocess.run(
             cmd + [f"--agent={agent}", f"--prompt={prompt}"],
