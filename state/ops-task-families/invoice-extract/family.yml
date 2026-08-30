@@ -7,6 +7,12 @@
 # Scored by tools/nos-ops-harness.py: exact reproduction of `expect`, decided
 # by the code oracle. The model never assesses itself.
 name: invoice-extract
+# The agent whose one_shot schema these labels are written against. The
+# harness takes --agent as a flag, so a family could be scored against a
+# schema that cannot express its labels and every sample would come back
+# `invalid` — a capability finding that was really a mismatched flag.
+# test_a_family_label_fits_its_schema.py checks every label against it.
+agent: ops-extract
 description: >
   Three fields (invoice_no, total, currency) out of a short invoice text, in
   the layouts a small business actually receives them: EN and CS, comma and

@@ -1,0 +1,91 @@
+name: ops-triage-cloud
+version: 1
+description: >-
+  `ops-triage`'s cloud twin: byte-identical prompt and schema, routed to a
+  hosted model. One comparison only — does a larger model triage this estate's
+  own weaknesses dramatically better than a 14B running on the operator's
+  desk. A SEPARATE agent rather than a flag, because the difference is not a
+  setting: these inputs LEAVE THE MACHINE, which is a different Article-30
+  record, and BindingResolver gate 8 makes the local twin's refusal structural
+  rather than a promise.
+
+model:
+  # SONNET tier, and the asymmetry must be read with the result: the estate
+  # pins NOS_MINIMAX_MODEL and leaves NOS_MINIMAX_SMALL_MODEL empty, so
+  # haiku-tier would refuse at gate 6. This compares a SMALL LOCAL model with a
+  # LARGE HOSTED one — the operator's actual question, not a size curve.
+  primary: anthropic-claude-sonnet-4-5
+  backend: minimax
+
+system_prompt_path: system.md
+
+mode: one_shot
+one_shot:
+  schema_path: one-shot.schema.json
+
+audit:
+  capability_scopes:
+    - llm.one_shot
+  pii_classification: low
+
+vault:
+  required_credentials:
+    - scope: anthropic-api
+
+metadata:
+  ait_phase: ops-plane
+  ceremony_role: measurement-subject-cloud
+  runner_status: unproven
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: >-
+    The one call completed. A wrong triage is a RESULT and the harness scores
+    which.
+  exit_1: >-
+    Does not emit exit 1. A schema rejection is exit 0 with stop_reason
+    one_shot_failed.
+  exit_2: "Binding, auth or runner error — nothing was measured."
+
+gdpr:
+  purpose: >-
+    Measuring whether a hosted model triages the estate's own reported
+    weaknesses better than the local twin, on the identical task, so the
+    operator can decide whether the transfer buys anything.
+  legal_basis: legitimate_interests
+  data_categories: [own_infrastructure_findings]
+  data_subjects: [none]
+  retention_days: 0
+  processors:
+    - name: MiniMax
+      role: LLM inference via the Anthropic-compatible endpoint (SDK adapter,
+        single call, no tool loop)
+      country: "unverified — international endpoint api.minimax.io; entity and seat not established"
+      safeguard: >-
+        None claimed, and none assessed. No SCCs, adequacy finding or
+        derogation has been identified for this transfer.
+  eu_residency: false
+  # THE DISCLOSURE THAT BUYS THE COMPARISON, and it costs more here than it
+  # does for ops-extract-cloud. That twin sends invented invoices; this one
+  # sends descriptions of THIS ESTATE'S OWN DEFECTS to an endpoint whose seat
+  # is not established. The twenty samples were written by hand with service
+  # names kept and every hostname, credential and person removed, and that
+  # redaction — not the legal basis — is what makes the transfer
+  # proportionate. It is a fixture set of twenty rows, not a feed.
+  transfers_outside_eu: true
+  notes: |
+    NEVER point this agent at the live weakness reader. The fixtures are
+    twenty hand-redacted rows; the live set carries hostnames, service
+    versions and the exact shape of what is currently exploitable on this
+    machine, and streaming that abroad is a different act with a different
+    record. If a live triage is ever wanted, it is ops-triage's job — the
+    twin that cannot leave the host.
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox]
+  on_medium:   []
+  on_low:      []
+  on_info:     []
+
+capabilities: []

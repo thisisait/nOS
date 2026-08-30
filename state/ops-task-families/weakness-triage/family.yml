@@ -1,0 +1,105 @@
+# The family that is NOT extraction.
+#
+# invoice-extract and invoice-absent both ask the same thing — can a model
+# copy three fields out of a short document — and a benchmark of one task
+# shape measures one task shape. The operator's words on 2026-08-30: "zkoušet
+# další typy specs, aby agent neustále jen nečetl jednu a tu samou red inbox
+# issue". This is that second shape, and it deliberately uses the estate's own
+# work as its inputs.
+#
+# THE TASK IS A JUDGEMENT, NOT A COPY. Every sample is a real weakness this
+# estate reported — from the remediation queue, the hidden-fee ledger, the
+# Prometheus alert set and the Pulse run table — with its id stripped, because
+# the id gives the answer away (`rem:` is nearly always a pin, `fee:` nearly
+# always code or docs). What is left is the sentence a human would read, and
+# the question is where the fix LANDS and what STOPS it. Neither answer is
+# anywhere in the input; both are inference over how this estate is built.
+#
+# WHY THESE TWO FIELDS. They are the two the loop actually needs before it can
+# hand a weakness to a proposer, and today it derives neither: `loop-propose.py`
+# ranks by severity alone, so it has picked a `rem:` version bump every single
+# time (fable's review, docs/idea/19-fable-review-2.md §5: "the loop is aimed
+# at the easy third of the backlog — five of seven sources have never produced
+# a proposal"). A model that can read `blocked_by` off a sentence is a model
+# that could stop the loop spending a run on a vendor-blocked row.
+#
+#   fix_surface  pin | config | code | docs | host
+#                where the change goes. `pin` is a version or image pin;
+#                `config` is a rendered service setting; `code` is a file in
+#                this repo that runs; `docs` is prose; `host` is the machine,
+#                not the repository.
+#   blocked_by   none | vendor | operator | evidence
+#                what stands between the sentence and a patch. `vendor` = no
+#                upstream fix exists. `operator` = it needs a human act (a
+#                signature, disk space, a decision). `evidence` = the report
+#                does not yet say enough to act on — which is exactly the
+#                state every `pulse:` row is in, and the reason none has ever
+#                been proposed against.
+#
+# BOTH FIELDS ARE REQUIRED HERE, and that is the opposite of invoice-absent on
+# purpose. There it was the measurement that a field can be genuinely absent;
+# here every weakness HAS a surface and HAS a blocker or does not, so an
+# omission is a refusal to answer rather than an honest one. The two families
+# now pin both halves of the schema doctrine.
+#
+# LABELS WRITTEN BY HAND, from rows whose fix this repo has already made or
+# already refused — so the label is history, not my opinion of it. A model may
+# not label a set it is scored against.
+#
+# THE LABELS WERE CHECKED BEFORE THEY WERE USED, and three of twenty did not
+# survive. Three readers labelled the same twenty rows blind — no access to
+# this file — and were asked to mark where another careful reader could
+# reasonably differ. Fourteen were unanimous with the hand label. The rest:
+#
+#   t17  0 of 3 agreed. I had called an empty JWT secret `config`; all three
+#        said the defect is that the service STARTS with it, and a guard is
+#        `code`. They were right and the label changed.
+#   t02  1 of 3. Two put the surface in rustfs's own source and one in our
+#        pin — and the enum has no value for "upstream's code", so the row was
+#        UNANSWERABLE rather than hard. Replaced.
+#   t15  1 of 3. Two read it as a quantization setting, one as a schema
+#        change. Reworded so the input says which it is.
+#   t09, t14, t20  2 of 3, and the dissent named my label as its alternative.
+#        Kept: a row every reader finds obvious measures nothing.
+#
+# A label set nobody argued with is a label set nobody read. This one was
+# argued with, and the argument is the reason the numbers below can be quoted.
+#
+# WHERE IT IS HARD, named in advance so a low score can be read: t03 and t14
+# are both "no upstream fix", but one closes by a container pin and the other
+# by a host package — same blocker, different surface. t09 and t20 are bare
+# "exited 1" rows, where the honest answer is that nothing is actionable yet,
+# and a model that pattern-matches "job failed → fix the job" will say `none`.
+name: weakness-triage
+# The agent whose one_shot schema these labels are written against. The
+# harness takes --agent as a flag, so a family could be scored against a
+# schema that cannot express its labels and every sample would come back
+# `invalid` — a capability finding that was really a mismatched flag.
+# test_a_family_label_fits_its_schema.py checks every label against it.
+agent: ops-triage
+description: >
+  A real weakness from this estate's own reporting, with its source id
+  removed. Answer where the fix lands and what blocks it. Neither is stated in
+  the input; both are inference.
+prompt_template: |
+  Below is one reported weakness from a self-hosted infrastructure estate.
+
+  Answer with ONE JSON object carrying exactly these two fields:
+
+    fix_surface — where the change goes. Exactly one of:
+      "pin"    a version or container-image pin in the repository
+      "config" a rendered service setting (env var, compose flag, TLS option)
+      "code"   a source file in the repository that runs
+      "docs"   prose: a runbook, a comment, an operator-facing text
+      "host"   the machine itself — disk, a package installed outside the repo
+
+    blocked_by — what stands between this sentence and a patch. Exactly one of:
+      "none"     nothing; it can be fixed now
+      "vendor"   no upstream fix exists yet
+      "operator" it needs a human act: a signature, disk space, a decision
+      "evidence" the report does not yet say enough to act on
+
+  No explanation, no markdown fence.
+
+  WEAKNESS:
+  {input}

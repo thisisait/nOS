@@ -1,0 +1,91 @@
+name: ops-triage
+version: 1
+description: >-
+  The ops plane's SECOND measurement subject, and the first that is not
+  extraction. ONE model call that reads a reported weakness and answers where
+  its fix lands and what blocks it — a judgement, not a copy, and nothing in
+  the input states either answer. It exists because a benchmark of one task
+  shape measures one task shape: ops-extract and its absence twin both ask
+  whether a model can lift three fields off a document, and the estate needs to
+  know whether a small local model can also TRIAGE. Not a service; nothing
+  schedules it.
+
+model:
+  # haiku tier, same as ops-extract and for the same reason: the question is
+  # whether the SMALL end works. The registry's model_env is what the harness
+  # moves per size (state/llm-backends.yml `sizes_b`).
+  primary: openai-local-haiku
+  backend: ollama
+
+system_prompt_path: system.md
+
+mode: one_shot
+one_shot:
+  schema_path: one-shot.schema.json
+
+audit:
+  capability_scopes:
+    - llm.one_shot
+  pii_classification: low
+
+vault:
+  required_credentials:
+    - scope: ollama-local
+      optional: true
+
+metadata:
+  ait_phase: ops-plane
+  ceremony_role: measurement-subject
+  runner_status: unproven
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: >-
+    The one call completed. A wrong triage is a RESULT, and the harness scores
+    which — the point is the number, not the model looking good.
+  exit_1: >-
+    Does not emit exit 1. An answer the schema rejects is exit 0 with
+    stop_reason one_shot_failed; that is data.
+  exit_2: "Binding, auth or runner error — nothing was measured."
+
+gdpr:
+  purpose: >-
+    Measuring how well a locally-hosted model triages the estate's own
+    reported weaknesses, so the loop can eventually stop spending a model run
+    on a row no patch can close. The inputs are the fixtures in
+    state/ops-task-families/weakness-triage/ — real findings, rewritten by
+    hand with their source ids removed.
+  legal_basis: legitimate_interests
+  data_categories: [own_infrastructure_findings]
+  data_subjects: [none]
+  retention_days: 0
+  processors:
+    - name: on-device (operator's own hardware)
+      role: >-
+        LLM inference on this host via ollama's OpenAI-compatible surface on
+        loopback. No third party: the prompt does not leave the machine, so
+        there is no processor in the Article-28 sense and this entry says so
+        rather than leaving the field blank.
+      country: "CZ — this host"
+      safeguard: >-
+        Not applicable. No transfer occurs.
+  eu_residency: true
+  # LOAD-BEARING HERE IN A WAY IT IS NOT FOR ops-extract. That agent's inputs
+  # are invented invoices; these are this estate's own security findings, so
+  # the local-only claim is protecting something real. BindingResolver gate 8
+  # turns the line into a mechanism: this agent refuses to route to a non-EU
+  # backend AND refuses to degrade to the default when ollama is disarmed.
+  transfers_outside_eu: false
+  notes: |
+    The samples name services and defects but no people, no credentials and no
+    hostnames — checked by hand when the family was written. If a future
+    sample carries any of those, this record is wrong before the first run.
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox]
+  on_medium:   []
+  on_low:      []
+  on_info:     []
+
+capabilities: []

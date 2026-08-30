@@ -1,0 +1,16 @@
+{
+  "$comment": "BOTH FIELDS REQUIRED, which is the deliberate opposite of ops-extract. There an empty `required` IS the measurement: a document may genuinely not print a field, and a schema that cannot say so forces every model to invent (measured 2026-08-30, two models of different capability both scoring 2/10 because the contract was deciding). Here every weakness HAS a surface and is or is not blocked, so an omission is a refusal to answer rather than an honest one. The two families pin both halves of the rule: absence must be sayable where absence is real, and required where it is not. `additionalProperties: false` is the same guard as the twin's — with it missing, any object at all validates.",
+  "type": "object",
+  "required": ["fix_surface", "blocked_by"],
+  "properties": {
+    "fix_surface": {
+      "type": "string",
+      "enum": ["pin", "config", "code", "docs", "host"]
+    },
+    "blocked_by": {
+      "type": "string",
+      "enum": ["none", "vendor", "operator", "evidence"]
+    }
+  },
+  "additionalProperties": false
+}

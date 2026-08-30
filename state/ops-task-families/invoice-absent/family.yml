@@ -42,17 +42,36 @@
 # The same fix lifted invoice-extract's 8B from 14/22 to 18/22, so four of the
 # misses on the ORIGINAL family were the contract too. The 14B stayed 22/22.
 #
-# TWO REMAINING 14B MISSES ARE WORTH READING before anyone calls it 7/10:
-#   a04, a08 — expected {}, the model returned []. It correctly said "nothing
-#              here"; JSON's empty object and empty array are the same thing
-#              to PHP's json_decode, and the exact-match oracle is not. Left
-#              scored as a miss rather than teaching the oracle to blur them —
-#              a loosened oracle is worth less than an honest 7.
-#   a07      — a credit note; it returned the invoice the note REFERENCES
-#              instead of the note's own number. A genuine comprehension miss.
+# THE ORACLE HAD ONE OF THE MISSES ITSELF, and the correction is the reason
+# these numbers moved again the same afternoon. a04 and a08 expect {}; all
+# three subjects returned [] — PHP's json_decode gives the same value for an
+# empty object and an empty array, and exact match does not. That measured the
+# encoding, not the model. `score()` now counts empty-against-empty as a match
+# (and ONLY when both sides are empty, so [] against a document that does have
+# fields still scores wrong). A first draft of this paragraph argued the
+# opposite — "a loosened oracle is worth less than an honest 7" — which was
+# defending an oracle bug as rigour.
+#
+#   FINAL, empty==empty, 2026-08-30
+#     hermes3:8b      4/10   invalid 4   wrong 2
+#     qwen3:14b       9/10   invalid 0   wrong 1
+#     MiniMax-M2.7    8/10   invalid 0   wrong 2   (hosted, not a rung)
+#
+# The 14B beats the hosted model here and on invoice-extract (22/22 vs 20/22).
+# The remaining 14B miss is a07 — a credit note, where it returned the invoice
+# the note REFERENCES instead of the note's own number. A genuine comprehension
+# miss, and the only one left. MiniMax's two are the same shape as its
+# extract-family misses: the label carried along with the number
+# ("Zalohova faktura 2026/551"), and a currency it was not shown.
 #
 # Labels written by hand. A model may not label a set it is scored against.
 name: invoice-absent
+# The agent whose one_shot schema these labels are written against. The
+# harness takes --agent as a flag, so a family could be scored against a
+# schema that cannot express its labels and every sample would come back
+# `invalid` — a capability finding that was really a mismatched flag.
+# test_a_family_label_fits_its_schema.py checks every label against it.
+agent: ops-extract
 description: >
   The same three fields, from documents where one of them is not present:
   no invoice number, no currency marker, or a total that is a due date rather
