@@ -26,6 +26,7 @@ Retro-verified 2026-08-30 by making score() ignore `repeat`.
 from __future__ import annotations
 
 import importlib.util
+import os
 import pathlib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -41,6 +42,13 @@ def _harness():
 
 
 def _score(repeat: int) -> dict:
+    # RESET THE STUB'S COUNTER. It lives in a file so successive subprocesses
+    # can share it, which also means it survives between runs — the first draft
+    # inherited a count from an earlier invocation and both tests failed in a
+    # full-suite run while passing alone. A fixture whose result depends on
+    # whether it ran before is not a fixture.
+    counter = pathlib.Path(os.environ.get("TMPDIR", "/tmp")) / "nos-alt-runner.count"
+    counter.unlink(missing_ok=True)
     return _harness().score(
         binding={"backend": "stub", "model": "stub", "size_b": 0, "model_env": None},
         samples=[{"id": "a", "input": "x", "expect": {"v": 1}}],

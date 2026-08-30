@@ -435,6 +435,16 @@ nodes:
   # which is the flow this file's own header describes and the correct one for
   # an edit the signer has not read.
   "agent:ops-extract": withheld
+  # The three siblings that arrived with the second task family (2026-08-30).
+  # Same ruling and the same reason: a measurement subject publishes no phrase
+  # and joins no organ. The CLOUD pair is worth naming separately, because it
+  # is the one place where "nothing leaves this machine" is FALSE — they send
+  # their prompts to a hosted endpoint by design, and that is disclosed in
+  # their own gdpr blocks (transfers_outside_eu: true). What they still do not
+  # do is publish anything on the apex surface, which is what this file rules.
+  "agent:ops-extract-cloud": withheld
+  "agent:ops-triage": withheld
+  "agent:ops-triage-cloud": withheld
   "agent:librarian": withheld
   "agent:migration-author": withheld
   "agent:proposer": withheld

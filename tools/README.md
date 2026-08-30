@@ -63,6 +63,7 @@ worse than none, because it reads as complete.
 - `stuck-status.py` — What has STOPPED MOVING — which is a different question from what is broken.
 - `tls-uptake.py` — How much of the datastore traffic on this estate is actually encrypted.
 - `view-contract-drift.py` — Compare the face's `TableView` against KEAP's `viewMetaSchema`.
+- `usage-status.py` — What each model budget has been spent on, and what is left.
 - `wing-status.py` — What Wing actually is: every table, who writes it, who reads it, what it costs.
 
 ## Control centre — the tmux session and its panes

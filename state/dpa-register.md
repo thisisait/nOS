@@ -20,10 +20,10 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 91 (77 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (85)
-- **Transfers outside the EU:** 9 activities
-- **Activities engaging a third-party processor:** 10
+- **Processing activities:** 93 (77 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (87)
+- **Transfers outside the EU:** 10 activities
+- **Activities engaging a third-party processor:** 12
 
 ## Transfers & processors (audit-sensitive subset)
 
@@ -35,6 +35,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 | migration-author (`agent_migration-author`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
 | ops-extract (`agent_ops-extract`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. There is no third party: the prompt does not leave the machine, so there is no processor in the Article-28 sense and this entry exists to say so rather than leave the field blank. · safeguard: Not applicable. No transfer occurs, which is a stronger position than any safeguard could describe. |
 | ops-extract-cloud (`agent_ops-extract-cloud`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, single call, no tool loop) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer. |
+| ops-triage (`agent_ops-triage`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. No third party: the prompt does not leave the machine, so there is no processor in the Article-28 sense and this entry says so rather than leaving the field blank. · safeguard: Not applicable. No transfer occurs. |
+| ops-triage-cloud (`agent_ops-triage-cloud`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, single call, no tool loop) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer. |
 | proposer (`agent_proposer`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer. |
 | surveyor (`agent_surveyor`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
 | upgrade-architect (`agent_upgrade-architect`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
@@ -1038,6 +1040,28 @@ commit metadata.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `none`
 - **Data categories:** `business_document_fixtures`
+- **Recipients / processors:** **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, single call, no tool loop) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer.
+- **Transfers outside EU:** **Yes**
+- **Retention:** transient (not persisted)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### ops-triage — `agent_ops-triage`
+- **Purpose:** Measuring how well a locally-hosted model triages the estate's own reported weaknesses, so the loop can eventually stop spending a model run on a row no patch can close. The inputs are the fixtures in state/ops-task-families/weakness-triage/ — real findings, rewritten by hand with their source ids removed.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `none`
+- **Data categories:** `own_infrastructure_findings`
+- **Recipients / processors:** **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. No third party: the prompt does not leave the machine, so there is no processor in the Article-28 sense and this entry says so rather than leaving the field blank. · safeguard: Not applicable. No transfer occurs.
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### ops-triage-cloud — `agent_ops-triage-cloud`
+- **Purpose:** Measuring whether a hosted model triages the estate's own reported weaknesses better than the local twin, on the identical task, so the operator can decide whether the transfer buys anything.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `none`
+- **Data categories:** `own_infrastructure_findings`
 - **Recipients / processors:** **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, single call, no tool loop) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer.
 - **Transfers outside EU:** **Yes**
 - **Retention:** transient (not persisted)
