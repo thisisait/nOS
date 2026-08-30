@@ -243,7 +243,7 @@
              open); NEVER the API key — that stays in ~/.nos/secrets.yml,
              resolved as nos:minimax_api_key at session open. -->
         <key>NOS_ARMED_BACKENDS</key>
-        <string>{{ (('minimax ' if minimax_enabled | default(false) | bool else '') ~ ('mistral-eu' if mistral_enabled | default(false) | bool else '')) | trim }}</string>
+        <string>{{ (('minimax ' if minimax_enabled | default(false) | bool else '') ~ ('mistral-eu ' if mistral_enabled | default(false) | bool else '') ~ ('ollama' if ollama_enabled | default(false) | bool else '')) | trim }}</string>
         <key>NOS_MINIMAX_MODEL</key>
         <string>{{ minimax_model | default('') }}</string>
         <key>NOS_MINIMAX_SMALL_MODEL</key>
@@ -252,6 +252,13 @@
         <string>{{ mistral_model | default('') }}</string>
         <key>NOS_MISTRAL_SMALL_MODEL</key>
         <string>{{ mistral_small_model | default('') }}</string>
+        <!-- ollama: LOCAL, so no key renders here and none exists — the empty
+             auth token is the honest value (BindingResolver gate 7), not a
+             missing one. The ids must be models `ollama list` shows. -->
+        <key>NOS_LOCAL_MODEL</key>
+        <string>{{ ollama_model | default('') }}</string>
+        <key>NOS_LOCAL_SMALL_MODEL</key>
+        <string>{{ ollama_small_model | default('') }}</string>
     </dict>
 
     <!-- launchd respawns on crash; ThrottleInterval prevents tight loops

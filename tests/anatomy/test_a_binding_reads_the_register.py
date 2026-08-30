@@ -99,16 +99,36 @@ def test_the_registry_is_well_formed_and_fail_closed():
         )
         if (b or {}).get("default"):
             continue
-        assert b.get("base_url", "").startswith("https://"), (
-            f"backend {name!r} has no https base_url — an env override pointing "
-            "nowhere, or somewhere unencrypted"
-        )
-        ref = b.get("auth_secret", "")
-        assert ref.startswith(("nos:", "env:", "infisical:")), (
-            f"backend {name!r} auth_secret {ref!r} is not a secret_ref — the "
-            "registry must carry a POINTER, never a value (AgentKit's "
-            "secret_ref rule, and the reason wing.db never held a key)"
-        )
+        # A LOCAL row is held to a DIFFERENT and narrower rule, not exempted
+        # from this one (2026-08-30). `https` exists here because a cloud
+        # base_url crosses a network; a model on loopback crosses nothing, and
+        # demanding TLS to 127.0.0.1 would buy nothing while pushing the row
+        # toward a self-signed cert nobody verifies. In exchange the local row
+        # may not point OFF-BOX at all, which is stricter than what any cloud
+        # row promises — and it is what makes `residency.eu: true` true.
+        if b.get("local"):
+            assert b.get("base_url", "").startswith("http://127.0.0.1"), (
+                f"backend {name!r} declares local: true but its base_url is "
+                f"{b.get('base_url')!r}. A local backend that reaches off-box "
+                "is a cloud backend with a false residency claim."
+            )
+            assert b.get("auth_secret") is None, (
+                f"backend {name!r} is local and still names an auth_secret. "
+                "There is nobody to show a key to; a placeholder in the vault "
+                "would be a secret that is not one (resolver gate 7)."
+            )
+        else:
+            assert b.get("base_url", "").startswith("https://"), (
+                f"backend {name!r} has no https base_url — an env override "
+                "pointing nowhere, or somewhere unencrypted"
+            )
+        ref = b.get("auth_secret") or ""
+        if not b.get("local"):
+            assert ref.startswith(("nos:", "env:", "infisical:")), (
+                f"backend {name!r} auth_secret {ref!r} is not a secret_ref — the "
+                "registry must carry a POINTER, never a value (AgentKit's "
+                "secret_ref rule, and the reason wing.db never held a key)"
+            )
         if ref.startswith("nos:"):
             key = ref.split(":", 1)[1]
             assert f"{key}:" in secrets_tpl, (

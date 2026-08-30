@@ -135,6 +135,43 @@ backends:
   # model_env remap and a tail like `mistral-large` carries no tier word for
   # gate 6 to map. (For `claude`/`anthropic` primaries the tier word sits
   # inside the vendor id and both readings agree.)
+  # THE ONLY BACKEND THAT CAN CARRY `transfers_outside_eu: false`.
+  #
+  # ollama on this machine, through its OpenAI-compatible surface. It is in the
+  # register for the same reason every other row is — gate 4 refuses a routing
+  # the register does not declare — but its residency claim is the strong one:
+  # nothing leaves the host, so there is no transfer to disclose. `processor`
+  # names the operator, because on-device inference has no third party, and
+  # Article 30 wants that said rather than left blank.
+  #
+  # `local: true` is load-bearing in the resolver: it is what makes the empty
+  # auth token honest instead of a placeholder secret in the vault (gate 7).
+  #
+  # `sizes_b` is read by tools/nos-ops-harness.py, not by the resolver. It is
+  # the ladder the ops plane's open question is about — at which model SIZE
+  # does one_shot chain emission stop working — and each entry is a model that
+  # must actually be pulled. MEASURED 2026-08-30 on the nos-lang bench:
+  # hermes3:8b fails on syntax, qwen3:14b on semantics, qwen2.5-coder:32b
+  # starves the KEAP validator (16.71s against a 0.02s baseline) and is
+  # disqualified by that harness's own rule. So the ladder stops at 14.
+  ollama:
+    local: true
+    protocol: openai
+    residency:
+      country: "CZ (this host)"
+      eu: true
+    base_url: "http://127.0.0.1:11434/v1"
+    auth_secret: null
+    model_env:
+      haiku: NOS_LOCAL_SMALL_MODEL
+      sonnet: NOS_LOCAL_MODEL
+      opus: null
+    sizes_b:
+      8: hermes3:8b
+      14: qwen3:14b
+    enabled_flag: ollama_enabled
+    processor_match: "on-device"
+
   mistral-eu:
     protocol: "openai"
     residency: { country: "FR", eu: true }

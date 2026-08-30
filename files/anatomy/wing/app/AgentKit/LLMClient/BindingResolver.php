@@ -191,8 +191,24 @@ final class BindingResolver
 			);
 		}
 
-		$token = $this->credentials->dereferenceRef((string) ($spec['auth_secret'] ?? ''));
-		if ($token === null || $token === '') {
+		// Gate 7 — a key, unless there is nobody to show it to.
+		//
+		// A LOCAL backend has no auth and inventing one would be a secret that
+		// is not a secret: `auth_secret: <anything>` would have to resolve, so
+		// the operator would paste a placeholder into credentials.yml and the
+		// vault would carry a lie. `local: true` says the model runs on this
+		// machine; the empty token is then the honest value, not a missing one.
+		//
+		// It is also the only backend that can satisfy gate 8's no-degrade
+		// rule: an agent declaring `transfers_outside_eu: false` cannot route
+		// to any cloud row here, and nothing leaves a machine that never opens
+		// a socket. That falls out of the existing gates rather than needing a
+		// new one.
+		$isLocal = ($spec['local'] ?? false) === true;
+		$token = $isLocal
+			? ''
+			: (string) ($this->credentials->dereferenceRef((string) ($spec['auth_secret'] ?? '')) ?? '');
+		if (!$isLocal && $token === '') {
 			throw new BindingRefused(
 				"backend '{$declared}' is armed but its auth_secret "
 				. "'{$spec['auth_secret']}' resolves to nothing — paste the key "

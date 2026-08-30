@@ -1142,6 +1142,20 @@ mistral_enabled: false
 mistral_model: ""              # -> NOS_MISTRAL_MODEL       (sonnet tier)
 mistral_small_model: ""        # -> NOS_MISTRAL_SMALL_MODEL (haiku tier)
 
+# ollama — the LOCAL backend, and the only one that can carry an agent's
+# `transfers_outside_eu: false` honestly: nothing leaves the host. Arming is
+# three edits, not five, because there is no key and no residency premium —
+# this flag and the two model ids. The ids must be models `ollama list` shows.
+#
+# MEASURED 2026-08-30 on state/local-model-bench.yml (6 tasks, code as judge):
+# hermes3:8b 2/6, every failure punctuation; qwen3:14b 4/6, no syntax errors
+# left and its two misses are about the world; qwen2.5-coder:32b unscoreable —
+# it drove the KEAP validator from 0.02s to 16.71s and starved its own judge.
+# The knee is 14B and the ceiling is this machine, not the weights.
+ollama_enabled: false
+ollama_model: ""               # -> NOS_LOCAL_MODEL         (sonnet tier)
+ollama_small_model: ""         # -> NOS_LOCAL_SMALL_MODEL   (haiku tier)
+
 # THE PIN THAT DID NOT EXIST, AND WHAT ITS ABSENCE COST (added 2026-08-08).
 #
 # `roles/pazny.openclaw` installs ollama with `state: latest` and nothing has
