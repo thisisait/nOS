@@ -1,0 +1,87 @@
+{
+  "header": {
+    "question": "at which model size does one_shot chain emission stop reproducing labels",
+    "read_this_as": "a size nobody ran is UNKNOWN \u2014 never a pass, never green",
+    "scored_by": "code oracle (exact label match); the model never assesses itself",
+    "ops_plane_tool_surface": "CLOSED",
+    "closed_because": "no armed local binding has produced a number for the 3-7B tier"
+  },
+  "family": "invoice-extract",
+  "samples": 22,
+  "generated_at": "2026-08-30T13:24:32+00:00",
+  "registry": "/Users/pazny/projects/nOS/state/llm-backends.yml",
+  "agent": "ops-extract",
+  "declared_sizes_b": [
+    8.0,
+    14.0
+  ],
+  "armed_backends": [
+    "ollama"
+  ],
+  "by_model_size_b": {
+    "8.0": {
+      "status": "measured",
+      "backend": "ollama",
+      "model": "hermes3:8b",
+      "attempted": 22,
+      "exact": 18,
+      "invalid_chain": 1,
+      "wrong_labels": 3,
+      "runner_errors": 0,
+      "accuracy": 0.8182,
+      "misses": [
+        {
+          "id": "s06",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "FAKTURA 2026/117",
+            "total": 3250,
+            "currency": "CZK"
+          }
+        },
+        {
+          "id": "s08",
+          "why": "no valid chain",
+          "detail": "$.currency: 'K\u010d' is not in the declared enum"
+        },
+        {
+          "id": "s14",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "DOKLAD 9912",
+            "total": 4500,
+            "currency": "CZK"
+          }
+        },
+        {
+          "id": "s20",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "Faktura 2026-1",
+            "total": 9680,
+            "currency": "CZK"
+          }
+        }
+      ]
+    },
+    "14.0": {
+      "status": "measured",
+      "backend": "ollama",
+      "model": "qwen3:14b",
+      "attempted": 22,
+      "exact": 22,
+      "invalid_chain": 0,
+      "wrong_labels": 0,
+      "runner_errors": 0,
+      "accuracy": 1.0,
+      "misses": []
+    }
+  },
+  "boundary": {
+    "threshold": 0.9,
+    "status": "MEASURED",
+    "chain_tier_floor_b": 14.0,
+    "unmeasured_sizes_b": [],
+    "note": "smallest size at or above the threshold"
+  }
+}

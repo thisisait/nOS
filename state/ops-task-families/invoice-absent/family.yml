@@ -23,6 +23,34 @@
 # refused to invent and the contract had no way to say so; high `wrong` means
 # it invented. Those are opposite findings and the report keeps them apart.
 #
+# MEASURED 2026-08-30, and the fix this family forced is in the numbers.
+#
+#   BEFORE (schema required all three fields)
+#     hermes3:8b   2/10   invalid 6   wrong 2
+#     qwen3:14b    2/10   invalid 6   wrong 2      <- identical, to the sample
+#
+#   AFTER (required: [])
+#     hermes3:8b   2/10   invalid 4   wrong 4
+#     qwen3:14b    7/10   invalid 0   wrong 3
+#
+# The 14B was right five more times than the contract allowed it to be, and
+# now emits nothing the schema refuses. The 8B did not improve — its failures
+# moved from `invalid` to `wrong`, which is the finding: it was not omitting,
+# it was inventing ("invoice_no": "N/A", a currency guessed from the language
+# of the text rather than read off it).
+#
+# The same fix lifted invoice-extract's 8B from 14/22 to 18/22, so four of the
+# misses on the ORIGINAL family were the contract too. The 14B stayed 22/22.
+#
+# TWO REMAINING 14B MISSES ARE WORTH READING before anyone calls it 7/10:
+#   a04, a08 — expected {}, the model returned []. It correctly said "nothing
+#              here"; JSON's empty object and empty array are the same thing
+#              to PHP's json_decode, and the exact-match oracle is not. Left
+#              scored as a miss rather than teaching the oracle to blur them —
+#              a loosened oracle is worth less than an honest 7.
+#   a07      — a credit note; it returned the invoice the note REFERENCES
+#              instead of the note's own number. A genuine comprehension miss.
+#
 # Labels written by hand. A model may not label a set it is scored against.
 name: invoice-absent
 description: >
