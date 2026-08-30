@@ -14,12 +14,27 @@
 #   qwen3:14b     22/22   then   22/22
 #   MiniMax-M2.7  20/22   then   21/22
 #
-# The 8B's spread is ±3 on twenty-two, and the 14B's is zero — so a gap of one
-# or two between two subjects on a single run says nothing at all, while
-# 14 vs 22 survives any amount of that noise. Nothing here averages runs yet;
-# the honest reading is to treat differences smaller than the observed spread
-# as unmeasured, and to say which run a quoted number came from. The reports
-# in state/ops-harness/ are the LAST run, not the best one.
+# That is what `--repeat` was built for. THREE PASSES EACH, pooled:
+#
+#   hermes3:8b     runs [18, 16, 16]   spread 2   50/66   0.758
+#   qwen3:14b      runs [21, 22, 20]   spread 2   63/66   0.955
+#   MiniMax-M2.7   runs [20, 19, 20]   spread 1   59/66   0.894
+#
+# THE 22/22 WAS A LUCKY PASS. The 14B's real rate on this family is 0.955, not
+# 1.0, and no subject here has spread 0 — the perfect score that looked like a
+# ceiling was one draw from a distribution with a 2-sample width.
+#
+# The 14B still leads the hosted model, 63 vs 59, but by four samples against a
+# spread of two: consistent across the three passes, and much thinner than the
+# single-run 22-vs-20 suggested. What is unambiguous is the 8B's distance from
+# both, 50 vs 59 and 63, which no amount of that noise touches.
+#
+# AND IT DOES NOT TRAVEL. On weakness-triage the same three subjects go the
+# other way (MiniMax 52/60, both local models 46/60), so "the local 14B beats
+# the hosted model" is a statement about EXTRACTION and false as a general
+# claim. See that family's header.
+#
+# Reports in state/ops-harness/ are the LAST run, never the best one.
 name: invoice-extract
 # The agent whose one_shot schema these labels are written against. The
 # harness takes --agent as a flag, so a family could be scored against a

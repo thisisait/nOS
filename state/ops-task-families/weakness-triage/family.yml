@@ -82,9 +82,9 @@
 # for `--repeat` rather than the docstring's.
 #
 # THE TWO LOCAL MODELS ARE EXACTLY EQUAL, 46/60 each. So the 14B's advantage is
-# task-shaped, not general: perfect on extraction (22/22, spread 0) and no
-# better than an 8B at judging. "The 14B beats the hosted model" was true on
-# both invoice families and is false here; it does not travel.
+# task-shaped, not general: 63/66 on extraction against this 8B's 50/66, and no
+# better than that same 8B at judging. "The 14B beats the hosted model" was
+# true on extraction (63 vs 59) and is false here; it does not travel.
 #
 # THE SHARED BLIND SPOT IS `blocked_by: operator`, and it is the most useful
 # thing this family has produced:

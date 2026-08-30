@@ -8,20 +8,62 @@
   },
   "family": "invoice-extract",
   "samples": 22,
-  "generated_at": "2026-08-30T15:02:37+00:00",
+  "generated_at": "2026-08-30T16:30:38+00:00",
   "registry": "/Users/pazny/projects/nOS/state/llm-backends.yml",
   "agent": "ops-extract",
   "reference": {
     "status": "measured",
     "backend": "minimax",
     "model": "MiniMax-M2.7",
-    "attempted": 22,
-    "exact": 21,
+    "attempted": 66,
+    "exact": 59,
+    "runs": [
+      20,
+      19,
+      20
+    ],
+    "spread": 1,
     "invalid_chain": 0,
-    "wrong_labels": 1,
+    "wrong_labels": 7,
     "runner_errors": 0,
-    "accuracy": 0.9545,
+    "accuracy": 0.8939,
     "misses": [
+      {
+        "id": "s06",
+        "why": "label not reproduced",
+        "got": {
+          "invoice_no": "FAKTURA 2026/117",
+          "total": 3250,
+          "currency": "CZK"
+        }
+      },
+      {
+        "id": "s20",
+        "why": "label not reproduced",
+        "got": {
+          "invoice_no": "Faktura 2026-1",
+          "total": 9680,
+          "currency": "CZK"
+        }
+      },
+      {
+        "id": "s06",
+        "why": "label not reproduced",
+        "got": {
+          "invoice_no": "FAKTURA 2026/117",
+          "total": 3250,
+          "currency": "CZK"
+        }
+      },
+      {
+        "id": "s14",
+        "why": "label not reproduced",
+        "got": {
+          "invoice_no": "DOKLAD 9912",
+          "total": 4500,
+          "currency": "CZK"
+        }
+      },
       {
         "id": "s19",
         "why": "label not reproduced",
@@ -29,6 +71,24 @@
           "invoice_no": "#ABC-0001",
           "total": 45,
           "currency": "EUR"
+        }
+      },
+      {
+        "id": "s06",
+        "why": "label not reproduced",
+        "got": {
+          "invoice_no": "FAKTURA 2026/117",
+          "total": 3250,
+          "currency": "CZK"
+        }
+      },
+      {
+        "id": "s20",
+        "why": "label not reproduced",
+        "got": {
+          "invoice_no": "Faktura 2026-1",
+          "total": 9680,
+          "currency": "CZK"
         }
       }
     ],
@@ -47,13 +107,55 @@
       "status": "measured",
       "backend": "ollama",
       "model": "hermes3:8b",
-      "attempted": 22,
-      "exact": 14,
-      "invalid_chain": 3,
-      "wrong_labels": 5,
+      "attempted": 66,
+      "exact": 50,
+      "runs": [
+        18,
+        16,
+        16
+      ],
+      "spread": 2,
+      "invalid_chain": 4,
+      "wrong_labels": 12,
       "runner_errors": 0,
-      "accuracy": 0.6364,
+      "accuracy": 0.7576,
       "misses": [
+        {
+          "id": "s05",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "Ref # A-7781",
+            "total": 49.99,
+            "currency": "EUR"
+          }
+        },
+        {
+          "id": "s06",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "FAKTURA 2026/117",
+            "total": 3250,
+            "currency": "CZK"
+          }
+        },
+        {
+          "id": "s14",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "DOKLAD 9912",
+            "total": 4500,
+            "currency": "CZK"
+          }
+        },
+        {
+          "id": "s20",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "Faktura 2026-1",
+            "total": 9680,
+            "currency": "CZK"
+          }
+        },
         {
           "id": "s02",
           "why": "label not reproduced",
@@ -95,8 +197,45 @@
           "id": "s18",
           "why": "label not reproduced",
           "got": {
-            "invoice_no": "Prijmovy doklad k fakture 771/2026",
-            "total": 999,
+            "invoice_no": "k fakture 771/2026",
+            "total": 1199,
+            "currency": "CZK"
+          }
+        }
+      ]
+    },
+    "14.0": {
+      "status": "measured",
+      "backend": "ollama",
+      "model": "qwen3:14b",
+      "attempted": 66,
+      "exact": 63,
+      "runs": [
+        21,
+        22,
+        20
+      ],
+      "spread": 2,
+      "invalid_chain": 0,
+      "wrong_labels": 3,
+      "runner_errors": 0,
+      "accuracy": 0.9545,
+      "misses": [
+        {
+          "id": "s19",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "#ABC-0001",
+            "total": 45,
+            "currency": "EUR"
+          }
+        },
+        {
+          "id": "s06",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "FAKTURA 2026/117",
+            "total": 3250,
             "currency": "CZK"
           }
         },
@@ -108,25 +247,8 @@
             "total": 9680,
             "currency": "CZK"
           }
-        },
-        {
-          "id": "s22",
-          "why": "no valid chain",
-          "detail": "$.currency: 'Kc' is not in the declared enum"
         }
       ]
-    },
-    "14.0": {
-      "status": "measured",
-      "backend": "ollama",
-      "model": "qwen3:14b",
-      "attempted": 22,
-      "exact": 22,
-      "invalid_chain": 0,
-      "wrong_labels": 0,
-      "runner_errors": 0,
-      "accuracy": 1.0,
-      "misses": []
     }
   },
   "boundary": {
