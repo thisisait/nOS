@@ -271,7 +271,12 @@ pulse:
       runner: subprocess
       command: "{{ playbook_dir }}/tools/run-agent.sh"
       args: ["--agent=librarian", "--trigger=pulse"]
-      schedule: "10 2 * * *"
+      # 02:30, not 02:10 (moved 2026-08-30). Every claude-CLI agent takes the
+      # same mkdir mutex, and conductor:vulnerability-scan fires at 02:00 and
+      # averages 607s with a measured worst case of 1080s. This job waits 300s
+      # for the lock and then dies rc=2 — which it has, twice. Ten minutes of
+      # separation was never enough for a job that can run eighteen.
+      schedule: "30 2 * * *"
       jitter_min: 5
       max_runtime_s: 900
       max_concurrent: 1
