@@ -146,7 +146,14 @@ def score(binding: dict, samples: list[dict], meta: dict, agent: str,
             else:
                 invalid += 1
             misses.append({"id": sample["id"], "why": "no valid chain", "detail": got.get("error")})
-        elif chain == sample["expect"]:
+        # AN EMPTY ANSWER IS AN EMPTY ANSWER. PHP's json_decode gives `[]` for
+        # both `{}` and `[]`, so a model that correctly says "nothing here"
+        # arrives as a list and never equals the label's `{}`. All three
+        # subjects lost the same two samples to that on 2026-08-30 — it
+        # measured the encoding, not the model. Narrow on purpose: only when
+        # BOTH sides are empty, so a model returning `[]` for a document that
+        # does have fields still scores wrong.
+        elif chain == sample["expect"] or (not chain and not sample["expect"]):
             exact += 1
         else:
             wrong += 1

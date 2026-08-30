@@ -474,6 +474,69 @@ row("local-llm-intent", "Intent grading — effectful chains only", _FILED,
          "phrased as 'say in plain language what this will do' for the operator, rather than "
          "as a score, because a score is a comfortable place for a model to hide.")
 
+_VOICE = "2026-08-30"
+
+row("local-llm-voice", "Speak a command, see what it would do, rate what it did", _VOICE,
+    "next", "cortex", parent="local-llm",
+    refs="technosideas/swama · technosideas/voicebox · Apple SpeechAnalyzer (macOS 26) · state/ops-task-families/invoice-extract/family.yml",
+    body="OPERATOR WANT, 2026-08-30: drive nOS by voice — judge the syntax-valid chain BEFORE "
+         "it runs, execute it sandboxed, then rate the action on -1/0/1/2/3. PoC scope is "
+         "DataTable control against `business-partners` (4 rows, already live), never the "
+         "roadmap table. WHY IT IS ITS OWN ROW AND NOT A NOTE: every oracle in this arc so "
+         "far is either code or a model. Code was measured to filter syntax and not sense "
+         "(local-llm-corpus: 20306 of 20306 composed chains validate), and intent grading is "
+         "a model grading a model. A rating typed by the person who spoke the sentence is the "
+         "one label channel that is neither, and it costs the seconds between speaking and "
+         "looking. TWO JUDGEMENTS, NOT ONE: 'is this chain sensible' is asked before "
+         "execution, 'was that action right' after it, and one column meaning both corrupts "
+         "the set — they disagree exactly where the grammar is fine and the world model is "
+         "wrong, which is what qwen3:14b's only two failures already were (unknown_operand, "
+         "namespace_not_resolvable). It does NOT contradict local-llm-intent's refusal of a "
+         "score: that refusal is about a MODEL hiding behind a number, and the plain-language "
+         "preview it asks for is exactly what makes a human rating possible. No new organ, "
+         "port or daemon (loop-contract non-goals stand): ASR is an ingress in front of the "
+         "emitter, and the executor with its binding gate already exists. What dictation does "
+         "NOT solve, so nobody re-sells it later: it supplies the INPUT half of a test case, "
+         "and the expensive half is the label — which is the half the star supplies.")
+
+row("local-llm-voice-asr", "Which ear — and vocabulary before fine-tune", _VOICE,
+    "queued", "cortex", parent="local-llm-voice",
+    refs="developer.apple.com/videos/play/wwdc2025/277 · github.com/senstella/parakeet-mlx · github.com/Trans-N-ai/swama",
+    body="Four candidates, all runnable on this host (macOS 26.6.1, Apple Silicon). Apple "
+         "SpeechAnalyzer/SpeechTranscriber: on-device, no container, no download beyond the "
+         "system model, claimed ~2x Whisper Large V3 Turbo — Swift-only, so it costs a small "
+         "CLI wrapper. parakeet-mlx: pip plus a working CLI today, MLX, 68 minutes of audio "
+         "in 62 seconds. swama: MIT, pure Swift on MLX, OpenAI-compatible "
+         "/v1/audio/transcriptions — so it would join as a ROW in state/llm-backends.yml "
+         "rather than as a new organ; its TechNosIdeas `refused` was decided by plat-ollama "
+         "against ollama as an LLM RUNTIME and never judged the ASR half. voicebox: MIT, "
+         "Whisper plus an MCP server, but its surface is TTS and voice cloning — wider than "
+         "this row wants, and cloning is a separate operator decision deliberately not folded "
+         "in. FINE-TUNING IS NOT THE FIRST MOVE. The failure will be vocabulary — opcode "
+         "names, tax:02.02, service ids — and both SpeechAnalyzer contextualStrings and "
+         "Whisper initial_prompt take a bias list the estate can already generate from the "
+         "opcode registry and the taxonomy. Measure the hint first: one example in the prompt "
+         "moved hermes3:8b from 0/6 to 2/6, and that gap was not in the parameters either.")
+
+row("local-llm-voice-rating", "The star is a label, and it needs a writer that is not the rated thing", _VOICE,
+    "queued", "agents", parent="local-llm-voice",
+    refs="state/ops-task-families/invoice-extract/family.yml · docs/idea/02-cortex-lang.md",
+    body="-1/0/1/2/3 needs every value defined before the first one is typed or the set is "
+         "noise: -1 must mean 'would have done harm' and 0 'useless but harmless', because "
+         "those are different signals and a scale that blurs them teaches the blur. Recorded "
+         "per utterance: both ratings, the transcript, the emitted chain, the ASR engine and "
+         "the model uri — the sentence is the constant and the BINDING is the variable "
+         "(cortex-lang contract v2), so a run that does not record which model spoke is not "
+         "comparable to any other. WHERE IT LANDS is a measurement, not a preference: wing.db "
+         "already carries the lineage key (actor_action_id) and 390 cortex_stage events, and "
+         "a KEAP DataTable already renders in face with no schema work — decide after "
+         "counting what the PoC writes, not before. THE STANDING RULE HOLDS: local-llm-model "
+         "forbids training on loop verdicts or judge outcomes. An operator rating is not a "
+         "judge outcome — it is a hand-written label, the same provenance invoice-extract's "
+         "samples have, and its own header forbids a model labelling a set it is later scored "
+         "against. The day anything but a human writes this column, that distinction is gone "
+         "and so is the corpus.")
+
 # ── Local models — measured 2026-08-08, and the numbers reordered the arc ───
 #
 # The four rows above assume a model choice nobody had measured. One afternoon

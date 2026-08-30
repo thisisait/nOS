@@ -134,6 +134,35 @@ def test_the_absence_family_exists_and_labels_omissions() -> None:
         "one where a model most wants to fill the object in")
 
 
+def test_an_empty_answer_matches_an_empty_label() -> None:
+    """PHP's `json_decode` returns `[]` for both `{}` and `[]`, so the honest
+    "nothing is extractable here" arrives at the oracle as a LIST and never
+    equals the label's dict. Measured 2026-08-30: all three subjects — 8B, 14B
+    and the hosted model — lost the same two samples (a04, a08) to it, which is
+    the signature of an oracle bug rather than a capability difference.
+
+    Behavioural, through `score()` with a stub runner: a source assertion here
+    would be the prose-detector trap this file already carries one scar from."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "ops_harness", REPO / "tools/nos-ops-harness.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    stub = REPO / "tests/anatomy/_stub_empty_runner.sh"
+    got = mod.score(
+        binding={"backend": "stub", "model": "stub", "size_b": 0, "model_env": None},
+        samples=[{"id": "empty", "input": "x", "expect": {}},
+                 {"id": "full", "input": "x", "expect": {"invoice_no": "A"}}],
+        meta={}, agent="ops-extract", cmd=["sh", str(stub)], timeout=30)
+    assert got["exact"] == 1 and got["wrong_labels"] == 1, (
+        f"an empty chain scored {got['exact']} exact / {got['wrong_labels']} "
+        "wrong against one empty and one non-empty label; expected 1/1. If "
+        "exact is 0 the harness is measuring the JSON encoding, not the model; "
+        "if wrong is 0 an empty answer now passes for documents that DO carry "
+        "fields, which is worse.")
+
+
 def test_a_refused_answer_says_why() -> None:
     """`chain: null, error: null` cannot distinguish 'omitted a required field'
     from 'answered in prose', and those call for opposite fixes. OneShot has
