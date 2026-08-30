@@ -581,12 +581,19 @@ run_keap_db() {
 
     # PRIMARY PATH — inside the container.
     #
-    # Not a stylistic choice: backup.sh runs from launchd, which has no Full
-    # Disk Access for /Volumes, so a host-side read under nos_data_root fails
-    # with `authorization denied` — this source reported success=false every
-    # night from 2026-07-25 to 2026-07-30 and never produced an object. Docker
-    # Desktop holds the grant, so reading via the container's own bind mount
-    # removes the whole failure class rather than working around it.
+    # Not a stylistic choice: backup.sh runs from launchd, whose context has
+    # no Full Disk Access, so a host-side read under nos_data_root fails with
+    # `authorization denied` — this source reported success=false every night
+    # from 2026-07-25 to 2026-07-30 and never produced an object.
+    #
+    # THE GRANT NAMED HERE WAS WRONG UNTIL 2026-08-30. This said "Docker
+    # Desktop holds the grant", and it does not: `tools/permission-status.py
+    # --grants` reads the TCC log and finds `com.docker.docker` refused
+    # `SystemPolicyAllFiles` 16 times in two days. What Docker holds is
+    # `SystemPolicyRemovableVolumes`, ALLOWED — a narrower grant that happens
+    # to be exactly the right one, because /Volumes/SSD1TB is a REMOVABLE
+    # volume and Full Disk Access was never the thing this path needed.
+    # The route is correct; the reason on the label was not.
     if docker exec "${KEAP_CONTAINER}" true >/dev/null 2>&1; then
         log "keap-db: online backup inside ${KEAP_CONTAINER} (node:sqlite backup())"
         keap_backup_js \
@@ -640,9 +647,15 @@ run_keap_db() {
         log "keap-db: container ${KEAP_CONTAINER} not available — falling back to host sqlite3"
     fi
 
-    # FALLBACK — host sqlite3. Correct, and it works when the process running
-    # this script HAS Full Disk Access (an interactive Terminal.app does). Kept
-    # so a stopped container degrades instead of losing the source outright.
+    # FALLBACK — host sqlite3. Kept so a stopped container degrades instead of
+    # losing the source outright.
+    #
+    # DO NOT READ THIS AS "works from a terminal". It used to say an
+    # interactive Terminal.app has Full Disk Access; on this host the terminal
+    # is refused it 34 times in two days (`permission-status.py --grants`).
+    # What makes the fallback work from a shell is the REMOVABLE VOLUMES grant
+    # the terminal does hold — so it works for /Volumes and would still fail on
+    # a genuinely FDA-gated path, and it fails under launchd either way.
     if ! command -v sqlite3 >/dev/null 2>&1; then
         log "keap-db: FAILED — no container and sqlite3 not on PATH"
         status_append "keap-db" 0 "$(( $(now_ms) - start ))" 0

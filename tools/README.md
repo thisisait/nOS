@@ -54,6 +54,7 @@ worse than none, because it reads as complete.
 - `loop-status.py` — Which weakness sources actually produce proposals, and what came of them.
 - `npm-ioc-scan.py` — Cross-check every installed npm package against a published IOC list.
 - `plugin-wiring-report.py` — Plugin wiring report — capability matrix + contract checks.
+- `permission-status.py` — What macOS will and will not let this estate do, in one place.
 - `red-status.py` — What is red on this estate right now.
 - `rem-status.py` — What the security queue says, right now.
 - `roadmap-status.py` — What the roadmap says, right now.

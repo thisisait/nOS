@@ -61,9 +61,11 @@ backup_keap_db: "{{ install_keap | default(false) }}"
 backup_keap_db_path: "{{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}/keap.db"
 # Container that already has keap.db bind-mounted. The backup runs INSIDE it
 # (node:sqlite `backup()`), which is what makes the source work at all: the
-# launchd context that runs backup.sh has no Full Disk Access for /Volumes, so
-# every host-path read under nos_data_root fails with "authorization denied".
-# Docker Desktop does have the grant, and the container reads its own mount.
+# launchd context that runs backup.sh has no Full Disk Access, so every
+# host-path read under nos_data_root fails with "authorization denied".
+# Docker reads its own mount — with SystemPolicyRemovableVolumes, NOT Full
+# Disk Access, which it is refused (corrected 2026-08-30; ask
+# tools/permission-status.py --grants rather than restating this).
 # `keap_db_container_path` is where the store lives INSIDE that container.
 backup_keap_container: "{{ keap_container_name | default('iiab-keap-1') }}"
 backup_keap_db_container_path: "/data/keap.db"
