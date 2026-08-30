@@ -13,7 +13,7 @@ The oracle is this file. The model never assesses itself, and a size nobody
 ran is UNKNOWN in the report — never a pass, never a blank.
 
 Usage: tools/nos-ops-harness.py --family <dir> [--agent <name>] [--registry <yml>]
-       [--out <json>] [--threshold 0.9] [--timeout 180] [--limit N]
+       [--out <json>] [--threshold 0.9] [--timeout 180] [--limit N] [--repeat N]
 
     tools/nos-ops-harness.py --family state/ops-task-families/invoice-extract \\
                              --agent ops-extract
@@ -130,8 +130,47 @@ def run_one(cmd: list[str], agent: str, prompt: str, binding: dict, timeout: int
 
 
 def score(binding: dict, samples: list[dict], meta: dict, agent: str,
-          cmd: list[str], timeout: int) -> dict:
-    """The code oracle: exact reproduction of the hand-written label."""
+          cmd: list[str], timeout: int, repeat: int = 1) -> dict:
+    """The code oracle over `repeat` passes; accuracy is pooled across them.
+
+    ONE RUN IS NOT A MEASUREMENT, measured 2026-08-30: the same 22 samples
+    against the same hermes3:8b scored 17/22 and then 14/22 hours apart, while
+    qwen3:14b scored 22/22 both times. A single pass cannot tell a
+    three-sample GAP from a three-sample DRIFT — and "is the bigger model
+    dramatically better" is exactly a question about gap size, so the tool
+    could not answer the question it exists for. `runs` carries each pass's
+    exact count; the spread between them is the floor below which a
+    difference between two subjects means nothing.
+    """
+    passes = [_one_pass(binding, samples, meta, agent, cmd, timeout)
+              for _ in range(max(1, repeat))]
+    exact = sum(p["exact"] for p in passes)
+    invalid = sum(p["invalid"] for p in passes)
+    wrong = sum(p["wrong"] for p in passes)
+    errors = sum(p["errors"] for p in passes)
+    misses = [m for p in passes for m in p["misses"]]
+    attempted = len(samples) * len(passes) - errors
+    return {
+        "status": "measured" if attempted else "UNKNOWN",
+        "backend": binding["backend"],
+        "model": binding["model"],
+        "attempted": attempted,
+        "exact": exact,
+        # Per-pass exacts, out of len(samples) each. A one-element list is the
+        # caveat rather than the absence of one: it says nobody repeated this.
+        "runs": [p["exact"] for p in passes],
+        "spread": max(p["exact"] for p in passes) - min(p["exact"] for p in passes),
+        "invalid_chain": invalid,
+        "wrong_labels": wrong,
+        "runner_errors": errors,
+        "accuracy": round(exact / attempted, 4) if attempted else None,
+        "misses": misses[:10],
+    }
+
+
+def _one_pass(binding: dict, samples: list[dict], meta: dict, agent: str,
+              cmd: list[str], timeout: int) -> dict:
+    """One sweep of the family. Counters only — score() pools them."""
     exact = invalid = wrong = errors = 0
     misses: list[dict] = []
     template = str(meta.get("prompt_template", "{input}"))
@@ -158,19 +197,8 @@ def score(binding: dict, samples: list[dict], meta: dict, agent: str,
         else:
             wrong += 1
             misses.append({"id": sample["id"], "why": "label not reproduced", "got": chain})
-    attempted = len(samples) - errors
-    return {
-        "status": "measured" if attempted else "UNKNOWN",
-        "backend": binding["backend"],
-        "model": binding["model"],
-        "attempted": attempted,
-        "exact": exact,
-        "invalid_chain": invalid,
-        "wrong_labels": wrong,
-        "runner_errors": errors,
-        "accuracy": round(exact / attempted, 4) if attempted else None,
-        "misses": misses[:10],
-    }
+    return {"exact": exact, "invalid": invalid, "wrong": wrong,
+            "errors": errors, "misses": misses}
 
 
 def reference_binding(registry: pathlib.Path, backend: str) -> dict:
@@ -209,7 +237,8 @@ def reference_binding(registry: pathlib.Path, backend: str) -> dict:
 
 def build_report(family: pathlib.Path, agent: str | None, registry: pathlib.Path,
                  threshold: float, cmd: list[str], timeout: int, limit: int | None,
-                 ref_backend: str | None = None, ref_agent: str | None = None) -> dict:
+                 ref_backend: str | None = None, ref_agent: str | None = None,
+                 repeat: int = 1) -> dict:
     meta, samples = load_family(family)
     if limit:
         samples = samples[:limit]
@@ -226,7 +255,7 @@ def build_report(family: pathlib.Path, agent: str | None, registry: pathlib.Path
             by_size[key] = {"status": "UNKNOWN", "backend": binding["backend"],
                             "reason": "no --agent given: nothing to run in one_shot mode"}
         else:
-            by_size[key] = score(binding, samples, meta, agent, cmd, timeout)
+            by_size[key] = score(binding, samples, meta, agent, cmd, timeout, repeat)
 
     reference = None
     if ref_backend:
@@ -239,7 +268,7 @@ def build_report(family: pathlib.Path, agent: str | None, registry: pathlib.Path
         elif not (ref_agent or agent):
             reference = {"status": "UNKNOWN", "reason": "no agent to run"}
         else:
-            reference = score(binding, samples, meta, ref_agent or agent, cmd, timeout)
+            reference = score(binding, samples, meta, ref_agent or agent, cmd, timeout, repeat)
             reference["not_a_rung"] = (
                 "a hosted model has no size this tool can know; it is scored by "
                 "the same oracle and kept out of the ladder on purpose")
@@ -297,6 +326,9 @@ def main() -> int:
     ap.add_argument("--threshold", type=float, default=0.9)
     ap.add_argument("--timeout", type=int, default=180, help="seconds per sample")
     ap.add_argument("--limit", type=int, help="score only the first N samples")
+    ap.add_argument("--repeat", type=int, default=1,
+                    help="score the family N times; `runs` and `spread` in the report "
+                         "are what say whether a difference between subjects is real")
     ap.add_argument("--reference-backend", help="also score a HOSTED backend as a reference line")
     ap.add_argument("--reference-agent", help="agent for the reference run (its gdpr record must permit the transfer)")
     args = ap.parse_args()
@@ -304,7 +336,7 @@ def main() -> int:
     cmd = shlex.split(os.environ.get("NOS_OPS_HARNESS_CMD", DEFAULT_CMD))
     report = build_report(args.family, args.agent, args.registry,
                           args.threshold, cmd, args.timeout, args.limit,
-                          args.reference_backend, args.reference_agent)
+                          args.reference_backend, args.reference_agent, args.repeat)
     # ONE STABLE NAME PER FAMILY. Passing --out for each run left four report
     # files for two families by 2026-08-30, three of them superseded and none
     # of them saying so — the estate's signature defect wearing a filename.
