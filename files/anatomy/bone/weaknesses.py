@@ -1335,7 +1335,34 @@ def _source_pulse_runs(dirty: set[str]) -> SourceReport:
         conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
         conn.row_factory = sqlite3.Row
         try:
-            rows = conn.execute(
+            # A FINDING IS NOT A FAILURE, and the job table already says which
+            # codes mean which. `discovery:contradiction-scan` declares [1] and
+            # `loop:propose` declares [1,3] — both exit 1 to say "I found
+            # something", both were being mined here as red, and a streak of
+            # three ratchets that to HIGH. Measured 2026-08-30: of six jobs
+            # this source called failed, two had succeeded, and one of them was
+            # the LOOP'S OWN ENTRY — so the loop reported itself as a HIGH
+            # weakness its own deny rule forbids it from proposing against.
+            # Same defect as hidden fee 34, one reader over.
+            findings = {}
+            for job in conn.execute(
+                "SELECT id, findings_exit_codes FROM pulse_jobs "
+                "WHERE findings_exit_codes IS NOT NULL"
+            ).fetchall():
+                try:
+                    codes = json.loads(job["findings_exit_codes"] or "[]")
+                except (TypeError, ValueError):
+                    continue  # a malformed declaration must not silence a red job
+                if isinstance(codes, list):
+                    findings[job["id"]] = {int(c) for c in codes
+                                           if isinstance(c, (int, str)) and str(c).lstrip("-").isdigit()}
+
+            def _is_failure(job_id: str, code: object) -> bool:
+                """Red means red. Not null, not zero, not a declared finding."""
+                return (code is not None and code != 0
+                        and int(code) not in findings.get(job_id, set()))
+
+            rows = [r for r in conn.execute(
                 """
                 SELECT job_id, exit_code, fired_at, stderr_tail
                   FROM (SELECT job_id, exit_code, fired_at, stderr_tail,
@@ -1344,7 +1371,7 @@ def _source_pulse_runs(dirty: set[str]) -> SourceReport:
                           FROM pulse_runs)
                  WHERE rn = 1 AND exit_code IS NOT NULL AND exit_code <> 0
                 """
-            ).fetchall()
+            ).fetchall() if _is_failure(r["job_id"], r["exit_code"])]
             streaks = {}
             for row in rows:
                 recent = conn.execute(
@@ -1354,7 +1381,10 @@ def _source_pulse_runs(dirty: set[str]) -> SourceReport:
                 ).fetchall()
                 streak = 0
                 for r in recent:
-                    if r["exit_code"] is None or r["exit_code"] == 0:
+                    # A findings run breaks the streak exactly as a green one
+                    # does — otherwise a job that finds something every night
+                    # ratchets to HIGH for working.
+                    if not _is_failure(row["job_id"], r["exit_code"]):
                         break
                     streak += 1
                 streaks[row["job_id"]] = streak

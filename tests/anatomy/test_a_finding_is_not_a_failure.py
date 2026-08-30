@@ -96,3 +96,86 @@ def test_the_dashboard_says_so_where_a_reader_will_see_it() -> None:
     assert "findings_exit_codes" in prose, (
         "no panel explains that a non-zero exit can be a finding — the number "
         "is right and the reader has no way to know why it differs from `wc`")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# THE SAME RULE, ONE MORE ORGAN OVER — added 2026-08-30.
+#
+# The gates above cover the Grafana panels. The WEAKNESS READER had the identical
+# defect and it was worse, because the loop consumes it: `_source_pulse_runs`
+# selected `exit_code <> 0` and never read the declaration. Measured against the
+# live ledger, of six jobs it called failed, TWO had succeeded —
+# `discovery:contradiction-scan` (declares [1]) and `loop:propose` (declares
+# [1,3]).
+#
+# `loop:propose` is the LOOP'S OWN ENTRY. Three such nights ratchet a weakness to
+# HIGH (`_PULSE_STREAK_DEPTH`), so the loop mined itself as a high-severity
+# weakness — one its own `files/anatomy/bone/**` deny rule forbids it from
+# proposing against — for exiting 1 to say it had found work. Fable's review named
+# this shape before it was measured (docs/idea/19-fable-review-2.md §3.1).
+#
+# Retro-verified 2026-08-30 by restoring the bare `exit_code <> 0` filter.
+
+def test_the_weakness_reader_does_not_mine_a_finding_as_a_failure(tmp_path) -> None:
+    import importlib.util
+    import os
+    import sqlite3
+    import sys
+
+    db = tmp_path / "wing.db"
+    conn = sqlite3.connect(db)
+    conn.executescript("""
+        CREATE TABLE pulse_jobs (id TEXT PRIMARY KEY, findings_exit_codes TEXT);
+        CREATE TABLE pulse_runs (job_id TEXT, exit_code INT, fired_at TEXT, stderr_tail TEXT);
+    """)
+    conn.executemany("INSERT INTO pulse_jobs VALUES (?,?)", [
+        ("finder", "[1,3]"),      # exits 1 to say "found something"
+        ("breaker", None),        # no declaration: 1 is a failure
+        ("malformed", "{oops"),   # a bad declaration must not silence a red job
+    ])
+    conn.executemany("INSERT INTO pulse_runs VALUES (?,?,?,?)", [
+        # Three findings nights in a row: the streak that used to ratchet to HIGH.
+        ("finder", 1, "2026-08-28T01:00:00Z", ""),
+        ("finder", 1, "2026-08-29T01:00:00Z", ""),
+        ("finder", 1, "2026-08-30T01:00:00Z", ""),
+        ("breaker", 1, "2026-08-30T01:00:00Z", "boom"),
+        ("malformed", 1, "2026-08-30T01:00:00Z", "boom"),
+    ])
+    conn.commit()
+    conn.close()
+
+    spec = importlib.util.spec_from_file_location(
+        "weaknesses_findings", REPO / "files/anatomy/bone/weaknesses.py")
+    mod = importlib.util.module_from_spec(spec)
+    old = os.environ.get("WING_DB_PATH")
+    os.environ["WING_DB_PATH"] = str(db)
+    # weaknesses.py imports its siblings by bare name (`import judges`), the way
+    # Bone runs it. Put its own directory on the path rather than rewriting the
+    # module to suit a test.
+    sys.path.insert(0, str(REPO / "files/anatomy/bone"))
+    # Registered before exec: `@dataclass` resolves its annotations through
+    # sys.modules[cls.__module__], which is None for a module that ran without
+    # being registered — and the failure names dataclasses, not this line.
+    sys.modules[spec.name] = mod
+    try:
+        spec.loader.exec_module(mod)
+        report = mod._source_pulse_runs(set())
+    finally:
+        sys.path.remove(str(REPO / "files/anatomy/bone"))
+        sys.modules.pop(spec.name, None)
+        if old is None:
+            os.environ.pop("WING_DB_PATH", None)
+        else:
+            os.environ["WING_DB_PATH"] = old
+
+    reported = {w.weakness_id: w for w in report.weaknesses}
+    assert "pulse:finder" not in reported, (
+        "a job that declares exit 1 as a finding is reported as failed — three "
+        "such nights ratchet it to HIGH, which is how the loop came to mine its "
+        "own entry as a weakness it may not fix")
+    assert "pulse:breaker" in reported, (
+        "a job with NO declaration must still be red on exit 1; the fix must "
+        "not become a blanket amnesty")
+    assert "pulse:malformed" in reported, (
+        "a malformed findings_exit_codes silenced a red job — an unparseable "
+        "declaration is not a declaration")
