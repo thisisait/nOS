@@ -84,16 +84,31 @@ Gate: `tests/anatomy/test_a_snapshot_is_opened_before_it_is_uploaded.py`.
 
 ## Not closed
 
-**The two bad objects are still in S3** and both are inside the retention
-window, as are their good neighbours — 2026-08-29 carries a complete
-`pages=177199` / 347 MB snapshot, so nothing is at risk of being unrecoverable.
-Replacing today's object needs a converge first (so the new verifier is the one
-that runs) and is an operator act, because it overwrites a stored artifact.
+**2026-08-30's object was replaced and verified** the same morning, after the
+converge put the new reader on the host: a keap-only run logged `pages=177199`
+then `snapshot verified nodes/relations/objects=1711/5084/345` and uploaded
+347 MB over the corrupt 310 MB; the restore drill then read it back from S3 —
+`keap-db: OK (1711/5084/345)`, drill green. **2026-08-13's object is still
+corrupt in S3** and stays that way: it is inside the retention window with good
+neighbours either side, so nothing is unrecoverable, and rewriting a dated
+backup with today's data would be a lie about what that date held.
 
-**Why node dies mid-copy is unknown.** Twice in 29 nights, no error text
-captured either time — because the pipeline that would have carried it fed a
-`while`. With the substitution in place the next occurrence records its own
-reason. No guess is recorded here.
+**Why node dies mid-copy is unknown — but it IS a kill, not a refusal.**
+Narrowed 2026-08-30 by reproducing both candidate signatures against the live
+container:
+
+| | node output | output file | old `test -s` |
+| --- | --- | --- | --- |
+| source unreadable (a permission denial) | **loud stack trace**, rc=1 | **none** | false — no upload |
+| `kill -9` mid-copy | **silence** | **partial, 155 MB of 726** | **true — would upload** |
+| the two bad nights | **silence** | **partial, 296 / 310 MB** | uploaded |
+
+So a TCC or filesystem permission denial is excluded: it is loud and leaves no
+file. What matches is a process killed without a signal handler running. WHICH
+kill is still unknown — the container's own cgroup shows 512 MB with the backup
+peaking at 76 MB, the Docker VM had 8.6 GB free, and nothing distinguished
+those two nights in the pulse schedule. With the exit code now logged, `137`
+will say so the next time; no cause is guessed here.
 
 **The wing-db leg has no equivalent check.** It replays a SQL dump into a
 scratch database at drill time, which is a real verification, but it happens
