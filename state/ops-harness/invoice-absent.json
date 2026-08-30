@@ -8,19 +8,25 @@
   },
   "family": "invoice-absent",
   "samples": 10,
-  "generated_at": "2026-08-30T14:15:58+00:00",
+  "generated_at": "2026-08-30T16:51:00+00:00",
   "registry": "/Users/pazny/projects/nOS/state/llm-backends.yml",
   "agent": "ops-extract",
   "reference": {
     "status": "measured",
     "backend": "minimax",
     "model": "MiniMax-M2.7",
-    "attempted": 10,
-    "exact": 8,
+    "attempted": 30,
+    "exact": 25,
+    "runs": [
+      8,
+      9,
+      8
+    ],
+    "spread": 1,
     "invalid_chain": 0,
-    "wrong_labels": 2,
+    "wrong_labels": 5,
     "runner_errors": 0,
-    "accuracy": 0.8,
+    "accuracy": 0.8333,
     "misses": [
       {
         "id": "a03",
@@ -36,6 +42,31 @@
         "why": "label not reproduced",
         "got": {
           "invoice_no": "Zalohova faktura 2026/551"
+        }
+      },
+      {
+        "id": "a03",
+        "why": "label not reproduced",
+        "got": {
+          "invoice_no": "FV-40119",
+          "total": 8750,
+          "currency": "CZK"
+        }
+      },
+      {
+        "id": "a02",
+        "why": "label not reproduced",
+        "got": {
+          "invoice_no": "INVOICE 2026-0912"
+        }
+      },
+      {
+        "id": "a03",
+        "why": "label not reproduced",
+        "got": {
+          "invoice_no": "FV-40119",
+          "total": 8750,
+          "currency": "CZK"
         }
       }
     ],
@@ -54,13 +85,61 @@
       "status": "measured",
       "backend": "ollama",
       "model": "hermes3:8b",
-      "attempted": 10,
-      "exact": 4,
-      "invalid_chain": 4,
-      "wrong_labels": 2,
+      "attempted": 30,
+      "exact": 12,
+      "runs": [
+        4,
+        4,
+        4
+      ],
+      "spread": 0,
+      "invalid_chain": 11,
+      "wrong_labels": 7,
       "runner_errors": 0,
       "accuracy": 0.4,
       "misses": [
+        {
+          "id": "a01",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "Dodaci list",
+            "total": 3200,
+            "currency": "CZK"
+          }
+        },
+        {
+          "id": "a02",
+          "why": "no valid chain",
+          "detail": "$.total: expected number, got null"
+        },
+        {
+          "id": "a03",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "Faktura c. FV-40119",
+            "total": 8750,
+            "currency": "CZK"
+          }
+        },
+        {
+          "id": "a05",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "INVOICE",
+            "total": 412.6,
+            "currency": "EUR"
+          }
+        },
+        {
+          "id": "a06",
+          "why": "no valid chain",
+          "detail": "$.total: expected number, got null"
+        },
+        {
+          "id": "a10",
+          "why": "no valid chain",
+          "detail": "$.currency: 'Kc' is not in the declared enum"
+        },
         {
           "id": "a01",
           "why": "no valid chain",
@@ -84,20 +163,10 @@
           "id": "a05",
           "why": "label not reproduced",
           "got": {
-            "invoice_no": "INVOICE",
+            "invoice_no": "Ref: see attached schedule",
             "total": 412.6,
             "currency": "EUR"
           }
-        },
-        {
-          "id": "a06",
-          "why": "no valid chain",
-          "detail": "$.total: expected number, got null"
-        },
-        {
-          "id": "a10",
-          "why": "no valid chain",
-          "detail": "$.currency: 'Kc' is not in the declared enum"
         }
       ]
     },
@@ -105,13 +174,46 @@
       "status": "measured",
       "backend": "ollama",
       "model": "qwen3:14b",
-      "attempted": 10,
-      "exact": 9,
+      "attempted": 30,
+      "exact": 26,
+      "runs": [
+        9,
+        8,
+        9
+      ],
+      "spread": 1,
       "invalid_chain": 0,
-      "wrong_labels": 1,
+      "wrong_labels": 4,
       "runner_errors": 0,
-      "accuracy": 0.9,
+      "accuracy": 0.8667,
       "misses": [
+        {
+          "id": "a07",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "2026-0417",
+            "total": 240,
+            "currency": "EUR"
+          }
+        },
+        {
+          "id": "a03",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "FV-40119",
+            "total": 8750,
+            "currency": "CZK"
+          }
+        },
+        {
+          "id": "a07",
+          "why": "label not reproduced",
+          "got": {
+            "invoice_no": "2026-0417",
+            "total": 240,
+            "currency": "EUR"
+          }
+        },
         {
           "id": "a07",
           "why": "label not reproduced",
@@ -126,9 +228,9 @@
   },
   "boundary": {
     "threshold": 0.9,
-    "status": "MEASURED",
-    "chain_tier_floor_b": 14.0,
+    "status": "UNKNOWN",
+    "chain_tier_floor_b": null,
     "unmeasured_sizes_b": [],
-    "note": "smallest size at or above the threshold"
+    "note": "every measured size fell below the threshold; the floor is above what was run"
   }
 }

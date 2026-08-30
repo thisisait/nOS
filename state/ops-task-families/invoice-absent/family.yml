@@ -52,17 +52,27 @@
 # opposite — "a loosened oracle is worth less than an honest 7" — which was
 # defending an oracle bug as rigour.
 #
-#   FINAL, empty==empty, 2026-08-30
-#     hermes3:8b      4/10   invalid 4   wrong 2
-#     qwen3:14b       9/10   invalid 0   wrong 1
-#     MiniMax-M2.7    8/10   invalid 0   wrong 2   (hosted, not a rung)
+#   SINGLE PASS, empty==empty, 2026-08-30
+#     hermes3:8b 4/10 · qwen3:14b 9/10 · MiniMax-M2.7 8/10
 #
-# The 14B beats the hosted model here and on invoice-extract (22/22 vs 20/22).
-# The remaining 14B miss is a07 — a credit note, where it returned the invoice
-# the note REFERENCES instead of the note's own number. A genuine comprehension
-# miss, and the only one left. MiniMax's two are the same shape as its
-# extract-family misses: the label carried along with the number
-# ("Zalohova faktura 2026/551"), and a currency it was not shown.
+#   THREE PASSES EACH, pooled (`--repeat 3`):
+#     hermes3:8b     runs [4, 4, 4]   spread 0   12/30   0.400
+#     qwen3:14b      runs [9, 8, 9]   spread 1   26/30   0.867
+#     MiniMax-M2.7   runs [8, 9, 8]   spread 1   25/30   0.833
+#
+# THE 14B AND THE HOSTED MODEL ARE THE SAME HERE, 26 against 25 with a spread
+# of one on each. The single pass showed 9 vs 8 and the temptation was to read
+# a winner; there is none. What IS unambiguous is the 8B at 12/30 with spread
+# ZERO — it fails the same four samples every time. That is not variance, it is
+# a capability line: eleven of its thirty answers are objects the schema
+# refuses at all, against zero for either of the others.
+#
+# TWO CONSISTENT MISSES, both 3 of 3 and so not noise either:
+#   qwen3:14b     a07, the credit note — it returns the invoice the note
+#                 REFERENCES rather than the note's own number, every time.
+#   MiniMax-M2.7  a03, every pass.
+# A miss that repeats is a comprehension finding; a miss that comes and goes is
+# the spread. Only the repeat run can tell them apart, which is the point.
 #
 # Labels written by hand. A model may not label a set it is scored against.
 name: invoice-absent
