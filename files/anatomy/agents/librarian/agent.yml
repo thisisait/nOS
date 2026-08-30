@@ -159,7 +159,17 @@ pulse:
       runner: subprocess
       command: "{{ playbook_dir }}/tools/run-agent.sh"
       args: ["--agent=librarian", "--trigger=pulse"]
-      schedule: "10 5 * * *"
+      # 05:35, AFTER the producer. It was 05:10 and `keap:keap-lint` — the job
+      # that FILLS the lint queue — fires at 05:15, so every night since these
+      # schedules were set the judge ruled on the PREVIOUS night's queue and
+      # nothing said so. Measured 2026-08-30 across the run history: judge
+      # 05:11-05:14, keap-lint 05:15-05:18, every single night.
+      #
+      # 05:35 clears keap-lint's worst end (05:19, max 21s) and cortex's
+      # corpus-diff at 05:30, so the judge sees a queue filled the same night.
+      # The night finishes ~25 min later; ordering is worth more than latency
+      # when the alternative is a verdict on stale input.
+      schedule: "35 5 * * *"
       jitter_min: 5
       max_runtime_s: 600
       max_concurrent: 1
