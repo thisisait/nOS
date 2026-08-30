@@ -38,7 +38,18 @@ import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_REGISTRY = REPO / "state" / "llm-backends.yml"
-DEFAULT_CMD = f"php {REPO / 'files/anatomy/wing/bin/run-agent.php'}"
+# tools/run-agent.sh, NOT `php bin/run-agent.php` (corrected 2026-08-30).
+#
+# The wrapper exists precisely to stop what calling the php directly does: its
+# own first paragraph describes the symptom — an unset NOS_REPO_ROOT makes
+# `getenv()` return FALSE, which is a TypeError deep in the DI container and
+# names MigrationWriteTool rather than the missing variable. This harness
+# bypassed the wrapper and hit exactly that, 44 times, reporting every one as
+# "runner emitted no JSON summary".
+#
+# The wrapper also passes the running daemon's environment through and takes
+# the agent mutex, both of which a measurement wants.
+DEFAULT_CMD = str(REPO / "tools/run-agent.sh")
 # The tier whose answer the ops plane's tool surface waits on.
 TIER_B = (3.0, 7.0)
 

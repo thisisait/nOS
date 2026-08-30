@@ -4,23 +4,23 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 238,
-    "edges": 270,
+    "nodes": 240,
+    "edges": 271,
     "nodes_pulse": 30,
     "nodes_judge": 5,
     "nodes_gateset": 4,
     "nodes_weakness": 7,
     "nodes_daemon": 12,
     "nodes_service": 64,
-    "nodes_resource": 14,
+    "nodes_resource": 15,
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 55,
     "nodes_table": 16,
     "nodes_doctrine": 13,
     "nodes_faceapp": 5,
-    "nodes_agent": 8,
-    "edges_data": 187,
+    "nodes_agent": 9,
+    "edges_data": 188,
     "edges_trigger": 37,
     "edges_temporal": 5,
     "edges_mutex": 21,
@@ -122,6 +122,18 @@
       ],
       "anchor": "02.02.09",
       "description": "Agent ceremony 'migration-author' (migration-authoring), mode=None, runner_status=parked — primary claude-sonnet on backend anthropic (the register default, undeclared)"
+    },
+    "agent:ops-extract": {
+      "kind": "agent",
+      "source": "files/anatomy/agents/ops-extract/agent.yml",
+      "charter": "measurement-subject",
+      "runner_status": "unproven",
+      "primary_model": "openai-local-haiku",
+      "backend": "ollama",
+      "backend_declared": true,
+      "tools": [],
+      "anchor": "02.02.09",
+      "description": "Agent ceremony 'ops-extract' (measurement-subject), mode=None, runner_status=unproven — primary openai-local-haiku on backend ollama"
     },
     "agent:proposer": {
       "kind": "agent",
@@ -1766,6 +1778,16 @@
       "anchor": "02.02.06",
       "description": "LLM backend 'mistral-eu' — a permitted orchestrator row (protocol openai, eu_resident=True), armed by mistral_enabled"
     },
+    "resource:backend-ollama": {
+      "kind": "resource",
+      "source": "state/llm-backends.yml",
+      "protocol": "openai",
+      "eu_resident": true,
+      "enabled_flag": "ollama_enabled",
+      "is_default": false,
+      "anchor": "02.02.06",
+      "description": "LLM backend 'ollama' — a permitted orchestrator row (protocol openai, eu_resident=True), armed by ollama_enabled"
+    },
     "resource:bash-read-only": {
       "kind": "resource",
       "source": "derived from agent tools",
@@ -3319,6 +3341,13 @@
       "to": "agent:surveyor",
       "kind": "data",
       "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend"
+    },
+    {
+      "from": "resource:backend-ollama",
+      "to": "agent:ops-extract",
+      "kind": "data",
+      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
       "derived": "agent-backend"
     },
     {

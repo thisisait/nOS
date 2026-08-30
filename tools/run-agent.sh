@@ -194,7 +194,7 @@ PY
     if agent_ak_token="$(pulse_mint_agent_token "$grant_env" 2>"$mint_err")" \
        && [[ -n "$agent_ak_token" ]]; then
         export NOS_AUTHENTIK_TOKEN="$agent_ak_token"
-        echo "[run-agent] minted an Authentik token for nos-${AGENT_NAME}"
+        echo "[run-agent] minted an Authentik token for nos-${AGENT_NAME}" >&2
     else
         # Print the mint's OWN reason. "No token" is not a diagnosis, and the
         # operator shell reaches here for a mundane one — NOS_AUTHENTIK_URL is
@@ -220,7 +220,7 @@ if [[ ${#missing[@]} -gt 0 ]]; then
 fi
 
 if [[ "$SHOW_ENV" == "1" ]]; then
-    echo "[run-agent] resolved from the running ${LABEL}:"
+    echo "[run-agent] resolved from the running ${LABEL}:" >&2
     for name in "${REQUIRED[@]}" "${REPORTED[@]}"; do
         value="${!name:-}"
         [[ -z "$value" ]] && { printf '  %-26s <absent>\n' "$name"; continue; }
@@ -251,11 +251,16 @@ fi
 
 # A bound run is about to spend real money at a third party. Say which backend
 # before it happens, so the operator watching can stop it if it is the wrong one.
-echo "[run-agent] armed backends: ${NOS_ARMED_BACKENDS:-<none>}"
-echo "[run-agent] ceilings: tokens=${NOS_AGENT_SESSION_TOKEN_CEILING:-<default>} wall=${NOS_AGENT_SESSION_WALL_CLOCK_S:-<default>}s"
+echo "[run-agent] armed backends: ${NOS_ARMED_BACKENDS:-<none>}" >&2
+echo "[run-agent] ceilings: tokens=${NOS_AGENT_SESSION_TOKEN_CEILING:-<default>} wall=${NOS_AGENT_SESSION_WALL_CLOCK_S:-<default>}s" >&2
 
 # The same mutex the CLI path takes. Not `exec` below: exec would drop the
 # release trap and leak the lock for the rest of the night.
+# STDOUT IS THE SUMMARY, NOTHING ELSE (2026-08-30). Six of this script's
+# sixteen `[run-agent]` lines went to stdout while ten already went to
+# stderr; a caller that parses the summary — tools/nos-ops-harness.py does,
+# 44 runs of it — got `[run-agent] armed backends: …` in front of the JSON
+# and reported `runner emitted no JSON summary` for every single one.
 # shellcheck source=../files/anatomy/scripts/agent-run-lock.sh
 source "$REPO_ROOT/files/anatomy/scripts/agent-run-lock.sh"
 nos_agent_lock_acquire "${NOS_AGENT_NAME:-agentkit}" 300 agentkit || exit 2
@@ -276,7 +281,7 @@ if [[ -n "${PULSE_RUN_ID:-}" ]] \
    && [[ "$PULSE_RUN_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]] \
    && [[ ! " ${PASSTHRU[*]} " == *" --session-uuid="* ]]; then
     PASSTHRU+=("--session-uuid=$PULSE_RUN_ID")
-    echo "[run-agent] session uuid adopted from PULSE_RUN_ID — the run and the session are one row"
+    echo "[run-agent] session uuid adopted from PULSE_RUN_ID — the run and the session are one row" >&2
 fi
 
 cd "$WING_APP"
@@ -297,7 +302,7 @@ SESSION_UUID="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).g
 if [[ -n "$SESSION_UUID" && -x "$REPO_ROOT/tools/recipe-pr.sh" ]]; then
     while IFS= read -r recipe; do
         svc="$(basename "$recipe" .yml)"
-        echo "[run-agent] $recipe was written — opening an MR via recipe-pr.sh $svc"
+        echo "[run-agent] $recipe was written — opening an MR via recipe-pr.sh $svc" >&2
         (cd "$REPO_ROOT" && ./tools/recipe-pr.sh "$svc" --open-pr) \
             || echo "WARN: recipe-pr.sh refused $svc — the recipe is in the tree, NO MR was opened" >&2
     done < <(sqlite3 -readonly "${WING_DB_PATH:-$HOME/wing/app/data/wing.db}" \
