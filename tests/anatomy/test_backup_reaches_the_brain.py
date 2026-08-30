@@ -199,6 +199,13 @@ def _absent_source_branches() -> list[tuple[int, str]]:
             continue
         if "log " not in s:
             continue
+        # A branch that FALLS BACK has not bailed out — the alternative path
+        # runs and records its own result. Added 2026-08-30, when keap-db's
+        # fallback message gained the word "missing" and this matched it; the
+        # branch continues into the host-sqlite3 path four lines later. A real
+        # bail-out cannot say "falling back", because it is not.
+        if "falling back" in s:
+            continue
         if re.search(r"(not found|missing|no token)", s):
             out.append((i, s))
     return out
