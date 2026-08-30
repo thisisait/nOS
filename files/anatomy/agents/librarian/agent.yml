@@ -230,7 +230,11 @@ pulse:
       runner: subprocess
       command: "{{ playbook_dir }}/tools/run-agent.sh"
       args: ["--agent=librarian", "--trigger=pulse"]
-      schedule: "10 3 * * *"
+      # 03:30, not 03:10 (moved 2026-08-30): describe-taxonomy's window now
+      # closes at 03:20 and both take the same exclusive agent lock. It has
+      # never collided — this is the knock-on of moving its sibling, kept
+      # honest by the same gate.
+      schedule: "30 3 * * *"
       jitter_min: 5
       max_runtime_s: 900
       max_concurrent: 1
@@ -281,12 +285,22 @@ pulse:
       runner: subprocess
       command: "{{ playbook_dir }}/tools/run-agent.sh"
       args: ["--agent=librarian", "--trigger=pulse"]
-      # 02:30, not 02:10 (moved 2026-08-30). Every claude-CLI agent takes the
-      # same mkdir mutex, and conductor:vulnerability-scan fires at 02:00 and
-      # averages 607s with a measured worst case of 1080s. This job waits 300s
-      # for the lock and then dies rc=2 — which it has, twice. Ten minutes of
-      # separation was never enough for a job that can run eighteen.
-      schedule: "30 2 * * *"
+      # 03:00, and the number comes from the DECLARED budget, not a measurement.
+      #
+      # It was 02:10, then 02:30 earlier on 2026-08-30 — and it collided again
+      # the same night, 30 seconds apart in the Pulse log (scan 04:12:34 local,
+      # this job 04:13:04, rc=2 after waiting 311s for a lock the scan held for
+      # 435s). The 02:30 move was sized to conductor:vulnerability-scan's
+      # MEASURED worst case of 1080s. Its DECLARED ceiling is 1800s with 15
+      # minutes of jitter, so its window closes at 02:45 and no start before
+      # then can be safe. Sizing a margin to what a job has done so far is the
+      # mistake this file has now made twice; size it to what the job is
+      # ALLOWED to do.
+      #
+      # Window here: 03:00 +5 jitter +900s -> closes 03:20, which is why
+      # brief-taxonomy moved to 03:30. Derived and checked by
+      # tests/anatomy/test_two_agent_lock_jobs_cannot_overlap.py.
+      schedule: "0 3 * * *"
       jitter_min: 5
       max_runtime_s: 900
       max_concurrent: 1
