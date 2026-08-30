@@ -616,3 +616,9 @@ dry-run-evidence-sweep:
   unverifiable: >-
     no command distinguishes a refusal nobody has checked from one checked and
     found fine; the twenty are a reading list, and reading is a person's job
+
+# The deliverable is the READER in the producer, not the drill going green —
+# the drill can only go green on tomorrow's object.
+backup-drill-keap-db: >-
+  grep -q 'keap_verify_js' roles/pazny.backup/files/backup.sh
+  && test -f tests/anatomy/test_a_snapshot_is_opened_before_it_is_uploaded.py

@@ -906,7 +906,16 @@ row("backup-drill-keap-db", "the restore drill cannot find keap-db, but the back
          "while wing-db replayed 336701 events. But backup-status.json shows keap-db succeeding "
          "nightly at 347 MB, 14 of 14 sources ok. So this is a lookup, key-format or retention "
          "mismatch in the DRILL, not a backup that is not running — and it must be diagnosed "
-         "before the distinction stops being academic.")
+         "before the distinction stops being academic. "
+         "RESOLVED 2026-08-30, and the guess above was wrong in the reassuring direction: the "
+         "drill was right and the BACKUP was bad. Reading backup.log over 29 nights, two of "
+         "them (08-13, 08-30) carry no `pages=` completion line from the in-container node "
+         "backup and uploaded 296 MB and 310 MB against a steady 347 — truncated snapshots, "
+         "shipped and logged `keap-db: OK`. The producer branched on `test -s` because the "
+         "backup pipeline ends in a `while` and node's exit code belonged to the loop, so it "
+         "substituted the claim it could see for the verdict it could not. A reader now opens "
+         "the snapshot in-container before upload and counts the same three tables the drill "
+         "counts. See docs/hidden_fees/38.")
 
 row("notify-body-is-prompt", "a notification whose body is its own prompt", _REV,
     "queued", "platform",
