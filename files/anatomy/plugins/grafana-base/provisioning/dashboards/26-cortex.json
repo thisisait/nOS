@@ -256,8 +256,8 @@
     },
     {
       "type": "table",
-      "title": "Chains by length \u2014 the panel this page was built to show",
-      "description": "MEASURED 2026-08-29: 390 chains, every one of them a SINGLE STAGE. cortex-lang is a pipeline IR and no pipeline has ever run through it. That is not a fault in the executor \u2014 it is what the callers ask for \u2014 but it means the composition half of the language is unexercised, and a row here with stages_in_chain > 1 is the first evidence otherwise.",
+      "title": "Chains by length (from the stage index, not the key)",
+      "description": "Length read from the stage's own `index`, NOT from counting rows per action id. Until 2026-08-30 the executor minted a fresh action id per STAGE, so a row-count grouped by it reported every chain as length 1 \u2014 and this panel said so, in a report, wrongly. `index` was correct all along and ran 0..6. Rows written before the fix still carry one stage per id, so they show here as the length their index records.",
       "datasource": {
         "type": "frser-sqlite-datasource",
         "uid": "wing_sqlite"
@@ -272,8 +272,8 @@
         {
           "refId": "A",
           "queryType": "table",
-          "rawQueryText": "SELECT stages AS stages_in_chain, COUNT(*) AS chains FROM (\n  SELECT actor_action_id, COUNT(*) AS stages\n    FROM events WHERE type='cortex_stage_begin' GROUP BY actor_action_id\n) GROUP BY stages ORDER BY stages",
-          "queryText": "SELECT stages AS stages_in_chain, COUNT(*) AS chains FROM (\n  SELECT actor_action_id, COUNT(*) AS stages\n    FROM events WHERE type='cortex_stage_begin' GROUP BY actor_action_id\n) GROUP BY stages ORDER BY stages",
+          "rawQueryText": "SELECT stages_in_chain, COUNT(*) AS chains FROM (SELECT actor_action_id, MAX(CAST(json_extract(result_json,'$.index') AS INT)) + 1 AS stages_in_chain FROM events WHERE type='cortex_stage_finish' AND result_json IS NOT NULL GROUP BY actor_action_id) GROUP BY stages_in_chain ORDER BY stages_in_chain",
+          "queryText": "SELECT stages_in_chain, COUNT(*) AS chains FROM (SELECT actor_action_id, MAX(CAST(json_extract(result_json,'$.index') AS INT)) + 1 AS stages_in_chain FROM events WHERE type='cortex_stage_finish' AND result_json IS NOT NULL GROUP BY actor_action_id) GROUP BY stages_in_chain ORDER BY stages_in_chain",
           "timeColumns": []
         }
       ],

@@ -150,11 +150,19 @@ row("obs-cortex-dashboard", "cortex-lang runs 390 chains and none of them is a p
     refs="files/anatomy/plugins/grafana-base/provisioning/dashboards/26-cortex.json",
     body="The executor emits cortex_stage_begin/finish with the opcode, the chain id and the "
          "stage's effect, 390 of each, and nothing rendered them. MEASURED WHILE BUILDING IT: "
-         "every one of the 390 chains is a SINGLE STAGE — the typed pipeline IR has never "
-         "executed a pipeline. Not a fault in the executor (it runs what callers ask for), but "
-         "the composition half of the language is unexercised, which is worth knowing before "
-         "anyone trains a model to emit compositions. Pairs with local-llm-corpus, which found "
-         "the validator does not constrain composition either.")
+         "the headline said every one of the 390 chains was a SINGLE STAGE and that the typed "
+         "pipeline IR had never executed a pipeline. THAT WAS WRONG, corrected 2026-08-30. The "
+         "panel grouped stage events by actor_action_id, and the executor minted a fresh id PER "
+         "STAGE — so no two stages of one chain ever shared the key a reader groups on, and the "
+         "count could only ever be 1. The stage's own `index` was right all along and runs 0..6. "
+         "Read from index: 190 one-stage, 183 two-stage, 20 three, up to seven long. The "
+         "composition half of the language IS exercised. Fixed at the mint (one chain, one id, "
+         "gate test_a_chain_is_one_action_not_many.py) and the panel now reads index. The lesson "
+         "is the estate's oldest one wearing a new hat: a reader grouped by a key nobody sets "
+         "correctly measures the bug, not the world — and this one put a false claim into a "
+         "dashboard, a roadmap row and a report to the operator before anyone checked it. What "
+         "survives from local-llm-corpus is separate and still true: the VALIDATOR does not "
+         "constrain composition, which is about what may be emitted, not what has run.")
 
 # ── the night of 2026-08-29: the organs get joined ──────────────────────────
 row("wing-map", "Wing had no reader, so every question about it was a grep", "2026-08-29",

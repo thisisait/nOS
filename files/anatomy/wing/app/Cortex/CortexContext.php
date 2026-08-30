@@ -12,9 +12,11 @@ namespace App\Cortex;
  * the raw bearer — a handler that could read the caller's token could widen its
  * own reach, and the whole point of the capability model is that it cannot.
  *
- * `actionId` is the audit lineage handle: one per stage, minted before the
- * handler runs and closed after it returns, so a single
- * `SELECT … WHERE actor_action_id = ?` reconstructs what one stage did.
+ * `actionId` is the audit lineage handle: ONE PER CHAIN, minted before the
+ * first stage, so a single `SELECT … WHERE actor_action_id = ?` reconstructs
+ * the whole pipeline in `index` order. It was one per STAGE until 2026-08-30,
+ * which made that SELECT return exactly one row however long the chain was —
+ * and made every reader conclude the executor only ever ran single stages.
  */
 final class CortexContext
 {

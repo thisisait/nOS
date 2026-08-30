@@ -247,9 +247,25 @@ final class CortexExecutorPresenter extends BaseApiPresenter
         $out = [];
         $prev = [];
         $brokenAt = null;
+
+        // ONE CHAIN, ONE ACTION ID — minted here, not per stage.
+        //
+        // It used to be minted inside the loop, so every stage of a pipeline
+        // got a fresh `cx-…` and no two stages of one chain shared a key.
+        // MEASURED 2026-08-30: 404 stage-finish events, stage `index` running
+        // 0..6 — pipelines up to seven stages long — and all 404 action ids
+        // carrying exactly ONE stage. A reader grouping by the lineage key,
+        // which is what the key is for, concluded the executor had never run a
+        // pipeline. It had, hundreds of times.
+        //
+        // `index` (already in every event) is the position; the action id is
+        // the chain. One `SELECT … WHERE actor_action_id = ?` now returns the
+        // whole pipeline in order, which is what CortexContext's docblock has
+        // always promised.
+        $actionId = 'cx-' . bin2hex(random_bytes(10));
+
         foreach ($stages as $raw) {
             $stage = ResolvedStage::fromAst((array) $raw);
-            $actionId = 'cx-' . bin2hex(random_bytes(10));
             $ctx = new CortexContext($actor, $tenant, $actionId, null, $prev, $stage->index > 0);
 
             $this->audit('cortex_stage_begin', $stage->opcode, $actor, $actionId, [

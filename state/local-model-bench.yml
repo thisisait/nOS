@@ -73,6 +73,39 @@ system: |
 # merely rarer. homebrew-core's ollama 0.32.6 ships that binary (verified), so
 # the upgrade and the small-model direction are one thread, not two.
 
+# THE SIZE CURVE, MEASURED 2026-08-30 on this host. All three installed chat
+# models, same 6 tasks, same one-example prompt, code as judge.
+#
+#   model                valid  intent  tokens  seconds  estate-while-resident
+#   hermes3:8b            2/6    2/6     1015        9    0.12s
+#   qwen3:14b             4/6    4/6     2164      103    0.42s
+#   qwen2.5-coder:32b     0/6    0/6      693      701   16.71s   DISQUALIFIED
+#
+# (estate baseline with nothing resident: 0.02s)
+#
+# THE ANSWER IS NOT "BIGGER IS BETTER". It is that the failures change KIND, and
+# then the host runs out:
+#
+#   8B   every failure is `syntax_error` on a shape that is otherwise right.
+#        It is fumbling punctuation, not meaning.
+#   14B  no syntax errors at all. Its two failures are `unknown_operand` and
+#        `namespace_not_resolvable` — it is now wrong about the WORLD, which is
+#        a different and more interesting problem, and one a grammar cannot fix.
+#   32B  emitted plausible chains (`@input | filter(tax:11.01) | embed()`) and
+#        could not be scored: the KEAP validator answered in 16.71s against a
+#        0.02s baseline, two tasks timed out and four came back
+#        `judge-unreachable`. The model starved the judge. On a 36 GB box with
+#        63 containers that is a property of the host, not of the model.
+#
+# So the knee is 14B, and the ceiling is the machine rather than the weights.
+# The two multi-stage tasks (rank-results, filter-then-embed) were passed by
+# BOTH runnable models — composition is not what a small model finds hard here.
+#
+# WHAT THAT SETTLES for the roadmap: `local-llm-model` should read "the largest
+# model that leaves the estate answering", and the disqualification rule already
+# in this harness (a resident model that makes the judge time out fails whatever
+# it scored) is the one that matters more than the score column.
+
 tasks:
   - id: map-taxonomy
     prompt: "Take the input and map it onto taxonomy node 01."
