@@ -529,10 +529,42 @@ backup(db, dst)
 KEAPJS
 }
 
+# A READER for the snapshot the step above just wrote — not the writer's own
+# claim about it. MEASURED 2026-08-30: `test -s` (below, kept as the cheap
+# first question) accepted a TRUNCATED file on 2 of 29 nights, 08-13 and
+# 08-30, and both uploaded with `keap-db: OK`. The restore drill found the
+# second one seven hours later with `file is not a database (26)`; the first
+# was never noticed at all. On both nights node had printed no `pages=` line,
+# because the pipeline that runs it ends in a `while`, so its exit code was
+# never anyone's.
+#
+# This opens the artifact and counts the same three tables the drill counts.
+# It is the last moment the estate can still fail loudly and keep yesterday's
+# good object instead of overwriting the day with a bad one.
+keap_verify_js() {
+    cat <<'KEAPVERIFYJS'
+const { DatabaseSync } = require("node:sqlite");
+try {
+  const db = new DatabaseSync(process.argv[2], { readOnly: true });
+  const n = (t) => db.prepare("select count(*) c from " + t).get().c;
+  const counts = [n("taxonomy_nodes_ext"), n("relations"), n("knowledge_objects")];
+  db.close();
+  if (counts.some((c) => c === 0)) {
+    process.stderr.write("snapshot has an EMPTY core table: " + counts.join("/") + "\n");
+    process.exit(1);
+  }
+  process.stderr.write("snapshot verified nodes/relations/objects=" + counts.join("/") + "\n");
+} catch (e) {
+  process.stderr.write("snapshot is not a readable database: " + e.message + "\n");
+  process.exit(1);
+}
+KEAPVERIFYJS
+}
+
 run_keap_db() {
     [[ "${DO_KEAP}" != "true" ]] && return 0
 
-    local date_str key start dur rc size ctmp cjs
+    local date_str key start dur rc size ctmp cjs cvjs
     date_str="$(date -u +%Y-%m-%d)"
     key="${date_str}/keap-db.gz${ENC_SUFFIX}"
 
@@ -545,6 +577,7 @@ run_keap_db() {
     start=$(now_ms)
     ctmp="/tmp/nos-keap-backup.$$.db"
     cjs="/tmp/nos-keap-backup.$$.js"
+    cvjs="/tmp/nos-keap-verify.$$.js"
 
     # PRIMARY PATH — inside the container.
     #
@@ -564,13 +597,21 @@ run_keap_db() {
         # The snapshot either exists and is non-empty, or it does not. That is
         # the only claim worth branching on — the pipeline above reports rc for
         # the `while`, not for node.
-        if docker exec "${KEAP_CONTAINER}" test -s "${ctmp}" 2>/dev/null; then
+        # `test -s` first (cheap), then OPEN it. The pipeline below ends in
+        # `docker exec`, so node's exit code is the branch's — unlike the
+        # backup pipeline above, whose rc belongs to its trailing `while`.
+        if docker exec "${KEAP_CONTAINER}" test -s "${ctmp}" 2>/dev/null \
+           && keap_verify_js \
+              | docker exec -i "${KEAP_CONTAINER}" \
+                  sh -c "cat > ${cvjs} && node --no-warnings ${cvjs} '${ctmp}'" 2>&1 \
+              | tee -a "${LOG_FILE}" >/dev/null \
+           && docker exec "${KEAP_CONTAINER}" test -s "${ctmp}" 2>/dev/null; then
             docker exec "${KEAP_CONTAINER}" cat "${ctmp}" \
               | gzip -c \
               | encrypt_stream \
               | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
             rc=$?
-            docker exec "${KEAP_CONTAINER}" rm -f "${ctmp}" "${cjs}" >/dev/null 2>&1 || true
+            docker exec "${KEAP_CONTAINER}" rm -f "${ctmp}" "${cjs}" "${cvjs}" >/dev/null 2>&1 || true
             dur=$(( $(now_ms) - start ))
             if [[ "${rc}" -eq 0 ]]; then
                 size=$(s3_size "${key}")
@@ -580,8 +621,8 @@ run_keap_db() {
             fi
             log "keap-db: upload FAILED (rc=${rc}) — falling back to host sqlite3"
         else
-            docker exec "${KEAP_CONTAINER}" rm -f "${ctmp}" "${cjs}" >/dev/null 2>&1 || true
-            log "keap-db: in-container backup produced nothing — falling back to host sqlite3"
+            docker exec "${KEAP_CONTAINER}" rm -f "${ctmp}" "${cjs}" "${cvjs}" >/dev/null 2>&1 || true
+            log "keap-db: in-container snapshot missing, empty or NOT A READABLE DATABASE — falling back to host sqlite3"
         fi
     else
         log "keap-db: container ${KEAP_CONTAINER} not available — falling back to host sqlite3"
