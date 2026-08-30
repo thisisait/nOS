@@ -428,6 +428,13 @@ nodes:
   "agent:conductor": withheld
   "agent:curator": withheld
   "agent:inspektor": withheld
+  # The ops plane's measurement subject (2026-08-30). Withheld like every
+  # other agent: it publishes no phrase and joins no organ, so nothing new
+  # leaves this machine. The digest below is DELIBERATELY left stale —
+  # tools/awaiting-operator.py will report this file as AMENDED AFTER SIGNING,
+  # which is the flow this file's own header describes and the correct one for
+  # an edit the signer has not read.
+  "agent:ops-extract": withheld
   "agent:librarian": withheld
   "agent:migration-author": withheld
   "agent:proposer": withheld
@@ -441,6 +448,7 @@ nodes:
   "resource:backend-anthropic": withheld
   "resource:backend-minimax": withheld
   "resource:backend-mistral-eu": withheld
+  "resource:backend-ollama": withheld
   "resource:bash-read-only": withheld
   "resource:mcp-bone": withheld
   "resource:mcp-keap": withheld

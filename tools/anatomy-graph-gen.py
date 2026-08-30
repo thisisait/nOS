@@ -1765,7 +1765,7 @@ def main() -> int:
     pin_path = FACE_TARGET.parent / "graphLayout.force.pin.json"
     if pin_path.exists():
         pin = json.loads(pin_path.read_text(encoding="utf-8"))
-        if pin.get("graphSha256") != hashlib.sha256(text.encode()).hexdigest():
+        if pin.get("graphSha256") != hashlib.sha256(FACE_TARGET.read_bytes()).hexdigest():
             if not args.refreeze:
                 print("anatomy-graph: the face layout pin was frozen against a "
                       "DIFFERENT graph — re-freeze graphLayout.force.pin.json "
@@ -1787,7 +1787,11 @@ def main() -> int:
                       "moved, so this is not a re-stamp but a re-pin a human "
                       "must look at:\n" + got.stdout[-700:], file=sys.stderr)
                 return 1
-            pin["graphSha256"] = hashlib.sha256(text.encode()).hexdigest()
+            # THE FILE THE GATE READS, not the rendered text. They differ
+            # (the writer's trailing newline), so stamping sha256(text) wrote
+            # a hash nothing would ever match — the first --refreeze did
+            # exactly that and the pin gate caught it on the next run.
+            pin["graphSha256"] = hashlib.sha256(FACE_TARGET.read_bytes()).hexdigest()
             pin["pinnedAt"] = datetime.date.today().isoformat()
             pin_path.write_text(json.dumps(pin, indent=2) + "\n", encoding="utf-8")
             subprocess.run(["npx", "prettier", "--write", str(pin_path)],
