@@ -8,26 +8,72 @@
   },
   "family": "weakness-triage",
   "samples": 20,
-  "generated_at": "2026-08-30T14:47:03+00:00",
+  "generated_at": "2026-08-30T15:45:28+00:00",
   "registry": "/Users/pazny/projects/nOS/state/llm-backends.yml",
   "agent": "ops-triage",
   "reference": {
     "status": "measured",
     "backend": "minimax",
     "model": "MiniMax-M2.7",
-    "attempted": 20,
-    "exact": 17,
+    "attempted": 60,
+    "exact": 52,
+    "runs": [
+      17,
+      18,
+      17
+    ],
+    "spread": 1,
     "invalid_chain": 0,
-    "wrong_labels": 3,
+    "wrong_labels": 8,
     "runner_errors": 0,
-    "accuracy": 0.85,
+    "accuracy": 0.8667,
     "misses": [
       {
-        "id": "t12",
+        "id": "t10",
+        "why": "label not reproduced",
+        "got": {
+          "fix_surface": "docs",
+          "blocked_by": "evidence"
+        }
+      },
+      {
+        "id": "t17",
+        "why": "label not reproduced",
+        "got": {
+          "fix_surface": "code",
+          "blocked_by": "vendor"
+        }
+      },
+      {
+        "id": "t19",
+        "why": "label not reproduced",
+        "got": {
+          "fix_surface": "code",
+          "blocked_by": "evidence"
+        }
+      },
+      {
+        "id": "t02",
         "why": "label not reproduced",
         "got": {
           "fix_surface": "pin",
-          "blocked_by": "operator"
+          "blocked_by": "vendor"
+        }
+      },
+      {
+        "id": "t19",
+        "why": "label not reproduced",
+        "got": {
+          "fix_surface": "code",
+          "blocked_by": "none"
+        }
+      },
+      {
+        "id": "t08",
+        "why": "label not reproduced",
+        "got": {
+          "fix_surface": "host",
+          "blocked_by": "evidence"
         }
       },
       {
@@ -62,13 +108,27 @@
       "status": "measured",
       "backend": "ollama",
       "model": "hermes3:8b",
-      "attempted": 20,
-      "exact": 17,
-      "invalid_chain": 1,
-      "wrong_labels": 2,
+      "attempted": 60,
+      "exact": 46,
+      "runs": [
+        16,
+        16,
+        14
+      ],
+      "spread": 2,
+      "invalid_chain": 3,
+      "wrong_labels": 11,
       "runner_errors": 0,
-      "accuracy": 0.85,
+      "accuracy": 0.7667,
       "misses": [
+        {
+          "id": "t06",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "code",
+            "blocked_by": "evidence"
+          }
+        },
         {
           "id": "t08",
           "why": "label not reproduced",
@@ -89,26 +149,42 @@
             "fix_surface": "code",
             "blocked_by": "evidence"
           }
-        }
-      ]
-    },
-    "14.0": {
-      "status": "measured",
-      "backend": "ollama",
-      "model": "qwen3:14b",
-      "attempted": 20,
-      "exact": 16,
-      "invalid_chain": 0,
-      "wrong_labels": 4,
-      "runner_errors": 0,
-      "accuracy": 0.8,
-      "misses": [
+        },
         {
-          "id": "t02",
+          "id": "t08",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "host",
+            "blocked_by": "none"
+          }
+        },
+        {
+          "id": "t09",
+          "why": "no valid chain",
+          "detail": "$.fix_surface: 'evidence' is not in the declared enum"
+        },
+        {
+          "id": "t12",
           "why": "label not reproduced",
           "got": {
             "fix_surface": "pin",
-            "blocked_by": "vendor"
+            "blocked_by": "evidence"
+          }
+        },
+        {
+          "id": "t19",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "code",
+            "blocked_by": "evidence"
+          }
+        },
+        {
+          "id": "t03",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "pin",
+            "blocked_by": "none"
           }
         },
         {
@@ -117,6 +193,41 @@
           "got": {
             "fix_surface": "host",
             "blocked_by": "none"
+          }
+        }
+      ]
+    },
+    "14.0": {
+      "status": "measured",
+      "backend": "ollama",
+      "model": "qwen3:14b",
+      "attempted": 60,
+      "exact": 46,
+      "runs": [
+        15,
+        16,
+        15
+      ],
+      "spread": 1,
+      "invalid_chain": 0,
+      "wrong_labels": 14,
+      "runner_errors": 0,
+      "accuracy": 0.7667,
+      "misses": [
+        {
+          "id": "t08",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "host",
+            "blocked_by": "none"
+          }
+        },
+        {
+          "id": "t09",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "config",
+            "blocked_by": "evidence"
           }
         },
         {
@@ -133,6 +244,54 @@
           "got": {
             "fix_surface": "host",
             "blocked_by": "evidence"
+          }
+        },
+        {
+          "id": "t20",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "host",
+            "blocked_by": "evidence"
+          }
+        },
+        {
+          "id": "t09",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "config",
+            "blocked_by": "evidence"
+          }
+        },
+        {
+          "id": "t17",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "config",
+            "blocked_by": "none"
+          }
+        },
+        {
+          "id": "t19",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "code",
+            "blocked_by": "none"
+          }
+        },
+        {
+          "id": "t20",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "config",
+            "blocked_by": "evidence"
+          }
+        },
+        {
+          "id": "t08",
+          "why": "label not reproduced",
+          "got": {
+            "fix_surface": "host",
+            "blocked_by": "none"
           }
         }
       ]

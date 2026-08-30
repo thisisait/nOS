@@ -65,33 +65,43 @@
 # A label set nobody argued with is a label set nobody read. This one was
 # argued with, and the argument is the reason the numbers below can be quoted.
 #
-# MEASURED 2026-08-30, and the result is the opposite of the extract families.
+# MEASURED 2026-08-30 — TWICE, and the second measurement overturns the first.
 #
-#   hermes3:8b     17/20  (0.85)   invalid 1   wrong 2
-#   qwen3:14b      16/20  (0.80)   invalid 0   wrong 4
-#   MiniMax-M2.7   17/20  (0.85)   invalid 0   wrong 3   (hosted, not a rung)
+# ONE PASS EACH (reported first, and wrong to act on):
+#   hermes3:8b 17/20 · qwen3:14b 16/20 · MiniMax-M2.7 17/20
+#   Read at the time as "nothing separated". Three numbers inside the noise.
 #
-# READ THAT AGAINST THE NOISE FLOOR, which was measured the same evening and
-# is written up in invoice-extract/family.yml: re-running the SAME 22 samples
-# against the SAME 8B moved it 17/22 → 14/22. A spread of three on twenty-two
-# means 17 vs 16 vs 17 here is not a ranking, it is three numbers inside the
-# noise. That does not weaken the finding below — it IS the finding. Nothing
-# separated.
+# THREE PASSES EACH, pooled (`--repeat 3`, added because of exactly this):
+#   hermes3:8b     runs [16, 16, 14]   spread 2   46/60   0.767
+#   qwen3:14b      runs [15, 16, 15]   spread 1   46/60   0.767
+#   MiniMax-M2.7   runs [17, 18, 17]   spread 1   52/60   0.867
 #
-# THE THREE ARE INDISTINGUISHABLE, and the 8B is not the worst of them. On
-# invoice-extract the same three subjects separated cleanly (17 / 22 / 20 out
-# of 22) and on invoice-absent they separated further (4 / 9 / 8 out of 10).
-# Read together, the extraction families measure something that scales with
-# model size and this one does not — at this difficulty. The honest reading is
-# not "triage is easy for an 8B"; it is that twenty rows written to be
-# ANSWERABLE are not hard enough to separate anything, and the next version of
-# this family has to be harder rather than longer.
+# THE HOSTED MODEL IS BETTER HERE, by six samples against a spread of one to
+# two — outside the noise, unlike anything the single pass showed. Repeating
+# did not sharpen the earlier answer, it reversed it, and that is the argument
+# for `--repeat` rather than the docstring's.
 #
-# t19 IS THE ROW EVERY SUBJECT MISSED, all three and in three different ways
-# ('code'/'evidence', 'host'/'evidence', 'code'/'evidence' against the label
-# 'docs'/'operator'). The blind readers all agreed with the label and all three
-# marked it low-confidence. A row that every model fails and every human passes
-# is the most interesting one here, and it is one row — not a finding yet.
+# THE TWO LOCAL MODELS ARE EXACTLY EQUAL, 46/60 each. So the 14B's advantage is
+# task-shaped, not general: perfect on extraction (22/22, spread 0) and no
+# better than an 8B at judging. "The 14B beats the hosted model" was true on
+# both invoice families and is false here; it does not travel.
+#
+# THE SHARED BLIND SPOT IS `blocked_by: operator`, and it is the most useful
+# thing this family has produced:
+#
+#   subject         operator rows   evidence rows
+#   hermes3:8b         5/6 wrong       2/6 wrong
+#   qwen3:14b          4/6 wrong       4/6 wrong
+#   MiniMax-M2.7       4/6 wrong       1/6 wrong
+#
+# Two rows carry `operator` — t08, a disk filling up; t19, a document amended
+# after signing — and every subject fails most of them, at every size and on
+# both sides of the network, while all three blind human readers got both. A
+# model reads "what is technically wrong here" and answers it well; it does not
+# see "this one needs a person". That is precisely the judgement the loop would
+# need before handing a weakness to a proposer. SIX DATA POINTS, so this is a
+# hypothesis with a number attached, not a finding: the next version of the
+# family carries six operator rows, not two.
 #
 # WHERE IT IS HARD, named in advance so a low score can be read: t03 and t14
 # are both "no upstream fix", but one closes by a container pin and the other
