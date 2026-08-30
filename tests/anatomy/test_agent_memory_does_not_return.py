@@ -13,6 +13,7 @@ tree the autoloader serves. It does not read prose about them.
 
 from __future__ import annotations
 
+import re
 import pathlib
 
 import pytest
@@ -139,13 +140,36 @@ FORBIDDEN_COORDINATOR = ("RosterEntry", "isCoordinator", "startChildThread",
                          "multiagentType", "maxConcurrentThreads")
 
 
+def _code_only(src: str) -> str:
+    """PHP source with its comments removed.
+
+    ADDED 2026-08-30 after this gate reddened on a COMMENT. `VaultRequirement`
+    was deleted by mistake beside the real coordinator surface (fee 37), and
+    the docblock restoring it explains which file it shared and why — a
+    sentence that necessarily names `RosterEntry`. The gate matched the prose
+    and reported the surface as back.
+
+    That is this estate's own rule pointed the wrong way: a detector must read
+    the artifact, not the description of it. A comment recording why something
+    was deleted is the opposite of re-declaring it, and a gate that forbids
+    writing that sentence deletes the knowledge along with the code.
+
+    Block comments go whole; a line whose first non-space is `//`, `#` or `*`
+    (docblock continuation) goes. A TRAILING comment on a code line is kept —
+    that line has code on it, so keeping it fails toward detection.
+    """
+    src = re.sub(r"/\*.*?\*/", "", src, flags=re.S)
+    return "\n".join(ln for ln in src.splitlines()
+                     if not ln.lstrip().startswith(("//", "#", "*")))
+
+
 def test_the_coordinator_surface_stays_deleted() -> None:
     offenders = [
         f"{p.relative_to(REPO)}: {ident}"
         for p in list(AGENTKIT.rglob("*.php")) + list(MODEL.rglob("*.php"))
         + list((WING / "app" / "Presenters").rglob("*.php"))
         for ident in FORBIDDEN_COORDINATOR
-        if ident in p.read_text(encoding="utf-8")
+        if ident in _code_only(p.read_text(encoding="utf-8"))
     ]
     assert not offenders, (
         "the coordinator surface is back: " + ", ".join(offenders) + ". There is "

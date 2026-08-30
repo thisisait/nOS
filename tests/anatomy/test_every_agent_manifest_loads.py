@@ -52,10 +52,10 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 WING = REPO / "files/anatomy/wing"
 AGENTS = REPO / "files/anatomy/agents"
-VENDOR = WING / "vendor/autoload.php"
+AUTOLOAD = WING / "vendor/autoload.php"
 
 pytestmark = pytest.mark.skipif(
-    shutil.which("php") is None or not VENDOR.exists(),
+    shutil.which("php") is None or not AUTOLOAD.exists(),
     reason="php or the wing vendor tree is absent — declare "
            "files/anatomy/wing/vendor/autoload.php in NOS_TEST_PROVIDES to bind this",
 )
