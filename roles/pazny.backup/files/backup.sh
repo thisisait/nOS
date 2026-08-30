@@ -564,7 +564,7 @@ KEAPVERIFYJS
 run_keap_db() {
     [[ "${DO_KEAP}" != "true" ]] && return 0
 
-    local date_str key start dur rc size ctmp cjs cvjs
+    local date_str key start dur rc size ctmp cjs cvjs vout
     date_str="$(date -u +%Y-%m-%d)"
     key="${date_str}/keap-db.gz${ENC_SUFFIX}"
 
@@ -597,15 +597,19 @@ run_keap_db() {
         # The snapshot either exists and is non-empty, or it does not. That is
         # the only claim worth branching on — the pipeline above reports rc for
         # the `while`, not for node.
-        # `test -s` first (cheap), then OPEN it. The pipeline below ends in
-        # `docker exec`, so node's exit code is the branch's — unlike the
-        # backup pipeline above, whose rc belongs to its trailing `while`.
+        # `test -s` first (cheap), then OPEN it.
+        #
+        # COMMAND SUBSTITUTION, NOT A PIPE INTO tee — and the first draft of
+        # this very fix got it wrong the same way the bug did. A pipeline's rc
+        # is its LAST stage: `… | docker exec … | tee` reports tee, which
+        # always succeeds, so the verifier's verdict would have been discarded
+        # exactly like node's was. `$(…)` ends at `docker exec`, so node's exit
+        # code is what the `if` reads, and the output is logged by us.
         if docker exec "${KEAP_CONTAINER}" test -s "${ctmp}" 2>/dev/null \
-           && keap_verify_js \
-              | docker exec -i "${KEAP_CONTAINER}" \
-                  sh -c "cat > ${cvjs} && node --no-warnings ${cvjs} '${ctmp}'" 2>&1 \
-              | tee -a "${LOG_FILE}" >/dev/null \
-           && docker exec "${KEAP_CONTAINER}" test -s "${ctmp}" 2>/dev/null; then
+           && vout="$(keap_verify_js \
+                | docker exec -i "${KEAP_CONTAINER}" \
+                    sh -c "cat > ${cvjs} && node --no-warnings ${cvjs} '${ctmp}'" 2>&1)"; then
+            log "keap-db: ${vout}"
             docker exec "${KEAP_CONTAINER}" cat "${ctmp}" \
               | gzip -c \
               | encrypt_stream \

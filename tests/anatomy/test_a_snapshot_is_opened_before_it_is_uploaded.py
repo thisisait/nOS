@@ -91,16 +91,36 @@ def test_the_upload_does_not_branch_on_test_s_alone() -> None:
         "truncated file on 2 of 29 nights and logged `keap-db: OK` for both.")
 
 
+#: A pipeline's rc is its LAST stage. Anything here at the end of the verify
+#: pipeline swallows the verdict — `tee` and `cat` always succeed, a `while`
+#: reports the loop. The first draft of the FIX ended in `| tee -a LOG_FILE`
+#: and would have discarded the verifier's exit code exactly the way the bug
+#: discarded node's; this gate did not catch it, so it was rewritten to.
+RC_SWALLOWERS = ("tee", "while", "cat", "true", "sed", "awk", "grep")
+
+
 def test_the_verify_pipeline_ends_where_its_exit_code_is_read() -> None:
-    """THE ROOT CAUSE, pinned. The backup pipeline ends in `| while read`, so
-    node's exit code belongs to the loop. A verifier appended the same way
-    would be decoration. Its last stage must be something whose rc the `if`
-    actually reads."""
-    step = _keap_step()
-    branch = _upload_branch(step)
-    assert "while" not in branch.rsplit("&&", 1)[-1], (
-        "the verify branch ends in a `while`, which is exactly how node's exit "
-        "code was lost in the first place:\n" + branch)
+    """THE ROOT CAUSE, pinned — and the trap the fix itself fell into once.
+
+    `backup.sh` does not `set -o pipefail`, so a verifier whose pipeline ends
+    in anything that always succeeds is decoration. The branch must end at the
+    command that carries node's verdict.
+    """
+    branch = _upload_branch(_keap_step())
+    # The verify pipeline is the substitution or the last &&-clause; take
+    # everything after the last `docker exec` and look at what follows it.
+    after = branch.rsplit("docker exec", 1)[-1]
+    # The command NAME only: a stage can end `cat)"; then`, and a first draft
+    # compared the whole token and let `cat` through.
+    stages = [re.match(r"[a-z_]+", seg.strip().lstrip("\\ ")) for seg in after.split("|")[1:]]
+    offenders = [m.group(0) for m in stages if m and m.group(0) in RC_SWALLOWERS]
+    assert not offenders, (
+        f"the verify pipeline continues past `docker exec` into {offenders}, "
+        "whose exit code the `if` will read instead of node's — the same way "
+        "the bug hid. Use a command substitution and log the output.\n" + branch)
+    assert 'vout="$(' in branch or "$(keap_verify_js" in branch, (
+        "the verifier's output is not captured, so either it is piped (rc lost) "
+        "or it is never logged (an operator sees a failure with no reason)")
 
 
 def test_the_failure_message_says_what_was_wrong() -> None:
