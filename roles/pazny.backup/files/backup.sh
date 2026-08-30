@@ -564,7 +564,7 @@ KEAPVERIFYJS
 run_keap_db() {
     [[ "${DO_KEAP}" != "true" ]] && return 0
 
-    local date_str key start dur rc size ctmp cjs cvjs vout
+    local date_str key start dur rc size ctmp cjs cvjs vout vrc
     date_str="$(date -u +%Y-%m-%d)"
     key="${date_str}/keap-db.gz${ENC_SUFFIX}"
 
@@ -625,8 +625,16 @@ run_keap_db() {
             fi
             log "keap-db: upload FAILED (rc=${rc}) — falling back to host sqlite3"
         else
+            # THE EXIT CODE, because the cause is still unknown. Twice in 29
+            # nights (08-13, 08-30) node died mid-copy printing NOTHING — no
+            # `pages=`, no error — which is what a SIGKILL looks like and is
+            # not what a node exception looks like. `$?` here is the condition
+            # list's status, so 137 (killed) reads differently from 1 (the
+            # verifier refused) and 0-with-empty-output differently again.
+            # Nobody has to guess next time; see docs/hidden_fees/38.
+            vrc=$?
             docker exec "${KEAP_CONTAINER}" rm -f "${ctmp}" "${cjs}" "${cvjs}" >/dev/null 2>&1 || true
-            log "keap-db: in-container snapshot missing, empty or NOT A READABLE DATABASE — falling back to host sqlite3"
+            log "keap-db: in-container snapshot missing, empty or NOT A READABLE DATABASE (rc=${vrc}${vout:+; ${vout}}) — falling back to host sqlite3"
         fi
     else
         log "keap-db: container ${KEAP_CONTAINER} not available — falling back to host sqlite3"
