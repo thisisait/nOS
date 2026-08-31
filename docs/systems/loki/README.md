@@ -36,6 +36,22 @@ Data-path note: `nos_data_root` defaults to `~/nos`. On external storage the pat
 - **Endpoint:** `GET /ready`
 - **Expected:** `200 OK`
 - Container healthcheck instead verifies the config (`loki -verify-config`), because that is what the distroless image can run internally.
+- **AND IT CANNOT SEE THE FAILURE THAT MATTERS.** Measured 2026-08-31: Loki's
+  ingester answered every push with `500 Ingester is shutting down` from
+  2026-07-12 — fifty days — while `docker ps` said `healthy` and `/ready`
+  answered `ready`. 2,180,252 entries / 195 MB were dropped
+  (`loki_write_dropped_entries_total{reason="ingester_error"}` on Alloy) and
+  every Loki query returned nothing, because nothing had been stored. A check
+  that parses a FILE cannot observe a PROCESS.
+- The cause was not Loki: `/System/Volumes/Data` was at 92% (34 GiB free of
+  460), Loki's WAL guard tripped `disk usage exceeded threshold, throttling
+  writes`, and the ingester stopped accepting. `NosWarningDiskLow` had been
+  firing in the inbox throughout.
+- Because the distroless image has no HTTP client, the watch lives OUTSIDE the
+  container: `NosCriticalLokiRejectingWrites` +`NosWarningLokiStoresNothing` in
+  `prometheus-base/provisioning/rules/01-infra.yml`, on Alloy's own drop
+  counters. That also gives logs their first path to the loop —
+  `_source_prometheus_alerts` turns a firing alert into a weakness.
 
 ## Dependencies
 

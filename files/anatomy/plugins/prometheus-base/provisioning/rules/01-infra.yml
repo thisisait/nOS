@@ -163,3 +163,70 @@ groups:
             {{ $labels.instance }}. Docker services may start OOM-killing —
             check Ollama (MLX), Authentik, GitLab first.
           runbook_url: "https://github.com/thisisait/nOS/blob/master/docs/runbooks/NosWarningMemoryHigh.md"
+
+  # ── Log pipeline: the sink must actually accept what the shipper sends ───────
+  #
+  # MEASURED 2026-08-31, and the numbers are why this group exists. Loki's
+  # ingester had been answering every push with HTTP 500 "Ingester is shutting
+  # down" since 2026-07-12 — FIFTY DAYS — while:
+  #
+  #   * `docker ps` said `Up 3 weeks (healthy)`
+  #   * `GET /ready` answered `ready`
+  #   * Alloy collected 4,675,597 entries with 0 parsing errors
+  #   * `loki_distributor_bytes_received_total` reached 27 GB
+  #   * and 2,180,252 entries / 195 MB were dropped, reason="ingester_error"
+  #
+  # Loki has no labels at all: every query returns nothing, because nothing was
+  # ever stored. THE CONTAINER HEALTHCHECK CANNOT SEE THIS and is not at fault
+  # — the distroless image has no HTTP client, so it runs `loki -verify-config`,
+  # which parses a FILE. A check that reads a file cannot observe a process.
+  # That is why this lives here, outside the container, on the one signal that
+  # is unambiguous: the shipper's own count of what the sink refused.
+  #
+  # It also closes the loop, literally: `_source_prometheus_alerts` turns a
+  # firing alert into a loop weakness, so a stalled log pipeline now reaches the
+  # same queue everything else does. Before this, logs had no path to any
+  # reader at all — 7 weakness sources and not one of them log-derived.
+  - name: nos_infra_logs
+    interval: 30s
+    rules:
+      - alert: NosCriticalLokiRejectingWrites
+        # ANY sustained drop is the alert. Not a rate threshold: a healthy
+        # pipeline drops zero, so "some" and "all" are the same finding here,
+        # and the 50-day outage would have fired on its first minute.
+        expr: increase(loki_write_dropped_entries_total{reason="ingester_error"}[10m]) > 0
+        for: 10m
+        labels:
+          severity: critical
+          nos_domain: infra
+        annotations:
+          summary: "Loki is refusing writes — logs are being dropped, not stored"
+          description: |
+            Alloy dropped {{ $value | humanize }} entries in the last 10 minutes
+            with reason=ingester_error: Loki accepted them at the distributor and
+            its ingester refused them.
+
+            The container will still report healthy. Its healthcheck runs
+            `loki -verify-config`, which parses the config file and never
+            touches the running process — so this alert is the only thing that
+            can see it. Check: docker logs observability-loki-1 | tail, then
+            `ansible-playbook main.yml --tags observability` to recreate it.
+
+      - alert: NosWarningLokiStoresNothing
+        # The second half, and the one that catches a SILENT stall: a pipeline
+        # can stop storing without anybody dropping anything (a shipper that
+        # stopped tailing, a filter that matches nothing). Received-but-never-
+        # stored is invisible to the rule above.
+        expr: sum(rate(loki_distributor_bytes_received_total[15m])) > 0
+              and on() absent_over_time(loki_ingester_streams_created_total[1h]) == 1
+        for: 30m
+        labels:
+          severity: warning
+          nos_domain: infra
+        annotations:
+          summary: "Loki is receiving bytes and creating no streams"
+          description: |
+            The distributor is taking data and the ingester has created no
+            stream in an hour. Logs are arriving and not being stored, which
+            every query then reports as "no results" — absence rendering as a
+            clean estate.
