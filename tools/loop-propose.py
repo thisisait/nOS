@@ -164,13 +164,27 @@ def pick(status_mod, wanted: str | None) -> dict:
                   else "nothing proposable is also fixable: ")
         raise Refused(prefix + ". ".join(parts))
 
-    # A vendor_blocked row has no upstream fix to propose (CLAUDE.md names
-    # FreePBX + Ollama as accepted-risk for exactly this reason) — a model run
-    # against one buys a well-written refusal. Soft filter: deprioritised,
-    # not hidden, so an all-blocked queue still surfaces its worst row.
-    actionable = [w for w in candidates if "vendor_blocked" not in w["title"]]
-    if actionable:
-        candidates = actionable
+    # THE VENDOR-BLOCKED SOFT FILTER IS GONE (2026-08-31), and deleting it is
+    # the fix rather than a simplification of it.
+    #
+    # It read `"vendor_blocked" not in w["title"]` — a substring match on a
+    # RENDERED SENTENCE, where the queue has a structured `status` field that
+    # already says this. `_source_remediation` only emits rows whose status is
+    # `pending`, and `vendor-blocked` is a DIFFERENT status (5 rows carry it
+    # today), so every weakness reaching this function has already been gated
+    # on exactly the property the filter re-derived.
+    #
+    # What it actually did, measured the morning it was removed: `REM-212`
+    # (portainer) was filed as `remediation_type: vendor_blocked` back when no
+    # fixed release existed. On 2026-08-27 upstream shipped 2.45.0; the scan
+    # moved the row's STATUS to `pending` and confirmed the tag on Docker Hub,
+    # and left the TYPE label alone — it describes how the row was filed, not
+    # what is true now. So the one live effect of this filter was to
+    # deprioritise the queue's only actionable CRITICAL behind a `high`,
+    # because a stale label appeared inside a string.
+    #
+    # Reading `evidence["remediation_type"]` instead would keep the same bug
+    # with better manners: the field is stale too. The status is the fact.
 
     order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
     candidates.sort(key=lambda w: (order.get(w["severity"], 9), w["id"]))
