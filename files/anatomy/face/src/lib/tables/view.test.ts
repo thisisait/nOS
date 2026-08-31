@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveView, orderRows, formatWhen } from './view';
+import { resolveView, orderRows, timelineSections, formatWhen } from './view';
 import type { ColumnSpec, DataTable } from '$lib/contracts';
 
 /**
@@ -136,6 +136,48 @@ describe('orderRows', () => {
 	});
 });
 
+// ── timeline sections (2026-08-31) ──────────────────────────────────────────
+//
+// The roadmap complaint, pinned: 122 rows as one flat dot-list read as a chat
+// feed. Sections make the time axis visible (month headings) and give the
+// undated tail — which `orderRows` sinks — ONE honest bucket named after the
+// date column itself, instead of a wall of "—".
+describe('timelineSections', () => {
+	const tl = resolveView(
+		table(COLS, { style: 'timeline', titleColumn: 'title', dateColumn: 'created' })
+	);
+	const rows = [
+		{ id: 'a', title: 'a', created: '2026-09-02' },
+		{ id: 'b', title: 'b', created: '2026-09-20' },
+		{ id: 'c', title: 'c', created: 1754006400 }, // epoch seconds, Aug 2026
+		{ id: 'd', title: 'd', created: '' },
+		{ id: 'e', title: 'e', created: null as unknown as string }
+	];
+
+	it('groups the ordered rows by month and buckets the undated tail last', () => {
+		const secs = timelineSections(orderRows(rows, tl), tl);
+		expect(secs.map((s) => s.rows.length).reduce((x, y) => x + y, 0)).toBe(rows.length);
+		// newest month first, then the undated bucket — named after the COLUMN,
+		// so a roadmap says "no Target" and this table says "no Created".
+		expect(secs.at(-1)?.label).toBe('no Created');
+		expect(secs.at(-1)?.rows.map((r) => r.id).sort()).toEqual(['d', 'e']);
+		expect(secs[0].rows.map((r) => r.id)).toEqual(['b', 'a']);
+		// two dated months → two labeled sections before the undated one
+		expect(secs).toHaveLength(3);
+		expect(secs[0].label).not.toBe(secs[1].label);
+	});
+
+	it('every other style gets one unlabeled section — no second code path', () => {
+		const grid = resolveView(table(COLS));
+		const secs = timelineSections(rows, grid);
+		expect(secs).toEqual([{ label: '', rows }]);
+	});
+
+	it('an empty table is one empty section, not zero sections', () => {
+		expect(timelineSections([], tl)).toEqual([{ label: '', rows: [] }]);
+	});
+});
+
 describe('formatWhen', () => {
 	it('accepts epoch seconds, epoch ms and an ISO string', () => {
 		for (const raw of [1_780_000_000, 1_780_000_000_000, '2026-05-29T00:00:00Z']) {
@@ -145,5 +187,59 @@ describe('formatWhen', () => {
 
 	it('says nothing rather than lying when the value is unparseable', () => {
 		for (const raw of [null, undefined, 'not a date', {}]) expect(formatWhen(raw)).toBe('—');
+	});
+});
+
+// ── chat (2026-08-31) ────────────────────────────────────────────────────────
+//
+// The style the caddy-sessions table is for: one row is one EXCHANGE, because a
+// caddy turn is a sentence in and an answer out. Two columns are load-bearing,
+// so a chat missing either degrades to the grid rather than rendering a list
+// with round corners — the same rule blog and timeline already carry.
+//
+// NOT YET DECLARABLE END TO END, and the test says so rather than the comment
+// alone: KEAP validates `view.style` against its own enum (shared/contracts/
+// table.ts, tableViewStyleSchema), so a table definition carrying
+// `style: chat` would be REFUSED at seed time until that enum learns the word.
+// This half is the renderer's, and it is honest on its own: the resolver
+// accepts chat, degrades correctly, and does nothing surprising.
+describe('chat style', () => {
+	const table = (view: unknown) =>
+		({
+			id: 'caddy-sessions',
+			title: 'Caddy sessions',
+			columns: [
+				{ key: 'transcript', label: 'What was said', kind: 'text' },
+				{ key: 'summary', label: 'Answer', kind: 'text' },
+				{ key: 'started', label: 'Started', kind: 'date' }
+			],
+			view
+		}) as unknown as Parameters<typeof resolveView>[0];
+
+	it('resolves both halves of the exchange', () => {
+		const v = resolveView(
+			table({ style: 'chat', askColumn: 'transcript', bodyColumn: 'summary' })
+		);
+		expect(v.style).toBe('chat');
+		expect(v.ask?.key).toBe('transcript');
+		expect(v.body?.key).toBe('summary');
+		expect(v.degradedFrom).toBeUndefined();
+	});
+
+	it('degrades to grid when the asking side is missing', () => {
+		const v = resolveView(table({ style: 'chat', bodyColumn: 'summary' }));
+		expect(v.style).toBe('grid');
+		expect(v.degradedFrom).toBe('chat');
+		expect(v.ask).toBeNull();
+	});
+
+	it('degrades when the answer column is gone, and says so', () => {
+		const v = resolveView(table({ style: 'chat', askColumn: 'transcript', bodyColumn: 'nope' }));
+		expect(v.degradedFrom).toBe('chat');
+	});
+
+	it('never sets ask for another style', () => {
+		const v = resolveView(table({ style: 'grid', askColumn: 'transcript' }));
+		expect(v.ask).toBeNull();
 	});
 });

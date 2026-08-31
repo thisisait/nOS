@@ -279,9 +279,12 @@ export interface OfferSpec {
  * tomorrow — same block, same door (`narrowView`), same degrade.
  */
 export interface TableView {
-	style: 'grid' | 'blog' | 'timeline' | 'tiles';
+	style: 'grid' | 'blog' | 'timeline' | 'tiles' | 'chat';
 	titleColumn?: string;
 	bodyColumn?: string;
+	/** `chat` only: what was ASKED. The body column holds the answer, so one
+	 *  row is one exchange — the shape a caddy session already has. */
+	askColumn?: string;
 	dateColumn?: string;
 	mediaColumn?: string;
 	metaColumns?: string[];

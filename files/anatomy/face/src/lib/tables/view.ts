@@ -23,7 +23,7 @@ import type {
 	TableView
 } from '$lib/contracts';
 
-export type ResolvedStyle = 'grid' | 'blog' | 'timeline' | 'tiles';
+export type ResolvedStyle = 'grid' | 'blog' | 'timeline' | 'tiles' | 'chat';
 
 /**
  * Every action this renderer can offer. A CLOSED CATALOG, in code.
@@ -68,6 +68,9 @@ export interface ResolvedView {
 	style: ResolvedStyle;
 	title: ColumnSpec | null;
 	body: ColumnSpec | null;
+	/** `chat` only: the column holding what was ASKED. The body holds the
+	 *  answer, so one row renders as two bubbles. Null for every other style. */
+	ask: ColumnSpec | null;
 	date: ColumnSpec | null;
 	media: ColumnSpec | null;
 	meta: ColumnSpec[];
@@ -143,13 +146,23 @@ export function resolveView(table: DataTable): ResolvedView {
 	// vector cells are never renderable inline (they are 768 floats); a style
 	// that resolved onto one would print "⋯" as its whole body.
 	const bodyOk = body !== null && body.kind !== 'vector';
+	// `chat` renders ONE ROW AS AN EXCHANGE: the asking column becomes the left
+	// bubble, the body the right one. It is the caddy-sessions shape (a turn is
+	// a sentence in and an answer out), and it needs both halves — a chat with
+	// only one side is a list with round corners, so it degrades like the rest.
+	const asking = byKey(cols, v.askColumn);
 	const degraded =
-		(want === 'blog' && !bodyOk) || (want === 'timeline' && !date) ? want : undefined;
+		(want === 'blog' && !bodyOk) ||
+		(want === 'timeline' && !date) ||
+		(want === 'chat' && (!bodyOk || !asking))
+			? want
+			: undefined;
 
 	return {
 		style: degraded ? 'grid' : want,
 		title,
 		body: bodyOk ? body : null,
+		ask: want === 'chat' && !degraded ? asking : null,
 		date,
 		media,
 		meta,
@@ -226,11 +239,12 @@ export function narrowView(
 	// behaviour predates this function. Narrowing them here would change what a
 	// KEAP-authored block does today for no gain.
 	const out: TableView = {
-		style: (['grid', 'blog', 'timeline', 'tiles'] as const).includes(v.style as ResolvedStyle)
+		style: (['grid', 'blog', 'timeline', 'tiles', 'chat'] as const).includes(v.style as ResolvedStyle)
 			? (v.style as ResolvedStyle)
 			: 'grid',
 		...(typeof v.titleColumn === 'string' ? { titleColumn: v.titleColumn } : {}),
 		...(typeof v.bodyColumn === 'string' ? { bodyColumn: v.bodyColumn } : {}),
+		...(typeof v.askColumn === 'string' ? { askColumn: v.askColumn } : {}),
 		...(typeof v.dateColumn === 'string' ? { dateColumn: v.dateColumn } : {}),
 		...(typeof v.mediaColumn === 'string' ? { mediaColumn: v.mediaColumn } : {}),
 		...(Array.isArray(v.metaColumns)
@@ -373,7 +387,7 @@ export function buildViewProposalPrompt(table: DataTable): string {
 		cols,
 		'',
 		`Propose a JSON view block. Reply with JSON ONLY, no prose, no code fence:`,
-		`{"style":"grid|blog|timeline|tiles","titleColumn":"…","dateColumn":"…",`,
+		`{"style":"grid|blog|timeline|tiles|chat","titleColumn":"…","dateColumn":"…",`,
 		` "facets":["col","col"],`,
 		` "highlights":[{"label":"…","when":[{"column":"…","op":"eq|neq|lt|lte|gt|gte|contains","value":"…"}]}],`,
 		` "offer":{"label":"…","action":"${VIEW_ACTIONS[0]}","when":[…]}}`,
@@ -409,18 +423,65 @@ export function orderRows<T extends Record<string, unknown> & { id?: string }>(
 	return [...rows].sort((a, b) => at(b) - at(a));
 }
 
+/** Epoch seconds, ms, or a parseable string → ms. Null when it is none of those. */
+function toMs(raw: unknown): number | null {
+	if (typeof raw === 'number') return raw > 1e11 ? raw : raw * 1000;
+	if (typeof raw === 'string') {
+		const t = Date.parse(raw);
+		if (!Number.isNaN(t)) return t;
+	}
+	return null;
+}
+
 /** Human date for the timeline gutter. Epoch seconds, ms, or a parseable string. */
 export function formatWhen(raw: unknown): string {
-	let ms: number | null = null;
-	if (typeof raw === 'number') ms = raw > 1e11 ? raw : raw * 1000;
-	else if (typeof raw === 'string') {
-		const t = Date.parse(raw);
-		if (!Number.isNaN(t)) ms = t;
-	}
+	const ms = toMs(raw);
 	if (ms === null) return '—';
 	return new Date(ms).toLocaleDateString(undefined, {
 		year: 'numeric',
 		month: 'short',
 		day: 'numeric'
 	});
+}
+
+export interface TimelineSection<T> {
+	/** Month heading ("Sep 2026"), or the honest bucket for rows the date
+	 *  column is empty on ("no Target" — the column's own label, so a roadmap
+	 *  says "no Target" and a log says "no Started"). */
+	label: string;
+	rows: T[];
+}
+
+/**
+ * The already-ordered timeline rows, bucketed by month.
+ *
+ * WHY: 122 roadmap rows as one flat dot-list read as a chat feed — every entry
+ * the same weight, the time axis invisible, and the undated rows (`orderRows`
+ * sinks them) rendering a wall of "—". A timeline earns its name only when time
+ * is a visible axis, so the gutter dates become month headings and the undated
+ * tail becomes one named bucket instead of dozens of identical dashes.
+ *
+ * Pure projection over `orderRows`' output — it reorders nothing, drops
+ * nothing (the corpus and the view must not disagree about how many rows
+ * exist), and for any non-timeline view it returns one unlabeled section so
+ * the caller needs no second code path.
+ */
+export function timelineSections<T extends Record<string, unknown>>(
+	rows: T[],
+	view: ResolvedView
+): TimelineSection<T>[] {
+	if (view.style !== 'timeline' || !view.date) return [{ label: '', rows }];
+	const key = view.date.key;
+	const sections: TimelineSection<T>[] = [];
+	for (const row of rows) {
+		const ms = toMs(row[key]);
+		const label =
+			ms === null
+				? `no ${view.date.label}`
+				: new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
+		const last = sections[sections.length - 1];
+		if (last && last.label === label) last.rows.push(row);
+		else sections.push({ label, rows: [row] });
+	}
+	return sections.length ? sections : [{ label: '', rows }];
 }

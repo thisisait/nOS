@@ -18,7 +18,7 @@
 	import { loadTable, tablesUpsertRow } from '$lib/api/tables';
 	import { ApiError } from '$lib/api/client';
 	import RowEditor from './RowEditor.svelte';
-	import { resolveView, orderRows, formatWhen, matchRow } from '$lib/tables/view';
+	import { resolveView, orderRows, timelineSections, formatWhen, matchRow } from '$lib/tables/view';
 	import { StatusNote, Badge, prefersReducedMotion } from './ui';
 
 	let { table }: { table: DataTable | null } = $props();
@@ -295,8 +295,14 @@
 		{:else if rows.length === 0}
 			<StatusNote kind="empty">No rows.</StatusNote>
 
-			<!-- ── GRID ─────────────────────────────────────────────────────── -->
-		{:else if view.style === 'grid'}
+			<!-- ── GRID ─────────────────────────────────────────────────────
+			     `chat` renders here too, DELIBERATELY: the resolver admits the
+			     style but this component has no arm for it yet, and the {:else}
+			     catch-all below is TILES — so a declared chat was silently
+			     rendering as tiles, a style nobody asked for wearing no badge.
+			     Until the exchange renderer ships, chat gets the grid: the same
+			     target every other unhonourable style degrades to. -->
+		{:else if view.style === 'grid' || view.style === 'chat'}
 			<div class="scroll">
 				<table>
 					<thead>
@@ -353,8 +359,13 @@
 
 			<!-- ── TIMELINE ─────────────────────────────────────────────────── -->
 		{:else if view.style === 'timeline'}
+			<!-- Month headings, not one flat dot-list: a timeline whose time axis
+			     is invisible reads as a chat feed, and the undated tail becomes
+			     one named bucket ("no Target") instead of a wall of dashes. -->
 			<ol class="timeline">
-				{#each rows as row (row.id)}
+				{#each timelineSections(rows, view) as sec (sec.label)}
+					<li class="tl-sec" aria-hidden="true">{sec.label}</li>
+					{#each sec.rows as row (row.id)}
 					<li id={rowDomId(row.id)} class:flash={flashed === String(row.id)}>
 						<span class="dot" aria-hidden="true"></span>
 						<div class="entry">
@@ -373,6 +384,7 @@
 							{/if}
 						</div>
 					</li>
+					{/each}
 				{/each}
 			</ol>
 
@@ -679,6 +691,18 @@
 		display: flex;
 		gap: 12px;
 		padding: 0 0 16px 0;
+	}
+	/* Month heading. No dot, no rail — it is an axis label, not an entry. */
+	.timeline li.tl-sec {
+		display: block;
+		padding: 6px 0 10px 21px;
+		font-size: 11px;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--muted, #9aa4b2);
+	}
+	.timeline li.tl-sec::before {
+		display: none;
 	}
 	/* The rail: a border on the marker column, stopped by the last item. */
 	.timeline li::before {
