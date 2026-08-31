@@ -442,7 +442,7 @@ def _run_loop(args, daemon: bool) -> int:
     # loop rather than a silent absence, which is the only reason it was cheap
     # to find — but a name used before assignment is not a thing a loop should
     # be discovering for us.
-    threshold = 0.0
+    threshold = SPEECH_RMS or 60.0
 
     audio: "queue.Queue[bytes]" = queue.Queue()
     _drain(proc, audio)
@@ -491,14 +491,21 @@ def _run_loop(args, daemon: bool) -> int:
                 last_prune = now
 
             level = rms(chunk)
-            floor.append(level)
-            if len(floor) > FLOOR_WINDOW:
-                floor.pop(0)
-            # The quiet half of recent history IS the floor: a sentence occupies
-            # the loud half and therefore cannot raise its own threshold.
-            quiet = sorted(floor)[: max(1, len(floor) // 2)]
-            threshold = SPEECH_RMS or max(
-                60.0, (sum(quiet) / len(quiet)) * SPEECH_OVER_FLOOR)
+            # THE FLOOR IS LEARNED FROM SILENCE ONLY, and the first version was
+            # wrong in a way that only a long sentence reveals: it averaged the
+            # quiet half of the last six seconds, so during ten seconds of
+            # speech the "quiet half" IS speech. The floor climbed, the
+            # threshold with it, and the sentence cut itself into 1-3 s pieces —
+            # which is exactly the length at which this model starts answering
+            # in English. Measured: a 10 s utterance arriving as four fragments.
+            if not speech or level < threshold:
+                floor.append(level)
+                if len(floor) > FLOOR_WINDOW:
+                    floor.pop(0)
+            if floor:
+                quiet = sorted(floor)[: max(1, len(floor) // 2)]
+                threshold = SPEECH_RMS or max(
+                    60.0, (sum(quiet) / len(quiet)) * SPEECH_OVER_FLOOR)
 
             if level >= threshold:
                 speech += chunk
@@ -670,8 +677,39 @@ def cmd_selfcheck(_args) -> int:
         t.feed(said, 0)
         assert not t.armed, f"FALSE WAKE on ordinary speech: {said!r}"
 
+    # THE FLOOR MUST BE LEARNED FROM SILENCE. Simulated: 3 s of quiet, 10 s of
+    # speech at 5x the floor, 3 s of quiet. Averaging the quiet HALF of a
+    # rolling window lets a long sentence raise its own threshold and cut
+    # itself in two — measured on real speech as 1-3 s fragments, the length at
+    # which this model answers in English.
+    def _segments(learn_from_silence_only):
+        floor, thr, cur, quiet_run, segs = [], 60.0, 0, 0, []
+        for lvl in [300.0] * 100 + [1500.0] * 333 + [300.0] * 100:
+            if (not learn_from_silence_only) or cur == 0 or lvl < thr:
+                floor.append(lvl)
+                del floor[:-FLOOR_WINDOW]
+            quiet = sorted(floor)[: max(1, len(floor) // 2)]
+            thr = max(60.0, sum(quiet) / len(quiet) * SPEECH_OVER_FLOOR)
+            if lvl >= thr:
+                cur += 1
+                quiet_run = 0
+            elif cur:
+                quiet_run += 1
+                cur += 1
+                if quiet_run >= 40:
+                    segs.append(round(cur * 0.03, 1))
+                    cur, quiet_run = 0, 0
+        if cur:
+            segs.append(round(cur * 0.03, 1))
+        return segs
+
+    assert max(_segments(False)) < 7, "the simulation stopped reproducing the bug"
+    assert max(_segments(True)) > 10, (
+        f"a 10 s utterance still fragments: {_segments(True)} — the floor is "
+        f"being learned from speech again")
+
     print("selfcheck OK — 4 turns, 6 wake spellings, 7 refusals, "
-          "1 retention sweep, 1 threshold")
+          "1 retention sweep, 2 thresholds")
     return 0
 
 
