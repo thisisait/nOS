@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Presenters;
 
 use App\Model\HubCardRepository;
+use App\Model\NotificationRepository;
+use App\Model\PulseRepository;
 use App\Model\SystemRepository;
 
 /**
@@ -22,6 +24,13 @@ final class HubPresenter extends BasePresenter
 	public function __construct(
 		private SystemRepository $systems,
 		private HubCardRepository $cards,
+		// ESTATE RED, not just HTTP red. /hub probed 33 services, called them
+		// all up, and said nothing while two Pulse jobs had been failing for
+		// half a day and five CRITICAL/HIGH notifications sat unread
+		// (measured 2026-08-31). Both facts already live in wing.db and both
+		// already have a repository; the page simply never asked.
+		private PulseRepository $pulse,
+		private NotificationRepository $notifications,
 	) {
 	}
 
@@ -146,6 +155,16 @@ final class HubPresenter extends BasePresenter
 		ksort($stacks);
 		ksort($categories);
 
+		// Scoped ON PURPOSE to what Wing knows first-hand. `tools/red-status.py`
+		// also reports CI and Dependabot, which come from `gh` — Wing has no
+		// business shelling out to it, and a second, partial "total red" would
+		// be a number that disagrees with the reader everyone else quotes. The
+		// tile names its own scope instead.
+		$failing = $this->pulse->failingJobs();
+		$this->template->estateRed = [
+			'jobs'    => $failing,
+			'unread'  => $this->notifications->countUnread('operator'),
+		];
 		$this->template->stats = $stats;
 		$this->template->tree = $tree;
 		$this->template->byStack = $byStack;

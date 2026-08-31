@@ -469,6 +469,45 @@ final class PulseRepository
 	 *
 	 * @return array<string, array<string, mixed>>
 	 */
+	/**
+	 * Jobs whose LATEST run failed — the estate-red half Wing can answer
+	 * first-hand.
+	 *
+	 * Why it exists: /hub showed 33 green tiles while two Pulse jobs had been
+	 * failing for half a day (measured 2026-08-31). The page probes HTTP and
+	 * nothing else, so a service can be up and its nightly job dead, and the
+	 * operator sees only green.
+	 *
+	 * A DECLARED FINDINGS CODE IS NOT A FAILURE — `findingsExitCodes()`. This
+	 * deliberately does NOT try to reproduce everything `tools/red-status.py`
+	 * reports: CI and Dependabot come from `gh`, which Wing has no business
+	 * shelling out to. Two readers, one definition each, and the tile says
+	 * which half it is showing rather than implying a total.
+	 *
+	 * @return list<array{job_id: string, exit_code: int, fired_at: string}>
+	 */
+	public function failingJobs(): array
+	{
+		$latest = $this->db->query(
+			'SELECT r.job_id, r.exit_code, r.fired_at FROM pulse_runs r
+			   JOIN (SELECT job_id, MAX(fired_at) AS f FROM pulse_runs GROUP BY job_id) m
+			     ON r.job_id = m.job_id AND r.fired_at = m.f
+			  WHERE r.exit_code IS NOT NULL AND r.exit_code != 0
+			  GROUP BY r.job_id
+			 HAVING r.run_id = MAX(r.run_id)',
+		);
+		$out = [];
+		foreach ($latest as $row) {
+			$id = (string) $row->job_id;
+			$code = (int) $row->exit_code;
+			if (in_array($code, $this->findingsExitCodes($id), true)) {
+				continue;
+			}
+			$out[] = ['job_id' => $id, 'exit_code' => $code, 'fired_at' => (string) $row->fired_at];
+		}
+		return $out;
+	}
+
 	public function runSummaries(): array
 	{
 		$since = date('c', time() - self::SUMMARY_WINDOW_HOURS * 3600);
@@ -500,12 +539,33 @@ final class PulseRepository
 		}
 
 		// Counts over the window.
+		// `fails` excludes DECLARED FINDINGS CODES, because a job that exits 3
+		// to say "I found something" has not failed. `findingsExitCodes()` has
+		// held that contract since it was written; this counter did not consult
+		// it, so a nightly detector that finds something every night read as a
+		// job failing every night. Same defect the python weakness reader
+		// carried until 2026-08-31 (`_source_pulse_runs`), one language over.
 		$counts = $this->db->query(
-			'SELECT job_id, COUNT(*) AS runs,
-			        SUM(CASE WHEN exit_code IS NOT NULL AND exit_code != 0 THEN 1 ELSE 0 END) AS fails
-			   FROM pulse_runs WHERE fired_at >= ? GROUP BY job_id',
+			'SELECT job_id, exit_code, COUNT(*) AS n
+			   FROM pulse_runs WHERE fired_at >= ? AND exit_code IS NOT NULL
+			  GROUP BY job_id, exit_code',
 			$since,
 		);
+		$agg = [];
+		foreach ($counts as $row) {
+			$id = (string) $row->job_id;
+			$code = (int) $row->exit_code;
+			$n = (int) $row->n;
+			$agg[$id] ??= ['runs' => 0, 'fails' => 0];
+			$agg[$id]['runs'] += $n;
+			if ($code !== 0 && !in_array($code, $this->findingsExitCodes($id), true)) {
+				$agg[$id]['fails'] += $n;
+			}
+		}
+		$counts = [];
+		foreach ($agg as $id => $v) {
+			$counts[] = (object) ['job_id' => $id, 'runs' => $v['runs'], 'fails' => $v['fails']];
+		}
 		foreach ($counts as $row) {
 			$id = (string) $row->job_id;
 			if (!isset($out[$id])) {

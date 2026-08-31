@@ -20,6 +20,26 @@
 		<div class="value" style="color:{if $stats['down'] > 0}var(--red){else}var(--text2){/if}">{$stats['down']}</div>
 		<div class="sub">{if $stats['down'] > 0}needs attention{else}all clear{/if}</div>
 	</div>
+	{*
+	   ESTATE RED — the tile that stops /hub reading as "all clear" while the
+	   estate is not. Health above is an HTTP probe of each service; this is the
+	   half Wing knows first-hand from its own tables: Pulse jobs whose latest
+	   run failed (a declared findings code is NOT a failure) and unread
+	   CRITICAL/HIGH notifications.
+
+	   It says "wing.db only" because it is NOT the whole red set —
+	   `tools/red-status.py` also covers CI and Dependabot via `gh`. A tile
+	   implying a total it cannot see would be worse than no tile.
+	*}
+	{var $redCount = count($estateRed['jobs']) + $estateRed['unread']}
+	<div class="stat" style="border-left:3px solid {if $redCount > 0}var(--red){else}var(--border){/if}">
+		<div class="label">Estate red</div>
+		<div class="value" style="color:{if $redCount > 0}var(--red){else}var(--text2){/if}">{$redCount}</div>
+		<div class="sub" title="{foreach $estateRed['jobs'] as $j}{$j['job_id']} rc={$j['exit_code']}
+{/foreach}">
+			{if $redCount > 0}{count($estateRed['jobs'])} job(s), {$estateRed['unread']} unread{else}wing.db only{/if}
+		</div>
+	</div>
 	<div class="stat" style="border-left:3px solid {if $stats['findings'] > 0}var(--orange){else}var(--border){/if}">
 		<div class="label">Findings</div>
 		<div class="value" style="color:{if $stats['findings'] > 0}var(--orange){else}var(--text2){/if}">{$stats['findings']}</div>
