@@ -66,6 +66,20 @@ gdpr:
 # The emitter decides severity; this block only routes. A failed apex build
 # (unsigned ruling, gate halt, leak refusal) surfaces at converge, so the
 # channels matter mainly for future Pulse probes of the public surface.
+# ── Reload semantics (2026-08-31) ────────────────────────────────────────────
+# Consumed by tools/reload-stale-config.py. The mount here is a DOCROOT, not a
+# config file: nginx opens it per request, so a rendered page is live the
+# moment it lands and a restart would only drop connections. The staleness
+# reader still reports it (a file newer than the process IS a fact), which is
+# why the exemption is declared here rather than filtered out of the reader.
+reload:
+  mode: self
+  services:
+    - apex
+  reason: >-
+    the mount is an nginx docroot, re-read per request; a render is live
+    without any restart.
+
 notification:
   on_critical: [wing-inbox, ntfy]
   on_high:     [wing-inbox]

@@ -27,6 +27,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 
+from . import otel
 from . import redact
 from . import secrets as secret_refs
 from .config import PulseConfig
@@ -228,7 +229,21 @@ class PulseDaemon:
             # daemon has held the real UUID all along — this hands it over.
             # setdefault: a job that declares its own PULSE_RUN_ID keeps it.
             env.setdefault("PULSE_RUN_ID", run_id)
+            # AND SO DOES THE TRACE. `TRACEPARENT` is the W3C standard variable
+            # every OTel SDK reads at startup, so a job's own tool — including
+            # one a user brings, which nOS knows nothing about — nests its spans
+            # under this run without a line of nOS-specific code. The trace id
+            # IS run_id (see otel.py), so Tempo joins the same lineage chain
+            # that pulse_runs, events and agent_sessions already share rather
+            # than opening a parallel one. setdefault for the same reason as
+            # PULSE_RUN_ID: a job that sets its own context keeps it.
+            span_id = otel.new_span_id()
+            env.setdefault("TRACEPARENT", otel.traceparent(run_id, span_id))
+            start_nanos = time.time_ns()
             result = sp_runner.execute(command, args, timeout_s=timeout_s, env=env)
+            otel.export_run(job_id=job_id, run_id=run_id, span_id=span_id,
+                            start_nanos=start_nanos, end_nanos=time.time_ns(),
+                            exit_code=result.exit_code, command=command)
             log.info("job %s done rc=%d dur=%.1fs timed_out=%s",
                      job_id, result.exit_code, result.duration_s, result.timed_out)
             # SEC-9 (2026-05-23): scrub stdout/stderr tails BEFORE

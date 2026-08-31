@@ -113,6 +113,25 @@ provisioning:
     source_dir: blueprints
     target_dir: "{{ stacks_dir }}/infra/authentik/blueprints"
 
+# ── Reload semantics (2026-08-31) ────────────────────────────────────────────
+# Consumed by tools/reload-stale-config.py, which restarts any container whose
+# mounted config is newer than the process that read it. Authentik must NOT be
+# in that set: it re-applies /blueprints/custom on its own schedule, so a
+# restart would be a ~60s SSO outage in exchange for nothing.
+#
+# MEASURED, not assumed — the container had been up since 2026-08-23 while
+# authentik_blueprints_blueprintinstance.last_applied carried same-day
+# timestamps for four blueprints. If a future authentik drops that scheduler,
+# delete this block and the restart comes back by default.
+reload:
+  mode: self
+  services:
+    - authentik-server
+    - authentik-worker
+  reason: >-
+    authentik re-applies /blueprints/custom on a schedule; measured 2026-08-31
+    with the container up since 08-23 and four blueprints applied same-day.
+
 lifecycle:
   pre_compose:
     - ensure_dir: "{{ stacks_dir }}/infra/authentik/blueprints"

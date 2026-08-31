@@ -360,9 +360,29 @@ loki.source.file "agent_logs" {
 // that directory — Alloy is started by brew against
 // {{ homebrew_prefix }}/etc/grafana-alloy, which this template writes. Two
 // implementations, one live; the declarations there have never been active
-// (the fragments on disk are dated 2026-07-24). Filed as
-// `alloy-syslog-fragments-orphaned` rather than fixed here, because making
-// conf.d load means changing how the brew service is launched.
+// (the fragments on disk are dated 2026-07-24).
+//
+// CORRECTION 2026-08-31 — the reason first given here, "making conf.d load
+// means changing how the brew service is launched", was WRONG. `alloy run` is
+// already pointed at a DIRECTORY, and its own --help says "if path is a
+// directory, all *.alloy files in that directory will be combined". A fragment
+// written as {{ homebrew_prefix }}/etc/grafana-alloy/<name>.alloy loads today,
+// with no change to the service.
+//
+// The real blocker is DUPLICATION, and it is the worse problem. Measured:
+// alloy-host-metrics declares prometheus.exporter.unix "host" beside this
+// file's "local"; alloy-docker-metrics declares discovery.docker +
+// loki.source.docker beside this file's docker_targets/docker_logs;
+// alloy-syslog's nginx/wing/daemons overlap organ_logs and nginx_*. The
+// component LABELS differ, so Alloy would start cleanly and then ship every
+// container log twice and scrape every host metric twice. Only cadvisor is
+// additive.
+//
+// So the four alloy-* plugins are a SUPERSEDED parallel implementation, not an
+// orphaned path waiting to be reconnected. Deleting them moves the Track Q
+// plugin tally and is the operator's call; until then the gate
+// `test_alloy_fragments_stay_out_of_the_live_config_dir.py` stops anyone
+// "fixing" the path and silently doubling the estate's log volume.
 //
 // `service` is set per target so a query can name one organ. Missing files are
 // a no-op: Alloy tolerates a glob that matches nothing, which is what keeps

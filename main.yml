@@ -2280,6 +2280,37 @@
       tags: ['iiab', 'stack', 'verify', 'stacks']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Make the running containers read the config this run rendered for them
+    # ──────────────────────────────────────────────────────────────────────────
+    # Fourteen plugins render config into a bind mount of a RUNNING container,
+    # and nothing made the process re-read it: `docker compose up -d` is a no-op
+    # when the service definition is unchanged, so a converge could rewrite
+    # prometheus.yml and finish `failed=0` with Prometheus still serving the old
+    # one (measured 2026-08-31 — a Traefik scrape job sat unread on disk while
+    # every surface reported success).
+    #
+    # AFTER the stacks are up, not before: a container started by this run is
+    # already reading the fresh config, and the tool only touches the ones whose
+    # config is newer than their own StartedAt. On a blank that set is empty.
+    #
+    # Opt-out lives in the plugin manifest (`reload: {mode: self}`) for the two
+    # services that re-read on their own — see tools/reload-stale-config.py for
+    # why the polarity is opt-OUT.
+    - name: "[Stacks] Reload containers whose rendered config is newer than they are"
+      ansible.builtin.command: "{{ playbook_dir }}/tools/reload-stale-config.py --apply"
+      register: _stale_reload
+      changed_when: "'restarted ' in _stale_reload.stdout"
+      failed_when: false
+      when: nos_docker_ready | default(false) | bool
+      tags: ['stacks', 'reload-config', 'always']
+
+    - name: "[Stacks] Config-reload report"
+      ansible.builtin.debug:
+        msg: "{{ _stale_reload.stdout_lines | default(['(skipped — docker not ready)']) }}"
+      when: nos_docker_ready | default(false) | bool
+      tags: ['stacks', 'reload-config', 'always']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Service Registry - JSON catalog + Grafana dashboard
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/service-registry.yml
