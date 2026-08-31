@@ -32,9 +32,14 @@ import path from 'node:path';
 // under owner `fsmap:<id>` with the MAPPING's visibility — one user's files
 // readable by everyone, and invisible to the users-pass prune filter.
 //
-// Upstreamable: KEAP would take this unchanged, since `listUserRoots()` yields
-// the single path when only `KEAP_USER_FILES_DIR` is set. Declared rather than
-// re-vendored because the organ needs it NOW and KEAP does not.
+// NOT UPSTREAMABLE, corrected 2026-08-31 — the first draft of this marker said
+// KEAP would take it unchanged. It would not: `listUserRoots` lives in
+// server/cortex-fs.ts, which is nOS-AUTHORED and has no counterpart upstream.
+// Sending this patch to KEAP would mean vendoring the roots-list abstraction
+// with it, and KEAP does not need it — its compose file stacks the two trees
+// at one path, so a single `KEAP_USER_FILES_DIR` is the whole truth there.
+// The divergence exists because the deployments differ, which is the honest
+// reason for a declaration rather than a pull request.
 import { listUserRoots } from './cortex-fs';
 
 const KEY_RE = /^[a-z0-9][a-z0-9-]{0,31}$/;
