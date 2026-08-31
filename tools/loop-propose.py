@@ -113,6 +113,16 @@ class Refused(Exception):
     """A condition this runner will not spend a model run on."""
 
 
+class Unreadable(Exception):
+    """The ledger could not be read, which is not the same as it being empty.
+
+    Kept distinct from Refused on purpose: a refusal is a decision this runner
+    made, and this is the absence of an answer. Collapsing them would put
+    "I could not look" and "I looked and there was nothing" behind one exit
+    code, which is the confusion that produced this class.
+    """
+
+
 def _load_status():
     spec = importlib.util.spec_from_file_location(
         "_loop_status_entry", REPO / "tools" / "loop-status.py")
@@ -222,15 +232,36 @@ def _proposals_citing(weakness_id: str) -> list[dict]:
     """
     db = wing_db()
     if not db.is_file():
-        return []
-    conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        raise Unreadable(f"no ledger at {db}")
+    # busy_timeout, because the ledger is BUSY exactly when this runs.
+    #
+    # MEASURED 2026-08-31. The first model-authored proposal for a CRITICAL
+    # (rem:REM-212) was written at 08:58:33, its session ended at 08:58:45, and
+    # this runner reported "no proposal citing rem:REM-212 appeared in the
+    # ledger — the run bought nothing". The row was there the whole time. Bone
+    # sealed a verdict at 08:58:44, one second before the read, and SQLite
+    # answered `database is locked` — which the handler below turned into `[]`,
+    # a value that also means "no proposals". The comment claimed to
+    # distinguish absence from zero; the RETURN TYPE could not.
+    #
+    # So: wait for the writer (the ledger's own default elsewhere is 60s), and
+    # when the read genuinely cannot happen, say UNREADABLE rather than
+    # returning a shape that reads as an answer.
+    try:
+        # connect() raises too, and separately: an unopenable file failed
+        # OUTSIDE the try that was meant to catch it, so the wrapper leaked a
+        # raw OperationalError to the caller. Both halves of the read are the
+        # read.
+        conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=60.0)
+    except sqlite3.OperationalError as exc:
+        raise Unreadable(f"the ledger could not be read: {exc}") from exc
     try:
         conn.row_factory = sqlite3.Row
         return [dict(r) for r in conn.execute(
             "SELECT id, uuid, session_uuid FROM loop_proposals "
             "WHERE weakness_id = ? ORDER BY id", (weakness_id,))]
-    except sqlite3.OperationalError:
-        return []  # no ledger yet — absence, not zero proposals
+    except sqlite3.OperationalError as exc:
+        raise Unreadable(f"the ledger could not be read: {exc}") from exc
     finally:
         conn.close()
 
@@ -246,7 +277,12 @@ def invoke(weakness: dict, log) -> int:
     if not RUNNER.is_file():
         raise Refused(f"the AgentKit runner {RUNNER} does not exist — the "
                       f"proposer runs through it, not through `claude`")
-    before = {p["id"] for p in _proposals_citing(weakness["id"])}
+    # If this one cannot be read, the run has not started and refusing costs
+    # nothing — unlike the readback above, where the model has already been paid.
+    try:
+        before = {p["id"] for p in _proposals_citing(weakness["id"])}
+    except Unreadable as exc:
+        raise Refused(f"cannot establish what the ledger already holds: {exc}") from exc
     session_uuid = str(_uuid.uuid4())
     argv = runner_argv(weakness, session_uuid)
 
@@ -261,7 +297,18 @@ def invoke(weakness: dict, log) -> int:
     for line in (done.stdout or "").strip().splitlines()[-6:]:
         log(f"  | {line}")
 
-    new = [p for p in _proposals_citing(weakness["id"]) if p["id"] not in before]
+    try:
+        after = _proposals_citing(weakness["id"])
+    except Unreadable as exc:
+        # The run may well have proposed. Saying so is the honest report, and
+        # exit 2 (environment) rather than 1 (the model bought nothing) keeps
+        # the two apart for whatever reads this next.
+        log(f"the model ran, and the ledger cannot be read to say what it "
+            f"produced: {exc}. This is NOT 'no proposal' — check with "
+            f"tools/loop-status.py before retrying, or a second run will pay "
+            f"for the same work twice.")
+        return 2
+    new = [p for p in after if p["id"] not in before]
     if not new:
         log(f"no proposal citing {weakness['id']} appeared in the ledger "
             f"(runner exit {done.returncode}) — the run bought nothing; "
