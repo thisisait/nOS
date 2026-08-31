@@ -95,6 +95,13 @@ ears_always_listen: false
 # a dictation machine.
 ears_autorun: true
 ears_launchd_label: "eu.thisisait.nos.ears-listen"
+# CAPTURE GAIN — the calibration knob, and the fix for the first real session.
+# This host's USB microphone peaks at about -30 dBFS, and parakeet HALLUCINATES
+# on near-silence: it wrote English, then Spanish, for Czech speech. At 8 the
+# same voice reaches -6 dBFS and the transcript is correct Czech. Measured, not
+# chosen — a different microphone wants a different number.
+ears_input_gain: 8
+
 # avfoundation input spec. `:0` is "no video, default audio input".
 ears_input_device: ":0"
 # launchd retry interval after the process exits — long enough that a denied

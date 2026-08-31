@@ -93,6 +93,22 @@ SPEECH_OVER_FLOOR = float(os.environ.get("EARS_SPEECH_OVER_FLOOR", "2.2"))
 #: drag it up and deafen the listener mid-turn.
 FLOOR_WINDOW = 200
 
+#: CAPTURE GAIN, and it is the calibration knob a real microphone needs.
+#:
+#: MEASURED 2026-08-31 and it was the ROOT CAUSE of an ear that heard 14
+#: segments and understood none of them: this USB microphone peaks at RMS 969
+#: of 32768 — about -30 dBFS — and parakeet HALLUCINATES on near-silence. It
+#: produced "Hello, hello, you're fine.", then "Hey Just Coal Kevin.", then a
+#: fluent Spanish sentence, for Czech speech. None of that reads as a level
+#: problem; it reads as a language-detection problem, and two fixes were aimed
+#: at the wrong thing before the level was measured. At volume=8 the same voice
+#: peaks at -6 dBFS and the same model writes correct Czech.
+#:
+#: A FIXED gain and not dynaudnorm: an auto-leveller raises the noise floor
+#: during silence, which is exactly what the VAD reads. The threshold is
+#: floor-relative, so it follows the gain without retuning.
+INPUT_GAIN = float(os.environ.get("EARS_INPUT_GAIN", "8"))
+
 # How long the daemon waits for the FIRST audio byte before deciding the
 # microphone is not actually reachable. Generous: launchd starts us before the
 # login session is fully up.
@@ -295,9 +311,12 @@ def _drain(proc: subprocess.Popen, sink: "queue.Queue[bytes]") -> threading.Thre
     return t
 
 
-def _ffmpeg(args: list[str]) -> subprocess.Popen:
+def _ffmpeg(args: list[str], gain: float = 0.0) -> subprocess.Popen:
+    """`gain` applies to the MICROPHONE only — a file already carries its own
+    level, and amplifying it would corrupt the one path used for measurement."""
+    filt = ["-af", f"volume={gain}"] if gain and gain != 1.0 else []
     return subprocess.Popen(
-        ["ffmpeg", "-loglevel", "error", "-nostats", *args,
+        ["ffmpeg", "-loglevel", "error", "-nostats", *args, *filt,
          "-ac", "1", "-ar", str(RATE), "-f", "s16le", "-"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -325,7 +344,8 @@ def _run_loop(args, daemon: bool) -> int:
     removed = prune(args.retention)
     _write_state(mode="daemon" if daemon else "foreground", mic_ok=None,
                  started=int(time.time()), pruned=len(removed), turns_today=0,
-                 model=args.model, wake=args.wake, retention_days=args.retention)
+                 model=args.model, wake=args.wake, retention_days=args.retention,
+                 gain=args.gain)
 
     # ORDER IS LOAD-BEARING: the model (and its ~600 MB first-run download)
     # resolves BEFORE the microphone opens, so the wait costs no audio. Per
@@ -334,7 +354,7 @@ def _run_loop(args, daemon: bool) -> int:
     # read into a thread rather than growing the buffer.
     model = _load_model(args.model)
     turn = Turn(args.wake, args.submit, args.silence)
-    proc = _ffmpeg(["-f", "avfoundation", "-i", args.input])
+    proc = _ffmpeg(["-f", "avfoundation", "-i", args.input], gain=args.gain)
     if not daemon:
         print(f"listening — say '{args.wake}' to open a turn, "
               f"'{args.submit}' or {args.silence:.0f}s of silence to close it",
@@ -548,6 +568,8 @@ def main() -> int:
     ap.add_argument("--retention", type=int, default=RETENTION_DAYS)
     ap.add_argument("--input", default=os.environ.get("EARS_INPUT", ":0"),
                     help="avfoundation input spec (default :0, the system input)")
+    ap.add_argument("--gain", type=float, default=INPUT_GAIN,
+                    help="capture gain; a quiet mic makes the ASR hallucinate")
     ap.add_argument("--verbose", action="store_true", help="print every segment heard")
     ap.add_argument("--autorun", action="store_true",
                     default=os.environ.get("EARS_AUTORUN", "") == "1",
