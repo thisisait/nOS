@@ -489,6 +489,8 @@ def fingerprint(weakness_id: str, target_paths: Iterable[str],
     return hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()
 
 
+_HUNK_HEADER_RE = re.compile(
+    r"^@@ -\d+(?:,(?P<oldn>\d+))? \+\d+(?:,(?P<newn>\d+))? @@")
 _HUNK_RE = re.compile(r"^@@[^@]*@@")
 _INDEX_RE = re.compile(r"^index [0-9a-f]+\.\.[0-9a-f]+")
 
@@ -512,46 +514,83 @@ def normalize_diff(diff_text: str) -> str:
 
 
 def malformed_hunk_line(diff_text: str) -> tuple[int, str] | None:
-    """The first hunk line that is not a legal unified-diff body line.
+    """The first thing about this patch that git will refuse to read.
 
-    MEASURED 2026-08-31. The nightly loop's one model-authored proposal
-    (rem:REM-156, a nodered pin bump) was recorded, sat five hours, and then
-    every judge in its set refused it:
+    MEASURED 2026-08-31, twice, on the loop's first two model-authored
+    proposals — and the second is why this function checks two things:
 
-        diff does not apply at engine base: corrupt patch at <stdin>:5
+      rem:REM-156  "corrupt patch at <stdin>:5"   context line, no leading space
+      rem:REM-212  "corrupt patch at <stdin>:10"  hunk header declares 7 lines,
+                                                  the body supplies 6
 
-    Line 5 was the first CONTEXT line, and it had no leading space. A unified
-    diff's body lines must begin with ' ', '+', '-' or '\\'; a model that emits
-    context flush-left produces a patch git will not read. The diff was
-    otherwise correct — right file, right line, 4.0.9 -> 4.0.10.
+    Both diffs were otherwise correct: right file, right line, right new
+    version. Both were recorded, sat hours, and were then refused by every
+    judge in their set — the model that could have fixed a one-character or
+    one-digit mistake had stopped existing.
 
-    WHY THIS BELONGS AT THE FRONT DOOR. Nothing was wrong with the judge's
-    refusal; it is exactly right to refuse rather than judge unpatched HEAD.
-    The cost was WHERE the news arrived: the proposer's session had ended
-    hours earlier, so the one actor able to fix a malformed patch — the model
-    that wrote it, still holding the file it read — never heard. Recording it
-    and discovering it a night later turns a typo into a wasted cycle.
+    THE FIRST DRAFT OF THIS CHECK ONLY CAUGHT THE FIRST CLASS, and the very
+    next proposal was the second class. That is worth recording: "malformed
+    patch" is not one defect, and a front-door check that models a single
+    observed spelling of it will keep letting the next one through. These two
+    are what a language model actually gets wrong about unified diffs — the
+    prefix, and the arithmetic — because neither is inferable from the content
+    it is editing.
 
-    Deliberately NOT `git apply --check`: applicability at a given base is the
-    judge's question and needs a sandbox. This is the FORMAT, which is
-    context-free, needs no repo, and is the half that was actually failing.
+    Deliberately NOT `git apply --check`: whether a patch applies at a given
+    base is the judge's question and needs a sandbox. This is the FORMAT, which
+    is context-free and needs no repo.
     """
-    in_hunk = False
-    for n, raw in enumerate(diff_text.replace("\r\n", "\n").split("\n"), start=1):
-        if raw.startswith("@@"):
-            in_hunk = True
+    lines = diff_text.replace("\r\n", "\n").split("\n")
+    n = 0
+    while n < len(lines):
+        raw = lines[n]
+        n += 1
+        found = _HUNK_HEADER_RE.match(raw)
+        if not found:
             continue
-        if not in_hunk:
-            continue
-        if raw.startswith(("diff --git ", "--- ", "+++ ", "index ")):
-            in_hunk = False
-            continue
-        if raw == "":
-            # A wholly empty line is a legal (if sloppy) empty context line;
-            # git tolerates it and so does this.
-            continue
-        if raw[0] not in " +-\\":
-            return n, raw
+        header_no = n
+        want_old = int(found.group("oldn") or 1)
+        want_new = int(found.group("newn") or 1)
+        got_old = got_new = 0
+        while n < len(lines):
+            body = lines[n]
+            if body.startswith("@@") or body.startswith(("diff --git ", "--- ", "+++ ", "index ")):
+                break
+            n += 1
+            if body.startswith("\\"):        # "\ No newline at end of file"
+                continue
+            if body == "":
+                # A trailing blank at the very end is the string's own tail,
+                # not an empty context line; anywhere else git reads it as one.
+                if n >= len(lines):
+                    break
+                got_old += 1
+                got_new += 1
+                continue
+            if body[0] == " ":
+                got_old += 1
+                got_new += 1
+            elif body[0] == "-":
+                got_old += 1
+            elif body[0] == "+":
+                got_new += 1
+            else:
+                return n, (
+                    f"line {n} is inside a hunk and starts with {body[:1]!r}: "
+                    f"{body[:60]!r}. Unified-diff body lines must begin with "
+                    "' ' (context), '+' (added) or '-' (removed) — a context "
+                    "line flush against the margin makes git read the patch as "
+                    "corrupt. Re-emit the hunk with its context lines prefixed "
+                    "by a single space."
+                )
+        if got_old != want_old or got_new != want_new:
+            return header_no, (
+                f"the hunk header on line {header_no} declares {want_old} old "
+                f"and {want_new} new line(s), and the body supplies {got_old} "
+                f"and {got_new}. git stops at the line where the count runs "
+                "out and calls the patch corrupt. Recount: old = context + "
+                "removed, new = context + added."
+            )
     return None
 
 

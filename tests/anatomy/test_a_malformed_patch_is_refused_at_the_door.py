@@ -45,6 +45,10 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 LEDGER = REPO / "files/anatomy/bone/ledger.py"
 
+#: VERIFIED WITH `git apply --check`, not by eye. The first version of this
+#: fixture declared a 3-line hunk and supplied 2 body lines — git calls that
+#: "corrupt patch" too, so the "well-formed" case in this file was malformed
+#: from the day it was written and the check that later flagged it was right.
 _GOOD = (
     "diff --git a/x b/x\n"
     "--- a/x\n"
@@ -53,6 +57,7 @@ _GOOD = (
     " context\n"
     "-old\n"
     "+new\n"
+    " tail\n"
 )
 
 #: The live shape, reduced: a hunk whose context line is flush left.
@@ -88,6 +93,38 @@ def test_the_live_failure_is_caught_and_the_line_is_named() -> None:
     assert "nodered_uid" in text, "the refusal does not quote the offending line"
 
 
+#: The SECOND class, and the reason this file no longer models one spelling of
+#: "malformed". rem:REM-212's diff had every body line correctly prefixed and a
+#: header declaring seven lines over a six-line body — git: "corrupt patch at
+#: <stdin>:10". It passed the first version of this check and was refused by
+#: every judge in its set, hours later, exactly like the diff before it.
+_MISCOUNTED = (
+    "--- a/default.config.yml\n"
+    "+++ b/default.config.yml\n"
+    "@@ -1230,7 +1230,7 @@ install_portainer: true\n"
+    " portainer_data_dir: x\n"
+    " portainer_domain: y\n"
+    " portainer_port: 9002\n"
+    '-portainer_version: "2.44.0"\n'
+    '+portainer_version: "2.45.0"\n'
+    " portainer_admin_password: z\n"
+    " portainer_admin_auto_reset: false\n"
+)
+
+
+def test_a_hunk_that_miscounts_its_own_lines_is_caught() -> None:
+    """The class the first draft missed, taken from the live proposal."""
+    mod = _ledger()
+    found = mod.malformed_hunk_line(_MISCOUNTED)
+    assert found is not None, (
+        "a hunk header declaring 7 lines over a 6-line body is accepted; git "
+        "calls it corrupt and the judge refuses it hours later")
+    line_no, why = found
+    assert line_no == 3, f"named line {line_no}; the header is on line 3"
+    assert "declares 7 old and 7 new" in why and "supplies 6 and 6" in why, (
+        f"the refusal does not say what to recount: {why!r}")
+
+
 def test_a_well_formed_patch_passes() -> None:
     """The half that matters more: a check that refuses everything would stop
     the loop entirely, which is a worse failure than the one it fixes."""
@@ -96,7 +133,34 @@ def test_a_well_formed_patch_passes() -> None:
     # Several files, and the no-newline marker git itself emits.
     multi = _GOOD + _GOOD.replace("a/x b/x", "a/y b/y").replace("a/x", "a/y").replace("b/x", "b/y")
     assert mod.malformed_hunk_line(multi) is None
+    # A header with no counts at all means 1 and 1, and is legal.
+    assert mod.malformed_hunk_line(
+        "--- a/x\n+++ b/x\n@@ -1 +1 @@\n-a\n+b\n") is None
+    # An addition that grows the file: 2 old, 3 new.
+    assert mod.malformed_hunk_line(
+        "--- a/x\n+++ b/x\n@@ -1,2 +1,3 @@\n ctx\n+added\n ctx2\n") is None
     assert mod.malformed_hunk_line(_GOOD + "\\ No newline at end of file\n") is None
+
+
+def test_the_boundary_with_git_is_where_it_was_drawn() -> None:
+    """CROSS-CHECKED AGAINST REAL GIT, 2026-08-31, because a hand-written diff
+    parser that disagrees with git is worse than none.
+
+    Every fixture in this file was run through `git apply --check` in a scratch
+    repository. On FORMAT the two agree exactly — flush-left context and a
+    miscounted hunk are "corrupt patch" to both. They part on APPLICABILITY:
+    git also rejects a well-formed patch whose context does not match the file
+    ("patch does not apply"), and this check accepts it on purpose, because
+    that question belongs to the judge, at a base, in a sandbox.
+
+    The distinction is legible in git's own two error strings, and the split
+    means a proposal is never refused here for a reason the front door cannot
+    honestly know.
+    """
+    mod = _ledger()
+    # Well-formed but would not apply anywhere: accepted here, judged later.
+    assert mod.malformed_hunk_line(
+        "--- a/nowhere\n+++ b/nowhere\n@@ -1,2 +1,2 @@\n who\n-knows\n+what\n") is None
 
 
 def test_the_refusal_reaches_record_proposal_as_a_stable_code() -> None:
