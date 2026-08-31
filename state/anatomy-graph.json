@@ -4,13 +4,13 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 249,
+    "nodes": 250,
     "edges": 280,
     "nodes_pulse": 30,
     "nodes_judge": 5,
     "nodes_gateset": 4,
     "nodes_weakness": 7,
-    "nodes_daemon": 13,
+    "nodes_daemon": 14,
     "nodes_service": 64,
     "nodes_resource": 16,
     "nodes_repo": 4,
@@ -953,6 +953,12 @@
       "source": "launchd label (role defaults)",
       "anchor": "02.02.06",
       "description": "Host launchd daemon eu.thisisait.nos.cortex — cortex organ server — the KEAP-facing knowledge mirror API"
+    },
+    "daemon:eu.thisisait.nos.ears": {
+      "kind": "daemon",
+      "source": "launchd label (role defaults)",
+      "anchor": "02.02.06",
+      "description": "Host launchd daemon eu.thisisait.nos.ears — host daemon"
     },
     "daemon:eu.thisisait.nos.ears-listen": {
       "kind": "daemon",

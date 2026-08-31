@@ -489,6 +489,12 @@ nodes:
   # daemon would tell a stranger that this house has an open microphone, which
   # is a fact about the people in it and not about the software.
   "daemon:eu.thisisait.nos.ears-listen": withheld
+  # The .app bundle's own id, which the graph now sees as a second daemon
+  # (2026-08-31, added AFTER the signature — awaiting-operator will report the
+  # amendment). Withheld for the same reason as the listener it launches: a
+  # public page naming a microphone tells a stranger about the room, not the
+  # software. The published set is unchanged; only the ruling grew.
+  "daemon:eu.thisisait.nos.ears": withheld
   "daemon:eu.thisisait.nos.backup.exporter": withheld
   "daemon:eu.thisisait.nos.backup.offsite": withheld
   "daemon:eu.thisisait.nos.backup.rustfs": withheld

@@ -2,5 +2,5 @@
 	"comment": "Determinism pin for forceLayout() on the default view (docs/idea/17-loop-split-refactor-graph.md §3). sha256 over [id,x,y,rank] per node + width/height — whole-px coordinates since 2026-08-18 (raw floats are ISA-bound: arm64 and x86_64 V8 disagree by ≤2.1e-06 px, so the rounding was verified identical on macOS arm64, linux/arm64 and linux/amd64 before freezing). Lives OUTSIDE the test file because tests/anatomy/test_a_fixture_is_never_a_real_secret.py refuses credential-shaped literals inside *.test.ts, and a 64-hex pin is exactly that shape. Re-pin deliberately: run graphLayout.test.ts, read the new hash from the failure. graphSha256 is sha256 of the anatomy-graph.json this pin was frozen against — tests/anatomy/test_face_layout_pin_binds_the_graph.py compares it to the artifact, so a graph regen that forgets this file goes red in the pytest lane (the lane that regenerates), not four days later in the face lane. That gate exists because the 6b960b47 lesson repeated 2026-08-20..23: three graph regens, no re-freeze, three days of CI red.",
 	"pinnedAt": "2026-08-31",
 	"defaultViewPositionsSha256": "cd0280c5d243fa8b53c4733da99ab4cf4494043c474941001c9e929cd0d87cf8",
-	"graphSha256": "7827176e9a3eac94d842d3c4b8a073760d97423a4ca4795733d95f8eb8706981"
+	"graphSha256": "b9ef2fc348fd6441b9048a3d7d4354117e739da184bc63fbcdc6507d8dd48f67"
 }
