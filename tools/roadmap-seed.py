@@ -470,8 +470,18 @@ row("local-llm-corpus", "Corpus generator: opcodes + validator as a free oracle"
 
 row("local-llm-model", "The small local model", _FILED,
     "queued", "agents", parent="local-llm",
-    body="Ollama MLX, local, free at inference. Train only after the corpus exists and its "
-         "size is known. NOT to be trained on loop verdicts or judge outcomes — a model that "
+    body="Ollama MLX, local, free at inference. FINE-TUNE THE SHAPE, NOT THE FACTS "
+         "(2026-08-31): after grammar-constrained decoding the residual failure is (a) the "
+         "right opcode and (b) an operand that exists. (a) is learnable from a corpus and a "
+         "3-4B can hold it; (b) is knowledge that goes stale on every ingest and belongs at "
+         "inference — see caddy-entity-resolve. THE BLOCKER IS THE CORPUS, NOT THE "
+         "PARAMETER COUNT: local-llm-corpus measured the validator passing 20306 of 20306 "
+         "composed chains, so there is no label for 'the right opcode' anywhere yet, and the "
+         "rating channel produces tens of labels a week rather than thousands. The "
+         "distinction that unblocks it: the rule against a model labelling its own eval set "
+         "governs the EVAL set; a TRAINING set distilled from a large model is ordinary and "
+         "allowed, provided the eval stays hand-written. Train only after the corpus exists "
+         "and its size is known. NOT to be trained on loop verdicts or judge outcomes — a model that "
          "learns to please the judge is reward hacking with an extra step, and the "
          "proposer/judge asymmetry exists to prevent exactly that. The task here is narrow "
          "and well-posed (natural language -> constrained typed IR), which is the case where "
@@ -511,24 +521,58 @@ row("local-llm-voice", "Speak a command, see what it would do, rate what it did"
          "NOT solve, so nobody re-sells it later: it supplies the INPUT half of a test case, "
          "and the expensive half is the label — which is the half the star supplies.")
 
-row("local-llm-voice-asr", "Which ear — and vocabulary before fine-tune", _VOICE,
+row("local-llm-voice-asr", "Parakeet is the ear — the Apple one cannot hear Czech", _VOICE,
+    "next", "cortex", parent="local-llm-voice",
+    refs="huggingface.co/nvidia/parakeet-tdt-0.6b-v3 · github.com/senstella/parakeet-mlx · github.com/Arthur-Ficial/ohr · SpeechTranscriber.supportedLocales",
+    body="DECIDED 2026-08-31 on one measurement, and it overturned the nicer engineering. "
+         "SpeechTranscriber.supportedLocales lists 42 locales and cs_CZ is NOT among them — "
+         "while this estate is spoken to in Czech, down to the bench's own task "
+         "('Zaloz noveho obchodniho partnera... Opravdu uloz'). So Apple's stack is the best "
+         "ear we cannot use: on-device, no container, ~57x realtime on an M2, and a "
+         "ready-made MIT CLI (Arthur-Ficial/ohr, Swift 6.3, no Xcode) that even serves an "
+         "OpenAI-shaped /v1/audio/transcriptions — which would have made it a ROW in "
+         "state/llm-backends.yml instead of a new organ. Parked for an English lane, not "
+         "refused. THE CHOICE IS parakeet-tdt-0.6b-v3 via parakeet-mlx: Apache-2.0, 0.6B, 25 "
+         "European languages INCLUDING Czech with automatic language detection, punctuation "
+         "and capitalisation, word-level timestamps, a working CLI today and "
+         "transcribe_stream() for the always-listen row. THREE COSTS RECORDED SO NOBODY "
+         "REDISCOVERS THEM: ohr serves on 11434, which is ollama's port on this host; ohr "
+         "exposes no custom vocabulary even though the Apple API has contextualStrings, so "
+         "the vocabulary lever is unreachable through it; and macOS attributes the microphone "
+         "TCC grant to the CALLING app, so a CLI inherits the terminal's grant and a launchd "
+         "daemon has no UI to prompt with — the estate already has one unpaid TCC bill "
+         "(/Volumes/SSD1TB). FINE-TUNING IS STILL NOT THE FIRST MOVE: the failure will be "
+         "vocabulary — opcode names, tax:02.02, service ids — and a bias list is generated "
+         "from the opcode registry and the taxonomy. Measure the hint first: one example in "
+         "the prompt moved hermes3:8b from 0/6 to 2/6, and that gap was not in the "
+         "parameters either.")
+
+row("local-llm-voice-always", "Always-listen: the wake phrase is text, not a second model", _VOICE,
     "queued", "cortex", parent="local-llm-voice",
-    refs="developer.apple.com/videos/play/wwdc2025/277 · github.com/senstella/parakeet-mlx · github.com/Trans-N-ai/swama",
-    body="Four candidates, all runnable on this host (macOS 26.6.1, Apple Silicon). Apple "
-         "SpeechAnalyzer/SpeechTranscriber: on-device, no container, no download beyond the "
-         "system model, claimed ~2x Whisper Large V3 Turbo — Swift-only, so it costs a small "
-         "CLI wrapper. parakeet-mlx: pip plus a working CLI today, MLX, 68 minutes of audio "
-         "in 62 seconds. swama: MIT, pure Swift on MLX, OpenAI-compatible "
-         "/v1/audio/transcriptions — so it would join as a ROW in state/llm-backends.yml "
-         "rather than as a new organ; its TechNosIdeas `refused` was decided by plat-ollama "
-         "against ollama as an LLM RUNTIME and never judged the ASR half. voicebox: MIT, "
-         "Whisper plus an MCP server, but its surface is TTS and voice cloning — wider than "
-         "this row wants, and cloning is a separate operator decision deliberately not folded "
-         "in. FINE-TUNING IS NOT THE FIRST MOVE. The failure will be vocabulary — opcode "
-         "names, tax:02.02, service ids — and both SpeechAnalyzer contextualStrings and "
-         "Whisper initial_prompt take a bias list the estate can already generate from the "
-         "opcode registry and the taxonomy. Measure the hint first: one example in the prompt "
-         "moved hermes3:8b from 0/6 to 2/6, and that gap was not in the parameters either.")
+    refs="github.com/snakers4/silero-vad · github.com/dscripka/openWakeWord · docs/idea/02-cortex-lang.md",
+    body="OPERATOR WANT: address the agent from anywhere — 'Hej Jeffe' opens a turn, 7s of "
+         "silence submits it, 'makej, Jeffe' closes and submits the preceding transcription. "
+         "THE LAZY SHAPE, and it removes a whole component: silero-vad (MIT, ~2 MB, under 1 "
+         "ms per 30 ms chunk on one thread) gates the microphone, parakeet transcribes only "
+         "the speech segments, and the wake phrase is matched IN TEXT. The ASR is fast enough "
+         "to be its own detector, so there is no wake-word model, no training pipeline, and "
+         "the phrase becomes an editable string rather than trained weights. CEILING NAMED: "
+         "a resident 0.6B plus an always-open microphone costs battery and transcribes "
+         "everything said in the room; if that bites, openWakeWord is ~200 KB of ONNX at "
+         "negligible CPU — but its code is Apache-2.0 while its PRE-TRAINED models are "
+         "CC-BY-NC-SA, so a custom 'Hej Jeffe' must be trained, and the published trainer "
+         "wants CUDA. SUBMIT HAS TWO TRIGGERS AND ONE IS A TIMER, so the timer must be "
+         "visible: without it the operator cannot tell 'it submitted' from 'it never heard "
+         "me', which is the estate's own failure shape — a thing that looks identical whether "
+         "it worked or stopped. THE REFUSAL THAT IS BUILT IN, not bolted on: a wake phrase "
+         "means the ROOM can start an action, so always-listen may only ever PROPOSE. The "
+         "preview and the binding gate stay between the sentence and the effect, because a "
+         "spoken sentence is data and a capability may never be added by data. AUDIO AT REST: "
+         "transcript yes, waveform no, unless that is decided deliberately — wing.db already "
+         "carried 921 MB of payload nobody read, and this payload would be recordings of a "
+         "household. A live microphone is also a NEW DATA CATEGORY needing its own Article-30 "
+         "record (the parser refuses manifests without one), and third parties in the room "
+         "have not consented — which is the honest limit on 'from anywhere'.")
 
 row("local-llm-voice-rating", "The star is a label, and it needs a writer that is not the rated thing", _VOICE,
     "queued", "agents", parent="local-llm-voice",
@@ -548,6 +592,224 @@ row("local-llm-voice-rating", "The star is a label, and it needs a writer that i
          "samples have, and its own header forbids a model labelling a set it is later scored "
          "against. The day anything but a human writes this column, that distinction is gone "
          "and so is the corpus.")
+
+row("jeff", "Jeff — the operator's assistant, two halves and one record each",
+    "2026-08-31", "active", "agents", parent="agents",
+    refs="files/anatomy/agents/jeff · files/anatomy/agents/jeff-cloud · state/keap-tables/caddy*.table.yml · tools/caddy-status.py",
+    body="THE AGENT A SPOKEN SENTENCE REACHES FIRST, at master-session level. Shipped "
+         "2026-08-31 as declarations, and the reader says exactly how far that goes: "
+         "`tools/caddy-status.py` reports jeff-cloud READY (minimax armed, MiniMax-M2.7), jeff "
+         "DISARMED (ollama not in NOS_ARMED_BACKENDS, model id blank), both tables UNKNOWN "
+         "(declared in git, not applied to KEAP) and the ear ABSENT (parakeet not installed). "
+         "TWO AGENTS, NOT A MODE FLAG — the ops-extract/-cloud precedent, and here it is "
+         "load-bearing rather than tidy: `jeff` declares transfers_outside_eu false, so "
+         "BindingResolver gate 8 refuses to point it at a hosted backend however anyone "
+         "configures it, and refuses to let it degrade to the default when ollama is "
+         "disarmed. The settings table picks a NAME; the Article-30 record behind the name "
+         "decides where the sentence may go — a settings row that could move that line would "
+         "be data widening a permission. READ-ONLY TOOLS BY DESIGN: mcp-keap would hand Jeff "
+         "a raw DataTable write that never meets CortexBindingGate, so every change leaves as "
+         "a cortex-lang chain instead — one write path, or the gate is decoration. WHAT IS "
+         "NOT BUILT AND MUST NOT BE CLAIMED: no launcher runs Jeff, no turn has happened, and "
+         "there is NO TOOL THAT STARTS ANOTHER AGENT — the operator wants one and the "
+         "registry has none, so it is a gap with a name rather than a line in a prompt. "
+         "ask-operator was added to the schema enum the same day: it has been DI-registered "
+         "since the inbox work (common.neon:192) and no agent could declare it, which is why "
+         "the human channel had four gates and no caller. CONVERGE-READY THE SAME DAY: "
+         "roles/pazny.ears installs the EAR only — a venv, parakeet-mlx, ears-listen on PATH "
+         "— and pazny.keap seeds the two tables from state/fixtures/caddy.seed.yml. NO LAUNCHD "
+         "JOB, deliberately: a microphone that survives a reboot is a decision with an "
+         "Article-30 record and other people in the room attached to it, not a side effect of "
+         "an install flag. Two dependencies were designed away rather than added — capture "
+         "goes through ffmpeg (already installed) instead of portaudio, and the VAD is an "
+         "energy threshold instead of silero, which is MIT and 2 MB but wants ~2.5 GB of "
+         "torch to run it. THE LOOP CLOSED 2026-08-31: caddy puts a heard turn to the "
+         "agent, the cortex daemon typechecks what comes back, and speech.py reads the "
+         "answer aloud — the CHAIN AS A SENTENCE, verbalised from a wording table, because "
+         "a synthesiser reading `tax:02.02` as a number names a different node than the "
+         "screen does and the operator is approving by ear. It fails closed: an opcode with "
+         "no wording refuses the whole chain rather than speaking syntax, and a gate holds "
+         "every opcode in the registry to an entry in both languages. Two operator ratings "
+         "per turn (-1..3, sense before and outcome after) are the only labels in this "
+         "estate written by neither code nor a model. macOS `say` with Zuzana and Samantha "
+         "is the whole TTS dependency; a cloned voice slots into the one voice name per "
+         "language when that decision is taken.")
+
+row("caddy", "The organ is ears; the assistant is a caddy; `jeff` is a name",
+    "2026-08-31", "shipped", "agents", parent="jeff",
+    refs="files/anatomy/ears/ · roles/pazny.ears · state/keap-tables/caddy*.table.yml",
+    body="OPERATOR OBJECTION 2026-08-31, and it is right: `files/anatomy/ears/` hardcodes a "
+         "PERSON'S NAME into the anatomy. Jeff is not an organ. What hears and speaks IS an "
+         "organ and belongs beside bone, wing, pulse and cortex — call it EARS (it hears, "
+         "and its mouth is the same nerve). What the operator talks TO is a role, not a "
+         "part: a CADDY, the one who carries your clubs and hands you the right one, and "
+         "DONE THE SAME DAY, before the merge and therefore as a rename rather than a "
+         "migration: files/anatomy/ears/, roles/pazny.ears, tools/caddy-status.py, tables "
+         "`caddy` + `caddy-sessions`, launchd eu.thisisait.nos.ears-listen, and an `agent` "
+         "row in the settings table that BINDS the role to the person — read by caddy.py, "
+         "with the cloud twin DERIVED as `<agent>-cloud` rather than declared twice. The "
+         "only place a person's name still belongs is the wake phrase, because that is what "
+         "the operator says out loud. "
+         "`jeff` is simply this operator's caddy the way `pazny` is this tenant. THE SPLIT "
+         "IS ALREADY HALF-MADE and that is what makes it cheap: the AgentKit contract has "
+         "always been files/anatomy/agents/<any-name>/, so the PERSONA is renameable today; "
+         "only the ORGAN around it (role, tables, tools, pane, plist label) carries the "
+         "name. So: files/anatomy/ears/, roles/pazny.ears, tools/caddy-status.py, tables "
+         "`caddy` + `caddy-sessions`, and ONE settings row `agent: jeff` binding the role to "
+         "the person. Do it BEFORE the merge — nothing is committed or converged, and a "
+         "rename after the first session row is a migration instead of a sed.")
+
+row("face-chat-style", "A caddy session is an exchange, so render it as one",
+    "2026-08-31", "next", "face", parent="face",
+    refs="files/anatomy/face/src/lib/tables/view.ts · ~/keap/src/shared/contracts/table.ts (tableViewStyleSchema)",
+    body="THE RENDERER HALF SHIPPED 2026-08-31: `chat` is the fifth member of the closed "
+         "style vocabulary in view.ts, it resolves an `askColumn` beside the body so ONE ROW "
+         "renders as an exchange (a caddy turn is a sentence in and an answer out), and it "
+         "degrades to the grid when either half is missing — the rule blog and timeline "
+         "already carry, because a chat with one side is a list with round corners. Four "
+         "tests drive it. WHAT IS NOT DONE, AND WHY IT IS A CONTRACT AND NOT A TODO: KEAP "
+         "validates `view.style` against its own enum, so a table definition carrying "
+         "`style: chat` is REFUSED AT SEED TIME until tableViewStyleSchema learns the word. "
+         "So the style is declarable in nOS and rejectable by KEAP, which is exactly the "
+         "asymmetry ext-contract is about — the smallest possible instance of it, and a good "
+         "one to design the interface against. Until then caddy-sessions renders as a grid, "
+         "honestly. THE OPERATOR ASKED FOR A MARKUP TEMPLATE AND THE ANSWER IS NO: a "
+         "template a table can carry is markup a table can carry, and markup is a capability "
+         "— the same rule cortex-lang states one storey down (a capability may never be "
+         "added by data; a model that can emit HTML can emit a login form). The configurable "
+         "part is the VIEW BLOCK, which selects from a code-owned catalog; what is worth "
+         "building is an EDITOR for that block, not an engine for arbitrary markup.")
+
+row("tables-system-flag", "System tables should be hidden by default, with an admin toggle",
+    "2026-08-31", "queued", "face", parent="face",
+    refs="state/keap-tables/*.table.yml · KEAP table metadata · face TablesApp",
+    body="OPERATOR WANT 2026-08-31: the estate's own DataTables (caddy, caddy-sessions, "
+         "loop-config, apps, systems, roadmap, the face-* config tables) crowd the tenant's "
+         "view; hide them by default and give an admin a show toggle. TWO HALVES, AND ONLY "
+         "ONE IS OURS: the flag is TABLE METADATA, so KEAP's table schema has to carry it "
+         "(the same seam as face-chat-style — this is the second instance in one day, which "
+         "is itself the argument for settling the contract). The face half is a filter plus "
+         "a toggle and is small. WHAT MUST NOT HAPPEN: hiding by naming convention, or "
+         "reusing `visibility` for it. Visibility is ACCESS — who may read the rows — and a "
+         "list-clutter preference that silently changed who can see data would be the worst "
+         "kind of overload. A system table hidden from a tenant is still readable by them if "
+         "their tier allows; that is the distinction the flag must keep.")
+
+row("web-apex-rethink", "The root domain publishes facts about the installation; it should publish facts about the product",
+    "2026-08-31", "next", "platform",
+    refs="files/anatomy/apex/{projection,render}.py · files/anatomy/apex/ruling.yml · default.config.yml apex_domain · thisisait.eu (WordPress)",
+    body="OPERATOR VERDICT 2026-08-31, after reading what the page actually serves: the graph "
+         "says relatively nothing and the phrasing is too cryptic for a visitor. MEASURED, "
+         "and it shows the complaint is structural rather than editorial: the published "
+         "document is 6065 bytes holding 13 organs, 63 ANONYMOUS atoms and 14 veins — a "
+         "title, one `tells` sentence per organ, and one `speaks` phrase per atom, with no "
+         "name, version, count or hostname anywhere. That is the design working exactly as "
+         "written (withheld by default, an atom at most), which is why THE PROJECTION CAN "
+         "NEVER BE A GOOD MARKETING PAGE: persuasion needs specifics and this artifact "
+         "forbids them. Two artifacts, not two states of one. THE REFRAME THAT RESOLVES IT: "
+         "today's apex publishes facts about THE INSTALLATION, so it must anonymise them "
+         "until they stop meaning anything; a product page publishes facts about THE "
+         "PRODUCT, where nothing needs withholding — ~50 services across 9 stacks, 76 roles, "
+         "4407 gates, 95 Article-30 records in the DPA register, `nos --remove=all` as a "
+         "demonstrable exit, every byte on the operator's own hardware. None of that "
+         "discloses this estate's topology, because none of it is about this estate. And the "
+         "surface already exists: thisisait.eu on WordPress, which the devlog already syncs "
+         "into and which may name things because it is authored content rather than a "
+         "projection. WHAT SURVIVES REGARDLESS: ruling.yml is a DOOR, not a page — the one "
+         "place where what leaves this machine is a conscious signed decision whose default "
+         "is nothing and whose unruled node HALTS the build. `projection.py` (what may "
+         "leave) and `render.py` (how it looks) are already separate, so a new page costs "
+         "the ruling nothing. THE DECISION THIS ROW HOLDS OPEN, to be taken when the new "
+         "site exists and not before: `install_apex: false`, or the anatomy demoted to an "
+         "/anatomy section for the curious. DO NOT rewrite render.py first — rewriting the "
+         "renderer of an artifact that may be retired is the same work done twice.")
+
+row("ext-contract", "What an nOS extension in another repo would have to be",
+    "2026-08-31", "queued", "platform",
+    refs="docs/doctrine/cross-repo-contracts.md · tools/cortex-drift.py · docs/tier2-app-onboarding.md",
+    body="OPERATOR QUESTION 2026-08-31: should something like the ears organ live in its own "
+         "repo, and would the wiring get harder. MEASURED ANSWER FROM THE ONE SPLIT THIS "
+         "ESTATE ALREADY MADE: KEAP is an external repo with a vendored copy in "
+         "files/anatomy/cortex, and the machinery that exists SOLELY because of that split "
+         "is tools/cortex-drift.py, a version pin, a re-vendor ritual and a contract doc "
+         "whose live table holds exactly one row. That is the cost, paid, in the open. So "
+         "the recommendation is NO for an organ nobody else maintains: a split buys "
+         "independence from a third party, and pays for it in drift readers — with no third "
+         "party there is nothing to buy. WHAT nOS ALREADY HAS as extension surfaces, none of "
+         "which needs a repo: apps/<name>.yml manifests (schema + Article-30 gated, the "
+         "proven one), plugin manifests for cross-service wiring, agent directories, and "
+         "git-owned DataTable definitions. THE INTERFACE TO DESIGN, when a real third party "
+         "appears, is the asymmetric half cross-repo-contracts.md names and does not yet "
+         "have: one spec at one location, a fixture owned by the CONSUMER (we state what we "
+         "need; the upstream will never run our gate), a drift reader that goes red when the "
+         "producer moves, and a declaration of identity/visibility/removal. Design it "
+         "against a real second consumer, not against a hypothetical one.")
+
+row("tables", "DataTables are nOS core; KEAP should be a consumer of them",
+    "2026-08-31", "next", "cortex",
+    refs="state/keap-tables/*.table.yml · ~/keap/src/server (upsertRow, syncCard, syncRows) · docs/systems/cortex/README.md",
+    body="OPERATOR DIRECTION 2026-08-31: the DataTable engine belongs to nOS, and KEAP should "
+         "depend on it like anything else. NOTICE FIRST THAT THE SPLIT IS ALREADY HALF DONE "
+         "IN THE RIGHT DIRECTION, because it changes what this work is: the DEFINITIONS "
+         "already live in nOS git (state/keap-tables/*.table.yml, seventeen of them, gated by "
+         "test_keap_table_concepts.py), while the STORE, the row upsert, the row history, the "
+         "ref integrity and the card/graph materialisation live in KEAP. So this is a move of "
+         "the engine, not of the vocabulary. WHAT THE MOVE ACTUALLY COSTS, named before "
+         "anyone estimates it: rows are wired into KEAP's own graph (syncCard/syncRows "
+         "materialise cards and nodes), visibility is its Authentik-tier model, and "
+         "referential integrity (assertRowRefTargetsExist, onDelete restrict) sits in the "
+         "same libsql store as the taxonomy — an engine that leaves has to take or replace "
+         "all three. THE MEASUREMENT THAT DECIDES WHETHER THIS IS A REFACTOR OR A "
+         "RE-LABELLING: count the consumers. roadmap, face controls/wallpapers/layouts, apps, "
+         "systems, loop-config, the print/party fixture and now jeff are nOS's; the taxonomy "
+         "is KEAP's. If the dependency arrow is already backwards in practice, the honest "
+         "first step is to say so and publish the contract, not to move code. And it would be "
+         "the FIRST contract pointing that way: cross-repo-contracts.md's live table holds "
+         "exactly one row, nOS self-model -> KEAP.")
+
+row("agents-awaiting-surface", "The reader that knows what needs a human has no surface",
+    "2026-08-31", "next", "agents", parent="agents",
+    refs="tools/awaiting-operator.py · Wing QuestionsPresenter/InboxPresenter · technosideas/buzz",
+    body="tools/awaiting-operator.py has collected every 'this cannot move without me' source "
+         "since 2026-08-29 — agent questions, unread CRITICAL/HIGH, judged-but-unlanded "
+         "proposals, a ruling amended after signing — and nothing renders it. The operator "
+         "asks for ONE UI for talking to agents; this is the data half of it, already built "
+         "and already honest (it acts on nothing). BUZZ IS THE WRONG SHAPE and the estate had "
+         "already decided why, in QuestionsPresenter's own header: Q15, Wing is the ONLY "
+         "answering channel, because an approval channel is an authentication surface — ntfy "
+         "actions and chat replies are explicitly out, and `answered_via` exists to make a "
+         "non-Wing answer VISIBLE, not to invite one. block/buzz is an Apache-2.0 Nostr relay "
+         "where humans and agents share rooms and authority is a cryptographic signature "
+         "rather than a permission flag: that is a SECOND IDENTITY SYSTEM beside Authentik, "
+         "which is the expensive part, not the rooms. And idea 14 forbids the shape directly "
+         "— one abstract channel, not four systems that each grew a notifier. So the surface "
+         "is a face app over this reader, handing off to Wing /inbox for the answer; buzz "
+         "stays inspiration. If the latent want is TEAM chat between people, that is the "
+         "Matrix/Zulip row and a different want.")
+
+row("face-conversation", "The conversation is rows, and generative UI is a closed vocabulary",
+    "2026-08-31", "next", "face", parent="face",
+    refs="files/anatomy/face/src/lib/apps/native/TablesApp.svelte · control-panel/surfaces.ts · docs/idea/02-cortex-lang.md",
+    body="OPERATOR WANT: the main communication UI lives in nOS face, built over DataTables, "
+         "with generative UI inside the chat. TWO DESIGN RULES, both already earned "
+         "elsewhere. (1) A CONVERSATION IS ROWS, NOT SCROLLBACK — the same rule the control "
+         "centre carries for panes, and a DataTable already gives ordering, row history, refs "
+         "and a face renderer for free. One row per turn: utterance, transcript, ASR engine, "
+         "emitted chain, plain-language preview, action taken, and the two ratings from "
+         "local-llm-voice-rating. That makes the chat and the training corpus the same "
+         "artifact rather than two that drift. (2) GENERATIVE UI IS A CLOSED VOCABULARY: the "
+         "model CHOOSES a view component from a published set and parameterises it with data; "
+         "it never authors markup, styles or script. This is cortex-lang's law one storey up "
+         "— a capability may never be added by data — and the failure mode is concrete: a "
+         "model that can emit HTML can emit a login form. face already has the embryo "
+         "(native app registry, control-panel surfaces, the rawDataTable surface), so the "
+         "work is publishing the component set and its params, not inventing a renderer. "
+         "Q15 STANDS: the chat may DISPLAY an agent question and hand off to Wing /inbox; "
+         "answering in place is a deliberate revisit of Q15, never a UI convenience. OPEN, "
+         "and to be decided by counting rather than taste: whether turns live in a KEAP "
+         "DataTable (renders free, has history) or in wing.db (carries actor_action_id "
+         "lineage) — the same open question the ratings row records, so decide them together "
+         "or one of them will be moved later.")
 
 # ── Local models — measured 2026-08-08, and the numbers reordered the arc ───
 #
@@ -785,6 +1047,72 @@ row("face-planner", "The Planner is declared as existing and is not built", _TNI
          "circle (MIT, no backend) supplies two of the three readings: a grouped-board engine "
          "including the 'n issues hidden by filters' footer, which is absence-doctrine rendered "
          "in UI, and a timeline zoom ladder that now has target/occurred_at to draw. ~1-1.5 wks.")
+
+row("local-llm-ladder", "Bench the whole ladder 1B to 6B, with and without the grammar",
+    "2026-08-31", "next", "agents", parent="local-llm-model",
+    refs="tools/local-model-bench.py · state/cortex-lang.gbnf · state/llm-backends.yml sizes_b",
+    body="THE LADDER IS TWO MEASUREMENTS SHORT AT BOTH ENDS. sizes_b holds 8 and 14; the "
+         "operator wants 1, 2, 3, 4 and 6 measured before anything is trained, and the "
+         "reason is in the failure KINDS already recorded: hermes3:8b missed 4 of 6 on "
+         "PUNCTUATION, qwen3:14b missed 2 on the WORLD. Grammar-constrained decoding deletes "
+         "the first kind outright, so the 8B number is not the 8B model — it is the 8B model "
+         "without its brace. RUN EVERY RUNG TWICE, with `--grammar-file` and without: the "
+         "delta IS the size of the class the grammar already solved, and without it nobody "
+         "can tell a small model that cannot reason from one that cannot punctuate. "
+         "CANDIDATES that are Apache-2.0 and pullable today (qwen3:1.7b, qwen3:4b, "
+         "gemma3:4b); LFM2.5-2.6B is the sibling row and carries a licence decision, so it "
+         "must not be the ONLY small rung or the ladder becomes a licence argument. "
+         "sizes_b stays as-is until each model is actually pulled — its own comment makes "
+         "every entry a promise that a model exists, and a rung nobody pulled is the "
+         "fabricated affordance this estate keeps paying for. WHAT THE RESULT DECIDES: the "
+         "floor. If an untuned 4B with the grammar scores where an untuned 8B does, the gap "
+         "a fine-tune has to close is small and KNOWN, and only then is training worth its "
+         "afternoon.")
+
+row("local-llm-runtime-grammar", "The grammar that makes syntax impossible is in the bench, not the runtime",
+    "2026-08-31", "next", "cortex", parent="local-llm",
+    refs="tools/local-model-bench.py --grammar-file · files/anatomy/wing/app/AgentKit/LLMClient/OpenAiCompatAdapter.php",
+    body="MEASURED 2026-08-31 by grepping for it: `state/cortex-lang.gbnf` is loaded by "
+         "tools/local-model-bench.py and by nothing else. The path a real turn takes — "
+         "caddy.py -> tools/run-agent.sh -> AgentKit -> OpenAiCompatAdapter -> ollama's "
+         "/chat/completions — sends no grammar at all. So the estate BENCHMARKS the model "
+         "with a brace and RUNS it without one, and every syntax error the bench proved "
+         "impossible is possible in production. That also makes the bench's own numbers a "
+         "ceiling rather than a forecast. Two ways out, and the cheap one is not obviously "
+         "wrong: ollama's native /api/generate accepts a grammar where its OpenAI-compatible "
+         "surface does not, so this may be a second adapter rather than a new organ — but "
+         "AgentKit's tool loop lives on the OpenAI shape, so measure before committing. "
+         "Cheaper than any fine-tune, and it moves a whole class of failure rather than a "
+         "few points.")
+
+row("caddy-entity-resolve", "Resolve the entity by fanning out read-only chains, not by guessing",
+    "2026-08-31", "queued", "cortex", parent="local-llm-voice",
+    refs="files/anatomy/cortex/server/cortex-opcodes.ts · KEAP vector + fts surfaces · docs/idea/02-cortex-lang.md",
+    body="THE GAP THE VOICE LOOP HITS FIRST. A spoken turn says 'the ideas table', and the "
+         "emitter must produce an operand that EXISTS — which is exactly where qwen3:14b's "
+         "only two failures landed (unknown_operand, namespace_not_resolvable). Baking 790 "
+         "taxonomy nodes and every table slug into weights is the wrong fix twice over: it "
+         "is stale the next time knowledge ingests, and it is facts in a place built for "
+         "shape. OPERATOR DESIGN, 2026-08-31: fan out several READ-ONLY cortex chains in "
+         "parallel — vector similarity over doctrine, over the apex surface, over data "
+         "points, over the list of databases and tables; fulltext over the helper tables — "
+         "and hand a grader only the GREEN answers. Read-only is what makes the fan-out "
+         "safe to run speculatively: the executor already refuses mutating stages, so a "
+         "wrong guess costs a query and nothing else. WHEN THE MATCH IS UNCLEAR, SHOW THE "
+         "TOP N (configurable, default 3) AND STOP — an ambiguous entity resolved silently "
+         "is the estate's own defect shape wearing a helpful face, and the UI must carry "
+         "that state rather than the resolver hiding it. THREE THINGS TO SETTLE BEFORE ANY "
+         "CODE: (1) the enumeration oracle — 02-cortex-lang refuses `kg:`/`ent:` at "
+         "NAMESPACE granularity precisely so no timing signal survives, so a resolver that "
+         "queries broadly must be scoped to what the caller could already enumerate "
+         "wholesale (`tax:`, `rel:`), or it becomes the thing that document rejects; (2) "
+         "who the grader is — a large model here is a model grading a model unless the "
+         "candidates carry a code-checkable property (exists / resolves / is in scope), "
+         "which they do, so prefer the checker; (3) the fan-out's ceiling, because N "
+         "speculative queries per spoken sentence on a box that already starved a validator "
+         "with one 32B model is a measurement, not a default. NOT BEING BUILT YET, and the "
+         "spec lives in this row rather than in docs/idea/ — that directory is at 24 of its "
+         "ceiling of 20 already.")
 
 row("local-llm-lfm25", "Benchmark LFM2.5-2.6B as the emitter", _TNI, "queued", "agents",
     parent="local-llm-model", refs="technosideas/lfm25-26b.md",
