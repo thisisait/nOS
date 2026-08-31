@@ -782,6 +782,33 @@ row("ears-app-bundle", "The launchd ear is handed a microphone with no speech in
          "AND THE READER LEARNED THE LESSON: `mic_ok` asked whether any sample was non-zero, "
          "which hiss satisfies. It now reports DEAF — running, segments heard, not one of "
          "them became words — because the check that matters asks whether SPEECH arrived.")
+row("sec-prefix-gate-flaps", "The weak-prefix gate refuses, then passes, with nothing changed between",
+    "2026-08-31", "next", "security", parent="sec",
+    refs="main.yml (the global_password_prefix assert) · docs/archive/secret-blast-radius.md · /tmp/ears2.log",
+    body="MEASURED 2026-08-31 across five runs of the same command minutes apart: "
+         "`ansible-playbook main.yml --tags ears` failed three times at ok=48 and passed "
+         "twice, with no edit in between. The failure is the P0 security assert — "
+         "`global_password_prefix not in ['changeme', '']` — whose own message says 88 "
+         "credentials derive from it at runtime, including the backup encryption key that "
+         "keys an archive containing ~/.nos/secrets.yml. "
+         "IT COST MORE THAN THE TIME. The gate fires BEFORE any role work, so those three "
+         "runs deployed nothing at all, and the tail of the output was read as a transient — "
+         "twice — while the real work silently did not happen. That is the estate's own "
+         "shape: a step that could not do its job, reported in a way that let the reader "
+         "walk on. The fix that ended it was banal: ANSIBLE_LOG_PATH, on the fourth attempt. "
+         "BOTH ANSWERS ARE BAD, WHICH IS WHY IT IS A SECURITY ROW AND NOT AN ANNOYANCE. If "
+         "the prefix really does resolve weak sometimes, 88 credentials and the backup key "
+         "are derived from something the estate cannot vouch for. If it does not, then a "
+         "gate that refuses at random teaches the operator to reach for "
+         "`-e allow_weak_prefix=true`, and from that day it protects nothing. A gate that "
+         "cries wolf is disarmed by its own users. "
+         "WHAT TO MEASURE, and the constraint is that the value may never be printed: have "
+         "the assert record LENGTH and a salted digest of the resolved prefix, plus which "
+         "var file it came from, into ~/.nos/. Then correlate with concurrent converges — "
+         "two sessions were converging this host all evening, and a var file being rewritten "
+         "underneath a run is the first hypothesis to kill. Second: the resolution path "
+         "itself, since a `{{ vars }}` eager-resolve is already a known trap here and an "
+         "empty result is exactly what this assert would see.")
 row("ext-contract", "What an nOS extension in another repo would have to be",
     "2026-08-31", "queued", "platform",
     refs="docs/doctrine/cross-repo-contracts.md · tools/cortex-drift.py · docs/tier2-app-onboarding.md",
