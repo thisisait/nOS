@@ -43,10 +43,22 @@ Data-path note: `nos_data_root` defaults to `~/nos`. On external storage the pat
   (`loki_write_dropped_entries_total{reason="ingester_error"}` on Alloy) and
   every Loki query returned nothing, because nothing had been stored. A check
   that parses a FILE cannot observe a PROCESS.
-- The cause was not Loki: `/System/Volumes/Data` was at 92% (34 GiB free of
-  460), Loki's WAL guard tripped `disk usage exceeded threshold, throttling
-  writes`, and the ingester stopped accepting. `NosWarningDiskLow` had been
-  firing in the inbox throughout.
+- **The cause was a disk-full reading about a different disk.** Loki's `/loki`
+  binds to `/Volumes/SSD1TB/nOS/data/platform/services/loki/storage`; that SSD
+  is 931 GiB at 53% used. A container at the same mount reports
+  `460.4G total / 66.1G avail / 86%` — 460.4G is the INTERNAL volume's size.
+  Docker Desktop's VirtioFS answers `statfs` for a bind-mounted host path with
+  the internal volume's figures, so Loki's WAL guard compared the internal
+  disk's fullness against its 90% threshold and throttled writes to an external
+  disk with 434 GiB free. The WAL is 66 MB. See
+  `docs/doctrine/foreign-properties.md` — this is a property of Docker
+  Desktop, not of Loki or of this playbook.
+- Recovery needs BOTH restarts, in order: the ingester latches into
+  `Ingester is shutting down` and never re-reads the disk, and Alloy's client
+  backs off permanently once the endpoint has refused it. Freeing space alone
+  changes nothing until both are bounced.
+- The first draft of this note blamed the internal volume being 92% full. That
+  was the number Loki *read*, not the reason it was wrong to read it.
 - Because the distroless image has no HTTP client, the watch lives OUTSIDE the
   container: `NosCriticalLokiRejectingWrites` +`NosWarningLokiStoresNothing` in
   `prometheus-base/provisioning/rules/01-infra.yml`, on Alloy's own drop

@@ -180,6 +180,14 @@ groups:
   # ever stored. THE CONTAINER HEALTHCHECK CANNOT SEE THIS and is not at fault
   # — the distroless image has no HTTP client, so it runs `loki -verify-config`,
   # which parses a FILE. A check that reads a file cannot observe a process.
+  #
+  # AND THE TRIGGER WAS A READING ABOUT THE WRONG DISK. Loki's /loki binds to
+  # /Volumes/SSD1TB/... (931 GiB, 53% used), but a container at that mount is
+  # told `460.4G total / 86% used` — the INTERNAL volume's figures, because
+  # Docker Desktop's VirtioFS answers statfs from there. Loki's WAL guard
+  # compared that against its 90% threshold and throttled writes to a disk with
+  # 434 GiB free. Any SSD-backed service with a disk guard can hit this; the
+  # foreign property is filed as `virtiofs-statfs-wrong-volume`.
   # That is why this lives here, outside the container, on the one signal that
   # is unambiguous: the shipper's own count of what the sink refused.
   #
@@ -194,7 +202,17 @@ groups:
         # ANY sustained drop is the alert. Not a rate threshold: a healthy
         # pipeline drops zero, so "some" and "all" are the same finding here,
         # and the 50-day outage would have fired on its first minute.
-        expr: increase(loki_write_dropped_entries_total{reason="ingester_error"}[10m]) > 0
+        # max(), not a bare series: Alloy's own metrics reach Prometheus TWICE —
+        # pulled as job="grafana-alloy" instance="host.docker.internal:12345"
+        # and pushed by Alloy's own remote_write as job="alloy"
+        # instance="localhost:12345". Same counter, identical value
+        # (2,221,319 on both when this was measured), so a per-series alert
+        # fires twice and the loop books two weaknesses for one condition.
+        # Aggregating here fixes THIS rule; the duplication itself is
+        # `alloy-scraped-twice` on the roadmap, because it doubles every
+        # Alloy-derived alert and the right answer (drop the pull job, drop the
+        # self-push, or keep both as independent paths) is a topology decision.
+        expr: max(increase(loki_write_dropped_entries_total{reason="ingester_error"}[10m])) > 0
         for: 10m
         labels:
           severity: critical

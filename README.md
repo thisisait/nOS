@@ -1,5 +1,7 @@
 # nOS — the engine behind AIT
 
+[![built with ponytail](https://img.shields.io/badge/built%20with-ponytail-ff69b4?style=flat-square)](docs/doctrine/ponytail.md)
+
 > **One stack. Forty services. Zero SaaS bills.**
 >
 > `nOS` is the open-source integration engine behind [**This is AIT — Agentic IT**](https://thisisait.eu).

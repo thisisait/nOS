@@ -1243,6 +1243,26 @@ row("prom-rules-never-reload", "A new alert rule reaches the disk and never reac
          "copy_dir as changed so Ansible can notify. The third is the one that also fixes every "
          "other copy_dir consumer.")
 
+row("virtiofs-statfs-wrong-volume", "A disk guard read the wrong disk and stopped logging for 50 days",
+    "2026-08-31", "shipped", "platform",
+    refs="docs/doctrine/foreign-properties.md §7 · docs/systems/loki/README.md",
+    body="Docker Desktop's VirtioFS answers statfs() for a bind-mounted host path with the "
+         "figures of the volume DOCKER lives on, not the volume the path is on. Loki's /loki "
+         "is on the 931 GiB SSD at 53% used; the container is told 460.4G total / 86% used — "
+         "the internal disk. Loki's WAL guard compared that to its 90% threshold and throttled "
+         "writes to a disk with 434 GiB free. The ingester then latched into `Ingester is "
+         "shutting down` and answered every push with HTTP 500 for FIFTY DAYS (2026-07-12 -> "
+         "2026-08-31), dropping 2,180,252 entries / 195 MB, while `docker ps` said healthy, "
+         "`/ready` said ready, and every Loki query returned nothing. The WAL was 66 MB. "
+         "SHIPPED because the estate now sees it: NosCriticalLokiRejectingWrites + "
+         "NosWarningLokiStoresNothing watch Alloy's own drop counters from OUTSIDE the "
+         "container (the distroless image has no HTTP client, so its healthcheck can only "
+         "parse a file), and they gave logs their first path to the loop via "
+         "_source_prometheus_alerts. Recorded as a FOREIGN property, not a bug of ours: any "
+         "container deciding anything from free space on an external bind mount reads about "
+         "Docker's disk instead, and the standing rule is to ask the container "
+         "(`docker run --rm -v <path>:/x alpine df -h /x`) rather than the host's df.")
+
 # ── Preflight: does the live table have the columns this script writes? ──────
 #
 # Added 2026-08-07 with the target/occurred_at migration. The live table was

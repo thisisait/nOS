@@ -284,3 +284,39 @@ and only the last one is true.
 **Not ours to fix.** A config cache is a correct optimisation, and an image
 curating its `.env` is a defensible boundary with a documented door. What is
 ours is to stop asking the layer that is easy to reach.
+
+## 7. VirtioFS answers `statfs` from the wrong volume
+
+MEASURED 2026-08-31. `observability-loki-1` bind-mounts
+`/Volumes/SSD1TB/nOS/data/platform/services/loki/storage` at `/loki`. The SSD
+is 931 GiB, 53% used, 434 GiB free. A container at that same mount is told:
+
+    460.4G total   394.3G used   66.1G avail   86%   /loki
+
+`460.4G` is the size of the **internal** volume. Docker Desktop's VirtioFS
+answers `statfs()` for a bind-mounted host path with the figures of the disk
+Docker itself lives on, not the disk the path is on.
+
+Loki's WAL guard reads exactly that and refuses writes above 90%:
+
+    disk usage exceeded threshold, throttling writes
+    usage_percent=90.63% threshold_percent=90.00% component=wal
+
+So Loki throttled writes to a disk with 434 GiB free, the ingester latched into
+`Ingester is shutting down`, and every push answered HTTP 500 for **fifty days**
+(2026-07-12 → 2026-08-31): 2,180,252 entries and 195 MB dropped, every query
+returning nothing. Its WAL was 66 MB.
+
+**Not ours to fix, and the shape generalises.** Any container that decides
+something from free space on an external bind mount is reading about Docker's
+disk instead. Loki is the one that happens to have a guard; a database that
+refuses to start below a free-space floor would do the same thing.
+
+What IS ours: never diagnose one of these from the host's `df`. Ask the
+container — `docker run --rm -v <host path>:/x alpine df -h /x` — because the
+number the service acts on is the one it is told, not the one that is true.
+
+Two recovery facts, both learned the slow way: the Loki ingester does not
+re-read the disk after it latches, and Alloy's `loki.write` client backs off
+permanently once refused. Freeing space changes nothing until **both** are
+restarted, in that order.
