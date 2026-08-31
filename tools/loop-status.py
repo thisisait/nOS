@@ -541,7 +541,8 @@ def collect() -> dict:
             "gloss": SOURCE_GLOSS.get(_source_of(wid), ""),
             "proposals": 0, "weaknesses": set(),
             "pass": 0, "fail": 0, "indeterminate": 0, "unjudged": 0,
-            "unresolved_ids": set(), "first": row["created_at"], "last": row["created_at"],
+            "unresolved_ids": set(), "awaiting_ids": set(), "settled_ids": set(),
+            "first": row["created_at"], "last": row["created_at"],
         })
         src["proposals"] += 1
         src["weaknesses"].add(wid)
@@ -551,10 +552,30 @@ def collect() -> dict:
         # Only claim an id is unresolvable when we could actually ask.
         if resolve_error is None and wid not in live:
             src["unresolved_ids"].add(wid)
+        # STILL AWAITING A PROPOSAL THAT WORKS — added 2026-08-31.
+        #
+        # Distinct from `unresolved_ids`, which is about an id that no longer
+        # JOINS a live source (dangling lineage). This is about the verdict: a
+        # weakness whose proposals have all come back `fail`, `indeterminate`
+        # or unjudged has been attempted and not settled, and the loop may
+        # legitimately try again — the ledger holds the rules for whether it
+        # actually may (`already-failed`, `content-fp-repeat`,
+        # `passed-awaiting-act`) and refuses if not.
+        #
+        # Measured: rem:REM-212, a CRITICAL, was proposed against once with a
+        # malformed diff, every judge refused it, and the picker then treated
+        # the weakness as spoken for — permanently, because "has a proposal"
+        # was the whole test. A pass is the only verdict that means the loop's
+        # part is done and an act outside it is what is missing.
+        (src["settled_ids"] if verdict == "pass" else src["awaiting_ids"]).add(wid)
 
     for src in by_source.values():
         src["weaknesses"] = sorted(src["weaknesses"])
         src["unresolved_ids"] = sorted(src["unresolved_ids"])
+        # A weakness with several proposals counts as settled the moment ONE
+        # of them passed, whatever the others did.
+        src["awaiting_ids"] = sorted(src["awaiting_ids"] - src["settled_ids"])
+        src["settled_ids"] = sorted(src["settled_ids"])
 
     # A source the reader reports but which has NEVER produced a proposal is
     # the other half of entry 15's question, and it is invisible in the ledger

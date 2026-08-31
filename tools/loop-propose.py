@@ -145,13 +145,58 @@ def pick(status_mod, wanted: str | None) -> dict:
 
     report = status_mod.collect()
     proposed = {w for s in report.get("sources", []) for w in s["weaknesses"]}
+    # AWAITING — attempted, and no proposal has passed. Computed by the status
+    # reader (`awaiting_ids`), not re-derived here: a second opinion about what
+    # the ledger already knows is how two layers come to disagree.
+    #
+    # NOT `unresolved_ids`, which the first draft of this reached for and which
+    # means something else entirely — an id that no longer JOINS a live source,
+    # i.e. dangling lineage. It excluded REM-212 precisely because that
+    # weakness is still live, which is the opposite of the question here.
+    awaiting = {w for s in report.get("sources", [])
+                for w in (s.get("awaiting_ids") or [])}
 
-    gap = [w for w in live if w["id"] not in proposed]
+    # A WEAKNESS WHOSE ONLY PROPOSAL WAS NEVER JUDGEABLE IS NOT DONE WITH.
+    #
+    # MEASURED 2026-08-31, and it is the last link in that morning's chain. The
+    # loop proposed against rem:REM-212 (a CRITICAL), the diff was malformed,
+    # every judge in the set refused it, and the verdict came back
+    # `indeterminate`. Asking for it again then produced:
+    #
+    #     refused: 'rem:REM-212' is not an un-proposed reported weakness
+    #
+    # So the CRITICAL was permanently out of the loop's reach — not because it
+    # was fixed, judged, or refused on its merits, but because a single
+    # unusable artifact had been written against it once.
+    #
+    # The LEDGER already models retries and holds the rules for them:
+    # `already-failed` (attempts exhausted with a failing verdict),
+    # `content-fp-repeat` (the byte-identical patch re-offered),
+    # `passed-awaiting-act` (a pass is waiting on a merge, not on another
+    # proposal). Those are exactly the cases that must not be retried, and each
+    # is decided where the evidence is. This picker was applying a cruder rule
+    # in front of them — "proposed once, ever" — which the ledger's own retry
+    # ceiling then had no way to be reached.
+    #
+    # Fresh weaknesses still come FIRST; unresolved ones are the fallback, so
+    # an ordinary night is unchanged and only a queue with nothing new reaches
+    # back for something that stalled.
+    fresh = [w for w in live if w["id"] not in proposed]
+    retryable = [w for w in live if w["id"] in awaiting]
+    gap = fresh or retryable
     if wanted:
-        gap = [w for w in gap if w["id"] == wanted]
+        # An explicit ask is a deliberate act: honour it for anything the
+        # engine may still accept, and let the ledger refuse if it may not.
+        gap = [w for w in (fresh + retryable) if w["id"] == wanted]
         if not gap:
-            raise Refused(f"{wanted!r} is not an un-proposed reported weakness "
-                          f"(already proposed against, or not reported)")
+            settled = wanted in proposed and wanted not in awaiting
+            raise Refused(
+                f"{wanted!r} is "
+                + ("already resolved by a proposal — the loop is waiting on an "
+                   "act outside it (merge, converge, rescan), not on another "
+                   "proposal" if settled
+                   else "not reported by any weakness source")
+            )
 
     withheld = [w for w in gap if not w.get("proposable", True)]
     candidates = [w for w in gap
