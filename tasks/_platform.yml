@@ -90,6 +90,31 @@
     # On macOS nos_docker_bin == the original docker_bin, so this is a no-op.
     docker_bin: "{{ nos_docker_bin }}"
 
+# ── Traefik's route to a HOST daemon (2026-08-31) ───────────────────────────
+# `dynamic/services.yml.j2` routes wing / openclaw / hermes — launchd processes
+# on the host's 127.0.0.1 — at `traefik_host_gateway_ip`, whose default is
+# `192.168.65.254`. That is Docker DESKTOP's gateway: a macOS address, hardcoded
+# as the default for every platform, with a comment inviting a per-host override
+# that Linux never had reason to set.
+#
+# MEASURED in CI 2026-08-31, the first run in which Linux had a Traefik at all:
+# every router answered a uniform 500 — face, wing, mailpit and all four Tier-2
+# apps — because the upstream IP does not exist on a Linux bridge network. The
+# defect is as old as the Linux port; nothing could see it while CI ran with no
+# edge proxy, which is fee 39.
+#
+# `host.docker.internal` rather than a bridge IP: the Traefik compose file
+# already maps it (`host.docker.internal:host-gateway`) on BOTH platforms, so
+# this resolves without hardcoding a second address that a Docker version could
+# move. macOS keeps the literal IP it was measured working with — the comment in
+# services.yml.j2 records that the IPv6 `nos-host` alias does NOT reach host
+# loopback there, so this is not a place to unify on a guess.
+- name: "[platform] Traefik's host-gateway address"
+  ansible.builtin.set_fact:
+    traefik_host_gateway_ip: >-
+      {{ traefik_host_gateway_ip | default('192.168.65.254' if nos_platform == 'macos'
+                                           else 'host.docker.internal', true) }}
+
 - name: "[platform] Print platform summary"
   ansible.builtin.debug:
     msg: |
