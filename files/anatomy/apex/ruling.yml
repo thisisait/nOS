@@ -52,7 +52,7 @@ artifact: state/anatomy-graph.json
 # file as AMENDED AFTER SIGNING and asks for a fresh signature. To re-sign:
 #   python3 tools/apex-sign.py            # prints the diff since the last sign
 #   python3 tools/apex-sign.py --confirm  # writes the new digest
-signed_digest: 0926f24a57bbd44b8b7ec20088b82995677350479bd2bd2ac842c486b561decc
+signed_digest: 9927fb38353e1ac3a1138dd062cd4be286b1b7cc8ae74c05e3938f3db3694ee0
 
 
 # The declared split. The gate recounts the table below and refuses to run
@@ -445,6 +445,16 @@ nodes:
   "agent:ops-extract-cloud": withheld
   "agent:ops-triage": withheld
   "agent:ops-triage-cloud": withheld
+  # The operator's own caddy and its cloud twin, added 2026-08-31 AFTER the
+  # signature. WITHHELD like every other agent — they publish no phrase and
+  # join no organ, so the published set is unchanged and nothing new leaves
+  # this machine. Two reasons this one is worth a sentence rather than a line:
+  # the agent is named after a PERSON, and a public surface that admitted the
+  # operator's assistant is called Jeff would be telling a stranger something
+  # about the household rather than about the estate. And it is the half that
+  # HEARS: even the existence of a listening agent is a fact about a room.
+  "agent:jeff": withheld
+  "agent:jeff-cloud": withheld
   "agent:librarian": withheld
   "agent:migration-author": withheld
   "agent:proposer": withheld
@@ -459,6 +469,10 @@ nodes:
   "resource:backend-minimax": withheld
   "resource:backend-mistral-eu": withheld
   "resource:backend-ollama": withheld
+  # The human channel a caddy holds (2026-08-31). Withheld with every other
+  # tool node: which questions an agent may ask its operator is estate
+  # mechanics, not a public claim.
+  "resource:ask-operator": withheld
   "resource:bash-read-only": withheld
   "resource:mcp-bone": withheld
   "resource:mcp-keap": withheld
@@ -470,6 +484,11 @@ nodes:
   # --- withheld: host daemons (the estate's launchd organs) -----------------
   "daemon:eu.thisisait.nos.acme-renew": withheld
   "daemon:eu.thisisait.nos.backrest": withheld
+  # The listener (2026-08-31). WITHHELD, and here the default is not merely
+  # conventional — it is the point: a public page that named a microphone
+  # daemon would tell a stranger that this house has an open microphone, which
+  # is a fact about the people in it and not about the software.
+  "daemon:eu.thisisait.nos.ears-listen": withheld
   "daemon:eu.thisisait.nos.backup.exporter": withheld
   "daemon:eu.thisisait.nos.backup.offsite": withheld
   "daemon:eu.thisisait.nos.backup.rustfs": withheld
@@ -581,6 +600,12 @@ nodes:
   # needed. It holds one operator switch that ships OFF; which switches an
   # estate has is not a fact the public projection owes anyone.
   "table:loop-config": withheld
+  # The caddy's settings and its session ledger (2026-08-31). Withheld like
+  # every other table node. The sessions table would be the most sensitive
+  # publication in this file if it were ever anything else: it holds what was
+  # said out loud in a room.
+  "table:caddy": withheld
+  "table:caddy-sessions": withheld
   "table:party": withheld
   "table:party-address": withheld
   "table:party-contact": withheld
