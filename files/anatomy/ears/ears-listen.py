@@ -346,6 +346,14 @@ def _run_loop(args, daemon: bool) -> int:
     last_beat, last_prune, turns_today = 0.0, time.time(), 0
     floor: list[float] = []
     segments, wake_misses, last_segment_at = 0, 0, 0.0
+    # INITIALISED BEFORE THE LOOP because the heartbeat reports it and fires on
+    # a timer, not on a chunk: the first beat arrived 15 s in, read a threshold
+    # the first chunk had not yet computed, and the daemon died with
+    # UnboundLocalError. launchd's KeepAlive turned that into a visible restart
+    # loop rather than a silent absence, which is the only reason it was cheap
+    # to find — but a name used before assignment is not a thing a loop should
+    # be discovering for us.
+    threshold = 0.0
 
     audio: "queue.Queue[bytes]" = queue.Queue()
     _drain(proc, audio)

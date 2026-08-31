@@ -174,6 +174,39 @@ def test_a_chain_is_verbalised_or_refused_never_read_as_syntax():
     assert speech.detect_lang("how many open highs") == "en"
 
 
+def test_no_name_is_read_before_it_is_assigned_in_the_listen_loop():
+    """The defect that killed the daemon 15 seconds into its first real run.
+
+    The heartbeat fires on a TIMER and reported `threshold`, which the chunk
+    branch assigns — so the first beat read an unbound local and the process
+    died. launchd's KeepAlive made it a visible restart loop rather than a
+    silent absence, which is the only reason it was cheap to find. This is the
+    static version of that lesson: in the listen loop, a local may not be READ
+    on a line before the line that assigns it. Approximate by construction
+    (textual order is not control flow), and it catches exactly the shape that
+    a timer-driven branch produces.
+    """
+    import ast
+
+    tree = ast.parse(LISTENER.read_text())
+    loop = next(n for n in ast.walk(tree)
+                if isinstance(n, ast.FunctionDef) and n.name == "_run_loop")
+    assigned: dict[str, int] = {}
+    for node in ast.walk(loop):
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            assigned.setdefault(node.id, node.lineno)
+    early = [
+        f"{node.id} read at line {node.lineno}, first assigned at {assigned[node.id]}"
+        for node in ast.walk(loop)
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)
+        and node.id in assigned and node.lineno < assigned[node.id]
+    ]
+    assert not early, (
+        "a local is read before its first assignment in the listen loop — on a "
+        "timer branch this is an UnboundLocalError 15 seconds into a run:\n  "
+        + "\n  ".join(early))
+
+
 @pytest.mark.parametrize("switch", ["--on", "--off"])
 def test_the_microphone_has_exactly_one_switch(switch):
     """`ears_always_listen` + a converge, and nothing else.
