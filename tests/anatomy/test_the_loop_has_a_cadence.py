@@ -185,9 +185,30 @@ def test_pick_hands_over_the_worst_fixable_weakness(entry):
             return wid.split(":", 1)[0]
 
     chosen = entry.pick(FakeStatus, None)
-    assert chosen["id"] == "rem:R-high", (
-        "expected the worst ACTIONABLE row: fee: is budget-unfixable and a "
-        "vendor_blocked row has no upstream fix to propose")
+    # CORRECTED 2026-08-31, and the correction is the point of the row above.
+    #
+    # This asserted `rem:R-high` — that a `rem:` row whose TITLE contains
+    # "vendor_blocked" is skipped in favour of a lesser severity. Measured on
+    # live data that day, the premise does not hold: `remediation_type` records
+    # how a row was FILED, and REM-212 (portainer) carried the label from when
+    # no fixed release existed. Upstream shipped 2.45.0 on 08-27, the scan moved
+    # the row's STATUS to `pending` and confirmed the tag, and left the label.
+    # The filter read the label and pushed the queue's only actionable CRITICAL
+    # behind a `high`.
+    #
+    # The property the old assertion wanted is real and is enforced UPSTREAM:
+    # `_source_remediation` emits only `status == "pending"` rows, and
+    # `vendor-blocked` is a separate status carried by 5 rows today. So a row
+    # that reaches `pick()` is actionable by construction, and re-deriving that
+    # from prose could only ever be wrong in one direction.
+    #
+    # fee: is still excluded, and that half was never in question — it is a
+    # SOURCE the budget cannot fix, not a label on a row.
+    # See tests/anatomy/test_the_worst_actionable_row_is_reachable.py.
+    assert chosen["id"] == "rem:R-blocked", (
+        "expected the worst severity present. fee: is budget-unfixable and "
+        "stays excluded; a `rem:` row is actionable by status before it gets "
+        "here, whatever its title happens to say")
 
 
 def test_the_ledger_distinguishes_withheld_from_unseen(monkeypatch):
