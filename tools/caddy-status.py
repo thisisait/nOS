@@ -174,6 +174,10 @@ def _listener() -> dict:
         "mic_ok": state.get("mic_ok"),
         "armed": bool(state.get("armed")),
         "turns_today": state.get("turns_today", 0),
+        "segments": state.get("segments", 0),
+        "wake_misses": state.get("wake_misses", 0),
+        "threshold": state.get("threshold"),
+        "last_segment_age": state.get("last_segment_age"),
         "heartbeat_age": int(time.time() - beat) if beat else None,
         "stale": bool(beat) and (time.time() - beat) > HEARTBEAT_STALE_S,
         "retention_days": state.get("retention_days"),
@@ -325,10 +329,20 @@ def build_rows(data: dict) -> list[dict]:
     elif ear["mic_ok"] is None:
         rows.append({"state": "UNKNOWN", "part": "listener",
                      "detail": ear["detail"] or "loaded; no audio seen yet (starting up)"})
+    elif ear["segments"] and not ear["turns_today"]:
+        # THE STATE THAT USED TO LOOK LIKE SUCCESS. The ear hears, transcribes,
+        # and nothing it heard was addressed to it — which is a working mic and
+        # a phrase that does not match, not "waiting for you to speak".
+        rows.append({"state": "UNHEARD", "part": "listener",
+                     "detail": f"heard {ear['segments']} speech segment(s), "
+                               f"NONE matched the wake phrase "
+                               f"(last {ear['last_segment_age']}s ago, "
+                               f"threshold {ear['threshold']})"})
     else:
         rows.append({"state": "LISTENING", "part": "listener",
                      "detail": f"{'ARMED · ' if ear['armed'] else ''}"
-                               f"{ear['turns_today']} turn(s) since start, "
+                               f"{ear['turns_today']} turn(s), "
+                               f"{ear['segments']} segment(s) heard, "
                                f"heartbeat {ear['heartbeat_age']}s ago"})
 
     tr = data["transcripts"]
@@ -353,8 +367,8 @@ def build_rows(data: dict) -> list[dict]:
 
     # Worst first, and HEARD last in arrival order — a transcript is not a
     # verdict, so it must never sort above one.
-    rank = {"BROKEN": 0, "DENIED": 1, "ABSENT": 2, "DISARMED": 3, "UNKNOWN": 4,
-            "OFF": 5, "READY": 6, "LISTENING": 6, "HEARD": 9}
+    rank = {"BROKEN": 0, "DENIED": 1, "ABSENT": 2, "UNHEARD": 3, "DISARMED": 4,
+            "UNKNOWN": 5, "OFF": 6, "READY": 7, "LISTENING": 7, "HEARD": 9}
     rows.sort(key=lambda r: (rank.get(r["state"], 8),
                              "" if r["state"] == "HEARD" else r["part"]))
     return rows

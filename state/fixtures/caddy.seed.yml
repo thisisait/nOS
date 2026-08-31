@@ -47,17 +47,17 @@ caddy:
     description: >-
       Spoken phrase that opens a turn. Matched in the TEXT parakeet wrote, not
       by a wake-word model — so changing it here is a string edit and not a
-      training run. COMMA-SEPARATED VARIANTS because Czech transcription of an
-      English name is not stable; one spelling would make the feature fail
-      silently and look like a hearing problem.
-    value: "hej jeffe, hej jefe, hej dzefe"
+      training run. COMMA-SEPARATED VARIANTS because the ASR DETECTS THE LANGUAGE
+      per segment and may write the same phrase in English — measured, and it is
+      what produced zero turns from an ear that reported LISTENING.
+    value: "hej jeffe, hej jefe, hej dzefe, hey jeff, hey jeffe, hej jeff"
     read_by: "files/anatomy/ears/ears-listen.py (via EARS_WAKE_PHRASE)"
 
   - slug: "submit_phrase"
     name: "Submit phrase"
     description: >-
       Spoken phrase that closes a turn and submits what came before it.
-    value: "makej jeffe"
+    value: "makej jeffe, makej jeff, makey jeffe"
     read_by: "files/anatomy/ears/ears-listen.py (via EARS_SUBMIT_PHRASE)"
 
   - slug: "silence_seconds"

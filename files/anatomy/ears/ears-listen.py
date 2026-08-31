@@ -54,9 +54,11 @@ import json
 import os
 import pathlib
 import re
+import queue
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import wave
 
@@ -74,10 +76,22 @@ DEFAULT_SUBMIT = os.environ.get("EARS_SUBMIT_PHRASE", "makej jeffe")
 DEFAULT_SILENCE = float(os.environ.get("EARS_SILENCE_SECONDS", "7"))
 RETENTION_DAYS = int(os.environ.get("EARS_RETENTION_DAYS", "90"))
 
-# ponytail: energy-threshold VAD, not silero — silero is MIT and 2 MB but wants
-# torch, ~2.5 GB of dependency for it. Swap to the ONNX build if a noisy room
-# makes this misfire; the interface below (bytes in, is-speech out) is the seam.
-SPEECH_RMS = float(os.environ.get("EARS_SPEECH_RMS", "500"))
+# ponytail: energy VAD, not silero — silero is MIT and 2 MB but wants torch,
+# ~2.5 GB of dependency for it. The ceiling that comment named was hit on day
+# one: MEASURED on this operator's microphone, the noise floor sits at RMS 100+
+# in EVERY chunk, the median is 300 and the peak 969 — so the fixed 500 crossed
+# on 18 of 120 chunks and speech never formed a segment. A fixed threshold
+# encodes one room; a floor-relative one calibrates to whatever room it is in,
+# which is the knob the physical world needs. EARS_SPEECH_RMS still overrides it
+# absolutely, for a room where the tracking itself misbehaves.
+SPEECH_RMS = float(os.environ.get("EARS_SPEECH_RMS", "0")) or None
+#: Speech is this many times the tracked noise floor. 2.2 sits between the
+#: measured floor (300 median) and the measured peak (969) with room on both
+#: sides; below ~1.6 the floor itself starts triggering.
+SPEECH_OVER_FLOOR = float(os.environ.get("EARS_SPEECH_OVER_FLOOR", "2.2"))
+#: The floor tracks the QUIET half of recent history, so a long sentence cannot
+#: drag it up and deafen the listener mid-turn.
+FLOOR_WINDOW = 200
 
 # How long the daemon waits for the FIRST audio byte before deciding the
 # microphone is not actually reachable. Generous: launchd starts us before the
@@ -258,6 +272,29 @@ def _transcribe_pcm(model, pcm: bytes) -> str:
         os.unlink(path)
 
 
+def _drain(proc: subprocess.Popen, sink: "queue.Queue[bytes]") -> threading.Thread:
+    """Keep reading ffmpeg while the model is busy.
+
+    MEASURED 2026-08-31 and it overturned an earlier comment in this file: a
+    3.6 s clip took 3.36 s to transcribe — roughly ONE times realtime for a
+    short segment, not the 60x a long file gets from chunked decoding. The OS
+    pipe holds about two seconds, so every transcription was deafening the
+    listener for its own duration, and the sentence after "hej jeffe" is
+    exactly what fell in that hole.
+    """
+    def pump() -> None:
+        while True:
+            chunk = proc.stdout.read(CHUNK_BYTES)
+            if not chunk:
+                sink.put(b"")
+                return
+            sink.put(chunk)
+
+    t = threading.Thread(target=pump, daemon=True)
+    t.start()
+    return t
+
+
 def _ffmpeg(args: list[str]) -> subprocess.Popen:
     return subprocess.Popen(
         ["ffmpeg", "-loglevel", "error", "-nostats", *args,
@@ -307,10 +344,15 @@ def _run_loop(args, daemon: bool) -> int:
     quiet_needed = int(600 / CHUNK_MS)        # 0.6 s ends a speech segment
     started, heard_any = time.time(), False
     last_beat, last_prune, turns_today = 0.0, time.time(), 0
+    floor: list[float] = []
+    segments, wake_misses, last_segment_at = 0, 0, 0.0
+
+    audio: "queue.Queue[bytes]" = queue.Queue()
+    _drain(proc, audio)
 
     try:
         while True:
-            chunk = proc.stdout.read(CHUNK_BYTES)
+            chunk = audio.get()
             now = time.time()
 
             if not chunk:
@@ -340,13 +382,27 @@ def _run_loop(args, daemon: bool) -> int:
 
             if now - last_beat >= HEARTBEAT_S:
                 _write_state(armed=turn.armed, turns_today=turns_today,
-                             silence_left=round(turn.silence_left(now), 1))
+                             silence_left=round(turn.silence_left(now), 1),
+                             segments=segments, wake_misses=wake_misses,
+                             threshold=round(threshold),
+                             last_segment_age=(round(now - last_segment_at)
+                                               if last_segment_at else None))
                 last_beat = now
             if now - last_prune >= 3600:
                 prune(args.retention)
                 last_prune = now
 
-            if rms(chunk) >= SPEECH_RMS:
+            level = rms(chunk)
+            floor.append(level)
+            if len(floor) > FLOOR_WINDOW:
+                floor.pop(0)
+            # The quiet half of recent history IS the floor: a sentence occupies
+            # the loud half and therefore cannot raise its own threshold.
+            quiet = sorted(floor)[: max(1, len(floor) // 2)]
+            threshold = SPEECH_RMS or max(
+                60.0, (sum(quiet) / len(quiet)) * SPEECH_OVER_FLOOR)
+
+            if level >= threshold:
                 speech += chunk
                 quiet_chunks = 0
                 continue
@@ -359,9 +415,18 @@ def _run_loop(args, daemon: bool) -> int:
                     continue
                 text = _transcribe_pcm(model, speech)
                 speech, quiet_chunks = b"", 0
+                segments += 1
+                last_segment_at = now
                 if args.verbose and text:
                     print(f"  … {text}", file=sys.stderr)
+                was_armed = turn.armed
                 done = turn.feed(text, now)
+                if not was_armed and not turn.armed:
+                    # HEARD AND NOT ADDRESSED. Counted, never stored: the count
+                    # is what tells the operator "the ear works, the phrase did
+                    # not match" instead of leaving silence to mean both. The
+                    # words themselves are the room's, and stay unrecorded.
+                    wake_misses += 1
             elif turn.armed:
                 if not daemon:
                     print(f"\r  armed · submitting in {turn.silence_left(now):4.1f}s ",
@@ -440,7 +505,23 @@ def cmd_selfcheck(_args) -> int:
         assert removed == [old.name], f"retention removed {removed}, expected the 91-day file"
         assert young.exists(), "retention deleted a file inside the horizon"
 
-    print("selfcheck OK — 3 turns, 1 retention sweep, no model loaded")
+    # THE ASR'S LANGUAGE GUESS, which produced zero turns from a working ear:
+    # the same phrase written in English must still arm the turn.
+    t6 = Turn("hej jeffe, hey jeff", "makej jeffe, makej jeff", 7)
+    assert t6.feed("Hey, Jeff, how many open highs?", 0) is None
+    assert t6.armed, "an English transliteration of the wake phrase did not arm"
+    assert t6.feed("makej Jeff", 1) == "how many open highs", \
+        "the English submit phrase did not close the turn"
+
+    # The floor-relative threshold, against the measured room: floor 300,
+    # peak 969. A fixed 500 crossed on 15 percent of chunks and never formed a
+    # segment; 300 * 2.2 = 660 must still admit the peak and refuse the floor.
+    quiet_mean, peak = 300.0, 969.0
+    threshold = max(60.0, quiet_mean * SPEECH_OVER_FLOOR)
+    assert threshold < peak, f"the tracked threshold {threshold} deafens the measured peak {peak}"
+    assert threshold > quiet_mean, f"the threshold {threshold} sits under the noise floor"
+
+    print("selfcheck OK — 4 turns, 1 retention sweep, 1 threshold, no model loaded")
     return 0
 
 

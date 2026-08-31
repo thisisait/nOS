@@ -46,13 +46,20 @@ ears_asr_model: "mlx-community/parakeet-tdt-0.6b-v3"
 # Phrases, as TEXT rather than a trained wake-word model: the ASR transcribes
 # the speech segment and the phrase is matched in what it wrote. One fewer
 # model, one fewer training pipeline, and the phrase stays editable.
+# MEASURED 2026-08-31: parakeet-tdt-0.6b-v3 AUTO-DETECTS the language per
+# segment, and on a short noisy one it chose ENGLISH and wrote
+# "Hello, hello, you're fine." So a Czech-only variant list loses the wake
+# phrase whenever the detector guesses en — `Hey, Jeff` normalises to
+# `hey jeff`, which matched nothing and produced zero turns while the ear
+# reported LISTENING. The English spellings are not a nicety; they are the
+# same phrase after a decision this estate does not control.
 # COMMA-SEPARATED VARIANTS, and this default is the one that reaches the
 # daemon: the plist renders THIS, not the settings fixture. They disagreed
 # for a day (fixture had the variants, this had one spelling), which is the
 # single-spelling failure ears-listen.py documents — silent, and looking
 # like a hearing problem.
-ears_wake_phrase: "hej jeffe, hej jefe, hej dzefe"
-ears_submit_phrase: "makej jeffe"
+ears_wake_phrase: "hej jeffe, hej jefe, hej dzefe, hey jeff, hey jeffe, hej jeff"
+ears_submit_phrase: "makej jeffe, makej jeff, makey jeffe"
 # Silence that closes a turn. The number is the operator's; what matters is
 # that the countdown is VISIBLE — a submit trigger that is a timer looks
 # identical to "it never heard me" when it is not shown.
