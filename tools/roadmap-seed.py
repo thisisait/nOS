@@ -1192,6 +1192,33 @@ row("wing-tenants", "Wing hosts systems that are not Wing, and one is cheap to m
          "with KEAP as UI plus general knowledge — and the fact that the executor's only Wing "
          "dependency is a client to the very service the organ already speaks to.")
 
+row("cortex-vendor-staleness", "Four cortex drifts that are staleness, not divergence",
+    "2026-08-31", "next", "cortex",
+    refs="tools/cortex-drift.py · files/anatomy/cortex/server/{migrations,db,cortex-lang}.ts · shared/contracts/field-concepts.ts",
+    body="Read one at a time 2026-08-31, and the UNDECLARED bucket held three different "
+         "things. TWO WERE OURS AND ARE NOW DECLARED: fs-roots.ts rewrites an overlap guard "
+         "KEAP keys on KEAP_USER_FILES_DIR — KEAP's compose sets it so the guard runs there, "
+         "the organ's plist never does, so on this deployment the `if` never ran and a "
+         "mapped-folder root over the per-user tree would have mirrored every user's documents "
+         "with the MAPPING's visibility; cortex-opcodes.ts adds `openai` to MODEL_URI_RE "
+         "because two nOS agents bind openai-local-haiku and KEAP's regex rejects that URI. "
+         "THE OTHER FOUR ARE STALENESS AND DECLARING THEM WOULD BE A LIE, in both directions. "
+         "KEAP is behind on two: server/cortex-lang.ts and server/db.ts cite "
+         "docs/plans/{nos-cortex-lang,keap-curator-agent,keap-semantic-lens}.md, and all three "
+         "live in nOS docs/archive/ — the paths exist in neither repo, so KEAP's citations "
+         "point nowhere and the organ simply followed the move. That is an upstream one-liner, "
+         "not a divergence. THE ORGAN is behind on two, and they are the same feature: "
+         "shared/contracts/field-concepts.ts lacks `rowRef` in the graph.* kinds and "
+         "server/migrations.ts lacks migration 007-row-refs (the table_row_refs back-reference "
+         "mirror). That is w-keap-relations, which shipped on the KEAP side. CHECKED BEFORE "
+         "ALARM: the organ has NO code referencing table_row_refs either, so it is internally "
+         "consistent — one feature behind, not broken, and its store carries data_tables / "
+         "table_rows / table_row_history without the mirror. Re-vendor when the organ needs "
+         "rowRef; doing it now drags in tables.ts and its writer for a feature nothing here "
+         "calls. WHAT THE TOOL STILL CANNOT SAY: `undeclared` conflates 'we diverged on "
+         "purpose' with 'one side is behind', and a third state would have made this reading "
+         "unnecessary. Worth adding the day a fifth file joins the bucket, not before.")
+
 # ── Preflight: does the live table have the columns this script writes? ──────
 #
 # Added 2026-08-07 with the target/occurred_at migration. The live table was

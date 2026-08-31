@@ -20,6 +20,20 @@
  */
 import { realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
+// ── nOS S3 DIFF 1/2 — the guard resolves the roots the organ really walks ───
+// KEAP reads `process.env.KEAP_USER_FILES_DIR` here, and its compose file sets
+// that variable, so the overlap guard runs on KEAP. The ORGAN'S plist never
+// sets it — since §1.4 the users pass walks an ORDERED LIST
+// (`CORTEX_FS_USER_ROOTS` -> `KEAP_FS_USER_ROOTS`), of which the single path is
+// only one shape. So on this deployment the guard was keyed on a variable
+// nobody sets, the `if` never ran, and a mapped-folder root laid over the
+// per-user tree would have resolved cleanly and mirrored every user's documents
+// under owner `fsmap:<id>` with the MAPPING's visibility — one user's files
+// readable by everyone, and invisible to the users-pass prune filter.
+//
+// Upstreamable: KEAP would take this unchanged, since `listUserRoots()` yields
+// the single path when only `KEAP_USER_FILES_DIR` is set. Declared rather than
+// re-vendored because the organ needs it NOW and KEAP does not.
 import { listUserRoots } from './cortex-fs';
 
 const KEY_RE = /^[a-z0-9][a-z0-9-]{0,31}$/;
@@ -57,6 +71,7 @@ function perUserRoots(): string[] {
   return userRootPaths;
 }
 
+// ── nOS S3 DIFF 2/2 — memoised, with a seam so a test can re-resolve ────────
 /** Test seam only: drop the memoised roots so a scenario can re-resolve them. */
 export function _resetUserRootsCache(): void {
   userRootPaths = null;

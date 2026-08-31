@@ -137,6 +137,13 @@ export type CortexParamType = 'bool' | 'int' | 'string' | 'id' | 'model-uri';
  * roadmap row, which collapses them to one. Until it lands, this comment is the
  * pointer that keeps the duplication visible instead of quiet.
  */
+// ── nOS S3 DIFF 1/1 — `openai` is a provider this estate actually binds to ──
+// KEAP's copy allows anthropic|claude|openclaw. nOS runs two agents on
+// `openai-local-haiku` (ops-extract, ops-triage — the ops plane's measurement
+// subjects, bound to ollama's OpenAI-compatible surface on loopback), and
+// KEAP's regex rejects that URI. Not upstreamable as-is: it is a fact about
+// which providers THIS estate binds, and the registry hash both halves publish
+// does not cover this constant, so the seam is unaffected.
 export const MODEL_URI_RE = /^(anthropic|claude|openai|openclaw)-[A-Za-z0-9._:/-]{1,96}$/;
 
 export interface CortexParamSpec {
