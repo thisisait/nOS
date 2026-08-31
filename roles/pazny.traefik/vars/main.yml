@@ -151,6 +151,29 @@ traefik_auth_modes:
   # Everything else falls through to 'proxy' as a safe default — but the
   # explicit catalog above should already cover every manifest entry.
 
+  # ── THE THREE THAT INHERITED THEIR GATE (added 2026-08-31) ─────────────────
+  # `services.yml.j2` renders `traefik_auth_modes.get(s.id, 'proxy')`, so an id
+  # nobody lists is GATED — the safe direction, and the reason none of these was
+  # ever exposed. But an inherited default is not a decision, and CLAUDE.md
+  # already names this as the silent path. Measured that day: 46 routed,
+  # non-skipped services, 43 listed, these 3 relying on the fallback.
+  #
+  # In every case the INTENT was already written down — in the plugin manifest,
+  # which the renderer does not read. That is the wiring defect: two files, one
+  # question, nothing joining them. These lines put the answer where the render
+  # happens. `tests/anatomy/test_no_route_inherits_its_gate.py` keeps it there.
+  snappymail: proxy     # plugin: "no native OIDC — Authentik gates at the proxy layer"
+  smtp_stalwart: proxy  # plugin declares NO authentik block on purpose: mail speaks
+                        # SASL against Stalwart's own store and is not routed through
+                        # Traefik at all. This entry gates the WEB admin surface,
+                        # which is the only thing this router carries.
+  backrest: proxy       # LOAD-BEARING, not cosmetic: backrest's own auth is
+                        # DISABLED (sec-backrest-auth — GetConfig answered 200 from
+                        # inside devops-gitea-1). Until that row closes, this
+                        # middleware is the only thing in front of it, and it was
+                        # being supplied by a default nobody had written down.
+
+
 # REM-144: a routed service with auth_mode 'none' is anonymously reachable at the
 # edge. Until this map existed, the ONLY thing standing behind such a decision was
 # an inline comment — and `traefik: none  # LAN-only via 127.0.0.1 bind` was false
