@@ -23,7 +23,7 @@ metadata:
     managed-by: nos
     blueprint-version: "1"
 
-# The `if`/`else`: with the loop source empty, a bare `entries:` renders as a
+# The if/else below: with the loop source empty, a bare `entries:` renders as a
 # key with no list, which authentik's `Importer.from_string` rejects with
 # EntryInvalidError rather than treating as empty — the instance then sits
 # at status='error' forever. Measured on 50-mfa-policy 2026-08-31; see that

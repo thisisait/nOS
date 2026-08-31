@@ -58,6 +58,7 @@ worse than none, because it reads as complete.
 - `plugin-wiring-report.py` — Plugin wiring report — capability matrix + contract checks.
 - `permission-status.py` — What macOS will and will not let this estate do, in one place.
 - `red-status.py` — What is red on this estate right now.
+- `stale-config-status.py` — Containers running config the estate has already replaced.
 - `rem-status.py` — What the security queue says, right now.
 - `roadmap-status.py` — What the roadmap says, right now.
 - `skill-status.py` — What is on the shelf, who should be holding it, and who actually is.

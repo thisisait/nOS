@@ -9,7 +9,7 @@
 # <stacks_dir>/infra/authentik/blueprints/50-mfa-policy.yaml and is auto-discovered
 # by Authentik's blueprint engine. With the flag off it renders `entries: []`
 # -> the blueprint IMPORTS and applies zero objects. (It used to render a bare
-# `entries:`; see the `{% raw %}{% else %}{% endraw %}` branch at the foot for why that was a failed
+# `entries:`; see the else-branch at the foot of this file for why that was a failed
 # import rather than the no-op this line used to claim.) DO NOT remove the
 # Jinja if/endif wrap believing the render is gated elsewhere — it is NOT. Removing
 # it would enforce MFA on every non-gov install.
