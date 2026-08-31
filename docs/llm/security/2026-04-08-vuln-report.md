@@ -1,3 +1,103 @@
+# nOS Vulnerability Scan Addendum — 2026-08-31 (Cycle 48)
+
+**Batch:** mailpit, spacetimedb, portainer, gitea, openwebui · **Probe:** `unauthenticated_endpoint_scan`
+**Outcome:** 2 queue items added (**REM-244 HIGH**, **REM-245 HIGH**), 4 amended (REM-212, REM-171, REM-173, REM-179), 0 closed — and **one status change that is the batch's whole point**: `REM-212` moves **vendor-blocked → pending**. Counts per `tools/rem-status.py`; do not copy them forward.
+
+> **The headline is not a new vulnerability. It is a row that stopped being true while nobody was reading it.**
+>
+> On 2026-08-21 this scanner filed REM-212 — Portainer CVE-2026-72533, CVSS 4.0 **9.4**, authenticated non-admin reaches the Docker API directly — and recorded, correctly, that **no patch existed**: neither 2.45.0 nor 2.39.7 was on the releases endpoint, the tags endpoint, or Docker Hub. It then asked, in capitals, to be **re-read next batch regardless of rotation**. The five-component round-robin took **ten days** to come back. **Portainer 2.45.0 shipped 2026-08-27** and had been available for four of them.
+>
+> `vendor-blocked` is a claim about **the world**, not about this estate, and it is the only status in the queue that no gate, hook or Pulse job re-evaluates. Every other status is either terminal (`resolved`, `wontfix`) or self-evidently open (`pending`). `vendor-blocked` reads like a decision and behaves like a bet on someone else's release schedule. This is the 2026-08-01 *"success markers must be written by a reader"* rule applied to a status field: the row asserted its own blockedness and nothing re-measured it. **Six rows currently carry that status.**
+
+---
+
+### 🔴 CRITICAL — [REM-212] the Portainer patch now exists — status change, not a new finding
+
+- **Component:** portainer — `portainer/portainer-ce:2.44.0` live as `infra-portainer-1` (up 3 weeks), pinned `default.config.yml:1928`
+- **Fix version:** **2.45.0** (STS, 2026-08-27) or **2.39.7** (LTS). Both verified on Docker Hub this batch — tag endpoint HTTP 200 for each.
+- **Nothing about the exposure changed.** 2.44.0 is still inside `>= 2.40.0, < 2.45.0`.
+
+The 2.45.0 release body names the fix in its own words, under *Security improvements*:
+
+> *"Fixed a critical Docker proxy authorization bypass. Unrecognised API version prefixes like `/v1.47.0/` or `/v01.47/` skipped access control entirely, letting non-admin users reach the Docker API directly"*
+
+— which is CVE-2026-72533 described by **mechanism rather than id**. The estate's reach is unchanged from batch-57: `docker-socket-proxy` runs `POST=1 EXEC=1 PLUGINS=0`, so the bypass still lands `POST /containers/{id}/exec` into any running container. Reduced from host RCE; not closed.
+
+**A second reason to take the bump:** 2.45.0 carries a Go 1.26.6 toolchain update closing **CVE-2026-39821** (9.6, IDNA validation bypass of hostname-based access controls) plus nine further Go CVEs and `oras-go` CVE-2026-50163. **No version-aware query against `portainer` itself would ever have surfaced those** — second sighting of the batch-42 `tempo` lesson: *read the release bodies, not just the vulnerability database.*
+
+**Pre-converge caveat, not a blocker.** 2.45.0 is a **minor** bump, and this estate's standing hazard is that a minor bump orphans the role's post-start automation (`kuma` 1→2 served its installer for ten days, healthy, zero monitors). Re-verify `roles/pazny.portainer/tasks/post.yml` — admin-init and the OAuth settings `PUT` — after converging.
+
+---
+
+### 🟠 HIGH — [REM-244] Gitea 1.27.2 is below the floor on twenty of twenty-two advisories published 2026-08-29
+
+- **Component:** gitea — pinned and live at `1.27.2` (`default.config.yml:1667`, marked `[swept 1.27.0 2026-08-06]`; `devops-gitea-1` healthy)
+- **Fix version:** **1.27.3**, released 2026-08-29T17:42Z — **the same day as the wave**. `gitea/gitea:1.27.3` confirmed on Docker Hub. Patch-level, same minor.
+- **Tally from the vendor endpoint:** 4 HIGH · 15 MEDIUM · 3 LOW.
+
+REM-213 recorded this exact arc ten days ago: the pin advances to clear a wave, and a new wave lands. **Two of the twenty-two are already fixed at the running pin** and are recorded so nobody re-derives them — `CVE-2026-71184` (8.8) and `CVE-2026-73135`, both ranged `<= 1.27.1`.
+
+| GHSA | CVE | Sev | Summary |
+|---|---|---|---|
+| `GHSA-v2w8-m4gr-qj65` | CVE-2026-66877 | **HIGH 8.7** | **RCE on self-hosted runners** — fork-PR `NeedApproval` gate bypassed via job-level concurrency cancellation |
+| `GHSA-g5jj-gp8w-73h7` | CVE-2026-60010 | **HIGH 8.1** | Repo-side team-link endpoint bypasses `RepoAdminChangeTeamAccess` |
+| `GHSA-wg93-gp4m-c6vr` | CVE-2026-68957 | **HIGH** | Restricted users read limited-visibility users' issue titles and bodies via issue search |
+| `GHSA-2xph-7j4g-43rg` | CVE-2026-63792 | MED 6.3 | Fork PRs read reusable workflow files from another private repository |
+| `GHSA-5xp7-r6cr-39ff` | CVE-2026-66874 | MED 6.5 | Fork-PR author satisfies a required Actions check with no workflow run |
+| *(+15 more, all `<= 1.27.2`)* | | | package-registry scope, attachment cross-repo, migration DoS |
+
+**Unlike REM-213, the fix mapping is unambiguous.** Every advisory still publishes `first_patched_version: null`, but v1.27.3's release body enumerates its SECURITY commits by subsystem and they line up one-for-one with the wave (`#39048` attachments owning-repository, `#39004` hide limited users from restricted viewers, `#39005` fork-PR trust boundaries, `#39035`/`#39033` migration probes, `#39041`–`#39047` package scope). No commit-archaeology gap is being papered over this time. Two advisories again publish `>= 1.16.0` with **no upper bound** — the shape REM-213 flagged on CVE-2026-73800 — and both are resolved from the release notes rather than the range.
+
+**Estate-specific, measured not reasoned — and the mitigation is an accident.** The Actions cluster is the wave's largest group and includes its top HIGH. It is **mitigated by absence**: `app.ini` has **no `[actions]` section at all**, so `ENABLED` is upstream-default **true** — and `select count(*) from action_runner` in `/data/gitea/gitea.db` returns **zero**. Eighty-five rows sit in `action_run` with nothing to execute them. That is a fact about today's deployment, not a control: **the day anyone registers an `act_runner`, the 8.7 is live with no other change and nothing in the estate would notice.** There are likewise no forks and no external contributors, so the fork-PR precondition has no population, and the restricted-user disclosure cluster needs a restricted account — `/api/v1/users/search` returns exactly two, `akadmin` and `pazny`, neither restricted. **CVE-2026-60010 is the one HIGH with no estate-specific brake.**
+
+---
+
+### 🟠 HIGH — [REM-245] Open WebUI 0.11.0 — six advisories, zero CVE ids, and the patch shipped *before* the disclosure
+
+- **Component:** openwebui — pinned and live at `0.11.0` (`default.config.yml:1863`; `iiab-open-webui-1` up 3 weeks, healthy)
+- **Fix version:** **0.11.1**, released 2026-08-25. Patch-level, same minor.
+- **Source:** `repos/open-webui/open-webui/security-advisories` only. **Nothing else shows it.**
+
+Batch-57 recorded this component **VERSION CLEAN at 0.11.0** on 2026-08-21 — correct when written, stale eight days later.
+
+**This is the sixth sighting of the CVE-less-GHSA blind spot** (REM-152, REM-153, REM-198, REM-229, the cycle-39 traefik wave, now this) **and the sharpest, because of the ordering.** 0.11.1 shipped **2026-08-25**; the six advisories describing what it fixed were published **2026-08-29 and 2026-08-30 — four and five days later**. In that window, NVD, OSV *and the project's own release notes* all return nothing security-shaped. A version-aware query reads exactly like diligence. Only the vendor endpoint carries the wave, and only its **metadata** carries the floor — the advisory prose never names a version.
+
+| GHSA | Sev | Range | Summary |
+|---|---|---|---|
+| `GHSA-34r3-9m95-vq73` | **HIGH 7.1** | `< 0.11.1` | Any authenticated user reaches the Azure platform channel via server-side web fetch |
+| `GHSA-2724-6cpj-gf3v` | **HIGH 7.1** | `>= 0.10.0, < 0.11.1` | Non-admin deletes admin-owned external knowledge connections |
+| `GHSA-5x7x-4c3c-qf5w` | MED 5.0 | `>= 0.9.5, <= 0.11.0` | **SSRF — server-side fetches reach blocked and internal hosts via unvalidated HTTP redirect targets** |
+| `GHSA-3cgp-3cqx-j8w2` | MED 6.5 | `< 0.11.1` | Server hang via message deletion in a cyclic chat tree |
+| `GHSA-jqhh-cjmq-vmv6` | MED 6.5 | `>= 0.5.0, < 0.11.1` | Server hang via cyclic chat message history |
+| `GHSA-3pf7-q2g3-wj28` | MED 4.3 | `>= 0.10.0, < 0.11.1` | Chat injection into another user's folder |
+
+**The lowest-scored one is the one that matters here.** `GHSA-5x7x` is the **fourth SSRF in this component in a single release cycle** (after CVE-2026-70479 / 70485 / 70480), and it is a **redirect-target** bypass — precisely the class that walks past an allow-list validated only on the first URL. REM-214 already measured, from inside `iiab-open-webui-1`, what an SSRF here reaches: `host.docker.internal:11434` (full Ollama inventory), `:12345` (Alloy admin), `:9898` (Backrest, whose unauthenticated config declares `"auth":{"disabled":true}`), cortex `:8098`, bone `:8099`. **REM-214 wrote that "three SSRF CVEs in one release cycle makes 'the next one' a forecast." The forecast resolved in eight days.**
+
+**Precondition, stated honestly, and why this is HIGH and not CRITICAL:** all six need an authenticated session. `/api/config` confirms live that `enable_signup` is **false** and the only provider is `oidc:Authentik` — an account means an Authentik identity, not a self-registration. The exposure is what an ordinary estate *user* can do to the admin's knowledge connections and to the host organs behind the SSRF, not what the internet can do.
+
+---
+
+### Probe result — `unauthenticated_endpoint_scan`: no new row, one **withdrawn verdict**
+
+The probe re-ran against all three live components — host loopback publishes (`:3003` gitea, `:3004` open-webui, `:9002` portainer), a peer container, and the Traefik edge with `--resolve` and no session. **Structurally, nothing changed since batch-45.** State-bearing endpoints still refuse (`/api/endpoints` 401, `/api/models` 401); `portainer/api/users/admin/check` still returns **204** so REM-182's setup window stays closed.
+
+What changed is **what the leaked strings now mean**:
+
+| Anonymous endpoint | Publishes | Status of that version today |
+|---|---|---|
+| `portainer.<tld>/api/status` | `2.44.0` | **unpatched CVSS 9.4** (REM-212) |
+| `git.<tld>/api/v1/version` | `1.27.2` | 20 open advisories (REM-244) |
+| `ai.<tld>/api/config` | `0.11.0` | 6 open advisories (REM-245) |
+
+Batch-46 closed the Open WebUI leg as *"ordinary recon"* on the reasoning that 0.11.0 had zero known vulns — true then. **That closure is withdrawn, and so is the general shape of it.** A version-disclosure leg cannot be retired as "decayed", because its severity is not a property of the leak — it is a property of the **patch state**, which oscillates. Each leg re-sharpens the day an advisory lands and re-dulls the day a converge runs, and the estate has **no reader that notices either transition**. It is a **permanent multiplier on patch latency**, not a finding that ages out. The batch-45 pricing of the *remedies* stands (edge middleware and forward-auth are both wrong for native_oidc services); **REM-180** — Gitea's own `REQUIRE_SIGNIN_VIEW`, still unset — remains the one cheap real fix and remains pending.
+
+### Not-live components, recorded so the absence is legible
+
+- **mailpit** — `install_mailpit: false` (`config.yml:161`), no container, nothing to probe. CVE leg re-read at source: **34 days with no new advisory**; the `v1.30.5` pin is still one release below the CVE-2026-67448 floor (REM-171, amended — head is now `v1.31.0`). REM-211 stands: `default.config.yml:312` ships this **TRUE**, and a stock install runs a UI whose `MP_UI_AUTH` block sits inside a conditional that has never once evaluated true.
+- **spacetimedb** — `install_spacetimedb: false`, no container, `127.0.0.1:3030` bind. **The advisory endpoint has never returned a single record for this project.** Pin drift widened again: head `v2.8.3` (2026-08-25) against a `v2.7.0-hotfix3` pin (REM-173, amended). Blank-reproducibility hygiene, not exposure.
+
+---
+
 # nOS Vulnerability Scan Addendum — 2026-08-26 (Cycle 42)
 
 **Batch:** loki, mcp_gateway, n8n, metabase, tempo · **Probe:** `default_credentials_test`
