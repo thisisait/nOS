@@ -663,7 +663,11 @@ jobs:
         #
         # Overridden here rather than in tests/config.yml so the macOS job keeps
         # exercising the nginx vhost path, which is real and supported there.
-        run: ansible-playbook main.yml -e allow_weak_prefix=true -e install_traefik=true -e install_nginx=false -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
+        run: >-
+          ansible-playbook main.yml
+          -e allow_weak_prefix=true
+          -e '{"install_traefik": true, "install_nginx": false}'
+          -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
         env:
           ANSIBLE_FORCE_COLOR: '1'
           ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
