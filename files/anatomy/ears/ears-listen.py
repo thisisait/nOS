@@ -74,6 +74,21 @@ DEFAULT_MODEL = os.environ.get("EARS_ASR_MODEL", "mlx-community/parakeet-tdt-0.6
 DEFAULT_WAKE = os.environ.get("EARS_WAKE_PHRASE", "hej jeffe")
 DEFAULT_SUBMIT = os.environ.get("EARS_SUBMIT_PHRASE", "makej jeffe")
 DEFAULT_SILENCE = float(os.environ.get("EARS_SILENCE_SECONDS", "7"))
+
+#: A PHONETIC FALLBACK for the wake phrase, because exact spellings do not
+#: survive this ASR. MEASURED 2026-08-31 across two recordings: the same spoken
+#: "Hej Jeffe" came back as Hejče / Nej Jefem / Hej Gefan / Hejfem / He fe /
+#: Hyčef / Hejče — seven spellings, none stable, so a variant list can only ever
+#: chase them. Three candidate patterns were scored against 10 wake utterances
+#: and 18 ordinary Czech and English lines; this one takes 8 of 10 and raises
+#: ZERO false alarms. A looser rule reached 10 of 10 and armed on "Hej, počkej
+#: chvilku" — a sentence said to a person in the room. That trade is not close:
+#: a missed wake costs a repeat, a false wake starts an action.
+#:
+#: THE REAL FIX IS A DIFFERENT WORD. An English name is what Czech ASR mangles;
+#: an ordinary Czech word is in-distribution and comes back the same every time.
+#: This pattern is the bridge until the operator picks one.
+WAKE_PATTERN = os.environ.get("EARS_WAKE_PATTERN", r"^[hn][eěy]\S*\s?\S*(ef|če|čef)")
 RETENTION_DAYS = int(os.environ.get("EARS_RETENTION_DAYS", "90"))
 
 # ponytail: energy VAD, not silero — silero is MIT and 2 MB but wants torch,
@@ -170,6 +185,10 @@ class Turn:
 
         if not self.armed:
             hit = next((w for w in self.wakes if w in norm), None)
+            if hit is None and WAKE_PATTERN:
+                m = re.search(WAKE_PATTERN, norm)
+                if m:
+                    hit = norm[: m.end()]
             if hit is None:
                 return None
             self.armed = True
@@ -371,7 +390,13 @@ def _run_loop(args, daemon: bool) -> int:
               file=sys.stderr)
 
     speech, quiet_chunks = b"", 0
-    quiet_needed = int(600 / CHUNK_MS)        # 0.6 s ends a speech segment
+    # 1.2 s, MEASURED, not chosen. At 0.6 s the same 10.6 s recording split into
+    # three fragments — "Nej Jefem, tohle je první test." / "Relativně zdalky." /
+    # "bych se tě zeptat, kolik." — and short fragments are where this model
+    # hallucinates: a 0.3 s one came back "Mm-hmm." in English. At 1.2 s the
+    # same audio became two whole clauses, and at 2.0 s one correct sentence.
+    # Longer is better for accuracy and worse for latency; 1.2 is the knee.
+    quiet_needed = int(float(os.environ.get("EARS_SILENCE_GAP", "1.2")) * 1000 / CHUNK_MS)
     started, heard_any = time.time(), False
     last_beat, last_prune, turns_today = 0.0, time.time(), 0
     floor: list[float] = []
@@ -572,7 +597,26 @@ def cmd_selfcheck(_args) -> int:
     assert threshold < peak, f"the tracked threshold {threshold} deafens the measured peak {peak}"
     assert threshold > quiet_mean, f"the threshold {threshold} sits under the noise floor"
 
-    print("selfcheck OK — 4 turns, 1 retention sweep, 1 threshold, no model loaded")
+    # THE PHONETIC FALLBACK, against the very spellings this ASR produced and
+    # the ordinary sentences it must NOT arm on. Both lists are measured, not
+    # imagined — they are transcripts from the two test recordings.
+    heard_as = ["hejče tohle je první test", "nej jefem tohle je test",
+                "hej gefan tohle je test", "hyčef tohle je test",
+                "hejče tohle je test", "hej jeffe kolik je hodin"]
+    must_not = ["hele to je jedno", "hej počkej chvilku", "nejde to",
+                "kolik je hodin v brně", "chtěl bych se tě zeptat",
+                "tohle je první test relativně z dálky", "nevím co s tím"]
+    for said in heard_as:
+        t = Turn("hej jeffe", "makej jeffe", 7)
+        t.feed(said, 0)
+        assert t.armed, f"the phonetic fallback missed a real wake: {said!r}"
+    for said in must_not:
+        t = Turn("hej jeffe", "makej jeffe", 7)
+        t.feed(said, 0)
+        assert not t.armed, f"FALSE WAKE on ordinary speech: {said!r}"
+
+    print("selfcheck OK — 4 turns, 6 wake spellings, 7 refusals, "
+          "1 retention sweep, 1 threshold")
     return 0
 
 

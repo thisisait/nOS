@@ -64,6 +64,12 @@ ears_submit_phrase: "makej jeffe, makej jeff, makey jeffe"
 # that the countdown is VISIBLE — a submit trigger that is a timer looks
 # identical to "it never heard me" when it is not shown.
 ears_silence_seconds: 7
+# Silence that ENDS A SEGMENT (not the turn). MEASURED 2026-08-31 on two
+# recordings: at 0.6 s a 10.6 s sentence split into three fragments and the
+# short ones came back as English noise ("Mm-hmm."); at 1.2 s it became two
+# whole clauses; at 2.0 s one correct sentence. Longer is more accurate and
+# slower to react — 1.2 is the knee.
+ears_silence_gap: 1.2
 
 # Which half serves a turn by default. `local` keeps the sentence on this
 # machine; `cloud` is a different agent with a different Article-30 record, and
