@@ -12,6 +12,7 @@ from __future__ import annotations
 import dataclasses
 import os
 import re
+import signal
 import subprocess
 import time
 
@@ -75,6 +76,20 @@ class RunResult:
     timed_out: bool
 
 
+def _kill_tree(proc: subprocess.Popen) -> None:
+    """SIGKILL the child's whole process group.
+
+    `os.killpg` and not `proc.kill()`: the grandchild IS the point of this
+    change. Guarded because the group can legitimately be gone already — the
+    child may have exited between the timeout firing and this call, and a
+    ProcessLookupError there is a race, not a failure.
+    """
+    try:
+        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        proc.kill()  # the group is gone or not ours; the direct child still is
+
+
 def execute(command: str, args: list[str], *,
             timeout_s: float, env: dict[str, str] | None = None,
             cwd: str | None = None) -> RunResult:
@@ -97,36 +112,73 @@ def execute(command: str, args: list[str], *,
         )
     final_env = _safe_env(env)
     try:
-        proc = subprocess.run(
+        # THE TIMEOUT KILLS THE WHOLE TREE, NOT THE PROCESS WE HAPPEN TO HOLD.
+        #
+        # MEASURED 2026-08-31, twice in one night. `subprocess.run(timeout=)`
+        # SIGKILLs the DIRECT child only. Every agent job's command is
+        # tools/run-agent.sh, a bash wrapper whose real work is a `php
+        # run-agent.php` grandchild, so the timeout killed the shell and left
+        # the agent running:
+        #
+        #   librarian:brief-taxonomy   killed at 900s   session ended  1103s
+        #   librarian:judge-lint-queue killed at 600s   session ended   627s
+        #
+        # Both sessions ended `outcome_satisfied`. The work COMPLETED, minutes
+        # after the estate recorded it as killed — so pulse_runs said rc=-9
+        # while agent_sessions said satisfied, and neither was wrong about what
+        # it saw. That is two truths from one run, which is the shape this
+        # estate keeps paying for.
+        #
+        # The second-order cost is worse than the bookkeeping. The agent mutex
+        # is released by `trap 'nos_agent_lock_release' EXIT` in
+        # agent-run-lock.sh, and SIGKILL does not run traps. So the killed
+        # wrapper leaked its slot: measured at 07:38 the same morning, slot.1
+        # was still held by PID 51683 (dead since 05:38) — and a leaked slot is
+        # what makes the NEXT agent job wait 300s and exit 2, the failure that
+        # was diagnosed the day before as a scheduling collision and fixed by
+        # moving two cron times. That fix was right on its own terms and this
+        # is the generator underneath it.
+        #
+        # start_new_session puts the child in its own process group; killing
+        # the GROUP reaches the grandchild. The wrapper still cannot run its
+        # trap — SIGKILL never allows that — so the lock's PID-liveness reclaim
+        # remains the backstop, and now it has at most one dead PID to reclaim
+        # instead of a live agent to fight.
+        proc = subprocess.Popen(
             [command, *args],
-            capture_output=True,
-            timeout=timeout_s,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            check=False,
             env=final_env,
             cwd=cwd,
+            start_new_session=True,
         )
+        try:
+            out, err = proc.communicate(timeout=timeout_s)
+        except subprocess.TimeoutExpired:
+            _kill_tree(proc)
+            # After the group is gone, collect whatever it had written. A
+            # second timeout here would mean a process ignoring SIGKILL, which
+            # is not a thing on this platform — but it is bounded anyway so a
+            # stuck read can never wedge the daemon's tick.
+            try:
+                out, err = proc.communicate(timeout=10)
+            except subprocess.TimeoutExpired:
+                out, err = "", ""
+            return RunResult(
+                exit_code=-9,     # convention: -9 == SIGKILL after timeout
+                duration_s=time.monotonic() - start,
+                stdout_tail=out or "",
+                stderr_tail=err or "",
+                timed_out=True,
+            )
         duration = time.monotonic() - start
         return RunResult(
             exit_code=proc.returncode,
             duration_s=duration,
-            stdout_tail=proc.stdout or "",
-            stderr_tail=proc.stderr or "",
+            stdout_tail=out or "",
+            stderr_tail=err or "",
             timed_out=False,
-        )
-    except subprocess.TimeoutExpired as e:
-        duration = time.monotonic() - start
-        # Best-effort capture of partial output
-        out = (e.stdout or "") if isinstance(e.stdout, str) \
-            else (e.stdout.decode("utf-8", "replace") if e.stdout else "")
-        err = (e.stderr or "") if isinstance(e.stderr, str) \
-            else (e.stderr.decode("utf-8", "replace") if e.stderr else "")
-        return RunResult(
-            exit_code=-9,         # convention: -9 == SIGKILL after timeout
-            duration_s=duration,
-            stdout_tail=out,
-            stderr_tail=err,
-            timed_out=True,
         )
     except FileNotFoundError as e:
         duration = time.monotonic() - start
