@@ -1551,9 +1551,9 @@
     "pulse:librarian:brief-taxonomy": {
       "kind": "pulse",
       "source": "files/anatomy/agents/librarian/agent.yml",
-      "schedule": "30 3 * * *",
+      "schedule": "15 4 * * *",
       "jitter_min": 5,
-      "max_runtime_s": 900,
+      "max_runtime_s": 2400,
       "category": "knowledge",
       "paused": false,
       "findings_exit_codes": null,
@@ -1563,7 +1563,7 @@
       ],
       "runs_agent": "librarian",
       "anchor": "09",
-      "description": "Pulse scheduled job (knowledge): runs run-agent.sh on cron `30 3 * * *`"
+      "description": "Pulse scheduled job (knowledge): runs run-agent.sh on cron `15 4 * * *`"
     },
     "pulse:librarian:describe-taxonomy": {
       "kind": "pulse",
@@ -1587,7 +1587,7 @@
       "source": "files/anatomy/agents/librarian/agent.yml",
       "schedule": "35 5 * * *",
       "jitter_min": 5,
-      "max_runtime_s": 600,
+      "max_runtime_s": 1800,
       "category": "knowledge",
       "paused": false,
       "findings_exit_codes": null,

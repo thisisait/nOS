@@ -248,11 +248,20 @@ pulse:
       runner: subprocess
       command: "{{ playbook_dir }}/tools/run-agent.sh"
       args: ["--agent=librarian", "--trigger=pulse"]
-      # 03:30, not 03:10 (moved 2026-08-30): describe-taxonomy's window now
-      # closes at 03:20 and both take the same exclusive agent lock. It has
-      # never collided — this is the knock-on of moving its sibling, kept
-      # honest by the same gate.
-      schedule: "30 3 * * *"
+      # 04:15, not 03:30 (moved 2026-08-31): enlarging this job's budget to
+      # 2400s stretched its window to 03:30-04:15, which swallowed
+      # `conductor:self-test-001` (04:00-04:10, Sundays). Both take the same
+      # exclusive agent lock, so the loser waits on the mutex, times out and
+      # exits 2, and stays red until its next cron — a weekly failure bought
+      # with a fix for a nightly one.
+      #
+      # Caught by test_two_agent_lock_jobs_cannot_overlap, which I did not run
+      # on the branch that made the change. A budget is not a local edit: it
+      # moves the window's far edge into whatever is standing there.
+      #
+      # 04:15 + 5 jitter + 40min closes at 05:00 — clear of describe-taxonomy
+      # (ends 03:20), of the conductor, and of judge-lint-queue (opens 05:35).
+      schedule: "15 4 * * *"
       jitter_min: 5
       # 900 -> 2400 (2026-08-31). Same measurement as judge-lint-queue above,
       # and the starker case: recorded rc=-9 at exactly 900s, while the agent
