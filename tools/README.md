@@ -43,6 +43,7 @@ worse than none, because it reads as complete.
 - `app-version.py` — What each container actually RUNS, against what the pin says it bundles.
 - `awaiting-operator.py` — What is waiting for a HUMAN right now, across every source that asks for one.
 - `brew-pin-status.py` — How old is the version brew wants to give us, and is it old enough to adopt?
+- `cortex-status.py` — What the cortex organ is, all of it — not just the part KEAP serves.
 - `cortex-drift.py` — Compare the vendored cortex organ against the KEAP tree it was cut from.
 - `discovery-scan.py` — Discovery: find two representations of one fact that disagree.
 - `doctrine-cite.py` — Resolve every doctrine citation in the estate — or say exactly which do not.
