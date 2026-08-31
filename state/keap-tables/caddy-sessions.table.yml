@@ -27,7 +27,12 @@ description: >-
   depth lives in wing.db under session_uuid; this is the surface that can be
   ordered, filtered and rendered.
 driver: libsql
-visibility: tier-admins
+# `tier-managers`, not `tier-admins` — WHICH DOES NOT EXIST. KEAP's enum is
+# private | tier-managers | tier-users | tier-guests | shared, and the invented
+# value shipped green through every offline gate and 400'd on the converge.
+# Not `private` either: that would make the SEEDING AGENT the owner, so the
+# operator would not see their own caddy's table in face.
+visibility: tier-managers
 anchors: ["nos.agents"]
 
 schema:

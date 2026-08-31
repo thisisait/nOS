@@ -135,6 +135,35 @@ def test_the_conceptless_excuse_is_not_stale():
     )
 
 
+#: KEAP's `tableVisibilitySchema` (~/keap/src/shared/contracts/table.ts). Copied,
+#: because it lives in another repo and nothing here can import it — which makes
+#: this the THIRD instance in one day of the same seam (the `chat` style and the
+#: system-table flag are the others; roadmap row `ext-contract`).
+KEAP_VISIBILITY = {"private", "tier-managers", "tier-users", "tier-guests", "shared"}
+
+
+def test_visibility_is_a_value_keap_will_accept():
+    """MEASURED THE HARD WAY 2026-08-31: `tier-admins` is not a KEAP visibility.
+
+    It reads like the obvious tightening of `tier-managers`, it passed every
+    offline gate here, and it 400'd on the converge — `Invalid enum value.
+    Expected 'private' | 'tier-managers' | 'tier-users' | 'tier-guests' |
+    'shared', received 'tier-admins'` — after the play had already done 431
+    tasks of work. A definition this repo owns and another repo validates is
+    exactly the shape that must be checked BEFORE the converge, not by it.
+    """
+    bad = [
+        f"{name}: visibility: {doc.get('visibility')}"
+        for name, doc in _definitions()
+        if doc.get("visibility") and doc["visibility"] not in KEAP_VISIBILITY
+    ]
+    assert not bad, (
+        "visibility values KEAP's enum does not contain — the seeder will 400 "
+        "mid-converge:\n  " + "\n  ".join(bad)
+        + f"\nAllowed: {sorted(KEAP_VISIBILITY)}"
+    )
+
+
 def test_concept_ids_are_well_formed():
     bad = [
         f"{name}.{c['key']} -> {c['concept']}"
