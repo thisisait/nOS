@@ -44,13 +44,16 @@ HOST_DAEMONS = {
     "pazny.bone": (("sync bone source",), "bone"),
     "pazny.hermes": (("install hermes-agent",), "hermes"),
     "pazny.cortex": (("build dist-server",), "cortex"),
-    "pazny.ears": (("sync listener source",), "ears"),
 }
 
 # Roles that bootstrap something into launchd but are NOT a long-lived process
 # holding code in memory, with the reason. Each was surfaced by the coverage
 # check below rather than remembered.
 DAEMON_ROLES_EXCUSED = {
+    "pazny.ears": "no daemon by measurement, not by omission — every background "
+                  "shape macOS offers was handed a microphone with no speech in "
+                  "it (2026-08-31), so the ear is a deliberate Terminal session "
+                  "that starts with the code it starts with. Roadmap: ears-app-bundle",
     "pazny.wing": "FrankenPHP serves from wing_app_dir; no installed-package step to miss, and the renders already notify",
     "pazny.backup": "launchd TIMER, not a daemon — each tick execs ~/.nos/backup.sh fresh, so no process can hold stale code",
     "pazny.backrest": "install_backrest defaults false and the role has no handlers file at all; wiring one is part of un-blocking that spike, not this gate",

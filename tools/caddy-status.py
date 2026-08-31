@@ -159,15 +159,16 @@ def _listener() -> dict:
     # reason: launchd gets a TCC-silent microphone (see the pane module), so
     # the listener lives in a tmux window where the grant already is. A launchd
     # job that IS loaded is reported, and reported as deaf.
-    session = os.environ.get("NOS_CC_SESSION", "nos-cc")
-    in_tmux = subprocess.run(
-        ["tmux", "list-windows", "-t", f"={session}", "-F", "#{window_name}"],
-        capture_output=True, text=True)
-    windowed = in_tmux.returncode == 0 and "ears" in in_tmux.stdout.split()
+    # THE PROCESS, not a job registry: the ear is a deliberate session in a
+    # Terminal window (the only context on this host whose microphone grant is
+    # real), so what matters is whether it is RUNNING. A launchd job is still
+    # detected — and reported as deaf, because that is what it is here.
+    foreground = subprocess.run(["pgrep", "-f", "ears-listen.py --listen"],
+                                capture_output=True, text=True).stdout.split()
     daemonised = subprocess.run(
         ["launchctl", "print", f"gui/{os.getuid()}/{LISTENER_LABEL}"],
         capture_output=True, text=True).returncode == 0
-    loaded = windowed or daemonised
+    loaded = bool(foreground) or daemonised
 
     state, detail = {}, ""
     if STATE_FILE.is_file():
@@ -194,7 +195,7 @@ def _listener() -> dict:
         "retention_days": state.get("retention_days"),
         "detail": detail or state.get("detail", ""),
         "paused": (EARS_HOME / "paused").is_file(),
-        "where": "tmux" if windowed else ("launchd" if daemonised else ""),
+        "where": "terminal" if foreground else ("launchd" if daemonised else ""),
     }
 
 
@@ -337,8 +338,8 @@ def build_rows(data: dict) -> list[dict]:
                                "a converge resumes it too (config.yml still declares it)"})
     elif not ear["loaded"]:
         rows.append({"state": "OFF", "part": "listener",
-                     "detail": "not running — press s in nos-cc to start it in the ears "
-                               "window (launchd cannot hear: TCC)"})
+                     "detail": "not listening — press s in nos-cc (it opens a Terminal "
+                               "window; no background ear on macOS, see ears-app-bundle)"})
     elif ear["mic_ok"] is False:
         rows.append({"state": "DENIED", "part": "listener",
                      "detail": f"loaded and hearing NOTHING — {ear['detail'] or 'microphone refused'}. "
@@ -358,6 +359,10 @@ def build_rows(data: dict) -> list[dict]:
                                f"NONE matched the wake phrase "
                                f"(last {ear['last_segment_age']}s ago, "
                                f"threshold {ear['threshold']})"})
+    elif ear.get("where") == "launchd":
+        rows.append({"state": "DEAF", "part": "listener",
+                     "detail": "running under launchd, which macOS hands a microphone with "
+                               "no speech in it — press s to listen from a Terminal window"})
     elif ear["segments"] >= 3 and not any((s.get("text") or "").strip()
                                           for s in (ear.get("recent") or [])):
         # DEAF: it is running, the stream is not zeros, and NOTHING it heard

@@ -118,78 +118,42 @@
       (_ears_app_exec is defined and _ears_app_exec is changed)
   changed_when: true
 
-# ── The always-listen agent ──────────────────────────────────────────────────
-# Rendered ALWAYS, bootstrapped only when the operator has said so. ONE SWITCH:
-# `ears_always_listen` in config.yml, applied by a converge — the listener has
-# no --on/--off of its own, because two ways to start a microphone means the
-# next converge silently undoes one of them, and because the estate's rule is
-# that either the playbook does it or the operator runs nos, nothing in
-# between. macOS only: MLX is Apple Silicon, so there is no Linux sibling.
+# ── NO LAUNCHD JOB, and this is a measured decision, not an omission ─────────
+#
+# Every background shape was tried on 2026-08-31 and every one was handed a
+# microphone with no speech in it: a launchd job running the venv python, a
+# tmux window of the operator's own control-centre session, and an ad-hoc
+# signed .app bundle under launchd — for which TCC would not even record a
+# row. macOS binds a microphone grant to the RESPONSIBLE process, and on this
+# host exactly two hold one: com.apple.Terminal and the pyenv interpreter.
+#
+# So the ear is a DELIBERATE SESSION: `s` in nos-cc opens a Terminal window
+# running the listener. The window is not an inconvenience — it is the
+# microphone made visible, and closing it is the fastest way to stop being
+# recorded. A reboot-proof ear needs a real signing identity; that is roadmap
+# row `ears-app-bundle`, and until it exists this role must not pretend.
+#
+# A STALE JOB IS WORSE THAN NONE: one that loads and hears nothing reports
+# LISTENING, so the role removes any it previously installed.
 
-- name: "[pazny.ears] Render launchd plist for the listener"
-  ansible.builtin.template:
-    src: ears-listen.plist.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ ears_launchd_label }}.plist"
-    mode: '0644'   # no secrets in this plist — phrases, paths and a horizon
-  register: _ears_plist
-  when: (nos_service_manager | default('launchd')) == 'launchd'
-
-# bootout+bootstrap on a CHANGED plist, and the sleep is not superstition: the
-# bone/wing roles measured that bootout is ASYNCHRONOUS, so bootstrapping into
-# the teardown returns `5: Input/output error` and leaves the job unloaded.
-# A loaded job never re-reads its file, so without this a changed wake phrase
-# would reach the process at the next reboot and not before.
-- name: "[pazny.ears] Bootstrap the listener (idempotent)"
-  ansible.builtin.shell: |
-    set -e
-    PLIST=~/Library/LaunchAgents/{{ ears_launchd_label }}.plist
-    UID_NUM=$(id -u)
-    PLIST_CHANGED={{ 'yes' if (_ears_plist is defined and _ears_plist is changed) else 'no' }}
-    if launchctl print "gui/${UID_NUM}/{{ ears_launchd_label }}" >/dev/null 2>&1; then
-      if [ "$PLIST_CHANGED" = "yes" ]; then
-        launchctl bootout "gui/${UID_NUM}/{{ ears_launchd_label }}" 2>/dev/null || true
-        sleep 1
-        launchctl bootstrap "gui/${UID_NUM}" "$PLIST" || {
-          # The one path that leaves nothing listening. bootout is
-          # ASYNCHRONOUS, so bootstrapping into the teardown returns 5 and the
-          # converge would otherwise walk on with the ear down.
-          echo "BOOTSTRAP-FAILED rc=$?"
-        }
-        echo RELOADED
-      else
-        echo ALREADY_LOADED
-      fi
-    else
-      launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
-      echo LOADED
-    fi
-  register: _ears_boot
-  changed_when: "'ALREADY_LOADED' not in _ears_boot.stdout"
-  when:
-    - (nos_service_manager | default('launchd')) == 'launchd'
-    - ears_always_listen | default(false) | bool
-    # The job runs THE BUNDLE, which is what macOS can attach a microphone
-    # grant to. Until the operator answers the prompt the ear still hears
-    # nothing — so the reader checks for SPEECH, not for a running process.
-
-
-# The other half of the switch. Without this, turning always-listen off in
-# config.yml and converging would leave the microphone open — a flag that can
-# only start something is not a flag.
-- name: "[pazny.ears] Stop the listener when always-listen is off"
+- name: "[pazny.ears] Stop and remove a previously installed launchd listener"
   ansible.builtin.shell: |
     UID_NUM=$(id -u)
     if launchctl print "gui/${UID_NUM}/{{ ears_launchd_label }}" >/dev/null 2>&1; then
       launchctl bootout "gui/${UID_NUM}/{{ ears_launchd_label }}" 2>/dev/null || true
-      echo STOPPED
+      echo REMOVED
     else
-      echo NOT_RUNNING
+      echo ABSENT
     fi
-  register: _ears_stop
-  changed_when: "'STOPPED' in _ears_stop.stdout"
-  when:
-    - (nos_service_manager | default('launchd')) == 'launchd'
-    - not (ears_always_listen | default(false) | bool)
+  register: _ears_unload
+  changed_when: "'REMOVED' in _ears_unload.stdout"
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+- name: "[pazny.ears] Remove the launchd plist"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ ears_launchd_label }}.plist"
+    state: absent
+  when: (nos_service_manager | default('launchd')) == 'launchd'
 
 # The model is ~600 MB and downloads on first use. Pre-fetching it here would
 # make a converge wait on huggingface for a file the operator may never speak
@@ -200,11 +164,8 @@
     msg:
       - "ears-listen installed ({{ nos_cli_install_dir }}/ears-listen)"
       - "ASR model {{ ears_asr_model }} downloads on FIRST USE (~600 MB), not during this run"
-      - "listening: {{ 'the ' ~ ears_app_name ~ ' bundle is loaded by launchd' if (ears_always_listen | default(false) | bool) else 'OFF — set ears_always_listen: true in config.yml' }}"
-      - "FIRST START: macOS asks for the microphone ONCE, for {{ ears_app_name }}. If no
-         prompt appears, open System Settings > Privacy & Security > Microphone and enable
-         it there — until then the listener runs and hears nothing, which
-         tools/caddy-status.py reports as DEAF rather than LISTENING."
+      - "listening: NOT automatic. Press s in nos-cc — it opens a Terminal window, the one
+         context on this host whose microphone grant is real. Closing the window stops it."
       - "MICROPHONE: a launchd agent has no window to prompt in. If macOS refuses,
          the listener exits 3 and records mic_ok=false — check `tools/caddy-status.py`,
          then grant it in System Settings > Privacy & Security > Microphone and

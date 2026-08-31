@@ -111,39 +111,44 @@ LABEL_ID = "eu.thisisait.nos.ears-listen"
 #:
 #: So the ear runs where the grant already is. The .app bundle that would give
 #: launchd its own grantable identity is roadmap row `ears-app-bundle`.
-WINDOW = "ears"
+#: THE EAR RUNS IN A TERMINAL WINDOW, and everything else was tried first:
+#: launchd (deaf), a tmux window of this session (deaf), an ad-hoc-signed .app
+#: bundle under launchd (deaf, and TCC would not even record a row for it).
+#: macOS binds a microphone grant to the RESPONSIBLE process, and on this host
+#: exactly two hold one: com.apple.Terminal and the pyenv interpreter. So the
+#: ear is started in Terminal, by AppleScript, and the window it opens is not
+#: an inconvenience — it is the microphone made visible.
+LISTEN_CMD = ("{venv}/bin/python {home}/ears-listen.py --listen --autorun --verbose")
 
 
-def _tmux(*args, session=None):
-    import os as _os
+def _listener_pids():
     import subprocess
-    sess = session or _os.environ.get("NOS_CC_SESSION", "nos-cc")
-    return subprocess.run(["tmux", *[a.replace("{s}", sess) for a in args]],
-                          capture_output=True, text=True)
+    out = subprocess.run(["pgrep", "-f", "ears-listen.py --listen"],
+                         capture_output=True, text=True)
+    return [p for p in out.stdout.split() if p]
 
 
 def toggle(data):
-    """`s` — stop or start the microphone, NOW, without a converge.
+    """`s` — start or stop listening. A deliberate session, not a daemon.
 
-    It runs the listener in a tmux window of this control centre's session,
-    because that is where the microphone grant lives (see WINDOW above). The
-    window survives the terminal that opened it, and it is VISIBLE — a live
-    microphone should be something you can look at, not only infer.
-
-    Requiring a converge to stop being recorded would make the fastest way out
-    of a private conversation an edit to YAML. That is the whole argument for
-    the one action in this control centre.
+    NO ALWAYS-ON EAR on this platform, and the reason is measured rather than
+    cautious: every background shape was tried and every one was handed a
+    microphone with no speech in it (see LISTEN_CMD). What remains is honest —
+    listening is something the operator starts, in a window they can see, and
+    closing that window is the fastest possible way to stop being recorded.
     """
-    running = bool((data.get("listener") or {}).get("loaded"))
-    if running:
-        _tmux("kill-window", "-t", "={s}:" + WINDOW)
-        return "[b]microphone STOPPED[/] — the ears window is gone"
+    import subprocess
 
-    if _tmux("has-session", "-t", "={s}").returncode != 0:
-        return ("[b red]no nos-cc session[/] — the ear runs inside it, "
-                "because that is where the microphone grant is")
-    cmd = str(pathlib.Path.home() / "ears/venv/bin/python") + " " + \
-        str(pathlib.Path.home() / "ears/ears-listen.py") + " --listen --autorun --verbose"
-    run = _tmux("new-window", "-d", "-t", "={s}", "-n", WINDOW, cmd)
-    return ("[b]microphone STARTED[/] in the `ears` window" if run.returncode == 0
-            else f"[b red]tmux: {run.stderr.strip()[:80]}[/]")
+    pids = _listener_pids()
+    if pids:
+        subprocess.run(["kill", *pids], capture_output=True)
+        return f"[b]microphone STOPPED[/] — {len(pids)} listener(s) ended"
+
+    home = pathlib.Path.home() / "ears"
+    if not (home / "venv/bin/python").is_file():
+        return "[b red]no ~/ears/venv[/] — converge with install_ears first"
+    cmd = LISTEN_CMD.format(venv=home / "venv", home=home)
+    script = f'tell application "Terminal" to do script "{cmd}"'
+    run = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+    return ("[b]microphone STARTED[/] in a Terminal window — close it to stop"
+            if run.returncode == 0 else f"[b red]osascript: {run.stderr.strip()[:70]}[/]")
