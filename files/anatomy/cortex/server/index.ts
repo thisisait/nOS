@@ -70,6 +70,7 @@
  */
 import { createHash } from 'node:crypto';
 import express from 'express';
+import { traceRequests } from './otel.js';
 import type { Request, Response, NextFunction } from 'express';
 import { openStore } from './cortex-store';
 
@@ -192,6 +193,9 @@ async function main(): Promise<void> {
   }
 
   const app = express();
+  // One OTel span per request (2026-08-31). See otel.ts: app-wide on purpose,
+  // so a 401 or the 503 of a disabled agent surface is traced too.
+  app.use(traceRequests());
   // 2 MB is the TRANSPORT ceiling and is cited as such by
   // shared/contracts/cortex.ts: the 4096-char program cap of
   // docs/specs/cortex-validate.md §3.6 (Input bounds) is a SEMANTIC bound

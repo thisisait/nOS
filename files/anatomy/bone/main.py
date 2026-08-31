@@ -14,7 +14,15 @@ from pathlib import Path
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Header
 
+import otel
+
 app = FastAPI(title="nOS Bone API", version="0.2.0")
+
+# One OTel span per request (2026-08-31). Bone is the estate's HTTP bridge —
+# the loop, the weakness readers and every agent go through it — and it emitted
+# no traces at all, so Tempo held nothing but AgentKit sessions. See otel.py for
+# why this is 100 hand-written lines instead of the instrumentation package.
+otel.install(app)
 
 # Track B (2026-04-26): operational endpoints now require Authentik-issued
 # JWTs with capability scopes. The legacy BONE_SECRET / X-API-Key channel is

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Presenters;
 
+use App\AgentKit\Telemetry\OtelExporter;
+use App\AgentKit\Telemetry\Span;
+use App\AgentKit\Telemetry\TraceContext;
 use App\Model\AgentQuestionRepository;
 use App\Model\AuditChainRepository;
 use App\Model\NotificationRepository;
@@ -64,15 +67,84 @@ abstract class BasePresenter extends Presenter
 	 * check. The 127.0.0.1 bind (Wing Caddyfile, SEC-6) is still the
 	 * first defense; this header is the second.
 	 */
+	/** The request span, or null when tracing is off. */
+	private ?Span $requestSpan = null;
+
 	public function startup(): void
 	{
 		parent::startup();
+		$this->startRequestSpan();
 		$this->enforceEdgeTrust();
 		// Standard RBAC gate — enforced for EVERY presenter that declares a
 		// minimum tier. Privileged subclasses opt in with one property
 		// ($minAccessTier) instead of an easy-to-forget startup() override.
 		if ($this->minAccessTier !== null) {
 			$this->requireTier($this->minAccessTier);
+		}
+	}
+
+	/**
+	 * ONE SPAN PER REQUEST, for every presenter — UI and API alike.
+	 *
+	 * Until 2026-08-31 the only thing in this estate that emitted OTel was
+	 * AgentKit: Tempo held 950 traces and every one was an `agent.session`.
+	 * Wing serves the whole operator surface and the agent-facing API and was
+	 * invisible, so "why was that request slow" had no answer an agent could
+	 * reach through grafana-mcp.
+	 *
+	 * Reuses `AgentKit\Telemetry\OtelExporter` rather than adding an SDK. That
+	 * class already speaks OTLP/HTTP JSON to Alloy on 4318 in 94 hand-written
+	 * lines; `open-telemetry/sdk` would be a large dependency to do the same
+	 * thing one service further along.
+	 *
+	 * ponytail: synchronous export on shutdown, ~1 curl per request with a
+	 * 300ms cap. Move to a batching span processor if request latency ever
+	 * shows it — at this estate's request volume a background batcher would be
+	 * more moving parts than the problem.
+	 */
+	private function startRequestSpan(): void
+	{
+		if ((getenv('NOS_WING_TRACING') ?: '1') === '0') {
+			return;
+		}
+		$this->requestSpan = new Span(
+			name: $this->getName() . ':' . ($this->getAction() ?: 'default'),
+			traceId: TraceContext::newTraceId(),
+			spanId: TraceContext::newSpanId(),
+			parentSpanId: null,
+			startNanos: (int) (microtime(true) * 1_000_000_000),
+			kind: 2,                       // SPAN_KIND_SERVER
+		);
+	}
+
+	public function shutdown($response): void
+	{
+		parent::shutdown($response);
+		if ($this->requestSpan === null) {
+			return;
+		}
+		$span = $this->requestSpan;
+		$this->requestSpan = null;         // never export twice
+		try {
+			$code = $this->getHttpResponse()->getCode();
+			$span->setAttributes([
+				'http.request.method' => $this->getHttpRequest()->getMethod(),
+				'http.response.status_code' => $code,
+				'url.path' => (string) $this->getHttpRequest()->getUrl()->getPath(),
+				'nos.presenter' => $this->getName(),
+				'nos.action' => (string) $this->getAction(),
+			]);
+			// 4xx is the caller's problem and not an error of ours; 5xx is.
+			if ($code >= 500) {
+				$span->setError('HTTP ' . $code);
+			} else {
+				$span->setOk();
+			}
+			$span->end();
+			(new OtelExporter(null, 0.3, 'nos.wing'))->export([$span]);
+		} catch (\Throwable) {
+			// Telemetry may never break a response. A dropped span is a gap in
+			// a graph; an exception here would be a 500 on a page that worked.
 		}
 	}
 
