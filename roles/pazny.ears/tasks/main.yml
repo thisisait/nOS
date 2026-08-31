@@ -102,7 +102,16 @@
 # identity stable across edits; without it the operator is re-prompted at
 # random and eventually stops reading the prompt.
 - name: "[pazny.ears] Ad-hoc sign the bundle so its identity survives an edit"
-  ansible.builtin.command: "codesign --force --sign - {{ ears_app_dir }}"
+  # argv, NOT a string: `ears_app_dir` holds "nOS Ears.app" and the command
+  # module splits a string on whitespace — so the signed path became
+  # ".../Applications/nOS" and the play failed after building the bundle.
+  ansible.builtin.command:
+    argv:
+      - codesign
+      - --force
+      - --sign
+      - "-"
+      - "{{ ears_app_dir }}"
   when:
     - ansible_os_family == 'Darwin'
     - (_ears_app_plist is defined and _ears_app_plist is changed) or
