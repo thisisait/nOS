@@ -239,7 +239,9 @@ export function narrowView(
 	// behaviour predates this function. Narrowing them here would change what a
 	// KEAP-authored block does today for no gain.
 	const out: TableView = {
-		style: (['grid', 'blog', 'timeline', 'tiles', 'chat'] as const).includes(v.style as ResolvedStyle)
+		style: (['grid', 'blog', 'timeline', 'tiles', 'chat'] as const).includes(
+			v.style as ResolvedStyle
+		)
 			? (v.style as ResolvedStyle)
 			: 'grid',
 		...(typeof v.titleColumn === 'string' ? { titleColumn: v.titleColumn } : {}),

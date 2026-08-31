@@ -366,24 +366,24 @@
 				{#each timelineSections(rows, view) as sec (sec.label)}
 					<li class="tl-sec" aria-hidden="true">{sec.label}</li>
 					{#each sec.rows as row (row.id)}
-					<li id={rowDomId(row.id)} class:flash={flashed === String(row.id)}>
-						<span class="dot" aria-hidden="true"></span>
-						<div class="entry">
-							<p class="when">{view.date ? formatWhen(row[view.date.key]) : '—'}</p>
-							<h4>{heading(row)}</h4>
-							{#if view.meta.length}
-								<p class="meta">
-									{#each view.meta as m (m.key)}
-										<span class="chip">{cell(row, m)}</span>
-									{/each}
-								</p>
-							{/if}
-							{#if view.body}<p class="body clamp">{cell(row, view.body)}</p>{/if}
-							{#if data.canWrite}
-								<button class="edit" onclick={() => open(row)}>edit</button>
-							{/if}
-						</div>
-					</li>
+						<li id={rowDomId(row.id)} class:flash={flashed === String(row.id)}>
+							<span class="dot" aria-hidden="true"></span>
+							<div class="entry">
+								<p class="when">{view.date ? formatWhen(row[view.date.key]) : '—'}</p>
+								<h4>{heading(row)}</h4>
+								{#if view.meta.length}
+									<p class="meta">
+										{#each view.meta as m (m.key)}
+											<span class="chip">{cell(row, m)}</span>
+										{/each}
+									</p>
+								{/if}
+								{#if view.body}<p class="body clamp">{cell(row, view.body)}</p>{/if}
+								{#if data.canWrite}
+									<button class="edit" onclick={() => open(row)}>edit</button>
+								{/if}
+							</div>
+						</li>
 					{/each}
 				{/each}
 			</ol>

@@ -160,7 +160,12 @@ describe('timelineSections', () => {
 		// newest month first, then the undated bucket — named after the COLUMN,
 		// so a roadmap says "no Target" and this table says "no Created".
 		expect(secs.at(-1)?.label).toBe('no Created');
-		expect(secs.at(-1)?.rows.map((r) => r.id).sort()).toEqual(['d', 'e']);
+		expect(
+			secs
+				.at(-1)
+				?.rows.map((r) => r.id)
+				.sort()
+		).toEqual(['d', 'e']);
 		expect(secs[0].rows.map((r) => r.id)).toEqual(['b', 'a']);
 		// two dated months → two labeled sections before the undated one
 		expect(secs).toHaveLength(3);
@@ -217,9 +222,7 @@ describe('chat style', () => {
 		}) as unknown as Parameters<typeof resolveView>[0];
 
 	it('resolves both halves of the exchange', () => {
-		const v = resolveView(
-			table({ style: 'chat', askColumn: 'transcript', bodyColumn: 'summary' })
-		);
+		const v = resolveView(table({ style: 'chat', askColumn: 'transcript', bodyColumn: 'summary' }));
 		expect(v.style).toBe('chat');
 		expect(v.ask?.key).toBe('transcript');
 		expect(v.body?.key).toBe('summary');
