@@ -99,3 +99,23 @@ def test_a_failed_run_is_an_error_span() -> None:
     assert span["status"]["code"] == 2, (
         f"exit_code=1 produced status {span['status']} — a failed job would "
         "show green in Tempo")
+
+
+def test_the_env_scoping_does_not_swallow_it() -> None:
+    """Setting TRACEPARENT is not the same as the child RECEIVING it.
+
+    Two allow-lists sit between a declared field and a running job — the Pulse
+    catalog's token table and, here, `_safe_env`, which strips secrets from the
+    inherited environment and refuses loader/PATH overrides (`DYLD_*`, `LD_*`,
+    `PYTHONPATH`). This estate has twice shipped a field that a later filter
+    dropped in silence, and a dropped TRACEPARENT looks exactly like a child
+    that simply was not instrumented — the job span still appears, the child
+    spans just never nest, and nobody can tell which of the two happened.
+    """
+    from pulse.runners.subprocess import _safe_env
+
+    tp = otel.traceparent("550e8400-e29b-41d4-a716-446655440000", "abcdef0123456789")
+    env = _safe_env({"TRACEPARENT": tp, "PULSE_RUN_ID": "x"})
+    assert env.get("TRACEPARENT") == tp, (
+        "_safe_env dropped or rewrote TRACEPARENT, so the child inherits no "
+        "trace context and its spans land in a trace of their own")
