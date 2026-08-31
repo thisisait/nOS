@@ -42,6 +42,7 @@ worse than none, because it reads as complete.
 - `anatomy-measure-margins.py` — Measure the nightly chain's temporal margins, and restamp the declared edges.
 - `app-version.py` — What each container actually RUNS, against what the pin says it bundles.
 - `awaiting-operator.py` — What is waiting for a HUMAN right now, across every source that asks for one.
+- `caddy-status.py` — Can the caddy answer, is the ear listening, and what did it hear.
 - `brew-pin-status.py` — How old is the version brew wants to give us, and is it old enough to adopt?
 - `cortex-status.py` — What the cortex organ is, all of it — not just the part KEAP serves.
 - `cortex-drift.py` — Compare the vendored cortex organ against the KEAP tree it was cut from.
