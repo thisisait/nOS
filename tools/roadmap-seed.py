@@ -724,6 +724,33 @@ row("web-apex-rethink", "The root domain publishes facts about the installation;
          "/anatomy section for the curious. DO NOT rewrite render.py first — rewriting the "
          "renderer of an artifact that may be retired is the same work done twice.")
 
+row("repo-split-trigger", "Nothing is worth splitting out yet, and here is the number that would change that",
+    "2026-08-31", "next", "platform",
+    refs="git log --since=90.days coupling measurement · tools/cortex-drift.py · docs/doctrine/cross-repo-contracts.md",
+    body="ASKED 2026-08-31: extract another system (DataTables?) into its own repo so parallel "
+         "sessions are safer. MEASURED FIRST — for each candidate, how many of its last 90 "
+         "days of commits ALSO touched the rest of the estate, because that is what a repo "
+         "boundary would turn into two commits plus a version bump plus a drift check: "
+         "wing 149/153 (97 percent), bone 53/55 (96), face 66/100 (66), cortex 25/41 (61). "
+         "THE SHARPEST DATUM IS CORTEX: it is ALREADY split (vendored from the KEAP repo) "
+         "and still 61 percent of its commits reach outside — the split did not decouple it, "
+         "it added tools/cortex-drift.py and a re-vendor ritual ON TOP of the same coupling. "
+         "DATATABLES SPECIFICALLY: the boundary is already drawn, in the wrong place. The "
+         "definitions live here (state/keap-tables, 18 files, 962 lines, 14 commits in 90 "
+         "days — the least active thing on the list) and the ENGINE lives in KEAP, which is "
+         "why both items found on 2026-08-31 (the `chat` style, the system-table flag) are "
+         "engine-side and neither is fixable from this repo. Splitting the definitions out "
+         "would move the small half. AND THE PREMISE IS WRONG ANYWAY: a repo does not buy "
+         "parallel-development safety — worktrees do, and the three collisions actually "
+         "suffered were another session sweeping uncommitted work into its own commit (fixed "
+         "by a worktree plus committing early), KEAP restarting under a seeder (SHARED "
+         "RUNTIME, which no repo boundary touches), and `dev` being checked out in the tree "
+         "that was mid-converge (fixed by giving dev its own worktree). Two of three are "
+         "immune to topology. THE TRIGGER, so this is a threshold and not an opinion: face "
+         "is the only plausible candidate — own toolchain, own 330-test vitest lane, the "
+         "work most likely to be somebody else's — and it splits when its mixed-commit ratio "
+         "drops below about 30 percent. Re-measure with the same one-liner; do not split on "
+         "a feeling.")
 row("ext-contract", "What an nOS extension in another repo would have to be",
     "2026-08-31", "queued", "platform",
     refs="docs/doctrine/cross-repo-contracts.md · tools/cortex-drift.py · docs/tier2-app-onboarding.md",
