@@ -345,3 +345,56 @@ def test_the_session_model_uri_is_what_the_resolver_returns(estate, resolved_mod
         f"serves a proposer {resolved_model_uri!r} — a session whose model is "
         "not the resolved one is outside the register that permits it"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AND THE AUTHOR, added 2026-08-31 — the same defect one field over.
+#
+# `nos-loop propose` defaults `--proposer-id` to `operator:$USER`, which is
+# right for a human at a terminal and false for every agent run, because
+# McpLoopTool never sent the flag. Measured that morning:
+#
+#     uuid …aa4bb912   rem:REM-156   proposer_id: operator:pazny   01:33:35
+#
+# Filed by the unattended nightly `loop:propose` job. The operator was asleep.
+#
+# It reads as cosmetic and is not. The loop's safety argument is that any
+# proposal can be traced to what authored it and what that cost; a model's work
+# wearing the operator's name defeats that at the first question anyone asks of
+# it, and it is precisely the direction of mis-attribution that matters — an
+# agent's diff looks reviewed-by-a-human.
+#
+# Stamped from the tool context exactly like the session uuid, and for the same
+# stated reason: a value the MODEL supplies names whoever the model chose.
+
+def _stamped_args(sub: str = "propose") -> list[str]:
+    """The argv McpLoopTool builds, read out of its source.
+
+    A behavioural test would need the PHP tool container; this reads the two
+    stamps as a pair, because the failure that matters is one of them being
+    added and the other forgotten — which is exactly what happened."""
+    src = (REPO / "files/anatomy/wing/app/AgentKit/Tools/McpLoopTool.php").read_text(
+        encoding="utf-8")
+    return src.split("$argv = array_merge")[0]
+
+
+def test_an_agent_authored_proposal_is_not_stamped_as_the_operator() -> None:
+    body = _stamped_args()
+    assert "'--proposer-id'" in body, (
+        "McpLoopTool does not stamp --proposer-id, so nos-loop's default "
+        "`operator:$USER` applies and every agent-authored proposal is "
+        "recorded as the human at the terminal")
+    assert "$context->actorId" in body, (
+        "--proposer-id is being supplied from something other than the tool "
+        "context; a value the model can choose names whoever it chose")
+
+
+def test_both_stamps_are_conditional_on_the_model_not_having_sent_one() -> None:
+    """Neither stamp may overwrite an explicit argument — a duplicate flag is
+    an argparse error, and the run would die on the tool call instead of
+    proposing."""
+    body = _stamped_args()
+    for flag in ("--session-uuid", "--proposer-id"):
+        assert f"!in_array('{flag}', $args, true)" in body, (
+            f"{flag} is appended unconditionally; if the model also passes it "
+            "the CLI sees the flag twice")

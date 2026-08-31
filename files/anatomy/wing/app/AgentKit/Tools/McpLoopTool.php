@@ -122,6 +122,24 @@ final class McpLoopTool implements ToolInterface
 			$args[] = '--session-uuid';
 			$args[] = $context->sessionUuid;
 		}
+		// AND THE AUTHOR, for exactly the same reason and one field over.
+		//
+		// `nos-loop propose` defaults --proposer-id to "operator:$USER" — the
+		// right default for a human at a terminal, and a false statement for
+		// every agent run, because this tool never sent the flag. Measured
+		// 2026-08-31: the proposal filed by the unattended nightly job at
+		// 01:33 is recorded as `operator:pazny`. The operator was asleep.
+		//
+		// That is not a cosmetic mis-stamp. The loop's whole safety story is
+		// that a proposal can be traced to what authored it and what it cost;
+		// an agent's work wearing the operator's name defeats the audit at the
+		// first question it will ever be asked. Stamped from the context like
+		// the session above — never asked of the model, which could name
+		// anyone.
+		if ($sub === 'propose' && !in_array('--proposer-id', $args, true)) {
+			$args[] = '--proposer-id';
+			$args[] = $context->actorId;
+		}
 
 		$argv = array_merge(['nos-loop', $sub], $args);
 		$done = $this->run($argv);

@@ -181,6 +181,33 @@ def cmd_weaknesses(args: argparse.Namespace) -> int:
         return EXIT_REFUSED if status in (400, 403, 404) else EXIT_CONFIG
 
     items = payload.get("weaknesses", []) if isinstance(payload, dict) else []
+    # ONE ROW, BY ID. Added 2026-08-31 after watching a proposer fail to ask.
+    #
+    # `propose` has taken `--weakness <id>` since it existed, so an agent told
+    # to work on rem:REM-212 reaches for the same flag here — and got `exit 2:
+    # unrecognized arguments`. Measured that morning: the proposer spent 30k
+    # input and 4.4k output tokens, guessed this flag, then `history` without
+    # its required argument, then `cat state/weakness-scan.json` (absent), and
+    # gave up having recorded nothing. The model was not being stupid; it was
+    # generalising from the CLI's own vocabulary, which is what a consistent
+    # CLI is FOR.
+    #
+    # Filtered client-side on purpose: the route ranks and reports per-source
+    # availability, and asking it for one id would either need a new server
+    # parameter or lose the `sources` block that stops absence reading as
+    # health. This keeps the payload whole and narrows what is printed.
+    if getattr(args, "weakness", None):
+        wanted = args.weakness
+        items = [i for i in items if i.get("weakness_id") == wanted]
+        if not items and isinstance(payload, dict):
+            # An id that matches nothing is a REFUSAL, not an empty list: the
+            # caller named a row it believes exists, and printing "(none)"
+            # would let it proceed against a weakness the engine never had.
+            print(f"no weakness with id {wanted!r} — it may be resolved, "
+                  "withheld for uncommitted evidence, or misspelt; run without "
+                  "--weakness to see what is live", file=sys.stderr)
+            return EXIT_REFUSED
+        payload = dict(payload, weaknesses=items)
     lines = [f"{i.get('severity', '?'):<8} {i.get('weakness_id', '?'):<28} "
              f"{str(i.get('title', ''))[:80]}" for i in items]
     # A reader must be able to tell "nothing is wrong" from "nothing was read".
@@ -417,6 +444,9 @@ def main(argv: list[str] | None = None) -> int:
                       choices=["critical", "high", "medium", "low", "info"])
     weak.add_argument("--source", action="append", default=None,
                       help="restrict to a source; repeatable")
+    weak.add_argument("--weakness", default=None,
+                      help="show only this weakness_id (the same spelling "
+                           "`propose --weakness` takes); refuses if absent")
     weak.set_defaults(fn=cmd_weaknesses)
 
     bud = _json_flag(sub.add_parser(
