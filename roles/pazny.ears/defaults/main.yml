@@ -118,6 +118,15 @@ ears_launchd_label: "eu.thisisait.nos.ears-listen"
 # chosen — a different microphone wants a different number.
 ears_input_gain: 8
 
+# DIAGNOSTIC: keep the last N heard segments as wav under ~/ears/debug/.
+# 0 = off, and off is the default because audio at rest contradicts everything
+# else this role promises. It exists because the daemon's stream CANNOT BE
+# OBSERVED FROM OUTSIDE: a second capture on this microphone drops the signal
+# 2.4x (measured 18027 peak alone, 7470 with one more client), so every attempt
+# to check on the ear degraded the thing being checked. When the ear is wrong,
+# this is the only honest instrument — turn it on, learn, turn it off.
+ears_dump_segments: 0
+
 # avfoundation input spec. `:0` is "no video, default audio input".
 ears_input_device: ":0"
 # launchd retry interval after the process exits — long enough that a denied
