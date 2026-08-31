@@ -190,6 +190,19 @@ queue/bounce logs are shorter.
 - **Storage:** 'infra' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
+#### Spacetimedb — `svc_spacetimedb`
+- **Purpose:** Hosts the operator's SpacetimeDB realtime DB modules. Stores user-defined
+tables, table rows, and the cryptographic identity (ctx.sender.identity)
+of every module caller. Module-level data subject is operator-defined.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operator`; `module_callers`
+- **Data categories:** `module_state`; `operator_identity`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 365 days (~1y)
+- **Storage:** 'infra' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
 #### Traefik — `svc_traefik`
 - **Purpose:** Traefik is the platform edge reverse proxy. Its access and error logs
 record request metadata (method, path, status, latency), client source IP
@@ -339,6 +352,19 @@ session data. Telemetry from physical IoT devices stays on-host.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`; `household_members`
 - **Data categories:** `device_telemetry`; `sensor_history`; `automation_definitions`; `user_accounts`; `oauth_session_data`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 365 days (~1y)
+- **Storage:** 'iiab' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
+#### Jellyfin — `svc_jellyfin`
+- **Purpose:** Hosts the operator's media library (movies / TV / music). Stores user
+accounts (per-family-member profiles), watch history, and library
+metadata.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `user_accounts`; `watch_history`; `media_metadata`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
@@ -867,6 +893,18 @@ identity data is collected.
 
 ### data stack
 
+#### Metabase — `svc_metabase`
+- **Purpose:** Hosts the operator's Metabase BI dashboards. Stores question /
+dashboard / collection metadata, query history, user accounts.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `dashboard_definitions`; `query_history`; `user_accounts`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 365 days (~1y)
+- **Storage:** 'data' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
 #### Superset — `svc_superset`
 - **Purpose:** Hosts the operator's BI dashboards (Apache Superset). Stores dataset
 metadata, dashboard definitions, query history, and user sessions.
@@ -1330,19 +1368,6 @@ Anthropic (US) — update transfers_outside_eu + processors accordingly.
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
-#### Jellyfin — `svc_jellyfin`
-- **Purpose:** Hosts the operator's media library (movies / TV / music). Stores user
-accounts (per-family-member profiles), watch history, and library
-metadata.
-- **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`; `end_users`
-- **Data categories:** `user_accounts`; `watch_history`; `media_metadata`
-- **Recipients / processors:** —
-- **Transfers outside EU:** No
-- **Retention:** 365 days (~1y)
-- **Storage:** host service (non-Docker / launchd)
-- **Security measures:** platform baseline (see above)
-
 #### Loop — `svc_loop`
 - **Purpose:** The agentic-loop cadence runs three scheduled maintenance ceremonies on
 the operator's own repository: proposing a bounded code change against a
@@ -1359,18 +1384,6 @@ claude CLI — the same transfer the attended ceremony performs today.
 - **Recipients / processors:** `Anthropic (US) — claude CLI backend, authoring proposals when the propose job runs`
 - **Transfers outside EU:** **Yes**
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
-- **Storage:** host service (non-Docker / launchd)
-- **Security measures:** platform baseline (see above)
-
-#### Metabase — `svc_metabase`
-- **Purpose:** Hosts the operator's Metabase BI dashboards. Stores question /
-dashboard / collection metadata, query history, user accounts.
-- **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`
-- **Data categories:** `dashboard_definitions`; `query_history`; `user_accounts`
-- **Recipients / processors:** —
-- **Transfers outside EU:** No
-- **Retention:** 365 days (~1y)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
@@ -1413,18 +1426,5 @@ operator authors or triggers jobs; no tenant end-user data is processed.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
-- **Storage:** host service (non-Docker / launchd)
-- **Security measures:** platform baseline (see above)
-
-#### Spacetimedb — `svc_spacetimedb`
-- **Purpose:** Hosts the operator's SpacetimeDB realtime DB modules. Stores user-defined
-tables, table rows, and the cryptographic identity (ctx.sender.identity)
-of every module caller. Module-level data subject is operator-defined.
-- **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operator`; `module_callers`
-- **Data categories:** `module_state`; `operator_identity`
-- **Recipients / processors:** —
-- **Transfers outside EU:** No
-- **Retention:** 365 days (~1y)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)

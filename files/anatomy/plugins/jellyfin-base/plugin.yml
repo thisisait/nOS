@@ -55,6 +55,33 @@ authentik:
 # SSO-Auth.xml render. Plugin-self compose-extension would have nothing
 # to render.
 
+# =============================================================================
+# OBSERVABILITY — the Loki label set, and the stack this plugin belongs to
+# =============================================================================
+# ADDED 2026-08-31 for the SECOND half, which is the one with teeth.
+#
+# `load_plugins._plugin_stack` resolves a plugin's stack from
+# `compose_extension.target_stack` first and this label second, and `run_hook`
+# skips a plugin only when `pstack is not None and pstack not in stack_filter`.
+# So a plugin with NO resolvable stack is never filtered out: its lifecycle
+# hooks ran on EVERY stack-scoped pass, doing work for a service that pass was
+# not bringing up. This plugin had hooks and no stack.
+#
+# Not new metadata — the fact was already recorded elsewhere:
+#     state/manifest.yml gives jellyfin stack: iiab
+#
+# The log labels themselves are close to free: Alloy discovers ALL containers
+# over the Docker socket and derives `container` / `compose_project` /
+# `compose_service` by relabel, so logs already reach Loki with their stack
+# whether or not a plugin says anything. `metrics`/`dashboard` are deliberately
+# omitted — they are metadata with no aggregator today
+# (files/anatomy/docs/plugin-wiring-capabilities.md).
+observability:
+  loki:
+    labels:
+      app: jellyfin
+      stack: iiab
+
 lifecycle:
   pre_compose: []
   post_compose:
