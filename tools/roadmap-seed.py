@@ -781,7 +781,24 @@ row("ears-app-bundle", "The launchd ear is handed a microphone with no speech in
          "re-prompted at random until they stopped reading the prompt. "
          "AND THE READER LEARNED THE LESSON: `mic_ok` asked whether any sample was non-zero, "
          "which hiss satisfies. It now reports DEAF — running, segments heard, not one of "
-         "them became words — because the check that matters asks whether SPEECH arrived.")
+         "them became words — because the check that matters asks whether SPEECH arrived. "
+         "SETTLED FOR NOW (2026-08-31): no background ear at all. Every shape was tried — "
+         "launchd on the venv python, a tmux window of the operator's own session, an "
+         "ad-hoc-signed .app under launchd, `open -a` — and every one was handed a "
+         "microphone with no speech in it; the ad-hoc bundle did not even get a TCC row, "
+         "because an ad-hoc signature changes its cdhash on every build and there is nothing "
+         "stable to bind a grant to. `s` in nos-cc opens a Terminal window instead, and the "
+         "window is the microphone made visible. "
+         "THE LEAD WORTH CHASING FIRST, from the operator (2026-08-31): at ONE earlier stage "
+         "of this evening — roughly four attempts back, before the pane existed — macOS lit "
+         "the microphone indicator in the status bar AND offered VOICE ISOLATION for the "
+         "capture. That is macOS recognising the client properly, and it is the state to "
+         "reproduce: it means a correct attribution buys not just audio but Apple's own "
+         "voice extraction, which is worth more than any gain knob this row has argued "
+         "about. Find which configuration was in effect then — the plist, the label, the "
+         "binary — before designing anything new. An Apple developer identity is the "
+         "operator's stated direction and would make the binding stable rather than "
+         "rediscovered.")
 row("sec-prefix-gate-flaps", "The weak-prefix gate refuses, then passes, with nothing changed between",
     "2026-08-31", "next", "security", parent="sec",
     refs="main.yml (the global_password_prefix assert) · docs/archive/secret-blast-radius.md · /tmp/ears2.log",
