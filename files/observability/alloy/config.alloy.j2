@@ -345,6 +345,43 @@ loki.source.file "agent_logs" {
 }
 {% endif %}
 
+{% if alloy_tail_organ_logs | default(true) %}
+// ── The four host organs (2026-08-31) ───────────────────────────────────────
+//
+// Wing, Bone, Pulse and the cortex organ are nOS's OWN daemons and their logs
+// were the only ones not reaching Loki. Measured that day: Alloy tailed five
+// file targets — nginx access/error, ~/agents/log/*.md, php-fpm, and a broad
+// {{ homebrew_prefix }}/var/log/*.log — so an agent in Grafana could read every
+// container and none of the estate's own processes. ~28 MB of organ log sat
+// outside the observability plane (pulse launchd.err alone was 16.9 MB).
+//
+// `files/anatomy/plugins/alloy-syslog/` ALREADY DECLARES most of these. Its
+// fragment renders to ~/.config/alloy/conf.d/syslog.river and nothing loads
+// that directory — Alloy is started by brew against
+// {{ homebrew_prefix }}/etc/grafana-alloy, which this template writes. Two
+// implementations, one live; the declarations there have never been active
+// (the fragments on disk are dated 2026-07-24). Filed as
+// `alloy-syslog-fragments-orphaned` rather than fixed here, because making
+// conf.d load means changing how the brew service is launched.
+//
+// `service` is set per target so a query can name one organ. Missing files are
+// a no-op: Alloy tolerates a glob that matches nothing, which is what keeps
+// this safe on a host where an organ is disabled.
+local.file_match "organ_logs" {
+  path_targets = [
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/wing/app/log/*.log",  job = "organ", service = "wing"},
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/bone/log/*.log",      job = "organ", service = "bone"},
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/pulse/log/*.log",     job = "organ", service = "pulse"},
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/cortex/log/*.log",    job = "organ", service = "cortex"},
+  ]
+}
+
+loki.source.file "organ_logs" {
+  targets    = local.file_match.organ_logs.targets
+  forward_to = [loki.write.default.receiver]
+}
+{% endif %}
+
 {% if alloy_tail_php_logs | default(true) %}
 // PHP-FPM logs
 local.file_match "php_fpm_logs" {
