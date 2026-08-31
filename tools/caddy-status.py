@@ -358,13 +358,17 @@ def build_rows(data: dict) -> list[dict]:
                                f"NONE matched the wake phrase "
                                f"(last {ear['last_segment_age']}s ago, "
                                f"threshold {ear['threshold']})"})
-    elif ear.get("where") == "launchd":
-        # A LAUNCHD EAR IS A DEAF EAR on this platform, and it says `mic_ok`
-        # because hiss is not silence. Reported as BROKEN rather than
-        # LISTENING: the one thing worse than not hearing is believing you do.
-        rows.append({"state": "BROKEN", "part": "listener",
-                     "detail": "running under launchd — macOS gives it a stream with no "
-                               "speech in it (TCC). Press s to run it in the ears window"})
+    elif ear["segments"] >= 3 and not any((s.get("text") or "").strip()
+                                          for s in (ear.get("recent") or [])):
+        # DEAF: it is running, the stream is not zeros, and NOTHING it heard
+        # became words. That is what an ungranted microphone looks like on
+        # macOS — silence substituted for a refusal — and `mic_ok` cannot see
+        # it, because hiss is not silence. The check that matters asks whether
+        # SPEECH arrived, not whether samples did.
+        rows.append({"state": "DEAF", "part": "listener",
+                     "detail": f"running, {ear['segments']} segment(s), NOT ONE became "
+                               "words — the microphone grant is missing. System Settings "
+                               "> Privacy & Security > Microphone > nOS Ears"})
     else:
         rows.append({"state": "LISTENING", "part": "listener",
                      "detail": f"{'ARMED · ' if ear['armed'] else ''}"

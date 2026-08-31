@@ -768,14 +768,20 @@ row("ears-app-bundle", "The launchd ear is handed a microphone with no speech in
          "threshold and a phonetic matcher, all correct on real audio and all irrelevant to "
          "the cause. The tell was there from the first measurement — a floor with no dynamic "
          "range — and it read as 'audio is arriving'. "
-         "SHIPPED INSTEAD (bridge): nos-cc runs the listener in a tmux window of its own "
-         "session, where Terminal's grant already applies; `s` starts and stops it; the role "
-         "refuses to bootstrap a launchd listener unless `ears_launchd_tcc_granted` is set, "
-         "and the reader reports a launchd ear as BROKEN rather than LISTENING. "
-         "THE FIX THIS ROW HOLDS: a minimal .app bundle with its own bundle id, so macOS has "
-         "something to prompt about once and remember — the standard answer, and the only "
-         "one that survives a reboot without a terminal. Do it when the voice loop has "
-         "earned a reboot-proof ear; the bridge is honest until then.")
+         "THE BRIDGE WAS TRIED AND FAILED, which is worth recording because it looked "
+         "obvious: run the listener in a tmux window of the nos-cc session, inheriting the "
+         "terminal's grant. It heard nothing either — the tmux SERVER is long-lived and its "
+         "responsible app is whatever started it, which on this host is not an app holding "
+         "the grant. A grant is not ambient in a session; it belongs to a bundle. "
+         "SHIPPED: roles/pazny.ears builds `nOS Ears.app` — an Info.plist with a bundle id "
+         "and NSMicrophoneUsageDescription, and an executable that execs the same venv "
+         "python and the same listener, so there is one implementation of the ear. launchd "
+         "runs the BUNDLE. It is ad-hoc signed on every change, because an unsigned bundle "
+         "whose executable changed is a different app to TCC and the operator would be "
+         "re-prompted at random until they stopped reading the prompt. "
+         "AND THE READER LEARNED THE LESSON: `mic_ok` asked whether any sample was non-zero, "
+         "which hiss satisfies. It now reports DEAF — running, segments heard, not one of "
+         "them became words — because the check that matters asks whether SPEECH arrived.")
 row("ext-contract", "What an nOS extension in another repo would have to be",
     "2026-08-31", "queued", "platform",
     refs="docs/doctrine/cross-repo-contracts.md · tools/cortex-drift.py · docs/tier2-app-onboarding.md",

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>{{ ears_app_name }}</string>
+    <key>CFBundleDisplayName</key>
+    <string>{{ ears_app_name }}</string>
+    <key>CFBundleIdentifier</key>
+    <string>{{ ears_app_bundle_id }}</string>
+    <key>CFBundleExecutable</key>
+    <string>ears</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <!-- THE SENTENCE THE OPERATOR READS IN THE PROMPT. It is the only place
+         this estate explains a microphone to the person whose room it is, so
+         it says what is kept and for how long rather than "needs access". -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>nOS listens for "{{ ears_wake_phrase.split(',')[0] }}" and transcribes only what follows it. Audio is never stored; transcripts are kept {{ ears_retention_days }} days and can be deleted at any time.</string>
+    <!-- No Dock icon, no menu bar: it is an ear, not an application. -->
+    <key>LSUIElement</key>
+    <true/>
+</dict>
+</plist>

@@ -1,0 +1,8 @@
+#!/bin/bash
+# The .app bundle's executable. It exists so macOS HAS SOMETHING TO ASK ABOUT.
+#
+# MEASURED 2026-08-31: macOS attributes a microphone grant to the RESPONSIBLE
+# process. ffmpeg started by launchd is responsible for itself, has no grant,
+# and is handed a stream with no speech in it — not a refusal, a silence. A
+# bundle has a bundle id, so the prompt happens once and the answer sticks.
+exec "{{ ears_venv }}/bin/python" "{{ ears_runtime_dir }}/ears-listen.py" --daemon "$@"
