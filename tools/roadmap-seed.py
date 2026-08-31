@@ -1165,6 +1165,33 @@ row("wing-events-chain-aware-retention", "Chain-aware retention for the wing.db 
     parent="", refs="callback_plugins/wing_telemetry.py; files/anatomy/wing/app/Model/AuditChain.php; tests/callback/test_task_noise_gate.py",
     body="Measured 2026-08-12: events held 332,506 rows / 698 MB; task_start+task_skipped were 86% (~108k rows per converge day). The TAP is now gated (task noise off by default, NOS_TELEMETRY_TASK_VERBOSE=1 restores), but the accumulated table remains: every row is WORM-triggered and HMAC-chained, so pruning is a design problem, not a DELETE — it needs an anchor-and-reseal step (the shape the key-rotation machinery already performs) that seals a segment, archives it verifiably, and re-anchors the chain. Until designed, wing.db only grows and nightly chain verification walks every historical skip row.")
 
+# ── Wing's tenants, ranked by what it would cost to evict them (2026-08-31) ──
+row("wing-tenants", "Wing hosts systems that are not Wing, and one is cheap to move",
+    "2026-08-31", "next", "platform",
+    refs="files/anatomy/wing/app/Cortex · files/anatomy/cortex/server/cortex-lang.ts · tools/cortex-status.py",
+    body="OPERATOR, 2026-08-31: 'Wing mixes too many systems, spread it into the existing ones.' "
+         "MEASURED rather than argued. Wing is ~27k lines of PHP across 25 API presenters "
+         "(agents, cortex, gdpr, gitleaks, pentest, pulse, remediation, scan, migrations, "
+         "upgrades, coexistence, patches, inbox, notifications, hub). Size is the wrong "
+         "ranking; coupling is the right one, and it separates the two big tenants cleanly. "
+         "AgentKit is 8073 lines and imports SIX Model repositories — sessions, events, "
+         "vaults, subscriptions, questions, audit — every one of them a wing.db table. It is "
+         "genuinely Wing-resident and moving it means moving its state, which is a different "
+         "and larger question. Cortex is 1714 lines and imports exactly ONE: KeapCortexClient, "
+         "an HTTP client to KEAP. That is the whole tie. THE SPLIT IT WOULD CLOSE: cortex-lang "
+         "is one language implemented in two runtimes — the pure half (tokenise, parse, "
+         "analyse) is TypeScript in files/anatomy/cortex/server/cortex-lang.ts serving "
+         "/agent/v1/validate, and the execution half is PHP in files/anatomy/wing/app/Cortex/, "
+         "seven opcode handlers. They are bound by a shared opcode registry hash "
+         "(cx1:… on both sides, checked by tools/cortex-status.py since today) so the seam is "
+         "sound — but it is still a language boundary through the middle of one organ, and it "
+         "is why 'how is the cortex' could only ever be answered about KEAP. THE COST IS "
+         "HONEST: moving execution to the organ is a PHP->TS rewrite of 1714 lines, not a file "
+         "move, and the handlers are where the KEAP round-trips live. What makes it worth "
+         "pricing anyway is the operator's framing — the cortex organ belongs in nOS whole, "
+         "with KEAP as UI plus general knowledge — and the fact that the executor's only Wing "
+         "dependency is a client to the very service the organ already speaks to.")
+
 # ── Preflight: does the live table have the columns this script writes? ──────
 #
 # Added 2026-08-07 with the target/occurred_at migration. The live table was

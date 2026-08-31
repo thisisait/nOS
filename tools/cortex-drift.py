@@ -83,6 +83,28 @@ LOCALLY_AUTHORED = re.compile(r"LOCALLY AUTHORED", re.I)
 #: and does not say why. That is the shape entry 11 is actually about.
 DECLARED_DIFF = re.compile(r"nOS\s+S\d+\s+DIFF", re.I)
 
+#: THE OTHER SPELLING OF A DECLARATION, and missing it was hiding the signal.
+#:
+#: Measured 2026-08-31: 13 files read UNDECLARED, and SEVEN of them were
+#: docs/specs whose only divergence is the provenance banner the organ adds to
+#: every vendored copy —
+#:
+#:     > Vendored from thisisait/nos-keap @ v1.28.0 (94acbfe) docs/specs/… —
+#:       organ-side copy, P-4b Docs stage 2026-07-25. The KEAP original
+#:       remains authoritative until the post-C4 docs cleanup.
+#:
+#: That is a declaration by any reading: it names the upstream, the version,
+#: the commit, the date, and which side stays authoritative. It simply is not
+#: spelled `nOS Sn DIFF`, which is a CODE convention — a marker block beside
+#: the lines it justifies. A doc's whole divergence being its banner has no
+#: lines to sit beside.
+#:
+#: Counting them as undeclared put seven benign files in front of five real
+#: code drifts, which is the failure mode this tool's own docstring warns
+#: about one paragraph up: "reporting that beside an undeclared one-line
+#: change would make the tool as unreadable as having no tool."
+VENDOR_BANNER = re.compile(r"^>\s*Vendored from \S+ @ \S+", re.M)
+
 
 def _files(root: pathlib.Path) -> dict[str, pathlib.Path]:
     out: dict[str, pathlib.Path] = {}
@@ -142,7 +164,8 @@ def compare(keap_root: pathlib.Path) -> dict:
         ))
         changed = sum(1 for line in diff
                       if line[:1] in "+-" and not line.startswith(("+++", "---")))
-        declared = len(DECLARED_DIFF.findall("".join(ours_lines)))
+        body = "".join(ours_lines)
+        declared = len(DECLARED_DIFF.findall(body)) or len(VENDOR_BANNER.findall(body))
         rows.append({
             "file": rel,
             "state": "declared_diff" if declared else "drifted",
@@ -208,7 +231,7 @@ def main() -> int:
           f"{len(declared)} declared · {local} locally authored · "
           f"{len(organ_only)} organ-only · {report['keap_only_count']} KEAP-only (not vendored)")
     if declared:
-        print("  declared (each carries its own `nOS Sn DIFF` markers): "
+        print("  declared (an `nOS Sn DIFF` marker block, or a vendoring banner): "
               + ", ".join(f"{r['file'].split('/')[-1]}×{r['declared_markers']}" for r in declared))
 
     for row in sorted(drifted, key=lambda r: -r["changed_lines"]):
