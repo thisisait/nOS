@@ -1873,7 +1873,8 @@ openwebui_port: 3004             # Internal container port 8080 → host 3004
 # manifest is the only authoritative answer. arm64 present; 0.11.1 is 404, so
 # this is the top of the line as of 2026-08-07. Same-major, DB migration on
 # start (~minutes), and signup stays off per the pure-SSO doctrine.
-openwebui_version: "0.11.0"
+  # REM-245 patch bump. ghcr manifest verified 200 before pinning.
+openwebui_version: "0.11.1"
 openwebui_secret_key: "{{ nos_derived_secrets.openwebui }}"
 openwebui_enable_signup: false   # pure-SSO: public local signup OFF (was true →
                                  # public /auth/signup first-admin race). Users
@@ -1938,7 +1939,12 @@ woodpecker_prom_token: "{{ nos_derived_secrets.wp_prom }}"
 
 portainer_domain: "portainer{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 portainer_port: 9002                   # 9000/9001 reserved for RustFS (S3 API + console)
-portainer_version: "2.44.0"             # CVE-2025-68121 transitive (Go TLS CVSS 10.0) [swept 2.33.8 2026-08-06]
+  # REM-212 CRITICAL (CVE-2026-72533 / GHSA-jxhm-qq8x-v4c6, Docker API authz
+  # bypass). The row was filed vendor_blocked when no patch existed; 2.45.0
+  # (STS, 2026-08-27) now does. Tag verified pullable on Docker Hub before
+  # pinning — the queue records VERSIONS, and a version is not always a tag
+  # (node-red's recorded 4.1.13 has no plain tag at all).
+portainer_version: "2.45.0"             # STS line; also carries the CVE-2025-68121 Go-TLS sweep
 portainer_admin_password: "{{ nos_derived_secrets.portainer }}"
 # Self-heal an admin-password DRIFT (admin exists but neither the current nor
 # previous prefix logs in — left by an interrupted/partial provisioning). true =

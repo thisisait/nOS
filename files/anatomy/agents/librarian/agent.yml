@@ -171,7 +171,25 @@ pulse:
       # when the alternative is a verdict on stale input.
       schedule: "35 5 * * *"
       jitter_min: 5
-      max_runtime_s: 600
+      # 600 -> 1800 (2026-08-31). MEASURED, and the measurement inverts what the
+      # estate reported. On 2026-08-31 this job was recorded rc=-9 at exactly
+      # 600s and raised a HIGH "job failing" alert — while its agent session
+      # ran 05:38:08 -> 05:48:35 and ended `outcome_satisfied`. It finished 28
+      # seconds AFTER Pulse killed its parent, because SIGKILL went to the
+      # wrapper and the claude CLI grandchild survived it. The work was done;
+      # only the report said otherwise.
+      #
+      # That orphaning is now FIXED (pulse/runners/subprocess.py kills the
+      # process GROUP), which is exactly why this number has to move. Until
+      # tonight an over-budget run completed anyway and lied about it; from
+      # tonight it will be killed for real and lose the work. The fix converts
+      # a false alarm into a true loss unless the budget is honest.
+      #
+      # Successful session durations: 93s, 419s, 627s (n=3, drifting upward
+      # against a lint queue that is NOT growing — 121 open findings, none
+      # newer than 2026-08-08, so the cost is per-run, not per-item). 1800 is
+      # ~2.9x the observed max. It is a nightly job; the headroom is free.
+      max_runtime_s: 1800
       max_concurrent: 1
       paused: false
       paused_reason: "librarian is on-demand; tools/run-librarian.sh fires it"
@@ -236,7 +254,13 @@ pulse:
       # honest by the same gate.
       schedule: "30 3 * * *"
       jitter_min: 5
-      max_runtime_s: 900
+      # 900 -> 2400 (2026-08-31). Same measurement as judge-lint-queue above,
+      # and the starker case: recorded rc=-9 at exactly 900s, while the agent
+      # session ran 03:34:58 -> 03:53:21 and ended `outcome_satisfied` — it
+      # kept working for 3m24s after Pulse killed its parent. Successful
+      # durations 211s, 302s, 644s, 1103s (n=4); the longest already exceeded
+      # this budget. 2400 is ~2.2x the observed max.
+      max_runtime_s: 2400
       max_concurrent: 1
       paused: false
       paused_reason: "brief sweep is operator-paced; tools/run-librarian.sh --brief fires it"

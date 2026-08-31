@@ -13,7 +13,8 @@
 # auto-generated in main.yml on first run / blank=true.
 # ==============================================================================
 
-bookstack_version: "26.05.2"                      # REM-122: 26.05.2 patch (was v26.05-ls264)
+  # REM-239 HIGH. ghcr manifest verified 200 before pinning.
+bookstack_version: "26.05.4"                      # REM-239 (supersedes the REM-122 26.05.2 pin)
 bookstack_domain: "bookstack{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 bookstack_port: 3013                                    # unique — see PORT REGISTRY
 bookstack_db_name: "bookstack"
