@@ -673,11 +673,27 @@ backup-drill-keap-db: >-
 sec-pulse-env: >-
   python3 -c "import json,os,urllib.request,yaml,sys; t=(yaml.safe_load(open(os.path.expanduser('~/.nos/secrets.yml'))) or {}); r=urllib.request.Request('http://127.0.0.1:9000/api/v1/pulse_jobs', headers={'Authorization':'Bearer '+str(t.get('wing_api_token',''))}); b=urllib.request.urlopen(r,timeout=10).read().decode(); d=json.loads(b); j=d['jobs']; bad=[k for x in j.values() for k in x if k=='env_json']; leak=[k for k,v in t.items() if isinstance(v,(str,int)) and len(str(v))>=12 and str(v) in b]; print(len(j),'jobs,',len(bad),'env_json field(s),',len(leak),'secret value(s) present'); sys.exit(0 if not bad and not leak else 1)"
 
-# The archive key stopped deriving from the password prefix. Compared as
-# DIGESTS: if the live passphrase equals the old derived form, the rotation
-# never happened on this host whatever the template says.
+# The archive key stopped deriving from the password prefix.
+#
+# Asks whether the live passphrase CONTAINS the prefix, rather than
+# reconstructing the old derived spelling and comparing. Two reasons, and the
+# second is the better one:
+#
+#   1. Building `<prefix>_pw_backup_encryption` in a probe trips
+#      test_no_master_in_rendered_artifacts.py, which is deliberately coarse
+#      about that shape ("a false positive costs an allowlist line; a false
+#      negative is REM-144"). An allowlist line was available. It was not
+#      needed.
+#   2. Containment is STRICTLY BROADER. The old form is one spelling of
+#      prefix-derived; any other — a different suffix, a prefix used as a seed
+#      — also contains it, and a 256-bit random value does not. The estate
+#      already refuses a prefix under 12 characters, so a chance substring is
+#      not a real risk.
+#
+# Prints a WORD. roadmap-verify.py stores stdout as evidence in a table the
+# face renders, and this one touches the secret store.
 sec-p2: >-
-  python3 -c "import hashlib,os,yaml,sys; s=yaml.safe_load(open(os.path.expanduser('~/.nos/secrets.yml'))) or {}; live=str(s.get('backup_encryption_passphrase','')); d=str(s.get('global_password_prefix',''))+'_pw_backup_encryption'; same=bool(live) and hashlib.sha256(live.encode()).digest()==hashlib.sha256(d.encode()).digest(); print('key is','PREFIX-DERIVED' if same else ('independent' if live else 'ABSENT')); sys.exit(1 if same or not live else 0)"
+  python3 -c "import os,yaml,sys; s=yaml.safe_load(open(os.path.expanduser('~/.nos/secrets.yml'))) or {}; live=str(s.get('backup_encryption_passphrase','')); pre=str(s.get('global_password_prefix','')); derived=bool(live) and bool(pre) and len(pre)>=8 and pre in live; print('key is','PREFIX-DERIVED' if derived else ('independent' if live else 'ABSENT')); sys.exit(1 if derived or not live else 0)"
 
 # The local-dev carve-out is gone from the gate's CONDITION, not from a comment
 # beside it. Parsed out of main.yml rather than grepped: the paragraph above
