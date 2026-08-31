@@ -23,7 +23,8 @@ import path from 'node:path';
 // ── nOS S3 DIFF 1/2 — the guard resolves the roots the organ really walks ───
 // KEAP reads `process.env.KEAP_USER_FILES_DIR` here, and its compose file sets
 // that variable, so the overlap guard runs on KEAP. The ORGAN'S plist never
-// sets it — since §1.4 the users pass walks an ORDERED LIST
+// sets it — since docs/archive/cortex-corpus-parallel.md §1.4 the users pass
+// walks an ORDERED LIST
 // (`CORTEX_FS_USER_ROOTS` -> `KEAP_FS_USER_ROOTS`), of which the single path is
 // only one shape. So on this deployment the guard was keyed on a variable
 // nobody sets, the `if` never ran, and a mapped-folder root laid over the

@@ -109,7 +109,24 @@ def test_an_external_standard_is_not_a_corpus_miss(tool, resolved):
 #: classifier: `phantom` and `resolved-external` are SEPARATE classes and stay
 #: visible in the tally for exactly that reason. A new residue goes here with
 #: the verification note the old four carried.
-KNOWN_FINDINGS: set[tuple[str, str, str, str]] = set()
+KNOWN_FINDINGS: set[tuple[str, str, str, str]] = {
+    # SURFACED, NOT CREATED, 2026-08-31. `files/anatomy/cortex/server/fs-roots.ts`
+    # opens with KEAP's own line "Doctrine guards (see the mapped-folders spec
+    # §3/§12.2)". That spec is in neither this checkout nor ~/keap/src — KEAP's
+    # docs are not vendored — so §12.2 has never been resolvable here.
+    #
+    # It only became VISIBLE when an `nOS S3 DIFF` marker added a qualified
+    # citation to the same file: with a document now named, the resolver had
+    # something to resolve the file's bare sections against, and §12.2 does not
+    # exist in it. Verified by hand: the cited doc
+    # (docs/archive/cortex-corpus-parallel.md) tops out at §3.3, and grepping
+    # both trees for "12.2" finds no heading anywhere.
+    #
+    # Recorded rather than repaired because the address belongs to KEAP: fixing
+    # it means either vendoring the spec or changing upstream's comment, and
+    # neither is a thing to do from inside a citation gate.
+    ("files/anatomy/cortex/server/fs-roots.ts", "section", "12.2", "wrong"),
+}
 
 #: Measured 2026-08-06 after the self-referential exclusion: 1061 citations,
 #: 929 resolved, 124 unqualified. The floor sits just under the measurement
