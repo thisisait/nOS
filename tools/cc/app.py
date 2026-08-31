@@ -57,11 +57,18 @@ class ControlCentreApp(App):
     #table  { height: 1fr; }
     #detail { height: 12; border-top: solid $primary; padding: 0 1; display: none; }
     #detail.shown { display: block; }
+    /* A LIVE MICROPHONE IS NOT A TABLE CELL. When a pane reports that
+       something is recording, it gets a full-width red bar that no amount of
+       scrolling hides — the one state in this control centre that is about the
+       room rather than about the estate. */
+    #rec { height: 1; display: none; }
+    #rec.on { display: block; background: $error; color: $text; text-style: bold; }
     """
     COMMANDS = App.COMMANDS | {PaneProvider}
     BINDINGS = [
         Binding("r", "reload", "Refresh"),
         Binding("enter", "drill", "Open row"),
+        Binding("s", "pane_toggle", "Start/stop"),
         Binding("escape", "close", "Close detail"),
         Binding("q", "quit", "Quit"),
     ]
@@ -77,6 +84,7 @@ class ControlCentreApp(App):
         yield Header(show_clock=True)
         yield Static("", id="status")
         yield Static("", id="banner")
+        yield Static("", id="rec")
         yield DataTable(id="table", cursor_type="row", zebra_stripes=True)
         yield Static("", id="detail")
         yield Footer()
@@ -104,11 +112,17 @@ class ControlCentreApp(App):
     def draw(self) -> None:
         pane, t = self.panes[self.current], self.table
         dt = self.query_one("#table", DataTable)
+        # KEEP THE CURSOR ACROSS A RE-READ. The caddy pane refreshes every five
+        # seconds; a cursor that jumps back to row 0 on every tick makes a fast
+        # pane unusable, which is the opposite of what the speed was for.
+        keep = dt.cursor_row if dt.row_count else 0
         dt.clear(columns=True)
         for col in t["columns"]:
             dt.add_column(col.upper(), key=col)
         for row in t["rows"]:
             dt.add_row(*[str(row.get(c, "")) for c in t["columns"]])
+        if dt.row_count:
+            dt.move_cursor(row=min(keep, dt.row_count - 1))
 
         banner = self.query_one("#banner", Static)
         if not t["ok"]:
@@ -125,12 +139,56 @@ class ControlCentreApp(App):
             f" [{'DEMO' if self.demo else 'LIVE'}] {pane.TITLE}   {meta}"
             f"   [dim]ctrl+p panes · enter row · r refresh[/]")
         self.title = f"nos-cc — {pane.LABEL}"
-        self.query_one("#detail", Static).remove_class("shown")
+
+        rec = self.query_one("#rec", Static)
+        if (t.get("meta") or {}).get("recording"):
+            rec.update(" ● RECORDING — the microphone is open.  s = stop ")
+            rec.add_class("on")
+        else:
+            rec.remove_class("on")
+
+        # THE DETAIL PANEL SURVIVES A RE-READ, and on a five-second pane that is
+        # the difference between reading a transcript and watching it vanish
+        # mid-sentence. It re-renders for the row the cursor is still on.
+        if self.query_one("#detail", Static).has_class("shown"):
+            self.action_drill()
 
     # ── actions ─────────────────────────────────────────────────────────────
     def action_close(self) -> None:
         self.query_one("#detail", Static).remove_class("shown")
         self.query_one("#table", DataTable).focus()
+
+    def on_data_table_row_selected(self, event) -> None:
+        """Enter, from the table itself.
+
+        The `enter` BINDING never fired: a focused DataTable with
+        cursor_type="row" consumes the key and emits this message instead, so
+        the App-level binding was dead the whole time the footer advertised it.
+        """
+        self.action_drill()
+
+    def action_pane_toggle(self) -> None:
+        """`s` — the one place a pane may ACT, and only over a live device.
+
+        Every other pane in this control centre is a reader and stays one. A
+        microphone is the exception the rule earns: requiring a converge to stop
+        listening would mean the fastest way to stop being recorded is to edit
+        YAML. The pane changes the RUNTIME only; the declaration in config.yml
+        is untouched, so a converge re-asserts whatever the operator declared —
+        and the reader says so rather than letting the two look identical.
+        """
+        pane = self.panes[self.current]
+        toggle = getattr(pane, "toggle", None)
+        if toggle is None:
+            self.query_one("#banner", Static).update(
+                "[dim]this pane has nothing to start or stop[/]")
+            return
+        try:
+            said = toggle(self.table.get("raw") or {})
+        except Exception as exc:                                # noqa: BLE001
+            said = f"[b red]{type(exc).__name__}[/] {exc}"
+        self.query_one("#banner", Static).update(said or "")
+        self.action_reload()
 
     def action_drill(self) -> None:
         dt = self.query_one("#table", DataTable)

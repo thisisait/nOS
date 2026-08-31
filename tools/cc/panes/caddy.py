@@ -5,6 +5,10 @@ first, then the last turns — because "the caddy did not answer" and "the micro
 was refused" look identical from where you are standing, and only one of them
 is fixable in System Settings.
 """
+import os
+import pathlib
+import time
+
 ID, LABEL, TITLE = "caddy", "Caddy", "the assistant, the ear, and what it heard"
 READER = "tools/caddy-status.py"
 # The fastest reader pane in the set: the transcript half moves in SECONDS, and
@@ -85,7 +89,46 @@ def detail(row, data):
 def meta(data):
     ear = data.get("listener", {})
     return {
+        # The app paints a full-width red bar on this one.
+        "recording": bool(ear.get("loaded") and ear.get("mic_ok") is not False),
         "armed_backends": data.get("armed", []),
         "retention_days": ear.get("retention_days"),
         "transcript_files": (data.get("transcripts") or {}).get("files"),
     }
+
+
+LABEL_ID = "eu.thisisait.nos.ears-listen"
+PAUSED = pathlib.Path.home() / "ears" / "paused"
+
+
+def toggle(data):
+    """`s` — stop or resume the microphone, NOW, without a converge.
+
+    THE RUNTIME ONLY. `ears_always_listen` in config.yml is the DECLARATION and
+    this does not touch it, so the next converge re-asserts whatever the
+    operator declared. A marker file records that the pause was deliberate, so
+    the reader can tell PAUSED apart from "never started" — two states that
+    would otherwise both render as a job that is not loaded.
+
+    Requiring a converge to stop being recorded would make the fastest way out
+    of a private conversation an edit to YAML. That is the whole argument for
+    the one action in this control centre.
+    """
+    import subprocess
+
+    target = f"gui/{os.getuid()}"
+    listening = bool((data.get("listener") or {}).get("loaded"))
+    if listening:
+        subprocess.run(["launchctl", "bootout", f"{target}/{LABEL_ID}"],
+                       capture_output=True)
+        PAUSED.parent.mkdir(parents=True, exist_ok=True)
+        PAUSED.write_text(f"paused from nos-cc at {int(time.time())}\n")
+        return "[b]microphone STOPPED[/] — a converge will start it again"
+    plist = pathlib.Path.home() / f"Library/LaunchAgents/{LABEL_ID}.plist"
+    if not plist.is_file():
+        return f"[b red]no plist at {plist}[/] — converge with install_ears first"
+    run = subprocess.run(["launchctl", "bootstrap", target, str(plist)],
+                         capture_output=True, text=True)
+    PAUSED.unlink(missing_ok=True)
+    return ("[b]microphone STARTED[/]" if run.returncode == 0
+            else f"[b red]launchctl: {run.stderr.strip()[:80]}[/]")

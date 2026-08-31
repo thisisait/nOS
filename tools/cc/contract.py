@@ -83,7 +83,10 @@ def table(pane, demo: bool = False) -> dict[str, Any]:
     return {
         "ok": True, "error": None, "columns": pane.COLUMNS, "rows": rows,
         "detail": {i: detail_fn(r, data) for i, r in enumerate(rows)},
-        "meta": meta_fn(data), "cmd": cmd,
+        # `raw` is the reader's own answer, passed through untouched, so a pane
+        # that offers an action decides from what the reader SAW rather than
+        # from the strings it rendered.
+        "meta": meta_fn(data), "raw": data, "cmd": cmd,
     }
 
 

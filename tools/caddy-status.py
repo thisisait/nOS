@@ -183,6 +183,7 @@ def _listener() -> dict:
         "stale": bool(beat) and (time.time() - beat) > HEARTBEAT_STALE_S,
         "retention_days": state.get("retention_days"),
         "detail": detail or state.get("detail", ""),
+        "paused": (EARS_HOME / "paused").is_file(),
     }
 
 
@@ -316,7 +317,14 @@ def build_rows(data: dict) -> list[dict]:
     # microphone a launchd agent cannot prompt for, STALE is a process that
     # stopped writing, and LISTENING is the only one that means it works.
     ear = data["listener"]
-    if not ear["loaded"]:
+    if not ear["loaded"] and ear.get("paused"):
+        # STOPPED ON PURPOSE, from the pane, and the declaration still says
+        # listen — so a converge brings it back. Two states that would both
+        # render as "not loaded" if the marker did not exist.
+        rows.append({"state": "PAUSED", "part": "listener",
+                     "detail": "stopped from nos-cc — press s to resume; "
+                               "a converge resumes it too (config.yml still declares it)"})
+    elif not ear["loaded"]:
         rows.append({"state": "OFF", "part": "listener",
                      "detail": "launchd agent not loaded — set ears_always_listen: true "
                                "in config.yml and re-run --tags ears"})
@@ -366,6 +374,14 @@ def build_rows(data: dict) -> list[dict]:
             rows.append({"state": "TURN", "part": when,
                          "detail": (turn.get("turn") or "")[:110]})
 
+    # A RULE between the state and the speech. Appending transcript lines
+    # straight under the verdicts made both harder to read — the operator said
+    # so — and the two halves answer different questions.
+    heard = ear.get("recent") or []
+    if heard:
+        rows.append({"state": "───", "part": "─── heard ───",
+                     "detail": "─" * 60 + f"  (last {len(heard)}, newest first)"})
+
     # WHAT THE EAR IS HEARING RIGHT NOW, addressed or not — the rolling window
     # the daemon keeps in state.json. Newest first, because the reason to look
     # is always the last thing said.
@@ -386,7 +402,7 @@ def build_rows(data: dict) -> list[dict]:
     rank = {"BROKEN": 0, "DENIED": 1, "ABSENT": 2, "UNHEARD": 3, "DISARMED": 4,
             "UNKNOWN": 5, "OFF": 6, "READY": 7, "LISTENING": 7, "HEARD": 9}
     rows.sort(key=lambda r: (rank.get(r["state"], 8),
-                             "" if r["state"] in ("HEARD", "TURN") else r["part"]))
+                             "" if r["state"] in ("HEARD", "TURN", "───") else r["part"]))
     return rows
 
 
