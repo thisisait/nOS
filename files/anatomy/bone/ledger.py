@@ -186,6 +186,11 @@ class ProposalRefused(LedgerError):
       missing-diff        — no diff_text: a proposal IS its artifact, and
                             without one neither the budget nor the dedup can
                             look at what would actually change
+      malformed-diff      — the text is not a readable unified diff: a hunk
+                            body line does not begin with ' ', '+' or '-'.
+                            Refused HERE so the proposer hears it while its
+                            session is still open, instead of five hours later
+                            as an indeterminate verdict
       content-fp-repeat   — byte-identical patch already offered, under ANY
                             fingerprint (an operator forget lifts it)
       already-failed      — attempts exhausted and the last verdict was fail
@@ -504,6 +509,50 @@ def normalize_diff(diff_text: str) -> str:
     while lines and not lines[-1]:
         lines.pop()
     return "\n".join(lines)
+
+
+def malformed_hunk_line(diff_text: str) -> tuple[int, str] | None:
+    """The first hunk line that is not a legal unified-diff body line.
+
+    MEASURED 2026-08-31. The nightly loop's one model-authored proposal
+    (rem:REM-156, a nodered pin bump) was recorded, sat five hours, and then
+    every judge in its set refused it:
+
+        diff does not apply at engine base: corrupt patch at <stdin>:5
+
+    Line 5 was the first CONTEXT line, and it had no leading space. A unified
+    diff's body lines must begin with ' ', '+', '-' or '\\'; a model that emits
+    context flush-left produces a patch git will not read. The diff was
+    otherwise correct — right file, right line, 4.0.9 -> 4.0.10.
+
+    WHY THIS BELONGS AT THE FRONT DOOR. Nothing was wrong with the judge's
+    refusal; it is exactly right to refuse rather than judge unpatched HEAD.
+    The cost was WHERE the news arrived: the proposer's session had ended
+    hours earlier, so the one actor able to fix a malformed patch — the model
+    that wrote it, still holding the file it read — never heard. Recording it
+    and discovering it a night later turns a typo into a wasted cycle.
+
+    Deliberately NOT `git apply --check`: applicability at a given base is the
+    judge's question and needs a sandbox. This is the FORMAT, which is
+    context-free, needs no repo, and is the half that was actually failing.
+    """
+    in_hunk = False
+    for n, raw in enumerate(diff_text.replace("\r\n", "\n").split("\n"), start=1):
+        if raw.startswith("@@"):
+            in_hunk = True
+            continue
+        if not in_hunk:
+            continue
+        if raw.startswith(("diff --git ", "--- ", "+++ ", "index ")):
+            in_hunk = False
+            continue
+        if raw == "":
+            # A wholly empty line is a legal (if sloppy) empty context line;
+            # git tolerates it and so does this.
+            continue
+        if raw[0] not in " +-\\":
+            return n, raw
+    return None
 
 
 def content_fingerprint(diff_text: str) -> str:
@@ -1083,6 +1132,19 @@ class ProposerLedger(ReaderLedger):
                 "cannot deduplicate it")
         paths = normalize_paths(target_paths)
         fp = fingerprint(weakness_id, paths, intent_class, gate_set)
+        bad = malformed_hunk_line(diff_text)
+        if bad is not None:
+            line_no, text = bad
+            raise ProposalRefused(
+                "malformed-diff",
+                f"line {line_no} of the diff is inside a hunk and starts with "
+                f"{text[:1]!r}: {text[:60]!r}. Unified-diff body lines must "
+                "begin with ' ' (context), '+' (added) or '-' (removed) — a "
+                "context line flush against the margin makes git read the "
+                "patch as corrupt. Re-emit the hunk with its context lines "
+                "prefixed by a single space.",
+            )
+
         cfp = content_fingerprint(diff_text)
         weakness_evidence_sha = self._weakness_evidence_sha(weakness_id)
 
