@@ -178,6 +178,7 @@ def _listener() -> dict:
         "wake_misses": state.get("wake_misses", 0),
         "threshold": state.get("threshold"),
         "last_segment_age": state.get("last_segment_age"),
+        "recent": state.get("recent") or [],
         "heartbeat_age": int(time.time() - beat) if beat else None,
         "stale": bool(beat) and (time.time() - beat) > HEARTBEAT_STALE_S,
         "retention_days": state.get("retention_days"),
@@ -362,15 +363,23 @@ def build_rows(data: dict) -> list[dict]:
         })
         for turn in tr["recent"]:
             when = time.strftime("%H:%M", time.localtime(turn.get("at", 0)))
-            rows.append({"state": "HEARD", "part": when,
+            rows.append({"state": "TURN", "part": when,
                          "detail": (turn.get("turn") or "")[:110]})
+
+    # WHAT THE EAR IS HEARING RIGHT NOW, addressed or not — the rolling window
+    # the daemon keeps in state.json. Newest first, because the reason to look
+    # is always the last thing said.
+    for seg in reversed(ear.get("recent") or []):
+        when = time.strftime("%H:%M:%S", time.localtime(seg.get("at", 0)))
+        rows.append({"state": "HEARD", "part": when,
+                     "detail": (seg.get("text") or "")[:110]})
 
     # Worst first, and HEARD last in arrival order — a transcript is not a
     # verdict, so it must never sort above one.
     rank = {"BROKEN": 0, "DENIED": 1, "ABSENT": 2, "UNHEARD": 3, "DISARMED": 4,
             "UNKNOWN": 5, "OFF": 6, "READY": 7, "LISTENING": 7, "HEARD": 9}
     rows.sort(key=lambda r: (rank.get(r["state"], 8),
-                             "" if r["state"] == "HEARD" else r["part"]))
+                             "" if r["state"] in ("HEARD", "TURN") else r["part"]))
     return rows
 
 

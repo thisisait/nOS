@@ -109,6 +109,16 @@ FLOOR_WINDOW = 200
 #: floor-relative, so it follows the gain without retuning.
 INPUT_GAIN = float(os.environ.get("EARS_INPUT_GAIN", "8"))
 
+#: How many recent segments the daemon keeps IN STATE for the operator to read.
+#:
+#: A ROLLING WINDOW, NOT RETENTION. These live only in state.json, are
+#: overwritten as they age out, and never reach ~/ears/turns/ — which still
+#: holds only ADDRESSED turns, for 90 days. The window exists because "the ear
+#: heard 14 segments and none matched" told the operator the phrase was wrong
+#: and could not tell them WHAT it wrote, and that gap cost three
+#: fixes aimed at the wrong layer. Set 0 to keep nothing.
+RECENT_SEGMENTS = int(os.environ.get("EARS_RECENT_SEGMENTS", "8"))
+
 # How long the daemon waits for the FIRST audio byte before deciding the
 # microphone is not actually reachable. Generous: launchd starts us before the
 # login session is fully up.
@@ -366,6 +376,7 @@ def _run_loop(args, daemon: bool) -> int:
     last_beat, last_prune, turns_today = 0.0, time.time(), 0
     floor: list[float] = []
     segments, wake_misses, last_segment_at = 0, 0, 0.0
+    recent: list[dict] = []
     # INITIALISED BEFORE THE LOOP because the heartbeat reports it and fires on
     # a timer, not on a chunk: the first beat arrived 15 s in, read a threshold
     # the first chunk had not yet computed, and the daemon died with
@@ -411,6 +422,7 @@ def _run_loop(args, daemon: bool) -> int:
             if now - last_beat >= HEARTBEAT_S:
                 _write_state(armed=turn.armed, turns_today=turns_today,
                              silence_left=round(turn.silence_left(now), 1),
+                             recent=recent,
                              segments=segments, wake_misses=wake_misses,
                              threshold=round(threshold),
                              last_segment_age=(round(now - last_segment_at)
@@ -447,6 +459,9 @@ def _run_loop(args, daemon: bool) -> int:
                 last_segment_at = now
                 if args.verbose and text:
                     print(f"  … {text}", file=sys.stderr)
+                if RECENT_SEGMENTS and text:
+                    recent.append({"at": int(now), "text": text[:200]})
+                    del recent[:-RECENT_SEGMENTS]
                 was_armed = turn.armed
                 done = turn.feed(text, now)
                 if not was_armed and not turn.armed:

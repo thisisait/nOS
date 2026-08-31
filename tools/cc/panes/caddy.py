@@ -7,9 +7,11 @@ is fixable in System Settings.
 """
 ID, LABEL, TITLE = "caddy", "Caddy", "the assistant, the ear, and what it heard"
 READER = "tools/caddy-status.py"
-# The transcript half moves in seconds, so this is the fastest reader pane in
-# the set. It is still a RE-RUN of the reader, never a tail.
-REFRESH = 20
+# The fastest reader pane in the set: the transcript half moves in SECONDS, and
+# a five-second-old answer to "did it hear me" is not an answer. Still a RE-RUN
+# of the reader on every tick, never a tail — the rule the whole control centre
+# is built on does not bend for latency.
+REFRESH = 5
 COLUMNS = ["state", "part", "detail"]
 DEMO = {
     "halves": {
@@ -58,6 +60,13 @@ def detail(row, data):
                       if part.endswith("-cloud")
                       else "arm ollama: ollama_enabled + ollama_model in config.yml, then --tags ears")
         return out
+    if part_state := row.get("state"):
+        if part_state in ("HEARD", "TURN"):
+            # The row truncates at 110 characters; Enter is where the rest of
+            # the sentence lives.
+            out["act"] = ("addressed — this became a turn" if part_state == "TURN"
+                          else "heard, not addressed to the caddy")
+            return out
     out["act"] = {
         "listener": {
             "OFF": "set ears_always_listen: true in config.yml, then --tags jeff",
