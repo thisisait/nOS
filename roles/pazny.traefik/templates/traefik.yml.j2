@@ -45,9 +45,10 @@ entryPoints:
         allowEncodedSlash: false
         allowEncodedBackSlash: false
         allowEncodedNullCharacter: false
-  # REM-194: a dedicated entry point that serves ONLY /ping (see `ping:` below).
-  # It carries no routers (every router binds `websecure`), so a peer container
-  # reaching :8080 gets the harmless 200 "OK" of /ping and a 404 on /api/*.
+  # REM-194: a dedicated entry point that carries no ROUTERS (every router binds
+  # `websecure`), so a peer container reaching :8080 gets a 404 on /api/*. It
+  # serves two built-ins: /ping (see `ping:` below) and, since 2026-08-31,
+  # /metrics (see `metrics:` — the exposure that gives is weighed there).
   # The compose host-port map (127.0.0.1:{{ traefik_dashboard_port }} → :8080)
   # and the container healthcheck both hit /ping here — unchanged.
   ping:
@@ -68,13 +69,58 @@ providers:
 
 log:
   level: "{{ traefik_log_level | default('INFO') }}"
-  filePath: "/var/log/traefik/traefik.log"
   format: "json"
 
+# NO `filePath` ON EITHER LOG — measured 2026-08-31, and this is the whole reason:
+# access.log had reached 5.2 GB / 4 157 848 lines across 38 days, unrotated and
+# unread. Traefik has no rotation of its own, the compose `logging: max-size 20m`
+# caps only the container's STDOUT (a bind-mounted file the log driver never
+# sees), and nothing tailed the file — not Alloy, not a Pulse job, nothing. It
+# was 5 GB of the estate's most complete request record that no reader could
+# reach: wired observability that was never observed.
+#
+# Writing to stdout instead hands both problems to machinery already standing:
+# the json-file driver rotates at 20m x 5 (100 MB ceiling, from ~140 MB/day of
+# growth), and Alloy's `discovery.docker` already tails every container in the
+# estate, so the lines land in Loki under the same retention as everything else.
 accessLog:
-  filePath: "/var/log/traefik/access.log"
   format: "json"
   bufferingSize: 100
+
+# ── Edge tracing (2026-08-31) ────────────────────────────────────────────────
+# Traefik fronts ~50 services and emitted no trace at all, so every one of them
+# was invisible to Tempo and to the agents that query it through grafana-mcp.
+#
+# Direct to Tempo's container, NOT to Alloy: REM-107 bound Alloy's OTLP receiver
+# to 127.0.0.1 on purpose, and Traefik is a container. Both sit on
+# `{{ stacks_shared_network | default('shared_net') }}`, so the collector hop is
+# one the estate does not need here. Alloy stays the pipeline for HOST emitters
+# (the three organs), which is where the loopback bind is the right answer.
+tracing:
+  # Measured 1.3 req/s at the edge, so full sampling costs Tempo ~110k spans/day
+  # against a 7-day block_retention. The knob is here for when a service starts
+  # polling; drop it before you widen retention.
+  sampleRate: {{ traefik_tracing_sample_rate | default(1.0) }}
+  otlp:
+    http:
+      endpoint: "http://observability-tempo-1:{{ tempo_otlp_http_port | default(4328) }}/v1/traces"
+
+# ── Edge metrics ─────────────────────────────────────────────────────────────
+# Per-service request rate, latency and status breakdown for every routed
+# service, which no other exporter in the estate produces.
+#
+# On the `ping` entry point, which means ~40 peer containers on the shared
+# fabric can read it anonymously — the same exposure REM-194 had to close for
+# the API. It is a deliberate and much narrower call: these series carry router
+# and service NAMES and request COUNTS, no tokens and no bodies, and the names
+# are already discoverable from Docker DNS by any peer that can reach this port.
+# If that stops being acceptable, the fix is a separate entry point published
+# only on the observability network, not an allow-list here.
+metrics:
+  prometheus:
+    entryPoint: ping
+    addRoutersLabels: true
+    addServicesLabels: true
 
 # Liveness endpoint for the docker healthcheck + host smoke probe. Pinned to the
 # dedicated loopback-published `ping` entry point (:8080) — NOT the built-in API

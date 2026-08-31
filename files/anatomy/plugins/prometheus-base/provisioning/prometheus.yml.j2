@@ -36,6 +36,20 @@ scrape_configs:
     static_configs:
       - targets: ['tempo:{{ tempo_http_port | default(3200) }}']
 
+  # The edge (2026-08-31). Traefik fronts ~50 services and exported nothing, so
+  # per-service request rate, latency and status breakdown had no source at all
+  # — the one exporter that covers every routed service at once.
+  #
+  # Container NAME, not a short service name: Traefik lives in the `infra`
+  # compose project, and only the four above share this one. Reached over
+  # `{{ stacks_shared_network | default('shared_net') }}`, on the `ping` entry
+  # point, which is where traefik.yml.j2 mounts /metrics. 8080 is literal on
+  # both sides — traefik.yml.j2 writes `ping: address: ":8080"` the same way;
+  # a var here would only be a second place for the two to disagree.
+  - job_name: traefik
+    static_configs:
+      - targets: ['infra-traefik-1:8080']
+
   # ── Host-side services (via Docker VM gateway) ────────────────────────────
   - job_name: grafana-alloy
     static_configs:
