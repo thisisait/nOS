@@ -823,7 +823,17 @@ def _diffs_for(loop, uuids: list[str]) -> dict[str, dict]:
 
     if not uuids:
         return {}
-    conn = sqlite3.connect(f"file:{loop.WING_DB}?mode=ro", uri=True)
+    # Through the shared opener (2026-08-31): wing.db is WAL and a bare
+    # `mode=ro` connect fails whenever no writer holds the `-shm` open, which
+    # is most of the time. This line died with an uncaught OperationalError on
+    # the first CRITICAL the loop ever proposed against.
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
+    import _ledger_open  # noqa: PLC0415 — same locality as the sqlite import
+    conn, _how = _ledger_open.open_ledger_ro(loop.WING_DB)
+    if conn is None:
+        raise SystemExit(f"loop-pr: the ledger is unreadable ({_how}) — "
+                         "refusing to report an empty diff set as if it were "
+                         "a proposal with nothing to land")
     try:
         marks = ",".join("?" * len(uuids))
         return {

@@ -78,6 +78,8 @@ import sys
 import uuid as _uuid
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "tools"))
+import _ledger_open  # noqa: E402 — after REPO is known
 
 #: Sources whose findings the budget gives the loop no way to FIX: a `fee:`
 #: closes only by writing docs/**, forbidden in every gate set (docs/idea/11-agentic-loop-contract.md §5.2). Handing
@@ -230,44 +232,32 @@ def _proposals_citing(weakness_id: str) -> list[dict]:
     Read-only, and read from the LEDGER: what the model says it did is a claim,
     a row is a fact (the module header's own rule).
     """
-    db = wing_db()
-    if not db.is_file():
-        raise Unreadable(f"no ledger at {db}")
-    # busy_timeout, because the ledger is BUSY exactly when this runs.
+    # THE SHARED OPENER, not a hand-rolled one (2026-08-31).
     #
-    # MEASURED 2026-08-31. The first model-authored proposal for a CRITICAL
-    # (rem:REM-212) was written at 08:58:33, its session ended at 08:58:45, and
-    # this runner reported "no proposal citing rem:REM-212 appeared in the
-    # ledger — the run bought nothing". The row was there the whole time. Bone
-    # sealed a verdict at 08:58:44, one second before the read, and SQLite
-    # answered `database is locked` — which the handler below turned into `[]`,
-    # a value that also means "no proposals". The comment claimed to
-    # distinguish absence from zero; the RETURN TYPE could not.
+    # This function used to call `sqlite3.connect(mode=ro)` itself and swallow
+    # OperationalError into `[]`. `tools/_ledger_open.py` has existed since
+    # 2026-08-20 for precisely this: wing.db is WAL, a `mode=ro` connection may
+    # not create the `-shm` a WAL reader needs, and Wing does not hold the
+    # database open between requests — so every quiet minute makes every
+    # hand-rolled read-only open fail. Its docstring says it plainly: "not
+    # intermittent; conditional, on a condition nobody controls."
     #
-    # So: wait for the writer (the ledger's own default elsewhere is 60s), and
-    # when the read genuinely cannot happen, say UNREADABLE rather than
-    # returning a shape that reads as an answer.
+    # Measured that morning, this was not theory: the readback reported "the
+    # run bought nothing" for a proposal that was on record, and `loop-pr.py`
+    # (which also hand-rolls it) still dies on the same line with a traceback.
+    conn, how = _ledger_open.open_ledger_ro(wing_db())
+    if conn is None:
+        raise Unreadable(how)
     try:
-        # connect() raises too, and separately: an unopenable file failed
-        # OUTSIDE the try that was meant to catch it, so the wrapper leaked a
-        # raw OperationalError to the caller. Both halves of the read are the
-        # read.
-        conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=60.0)
-    except sqlite3.OperationalError as exc:
-        raise Unreadable(f"the ledger could not be read: {exc}") from exc
-    try:
-        conn.row_factory = sqlite3.Row
         return [dict(r) for r in conn.execute(
             "SELECT id, uuid, session_uuid FROM loop_proposals "
             "WHERE weakness_id = ? ORDER BY id", (weakness_id,))]
     except sqlite3.OperationalError as exc:
-        # A LEDGER THAT DOES NOT EXIST YET HOLDS NO PROPOSALS, and that is a
-        # fact rather than a failure — a fresh estate has no loop_* tables
-        # until Bone creates them, and `test_a_run_that_proposed_nothing_is_
-        # not_success` pins exactly that. Anything ELSE (a missing column, a
-        # damaged file) is schema drift or damage: the table is there and the
-        # question still cannot be answered, which is the case that must never
-        # come back as an empty list.
+        # A LEDGER THAT DOES NOT EXIST YET HOLDS NO PROPOSALS — a fresh estate
+        # has no loop_* tables until Bone creates them, pinned by
+        # test_a_run_that_proposed_nothing_is_not_success. Anything else (a
+        # missing column, a damaged file) is drift the caller must not read as
+        # emptiness.
         if "no such table" in str(exc):
             return []
         raise Unreadable(f"the ledger could not be read: {exc}") from exc

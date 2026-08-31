@@ -111,8 +111,11 @@ def test_an_unopenable_ledger_raises_rather_than_answering(tmp_path, monkeypatch
             m._proposals_citing("rem:R-1")
     finally:
         db.chmod(0o644)
-    assert "could not be read" in str(exc.value), (
-        "the refusal does not carry sqlite's own message, so the next reader "
+    # The message now comes from tools/_ledger_open.py, which says WHY in its
+    # own words ("unreadable: ...", or that it refused a snapshot over a live
+    # WAL). What matters is that a reason travels with the refusal.
+    assert "unreadable" in str(exc.value).lower() or "could not be read" in str(exc.value), (
+        f"the refusal carries no reason ({exc.value!r}), so the next reader "
         "learns no more than this one did")
 
 
