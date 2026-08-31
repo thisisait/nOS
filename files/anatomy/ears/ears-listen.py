@@ -453,14 +453,22 @@ def _run_loop(args, daemon: bool) -> int:
                 if quiet_chunks < quiet_needed:
                     speech += chunk
                     continue
+                speech_at_cut = speech
                 text = _transcribe_pcm(model, speech)
                 speech, quiet_chunks = b"", 0
                 segments += 1
                 last_segment_at = now
                 if args.verbose and text:
                     print(f"  … {text}", file=sys.stderr)
-                if RECENT_SEGMENTS and text:
-                    recent.append({"at": int(now), "text": text[:200]})
+                if RECENT_SEGMENTS:
+                    # AN EMPTY TRANSCRIPTION IS INFORMATION, and dropping it
+                    # emptied the window exactly when the operator most needed
+                    # it: `segments: 1, recent: []` says the ear triggered and
+                    # the model returned nothing, which is a different problem
+                    # from not triggering. The DURATION comes along so a 0.2 s
+                    # blip is not mistaken for a sentence.
+                    recent.append({"at": int(now), "text": text,
+                                   "secs": round(len(speech_at_cut) / (RATE * 2), 1)})
                     del recent[:-RECENT_SEGMENTS]
                 was_armed = turn.armed
                 done = turn.feed(text, now)

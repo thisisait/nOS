@@ -371,8 +371,15 @@ def build_rows(data: dict) -> list[dict]:
     # is always the last thing said.
     for seg in reversed(ear.get("recent") or []):
         when = time.strftime("%H:%M:%S", time.localtime(seg.get("at", 0)))
-        rows.append({"state": "HEARD", "part": when,
-                     "detail": (seg.get("text") or "")[:110]})
+        text = (seg.get("text") or "").strip()
+        secs = seg.get("secs")
+        rows.append({
+            "state": "HEARD", "part": when,
+            # A segment the model returned nothing for says so — silence in
+            # this column would read as "not heard", which is a different fact.
+            "detail": (text[:110] if text
+                       else f"(transcribed to nothing — {secs}s of sound)"),
+        })
 
     # Worst first, and HEARD last in arrival order — a transcript is not a
     # verdict, so it must never sort above one.
