@@ -7,8 +7,10 @@
 # plugin lifecycle render_dir (provisioning.blueprints) renders EVERY .j2 in this
 # dir UNCONDITIONALLY, so this file always lands at
 # <stacks_dir>/infra/authentik/blueprints/50-mfa-policy.yaml and is auto-discovered
-# by Authentik's blueprint engine. With the flag off it renders to `entries:` with
-# NO list -> the blueprint applies zero objects (harmless no-op). DO NOT remove the
+# by Authentik's blueprint engine. With the flag off it renders `entries: []`
+# -> the blueprint IMPORTS and applies zero objects. (It used to render a bare
+# `entries:`; see the `{% raw %}{% else %}{% endraw %}` branch at the foot for why that was a failed
+# import rather than the no-op this line used to claim.) DO NOT remove the
 # Jinja if/endif wrap believing the render is gated elsewhere — it is NOT. Removing
 # it would enforce MFA on every non-gov install.
 # (NB: this header avoids literal Jinja brace-tags — Jinja parses them even inside
@@ -55,8 +57,8 @@ metadata:
     managed-by: nos
     blueprint-version: "1"
 
-entries:
 {% if enforce_mfa | default(false) | bool %}
+entries:
   # ── 1. TOTP setup stage (inline-configure target + self-enrol path) ───────
   - model: authentik_stages_authenticator_totp.authenticatortotpstage
     state: present
@@ -207,4 +209,14 @@ entries:
   # — does NOT depend on the policy binding, so we keep the policy OBJECT (for a
   # manual/UI bind or a future validation_policies M2M wire) and drop the brittle
   # blueprint bindings rather than let one bad target tank all 9 entries.
+{% else %}
+# `[]`, NOT a bare `entries:` — measured 2026-08-31. With the flag off this used
+# to render `entries:` followed by nothing, which YAML-loads as None and makes
+# authentik's `Importer.from_string` raise EntryInvalidError. The instance then
+# sat at status='error' indefinitely for a feature that is deliberately OFF: a
+# standing red on a healthy estate, which is the thing that teaches an operator
+# to stop reading a status column. The header above called it a "harmless
+# no-op"; measured, it was a failed import that applied nothing and said so
+# nowhere anyone looked.
+entries: []
 {% endif %}

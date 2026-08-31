@@ -23,6 +23,17 @@ metadata:
     managed-by: nos
     blueprint-version: "1"
 
+# The `if`/`else`: with the loop source empty, a bare `entries:` renders as a
+# key with no list, which authentik's `Importer.from_string` rejects with
+# EntryInvalidError rather than treating as empty — the instance then sits
+# at status='error' forever. Measured on 50-mfa-policy 2026-08-31; see that
+# file's else-branch for the account. `entries: []` imports and applies
+# nothing, which is what an empty source is supposed to mean.
+# Guarded on BOTH sources, not just the clients: the scope mappings below come
+# from `authentik_agent_scopes` and are entries in their own right, so keying
+# the whole block on the client list alone would drop them whenever an estate
+# declares scopes and no agents.
+{% if (authentik_agent_clients | default([])) or (authentik_agent_scopes | default([])) %}
 entries:
   # ── Scope mappings ────────────────────────────────────────────────────
   # One per scope in authentik_agent_scopes. Authentik's client_credentials
@@ -103,3 +114,6 @@ entries:
       policy_engine_mode: "any"
       open_in_new_tab: false
 {% endfor %}
+{% else %}
+entries: []
+{% endif %}

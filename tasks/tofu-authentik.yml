@@ -76,6 +76,62 @@
       vars:
         tofu_authentik_services: "{{ (lookup('template', playbook_dir + '/state/tofu-authentik-services.yml') | from_yaml).tofu_authentik_services }}"
 
+    # ── WORKTREE GUARD (2026-08-31) ─────────────────────────────────────────
+    # The tofu state is gitignored, so it exists ONLY in the checkout that
+    # created it. A linked git worktree therefore starts with no state at all,
+    # and `tofu plan` in a stateless dir does not read that as "someone else
+    # owns this" — it reads it as "nothing exists yet" and plans to CREATE the
+    # entire Authentik surface.
+    #
+    # Measured 2026-08-31, running `--tags anatomy,authentik` from a worktree:
+    # the self-reconcile printed "no state yet — nothing to reconcile" (it has
+    # nothing to reconcile AGAINST) and every guard below passed, because a plan
+    # of 40 creates and zero destroys is exactly what a blank looks like. The
+    # apply then failed 40 times with `400 provider with this name already
+    # exists`. It was survivable only because Authentik's uniqueness constraints
+    # happened to refuse first — the estate's integrity was upstream's doing,
+    # not ours, and a resource type without such a constraint would have been
+    # duplicated silently.
+    #
+    # The blank case is not an exception to fix around: a blank is run from the
+    # main checkout, which is where the state belongs. A worktree has no
+    # business owning the live SSO surface at all, so this refuses before init
+    # rather than trying to teach the guards below to tell the two apart.
+    - name: "[tofu-authentik] Detect a linked git worktree"
+      ansible.builtin.command: "git rev-parse --git-dir --git-common-dir"
+      args:
+        chdir: "{{ playbook_dir }}"
+      register: _tofu_git_dirs
+      changed_when: false
+      failed_when: false
+
+    - name: "[tofu-authentik] Refuse to own Authentik state from a worktree"
+      ansible.builtin.fail:
+        msg: >-
+          REFUSED: {{ playbook_dir }} is a linked git worktree, and the tofu
+          state is gitignored — this checkout has none, so `tofu apply` would
+          try to CREATE every Authentik provider and application that already
+          exists live (measured: 53 of each on 2026-08-31, all of which failed
+          with `400 already exists`). Run the authentik/anatomy tags from the
+          main checkout, or pass
+          `-e authentik_engine=blueprint` to skip the tofu path entirely.
+      when:
+        # Only when tofu is the AUTHORITY. Under engine=blueprint this file
+        # still runs, but plan-only — a stateless full-create plan that is
+        # never applied is noise, not damage, and refusing it would leave a
+        # worktree unable to render blueprints at all. Measured the hard way:
+        # the first cut of this guard blocked its own documented escape hatch.
+        - (authentik_engine | default('blueprint')) == 'tofu'
+        - _tofu_git_dirs.rc | default(1) == 0
+        - (_tofu_git_dirs.stdout_lines | default([])) | length == 2
+        # Plain comparison, NOT `| realpath`: that filter resolves against the
+        # CONTROLLER's cwd, and in the main checkout git answers the relative
+        # `.git` for both — which realpath would happily resolve to two equal
+        # but unrelated paths if the controller sat elsewhere. git already
+        # answers absolutely whenever the two differ, which is the only case
+        # this needs to detect.
+        - _tofu_git_dirs.stdout_lines[0] != _tofu_git_dirs.stdout_lines[1]
+
     - name: "[tofu-authentik] tofu init"
       ansible.builtin.command: "tofu init -input=false -no-color"
       args:
