@@ -44,6 +44,7 @@ HOST_DAEMONS = {
     "pazny.bone": (("sync bone source",), "bone"),
     "pazny.hermes": (("install hermes-agent",), "hermes"),
     "pazny.cortex": (("build dist-server",), "cortex"),
+    "pazny.ears": (("sync listener source",), "ears"),
 }
 
 # Roles that bootstrap something into launchd but are NOT a long-lived process

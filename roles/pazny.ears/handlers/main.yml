@@ -1,0 +1,18 @@
+---
+# A synced source file is code the running daemon is still holding in memory.
+# Without this handler a changed ears-listen.py would reach the ear at the next
+# reboot and not before — the shape test_host_daemon_source_restarts.py exists
+# to refuse, and the reason pazny.ears is in its HOST_DAEMONS map.
+- name: Restart ears-listen
+  ansible.builtin.shell: |
+    UID_NUM=$(id -u)
+    LABEL={{ ears_launchd_label }}
+    if launchctl print "gui/${UID_NUM}/${LABEL}" >/dev/null 2>&1; then
+      launchctl kickstart -k "gui/${UID_NUM}/${LABEL}"
+      echo restarted
+    else
+      echo not-loaded
+    fi
+  register: _ears_restart
+  changed_when: "'restarted' in _ears_restart.stdout"
+  when: (nos_service_manager | default('launchd')) == 'launchd'

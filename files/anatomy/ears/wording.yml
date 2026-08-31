@@ -1,0 +1,110 @@
+# =============================================================================
+# files/anatomy/ears/wording.yml — how a cortex-lang chain is READ ALOUD.
+#
+# THE PROBLEM THIS SOLVES. `@input | map(tax:02.02) | rank()` spoken as
+# characters is noise, and noise that sounds like an answer is worse than
+# silence: the operator is being asked to approve an action from what they
+# HEAR. So a chain is not read — it is VERBALISED, from this table, into a
+# sentence a person can judge.
+#
+# IT ADDS NO CAPABILITY, AND THAT IS WHY IT MAY BE DATA. cortex-lang's standing
+# rule is that a capability may never be added by data. Wording is the safe
+# side of that line: an opcode with no entry here cannot be SPOKEN, it can
+# still be validated, gated and executed exactly as before. Nothing here
+# decides what may run.
+#
+# IT FAILS CLOSED. An opcode or namespace missing from this file makes the
+# verbaliser REFUSE the whole chain — it never falls back to reading the raw
+# syntax, because a chain half-read as English and half as punctuation is the
+# most confident-sounding wrong thing this feature could produce. The gate
+# tests/anatomy/test_the_ears_are_wired.py holds every opcode in
+# files/anatomy/cortex/server/cortex-opcodes.ts to an entry in EVERY declared
+# language, so adding an opcode without teaching this file how to say it goes
+# red before it can be heard.
+#
+# `{operand}` is the resolved namespace phrase; `{id}` is the identifier, which
+# the verbaliser spells out digit by digit (see `digits`) because "02.02" is
+# read by a speech synthesiser as a number and heard by a person as a guess.
+# =============================================================================
+
+version: 1
+languages: [cs, en]
+
+# Spoken before the chain, so the operator always knows this is a PROPOSAL.
+prefix:
+  cs: "Návrh: "
+  en: "Proposal: "
+join:
+  cs: ", pak "
+  en: ", then "
+# Read at the very end of a chain that would change something. Deliberately
+# blunt in both languages: this is the sentence that must not be missable.
+mutating_suffix:
+  cs: ". Tohle něco změní."
+  en: ". This changes something."
+# Heard when the typechecker REFUSED the chain. Without it, a rejected proposal
+# and an answer that proposed nothing sound identical.
+rejected:
+  cs: "Návrh neprošel kontrolou, takže ho nepřečtu."
+  en: "The proposal failed its check, so I will not read it."
+# Heard when the checker could not be reached. UNKNOWN is not VALID.
+unchecked:
+  cs: "Návrh jsem nemohl zkontrolovat."
+  en: "I could not check the proposal."
+# Heard FIRST when the turn was served off this machine.
+off_machine:
+  cs: "Mimo tenhle stroj:"
+  en: "Off this machine:"
+refusal:
+  cs: "Tenhle řetězec neumím nahlas přečíst, mám ho jen na obrazovce."
+  en: "I cannot read this chain aloud; it is on the screen only."
+
+opcodes:
+  get:      {cs: "přečte {operand}",              en: "read {operand}"}
+  map:      {cs: "namapuje to na {operand}",      en: "map it onto {operand}"}
+  filter:   {cs: "vyfiltruje to podle {operand}", en: "filter it by {operand}"}
+  rank:     {cs: "seřadí výsledek",               en: "rank the result"}
+  classify: {cs: "zařadí to do taxonomie",        en: "classify it against the taxonomy"}
+  resolve:  {cs: "dohledá {operand}",             en: "resolve {operand}"}
+  embed:    {cs: "spočítá embedding",             en: "compute an embedding"}
+  link:     {cs: "propojí to s {operand}",        en: "link it to {operand}"}
+  insert:   {cs: "založí nový záznam v {operand}", en: "create a new record in {operand}"}
+  update:   {cs: "upraví {operand}",              en: "update {operand}"}
+  delete:   {cs: "SMAŽE {operand}",               en: "DELETE {operand}"}
+  preserve: {cs: "archivuje {operand}",           en: "preserve {operand}"}
+  route:    {cs: "pošle to na {operand}",         en: "route it to {operand}"}
+  review:   {cs: "pošle {operand} k revizi",      en: "send {operand} for review"}
+  delegate: {cs: "předá to agentovi {id}",        en: "hand it to the agent {id}"}
+
+namespaces:
+  tax:   {cs: "uzel taxonomie {id}",     en: "taxonomy node {id}"}
+  rel:   {cs: "vztah {id}",              en: "relation {id}"}
+  kg:    {cs: "objekt znalostního grafu {id}", en: "knowledge-graph object {id}"}
+  ent:   {cs: "entitu {id}",             en: "entity {id}"}
+  db:    {cs: "databázi {id}",           en: "the database {id}"}
+  svc:   {cs: "službu {id}",             en: "the service {id}"}
+  doc:   {cs: "dokument {id}",           en: "document {id}"}
+  agent: {cs: "agenta {id}",             en: "agent {id}"}
+
+params:
+  commit: {cs: " a opravdu to uloží",  en: " and really save it"}
+  via:    {cs: " přes model {value}",  en: " using the model {value}"}
+  limit:  {cs: " nejvýš {value}",      en: " at most {value}"}
+
+# Identifiers are SPELLED, not pronounced as numbers. `tax:02.02` said as "two
+# point zero two" is a different node from the one on the screen, and the
+# operator is approving by ear.
+digits:
+  cs: {"0": "nula", "1": "jedna", "2": "dva", "3": "tři", "4": "čtyři",
+       "5": "pět", "6": "šest", "7": "sedm", "8": "osm", "9": "devět",
+       ".": "tečka", "-": "pomlčka", "_": "podtržítko"}
+  en: {"0": "zero", "1": "one", "2": "two", "3": "three", "4": "four",
+       "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine",
+       ".": "point", "-": "dash", "_": "underscore"}
+
+# macOS `say` voices. Zero dependencies and both languages are already on this
+# host (Zuzana is cs_CZ). The seam for a cloned voice later is exactly here:
+# one name per language, read by files/anatomy/ears/speech.py.
+voices:
+  cs: "Zuzana"
+  en: "Samantha"

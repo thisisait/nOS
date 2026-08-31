@@ -1,0 +1,116 @@
+name: jeff
+version: 1
+description: >-
+  The operator's assistant at master-session level: the agent a spoken or typed
+  sentence reaches first. It reads the estate, asks when it is unsure, and
+  proposes work as a cortex-lang chain that deterministic code validates and
+  gates. This is the LOCAL half — nothing it is told leaves the machine — and
+  it is a separate agent from `jeff-cloud` rather than a mode flag, because
+  where the sentence goes is an Article-30 fact and not a setting.
+
+model:
+  # sonnet tier -> NOS_LOCAL_MODEL -> ollama_model in config.yml. Measured
+  # 2026-08-30: qwen3:14b emits 4/6 valid chains with NO syntax errors left
+  # (its two misses are about the world), while 32B starved the validator it
+  # is judged by. So the tier pin is "the largest model that leaves the estate
+  # answering", and today that is 14B.
+  primary: openai-local-sonnet
+  backend: ollama
+  max_output_tokens: 2048
+
+system_prompt_path: system.md
+
+# READ-ONLY TOOLS, DELIBERATELY, and this is the design rather than caution.
+# `mcp-keap` would give Jeff a raw DataTable write (its scopes are keap.read +
+# keap.write), which is a SECOND write path that never meets CortexBindingGate.
+# Every change Jeff wants goes out as a cortex-lang chain: validated by code,
+# authorised by the executor's scoped token, previewed in plain language, then
+# rated. One write path or the gate is decoration.
+tools:
+  - id: mcp-wing-read
+  - id: ask-operator
+
+audit:
+  capability_scopes:
+    - mcp.tool_use
+    - wing.read
+    - inbox.ask
+  pii_classification: low
+
+vault:
+  required_credentials:
+    # The local backend resolves an empty token by design (BindingResolver
+    # gate 7) — there is nobody to show a key to.
+    - scope: ollama-local
+      optional: true
+
+metadata:
+  ait_phase: voice
+  ceremony_role: operator-assistant
+  # PREPARED, NOT ARMED, and both halves are true today: `ollama_enabled` is
+  # false and `ollama_model` is empty in default.config.yml, so a session would
+  # refuse at resolution rather than send a blank model id. Arming is the
+  # operator's three edits, not this file's claim.
+  runner_status: unproven
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: "The turn completed. A proposed chain that the validator rejected is still exit 0 — the refusal is the answer, and the harness records it."
+  exit_1: "Does not emit exit 1. Jeff answers or asks; a bad answer is data for the rating column, not a process failure."
+  exit_2: "Binding, auth or runner error — nothing was answered."
+
+gdpr:
+  purpose: >-
+    Assisting the operator with the estate: reading Wing state, answering
+    questions, and proposing work as typed chains. Estate operation under
+    legitimate interest, Art. 6(1)(f). Inputs are whatever the operator says or
+    types, which is why the local twin exists at all.
+  legal_basis: legitimate_interests
+  data_categories:
+    - operator_authored_prompts
+    - estate_health_telemetry
+    # Named ahead of the listener, because the day dictation lands this
+    # category is already true and a record written afterwards is a record
+    # written too late.
+    - operator_speech_transcripts
+  data_subjects:
+    - operators
+  # 90 days, the operator's horizon (2026-08-31), and it is the SAME number
+  # as jeff_retention_days in roles/pazny.ears/defaults — a horizon declared
+  # in the register and enforced nowhere is the shape this estate already
+  # paid for. The listener prunes; tools/caddy-status.py reports the age of
+  # the oldest surviving transcript, so a sweep that stops firing is visible.
+  retention_days: 90
+  processors:
+    - name: on-device (operator's own hardware)
+      role: >-
+        LLM inference on this host via ollama's OpenAI-compatible surface on
+        loopback. No third party sees the prompt, so there is no processor in
+        the Article-28 sense; this entry says so rather than leaving the field
+        blank.
+      country: "CZ — this host"
+      safeguard: >-
+        Not applicable. No transfer occurs, which is stronger than any
+        safeguard could describe.
+  eu_residency: true
+  # BindingResolver gate 8 turns this line into a mechanism: with it false this
+  # agent CANNOT be pointed at a hosted backend however anyone configures it,
+  # and cannot silently degrade to the default when ollama is disarmed. That is
+  # the whole reason `jeff-cloud` is a second directory.
+  transfers_outside_eu: false
+  notes: |
+    A spoken turn is dictation, and dictation catches whoever else is in the
+    room. Third parties have not consented, which is why the always-listen row
+    (local-llm-voice-always) records "transcript yes, waveform no" as a
+    condition rather than a preference, and why this record names speech
+    transcripts before the microphone exists.
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox]
+  on_medium:   []
+  on_low:      []
+  on_info:     []
+
+capabilities:
+  - nos:state:read

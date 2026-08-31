@@ -1,0 +1,80 @@
+# =============================================================================
+# state/fixtures/caddy.seed.yml — the committed default rows of the `caddy`
+# settings DataTable, seeded by roles/pazny.keap/tasks/seed-caddy-tables.yml.
+#
+# Same doctrine as loop-config.seed.yml: the repo fixture is the source of
+# truth for the DEFAULT, and a row the operator has changed in KEAP is a
+# decision the seeder must not overwrite — the seeder upserts rows by slug only
+# when the slug is ABSENT, so a re-converge never reverts a preference.
+#
+# EVERY ROW NAMES ITS READER. A config row whose reader nobody can point at is
+# how a toggle ends up half-armed, and this estate has paid for that shape more
+# than once. Where the reader is not built yet, the row says so in `read_by`
+# rather than pretending — `tools/caddy-status.py` renders exactly this column.
+#
+# WHAT MAY NOT LIVE HERE: anything that would widen a permission. `mode` picks
+# WHICH HALF of the caddy serves a turn; it cannot re-point one
+# agent at another backend, because the binding is declared in agent.yml and
+# BindingResolver gate 8 refuses to route an agent declaring
+# transfers_outside_eu: false to a hosted backend at all. Data may narrow a
+# permission; data may never widen one.
+# =============================================================================
+
+caddy:
+  - slug: "agent"
+    name: "Caddy agent"
+    description: >-
+      WHICH AGENT IS THE CADDY. `jeff` is this operator's; another tenant names
+      theirs whatever they like, in this one row, and nothing in the organ
+      changes — that is the whole reason the organ is called `ears` and not
+      after a person. The cloud twin is DERIVED (`<agent>-cloud`), never
+      declared separately: two rows that must agree are two rows that will not.
+    value: "jeff"
+    read_by: "files/anatomy/ears/caddy.py"
+
+  - slug: "mode"
+    name: "Default mode"
+    description: >-
+      Which half answers when the operator does not say otherwise. `local`
+      keeps the sentence on this machine (the `agent` row's agent, ollama);
+      `cloud` sends it to its hosted twin (`<agent>-cloud`, minimax) under a different
+      Article-30 record.
+    value: "local"
+    read_by: "tools/caddy-status.py · the launcher, when it exists"
+
+  - slug: "wake_phrase"
+    name: "Wake phrase"
+    description: >-
+      Spoken phrase that opens a turn. Matched in the TEXT parakeet wrote, not
+      by a wake-word model — so changing it here is a string edit and not a
+      training run. COMMA-SEPARATED VARIANTS because Czech transcription of an
+      English name is not stable; one spelling would make the feature fail
+      silently and look like a hearing problem.
+    value: "hej jeffe, hej jefe, hej dzefe"
+    read_by: "files/anatomy/ears/ears-listen.py (via EARS_WAKE_PHRASE)"
+
+  - slug: "submit_phrase"
+    name: "Submit phrase"
+    description: >-
+      Spoken phrase that closes a turn and submits what came before it.
+    value: "makej jeffe"
+    read_by: "files/anatomy/ears/ears-listen.py (via EARS_SUBMIT_PHRASE)"
+
+  - slug: "silence_seconds"
+    name: "Silence submit"
+    description: >-
+      Seconds of silence that also close a turn. The second submit trigger, and
+      the one that is a timer — which is why the listener prints the countdown:
+      a turn that submitted and a turn that was never heard look identical
+      otherwise.
+    value: "7"
+    read_by: "files/anatomy/ears/ears-listen.py (via EARS_SILENCE_SECONDS)"
+
+  - slug: "asr_model"
+    name: "ASR model"
+    description: >-
+      The ear. parakeet-tdt-0.6b-v3 hears 25 European languages including
+      Czech; Apple's SpeechTranscriber lists 42 locales and cs_CZ is not one of
+      them, which is why this is not the Apple stack.
+    value: "mlx-community/parakeet-tdt-0.6b-v3"
+    read_by: "files/anatomy/ears/ears-listen.py (via EARS_ASR_MODEL)"

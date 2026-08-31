@@ -1,0 +1,61 @@
+# =============================================================================
+# KEAP DataTable definition — "Caddy sessions"
+#
+# One row per turn the caddy runs for the operator. This is the SESSION ledger,
+# not the turn log: what was asked of the caddy, which half served it (local or
+# cloud), which model, how it ended, and the AgentKit session uuid that joins
+# it to everything wing.db already records.
+#
+# WHY THE JOIN COLUMN IS THE POINT. AgentKit already writes agent_sessions,
+# agent_threads and agent_iterations, with actor_action_id == session uuid, so
+# a single SELECT reconstructs a run. This table must NOT restate any of that —
+# the estate has paid for a second copy of a truth before (wing.db carried
+# 921 MB of a payload no organ read). It holds the operator-facing facts a
+# DataTable is good at — ordering, history, a rendered surface in face — and
+# `session_uuid` is how anything that needs the depth goes and gets it.
+#
+# ONE ROW PER TURN, and the question of where turns live is SETTLED here by
+# the smallest thing that works: a caddy session today IS one turn — one
+# sentence in, one answer out — so a second table would have been two rows
+# saying the same thing. If a turn ever becomes a conversation, the split
+# happens then, with a measurement, not now on a guess.
+# =============================================================================
+
+title: "Caddy sessions"
+description: >-
+  What the operator asked the caddy, which half answered, and how it ended. The
+  depth lives in wing.db under session_uuid; this is the surface that can be
+  ordered, filtered and rendered.
+driver: libsql
+visibility: tier-admins
+anchors: ["nos.agents"]
+
+schema:
+  columns:
+    - { key: slug,        label: "Session",   kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: started,     label: "Started",   kind: date,   role: dimension, concept: time.occurred_at }
+    # local | cloud — which agent served the turn, and therefore whether the
+    # sentence left the machine. This is why the column exists: "what did I
+    # send abroad" must be answerable rather than remembered.
+    - { key: mode,        label: "Mode",      kind: select, role: dimension, options: [local, cloud], concept: class.kind }
+    # The model URI actually bound, recorded because the sentence is the
+    # constant and the BINDING is the variable (cortex-lang contract v2) — a
+    # run that does not record which model served it is comparable to nothing.
+    # No concept: the vocabulary has no word for a model identifier.
+    - { key: model,       label: "Model",     kind: text,   role: attribute }
+    - { key: status,      label: "Status",    kind: select, role: dimension, options: [running, answered, asked, refused, failed], concept: lifecycle.status }
+    - { key: summary,     label: "Summary",   kind: text,   role: attribute, concept: identity.description }
+    # The join into wing.db. Not a copy of the lineage — a pointer at it.
+    - { key: session_uuid, label: "AgentKit session", kind: text, role: attribute, concept: prov.ref }
+    # What was said, and what was proposed back. Both are the training pair:
+    # a transcript without its chain teaches nothing, and a chain without the
+    # sentence that asked for it cannot be judged.
+    - { key: transcript,   label: "What was said",  kind: text, role: attribute }
+    - { key: chain,        label: "Proposed chain", kind: text, role: attribute }
+    # THE TWO RATINGS, and they are two columns because they are two questions:
+    # did the proposal make sense (asked before anything ran), and was the
+    # action right (asked after). One column meaning both corrupts the set —
+    # they disagree exactly where the grammar is fine and the world model is
+    # wrong. Written by the operator and by nobody else.
+    - { key: rating_before, label: "Sense (-1..3)",   kind: number, role: measure }
+    - { key: rating_after,  label: "Outcome (-1..3)", kind: number, role: measure }

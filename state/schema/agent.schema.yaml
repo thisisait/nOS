@@ -148,6 +148,12 @@ properties:
             - mcp-pulse
             - mcp-keap              # KEAP cortex /agent/v1 (read + captures-only write)
             - mcp-loop              # nos-loop: weaknesses/budget/propose/history — never judge
+            # Implemented and DI-registered since the inbox work
+            # (common.neon:192, AskOperatorTool::id() = 'ask-operator') and
+            # missing from this enum, so no agent could declare the human
+            # channel the estate built four gates for. Added 2026-08-31 with
+            # `jeff`, the first agent to hold it.
+            - ask-operator          # scope inbox.ask — asks, then blocks on the answer
         config:
           type: object
           description: "Tool-specific config; opaque to the schema."

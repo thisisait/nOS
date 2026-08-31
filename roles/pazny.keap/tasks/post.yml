@@ -164,3 +164,13 @@
   when:
     - install_keap | default(false) | bool
     - keap_seed_business_fixture | default(false) | bool
+
+# ── Caddy settings + session tables ─────────────────────────────────────────
+# Two tables for the caddy: the committed settings fixture, and
+# an EMPTY session ledger that must exist before the first turn. Gated on
+# install_ears — a converge without the assistant does not grow its furniture.
+- name: "[pazny.keap] Seed the caddy DataTables (settings + sessions)"
+  ansible.builtin.include_tasks: seed-caddy-tables.yml
+  when:
+    - install_keap | default(false) | bool
+    - install_ears | default(false) | bool

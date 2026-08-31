@@ -20,10 +20,10 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 93 (77 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (87)
-- **Transfers outside the EU:** 10 activities
-- **Activities engaging a third-party processor:** 12
+- **Processing activities:** 95 (77 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (89)
+- **Transfers outside the EU:** 11 activities
+- **Activities engaging a third-party processor:** 14
 
 ## Transfers & processors (audit-sensitive subset)
 
@@ -31,6 +31,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 |---|---|---|
 | conductor (`agent_conductor`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
 | curator (`agent_curator`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
+| jeff (`agent_jeff`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. No third party sees the prompt, so there is no processor in the Article-28 sense; this entry says so rather than leaving the field blank. · safeguard: Not applicable. No transfer occurs, which is stronger than any safeguard could describe. |
+| jeff-cloud (`agent_jeff-cloud`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this agent. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support. |
 | librarian (`agent_librarian`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer. |
 | migration-author (`agent_migration-author`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
 | ops-extract (`agent_ops-extract`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. There is no third party: the prompt does not leave the machine, so there is no processor in the Article-28 sense and this entry exists to say so rather than leave the field blank. · safeguard: Not applicable. No transfer occurs, which is a stronger position than any safeguard could describe. |
@@ -1032,6 +1034,28 @@ transferred.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### jeff — `agent_jeff`
+- **Purpose:** Assisting the operator with the estate: reading Wing state, answering questions, and proposing work as typed chains. Estate operation under legitimate interest, Art. 6(1)(f). Inputs are whatever the operator says or types, which is why the local twin exists at all.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `operator_authored_prompts`; `estate_health_telemetry`; `operator_speech_transcripts`
+- **Recipients / processors:** **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. No third party sees the prompt, so there is no processor in the Article-28 sense; this entry says so rather than leaving the field blank. · safeguard: Not applicable. No transfer occurs, which is stronger than any safeguard could describe.
+- **Transfers outside EU:** No
+- **Retention:** 90 days
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### jeff-cloud — `agent_jeff-cloud`
+- **Purpose:** Assisting the operator with the estate when the local model is not enough: reading Wing state, answering questions, proposing typed chains. Estate operation under legitimate interest, Art. 6(1)(f).
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `operator_authored_prompts`; `estate_health_telemetry`; `operator_speech_transcripts`
+- **Recipients / processors:** **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this agent. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.
+- **Transfers outside EU:** **Yes**
+- **Retention:** 90 days
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 

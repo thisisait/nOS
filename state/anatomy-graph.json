@@ -4,23 +4,23 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 243,
-    "edges": 274,
+    "nodes": 249,
+    "edges": 280,
     "nodes_pulse": 30,
     "nodes_judge": 5,
     "nodes_gateset": 4,
     "nodes_weakness": 7,
-    "nodes_daemon": 12,
+    "nodes_daemon": 13,
     "nodes_service": 64,
-    "nodes_resource": 15,
+    "nodes_resource": 16,
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 55,
-    "nodes_table": 16,
+    "nodes_table": 18,
     "nodes_doctrine": 13,
     "nodes_faceapp": 5,
-    "nodes_agent": 12,
-    "edges_data": 191,
+    "nodes_agent": 14,
+    "edges_data": 197,
     "edges_trigger": 37,
     "edges_temporal": 5,
     "edges_mutex": 21,
@@ -88,6 +88,36 @@
       ],
       "anchor": "02.02.09",
       "description": "Agent ceremony 'inspektor' (pentest-survey), mode=None, runner_status=deferred — primary claude-sonnet on backend anthropic (the register default, undeclared)"
+    },
+    "agent:jeff": {
+      "kind": "agent",
+      "source": "files/anatomy/agents/jeff/agent.yml",
+      "charter": "operator-assistant",
+      "runner_status": "unproven",
+      "primary_model": "openai-local-sonnet",
+      "backend": "ollama",
+      "backend_declared": true,
+      "tools": [
+        "ask-operator",
+        "mcp-wing-read"
+      ],
+      "anchor": "02.02.09",
+      "description": "Agent ceremony 'jeff' (operator-assistant), mode=None, runner_status=unproven — primary openai-local-sonnet on backend ollama"
+    },
+    "agent:jeff-cloud": {
+      "kind": "agent",
+      "source": "files/anatomy/agents/jeff-cloud/agent.yml",
+      "charter": "operator-assistant-cloud",
+      "runner_status": "unproven",
+      "primary_model": "anthropic-claude-sonnet-4-5",
+      "backend": "minimax",
+      "backend_declared": true,
+      "tools": [
+        "ask-operator",
+        "mcp-wing-read"
+      ],
+      "anchor": "02.02.09",
+      "description": "Agent ceremony 'jeff-cloud' (operator-assistant-cloud), mode=None, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:librarian": {
       "kind": "agent",
@@ -923,6 +953,12 @@
       "source": "launchd label (role defaults)",
       "anchor": "02.02.06",
       "description": "Host launchd daemon eu.thisisait.nos.cortex — cortex organ server — the KEAP-facing knowledge mirror API"
+    },
+    "daemon:eu.thisisait.nos.ears-listen": {
+      "kind": "daemon",
+      "source": "launchd label (role defaults)",
+      "anchor": "02.02.06",
+      "description": "Host launchd daemon eu.thisisait.nos.ears-listen — host daemon"
     },
     "daemon:eu.thisisait.nos.heartbeat": {
       "kind": "daemon",
@@ -1783,6 +1819,12 @@
       "source": "derived from claims",
       "anchor": "02.02.06",
       "description": "Exclusion resource 'agent-run-lock' — nodes claiming it are pairwise mutually exclusive (mutex edges derived from claims)"
+    },
+    "resource:ask-operator": {
+      "kind": "resource",
+      "source": "derived from agent tools",
+      "anchor": "02.02.06",
+      "description": "Agent tool 'ask-operator' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
     },
     "resource:backend-anthropic": {
       "kind": "resource",
@@ -2763,6 +2805,20 @@
       "anchor": "02.02.05",
       "description": "KEAP DataTable definition 'Apps' (state/keap-tables/apps.table.yml)"
     },
+    "table:caddy": {
+      "kind": "table",
+      "source": "state/keap-tables/caddy.table.yml",
+      "title": "Caddy settings",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Caddy settings' (state/keap-tables/caddy.table.yml)"
+    },
+    "table:caddy-sessions": {
+      "kind": "table",
+      "source": "state/keap-tables/caddy-sessions.table.yml",
+      "title": "Caddy sessions",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Caddy sessions' (state/keap-tables/caddy-sessions.table.yml)"
+    },
     "table:controls": {
       "kind": "table",
       "source": "state/keap-tables/controls.table.yml",
@@ -3324,6 +3380,20 @@
       "derived": "role-config"
     },
     {
+      "from": "resource:ask-operator",
+      "to": "agent:jeff",
+      "kind": "data",
+      "via": "tool grant `ask-operator` declared in files/anatomy/agents/jeff/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:ask-operator",
+      "to": "agent:jeff-cloud",
+      "kind": "data",
+      "via": "tool grant `ask-operator` declared in files/anatomy/agents/jeff-cloud/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
       "from": "resource:backend-anthropic",
       "to": "agent:inspektor",
       "kind": "data",
@@ -3354,6 +3424,13 @@
     {
       "from": "resource:backend-minimax",
       "to": "agent:curator",
+      "kind": "data",
+      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend"
+    },
+    {
+      "from": "resource:backend-minimax",
+      "to": "agent:jeff-cloud",
       "kind": "data",
       "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
       "derived": "agent-backend"
@@ -3391,6 +3468,13 @@
       "to": "agent:surveyor",
       "kind": "data",
       "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend"
+    },
+    {
+      "from": "resource:backend-ollama",
+      "to": "agent:jeff",
+      "kind": "data",
+      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
       "derived": "agent-backend"
     },
     {
@@ -3559,6 +3643,20 @@
       "to": "agent:inspektor",
       "kind": "data",
       "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/inspektor/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-wing-read",
+      "to": "agent:jeff",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/jeff/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:mcp-wing-read",
+      "to": "agent:jeff-cloud",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/jeff-cloud/agent.yml tools[]",
       "derived": "agent-tools"
     },
     {

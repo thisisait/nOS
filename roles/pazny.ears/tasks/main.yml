@@ -1,0 +1,156 @@
+---
+# ==============================================================================
+# pazny.ears — the ear, the mouth, and the launcher between them. No port, no
+# organ, and nothing here executes a cortex chain.
+#
+# Three pieces travel together because they are one loop: ears-listen hears a
+# turn, caddy puts it to an agent and has the cortex daemon typecheck the
+# answer, speech.py reads the answer back — verbalised from a wording table, so
+# a chain is spoken as a sentence a person can judge rather than as syntax.
+# The launchd agent is rendered always and started only when the operator has
+# said so.
+# ==============================================================================
+
+# NO `meta: end_play` GUARD HERE, deliberately, and the omission is the
+# careful choice rather than the careless one. main.yml imports this role under
+# `when: install_ears`, which stamps that condition on every task below — so
+# the guard could never both be reached and be true. Copied from an older role
+# it would be dead code today and a landmine tomorrow: under `include_role`
+# (no outer when) `end_play` ends the ENTIRE converge play — Pulse, stacks,
+# post-provision — not just this role.
+
+- name: "[pazny.ears] Ensure runtime directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ ears_runtime_dir }}"
+    - "{{ ears_log_dir }}"
+
+- name: "[pazny.ears] Create Python venv"
+  ansible.builtin.command:
+    cmd: "{{ ears_python }} -m venv {{ ears_venv }}"
+    creates: "{{ ears_venv }}/bin/python"
+
+# Shelling out to the venv's own pip rather than ansible.builtin.pip, for the
+# reason pazny.bone records: the pip module imports `packaging` from the
+# controller interpreter, which is PEP 668 externally-managed on macOS.
+- name: "[pazny.ears] Install listener deps into venv (parakeet-mlx)"
+  ansible.builtin.command:
+    cmd: "{{ ears_venv }}/bin/pip install --disable-pip-version-check -r {{ playbook_dir }}/files/anatomy/ears/requirements.txt"
+  register: _ears_pip
+  # NOT `--quiet` with `stdout != ""`, which is how a task reports changed=false
+  # on the run that actually installed everything: -q suppresses the success
+  # line too, so the FIRST install looks identical to a no-op. Keying on pip's
+  # own success sentence is the honest signal in both directions.
+  changed_when: "'Successfully installed' in _ears_pip.stdout"
+
+- name: "[pazny.ears] Sync listener source to runtime dir"
+  ansible.posix.synchronize:
+    src: "{{ playbook_dir }}/files/anatomy/ears/"
+    dest: "{{ ears_runtime_dir }}/"
+    delete: false
+    rsync_opts:
+      - "--exclude=__pycache__"
+  notify: Restart ears-listen
+
+# A symlink and not a copy, same reason nos-loop is one: the target is the file
+# rsync just refreshed, so the command and the source can never be two
+# versions of each other.
+- name: "[pazny.ears] Put ears-listen and caddy on PATH"
+  ansible.builtin.file:
+    src: "{{ ears_runtime_dir }}/{{ item.src }}"
+    dest: "{{ nos_cli_install_dir }}/{{ item.dest }}"
+    state: link
+    force: true
+  loop:
+    - { src: "ears-listen.py", dest: "ears-listen" }
+    - { src: "caddy.py", dest: "caddy" }
+
+# ── The always-listen agent ──────────────────────────────────────────────────
+# Rendered ALWAYS, bootstrapped only when the operator has said so. ONE SWITCH:
+# `ears_always_listen` in config.yml, applied by a converge — the listener has
+# no --on/--off of its own, because two ways to start a microphone means the
+# next converge silently undoes one of them, and because the estate's rule is
+# that either the playbook does it or the operator runs nos, nothing in
+# between. macOS only: MLX is Apple Silicon, so there is no Linux sibling.
+
+- name: "[pazny.ears] Render launchd plist for the listener"
+  ansible.builtin.template:
+    src: ears-listen.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ ears_launchd_label }}.plist"
+    mode: '0644'   # no secrets in this plist — phrases, paths and a horizon
+  register: _ears_plist
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+# bootout+bootstrap on a CHANGED plist, and the sleep is not superstition: the
+# bone/wing roles measured that bootout is ASYNCHRONOUS, so bootstrapping into
+# the teardown returns `5: Input/output error` and leaves the job unloaded.
+# A loaded job never re-reads its file, so without this a changed wake phrase
+# would reach the process at the next reboot and not before.
+- name: "[pazny.ears] Bootstrap the listener (idempotent)"
+  ansible.builtin.shell: |
+    set -e
+    PLIST=~/Library/LaunchAgents/{{ ears_launchd_label }}.plist
+    UID_NUM=$(id -u)
+    PLIST_CHANGED={{ 'yes' if (_ears_plist is defined and _ears_plist is changed) else 'no' }}
+    if launchctl print "gui/${UID_NUM}/{{ ears_launchd_label }}" >/dev/null 2>&1; then
+      if [ "$PLIST_CHANGED" = "yes" ]; then
+        launchctl bootout "gui/${UID_NUM}/{{ ears_launchd_label }}" 2>/dev/null || true
+        sleep 1
+        launchctl bootstrap "gui/${UID_NUM}" "$PLIST" || {
+          # The one path that leaves nothing listening. bootout is
+          # ASYNCHRONOUS, so bootstrapping into the teardown returns 5 and the
+          # converge would otherwise walk on with the ear down.
+          echo "BOOTSTRAP-FAILED rc=$?"
+        }
+        echo RELOADED
+      else
+        echo ALREADY_LOADED
+      fi
+    else
+      launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
+      echo LOADED
+    fi
+  register: _ears_boot
+  changed_when: "'ALREADY_LOADED' not in _ears_boot.stdout"
+  when:
+    - (nos_service_manager | default('launchd')) == 'launchd'
+    - ears_always_listen | default(false) | bool
+
+# The other half of the switch. Without this, turning always-listen off in
+# config.yml and converging would leave the microphone open — a flag that can
+# only start something is not a flag.
+- name: "[pazny.ears] Stop the listener when always-listen is off"
+  ansible.builtin.shell: |
+    UID_NUM=$(id -u)
+    if launchctl print "gui/${UID_NUM}/{{ ears_launchd_label }}" >/dev/null 2>&1; then
+      launchctl bootout "gui/${UID_NUM}/{{ ears_launchd_label }}" 2>/dev/null || true
+      echo STOPPED
+    else
+      echo NOT_RUNNING
+    fi
+  register: _ears_stop
+  changed_when: "'STOPPED' in _ears_stop.stdout"
+  when:
+    - (nos_service_manager | default('launchd')) == 'launchd'
+    - not (ears_always_listen | default(false) | bool)
+
+# The model is ~600 MB and downloads on first use. Pre-fetching it here would
+# make a converge wait on huggingface for a file the operator may never speak
+# to, and would fail a blank run on a flaky network for a feature that is not
+# load-bearing. So the FIRST RUN downloads it, and says so.
+- name: "[pazny.ears] Report what is installed and what the first run still costs"
+  ansible.builtin.debug:
+    msg:
+      - "ears-listen installed ({{ nos_cli_install_dir }}/ears-listen)"
+      - "ASR model {{ ears_asr_model }} downloads on FIRST USE (~600 MB), not during this run"
+      - "always-listen: {{ 'ON — the agent is loaded' if (ears_always_listen | default(false) | bool) else 'OFF — set ears_always_listen: true in config.yml and re-run --tags ears' }}"
+      - "MICROPHONE: a launchd agent has no window to prompt in. If macOS refuses,
+         the listener exits 3 and records mic_ok=false — check `tools/caddy-status.py`,
+         then grant it in System Settings > Privacy & Security > Microphone and
+         re-run --tags ears."
+      - "transcripts: {{ ears_runtime_dir }}/turns/, kept {{ ears_retention_days }} days"
+      - "autorun: {{ 'ON — a finished turn goes to caddy, which asks the agent and typechecks the answer' if (ears_autorun | default(true) | bool) else 'OFF — turns are written down only' }}"
+      - "rate what you hear: caddy --rate <-1|0|1|2|3>  (the only writer of that column that may exist)"

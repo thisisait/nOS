@@ -1,0 +1,48 @@
+# =============================================================================
+# KEAP DataTable definition — "Caddy settings"
+#
+# The operator-config table for the CADDY — the operator's assistant at
+# master-session level. The role is `caddy`; who fills it is the `agent` row,
+# and `jeff` is simply this operator's. Second
+# operator-config table in the estate after `loop-config`, and it follows that
+# file's shape deliberately: one row per setting, a slug, a value, and a
+# `read_by` column naming who reads it — because a config row whose reader
+# nobody can point at is how a toggle ends up half-armed.
+#
+# WHAT THIS TABLE MAY NOT DECIDE, and the boundary is not a style choice.
+# `mode: local|cloud` selects WHICH HALF of the caddy serves a turn — the
+# local agent or its cloud twin. It does NOT re-point one agent at another backend: the binding
+# is declared per agent in agent.yml and gated six ways by BindingResolver, and
+# gate 8 refuses to route an agent declaring transfers_outside_eu: false to a
+# hosted backend at all. A settings row that could move that line would be data
+# widening a permission, which this estate refuses one storey down in
+# cortex-lang and must refuse here too. So the row picks a name; the record
+# behind the name is what decides where the sentence may go.
+#
+# WHY A DATATABLE AND NOT default.config.yml: operator answer 2026-08-28 —
+# configuration belongs in DataTables with fixtures committed in the repo.
+# The playbook-level flags (ollama_enabled, minimax_model, …) stay where they
+# are: those ARM a backend, which is a converge-time act, not a preference.
+# =============================================================================
+
+title: "Caddy settings"
+description: >-
+  Operator switches for the caddy, the operator's master-session assistant. A row here is a
+  preference the operator has taken; arming a backend and granting a scope stay
+  in the playbook and in agent.yml, where a gate can see them.
+driver: libsql
+visibility: tier-admins
+anchors: ["nos.agents"]
+
+schema:
+  columns:
+    - { key: slug,        label: "Slug",         kind: text, role: dimension, required: true, concept: identity.slug }
+    - { key: name,        label: "Name",         kind: text, role: dimension, required: true, concept: identity.name }
+    - { key: description, label: "What it does", kind: text, role: attribute, concept: identity.description }
+    # The value, as text and not a typed column per setting: the settings are
+    # few and heterogeneous (a mode, a phrase, a number of seconds), and a
+    # column per kind would be four mostly-empty columns. The reader parses.
+    # No concept: the closed L1 vocabulary has no word for "the value of an
+    # operator setting" — see CONCEPTLESS in test_keap_table_concepts.py.
+    - { key: value,       label: "Value",        kind: text, role: attribute }
+    - { key: read_by,     label: "Read by",      kind: text, role: attribute, concept: prov.ref }

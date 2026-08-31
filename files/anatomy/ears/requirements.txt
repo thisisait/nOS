@@ -1,0 +1,15 @@
+# The ear, and nothing else.
+#
+# parakeet-mlx is Apache-2.0 and pulls MLX — Apple Silicon only, which this
+# estate already is. It brings no torch, and that absence is deliberate: the
+# obvious VAD (silero-vad, MIT, a 2 MB model) requires torch, ~2.5 GB of
+# dependency for two megabytes of weights. The listener therefore does its own
+# energy-threshold segmentation; see the ceiling noted in ears-listen.py.
+parakeet-mlx>=0.3
+
+# Audio capture and decoding go through ffmpeg, which is already in
+# homebrew_installed_packages — so there is no sounddevice here and no
+# portaudio to install. numpy comes with parakeet-mlx's stack; pinned here
+# anyway because the listener imports it directly and a dependency you use
+# should be a dependency you name.
+numpy>=1.26

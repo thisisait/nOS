@@ -1,0 +1,103 @@
+---
+# ==============================================================================
+# pazny.ears — the estate's speech organ.
+#
+# NAMED FOR WHAT IT IS, NOT FOR WHO USES IT (2026-08-31). This was
+# `pazny.jeff` for one day, and `files/anatomy/jeff/` put a PERSON'S NAME in
+# the anatomy. What hears and speaks is an organ, beside bone, wing, pulse and
+# cortex. What the operator talks TO is a ROLE — a caddy — and `jeff` is simply
+# this operator's caddy, a name that lives in a settings row and in an agent
+# directory, where any tenant can choose their own.
+#
+# WHAT THIS ROLE INSTALLS AND WHAT IT DELIBERATELY DOES NOT.
+#
+# Installs: a venv with parakeet-mlx, the listener, the launcher and the
+# speech half under ~/ears, `ears-listen` + `caddy` on PATH, and a launchd
+# agent that is RENDERED ALWAYS and STARTED ONLY when `ears_always_listen` says
+# so (operator decision, 2026-08-31 — an always-open microphone records whoever
+# else is in the room, and the flag works in both directions).
+#
+# Does NOT install: anything that EXECUTES a chain. The launcher asks an agent
+# for a proposal and has the cortex daemon typecheck it; effects stay behind
+# CortexBindingGate. Nothing in this role can act on what it hears.
+#
+# Does NOT install: ffmpeg or portaudio. ffmpeg is already in
+# homebrew_installed_packages, and the listener captures the microphone THROUGH
+# it (avfoundation on macOS) precisely so that no second audio dependency has
+# to exist. `sounddevice` would have needed portaudio for the same job.
+# ==============================================================================
+
+ears_runtime_dir: "{{ ansible_facts['env']['HOME'] }}/ears"
+ears_venv: "{{ ears_runtime_dir }}/venv"
+ears_log_dir: "{{ ears_runtime_dir }}/log"
+
+# Same interpreter split as pazny.bone: the operator's pyenv shim on macOS, the
+# system interpreter on Linux (tasks/python.yml apt-installs python3-venv).
+ears_python: "{{ (ansible_facts['env']['HOME'] ~ '/.pyenv/shims/python3') if ansible_os_family == 'Darwin' else '/usr/bin/python3' }}"
+
+# The ear. parakeet-tdt-0.6b-v3 is the model that can hear Czech — 25 European
+# languages with automatic detection — which SpeechTranscriber (42 locales, no
+# cs_CZ) cannot. Roadmap: local-llm-voice-asr.
+ears_asr_model: "mlx-community/parakeet-tdt-0.6b-v3"
+
+# THE WAKE PHRASE CARRIES THE PERSONA'S NAME, and that is the only place in
+# this role where a person's name belongs: it is what the operator SAYS. The
+# agent it reaches is the `agent` row in the caddy settings table.
+# Phrases, as TEXT rather than a trained wake-word model: the ASR transcribes
+# the speech segment and the phrase is matched in what it wrote. One fewer
+# model, one fewer training pipeline, and the phrase stays editable.
+# COMMA-SEPARATED VARIANTS, and this default is the one that reaches the
+# daemon: the plist renders THIS, not the settings fixture. They disagreed
+# for a day (fixture had the variants, this had one spelling), which is the
+# single-spelling failure ears-listen.py documents — silent, and looking
+# like a hearing problem.
+ears_wake_phrase: "hej jeffe, hej jefe, hej dzefe"
+ears_submit_phrase: "makej jeffe"
+# Silence that closes a turn. The number is the operator's; what matters is
+# that the countdown is VISIBLE — a submit trigger that is a timer looks
+# identical to "it never heard me" when it is not shown.
+ears_silence_seconds: 7
+
+# Which half serves a turn by default. `local` keeps the sentence on this
+# machine; `cloud` is a different agent with a different Article-30 record, and
+# this row picks a NAME — the record behind it decides what is allowed.
+caddy_default_mode: "local"
+
+# Seeded into the `caddy` settings DataTable by pazny.keap. The committed
+# fixture is the DEFAULT; a row the operator changed is never overwritten.
+caddy_seed_settings: true
+
+# ── The microphone, and the one flag that opens it ───────────────────────────
+#
+# THE PLIST IS ALWAYS RENDERED; THIS FLAG DECIDES WHETHER IT IS BOOTSTRAPPED.
+# `false` also BOOTS OUT a running agent, so turning it off in config.yml and
+# converging actually stops the listening — a switch that only turns things on
+# is not a switch.
+#
+# Default OFF while `install_ears` is ON, and the asymmetry is deliberate:
+# installing an ear is reversible and private; opening a microphone that
+# survives a reboot records whoever else is in the room, and they have not
+# consented. That is the operator's act, taken in config.yml, not a default
+# anyone inherits by upgrading.
+ears_always_listen: false
+# Whether a finished turn is PUT TO THE CADDY automatically, or only written down.
+# On by default once the microphone is open, because a voice assistant that
+# needs a second command to answer is not one — and because the answer is still
+# a PROPOSAL: caddy asks the agent, the cortex daemon typechecks the chain,
+# and execution stays behind the binding gate. Set false to keep the ear purely
+# a dictation machine.
+ears_autorun: true
+ears_launchd_label: "eu.thisisait.nos.ears-listen"
+# avfoundation input spec. `:0` is "no video, default audio input".
+ears_input_device: ":0"
+# launchd retry interval after the process exits — long enough that a denied
+# microphone is a slow visible loop rather than a hot one.
+ears_throttle_seconds: 60
+
+# How long a transcript is kept. The operator's horizon, enforced by the
+# listener itself (no second scheduler to half-wire) and read back by
+# tools/caddy-status.py, which reports the age of the OLDEST surviving file so a
+# retention that stops firing shows up as a number instead of as silence.
+# Mirrored in gdpr.retention_days of both caddy agent definitions — a horizon in
+# one place and not the other is a register that lies.
+ears_retention_days: 90

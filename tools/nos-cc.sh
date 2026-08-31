@@ -187,6 +187,15 @@ tmux send-keys -t "$SESSION:stuck" "tools/nos-pane.py stuck" C-m
 tmux new-window -t "=$SESSION" -n loop -c "$REPO_ROOT"
 tmux send-keys -t "$SESSION:loop" "tools/nos-pane.py loop" C-m
 
+# ── caddy: the ear, and what it heard ─────────────────────────────────────────
+# Its own window because it is the only pane whose subject is a LIVE DEVICE.
+# The four not-listening states it separates (off / denied / wedged / starting)
+# all look the same from the room you are speaking in, and a microphone macOS
+# refused leaves a process that looks perfectly healthy — so this is a reader
+# you want at a glance, not a log you have to interpret.
+tmux new-window -t "=$SESSION" -n caddy -c "$REPO_ROOT"
+tmux send-keys -t "$SESSION:caddy" "tools/nos-pane.py caddy" C-m
+
 # ── code: what changed, and the ability to go and look ───────────────────────
 # `git log` is a READER too, and it is the one that answers "what did we just
 # do to ourselves" — the question every other pane here raises. The editor is

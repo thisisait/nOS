@@ -1,0 +1,47 @@
+---
+# =============================================================================
+# pazny.keap/tasks/seed-caddy-tables.yml — the caddy's two DataTables.
+#
+# `caddy` (settings) and `caddy-sessions` (what the assistant actually ran). The
+# definitions are git-owned in state/keap-tables/, the default rows in
+# state/fixtures/caddy.seed.yml, and both are applied through the estate's ONE
+# implementation of create-or-reconcile-and-upsert (seed-face-table.yml). Its
+# loop var is `_face_tbl` and the name is a historical accident, not a scope:
+# a second implementation of the same law is how the agent-run mutex ended up
+# not covering scan-runner.sh.
+#
+# caddy-sessions IS SEEDED WITH NO ROWS, on purpose. The table must exist before
+# the first session so nothing has to create it mid-run, but a session row the
+# seeder wrote would be a conversation that never happened — the fabricated
+# affordance this estate keeps paying for. An empty table reads as empty, which
+# is exactly what tools/caddy-status.py reports.
+#
+# Gated on install_ears: a converge without the organ does not grow its
+# furniture. The agent definitions themselves need no seeding — they are
+# files under files/anatomy/agents/ that AgentKit loads.
+# =============================================================================
+
+- name: "[pazny.keap] Load the caddy's committed settings fixture (git SoT)"
+  ansible.builtin.set_fact:
+    _caddy_seed: "{{ lookup('file', playbook_dir + '/state/fixtures/caddy.seed.yml') | from_yaml }}"
+
+# Explicit block-style list for the same reason seed-fixture-tables.yml carries
+# one: without jinja2_native a list assembled in a Jinja for-block lands in
+# set_fact as its string repr, and an inline one-liner trips
+# test_config_stock_jinja_only's loop-item filter rule.
+- name: "[pazny.keap] Assemble the caddy DataTable defs + default rows"
+  ansible.builtin.set_fact:
+    _caddy_tables:
+      - slug: "caddy"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/caddy.table.yml') | from_yaml }}"
+        rows: "{{ _caddy_seed['caddy'] if (caddy_seed_settings | default(true) | bool) else [] }}"
+      - slug: "caddy-sessions"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/caddy-sessions.table.yml') | from_yaml }}"
+        rows: []
+
+- name: "[pazny.keap] Seed the caddy DataTables (create/reconcile + upsert missing rows)"
+  ansible.builtin.include_tasks: seed-face-table.yml
+  loop: "{{ _caddy_tables }}"
+  loop_control:
+    loop_var: _face_tbl
+    label: "{{ _face_tbl.slug }}"

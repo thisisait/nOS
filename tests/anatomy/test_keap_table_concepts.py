@@ -82,6 +82,12 @@ CONCEPTLESS = {
     "party-tax-identity.value": "a tax identifier is not identity.name; needs identity.registration",
     "party-tax-identity.valid_to": "an expiry is neither time.target nor time.occurred_at — needs time.valid_to",
     "print-order.customer": "no counterparty concept; graph.parent would claim the order nests under the customer",
+    "caddy.value": "the value of an operator setting is not identity.* or lifecycle.status — needs config.value",
+    "caddy-sessions.model": "a model URI is not deploy.image (that is a container) — needs llm.model",
+    "caddy-sessions.transcript": "a speech transcript is not identity.description — needs media.transcript",
+    "caddy-sessions.chain": "a cortex-lang program is not any closed concept — needs lang.program",
+    "caddy-sessions.rating_before": "an operator label is not a lifecycle or a measure of the row — needs eval.rating",
+    "caddy-sessions.rating_after": "same — eval.rating, with the phase as the column name",
     "print-job.quantity": "no measure concept — needs measure.quantity",
     "print-material.unit": "the measure's unit, not a class.* of the material — needs measure.unit",
     "print-job-step.planned_end": "time.target is claimed by planned_start (once-per-table rule); needs a window pair",
@@ -197,24 +203,27 @@ UNSEEDED = {
                    "keeps paying for. The committed fixture is the value Wing "
                    "/loop-editor renders; wiring the rows through the playbook "
                    "belongs to the cycle that teaches the ledger to read it.",
-    "roadmap": "rows come from tools/roadmap-seed.py, not the playbook seeder — "
+    "roadmap":"rows come from tools/roadmap-seed.py, not the playbook seeder — "
                "same split as apps and systems. The DEFINITION is git-owned here; "
                "wiring the rows through the playbook is a decision, not an oversight.",
 }
 
 
 def test_every_definition_is_either_seeded_or_explicitly_excused():
-    # TWO seeders since 2026-08-14: the face config tables and the
-    # label-printer fixture tables (seed-fixture-tables.yml, w-fixture). The
-    # question stays the same — a definition must land somewhere — the answer
-    # now has two places to come from.
-    src = (REPO / "roles" / "pazny.keap" / "tasks" / "seed-face-tables.yml").read_text()
-    fixture_src = (REPO / "roles" / "pazny.keap" / "tasks" / "seed-fixture-tables.yml").read_text()
+    # EVERY seeder, discovered rather than listed (2026-08-31). It named two
+    # files — the face tables and the label-printer fixture — and a third
+    # (seed-caddy-tables.yml) made the gate report its own blind spot as an
+    # orphan table. A hardcoded pair is a detector that goes stale the moment
+    # the thing it detects grows, so it now globs: any `seed-*-tables.yml` in
+    # the role is a place a definition may land.
+    seeders = sorted((REPO / "roles" / "pazny.keap" / "tasks").glob("seed-*-tables.yml"))
+    assert seeders, "no seeder task files found — path drift?"
+    src = "\n".join(p.read_text() for p in seeders)
     orphans = sorted(
         name
         for name, _ in _definitions()
         if f'slug: "face-{name}"' not in src
-        and f'slug: "{name}"' not in fixture_src
+        and f'slug: "{name}"' not in src
         and name not in UNSEEDED
     )
     assert not orphans, (

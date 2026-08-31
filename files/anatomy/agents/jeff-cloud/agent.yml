@@ -1,0 +1,104 @@
+name: jeff-cloud
+version: 1
+description: >-
+  `jeff`'s cloud twin: the same assistant, the same prompt discipline, routed to
+  a hosted model when the local 14B is not enough. It is a SEPARATE agent rather
+  than a mode flag because the difference is not a setting — sending the
+  operator's sentence off this machine is a different Article-30 record, and
+  BindingResolver gate 8 makes that structural: `jeff` declares
+  transfers_outside_eu false and therefore cannot be pointed at a cloud backend
+  however anyone configures it. Two records, two agents. Which one a turn goes
+  to is the operator's choice, held in the `jeff` settings table.
+
+model:
+  # sonnet tier -> NOS_MINIMAX_MODEL -> minimax_model in config.yml, where the
+  # operator pins the MiniMax 3.x id. The estate leaves NOS_MINIMAX_SMALL_MODEL
+  # empty, so a haiku-tier pin here would refuse at resolution rather than send
+  # a blank model id — sonnet is the tier that can actually serve.
+  primary: anthropic-claude-sonnet-4-5
+  backend: minimax
+  max_output_tokens: 4096
+
+system_prompt_path: system.md
+
+# Identical roster to the local twin, and that is deliberate: if the cloud
+# version could reach more of the estate than the local one, the choice between
+# them would stop being about capability and start being about access.
+tools:
+  - id: mcp-wing-read
+  - id: ask-operator
+
+audit:
+  capability_scopes:
+    - mcp.tool_use
+    - wing.read
+    - inbox.ask
+  pii_classification: low
+
+vault:
+  required_credentials:
+    - scope: anthropic-api
+
+metadata:
+  ait_phase: voice
+  ceremony_role: operator-assistant-cloud
+  runner_status: unproven
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: "The turn completed. A proposed chain the validator rejected is still exit 0 — the refusal is the answer."
+  exit_1: "Does not emit exit 1."
+  exit_2: "Binding, auth or runner error — nothing was answered."
+
+gdpr:
+  purpose: >-
+    Assisting the operator with the estate when the local model is not enough:
+    reading Wing state, answering questions, proposing typed chains. Estate
+    operation under legitimate interest, Art. 6(1)(f).
+  legal_basis: legitimate_interests
+  data_categories:
+    - operator_authored_prompts
+    - estate_health_telemetry
+    - operator_speech_transcripts
+  data_subjects:
+    - operators
+  # 90 days, the operator's horizon (2026-08-31), and it is the SAME number
+  # as jeff_retention_days in roles/pazny.ears/defaults — a horizon declared
+  # in the register and enforced nowhere is the shape this estate already
+  # paid for. The listener prunes; tools/caddy-status.py reports the age of
+  # the oldest surviving transcript, so a sweep that stops firing is visible.
+  retention_days: 90
+  processors:
+    - name: MiniMax
+      role: >-
+        LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool
+        loop driven by AgentKit). The bound backend for this agent.
+      country: "unverified — international endpoint api.minimax.io; entity and seat not established"
+      safeguard: >-
+        None established. Recorded as UNVERIFIED rather than asserted; the
+        binding gate refuses a backend this record does not name, so this entry
+        is what permits the routing and must not be written as a claim it
+        cannot support.
+  eu_residency: false
+  # TRUE, and it is why this file exists. Unlike the ops-plane twins, whose
+  # inputs are invented fixtures, THIS agent's input is whatever the operator
+  # actually says — so the transfer is real and the disclosure is not a
+  # formality. That is the cost of the cloud mode, and it is the operator's to
+  # accept per turn, not a default to drift into.
+  transfers_outside_eu: true
+  notes: |
+    A dictated turn can carry whatever was said in the room, including things
+    the operator did not intend to send anywhere. Two consequences that belong
+    in the design and not in a warning: the default mode is LOCAL, and a turn
+    routed here is recorded with its mode in the sessions table, so "what did I
+    send abroad" is answerable rather than remembered.
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox]
+  on_medium:   []
+  on_low:      []
+  on_info:     []
+
+capabilities:
+  - nos:state:read

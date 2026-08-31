@@ -578,6 +578,19 @@ install_apex: false              # apex – public anatomy page at the root doma
 # ── Knowledge / cortex ────────────────────────────────────────────────────────
 install_keap: true               # KEAP – knowledge explorer & preserver (taxonomy, content links, agent API) [Docker]
 install_cortex: true             # Cortex – reasoning organ (validate surface; host Node daemon, loopback-only) [requires: node]
+# Jeff – the operator's assistant. This flag installs the EAR only (parakeet in
+# a venv + the `ears-listen` command) and seeds the two DataTables. No daemon
+# and no microphone runs by itself: an always-listening mic is a decision with
+# its own Article-30 record, not a side effect of a flag (roadmap:
+# local-llm-voice-always). Requires ffmpeg, already in homebrew_installed_packages.
+install_ears: true               # Jeff – speech ingress + assistant tables [Apple Silicon; downloads ~600 MB ASR model on first use]
+# THE SECOND HALF, AND IT IS NOT THIS FLAG. `install_ears` installs the ear;
+# `ears_always_listen` (roles/pazny.ears/defaults, default false) OPENS the
+# microphone as a launchd agent that survives a reboot. Set it true in
+# config.yml when you mean it: a live mic records whoever else is in the room,
+# and they have not consented. Turning it back to false and converging boots
+# the agent out — the switch works in both directions.
+# Transcripts: ~/jeff/turns/, pruned at ears_retention_days (90).
 
 # ── AI orchestration ──────────────────────────────────────────────────────────
 install_paperclip: true          # Paperclip – multi-agent orchestration platform [requires: PostgreSQL]

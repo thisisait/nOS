@@ -2171,6 +2171,26 @@
       tags: ['cortex', 'anatomy']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Ears — the estate's speech organ (2026-08-31). A venv with
+    # parakeet-mlx and a `ears-listen` command; NO launchd job, so nothing
+    # listens until someone starts it. After Cortex, because the chains Jeff
+    # the caddy proposes are validated by that organ; before Pulse, which schedules
+    # nothing here on purpose.
+    # ──────────────────────────────────────────────────────────────────────────
+    # DARWIN-GATED, and this is not tidiness: parakeet-mlx is MLX, MLX is Apple
+    # Silicon, and `pip install` of it on Linux FAILS — which with
+    # install_ears defaulting true would have failed the Linux integration
+    # wet-test that runs this whole playbook. Caught before the first push;
+    # the Linux ear needs a different model and is not this role.
+    - name: "Ears — the speech organ: hears, asks the caddy, reads the answer back (pazny.ears role)"
+      ansible.builtin.import_role:
+        name: pazny.ears
+      when:
+        - install_ears | default(false)
+        - ansible_os_family == 'Darwin'
+      tags: ['ears', 'anatomy']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Pulse — local launchd Python daemon for scheduled jobs (A4, 2026-05-03).
     # Polls Wing API for due pulse_jobs and fires them as subprocess (A4 PoC) or
     # claude SDK invocations (A8). First host-launchd organ in the bones-and-wings
