@@ -49,11 +49,20 @@ GRACE_SECONDS = 5.0
 #: per request. Neither is stale — they never cached anything to go stale.
 #:
 #: What distinguishes CONFIG is where it comes from: the estate renders config
-#: into `stacks_dir`, and the 14 plugins that render into a running container
-#: all target a path under it. Data lives elsewhere by convention — on the
-#: external volume, in a named volume, or in an organ's own directory. So the
-#: source path is the filter, and it is a filter on PROVENANCE rather than on
-#: the shape of the file, which is why it does not need to guess.
+#: into `stacks_dir`, and nearly every plugin that renders into a running
+#: container targets a path under it. Data lives elsewhere by convention — on
+#: the external volume, in a named volume, or in an organ's own directory. So
+#: the source path is the filter, and it is a filter on PROVENANCE rather than
+#: on the shape of the file, which is why it does not need to guess.
+#:
+#: KNOWN BLIND SPOT, measured 2026-09-01: `grafana-base` renders dashboards to
+#: `~/observability/dashboards`, which IS a read-only container mount and is NOT
+#: under `stacks_dir`, so a dashboard this reader cannot see could go stale
+#: silently. Grafana's file provisioner rescans that directory on a timer, so it
+#: is believed self-reloading — but that is a belief about upstream, not a
+#: measurement, and widening the filter would put grafana in the RESTART set of
+#: reload-stale-config.py on every converge that renders a dashboard. Declared
+#: here rather than left for a reader to discover from a green report.
 #:
 #: KNOWN FALSE POSITIVES, and why they are not filtered out. A process that
 #: re-reads its mount without being restarted is reported here and is not
@@ -118,13 +127,20 @@ def scan() -> dict:
     except (OSError, subprocess.SubprocessError, ValueError) as exc:
         return {"readable": False, "error": str(exc), "containers": 0, "stale": []}
 
-    stale = []
+    stale, unreadable = [], []
     for c in containers:
+        name = c.get("Name", "").lstrip("/")
         started_raw = c.get("State", {}).get("StartedAt", "")
         try:
             started = dt.datetime.fromisoformat(
                 started_raw.replace("Z", "+00:00")).timestamp()
         except ValueError:
+            # NOT `continue` alone. A container whose StartedAt this cannot
+            # parse is a container this tool has NO answer for, and dropping it
+            # silently makes an unanswered question look like a clean one —
+            # absence is never success. It is reported instead.
+            unreadable.append({"container": name,
+                               "why": f"unparseable StartedAt {started_raw!r}"})
             continue
         for mount in c.get("Mounts", []):
             if mount.get("Type") != "bind" or mount.get("RW", True):
@@ -136,10 +152,16 @@ def scan() -> dict:
             if not source.is_relative_to(STACKS_DIR):
                 continue
             mtime = _newest_mtime(mount.get("Source", ""))
-            if mtime is None or mtime <= started + GRACE_SECONDS:
+            if mtime is None:
+                # Same reason as the StartedAt branch: a mount under
+                # stacks_dir that cannot be stat'd is unknown, not fresh.
+                unreadable.append({"container": name,
+                                   "why": f"cannot stat {mount.get('Source', '')}"})
+                continue
+            if mtime <= started + GRACE_SECONDS:
                 continue
             stale.append({
-                "container": c.get("Name", "").lstrip("/"),
+                "container": name,
                 "source": mount["Source"],
                 "destination": mount.get("Destination", ""),
                 "config_written": dt.datetime.fromtimestamp(mtime).isoformat(timespec="seconds"),
@@ -147,7 +169,8 @@ def scan() -> dict:
                 "stale_hours": round((mtime - started) / 3600, 2),
             })
     stale.sort(key=lambda r: -r["stale_hours"])
-    return {"readable": True, "containers": len(containers), "stale": stale}
+    return {"readable": True, "containers": len(containers), "stale": stale,
+            "unreadable": unreadable}
 
 
 def main() -> int:
@@ -167,6 +190,8 @@ def main() -> int:
     stale = report["stale"]
     print(f"{report['containers']} running containers · "
           f"{len(stale)} serving replaced config  (config under {STACKS_DIR})")
+    for row in report.get("unreadable", []):
+        print(f"  UNKNOWN {row['container']}: {row['why']}")
     if not stale:
         print("  every read-only mount is older than the process that read it.")
         return 0

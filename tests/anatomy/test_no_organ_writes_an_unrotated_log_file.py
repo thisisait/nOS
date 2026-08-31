@@ -32,23 +32,41 @@ import re
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 
-#: Templates rendered into a container's config, where a `filePath:` log
-#: directive means an unrotated, untailed file inside a bind mount.
-CONTAINER_LOG_CONFIGS = [
-    "roles/pazny.traefik/templates/traefik.yml.j2",
-]
+#: EVERY template rendered into a container's config, not a hand-kept list of
+#: one (2026-09-01). A named list is a claim that only these files can carry the
+#: defect, and that claim rots the moment someone adds a service — the same
+#: argument tools/stale-config-status.py makes against an exclusion list. The
+#: sweep costs nothing: measured repo-wide, `filePath:` appears in exactly zero
+#: templates today, so widening it introduces no noise and closes the rot.
+TEMPLATE_ROOTS = ("roles", "files/anatomy/plugins", "templates")
+
+#: The one file the defect was measured in. If the sweep stops finding it, the
+#: glob is wrong and every assertion below would pass vacuously.
+CANARY = "roles/pazny.traefik/templates/traefik.yml.j2"
 
 _FILEPATH = re.compile(r"^\s*filePath\s*:", re.M)
 
 
+def _templates() -> list[pathlib.Path]:
+    found: list[pathlib.Path] = []
+    for root in TEMPLATE_ROOTS:
+        found += sorted((ROOT / root).rglob("*.j2"))
+    return found
+
+
+def test_the_sweep_reaches_the_file_the_defect_was_measured_in() -> None:
+    assert (ROOT / CANARY) in _templates(), (
+        f"{CANARY} is not in the sweep — the glob moved and this gate would "
+        "pass by finding nothing to check")
+
+
 def test_no_container_log_config_names_a_file_path() -> None:
     offenders = []
-    for rel in CONTAINER_LOG_CONFIGS:
-        path = ROOT / rel
-        assert path.is_file(), f"{rel} moved — this gate now guards nothing"
-        for match in _FILEPATH.finditer(path.read_text(encoding="utf-8")):
-            line = path.read_text(encoding="utf-8")[: match.start()].count("\n") + 1
-            offenders.append(f"{rel}:{line}")
+    for path in _templates():
+        body = path.read_text(encoding="utf-8", errors="replace")
+        for match in _FILEPATH.finditer(body):
+            rel = path.relative_to(ROOT)
+            offenders.append(f"{rel}:{body[: match.start()].count(chr(10)) + 1}")
     assert not offenders, (
         "a containerised service is told to write its log to a file: "
         + ", ".join(offenders)

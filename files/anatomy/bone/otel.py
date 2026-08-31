@@ -13,9 +13,15 @@ weakness readers and the agents all go through it — and it was invisible, so
 "why was that call slow" had no answer an agent could reach through
 grafana-mcp.
 
-ponytail: fire-and-forget POST per request with a 300ms cap, on the response
-path. A batching processor would be more moving parts than this estate's
-request volume justifies; revisit if the cap ever shows up in latency.
+ponytail: fire-and-forget POST per request with a 300ms cap, handed to a daemon
+thread so the response never waits on the collector. A batching processor would
+be more moving parts than this estate's request volume justifies; revisit if
+thread-per-request ever shows up in latency.
+
+NOT INSTRUMENTED: an inbound `traceparent` header is ignored — every span here
+starts a NEW trace. `export_span` takes `trace_id`/`span_id` so a caller can
+continue one, and nothing passes them today. A Pulse job that calls Bone
+therefore does NOT appear under its run's trace.
 """
 
 from __future__ import annotations
@@ -77,7 +83,14 @@ def export_span(*, name: str, start_ns: int, end_ns: int,
         "scopeSpans": [{"scope": {"name": "bone.http"}, "spans": [span]}],
     }]}
     # Off the response path: the caller should not wait on the collector.
-    threading.Thread(target=_post, args=(payload,), daemon=True).start()
+    # The try is not decoration: `Thread.start()` raises RuntimeError when the
+    # process is out of threads or already shutting down, and this call sits in
+    # the middleware's `finally` — a raise there REPLACES the exception the
+    # request was already propagating. Telemetry may not break the response.
+    try:
+        threading.Thread(target=_post, args=(payload,), daemon=True).start()
+    except RuntimeError:
+        pass
 
 
 def install(app) -> None:
@@ -104,6 +117,12 @@ def install(app) -> None:
                     "url.path": request.url.path,
                     "http.response.status_code": status,
                 },
-                error=error if (error or status >= 500) else None,
+                # `or`, not a conditional: a route that RETURNS 500 raises
+                # nothing, so `error` is None and the old
+                # `error if (error or status >= 500) else None` collapsed to
+                # plain `error` — the 5xx branch could never set one, and the
+                # span went to Tempo with status Ok. cortex/otel.ts and Wing's
+                # BasePresenter both mark a returned 5xx; this now agrees.
+                error=error or (f"HTTP {status}" if status >= 500 else None),
             )
         return response

@@ -121,7 +121,15 @@ def main() -> int:
     for container, reason in sorted(skipped.items()):
         print(f"  skip    {container}: {reason}")
     if not todo:
-        print("nothing to reload: every mounted config is older than the process that read it.")
+        # Two different facts, and the message must not merge them: with skips
+        # present, the configs are NOT all older than their processes — some
+        # are newer and were exempted. Printing the clean-estate sentence over
+        # an exempted one is the same lie as a green report over an unread
+        # source (the live run says exactly this: 3 stale, all 3 skipped).
+        print("nothing to reload: "
+              + (f"{len(skipped)} stale mount(s), all declared self-reloading."
+                 if skipped
+                 else "every mounted config is older than the process that read it."))
         return 0
 
     for container, files in sorted(todo.items()):

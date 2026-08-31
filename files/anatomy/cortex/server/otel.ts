@@ -86,19 +86,27 @@ export function traceRequests() {
     const start = process.hrtime.bigint();
     const wall = BigInt(Date.now()) * 1_000_000n;
     res.on('finish', () => {
-      const route = (req.route?.path as string | undefined) ?? req.path;
-      exportSpan({
-        name: `${req.method} ${route}`,
-        startNanos: wall,
-        endNanos: wall + (process.hrtime.bigint() - start),
-        attributes: {
-          'http.request.method': req.method,
-          'url.path': req.path,
-          'http.route': route,
-          'http.response.status_code': res.statusCode,
-        },
-        error: res.statusCode >= 500 ? `HTTP ${res.statusCode}` : undefined,
-      });
+      // try/catch, not decoration: this runs in an EventEmitter listener, and
+      // an exception thrown there is an uncaught exception — it takes the whole
+      // daemon down, not the one request. Telemetry may not break the process
+      // it describes.
+      try {
+        const route = (req.route?.path as string | undefined) ?? req.path;
+        exportSpan({
+          name: `${req.method} ${route}`,
+          startNanos: wall,
+          endNanos: wall + (process.hrtime.bigint() - start),
+          attributes: {
+            'http.request.method': req.method,
+            'url.path': req.path,
+            'http.route': route,
+            'http.response.status_code': res.statusCode,
+          },
+          error: res.statusCode >= 500 ? `HTTP ${res.statusCode}` : undefined,
+        });
+      } catch {
+        // A dropped span is a gap in a graph; a throw here is an outage.
+      }
     });
     next();
   };

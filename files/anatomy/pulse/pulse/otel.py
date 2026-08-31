@@ -20,8 +20,14 @@ environment as `TRACEPARENT`, the W3C standard variable every OTel SDK reads on
 startup. So a tool someone writes — a nightly Apple Notes digest into KEAP, say
 — becomes a CHILD of its job's span with no nOS-specific code at all: if it is
 instrumented, its spans nest; if it is not, the job span still records that it
-ran and for how long. Either way the KEAP and Bone spans it triggers sit under
-the same trace.
+ran and for how long.
+
+WHAT IT DOES NOT GET, measured 2026-08-31: the spans that child triggers INSIDE
+the estate do not join this trace. Bone, the cortex and Wing each mint a fresh
+trace id per request and read no inbound `traceparent` header, so a call the job
+makes into them opens a parallel trace. Only the child's OWN SDK-emitted spans
+nest here. Closing that needs header propagation in all three organs; until
+then this is one hop deep, not end-to-end.
 
 ponytail: fourth hand-rolled OTLP emitter in this estate (Wing PHP, Bone
 FastAPI, cortex express, here). Deliberate — Pulse ships as its own venv and
@@ -111,4 +117,14 @@ def export_run(*, job_id: str, run_id: str, span_id: str,
                                     _kv("service.namespace", "nos")]},
         "scopeSpans": [{"scope": {"name": "pulse.run"}, "spans": [span]}],
     }]}
-    threading.Thread(target=_post, args=(payload,), daemon=True).start()
+    # NEVER let a telemetry failure reach the caller. `export_run` is called
+    # from `_run_job` BEFORE `post_run_finish`, inside a broad `except
+    # Exception` that reports `exit_code=255` — so a `Thread.start()`
+    # RuntimeError (out of threads, or interpreter shutting down) would record
+    # a job that SUCCEEDED as a daemon exception, and the operator would be
+    # alerted about work that was in fact done. The thing that describes the
+    # run may not decide its outcome.
+    try:
+        threading.Thread(target=_post, args=(payload,), daemon=True).start()
+    except RuntimeError:
+        pass
