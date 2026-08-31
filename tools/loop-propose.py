@@ -261,6 +261,15 @@ def _proposals_citing(weakness_id: str) -> list[dict]:
             "SELECT id, uuid, session_uuid FROM loop_proposals "
             "WHERE weakness_id = ? ORDER BY id", (weakness_id,))]
     except sqlite3.OperationalError as exc:
+        # A LEDGER THAT DOES NOT EXIST YET HOLDS NO PROPOSALS, and that is a
+        # fact rather than a failure — a fresh estate has no loop_* tables
+        # until Bone creates them, and `test_a_run_that_proposed_nothing_is_
+        # not_success` pins exactly that. Anything ELSE (a missing column, a
+        # damaged file) is schema drift or damage: the table is there and the
+        # question still cannot be answered, which is the case that must never
+        # come back as an empty list.
+        if "no such table" in str(exc):
+            return []
         raise Unreadable(f"the ledger could not be read: {exc}") from exc
     finally:
         conn.close()

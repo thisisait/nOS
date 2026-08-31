@@ -129,23 +129,38 @@ def test_the_runner_keeps_the_two_outcomes_apart() -> None:
         "nothing, which is a different fact about a different actor")
 
 
-def test_a_query_that_fails_also_raises(tmp_path, monkeypatch) -> None:
-    """THE HOLE THE FIRST DRAFT OF THIS FILE LEFT, found by retro-verify.
+def test_schema_drift_raises_while_a_fresh_ledger_reads_as_empty(tmp_path, monkeypatch) -> None:
+    """THE HOLE THE FIRST DRAFT LEFT, and the over-reach it led to.
 
     There are two OperationalError paths — connect and execute — and the first
-    version of these tests exercised only connect. Restoring the old
-    `return []` on the EXECUTE handler left every test green, which is a gate
-    that cannot see the regression it was written for.
+    version of these tests exercised only connect, so restoring the old
+    `return []` on the EXECUTE handler left every test green: a gate that
+    cannot see the regression it was written for.
 
-    A valid database with no `loop_proposals` table opens fine and fails on the
-    query, which is the reverted line exactly.
+    Covering it the obvious way (a database with no `loop_proposals` table)
+    then broke a deliberate decision this repo had already made and pinned in
+    `test_a_run_that_proposed_nothing_is_not_success`: a FRESH estate has no
+    loop_* tables until Bone creates them, and "no ledger yet" honestly means
+    no proposals. So the split is by cause, not by path — absent table is an
+    answer, a table that is there and unreadable is not.
     """
-    db = tmp_path / "wing.db"
-    sqlite3.connect(db).close()          # a real sqlite file, no ledger tables
     m = _mod()
-    monkeypatch.setenv("WING_DB_PATH", str(db))
+
+    fresh = tmp_path / "fresh.db"
+    sqlite3.connect(fresh).close()
+    monkeypatch.setenv("WING_DB_PATH", str(fresh))
+    assert m._proposals_citing("rem:R-1") == [], (
+        "a database with no ledger table must read as empty; a fresh host has "
+        "one of these and it is not an error")
+
+    drifted = tmp_path / "drifted.db"
+    conn = sqlite3.connect(drifted)
+    conn.execute("CREATE TABLE loop_proposals (id INTEGER PRIMARY KEY)")   # no session_uuid
+    conn.commit()
+    conn.close()
+    monkeypatch.setenv("WING_DB_PATH", str(drifted))
     with pytest.raises(m.Unreadable) as exc:
         m._proposals_citing("rem:R-1")
-    assert "no such table" in str(exc.value), (
-        "the sqlite message is not carried through, so a schema that has "
-        "drifted looks identical to a file that will not open")
+    assert "no such column" in str(exc.value), (
+        "a ledger whose shape has drifted answers as if it were empty, which "
+        "is the false negative this file exists to stop")
