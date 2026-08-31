@@ -93,6 +93,12 @@ caddy_seed_settings: true
 # consented. That is the operator's act, taken in config.yml, not a default
 # anyone inherits by upgrading.
 ears_always_listen: false
+# ONLY set this true if you have made the launchd job's microphone grant real —
+# today that means the .app bundle of roadmap row `ears-app-bundle`. With it
+# false the role renders the plist and refuses to START it, because a launchd
+# listener on macOS is handed a stream with no speech in it and then reports
+# LISTENING. Measured, not feared: see the comment in tasks/main.yml.
+ears_launchd_tcc_granted: false
 # Whether a finished turn is PUT TO THE CADDY automatically, or only written down.
 # On by default once the microphone is open, because a voice assistant that
 # needs a second command to answer is not one — and because the answer is still

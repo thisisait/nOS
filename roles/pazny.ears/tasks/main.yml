@@ -118,6 +118,19 @@
   when:
     - (nos_service_manager | default('launchd')) == 'launchd'
     - ears_always_listen | default(false) | bool
+    # MEASURED 2026-08-31: a launchd-started listener gets a microphone stream
+    # with no speech in it. ffmpeg opens the device and macOS attributes the
+    # TCC grant to the RESPONSIBLE process — Terminal when a terminal starts
+    # it, ffmpeg itself under launchd, which has no grant and is handed hiss
+    # rather than a refusal. Identical arguments: terminal peak 19898 and
+    # correct Czech; launchd, a flat floor and empty transcripts, while the
+    # daemon reported mic_ok because hiss is not silence.
+    #
+    # So this role no longer starts one unless the operator says the grant
+    # exists. Bootstrapping a deaf daemon is worse than not bootstrapping: it
+    # reports LISTENING. Roadmap: ears-app-bundle gives launchd an identity
+    # macOS can grant; until then nos-cc runs the ear where the grant is.
+    - ears_launchd_tcc_granted | default(false) | bool
 
 # The other half of the switch. Without this, turning always-listen off in
 # config.yml and converging would leave the microphone open — a flag that can
@@ -146,7 +159,7 @@
     msg:
       - "ears-listen installed ({{ nos_cli_install_dir }}/ears-listen)"
       - "ASR model {{ ears_asr_model }} downloads on FIRST USE (~600 MB), not during this run"
-      - "always-listen: {{ 'ON — the agent is loaded' if (ears_always_listen | default(false) | bool) else 'OFF — set ears_always_listen: true in config.yml and re-run --tags ears' }}"
+      - "listening: {{ 'launchd agent loaded (you asserted the TCC grant)' if (ears_always_listen | default(false) | bool and ears_launchd_tcc_granted | default(false) | bool) else 'NOT under launchd — macOS gives it a silent microphone. Press s in nos-cc to run it where the grant is.' }}"
       - "MICROPHONE: a launchd agent has no window to prompt in. If macOS refuses,
          the listener exits 3 and records mic_ok=false — check `tools/caddy-status.py`,
          then grant it in System Settings > Privacy & Security > Microphone and

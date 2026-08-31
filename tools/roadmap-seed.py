@@ -751,6 +751,31 @@ row("repo-split-trigger", "Nothing is worth splitting out yet, and here is the n
          "work most likely to be somebody else's — and it splits when its mixed-commit ratio "
          "drops below about 30 percent. Re-measure with the same one-liner; do not split on "
          "a feeling.")
+row("ears-app-bundle", "The launchd ear is handed a microphone with no speech in it",
+    "2026-08-31", "next", "platform", parent="local-llm-voice",
+    refs="roles/pazny.ears/tasks/main.yml (the TCC comment) · tools/cc/panes/caddy.py · files/anatomy/ears/ears-listen.py",
+    body="MEASURED 2026-08-31 with identical arguments in two contexts, after three fixes "
+         "had been aimed at the consequences. ffmpeg is the process that opens the "
+         "microphone and macOS attributes the TCC grant to the RESPONSIBLE process: started "
+         "from a terminal that is Terminal, which has the grant; started by launchd, ffmpeg "
+         "is responsible for itself, has none — AND MACOS DOES NOT REFUSE. It hands over a "
+         "stream with no speech in it. Terminal: peak 19898, 'Snazim se s tebou mluvit "
+         "cesky'. launchd: a flat noise floor, three segments of 1.4-3.2 s, every transcript "
+         "empty — while the daemon reported mic_ok TRUE, because the check asked whether any "
+         "sample was non-zero and hiss is not silence. That is this estate's own defect shape "
+         "in a new costume: a health check that cannot fail for the reason it exists. "
+         "WHAT IT COST BEFORE IT WAS FOUND: English wake-phrase variants, an adaptive VAD "
+         "threshold and a phonetic matcher, all correct on real audio and all irrelevant to "
+         "the cause. The tell was there from the first measurement — a floor with no dynamic "
+         "range — and it read as 'audio is arriving'. "
+         "SHIPPED INSTEAD (bridge): nos-cc runs the listener in a tmux window of its own "
+         "session, where Terminal's grant already applies; `s` starts and stops it; the role "
+         "refuses to bootstrap a launchd listener unless `ears_launchd_tcc_granted` is set, "
+         "and the reader reports a launchd ear as BROKEN rather than LISTENING. "
+         "THE FIX THIS ROW HOLDS: a minimal .app bundle with its own bundle id, so macOS has "
+         "something to prompt about once and remember — the standard answer, and the only "
+         "one that survives a reboot without a terminal. Do it when the voice loop has "
+         "earned a reboot-proof ear; the bridge is honest until then.")
 row("ext-contract", "What an nOS extension in another repo would have to be",
     "2026-08-31", "queued", "platform",
     refs="docs/doctrine/cross-repo-contracts.md · tools/cortex-drift.py · docs/tier2-app-onboarding.md",

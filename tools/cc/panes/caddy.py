@@ -98,37 +98,52 @@ def meta(data):
 
 
 LABEL_ID = "eu.thisisait.nos.ears-listen"
-PAUSED = pathlib.Path.home() / "ears" / "paused"
+#: The tmux window the listener runs in, inside the control centre's own
+#: session. NOT launchd, and the reason is measured (2026-08-31):
+#:
+#: ffmpeg is the process that opens the microphone, and macOS attributes the
+#: TCC grant to the RESPONSIBLE process. Started from a terminal, that is
+#: Terminal, which has the grant. Started by launchd, ffmpeg is responsible for
+#: itself, has no grant — and macOS does not deny it. It hands over a stream
+#: with no speech in it. Measured with identical arguments: terminal peak
+#: 19898 and correct Czech; launchd, a flat noise floor and empty transcripts,
+#: while the daemon reported `mic_ok: true` because hiss is not silence.
+#:
+#: So the ear runs where the grant already is. The .app bundle that would give
+#: launchd its own grantable identity is roadmap row `ears-app-bundle`.
+WINDOW = "ears"
+
+
+def _tmux(*args, session=None):
+    import os as _os
+    import subprocess
+    sess = session or _os.environ.get("NOS_CC_SESSION", "nos-cc")
+    return subprocess.run(["tmux", *[a.replace("{s}", sess) for a in args]],
+                          capture_output=True, text=True)
 
 
 def toggle(data):
-    """`s` — stop or resume the microphone, NOW, without a converge.
+    """`s` — stop or start the microphone, NOW, without a converge.
 
-    THE RUNTIME ONLY. `ears_always_listen` in config.yml is the DECLARATION and
-    this does not touch it, so the next converge re-asserts whatever the
-    operator declared. A marker file records that the pause was deliberate, so
-    the reader can tell PAUSED apart from "never started" — two states that
-    would otherwise both render as a job that is not loaded.
+    It runs the listener in a tmux window of this control centre's session,
+    because that is where the microphone grant lives (see WINDOW above). The
+    window survives the terminal that opened it, and it is VISIBLE — a live
+    microphone should be something you can look at, not only infer.
 
     Requiring a converge to stop being recorded would make the fastest way out
     of a private conversation an edit to YAML. That is the whole argument for
     the one action in this control centre.
     """
-    import subprocess
+    running = bool((data.get("listener") or {}).get("loaded"))
+    if running:
+        _tmux("kill-window", "-t", "={s}:" + WINDOW)
+        return "[b]microphone STOPPED[/] — the ears window is gone"
 
-    target = f"gui/{os.getuid()}"
-    listening = bool((data.get("listener") or {}).get("loaded"))
-    if listening:
-        subprocess.run(["launchctl", "bootout", f"{target}/{LABEL_ID}"],
-                       capture_output=True)
-        PAUSED.parent.mkdir(parents=True, exist_ok=True)
-        PAUSED.write_text(f"paused from nos-cc at {int(time.time())}\n")
-        return "[b]microphone STOPPED[/] — a converge will start it again"
-    plist = pathlib.Path.home() / f"Library/LaunchAgents/{LABEL_ID}.plist"
-    if not plist.is_file():
-        return f"[b red]no plist at {plist}[/] — converge with install_ears first"
-    run = subprocess.run(["launchctl", "bootstrap", target, str(plist)],
-                         capture_output=True, text=True)
-    PAUSED.unlink(missing_ok=True)
-    return ("[b]microphone STARTED[/]" if run.returncode == 0
-            else f"[b red]launchctl: {run.stderr.strip()[:80]}[/]")
+    if _tmux("has-session", "-t", "={s}").returncode != 0:
+        return ("[b red]no nos-cc session[/] — the ear runs inside it, "
+                "because that is where the microphone grant is")
+    cmd = str(pathlib.Path.home() / "ears/venv/bin/python") + " " + \
+        str(pathlib.Path.home() / "ears/ears-listen.py") + " --listen --autorun --verbose"
+    run = _tmux("new-window", "-d", "-t", "={s}", "-n", WINDOW, cmd)
+    return ("[b]microphone STARTED[/] in the `ears` window" if run.returncode == 0
+            else f"[b red]tmux: {run.stderr.strip()[:80]}[/]")
