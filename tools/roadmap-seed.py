@@ -1219,6 +1219,30 @@ row("cortex-vendor-staleness", "Four cortex drifts that are staleness, not diver
          "purpose' with 'one side is behind', and a third state would have made this reading "
          "unnecessary. Worth adding the day a fifth file joins the bucket, not before.")
 
+row("prom-rules-never-reload", "A new alert rule reaches the disk and never reaches Prometheus",
+    "2026-08-31", "next", "platform",
+    refs="files/anatomy/plugins/prometheus-base/plugin.yml · tasks/stacks/core-up.yml",
+    body="MEASURED 2026-08-31 while adding NosCriticalLokiRejectingWrites. The plugin's "
+         "pre_compose does `copy_dir: provisioning.rules` into "
+         "{{ stacks_dir }}/observability/prometheus/rules, the file lands correct and "
+         "complete — and the RUNNING Prometheus never learns. Its lifecycle API is off "
+         "(`POST /-/reload` answers 'Lifecycle API is not enabled'), Docker does not restart "
+         "a container because a bind-mounted file changed, and nothing sends SIGHUP. Measured "
+         "directly: after a clean `--tags observability` converge the deployed 01-infra.yml "
+         "contained nos_infra_logs and `GET /api/v1/rules` listed 19 groups without it. The "
+         "rule only loaded after a hand restart of the container. SAME FAMILY AS THE DEFECT IT "
+         "WAS WRITTEN FOR: a thing is wired, correct on disk, and unobserved — an alert that "
+         "cannot fire is indistinguishable from an estate with nothing wrong. WHY IT IS A ROW "
+         "AND NOT A PATCH: the loader's lifecycle vocabulary is deliberately declarative "
+         "(ensure_dir/render/copy_dir/remove_dir/replay_api_calls/wait_health) with NO exec "
+         "verb, so a SIGHUP cannot be expressed there, and adding one widens what every plugin "
+         "may do — a decision, not a fix. The alternatives, none free: enable "
+         "--web.enable-lifecycle and POST /-/reload (a new unauthenticated surface, loopback "
+         "only); checksum the rules dir in core-up.yml and notify a restart handler (Ansible "
+         "does not currently know the loader changed anything); or teach the loader to report "
+         "copy_dir as changed so Ansible can notify. The third is the one that also fixes every "
+         "other copy_dir consumer.")
+
 # ── Preflight: does the live table have the columns this script writes? ──────
 #
 # Added 2026-08-07 with the target/occurred_at migration. The live table was
