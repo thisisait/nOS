@@ -88,7 +88,30 @@ DEFAULT_SILENCE = float(os.environ.get("EARS_SILENCE_SECONDS", "7"))
 #: THE REAL FIX IS A DIFFERENT WORD. An English name is what Czech ASR mangles;
 #: an ordinary Czech word is in-distribution and comes back the same every time.
 #: This pattern is the bridge until the operator picks one.
-WAKE_PATTERN = os.environ.get("EARS_WAKE_PATTERN", r"^[hn][eěy]\S*\s?\S*(ef|če|čef)")
+#: NOT ANCHORED, and that was a real miss: the operator said "hej jeffe" in the
+#: MIDDLE of a segment ("...pokus 3. Hej je fe, slysis me") and an `^` pattern
+#: cannot see it. Segments are 10 s of continuous speech now, so the phrase is
+#: usually not at the start. A word boundary keeps the false-alarm score.
+#: MEASURED against 9 real spellings this ASR produced and 21 ordinary Czech
+#: lines. Two settings, and the choice is the operator's because it is a trade
+#: and not a bug:
+#:
+#:   default (this)  6 of 9 wakes, ZERO false alarms
+#:   +`fe`           9 of 9 wakes, 2 false alarms — "hej šéfe podej mi to",
+#:                   "hele kafe je hotové"
+#:
+#: A missed wake costs a repeat. A false wake sends whatever the room said to
+#: a model — locally under mode=local, and abroad under mode=cloud, which is
+#: why the safe one is the default. Switch with:
+#:   EARS_WAKE_PATTERN='\b[hn][eěy]\S{0,3}(\s\S{0,3}){0,2}(ef|fe|če)'
+#:
+#: NOT ANCHORED: the operator said the phrase in the MIDDLE of a 10 s segment
+#: ("...pokus 3. Hej je fe, slysis me"), and `^` cannot see that.
+#:
+#: THE REAL FIX IS A DIFFERENT WORD. Seven spellings for one English name is
+#: what Czech ASR does; an ordinary Czech word comes back the same every time
+#: and needs no pattern at all.
+WAKE_PATTERN = os.environ.get("EARS_WAKE_PATTERN", r"\b[hn][eěy]\S{0,3}(\s\S{0,3}){0,2}(ef|če)")
 RETENTION_DAYS = int(os.environ.get("EARS_RETENTION_DAYS", "90"))
 
 # ponytail: energy VAD, not silero — silero is MIT and 2 MB but wants torch,
@@ -133,6 +156,16 @@ INPUT_GAIN = float(os.environ.get("EARS_INPUT_GAIN", "8"))
 #: and could not tell them WHAT it wrote, and that gap cost three
 #: fixes aimed at the wrong layer. Set 0 to keep nothing.
 RECENT_SEGMENTS = int(os.environ.get("EARS_RECENT_SEGMENTS", "8"))
+
+#: DIAGNOSTIC ONLY, off by default: keep the last N segments as wav under
+#: ~/ears/debug/. It exists because the listener's stream CANNOT BE OBSERVED
+#: FROM OUTSIDE — a second capture on this USB microphone drops the signal
+#: 2.4x (measured: 18027 peak alone, 7470 with one more client), so every
+#: attempt to check on the daemon degraded the thing being checked. The only
+#: honest instrument is the daemon's own ears. Audio here is DEBUG WASTE and
+#: contradicts "no waveform at rest" — hence off by default, capped, and
+#: overwritten in place.
+DUMP_SEGMENTS = int(os.environ.get("EARS_DUMP_SEGMENTS", "0"))
 
 # How long the daemon waits for the FIRST audio byte before deciding the
 # microphone is not actually reachable. Generous: launchd starts us before the
@@ -479,6 +512,12 @@ def _run_loop(args, daemon: bool) -> int:
                     speech += chunk
                     continue
                 speech_at_cut = speech
+                if DUMP_SEGMENTS:
+                    dbg = HOME / "debug"
+                    dbg.mkdir(parents=True, exist_ok=True)
+                    with wave.open(str(dbg / f"seg{segments % DUMP_SEGMENTS}.wav"), "wb") as _w:
+                        _w.setnchannels(1); _w.setsampwidth(2); _w.setframerate(RATE)
+                        _w.writeframes(speech)
                 text = _transcribe_pcm(model, speech)
                 speech, quiet_chunks = b"", 0
                 segments += 1
@@ -606,6 +645,22 @@ def cmd_selfcheck(_args) -> int:
     must_not = ["hele to je jedno", "hej počkej chvilku", "nejde to",
                 "kolik je hodin v brně", "chtěl bych se tě zeptat",
                 "tohle je první test relativně z dálky", "nevím co s tím"]
+    # THE MID-SEGMENT CASE, from a real 10 s segment: with 1.2 s gaps the
+    # phrase arrives inside continuous speech, not at its start.
+    heard_as = heard_as + ["pokouším se na tobe mluvit hej jeffe slyšíš"]
+    must_not = must_not + ["pokouším se na tobe mluvit slyšíš mě",
+                           "pokus 1 2 3 4 5 6 7 8 9", "hej šéfe podej mi to",
+                           "hele kafe je hotové"]
+    # KNOWN MISSES of the safe pattern, asserted as misses so the trade stays
+    # measured rather than remembered: these three need the permissive
+    # EARS_WAKE_PATTERN, which costs two false alarms in the same sample.
+    for said in ("hejfem tohle je test", "he fe tohle je test",
+                 "11 12 13 14 pokus 3 hej je fe slyšíš"):
+        t = Turn("hej jeffe", "makej jeffe", 7)
+        t.feed(said, 0)
+        assert not t.armed, (
+            f"{said!r} now arms — the safe/permissive trade moved; re-measure "
+            f"the false-alarm side before keeping it")
     for said in heard_as:
         t = Turn("hej jeffe", "makej jeffe", 7)
         t.feed(said, 0)
