@@ -347,6 +347,8 @@ nodes:
   # the sentence would be a public claim about listening — theirs to author and
   # sign, not an agent's to draft. Withheld publishes nothing meanwhile.
   "service:ears":          withheld
+  "service:qdrant":        withheld
+  "service:spacetimedb":   withheld
   "service:homeassistant": { publish: reflexes, speaks: "the physical home, sensed and switched" }
 
   "service:smtp_stalwart": { publish: voice, speaks: "the house post office" }
