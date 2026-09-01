@@ -33,7 +33,7 @@ driver: libsql
 # Not `private` either: that would make the SEEDING AGENT the owner, so the
 # operator would not see their own caddy's table in face.
 visibility: tier-managers
-anchors: ["nos.agents"]
+anchors: ["nos.host"]
 
 schema:
   columns:
