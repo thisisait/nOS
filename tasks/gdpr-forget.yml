@@ -43,7 +43,10 @@
   loop: "{{ _erasure.services }}"
   loop_control:
     label: "{{ item.id }}"
-  when: item.flag == 'always' or (lookup('vars', item.flag, default=false) | bool)
+  # No `default=false`: an UNDECLARED flag is an error, not an absent service.
+  # `install_redis` was declared in no config layer, so this row's erasure pass
+  # silently dropped out of every plan. Gate: test_no_phantom_flag_branches.py.
+  when: item.flag == 'always' or (lookup('vars', item.flag) | bool)
 
 - name: "[GDPR forget] Erasure plan banner"
   ansible.builtin.debug:

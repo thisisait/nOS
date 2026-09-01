@@ -240,8 +240,9 @@
       expiry_notification: "{{ false if _unrouted else (uptime_kuma_tls_expiry_monitors | default(true)) }}"
       tags: ["{{ svc.stack | default('host') }}", "{{ svc.category | default('service') }}"]
   when:
-    - svc.install_flag in vars
-    - vars[svc.install_flag] | default(false)
+    # Undeclared flag = error, not "service off": the `in vars` guard dropped
+    # such a row silently, exit 0, no monitor.
+    - vars[svc.install_flag] | bool
     - vars[svc.domain_var] | default('') | length > 0
     # An unrouted service needs BOTH a declared path and a resolvable port, or
     # there is no honest probe to build and no monitor is better than a wrong one.
@@ -299,7 +300,9 @@
 - name: "[pazny.uptime_kuma] Append Redis TCP monitor"
   ansible.builtin.set_fact:
     _kuma_spec_monitors: "{{ _kuma_spec_monitors + [{'name': 'Redis TCP', 'type': 'tcp', 'hostname': '127.0.0.1', 'port': redis_port | default(6379), 'interval': 60, 'maxretries': 2, 'tags': ['infra', 'db']}] }}"
-  when: install_redis | default(false)
+  # `redis_docker` is the declared toggle; `install_redis` exists in no config
+  # layer, so this monitor was never once appended.
+  when: redis_docker | bool
 
 - name: "[pazny.uptime_kuma] Append FreePBX TCP monitor"
   ansible.builtin.set_fact:

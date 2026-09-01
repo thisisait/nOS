@@ -168,7 +168,9 @@ services:
   # Qdrant has no email to filter on), so auto-running them on a per-subject run
   # would over-delete. The dry-run plan prints these so the reach is auditable.
   - id: svc_redis
-    flag: install_redis
+    # `redis_docker`, not `install_redis`: the latter is declared in no config
+    # layer, so this row was never once in a plan.
+    flag: redis_docker
     method: manual
     note: "Sessions/cache only, opaque-keyed (session ids, not email). The
            svc_authentik delete revokes SSO; residual sessions TTL-expire. To

@@ -125,8 +125,9 @@ PEER_SERVICE_PLUGINS = ("woodpecker-base", "portainer-base")
 #: `install_redis` is why the OnlyOffice Redis block has never rendered; the
 #: other two surfaced from the same sweep and were unreported by R1.
 PHANTOM_FLAGS = {
-    "install_redis": ("roles/pazny.onlyoffice/templates/compose.yml.j2",
-                      "roles/pazny.uptime_kuma/tasks/monitors.yml"),
+    # The Kuma monitor was repaired to `redis_docker` (2026-09-01); OnlyOffice
+    # stays pinned because flipping it starts Redis for a live service.
+    "install_redis": ("roles/pazny.onlyoffice/templates/compose.yml.j2",),
     "freepbx_lan_access": ("roles/pazny.freepbx/templates/compose.yml.j2",),
     "sso_autologin_min_tier_2": (),
 }
