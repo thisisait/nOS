@@ -33,13 +33,26 @@ file fails against the broken state rather than merely describing it.
 """
 from __future__ import annotations
 
+import ast
 import importlib.util
 import pathlib
 import re
 
+import pytest
+import yaml
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
 FILTER = REPO / "filter_plugins/nos_prune_guard.py"
 TASK = REPO / "tasks/stacks/prune-disabled.yml"
+
+
+def _set_fact_expr(name: str) -> str:
+    """The Jinja body of the set_fact that defines `name`, from the PARSED task."""
+    for task in yaml.safe_load(TASK.read_text()) or []:
+        body = (task.get("ansible.builtin.set_fact") or task.get("set_fact") or {}).get(name)
+        if body is not None:
+            return body
+    raise AssertionError(f"no set_fact defines {name} in {TASK}")
 
 
 def _load():
@@ -329,8 +342,28 @@ def test_a_pinned_container_name_is_reached():
     )
 
 
-def test_the_task_supplies_pinned_container_names():
-    assert "container_name" in TASK.read_text(), (
+def test_the_task_supplies_pinned_container_names(tmp_path):
+    """RENDER the harvest, do not grep for it.
+
+    Deleting the whole selectattr('container_name','defined') harvest left the
+    old `"container_name" in TASK.read_text()` GREEN — the surviving comment
+    satisfied it, while a pinned container would survive its own prune.
+    """
+    jinja2 = pytest.importorskip("jinja2")
+    expr = _set_fact_expr("_override_services")
+
+    frag = tmp_path / "overrides" / "smtp_stalwart.yml"
+    frag.parent.mkdir(parents=True)
+    frag.write_text("services:\n  smtp_stalwart:\n    container_name: mail-gw\n")
+
+    env = jinja2.Environment()
+    env.filters["from_yaml"] = yaml.safe_load
+    env.tests["search"] = lambda v, p: re.search(p, v) is not None
+    rendered = env.from_string(expr).render(
+        lookup=lambda kind, p: pathlib.Path(p).read_text(),
+        _all_overrides={"files": [{"path": str(frag)}]},
+    )
+    assert "mail-gw" in ast.literal_eval(rendered)[str(frag)], (
         "the task stopped harvesting `container_name:` from the fragments, so "
         "a container named other than <stack>-<service>-<n> survives its prune"
     )

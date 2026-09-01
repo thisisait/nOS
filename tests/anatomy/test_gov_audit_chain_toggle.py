@@ -21,12 +21,10 @@ POST = REPO / "roles" / "pazny.wing" / "tasks" / "post.yml"
 
 
 def test_default_config_ships_chain_off():
-    assert "wing_audit_chain_enabled: false" in CFG.read_text(), \
+    # Parsed, not grepped: a commented-out line satisfied the old text assert.
+    # `test_gov_local_opts_in` was its parsed twin's duplicate and is gone.
+    assert yaml.safe_load(CFG.read_text()).get("wing_audit_chain_enabled") is False, \
         "default.config.yml must keep the audit chain OFF (normal run inert)"
-
-
-def test_gov_local_opts_in():
-    assert "wing_audit_chain_enabled: true" in GOV.read_text()
 
 
 def test_gov_local_three_gov_controls_all_true():

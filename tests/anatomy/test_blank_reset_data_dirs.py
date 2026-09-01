@@ -30,6 +30,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import yaml
+
 import pytest
 
 
@@ -106,15 +108,22 @@ def _extract_blank_dirs_expr() -> str:
     return match.group("body")
 
 
+def _plays(path):
+    return yaml.safe_load(path.read_text()) or []
+
+
 def test_blank_dirs_set_fact_exists():
-    """The _blank_dirs set_fact must live in removal-set.yml (the single removal
-    inventory) and blank-reset.yml must still own the wipe loop over it."""
-    assert "_blank_dirs:" in REMOVAL_SET_PATH.read_text(), (
-        "_blank_dirs set_fact missing from removal-set.yml"
-    )
-    assert 'loop: "{{ _blank_dirs }}"' in BLANK_RESET_PATH.read_text(), (
-        "the data-dir removal task must loop over _blank_dirs"
-    )
+    """Parsed, not grepped: a comment naming `_blank_dirs` satisfied the old
+    text assert, so the wipe could vanish with the gate still green."""
+    assert any(
+        "_blank_dirs" in (t.get("ansible.builtin.set_fact") or t.get("set_fact") or {})
+        for t in _plays(REMOVAL_SET_PATH)
+    ), "_blank_dirs set_fact missing from removal-set.yml"
+    assert [
+        t for t in _plays(BLANK_RESET_PATH)
+        if t.get("loop") == "{{ _blank_dirs }}"
+        and (t.get("ansible.builtin.file") or t.get("file") or {}).get("state") == "absent"
+    ], "no task removes the paths in _blank_dirs — a blank would leave the data dirs"
 
 
 def test_blank_dirs_expression_is_jinja_parseable():
