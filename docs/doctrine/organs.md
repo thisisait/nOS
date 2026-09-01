@@ -62,29 +62,43 @@ and calibre-web; `spine` holds bone and wing beside portainer. Organ answers
 what a service is for. Only `layer` answers what the estate cannot start
 without, and defaults are a necessity question.
 
-## 4. Defaults derive; config only adds
+## 4. Defaults are declared and validated, not derived
 
-    install_<svc> defaults true  iff  layer ∈ {L0, L1} or stack == host
-    everything else                   false
+    state/manifest.yml:  default: true | false          per service
+    gate:                every L0/L1 service is true
+                         no true service has a false upstream
+                         a service with no layer carries a reason
 
-~13 services, computed from the graph, so defaults cannot drift from it.
-A hand-set `install_*: true` the graph does not justify fails its gate.
+Derivation was tried and refused on evidence:
 
-`config.yml` becomes additive: extra services, parameters, personalisation.
-It never carries `false`.
+| rule `layer ∈ {L0,L1} or stack == host` | result |
+|---|---|
+| traefik | **false** — the only edge proxy, and the only proxy on Linux |
+| tailscale, bone, alloy | **true** via `stack == host` while their layer is *withheld* |
+| gitea, cortex, mcp_gateway, onlyoffice, openclaw, influxdb | true because a consumer that is false needs them |
+| mailpit, ntfy, rustfs | L0 — sinks read as substrate |
+| count | 30 of 65, against ~13 predicted |
 
-`prune_disabled_overrides` is then deleted. Its ambiguity is that `false` means
-both *never wanted* and *not this run*; with an additive config the enabled set
-is always a declaration, and the prune needs no permission flag.
+`stack == host` reads a refusal as a yes. A one-pass computation over the full
+manifest cannot express "needed only by something not enabled". Declaration
+plus a gate expresses both.
 
-Profiles become additive too. `all-on` adds everything. `dev-minimal` stops
-existing — it is the default.
+## 5. Census after survey
 
-## 5. Order of work
+L0 9 · L1 11 · L2 39 · withheld 6 — from 3/4/19/39.
 
-1. Survey the 39 services with no `layer`. Prerequisite, not a side effect.
-2. `organ` into `state/manifest.yml`; apex reads it.
-3. Derive the default set; gate defaults against the derivation.
-4. Make `config.yml` additive; delete the 30 no-op restatements and the 2 `false`.
-5. Delete `prune_disabled_overrides` and `profiles/dev-minimal.yml`.
-6. Re-point the agent forge from GitLab to Gitea (`tools/loop-review.py`).
+Withheld with a reason, not a gap: traefik and tailscale (reachability, zero
+data edges); bone (2-cycle with wing); ears, iiab_terminal, opencode (no
+plugin manifest to carry `depends_on:`).
+
+`alloy` is L2: it ships everything and nothing consumes it.
+
+## 6. Order of work
+
+1. `organ` into `state/manifest.yml`; apex reads it.
+2. `default:` into `state/manifest.yml`; gate it against the graph.
+3. `config.yml` additive; drop the 30 no-ops and the 2 `false`.
+4. Delete `prune_disabled_overrides` and `profiles/dev-minimal.yml`.
+5. Plugin manifests for ears, iiab_terminal, opencode.
+6. Decide the sink class: refuse it as edges the way exporters are refused, or accept 4 more default-on.
+7. Agent forge to Gitea (`tools/loop-review.py`).
