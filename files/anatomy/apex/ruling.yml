@@ -342,6 +342,11 @@ nodes:
   "service:n8n":           { publish: reflexes, speaks: "workflows that click together without code" }
   "service:nodered":       { publish: reflexes, speaks: "wires from events to actions" }
   "service:pulse":         { publish: reflexes, speaks: "the metronome every scheduled duty answers to" }
+  # ears: WITHHELD pending the operator. Every sibling organ publishes a
+  # `speaks:` sentence, but this one is a microphone in the operator's home and
+  # the sentence would be a public claim about listening — theirs to author and
+  # sign, not an agent's to draft. Withheld publishes nothing meanwhile.
+  "service:ears":          withheld
   "service:homeassistant": { publish: reflexes, speaks: "the physical home, sensed and switched" }
 
   "service:smtp_stalwart": { publish: voice, speaks: "the house post office" }

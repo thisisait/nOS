@@ -1304,6 +1304,28 @@
       ]
     },
     {
+      "q": "ears log",
+      "expect": [
+        "node:nos.host.ears",
+        "title:read-ears-log"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "ears status",
+      "expect": [
+        "node:nos.host.ears",
+        "title:check-ears-daemon"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "edge proxy summary",
       "expect": [
         "node:nos.infra.traefik",
@@ -2063,6 +2085,17 @@
       ]
     },
     {
+      "q": "is Ears running",
+      "expect": [
+        "node:nos.host.ears",
+        "title:check-ears-daemon"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "is InfluxDB up",
       "expect": [
         "node:nos.data.influxdb",
@@ -2243,6 +2276,17 @@
       "expect": [
         "node:nos.host.wing",
         "title:check-hub-health"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
+      "q": "is the microphone listening",
+      "expect": [
+        "node:nos.host.ears",
+        "title:check-ears-daemon"
       ],
       "forbid": [
         "node:nos",
@@ -5837,6 +5881,17 @@
       ]
     },
     {
+      "q": "what did Ears hear",
+      "expect": [
+        "node:nos.host.ears",
+        "title:read-ears-log"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
+      ]
+    },
+    {
       "q": "what does <router> forward to",
       "expect": [
         "node:nos.infra.traefik",
@@ -6496,6 +6551,17 @@
       "forbid": [
         "node:nos",
         "node:nos.iiab"
+      ]
+    },
+    {
+      "q": "why did it not wake",
+      "expect": [
+        "node:nos.host.ears",
+        "title:read-ears-log"
+      ],
+      "forbid": [
+        "node:nos",
+        "node:nos.host"
       ]
     },
     {

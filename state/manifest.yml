@@ -892,6 +892,18 @@ services:
       url_template: "http://localhost:{{ cortex_port }}/health"
       expect_status: 200
 
+  # The listening organ. NO domain_var/port_var and NO health_check, and both
+  # absences are deliberate: it serves nothing over HTTP, and its launchd agent
+  # is RENDERED ALWAYS but STARTED only when ears_always_listen is true
+  # (operator decision — an always-open microphone records whoever else is in
+  # the room). A health check here would report a correctly-off organ as broken.
+  - id: ears
+    category: ai
+    stack: null
+    install_flag: install_ears
+    version_source: launchd
+    launchd_label: eu.thisisait.nos.ears-listen
+    data_path_var: ears_runtime_dir
   - id: backrest
     category: storage
     stack: null

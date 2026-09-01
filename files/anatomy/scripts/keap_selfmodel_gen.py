@@ -131,7 +131,7 @@ SYSTEM_NAME = {
     "freepbx": "FreePBX", "qgis-server": "QGIS Server",
     "alloy": "Grafana Alloy", "openclaw": "OpenClaw", "hermes": "Hermes",
     "opencode": "OpenCode", "wing": "Wing", "bone": "Bone", "pulse": "Pulse",
-    "cortex": "Cortex",
+    "cortex": "Cortex", "ears": "Ears",
     "iiab-terminal": "IIAB Terminal", "backup": "Backup", "backrest": "Backrest",
     "tailscale": "Tailscale",
 }
@@ -506,6 +506,16 @@ SYSTEM_EN = {
         "answer with the ontology, opcode and database versions it reasoned against — where "
         "KEAP holds the knowledge itself, Cortex is the machinery that validates reasoning "
         "over it."
+    ),
+    "ears": (
+        "Ears, the listening organ. A launchd agent captures the microphone through "
+        "ffmpeg and transcribes it locally with Parakeet MLX, waking on a spoken phrase "
+        "and submitting on another — nothing is sent anywhere to be understood. It asks "
+        "an agent for a proposal and has the Cortex daemon typecheck it, and it cannot "
+        "execute a chain itself: effects stay behind the binding gate. Where OpenClaw "
+        "acts on written instructions, Ears is the only organ that takes an instruction "
+        "spoken aloud, and it is off unless the operator says otherwise, because an "
+        "always-open microphone records whoever else is in the room."
     ),
     "iiab-terminal": (
         "The IIAB terminal, a text user interface set as the forced shell for the kiosk "

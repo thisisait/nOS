@@ -4,14 +4,14 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 253,
+    "nodes": 254,
     "edges": 283,
     "nodes_pulse": 30,
     "nodes_judge": 5,
     "nodes_gateset": 4,
     "nodes_weakness": 7,
     "nodes_daemon": 14,
-    "nodes_service": 64,
+    "nodes_service": 65,
     "nodes_resource": 19,
     "nodes_repo": 4,
     "nodes_tofu": 1,
@@ -28,13 +28,13 @@
     "edges_service_dependency": 35,
     "services_survey_declared": 26,
     "services_survey_not_surveyed": 35,
-    "services_survey_no_manifest": 3,
+    "services_survey_no_manifest": 4,
     "edges_service_dependency_unenforced": 13,
     "services_layer_L0": 3,
     "services_layer_L1": 4,
     "services_layer_L2": 19,
     "services_layer_L3": 0,
-    "services_layer_withheld": 38
+    "services_layer_withheld": 39
   },
   "warnings": [
     "union-kind cycle (feedback loop, review-not-refuse): pulse:cortex:cortex-fs-sync -> pulse:keap:keap-embed-sync -> pulse:cortex:cortex-corpus-diff -> pulse:cortex:cortex-fs-sync"
@@ -2102,6 +2102,18 @@
       "description": "Docker service 'cortex' (knowledge) in the None compose stack, toggled by install_cortex",
       "layer": null,
       "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
+    },
+    "service:ears": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": null,
+      "category": "ai",
+      "install_flag": "install_ears",
+      "dependency_survey": "no-manifest",
+      "anchor": "02.02.09",
+      "description": "Docker service 'ears' (ai) in the None compose stack, toggled by install_ears",
+      "layer": null,
+      "layer_withheld": "dependency_survey=no-manifest — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:erpnext": {
       "kind": "service",
