@@ -42,6 +42,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import uuid
 from pathlib import Path
 
@@ -100,9 +101,15 @@ def _render(expression: str) -> dict:
     fact = json.dumps({"_nos_gated_without_authentik": expression})
     probe.write_text(PROBE.format(ANSIBLE_FACT=fact, out=out))
     try:
+        # inventory:4 pins ansible_python_interpreter=/opt/homebrew/bin/python3
+        # — correct on the operator's Mac, absent on the Linux pytest runner,
+        # where every module fails "interpreter not found". Extra-vars outrank
+        # an inventory host var, so this is what makes the probe portable.
         run = subprocess.run(
-            ["ansible-playbook", probe.name],
+            ["ansible-playbook", probe.name,
+             "-e", f"ansible_python_interpreter={sys.executable}"],
             cwd=REPO, capture_output=True, text=True, timeout=300,
+            env={**os.environ, "ANSIBLE_PYTHON_INTERPRETER": sys.executable},
         )
         assert run.returncode == 0, f"probe failed:\n{run.stdout}\n{run.stderr}"
         return json.loads(out.read_text())

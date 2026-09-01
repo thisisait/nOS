@@ -41,6 +41,8 @@ from __future__ import annotations
 import pathlib
 import shutil
 import subprocess
+import os
+import sys
 import tempfile
 
 import pytest
@@ -81,9 +83,14 @@ def _render_without_authentik(template_relpath: str) -> str:
     probe = REPO / f".oidc-degrade-probe-{out.stem}.yml"
     probe.write_text(PROBE.format(out=out, tpl=template_relpath))
     try:
+        # inventory:4 pins /opt/homebrew/bin/python3, absent on the Linux
+        # pytest runner. Extra-vars outrank an inventory host var.
         run = subprocess.run(["ansible-playbook", probe.name,
-                              "-e", "install_authentik=false"], cwd=REPO,
-                             capture_output=True, text=True, timeout=180)
+                              "-e", "install_authentik=false",
+                              "-e", f"ansible_python_interpreter={sys.executable}"],
+                             cwd=REPO, capture_output=True, text=True, timeout=180,
+                             env={**os.environ,
+                                  "ANSIBLE_PYTHON_INTERPRETER": sys.executable})
         assert run.returncode == 0, (
             "the template does not even RENDER with install_authentik false — "
             f"that is a converge abort, not a degradation:\n{run.stdout}\n{run.stderr}")
