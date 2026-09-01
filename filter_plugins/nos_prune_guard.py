@@ -34,6 +34,8 @@ from __future__ import annotations
 
 import os
 import re
+import sys
+from pathlib import Path
 
 #: A value we cannot attribute without rendering Jinja (e.g.
 #: `install_acme: "{{ not tenant_domain_is_local }}"`). Neither authored-off nor
@@ -63,10 +65,39 @@ def _literal_state(value):
 
 def _sep_insensitive(name):
     """`uptime_kuma` matches `uptime-kuma.yml` and `uptime_kuma.yml` alike —
-    fragments are named by whatever separator the role chose."""
+    fragments are named by whatever separator the role chose.
+
+    FALLBACK ONLY since 2026-09-01: it is a guess, and three services are
+    unreachable by any separator rule (`install_calibreweb` -> calibre-web.yml,
+    `install_openwebui` -> open-webui.yml, `install_offline_maps` ->
+    tileserver.yml). Used only where the manifest has no row to ask.
+    """
     return re.compile(
         r"^" + re.escape(name).replace("_", "[-_]?") + r"(-base)?$"
     )
+
+
+def _manifest_stems():
+    """install_<svc> -> [fragment stem], from state/manifest.yml. The join.
+
+    A flag carried by SEVERAL rows is a stack flag, not a service identity
+    (`install_observability` -> grafana+prometheus+loki+tempo+alloy), and
+    pruning on it is the 2026-09-01 blast radius. Excluded: it answers `[]`,
+    which is what the guess answered too.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+    from nos_identity import fragment_stem, services  # noqa: PLC0415
+
+    by_flag = {}
+    for row in services():
+        by_flag.setdefault(row.get("install_flag"), []).append(fragment_stem(row))
+    return {f: [s for s in v if s] for f, v in by_flag.items() if f and len(v) == 1}
+
+
+try:
+    _STEMS = _manifest_stems()
+except Exception:  # noqa: BLE001 — never fail a converge over the join
+    _STEMS = {}
 
 
 def nos_prune_plan(disabled, on_disk_flags, overrides, containers):
@@ -119,8 +150,16 @@ def nos_prune_plan(disabled, on_disk_flags, overrides, containers):
             # include_vars. Not a declaration.
             unauthored.append(svc)
 
+    def _patterns(name):
+        """The manifest row is authoritative — including when it answers "no
+        fragment". Only a name with no row at all falls back to the guess."""
+        flag = "install_" + name
+        if flag in _STEMS:
+            return [re.compile(r"^" + re.escape(s) + r"(-base)?$") for s in _STEMS[flag]]
+        return [_sep_insensitive(name)]
+
     def _select(names):
-        patterns = [_sep_insensitive(s) for s in names]
+        patterns = [p for s in names for p in _patterns(s)]
         fragments, compose_services = [], []
         for path, services in sorted(overrides.items()):
             parts = path.split(os.sep)

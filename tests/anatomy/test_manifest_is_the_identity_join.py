@@ -66,9 +66,12 @@ def test_the_stem_reaches_a_prune_plan():
     for flag in UNREACHABLE_BY_GUESS:
         row = by_flag(flag)
         stem, path = fragment_stem(row), fragment_path(row)
+        # The FLAG SUFFIX is what prune-disabled.yml passes — feeding the stem
+        # here would let the separator guess answer and prove nothing.
+        svc = flag[len("install_"):]
         plan = nos_prune_plan(
-            disabled=[stem],
-            on_disk_flags={f"install_{stem}": False},
+            disabled=[svc],
+            on_disk_flags={flag: False},
             overrides=rendered,
             containers=[f"{row['stack']}-{stem}-1"],
         )

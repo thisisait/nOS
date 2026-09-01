@@ -44,11 +44,12 @@
 #
 # ── Naming is NOT uniform, and a naive mapping misses half of them ───────────
 #
-# Fragments are named by whatever the role chose: `code-server.yml` with hyphens
-# sits beside `qgis_server.yml` and `smtp_stalwart.yml` with underscores. So the
-# match is SEPARATOR-INSENSITIVE, the same rule tools/discovery-scan.py already
-# needed for container names — a hyphen-only mapping silently misses the
-# underscore-named fragments (qgis_server, smtp_stalwart).
+# Fragments are named by whatever the role chose: `code-server.yml` sits beside
+# `qgis_server.yml`, and no separator rule reaches `calibre-web.yml` from
+# `install_calibreweb` or `tileserver.yml` from `install_offline_maps` — three
+# fragments were unreachable until 2026-09-01. `nos_prune_plan` now asks
+# state/manifest.yml for the flag -> fragment hop (tools/nos_identity.py) and
+# guesses only where no row exists. Gate: test_manifest_is_the_identity_join.py.
 #
 # ── Why removing the fragment is USUALLY enough, and when it is not ─────────
 #
