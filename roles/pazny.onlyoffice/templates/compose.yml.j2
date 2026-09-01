@@ -35,7 +35,7 @@ services:
       JWT_IN_BODY: "{{ onlyoffice_jwt_in_body | default(true) | string | lower }}"
       USE_UNAUTHORIZED_STORAGE: "false"
       GENERATE_FONTS: "{{ onlyoffice_generate_fonts | default(true) | string | lower }}"
-{% if install_redis | default(false) %}
+{% if redis_docker | bool %}
       # ── Redis (sdileny s infra stackem; volitelne, zvysuje propustnost) ───
       REDIS_SERVER_HOST: "redis"
       REDIS_SERVER_PORT: "6379"

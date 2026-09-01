@@ -12,14 +12,14 @@ Single invocation from `tasks/stacks/stack-up.yml`:
 - Renders `templates/compose.yml.j2` into `{{ stacks_dir }}/b2b/overrides/onlyoffice.yml`
 - Notifies `Restart onlyoffice` if the override template changed
 
-No post-start task. Embedded PostgreSQL bootstraps on first run. Redis from the infra stack is used when `install_redis=true` (optional, improves throughput).
+No post-start task. Embedded PostgreSQL bootstraps on first run. Redis from the infra stack is used when `redis_docker` is true (optional, improves throughput).
 
 ## Requirements
 
 - Docker Desktop for Mac (ARM64)
 - `stacks_shared_network` defined at the play level
 - A top-level `Restart onlyoffice` handler in the consuming playbook (role-local fallback also provided)
-- (Optional) `install_redis=true` — reuses infra Redis for caching
+- (Optional) `redis_docker` — reuses infra Redis for caching
 - `onlyoffice_jwt_secret` (auto-generated via `openssl rand -hex 32` in `main.yml`)
 
 ## Variables
