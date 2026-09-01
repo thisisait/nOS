@@ -23,48 +23,20 @@
     _wait_done: false
     _wait_last: []
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Re-bind stale config mounts BEFORE asking anything whether it is healthy.
-#
-# MEASURED 2026-09-01, and it is a deadlock rather than an inefficiency.
-# Ansible's `template:` writes a temp file and RENAMES it into place. A
-# single-FILE bind mount binds the inode, so the rename leaves the container's
-# path at ENOENT — not stale content, GONE:
-#
-#   in-place write (`> f`)  container sees the new bytes immediately
-#   atomic rename           container gets `No such file or directory`
-#   docker restart          re-binds; container sees the new bytes
-#
-# Loki's healthcheck is `loki -verify-config` against exactly such a mount, so a
-# converge that changed one line of local-config.yaml took it to `8/9 ready
-# FAILED: loki-1` and the STRICT gate then waited out its whole budget. The
-# reconciler that repairs this ran at the END of main.yml — AFTER this wait — so
-# the fix could never be reached by the run that caused the damage. Sixteen
-# minutes of a blocked converge, and on a longer budget it would have been the
-# full 540s and then a hard fail.
-#
-# It runs here without --apply's verdict being fatal: this is the REPAIR, and
-# the poll loop immediately below is what judges whether it worked. The
-# authoritative pass at the end of main.yml still fails the run on config a
-# container never picked up — finding stale config is not an error, failing to
-# act on it is, and that judgement stays in one place.
+# Re-bind stale config mounts BEFORE the health gate. `template:` renames, and a
+# single-FILE bind mount binds the inode, so the container gets ENOENT — loki's
+# healthcheck reads such a mount and the STRICT wait then blocks on damage this
+# run caused, while the reconciler that repairs it ran at the END of main.yml.
+# Repair here, verdict below and at the end of main.yml. See foreign-properties §8.
 - name: "[Stacks] Re-bind any container whose rendered config was replaced"
   tags: ['stacks', 'core', 'always']
   ansible.builtin.command: "{{ playbook_dir }}/tools/reload-stale-config.py --apply"
   register: _wait_reload
   changed_when: "'restarted ' in _wait_reload.stdout"
   failed_when: false
-  # default(TRUE), like every other nos_docker_ready consumer in main.yml, and
-  # the polarity is the whole point. The fact is set by a probe in
-  # tasks/iiab/docker-prereqs.yml tagged ['iiab','docker','stacks'] — so under
-  # `--tags observability` it is never set at all. Defaulting to false made this
-  # task skip SILENTLY (ansible.cfg has display_skipped_hosts=false, so a task
-  # skipped on every host prints no banner), which is how the first version of
-  # this repair ran a whole converge doing nothing and looked identical to one
-  # that worked. The end-of-run reconciler had the same bug, tagged `always` so
-  # it could not be skipped and then skipping itself on its own `when`.
-  # Assuming docker is present is safe: reload-stale-config.py answers
-  # `UNKNOWN — could not read docker` and exits 0 when it is not.
+  # default(TRUE) like every other consumer: the fact is only set under tags
+  # iiab/docker/stacks, so default(false) made this skip SILENTLY
+  # (display_skipped_hosts=false). The tool answers UNKNOWN if docker is absent.
   when: nos_docker_ready | default(true) | bool
 
 - name: "[Stacks] Re-bind report ({{ _wait_stacks | join(', ') }})"

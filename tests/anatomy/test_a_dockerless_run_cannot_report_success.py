@@ -1,30 +1,14 @@
 """Anatomy CI gate — a run asked for stacks must refuse to finish without Docker.
 
-MEASURED 2026-09-01, auditing for the fresh-Mac test. `nos_docker_ready` is set
-by a `docker info` probe in tasks/iiab/docker-prereqs.yml and gates 18 tasks —
-the entire compose layer. NOTHING asserted it. So a first converge on a machine
-where Docker never came up ends:
+MEASURED 2026-09-01: 18 tasks gate on `nos_docker_ready` and nothing asserted
+it, so a fresh-Mac converge where Docker never came up ends `failed=0` with no
+service installed — and ansible.cfg's display_skipped_hosts=false prints no
+banner for the skips, so the log looks clean.
 
-    PLAY RECAP  ok=N  changed=N  failed=0
-
-with no stack, no service and no post-start wiring, and `ansible.cfg`'s
-`display_skipped_hosts = false` means the skips print no banner at all. The log
-of a run that installed nothing is indistinguishable from one that worked.
-
-The playbook DOES pause helpfully when the docker BINARY is missing. This is the
-other half: the binary exists, the daemon never answered, and the run walks on.
-
-Three properties, and the third is the one that rots:
-
-  1. main.yml refuses (`fail:`) when `nos_docker_ready` is false.
-  2. The refusal carries core-up's OWN tags, so it is precise: `--tags dotfiles`
-     does not select it and cannot be failed by it, while any run that would
-     have brought stacks up does select it.
-  3. The escape hatch (`nos_allow_no_docker`) defaults to FALSE and is declared
-     per-invocation in .github/workflows/ci.yml — a reviewed file — not
-     defaulted in default.config.yml where a reader would never meet it. An
-     escape that ships on by default is not an escape, it is the old behaviour
-     with a longer name.
+Pinned: main.yml refuses; the refusal carries core-up's OWN tags (so
+`--tags dotfiles` is unaffected); and the escape defaults FALSE, declared
+per-invocation in ci.yml rather than in default.config.yml. An escape that
+ships on by default is the old behaviour with a longer name.
 """
 
 from __future__ import annotations

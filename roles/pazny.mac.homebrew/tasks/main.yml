@@ -211,6 +211,10 @@
       environment:
         HOMEBREW_NO_AUTO_UPDATE: "1"
         HOMEBREW_NO_INSTALL_CLEANUP: "1"
+      # install_cask_apps gated nothing until 2026-09-01 — false still installed
+      # VS Code, Windsurf, Sublime, Ghostty. Default true, so nothing changes on
+      # an existing box. Blacklist-uninstall above stays ungated: not an install.
+      when: install_cask_apps | default(true) | bool
       notify:
         - Clear homebrew cache
 

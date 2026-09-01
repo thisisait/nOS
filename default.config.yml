@@ -556,7 +556,8 @@ install_freepbx: false            # FreePBX + Asterisk – PBX / call center    
 
 # ── Engineering stack (HW/CAD/GIS) ───────────────────────────────────────────
 install_qgis_server: false        # QGIS Server – GIS map server                        [Docker]
-install_engineering_apps: false   # KiCad, FreeCAD, Arduino IDE                          [Homebrew Cask]
+# install_engineering_apps DELETED 2026-09-01 — no consumer, no cask list.
+# For CAD tooling add the casks to homebrew_cask_apps (install_cask_apps gates it).
 
 # ── Data stack (analytics/BI) ────────────────────────────────────────────────
 install_metabase: true           # Metabase – BI dashboards                             [requires: PostgreSQL]

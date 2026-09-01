@@ -2114,32 +2114,12 @@
     # Bluesky PDS / Grafana / Prometheus / Loki / Tempo are running and just inject
     # their configs + notify handlers to restart containers.
     # ──────────────────────────────────────────────────────────────────────────
-    # A DOCKER-LESS RUN MUST NOT REPORT SUCCESS. Measured 2026-09-01: 18 tasks
-    # are gated on `nos_docker_ready` and NOTHING asserted it, so a first
-    # converge on a machine where Docker never came up ends `failed=0` having
-    # installed no service at all — and ansible.cfg's display_skipped_hosts=false
-    # hides the skips, so the log looks like a clean run. That is the exact
-    # shape this estate exists to refuse, sitting on the path of the fresh-Mac
-    # test.
-    #
-    # It carries core-up's OWN tags, which is what makes it precise rather than
-    # blanket: a host-only run (`--tags dotfiles`) does not select this task, so
-    # it cannot fail a run that never wanted Docker. Any run that WOULD have
-    # brought stacks up selects it.
-    #
-    # The escape is deliberate and must stay visible in a reviewed file rather
-    # than defaulted here: the GitHub macOS runner has no Docker on purpose and
-    # declares `-e nos_allow_no_docker=true` in .github/workflows/ci.yml.
-    #
-    # SCOPE, measured while proving this fires rather than assumed: the fact is
-    # SET by tasks/iiab/docker-prereqs.yml, imported under tags
-    # ['iiab','docker','stacks']. `--tags core` alone therefore never sets it,
-    # `default(true)` wins, and this skips. That is the correct direction — a
-    # run that never probed must not fail on a guess — and the dead daemon is
-    # still caught in that path by core-up's own "Wait for Docker daemon to be
-    # ready", which retries 10x and DOES fail hard. The two together cover it;
-    # neither alone does. VERIFIED both ways with a `docker` stub that exits 1:
-    # `--tags core` fails at core-up's wait, `--tags docker,core` fails HERE.
+    # A Docker-less run must not report success: 18 tasks gate on
+    # nos_docker_ready, nothing asserted it, and display_skipped_hosts=false
+    # hides the skips — a fresh-Mac converge could end failed=0 with nothing
+    # installed. Tagged like core-up, so `--tags dotfiles` is unaffected;
+    # `--tags core` alone never sets the fact and core-up's own wait covers it.
+    # Escape declared per-invocation in ci.yml, never defaulted here.
     - name: "[Core] Refuse to continue without Docker"
       ansible.builtin.fail:
         msg: |
