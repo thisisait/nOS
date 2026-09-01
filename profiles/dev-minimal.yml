@@ -1,0 +1,164 @@
+# =============================================================================
+# profiles/dev-minimal.yml — the estate that develops nOS, and nothing else
+# =============================================================================
+#
+# Purpose: run the nOS development loop and a small business-logic fixture on
+# the smallest estate that still exercises every mechanism, so the rest of the
+# machine belongs to a local model.
+#
+#   nos -e @profiles/dev-minimal.yml
+#   tools/nos-stacks.sh stacks -e @profiles/dev-minimal.yml   # stack layer only
+#
+# MEASURED 2026-09-01 on the live 60-container estate (`docker stats`), not
+# estimated:
+#
+#     now      60 containers   14.2 GiB resident
+#     this     30 containers    3.8 GiB resident
+#     freed                    10.4 GiB
+#
+# READ THE CAVEAT BEFORE BUDGETING THAT. The container tally is not what macOS
+# gets back. The Docker VM (com.apple.Virtualization.VirtualMachine) held
+# 17.3 GiB RSS while its containers reported 14.2 — the VM's own overhead is
+# real memory — and Docker Desktop does not reliably return freed pages to the
+# host without a restart. So treat 10.4 GiB as freed INSIDE the VM. The hard
+# lever is Docker Desktop's own cap: `MemoryMiB` in the settings store reads
+# 23808 (23.25 GiB) on this host, which is what actually bounds Docker.
+#
+# WHAT DECIDED THE LIST. Not taste — the derived service→service dependency
+# graph (state/anatomy-graph.json, docs/doctrine/layers.md §4):
+#
+#   L0 substrate : mariadb, postgresql, redis
+#   L1 platform  : authentik, gitea, keap, wing
+#
+# Everything L0/L1 stays. Everything else had to earn its place by being the
+# development loop, an organ, or the fixture.
+# =============================================================================
+
+# ── L0 substrate ─────────────────────────────────────────────────────────────
+install_mariadb: true
+install_postgresql: true
+redis_docker: true
+
+# ── L1 platform + the edge ───────────────────────────────────────────────────
+install_authentik: true         # SSO is not optional: forward-auth and the
+                                # OIDC clients are what every route depends on
+install_traefik: true
+install_nginx: false            # Traefik is the edge since C1; nginx is the
+                                # opt-in fallback and doubles the surface
+install_gitea: true             # L1. The forge Woodpecker actually clones from
+install_keap: true              # L1. The cortex — the knowledge layer agents query
+install_infisical: true         # secrets vault; agent credentials resolve here
+
+# ── The development loop ─────────────────────────────────────────────────────
+install_woodpecker: true        # CI. Mandatory: the deploy pipeline IS the loop
+install_gitlab: false           # ── THE SINGLE BIGGEST CUT, 3 789 MiB (26% of
+                                # the whole estate) against Gitea's 198.
+                                # The graph says it is a LEAF: its only edges are
+                                # the Authentik SSO gate in and out, and
+                                # `repo:gitlab-forge` has ZERO edges either way.
+                                # What is genuinely lost: the agent MR-review
+                                # surface (tools/forge-sync.py). If the
+                                # migration-author agent needs somewhere to open
+                                # an MR, this comes back — nothing else does.
+install_code_server: false      # 135 MiB, also a leaf (one edge in, one out,
+                                # both Authentik). Develop over SSH or locally.
+install_paperclip: false        # secret scanning belongs to CI, not a service
+
+# ── Organs (host, not Docker — the anatomy) ──────────────────────────────────
+install_bone: true
+install_pulse: true
+install_cortex: true
+install_face: true
+install_apex: true
+install_ears: true
+install_backup: true
+install_openclaw: true
+install_hermes: false           # sibling of openclaw; one agent gateway is enough
+install_opencode: false
+install_backrest: false         # see the sec-backrest-auth roadmap row: OFF here
+                                # is a real declaration, and if a daemon is
+                                # already running the playbook does not own it
+
+# ── Observability ────────────────────────────────────────────────────────────
+# ON. ~700 MiB for grafana+prometheus+loki+tempo, and it is how the loop sees
+# itself — the traces the organs emit have nowhere to land without Tempo.
+# There is no per-service flag; `install_observability` is the group switch.
+# InfluxDB has its own flag and is a second metrics store nothing here reads.
+install_observability: true
+install_influxdb: false
+
+# ── The business-logic fixture ───────────────────────────────────────────────
+# Two services, deliberately, and deliberately DIFFERENT in shape: BookStack is
+# native_oidc over MariaDB, Firefly is header_oidc over MariaDB behind
+# gated_net. Between them they exercise both live SSO modes, the TLS client
+# ladder and the GDPR register, which is what a fixture is for. Neither is
+# heavy (107 + 82 MiB).
+install_bookstack: true
+install_firefly: true
+
+# ── Everything else off ──────────────────────────────────────────────────────
+# Ranked by what each actually cost on the live estate, so a future reader can
+# re-decide with the number in front of them rather than re-measuring.
+install_metabase: false         # 1 083 MiB — JVM; sizes its heap from the limit
+install_onlyoffice: false       #   818 MiB — embedded editor; needs Nextcloud
+install_openwebui: false        #   696 MiB — a chat UI for the model we are
+                                #             freeing this memory to run
+install_mcp_gateway: false      #   451 MiB (mcpo)
+install_homeassistant: false    #   450 MiB
+install_outline: false          #   365 MiB — BookStack is the fixture instead
+install_jellyfin: false         #   364 MiB
+install_n8n: false              #   358 MiB
+install_uptime_kuma: false      #   219 MiB — Traefik + the health-wait already
+                                #             gate every service on converge
+install_bluesky_pds: false      #   197 MiB — federation is not functional yet
+install_wordpress: false        #   158 MiB — devlog sync target; repo is the SoT
+install_calibreweb: false       #   153 MiB
+install_nextcloud: false        #   147 MiB
+install_freescout: false        #   135 MiB — no working OIDC module upstream
+install_hedgedoc: false         #   131 MiB
+install_offline_maps: false     #   118 MiB (tileserver)
+install_rustfs: false           # backup target — see the note below
+install_nodered: false
+install_snappymail: false
+# NOT SET FROM A PROFILE — the Tier-2 apps (apps/<name>.yml: documenso, 2fauth,
+# qdrant, roundcube). They are toggled by `meta.enabled` in their own manifest.
+# `install_qdrant` LOOKS like a flag but default.config.yml:1763 says apps_runner
+# sets it DYNAMICALLY from the catalog, so pinning it here would fight the
+# runner rather than turn anything off. To drop these, move or disable the
+# manifest.
+install_miniflux: false
+install_ntfy: false             # A9 falls back to wing-inbox
+install_kiwix: false
+install_vaultwarden: false
+install_portainer: false        # docker ps is the same answer without the UI
+install_watchtower: false
+install_mailpit: false
+install_superset: false
+install_erpnext: false
+install_freepbx: false
+install_qgis_server: false
+install_spacetimedb: false
+install_engineering_apps: false
+
+# =============================================================================
+# WHAT THIS PROFILE DOES NOT DO, said plainly rather than discovered later:
+#
+# 1. It does not stop anything. `install_*: false` is a declaration the
+#    playbook acts on for services it MANAGES; a container or launchd daemon
+#    already running is not removed by flipping a flag (that is the
+#    sec-backrest-auth lesson, and obs-disabled-services-still-running is the
+#    same shape). Reaching this footprint from the current estate is
+#    `nos --remove=data --confirm -e @profiles/dev-minimal.yml`, which is the
+#    OPERATOR's act, or stopping the dropped containers by hand.
+#
+# 2. `install_backup: true` with `install_rustfs: false` means the nightly
+#    backup runs with no local object store. That is deliberate for a dev box —
+#    the off-site copy still applies — but if you want copy #1 locally, turn
+#    RustFS back on (84 MiB).
+#
+# 3. It says nothing about the local model. Ollama is a host brew service, not
+#    a flag here. `ollama_keep_alive: "5m"` (default.config.yml) keeps a model
+#    resident for five minutes after use; set it to "0" when benching alongside
+#    a live estate, because a resident model has already been measured starving
+#    this one (qwen3:14b took the KEAP API from 0.09s to 25s).
+# =============================================================================
