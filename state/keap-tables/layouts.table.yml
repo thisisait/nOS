@@ -25,7 +25,7 @@ driver: libsql
 visibility: tier-users            # every authenticated user sees + adds layouts
 # Taxonomy anchor — the star this table's card orbits. Resolved by the seeder to
 # the real node id under the nOS self-model constellation ("nOS / Face").
-anchors: ["nos.face"]
+anchors: ["nos.iiab.face"]
 
 schema:
   columns:

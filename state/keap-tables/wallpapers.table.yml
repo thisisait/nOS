@@ -22,7 +22,7 @@ description: >-
   The active selection persists per-user in Bone user-state, not in this table.
 driver: libsql
 visibility: tier-users            # every authenticated user sees + adds wallpapers
-anchors: ["nos.face"]
+anchors: ["nos.iiab.face"]
 
 schema:
   columns:
