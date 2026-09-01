@@ -2114,6 +2114,55 @@
     # Bluesky PDS / Grafana / Prometheus / Loki / Tempo are running and just inject
     # their configs + notify handlers to restart containers.
     # ──────────────────────────────────────────────────────────────────────────
+    # A DOCKER-LESS RUN MUST NOT REPORT SUCCESS. Measured 2026-09-01: 18 tasks
+    # are gated on `nos_docker_ready` and NOTHING asserted it, so a first
+    # converge on a machine where Docker never came up ends `failed=0` having
+    # installed no service at all — and ansible.cfg's display_skipped_hosts=false
+    # hides the skips, so the log looks like a clean run. That is the exact
+    # shape this estate exists to refuse, sitting on the path of the fresh-Mac
+    # test.
+    #
+    # It carries core-up's OWN tags, which is what makes it precise rather than
+    # blanket: a host-only run (`--tags dotfiles`) does not select this task, so
+    # it cannot fail a run that never wanted Docker. Any run that WOULD have
+    # brought stacks up selects it.
+    #
+    # The escape is deliberate and must stay visible in a reviewed file rather
+    # than defaulted here: the GitHub macOS runner has no Docker on purpose and
+    # declares `-e nos_allow_no_docker=true` in .github/workflows/ci.yml.
+    #
+    # SCOPE, measured while proving this fires rather than assumed: the fact is
+    # SET by tasks/iiab/docker-prereqs.yml, imported under tags
+    # ['iiab','docker','stacks']. `--tags core` alone therefore never sets it,
+    # `default(true)` wins, and this skips. That is the correct direction — a
+    # run that never probed must not fail on a guess — and the dead daemon is
+    # still caught in that path by core-up's own "Wait for Docker daemon to be
+    # ready", which retries 10x and DOES fail hard. The two together cover it;
+    # neither alone does. VERIFIED both ways with a `docker` stub that exits 1:
+    # `--tags core` fails at core-up's wait, `--tags docker,core` fails HERE.
+    - name: "[Core] Refuse to continue without Docker"
+      ansible.builtin.fail:
+        msg: |
+          Docker is not ready, and this run was asked to bring stacks up.
+
+          `docker info` did not succeed (tasks/iiab/docker-prereqs.yml), so
+          every stack, every service and every post-start wiring step would be
+          SKIPPED — and skipped silently, because ansible.cfg sets
+          display_skipped_hosts = false. The run would end failed=0 with
+          nothing installed.
+
+          On a fresh machine: install Docker Desktop (`brew install --cask
+          docker`), start it, and re-run. The playbook pauses for that earlier
+          when the BINARY is missing; this fires when the binary exists but the
+          DAEMON never answered.
+
+          To run without Docker on purpose (CI host-only lane):
+            -e nos_allow_no_docker=true
+      when:
+        - not (nos_docker_ready | default(true) | bool)
+        - not (nos_allow_no_docker | default(false) | bool)
+      tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
+
     - import_tasks: tasks/stacks/core-up.yml
       when: nos_docker_ready | default(true)
       tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']

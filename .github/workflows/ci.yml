@@ -517,7 +517,14 @@ jobs:
         # -e ansible_python_interpreter (extra-vars, highest precedence) forces the
         # module interpreter past macOS's custom-module discovery cache, which
         # ignores the env + cfg pins. $PY has ansible-core + pyyaml (main-site).
-        run: ansible-playbook main.yml -e allow_weak_prefix=true -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
+        # -e nos_allow_no_docker=true — the GitHub macOS runner ships no Docker
+        # daemon, so this lane is a HOST-ONLY wet-test by design and every stack
+        # task skips. main.yml otherwise refuses that state (a Docker-less run
+        # reporting failed=0 with nothing installed is the fresh-Mac trap). The
+        # exception is declared HERE, in a reviewed file, rather than defaulted
+        # in the playbook where nobody would see it. The Linux lane below does
+        # NOT carry it: that one has Docker and must prove the stacks.
+        run: ansible-playbook main.yml -e allow_weak_prefix=true -e nos_allow_no_docker=true -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
         env:
           ANSIBLE_FORCE_COLOR: '1'
           ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
@@ -525,7 +532,7 @@ jobs:
       - name: Idempotence check.
         run: |
           idempotence=$(mktemp)
-          ansible-playbook main.yml -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}" | tee -a "${idempotence}"
+          ansible-playbook main.yml -e nos_allow_no_docker=true -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}" | tee -a "${idempotence}"
           tail "${idempotence}" | grep -q 'changed=0.*failed=0' \
             && (echo 'Idempotence test: pass' && exit 0) \
             || (echo 'Idempotence test: fail' && exit 1)
