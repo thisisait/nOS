@@ -67,6 +67,20 @@ def test_every_routed_service_names_its_mode() -> None:
         + "\n  ".join(inheriting))
 
 
+def test_every_listed_mode_is_a_manifest_id() -> None:
+    """The other direction: a key no renderer can reach decides nothing.
+
+    `traefik_auth_modes.get(s.id, ...)` is keyed by manifest id, so `openwebui`
+    (removed 2026-09-01, alias of `open_webui`) was never read — a spelling
+    kept beside the real one, reading as a decision.
+    """
+    ids = {s["id"] for s in (yaml.safe_load(MANIFEST.read_text(encoding="utf-8")) or {})["services"]}
+    orphans = [k for k in (_vars().get("traefik_auth_modes") or {}) if k not in ids]
+    assert not orphans, (
+        "these traefik_auth_modes keys are not manifest ids, so the renderer "
+        f"never looks them up: {orphans}")
+
+
 def test_the_gate_has_a_population() -> None:
     """Guard against the vacuous pass: a manifest or vars parse that silently
     yields nothing would make the assertion above trivially true."""

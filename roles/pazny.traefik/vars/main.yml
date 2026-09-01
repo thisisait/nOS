@@ -83,7 +83,6 @@ traefik_auth_modes:
   n8n: oidc
   nextcloud: oidc
   open_webui: oidc
-  openwebui: oidc           # alias spelling guard
   outline: oidc
   portainer: oidc
   vaultwarden: oidc
@@ -297,11 +296,15 @@ traefik_host_services:
 #     host-gateway (traefik_host_gateway_ip), which DOES reach host loopback.
 #
 # traefik_container_upstreams: manifest-id → { svc: <shared_net alias =
-# compose service name>, port: <internal/container port> }. Ground-truth from
-# the running containers' published host→private mappings. `svc` defaults to
-# the id with underscores→dashes; only override where the compose service name
-# differs (tileserver/mcpo/authentik-server/woodpecker-server). Services NOT
-# listed fall back to host-gateway routing (host daemons).
+# compose service name>, port: <internal/container port> }. `svc` defaults to
+# the id with underscores→dashes. Services NOT listed fall back to host-gateway
+# routing (host daemons).
+#
+# `svc` IS the manifest's container_name minus the `<stack>-` prefix and `-N`
+# suffix, so the row answers it — 5 overrides here were byte-identical to the
+# default and are gone. test_traefik_upstream_matches_the_manifest.py pins the
+# rest against the row. Ceiling: only 7 rows carry a single container_name;
+# woodpecker/authentik are multi-container and stay hand-written.
 traefik_host_gateway_ip: "192.168.65.254"   # Docker Desktop host gateway (IPv4); override per host
 traefik_container_upstreams:
   apex:          { port: 80 }   # gated_net only (SEC-02 posture; calibre-web precedent)
@@ -317,7 +320,7 @@ traefik_container_upstreams:
   outline:       { port: 3000 }
   metabase:      { port: 3000 }
   superset:      { port: 8088 }
-  open_webui:    { svc: open-webui, port: 8080 }
+  open_webui:    { port: 8080 }
   jellyfin:      { port: 8096 }
   miniflux:      { port: 8080 }
   hedgedoc:      { port: 3000 }
@@ -330,16 +333,16 @@ traefik_container_upstreams:
   kiwix:         { port: 8080 }
   nodered:       { port: 1880 }
   n8n:           { port: 5678 }
-  uptime_kuma:   { svc: uptime-kuma, port: 3001 }
-  calibre_web:   { svc: calibre-web, port: 8083 }
+  uptime_kuma:   { port: 3001 }
+  calibre_web:   { port: 8083 }
   homeassistant: { port: 8123 }
   rustfs:        { port: 9001 }
   mailpit:       { port: 8025 }
-  qgis_server:   { svc: qgis-server, port: 80 }
+  qgis_server:   { port: 80 }
   offline_maps:  { svc: tileserver, port: 8080 }
   mcp_gateway:   { svc: mcpo, port: 8000 }
   wordpress:     { port: 80 }
-  code_server:   { svc: code-server, port: 8443 }
+  code_server:   { port: 8443 }
   freescout:     { port: 80 }
   paperclip:     { port: 3100 }
   snappymail:    { port: 8888 }

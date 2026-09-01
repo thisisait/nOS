@@ -184,8 +184,8 @@ def test_no_service_is_keyed_two_ways():
     spelling guard") rather than reconcile them. That is the same disease as the
     RBAC map: a second copy standing in for agreement.
 
-    This does not demand one spelling — normalisation is enough — but it does
-    demand that the alias hack not grow.
+    The grandfathered alias is GONE (2026-09-01): the renderer keys on the
+    manifest id, so `openwebui` was never read. No duplicates remain.
     """
     modes = _vars().get("traefik_auth_modes") or {}
 
@@ -200,10 +200,9 @@ def test_no_service_is_keyed_two_ways():
     for k in modes:
         by_norm.setdefault(squash(k), []).append(k)
     dupes = {n: ks for n, ks in by_norm.items() if len(ks) > 1}
-    assert dupes == {"openwebui": ["open_webui", "openwebui"]}, (
-        "the set of duplicate alias keys in traefik_auth_modes changed: "
-        f"{dupes}. One service should have one key; the single grandfathered "
-        "alias is open_webui/openwebui."
+    assert not dupes, (
+        f"duplicate alias keys are back in traefik_auth_modes: {dupes}. One "
+        "service, one key — the renderer reads the manifest id and nothing else."
     )
 
 
