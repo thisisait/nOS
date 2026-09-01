@@ -19,10 +19,13 @@ backrest_port: 9898
 # Loopback only — which is NOT the isolation it reads like. Measured 2026-08-21
 # (REM-214): a container carrying any `<name>:host-gateway` alias reaches this
 # port, because Docker Desktop forwards the gateway to the host's loopback.
-# 23 containers carry one. Narrowing the bind further is not available; the fix
-# is auth on the daemon (roadmap `sec-backrest-auth`). The Traefik forward-auth
-# route (authentik@file) is real and guards the EDGE only.
+# 23 containers carry one. Narrowing the bind further is not available, so the
+# daemon carries its own login (tasks/main.yml, files/enable-auth.py). The
+# Traefik forward-auth route (authentik@file) is real and guards the EDGE only.
 backrest_bind_addr: "127.0.0.1"
+# Local daemon login. Password: backrest_admin_password (default.credentials.yml,
+# derived leaf `backrest_admin`) — read it with tools/nos-secret.py.
+backrest_admin_username: "admin"
 backrest_domain: "backrest{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 
 backrest_home: "{{ ansible_facts['env']['HOME'] }}/backrest"

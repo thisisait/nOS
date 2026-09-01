@@ -68,6 +68,21 @@
   no_log: true   # embeds restic_password + repo URI
   when: backrest_seed_config | default(true)
 
+# A 127.0.0.1 bind is not isolation: 23 containers carry a host-gateway alias
+# and Docker Desktop forwards it to the host loopback (REM-214 read the whole
+# config, hook commands included, from inside devops-gitea-1). config.json is
+# seed-once + daemon-owned, so the LIVE file is what has to be reconciled.
+- name: "[pazny.backrest] Enable local auth in the live config"
+  ansible.builtin.command:
+    argv: ["python3", "{{ role_path }}/files/enable-auth.py",
+           "--config", "{{ backrest_config_path }}",
+           "--user", "{{ backrest_admin_username }}"]
+    # Over stdin, not argv — the password must not be visible in `ps`.
+    stdin: "{{ backrest_admin_password }}"
+  register: _backrest_auth
+  changed_when: "'CHANGED' in (_backrest_auth.stdout | default(''))"
+  no_log: true
+
 - name: "[pazny.backrest] Render launchd plist"
   ansible.builtin.template:
     src: backrest.plist.j2
@@ -118,6 +133,22 @@
   delay: 1
   until: _backrest_health.status == 200
   failed_when: false
+
+# The reader that proves the effect: the enable-auth run above reports only
+# what it ATTEMPTED. An unauthenticated RPC must be refused by the daemon that
+# is actually serving. Fatal on purpose — a backrest nobody can measure is not
+# a backrest that is safe.
+- name: "[pazny.backrest] Verify the daemon refuses unauthenticated RPC"
+  ansible.builtin.uri:
+    url: "http://{{ backrest_bind_addr }}:{{ backrest_port }}/v1.Backrest/GetConfig"
+    method: POST
+    body_format: json
+    body: {}
+    status_code: [401]
+  register: _backrest_authz
+  retries: 10
+  delay: 2
+  until: _backrest_authz.status | default(0) == 401
 
 - name: "[pazny.backrest] Ready"
   ansible.builtin.debug:

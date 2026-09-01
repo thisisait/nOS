@@ -193,6 +193,18 @@ off-site restic leg (gated off so two schedulers don't prune the same repo).
 `restic_repo`/`restic_password` change must be made in the backrest UI — a playbook
 re-run will NOT re-seed it (`force: false`).
 
+**The daemon carries its own login (2026-09-01, roadmap `sec-backrest-auth`).** The
+Authentik forward-auth route guards the EDGE and nothing on the fabric: a
+127.0.0.1 bind constrains HOST callers only, Docker Desktop forwards host-gateway
+to the host loopback, and 23 containers carry such an alias — REM-214 read the
+whole config (hook commands, sync identity) out of `devops-gitea-1` with one
+unauthenticated POST. bcrypt has no Jinja filter here and `config.json` is
+seed-once, so `roles/pazny.backrest/files/enable-auth.py` reconciles the LIVE file
+each converge (idempotent; a missing `disabled` key is protojson for "auth on").
+Login `admin` / `backrest_admin_password` (derived leaf `backrest_admin`, read it
+with `tools/nos-secret.py`). The role FAILS unless an unauthenticated
+`/v1.Backrest/GetConfig` answers 401 — the attempt does not certify itself.
+
 **Why HOST daemon, not container:** restic-in-container **cannot read macOS
 VirtioFS bind mounts** (backup processes 0 files, "could not be read"; `stat`/`cat`
 work — Phase-0 spike 2026-07-24, same class as the gitlab puma `realdirpath
