@@ -1,4 +1,4 @@
-"""A notification its successor retired must stop being unread IN THE FACE.
+"""A notification its successor retired must stop being unread — everywhere.
 
 MEASURED 2026-09-01 against the live wing.db: `bin/reconcile-inbox.php` had
 retired 66 rows (superseded_at set, wing_inbox_read_at deliberately NULL —
@@ -6,6 +6,11 @@ nobody read them), Wing's own badge and Bone's list both excluded them, and the
 face did not: `projectNotification` mapped only `wing_inbox_read_at`, so the
 menubar counted 7 high/critical alerts where 6 were live. One of the phantom
 three was a CRITICAL its own successor had replaced.
+
+A SECOND SURFACE, same morning: `NotificationRepository::countSuperseded()` —
+whose own docblock says it is "the only place they remain visible" — had ZERO
+callers. The 66 rows were dropped from the unread list with nothing on the page
+saying so, which is indistinguishable from deleting them.
 
 WHAT THIS PINS, and why it is a source scan. The BEHAVIOUR is pinned where it
 can be executed — `src/lib/anatomy/wing.test.ts` runs `projectNotification` +
@@ -85,4 +90,36 @@ def test_no_face_surface_decides_unread_alone() -> None:
         "a face surface derives 'unread' from `.read` alone — a row its own "
         "successor retired would count as work forever. Use isUnreadWork():\n  "
         + "\n  ".join(offenders)
+    )
+
+
+# ── Wing's own inbox ─────────────────────────────────────────────────────────
+
+WING = REPO / "files/anatomy/wing/app"
+INBOX_PHP = WING / "Presenters/InboxPresenter.php"
+INBOX_LATTE = WING / "Templates/Inbox/default.latte"
+
+
+def test_the_retired_count_reaches_the_page() -> None:
+    php = INBOX_PHP.read_text(encoding="utf-8")
+    assert "countSuperseded()" in php, (
+        "InboxPresenter never asks how many rows were retired — they vanish "
+        "from the unread list with nothing on the page saying so"
+    )
+    assert re.search(r"template->supersededCount\s*=", php), (
+        "the count is read but never handed to the template"
+    )
+    assert "$supersededCount" in INBOX_LATTE.read_text(encoding="utf-8"), (
+        "the inbox template does not render the retired count"
+    )
+
+
+def test_a_retired_row_is_not_offered_mark_read() -> None:
+    """`wing_inbox_read_at` is a claim about a human. Offering the button on a
+    row nobody read invites the estate to record a decision never made."""
+    latte = INBOX_LATTE.read_text(encoding="utf-8")
+    cell = latte[latte.rfind("<td>", 0, latte.index("Inbox:markRead")) : latte.index("Inbox:markRead")]
+    assert "superseded_at" in cell, (
+        "the Mark-read control is reachable for a superseded row — the branch "
+        "that offers it must test superseded_at first:\n" + cell
     )

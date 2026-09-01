@@ -90,6 +90,13 @@
 	</a>
 </div>
 
+{if $unreadOnly && $supersededCount > 0}
+	<div style="font-size:11px; color:var(--text2); margin-bottom:10px;">
+		{$supersededCount} unread {if $supersededCount === 1}row was{else}rows were{/if} restated by a later message from the same emitter and {if $supersededCount === 1}is{else}are{/if} not listed here —
+		<a href="{plink Inbox:default, severity => $severityFilter, unreadOnly => false}">show read too</a> to see them.
+	</div>
+{/if}
+
 {if !$notifications}
 	<div class="empty" style="margin-bottom:32px;">
 		{if $unreadOnly}No unread notifications.{else}No notifications match the current filter.{/if}
@@ -124,7 +131,10 @@
 					<td style="font-size:11px; color:var(--text2)">{implode(', ', $n['channels'] ?? [])}</td>
 					<td style="font-size:11px; color:var(--text2)">{($n['created_at'] ?? '')|substr:0,19}</td>
 					<td>
-						{if !$n['wing_inbox_read_at']}
+						{if !empty($n['superseded_at'])}
+							{* Nobody read it; offering "Mark read" would record a decision the operator never made. *}
+							<span style="font-size:11px; color:var(--text2)">retired {($n['superseded_at'] ?? '')|substr:11,8}</span>
+						{elseif !$n['wing_inbox_read_at']}
 							<form method="post" action="{plink Inbox:markRead, uuid => $n['uuid']}" style="display:inline;">
 								<input type="hidden" name="_csrf" value="{$csrfToken}">{* SEC-14 CSRF *}
 								<button type="submit" class="btn btn-small">Mark read</button>

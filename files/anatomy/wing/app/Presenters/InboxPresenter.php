@@ -67,6 +67,10 @@ final class InboxPresenter extends BasePresenter
 		}
 		$notificationRows = $this->notifications->query($filters, 200);
 		$unreadCount      = $this->notifications->countUnread();
+		// Retired rows are excluded from the unread list. Counting them here is
+		// what keeps that from being a silent delete (countSuperseded had no
+		// caller until 2026-09-01, so 66 rows were hidden with nothing saying so).
+		$supersededCount  = $this->notifications->countSuperseded();
 
 		$findings = $this->gitleaks->listFindings(['open_only' => true], 200);
 
@@ -78,6 +82,7 @@ final class InboxPresenter extends BasePresenter
 		$this->template->notifications     = $notificationRows['items'];
 		$this->template->notificationTotal = $notificationRows['total'];
 		$this->template->unreadCount       = $unreadCount;
+		$this->template->supersededCount   = $supersededCount;
 		$this->template->severityFilter    = $severity;
 		$this->template->unreadOnly        = $unreadOnly;
 		$this->template->findings          = $findings;
