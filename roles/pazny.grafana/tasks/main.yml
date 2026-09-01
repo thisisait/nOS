@@ -21,6 +21,30 @@
     state: directory
     mode: '0755'
 
+# REM-217 rung 3, the sixth client. Rendered whether or not mariadb_ssl_enabled
+# resolves true, because the compose block mounts it only under that gate — a
+# file with no mount is inert, and a mount with no file makes Docker invent a
+# DIRECTORY, which is the failure roles/pazny.mariadb/tasks/main.yml has a heal
+# step for.
+- name: "[pazny.grafana] Ensure mysqld-exporter config directory exists"
+  ansible.builtin.file:
+    path: "{{ stacks_dir }}/observability/mysqld-exporter"
+    state: directory
+    mode: '0755'
+  when: install_mariadb | default(false)
+
+- name: "[pazny.grafana] Render mysqld-exporter client TLS config"
+  ansible.builtin.template:
+    src: mysqld-exporter-my.cnf.j2
+    dest: "{{ stacks_dir }}/observability/mysqld-exporter/my.cnf"
+    mode: '0644'
+  # No notify. The file is a read-only bind mount under stacks_dir, which is
+  # exactly what the post-stack-up reload reconciler (tools/reload-stale-config.py,
+  # main.yml) exists to catch — `docker compose up -d` is a no-op when only
+  # mounted CONTENT changed. A handler here would be a second mechanism for one
+  # outcome, and this estate has been bitten by that before.
+  when: install_mariadb | default(false)
+
 - name: "[pazny.grafana] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

@@ -145,11 +145,30 @@ services:
     command:
       - "--mysqld.address=mariadb:3306"
       - "--mysqld.username=mysqld_exporter"
+{% if mariadb_ssl_enabled | default(false) %}
+      # REM-217 rung 3. The exporter takes TLS from this file or from
+      # --tls.insecure-skip-verify and from nowhere else — no env, no DSN
+      # parameter — which is why it stayed plaintext while all five app clients
+      # moved. It is the last client holding --require-secure-transport=1 back.
+      - "--config.my-cnf=/etc/mysqld-exporter/my.cnf"
+{% endif %}
       - "--collect.info_schema.processlist"
       - "--collect.info_schema.innodb_metrics"
       - "--collect.global_status"
       - "--collect.global_variables"
-      - "--collect.slave_status"
+      # The mysqld_exporter grant carries PROCESS, REPLICATION CLIENT and
+      # SELECT, not SLAVE MONITOR, so this scraper logged `Error 1227 … you need
+      # SLAVE MONITOR` on EVERY scrape — 200 of the last 200 log lines, measured
+      # 2026-09-01 — and produced no metric. There is no replica to monitor, and
+      # widening the grant to silence a collector nothing reads is the wrong
+      # direction.
+      #
+      # IT MUST BE DISABLED EXPLICITLY. Deleting the `--collect.slave_status`
+      # line did NOT stop it: this scraper is ON BY DEFAULT in 0.19
+      # (`--[no-]collect.slave_status`), so removing the flag changed the
+      # rendered argv and nothing else — the errors kept arriving after the
+      # restart. Measured, not assumed.
+      - "--no-collect.slave_status"
     environment:
       MYSQLD_EXPORTER_PASSWORD: "{{ mysqld_exporter_password | default(nos_derived_secrets.mysqld_exporter) }}"
     healthcheck:
@@ -158,6 +177,15 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+{% if mariadb_ssl_enabled | default(false) %}
+    volumes:
+      # FILES not directories — Docker invents a directory when the path is
+      # missing, and the exporter then reads a my.cnf that is not a file.
+      - {{ stacks_dir }}/observability/mysqld-exporter/my.cnf:/etc/mysqld-exporter/my.cnf:ro
+      # The server certificate IS the CA here (self-signed), the same file and
+      # the same container path the five app clients already mount.
+      - {{ mariadb_certs_dir }}/server.crt:{{ mariadb_client_ca_path }}:ro
+{% endif %}
     networks:
       - observability_net
       - {{ stacks_shared_network }}

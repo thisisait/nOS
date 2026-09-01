@@ -253,9 +253,14 @@ MARIADB_CLIENTS = (
     {"service": "mysqld-exporter", "container": "observability-mysqld-exporter-1",
      "argv_tls": ("--config.my-cnf", "--tls.insecure-skip-verify"),
      "read_from": "prom/mysqld-exporter:v0.19.0 --help",
-     "note": "roadmap sec-transport-mysqld-exporter; a my.cnf carrying ssl-ca "
-             "also moves the password off the env, but the file must be "
-             "readable by the exporter's non-root user — untested, not shipped"},
+     "note": "shipped 2026-09-01: a my.cnf carrying only ssl-ca + "
+             "ssl-mode=VERIFY_CA, mounted read-only. The open question was "
+             "whether the exporter's non-root user (nobody, 65534) could read "
+             "a host file at all; MEASURED — VirtioFS remaps the host owner to "
+             "the ASKING uid, so even 0600 reads, and the file ships 0644 "
+             "because a Linux bind mount does NOT remap and holds no secret "
+             "anyway. The password stays on the env: moving it here is a "
+             "separate question about file ownership, not about transport"},
 )
 
 

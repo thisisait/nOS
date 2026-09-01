@@ -201,11 +201,15 @@ def test_the_mount_and_the_knob_share_one_gate():
             "into a comment protects nothing")
 
 
+EXPORTER_TPL = "roles/pazny.grafana/templates/compose.yml.j2"
+EXPORTER_MYCNF = "roles/pazny.grafana/templates/mysqld-exporter-my.cnf.j2"
+
+
 def test_the_sixth_client_is_not_quietly_dropped():
-    """`mysqld-exporter` is plaintext today and that is a KNOWN open row, not a
-    gap. What must not happen is it falling out of the reader's client table —
-    at which point the estate goes back to believing there are five, which is
-    how it was missed for a day in the first place."""
+    """`mysqld-exporter` moved on 2026-09-01; before that it was plaintext while
+    all five app clients had a knob. What must not happen is it falling out of
+    the reader's client table — at which point the estate goes back to believing
+    there are five, which is how it was missed for a day in the first place."""
     reader = (REPO / "tools/tls-uptake.py").read_text(encoding="utf-8")
     assert "mysqld-exporter" in reader, (
         "the sixth MariaDB client is gone from tools/tls-uptake.py. It was "
@@ -215,6 +219,93 @@ def test_the_sixth_client_is_not_quietly_dropped():
     assert "sec-transport-mysqld-exporter" in seed, (
         "the exporter's roadmap row is gone; a known-plaintext client with no "
         "row is an unknown-plaintext client")
+
+
+def test_the_exporters_three_artifacts_agree():
+    """The exporter's TLS rests on three things that must arrive together, and
+    any one alone is worse than none:
+
+      the --config.my-cnf FLAG, without which the file is inert;
+      the MOUNT, without which Docker invents a DIRECTORY at that path;
+      the rendered FILE, which is the only place this binary reads ssl-ca from.
+
+    All three sit behind `mariadb_ssl_enabled`, which resolves Darwin-only. On a
+    Linux estate the server offers no certificate, so a client that verified
+    unconditionally could not connect at all.
+    """
+    compose = (REPO / EXPORTER_TPL).read_text(encoding="utf-8")
+    mycnf = REPO / EXPORTER_MYCNF
+    assert mycnf.is_file(), (
+        f"{EXPORTER_MYCNF} is gone — the exporter takes TLS from this file or "
+        "from --tls.insecure-skip-verify and from nowhere else")
+
+    flag = [ln for ln in compose.splitlines()
+            if "--config.my-cnf" in ln and not ln.lstrip().startswith("#")]
+    # The volume line, not the flag line — both name the same basename.
+    mount = [ln for ln in compose.splitlines()
+             if "mysqld-exporter/my.cnf" in ln and ln.lstrip().startswith("- ")
+             and "stacks_dir" in ln]
+    assert flag, f"{EXPORTER_TPL}: the exporter no longer reads a my.cnf"
+    assert mount, f"{EXPORTER_TPL}: the my.cnf is not mounted; the flag is inert"
+    assert all(ln.rstrip().endswith(":ro") for ln in mount), (
+        "the my.cnf mount must be read-only")
+
+    # The CA comes from the server's own cert dir, same as the five app clients.
+    ca = [ln for ln in compose.splitlines()
+          if "mariadb_client_ca_path" in ln and "server.crt" in ln]
+    assert ca and all("mariadb_certs_dir" in ln for ln in ca), (
+        f"{EXPORTER_TPL}: the CA must come from mariadb_certs_dir, not a copy")
+
+    assert compose.count(f"{{% if {GATE}") >= 1, (
+        f"{EXPORTER_TPL}: the exporter's TLS lines are not behind {GATE}")
+
+
+def test_the_exporter_verifies_and_does_not_merely_encrypt():
+    """`--tls.insecure-skip-verify` is the other way this binary can be made to
+    speak TLS, and it is the one that looks finished while proving nothing about
+    who answered. The rendered file must name a CA and a verifying mode."""
+    mycnf = (REPO / EXPORTER_MYCNF).read_text(encoding="utf-8")
+    body = [ln.strip() for ln in mycnf.splitlines()
+            if ln.strip() and not ln.lstrip().startswith((";", "#"))]
+    assert "[client]" in body, f"{EXPORTER_MYCNF}: no [client] section"
+    assert any(ln.startswith("ssl-ca=") and "mariadb_client_ca_path" in ln
+               for ln in body), (
+        f"{EXPORTER_MYCNF}: ssl-ca must come from the play-scope variable, not "
+        "a hardcoded path that can drift from the mount")
+    mode = next((ln for ln in body if ln.startswith("ssl-mode=")), None)
+    assert mode in ("ssl-mode=VERIFY_CA", "ssl-mode=VERIFY_IDENTITY"), (
+        f"{EXPORTER_MYCNF}: ssl-mode is {mode!r}. REQUIRED encrypts without "
+        "checking who answered; this rung is about verification")
+
+    compose = (REPO / EXPORTER_TPL).read_text(encoding="utf-8")
+    skip = [ln for ln in compose.splitlines()
+            if "--tls.insecure-skip-verify" in ln
+            and not ln.lstrip().startswith("#")]
+    assert not skip, (
+        "the exporter is passing --tls.insecure-skip-verify, which encrypts "
+        "and verifies nothing:\n  " + "\n  ".join(skip))
+
+
+def test_the_exporter_does_not_scrape_what_its_grant_forbids():
+    """`slave_status` logged `Error 1227 … you need SLAVE MONITOR` on every
+    scrape — 200 of the last 200 log lines, measured 2026-09-01 — and produced
+    no metric. A collector that cannot run is not coverage, and its error drowns
+    the ones that mean something.
+
+    ASSERTS THE PRESENCE OF THE DISABLING FLAG, not the absence of an enabling
+    one, and that distinction is the whole lesson. The first version of this
+    gate demanded `--collect.slave_status` be absent; it went green, the flag
+    was duly deleted, and the errors kept arriving — the scraper is ON BY
+    DEFAULT in 0.19 (`--[no-]collect.slave_status`). A gate written against what
+    the config SAYS rather than what the binary DOES passes a broken state.
+    """
+    compose = (REPO / EXPORTER_TPL).read_text(encoding="utf-8")
+    live = [ln.strip() for ln in compose.splitlines()
+            if "collect.slave_status" in ln and not ln.lstrip().startswith("#")]
+    assert live == ['- "--no-collect.slave_status"'], (
+        "the exporter must explicitly disable the slave_status scraper. Its "
+        "grant carries PROCESS, REPLICATION CLIENT and SELECT — not SLAVE "
+        "MONITOR — and there is no replica. Found:\n  " + "\n  ".join(live))
 
 
 def test_the_verdict_comes_from_a_self_test_not_from_the_declaration():

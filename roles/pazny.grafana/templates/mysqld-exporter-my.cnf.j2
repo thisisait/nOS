@@ -1,0 +1,26 @@
+; ==============================================================================
+; mysqld_exporter client config — TLS only.
+;
+; The sixth MariaDB client. The rung-3 survey enumerated five, because it read
+; the list of APPLICATIONS; this one was found by sampling
+; information_schema.processlist, where it appears ~4x a minute.
+;
+; prom/mysqld-exporter takes TLS from exactly two places, verified against the
+; binary's own --help: this file, or --tls.insecure-skip-verify. There is no
+; env var and no DSN parameter, which is why the exporter was provably
+; plaintext while all five app clients had moved.
+;
+; The password deliberately stays in MYSQLD_EXPORTER_PASSWORD rather than
+; moving here. A my.cnf CAN hold it, but the file would then be a secret that
+; every local user can read at 0644 or that needs an ownership decision this
+; rung does not have to make. MEASURED 2026-09-01: the exporter connects with
+; mysql_up=1 and Ssl_accepts+2 when this file carries only the two ssl keys and
+; the password arrives on the env, so the two questions are separable and only
+; one of them is this row's.
+;
+; VERIFY_CA, not VERIFY_IDENTITY: the server certificate is self-signed and its
+; subject does not name `mariadb`, so identity verification would refuse.
+; ==============================================================================
+[client]
+ssl-ca={{ mariadb_client_ca_path }}
+ssl-mode=VERIFY_CA
