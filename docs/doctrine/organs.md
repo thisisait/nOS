@@ -46,33 +46,45 @@ and the KEAP lint reported it as a broken anchor for as long as they were there.
 **`iiab` is a legacy stack name** still carried by the taxonomy of every service
 in that stack.
 
-## 3. The axes, proposed — the operator settles this
+## 3. Three axes, one map
 
-The `layers.md` precedent is to give each axis its own word and let none of them
-be "organ" unqualified.
+| axis | question | today |
+|---|---|---|
+| `stack` | where it runs | complete, `state/manifest.yml` |
+| `organ` | what it is for | 63/65, lives in `files/anatomy/apex/ruling.yml` as `publish:` |
+| `layer` | what breaks without it | 26/65 — L0 3, L1 4, L2 19, **39 withheld** |
 
-1. **runtime placement** — `host` vs `<stack>`. Already exists as manifest
-   `stack`; needs no new word, only the discipline of not calling it organhood.
-2. **anatomy role** — the Bones/Wings/Pulse/Cortex vocabulary. Has no machine
-   surface at all. Either it gains one (a manifest field) or it is retired to
-   prose and stops being cited as though it enumerates something.
-3. **public organ** — the apex `publish:` grouping. Already machine-readable and
-   already the only one with a gate behind it.
+`organ` moves to the manifest; the apex ruling reads it instead of holding a
+second copy. `layer` stays derived from the dependency graph.
 
-Open questions, none of which an agent should answer alone:
+**They are not interchangeable.** `archive` holds cortex and keap beside kiwix
+and calibre-web; `spine` holds bone and wing beside portainer. Organ answers
+what a service is for. Only `layer` answers what the estate cannot start
+without, and defaults are a necessity question.
 
-- Does the anatomy vocabulary become a field, or does the public grouping
-  absorb it? Two metaphors for one estate is the ambiguity, not the fix.
-- Is a grouping node like `nos.host.agents` wanted? The self-model generator is
-  strictly two-level (stack → system) and manifest-driven, so a third level is
-  a real change to `keap_selfmodel_gen.py`, not a content edit.
-- Does `iiab` get renamed? That reaches compose project names, container names
-  and every `nos.iiab.*` id — and the nightly `cortex-corpus-diff` compares
-  taxonomy id sets both ways, so a rename reads as mass deletion unless staged.
+## 4. Defaults derive; config only adds
 
-## 4. What must be true whatever is chosen
+    install_<svc> defaults true  iff  layer ∈ {L0, L1} or stack == host
+    everything else                   false
 
-**One reader enumerates the organs.** The reason `ears` went missing is that
-four lists were each internally complete. Whatever the settled axis is, it needs
-a reader that can be asked, in the shape of `tools/estate-status.py` — not a
-list in prose that a fifth document will restate.
+~13 services, computed from the graph, so defaults cannot drift from it.
+A hand-set `install_*: true` the graph does not justify fails its gate.
+
+`config.yml` becomes additive: extra services, parameters, personalisation.
+It never carries `false`.
+
+`prune_disabled_overrides` is then deleted. Its ambiguity is that `false` means
+both *never wanted* and *not this run*; with an additive config the enabled set
+is always a declaration, and the prune needs no permission flag.
+
+Profiles become additive too. `all-on` adds everything. `dev-minimal` stops
+existing — it is the default.
+
+## 5. Order of work
+
+1. Survey the 39 services with no `layer`. Prerequisite, not a side effect.
+2. `organ` into `state/manifest.yml`; apex reads it.
+3. Derive the default set; gate defaults against the derivation.
+4. Make `config.yml` additive; delete the 30 no-op restatements and the 2 `false`.
+5. Delete `prune_disabled_overrides` and `profiles/dev-minimal.yml`.
+6. Re-point the agent forge from GitLab to Gitea (`tools/loop-review.py`).
