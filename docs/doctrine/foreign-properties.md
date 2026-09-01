@@ -366,3 +366,49 @@ file. Gate: `tests/anatomy/test_the_repair_runs_before_the_health_gate.py`.
 behind the gate that condition fails. `docker restart` is enough — it re-binds;
 `--force-recreate` is not required, which is worth knowing because reaching for
 the bigger hammer here would recreate containers on every config edit.
+
+## 9. A libSQL store reads as EMPTY through stock `sqlite3`
+
+MEASURED 2026-09-01, and it cost most of an investigation. KEAP's `keap.db` is
+a **libSQL** database. Its `embeddings` table carries a vector index declared
+with a libSQL-only function:
+
+    CREATE TABLE embeddings (..., vector F32_BLOB(768), ...)
+    CREATE INDEX embeddings_vec_idx ON embeddings(libsql_vector_idx(vector))
+
+Open that file with stock `sqlite3` (3.51.0) and ask it anything:
+
+    sqlite3 keap.db "select count(*) from embeddings"   ->  0
+    sqlite3 keap.db "pragma integrity_check(3)"         ->  Error: unknown
+                                                            function: libsql_vector_idx()
+
+**The count does not fail. It answers zero.** The `pragma` is the only thing
+that names the cause, and only because it walks the index. So a reader who
+counts rows — the obvious first move — is told the corpus has no embeddings,
+with no error, no warning, and a plausible-looking corroborating detail: the
+DiskANN shadow table (`embeddings_vec_idx_shadow`, 4266 rows of 160 KB pages)
+*is* readable, so it looks exactly like an orphaned index over deleted rows.
+
+Asking the service instead settles it in one call:
+
+    GET /agent/v1/embeddings/pending  ->  {"total": 2, "pruned": 0}
+
+Two pending out of ~1107 sources. The corpus is embedded, the nightly
+`keap-embed-sync` is working (1105 upserted, rc=0, 21 s), and nothing was lost.
+
+**This nearly produced a false record of a serious data loss**, filed as a
+roadmap row and reported to the operator, on the strength of a number a tool
+returned confidently while unable to read the table. Copying the WAL alongside
+the db — the usual correction for a stale snapshot — reproduced the same zero
+and made the wrong answer look confirmed.
+
+**The rule is the estate's own, and it generalises past libSQL:** a count of
+zero from a tool that cannot parse the schema is not a measurement. Ask the
+process that owns the store. Same shape as §7 — never diagnose from the host's
+`df` when the container is told a different number.
+
+One corollary worth carrying separately, because it also read as a defect and
+is not one: an ANN leg returns the *k nearest* neighbours for any embeddable
+query, however far. `q=zzzqqxnothing` coming back with vector-legged hits is
+correct behaviour, not a fabricated leg — `search.ts` sets `vectorOk` only when
+`hits.length` is non-zero, so the flag was honest all along.

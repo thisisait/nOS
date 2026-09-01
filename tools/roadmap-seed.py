@@ -1665,30 +1665,6 @@ row("wing-events-ts-unvalidated", "The audit chain takes an agent's word for whe
          "a validating writer, plus a decision on the six existing rows: they "
          "are chained, so correcting them means re-signing, and the honest "
          "option is probably to leave them and record why.")
-row("cortex-embeddings-gone", "Semantic search reports a vector leg it does not have",
-    "2026-09-01", "next", "cortex",
-    refs="~/cortex/data/keap.db · /Volumes/SSD1TB/nOS/data/platform/services/keap/data/keap.db · GET /api/search/semantic",
-    body="MEASURED 2026-09-01 in BOTH stores, so it is not vendored-organ drift: "
-         "`embeddings` holds 0 rows against 339 (organ) / 347 (docker) "
-         "knowledge_objects, while its own libsql vector index shadow "
-         "`embeddings_vec_idx_shadow` still holds 6462 / 4266 entries — an index "
-         "describing rows that are not there. The column is real "
-         "(`vector F32_BLOB(768)`), so this is emptied, not un-migrated; a "
-         "nightly ledger from 2026-07-27 recorded 291 object embeddings on both "
-         "sides, so something reaped them since and nothing noticed. "
-         "THE SECOND HALF IS THE EXPENSIVE ONE AND IT IS THIS ESTATE'S "
-         "SIGNATURE DEFECT: GET /api/search/semantic answers "
-         "`legs:{lexical:true,vector:true,graph:true}` estate-wide AND tags "
-         "individual items `legs:['vector']` — for q=zzzqqxnothing, a nonsense "
-         "token that can match nothing, over a table with zero vectors. The leg "
-         "label is written by the code that ATTEMPTED the leg, not by anything "
-         "that observed it contribute. So hybrid recall silently degraded to "
-         "lexical+graph and every caller, including the agent-facing /agent/v1 "
-         "surface, is told it got vectors. Neither reader covers it: "
-         "cortex-drift.py compares SOURCE, cortex-corpus-diff.py compares OBJECT "
-         "IDS, and an embedding count appears in neither. Fix is two independent "
-         "things — re-embed (KEAP-side), and make the leg flags a READING rather "
-         "than a declaration, which is the half that must not wait for the other.")
 row("cortex-vendor-staleness", "Four cortex drifts that are staleness, not divergence",
     "2026-08-31", "next", "cortex",
     refs="tools/cortex-drift.py · files/anatomy/cortex/server/{migrations,db,cortex-lang}.ts · shared/contracts/field-concepts.ts",
