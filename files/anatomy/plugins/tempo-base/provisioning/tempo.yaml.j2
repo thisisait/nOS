@@ -20,7 +20,7 @@ ingester:
 
 compactor:
   compaction:
-    block_retention: 168h  # 7 days
+    block_retention: {{ tempo_retention | default('168h') }}
 
 metrics_generator:
   registry:

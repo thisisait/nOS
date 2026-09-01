@@ -42,7 +42,7 @@ ruler:
   alertmanager_url: http://localhost:9093
 
 limits_config:
-  retention_period: 744h   # 31 days
+  retention_period: {{ loki_retention | default('744h') }}
   ingestion_rate_mb: 16
   ingestion_burst_size_mb: 32
   max_query_series: 10000
