@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 250,
+    "nodes": 251,
     "edges": 280,
     "nodes_pulse": 30,
     "nodes_judge": 5,
@@ -12,7 +12,7 @@
     "nodes_weakness": 7,
     "nodes_daemon": 14,
     "nodes_service": 64,
-    "nodes_resource": 16,
+    "nodes_resource": 17,
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 55,
@@ -1871,6 +1871,16 @@
       "is_default": false,
       "anchor": "02.02.06",
       "description": "LLM backend 'ollama' — a permitted orchestrator row (protocol openai, eu_resident=True), armed by ollama_enabled"
+    },
+    "resource:backend-xai": {
+      "kind": "resource",
+      "source": "state/llm-backends.yml",
+      "protocol": "openai",
+      "eu_resident": false,
+      "enabled_flag": "xai_enabled",
+      "is_default": false,
+      "anchor": "02.02.06",
+      "description": "LLM backend 'xai' — a permitted orchestrator row (protocol openai, eu_resident=False), armed by xai_enabled"
     },
     "resource:bash-read-only": {
       "kind": "resource",
