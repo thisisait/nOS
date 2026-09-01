@@ -19,7 +19,7 @@ import {
 	wingApiConfigured
 } from '$lib/server/upstream';
 import { projectSnapshot } from '$lib/anatomy/pulse';
-import { projectNotification, isContested } from '$lib/anatomy/wing';
+import { projectNotification, isContested, isUnreadWork } from '$lib/anatomy/wing';
 import { canViewAnatomy } from '$lib/security/tier';
 import { QUIET, type SystemStatus } from '$lib/anatomy/status';
 
@@ -50,7 +50,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 		};
 		const notes = (raw.notifications ?? []).map(projectNotification);
 		out.alerts = notes.filter(
-			(n) => !n.read && ['high', 'critical'].includes(n.severity.toLowerCase())
+			(n) => isUnreadWork(n) && ['high', 'critical'].includes(n.severity.toLowerCase())
 		).length;
 		out.contested = notes.filter(isContested).length;
 	} catch (e) {

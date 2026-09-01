@@ -15,7 +15,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { loadWing, type WingResponse } from '$lib/api/pulse';
-	import type { WingEventView, WingNotificationView } from '$lib/anatomy/wing';
+	import { isUnreadWork, type WingEventView, type WingNotificationView } from '$lib/anatomy/wing';
 	import { StatusNote, Badge, StateDot, Panel, severityTone } from '$lib/components/ui';
 
 	interface Props {
@@ -131,11 +131,13 @@
 				{:else}
 					<ul class="nt">
 						{#each notifications as n (n.id)}
-							<li class:unread={!n.read}>
+							<li class:unread={isUnreadWork(n)}>
 								<div class="head">
 									<StateDot tone={severityTone(n.severity)} label={n.severity || 'unknown'} />
 									<span class="title">{n.title}</span>
 									{#if n.originPlugin}<Badge tone="neutral" outline>{n.originPlugin}</Badge>{/if}
+									<!-- Shown, not hidden: a supersession you cannot see is a delete. -->
+									{#if n.superseded}<Badge tone="neutral">restated since</Badge>{/if}
 								</div>
 								{#if n.body}<p class="body">{n.body}</p>{/if}
 								<div class="ch">

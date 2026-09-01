@@ -3,7 +3,14 @@
  * delivery, and a windowed list separate from a total.
  */
 import { describe, it, expect } from 'vitest';
-import { projectEvent, projectNotification, projectWing, isContested, BODY_LIMIT } from './wing';
+import {
+	projectEvent,
+	projectNotification,
+	projectWing,
+	isContested,
+	isUnreadWork,
+	BODY_LIMIT
+} from './wing';
 
 describe('events', () => {
 	it('reads the shape Wing actually sends', () => {
@@ -77,6 +84,22 @@ describe('notifications', () => {
 	it('does not call a clean dispatch contested', () => {
 		const n = projectNotification({ ...base, mail_dispatched_at: '2026-08-05T06:00:00Z' });
 		expect(isContested(n)).toBe(false);
+	});
+
+	it('a retired row is neither read nor unread work', () => {
+		// MEASURED 2026-09-01: the menubar counted `!read` alone and showed 7
+		// alerts where 6 were live — a CRITICAL its own successor had retired.
+		const n = projectNotification({ ...base, superseded_at: '2026-08-31T01:02:03Z' });
+		expect(n.superseded).toBe(true);
+		expect(n.read).toBe(false); // nobody read it; the estate must not claim so
+		expect(isUnreadWork(n)).toBe(false);
+	});
+
+	it('still counts a live unread row', () => {
+		expect(isUnreadWork(projectNotification(base))).toBe(true);
+		expect(
+			isUnreadWork(projectNotification({ ...base, wing_inbox_read_at: '2026-08-31T09:00:00Z' }))
+		).toBe(false);
 	});
 
 	it('does not call an error with no stamp contested', () => {

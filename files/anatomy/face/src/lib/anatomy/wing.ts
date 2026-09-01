@@ -53,6 +53,9 @@ export interface WingNotificationView {
 	originPlugin: string | null;
 	channels: string[];
 	read: boolean;
+	/** A later message from the same emitter replaced this one (wing.db
+	 *  `superseded_at`). NOT read — nobody read it — and not unread work. */
+	superseded: boolean;
 	/** Per-channel delivery, as claimed. `error` is what makes a stamp
 	 *  meaningful — a dispatch time with an error beside it is not a delivery. */
 	ntfyAt: string | null;
@@ -88,6 +91,7 @@ interface RawNotification {
 	origin_plugin?: string | null;
 	channels_json?: string | null;
 	wing_inbox_read_at?: string | null;
+	superseded_at?: string | null;
 	ntfy_dispatched_at?: string | null;
 	ntfy_error?: string | null;
 	mail_dispatched_at?: string | null;
@@ -132,6 +136,7 @@ export function projectNotification(raw: RawNotification): WingNotificationView 
 		originPlugin: raw.origin_plugin ?? null,
 		channels,
 		read: Boolean(raw.wing_inbox_read_at),
+		superseded: Boolean(raw.superseded_at),
 		ntfyAt: raw.ntfy_dispatched_at ?? null,
 		ntfyError: raw.ntfy_error ?? null,
 		mailAt: raw.mail_dispatched_at ?? null,
@@ -147,6 +152,17 @@ export interface WingSnapshot {
 	notifications: WingNotificationView[];
 	/** Notifications whose dispatch stamp sits beside a dispatch error. */
 	contestedDeliveries: number;
+}
+
+/**
+ * Unread WORK — what the menubar counts and the list highlights.
+ *
+ * MEASURED 2026-09-01: the menubar read `!read` alone, so it showed 7 alerts
+ * where 6 were live — one CRITICAL had been retired by its own successor and
+ * had no way to stop being unread. One predicate, both callers.
+ */
+export function isUnreadWork(n: WingNotificationView): boolean {
+	return !n.read && !n.superseded;
 }
 
 /** True when a channel claims a delivery time AND records an error for it. */
