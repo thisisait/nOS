@@ -56,8 +56,18 @@ install_jellyfin: false
 install_openwebui: false
 install_homeassistant: false
 install_rustfs: false
-install_postgresql: false
-redis_docker: false
+# ── The three organs the wet-test needs to prove anything (2026-09-01) ────────
+# These were off, each with a comment naming its dependency, and together they
+# made the Linux integration job unable to serve a single SSO-gated route:
+# Traefik attaches `authentik@file` to every proxy-mode router, the middleware
+# was never defined, and all 7 gated services answered 500. Before the smoke
+# probe got honest that read as green (docs/hidden_fees/39).
+#
+# Turning the check off instead (`-e nos_skip_authentik_check=true`) would keep
+# the job fast and keep it proving nothing about those 7. The point of a
+# wet-test is that the topology is real.
+install_postgresql: true
+redis_docker: true
 install_erpnext: false
 install_freescout: false
 install_outline: false
@@ -68,7 +78,7 @@ install_metabase: false
 install_superset: false
 install_bluesky_pds: false
 install_paperclip: false         # Requires PostgreSQL Docker
-install_authentik: false         # Requires PostgreSQL + Redis Docker
+install_authentik: true          # both dependencies are enabled above
 install_infisical: false         # Requires PostgreSQL + Redis Docker
 install_vaultwarden: false       # Docker
 install_keap: false              # Docker; builds nos/keap from a git clone (thisisait/nos-keap, public) — off to skip the heavy image build, like every other Docker stack in the wet-test
