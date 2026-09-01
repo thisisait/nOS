@@ -1323,12 +1323,14 @@
       "max_runtime_s": 600,
       "category": "security",
       "paused": false,
-      "findings_exit_codes": null,
+      "findings_exit_codes": [
+        1
+      ],
       "command_name": "run-tofu-drift.sh",
       "claims": [],
       "runs_agent": null,
       "anchor": "02.02.08",
-      "description": "Pulse scheduled job (security): runs run-tofu-drift.sh on cron `30 5 * * *`"
+      "description": "Pulse scheduled job (security): runs run-tofu-drift.sh on cron `30 5 * * *` — exits [1] mean findings, not failure"
     },
     "pulse:backup:backup-restore-drill": {
       "kind": "pulse",

@@ -60,6 +60,7 @@ import importlib.util
 import json
 import pathlib
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -99,7 +100,7 @@ def _load(name: str, filename: str):
 
 
 def _api(url: str, headers: dict, *, method: str = "GET",
-         payload: dict | None = None) -> tuple[int, object]:
+         payload: dict | None = None, _attempt: int = 0) -> tuple[int, object]:
     """One HTTP call. Returns (status, parsed-json-or-raw-text).
 
     A 200 whose body is not JSON is returned as text ON PURPOSE, so callers can
@@ -122,6 +123,14 @@ def _api(url: str, headers: dict, *, method: str = "GET",
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read().decode("utf-8", "replace")[:300]
     except (urllib.error.URLError, OSError) as exc:
+        # A restarting GitLab is not a review failure. Measured 2026-09-01:
+        # one RemoteDisconnected at 06:50 (gitlab mid-restart) took the job to
+        # rc=2 and filed a HIGH inbox item. GET only — the single PUT caller
+        # must not be replayed on a connection this side never saw answered.
+        if method == "GET" and _attempt < 2:
+            time.sleep(3)
+            return _api(url, headers, method=method, payload=payload,
+                        _attempt=_attempt + 1)
         return 0, f"{type(exc).__name__}: {exc}"
 
 

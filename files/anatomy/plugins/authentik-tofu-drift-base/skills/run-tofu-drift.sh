@@ -69,6 +69,25 @@ if [[ ! -f "$TOFU_DIR/nos.auto.tfvars.json" ]]; then
     exit 0
 fi
 
+# A WORKTREE HAS THE TFVARS AND NOT THE STATE, so a plan here reports every
+# resource as "to add". Measured 2026-09-01: this job was re-registered from a
+# worktree by a converge (the catalog stores an absolute {{ playbook_dir }}
+# path), and it had been filing "101 to add, 0 to destroy" nightly against a
+# main checkout holding 109 real resources. Phantom drift, at medium, every day.
+# NOT `--git-dir` vs `--git-common-dir`: from a SUBDIRECTORY git answers the
+# first absolutely and the second relatively (`/…/nOS/.git` vs `../../.git`) —
+# same directory, different strings, so a string compare calls the main checkout
+# a worktree and this guard disabled the job everywhere. A linked worktree's
+# ABSOLUTE git-dir is always `<common>/worktrees/<name>`; that is the thing.
+if _gitdir=$(git -C "$TOFU_DIR" rev-parse --absolute-git-dir 2>/dev/null); then
+    case "$_gitdir" in
+        */worktrees/*)
+            echo "INFO: $TOFU_DIR is inside a git WORKTREE — the tofu state lives in the main checkout, so a plan here would report every resource as missing. Skipping."
+            exit 0
+            ;;
+    esac
+fi
+
 if ! command -v jq &>/dev/null; then
     echo "ERROR: jq not found in PATH" >&2
     exit 2

@@ -57,6 +57,11 @@ pulse:
       # kill (a SIGKILL'd run never reaches the notify code).
       max_runtime_s: 600
       max_concurrent: 1
+      # rc=1 is DRIFT FOUND, not a fault — the script's own header says so, and
+      # gitleaks/discovery/loop already declare theirs. Undeclared, rc=1 filed a
+      # HIGH "job failing" inbox item for a detector doing its job (fee 34, the
+      # next consumer it warned about).
+      findings_exit_codes: [1]
       # What this job READS (anatomy graph, consumer-side declaration).
       depends_on:
         - upstream: "tofu:authentik-state"
