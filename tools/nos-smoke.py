@@ -85,13 +85,20 @@ def merge_config(*paths: pathlib.Path) -> dict:
     return out
 
 
-def apply_runtime_estate_fallback(
+def apply_runtime_estate(
     vars_dict: dict,
     config_path: pathlib.Path,
     state_path: pathlib.Path | None = None,
     manifest: dict | None = None,
 ) -> None:
-    """When config.yml is absent, resolve tld + enablement from ~/.nos/state.yml.
+    """Enablement comes from ~/.nos/state.yml — the run's resolved answer.
+
+    config.yml cannot see a run's extra-vars, so `-e @profiles/<p>.yml` leaves it
+    describing an estate that was not deployed. state.yml is written per run by
+    pazny.state_manager and records what actually converged; probing anything
+    else asks about services whose routes the same run removed.
+
+    tld still falls back only when config.yml is absent; CLI --tenant-domain wins.
 
     The loop engine judges an EPHEMERAL worktree, which never contains the
     gitignored config.yml — so this script rendered `dev.local` while the
@@ -102,12 +109,10 @@ def apply_runtime_estate_fallback(
     `instance.tld` and `services.<id>.enabled`. CLI --tenant-domain and an
     operator checkout's config.yml still win.
     """
-    if config_path.exists():
-        return
     state_path = state_path or pathlib.Path(os.path.expanduser("~/.nos/state.yml"))
     state = load_yaml(state_path)
     tld = str(((state.get("instance") or {}).get("tld") or "")).strip()
-    if tld:
+    if tld and not config_path.exists():
         vars_dict["tenant_domain"] = tld
     services = state.get("services") or {}
     if not services:
@@ -880,7 +885,7 @@ def main() -> int:
         REPO / "default.config.yml",
         REPO / "config.yml",      # gitignored operator override
     )
-    apply_runtime_estate_fallback(
+    apply_runtime_estate(
         vars_dict, REPO / "config.yml",
         manifest=load_yaml(REPO / "state" / "manifest.yml"),
     )

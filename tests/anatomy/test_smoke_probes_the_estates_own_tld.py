@@ -61,7 +61,7 @@ def test_bare_worktree_resolves_tld_and_enablement_from_the_sidecar(tmp_path):
     state = tmp_path / "state.yml"
     state.write_text(STATE)
     v = _vars()
-    smoke.apply_runtime_estate_fallback(v, tmp_path / "no-config.yml", state, MANIFEST)
+    smoke.apply_runtime_estate(v, tmp_path / "no-config.yml", state, MANIFEST)
     assert v["tenant_domain"] == "pazny.eu"
     assert v["install_mailpit"] is False, (
         "the estate disabled mailpit; probing it 404s and fails the judge "
@@ -74,25 +74,32 @@ def test_bare_worktree_resolves_tld_and_enablement_from_the_sidecar(tmp_path):
     assert "install_no_flag_recorded" not in v, "invented a flag nothing declares"
 
 
-def test_an_operator_checkout_with_config_yml_is_untouched(tmp_path):
+def test_the_tld_is_the_operators_and_enablement_is_the_runs(tmp_path):
+    """The two facts split. tenant_domain is the operator's declaration and
+    config.yml keeps it. Enablement is not: config.yml cannot see a run's
+    extra-vars, so `-e @profiles/<p>.yml` leaves it naming services the run
+    disabled — measured 2026-09-01, the smoke probed 24 such routes and read
+    22/46. state.yml is written per run and records what converged."""
     smoke = _smoke()
     config = tmp_path / "config.yml"
     config.write_text("tenant_domain: operator.example\n")
     state = tmp_path / "state.yml"
     state.write_text(STATE)
     v = _vars()
-    before = dict(v)
     v["tenant_domain"] = "operator.example"
-    smoke.apply_runtime_estate_fallback(v, config, state, MANIFEST)
+    smoke.apply_runtime_estate(v, config, state, MANIFEST)
     assert v["tenant_domain"] == "operator.example", (
         "config.yml is the operator's declaration; the sidecar must not outrank it"
     )
-    assert v["install_mailpit"] is before["install_mailpit"]
+    assert v["install_mailpit"] is False, (
+        "config.yml won on ENABLEMENT. It cannot see extra-vars, so it describes "
+        "an estate that was not deployed, and the smoke probes routes the run removed"
+    )
 
 
 def test_no_sidecar_and_no_config_changes_nothing(tmp_path):
     smoke = _smoke()
     v = _vars()
     before = dict(v)
-    smoke.apply_runtime_estate_fallback(v, tmp_path / "no-config.yml", tmp_path / "no-state.yml", MANIFEST)
+    smoke.apply_runtime_estate(v, tmp_path / "no-config.yml", tmp_path / "no-state.yml", MANIFEST)
     assert v == before
