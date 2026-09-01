@@ -56,6 +56,10 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 CONFIG = REPO / "default.config.yml"
+
+sys.path.insert(0, str(REPO / "tools"))
+from nos_identity import resolve_flag  # noqa: E402
+
 QUEUE = REPO / "docs/llm/security/remediation-queue.json"
 CLAUDE_MD = REPO / "CLAUDE.md"
 
@@ -84,6 +88,17 @@ HEADERS = {
 # it) because a slug is what a person reads in a list; `source` is what a query
 # filters on. Both, not either.
 OBS_PREFIX = "obs-"
+
+
+def loopback_port(port_var: str | None) -> str | None:
+    """Three layers, last wins. Reading default.config.yml alone left
+    cortex_port / backrest_port / stalwart_port_smtp unresolvable — they are
+    declared only in role defaults — so every probe keyed on them skipped.
+    Measured 2026-09-01; gate tests/anatomy/test_readers_resolve_the_same_layers.py.
+    """
+    if not port_var:
+        return None
+    return next((v for _, v in reversed(resolve_flag(port_var)) if v.isdigit()), None)
 
 
 @dataclass
@@ -996,7 +1011,6 @@ def probe_declared_gate_actually_exists(res: ScanResult) -> None:
     rows = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
     rows = rows.get("services", rows)
     rows = rows if isinstance(rows, list) else list(rows.values())
-    cfg = CONFIG.read_text(encoding="utf-8")
 
     #: A page that offers a local password AND nothing Authentik-shaped.
     pw = re.compile(r"""(type=["']password|name=["']password)""", re.I)
@@ -1006,14 +1020,13 @@ def probe_declared_gate_actually_exists(res: ScanResult) -> None:
         sid = row.get("id")
         if not sid or modes.get(sid) != "oidc":
             continue
-        port_var = row.get("port_var")
-        m = re.search(rf"^{re.escape(str(port_var))}:\s*(\d+)", cfg, re.MULTILINE) if port_var else None
-        if not m:
+        port = loopback_port(row.get("port_var"))
+        if not port:
             res.skip("no loopback port for the declared-oidc service")
             continue
         try:
             req = urllib.request.Request(
-                f"http://127.0.0.1:{m.group(1)}/login",
+                f"http://127.0.0.1:{port}/login",
                 headers={"User-Agent": "nos-discovery-scan"},
             )
             with urllib.request.urlopen(req, timeout=6) as resp:
@@ -1110,7 +1123,6 @@ def probe_healthy_but_unreachable(images: dict[str, str], res: ScanResult) -> No
     rows = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
     rows = rows.get("services", rows)
     rows = rows if isinstance(rows, list) else list(rows.values())
-    cfg = CONFIG.read_text(encoding="utf-8")
 
     try:
         out = subprocess.run(
@@ -1128,12 +1140,11 @@ def probe_healthy_but_unreachable(images: dict[str, str], res: ScanResult) -> No
         hit = container_for(sid, images)
         if hit is None or hit[0] not in healthy:
             continue  # not running, or not claiming health — nothing to contradict
-        m = re.search(rf"^{re.escape(str(port_var))}:\s*(\d+)", cfg, re.MULTILINE)
-        if not m:
+        port = loopback_port(port_var)
+        if not port:
             res.skip("healthy service has no loopback port declared")
             continue
 
-        port = m.group(1)
         res.judge(f"{OBS_PREFIX}healthy-unreachable-{sid.replace('_', '-')}")
         try:
             req = urllib.request.Request(f"http://127.0.0.1:{port}/",

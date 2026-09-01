@@ -114,6 +114,11 @@ pulse:
       max_runtime_s: 900
       max_concurrent: 1
       category: platform
+      # NO findings_exit_codes, deliberately: loop-review has no "found
+      # something" exit. 1 = merged but the trunk holders did not converge
+      # (half-done); 2 = Refused, configuration it will not guess at. Both are
+      # failures, so rc=2 SHOULD be red. Reviewed 2026-09-01 after the [1,3]
+      # above was misread as covering this job.
 
 # =============================================================================
 # GDPR — Article 30 register row (required-fields contract for every plugin)

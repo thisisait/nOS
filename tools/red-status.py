@@ -152,7 +152,15 @@ def failing_jobs(conn: sqlite3.Connection) -> list[dict]:
         """
     ).fetchall()
     out = []
+    # ONE ROW PER JOB. Wing's PulseRepository::failingJobs() breaks a fired_at
+    # tie (GROUP BY … HAVING MAX(run_id)); this query did not, so two runs
+    # stamped the same second made the two readers of one column disagree by
+    # exactly one job. `ORDER BY fired_at DESC` above puts the newest first.
+    seen: set[str] = set()
     for row in rows:
+        if row["job_id"] in seen:
+            continue
+        seen.add(row["job_id"])
         # Declared findings code → the job worked. Unparseable declaration is
         # NOT read as "no codes declared": that would silently restore the old
         # behaviour, so it falls through to reporting the job, which is the

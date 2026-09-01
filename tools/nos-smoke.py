@@ -47,6 +47,9 @@ except ImportError:
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 
+sys.path.insert(0, str(REPO / "tools"))
+from nos_identity import resolve_flag  # noqa: E402
+
 # Lazy ANSI colors — disabled when stdout isn't a TTY.
 _TTY = sys.stdout.isatty()
 COLOR = {
@@ -213,20 +216,22 @@ def unrouted_ids(repo: pathlib.Path) -> set:
 def _loopback_probe(s: dict, vars_dict: dict) -> "tuple[str, list] | None":
     """The manifest's own answer to 'how do you health-check this service'.
 
-    `health_check.url_template` is authored per service and, for the unrouted
-    ids, points at a loopback endpoint. Only its PATH is taken: the template
-    embeds a Jinja port var that may live in a role default rather than in
-    default.config.yml, and this tool resolves variables from the config layer
-    alone. An unresolvable port returns None and the caller drops the probe —
-    no probe beats a wrong one pointed at `http://127.0.0.1:/health`.
+    `health_check.url_template` is authored per service; only its PATH is taken.
+    MEASURED 2026-09-01: `cortex_port` lives in a role default, this tool read
+    two layers, so the cortex probe returned None and derive_from_manifest
+    dropped it — silently, for as long as the row existed. Role defaults are a
+    real layer (nos_identity.resolve_flag); an unresolvable port now SAYS so.
     """
     hc = s.get("health_check") or {}
     tpl = hc.get("url_template") or ""
     port_var = s.get("port_var")
     if not tpl or not port_var:
         return None
-    port = vars_dict.get(port_var)
+    port = vars_dict.get(port_var) or next(
+        (v for _, v in reversed(resolve_flag(port_var))), None)
     if not port:
+        print(f"DROPPED {s.get('id')}: {port_var} resolves in no config layer "
+              f"(roles/*/defaults, default.config.yml, config.yml)", file=sys.stderr)
         return None
     path = tpl.split("}}")[-1] if "}}" in tpl else "/"
     expect = hc.get("expect_status", 200)
