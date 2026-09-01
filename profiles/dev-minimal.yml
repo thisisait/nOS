@@ -101,6 +101,15 @@ install_spacetimedb: false
 # =============================================================================
 # WHAT THIS PROFILE DOES NOT DO, said plainly rather than discovered later:
 #
+# 0. IT CANNOT BE COMBINED WITH AN ARMED PRUNE, and the converge REFUSES rather
+#    than warns. Measured 2026-09-01: `nos -e @profiles/dev-minimal.yml` with
+#    `prune_disabled_overrides: true` in config.yml failed at core-up —
+#    25 services resolve false here but are ENABLED on disk, and a disablement
+#    that outranks config.yml is a flag for one command, not a declaration.
+#    Pruning acts on it permanently. Either run
+#      nos -e @profiles/dev-minimal.yml -e prune_disabled_overrides=false
+#    or move the disablements into config.yml, where they ARE a declaration.
+#
 # 1. It does not stop anything. `install_*: false` is a declaration the
 #    playbook acts on for services it MANAGES; a container or launchd daemon
 #    already running is not removed by flipping a flag (that is the
