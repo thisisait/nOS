@@ -72,7 +72,7 @@ PROVIDER_BY_FACT = {
 #: (consumer, provider) pairs main.yml auto-enables but the consumer's code
 #: does not wire. MEASURED, asserted as an equality so the set can neither grow
 #: nor shrink unnoticed. Each entry is a repair ticket, not an exemption.
-UNPERFORMED = {("onlyoffice", "redis")}
+UNPERFORMED: set[tuple[str, str]] = set()
 
 #: (consumer, provider) pairs the code PERFORMS and this estate deliberately
 #: does not declare. The other half of the same honesty: a sweep that finds 30
@@ -127,7 +127,6 @@ PEER_SERVICE_PLUGINS = ("woodpecker-base", "portainer-base")
 PHANTOM_FLAGS = {
     # The Kuma monitor was repaired to `redis_docker` (2026-09-01); OnlyOffice
     # stays pinned because flipping it starts Redis for a live service.
-    "install_redis": ("roles/pazny.onlyoffice/templates/compose.yml.j2",),
     "freepbx_lan_access": ("roles/pazny.freepbx/templates/compose.yml.j2",),
     "sso_autologin_min_tier_2": (),
 }
@@ -263,15 +262,11 @@ def test_every_auto_enabled_dependency_that_runs_is_declared(committed):
 def test_the_unperformed_backlog_is_exactly_what_was_measured():
     """A − B, asserted as an equality.
 
-    (onlyoffice → redis): main.yml:1259 sets `redis_docker: true` for
-    install_onlyoffice, so the estate starts a Redis container FOR OnlyOffice —
-    and roles/pazny.onlyoffice/templates/compose.yml.j2:38 gates the whole
-    REDIS_SERVER_* block on `install_redis`, a variable no config file defines.
-    The block has therefore never rendered.
-
-    Deliberately NOT repaired in the same change that declares the edges — the
-    fix is a one-token flip to `redis_docker` but it turns Redis on for a live
-    service, which is a runtime change and belongs in its own diff.
+    Empty since 2026-09-01. (onlyoffice → redis) was the last entry: the
+    REDIS_SERVER_* block gated on `install_redis`, a variable no config file
+    defines, so it had never rendered. Repaired to `redis_docker | bool` in its
+    own diff, as this docstring required. A new entry belongs here only with the
+    render that proves it does not fire.
     """
     unperformed = {p for p in auto_enable_pairs() if not performs(*p)[0]}
     assert unperformed == UNPERFORMED, (

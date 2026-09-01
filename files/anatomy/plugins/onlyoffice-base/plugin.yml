@@ -64,6 +64,15 @@ authentik:
 # =============================================================================
 # COMPOSE-EXTENSION — Traefik labels (forward-auth middleware)
 # =============================================================================
+depends_on:
+  - upstream: "service:redis"
+    kind: data
+    via: >-
+      REDIS_SERVER_HOST=redis:6379
+      (roles/pazny.onlyoffice/templates/compose.yml.j2:38-42), gated on
+      redis_docker. main.yml auto-enables redis for install_onlyoffice.
+    measured: "2026-09-01"
+
 compose_extension:
   template: templates/onlyoffice-base.compose.yml.j2
   target_stack: b2b
