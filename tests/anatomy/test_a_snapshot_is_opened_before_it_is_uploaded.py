@@ -102,9 +102,16 @@ RC_SWALLOWERS = ("tee", "while", "cat", "true", "sed", "awk", "grep")
 def test_the_verify_pipeline_ends_where_its_exit_code_is_read() -> None:
     """THE ROOT CAUSE, pinned — and the trap the fix itself fell into once.
 
-    `backup.sh` does not `set -o pipefail`, so a verifier whose pipeline ends
-    in anything that always succeeds is decoration. The branch must end at the
-    command that carries node's verdict.
+    A verifier whose pipeline ends in anything that always succeeds is
+    decoration. The branch must end at the command that carries node's verdict.
+
+    CORRECTED 2026-09-01: this used to assert that backup.sh lacked pipefail.
+    It has it, on line 8 — added after this gate was written, and the sentence
+    was never updated. The check below is still worth keeping (ending a verify
+    pipeline in `tee`/`cat` is bad regardless, and pipefail reports the
+    RIGHTMOST failure, not the one you meant), but its premise was wrong: the
+    estate depended on that line while a gate documented its absence. Pinned
+    now by test_the_backup_pipeline_fails_loudly.py.
     """
     branch = _upload_branch(_keap_step())
     # The verify pipeline is the substitution or the last &&-clause; take
