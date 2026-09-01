@@ -22,7 +22,7 @@ from nos_identity import resolve_flag  # noqa: E402
 #: The one undeclared flag, quarantined by name because the fix is a rename and
 #: the DIRECTION is the operator's (declare `install_redis`, or point the row at
 #: `redis_docker` — plan §6). Closing it must also empty this set.
-PENDING_OPERATOR = {"install_redis"}
+PENDING_OPERATOR: set[str] = set()
 
 
 def test_every_manifest_install_flag_is_declared_somewhere():

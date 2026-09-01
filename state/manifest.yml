@@ -73,7 +73,9 @@ services:
   - id: redis
     category: cache
     stack: infra
-    install_flag: install_redis
+    # redis_docker, not install_redis: the flag chooses Docker over the Homebrew
+    # build, and that distinction is why it is not spelled install_*.
+    install_flag: redis_docker
     version_var: redis_version
     version_source: docker_image
     image: redis
