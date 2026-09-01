@@ -183,3 +183,44 @@ backends:
       opus: null
     enabled_flag: "mistral_enabled"
     processor_match: "Mistral"
+
+  # xAI's Grok, through its OpenAI-compatible surface — PREPARED, NOT ARMED
+  # (2026-09-01, operator direction: "zkusit, zda dokážeš orchestrovat
+  # GrokBota"). The SECOND openai-protocol row after mistral-eu, and it needed
+  # no adapter: OpenAiCompatAdapter is deliberately vendor-blank, and xAI
+  # documents `POST https://api.x.ai/v1/chat/completions` with Bearer auth as
+  # OpenAI-SDK-compatible (only base_url and key change). So "orchestrating
+  # Grok" is a REGISTRY ROW, which is the point of the permitted-orchestrator
+  # list — a new orchestrator joins as an entry, never as code.
+  #
+  # RESIDENCY IS THE HONEST HALF AND THE OPERATOR CHOSE IT DELIBERATELY.
+  # xAI Corp. is a US processor; `eu: false` is certain. Gate 8 therefore
+  # refuses to bind this row to any agent whose Article-30 record declares
+  # `transfers_outside_eu: false`, and that refusal is the feature — an EU
+  # claim served by a US backend is a false record, not a degraded one. An
+  # agent may only reach this row by naming an xAI processor in its own gdpr
+  # block (gate 4). Gate 6 additionally refuses it to every opus-primary,
+  # code-authoring agent, which is most of the ceremonies.
+  #
+  # ARMING IS FIVE EDITS AND ALL OF THEM ARE THE OPERATOR'S: xai_enabled: true
+  # in config.yml, the two model ids, `xai_api_key` pasted into
+  # ~/.nos/secrets.yml, and per-agent `model.backend: xai` + the gdpr
+  # processor entry. Nothing here half-arms any of that.
+  #
+  # PRIMARY-URI CONVENTION, same as mistral-eu: the agent pins `openai-sonnet`
+  # (the tail is the TIER) and the vendor model id arrives from model_env —
+  # a tail like `grok-4` carries no tier word for gate 6 to map.
+  xai:
+    protocol: "openai"
+    residency: { country: "US", eu: false }
+    base_url: "https://api.x.ai/v1"
+    auth_secret: "nos:xai_api_key"
+    model_env:
+      haiku: "NOS_XAI_SMALL_MODEL"
+      sonnet: "NOS_XAI_MODEL"
+      opus: null
+    enabled_flag: "xai_enabled"
+    # Keys the binding<->register agreement check only. The contracting entity
+    # (xAI Corp., and whether an Art. 46 safeguard covers the transfer) belongs
+    # in the bound agent's own register entry, verified when it is written.
+    processor_match: "xAI"

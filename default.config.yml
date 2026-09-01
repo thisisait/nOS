@@ -1155,6 +1155,20 @@ mistral_enabled: false
 mistral_model: ""              # -> NOS_MISTRAL_MODEL       (sonnet tier)
 mistral_small_model: ""        # -> NOS_MISTRAL_SMALL_MODEL (haiku tier)
 
+# ── xAI (Grok) — PREPARED, NOT ARMED (2026-09-01) ────────────────────────────
+# The second openai-protocol backend, and it needed no adapter: xAI documents
+# api.x.ai/v1 as OpenAI-SDK-compatible, and OpenAiCompatAdapter is vendor-blank
+# by design. Same five-edit arming as Mistral — key as `xai_api_key` in
+# credentials.yml, this flag, the two model ids, plus the per-agent
+# `model.backend: xai` and gdpr processor entry.
+# NON-EU, DELIBERATELY (state/llm-backends.yml residency.eu: false): gate 8
+# refuses this row to any agent claiming transfers_outside_eu: false, and gate 6
+# refuses it to every opus-primary code-authoring agent. Both refusals are the
+# point — this backend is reachable only where the Article-30 record says so.
+xai_enabled: false
+xai_model: ""                  # -> NOS_XAI_MODEL           (sonnet tier)
+xai_small_model: ""            # -> NOS_XAI_SMALL_MODEL     (haiku tier)
+
 # ollama — the LOCAL backend, and the only one that can carry an agent's
 # `transfers_outside_eu: false` honestly: nothing leaves the host. Arming is
 # three edits, not five, because there is no key and no residency premium —
