@@ -9,10 +9,14 @@ service DEFINITION is unchanged, `/-/reload` is 403 because the lifecycle API is
 off on purpose, and the plugin loader's job ends at the render. The edge target
 stayed absent while every surface said the converge had succeeded.
 
-It is not one service's bug. Fourteen plugins render config into a running
-container this way — alloy, authentik, grafana and its five composition
-plugins, loki, prometheus, tempo — and each one has the same gap between "the
-repo says X" and "the process is running X".
+It is not one service's bug. Every plugin that renders config into a bind
+mount of a running container has the same gap between "the repo says X" and
+"the process is running X" — grafana and its composition plugins, loki,
+prometheus, tempo, authentik. DO NOT CARRY THE TALLY HERE: it said "fourteen"
+for a day while the manifests said nine, and this file IS the reader that can
+be asked. `stale-config-status.py --json` enumerates what it actually scans.
+`alloy` is deliberately NOT in scope — alloy-base renders to
+$HOME/.config/alloy, a host brew service, not a bind mount under stacks_dir.
 
 WHY A READER AND NOT A HANDLER. A notify/handler pair only fires when the
 playbook itself was the writer, on the run that wrote. It cannot see a config
