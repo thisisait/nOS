@@ -46,6 +46,16 @@
   # own success sentence is the honest signal in both directions.
   changed_when: "'Successfully installed' in _ears_pip.stdout"
 
+# WHERE THE PLAYBOOK IS, written down at converge. The launcher needs
+# tools/run-agent.sh and cannot derive its path from its own location: in the
+# repo it sits three directories below the root, at runtime it sits one below
+# ~/ears, and the first real call went looking in `/`.
+- name: "[pazny.ears] Record the repo root for the launcher"
+  ansible.builtin.copy:
+    dest: "{{ ears_runtime_dir }}/repo-root"
+    content: "{{ playbook_dir }}\n"
+    mode: '0644'
+
 - name: "[pazny.ears] Sync listener source to runtime dir"
   ansible.posix.synchronize:
     src: "{{ playbook_dir }}/files/anatomy/ears/"

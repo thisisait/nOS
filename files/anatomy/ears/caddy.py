@@ -49,10 +49,34 @@ import speech  # noqa: E402  (same directory, synced together)
 
 HOME = pathlib.Path(os.environ.get("EARS_HOME", pathlib.Path.home() / "ears"))
 TURNS_DIR = HOME / "turns"
-REPO = pathlib.Path(os.environ.get("NOS_REPO_ROOT",
-                                   pathlib.Path(__file__).resolve().parents[3]))
+def _repo_root() -> pathlib.Path:
+    """Where the playbook lives, at RUNTIME.
+
+    MEASURED ON THE FIRST REAL CALL (2026-09-01): this was
+    `parents[3]` of __file__, which is the repo root when the file sits at
+    files/anatomy/ears/caddy.py — and `/` when it sits at ~/ears/caddy.py,
+    which is where the role puts it. The runner was then looked for at
+    `/tools/run-agent.sh` and the turn failed before it began. The repo is not
+    the running system, and path arithmetic written against the repo layout is
+    a claim about a tree this file does not live in.
+
+    Order: the environment (what the launcher sets), then the marker the role
+    writes at converge, then the repo layout — which is right only when this
+    file is being run FROM the checkout.
+    """
+    env = os.environ.get("NOS_REPO_ROOT", "").strip()
+    if env:
+        return pathlib.Path(env)
+    marker = HOME / "repo-root"
+    if marker.is_file():
+        return pathlib.Path(marker.read_text().strip())
+    return pathlib.Path(__file__).resolve().parents[3]
+
+
+REPO = _repo_root()
 KEAP = os.environ.get("CADDY_KEAP_URL", "http://127.0.0.1:8091")
 CORTEX = os.environ.get("CADDY_CORTEX_URL", "http://127.0.0.1:8098")
+WING = os.environ.get("CADDY_WING_URL", "http://127.0.0.1:9000")
 HUMAN_HDR = {
     "X-Authentik-Username": "akadmin",
     "X-Authentik-Groups": "nos-providers,nos-admins",
@@ -124,11 +148,61 @@ def validate_chain(chain: str) -> dict:
             "detail": "" if ok else json.dumps(data.get("errors") or data)[:200]}
 
 
+def _wing_token() -> str:
+    """The Wing read token, from the env or from the daemon that holds it."""
+    token = os.environ.get("WING_API_TOKEN", "").strip()
+    if token:
+        return token
+    plist = pathlib.Path.home() / "Library/LaunchAgents/eu.thisisait.nos.wing.plist"
+    if not plist.is_file():
+        return ""
+    import plistlib
+    try:
+        return (plistlib.loads(plist.read_bytes())
+                .get("EnvironmentVariables", {}).get("WING_API_TOKEN", "") or "")
+    except Exception:                                           # noqa: BLE001
+        return ""
+
+
+def fetch_answer(session_uuid: str) -> tuple[str, str]:
+    """(text, gap) — what the agent actually SAID, from the lineage.
+
+    MEASURED ON THE FIRST REAL CALL (2026-09-01): `tools/run-agent.sh` prints a
+    SUMMARY — uuid, tokens, stop_reason, and a `chain` that only one_shot mode
+    fills. The answer itself is not in it. The launcher was treating that
+    summary as prose, which meant the operator was read a JSON envelope out
+    loud. The text lives where the estate says every LLM call lives: an
+    `agent_message` event, keyed by actor_action_id == the session uuid.
+    """
+    token = _wing_token()
+    if not token:
+        return "", "no WING_API_TOKEN — the agent's answer could not be read back"
+    try:
+        out = _json(f"{WING}/api/v1/events?actor_action_id={session_uuid}"
+                    f"&type=agent_message&limit=50",
+                    {"authorization": f"Bearer {token}"})
+    except Exception as exc:                                    # noqa: BLE001
+        return "", f"answer unreadable: {type(exc).__name__}: {exc}"[:120]
+    items = (out.get("data") or out).get("items") or []
+    for row in reversed(items):
+        payload = row.get("result_json")
+        if isinstance(payload, str):
+            try:
+                payload = json.loads(payload)
+            except json.JSONDecodeError:
+                continue
+        text = (payload or {}).get("text") or (payload or {}).get("text_preview") or ""
+        if text.strip():
+            return text.strip(), ""
+    return "", "the session recorded no agent_message with text"
+
+
 def run_agent(agent: str, turn: str, timeout: int = 300) -> tuple[str, str]:
     """(stdout, gap). Shells the estate's own entry point — never a second one."""
     script = REPO / "tools" / "run-agent.sh"
     if not script.is_file():
-        return "", f"no {script} — the agent runner is not in this tree"
+        return "", (f"no {script} — set NOS_REPO_ROOT, or converge so the role "
+                    f"writes {HOME}/repo-root")
     proc = subprocess.run(
         [str(script), f"--agent={agent}", f"--prompt={turn}", "--trigger=operator"],
         capture_output=True, text=True, timeout=timeout, cwd=str(REPO))
@@ -273,13 +347,20 @@ def cmd_run(args) -> int:
     raw, gap = run_agent(agent, framed)
     if gap:
         gaps.append(gap)
-    prose, chain, split_gap = split_answer(raw)
+    # The runner's stdout is a SUMMARY, not an answer. Take the session id from
+    # it and read what the agent said from the lineage.
+    uuid_match = UUID_RE.search(raw)
+    answer, answer_gap = ("", "")
+    if uuid_match:
+        answer, answer_gap = fetch_answer(uuid_match.group(0))
+        if answer_gap:
+            gaps.append(answer_gap)
+    prose, chain, split_gap = split_answer(answer or "")
     if split_gap:
         gaps.append(split_gap)
-    uuid_match = UUID_RE.search(raw)
     if not uuid_match:
         gaps.append("no AgentKit session uuid in the runner output — this row "
-                    "cannot be joined to wing.db")
+                    "cannot be joined to wing.db, and the answer cannot be read")
     verdict = validate_chain(chain) if chain else {"verdict": "NONE", "detail": ""}
 
     # Spoken LAST, after the verdict is known: an invalid chain must not be read
