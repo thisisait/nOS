@@ -127,15 +127,11 @@
   tags: ['stacks', 'core', 'always']
 
 - name: "[Stacks] Reset the accumulator (this file is imported TWICE)"
-  # core-up.yml and stack-up.yml both import this. Without the reset, the list
-  # doubles its NAMES on the second import — harmless to the report today,
-  # because everything downstream keys off _disabled_fragments, a unique-path
-  # select() that a doubled name alternation cannot inflate. The reset is
-  # defensive hygiene: a stale accumulator is exactly the shape that becomes a
-  # bug the day something starts counting _disabled_services itself. (An
-  # earlier version of this comment claimed a doubled fragment count — "64
-  # where there are 32" — which the select() cannot produce; corrected
-  # 2026-08-10.)
+  # core-up.yml and stack-up.yml both import this. Without the reset the list
+  # doubles its NAMES on the second import. Since 2026-09-01 that would be a
+  # real bug rather than cosmetic: `nos_prune_plan` iterates the names to
+  # attribute each one, so a duplicated name is attributed — and reported —
+  # twice.
   ansible.builtin.set_fact:
     _disabled_services: []
   tags: ['stacks', 'core', 'always']
@@ -159,18 +155,87 @@
   register: _all_overrides
   tags: ['stacks', 'core', 'always']
 
-- name: "[Stacks] Match disabled services to the fragments still on disk"
-  # SEPARATOR-INSENSITIVE: `code-server.yml` sits beside `qgis_server.yml`, so a
-  # hyphen-only mapping silently misses the underscore-named fragments. `_`
-  # becomes `[-_]?` so one name matches whichever spelling the role chose.
+- name: "[Stacks] Read the install flags as the ON-DISK config layers declare them"
+  # The RUNTIME value says a service is off; this says whether the operator's
+  # own committed+local config says so. The difference is the whole guard: a
+  # disablement that exists only for the duration of one command (extra-vars,
+  # `-e @some/other/config.yml`) outranks config.yml and is NOT a declaration.
   ansible.builtin.set_fact:
-    _disabled_fragments: >-
-      {{ _all_overrides.files | default([]) | map(attribute='path')
-         | select('search', '/overrides/')
-         | select('match', '.*/overrides/(' ~ (_disabled_services | default([])
-                  | map('regex_replace', '_', '[-_]?') | join('|')) ~ ')(-base)?\.yml$')
-         | list }}
-  when: (_disabled_services | default([]) | length) > 0
+    _on_disk_flags: >-
+      {%- set _f = lookup('fileglob', playbook_dir ~ '/config.yml', wantlist=True) -%}
+      {%- set _base = lookup('file', playbook_dir ~ '/default.config.yml') | from_yaml -%}
+      {%- set _over = (lookup('file', _f[0]) | from_yaml) if _f else {} -%}
+      {{ (_base | combine(_over | default({}, true))) | dict2items
+         | selectattr('key', 'match', '^install_') | items2dict }}
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Read the compose services each override declares"
+  # Read BEFORE anything is deleted — this map is what makes container
+  # selection exact instead of a substring guess.
+  ansible.builtin.set_fact:
+    _override_services: >-
+      {%- set ns = namespace(m={}) -%}
+      {%- for p in _all_overrides.files | default([]) | map(attribute='path')
+                   | select('search', '/overrides/') -%}
+      {%- set _d = lookup('file', p) | from_yaml -%}
+      {%- set _ = ns.m.update({p: ((_d | default({}, true)).services
+                                   | default({}, true) | list)}) -%}
+      {%- endfor -%}
+      {{ ns.m }}
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Which containers are running right now"
+  # READ-ONLY, and unconditional: the plan needs it to name what a prune would
+  # destroy, whether or not the prune is authorised to proceed.
+  ansible.builtin.command:
+    argv: ["{{ docker_bin | default('docker') }}", "ps", "--format", "{{ '{{' }}.Names{{ '}}' }}"]
+  register: _running_containers
+  changed_when: false
+  failed_when: false
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Attribute the prune — what is authored, and what must be refused"
+  ansible.builtin.set_fact:
+    _prune_plan: >-
+      {{ (_disabled_services | default([]))
+         | nos_prune_plan(_on_disk_flags | default({}),
+                          _override_services | default({}),
+                          _running_containers.stdout_lines | default([])) }}
+  tags: ['stacks', 'core', 'always']
+
+# ── The refusal ─────────────────────────────────────────────────────────────
+#
+# Scoped to the case where the prune would ACT. With
+# `prune_disabled_overrides: false` nothing is destroyed, so refusing would
+# block runs that are already harmless — CI converges with a test config being
+# the obvious one. What is refused is the combination that destroys.
+- name: "[Stacks] REFUSE a prune whose disablements are not authored on disk"
+  ansible.builtin.fail:
+    msg: >-
+      Refusing to prune. {{ _prune_plan.unauthored | length }} service(s) resolve
+      install_*: false for this run but are ENABLED in the on-disk config
+      (default.config.yml + config.yml) —
+      {{ _prune_plan.unauthored | join(', ') }}.
+      A disablement that outranks config.yml (extra-vars, `-e @<file>`) is a
+      flag for one command, not a declaration, and pruning acts on it
+      PERMANENTLY: it deletes compose fragments and removes running containers.
+      On 2026-09-01 that combination destroyed 33 containers on this estate.
+      Either declare it in config.yml (then this passes), or run with
+      `-e prune_disabled_overrides=false` to converge without pruning.
+  when:
+    - prune_disabled_overrides | default(false) | bool
+    - (_prune_plan.unauthored | default([]) | length) > 0
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Note the flags that cannot be attributed without rendering"
+  # e.g. `install_acme: "{{ not tenant_domain_is_local }}"`. Neither authored
+  # nor un-authored: excluded from the prune AND from the refusal, so it
+  # destroys nothing and blocks nothing.
+  ansible.builtin.debug:
+    msg: >-
+      Not attributable from the config text, so excluded from the prune:
+      {{ _prune_plan.indeterminate | join(', ') }}.
+  when: (_prune_plan.indeterminate | default([]) | length) > 0
   tags: ['stacks', 'core', 'always']
 
 - name: "[Stacks] REPORT — services switched off whose compose fragment is still merged"
@@ -179,67 +244,29 @@
   # appears once someone opts in would leave that true.
   ansible.builtin.debug:
     msg: >-
-      {{ _disabled_fragments | length }} compose override(s) belong to services
+      {{ _prune_plan.fragments | length }} compose override(s) belong to services
       declared install_*: false and are still being merged into `docker compose
       up` —
-      {{ _disabled_fragments | map('basename') | join(', ') }}.
+      {{ _prune_plan.fragments | map('basename') | join(', ') }}.
+      {{ ('This will ALSO remove ' ~ (_prune_plan.containers | length) ~ ' running
+           container(s): ' ~ (_prune_plan.containers | join(', ')) ~ '.')
+         if (_prune_plan.containers | length) > 0 else '' }}
       {{ 'Removing them now (prune_disabled_overrides is true).'
          if (prune_disabled_overrides | default(false) | bool)
          else 'NOT removed: set prune_disabled_overrides=true to reconcile. Until
                then these services keep running and any security finding that
                claims mitigation from install_*=false is unsound (hidden_fees/01).' }}
-  when: (_disabled_fragments | default([]) | length) > 0
+  when: (_prune_plan.fragments | default([]) | length) > 0
   tags: ['stacks', 'core', 'always']
 
 - name: "[Stacks] Remove compose overrides of disabled services"
   ansible.builtin.file:
     path: "{{ item }}"
     state: absent
-  loop: "{{ _disabled_fragments | default([]) }}"
+  loop: "{{ _prune_plan.fragments | default([]) }}"
   loop_control:
     label: "{{ item | basename }}"
   when: prune_disabled_overrides | default(false) | bool
-  tags: ['stacks', 'core', 'always']
-
-# ── The survivor check ──────────────────────────────────────────────────────
-#
-# A reconcile that leaves the container it was reconciling is worse than one
-# that never ran: the operator reads "pruned" and the service keeps serving.
-# See the block above for the measured case (engineering/qgis_server, 13 days
-# up with its fragment already deleted).
-#
-# READ-ONLY on purpose. `docker ps` is a question; stopping is an operator act.
-- name: "[Stacks] Which disabled services still have a container"
-  ansible.builtin.command:
-    argv: ["{{ docker_bin | default('docker') }}", "ps", "--format", "{{ '{{' }}.Names{{ '}}' }}"]
-  register: _running_after_prune
-  changed_when: false
-  failed_when: false
-  when: prune_disabled_overrides | default(false) | bool
-  tags: ['stacks', 'core', 'always']
-
-- name: "[Stacks] Survivors of the prune, named with the command that ends them"
-  ansible.builtin.debug:
-    msg: >-
-      {{ _survivors | length }} disabled service(s) still have a RUNNING
-      container after their compose fragment was removed:
-      {{ _survivors | join(', ') }}.
-      This happens when the fragment was the stack's LAST one — the base compose
-      becomes `services: {}`, `docker compose up` answers "no service selected",
-      and --remove-orphans never fires. Removing them now: the opt-in that
-      authorised deleting the fragment authorises finishing the job.
-  vars:
-    _survivors: >-
-      {{ (_running_after_prune.stdout_lines | default([]))
-         | select('search', '(' ~ (_disabled_services | default(['\x00'])
-                  | map('regex_replace', '_', '[-_]?') | join('|')) ~ ')')
-         | list }}
-  when:
-    - prune_disabled_overrides | default(false) | bool
-    - (_running_after_prune.stdout_lines | default([]))
-        | select('search', '(' ~ (_disabled_services | default(['\x00'])
-                 | map('regex_replace', '_', '[-_]?') | join('|')) ~ ')')
-        | list | length > 0
   tags: ['stacks', 'core', 'always']
 
 # ── Finish the job ─────────────────────────────────────────────────────────
@@ -251,21 +278,24 @@
 # machinery-purpose-and-no-hacks, agents-drive-operator-supervises). The
 # playbook is where a destructive act belongs; what needs gating is the
 # APPROVAL, and `prune_disabled_overrides` already is that gate — it is what
-# authorised deleting the fragment three tasks ago. Stopping the container the
-# fragment described is the same decision, not a further one.
+# authorised deleting the fragment two tasks ago.
 #
-# `docker rm -f` on the NAMED survivors rather than `compose down` on the stack:
-# surgical, and it cannot take down a stack that still has live services if the
-# survivor detection is ever wrong. Data volumes are untouched — same reversible
-# teardown as the fragment removal; re-enabling the flag and converging brings
-# the service back with its data.
+# `docker rm -f` on NAMED containers rather than `compose down` on the stack:
+# surgical, and it cannot take down a stack that still has live services. Data
+# volumes are untouched — same reversible teardown as the fragment removal;
+# re-enabling the flag and converging brings the service back with its data.
+#
+# THE NAMES COME FROM THE FRAGMENTS, NOT FROM `docker ps`. Until 2026-09-01
+# this selected containers by unanchored substring of the disabled-service
+# alternation, which is how `install_observability: false` — a STACK flag that
+# matched no fragment and removed nothing — destroyed all nine
+# `observability-*` containers. `nos_prune_plan` reads the `services:` keys of
+# the fragments actually removed and matches `<stack>-<service>-<n>` exactly,
+# so a token that prunes nothing can no longer destroy anything.
 - name: "[Stacks] Stop the containers whose fragments were just removed"
   ansible.builtin.command:
     argv: ["{{ docker_bin | default('docker') }}", "rm", "-f", "{{ item }}"]
-  loop: "{{ (_running_after_prune.stdout_lines | default([]))
-            | select('search', '(' ~ (_disabled_services | default(['\x00'])
-                     | map('regex_replace', '_', '[-_]?') | join('|')) ~ ')')
-            | list }}"
+  loop: "{{ _prune_plan.containers | default([]) }}"
   loop_control:
     label: "{{ item }}"
   register: _survivor_removal

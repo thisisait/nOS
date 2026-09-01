@@ -132,8 +132,16 @@ dnsmasq_dev_address: "127.0.0.1"
 
 # -- Nginx - auto-detected from install_* flags (CI renders default.conf only)--
 
-# -- Dummy passwords for CI (unused because install_* flags are off) ----------
-mariadb_root_password: "ci-test-password"
+# -- Dummy passwords for CI ---------------------------------------------------
+# NOT "unused because install_* flags are off" — that comment stood here until
+# 2026-09-01 and was false. The install flags gate whether a SERVICE runs, not
+# whether a credential is PERSISTED: templates/secrets.yml.j2 writes its keys
+# into ~/.nos/secrets.yml unconditionally. `mariadb_root_password` lived here,
+# and one converge run with `-e @tests/config.yml` froze "ci-test-password"
+# into the live estate's credential store, orphaning the real root password
+# that the data volume was initialised with. It is removed here;
+# default.config.yml already resolves it from nos_derived_secrets.
+# Gate: tests/anatomy/test_ci_config_cannot_poison_the_secret_store.py
 grafana_admin_password: "ci-test-password"
 wordpress_db_password: "ci-test-password"
 nextcloud_admin_password: "ci-test-password"

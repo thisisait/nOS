@@ -137,13 +137,40 @@ def test_manifest_apps_are_derived_from_the_directory(tasks) -> None:
 
 
 def test_the_match_is_separator_insensitive(tasks) -> None:
-    """`code-server.yml` sits beside `qgis_server.yml`; one spelling misses the other."""
-    body = TASK.read_text(encoding="utf-8")
-    assert "[-_]?" in body, (
-        "the fragment match went back to a single separator. Fragments are named "
-        "by whatever the role chose — a hyphen-only mapping silently leaves "
-        "underscore-named fragments (qgis_server, smtp_stalwart) merged."
+    """`code-server.yml` sits beside `qgis_server.yml`; one spelling misses the other.
+
+    Moved into `filter_plugins/nos_prune_guard.py` on 2026-09-01 along with the
+    rest of the selection, so this asserts the BEHAVIOUR rather than the inline
+    Jinja that used to carry it — a stronger check than the `[-_]?` substring
+    it replaces, which a refactor could satisfy while matching nothing.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "nos_prune_guard", REPO / "filter_plugins/nos_prune_guard.py"
     )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    for svc, fragment in (
+        ("qgis_server", "/stacks/engineering/overrides/qgis_server.yml"),
+        ("smtp_stalwart", "/stacks/infra/overrides/smtp_stalwart.yml"),
+        # The same name spelled the other way must match too.
+        ("code_server", "/stacks/devops/overrides/code-server.yml"),
+        ("uptime_kuma", "/stacks/iiab/overrides/uptime-kuma-base.yml"),
+    ):
+        plan = mod.nos_prune_plan(
+            disabled=[svc],
+            on_disk_flags={"install_" + svc: False},
+            overrides={fragment: []},
+            containers=[],
+        )
+        assert plan["fragments"] == [fragment], (
+            f"the fragment match went back to a single separator: {svc} no "
+            f"longer matches {fragment}. Fragments are named by whatever the "
+            "role chose — a hyphen-only mapping silently leaves underscore-named "
+            "fragments (qgis_server, smtp_stalwart) merged."
+        )
 
 
 def test_it_does_not_claim_to_touch_data(tasks) -> None:
