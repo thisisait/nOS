@@ -171,15 +171,19 @@
 
 - name: "[Stacks] Read the compose services each override declares"
   # Read BEFORE anything is deleted — this map is what makes container
-  # selection exact instead of a substring guess.
+  # selection exact instead of a substring guess. A pinned `container_name:`
+  # is carried alongside the service key: the two are equal only by
+  # coincidence (pazny.smtp_stalwart), and where they differ the container
+  # would survive a prune of its own fragment, silently.
   ansible.builtin.set_fact:
     _override_services: >-
       {%- set ns = namespace(m={}) -%}
       {%- for p in _all_overrides.files | default([]) | map(attribute='path')
                    | select('search', '/overrides/') -%}
-      {%- set _d = lookup('file', p) | from_yaml -%}
-      {%- set _ = ns.m.update({p: ((_d | default({}, true)).services
-                                   | default({}, true) | list)}) -%}
+      {%- set _svc = ((lookup('file', p) | from_yaml) | default({}, true)).services | default({}, true) -%}
+      {%- set _ = ns.m.update({p: (_svc | list) + (_svc.values() | select('mapping')
+                                                   | selectattr('container_name', 'defined')
+                                                   | map(attribute='container_name') | list)}) -%}
       {%- endfor -%}
       {{ ns.m }}
   tags: ['stacks', 'core', 'always']
@@ -212,10 +216,10 @@
 - name: "[Stacks] REFUSE a prune whose disablements are not authored on disk"
   ansible.builtin.fail:
     msg: >-
-      Refusing to prune. {{ _prune_plan.unauthored | length }} service(s) resolve
-      install_*: false for this run but are ENABLED in the on-disk config
-      (default.config.yml + config.yml) —
-      {{ _prune_plan.unauthored | join(', ') }}.
+      Refusing to prune. {{ _prune_plan.unauthored_destructive | length }} service(s)
+      resolve install_*: false for this run but are ENABLED in the on-disk config
+      (default.config.yml + config.yml), and each owns a compose fragment —
+      {{ _prune_plan.unauthored_destructive | join(', ') }}.
       A disablement that outranks config.yml (extra-vars, `-e @<file>`) is a
       flag for one command, not a declaration, and pruning acts on it
       PERMANENTLY: it deletes compose fragments and removes running containers.
@@ -224,7 +228,19 @@
       `-e prune_disabled_overrides=false` to converge without pruning.
   when:
     - prune_disabled_overrides | default(false) | bool
-    - (_prune_plan.unauthored | default([]) | length) > 0
+    - (_prune_plan.unauthored_destructive | default([]) | length) > 0
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Note un-authored disablements that would destroy nothing"
+  # Reported rather than refused: they own no compose fragment, so obeying
+  # them removes nothing. `profiles/gov-local.yml` is the documented case —
+  # `install_tailscale: false` over a config.yml that says true.
+  ansible.builtin.debug:
+    msg: >-
+      Disabled for this run only (not declared in config.yml) and owning no
+      compose fragment, so skipped rather than refused:
+      {{ _prune_plan.unauthored | difference(_prune_plan.unauthored_destructive) | join(', ') }}.
+  when: (_prune_plan.unauthored | default([]) | difference(_prune_plan.unauthored_destructive | default([])) | length) > 0
   tags: ['stacks', 'core', 'always']
 
 - name: "[Stacks] Note the flags that cannot be attributed without rendering"

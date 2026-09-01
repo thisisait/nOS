@@ -26,8 +26,10 @@ final class HubPresenter extends BasePresenter
 		private HubCardRepository $cards,
 		// ESTATE RED, not just HTTP red. /hub probed 33 services, called them
 		// all up, and said nothing while two Pulse jobs had been failing for
-		// half a day and five CRITICAL/HIGH notifications sat unread
-		// (measured 2026-08-31). Both facts already live in wing.db and both
+		// half a day and eight notifications sat unread (measured 2026-08-31 —
+		// countUnread does NOT filter by severity, so this is every unread
+		// notification, not the CRITICAL/HIGH subset an earlier draft of this
+		// comment claimed). Both facts already live in wing.db and both
 		// already have a repository; the page simply never asked.
 		private PulseRepository $pulse,
 		private NotificationRepository $notifications,
@@ -159,7 +161,9 @@ final class HubPresenter extends BasePresenter
 		// also reports CI and Dependabot, which come from `gh` — Wing has no
 		// business shelling out to it, and a second, partial "total red" would
 		// be a number that disagrees with the reader everyone else quotes. The
-		// tile names its own scope instead.
+		// tile names its own scope alongside the breakdown — until 2026-09-01
+		// the "wing.db only" label rendered only in the zero branch, i.e. never
+		// when anyone was reading it.
 		$failing = $this->pulse->failingJobs();
 		$this->template->estateRed = [
 			'jobs'    => $failing,

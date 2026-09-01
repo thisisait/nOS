@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Make a running container read the config the estate rendered for it.
 
-THE GAP THIS CLOSES. Fourteen plugins render config into a running container's
+THE GAP THIS CLOSES. Plugins render config into a running container's
 bind mount, and nothing made the process re-read it. `docker compose up -d` is
 a no-op when the service DEFINITION is unchanged, so a converge could rewrite
 `prometheus.yml` and report `failed=0` while Prometheus kept serving the old
@@ -12,7 +12,7 @@ API is off on purpose — so a restart is the only lever that exists.
 WHY NOT ANSIBLE HANDLERS. Every one of these services already HAS a
 `Restart <svc>` handler, and they are notified by the role task that renders
 the compose OVERRIDE — not by the plugin loader that renders the CONFIG. That
-is the whole defect, and adding fourteen more notify: lines would fix it only
+is the whole defect, and adding one more notify: line per plugin would fix it only
 for the run that writes. A config left stale by a previous run, by a converge
 whose restart failed, or by a hand edit stays stale forever, because a handler
 cannot fire for a change it did not witness. Asking the artifact — file mtime
@@ -118,18 +118,29 @@ def main() -> int:
         else:
             todo.setdefault(row["container"], []).append(pathlib.Path(row["source"]).name)
 
+    # A container the reader could not stat is neither stale nor fresh, and
+    # dropping it here is the "green report over an unread source" the comment
+    # below names as the worst outcome. The reader gained this channel on
+    # 2026-09-01 (stale-config-status.py:142,158) and this tool did not read it
+    # until the same day's review — the fix had landed one file short.
+    unreadable = report.get("unreadable", [])
+    for row in sorted(unreadable, key=lambda r: r["container"]):
+        print(f"  UNKNOWN {row['container']}: {row['why']}")
+
     for container, reason in sorted(skipped.items()):
         print(f"  skip    {container}: {reason}")
     if not todo:
-        # Two different facts, and the message must not merge them: with skips
-        # present, the configs are NOT all older than their processes — some
-        # are newer and were exempted. Printing the clean-estate sentence over
-        # an exempted one is the same lie as a green report over an unread
-        # source (the live run says exactly this: 3 stale, all 3 skipped).
-        print("nothing to reload: "
-              + (f"{len(skipped)} stale mount(s), all declared self-reloading."
-                 if skipped
-                 else "every mounted config is older than the process that read it."))
+        # Three different facts, and the message must not merge them: an
+        # exempted stale mount is not a fresh one, and a mount nobody could
+        # read is neither.
+        if unreadable:
+            note = (f"{len(unreadable)} container(s) could not be read — "
+                    "this is not a clean estate, it is an unmeasured one.")
+        elif skipped:
+            note = f"{len(skipped)} stale mount(s), all declared self-reloading."
+        else:
+            note = "every mounted config is older than the process that read it."
+        print("nothing to reload: " + note)
         return 0
 
     for container, files in sorted(todo.items()):

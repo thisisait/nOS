@@ -78,12 +78,22 @@ def nos_prune_plan(disabled, on_disk_flags, overrides, containers):
     overrides     -- {path: [compose service names the fragment declares]}
     containers    -- [running container names]
 
-    Returns {"unauthored": [...], "indeterminate": [...],
-             "fragments": [...], "containers": [...]}.
+    Returns {"unauthored": [...], "unauthored_destructive": [...],
+             "indeterminate": [...], "fragments": [...], "containers": [...]}.
 
-    `unauthored` non-empty means REFUSE: the caller must not act on `fragments`
-    or `containers`, which are returned empty in that case so a caller that
-    forgets to check the refusal still destroys nothing.
+    `unauthored_destructive` non-empty means REFUSE: the caller must not act on
+    `fragments` or `containers`, which are returned empty in that case so a
+    caller that forgets to check the refusal still destroys nothing.
+
+    REFUSAL KEYS ON BLAST RADIUS, NOT ON ATTRIBUTION. The first cut refused on
+    `unauthored` alone and thereby broke `profiles/gov-local.yml`, a committed
+    profile invoked exactly as documented (`-e @profiles/gov-local.yml`): it
+    sets `install_tailscale: false` over a config.yml that says true, so the
+    disablement is correctly un-authored — and tailscale has no compose
+    fragment, so obeying it would have destroyed nothing. Refusing a converge
+    to protect zero containers is the guard failing at its own job. An
+    un-authored service that owns no fragment is reported and skipped; one
+    that owns a fragment still stops the run, which is the 2026-09-01 case.
     """
     disabled = sorted(set(disabled or []))
     on_disk_flags = on_disk_flags or {}
@@ -109,40 +119,50 @@ def nos_prune_plan(disabled, on_disk_flags, overrides, containers):
             # include_vars. Not a declaration.
             unauthored.append(svc)
 
-    if unauthored:
+    def _select(names):
+        patterns = [_sep_insensitive(s) for s in names]
+        fragments, compose_services = [], []
+        for path, services in sorted(overrides.items()):
+            parts = path.split(os.sep)
+            if len(parts) < 3 or parts[-2] != "overrides":
+                continue
+            stem = re.sub(r"\.ya?ml$", "", parts[-1])
+            if not any(p.match(stem) for p in patterns):
+                continue
+            fragments.append(path)
+            for svc in services or []:
+                compose_services.append((parts[-3], svc))
+
+        # EXACT names only. `<project>-<service>-<n>` is compose's own scheme;
+        # the bare `<service>` catches a pinned `container_name:`, which the
+        # caller supplies alongside the service keys because the two are only
+        # equal by coincidence (pazny.smtp_stalwart is the one live case).
+        # Neither form can over-match, which is the whole point — the substring
+        # form is what destroyed nine unrelated containers.
+        wanted = set()
+        for stack, svc in compose_services:
+            wanted.add(re.compile(
+                r"^" + re.escape(stack) + r"-" + re.escape(svc) + r"-\d+$"))
+            wanted.add(re.compile(r"^" + re.escape(svc) + r"$"))
+        return fragments, sorted(
+            {c for c in containers if any(p.match(c) for p in wanted)})
+
+    # An un-authored disablement only matters if obeying it would destroy
+    # something. Attribute first, then measure the radius.
+    destructive = [s for s in unauthored if _select([s])[0]]
+    if destructive:
         return {
             "unauthored": unauthored,
+            "unauthored_destructive": destructive,
             "indeterminate": indeterminate,
             "fragments": [],
             "containers": [],
         }
 
-    patterns = [_sep_insensitive(s) for s in authored]
-    fragments, compose_services = [], []
-    for path, services in sorted(overrides.items()):
-        parts = path.split(os.sep)
-        if len(parts) < 3 or parts[-2] != "overrides":
-            continue
-        stem = re.sub(r"\.ya?ml$", "", parts[-1])
-        if not any(p.match(stem) for p in patterns):
-            continue
-        fragments.append(path)
-        for svc in services or []:
-            compose_services.append((parts[-3], svc))
-
-    # EXACT names only. `<project>-<service>-<n>` is compose's own scheme; the
-    # bare `<service>` covers a fragment that pins `container_name:`. Neither
-    # can over-match, which is the whole point — the substring form is what
-    # destroyed nine unrelated containers.
-    wanted = set()
-    for stack, svc in compose_services:
-        wanted.add(re.compile(r"^" + re.escape(stack) + r"-" + re.escape(svc) + r"-\d+$"))
-        wanted.add(re.compile(r"^" + re.escape(svc) + r"$"))
-
-    doomed = sorted({c for c in containers if any(p.match(c) for p in wanted)})
-
+    fragments, doomed = _select(authored)
     return {
-        "unauthored": [],
+        "unauthored": unauthored,
+        "unauthored_destructive": [],
         "indeterminate": indeterminate,
         "fragments": fragments,
         "containers": doomed,

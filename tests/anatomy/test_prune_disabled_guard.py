@@ -267,3 +267,70 @@ def test_the_substring_selection_does_not_come_back():
         "the pre-guard fragment list is back; fragments must come from the "
         "attributed plan so they cannot be acted on when the prune is refused"
     )
+
+
+# ── 3. The guard must not refuse a converge to protect nothing ─────────────
+
+
+def test_a_committed_profile_is_not_refused():
+    """`profiles/gov-local.yml` is documented as `-e @profiles/gov-local.yml`.
+
+    It sets `install_tailscale: false` over a config.yml that says true, so the
+    disablement is genuinely un-authored — and tailscale has NO compose
+    fragment, so obeying it destroys nothing. The first cut of this guard
+    refused on attribution alone and therefore blocked the whole converge to
+    protect zero containers. Refusal keys on blast radius now.
+    """
+    plan = _load().nos_prune_plan(
+        disabled=["tailscale"],
+        on_disk_flags={"install_tailscale": True},
+        overrides=OVERRIDES,
+        containers=CONTAINERS,
+    )
+    assert plan["unauthored"] == ["tailscale"], "attribution must still be honest"
+    assert plan["unauthored_destructive"] == [], (
+        "a service with no compose fragment cannot destroy anything and must "
+        "not stop the run — profiles/gov-local.yml is the live case"
+    )
+
+
+def test_the_incident_still_refuses_after_that_relaxation():
+    """The relaxation above must not reach the case the guard exists for."""
+    mod = _load()
+    plan = mod.nos_prune_plan(
+        disabled=["authentik", "portainer", "observability", "tailscale"],
+        on_disk_flags={
+            "install_authentik": True, "install_portainer": True,
+            "install_observability": True, "install_tailscale": True,
+        },
+        overrides=OVERRIDES,
+        containers=CONTAINERS,
+    )
+    assert sorted(plan["unauthored_destructive"]) == ["authentik", "portainer"]
+    assert plan["fragments"] == [] and plan["containers"] == [], (
+        "one un-authored service that owns a fragment must stop the whole prune"
+    )
+
+
+def test_a_pinned_container_name_is_reached():
+    """`pazny.smtp_stalwart` pins `container_name: smtp_stalwart`, so compose
+    names the container by that and NOT `<stack>-<service>-<n>`. The task
+    supplies pinned names alongside the service keys; if it stopped, the
+    fragment would be deleted and the container would survive it silently."""
+    plan = _load().nos_prune_plan(
+        disabled=["smtp_stalwart"],
+        on_disk_flags={"install_smtp_stalwart": False},
+        overrides={"/stacks/infra/overrides/smtp_stalwart.yml":
+                   ["smtp_stalwart", "mail-gw"]},
+        containers=["mail-gw", "infra-unrelated-1"],
+    )
+    assert plan["containers"] == ["mail-gw"], (
+        "a pinned container_name was not reached — the prune would orphan it"
+    )
+
+
+def test_the_task_supplies_pinned_container_names():
+    assert "container_name" in TASK.read_text(), (
+        "the task stopped harvesting `container_name:` from the fragments, so "
+        "a container named other than <stack>-<service>-<n> survives its prune"
+    )

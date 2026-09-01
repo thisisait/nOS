@@ -333,6 +333,92 @@
         - not (nos_skip_edge_check | default(false) | bool)
       tags: ['always', 'preflight']
 
+    # ── Preflight: a gate with nothing behind it ─────────────────────────────
+    # With `install_authentik: false` both renderers still attach the
+    # `authentik@file` middleware, Traefik finds it undefined, and every gated
+    # route answers 500. Refuse at converge time instead.
+    #
+    # DERIVED, NOT REIMPLEMENTED. The first cut duplicated the renderers'
+    # predicate here and was wrong on 15 of 17 services, because
+    # `traefik_auth_modes`/`traefik_skip_ids` are pazny.traefik ROLE vars —
+    # undefined in pre_tasks, silently swallowed by `| default({})`, so every
+    # `oidc` and `none` service fell through to the `proxy` default. This
+    # renders services.yml.j2 for real and reads the middleware list back, so
+    # the set cannot drift from what Traefik is actually handed.
+    # Gate: tests/anatomy/test_preflight_authentik_gate_matches_renderers.py.
+    - name: "[Preflight] Find enabled services that need an Authentik to gate them"
+      ansible.builtin.set_fact:
+        _nos_gated_without_authentik: >-
+          {%- set _tv = (lookup('file', playbook_dir ~ '/roles/pazny.traefik/vars/main.yml') | from_yaml)
+                        | combine({'nos_manifest': lookup('file', playbook_dir ~ '/state/manifest.yml') | from_yaml}) -%}
+          {%- set _routers = (lookup('template', playbook_dir ~ '/roles/pazny.traefik/templates/dynamic/services.yml.j2',
+                                     template_vars=_tv) | from_yaml).http.routers | default({}, true) -%}
+          {%- set ns = namespace(need=_routers | dict2items
+                                 | selectattr('value.middlewares', 'defined')
+                                 | selectattr('value.middlewares', 'contains', 'authentik@file')
+                                 | map(attribute='key') | list) -%}
+          {#- Tier-2: nos_apps_render walks apps/ itself; mirror ITS file filter
+              (main():534-539) — .yml and .yaml, no `_` template, no `.draft`. -#}
+          {%- if apps_runner_enabled | default(true) | bool -%}
+          {%- for f in (lookup('fileglob', playbook_dir ~ '/apps/*.yml', playbook_dir ~ '/apps/*.yaml', wantlist=True) | sort) -%}
+          {%- set _b = f | basename -%}
+          {%- if not _b.startswith('_') and not _b.startswith('.') and '.draft.' not in _b -%}
+          {%- if (((lookup('file', f) | from_yaml).nginx | default({})).auth | default('proxy')) == 'proxy' -%}
+          {%- set ns.need = ns.need + ['app:' ~ (_b | splitext | first)] -%}
+          {%- endif -%}
+          {%- endif -%}
+          {%- endfor -%}
+          {%- endif -%}
+          {{ ns.need | sort }}
+      when:
+        - install_traefik | default(true) | bool
+        - not (install_authentik | default(false) | bool)
+      tags: ['always', 'preflight']
+
+    # `traefik-dashboard` is exempt from the REFUSAL, not from the fact above.
+    # services.yml.j2:120-127 emits it with authentik@file unconditionally, so
+    # it is present in EVERY estate and would refuse the legitimate
+    # Authentik-free install this check is meant to leave alone. A 500 on the
+    # dashboard is fail-closed and costs the operator nothing else; set
+    # `traefik_dashboard_route_enabled: false` to drop the router entirely.
+    - name: "[Preflight] Services that would 500, minus the always-present dashboard"
+      ansible.builtin.set_fact:
+        _nos_gated_without_authentik_refusable: >-
+          {{ _nos_gated_without_authentik | difference(['traefik-dashboard']) }}
+      when:
+        - install_traefik | default(true) | bool
+        - not (install_authentik | default(false) | bool)
+      tags: ['always', 'preflight']
+
+    - name: "[Preflight] Refuse a forward-auth gate with no Authentik behind it"
+      ansible.builtin.fail:
+        msg: |
+          install_authentik is false, but {{ _nos_gated_without_authentik_refusable | length }}
+          enabled service(s) route through Authentik forward-auth. Traefik will
+          reference the `authentik@file` middleware, find nothing defined, and
+          answer 500 on every one of them:
+
+            {{ _nos_gated_without_authentik_refusable | join(', ') }}
+
+          Pick one:
+            install_authentik: true          the gate these services are asking for
+            <service>: none in traefik_auth_modes (roles/pazny.traefik/vars/main.yml)
+                                             publishes a Tier-1 service UNGATED — read
+                                             docs/sso-and-attribution.md first
+            nginx.auth: none in apps/<name>.yml   the same, for a Tier-2 app
+
+          This list is derived by rendering the real router file, so a service
+          absent from it is a service Traefik will not gate.
+
+          Advanced override (an Authentik this playbook does not manage):
+            -e nos_skip_authentik_check=true
+      when:
+        - install_traefik | default(true) | bool
+        - not (install_authentik | default(false) | bool)
+        - _nos_gated_without_authentik_refusable | default([]) | length > 0
+        - not (nos_skip_authentik_check | default(false) | bool)
+      tags: ['always', 'preflight']
+
     - name: "[Preflight] Refuse if BOTH install_nginx and install_traefik are true"
       ansible.builtin.fail:
         msg: |
@@ -2282,7 +2368,7 @@
     # ──────────────────────────────────────────────────────────────────────────
     # Make the running containers read the config this run rendered for them
     # ──────────────────────────────────────────────────────────────────────────
-    # Fourteen plugins render config into a bind mount of a RUNNING container,
+    # Plugins render config into a bind mount of a RUNNING container,
     # and nothing made the process re-read it: `docker compose up -d` is a no-op
     # when the service definition is unchanged, so a converge could rewrite
     # prometheus.yml and finish `failed=0` with Prometheus still serving the old
@@ -2300,7 +2386,13 @@
       ansible.builtin.command: "{{ playbook_dir }}/tools/reload-stale-config.py --apply"
       register: _stale_reload
       changed_when: "'restarted ' in _stale_reload.stdout"
-      failed_when: false
+      # The tool exits non-zero ONLY when a restart it attempted did not work —
+      # i.e. a container is still serving replaced config. `failed_when: false`
+      # threw that away and let the converge report failed=0 over exactly the
+      # condition this task exists to end, which is the defect it was written
+      # to fix, one level up. Finding stale config is not an error; failing to
+      # act on it is.
+      failed_when: _stale_reload.rc | default(0) != 0
       when: nos_docker_ready | default(false) | bool
       tags: ['stacks', 'reload-config', 'always']
 

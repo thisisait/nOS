@@ -42,6 +42,12 @@ WTF_CSRF_EXEMPT_LIST = ["superset.views.core.log"]
 # -----------------------------------------------------------------------------
 # Authentication — native OIDC via Authentik
 # -----------------------------------------------------------------------------
+{# GUARDED like every sibling plugin. Unguarded until 2026-09-01: FAB served the
+   OAuth provider page with no Authentik behind it, so there was NO working UI
+   login — only post.yml's `provider: db` API path. Guarded, FAB falls back to
+   its AUTH_DB default. A Jinja comment, not a `#` one: a `#` comment naming the
+   symbol RENDERS, and defeats the gate that greps the artifact for it. #}
+{% if install_authentik | default(false) | bool %}
 AUTH_TYPE = AUTH_OAUTH
 AUTH_USER_REGISTRATION = True
 AUTH_USER_REGISTRATION_ROLE = "Gamma"
@@ -80,6 +86,7 @@ OAUTH_PROVIDERS = [
         },
     },
 ]
+{% endif %}
 
 # -----------------------------------------------------------------------------
 # SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 2

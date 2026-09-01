@@ -428,13 +428,13 @@ def test_a_completed_pytest_run_still_passes():
         registry=_one_judge_registry("pytest-anatomy", "repo"),
         repo_root=REPO,
         spawn=_fake_spawn(
-            **{"pytest": J.Completed(exit_code=0, stdout="4425 passed, 59 skipped in 329.00s\n")}
+            **{"pytest": J.Completed(exit_code=0, stdout="4496 passed, 166 skipped in 323.00s\n")}
         ),
         probe=_always_true,
         sandbox_factory=lambda root: (root, "sha-fake", lambda: None),
     )
     assert verdict.result is J.Result.PASS, verdict.reason
-    assert verdict.runs[0].work == 4425
+    assert verdict.runs[0].work == 4496
 
 
 def test_an_interrupted_pytest_that_did_fail_is_still_a_fail():
@@ -801,7 +801,7 @@ def test_pytest_never_runs_against_the_live_tree():
         # this test asserts PASS against a run the runner rightly calls
         # INDETERMINATE — which is how it failed when the floor moved on
         # 2026-08-24 and the fixture did not.
-        return J.Completed(exit_code=0, stdout="4425 passed in 329.00s\n")
+        return J.Completed(exit_code=0, stdout="4496 passed in 323.00s\n")
 
     sandbox = REPO.parent / "fake-sandbox"
     verdict = J.run_gate_set(
@@ -837,7 +837,7 @@ def test_every_judge_in_a_set_observes_exactly_one_tree():
         return {
             "ansible-lint": GREEN_ANSIBLE_LINT,
             "genome-codegen": GREEN_GENOME,
-            "pytest": J.Completed(exit_code=0, stdout="4425 passed in 329.00s\n"),
+            "pytest": J.Completed(exit_code=0, stdout="4496 passed in 323.00s\n"),
         }[_argv_key(argv)]
 
     sandbox = REPO.parent / "one-tree-sandbox"
@@ -1036,7 +1036,8 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 #: (driver refresh-in-place, passed-awaiting-act, fixture segregation). Fresh
 #: run: "3865 passed, 39 skipped in 277s". Synthetic counts in this file moved
 #: to 4075 on 2026-08-24 when min_work went to 4060, to 4255 on 2026-08-29, and
-#: to 4425 on 2026-08-30 when min_work went to 4370
+#: to 4425 on 2026-08-30 when min_work went to 4370, and to 4496 on 2026-09-01
+#: (min_work 4440)
 #: when it went to 4200 — they are scaffolding
 #: that must stay above the floor, not observations of anything.
 #: RE-DERIVED 2026-08-24, forced by the collection gate (4085 collected against
@@ -1055,7 +1056,7 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 #: ledger payload, the earned audit anchor, the check-mode evidence gate, the
 #: scheduler-to-session lineage, and a dashboard gate that parametrises per
 #: dashboard file. Measured by running the tool:
-#:   pytest tests/anatomy -q  → "4425 passed, 59 skipped in 329s"
+#:   pytest tests/anatomy -q  → "4496 passed, 166 skipped in 323s"  (2026-09-01)
 #:
 #: THE GATE IS DOING ITS JOB EACH TIME. Three re-derivations in a month is not
 #: churn — it is the only mechanism that notices the suite outgrowing the
@@ -1063,7 +1064,7 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 MEASURED_WORK = {
     "ansible-lint": 1500,
     "genome-codegen": 2,
-    "pytest-anatomy": 4425,
+    "pytest-anatomy": 4496,
     "cortex-corpus-diff": 1,
 }
 

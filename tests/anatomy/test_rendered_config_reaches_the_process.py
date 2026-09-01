@@ -1,6 +1,6 @@
 """Every plugin that renders config into a running container has a way to reload it.
 
-THE DEFECT, measured 2026-08-31. Fourteen plugins render config into a bind
+THE DEFECT, measured 2026-08-31. Plugins render config into a bind
 mount of a running container. Nothing made the process re-read it: `docker
 compose up -d` is a no-op when the service DEFINITION is unchanged, and
 Prometheus's `/-/reload` answers 403 because the lifecycle API is off on
@@ -88,8 +88,11 @@ def test_an_opt_out_names_its_services_and_says_why() -> None:
     for plugin, declared in _manifests_with_reload():
         assert declared.get("mode") == "self", (
             f"{plugin}: reload.mode is {declared.get('mode')!r}; `self` is the "
-            "only value the reconciler understands, and an unknown one is "
-            "silently ignored — which reads exactly like being exempt")
+            "only value the reconciler understands. An unknown one is NOT "
+            "treated as exempt — reload-stale-config.py:78 `continue`s past "
+            "it, so the service lands in `todo` and gets restarted. That is "
+            "the safe direction the opt-OUT polarity chose; what this refuses "
+            "is a manifest that LOOKS like an opt-out and silently is not")
         services = declared.get("services")
         assert isinstance(services, list) and services, (
             f"{plugin}: reload declares no `services` list, so it exempts "
