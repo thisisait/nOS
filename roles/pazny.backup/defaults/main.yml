@@ -102,11 +102,6 @@ backup_dirs_to_dump:
   - { name: "gitlab", path: "{{ gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab') }}" }
   - { name: "gitlab-config", path: "{{ gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config') }}" }
 
-# Alpine image for volume/dir tar streaming. MUST equal the restore extractor's
-# image (tasks/_restore_volume.yml + restore.yml restore_alpine_image) — a tag
-# skew is a silent restore drift. Single source of truth.
-backup_alpine_image: "alpine:3.20"
-
 # -- Container names (match the project-wide convention) -----------------------
 backup_mariadb_container: "{{ mariadb_container_name | default('nos-mariadb') }}"
 backup_postgresql_container: "{{ postgresql_container_name | default('nos-postgresql') }}"

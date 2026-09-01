@@ -84,7 +84,7 @@ See `defaults/main.yml`. Key tunables:
 | `backup_dirs_to_dump` | gitea/gitlab/gitlab-config | Host-bind dirs to tar (git repos — covered by no DB dump) |
 | `backup_wing_db` / `backup_wing_db_path` | `install_wing` / `…/wing.db` | sqlite3 .dump of the Wing store |
 | `backup_nos_state` | `true` | tar `~/.nos/{secrets,state}.yml` (restore gated by `restore_state`) |
-| `backup_alpine_image` | `alpine:3.20` | tar image; MUST match the restore extractor |
+| `backup_alpine_image` | `alpine:3.20` | tar image; declared in `default.config.yml` only — restore derives it |
 | `backup_run_now` | `false` | Execute `backup.sh` right after deploy (testing) |
 
 ## Dependencies

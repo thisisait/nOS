@@ -19,10 +19,6 @@
 # a production mail stack, or with install_mailpit for dev capture.
 install_snappymail: false
 
-# Docker image. djmaze/snappymail:latest is the official image (Alpine,
-# nginx + PHP-FPM 8.2). Pin a digest or tag for reproducibility.
-snappymail_image: "djmaze/snappymail:v2.38.2"
-
 # Domain — separate from mail.<tld> (which is the SMTP/IMAP server).
 # webmail.<tld> is the webmail UI frontend.
 snappymail_domain: "webmail{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"

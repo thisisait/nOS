@@ -45,8 +45,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 CONFIG = REPO / "default.config.yml"
 #: `_repo_ref` is in here because keap_repo_ref is a pin in every sense that
-#: matters: it selects the source tree a service is built from.
-KEY = r"[a-z0-9_]+_(?:version|image_version|image_tag|repo_ref)"
+#: matters: it selects the source tree a service is built from. Bare `_image`
+#: joined 2026-09-01: it escaped the first spelling, and snappymail_image +
+#: backup_alpine_image had each been declared twice under a green gate.
+KEY = r"[a-z0-9_]+_(?:version|image|image_version|image_tag|repo_ref)"
 
 
 def _declared(text: str) -> dict[str, str]:

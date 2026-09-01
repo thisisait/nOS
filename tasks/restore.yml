@@ -63,9 +63,8 @@
     restore_requested_sources: >-
       {{ (restore_sources | default('') | string).split(',')
          | map('trim') | reject('equalto', '') | list }}
-    # MUST equal roles/pazny.backup defaults backup_alpine_image (pinned by
-    # tests/anatomy/test_backup_restore_contract.py).
-    restore_alpine_image: "alpine:3.20"
+    # Derived, not repeated — backup_alpine_image is the one declaration.
+    restore_alpine_image: "{{ backup_alpine_image }}"
     # name → host target path for `dir-<name>` sources (mirrors
     # backup_dirs_to_dump). Derived from the *_data_dir config vars so an
     # external-storage redirect lands the restore on the same disk.

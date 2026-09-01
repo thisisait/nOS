@@ -57,7 +57,7 @@
   ansible.builtin.command: >
     docker run --rm
     -v {{ vol_name }}:/data
-    {{ restore_alpine_image | default('alpine:3.20') }}
+    {{ restore_alpine_image }}
     sh -c "rm -rf /data/..?* /data/.[!.]* /data/* || true"
   changed_when: true
 
@@ -66,7 +66,7 @@
     set -o pipefail
     docker run --rm -i \
       -v {{ vol_name }}:/data \
-      {{ restore_alpine_image | default('alpine:3.20') }} \
+      {{ restore_alpine_image }} \
       sh -c "tar -xzf - -C /data" < {{ vol_tarball }}
   args:
     executable: /bin/bash

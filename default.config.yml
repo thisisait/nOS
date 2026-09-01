@@ -2036,6 +2036,7 @@ calibreweb_timezone: "Europe/Prague"
 
 snappymail_domain: "webmail{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 snappymail_port: 3008
+# Official image (Alpine, nginx + PHP-FPM 8.2). Pin a tag or digest.
 snappymail_image: "djmaze/snappymail:v2.38.2"
 
 # ==============================================================================
@@ -3273,7 +3274,9 @@ backup_encryption_enabled: true
 # before (CLAUDE.md, operator gotchas). The real value arrives later from
 # ~/.nos/secrets.yml, which include_vars loads after this file.
 backup_encryption_keys_previous: []
-backup_alpine_image: "alpine:3.20"               # tar/extract image; MUST match restore_alpine_image
+# Tar/extract image — ONE declaration. backup.sh and restore_alpine_image both
+# read this var; a second literal is a silent restore-extract drift.
+backup_alpine_image: "alpine:3.20"
 backup_overwrite_same_day: true
 backup_run_now: false
 backup_status_file: "{{ ansible_facts['env']['HOME'] }}/.nos/backup-status.json"

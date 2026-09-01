@@ -26,6 +26,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 BACKUP_SH = REPO / "roles" / "pazny.backup" / "files" / "backup.sh"
 BACKUP_DEFAULTS = REPO / "roles" / "pazny.backup" / "defaults" / "main.yml"
+CONFIG = REPO / "default.config.yml"
 RESTORE_YML = REPO / "tasks" / "restore.yml"
 RESTORE_VOLUME = REPO / "tasks" / "_restore_volume.yml"
 
@@ -131,27 +132,23 @@ def test_canonical_db_stems_present():
     )
 
 
-def _alpine_image_backup() -> str:
-    m = re.search(r'^backup_alpine_image:\s*"([^"]+)"', BACKUP_DEFAULTS.read_text(), re.M)
-    assert m, "backup_alpine_image not declared in pazny.backup defaults"
-    return m.group(1)
+def test_alpine_image_has_exactly_one_declaration():
+    """Parity by derivation, not by four literals kept equal by hand.
 
-
-def test_alpine_image_parity():
-    """A tar/extract image-tag skew is a silent restore-extract drift."""
-    backup_img = _alpine_image_backup()
-    restore_text = RESTORE_YML.read_text()
-    m = re.search(r'restore_alpine_image:\s*"([^"]+)"', restore_text)
-    assert m, "restore_alpine_image not set in tasks/restore.yml"
-    assert m.group(1) == backup_img, (
-        f"alpine image mismatch: backup={backup_img!r} restore={m.group(1)!r}"
+    Until 2026-09-01 `alpine:3.20` was spelled five times (config, role default,
+    restore.yml, two `| default()` fallbacks) and parity was asserted pairwise —
+    which holds only while every copy is edited together.
+    """
+    m = re.search(r'^backup_alpine_image:\s*"([^"]+)"', CONFIG.read_text(), re.M)
+    assert m, "backup_alpine_image not declared in default.config.yml"
+    assert not re.search(r'^backup_alpine_image:', BACKUP_DEFAULTS.read_text(), re.M), (
+        "backup_alpine_image is back in the role default, where vars_files outrank it"
     )
-    # The volume extractor falls back to the same literal.
-    vol_text = RESTORE_VOLUME.read_text()
-    for fallback in re.findall(r"restore_alpine_image \| default\('([^']+)'\)", vol_text):
-        assert fallback == backup_img, (
-            f"_restore_volume.yml alpine fallback {fallback!r} != backup {backup_img!r}"
-        )
+    assert re.search(
+        r'restore_alpine_image:\s*"\{\{\s*backup_alpine_image\s*\}\}"', RESTORE_YML.read_text()
+    ), "restore.yml must DERIVE restore_alpine_image, not repeat the literal"
+    strays = re.findall(r"alpine:[\d.]+", RESTORE_VOLUME.read_text())
+    assert not strays, f"_restore_volume.yml carries literal alpine pins again: {strays}"
 
 
 def test_restore_decrypt_resolves_pbkdf2_openssl():
