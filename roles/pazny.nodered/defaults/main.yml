@@ -9,7 +9,10 @@
 # Node-RED instead of mere access control.
 # ==============================================================================
 
-nodered_version: "4.0.9"                              # stable multi-arch tag (nodered/node-red)
+# REM-156. 4.1.13 (the queue's floor) has NO plain tag — node-red suffixes with
+# the Node major, so the fix is 4.1.14-20: Node 20 as today (v20.19.0 measured
+# in the running container), node-red alone moves. arm64 confirmed on the tag.
+nodered_version: "4.1.14-20"
 nodered_domain: "nodered{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 nodered_port: 1880                                    # Node-RED default
 nodered_timezone: "Europe/Prague"
