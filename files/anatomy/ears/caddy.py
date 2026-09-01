@@ -164,6 +164,32 @@ def _wing_token() -> str:
         return ""
 
 
+def pending_question(session_uuid: str) -> tuple[bool | None, str]:
+    """(is the turn waiting on the operator, gap).
+
+    `asked` is one of the five statuses caddy-sessions declares, and until now
+    nothing ever wrote it — so the table's own `offer` block, which shows the
+    "answer it in Wing's inbox" hand-off `when status == asked`, matched no row
+    that could ever exist. A declared state nothing produces is a surface that
+    is switched off in a way no one can see.
+
+    None is NOT False. A row stamped `answered` because this check could not
+    run is a success marker written by the code that attempted the work, which
+    is the defect this estate names by name. Unreachable Wing -> None -> the
+    status keeps whatever the run itself established, and the gap says why.
+    """
+    token = _wing_token()
+    if not token:
+        return None, "no WING_API_TOKEN — could not tell whether the turn is waiting"
+    try:
+        out = _json(f"{WING}/api/v1/inbox/questions",
+                    {"authorization": f"Bearer {token}"})
+    except Exception as exc:                                    # noqa: BLE001
+        return None, f"open questions unreadable: {type(exc).__name__}: {exc}"[:120]
+    rows = (out.get("data") or out).get("questions") or []
+    return any(r.get("session_uuid") == session_uuid for r in rows), ""
+
+
 def fetch_answer(session_uuid: str) -> tuple[str, str]:
     """(text, gap) — what the agent actually SAID, from the lineage.
 
@@ -390,6 +416,15 @@ def cmd_run(args) -> int:
 
     status = ("failed" if gap else
               "refused" if verdict["verdict"] == "INVALID" else "answered")
+    # A turn that stopped to ask outranks every other ending: the run did not
+    # fail and did not finish, and only this status routes the row to the
+    # inbox hand-off the table offers.
+    if uuid_match:
+        waiting, wait_gap = pending_question(uuid_match.group(0))
+        if wait_gap:
+            gaps.append(wait_gap)
+        if waiting:
+            status = "asked"
     gap = record_session({
         "slug": slug, "started": int(started), "mode": mode, "model": agent,
         "status": status, "summary": (prose or turn)[:200],

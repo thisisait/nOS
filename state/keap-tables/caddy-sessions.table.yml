@@ -64,3 +64,43 @@ schema:
     # wrong. Written by the operator and by nobody else.
     - { key: rating_before, label: "Sense (-1..3)",   kind: number, role: measure }
     - { key: rating_after,  label: "Outcome (-1..3)", kind: number, role: measure }
+
+# =============================================================================
+# THE VIEW BLOCK — WHOLE, since 2026-09-01.
+#
+# It was authored half-way for a day: the face rendered `chat` and KEAP's
+# `tableViewStyleSchema` was [grid, blog, timeline, tiles] with no `askColumn`,
+# so zod would have rejected the style at seed time and stripped the column
+# silently — the trade the invented `tier-admins` visibility already cost this
+# file once. `tools/view-contract-drift.py` named those two and nothing else,
+# the KEAP half shipped (v1.41+, `chat` requires BOTH halves of the exchange),
+# and the reader now says the contracts agree.
+#
+# A row here IS a turn: `transcript` is what was said, `summary` is what came
+# back. NOT `chain` — since the caddy holds `exec` it RUNS read chains itself
+# and answers in prose, so the chain column is empty on exactly the turns that
+# worked. A body that is blank whenever the thing succeeded is a body column
+# pointed at the wrong fact.
+# =============================================================================
+view:
+  style: chat
+  askColumn: transcript
+  bodyColumn: summary
+  titleColumn: slug
+  dateColumn: started
+  metaColumns: [mode, model, status]
+  # Which half answered, and how it ended — the two questions this table exists
+  # to answer ("what left the machine", "what is still open").
+  facets: [mode, status]
+
+  # THE HAND-OFF. Q15: Wing is the only channel that may answer a pending
+  # question, so a row at `status: asked` is displayed here and answered there.
+  # The block names the ACTION ID and the rows; the address is built in code
+  # (`inboxHref`, face view.ts) from Wing's own catalog entry and session_uuid.
+  # A row with no session_uuid opens nothing and says so — no link that lands
+  # on an empty inbox.
+  offer:
+    label: "A caddy turn is waiting on you — answer it in Wing's inbox."
+    action: open-inbox
+    when:
+      - { column: status, op: eq, value: asked }

@@ -25,6 +25,14 @@
    as "nothing to do" and is indistinguishable from a broken query — this page
    already learned that lesson elsewhere in the estate. *}
 <h3 style="font-size:15px; margin-bottom:10px;">Agent questions</h3>
+{* A deep-link that matched nothing must say so. Silence here is what makes the
+   caddy row's "open in inbox" feel broken when the question was simply already
+   answered. *}
+{if $ref !== null && $refMatches === 0}
+	<div style="color:var(--text2); font-size:13px; margin-bottom:12px;">
+		The turn you followed has no open question — it was answered, expired, or asked nothing.
+	</div>
+{/if}
 {if count($questions) === 0}
 	<div style="color:var(--text2); font-size:13px; margin-bottom:20px;">
 		No agent is waiting on an answer.
@@ -38,7 +46,7 @@
 		</thead>
 		<tbody>
 			{foreach $questions as $q}
-				<tr>
+				<tr n:class="($q['session_uuid'] ?? null) === $ref && $ref !== null ? 'row-ref'">
 					<td style="font-size:12px;">{$q['agent_name']}</td>
 					<td>
 						<div style="max-width:520px;">{$q['prompt']}</div>

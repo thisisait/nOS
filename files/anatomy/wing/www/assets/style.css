@@ -337,3 +337,7 @@ pre { max-width: 100%; overflow-x: auto; }
 @media (prefers-reduced-motion: reduce) {
 	.hub-splash-arc { animation: none; }
 }
+
+/* A row the operator arrived AT — /inbox?ref=<session uuid> from a caddy-sessions
+   row in the face. Marks, never filters: the rest of the queue stays visible. */
+.row-ref > td { background: rgba(88,166,255,0.10); box-shadow: inset 3px 0 0 var(--blue, #58a6ff); }

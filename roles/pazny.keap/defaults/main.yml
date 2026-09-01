@@ -48,7 +48,11 @@ keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # accepted. Below this ref, `tools/roadmap-apply-view.py --confirm` writes a
 # block KEAP silently strips and then cannot read back — it refuses rather than
 # reporting success, but the pin is what makes the apply clean.
-keap_repo_ref: "v1.41.0"
+# v1.42.0 adds `chat` to tableViewStyleSchema + `askColumn` to viewMetaSchema,
+# and refuses a chat missing either half. state/keap-tables/caddy-sessions
+# declares that style: below this ref, zod strips both keys at seed time and
+# the conversation surface renders as a grid with no complaint anywhere.
+keap_repo_ref: "v1.42.0"
 
 # ── The cortex cutover (KEAP P-5) ────────────────────────────────────────────
 # false ⇒ KEAP answers /agent/v1/validate with its OWN typechecker (the shipped

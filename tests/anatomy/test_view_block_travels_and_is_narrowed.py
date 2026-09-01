@@ -205,7 +205,15 @@ def test_every_declared_view_has_something_that_applies_it():
     standing division of labour (CLAUDE.md): pytest owns the shape, the reader
     owns the effect, and neither may claim the other's job.
     """
-    seeder = (REPO / "roles/pazny.keap/tasks/seed-face-tables.yml").read_text(encoding="utf-8")
+    # EVERY seeder that routes through seed-face-table.yml, not just the face
+    # one: seed-caddy-tables.yml and seed-fixture-tables.yml use the same single
+    # implementation (the one task file that forwards `view:`), and a gate that
+    # knew only one of the three called an applied table unapplied (2026-09-01).
+    seeder = "".join(
+        p.read_text(encoding="utf-8")
+        for p in sorted((REPO / "roles/pazny.keap/tasks").glob("seed-*.yml"))
+        if "seed-face-table.yml" in p.read_text(encoding="utf-8")
+    )
     tools = REPO / "tools"
     unapplied = []
     for path, _ in _defs_with_view():

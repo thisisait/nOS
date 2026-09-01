@@ -2,7 +2,7 @@
 	/**
 	 * Generic DataTable renderer + editor (rawDataTable surface).
 	 *
-	 * FOUR STYLES over one resolve step. The table itself declares which one it
+	 * FIVE STYLES over one resolve step. The table itself declares which one it
 	 * wants (KEAP `view` block); `resolveView` picks the columns and degrades to
 	 * the grid when a declared style cannot be honoured. Before this there was
 	 * only the grid, and the grid sets `white-space: nowrap` — correct for a
@@ -18,7 +18,16 @@
 	import { loadTable, tablesUpsertRow } from '$lib/api/tables';
 	import { ApiError } from '$lib/api/client';
 	import RowEditor from './RowEditor.svelte';
-	import { resolveView, orderRows, timelineSections, formatWhen, matchRow } from '$lib/tables/view';
+	import {
+		resolveView,
+		orderRows,
+		timelineSections,
+		formatWhen,
+		matchRow,
+		inboxHref
+	} from '$lib/tables/view';
+	import type { ViewAction } from '$lib/tables/view';
+	import { hubApps } from '$lib/api/hub';
 	import { StatusNote, Badge, prefersReducedMotion } from './ui';
 
 	let { table }: { table: DataTable | null } = $props();
@@ -119,9 +128,8 @@
 		return el ? Math.max(0, el.offsetTop - 6) : 0;
 	});
 
-	/** The one action in VIEW_ACTIONS. Scroll to the row and mark it — the offer
-	 *  navigates; it does not write, and there is deliberately no arm here that
-	 *  could. */
+	/** `focus-highlight`. Scroll to the row and mark it — the offer navigates; it
+	 *  does not write, and neither arm in the catalog does. */
 	function focusHighlight(row: DataTableRow | null) {
 		if (!row || !root) return;
 		const el = root.querySelector<HTMLElement>(`#${CSS.escape(rowDomId(row.id))}`);
@@ -132,6 +140,46 @@
 		flashed = String(row.id);
 		setTimeout(() => (flashed = ''), 1600);
 	}
+	/**
+	 * `open-inbox` — the second arm, and the only one that leaves this surface.
+	 *
+	 * Q15: Wing is the answering channel; collab may DISPLAY a pending question
+	 * and never answer it inline. So this hands off and writes nothing. The URL
+	 * is built in code from a fixed column (`inboxHref`) and Wing's own catalog
+	 * entry — the view block chooses the ACTION ID and the rows, never an
+	 * address. A row without a session ref, or a hub without Wing, says so:
+	 * an offer that opens nothing must not look like it worked.
+	 */
+	let offerErr = $state('');
+	async function openInbox(row: DataTableRow | null) {
+		offerErr = '';
+		if (!row) return;
+		let base = '';
+		try {
+			base = (await hubApps()).find((a) => a.slug === 'wing')?.url ?? '';
+		} catch {
+			offerErr = 'Wing address unavailable';
+			return;
+		}
+		const href = inboxHref(base, row);
+		if (!href) {
+			offerErr = base ? 'this row has no session to open' : 'Wing is not in the app catalog';
+			return;
+		}
+		window.open(href, '_blank', 'noopener');
+	}
+
+	/**
+	 * The catalog's arms, keyed by id. `Record<ViewAction, …>` is what makes the
+	 * fail-closed rule a COMPILE error rather than a convention: an id added to
+	 * VIEW_ACTIONS with no arm here does not typecheck, so a declaration can
+	 * never validate into silence.
+	 */
+	const OFFER_ARMS: Record<ViewAction, (row: DataTableRow | null) => void> = {
+		'focus-highlight': focusHighlight,
+		'open-inbox': (row) => void openInbox(row)
+	};
+
 	/** Grid columns: everything. The other styles claim specific columns and
 	 *  show the rest only inside the editor — a card that reprinted all 23
 	 *  columns would be a grid with rounded corners. */
@@ -295,14 +343,8 @@
 		{:else if rows.length === 0}
 			<StatusNote kind="empty">No rows.</StatusNote>
 
-			<!-- ── GRID ─────────────────────────────────────────────────────
-			     `chat` renders here too, DELIBERATELY: the resolver admits the
-			     style but this component has no arm for it yet, and the {:else}
-			     catch-all below is TILES — so a declared chat was silently
-			     rendering as tiles, a style nobody asked for wearing no badge.
-			     Until the exchange renderer ships, chat gets the grid: the same
-			     target every other unhonourable style degrades to. -->
-		{:else if view.style === 'grid' || view.style === 'chat'}
+			<!-- ── GRID ─────────────────────────────────────────────────── -->
+		{:else if view.style === 'grid'}
 			<div class="scroll">
 				<table>
 					<thead>
@@ -388,6 +430,35 @@
 				{/each}
 			</ol>
 
+			<!-- ── CHAT ─────────────────────────────────────────────────────
+			     One row, two bubbles: `ask` is what was said, `body` is what came
+			     back. Both are non-null here — `resolveView` degrades a chat
+			     missing either half to the grid, so this arm needs no fallback.
+
+			     Both bubbles are `{expr}` text. A first cut also JSON-parsed the
+			     answer column into a nested step table; it was deleted 2026-09-01
+			     having never had anything to parse — caddy.py writes the chain as
+			     a pipeline STRING, so the parser returned null on every row that
+			     has ever existed. -->
+		{:else if view.style === 'chat' && view.ask && view.body}
+			<div class="chat">
+				{#each rows as row (row.id)}
+					<article class="turn" id={rowDomId(row.id)} class:flash={flashed === String(row.id)}>
+						<p class="meta">
+							{#if view.date}<span class="when">{formatWhen(row[view.date.key])}</span>{/if}
+							{#each view.meta as m (m.key)}
+								<span class="chip">{m.label}: {cell(row, m)}</span>
+							{/each}
+							{#if data.canWrite}
+								<button class="edit" onclick={() => open(row)}>edit</button>
+							{/if}
+						</p>
+						<p class="bubble ask">{cell(row, view.ask)}</p>
+						<p class="bubble ans">{cell(row, view.body)}</p>
+					</article>
+				{/each}
+			</div>
+
 			<!-- ── TILES ────────────────────────────────────────────────────── -->
 		{:else}
 			<div class="tiles">
@@ -423,10 +494,10 @@
 		     `role="status"` because it appears without the user asking. -->
 		{#if showOffer && offer}
 			<aside class="offer" style="top:{offerTop}px" role="status">
-				<span class="offer-text">{offer.label}</span>
+				<span class="offer-text">{offerErr || offer.label}</span>
 				<span class="offer-n">{offerRows.length}</span>
-				<button class="offer-go" type="button" onclick={() => focusHighlight(offerRow)}>
-					Show
+				<button class="offer-go" type="button" onclick={() => OFFER_ARMS[offer.action](offerRow)}>
+					{offer.action === 'open-inbox' ? 'Open in Wing' : 'Show'}
 				</button>
 				<button
 					class="offer-x"
@@ -676,6 +747,37 @@
 		font-size: 15px;
 		font-weight: 650;
 		letter-spacing: -0.01em;
+	}
+
+	/* ── chat ──────────────────────────────────────────────────────────── */
+	.chat {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		max-width: 74ch;
+	}
+	.turn {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.bubble {
+		margin: 0;
+		padding: 9px 12px;
+		border-radius: 13px;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		line-height: 1.5;
+		max-width: 88%;
+	}
+	.bubble.ask {
+		align-self: flex-end;
+		background: rgba(90, 150, 255, 0.22);
+	}
+	.bubble.ans {
+		align-self: flex-start;
+		background: rgba(255, 255, 255, 0.05);
+		border: 1px solid var(--glass-brd, rgba(255, 255, 255, 0.09));
 	}
 
 	/* ── timeline ──────────────────────────────────────────────────────── */

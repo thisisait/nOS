@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { resolveView, orderRows, timelineSections, formatWhen } from './view';
+import { readFileSync } from 'node:fs';
+import {
+	resolveView,
+	orderRows,
+	timelineSections,
+	formatWhen,
+	inboxHref,
+	VIEW_ACTIONS
+} from './view';
 import type { ColumnSpec, DataTable } from '$lib/contracts';
 
 /**
@@ -244,5 +252,36 @@ describe('chat style', () => {
 	it('never sets ask for another style', () => {
 		const v = resolveView(table({ style: 'grid', askColumn: 'transcript' }));
 		expect(v.ask).toBeNull();
+	});
+});
+
+// ── collab v1 (2026-09-01) ───────────────────────────────────────────────────
+//
+// The conversation surface's one pure helper: a missing ref is NO LINK.
+describe('inboxHref', () => {
+	it('builds the hand-off from the fixed column', () => {
+		expect(inboxHref('https://wing.dev.local/', { id: '1', session_uuid: 'a b' })).toBe(
+			'https://wing.dev.local/inbox?ref=a%20b'
+		);
+	});
+
+	it('is null without a ref or without Wing — an offer that opens nothing must not', () => {
+		expect(inboxHref('https://wing.dev.local', { id: '1' })).toBeNull();
+		expect(inboxHref('https://wing.dev.local', { id: '1', session_uuid: '  ' })).toBeNull();
+		expect(inboxHref('', { id: '1', session_uuid: 'u' })).toBeNull();
+		expect(inboxHref('javascript:alert(1)', { id: '1', session_uuid: 'u' })).toBeNull();
+	});
+});
+
+describe('VIEW_ACTIONS', () => {
+	it('is a closed catalog, and every member has an arm in the renderer', () => {
+		// The fail-closed rule from view.ts's own header: the handler ships
+		// first, the id second. This reads the RENDERER, not this file's prose.
+		const src = readFileSync(
+			new URL('../components/DataTableApp.svelte', import.meta.url),
+			'utf-8'
+		);
+		const arms = src.slice(src.indexOf('const OFFER_ARMS'));
+		for (const a of VIEW_ACTIONS) expect(arms).toContain(`'${a}':`);
 	});
 });

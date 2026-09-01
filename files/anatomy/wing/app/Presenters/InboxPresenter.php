@@ -59,7 +59,20 @@ final class InboxPresenter extends BasePresenter
 	) {
 	}
 
-	public function renderDefault(?string $severity = null, bool $unreadOnly = true): void
+	/**
+	 * `$ref` is an AgentKit session uuid, arriving from a caddy-sessions row in
+	 * the face (`inboxHref()` in files/anatomy/face/src/lib/tables/view.ts).
+	 *
+	 * It NARROWS NOTHING. The queue still shows every open question, because a
+	 * deep-link that hid the others would make "nobody is waiting" a function of
+	 * which link you followed. What it does is mark the rows this turn asked and
+	 * SAY SO WHEN THERE ARE NONE — a ref that matches nothing is the common
+	 * case (the question was already answered, or the turn asked nothing), and
+	 * a page that looked identical either way is what makes a deep-link feel
+	 * broken. Shipped 2026-09-01: the link existed for a day pointing at a
+	 * parameter this method did not take, and Nette dropped it silently.
+	 */
+	public function renderDefault(?string $severity = null, bool $unreadOnly = true, ?string $ref = null): void
 	{
 		$filters = ['unread_only' => $unreadOnly];
 		if ($severity !== null && $severity !== '') {
@@ -92,7 +105,14 @@ final class InboxPresenter extends BasePresenter
 		// Open questions first — a blocked run is more urgent than an unread
 		// message. listOpen() already excludes rows past their deadline, so
 		// nothing here can be answered into a decision the agent has moved past.
-		$this->template->questions = $this->questions->listOpen();
+		$questions = $this->questions->listOpen();
+		$this->template->questions = $questions;
+		$ref = ($ref !== null && trim($ref) !== '') ? trim($ref) : null;
+		$this->template->ref = $ref;
+		$this->template->refMatches = $ref === null ? 0 : count(array_filter(
+			$questions,
+			static fn(array $q): bool => ($q['session_uuid'] ?? null) === $ref,
+		));
 	}
 
 	/**

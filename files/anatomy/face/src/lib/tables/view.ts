@@ -34,12 +34,37 @@ export type ResolvedStyle = 'grid' | 'blog' | 'timeline' | 'tiles' | 'chat';
  * must not be addable by data, so opcodes and handlers stay code, per
  * runtime"), and the reason a model may fill this block at all.
  *
- * ONE MEMBER, deliberately, and the fail-closed ordering is the genome's too:
- * the handler ships first and the id joins this list second. A member with no
- * arm in the renderer is a declaration that validates and does nothing.
+ * TWO MEMBERS, and the fail-closed ordering is the genome's too: the handler
+ * ships first and the id joins this list second. A member with no arm in the
+ * renderer is a declaration that validates and does nothing.
+ *
+ * `open-inbox` (collab v1) hands a pending turn to Wing, the only channel that
+ * may answer one — it navigates and writes nothing, like the first member. The
+ * address is built in code (`inboxHref`) from Wing's own catalog entry and a
+ * fixed column; the block chooses the id and the rows, never a URL.
  */
-export const VIEW_ACTIONS = ['focus-highlight'] as const;
+export const VIEW_ACTIONS = ['focus-highlight', 'open-inbox'] as const;
 export type ViewAction = (typeof VIEW_ACTIONS)[number];
+
+/** The column `open-inbox` reads its ref from. Fixed in CODE: a data-chosen
+ *  key is a data-chosen URL, one indirection short of a data-chosen capability.
+ *  ponytail: one column name for one table — generalise when a second table
+ *  needs the action, not before. */
+export const INBOX_REF_COLUMN = 'session_uuid';
+
+/**
+ * Wing's inbox deep-link for a row — or null, which is the whole point.
+ *
+ * A row with no session ref, or a catalog with no Wing, yields NOTHING rather
+ * than a link to `/inbox?ref=` — an offer that opens an empty page looks like
+ * it worked. The caller reports the null; it never falls back to a guess.
+ */
+export function inboxHref(wingBase: string, row: DataTableRow): string | null {
+	const ref = row[INBOX_REF_COLUMN];
+	if (!/^https?:\/\//.test(wingBase)) return null;
+	if (typeof ref !== 'string' || !ref.trim()) return null;
+	return `${wingBase.replace(/\/+$/, '')}/inbox?ref=${encodeURIComponent(ref.trim())}`;
+}
 
 const ROW_OPS: readonly RowOp[] = ['eq', 'neq', 'lt', 'lte', 'gt', 'gte', 'contains'] as const;
 
