@@ -211,6 +211,37 @@ def test_purge_reanchors_and_chain_still_verifies(tmp_path):
     assert lp and lp[0], "purge must record last_purged_hash"
 
 
+def test_purge_is_an_id_prefix_not_a_ts_window(tmp_path):
+    """The chain is ordered by id; `ts` is not monotonic with it (several writers
+    + backfills — 4232 inversions live, worst 593 days). A ts-window purge punches
+    INTERIOR holes that one survivor anchor cannot repair: on the live 1.3 GB DB it
+    took verify from 398,438 rows OK to `checked: 0` while exiting 0. So a stale row
+    ABOVE a young one must be RETAINED, and said so."""
+    db = _fresh_db(tmp_path)
+    _chain_env(db, on=True)
+    W = _wing()
+    for i in range(3):
+        W.insert_event({"ts": "2024-01-01T00:00:00Z", "run_id": "r", "type": "task_ok", "task": f"old{i}"})
+    W.insert_event({"ts": "2026-05-31T00:00:00Z", "run_id": "r", "type": "task_ok", "task": "young"})
+    # the inversion: a stale ts arriving at a HIGH id (late/backfilled writer)
+    W.insert_event({"ts": "2024-01-01T00:00:00Z", "run_id": "r", "type": "task_ok", "task": "stranded"})
+
+    p = _php([str(PURGE), f"--db={db}", "--older-than-days=365", "--dry-run"])
+    assert p.returncode == 0, p.stderr
+    assert "would purge 3 events" in p.stdout, p.stdout
+    assert "1 stale rows RETAINED" in p.stdout, "the stranded row must be reported, not silently kept"
+
+    p = _php([str(PURGE), f"--db={db}", "--older-than-days=365"])
+    assert p.returncode == 0, p.stderr
+    v = _php([str(VERIFY), f"--db={db}"])
+    assert v.returncode == 0, f"purge must leave the chain verifiable: {v.stderr}"
+
+    con = sqlite3.connect(db)
+    tasks = [r[0] for r in con.execute("SELECT task FROM events ORDER BY id").fetchall()]
+    con.close()
+    assert tasks == ["young", "stranded"], tasks
+
+
 def test_legacy_db_without_chain_surface_purges_unchanged(tmp_path):
     """FIX-B1: a DB with no audit_chain_meta / row_hash falls through to the
     original byte-identical DELETE."""

@@ -53,17 +53,6 @@ try {
     exit(3);
 }
 
-// julianday(ts) < julianday('now', '-N days') — robust against T/Z ISO forms.
-$predicate = "julianday(ts) < julianday('now', '-{$days} days')";
-
-$count = (int) $sqlite->querySingle("SELECT COUNT(*) FROM events WHERE {$predicate}");
-
-if ($dryRun) {
-    echo "DRY-RUN: would purge {$count} events older than {$days} days\n";
-    $sqlite->close();
-    exit(0);
-}
-
 // Detect whether THIS db has the audit-chain surface. Absent (chain-off
 // install, pre-feature DB, or a legacy test seed) -> the original byte-identical
 // DELETE so we never crash on a DB lacking audit_chain_meta / row_hash.
@@ -77,6 +66,41 @@ while ($c = $ti->fetchArray(SQLITE3_ASSOC)) {
         $hasRowHash = true;
         break;
     }
+}
+
+// julianday(ts) < julianday('now', '-N days') — robust against T/Z ISO forms.
+$stale = "julianday(ts) < julianday('now', '-{$days} days')";
+$predicate = $stale;
+$stranded = 0;
+
+// THE CHAIN IS ORDERED BY id, NOT BY ts, AND THE TWO DISAGREE (2026-09-01).
+// A chain-aware purge may only remove an id-PREFIX: one contiguous head, whose
+// single survivor boundary `last_purged_hash` re-anchors. `ts` is written by
+// several writers and by backfills, so it is NOT monotonic with id — measured
+// live: 4232 inversions, worst 593 days. Purging on the ts predicate therefore
+// punched 314,578 survivors' worth of interior holes, one anchor repaired one of
+// them, and verify-audit-chain.php went from 398,438 rows OK to `checked: 0`
+// while this script exited 0 saying "Purged 81107 events". So the chained path
+// deletes strictly below the OLDEST row inside the horizon. Cost is the handful
+// of stale rows stranded above a young one — 9 of 81,107 on the live estate —
+// and those are retained, never silently dropped: they are reported.
+if ($hasMeta && $hasRowHash) {
+    $firstKept = $sqlite->querySingle("SELECT MIN(id) FROM events WHERE NOT ({$stale})");
+    $predicate = $firstKept === null ? '1=1' : 'id < ' . (int) $firstKept;
+    $stranded = (int) $sqlite->querySingle(
+        "SELECT COUNT(*) FROM events WHERE ({$stale}) AND NOT ({$predicate})"
+    );
+}
+
+$count = (int) $sqlite->querySingle("SELECT COUNT(*) FROM events WHERE {$predicate}");
+$note = $stranded > 0
+    ? " ({$stranded} stale rows RETAINED — they sit above a younger row in the hash chain)"
+    : '';
+
+if ($dryRun) {
+    echo "DRY-RUN: would purge {$count} events older than {$days} days{$note}\n";
+    $sqlite->close();
+    exit(0);
 }
 
 $chainInWindow = 0;
@@ -94,7 +118,7 @@ if (!$hasMeta || !$hasRowHash || $chainInWindow === 0) {
         fwrite(STDERR, "DELETE failed\n");
         exit(3);
     }
-    echo "Purged {$count} events older than {$days} days\n";
+    echo "Purged {$count} events older than {$days} days{$note}\n";
     exit(0);
 }
 
