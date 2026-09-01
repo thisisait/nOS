@@ -26,6 +26,7 @@ written. This reads four committed files and cannot skip.
 
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 
@@ -47,6 +48,43 @@ def _wing_links() -> list[tuple[str, str]]:
     src = VIEW_TS.read_text(encoding="utf-8")
     return [(m.group(1), m.group(2))
             for m in re.finditer(r"\}/([a-z][a-z0-9-]*)\?([a-z_]+)=", src)]
+
+
+def _statuses_written() -> set[str]:
+    """Every literal caddy.py can put in a row's `status`, from the AST.
+
+    Regex over the source read `status = "asked"` and missed
+    `status = ("failed" if … else "answered")` — three of the five statuses,
+    invisible to a detector reading text instead of the artifact. Both
+    assignment and the `{"status": …}` literal are walked, so a fourth spelling
+    fails here rather than passing quietly.
+    """
+    tree = ast.parse(CADDY.read_text(encoding="utf-8"))
+    out: set[str] = set()
+
+    def literals(node: ast.AST) -> set[str]:
+        """A literal, or a ternary of them — deliberately nothing else.
+
+        Walking the whole subtree also collected `"INVALID"` out of the
+        ternary's own CONDITION, which would let a status count as written
+        because something compared against it. A value this cannot read is
+        reported as unwritten; that failure is the safe direction.
+        """
+        if isinstance(node, ast.Constant):
+            return {node.value} if isinstance(node.value, str) else set()
+        if isinstance(node, ast.IfExp):
+            return literals(node.body) | literals(node.orelse)
+        return set()
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            if any(isinstance(t, ast.Name) and t.id == "status" for t in node.targets):
+                out |= literals(node.value)
+        elif isinstance(node, ast.Dict):
+            for key, val in zip(node.keys, node.values):
+                if isinstance(key, ast.Constant) and key.value == "status":
+                    out |= literals(val)
+    return out
 
 
 def _render_params(presenter: str) -> set[str]:
@@ -87,8 +125,7 @@ def test_every_query_key_the_face_sends_is_one_wing_accepts() -> None:
 def test_every_offer_fires_on_a_status_something_writes() -> None:
     """An `offer` gated on a value nothing produces is a surface switched off
     in a way no reader can see."""
-    written = set(re.findall(r'status = "([a-z]+)"', CADDY.read_text(encoding="utf-8")))
-    written |= set(re.findall(r'"status": "([a-z]+)"', CADDY.read_text(encoding="utf-8")))
+    written = _statuses_written()
     checked = 0
     for table in sorted(TABLES.glob("*.table.yml")):
         doc = yaml.safe_load(table.read_text(encoding="utf-8")) or {}
@@ -104,4 +141,23 @@ def test_every_offer_fires_on_a_status_something_writes() -> None:
     assert checked, (
         "no status-gated offer found in state/keap-tables — either they moved or "
         "the parse broke; this gate must not pass by finding nothing"
+    )
+
+
+def test_every_status_the_sessions_table_declares_is_one_something_writes() -> None:
+    """The general form of the assertion above, and it found a second instance.
+
+    `running` was declared by caddy-sessions and written by nothing for a day:
+    the row was recorded only AFTER the agent returned, so a turn killed
+    mid-flight left no record at all — not an unfinished one, none — and the
+    one status meaning "in flight" could never appear. Gating only the offer's
+    value would have kept passing while the durability hole stayed open.
+    """
+    doc = yaml.safe_load((TABLES / "caddy-sessions.table.yml").read_text(encoding="utf-8"))
+    declared = next(c["options"] for c in doc["schema"]["columns"] if c["key"] == "status")
+    written = _statuses_written()
+    assert not set(declared) - written, (
+        f"caddy-sessions declares {sorted(set(declared) - written)} and caddy.py "
+        f"writes {sorted(written)}. A declared state nothing produces is a "
+        "surface switched off in a way no reader can see."
     )

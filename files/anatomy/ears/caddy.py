@@ -284,7 +284,7 @@ def _rw_token() -> str:
 
 
 def record_session(row: dict) -> str:
-    """Append to the caddy-sessions DataTable. Returns a gap, or ''."""
+    """Upsert a caddy-sessions row (the agent API keys on `slug`). Gap, or ''."""
     token = _rw_token()
     if not token:
         return "no KEAP write token (env or container) — the session was NOT recorded"
@@ -364,6 +364,18 @@ def cmd_run(args) -> int:
                           "slug": slug, "gaps": gaps, "ran": False},
                          ensure_ascii=False, indent=2))
         return 0
+
+    # THE ROW OPENS BEFORE THE AGENT RUNS, because the rows API upserts on
+    # `slug` and the close below reuses it. A turn killed mid-flight otherwise
+    # leaves NO record — the transcript is gone, not merely unfinished — and
+    # `running` was the twin of the `asked` defect above: a status the table
+    # declares and nothing ever wrote.
+    open_gap = record_session({
+        "slug": slug, "started": int(started), "mode": mode, "model": agent,
+        "status": "running", "transcript": turn[:500],
+    })
+    if open_gap:
+        gaps.append(open_gap)
 
     # WHERE THE SENTENCE CAME FROM travels with it. `ask-operator` writes into
     # the one channel Q15 makes authoritative, and a voice turn carries whatever

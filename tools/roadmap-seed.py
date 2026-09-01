@@ -664,7 +664,7 @@ row("caddy", "The organ is ears; the assistant is a caddy; `jeff` is a name",
          "rename after the first session row is a migration instead of a sed.")
 
 row("face-chat-style", "A caddy session is an exchange, so render it as one",
-    "2026-08-31", "next", "face", parent="face",
+    "2026-08-31", "next", "face", parent="face-collab",
     refs="files/anatomy/face/src/lib/tables/view.ts · ~/keap/src/shared/contracts/table.ts (tableViewStyleSchema)",
     body="THE RENDERER HALF SHIPPED 2026-08-31: `chat` is the fifth member of the closed "
          "style vocabulary in view.ts, it resolves an `askColumn` beside the body so ONE ROW "
@@ -676,8 +676,13 @@ row("face-chat-style", "A caddy session is an exchange, so render it as one",
          "`style: chat` is REFUSED AT SEED TIME until tableViewStyleSchema learns the word. "
          "So the style is declarable in nOS and rejectable by KEAP, which is exactly the "
          "asymmetry ext-contract is about — the smallest possible instance of it, and a good "
-         "one to design the interface against. Until then caddy-sessions renders as a grid, "
-         "honestly. THE OPERATOR ASKED FOR A MARKUP TEMPLATE AND THE ANSWER IS NO: a "
+         "one to design the interface against. BOTH HALVES LANDED 2026-09-01: KEAP v1.41+ "
+         "accepts `chat` and requires both sides of the exchange, `tools/view-contract-drift.py` "
+         "reports the contracts agreed, and caddy-sessions.table.yml now carries the whole "
+         "view block — style, askColumn: transcript, bodyColumn: summary, and the "
+         "`open-inbox` offer. NOT bodyColumn: chain, as first authored: since the caddy holds "
+         "`exec` it RUNS read chains and answers in prose, so that column is empty on exactly "
+         "the turns that worked. THE OPERATOR ASKED FOR A MARKUP TEMPLATE AND THE ANSWER IS NO: a "
          "template a table can carry is markup a table can carry, and markup is a capability "
          "— the same rule cortex-lang states one storey down (a capability may never be "
          "added by data; a model that can emit HTML can emit a login form). The configurable "
@@ -833,7 +838,7 @@ row("sec-prefix-gate-flaps", "The weak-prefix gate refuses, then passes, with no
          "itself, since a `{{ vars }}` eager-resolve is already a known trap here and an "
          "empty result is exactly what this assert would see.")
 row("caddy-exec-tool", "The primary tool should be `exec`, and its input a nos-lang sentence",
-    "2026-09-01", "next", "cortex", parent="local-llm-voice",
+    "2026-09-01", "next", "cortex", parent="jeff",
     refs="files/anatomy/wing/app/AgentKit/Tools/ · state/schema/agent.schema.yaml (tool enum) · docs/idea/02-cortex-lang.md",
     body="OPERATOR DIRECTION 2026-09-01: prefer tools over free prose — a 1B model that can "
          "call tools is now plausible — and make the PRIMARY one `exec`, whose argument is a "
@@ -875,7 +880,27 @@ row("face-collab", "One surface for talking to agents, and it has to be Tauri-sh
          "operator wants can pause for a day (see the saga discussion in local-llm-voice). "
          "A debug/admin mode is a VIEW over what is already recorded — sessions, chains, "
          "validator verdicts, ratings — not a second store; the estate has paid for a second "
-         "copy of a truth before.")
+         "copy of a truth before. "
+         "WHAT SHIPPED 2026-09-01, and it is the READ half only: caddy-sessions renders "
+         "through the existing bff/tables + DataTableApp path as `chat`, and the one new "
+         "catalog entry `open-inbox` carries the Q15 hand-off — handler first, id second. "
+         "Then the durability rule this row states as its Tauri consequence was found "
+         "UNMET in the organ it applies to: caddy.py recorded the row only AFTER the agent "
+         "returned, so a turn killed mid-flight left no record at all, and `running` was a "
+         "status the table declares and nothing wrote — the twin of the `asked` defect fixed "
+         "in the same file a day earlier. The row now opens before the agent runs (the rows "
+         "API upserts on slug, so the close reuses it) and the gate is the general form: "
+         "every status the table declares is one caddy.py can write, read from the AST "
+         "because the regex that preceded it saw one of five. "
+         "WHAT IS STILL MISSING, and it is the whole point of the row: there is no way to "
+         "SPEAK TO an agent from face. Every surface above renders turns that arrived by "
+         "voice or CLI. `bff/ask` is a one-shot request/response with no persistence — the "
+         "wrong shape, named as such in the draft — and the write path (open a row at "
+         "`running`, start the agent, let the row be the truth) is exactly what caddy.py now "
+         "does and what no HTTP route does. NO `collab` FACE APP WAS REGISTERED: a second "
+         "front door onto a table the Tables app already renders adds a dock icon and "
+         "nothing else, and it costs a graph node plus an apex ruling amendment. Register it "
+         "when it carries the write path, not before.")
 
 row("ext-contract", "What an nOS extension in another repo would have to be",
     "2026-08-31", "queued", "platform",
@@ -941,7 +966,7 @@ row("agents-awaiting-surface", "The reader that knows what needs a human has no 
          "Matrix/Zulip row and a different want.")
 
 row("face-conversation", "The conversation is rows, and generative UI is a closed vocabulary",
-    "2026-08-31", "next", "face", parent="face",
+    "2026-08-31", "next", "face", parent="face-collab",
     refs="files/anatomy/face/src/lib/apps/native/TablesApp.svelte · control-panel/surfaces.ts · docs/idea/02-cortex-lang.md",
     body="OPERATOR WANT: the main communication UI lives in nOS face, built over DataTables, "
          "with generative UI inside the chat. TWO DESIGN RULES, both already earned "
@@ -962,7 +987,13 @@ row("face-conversation", "The conversation is rows, and generative UI is a close
          "and to be decided by counting rather than taste: whether turns live in a KEAP "
          "DataTable (renders free, has history) or in wing.db (carries actor_action_id "
          "lineage) — the same open question the ratings row records, so decide them together "
-         "or one of them will be moved later.")
+         "or one of them will be moved later. SETTLED 2026-09-01, and in an artifact rather "
+         "than a sentence: BOTH, which is what `session_uuid` is for. "
+         "state/keap-tables/caddy-sessions.table.yml holds the operator-facing facts a "
+         "DataTable is good at and points at wing.db for the depth, so neither is a copy of "
+         "the other. Both design rules are now realised — one row per turn, and `VIEW_ACTIONS` "
+         "is a closed two-member list in code — so this row is a set of DECISIONS that hold, "
+         "and the surface built on them is face-collab, which is now its parent.")
 
 # ── Local models — measured 2026-08-08, and the numbers reordered the arc ───
 #
@@ -1239,7 +1270,7 @@ row("local-llm-runtime-grammar", "The grammar that makes syntax impossible is in
          "few points.")
 
 row("caddy-entity-resolve", "Resolve the entity by fanning out read-only chains, not by guessing",
-    "2026-08-31", "queued", "cortex", parent="local-llm-voice",
+    "2026-08-31", "queued", "cortex", parent="jeff",
     refs="files/anatomy/cortex/server/cortex-opcodes.ts · KEAP vector + fts surfaces · docs/idea/02-cortex-lang.md",
     body="THE GAP THE VOICE LOOP HITS FIRST. A spoken turn says 'the ideas table', and the "
          "emitter must produce an operand that EXISTS — which is exactly where qwen3:14b's "
