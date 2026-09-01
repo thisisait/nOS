@@ -19,11 +19,11 @@ prune-disabled.yml header, and three remediation-queue amendments before
 anyone re-derived it. A probe that measures the wrong layer does not merely
 miscount — it manufactures a believable narrative.
 
-The cure is `resolved_install_flags()`: default.config.yml first, config.yml
-overlaid when present, override wins — the same order `main.yml`'s vars_files
-declares. This gate pins both the resolver's semantics and the fact that probe
-E actually calls it (a resolver the probe ignores is the same bug wearing a
-fix's name).
+The cure is `resolved_install_flags()`: role defaults first, then
+default.config.yml, then config.yml overlaid when present — the same order
+`main.yml`'s vars_files declares, and the layer list `nos_identity` owns. This
+gate pins both the resolver's semantics and the fact that probe E actually
+calls it (a resolver the probe ignores is the same bug wearing a fix's name).
 """
 
 from __future__ import annotations
@@ -65,7 +65,7 @@ def test_override_wins_and_both_layers_are_read(scan, tmp_path) -> None:
     override.write_text(
         "install_foo: true\ninstall_qux: false\n", encoding="utf-8"
     )
-    flags = scan.resolved_install_flags(default_path=default, override_path=override)
+    flags = scan.resolved_install_flags([default, override])
     assert flags["foo"] == "true", (
         "config.yml did not win over default.config.yml — this is exactly the "
         "wrong-layer read that reported sixteen enabled services as zombies"
@@ -83,9 +83,7 @@ def test_absent_override_falls_back_to_the_committed_default(scan, tmp_path) -> 
     """CI and a fresh clone have no config.yml; the probe must still run."""
     default = tmp_path / "default.config.yml"
     default.write_text("install_foo: false\n", encoding="utf-8")
-    flags = scan.resolved_install_flags(
-        default_path=default, override_path=tmp_path / "config.yml"
-    )
+    flags = scan.resolved_install_flags([default, tmp_path / "config.yml"])
     assert flags == {"foo": "false"}
 
 

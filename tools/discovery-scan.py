@@ -58,7 +58,7 @@ REPO = Path(__file__).resolve().parents[1]
 CONFIG = REPO / "default.config.yml"
 
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import resolve_flag  # noqa: E402
+from nos_identity import layer_paths, resolve_flag  # noqa: E402
 
 QUEUE = REPO / "docs/llm/security/remediation-queue.json"
 CLAUDE_MD = REPO / "CLAUDE.md"
@@ -848,15 +848,18 @@ def file_rows(findings: list[Finding]) -> int:
 # Probe E — what the operator SWITCHED OFF vs what is still running
 # ---------------------------------------------------------------------------
 
-def resolved_install_flags(default_path: Path | None = None,
-                           override_path: Path | None = None) -> dict[str, str]:
+def resolved_install_flags(paths: list[Path] | None = None) -> dict[str, str]:
     """`install_*` flags resolved across the documented config layering.
 
-    default.config.yml is the committed default; config.yml (gitignored,
-    operator-owned) overrides it — the same order main.yml's vars_files
-    declares. The override wins where both declare a flag, and a flag declared
-    only in config.yml is seen too: that is exactly the shape of an operator
-    switching OFF something the default ships ON.
+    THREE layers, lowest first (nos_identity.layer_paths): role defaults,
+    default.config.yml, config.yml. The last declaration wins. Reading two of
+    them made a role-default-only flag read as UNDECLARED, so probe E skipped
+    its comparison entirely — five install_* flags live there today, and in a
+    worktree (no gitignored config.yml) two of them resolve nowhere else.
+    Measured 2026-09-01; gate test_readers_resolve_the_same_layers.py.
+
+    A flag declared only in config.yml is seen too: that is exactly the shape
+    of an operator switching OFF something the default ships ON.
 
     WHY THIS FUNCTION EXISTS AS A FUNCTION. Probe E's first run (2026-08-10)
     read the committed default alone, and on any host carrying a config.yml
@@ -868,10 +871,8 @@ def resolved_install_flags(default_path: Path | None = None,
     amendments before anyone re-derived it. Gate:
     tests/anatomy/test_discovery_probe_reads_resolved_config.py.
     """
-    default_path = CONFIG if default_path is None else default_path
-    override_path = (REPO / "config.yml") if override_path is None else override_path
     flags: dict[str, str] = {}
-    for path in (default_path, override_path):
+    for path in (layer_paths() if paths is None else paths):
         if not path.exists():
             continue
         for m in re.finditer(r"^install_([a-z0-9_]+):\s*(\S+)",

@@ -7,13 +7,18 @@ MEASURED 2026-09-01 on `fix/ci-linux-edge`: `cortex_port`, `backrest_port` and
 resolved None — and nos-smoke's caller dropped the cortex probe with a bare
 `continue`. A probe that vanishes reports nothing, for ever, at exit 0.
 
-Two claims, both against the PARSED artifact rather than the source text:
+The same hole runs through the `install_*` flags: five live only in a role
+default, and nos-smoke read an absent flag as `false` — a service silently
+unprobed. Four claims, all against the PARSED artifact, never the source text:
   1. both tools resolve a port var the way `nos_identity.resolve_flag` does;
-  2. an unresolvable port is REPORTED, never silently dropped.
+  2. an unresolvable port is REPORTED, never silently dropped;
+  3. both tools resolve a FLAG the same way, and default to the shared layer list;
+  4. a flag no layer declares is reported too — absent is not false.
 """
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import pathlib
 import sys
@@ -23,7 +28,7 @@ import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import resolve_flag  # noqa: E402
+from nos_identity import layer_paths, resolve_flag  # noqa: E402
 
 
 def _tool(name: str, filename: str):
@@ -83,6 +88,66 @@ def test_the_smoke_loopback_probe_resolves_the_role_default():
     probe = SMOKE._loopback_probe(cortex, vars_dict)
     assert probe is not None, "the cortex loopback probe is being dropped again"
     assert f":{resolve_flag('cortex_port')[-1][1]}/" in probe[0], probe
+
+
+#: install_* flags that live ONLY in a role default. A two-layer reader calls
+#: them undeclared; in a worktree (no gitignored config.yml) these two resolve
+#: in no other layer at all.
+ROLE_DEFAULT_FLAGS = ("install_gitea_autowire_nos", "install_woodpecker_autowire_nos")
+
+
+@pytest.mark.parametrize("flag", ROLE_DEFAULT_FLAGS)
+def test_discovery_probe_e_sees_a_role_default_flag(flag):
+    """Probe E skipped the whole comparison for a flag it could not resolve.
+
+    Layers minus config.yml — the ephemeral-worktree shape, where the operator's
+    gitignored override does not exist and the role default is the only one.
+    """
+    worktree = [p for p in layer_paths() if p.name != "config.yml"]
+    assert flag.removeprefix("install_") in DISCOVERY.resolved_install_flags(worktree), (
+        f"{flag} is undeclared to probe E, so its container is never compared"
+    )
+
+
+def test_the_probes_default_layer_list_is_the_shared_one():
+    """AST, not a value: on a host whose config.yml happens to declare the same
+    flags, a two-layer resolver returns the right answer for the wrong reason.
+    What must not drift is WHICH list it defaults to."""
+    src = (REPO / "tools/discovery-scan.py").read_text(encoding="utf-8")
+    fn = next(n for n in ast.parse(src).body
+              if isinstance(n, ast.FunctionDef) and n.name == "resolved_install_flags")
+    names = {n.id for n in ast.walk(fn) if isinstance(n, ast.Name)}
+    assert "layer_paths" in names, (
+        "resolved_install_flags no longer defaults to nos_identity.layer_paths() — "
+        "it is back to a hand-listed subset of the config layers"
+    )
+
+
+def test_smoke_absent_flag_is_reported_not_treated_as_false(capsys):
+    """A flag no layer declares is UNKNOWN; false is an answer it cannot give."""
+    assert SMOKE.flag_enabled("install_no_such_service", {}, "ghost") is False
+    err = capsys.readouterr().err
+    assert "DROPPED" in err and "ghost" in err, (
+        f"an unresolvable install flag produced no report; stderr was {err!r}"
+    )
+
+
+def test_smoke_falls_back_to_the_reader_not_to_false():
+    """Empty vars_dict = the two layers absent (the worktree). Every manifest
+    flag a lower layer declares must still resolve, not collapse to disabled."""
+    rows = yaml.safe_load((REPO / "state/manifest.yml").read_text(encoding="utf-8"))["services"]
+    disagree = []
+    for r in rows:
+        flag, layers = r.get("install_flag"), resolve_flag(r.get("install_flag") or "\0")
+        if not layers:
+            continue
+        want = layers[-1][1] not in ("false", "no")
+        if SMOKE.flag_enabled(flag, {}, r["id"]) is not want:
+            disagree.append((r["id"], flag, layers[-1]))
+    assert not disagree, (
+        f"nos-smoke disagrees with nos_identity about {disagree} — a declared "
+        f"flag it cannot see reads as disabled and its probe never runs"
+    )
 
 
 def test_an_unresolvable_port_is_reported_not_dropped(capsys):

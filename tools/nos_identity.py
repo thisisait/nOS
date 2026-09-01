@@ -26,23 +26,21 @@ MANIFEST = REPO / "state" / "manifest.yml"
 CONFIG_LAYERS = ("roles/*/defaults/main.yml", "default.config.yml", "config.yml")
 
 
+def layer_paths() -> list[Path]:
+    """The layers that exist, LOWEST precedence first. One list, every reader."""
+    return [p for p in (*sorted((REPO / "roles").glob("*/defaults/main.yml")),
+                        REPO / "default.config.yml", REPO / "config.yml")
+            if p.exists()]
+
+
 def resolve_flag(flag: str) -> list[tuple[str, str]]:
     """Every layer that declares it, in precedence order. The LAST one wins."""
-    seen: list[tuple[str, str]] = []
     pattern = re.compile(rf"^{re.escape(flag)}:\s*(\S+)", re.MULTILINE)
-
-    for path in sorted((REPO / "roles").glob("*/defaults/main.yml")):
+    seen: list[tuple[str, str]] = []
+    for path in layer_paths():
         m = pattern.search(path.read_text(encoding="utf-8"))
         if m:
             seen.append((str(path.relative_to(REPO)), m.group(1).strip().strip('"\'')))
-
-    for layer in ("default.config.yml", "config.yml"):
-        path = REPO / layer
-        if not path.exists():
-            continue
-        m = pattern.search(path.read_text(encoding="utf-8"))
-        if m:
-            seen.append((layer, m.group(1).strip().strip('"\'')))
     return seen
 
 

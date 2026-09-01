@@ -130,9 +130,9 @@ def apply_runtime_estate(
         enabled = (body or {}).get("enabled")
         if enabled is None:
             continue
-        flag = flags.get(sid) or f"install_{sid}"
-        if flag in vars_dict:
-            vars_dict[flag] = bool(enabled)
+        # Unconditional: state.yml is the run's resolved answer, so a flag it
+        # names but no vars_file declares must still be settable.
+        vars_dict[flags.get(sid) or f"install_{sid}"] = bool(enabled)
 
 
 def resolve_jinja_lite(text: str, vars_dict: dict, depth: int = 0) -> str:
@@ -238,6 +238,23 @@ def _loopback_probe(s: dict, vars_dict: dict) -> "tuple[str, list] | None":
     return f"http://127.0.0.1:{port}{path}", [expect]
 
 
+def flag_enabled(flag: str, vars_dict: dict, sid: str) -> bool:
+    """Enabled? Absent from vars_dict is not the same answer as false.
+
+    vars_dict holds two layers; role defaults are the third, and the manifest
+    gate accepts a flag declared only there. Such a flag read as false and its
+    probe vanished. Unresolvable in ALL three now SAYS so, like a dropped port.
+    """
+    if flag in vars_dict:
+        return bool(vars_dict[flag])
+    layers = resolve_flag(flag)
+    if not layers:
+        print(f"DROPPED {sid}: {flag} resolves in no config layer "
+              f"(roles/*/defaults, default.config.yml, config.yml)", file=sys.stderr)
+        return False
+    return layers[-1][1] not in ("false", "no")
+
+
 def derive_from_manifest(manifest: dict, vars_dict: dict, defaults: dict,
                          skip_ids: set | None = None) -> list[dict]:
     """Auto-derive one GET / probe per manifest service with domain_var."""
@@ -247,8 +264,8 @@ def derive_from_manifest(manifest: dict, vars_dict: dict, defaults: dict,
         if "domain_var" not in s:
             continue
         flag = s.get("install_flag")
-        if flag and not vars_dict.get(flag, False):
-            continue  # service not enabled → skip
+        if flag and not flag_enabled(flag, vars_dict, s["id"]):
+            continue
         domain = vars_dict.get(s["domain_var"])
         if not domain:
             continue
