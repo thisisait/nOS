@@ -17,12 +17,14 @@ What's actually missing is not a chat bubble — it's what a model can attach
 *inside* an answer bubble once the chain has run. Two new pieces, both scoped
 tightly to stay inside the closed-vocabulary rule:
 
-- **`chain` as a sub-table, not a text blob.** `caddy-sessions.chain` is
-  `kind: text` today — a JSON dump the model wrote. A chain is itself row-
-  shaped (step, tool, args, result), so render it as a **nested `grid`**
-  (reuse `resolveView`, zero new code) rather than inventing a "chain viewer"
-  component. If it doesn't already deserialize row-shaped, that's the actual
-  one-afternoon task, not a new render style.
+- ~~**`chain` as a sub-table, not a text blob.**~~ **WRONG, corrected
+  2026-09-01 after building it.** The premise — "`caddy-sessions.chain` is a
+  JSON dump the model wrote" — was never true: `caddy.py::split_answer` joins a
+  pipeline across lines and stores the SENTENCE, so a row-shaped parser returned
+  null on every row that has ever existed. ~55 lines shipped and were deleted
+  the same day. The body column is `summary` (what came back in prose) — since
+  the caddy holds `exec` it RUNS read chains and answers, so `chain` is empty on
+  exactly the turns that worked.
 - **One new offer action: `open-inbox`.** Q15 says Wing is the only answering
   channel — collab may *display* a pending question, never answer it inline.
   `VIEW_ACTIONS` today has exactly `focus-highlight`. A turn whose `status =

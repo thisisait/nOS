@@ -743,7 +743,9 @@ row("repo-split-trigger", "Nothing is worth splitting out yet, and here is the n
          "definitions live here (state/keap-tables, 18 files, 962 lines, 14 commits in 90 "
          "days — the least active thing on the list) and the ENGINE lives in KEAP, which is "
          "why both items found on 2026-08-31 (the `chat` style, the system-table flag) are "
-         "engine-side and neither is fixable from this repo. Splitting the definitions out "
+         "engine-side and neither is fixable from this repo — the `chat` style was closed on "
+         "2026-09-01 by editing the KEAP repo, which is the point: the boundary makes "
+         "a three-line zod change a second checkout, not a harder problem. Splitting the definitions out "
          "would move the small half. AND THE PREMISE IS WRONG ANYWAY: a repo does not buy "
          "parallel-development safety — worktrees do, and the three collisions actually "
          "suffered were another session sweeping uncommitted work into its own commit (fixed "
@@ -1277,8 +1279,19 @@ row("caddy-entity-resolve", "Resolve the entity by fanning out read-only chains,
          "`resolved` and therefore the only two a broad query may touch without becoming the "
          "enumeration oracle 02-cortex-lang refuses; the 18 DataTable definitions, all "
          "anchored; and state/manifest.yml. Four probes, all read-only, all already written "
-         "down by something else. NOT BEING BUILT YET, and the spec lives in this row rather "
-         "than in docs/idea/ — that directory is at 24 of its ceiling of 20 already.")
+         "down by something else. "
+         "WHAT SHIPPED 2026-09-01 IS PROBE 1 ONLY, as its own tool: `contract-search`, a "
+         "token search over the two OpenAPI files, handed to both caddies. It closes the "
+         "measured 404 above and nothing else — the fan-out, the grader and the top-N "
+         "ambiguity surface are all still unbuilt. The class behind it (`StaticIndex`) "
+         "spent a day CLAIMING to be bucket 1 of this resolver in its own docblock, with "
+         "no second consumer anywhere; the claim was deleted rather than the second "
+         "consumer invented, because a generalisation nothing asked for is how a "
+         "resolver gets half-built twice. THE OPEN QUESTION BEFORE PROBE 2: cortex-lang "
+         "already HAS a `resolve` verb, and the caddy now holds `exec` to call it. "
+         "Measure whether that covers the taxonomy half before building a second "
+         "resolver beside it. The spec lives in this row rather than in docs/idea/ — "
+         "that directory is at 24 of its ceiling of 20 already.")
 
 row("local-llm-lfm25", "Benchmark LFM2.5-2.6B as the emitter", _TNI, "queued", "agents",
     parent="local-llm-model", refs="technosideas/lfm25-26b.md",
@@ -1799,6 +1812,32 @@ row("virtiofs-statfs-wrong-volume", "A disk guard read the wrong disk and stoppe
          "container deciding anything from free space on an external bind mount reads about "
          "Docker's disk instead, and the standing rule is to ask the container "
          "(`docker run --rm -v <path>:/x alpine df -h /x`) rather than the host's df.")
+
+row("caddy-exec-confirm-untestable", "The confirm gate has no mutating verb to be tested against",
+    "2026-09-01", "next", "cortex", parent="caddy-exec-tool",
+    refs="docs/drafts/exec-tool.md §3 · files/anatomy/wing/app/Cortex/CortexCapability.php · tests/anatomy/test_exec_adds_no_capability.py",
+    body="MEASURED 2026-09-01 while building the exec tool. The draft's reviewer check — a "
+         "mutating stage carrying confirm:true still stops at CortexCapability::allowsVerb, so "
+         "confirm is not a capability — CANNOT BE WRITTEN TODAY, because P1 refuses every "
+         "mutating stage at the presenter before dispatch. No code path reaches allowsVerb with "
+         "a mutating opcode, so the assertion would exercise the refusal above it and read as "
+         "proof of a gate that never ran. What shipped instead is the strongest honest form: "
+         "confirm never reaches the wire. The check becomes writable the day the first write "
+         "verb ships a HANDLER — that is the trigger, not a date. Recorded so the weaker "
+         "assertion is not later mistaken for the intended one.")
+
+row("workflow-build-fanout-verdict", "The build gate was right and the workflow moved",
+    "2026-09-01", "shipped", "platform",
+    refs="tests/anatomy/test_workflow_declares_fanout_semantics.py::test_a_build_phase_is_not_a_fanout · .claude/workflows/voice-build.js · docs/doctrine/workflows.md §1",
+    body="MEASURED 2026-09-01 on feat/voice-ingress: 1 failed, 32 passed. The gate forbids a "
+         "parallel() near a `phase: build` marker; voice-build.js ran its two build lanes as "
+         "one. The fan-out DID have disjoint output — AgentKit PHP plus the agent.schema.yaml "
+         "tool enum on one side, face TypeScript plus one table definition on the other — which "
+         "is what workflows.md §1 asks of a union, so the first instinct was to argue for an "
+         "argued-exception door like the sibling gate has. Rejected: the author of the offending "
+         "fan-out may not be the one who widens the gate that caught it, and the gate\'s own "
+         "reason survives the disjointness argument — both lanes were BUILD steps, and a build "
+         "step wants the previous one\'s real contract. Lanes serialised; the door was not built.")
 
 # ── Preflight: does the live table have the columns this script writes? ──────
 #

@@ -6,48 +6,40 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-08-29 • Wing measured, the vein bounded, the lineage joined.
+> Last updated: 2026-09-01 • The caddy can run a sentence, not only propose one.
 
 ## Now (current track)
 
-**The night of 2026-08-29 — the organs got joined, and Wing got a reader.**
-The operator's report was that Wing has become hard to get hold of. It was an
-unanswerable question until `tools/wing-status.py` existed; every claim below
-names the reader or gate that holds it.
+**Voice → caddy → AgentKit → cortex, joined 2026-09-01.** The loop the estate
+had all the pieces for and no wire between: a spoken turn reaches an agent, the
+agent runs one cortex-lang sentence, and the answer comes back as prose the
+operator hears and rates.
 
 | what | finding | now |
 | --- | --- | --- |
-| `wing.db` | **1223 MB, 97% one table** | `tools/wing-status.py --cost` |
-| ledger payload | 921 MB of `result_json` no organ reads | mean 10 425 B → **1 242 B** live |
-| audit anchors | one minted **per converge**, 99 in five weeks | minted only on a real gap |
-| `pulse_runs.actor_action_id` | NULL on **all 56 051** rows | run → session → ledger, one key |
-| `--tags wing --check` | refused on a healthy host, twice | **438 ok, 0 failed** |
+| `exec` | shipped complete, gated, **unspendable** — no agent token carried a cortex axis | `jeff` minted all three; gate `test_exec_is_spendable.py` |
+| the invented endpoint | qwen3:14b called `/api/v1/security/findings/open/count`, 404 | `contract-search` over the two committed OpenAPI files |
+| `?ref=` | the face built it, `InboxPresenter` did not take it — Nette drops it silently | `renderDefault($ref)`; gate `test_the_offer_lands_somewhere.py` |
+| `status: asked` | a declared status **nothing ever wrote**, so the inbox hand-off could not appear | `caddy.py::pending_question`, None ≠ False |
+| `style: chat` | face rendered it, KEAP's zod refused it | shipped engine-side (KEAP v1.41+); `tools/view-contract-drift.py` agrees |
 
-Four fees paid: [33](hidden_fees/33-a-retention-horizon-measured-in-days.md) a
-retention horizon that can never fire ·
-[34](hidden_fees/34-the-answer-was-already-in-a-column.md) a new panel judging
-`exit_code <> 0` while `findings_exit_codes` already said otherwise ·
-[35](hidden_fees/35-an-authorised-discontinuity-per-converge.md) 99 authorised
-chain discontinuities · [36](hidden_fees/36-a-dry-run-that-invents-failures.md)
-a dry run refusing on evidence it never gathered.
+One fee paid: [43](hidden_fees/43-a-tool-with-no-door.md) — three declarations
+in three languages, each internally consistent, none compared to another.
 
-Two dashboards and a pane: `27-pulse.json` (the scheduled-job organ had none),
-the lineage panel over the join above, and `nos-pane.py wing`.
+**Deleted rather than defended:** `parseChain` (~55 lines parsing a JSON shape
+`caddy.py` has never written), the `surface` argument nobody asked for, and a
+`StaticIndex` docblock claiming a second consumer that did not exist.
 
-**Two tables deleted** — `users` and `report_types`, 0 rows / 0 writers /
-0 readers. Wing's identity has been stateless forward-auth since A3.5.
+**One operator act blocks the converge:** `git -C ~/keap/src push origin dev
+--follow-tags` — v1.42.0 is committed and tagged LOCALLY, and
+`roles/pazny.keap` clones from GitHub, so the pin bump fails at clone until the
+tag is pushed. That is deliberate: it fails loudly at a named step rather than
+deploying 1.41 and letting zod strip the style in silence.
 
-**The wing.db contract now describes the whole file.** Bone creates the `loop_*`
-tables in Wing's database and only Wing exported a schema, so the committed
-artifact named 41 of 45 tables and three gates imported `ledger._DDL` to cope.
-
-**Next:** (1) `sec-transport-redis` — AUTH secret on the argv, no TLS listener.
-(2) `sec-backrest-auth` — reachable from 23 containers. (3) `mysqld-exporter`,
-a sixth MariaDB client found in `processlist` and not in the survey of
-*applications* — ~4×/min with the credential in clear, TLS only via
-`--config.my-cnf`, whose file a non-root user must read. (4)
-`dry-run-evidence-sweep` — twenty more refusals of the fee-36 shape, **none
-measured**, to be checked one at a time.
+**Next:** (1) converge — the mint, the KEAP re-seed and the first real `exec`
+call are all on the far side of one. (2) `caddy-entity-resolve` probe 2, but
+measure whether cortex's own `resolve` verb already covers the taxonomy half.
+(3) the four security items below, unchanged.
 
 ## Open follow-ups
 
