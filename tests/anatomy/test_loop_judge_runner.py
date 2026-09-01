@@ -428,13 +428,13 @@ def test_a_completed_pytest_run_still_passes():
         registry=_one_judge_registry("pytest-anatomy", "repo"),
         repo_root=REPO,
         spawn=_fake_spawn(
-            **{"pytest": J.Completed(exit_code=0, stdout="4496 passed, 166 skipped in 323.00s\n")}
+            **{"pytest": J.Completed(exit_code=0, stdout="4666 passed, 66 skipped in 351.00s\n")}
         ),
         probe=_always_true,
         sandbox_factory=lambda root: (root, "sha-fake", lambda: None),
     )
     assert verdict.result is J.Result.PASS, verdict.reason
-    assert verdict.runs[0].work == 4496
+    assert verdict.runs[0].work == 4666
 
 
 def test_an_interrupted_pytest_that_did_fail_is_still_a_fail():
@@ -801,7 +801,7 @@ def test_pytest_never_runs_against_the_live_tree():
         # this test asserts PASS against a run the runner rightly calls
         # INDETERMINATE — which is how it failed when the floor moved on
         # 2026-08-24 and the fixture did not.
-        return J.Completed(exit_code=0, stdout="4496 passed in 323.00s\n")
+        return J.Completed(exit_code=0, stdout="4666 passed in 351.00s\n")
 
     sandbox = REPO.parent / "fake-sandbox"
     verdict = J.run_gate_set(
@@ -837,7 +837,7 @@ def test_every_judge_in_a_set_observes_exactly_one_tree():
         return {
             "ansible-lint": GREEN_ANSIBLE_LINT,
             "genome-codegen": GREEN_GENOME,
-            "pytest": J.Completed(exit_code=0, stdout="4496 passed in 323.00s\n"),
+            "pytest": J.Completed(exit_code=0, stdout="4666 passed in 351.00s\n"),
         }[_argv_key(argv)]
 
     sandbox = REPO.parent / "one-tree-sandbox"
@@ -1057,6 +1057,11 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 #: scheduler-to-session lineage, and a dashboard gate that parametrises per
 #: dashboard file. Measured by running the tool:
 #:   pytest tests/anatomy -q  → "4496 passed, 166 skipped in 323s"  (2026-09-01)
+#: RE-DERIVED 2026-09-01, a FOURTH time, hours after the third — two sessions
+#: merged in one afternoon (the voice/caddy arc and the ops/security arc), and
+#: the collection gate caught the sum. Nothing about the suite is wrong; the
+#: number that certifies it was measured before half of it existed:
+#:   pytest tests/anatomy -q  → "4666 passed, 66 skipped in 351s"  (post-merge)
 #:
 #: THE GATE IS DOING ITS JOB EACH TIME. Three re-derivations in a month is not
 #: churn — it is the only mechanism that notices the suite outgrowing the
@@ -1064,7 +1069,7 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 MEASURED_WORK = {
     "ansible-lint": 1500,
     "genome-codegen": 2,
-    "pytest-anatomy": 4496,
+    "pytest-anatomy": 4666,
     "cortex-corpus-diff": 1,
 }
 
