@@ -43,8 +43,9 @@
           "type": "string",
           "enum": ["infra", "database", "cache", "identity", "observability", "storage", "proxy", "web", "collaboration", "media", "devops", "automation", "ai", "messaging", "pbx", "gis", "data", "finance", "cms", "helpdesk", "wiki", "iam", "vault", "notifications", "rss", "iiab", "agent", "desktop", "api", "security", "homeautomation", "vpn", "mail", "monitoring", "knowledge", "productivity", "app"]
         },
-        "stack":          { "type": ["string", "null"], "description": "Docker compose stack (infra, observability, iiab, devops, b2b, voip, engineering, data) or null for host-native services." },
+        "stack":          { "type": ["string", "null"], "description": "Docker compose stack (infra, observability, iiab, apps, devops, b2b, voip, engineering, data) or null for host-native services." },
         "install_flag":   { "type": "string", "description": "Name of install_<service> boolean in default.config.yml." },
+        "fragment":       { "type": ["string", "null"], "description": "Compose override fragment stem — <stacks_dir>/<stack>/overrides/<fragment>.yml. Defaults to `id`; state it only where they differ (6 rows). null = the service owns no fragment of its own (Tier-2 apps merge into apps/overrides/auto.yml)." },
         "version_var":    { "type": ["string", "null"] },
         "version_source": {
           "type": "string",

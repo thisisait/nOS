@@ -160,6 +160,7 @@ services:
     category: identity
     stack: infra
     install_flag: install_bluesky_pds
+    fragment: bluesky-pds
     version_var: bluesky_pds_version
     version_source: docker_image
     image: ghcr.io/bluesky-social/pds
@@ -171,6 +172,19 @@ services:
       url_template: "http://localhost:{{ bluesky_pds_port }}/xrpc/_health"
       expect_status: 200
     upgrade_recipe: upgrades/bluesky_pds.yml
+
+  # domain_var WITHHELD, not missing: domain_var + port_var auto-derives a
+  # Traefik router, and traefik_auth_modes says `none` where the plugin says
+  # forward_auth. Adding the row must not settle that — see the P1 report.
+  - id: spacetimedb
+    category: database
+    stack: infra
+    install_flag: install_spacetimedb
+    version_var: spacetimedb_version
+    version_source: docker_image
+    image: clockworklabs/spacetime
+    port_var: spacetimedb_port
+    data_path_var: spacetimedb_data_dir
 
   # ------------------------------------------------------- observability stack
   - id: grafana
@@ -334,6 +348,7 @@ services:
     category: gis
     stack: iiab
     install_flag: install_offline_maps
+    fragment: tileserver
     version_var: maps_tileserver_version
     version_source: docker_image
     image: maptiler/tileserver-gl
@@ -358,6 +373,7 @@ services:
     category: ai
     stack: iiab
     install_flag: install_openwebui
+    fragment: open-webui
     version_var: openwebui_version
     version_source: docker_image
     image: ghcr.io/open-webui/open-webui
@@ -372,6 +388,7 @@ services:
     category: observability
     stack: iiab
     install_flag: install_uptime_kuma
+    fragment: uptime-kuma
     version_var: uptime_kuma_version
     version_source: docker_image
     image: louislam/uptime-kuma
@@ -386,6 +403,7 @@ services:
     category: media
     stack: iiab
     install_flag: install_calibreweb
+    fragment: calibre-web
     version_var: calibreweb_version
     version_source: docker_image
     image: lscr.io/linuxserver/calibre-web
@@ -600,6 +618,7 @@ services:
     category: devops
     stack: devops
     install_flag: install_code_server
+    fragment: code-server
     version_var: code_server_version
     version_source: docker_image
     image: lscr.io/linuxserver/code-server
@@ -783,6 +802,18 @@ services:
     domain_var: influxdb_domain
     port_var: influxdb_port
     data_path_var: influxdb_data_dir
+
+  # Tier-2 manifest app (apps/qdrant.yml): apps_runner merges every Tier-2
+  # service into apps/overrides/auto.yml, so this row owns no fragment stem.
+  - id: qdrant
+    category: database
+    stack: apps
+    install_flag: install_qdrant
+    fragment: null
+    version_source: docker_image
+    image: qdrant/qdrant
+    container_name: qdrant
+    port_var: qdrant_port
 
   # ------------------------------------------------------- ai / gateway addons
   - id: mcp_gateway

@@ -85,9 +85,10 @@ authentik:
 # hooks ran on EVERY stack-scoped pass, doing work for a service that pass was
 # not bringing up. This plugin had hooks and no stack.
 #
-# Not new metadata — the fact was already recorded elsewhere:
-#     no manifest row (excluded from the all-on profile); the
-#     role renders its override to {{ stacks_dir }}/infra/overrides/spacetimedb.yml
+# Not new metadata — the fact was already recorded elsewhere: the role renders
+# its override to {{ stacks_dir }}/infra/overrides/spacetimedb.yml. (The "no
+# manifest row" half of this note expired 2026-09-01 — state/manifest.yml now
+# carries one; it is still excluded from the all-on profile.)
 #
 # The log labels themselves are close to free: Alloy discovers ALL containers
 # over the Docker socket and derives `container` / `compose_project` /

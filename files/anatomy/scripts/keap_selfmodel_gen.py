@@ -103,7 +103,7 @@ HOST_STACK = "host"  # bucket for manifest services with stack: null (host-nativ
 # Stack render order → the `ordinal` field. Substrate first, then what a person
 # opens, then the specialist stacks; unknown stacks sort alphabetically after.
 STACK_ORDER = [
-    "infra", "observability", "iiab", "devops", "b2b", "data",
+    "infra", "observability", "iiab", "apps", "devops", "b2b", "data",
     "engineering", "voip", "host",
 ]
 
@@ -134,6 +134,7 @@ SYSTEM_NAME = {
     "cortex": "Cortex", "ears": "Ears",
     "iiab-terminal": "IIAB Terminal", "backup": "Backup", "backrest": "Backrest",
     "tailscale": "Tailscale",
+    "spacetimedb": "SpacetimeDB", "qdrant": "Qdrant",
 }
 
 ROOT_EN = (
@@ -197,6 +198,11 @@ STACK_EN = {
         "launchd or systemd rather than in a container, because they need the host's own "
         "filesystem, devices or network stack."
     ),
+    "apps": (
+        "The apps compose stack: Tier-2 services deployed from a YAML manifest under "
+        "apps/ rather than from an Ansible role. Every service in it is merged into one "
+        "generated compose file, so no app here owns a fragment of its own."
+    ),
 }
 
 # Per-system prose. Hand-written, not templated: each one says what the service IS
@@ -212,6 +218,18 @@ SYSTEM_EN = {
         "MariaDB, the second relational engine, kept because several PHP applications "
         "ship MySQL-dialect schemas and migrations that PostgreSQL will not accept. It "
         "is a compatibility store, not the preferred one."
+    ),
+    "spacetimedb": (
+        "SpacetimeDB, a realtime database whose stored procedures ARE the application: "
+        "clients subscribe to queries over WebSocket and receive changes as they commit. "
+        "Unlike the SQL stores beside it, it has no admin UI and no passwords — identity "
+        "is a JWT, and authorisation is written inside the module."
+    ),
+    "qdrant": (
+        "Qdrant, the vector database: it stores embeddings and answers similarity "
+        "queries. It is the only store in the estate searched by MEANING rather than by "
+        "key or by SQL predicate, and everything in it is derived — re-embeddable from "
+        "the canonical rows elsewhere."
     ),
     "redis": (
         "Redis, the shared in-memory key-value store. It holds sessions, locks, hot "
@@ -546,6 +564,16 @@ SYSTEM_EN = {
 # no issued secret (public, or reachable only via a container-local command line)
 # gets NO credential node — absent is honest, a stub is noise.
 CREDENTIAL_EN = {
+    "spacetimedb": (
+        "A bearer JWT — either signed by the estate's own ECDSA keypair or issued by "
+        "Authentik. Unlike every issued API token beside it, holding a valid one grants "
+        "nothing by itself: the module decides what that identity may do."
+    ),
+    "qdrant": (
+        "The Qdrant API key, in two grades — one read-write, one read-only. A single "
+        "shared string per grade, carrying no person's identity, so a write is "
+        "attributable only to the integration that made it."
+    ),
     "authentik": (
         "The Authentik API token. An issued administrative secret scoped to the identity "
         "provider itself: it authorises reads and writes of users, groups, providers and "
@@ -1057,6 +1085,7 @@ ANCHOR_BY_STACK = {
     "b2b": "02.02.07.04",            # Web Technologies
     "data": "02.02.05",              # Databases
     "iiab": "02.02.07.04",           # Web Technologies
+    "apps": "02.02.07.04",           # Web Technologies
     "engineering": "02.02",          # Computer Science (generic)
     "voip": "02.02.07",              # Computer Networks
     "host": "02.02.06",              # Operating Systems
