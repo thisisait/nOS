@@ -1259,12 +1259,33 @@ row("kpro", "KPro's three ideas, and nothing else from KPro", _KPRO,
 
 row("kpro-ids", "A cortex id that survives a file being moved", _KPRO,
     "next", "cortex", parent="kpro",
-    refs="files/anatomy/cortex · KPro docId",
+    refs="files/anatomy/cortex · KPro docId · tests/anatomy/test_the_fs_object_id_is_a_vendored_contract.py",
     body="Cortex ids are `fs:<uid>:sha1(relPath)[:16]` — a PHYSICAL id, so moving a file "
          "destroys its identity and forks the corpus silently. KPro's docId is opaque and "
          "stable and the path is an ATTRIBUTE, which is the whole lesson in one sentence. "
          "Cost is near-zero now and rises with every row added to the corpus, which is why "
-         "this is the child to do first even though it is the least visible.")
+         "this is the child to do first even though it is the least visible. "
+         "TWO CORRECTIONS MEASURED 2026-09-01 BEFORE ANY CODE, and each changes the work. "
+         "(1) WRONG TREE. `refs` named only files/anatomy/cortex, but server/fs-sync.ts is a "
+         "vendored port and server/cortex-fs.ts states the constraint outright: both root "
+         "shapes must produce 'the same fs:<uid>:<sha1(relPath)[:16]> ids the container "
+         "derives... that id equality is the whole point'. It has a LIVE consumer, not just a "
+         "comment — cortex-corpus-diff.py compares the two fs id sets exactly as the `fs ids` "
+         "clause every night, and a removal-shaped disagreement HALTS cortex-fs-sync. Re-mint "
+         "on the organ side alone and every id moves at once, which the harness reads as the "
+         "corpus being deleted and the nightly sync then refuses to run. So this lands in KEAP "
+         "and arrives here by re-vendor; the gate above is the tripwire for the next agent "
+         "handed this row, because the row named only this repo. "
+         "(2) AN OPAQUE ID DOES NOT BY ITSELF SURVIVE A MOVE. KPro's docId is stable because "
+         "KPro's STORE is the authority and a move goes through its API. Here the filesystem "
+         "is the authority and the syncer sees only snapshots, so identity is re-derived every "
+         "pass: look a minted uuid up by (uid, path) and a moved file still finds no row, mints "
+         "a new one, and the old row is pruned with its curated links and its vector — byte-"
+         "identical to today. The mechanism is move ADOPTION on a move-invariant signal (the "
+         "inode, which the walker's lstat already returns), and the opaque id is the cosmetic "
+         "half that makes adoption expressible. Sized against the organ store the same day: 339 "
+         "fs: rows, 0 embeddings — the migration is still cheap, and `move/rename` is on the S2 "
+         "harness's own NOT EXERCISED list, so nothing has ever demonstrated the loss.")
 
 row("kpro-logical", "One logical id, many manifestations", _KPRO,
     "queued", "cortex", parent="kpro",
