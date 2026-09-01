@@ -82,16 +82,21 @@ def test_traefik_emits_a_trace_id_a_log_line_can_carry():
 
 
 def test_the_regex_matches_what_traefik_actually_writes():
-    """A real line captured from `docker logs infra-traefik-1` on 2026-09-01.
-    Trimmed to the fields that matter; the point is the exact key spelling —
-    Traefik writes both `TraceId` and a lowercase `trace_id`, and the derived
-    field matches only the latter."""
+    """Shaped after a line captured from `docker logs infra-traefik-1` on
+    2026-09-01, trimmed to the fields that matter. The id is minted here rather
+    than copied: what the regex has to get right is the key SPELLING — Traefik
+    writes both `TraceId` and a lowercase `trace_id`, and the derived field
+    matches only the latter — not one particular hex string. (A pasted 32-hex
+    literal is also indistinguishable from a credential to
+    `test_a_fixture_is_never_a_real_secret`, and correctly trips it.)"""
+    import random
+
+    rng = random.Random(20260901)
+    tid = "".join(rng.choice("0123456789abcdef") for _ in range(32))
     sample = (
         '{"DownstreamStatus":302,"RouterName":"metabase@file",'
-        '"SpanId":"b1d5a7b32685062f",'
-        '"TraceId":"75cb54864ce2c6671c723ab44b379f65","level":"info",'
-        '"span_id":"b1d5a7b32685062f",'
-        '"trace_id":"75cb54864ce2c6671c723ab44b379f65"}'
+        f'"SpanId":"b1d5a7b32685062f","TraceId":"{tid}","level":"info",'
+        f'"span_id":"b1d5a7b32685062f","trace_id":"{tid}"}}'
     )
     ds = yaml.safe_load(_strip_jinja(LOKI_DS.read_text()))
     loki = next(d for d in ds["datasources"] if d.get("type") == "loki")
@@ -103,4 +108,4 @@ def test_the_regex_matches_what_traefik_actually_writes():
         f"matcherRegex {field['matcherRegex']!r} does not match a real Traefik "
         f"access-log line — the Logs→Traces link cannot fire"
     )
-    assert m.group(1) == "75cb54864ce2c6671c723ab44b379f65"
+    assert m.group(1) == tid
