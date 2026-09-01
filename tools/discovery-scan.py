@@ -100,9 +100,30 @@ class ScanResult:
     findings: list[Finding] = field(default_factory=list)
     skipped: dict[str, int] = field(default_factory=dict)
     compared: int = 0
+    #: Slugs this run reached a VERDICT on, whether or not it found a
+    #: contradiction. A slug in here and not in `findings` is a finding that has
+    #: stopped reproducing. A slug in neither was never judged — see `judge`.
+    judged: set[str] = field(default_factory=set)
 
     def skip(self, reason: str) -> None:
         self.skipped[reason] = self.skipped.get(reason, 0) + 1
+
+    def judge(self, slug: str) -> None:
+        """Record that this run compared the pair `slug` names, and decided.
+
+        THIS IS WHAT MAKES CLOSING SAFE, and it is the whole reason the
+        stale-row report is not simply "the finding is absent this run". A
+        finding can be absent because it was fixed, or because the probe SKIPPED
+        it — an unreadable container, a fix_version that is prose, a prerelease
+        suffix that will not compare. Treating the second as the first would let
+        this tool retire a live contradiction, which is the failure it exists to
+        catch, committed by the catcher.
+
+        So a row is reported stale only when its slug is in here: the probe ran
+        the comparison to completion and found nothing to report.
+        """
+        self.compared += 1
+        self.judged.add(slug)
 
 
 # ---------------------------------------------------------------------------
@@ -446,7 +467,7 @@ def probe_pin_vs_running(images: dict[str, str], res: ScanResult) -> None:
         if verdict is None:
             res.skip("prerelease suffix not comparable to the other side")
             continue
-        res.compared += 1
+        res.judge(f"{OBS_PREFIX}pin-{var.replace('_', '-')}")
         if verdict == 0:
             continue
         direction = "BEHIND" if verdict < 0 else "AHEAD OF"
@@ -527,7 +548,7 @@ def probe_queue_vs_running(images: dict[str, str], res: ScanResult) -> None:
         if verdict is None:
             res.skip("prerelease suffix not comparable to the other side")
             continue
-        res.compared += 1
+        res.judge(f"{OBS_PREFIX}queue-{item['id'].lower()}")
 
         # A FLOOR NEEDS NO SPECIAL CASE, and the first cut of this got it wrong
         # by adding one. `fix_version: "1.24.7+"` means "at or above", and both
@@ -609,7 +630,7 @@ def probe_artefact_vs_repo(res: ScanResult) -> None:
             res.skip("artefact not tracked at scan-data or HEAD")
             continue
         live = path.read_text(encoding="utf-8")
-        res.compared += 1
+        res.judge(f"{OBS_PREFIX}uncommitted-{Path(rel).stem}")
         if any(live == content for _, content in baselines):
             continue  # recorded in git somewhere — not one checkout from gone
 
@@ -682,7 +703,7 @@ def probe_doc_claim_vs_queue(res: ScanResult) -> None:
         # itself is now the thing asserted, and re-adding a hand-written tally
         # — or dropping the pointer — puts the estate back where it was.
         if "rem-status.py" in doc:
-            res.compared += 1
+            res.judge(f"{OBS_PREFIX}claude-md-backlog-tally")
             return
         res.findings.append(Finding(
             slug=f"{OBS_PREFIX}claude-md-backlog-tally",
@@ -712,7 +733,7 @@ def probe_doc_claim_vs_queue(res: ScanResult) -> None:
         s = it.get("status")
         if s in actual:
             actual[s] += 1
-    res.compared += 1
+    res.judge(f"{OBS_PREFIX}claude-md-backlog-tally")
 
     deltas = [f"{k}: doc {claimed[k]} vs file {actual[k]}"
               for k in claimed if claimed[k] != actual[k]]
@@ -887,11 +908,15 @@ def probe_disabled_vs_running(images: dict[str, str], res: ScanResult) -> None:
         if (REPO / "apps" / f"{var}.yml").exists():
             res.skip("manifest app — apps/<name>.yml owns bring-up, not the toggle")
             continue
-        res.compared += 1
+        res.compared += 1   # per-var; the CLASS verdict is judged after the loop
         hit = container_for(var, images)
         if hit is not None:
             live.append((var, hit[0], hit[1]))
 
+    # Judged AFTER the loop, because the finding is one row for the CLASS.
+    # Reaching here means every toggle was resolved and every container looked
+    # up, so an empty `live` is a real "no longer reproduces".
+    res.judge(f"{OBS_PREFIX}disabled-services-still-running")
     if not live:
         return
 
@@ -998,7 +1023,7 @@ def probe_declared_gate_actually_exists(res: ScanResult) -> None:
             res.skip("declared-oidc service did not serve a readable /login")
             continue
 
-        res.compared += 1
+        res.judge(f"{OBS_PREFIX}gate-claimed-not-offered-{sid.replace('_', '-')}")
         if not pw.search(body):
             res.skip("declared-oidc /login has no password field to judge")
             continue
@@ -1109,7 +1134,7 @@ def probe_healthy_but_unreachable(images: dict[str, str], res: ScanResult) -> No
             continue
 
         port = m.group(1)
-        res.compared += 1
+        res.judge(f"{OBS_PREFIX}healthy-unreachable-{sid.replace('_', '-')}")
         try:
             req = urllib.request.Request(f"http://127.0.0.1:{port}/",
                                          headers={"User-Agent": "nos-discovery-scan"})
@@ -1153,6 +1178,38 @@ def probe_healthy_but_unreachable(images: dict[str, str], res: ScanResult) -> No
         ))
 
 
+def open_obs_rows() -> dict[str, str]:
+    """Every `obs-` row this tool has filed that is still open, slug -> status.
+
+    Returns {} when the table cannot be read, and the caller says so rather than
+    reporting "nothing is stale" — the same rule the rest of the tool follows.
+    """
+    req = urllib.request.Request(BASE + "/rows?limit=500", headers=HEADERS)
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        rows = json.loads(resp.read())["data"]["rows"]
+    return {v["slug"]: v.get("status", "")
+            for r in rows if (v := r["values"]).get("slug", "").startswith(OBS_PREFIX)
+            and v.get("status") not in ("shipped", "dropped")}
+
+
+def stale_rows(res: ScanResult, open_rows: dict[str, str]) -> dict[str, str]:
+    """Filed rows whose finding this run compared and did NOT reproduce.
+
+    `s in res.judged` is the load-bearing half. Without it this would report
+    every filed row the scan happened not to re-emit — including the ones it
+    SKIPPED because a version was prose or a container was unreadable — and the
+    tool would recommend retiring live contradictions.
+
+    REM-188 is the worked example: `fix_version: "11.8.8 (re-pull)"` is prose, so
+    the probe skips it, so its slug is never judged, so it is never reported
+    stale — even though the running tag equals the fix and a naive comparison
+    would call it agreement.
+    """
+    found = {f.slug for f in res.findings}
+    return {s: st for s, st in open_rows.items()
+            if s in res.judged and s not in found}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--file", action="store_true",
@@ -1180,11 +1237,33 @@ def main() -> int:
     probe_declared_gate_actually_exists(res)
     probe_healthy_but_unreachable(images, res)
 
+    # WHAT STOPPED REPRODUCING. This tool was write-once — `file_rows` skips a
+    # slug that already exists — so it could open a finding and never close one.
+    # Measured 2026-09-01: four of its `obs-queue-rem-*` rows described a queue
+    # that had since been reconciled, and one described a CLAUDE.md that had
+    # already stopped quoting the numbers it complained about. The contradiction
+    # finder was itself holding records that had stopped being true, which is
+    # the defect it exists to find, in its own output.
+    #
+    # It still does not close them. Closing stays a deliberate act with the
+    # evidence written into the row (CLAUDE.md, "Security remediation backlog").
+    # What changes is that the estate can now be ASKED which rows are candidates
+    # instead of someone re-deriving it by hand, four containers at a time.
+    stale: dict[str, str] = {}
+    obs_error: str | None = None
+    try:
+        stale = stale_rows(res, open_obs_rows())
+    except Exception as exc:  # noqa: BLE001 — an unreadable table is UNKNOWN
+        obs_error = str(exc)
+
     if args.json:
         print(json.dumps({
             "compared": res.compared,
             "skipped": res.skipped,
             "findings": [f.__dict__ for f in res.findings],
+            "judged": sorted(res.judged),
+            "no_longer_reproducing": sorted(stale),
+            "obs_rows_error": obs_error,
         }, indent=2))
     else:
         print(f"compared {res.compared} pair(s) against {len(images)} running containers")
@@ -1195,6 +1274,18 @@ def main() -> int:
         print(f"\n{len(res.findings)} contradiction(s). "
               f"Skips are not agreements — {sum(res.skipped.values())} pair(s) "
               f"could not be compared exactly and were not judged.")
+
+        if obs_error:
+            print(f"\n  UNKNOWN — could not read the filed rows: {obs_error}")
+            print("  Nothing is claimed about which findings have stopped "
+                  "reproducing.")
+        elif stale:
+            print(f"\n{len(stale)} filed row(s) NO LONGER REPRODUCE — this run "
+                  f"compared each pair and found them in agreement:")
+            for slug, status in sorted(stale.items()):
+                print(f"  [{status}] {slug}")
+            print("  Not closed here. Close deliberately, with the reading "
+                  "written into the row.")
 
     if args.file and res.findings:
         print(f"filed {file_rows(res.findings)} new roadmap row(s)")
