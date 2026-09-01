@@ -1,9 +1,9 @@
 {
   "initialized_at": "2026-04-08T12:00:00Z",
-  "last_full_scan": "2026-08-31T02:13:05Z",
-  "last_advisory_check": "2026-08-31T04:05:59+02:00",
+  "last_full_scan": "2026-09-01T02:05:41Z",
+  "last_advisory_check": "2026-09-01T04:00:53+02:00",
   "last_remediation_applied": "2026-04-09T12:00:00Z",
-  "scan_cycle": 49,
+  "scan_cycle": 50,
   "scanner_version": "2.0.0",
   "config": {
     "batch_size": 5,
@@ -146,31 +146,34 @@
       "notes": "Cycle-45 batch-58 SCAN (2026-08-28, tls_crypto_weakness + CVE). NO CHANGE, and no probe surface: install_freepbx is false, no freepbx container among those running, so there is no edge route and no TLS to negotiate against -- the tls_crypto_weakness probe is recorded as NOT APPLICABLE here rather than as a pass, because a service that is not deployed cannot demonstrate a good posture. CVE leg clean-with-standing-debt: the FreePBX/security-reporting advisory feed has published nothing new since the 2026-07-16/17 wave already captured by REM-130, and the items surfaced by search are all ones already held here (CVE-2026-46376 hard-coded credentials in the UCP interface = REM-113; the Endpoint Manager ACP advisory is 2025 and commercial-module-only). REM-206 stands unchanged: tiredofit/freepbx is still absent from Docker Hub, so the four vendor-blocked rows (REM-014 / REM-046 / REM-113 / REM-130) continue to describe a service that is UNDEPLOYABLE rather than deployable-and-unpatched. Recommendation unchanged: retire or repoint roles/pazny.freepbx."
     },
     "mariadb": {
-      "last_checked": "2026-08-22T04:05:29+02:00",
-      "last_cve_scan": "2026-08-22T04:05:29+02:00",
+      "last_checked": "2026-09-01T04:00:53+02:00",
+      "last_cve_scan": "2026-09-01T04:00:53+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-22T04:05:29+02:00",
-      "findings_count": 5,
+      "last_attack_probe": "2026-09-01T04:00:53+02:00",
+      "findings_count": 6,
       "status": "scanned",
-      "notes": "Cycle-37 (2026-08-22, CVE scan + tls_crypto_weakness). CVE LEG CLEAN at pinned 11.8.8, re-confirmed at source: the MariaDB/server advisory endpoint still shows NOTHING published after the 2026-06-02 Galera/wsrep wave, every item of which ends its 11.8 range at 11.8.7 and is therefore carried by 11.8.8 -- and the standing disposition also still holds, that every wsrep item is unreachable here regardless of version because the official image runs STANDALONE with no wsrep_on and no wsrep_provider. 11.8.8 remains the newest 11.8.x on Docker Hub (11.8.8, 11.8.8-noble, 11.8.8-ubi9 present; no 11.8.9). PROBE (tls_crypto_weakness) -> REM-217 (HIGH, pending), filed under this component because the measurement is starkest here: have_ssl=YES, OpenSSL 3.0.13, tls_version TLSv1.2+TLSv1.3, and a client that asks really does get TLS_AES_256_GCM_SHA384 at TLSv1.3 -- but Ssl_accepts=72 against Connections=591811, i.e. 0.012 per cent, with require_secure_transport=OFF and empty ssl_cert/ssl_key (auto-generated self-signed material, so the TLS that IS used resists passive reading and not active interposition). Live processlist corroborates: both freescout sessions report an empty Ssl_cipher. The row spans redis (tls-port 0, 56 plaintext clients) and postgresql (ssl=on, yet infisical and authentik-server plaintext) as well. Edge TLS measured separately and is CLEAN (TLS1.1 refused, 3DES rejected with alert 40, AEAD only) -- but that does NOT discharge REM-162, because Traefik's defaults would produce the same result. REM-188 (image-digest base-layer drift, same semver) remains pending and was not advanced."
+      "notes": "Cycle-49 batch-62 (2026-09-01, CVE + version_header_leakage). NOT CLEAN -- +REM-246 (MEDIUM, pending), and THIS ENTRY REVERSES ITS OWN PREDECESSOR the way the postgresql entry did in cycle-37. 11.8.9 shipped 2026-08-24 fixing SIX CVEs first patched in the 11.8 line at .9: CVE-2026-60585 (6.6), CVE-2026-60331 (6.4), CVE-2026-60747 (6.2), CVE-2026-47023 (4.9), CVE-2026-60184 (4.4), CVE-2026-61081 (2.7). THE MECHANISM OF THE MISS IS THE POINT: the 2026-08-22 note certified 11.8.8 clean 'at source' by re-querying the MariaDB/server GHSA endpoint -- and that endpoint STILL ends at the 2026-06-02 Galera wave and carries none of the six. Only mariadb.com/docs/server/security/cve/community-server has them. Seventh estate-wide sighting of 'the feed is empty' being read as 'there is nothing'. DISPOSITION: five of six name the Replication component and one Performance Schema; infra-mariadb-1 is STANDALONE (the same fact that makes every wsrep item unreachable) so the replication five are theoretical here, and four of six need PR:H. CVE-2026-60747 is the exception at PR:N -- but AV:L, so it needs code execution in the container first. Bump 1367 to 11.8.9. PROBE (version_header_leakage): the pre-auth handshake on 127.0.0.1:3306 discloses '11.8.8-MariaDB-ubu2404' -- exact patch AND base image -- before any credential is offered. That is protocol-mandatory in MySQL's wire format and cannot be suppressed; rated MITIGATED-BY-REACHABILITY (loopback publish + infra_net/shared_net), not fixable. The handshake also advertises mysql_native_password as the default plugin, noted for a future auth-hardening probe and NOT filed. REM-217 (0.012 per cent of 591811 connections used TLS; require_secure_transport=OFF) and REM-188 remain pending and were not advanced.",
+      "last_scan_attempt": "2026-09-01T04:00:53+02:00"
     },
     "postgresql": {
-      "last_checked": "2026-08-22T04:05:29+02:00",
-      "last_cve_scan": "2026-08-22T04:05:29+02:00",
+      "last_checked": "2026-09-01T04:00:53+02:00",
+      "last_cve_scan": "2026-09-01T04:00:53+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-22T04:05:29+02:00",
-      "findings_count": 5,
+      "last_attack_probe": "2026-09-01T04:00:53+02:00",
+      "findings_count": 6,
       "status": "scanned",
-      "notes": "Cycle-37 (2026-08-22, CVE scan + tls_crypto_weakness). NOT CLEAN -- THIS ENTRY REVERSES ITS OWN PREDECESSOR. +REM-215 (HIGH, pending). postgresql 16.14-alpine is AFFECTED by the 2026-08-13 release (18.5/17.11/16.15/15.19/14.24), 28 CVEs of which 26 name the 16 line: twelve at CVSS 8.8 (CVE-2026-19385 pg_dump heap overflow, CVE-2026-16239 cursor CLOSE+DECLARE type confusion, CVE-2026-15741 EXTRACT SQL injection, CVE-2026-14664 regexp overflow, CVE-2026-14669 to_char overflow, CVE-2026-14670 plperl, CVE-2026-14671 refint, CVE-2026-14662 tsvector/tsquery, CVE-2026-14677, CVE-2026-15742, CVE-2026-14680, CVE-2026-18408), plus CVE-2026-14679 (8.2), CVE-2026-14668 (8.1), CVE-2026-6464 (8.1), CVE-2026-6471 (7.2) and CVE-2026-14663 (6.5, pgcrypto SILENTLY encrypting to cleartext for OpenSSL-disabled ciphers -- not a memory bug and it fails without error). Fix is 16.15-alpine, published on Docker Hub. THE PREVIOUS NOTE IN THIS FIELD WAS WRONG AND IS REPLACED. Cycle-35 wrote: 'versions.json now reports 16.15 as latestMinor, so a bare latest-vs-pin comparison would flag this component and be WRONG -- 16.15 carries no security content beyond 16.14.' That is false, and it disarmed the one automated signal pointing at the cohort. The mechanism is worth remembering: cycle-35 DID read postgresql.org/support/security at source, but it verified the pin against the newest cohort it already knew (CVE-2026-6637/6638/6575) instead of reading the page top-down for one it did not. Corroborated independently via OSV (39 BIT-postgresql-2026-* ingested 2026-08-19; BIT-postgresql-2026-19385 resolves to fixed 16.15.0). Exposure is authenticated-session, not unauthenticated -- 127.0.0.1:5432 only, infra_net+shared_net -- but ~12 services hold legitimate credentials and REM-217 (this batch) shows 23 of 42 backends connecting in cleartext, so the credential half of the chain is measured too. REM-181's documenso-db (postgres:15-alpine, floating major tag, still outside the component list) now has a security floor of 15.19 rather than a currency preference."
+      "notes": "Cycle-49 batch-62 (2026-09-01, CVE + version_header_leakage). CVE LEG CLEAN and the cycle-37 correction held: the postgresql.org/support/security page was read TOP-DOWN (the discipline REM-215 asked for, not a diff against the newest known wave) and 16.15 -- released 2026-08-13, live-confirmed on infra-postgresql-1 -- is the newest 16.x and carries every 2026 CVE naming the 16 line, including all 26 of the 2026-08-13 cohort. Nothing has published since. Docker Hub has no 16.16. REM-215 stays RESOLVED. PROBE -> +REM-248 (MEDIUM, pending), and it landed one hop sideways from where it was aimed. Postgres itself passes the leak test cleanly: a raw TCP read against 127.0.0.1:5432 TIMED OUT with no banner, because the protocol demands auth before it says anything. What leaks is observability-postgres-exporter-1: /metrics is served with NO authentication and publishes pg_settings_server_version_num=160015 plus 255 pg_settings series including the whole log_* configuration and data_checksums=0. Its sibling redis-exporter leaks redis_version=8.10.1, run_id, master_replid, redis_build_id, maxmemory_policy and the kernel string. Both join shared_net, and reachability was PROVEN not inferred: a plain wget from inside infra-bluesky-pds-1 -- an ordinary app container with no monitoring credentials -- returned redis_instance_info in full. Neither exporter is on any component rotation list, which is why five cycles of datastore probes never looked at them. Fix is a network removal (drop shared_net, keep observability_net), not a password. REM-181 (documenso-db on the floating postgres:15-alpine, security floor now 15.19) still pending and still outside the component list.",
+      "last_scan_attempt": "2026-09-01T04:00:53+02:00"
     },
     "redis": {
-      "last_checked": "2026-08-22T04:05:29+02:00",
-      "last_cve_scan": "2026-08-22T04:05:29+02:00",
+      "last_checked": "2026-09-01T04:00:53+02:00",
+      "last_cve_scan": "2026-09-01T04:00:53+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-22T04:05:29+02:00",
+      "last_attack_probe": "2026-09-01T04:00:53+02:00",
       "findings_count": 5,
       "status": "scanned",
-      "notes": "Cycle-37 (2026-08-22, CVE scan + tls_crypto_weakness). NOT CLEAN. +REM-216 (HIGH, pending): redis 8.10.0 is one patch below the coordinated 2026-08-17 all-branch security release (8.10.1 / 8.8.2 / 8.6.6 / 8.4.6 / 8.2.9 / 7.4.11 / 7.2.16 / 6.2.24 all published the same day), whose notes open 'Update urgency: SECURITY'. Nine fixes, of which only CVE-2026-62356 (CMSketch RDB-load heap OOB write) carries a CVE id; the rest are prose plus tracker ids. WHY BOTH STANDARD CHECKS READ CLEAN: the redis/redis GitHub security-advisories endpoint is EMPTY -- this vendor publishes no GHSAs at all, ever -- and eight of nine fixes have no CVE. The reliable trigger for this component is the release CADENCE (eight maintenance branches cut in one day) and the notes themselves, not any feed. Rated against this estate rather than in the abstract: the three RDB-loading items (incl. the SLOT_INFO memory corruption that may lead to RCE) are THEORETICAL here -- standalone, no replication, no cluster, data dir not writable from peers; the TLS client-cert CN NUL-byte auth bypass and the TLS pending-data UAF are N/A because tls-port is 0; the blocked-client/unblock-client use-after-frees and the TopK OOB are reachable from any ORDINARY AUTHENTICATED SESSION and are what carries the HIGH. Vector Sets exposure NOT MEASURED (no known nOS consumer issues V* commands; stated as unmeasured, not absent). REM-140's standing obligation on CVE-2025-62507 stays discharged (fixed 8.2.3, N/A at 8.10.x). PROBE -> REM-217: tls-port 0, 56 connected clients, AUTH secret passed on argv and transmitted in cleartext across infra_net + shared_net + gated_b2b_net."
+      "notes": "Cycle-49 batch-62 (2026-09-01, CVE + version_header_leakage). CLEAN on the version leg. 8.10.1 -- the coordinated all-branch SECURITY release of 2026-08-17 -- is still the newest 8.10.x on both the GitHub release list and Docker Hub, nothing has shipped since, and infra-redis-1 runs it (REM-216 stays RESOLVED). The standing source rule is re-affirmed rather than re-derived: redis/redis publishes NO GHSAs ever and eight of nine fixes in that release had no CVE, so the reliable trigger for this component is release CADENCE and the notes' own 'Update urgency: SECURITY' line, not any feed. PROBE: redis itself PASSES -- a pre-auth probe sending PING and INFO server to 127.0.0.1:6379 returns '-NOAUTH Authentication required.' twice and nothing else, so the version is not disclosed to an unauthenticated client. The disclosure is in observability-redis-exporter-1 instead (see REM-248, filed under postgresql because both exporters share one fix): unauthenticated /metrics on shared_net publishing redis_version=8.10.1, run_id, master_replid, redis_build_id, maxmemory_policy=allkeys-lru, tcp_port and 'Linux 6.12.76-linuxkit aarch64', read successfully from a peer container. REM-217 unchanged: tls-port is still 0 and the AUTH secret still crosses infra_net + shared_net + gated_b2b_net in cleartext -- which is the same fabric the exporter leak rides.",
+      "last_scan_attempt": "2026-09-01T04:00:53+02:00"
     },
     "ollama": {
       "last_checked": "2026-08-30T04:12:35+02:00",
@@ -183,22 +186,24 @@
       "last_scan_attempt": "2026-08-30T04:12:35+02:00"
     },
     "bluesky_pds": {
-      "last_checked": "2026-08-21T04:14:30+02:00",
-      "last_cve_scan": "2026-08-21T04:14:30+02:00",
+      "last_checked": "2026-09-01T04:00:53+02:00",
+      "last_cve_scan": "2026-09-01T04:00:53+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-21T04:14:30+02:00",
+      "last_attack_probe": "2026-09-01T04:00:53+02:00",
       "findings_count": 0,
       "status": "scanned",
-      "notes": "Cycle-35 batch-57 (2026-08-21, CVE scan + ssrf_vector_analysis). CLEAN on every source queried, and the queries were widened after REM-177's criticism that this component keeps getting certified against a string that names nothing. Checked: bluesky-social/pds GHSA endpoint (no advisories have ever been published), bluesky-social/atproto GHSA endpoint (none), and OSV for the npm packages that actually constitute the server -- @atproto/pds, @atproto/xrpc-server, @atproto/identity, @atproto/oauth-provider -- all zero. SSRF probe: PDS does make outbound requests by protocol necessity (PDS_DID_PLC_URL -> plc.directory, PDS_BSKY_APP_VIEW_URL -> api.bsky.app, PDS_REPORT_SERVICE_URL -> mod.bsky.app), but these are operator-pinned constants in compose.yml.j2:33-36, not user-supplied URLs, so there is no attacker-directed fetch primitive to rate. The container publishes 127.0.0.1:2583 only, joins infra_net + shared_net, and declares NO extra_hosts at all -- it is NOT among the 23 host-gateway containers in REM-214, making it the least exposed component in this batch. REM-177 STANDS AND IS RE-AFFIRMED, not closed: bluesky_pds_version is still the moving tag '0.4' (default.config.yml:2423) while upstream tags are v0.4.5027-style, so 'clean' here means 'no advisory exists for this software', which is true and useful, and specifically does NOT mean 'the running image is the newest 0.4'. The container has been up 11 days; what 0.4 pointed at then is not recorded anywhere the queue can read."
+      "notes": "Cycle-49 batch-62 (2026-09-01, CVE + version_header_leakage). CLEAN on every source, re-queried rather than carried: bluesky-social/pds and bluesky-social/atproto GHSA endpoints both return an empty list (no advisory has ever been published for either), and prior batches cleared OSV for @atproto/pds, xrpc-server, identity and oauth-provider. PROBE: 127.0.0.1:2583 emits 'X-Powered-By: Express' on both / and /xrpc/com.atproto.server.describeServer -- a framework name with NO version attached, so it narrows an attacker's target set by one guess and nothing more. Rated THEORETICAL and deliberately NOT filed as a row; suppressing it is app.disable('x-powered-by') in code this estate does not own. Nothing else leaks: no Server header, and describeServer returns only did:web:bsky.pazny.eu, the available user domain and inviteCodeRequired=true -- no build string. Access-Control-Allow-Origin is '*' on the xrpc surface, which is atproto's public-API design and carries no credentials flag, so it is not filed either. THE COMPONENT WAS ALSO USED AS AN INSTRUMENT THIS BATCH: because it holds no monitoring credentials and is the least privileged container in the estate, a wget from inside it proved REM-248's exporter /metrics leak is reachable by ANY peer container rather than merely published on loopback. REM-177 STANDS AND IS RE-AFFIRMED for the third batch running: bluesky_pds_version is still the moving tag '0.4' (default.config.yml:2536) against upstream v0.4.5027-style tags, the container has been up 3 weeks, and nothing records what '0.4' resolved to when it started -- so 'clean' here means 'no advisory exists for this software', not 'the running image is the newest 0.4'.",
+      "last_scan_attempt": "2026-09-01T04:00:53+02:00"
     },
     "infisical": {
-      "last_checked": "2026-08-22T04:05:29+02:00",
-      "last_cve_scan": "2026-08-22T04:05:29+02:00",
+      "last_checked": "2026-09-01T04:00:53+02:00",
+      "last_cve_scan": "2026-09-01T04:00:53+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-22T04:05:29+02:00",
-      "findings_count": 1,
+      "last_attack_probe": "2026-09-01T04:00:53+02:00",
+      "findings_count": 2,
       "status": "scanned",
-      "notes": "Cycle-37 (2026-08-22, CVE scan + tls_crypto_weakness). CVE LEG CLEAN, no row filed on the version. The Infisical/infisical advisory endpoint returns a literally EMPTY list for the SIXTH consecutive batch -- zero advisories ever published -- and prior batches cleared OSV, the GitHub Advisory DB and NVD. CURRENCY: the pin moved to v0.162.19 (default.config.yml:2970, live-confirmed infra-infisical-1 on infisical/infisical:v0.162.19, healthy) since the last read; upstream is at v0.162.24 (2026-08-21), so the pin trails by five patch releases and eleven days. That is WITHIN normal cadence for a vendor shipping near-daily and is NOT filed -- REM-141 existed because the gap was two whole minor lines. The standing caveat is unchanged and is why this component keeps earning a re-read rather than a permanent clean mark: Infisical discloses PRIVATELY (security@infisical.com + Cure53) and publishes nothing, so for this vendor version currency IS the security control, because no CVE will ever arrive to trigger a bump -- and install_infisical=true by default with Tier-1 blast radius as the central secrets vault. PROBE (tls_crypto_weakness): NOT clean, and this is the batch's sharpest single fact. infra-infisical-1 (172.20.0.7) connects to its Postgres backing store in CLEARTEXT -- measured via pg_stat_ssl, ssl=f. DB_CONNECTION_URI is built in roles/pazny.infisical/templates/compose.yml.j2 with no sslmode parameter, and node-postgres defaults ssl to DISABLED when unspecified (libpq's sslmode=prefer would have upgraded opportunistically; this driver does not). The component whose entire job is secret custody talks to its own store unencrypted on a fabric REM-194 proved every peer container reaches. Filed as part of REM-217; the one-line fix (append ?sslmode=require) is named there as remediation step 2."
+      "notes": "Cycle-49 batch-62 (2026-09-01, CVE + version_header_leakage). CVE LEG CLEAN for the SEVENTH consecutive batch -- the Infisical/infisical advisory endpoint returns a literally empty list and has never published one. +REM-247 (MEDIUM, pending) FILED ON CURRENCY, and it is filed because the previous batch set the threshold explicitly and it has now been crossed: on 2026-08-22 the pin trailed by five patch releases and the note declined to file, citing REM-141's two-minor-line precedent. Upstream then cut v0.163.0 and v0.164.0 within six hours on 2026-08-26 and v0.164.1 on 2026-08-27, so v0.162.19 now sits two minor lines and thirteen releases back. No release body names a security fix, which for THIS vendor is uninformative rather than reassuring -- they disclose privately (security@infisical.com + Cure53) and publish nothing, so version currency is the only control this component has and no CVE will ever arrive to trigger the bump. MEDIUM on blast radius (Tier-1 central secrets vault, install_infisical true by default), not on evidence. Watch the minor-line hazard on converge (kuma 1->2 / portainer 2.45.0 shape): re-verify the role's post.yml init + admin bootstrap. PROBE (version_header_leakage): CLEAN, and it is the best result in the batch. 127.0.0.1:8075 emits NO Server header and NO X-Powered-By on either / or /api/status -- helmet is configured, with HSTS, COOP/CORP same-origin, nosniff, frame-options SAMEORIGIN and a pinned CORS origin. /api/status is unauthenticated but discloses only posture (inviteOnlySignup=true, emailConfigured=false, redisConfigured=true) and NO version. Contrast bluesky_pds in the same batch, which does emit X-Powered-By. The cleartext DB_CONNECTION_URI (pg_stat_ssl ssl=f, node-postgres defaults ssl OFF) is UNCHANGED and remains step 2 of REM-217; bumping the image does not touch it.",
+      "last_scan_attempt": "2026-09-01T04:00:53+02:00"
     },
     "metabase": {
       "last_checked": "2026-08-26T04:01:32+02:00",
@@ -494,11 +499,11 @@
   },
   "rotation": {
     "next_batch": [
-      "bluesky_pds",
-      "mariadb",
-      "postgresql",
-      "redis",
-      "infisical"
+      "rustfs",
+      "postgres",
+      "superset",
+      "outline",
+      "freescout"
     ],
     "strategy": "oldest_first",
     "note": "Recomputed oldest-first by batch-59 (2026-08-29) from the component last_checked timestamps, not carried forward. The five just scanned (hedgedoc, bookstack, erpnext, homeassistant, firefly) now hold 2026-08-29T04:01:32+02:00 and sort last."
