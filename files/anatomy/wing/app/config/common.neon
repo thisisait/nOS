@@ -182,6 +182,13 @@ services:
 	    - register(@App\AgentKit\Tools\McpBoneTool)
 	    - register(@App\AgentKit\Tools\McpKeapTool)
 	    - register(@App\AgentKit\Tools\McpLoopTool)
+	    # Reads two committed OpenAPI files and nothing else — no scope beyond
+	    # mcp.tool_use, because it cannot reach data (2026-09-01).
+	    - register(@App\AgentKit\Tools\ContractSearchTool)
+	    # One cortex-lang sentence to POST /api/v1/cortex/execute. Adds no
+	    # capability: validate, binding gate and the mutating check all live
+	    # in CortexExecutorPresenter (2026-09-01).
+	    - register(@App\AgentKit\Tools\ExecTool)
 	    # Q8/A1: gated migration file-write tool (path-allowlisted to
 	    # files/anatomy/migrations/ + default.config.yml; escape-refused).
 	    - register(@App\AgentKit\Tools\MigrationWriteTool)
@@ -200,6 +207,9 @@ services:
 	- App\AgentKit\Tools\McpLoopTool
 	# Q8/A1: %nosRepoRoot% is the repo working-tree root (NOS_REPO_ROOT env).
 	- App\AgentKit\Tools\MigrationWriteTool(%nosRepoRoot%)
+	# Same %nosRepoRoot%: the contracts live in the checkout, not ~/wing.
+	- App\AgentKit\Tools\ContractSearchTool(%nosRepoRoot%)
+	- App\AgentKit\Tools\ExecTool
 	- App\AgentKit\Tools\AskOperatorTool
 
 	# Shared HTTP client for tools + adapters

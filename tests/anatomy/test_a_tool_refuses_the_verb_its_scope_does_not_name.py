@@ -98,7 +98,14 @@ READ_ONLY_SCOPES = [
 # `unserved` is a path the tool routes the shape of but must refuse to write.
 # A tool that takes no HTTP path at all declares `None`, and assertion 1 makes
 # that declaration a decision someone has to make rather than an omission.
-PROBE_PATHS: dict[str, dict[str, str | None]] = {
+#
+# `input` (optional) is merged into the probe's `{method, path}` payload for a
+# tool whose arguments are not a method and a path. `exec` is the first: it
+# reaches one hardcoded route and takes a sentence, so without this the probe
+# hands it an empty `chain`, gets "needs a chain" back, and assertion 2
+# correctly reports that the request never reached the tool's own gate. The
+# entry drives the tool HARDER — it is not a way out of being driven.
+PROBE_PATHS: dict[str, dict[str, object]] = {
     "mcp-wing-read": {"served": "/api/v1/events", "unserved": None},
     "mcp-wing-write": {"served": "/api/v1/events", "unserved": "/api/v1/pentest/findings"},
     "mcp-bone": {"served": "/api/health", "unserved": None},
@@ -111,6 +118,17 @@ PROBE_PATHS: dict[str, dict[str, str | None]] = {
     "bash-read-only": {"served": None, "unserved": None},
     "migration-file-write": {"served": None, "unserved": None},
     "ask-operator": {"served": None, "unserved": None},
+    # Reads two committed OpenAPI files. Takes no HTTP client, so assertion 1
+    # allows the None — it has no estate plane to reach.
+    "contract-search": {"served": None, "unserved": None},
+    # One route, no path argument: `served` is what it POSTs to, and `input`
+    # is what makes the POST real. Nothing is un-granted for it to refuse
+    # because it cannot be pointed anywhere, so `unserved` is None by shape.
+    "exec": {
+        "served": "/api/v1/cortex/execute",
+        "unserved": None,
+        "input": {"chain": "get tax:01"},
+    },
 }
 
 _PROBE = r"""
@@ -165,11 +183,12 @@ function build(string $class): ToolInterface {
     return new $class(...$args);
 }
 
-function call(ToolInterface $tool, string $method, string $path, ToolContext $ctx): array {
+function call(ToolInterface $tool, string $method, string $path, ToolContext $ctx, array $extra = []): array {
     $input = ['method' => $method, 'path' => $path];
     if ($method === 'POST') {
         $input['body'] = ['ts' => '2026-08-28T00:00:00Z', 'type' => 'gate_probe'];
     }
+    $input = array_merge($input, $extra);
     $r = $tool->execute($input, $ctx);
     return [
         'is_error' => $r->isError,
@@ -204,16 +223,17 @@ foreach (json_decode($classesJson, true) as $class) {
             }
         }
         $served = $paths[$id]['served'] ?? null;
+        $extra = (array) ($paths[$id]['input'] ?? []);
         if ($served !== null) {
-            $row['get'] = call($tool, 'GET', $served, $ctx);
-            $row['post'] = call($tool, 'POST', $served, $ctx);
+            $row['get'] = call($tool, 'GET', $served, $ctx, $extra);
+            $row['post'] = call($tool, 'POST', $served, $ctx, $extra);
             // Reach = whichever verb this tool does answer. If BOTH come back
             // without a refused_reason and still error, the path never landed.
             $row['reach'] = $row['get']['reason'] === null && !$row['get']['is_error']
                 ? $row['get'] : $row['post'];
             $unserved = $paths[$id]['unserved'] ?? null;
             if ($unserved !== null) {
-                $row['unserved'] = call($tool, 'POST', $unserved, $ctx);
+                $row['unserved'] = call($tool, 'POST', $unserved, $ctx, $extra);
             }
         }
     } catch (Throwable $e) {
@@ -302,6 +322,19 @@ def _has_write_scope(row: dict) -> bool:
     return any(s.endswith(".write") for s in row["scopes"])
 
 
+def _costs_more_than_reading(row: dict) -> bool:
+    """Does serving this POST cost a scope the read-only roster does not hold?
+
+    Stated against the ROSTER rather than the `.write` spelling, because the
+    defect was never about the suffix: `wing.read` served POSTs to any agent
+    that could read, and that is what "inside the roster" means. `cortex.exec`
+    is outside it and names exactly the power it grants; a tool asking for it
+    is not the hole this gate was born from. Every tool that existed when the
+    gate was written classifies identically under both readings.
+    """
+    return not row["within_read_only_roster"]
+
+
 def test_the_registry_still_registers_the_two_planes():
     """Positive control. If the split were reverted, or a tool renamed, every
     behavioural assertion below would drive an empty or stale roster and pass
@@ -372,10 +405,10 @@ def test_a_served_post_requires_a_write_scope(driven: list[dict]):
         (r["id"], r["scopes"], r["post"]["content"])
         for r in driven
         if PROBE_PATHS[r["id"]]["served"] is not None
-        and not r["post"]["is_error"] and not _has_write_scope(r)
+        and not r["post"]["is_error"] and not _costs_more_than_reading(r)
     ]
     assert not offenders, (
-        f"a tool served a POST without asking for a write scope: {offenders}. "
+        f"a tool served a POST while loadable under the read-only roster: {offenders}. "
         "A scope that does not name a verb cannot refuse it."
     )
 

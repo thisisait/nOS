@@ -1358,6 +1358,7 @@
         surveyor_wing_api_token: "{% if '_pw_' in (surveyor_wing_api_token | default('')) and surveyor_wing_api_token != nos_derived_secrets.wing_surveyor %}{{ nos_derived_secrets.wing_surveyor }}{% else %}{{ surveyor_wing_api_token | default(nos_derived_secrets.wing_surveyor) }}{% endif %}"
         upgrade_architect_wing_api_token: "{% if '_pw_' in (upgrade_architect_wing_api_token | default('')) and upgrade_architect_wing_api_token != nos_derived_secrets.wing_upgrade_architect %}{{ nos_derived_secrets.wing_upgrade_architect }}{% else %}{{ upgrade_architect_wing_api_token | default(nos_derived_secrets.wing_upgrade_architect) }}{% endif %}"
         librarian_wing_api_token: "{% if '_pw_' in (librarian_wing_api_token | default('')) and librarian_wing_api_token != nos_derived_secrets.wing_librarian %}{{ nos_derived_secrets.wing_librarian }}{% else %}{{ librarian_wing_api_token | default(nos_derived_secrets.wing_librarian) }}{% endif %}"
+        jeff_wing_api_token: "{% if '_pw_' in (jeff_wing_api_token | default('')) and jeff_wing_api_token != nos_derived_secrets.wing_jeff %}{{ nos_derived_secrets.wing_jeff }}{% else %}{{ jeff_wing_api_token | default(nos_derived_secrets.wing_jeff) }}{% endif %}"
       no_log: true
       tags: ['always']
 

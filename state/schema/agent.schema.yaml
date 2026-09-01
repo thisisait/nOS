@@ -148,6 +148,16 @@ properties:
             - mcp-pulse
             - mcp-keap              # KEAP cortex /agent/v1 (read + captures-only write)
             - mcp-loop              # nos-loop: weaknesses/budget/propose/history — never judge
+            # Searches the committed OpenAPI contracts; returns static
+            # method/path/summary strings only. Scope mcp.tool_use alone —
+            # it reaches no data, so there is no data scope to name.
+            - contract-search
+            # One cortex-lang sentence against the estate's own ontology.
+            # Scope cortex.exec is the same axis as the cortex token, not a
+            # new one — and the token's verb/namespace/tenant grants still
+            # decide every stage. The tool reaches one route and re-implements
+            # none of its gates.
+            - exec
             # Implemented and DI-registered since the inbox work
             # (common.neon:192, AskOperatorTool::id() = 'ask-operator') and
             # missing from this enum, so no agent could declare the human

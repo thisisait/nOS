@@ -26,6 +26,16 @@ system_prompt_path: system.md
 # them would stop being about capability and start being about access.
 tools:
   - id: mcp-wing-read
+  # Find the path BEFORE calling it: the 2026-08-30 turn invented
+  # /api/v1/security/findings/open/count while GET /api/v1/remediation sat
+  # described in the committed contract. Adds no scope — it reads two static
+  # files and can return nothing the estate did not already publish.
+  - id: contract-search
+  # NO `exec`, and the asymmetry with `jeff` is the point. Running a chain is a
+  # local read, but its ROWS return into the model's context — for the cloud
+  # twin that is estate ontology leaving the machine, which is an Article-30
+  # fact and not a setting. The cloud caddy proposes chains; the local one runs
+  # them. Pinned by tests/anatomy/test_exec_is_spendable.py.
   - id: ask-operator
 
 audit:

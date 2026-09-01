@@ -28,6 +28,17 @@ system_prompt_path: system.md
 # rated. One write path or the gate is decoration.
 tools:
   - id: mcp-wing-read
+  # Find the path BEFORE calling it: the 2026-08-30 turn invented
+  # /api/v1/security/findings/open/count while GET /api/v1/remediation sat
+  # described in the committed contract. Adds no scope — it reads two static
+  # files and can return nothing the estate did not already publish.
+  - id: contract-search
+  # THE primary tool, and the reason the estate has a language: one validated
+  # cortex-lang sentence instead of a REST path guessed from memory. It adds no
+  # capability — the executor reads verbs/namespaces/tenants off jeff's own
+  # api_tokens row (roles/pazny.wing/tasks/post.yml), so this line grants the
+  # ability to ASK, and the token decides what may be asked.
+  - id: exec
   - id: ask-operator
 
 audit:
@@ -35,6 +46,10 @@ audit:
     - mcp.tool_use
     - wing.read
     - inbox.ask
+    # Tool admission only. What `cortex.exec` opens is the exec TOOL; the three
+    # cortex axes on the token are what open the route, and they are declared
+    # in the ansible task alone (test_the_mint_matches_the_manifest.py §gap).
+    - cortex.exec
   pii_classification: low
 
 vault:

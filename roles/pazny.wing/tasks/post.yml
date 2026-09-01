@@ -274,6 +274,42 @@
     or 'Updated' in (_wing_cortex_token.stdout | default(''))
   no_log: true
 
+# THE CADDY'S DOOR, and the second token in the estate to carry cortex axes.
+#
+# Measured 2026-09-01, building `exec`: the tool was registered, schema-declared
+# and gated, and would have 403'd on every call for every agent — the executor
+# refuses a token missing ANY of the three axes, and no agent token had one.
+# A tool nothing can spend is not a capability, it is a description of one.
+#
+# The axes are the executor's own P1 surface and no wider: the five read verbs
+# it can dispatch, and the two namespaces KEAP resolves. `db:` is deliberately
+# absent for the same reason it is absent from cortex-executor — a chain
+# reaching the Wing or GDPR store through this token would make the caddy a
+# second, unaudited path into them.
+#
+# `jeff-cloud` gets NO such row: executing is local, but the ROWS come back
+# into the model's context, and for the cloud twin that is estate ontology
+# leaving the machine. One agent holds `exec`, and it is the local one.
+# Gate: tests/anatomy/test_exec_is_spendable.py.
+- name: "[pazny.wing] Reconverge API token — jeff (the caddy; cortex axes)"
+  ansible.builtin.command:
+    argv:
+      - php
+      - "{{ wing_app_dir }}/bin/provision-token.php"
+      - --db={{ wing_data_dir }}/wing.db
+      - --token={{ jeff_wing_api_token }}
+      - --name=jeff
+      - --scopes=wing.read
+      - --cortex-verbs=get,resolve,map,filter,rank,classify
+      - --cortex-namespaces=tax,rel
+      - --cortex-tenants=default
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_jeff_token
+  changed_when: >
+    'Created' in (_wing_jeff_token.stdout | default(''))
+    or 'Updated' in (_wing_jeff_token.stdout | default(''))
+  no_log: true
+
 - name: "[pazny.wing] Reconverge API token — librarian (cortex L2 knowledge judge)"
   # Judges the KEAP lint intake queue (overlap-review/near-duplicate pairs).
   # Client nos-librarian pre-provisioned in authentik_agent_clients; this adds
