@@ -469,6 +469,7 @@ nodes:
   "resource:backend-minimax": withheld
   "resource:backend-mistral-eu": withheld
   "resource:backend-ollama": withheld
+  "resource:backend-xai": withheld
   # The human channel a caddy holds (2026-08-31). Withheld with every other
   # tool node: which questions an agent may ask its operator is estate
   # mechanics, not a public claim.
