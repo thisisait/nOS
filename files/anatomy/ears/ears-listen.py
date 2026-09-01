@@ -49,6 +49,7 @@ playbook does it or the operator runs nos, with nothing in between.
 from __future__ import annotations
 
 import argparse
+import collections
 import datetime as dt
 import json
 import os
@@ -156,6 +157,13 @@ INPUT_GAIN = float(os.environ.get("EARS_INPUT_GAIN", "8"))
 #: and could not tell them WHAT it wrote, and that gap cost three
 #: fixes aimed at the wrong layer. Set 0 to keep nothing.
 RECENT_SEGMENTS = int(os.environ.get("EARS_RECENT_SEGMENTS", "8"))
+
+#: AUDIO KEPT BEFORE A SEGMENT STARTS. Without it a segment begins at the first
+#: chunk that crosses the threshold — which is the middle of the first word,
+#: because a word's attack ramps up from silence. The operator's symptom was
+#: exactly this: "long sentences get cut and a few words are missing on the
+#: continuing line". Half a second is cheap (16 kB) and covers a word onset.
+PRE_ROLL_CHUNKS = int(float(os.environ.get("EARS_PRE_ROLL", "0.5")) * 1000 / CHUNK_MS)
 
 #: DIAGNOSTIC ONLY, off by default: keep the last N segments as wav under
 #: ~/ears/debug/. It exists because the listener's stream CANNOT BE OBSERVED
@@ -350,6 +358,29 @@ def _transcribe_pcm(model, pcm: bytes) -> str:
         os.unlink(path)
 
 
+def _transcriber(model, jobs: "queue.Queue", results: "queue.Queue") -> threading.Thread:
+    """Transcribe off the segmentation loop.
+
+    MEASURED: this model runs at about ONE times realtime on a short segment
+    (3.6 s of audio took 3.36 s). With the transcription inline, the listener
+    stopped segmenting for the whole of it — the audio was safe in the capture
+    queue, but the backlog GREW for as long as anyone kept talking and the
+    silence timer ran on a wall clock that had moved on without it. One worker,
+    not a pool: segments must reach the turn in the order they were spoken.
+    """
+    def work() -> None:
+        while True:
+            job = jobs.get()
+            if job is None:
+                return
+            pcm, ended_at = job
+            results.put((_transcribe_pcm(model, pcm), pcm, ended_at))
+
+    t = threading.Thread(target=work, daemon=True)
+    t.start()
+    return t
+
+
 def _drain(proc: subprocess.Popen, sink: "queue.Queue[bytes]") -> threading.Thread:
     """Keep reading ffmpeg while the model is busy.
 
@@ -446,6 +477,10 @@ def _run_loop(args, daemon: bool) -> int:
 
     audio: "queue.Queue[bytes]" = queue.Queue()
     _drain(proc, audio)
+    jobs: "queue.Queue" = queue.Queue()
+    results: "queue.Queue" = queue.Queue()
+    _transcriber(model, jobs, results)
+    pre_roll: "collections.deque[bytes]" = collections.deque(maxlen=PRE_ROLL_CHUNKS)
 
     try:
         while True:
@@ -491,13 +526,10 @@ def _run_loop(args, daemon: bool) -> int:
                 last_prune = now
 
             level = rms(chunk)
-            # THE FLOOR IS LEARNED FROM SILENCE ONLY, and the first version was
-            # wrong in a way that only a long sentence reveals: it averaged the
-            # quiet half of the last six seconds, so during ten seconds of
-            # speech the "quiet half" IS speech. The floor climbed, the
-            # threshold with it, and the sentence cut itself into 1-3 s pieces —
-            # which is exactly the length at which this model starts answering
-            # in English. Measured: a 10 s utterance arriving as four fragments.
+            # THE FLOOR IS LEARNED FROM SILENCE ONLY. Averaging the quiet half
+            # of a rolling window let a long sentence raise its own threshold
+            # and cut itself into 1-3 s pieces — the length at which this model
+            # starts answering in English.
             if not speech or level < threshold:
                 floor.append(level)
                 if len(floor) > FLOOR_WINDOW:
@@ -508,48 +540,61 @@ def _run_loop(args, daemon: bool) -> int:
                     60.0, (sum(quiet) / len(quiet)) * SPEECH_OVER_FLOOR)
 
             if level >= threshold:
+                if not speech and pre_roll:
+                    # THE HALF SECOND BEFORE THE WORD STARTED, prepended once
+                    # when a segment opens. A segment that begins at the first
+                    # chunk over the threshold begins in the middle of a word.
+                    speech = b"".join(pre_roll)
+                    pre_roll.clear()
                 speech += chunk
                 quiet_chunks = 0
-                continue
-
-            done = None
-            if speech:
+            elif speech:
                 quiet_chunks += 1
-                if quiet_chunks < quiet_needed:
-                    speech += chunk
-                    continue
-                speech_at_cut = speech
+                speech += chunk
+                if quiet_chunks >= quiet_needed:
+                    # HANDED OFF, not transcribed here: the loop keeps
+                    # segmenting while the worker works, which is the point.
+                    jobs.put((speech, now))
+                    speech, quiet_chunks = b"", 0
+            else:
+                pre_roll.append(chunk)
+
+            # Finished transcriptions, in the order they were spoken.
+            done = None
+            while True:
+                try:
+                    text, seg_pcm, ended_at = results.get_nowait()
+                except queue.Empty:
+                    break
                 if DUMP_SEGMENTS:
                     dbg = HOME / "debug"
                     dbg.mkdir(parents=True, exist_ok=True)
                     with wave.open(str(dbg / f"seg{segments % DUMP_SEGMENTS}.wav"), "wb") as _w:
-                        _w.setnchannels(1); _w.setsampwidth(2); _w.setframerate(RATE)
-                        _w.writeframes(speech)
-                text = _transcribe_pcm(model, speech)
-                speech, quiet_chunks = b"", 0
+                        _w.setnchannels(1)
+                        _w.setsampwidth(2)
+                        _w.setframerate(RATE)
+                        _w.writeframes(seg_pcm)
                 segments += 1
-                last_segment_at = now
+                last_segment_at = ended_at
                 if args.verbose and text:
                     print(f"  … {text}", file=sys.stderr)
                 if RECENT_SEGMENTS:
-                    # AN EMPTY TRANSCRIPTION IS INFORMATION, and dropping it
-                    # emptied the window exactly when the operator most needed
-                    # it: `segments: 1, recent: []` says the ear triggered and
-                    # the model returned nothing, which is a different problem
-                    # from not triggering. The DURATION comes along so a 0.2 s
-                    # blip is not mistaken for a sentence.
-                    recent.append({"at": int(now), "text": text,
-                                   "secs": round(len(speech_at_cut) / (RATE * 2), 1)})
+                    # AN EMPTY TRANSCRIPTION IS INFORMATION: "1 segment, no
+                    # recent" says the ear triggered and the model returned
+                    # nothing, which is a different problem from not triggering.
+                    recent.append({"at": int(ended_at), "text": text,
+                                   "secs": round(len(seg_pcm) / (RATE * 2), 1)})
                     del recent[:-RECENT_SEGMENTS]
                 was_armed = turn.armed
-                done = turn.feed(text, now)
-                if not was_armed and not turn.armed:
-                    # HEARD AND NOT ADDRESSED. Counted, never stored: the count
-                    # is what tells the operator "the ear works, the phrase did
-                    # not match" instead of leaving silence to mean both. The
-                    # words themselves are the room's, and stay unrecorded.
+                finished = turn.feed(text, ended_at)
+                if finished:
+                    done = finished
+                elif not was_armed and not turn.armed:
+                    # HEARD AND NOT ADDRESSED. Counted, never stored: the words
+                    # are the room's.
                     wake_misses += 1
-            elif turn.armed:
+
+            if done is None and turn.armed and not speech:
                 if not daemon:
                     print(f"\r  armed · submitting in {turn.silence_left(now):4.1f}s ",
                           end="", file=sys.stderr)

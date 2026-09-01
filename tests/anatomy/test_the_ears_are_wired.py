@@ -207,6 +207,75 @@ def test_no_name_is_read_before_it_is_assigned_in_the_listen_loop():
         + "\n  ".join(early))
 
 
+def test_the_ear_keeps_listening_while_it_transcribes():
+    """Two defects the operator heard as "long sentences get cut and words go
+    missing on the continuing line", driven here without a microphone.
+
+    1. TRANSCRIPTION MUST NOT BLOCK SEGMENTATION. This model runs at about one
+       times realtime on a short segment, so an inline call stopped the loop
+       for as long as the speech lasted; the audio was safe in the capture
+       queue but the backlog grew for as long as anyone kept talking. One
+       worker, so segments still reach the turn in the order they were spoken.
+    2. A SEGMENT MUST NOT BEGIN AT THE THRESHOLD. A word's attack ramps up out
+       of silence, so a segment starting at the first loud chunk starts in the
+       middle of the first word. The pre-roll is the half second before it.
+    """
+    import collections
+    import importlib.util
+    import queue
+    import time
+
+    spec = importlib.util.spec_from_file_location("ears_listen", LISTENER)
+    ears = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ears)
+
+    chunk = b"\x10\x00" * 480
+
+    def first_segment_chunks(pre_roll_len):
+        pre = collections.deque(maxlen=pre_roll_len)
+        speech, quiet, out = b"", 0, []
+        for loud in [False] * 30 + [True] * 20 + [False] * 45:
+            if loud:
+                if not speech and pre:
+                    speech = b"".join(pre)
+                    pre.clear()
+                speech += chunk
+                quiet = 0
+            elif speech:
+                quiet += 1
+                speech += chunk
+                if quiet >= 40:
+                    out.append(len(speech) // 960)
+                    speech, quiet = b"", 0
+            else:
+                pre.append(chunk)
+        return out[0] if out else 0
+
+    assert ears.PRE_ROLL_CHUNKS > 0, "the pre-roll was removed"
+    assert (first_segment_chunks(ears.PRE_ROLL_CHUNKS)
+            - first_segment_chunks(0)) == ears.PRE_ROLL_CHUNKS, (
+        "the pre-roll no longer reaches the segment — the first word starts clipped")
+
+    jobs: queue.Queue = queue.Queue()
+    results: queue.Queue = queue.Queue()
+
+    class SlowModel:
+        def transcribe(self, path):
+            time.sleep(0.4)
+            return type("R", (), {"text": "ok"})()
+
+    ears._transcriber(SlowModel(), jobs, results)
+    started = time.time()
+    jobs.put((b"\x00\x00" * 16000, 1.0))
+    jobs.put((b"\x00\x00" * 16000, 2.0))
+    handed_off_in = time.time() - started
+    assert handed_off_in < 0.05, (
+        f"handing a segment to the transcriber blocked for {handed_off_in:.2f}s "
+        f"— the loop is transcribing inline again")
+    order = [results.get(timeout=10)[2] for _ in range(2)]
+    assert order == [1.0, 2.0], f"segments came back out of order: {order}"
+
+
 @pytest.mark.parametrize("switch", ["--on", "--off"])
 def test_the_microphone_has_exactly_one_switch(switch):
     """`ears_always_listen` + a converge, and nothing else.
