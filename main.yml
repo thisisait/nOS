@@ -2393,13 +2393,13 @@
       # to fix, one level up. Finding stale config is not an error; failing to
       # act on it is.
       failed_when: _stale_reload.rc | default(0) != 0
-      when: nos_docker_ready | default(false) | bool
+      when: nos_docker_ready | default(true) | bool
       tags: ['stacks', 'reload-config', 'always']
 
     - name: "[Stacks] Config-reload report"
       ansible.builtin.debug:
         msg: "{{ _stale_reload.stdout_lines | default(['(skipped — docker not ready)']) }}"
-      when: nos_docker_ready | default(false) | bool
+      when: nos_docker_ready | default(true) | bool
       tags: ['stacks', 'reload-config', 'always']
 
     # ──────────────────────────────────────────────────────────────────────────

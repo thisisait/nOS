@@ -320,3 +320,49 @@ Two recovery facts, both learned the slow way: the Loki ingester does not
 re-read the disk after it latches, and Alloy's `loki.write` client backs off
 permanently once refused. Freeing space changes nothing until **both** are
 restarted, in that order.
+
+## 8. A single-FILE bind mount does not survive an atomic replace
+
+MEASURED 2026-09-01, with a throwaway container rather than inferred:
+
+    docker run -d --name p -v "$T/f.txt:/f.txt:ro" alpine:3 sleep 600
+
+| what the host does | what the container sees |
+|---|---|
+| in-place write (`echo v2 > f.txt`) | `v2` — immediately |
+| atomic rename (`echo v3 > .tmp; mv .tmp f.txt`) | **`No such file or directory`** |
+| `docker restart p` | `v3` |
+
+A bind mount of a single file binds the **inode**. A rename puts a new inode at
+the path, and the container is left pointing at the old one — which is now
+unlinked, so the path answers ENOENT. Not stale content. **Gone.**
+
+This is not an edge case for us, it is the normal path: Ansible's `template:`
+and `copy:` write a temp file and rename it. So **every converge that changes
+the content of a bind-mounted config file breaks that mount** until the
+container is restarted. A directory mount is unaffected — the directory inode
+does not change — which is why this is invisible in most of the estate and why
+the config files rendered as single files are exactly where it bites.
+
+### 8.1 What it cost, and the shape worth carrying
+
+Loki's healthcheck is `loki -verify-config -config.file=/etc/loki/local-config.yaml`
+against such a mount. A one-line change to that file therefore did not degrade
+Loki — it made Loki *unable to answer whether it was healthy*, and the STRICT
+`wait-stacks-healthy` gate then held the converge at `8/9 ready FAILED: loki-1`.
+
+The reconciler that repairs this (`tools/reload-stale-config.py`) ran at the END
+of `main.yml`, after the health-wait. **So the run that caused the damage could
+never reach its own fix.** That is a deadlock, and it was invisible for as long
+as the rendered content never actually changed: the render reported `ok`, the
+mount stayed intact, and nothing was wrong. The first real content change
+surfaced all of it.
+
+The repair now runs inside `tasks/stacks/wait-stacks-healthy.yml` before the
+poll loop — one insertion point, because every bring-up flow routes through that
+file. Gate: `tests/anatomy/test_the_repair_runs_before_the_health_gate.py`.
+
+**Generalises to any ordering:** a step that repairs a condition must not sit
+behind the gate that condition fails. `docker restart` is enough — it re-binds;
+`--force-recreate` is not required, which is worth knowing because reaching for
+the bigger hammer here would recreate containers on every config edit.
