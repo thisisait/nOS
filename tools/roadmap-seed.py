@@ -830,6 +830,51 @@ row("sec-prefix-gate-flaps", "The weak-prefix gate refuses, then passes, with no
          "underneath a run is the first hypothesis to kill. Second: the resolution path "
          "itself, since a `{{ vars }}` eager-resolve is already a known trap here and an "
          "empty result is exactly what this assert would see.")
+row("caddy-exec-tool", "The primary tool should be `exec`, and its input a nos-lang sentence",
+    "2026-09-01", "next", "cortex", parent="local-llm-voice",
+    refs="files/anatomy/wing/app/AgentKit/Tools/ · state/schema/agent.schema.yaml (tool enum) · docs/idea/02-cortex-lang.md",
+    body="OPERATOR DIRECTION 2026-09-01: prefer tools over free prose — a 1B model that can "
+         "call tools is now plausible — and make the PRIMARY one `exec`, whose argument is a "
+         "cortex-lang sentence. That inverts today's shape, where an agent reaches for "
+         "mcp-wing-read and composes a REST call by guessing, which is exactly what produced "
+         "the invented endpoint in caddy-entity-resolve. One tool with a typed language "
+         "behind it is a smaller surface than a family of tools with free-text paths. "
+         "WHAT IT COSTS, and none of it is new machinery: a Tool class beside the eight that "
+         "exist, its id in the agent.schema.yaml enum, its scopes, and a route to the "
+         "executor that ALREADY validates and gates (CortexBindingGate, three-axis scoped "
+         "tokens). The tool adds no capability — that is the test it must pass. "
+         "TWO REFUSALS BUILT IN FROM THE START, or it becomes the thing 02-cortex-lang "
+         "rejects: (1) an error may not enumerate. `unknown_operand` must not list the "
+         "operands that would have worked, or `exec` becomes a query interface for the "
+         "estate's contents by failure. (2) a mutating chain still meets the confirm gate; "
+         "`exec` is not a way around the gate, it is a way TO it. "
+         "AND THE SMALL VERSION FIRST: before the tool exists, give the agent the contract it "
+         "was missing — a read-only search over the OpenAPI summaries. That is ~40 lines and "
+         "closes the measured 404; `exec` is the shape we want, not the fix we owe today.")
+
+row("face-collab", "One surface for talking to agents, and it has to be Tauri-shaped",
+    "2026-09-01", "next", "face", parent="face",
+    refs="docs/idea/07-face.md · face-conversation · face-tauri · files/anatomy/face/src/lib/apps/native/",
+    body="OPERATOR DIRECTION 2026-09-01: the main communication channel — conversation with "
+         "agents, state-of-the-art generative UI, a debug/admin mode — and Tauri-compatible "
+         "from the start so the same code is both the Svelte web desktop and a native nOS "
+         "app once the Apple identity exists. Working name `collab`; the estate names face "
+         "apps for what they do, so the name is the cheapest decision here and should not "
+         "hold anything up. "
+         "WHAT IS ALREADY DECIDED AND MUST NOT BE RE-OPENED CASUALLY: the conversation is "
+         "ROWS, not scrollback (face-conversation), so the chat and the training corpus are "
+         "one artifact; generative UI is a CLOSED VOCABULARY of view components the model "
+         "SELECTS and parameterises, never markup it authors — a model that can emit HTML "
+         "can emit a login form; and Q15 stands, so the chat may DISPLAY an agent question "
+         "and hand off to Wing /inbox rather than answering in place. "
+         "TAURI-SHAPED MEANS ONE THING IN PRACTICE: no browser-only assumptions on the path "
+         "that matters — no reliance on a browser session for identity, no cookies as the "
+         "only credential, and every long operation resumable, because the transaction the "
+         "operator wants can pause for a day (see the saga discussion in local-llm-voice). "
+         "A debug/admin mode is a VIEW over what is already recorded — sessions, chains, "
+         "validator verdicts, ratings — not a second store; the estate has paid for a second "
+         "copy of a truth before.")
+
 row("ext-contract", "What an nOS extension in another repo would have to be",
     "2026-08-31", "queued", "platform",
     refs="docs/doctrine/cross-repo-contracts.md · tools/cortex-drift.py · docs/tier2-app-onboarding.md",
@@ -1216,9 +1261,24 @@ row("caddy-entity-resolve", "Resolve the entity by fanning out read-only chains,
          "candidates carry a code-checkable property (exists / resolves / is in scope), "
          "which they do, so prefer the checker; (3) the fan-out's ceiling, because N "
          "speculative queries per spoken sentence on a box that already starved a validator "
-         "with one 32B model is a measurement, not a default. NOT BEING BUILT YET, and the "
-         "spec lives in this row rather than in docs/idea/ — that directory is at 24 of its "
-         "ceiling of 20 already.")
+         "with one 32B model is a measurement, not a default. "
+         "FIRST EVIDENCE, 2026-09-01, from the first real turn: asked for open security "
+         "findings, qwen3:14b invented `GET /api/v1/security/findings/open/count`, took the "
+         "404 and said so. The answer it needed EXISTS AND IS DESCRIBED — `GET "
+         "/api/v1/remediation` (?status, ?severity, ?component) — in a contract the agent "
+         "was never given. Until now this row was an argument; that 404 is the measurement. "
+         "AND THE INDEX TO BUILD ON IS NOT THE GENOME. Checked the same day: the genome is a "
+         "SCHEMA plus codegen — entity = six components, ONE organelle (data-table), and "
+         "ZERO files carrying an entity block. It shares a vocabulary, it stores nothing, so "
+         "a resolver over it would query an empty table. What IS populated and machine-"
+         "readable: files/anatomy/skills/contracts/wing.openapi.yml (98 paths, 117 "
+         "operations, 117 of them with a written summary) plus bone.openapi.yml; the KEAP "
+         "taxonomy and relations, which are the only two namespaces cortex-lang declares "
+         "`resolved` and therefore the only two a broad query may touch without becoming the "
+         "enumeration oracle 02-cortex-lang refuses; the 18 DataTable definitions, all "
+         "anchored; and state/manifest.yml. Four probes, all read-only, all already written "
+         "down by something else. NOT BEING BUILT YET, and the spec lives in this row rather "
+         "than in docs/idea/ — that directory is at 24 of its ceiling of 20 already.")
 
 row("local-llm-lfm25", "Benchmark LFM2.5-2.6B as the emitter", _TNI, "queued", "agents",
     parent="local-llm-model", refs="technosideas/lfm25-26b.md",
