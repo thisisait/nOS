@@ -265,8 +265,9 @@ organs:
   voice:     { title: "The Voice",     tells: "Mail, calls and signals, spoken from home.",   limb: right, order: 4 }
 
 # -----------------------------------------------------------------------------
-# NODE RULINGS — all 208 nodes the artifact carries today. 63 atoms
-# publish; 145 nodes are withheld. For a published atom, the `speaks:`
+# NODE RULINGS — all 251 nodes the artifact carries today. 63 atoms
+# publish; 188 nodes are withheld. (The prose said 208/145 while the table
+# held 250/187 — counted, not copied, 2026-09-01.) For a published atom, the `speaks:`
 # phrase is the ONLY text that leaves for that node — read each one as the
 # sentence a stranger will see.
 # -----------------------------------------------------------------------------
@@ -475,6 +476,11 @@ nodes:
   # mechanics, not a public claim.
   "resource:ask-operator": withheld
   "resource:bash-read-only": withheld
+  # Which committed contracts an agent may search is estate mechanics (2026-09-01).
+  "resource:contract-search": withheld
+  # That the caddy can run one cortex-lang sentence is a fact about the door,
+  # and a door is not a thing to publish (2026-09-01).
+  "resource:exec": withheld
   "resource:mcp-bone": withheld
   "resource:mcp-keap": withheld
   "resource:mcp-loop": withheld

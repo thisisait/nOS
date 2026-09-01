@@ -4,15 +4,15 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 251,
-    "edges": 280,
+    "nodes": 253,
+    "edges": 283,
     "nodes_pulse": 30,
     "nodes_judge": 5,
     "nodes_gateset": 4,
     "nodes_weakness": 7,
     "nodes_daemon": 14,
     "nodes_service": 64,
-    "nodes_resource": 17,
+    "nodes_resource": 19,
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 55,
@@ -20,7 +20,7 @@
     "nodes_doctrine": 13,
     "nodes_faceapp": 5,
     "nodes_agent": 14,
-    "edges_data": 197,
+    "edges_data": 200,
     "edges_trigger": 37,
     "edges_temporal": 5,
     "edges_mutex": 21,
@@ -99,6 +99,8 @@
       "backend_declared": true,
       "tools": [
         "ask-operator",
+        "contract-search",
+        "exec",
         "mcp-wing-read"
       ],
       "anchor": "02.02.09",
@@ -114,6 +116,7 @@
       "backend_declared": true,
       "tools": [
         "ask-operator",
+        "contract-search",
         "mcp-wing-read"
       ],
       "anchor": "02.02.09",
@@ -1890,11 +1893,23 @@
       "anchor": "02.02.06",
       "description": "Agent tool 'bash-read-only' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
     },
+    "resource:contract-search": {
+      "kind": "resource",
+      "source": "derived from agent tools",
+      "anchor": "02.02.06",
+      "description": "Agent tool 'contract-search' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
+    },
     "resource:cortex_token_ro": {
       "kind": "resource",
       "source": "derived from judge-sets requires",
       "anchor": "02.02.06",
       "description": "Capability resource 'cortex_token_ro' — required by judges, satisfied or not, never exclusive"
+    },
+    "resource:exec": {
+      "kind": "resource",
+      "source": "derived from agent tools",
+      "anchor": "02.02.06",
+      "description": "Agent tool 'exec' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
     },
     "resource:keap_token_ro": {
       "kind": "resource",
@@ -3566,11 +3581,32 @@
       "derived": "agent-tools"
     },
     {
+      "from": "resource:contract-search",
+      "to": "agent:jeff",
+      "kind": "data",
+      "via": "tool grant `contract-search` declared in files/anatomy/agents/jeff/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
+      "from": "resource:contract-search",
+      "to": "agent:jeff-cloud",
+      "kind": "data",
+      "via": "tool grant `contract-search` declared in files/anatomy/agents/jeff-cloud/agent.yml tools[]",
+      "derived": "agent-tools"
+    },
+    {
       "from": "resource:cortex_token_ro",
       "to": "judge:cortex-corpus-diff",
       "kind": "data",
       "via": "capability requirement (judge-sets requires:) — satisfied or not, never exclusive",
       "derived": "judge-sets.requires"
+    },
+    {
+      "from": "resource:exec",
+      "to": "agent:jeff",
+      "kind": "data",
+      "via": "tool grant `exec` declared in files/anatomy/agents/jeff/agent.yml tools[]",
+      "derived": "agent-tools"
     },
     {
       "from": "resource:keap_token_ro",
