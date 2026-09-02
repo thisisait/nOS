@@ -93,6 +93,33 @@ plugin manifest to carry `depends_on:`).
 
 `alloy` is L2: it ships everything and nothing consumes it.
 
+## 5b. Enforcement: stopping is not deleting
+
+One flag guards two risks. `tasks/stacks/prune-disabled.yml` behind
+`prune_disabled_overrides` does both:
+
+    file: state: absent   on the compose fragment   — the converge can no longer recreate it
+    docker rm -f          on the container          — gone, with its logs
+
+So the SAFE half is gated behind the DANGEROUS half's permission, and with the
+flag off — the only setting a profile run can use — nothing enforces the
+declaration at all. MEASURED 2026-09-02: `install_gitlab: false` in config.yml,
+and a reboot brought GitLab back, because nothing had stopped it.
+
+Split them:
+
+| declared off | action | reversible | gate |
+|---|---|---|---|
+| service is not in the enabled set | `docker stop` | yes | none — always runs |
+| operator removed it deliberately | fragment + `rm -f` | no | explicit, per run |
+
+`restart: unless-stopped` is what makes this work and it is already on every
+container: an explicitly stopped container **stays stopped across a reboot**.
+Stopping is therefore durable, cheap and undoable, and needs no permission flag.
+
+`prune_disabled_overrides` then guards only deletion, which is what its name
+says, and the enabled set is enforced on every converge instead of never.
+
 ## 6. Order of work
 
 1. `organ` into `state/manifest.yml`; apex reads it.
