@@ -6,40 +6,40 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-09-01 • The caddy can run a sentence, not only propose one.
+> Last updated: 2026-09-02 • Big review of the two-week window; first fees paid.
 
 ## Now (current track)
 
-**Voice → caddy → AgentKit → cortex, joined 2026-09-01.** The loop the estate
-had all the pieces for and no wire between: a spoken turn reaches an agent, the
-agent runs one cortex-lang sentence, and the answer comes back as prose the
-operator hears and rates.
+**2026-09-02 review verdict (6-agent pass over ~490 commits).** Paid same-day:
+speech.py's MUTATING gate that never existed, the `ears_always_listen` no-op
+flag (six surfaces), the menubar badge sampling 60 rows as a count, the
+transcriber thread dying silently, loop-pr's orphaned worktree entries, the
+doctrine README's four missing rows. Open, in priority order:
 
-| what | finding | now |
-| --- | --- | --- |
-| `exec` | shipped complete, gated, **unspendable** — no agent token carried a cortex axis | `jeff` minted all three; gate `test_exec_is_spendable.py` |
-| the invented endpoint | qwen3:14b called `/api/v1/security/findings/open/count`, 404 | `contract-search` over the two committed OpenAPI files |
-| `?ref=` | the face built it, `InboxPresenter` did not take it — Nette drops it silently | `renderDefault($ref)`; gate `test_the_offer_lands_somewhere.py` |
-| `status: asked` | a declared status **nothing ever wrote**, so the inbox hand-off could not appear | `caddy.py::pending_question`, None ≠ False |
-| `style: chat` | face rendered it, KEAP's zod refused it | shipped engine-side (KEAP v1.41+); `tools/view-contract-drift.py` agrees |
+1. **No green Integration exists for dev HEAD.** Master's red run
+   (`ef2088bc`) was DNS/edge; the fix branch's NEXT run failed on a new
+   preflight (`install_authentik: false` vs 7 forward-auth routes). Dev pushes
+   run the light lane only — the next dev→master PR fails until this is fixed.
+2. **Prune `stop` is ungated on unauthored disablements** (operator call —
+   see Operator to-dos).
+3. **`agentkit.md` doctrine is the most expensive unwritten file:** ~25
+   commits since 08-19 decided ad-hoc what it would pin (tool-mediation, scope
+   vocabulary, backend naming, vault resolution, ceremony satisfaction).
+   Draft it `proposed`, like organs.md.
+4. **Roadmap table undercounts shipped work:** no rows for xAI backend,
+   dev-minimal, host-organ OTel, hub honesty; `ears-app-bundle` row framing
+   ("no speech in it") predates a working ASR path.
+5. Doctrine splits owed: loops.md (518 lines) + foreign-properties.md (414)
+   → index + companions; secrets/observability duplicate one paragraph.
 
-One fee paid: [43](hidden_fees/43-a-tool-with-no-door.md) — three declarations
-in three languages, each internally consistent, none compared to another.
-
-**Deleted rather than defended:** `parseChain` (~55 lines parsing a JSON shape
-`caddy.py` has never written), the `surface` argument nobody asked for, and a
-`StaticIndex` docblock claiming a second consumer that did not exist.
-
-**One operator act blocks the converge:** `git -C ~/keap/src push origin dev
---follow-tags` — v1.42.0 is committed and tagged LOCALLY, and
-`roles/pazny.keap` clones from GitHub, so the pin bump fails at clone until the
-tag is pushed. That is deliberate: it fails loudly at a named step rather than
-deploying 1.41 and letting zod strip the style in silence.
-
-**Next:** (1) converge — the mint, the KEAP re-seed and the first real `exec`
-call are all on the far side of one. (2) `caddy-entity-resolve` probe 2, but
-measure whether cortex's own `resolve` verb already covers the taxonomy half.
-(3) the four security items below, unchanged.
+**Voice → caddy → AgentKit → cortex, joined 2026-09-01.** Five wires fixed
+(exec spendable, contract-search, `?ref=`, `status: asked`, `style: chat` —
+each with its gate), fee [43](hidden_fees/43-a-tool-with-no-door.md) paid.
+KEAP v1.42.0 is tagged AND pushed (verified 09-02 — the "operator act blocks
+the converge" line here was already stale a day later). **Next:** (1) converge
+— the mint, the KEAP re-seed and the first real `exec` call sit on its far
+side. (2) `caddy-entity-resolve` probe 2 — measure whether cortex's own
+`resolve` verb covers the taxonomy half first.
 
 ## Open follow-ups
 

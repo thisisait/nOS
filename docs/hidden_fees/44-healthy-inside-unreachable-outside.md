@@ -1,4 +1,4 @@
-# 43 — Healthy inside, unreachable from the host
+# 44 — Healthy inside, unreachable from the host
 
 **Paid:** twice in one day — 2026-09-01 evening and 2026-09-02 morning, ~40
 minutes each, both spent proving the estate was fine.
