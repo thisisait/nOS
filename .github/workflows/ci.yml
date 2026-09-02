@@ -689,7 +689,7 @@ jobs:
           echo "-- wing route, verbose (an outpost 404 has a branded body) --"
           curl -skv --max-time 10 https://wing.dev.local/ 2>&1 | tail -40 || true
           echo "-- 10-oidc-apps re-apply, exit code NOT swallowed --"
-          docker compose -p infra exec -T authentik-worker \
+          docker compose -p infra exec -T -u root authentik-worker \
             ak apply_blueprint /blueprints/custom/10-oidc-apps.yaml || echo "APPLY FAILED rc=$?"
           echo "-- applications Authentik holds --"
           docker compose -p infra exec -T authentik-server \

@@ -13,7 +13,10 @@
 
 - name: "[Verify] Read the Applications Authentik actually holds"
   ansible.builtin.uri:
-    url: "https://{{ authentik_domain | default('auth.' ~ (tenant_domain | default('dev.local'))) }}/api/v3/core/applications/?page_size=300"
+    # Loopback, not the domain: a CI runner has no DNS for the tenant TLD
+    # (the smoke's loopback retry is what makes its authentik row green), and
+    # this reader must not fail on transport while measuring content.
+    url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/core/applications/?page_size=300"
     headers:
       Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
     validate_certs: false
