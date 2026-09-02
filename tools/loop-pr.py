@@ -728,6 +728,10 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
     finally:
         _git("worktree", "remove", "--force", str(tree), check=False)
         shutil.rmtree(work, ignore_errors=True)
+        # remove can fail (lock contention with an interactive session) while
+        # rmtree still deletes the directory — prune sweeps the orphaned
+        # .git/worktrees entry that combination would otherwise accrete forever.
+        _git("worktree", "prune", check=False)
 
 
 def main() -> int:
