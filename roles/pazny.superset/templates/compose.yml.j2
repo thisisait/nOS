@@ -9,11 +9,11 @@
 
 services:
   superset:
-    # Build context is playbook_dir/files/superset — stays there so files/
+    # Build context is nos_main_checkout/files/superset — stays there so files/
     # keeps being the source-of-truth for overrideable Dockerfiles. The BASE
     # arg lets the role's superset_version default drive the upstream tag.
     build:
-      context: {{ playbook_dir }}/files/superset
+      context: {{ nos_main_checkout }}/files/superset
       dockerfile: Dockerfile
       args:
         BASE: "apache/superset:{{ superset_version | default('6.0.0-dev') }}"

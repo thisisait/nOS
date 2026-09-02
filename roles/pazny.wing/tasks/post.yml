@@ -451,7 +451,7 @@
     # environment that no longer reads them — visible to `ps -E` for the life of
     # the task, for nothing. Removed rather than left as harmless: an unused
     # secret in flight is still a secret in flight.
-    NOS_PLAYBOOK_DIR: "{{ playbook_dir }}"
+    NOS_PLAYBOOK_DIR: "{{ nos_main_checkout }}"
     NOS_AUTHENTIK_DOMAIN: "{{ authentik_domain | default('auth.' ~ (tenant_domain | default('dev.local'))) }}"
     NOS_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
     NOS_GLOBAL_PASSWORD_PREFIX: "{{ global_password_prefix }}"

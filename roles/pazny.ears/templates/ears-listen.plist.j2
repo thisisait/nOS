@@ -64,7 +64,7 @@
         <key>EARS_AUTORUN</key>
         <string>{{ '1' if (ears_autorun | default(true) | bool) else '' }}</string>
         <key>NOS_REPO_ROOT</key>
-        <string>{{ playbook_dir }}</string>
+        <string>{{ nos_main_checkout }}</string>
         <!-- The launcher needs these to VALIDATE and to RECORD. Absent, it says
              so in its `gaps` rather than reporting a chain as fine or a session
              as written — an unvalidated chain must never read as a valid one. -->

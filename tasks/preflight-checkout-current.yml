@@ -103,3 +103,46 @@
       not compared ({{ _ckt[0] | default('unknown') }}) — no upstream to be behind
       {% endif %}
   tags: ['always', 'preflight']
+
+# ── Which checkout does the ESTATE run from? ──────────────────────────────────
+#
+# MEASURED 2026-09-02: all 24 repo-pathed Pulse jobs — ten of them agent runs —
+# pointed at a worktree on a feature branch, because the catalog stores an
+# absolute playbook_dir and the last converge to touch it wins. The same path is
+# baked into the launchd plists, including wing's NOS_REPO_ROOT, which is the
+# root AgentKit agents WRITE into.
+#
+# So a converge writes two kinds of path, and only one of them may be this tree:
+#   used during THIS run    playbook_dir       correct — you are converging here
+#   PERSISTED past the run  nos_main_checkout  the estate's code, not a branch
+#
+# --path-format=absolute is load-bearing: without it git answers --git-common-dir
+# relatively from a worktree and the dirname lands somewhere else entirely. With
+# it the expression needs no worktree/main branching — a main checkout resolves
+# to its own root.
+- name: "[preflight] Resolve the main checkout the estate should run from"  # noqa: command-instead-of-module
+  ansible.builtin.command:
+    cmd: git rev-parse --path-format=absolute --git-common-dir
+    chdir: "{{ playbook_dir }}"
+  register: _ckt_common
+  changed_when: false
+  failed_when: false
+  tags: ['always', 'preflight']
+
+- name: "[preflight] Set nos_main_checkout"
+  ansible.builtin.set_fact:
+    # Not a git repo (tarball install) → this tree IS the estate's checkout.
+    nos_main_checkout: >-
+      {{ (_ckt_common.stdout | trim | dirname)
+         if _ckt_common.rc | default(1) == 0 and (_ckt_common.stdout | trim) != ''
+         else playbook_dir }}
+  tags: ['always', 'preflight']
+
+- name: "[preflight] Persisted paths point at the main checkout"
+  ansible.builtin.debug:
+    msg: >-
+      converging {{ playbook_dir }}; the estate's scheduled work and agents are
+      pinned to {{ nos_main_checkout }}
+      {%- if nos_main_checkout != playbook_dir %} (this is a WORKTREE — Pulse
+      jobs and launchd will NOT be re-pointed here){% endif %}
+  tags: ['always', 'preflight']
