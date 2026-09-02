@@ -1,0 +1,66 @@
+---
+# ── Verify: every forward-auth route has an Application behind it ─────────────
+#
+# MEASURED on CI run 33651218229 (2026-09-02): the blueprint apply is
+# best-effort twice over (`|| true` + `failed_when: false`), and nothing ever
+# read back whether the providers exist. The run finished green through the
+# playbook while the embedded outpost answered its own 404 on all seven
+# forward-auth routes. Success markers are written by a READER — this is it.
+#
+# Blueprint engine only: under engine=tofu the apply path owns its own
+# verification (plan/destroy-guard). The applier stays best-effort by design;
+# this reader is where the truth lands.
+
+- name: "[Verify] Read the Applications Authentik actually holds"
+  ansible.builtin.uri:
+    url: "https://{{ authentik_domain | default('auth.' ~ (tenant_domain | default('dev.local'))) }}/api/v3/core/applications/?page_size=300"
+    headers:
+      Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
+    validate_certs: false
+    status_code: [200]
+  register: _verify_ak_apps
+  when:
+    - install_authentik | default(false) | bool
+    - install_traefik | default(true) | bool
+    - (authentik_engine | default('blueprint')) != 'tofu'
+    - nos_docker_ready | default(true)
+  tags: ['always', 'verify']
+
+- name: "[Verify] Every forward-auth route resolves to an Application slug"
+  ansible.builtin.assert:
+    that:
+      - _verify_missing | length == 0
+    fail_msg: |
+      {{ _verify_missing | length }} forward-auth route(s) have NO Application
+      in Authentik — the outpost will answer its own 404 on each:
+
+        {{ _verify_missing | join(', ') }}
+
+      The blueprint apply is best-effort and its failure is invisible; re-run
+      it and read its output:
+        {{ docker_bin | default('docker') }} compose -p infra exec authentik-worker \
+          ak apply_blueprint /blueprints/custom/10-oidc-apps.yaml
+    success_msg: >-
+      {{ _verify_routes | length }} forward-auth route(s), every one backed by
+      an Application.
+  vars:
+    # Route ids come from the rendered router file (preflight derivation);
+    # slugs use dashes where manifest ids use underscores, and Tier-2 rows
+    # carry an `app:` prefix — normalize both sides before comparing.
+    _verify_routes: >-
+      {{ (_nos_gated_without_authentik | default([]))
+         | difference(['traefik-dashboard']) }}
+    _verify_slugs: >-
+      {{ (_verify_ak_apps.json.results | default([]))
+         | map(attribute='slug') | map('replace', '_', '-') | list }}
+    _verify_missing: >-
+      {{ _verify_routes
+         | map('replace', 'app:', '') | map('replace', '_', '-')
+         | difference(_verify_slugs) }}
+  when:
+    - install_authentik | default(false) | bool
+    - install_traefik | default(true) | bool
+    - (authentik_engine | default('blueprint')) != 'tofu'
+    - nos_docker_ready | default(true)
+    - _verify_ak_apps.json is defined
+  tags: ['always', 'verify']

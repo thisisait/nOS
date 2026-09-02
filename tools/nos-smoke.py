@@ -172,6 +172,12 @@ def evaluate_when(expr: str | None, vars_dict: dict) -> bool:
     if not expr:
         return True
     s = expr.strip()
+    # Compound AND, recursively — the cortex-executor row declared
+    # `install_wing and install_keap` and the permissive fallback ran it
+    # anyway: a 502 on every host with KEAP off, CI and fresh macOS alike
+    # (measured on run 33651218229). OR stays unsupported -> permissive.
+    if " and " in s and " or " not in s:
+        return all(evaluate_when(part, vars_dict) for part in s.split(" and "))
     if s.lower() in ("true", "yes", "1"):
         return True
     if s.lower() in ("false", "no", "0"):
