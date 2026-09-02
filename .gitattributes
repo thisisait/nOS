@@ -1,0 +1,7 @@
+# Derived artifacts: parallel agents regenerate these, so a content merge is
+# noise — any resolution is wrong until tools/anatomy-graph-gen.py reruns, and
+# test_anatomy_graph_is_sound.py refuses a stale artifact either way.
+# One-time setup (like the pre-push hook): git config merge.regen.driver true
+# Unconfigured, git falls back to a normal text merge — a loud conflict, safe.
+files/anatomy/face/src/lib/anatomy/anatomy-graph.json merge=regen
+state/anatomy-graph.json merge=regen
