@@ -187,7 +187,11 @@ still be a leaf. If the derived answer is unwelcome, the correct response is to
 argue with the edges, not to overrule the arithmetic.
 
 **Measured 2026-08-07 (R2).** The prediction held, and it brought two more with
-it. The census is L0 3 · L1 4 · L2 19 · L3 0 · withheld 38:
+it. The census then was L0 3 · L1 4 · L2 19 · L3 0 · withheld 38 — a dated
+sample, not a number to carry: the survey wave since moved it (organs.md §
+records L0 9 · L1 11 · L2 39 · withheld 6 on 2026-09-01), and the current
+answer is the graph's, not this paragraph's. The rows below stay because the
+*arguments* are what this section teaches:
 
 | service | §3 says | derives | why |
 |---|---|---|---|

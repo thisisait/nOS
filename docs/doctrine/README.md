@@ -32,6 +32,10 @@ than kept as a rule that only ever reports its own defeat.)
 | [face-app-tiers.md](face-app-tiers.md) | face-app `form` + build-complexity (F1–F4/H) axes | ✅ v1 |
 | [generative-ui.md](generative-ui.md) | a model FILLS a declarative render contract, never extends one: `TableView` twice at a repo boundary, one narrowing door, an action catalog that stays code; deterministic first, generation design-time; and the two rules a learning loop needs (it may not grade its own offers, and it proposes rather than applies) | ✅ v1 |
 | [loops.md](loops.md) | the sequence axis: SERE + the nOS loop proper as verified Mermaid — every edge marked live/partial/target, the refusals, the missing-edge ranking, edge gates | ✅ v1 |
+| [identity.md](identity.md) | the declared account roster is the one source; a realm's admin/allowlist is a projection of it; presence checked both directions (MISSING / UNDECLARED / `?`) | ✅ v1 |
+| [security-floor.md](security-floor.md) | severity picks what is noticed now; what a row is *blocked on* picks whether a release boundary means anything to it — three lanes, four refused designs logged | ✅ v1 |
+| [ponytail.md](ponytail.md) | the 7-rung ladder answered before code is written; deliberate shortcuts carry a `# ponytail:` marker harvested by `/ponytail-debt` | ✅ v1 |
+| [organs.md](organs.md) | four incompatible meanings of "organ" named; proposes the 3-axis fix (`stack`/`organ`/`layer`) — §3 awaits the operator's ruling | proposed |
 | table-naming.md | DB table / column naming conventions | planned |
 | taxonomy.md | taxonomy / ontology term definitions (KEAP taxonomy depth levels, node/pillar/block, relations — NOT the service `layer` L0–L3 axis, which layers.md owns) | planned |
 | operator-model.md | the operator's five steps + who may decide what without them | live |
