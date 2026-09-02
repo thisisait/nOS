@@ -30,7 +30,12 @@ from collections import Counter
 import pytest
 
 
-HARD_FAIL = {"404", "500", "502", "503", "ERR", "000"}
+#: A service answered and answered wrongly. Routing drift.
+HARD_FAIL = {"404", "500", "502", "503"}
+#: Nothing answered. curl reports 000 whether the estate is down or Docker's
+#: host->container forwarding is (fee 43) — from the host those are the same
+#: string, so this is UNREACHABLE, never drift.
+UNREACHABLE = {"000", "ERR"}
 OK_STATUSES = {"200", "301", "302", "307", "401", "403"}
 
 # Mirror HubPresenter's backend-only set so the gate audits exactly what /hub
@@ -112,6 +117,7 @@ def test_no_hard_404_in_hub_systems():
     assert systems, "no systems returned"
 
     bad: list[tuple[str, str, str]] = []
+    unreachable: list[tuple[str, str, str]] = []
     counter: Counter[str] = Counter()
     for s in systems:
         sid = str(s.get("id", "?"))
@@ -124,11 +130,27 @@ def test_no_hard_404_in_hub_systems():
         counter[code] += 1
         if code in HARD_FAIL:
             bad.append((sid, code, url))
+        elif code in UNREACHABLE:
+            unreachable.append((sid, code, url))
 
     print(f"\n  status distribution: {dict(counter)}")
+
+    # Everything unreachable is a transport verdict, not N service verdicts.
+    # Report it and SKIP: this gate audits routing, and from the host it cannot
+    # see routing through a forwarder that is not forwarding.
+    if unreachable and not bad:
+        names = ", ".join(sid for sid, _, _ in unreachable[:6])
+        pytest.skip(
+            f"{len(unreachable)} of {sum(counter.values())} unreachable from the "
+            f"host ({names}) — no service answered, so this cannot distinguish "
+            f"drift from Docker's forwarder (fee 43). Ask a container instead: "
+            f"docker exec <peer> curl -sk -H 'Host: <domain>' https://infra-traefik-1/")
+
     if bad:
         lines = "\n".join(f"    {sid:24s} [{code}] {url}" for sid, code, url in bad)
-        pytest.fail(f"\n{len(bad)} hard failures (404/5xx) — auto-wiring drift:\n{lines}")
+        extra = (f"\n  ({len(unreachable)} more were UNREACHABLE — not counted as drift)"
+                 if unreachable else "")
+        pytest.fail(f"\n{len(bad)} hard failures (404/5xx) — auto-wiring drift:\n{lines}{extra}")
 
 
 def test_hub_systems_table_is_not_stale():

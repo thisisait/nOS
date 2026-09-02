@@ -805,7 +805,7 @@ def render_table(results: list[ProbeResult], failed_only: bool = False) -> str:
             continue
         e = r.entry
         expect_str = ",".join(str(x) for x in (e["expect"] if isinstance(e["expect"], list) else [e["expect"]]))
-        got = str(r.status) if r.status is not None else "DEAD"
+        got = str(r.status) if r.status is not None else "UNREACH"
         flag = "✅" if r.ok else "❌"
         row = (
             e["id"],
@@ -1038,13 +1038,25 @@ def main() -> int:
     else:
         print(render_table(results, failed_only=args.failed_only))
         ok = sum(1 for r in results if r.ok)
-        bad = len(results) - ok
+        # A probe that got no answer at all is UNREACHABLE, not a service that
+        # answered wrongly. From the host those look identical and are not:
+        # Docker's forwarder fails while every service is healthy (fee 43).
+        unreach = sum(1 for r in results if not r.ok and r.status is None)
+        bad = len(results) - ok - unreach
         print()
-        summary = "%d / %d OK  ·  %d failed" % (ok, len(results), bad)
-        if bad == 0:
+        summary = "%d / %d OK  ·  %d failed  ·  %d unreachable" % (
+            ok, len(results), bad, unreach)
+        if bad == 0 and unreach == 0:
             print(COLOR["green"] + "✅ " + summary + COLOR["reset"])
         else:
             print(COLOR["red"] + "❌ " + summary + COLOR["reset"])
+        if unreach and not bad:
+            print(COLOR["red"] + "   NOTHING ANSWERED on %d probe(s) — no service "
+                  "reported a status, so this is a TRANSPORT verdict, not %d "
+                  "broken services." % (unreach, unreach) + COLOR["reset"])
+            print("   Ask a container before believing the host (fee 43):")
+            print("     docker exec devops-gitea-1 curl -sk -o /dev/null -w '%{http_code}\\n' \\")
+            print("       -H 'Host: <domain>' https://infra-traefik-1/")
 
     # ── JSONL persistence ──────────────────────────────────────────────────
     if not args.no_jsonl:
