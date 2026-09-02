@@ -26,7 +26,13 @@ services:
       - {{ onlyoffice_data_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/data') }}:/var/www/onlyoffice/Data
       - {{ onlyoffice_logs_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/logs') }}:/var/log/onlyoffice
       - {{ onlyoffice_lib_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/lib') }}:/var/lib/onlyoffice
-      - {{ onlyoffice_db_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/db') }}:/var/lib/postgresql
+      # NAMED VOLUME, not a bind mount — the pazny.mariadb precedent for the
+      # same VirtioFS layer. Measured 2026-09-02 after Docker 29.7.2: VirtioFS
+      # presents a host dir as owned by the ASKING uid, so the embedded
+      # postgres saw root and refused ("Data directory ... must not be owned by
+      # root") — 31 restarts, never started. A named volume routes I/O through
+      # Docker's own filesystem, where ownership is real.
+      - onlyoffice_db:/var/lib/postgresql
     environment:
       # ── JWT (API autentizace pro Nextcloud/Outline/BookStack) ─────────────
       JWT_ENABLED: "{{ onlyoffice_jwt_enabled | default(true) | string | lower }}"
@@ -57,3 +63,9 @@ services:
         max-file: "5"
     mem_limit: {{ onlyoffice_mem_limit | default(docker_mem_limit_critical | default('2g')) }}
     cpus: {{ onlyoffice_cpus | default(docker_cpus_standard | default('1.0')) }}
+
+# Named volume declaration — Compose merges per-file `volumes:` blocks, so this
+# sits alongside the ones from the b2b base file and other role overrides.
+volumes:
+  onlyoffice_db:
+    name: onlyoffice_db       # explicit name so it survives `compose -p b2b down` without --volumes
