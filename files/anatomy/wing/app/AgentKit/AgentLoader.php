@@ -154,6 +154,7 @@ final class AgentLoader
 		$maxIterations = 3;
 		$gateset = null;
 		$deliverableEvent = null;
+		$deliverableFiledByRunner = false;
 		if (!empty($raw['outcomes'])) {
 			// THE ORACLE IS MANDATORY. An outcome loop with no gate set has
 			// nothing to ask but the model that produced the work.
@@ -189,6 +190,17 @@ final class AgentLoader
 						. 'type this ceremony has to file before a gate set may certify it'
 					);
 				}
+				// filed_by: runner — the f1ddef96 shape for a ceremony with no
+				// write plane: the model writes the report, the RUNNER files it
+				// (conductor could otherwise never satisfy: system.md forbids the
+				// POST its own manifest demanded, measured session 11f550ec).
+				$filedBy = is_array($deliverable) ? ($deliverable['filed_by'] ?? 'agent') : 'agent';
+				if (!in_array($filedBy, ['agent', 'runner'], true)) {
+					throw new AgentLoadException(
+						"outcomes.deliverable.filed_by must be 'agent' or 'runner'; got '{$filedBy}'"
+					);
+				}
+				$deliverableFiledByRunner = ($filedBy === 'runner');
 			}
 			$maxIterations = (int) ($raw['outcomes']['max_iterations'] ?? 3);
 			if ($maxIterations < 1 || $maxIterations > 10) {
@@ -310,6 +322,7 @@ final class AgentLoader
 			maxOutputTokens: $maxOutputTokens,
 			gateset: $gateset,
 			deliverableEvent: $deliverableEvent,
+			deliverableFiledByRunner: $deliverableFiledByRunner ?? false,
 			mode: (string) $mode,
 			oneShotSchema: $oneShotSchema,
 		);

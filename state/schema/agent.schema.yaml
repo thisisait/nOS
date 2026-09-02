@@ -193,6 +193,15 @@ properties:
             description: |
               The event TYPE this ceremony must have filed, keyed to its own
               session, before the gate set may certify it.
+          filed_by:
+            type: string
+            enum: [agent, runner]
+            description: |
+              Who writes the owed event. `agent` (default): the ceremony files
+              it through a write tool. `runner`: the model has NO write plane —
+              the runner files each iteration's final text (f1ddef96 shape;
+              conductor was otherwise unsatisfiable, session 11f550ec). The
+              reader still reads it back and satisfaction still needs the gates.
 
               MEASURED 2026-08-29 (session 53de6409): the surveyor passed both
               judges and was `outcome_satisfied` having posted nothing. The gate

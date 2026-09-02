@@ -952,6 +952,22 @@ final class Runner
 				'grader.rubric_path' => $agent->rubric?->sourcePath ?? '',
 			]);
 
+			// filed_by: runner — the model has no write plane, so the RUNNER
+			// files its report as the owed event (f1ddef96 shape). The reader
+			// below still reads it BACK from the table, still refuses empty,
+			// and the gate set still has to pass — filing is not satisfying.
+			if ($agent->deliverableFiledByRunner && $agent->deliverableEvent !== null
+					&& trim($finalText) !== '') {
+				$this->audit->emit(
+					$agent->deliverableEvent,
+					$sessionUuid,
+					$resolvedActor,
+					null,
+					['report' => $finalText, 'filed_by' => 'runner', 'iteration' => $iteration],
+					$traceId,
+				);
+			}
+
 			// The verdict. Everything below only records or explains it.
 			$verdict = $oracle->judge($iteration, (string) $agent->gateset, $finalText);
 			$result = $verdict['satisfied'] ? 'satisfied' : 'needs_revision';

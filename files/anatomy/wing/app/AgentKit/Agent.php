@@ -95,6 +95,7 @@ final class Agent
 		 * work is an artifact, and it must EXIST, keyed to this session.
 		 */
 		public readonly ?string $deliverableEvent = null,
+		public readonly bool $deliverableFiledByRunner = false,
 		/**
 		 * 'loop' (tool-use / outcome, the default) or 'one_shot': bind, ONE
 		 * call, validate the emitted chain against $oneShotSchema, record.

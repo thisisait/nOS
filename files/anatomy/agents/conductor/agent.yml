@@ -29,6 +29,10 @@ outcomes:
   # filed nothing at all.
   deliverable:
     event: conductor_report
+    # system.md forbids this ceremony a write plane, so the RUNNER files the
+    # report (measured 2026-09-02: both iterations passed the gates and could
+    # not satisfy — the owed event had no author).
+    filed_by: runner
   # the self-test reads the estate; nos-smoke + corpus-diff are what it claims about.
   gateset: live
   rubric_path: rubric.md

@@ -85,6 +85,11 @@ binding gates 1–8 in its header), `docs/ait-runtime-architecture.md` (the essa
   `af908a30`).
 - The filing obligation goes in the TASK — the task is the turn the model
   answers, not line 175 of system.md (`c8ee8ebe`).
+- A ceremony with NO write plane declares `deliverable.filed_by: runner`: the
+  model writes, the RUNNER files (the `f1ddef96` shape). The reader still reads
+  the event back, still refuses empty, and the gates still decide — filing is
+  not satisfying. Added 2026-09-02: conductor owed an event its own system.md
+  forbade it to write, and passed its gates twice unsatisfiable.
 - An unrunnable judge is not failed work: peak 0 → `indeterminate`, and
   iteration-0 indeterminate stops the loop (`7b60d9ad`). Repair is
   deterministic parser → ONE format-only re-ask → UNPARSEABLE, always stamping
