@@ -46,7 +46,7 @@ REPO_WORDING = pathlib.Path(
                    pathlib.Path(__file__).resolve().parent / "wording.yml"))
 
 #: Opcodes that change something. Kept in sync with the cortex registry's
-#: `effect` field by the gate, not by memory.
+#: `mutating` flags by tests/anatomy/test_speech_mutating_matches_registry.py.
 MUTATING = {"link", "insert", "update", "delete", "preserve", "route", "review",
             "delegate"}
 
