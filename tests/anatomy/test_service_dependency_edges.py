@@ -122,11 +122,10 @@ REFUSED = {
 PEER_SERVICE_PLUGINS = ("woodpecker-base", "portainer-base")
 
 #: Identifiers referenced in committed code and DEFINED IN NO config source.
-#: `install_redis` is why the OnlyOffice Redis block has never rendered; the
-#: other two surfaced from the same sweep and were unreported by R1.
+#: `install_redis` once sat here (why the OnlyOffice Redis block never
+#: rendered) — repaired to `redis_docker` in b87770a2/e6341230, so the two
+#: rows left are the sweep's remaining unrepaired finds.
 PHANTOM_FLAGS = {
-    # The Kuma monitor was repaired to `redis_docker` (2026-09-01); OnlyOffice
-    # stays pinned because flipping it starts Redis for a live service.
     "freepbx_lan_access": ("roles/pazny.freepbx/templates/compose.yml.j2",),
     "sso_autologin_min_tier_2": (),
 }
