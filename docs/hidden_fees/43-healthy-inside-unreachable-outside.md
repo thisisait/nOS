@@ -65,3 +65,20 @@ Environment when observed: macOS 26.6.1 (25G76), Docker 29.4.2, VM cap
 reachable service as drift. Unreachable and 404 are different facts; the smoke
 makes the same conflation. Neither should report an estate fault for a
 transport failure they can distinguish with one extra call.
+
+## Resolved 2026-09-02 — by a version, not a restart
+
+Docker 29.4.2 → **29.7.2** (macOS 26.6.1 → 26.6.2 in the same sitting). Smoke
+went 3/16 → **16/16**, `https://pazny.eu/` → 200, and the two ports that had
+stayed dark through a restart the night before answered immediately:
+
+    traefik    :8082/ping     000  ->  200
+    prometheus :9090/-/healthy 000  ->  200
+
+The restart on 2026-09-01 cleared it; the restart on 2026-09-02 did not. Only
+the upgrade did. So "restart Docker" is not the remedy — it was a coincidence
+the first time, and reaching for it again cost the second session.
+
+What stays true regardless of the version: from the host, a transport failure
+and a broken service produce the same string, and only the container can tell
+them apart.
