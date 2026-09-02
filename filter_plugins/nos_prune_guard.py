@@ -110,7 +110,13 @@ def nos_prune_plan(disabled, on_disk_flags, overrides, containers):
     containers    -- [running container names]
 
     Returns {"unauthored": [...], "unauthored_destructive": [...],
-             "indeterminate": [...], "fragments": [...], "containers": [...]}.
+             "indeterminate": [...], "fragments": [...], "containers": [...],
+             "stop": [...]}.
+
+    `stop` is every off-at-run-time service's running containers, authored or
+    not. Stopping is reversible and survives a reboot via
+    `restart: unless-stopped`, so it is returned even on a refusal — the
+    refusal guards DELETION.
 
     `unauthored_destructive` non-empty means REFUSE: the caller must not act on
     `fragments` or `containers`, which are returned empty in that case so a
@@ -186,7 +192,13 @@ def nos_prune_plan(disabled, on_disk_flags, overrides, containers):
         return fragments, sorted(
             {c for c in containers if any(p.match(c) for p in wanted)})
 
-    # An un-authored disablement only matters if obeying it would destroy
+    # STOPPING IS NOT DELETING, so the two sets are computed apart.
+    # `stop` covers every service that is off at run time, authored or not:
+    # `docker stop` is reversible, and `restart: unless-stopped` keeps it
+    # stopped across a reboot, so it needs neither a toggle nor a refusal.
+    _, stoppable = _select(disabled)
+
+    # An un-authored disablement only matters if obeying it would DESTROY
     # something. Attribute first, then measure the radius.
     destructive = [s for s in unauthored if _select([s])[0]]
     if destructive:
@@ -196,6 +208,7 @@ def nos_prune_plan(disabled, on_disk_flags, overrides, containers):
             "indeterminate": indeterminate,
             "fragments": [],
             "containers": [],
+            "stop": stoppable,
         }
 
     fragments, doomed = _select(authored)
@@ -205,6 +218,7 @@ def nos_prune_plan(disabled, on_disk_flags, overrides, containers):
         "indeterminate": indeterminate,
         "fragments": fragments,
         "containers": doomed,
+        "stop": stoppable,
     }
 
 

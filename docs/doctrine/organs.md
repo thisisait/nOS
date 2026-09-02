@@ -95,8 +95,8 @@ plugin manifest to carry `depends_on:`).
 
 ## 5b. Enforcement: stopping is not deleting
 
-One flag guards two risks. `tasks/stacks/prune-disabled.yml` behind
-`prune_disabled_overrides` does both:
+SHIPPED 2026-09-02. Before the split, one flag guarded two risks —
+`tasks/stacks/prune-disabled.yml` did both behind `prune_disabled_overrides`:
 
     file: state: absent   on the compose fragment   — the converge can no longer recreate it
     docker rm -f          on the container          — gone, with its logs
@@ -117,15 +117,16 @@ Split them:
 container: an explicitly stopped container **stays stopped across a reboot**.
 Stopping is therefore durable, cheap and undoable, and needs no permission flag.
 
-`prune_disabled_overrides` then guards only deletion, which is what its name
-says, and the enabled set is enforced on every converge instead of never.
+The flag is now `uninstall_disabled_services` and guards only deletion, which
+is what its name says. The enabled set is enforced on every converge instead
+of never. A config.yml still carrying the retired name is REFUSED, not ignored.
 
 ## 6. Order of work
 
 1. `organ` into `state/manifest.yml`; apex reads it.
 2. `default:` into `state/manifest.yml`; gate it against the graph.
 3. `config.yml` additive; drop the 30 no-ops and the 2 `false`.
-4. Delete `prune_disabled_overrides` and `profiles/dev-minimal.yml`.
+4. Delete `profiles/dev-minimal.yml` (the enforcement split shipped 2026-09-02).
 5. Plugin manifests for ears, iiab_terminal, opencode.
 6. Decide the sink class: refuse it as edges the way exporters are refused, or accept 4 more default-on.
 7. Agent forge to Gitea (`tools/loop-review.py`).

@@ -83,12 +83,12 @@ def test_removal_is_opt_in_and_the_report_is_not(tasks) -> None:
     assert remove, "no removal task — the fee stays unpaid"
 
     report_when = str(report[0].get("when", ""))
-    assert "prune_disabled_overrides" not in report_when, (
+    assert "uninstall_disabled_services" not in report_when, (
         "the REPORT is gated on the opt-in flag. Then nothing is louder until "
         "someone already knew to look, which is the defect this closes."
     )
     remove_when = str(remove[0].get("when", ""))
-    assert "prune_disabled_overrides" in remove_when, (
+    assert "uninstall_disabled_services" in remove_when, (
         "the removal is NOT gated. Every resolved-disabled service would be "
         "torn down on the first converge after this lands; the estate's "
         "destructive-op doctrine is report first, act on an explicit token."
@@ -97,8 +97,8 @@ def test_removal_is_opt_in_and_the_report_is_not(tasks) -> None:
 
 def test_the_flag_is_declared_and_defaults_to_false(tasks) -> None:
     cfg = CONFIG.read_text(encoding="utf-8")
-    m = re.search(r"^prune_disabled_overrides:\s*(\S+)", cfg, re.M)
-    assert m, "prune_disabled_overrides is not declared in default.config.yml"
+    m = re.search(r"^uninstall_disabled_services:\s*(\S+)", cfg, re.M)
+    assert m, "uninstall_disabled_services is not declared in default.config.yml"
     assert m.group(1) == "false", (
         "the default flipped to true. That is the intended END state, but it "
         "must be a deliberate change with the operator seeing the list first — "
