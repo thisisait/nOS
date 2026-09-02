@@ -3,8 +3,8 @@
 #
 # tools/devlog-render.py turns docs/devlog/nos-core/**/*.md into a static
 # site (index + per-entry pages + RSS). Deployment is Actions-artifact ONLY —
-# never enable "Pages from branch /docs" (docs/index.html is a separate
-# hand-made dashboard and must not collide). One-time operator step:
+# never enable "Pages from branch /docs" (docs/ carries operator pages
+# like overview.html and the devlog site must not collide with them). One-time operator step:
 # repo Settings → Pages → Source = GitHub Actions.
 # Doctrine: docs/devlog/README.md § Pipeline.
 # =============================================================================

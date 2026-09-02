@@ -1,7 +1,8 @@
 """Anatomy CI gate — a declared toggle must gate something.
 
 MEASURED 2026-09-01: 2 of 93 install_*/configure_* flags had no consumer.
-`install_cask_apps` was rendered as a toggle in docs/index.html while the cask
+`install_cask_apps` was rendered as a toggle in the (since-deleted legacy)
+docs/index.html while the cask
 loop ran unconditionally; `install_engineering_apps` named three CAD apps that
 had no cask list. Both closed — the first `when:`-gated, the second deleted.
 
@@ -68,8 +69,8 @@ def test_no_toggle_is_a_promise_with_nothing_behind_it():
     dead = [f for f in _flags() if seen[f] == 0]
     assert not dead, (
         f"{len(dead)} toggle(s) in default.config.yml gate nothing. Setting "
-        f"one changes no behaviour, while the config — and possibly "
-        f"docs/index.html — presents it as a choice:\n  " + "\n  ".join(dead)
+        f"one changes no behaviour, while the config "
+        f"presents it as a choice:\n  " + "\n  ".join(dead)
         + "\n\nEither gate something on it (a `when:` is usually enough) or "
           "delete it. install_cask_apps was the first kind, "
           "install_engineering_apps the second.")
