@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nOS — system overview</title>
+<style>
+  /* Hand-written. Terminal-density over decoration; no framework, no JS.
+     Dark only, deliberately — this is an operator surface, not a brand. */
+  :root{
+    --bg:#0b0e13; --panel:#10151d; --line:#232b38; --fg:#c9d4e3;
+    --dim:#7a8699; --green:#7ee787; --amber:#e3b341; --red:#f47067;
+    --cyan:#79c0ff; --mag:#d2a8ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--fg);
+    font:13px/1.55 ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    padding:0 0 6rem}
+  a{color:var(--cyan);text-decoration:none}
+  a:hover{text-decoration:underline}
+  header{padding:2.2rem 2rem 1.2rem;border-bottom:1px solid var(--line)}
+  header h1{font-size:1.15rem;font-weight:600;letter-spacing:.04em}
+  header h1 b{color:var(--green)}
+  header p{color:var(--dim);margin-top:.35rem;max-width:72ch}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 2rem}
+  /* tabs: three radios, pure CSS */
+  input[name=tab]{display:none}
+  nav{display:flex;gap:0;border-bottom:1px solid var(--line);margin-top:1rem}
+  nav label{padding:.55rem 1.1rem;color:var(--dim);cursor:pointer;
+    border:1px solid transparent;border-bottom:none;user-select:none}
+  nav label:hover{color:var(--fg)}
+  #t1:checked~.wrap nav label[for=t1],
+  #t2:checked~.wrap nav label[for=t2],
+  #t3:checked~.wrap nav label[for=t3]{
+    color:var(--green);border-color:var(--line);background:var(--panel);
+    border-radius:6px 6px 0 0}
+  .tab{display:none;padding-top:1.6rem}
+  #t1:checked~.wrap #tab1,#t2:checked~.wrap #tab2,#t3:checked~.wrap #tab3{display:block}
+  h2{font-size:.95rem;color:var(--amber);margin:1.8rem 0 .6rem;
+    text-transform:uppercase;letter-spacing:.08em}
+  h2:first-child{margin-top:0}
+  p.note{color:var(--dim);max-width:78ch;margin:.3rem 0 .8rem}
+  table{border-collapse:collapse;width:100%;margin:.4rem 0 1rem}
+  th,td{border:1px solid var(--line);padding:.35rem .6rem;text-align:left;
+    vertical-align:top}
+  th{color:var(--dim);font-weight:600;background:var(--panel)}
+  td b{color:var(--fg);font-weight:600}
+  .k{color:var(--cyan)} .g{color:var(--green)} .a{color:var(--amber)}
+  .r{color:var(--red)} .m{color:var(--mag)} .d{color:var(--dim)}
+  pre{background:var(--panel);border:1px solid var(--line);border-radius:6px;
+    padding:.9rem 1.1rem;overflow-x:auto;margin:.4rem 0 1rem;line-height:1.5}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 2rem}
+  @media(max-width:820px){.cols{grid-template-columns:1fr}}
+  .tag{display:inline-block;border:1px solid var(--line);border-radius:4px;
+    padding:0 .4rem;color:var(--dim);font-size:.85em}
+  .tag.live{color:var(--green);border-color:#2ea04366}
+  .tag.tgt{color:var(--amber);border-color:#e3b34166}
+  footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--line);
+    color:var(--dim)}
+</style>
+</head>
+<body>
+
+<input type="radio" name="tab" id="t1" checked>
+<input type="radio" name="tab" id="t2">
+<input type="radio" name="tab" id="t3">
+
+<div class="wrap">
+<header>
+  <h1><b>nOS</b> — one machine, a whole self-hosted estate</h1>
+  <p>An Ansible playbook converges source into a running estate: ~50 FOSS
+     services, four host organs, an agent runtime, and the loops that let the
+     system improve itself. This page is the bird's-eye view — every figure
+     that moves lives in a reader, not here.
+     <span class="tag live">live</span> = running today ·
+     <span class="tag tgt">target</span> = designed, not yet closed.</p>
+  <nav>
+    <label for="t1">1 · convergence</label>
+    <label for="t2">2 · organs &amp; systems</label>
+    <label for="t3">3 · loops</label>
+  </nav>
+</header>
+
+<!-- ══════════════════ TAB 1 — CONVERGENCE ══════════════════ -->
+<section class="tab" id="tab1">
+
+<h2>The one rule</h2>
+<p class="note">The repo is the <b>source</b>; the estate runs from elsewhere
+(<span class="k">~/stacks</span>, launchd organs, <span class="k">~/wing</span>).
+A converge — <span class="g">ansible-playbook main.yml</span> — is the only
+thing that moves source into runtime. A git ref answers “what is in the repo”,
+never “what is running”; the two differ routinely and on purpose.</p>
+
+<h2>Configuration — later overrides earlier</h2>
+<pre>
+default.config.yml      every variable, committed defaults   (~94 install_* toggles)
+default.credentials.yml every secret as a template, committed
+config.yml              the operator's overrides, gitignored  ← the estate's real flags
+credentials.yml         the operator's secrets, gitignored
+-e extra-vars           highest precedence, this run only     (profiles live here)
+</pre>
+<p class="note">Consequence: a flag read from the default alone is not the flag
+the estate uses — ask <span class="k">tools/estate-status.py --config &lt;flag&gt;</span>
+for the resolved value. Two path vocabularies in one run:
+<span class="k">playbook_dir</span> for <i>this run</i>,
+<span class="k">nos_main_checkout</span> for anything that must
+<i>outlive</i> it (Pulse jobs, launchd plists) — so a converge from a worktree
+never re-points the estate at a feature branch.</p>
+
+<h2>What a converge does, in order</h2>
+<pre>
+preflight   checkout current? main-checkout resolved? forward-auth has an
+            Authentik behind it? docker actually answers?
+platform    resolve macOS/Linux differences (pkg mgr, service mgr, edge proxy)
+host        Homebrew · dotfiles · SSH · runtimes · organs (launchd/systemd)
+core-up     <b>infra + observability stacks — always required, always first</b>
+            then DB setup, Authentik blueprints/tofu, Infisical, Portainer
+configs     Traefik routes (derived from the manifest) · dashboards · scrapes
+stack-up    the remaining stacks, parallel by default, STRICT health wait —
+            every container must reach healthy; a skip is not a pass
+post        service-side SSO wiring · registries · GDPR records
+verify      readers check the run's EFFECTS (a success marker is written by
+            a reader, never by the code that attempted the work)
+smoke       one HTTP probe per service, catalog-gated, honest about UNKNOWN
+</pre>
+
+<h2>The nine compose stacks</h2>
+<table>
+<tr><th>stack</th><th>carries</th></tr>
+<tr><td><b>infra</b></td><td>MariaDB · PostgreSQL · Redis · Portainer · <b>Traefik (edge)</b> · <b>Authentik (SSO)</b> · Infisical (vault) · Bluesky PDS</td></tr>
+<tr><td><b>observability</b></td><td>Grafana · Prometheus · Loki · Tempo · InfluxDB — Alloy feeds all three signals</td></tr>
+<tr><td><b>iiab</b></td><td>Nextcloud · WordPress · n8n · Node-RED · Kiwix · Jellyfin · Open WebUI · <b>KEAP (cortex)</b> · Vaultwarden · ntfy · Home Assistant · RustFS · face · …</td></tr>
+<tr><td><b>apps</b></td><td>manifest apps — one YAML file each, GDPR block mandatory (Documenso · 2FAuth · Qdrant · Roundcube)</td></tr>
+<tr><td><b>devops</b></td><td>Gitea · Woodpecker CI · code-server · Paperclip <span class="d">(GitLab exists, declared off)</span></td></tr>
+<tr><td><b>b2b</b></td><td>FreeScout · Outline · HedgeDoc · BookStack · Firefly III · euro-office (OnlyOffice fork)</td></tr>
+<tr><td><b>voip / engineering / data</b></td><td>FreePBX · QGIS Server · Metabase · Superset</td></tr>
+</table>
+
+<h2>Declared off ≠ deleted</h2>
+<pre>
+install_x: false   →  docker stop        reversible · every converge · ungated
+uninstall flag on  →  fragment + rm      permanent · deliberate · gated
+removal ladder     →  nos --remove=none|data|deep|all   (dry-run without --confirm)
+</pre>
+<p class="note">A stopped container stays stopped across reboot
+(<span class="k">restart: unless-stopped</span>); host daemons get the same
+split via launchd <span class="k">disable</span>.
+<span class="tag tgt">target</span> for daemons, <span class="tag live">live</span>
+for containers.</p>
+
+<h2>Gates</h2>
+<p class="note">~4,600 pytest gates pin shape; <span class="k">--tags verify</span>
+owns effects; <span class="k">nos-smoke --strict</span> owns end-to-end truth.
+Every gate is retro-verified against its own broken state — a gate never seen
+red is not a gate. A release tag refuses to push onto a red trunk.</p>
+
+</section>
+
+<!-- ══════════════════ TAB 2 — ORGANS & SYSTEMS ══════════════════ -->
+<section class="tab" id="tab2">
+
+<h2>Three axes, one map</h2>
+<pre>
+stack   where it runs          infra · iiab · devops · … · <i>null = the host itself</i>
+organ   what it is for         spine · wits · archive · senses · voice · ledger
+                               forge · reflexes · gatehouse · commons
+layer   what breaks without it L0 substrate · L1 platform · L2 application
+                               (derived from dependency edges; withheld &gt; guessed)
+</pre>
+<p class="note">Axes classify <i>nouns</i>; the two planes (tab 3) classify
+<i>verbs</i>. One word never carries two meanings — that rule was paid for
+three times (<span class="k">tier</span>, <span class="k">organ</span>,
+<span class="k">runner_status</span>).</p>
+
+<h2>Host organs — the anatomy</h2>
+<table>
+<tr><th>organ</th><th>is</th><th>speaks</th></tr>
+<tr><td><b>Bone</b></td><td>FastAPI bridge between runs and state; audit + notification door</td><td>HTTP :8099, HMAC-signed events</td></tr>
+<tr><td><b>Wing</b></td><td>Nette/PHP dashboard + state store (<span class="k">wing.db</span>) + AgentKit runtime</td><td>HTTP :9000 behind forward-auth</td></tr>
+<tr><td><b>Pulse</b></td><td>scheduled-job daemon — fires every nightly ceremony</td><td>polls Wing for due jobs, posts run start/finish</td></tr>
+<tr><td><b>Cortex</b> (daemon)</td><td>reasoning organ: validates ontology-typed chains before anything executes</td><td>loopback Node, <span class="k">/agent/v1/validate</span></td></tr>
+<tr><td><b>KEAP</b> (cortex, Docker)</td><td>the knowledge layer: curated taxonomy, capture queue, agent knowledge API — <b>the estate's only memory</b></td><td><span class="k">/agent/v1</span>, scope-split bearer tokens</td></tr>
+<tr><td><b>Ears</b></td><td>speech ingress — ASR feeds the caddy <span class="tag live">live</span>, always-listen <span class="tag tgt">target</span></td><td>host audio → text → agent task</td></tr>
+<tr><td><b>Face</b></td><td>web desktop (SvelteKit, vendored) — windows over every service, anatomy views</td><td>BFF is an allow-list projection, never a proxy</td></tr>
+</table>
+<p class="note">Veins = Bone↔Wing HTTP + callback telemetry. Tendons =
+per-plugin lifecycle wiring (77 plugins autowire SSO, dashboards, notifications,
+pulse jobs). Nerves = the agent feedback loops in tab 3.</p>
+
+<h2>Identity — one gatehouse</h2>
+<pre>
+Authentik (SSO)  cookie on .&lt;tld&gt; → one login for the whole estate
+  native_oidc    the app itself speaks OIDC        Grafana · Gitea · Nextcloud · …
+  header_oidc    outpost forwards Remote-User      per-user identity, no app client
+  forward_auth   pure access gate                  Wing · Kiwix · ntfy · …
+RBAC             four tiers (admin → guest) as Authentik groups, per-plugin declared
+machine identity agent:&lt;name&gt; OAuth clients — scopes minted per run, never shared
+secrets          Infisical (infra) · Vaultwarden (people) · ~/.nos/secrets.yml (resolved)
+</pre>
+
+<h2>Agents — AgentKit</h2>
+<pre>
+one runner door   run-agent.sh → session row opens BEFORE the model runs
+tools             scope names the verb (wing.read ≠ wing.write) · grants from
+                  MEASURED use · no forge tool — a session that can push
+                  could merge itself
+backends          adapter (protocol) ≠ backend (endpoint row) · 8 fail-closed
+                  binding gates · EU-residency is a per-agent Article-30 fact
+satisfaction      written by a GATE RUN, never a model — “a ceremony that
+                  filed nothing is not satisfied”
+lineage           one join key: run_id = session uuid = actor_action_id →
+                  every event, token bill and trace reconstructs from one SELECT
+</pre>
+
+<h2>Edge &amp; public</h2>
+<p class="note">Traefik is the one edge (80/443), routes derived from the
+manifest — no per-service proxy config. What the estate shows strangers is a
+<b>signed projection</b>: the apex ruling names every field VERBATIM /
+TRANSFORMED / WITHHELD, the build halts on an unruled field, and an agent may
+add rows but never sign — an amended-after-signing digest is the system
+working.</p>
+
+</section>
+
+<!-- ══════════════════ TAB 3 — LOOPS ══════════════════ -->
+<section class="tab" id="tab3">
+
+<h2>Two planes</h2>
+<pre>
+SERE        the estate improves ITSELF     weakness → proposal → judged MR → converge
+nos-loop    the estate does the WORK       operator/tenant tasks through the same organs
+</pre>
+
+<h2>A day in the estate</h2>
+<pre>
+night   Pulse fires the ceremonies: security scans · drift plans · backups ·
+        taxonomy upkeep · agent runs — every one a session with a bill
+        <span class="d">rc=0 clean · rc=findings — a detector that found something has NOT failed</span>
+morning tools/red-status.py — red is a STATE, not a notification stream;
+        an unreadable source reports UNKNOWN, never green
+always  tools/nos-cc.sh — every tmux pane re-runs a reader; a tailed log
+        looks healthy right up until its writer stops
+</pre>
+
+<h2>The improvement loop (SERE)</h2>
+<pre>
+ weakness sources        propose            judge                land
+ ┌──────────────┐   ┌─────────────┐   ┌──────────────┐   ┌────────────────┐
+ │ scans · fees │ → │ agent writes│ → │ 3 × YES:     │ → │ merge → trunk  │
+ │ gates · drift│   │ a real diff │   │ CI on the sha│   │ → converge →   │
+ │ graph reports│   │ (no judge   │   │ judges passed│   │ the estate     │
+ │ contradiction│   │  self-vote) │   │ THIS diff    │   │ runs it        │
+ └──────────────┘   └─────────────┘   │ MR carries it│   └────────────────┘
+                                      └──────────────┘
+ <span class="d">every NODE is gated; the EDGES are the frontier — a human was silently
+ the edge until the first unattended night proved it</span>
+</pre>
+
+<h2>The ceremony loop (one agent run)</h2>
+<pre>
+task → iterations (bounded) → gate run decides → deliverable EVENT filed
+  ↑         │                     │                    │
+  │         └ grader feedback     └ unrunnable judge   └ absence unmakes
+  │           only steers           = indeterminate,     satisfaction
+  │           revision              never "failed"
+  └ operator answers land through ask-operator, priced like everything else
+</pre>
+
+<h2>What keeps the loops honest</h2>
+<table>
+<tr><th>principle</th><th>enforced by</th></tr>
+<tr><td>absence is never success</td><td>readers report UNKNOWN; smoke gates evaluate or refuse</td></tr>
+<tr><td>a detector reads the artifact, not the prose</td><td>gates render templates, run SQL, ask <span class="k">--json</span></td></tr>
+<tr><td>success markers are written by readers</td><td><span class="k">--tags verify</span> · post-apply API read-backs</td></tr>
+<tr><td>figures move → ask, don't copy</td><td><span class="k">red-status</span> · <span class="k">rem-status</span> · <span class="k">agent-status</span> · <span class="k">estate-status</span> · <span class="k">graph-report</span> · …</td></tr>
+<tr><td>destructive acts are the operator's</td><td>dry-run defaults · confirm gates · signed rulings</td></tr>
+</table>
+
+<h2>Where it is heading <span class="tag tgt">target</span></h2>
+<p class="note">The closed loop: the conductor runs the ceremonies on cadence
+with no human edge; proposals flow from every weakness source; the code graph
+answers “what breaks if I change this”; and the same organs serve tenant
+business logic — one estate that maintains itself and does the work, every
+byte local, every action attributed.</p>
+
+</section>
+
+<footer>
+  <p>Hand-written overview · sources: CLAUDE.md + docs/doctrine/ (public) ·
+  no live estate values on this page — the readers own those.</p>
+</footer>
+</div>
+</body>
+</html>
