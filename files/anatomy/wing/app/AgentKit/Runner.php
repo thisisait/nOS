@@ -961,7 +961,7 @@ final class Runner
 				$this->audit->emit(
 					$agent->deliverableEvent,
 					$sessionUuid,
-					$resolvedActor,
+					$actorId,
 					null,
 					['report' => $finalText, 'filed_by' => 'runner', 'iteration' => $iteration],
 					$traceId,
