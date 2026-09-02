@@ -45,7 +45,14 @@ export const GET: RequestHandler = async ({ locals }) => {
 	}
 
 	try {
-		const raw = (await wingNotifications({ limit: '60' })) as {
+		// unread_only is the server-side isUnreadWork (unread AND not
+		// superseded), so the badge counts the whole unread set — the previous
+		// `limit: 60` with no filter was a sample of the newest 60 rows
+		// presented as a count, and an old unread CRITICAL fell off it
+		// silently past 60 total notifications (2026-09-02).
+		// ponytail: exact up to 500 unread rows, a floor beyond — revisit if
+		// the inbox ever legitimately holds more unread work than that.
+		const raw = (await wingNotifications({ unread_only: '1', limit: '500' })) as {
 			notifications?: Record<string, unknown>[];
 		};
 		const notes = (raw.notifications ?? []).map(projectNotification);

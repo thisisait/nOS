@@ -36,7 +36,7 @@ export interface SystemStatus {
 	never: number;
 	/** Unread wing-inbox notifications at high/critical severity. */
 	alerts: number;
-	/** Notifications that claim a dispatch AND record an error for it. */
+	/** Unread-work notifications that claim a dispatch AND record an error for it. */
 	contested: number;
 	/** Bone answered its liveness probe. `null` = not checked this cycle. */
 	boneAlive: boolean | null;
