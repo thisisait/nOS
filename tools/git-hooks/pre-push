@@ -29,6 +29,54 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 		continue
 	fi
 
+	# A release tag needs a green trunk. Cut on red at v0.10 AND v0.11
+	# (fee 39): the checklist said "check CI", nothing enforced it. Fail
+	# CLOSED — no gh, no runs, or any failure on the tagged commit refuses.
+	# Loud bypass: NOS_TAG_RED_OK=1 git push origin v<x>. (--no-verify works
+	# too, but skips every check, not just this one.)
+	case "$remote_ref" in
+		refs/tags/v*)
+			tag="${remote_ref#refs/tags/}"
+			if [[ "${NOS_TAG_RED_OK:-}" == "1" ]]; then
+				echo "⚠ $tag pushed with NOS_TAG_RED_OK=1 — the CI gate was bypassed" >&2
+				continue
+			fi
+			# Annotated tags push the TAG OBJECT sha; gh knows only commits.
+			commit=$(git rev-parse "${local_sha}^{commit}" 2>/dev/null || echo "")
+			verdict=$("${NOS_TAG_GATE_GH:-gh}" run list --commit "$commit" --limit 20 					--json name,status,conclusion 2>/dev/null 				| python3 -c '
+import json, sys
+try:
+    runs = json.load(sys.stdin)
+except Exception:
+    runs = None
+if not runs:
+    print("UNKNOWN: no CI run exists for this commit — a tag needs evidence, not absence")
+    sys.exit(0)
+red = sorted({r["name"] for r in runs if r.get("conclusion") == "failure"})
+green = [r for r in runs if r.get("status") == "completed" and r.get("conclusion") == "success"]
+if red:
+    print("RED: " + ", ".join(red))
+elif not green:
+    print("UNKNOWN: no completed successful run — pending is not green")
+else:
+    print("GREEN")
+' ) || verdict="UNKNOWN: the gh probe itself failed"
+			if [[ "$verdict" != "GREEN" ]]; then
+				cat >&2 <<-EOF
+					✖ pre-push refused: $tag on commit $commit is not provably green.
+
+					    $verdict
+
+					A release tag was cut on a red trunk at v0.10-beta AND v0.11-beta
+					(docs/hidden_fees/39). Fix CI, or bypass loudly:
+					    NOS_TAG_RED_OK=1 git push origin $tag
+				EOF
+				exit 1
+			fi
+			continue
+			;;
+	esac
+
 	# Extract the branch name from refs/heads/<name>.
 	branch="${local_ref#refs/heads/}"
 

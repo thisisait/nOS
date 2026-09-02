@@ -60,3 +60,33 @@ def test_open_alerts_are_counted_by_severity(monkeypatch) -> None:
     assert dep["counts"] == {"high": 1, "low": 1}
     assert dep["serious_packages"] == ["js-yaml"]
     assert any("Dependabot" in line for line in mod.reds({"dependabot": dep}))
+
+
+#: Fee 39 replayed: the v0.11-beta shape — failures stacked on an old success.
+#: A state without its streak hid 46 days of red behind "failure (newest run)".
+V011 = [{"name": "CI", "conclusion": "failure", "status": "completed",
+         "headSha": f"{i:08x}", "createdAt": f"2026-08-{28 - i:02d}T10:00:00Z"}
+        for i in range(9)] + [
+    {"name": "CI", "conclusion": "success", "status": "completed",
+     "headSha": "00ff00ff", "createdAt": "2026-07-16T10:00:00Z"}]
+
+
+def test_a_red_row_carries_its_streak(monkeypatch) -> None:
+    mod = _mod()
+    monkeypatch.setattr(mod, "_gh", lambda *a: V011)
+    row = mod.ci_runs()["dev"][0]
+    assert row["streak"] == 9, (
+        f"streak={row.get('streak')} for nine consecutive failures — the row "
+        "reports a state without its history, which is what let 46 days of red "
+        "read as one bad run")
+    assert row["red_since"] == "2026-08-20T10:00:00Z", (
+        "red_since must be the streak's FIRST failure, not the newest")
+
+
+def test_the_streak_stops_at_a_success(monkeypatch) -> None:
+    """One green run inside the window resets the streak — history under a
+    success is history."""
+    mod = _mod()
+    monkeypatch.setattr(mod, "_gh", lambda *a: [V011[0], V011[9], V011[1]])
+    row = mod.ci_runs()["dev"][0]
+    assert row["streak"] == 1, "the streak counted past a success"

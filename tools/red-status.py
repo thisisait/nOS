@@ -626,13 +626,27 @@ def ci_runs() -> dict | None:
         for run in runs:
             if run["name"] not in newest:
                 newest[run["name"]] = run
-        branches[branch] = [
-            {"workflow": name, "conclusion": r["conclusion"] or r["status"],
-             "sha": (r["headSha"] or "")[:8], "at": r["createdAt"]}
-            for name, r in sorted(newest.items())
-            if r["conclusion"] not in ("success", "skipped", None)
-            or r["status"] not in ("completed", "in_progress", "queued")
-        ]
+        rows = []
+        for name, r in sorted(newest.items()):
+            if (r["conclusion"] in ("success", "skipped", None)
+                    and r["status"] in ("completed", "in_progress", "queued")):
+                continue
+            # Fee 39: a state without its streak hid 46 days of red — the
+            # newest run said "failure" and nothing said "×9 since 07-16".
+            # The 40 runs are already fetched; walk them, no extra gh call.
+            streak, since = 0, r["createdAt"]
+            for older in runs:
+                if older["name"] != name:
+                    continue
+                if older.get("conclusion") == "success":
+                    break
+                streak += 1
+                since = older["createdAt"]
+            rows.append({"workflow": name,
+                         "conclusion": r["conclusion"] or r["status"],
+                         "sha": (r["headSha"] or "")[:8], "at": r["createdAt"],
+                         "streak": streak, "red_since": since})
+        branches[branch] = rows
     return branches
 
 
@@ -805,8 +819,10 @@ def reds(report: dict) -> list[str]:
         )
     for branch, failures in (report.get("ci") or {}).items():
         for f in failures:
+            streak = (f" ×{f['streak']} since {f['red_since'][:10]}"
+                      if f.get("streak", 0) > 1 else "")
             out.append(
-                f"CI {f['workflow']} on {branch} is {f['conclusion']} "
+                f"CI {f['workflow']} on {branch} is {f['conclusion']}{streak} "
                 f"({f['sha']}, {_age(_parse_iso(f['at']))}) — newest run of that "
                 "workflow, so this is the branch's state, not one bad run"
             )
