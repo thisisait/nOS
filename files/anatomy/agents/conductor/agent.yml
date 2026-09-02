@@ -58,7 +58,7 @@ metadata:
   ait_phase: A8
   ceremony_role: first-non-operator-write
   # The weekly CLI ceremony works; the bound path has never served this agent.
-  runner_status: unproven
+  runner_status: proven  # first satisfied bound run 2026-09-02, session 319d5e91 (conductor_report 3170 B on record)
 
 exit_code_semantics:
   emits_sentinel: false

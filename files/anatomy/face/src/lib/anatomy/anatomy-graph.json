@@ -44,7 +44,7 @@
       "kind": "agent",
       "source": "files/anatomy/agents/conductor/agent.yml",
       "charter": "first-non-operator-write",
-      "runner_status": "unproven",
+      "runner_status": "proven",
       "primary_model": "anthropic-claude-sonnet-4-5",
       "backend": "minimax",
       "backend_declared": true,
@@ -54,7 +54,7 @@
         "mcp-wing-read"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'conductor' (first-non-operator-write), mode=None, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
+      "description": "Agent ceremony 'conductor' (first-non-operator-write), mode=None, runner_status=proven — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:curator": {
       "kind": "agent",
