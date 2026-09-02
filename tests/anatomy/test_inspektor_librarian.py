@@ -107,7 +107,9 @@ def test_librarian_runner_live_on_demand():
     )
     agent = yaml.safe_load((d / "agent.yml").read_text())
     meta = agent.get("metadata") or {}
-    assert meta.get("runner_status") == "scheduled"
+    # `scheduled` left the enum (ruling 2, docs/doctrine/agentkit.md §6);
+    # the cadence is a pulse edge, the field carries evidence.
+    assert meta.get("runner_status") == "proven"
 
 
 def test_inspektor_carries_write_scope():

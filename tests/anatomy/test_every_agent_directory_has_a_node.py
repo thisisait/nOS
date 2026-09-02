@@ -97,7 +97,8 @@ def test_the_node_repeats_the_profile_rather_than_asserting(graph, profiles):
 def test_runner_status_is_the_schema_vocabulary_or_absent(graph, profiles):
     schema = yaml.safe_load(SCHEMA.read_text(encoding="utf-8"))
     allowed = schema["properties"]["metadata"]["properties"]["runner_status"]["enum"]
-    assert set(allowed) == {"unproven", "scheduled", "parked", "deferred", "proven"}, (
+    # ruling 2 (2026-09-02, docs/doctrine/agentkit.md §6): scheduling is DERIVED.
+    assert set(allowed) == {"unproven", "parked", "deferred", "proven"}, (
         "the runner_status vocabulary changed — decide deliberately, then update "
         "this gate AND the graph's description of an absent status")
     for nid, n in _agent_nodes(graph).items():

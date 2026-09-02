@@ -92,7 +92,7 @@ vault:
 metadata:
   ait_phase: A9.4-contract-only
   ceremony_role: rag-recall
-  runner_status: scheduled
+  runner_status: proven  # nightly cadence is DERIVED (pulse edges); evidence: runs on record since 2026-08-28
   deferred_reason: >-
     runner live 2026-07-11;
     unpaused 2026-08-28, nightly through tools/run-agent.sh (AgentKit), which

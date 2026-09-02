@@ -140,12 +140,10 @@ properties:
           type: string
           enum:
             - bash-read-only
-            - bash-write            # reserved placeholder, no impl (kept)
             - migration-file-write  # gated, path-allowlisted (Q8/A1, 2026-06-16)
             - mcp-wing-read         # GET only, scope wing.read
             - mcp-wing-write        # POST, scope wing.write, route-allowlisted
             - mcp-bone
-            - mcp-pulse
             - mcp-keap              # KEAP cortex /agent/v1 (read + captures-only write)
             - mcp-loop              # nos-loop: weaknesses/budget/propose/history — never judge
             # Searches the committed OpenAPI contracts; returns static
@@ -326,14 +324,18 @@ properties:
           coexist; the enum makes a sixth a schema error.
 
             unproven   apparatus exists, no completed run proves it
-            scheduled  a pulse job fires it on a cadence
             parked     contract-only: no launcher, no pulse job (deliberate)
             deferred   declared, never performed — refuses a backend binding
             proven     completed runs on record
 
+          `scheduled` was REMOVED (operator ruling 2026-09-02, docs/doctrine/agentkit.md §6):
+          it named INTENT on an EVIDENCE axis — a scheduled-but-always-failing
+          agent read as fine. Whether a pulse job fires an agent is derivable
+          (pulse->agent edges in the anatomy graph); a reader joins the axes.
+
           ABSENT is not a sixth value and not "fine": it is UNKNOWN, and the
           graph renders it as UNKNOWN rather than as any of the above.
-        enum: [unproven, scheduled, parked, deferred, proven]
+        enum: [unproven, parked, deferred, proven]
   gdpr:
     type: object
     additionalProperties: false

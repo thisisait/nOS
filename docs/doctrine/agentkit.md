@@ -1,11 +1,10 @@
 # AgentKit — how an agent runs, spends, and satisfies
 
-> **PROPOSED, not settled.** ~25 commits since 2026-08-19 decided each of these
-> rules ad-hoc, in commit bodies and file headers — the most expensive unwritten
-> doctrine in the estate. This file collects them so the next decision cites a
-> section instead of re-deriving one. §6 lists what the operator must settle;
-> everything else is already enforced by a named gate or refusal and is recorded
-> here, not invented here. Sibling of [`organs.md`](organs.md) in status.
+> **v1 — settled.** ~25 commits since 2026-08-19 decided each of these rules
+> ad-hoc, in commit bodies and file headers; this file collected them, and the
+> operator ruled on the five open contradictions on 2026-09-02 (§6). Every rule
+> is enforced by a named gate or refusal and is recorded here, not invented
+> here.
 
 Authorities this file points at, never copies: `state/schema/agent.schema.yaml`
 (the manifest contract), `state/llm-backends.yml` (the orchestrator register,
@@ -118,19 +117,30 @@ binding gates 1–8 in its header), `docs/ait-runtime-architecture.md` (the essa
   `processors: []` is a claim ("empty means NOBODY"); unverifiable processor
   facts are recorded UNVERIFIED, never asserted (schema; conductor agent.yml).
 
-## 6. What the operator must settle (measured contradictions)
+## 6. Rulings of 2026-09-02 (were the open contradictions)
 
-1. **URI provider enum drift** — the essay says `(anthropic|openclaw|openai|local)`
-   with `openai-*` throwing; the schema says `(anthropic|claude|openai|openclaw)`
-   and `openai-local-haiku` runs live (`e19a509d`). The schema is reality; the
-   essay (and CLAUDE.md's A14 grader sentence, pre-`392fd6ee`) needs the edit.
-2. **Scheduled-but-never-proven** — conductor carries `unproven` while a weekly
-   pulse job schedules it; the enum holds both words and no rule picks one.
-3. **The scope declared three times** (`d08abc81`) — agent.yml, mint task, live
-   `api_tokens`; gates compare two. Name the single authority, as `95faa153`
-   did for secrets.
-4. **Grandfathered unrestricted tokens** — `api_tokens.scopes` NULL = unlimited
-   for 6 incumbents, against the measured-use rule. When do they narrow?
-5. **`bash-write` reserved-no-impl** — permitted, or must the tool enum track
-   DI registration both ways (the `ask-operator` lesson: implemented but
-   undeclarable for months)?
+1. **The URI's first segment names the WIRE PROTOCOL, not the vendor.**
+   `openai-*` is anything speaking the OpenAI API — a local model, a DGX on the
+   LAN, a hosted endpoint; WHO serves it is the backend row's business, and "who
+   holds the data" is answered by `gdpr.processors` + the residency gate, never
+   by the URI. The schema was reality; the essay and CLAUDE.md are corrected.
+   The string may grow more protocol families as they arrive — a new family is
+   a new enum member PLUS its adapter, together (fail-closed, adapter-first).
+2. **`scheduled` left the `runner_status` enum.** It named INTENT on an
+   EVIDENCE axis — a scheduled-but-always-failing agent read as fine. Whether a
+   pulse job fires an agent is DERIVED (pulse→agent graph edges); the enum
+   keeps `unproven | parked | deferred | proven`, and a reader joins the axes.
+3. **Scopes follow [`identity.md`](identity.md):** the manifest is the one
+   authority, the mint is a projection of it, and a reader compares the live
+   `api_tokens` row both directions (MISSING / UNDECLARED). Implementation is a
+   roadmap row; the ruling is settled.
+4. **Grandfathered unrestricted tokens ratchet DOWN.** Measured 2026-09-02:
+   7 active NULL-scope tokens (one more than the register's 6 — reality beat
+   the doc). Narrowing is driven by measured `agent_tool_use` history, tuned by
+   manual loop runs simulating the night; new tokens are never NULL. Gate:
+   `test_unrestricted_tokens_only_ratchet_down.py` — the ceiling may only fall.
+5. **The tool enum tracks DI registration both ways.** `bash-write` and
+   `mcp-pulse` (declarable, no implementation) are out; `ask-operator`'s
+   inverse (implemented, undeclarable) can't recur either. Intent lives in the
+   roadmap table, not the contract. Gate:
+   `test_the_tool_enum_tracks_registration.py`.

@@ -126,7 +126,7 @@
       "kind": "agent",
       "source": "files/anatomy/agents/librarian/agent.yml",
       "charter": "rag-recall",
-      "runner_status": "scheduled",
+      "runner_status": "proven",
       "primary_model": "anthropic-claude-sonnet-4-5",
       "backend": "minimax",
       "backend_declared": true,
@@ -138,7 +138,7 @@
         "mcp-wing-write"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'librarian' (rag-recall), mode=None, runner_status=scheduled — primary anthropic-claude-sonnet-4-5 on backend minimax"
+      "description": "Agent ceremony 'librarian' (rag-recall), mode=None, runner_status=proven — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:migration-author": {
       "kind": "agent",

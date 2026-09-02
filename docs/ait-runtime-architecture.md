@@ -55,7 +55,7 @@ files/anatomy/wing/app/AgentKit/
 |---|---|---|
 | `agent_sessions` | one agent invocation | trace_id, model_uri, status, tokens, outcome_result |
 | `agent_threads` | one agent's view in a session | primary or child; carries span_id |
-| `agent_iterations` | one grader call | result + feedback for outcome loop |
+| `agent_iterations` | one iteration | gate_run_id + feedback; satisfaction is the gate run's (392fd6ee) |
 | `agent_vaults` | one credential bag | grouping, never plaintext |
 | `agent_credentials` | one (vault, scope) pair | `secret_ref` is `env:NAME` or `infisical:/path` |
 | `agent_subscriptions` | one outbound webhook receiver | enabled/auto-disable + signing_secret |
@@ -83,7 +83,10 @@ local-llama3.1-70b-instruct
 ```
 
 Pinned by:
-- `state/schema/agent.schema.yaml` regex: `^(anthropic|openclaw|openai|local)-[a-z0-9.-]+$`
+- `state/schema/agent.schema.yaml` regex: `^(anthropic|claude|openai|openclaw)-[a-z0-9.-]+$`
+  (ruling 1, 2026-09-02, docs/doctrine/agentkit.md §6: the first segment names the WIRE
+  PROTOCOL/adapter, not the vendor — `openai-*` is anything speaking the
+  OpenAI API, incl. local models; WHO serves it is the backend row)
 - `tests/anatomy/test_agent_schema.py::test_agent_yml_model_uri_pattern`
 - `App\AgentKit\AgentLoader::isValidModelUri`
 
@@ -125,10 +128,10 @@ Borrowed from Anthropic Managed Agents' outcomes. Optional — declared by `agen
 for iteration in 0..max_iterations:
   run tool-use loop until stop_reason=end_turn
   build markdown transcript of conversation
-  Grader::grade(task, rubric, transcript) → separate LLM call with strict-JSON output
-  if result == satisfied:    end session
-  if result == failed:        end session
-  if result == needs_revision: append grader.feedback as user message, loop
+  gate run (outcomes.gateset) decides satisfied/failed — never any model
+  Grader::grade(...) → FEEDBACK ONLY (392fd6ee); its text steers revision
+  if gate satisfied: end session; unrunnable judge → indeterminate, stop
+  else: append feedback as user message, loop
 ```
 
 The **grader runs in an isolated context** — it sees the rubric + transcript but not the working agent's reasoning. This mirrors Anthropic's grader-isolation property; prevents the grader from being talked into "satisfied" by clever prose.
