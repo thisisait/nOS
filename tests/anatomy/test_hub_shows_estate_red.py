@@ -120,16 +120,23 @@ def test_the_hub_renders_and_carries_the_tile() -> None:
 
 
 def test_the_number_agrees_with_the_database() -> None:
+    """Both sides move — a converge writes notifications while this runs — so
+    the database is read either side of the page fetch and the rendered number
+    must fall in that interval. Sampling once gave a 13-vs-12 that was pure
+    timing (MEASURED 2026-09-02), and a cross-check that fails on timing alone
+    is one everybody learns to ignore."""
+    before, _ = _expected_red()
     html = _hub_html()
-    expected, failing = _expected_red()
+    after, failing = _expected_red()
     found = re.search(r'Estate red</div>\s*<div class="value"[^>]*>(\d+)<', html)
     assert found, "the tile renders no number"
     rendered = int(found.group(1))
-    assert rendered == expected, (
-        f"the page says {rendered} and the database says {expected} "
-        f"(failing jobs: {failing or 'none'}). The two sides of this count "
-        "have drifted — most likely one of them started treating a declared "
-        "findings exit code as a failure.")
+    lo, hi = min(before, after), max(before, after)
+    assert lo <= rendered <= hi, (
+        f"the page says {rendered} and the database said {before} before the "
+        f"fetch and {after} after (failing jobs: {failing or 'none'}). The two "
+        "sides of this count have drifted — most likely one of them started "
+        "treating a declared findings exit code as a failure.")
 
 
 def test_a_findings_code_is_not_counted_as_a_failure() -> None:

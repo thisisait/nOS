@@ -488,13 +488,16 @@ final class PulseRepository
 	 */
 	public function failingJobs(): array
 	{
+		// Pick the latest run FIRST, then ask whether it failed. The old shape
+		// filtered exit_code != 0 before the grouping, so MAX(run_id) ranged
+		// over the surviving failures only: a job whose latest run succeeded
+		// still reported failing if an earlier run shared its fired_at.
 		$latest = $this->db->query(
-			'SELECT r.job_id, r.exit_code, r.fired_at FROM pulse_runs r
-			   JOIN (SELECT job_id, MAX(fired_at) AS f FROM pulse_runs GROUP BY job_id) m
-			     ON r.job_id = m.job_id AND r.fired_at = m.f
-			  WHERE r.exit_code IS NOT NULL AND r.exit_code != 0
-			  GROUP BY r.job_id
-			 HAVING r.run_id = MAX(r.run_id)',
+			'SELECT job_id, exit_code, fired_at FROM (
+			   SELECT job_id, exit_code, fired_at, ROW_NUMBER() OVER (
+			     PARTITION BY job_id ORDER BY fired_at DESC, run_id DESC) rn
+			     FROM pulse_runs)
+			  WHERE rn = 1 AND exit_code IS NOT NULL AND exit_code != 0',
 		);
 		$out = [];
 		foreach ($latest as $row) {
