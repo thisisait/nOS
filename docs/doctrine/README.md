@@ -35,6 +35,7 @@ than kept as a rule that only ever reports its own defeat.)
 | [identity.md](identity.md) | the declared account roster is the one source; a realm's admin/allowlist is a projection of it; presence checked both directions (MISSING / UNDECLARED / `?`) | ✅ v1 |
 | [security-floor.md](security-floor.md) | severity picks what is noticed now; what a row is *blocked on* picks whether a release boundary means anything to it — three lanes, four refused designs logged | ✅ v1 |
 | [ponytail.md](ponytail.md) | the 7-rung ladder answered before code is written; deliberate shortcuts carry a `# ponytail:` marker harvested by `/ponytail-debt` | ✅ v1 |
+| [agentkit.md](agentkit.md) | how an agent runs, spends, and satisfies: one runner door, scope-verb match, backend≠provider (gates 1–8), satisfaction is a gate run, one join key, roster status; §6 = operator's open rulings | proposed |
 | [organs.md](organs.md) | four incompatible meanings of "organ" named; proposes the 3-axis fix (`stack`/`organ`/`layer`) — §3 awaits the operator's ruling | proposed |
 | table-naming.md | DB table / column naming conventions | planned |
 | taxonomy.md | taxonomy / ontology term definitions (KEAP taxonomy depth levels, node/pillar/block, relations — NOT the service `layer` L0–L3 axis, which layers.md owns) | planned |
