@@ -64,34 +64,52 @@ if [[ -z "$TOFU_BIN" ]]; then
     exit 0
 fi
 
-if [[ ! -f "$TOFU_DIR/nos.auto.tfvars.json" ]]; then
-    echo "INFO: $TOFU_DIR/nos.auto.tfvars.json absent — skipping drift check (tofu cutover has not rendered tfvars)"
-    exit 0
-fi
-
-# A WORKTREE HAS THE TFVARS AND NOT THE STATE, so a plan here reports every
-# resource as "to add". Measured 2026-09-01: this job was re-registered from a
-# worktree by a converge (the catalog stores an absolute {{ playbook_dir }}
-# path), and it had been filing "101 to add, 0 to destroy" nightly against a
-# main checkout holding 109 real resources. Phantom drift, at medium, every day.
-# NOT `--git-dir` vs `--git-common-dir`: from a SUBDIRECTORY git answers the
-# first absolutely and the second relatively (`/…/nOS/.git` vs `../../.git`) —
-# same directory, different strings, so a string compare calls the main checkout
-# a worktree and this guard disabled the job everywhere. A linked worktree's
-# ABSOLUTE git-dir is always `<common>/worktrees/<name>`; that is the thing.
+# WHICH CHECKOUT AM I IN? The Pulse catalog stores an absolute {{ playbook_dir }},
+# so a converge from a worktree re-points this job there — and a worktree carries
+# the tfvars but NOT the state, so every resource reads as "to add" (measured
+# 2026-09-01: "101 to add" nightly against 109 live resources).
+#
+# Skipping was the first fix and it is a silent green: the job exits 0 having
+# checked nothing, and the estate loses drift coverage until some later converge
+# happens to run from the main checkout. So resolve the main checkout instead and
+# plan THERE — it is the one that owns the state.
+#
+# NOT `--git-dir` vs `--git-common-dir`: from a SUBDIRECTORY git answers the first
+# absolutely and the second relatively, same directory as different strings, which
+# called the main checkout a worktree and disabled the job everywhere. A linked
+# worktree's ABSOLUTE git-dir is always `<common>/worktrees/<name>`.
 if _gitdir=$(git -C "$TOFU_DIR" rev-parse --absolute-git-dir 2>/dev/null); then
     case "$_gitdir" in
         */worktrees/*)
-            echo "INFO: $TOFU_DIR is inside a git WORKTREE — the tofu state lives in the main checkout, so a plan here would report every resource as missing. Skipping."
-            exit 0
+            _main_root="$(dirname "${_gitdir%%/worktrees/*}")"
+            if [[ -f "$_main_root/terraform/authentik/nos.auto.tfvars.json" ]]; then
+                echo "INFO: $TOFU_DIR is inside a git WORKTREE; the state lives in the main checkout — planning in $_main_root/terraform/authentik instead"
+                TOFU_DIR="$_main_root/terraform/authentik"
+            else
+                echo "INFO: $TOFU_DIR is inside a git WORKTREE and no tfvars were found in the main checkout $_main_root — nothing to plan against"
+            fi
             ;;
     esac
+fi
+
+echo "INFO: checkout = $(git -C "$TOFU_DIR" rev-parse --show-toplevel 2>/dev/null || echo "$TOFU_DIR") (branch $(git -C "$TOFU_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown))"
+
+if [[ ! -f "$TOFU_DIR/nos.auto.tfvars.json" ]]; then
+    echo "INFO: $TOFU_DIR/nos.auto.tfvars.json absent — skipping drift check (tofu cutover has not rendered tfvars)"
+    exit 0
 fi
 
 if ! command -v jq &>/dev/null; then
     echo "ERROR: jq not found in PATH" >&2
     exit 2
 fi
+
+# "No drift" is a claim about the DESIRED state, and a converge run under a
+# profile renders a smaller one: measured 2026-09-02, 14 services where the
+# registry holds far more, because tofu had destroyed the rest as install flags
+# resolved off. The plan agreed with itself and said nothing. Print the size so
+# a collapse is visible in the run log.
+echo "INFO: desired state declares $(jq '.authentik_services | length' "$TOFU_DIR/nos.auto.tfvars.json" 2>/dev/null || echo '?') Authentik services"
 
 # ── Notification emit (A9 fanout — gitleaks precedent mechanics) ─────────────
 # POST to Bone /api/v1/notifications with HMAC-SHA256 signature. Channels are

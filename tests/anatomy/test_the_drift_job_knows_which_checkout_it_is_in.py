@@ -1,4 +1,4 @@
-"""Anatomy CI gate — the nightly tofu drift plan must skip a worktree, not cry drift.
+"""Anatomy CI gate — the nightly tofu drift plan must know which checkout it is in.
 
 MEASURED 2026-09-01. The Pulse catalog stores an absolute `{{ playbook_dir }}`
 command, so a converge run from a git worktree re-registered
@@ -18,6 +18,11 @@ everywhere. (`tasks/tofu-authentik.yml` uses that pair correctly because it runs
 from the repo ROOT, where both are `.git`.)
 
 A linked worktree's ABSOLUTE git-dir is always `<common>/worktrees/<name>`.
+
+AND SKIPPING IS NOT ENOUGH (2026-09-02). The first guard exited 0 on a worktree,
+so the job checked nothing and the estate lost drift coverage until some later
+converge happened to run from the main checkout — a silent green of exactly the
+shape the house forbids. It must resolve the main checkout and plan THERE.
 """
 
 from __future__ import annotations
@@ -60,16 +65,20 @@ def test_it_does_not_compare_two_spellings_of_one_path():
         "silently stops running")
 
 
-def test_the_worktree_skip_is_clean_not_a_failure():
-    """Exit 0. A worktree is not an error condition and must not spend the
-    job's error-notify path — the contract reserves 1 for drift and 2 for a
-    plan error."""
+def test_a_worktree_is_not_an_error_condition():
+    """A worktree is a place to redirect FROM, not a fault. It must not spend
+    the job's error-notify path — the contract reserves 1 for drift and 2 for a
+    plan error, and being run from the wrong checkout is neither."""
     src = SCRIPT.read_text(encoding="utf-8")
     m = re.search(r"worktrees/\*\)(.*?)\besac", src, re.S)
     assert m, "the worktree branch is no longer a case arm; re-read this gate"
-    assert "exit 0" in m.group(1), (
-        "the worktree branch does not exit 0. Skipping a checkout that cannot "
-        "hold the state is a clean skip, not drift and not a plan error")
+    branch = m.group(1)
+    assert "exit 1" not in branch and "exit 2" not in branch, (
+        "the worktree branch exits on an error code. Being registered from a "
+        "worktree is a resolvable fact about where the job was started, not "
+        "drift and not a plan error")
+    assert "notify " not in branch, (
+        "the worktree branch notifies. It resolves the main checkout instead")
 
 
 def test_the_findings_code_is_declared_so_drift_is_not_read_as_failure():
@@ -82,3 +91,32 @@ def test_the_findings_code_is_declared_so_drift_is_not_read_as_failure():
         "the drift job does not declare findings_exit_codes: [1]. gitleaks, "
         "discovery and loop all declare theirs; without it every detected "
         "drift is reported as a failing job")
+
+
+def test_a_worktree_redirects_rather_than_skipping():
+    """Exiting 0 on a worktree is a pass reported for work not done."""
+    body = _body()
+    assert "worktrees/*}" in body, (
+        f"{SCRIPT.name} no longer derives the main checkout from the worktree "
+        "git-dir. Skipping instead leaves the estate with no drift coverage "
+        "at all, and says so only in an INFO line nobody reads")
+    guard = body[body.index("*/worktrees/*)"):]
+    guard = guard[:guard.index("esac")]
+    assert "exit 0" not in guard, (
+        "the worktree branch still exits 0. That is a green run for a check "
+        "that never happened")
+    assert "TOFU_DIR=" in guard, (
+        "the worktree branch does not re-point TOFU_DIR at the main checkout")
+
+
+def test_the_run_names_the_checkout_it_chose():
+    """A verdict whose premise is invisible cost a day on 2026-09-02: the plan
+    said `no drift` about a desired state a profile run had shrunk to 14."""
+    body = _body()
+    assert "--show-toplevel" in body, (
+        "the run does not print which checkout it planned in, so two checkouts "
+        "give two verdicts and the log cannot tell them apart")
+    assert "authentik_services | length" in body, (
+        "the run does not print how many services the desired state declares. "
+        "`no drift` against a collapsed desired state is a true sentence about "
+        "a false premise, and reads identically to a healthy run")
