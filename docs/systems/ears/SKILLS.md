@@ -9,18 +9,18 @@
 
 ---
 
-## check-ears-daemon
+## check-ears-session
 
 **Trigger:** "is Ears running", "is the microphone listening", "ears status"
-**Method:** host service manager
+**Method:** state reader (there is no daemon — listening is a Terminal session)
 **Command:**
 ```bash
-launchctl print "gui/$(id -u)/eu.thisisait.nos.ears-listen"     # macOS
-systemctl --user status eu.thisisait.nos.ears-listen             # Linux
+tools/caddy-status.py        # listener state, mic_ok, last heard turn
+pgrep -fl ears-listen        # is a session process alive right now
 ```
-**Output:** load state, pid, last exit status. **Not loaded is the DEFAULT and
-is not a fault** — `ears_always_listen` is false unless the operator set it.
-Report the state; do not infer a problem from absence.
+**Output:** session state and pid. **Not running is the DEFAULT and is not a
+fault** — the operator opens a session with `s` in nos-cc and closes the window
+to stop it. Report the state; do not infer a problem from absence.
 
 ---
 

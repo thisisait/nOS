@@ -32,11 +32,11 @@ EARS_RETENTION_DAYS (90) and pruned by this process — with the oldest survivin
 file reported by tools/caddy-status.py, so a retention that stops firing is
 visible rather than assumed.
 
-ONE SWITCH, AND IT IS NOT HERE. Starting and stopping the always-listen agent
-is `ears_always_listen` in config.yml plus a converge. This file deliberately
-has no --on/--off: two ways to open a microphone means the next converge
-silently closes one of them, and the estate's standing rule is that either the
-playbook does it or the operator runs nos, with nothing in between.
+ONE SWITCH, AND IT IS THE WINDOW. Listening starts as a deliberate Terminal
+session (`s` in nos-cc) and stops when the window closes — there is no launchd
+agent and no config flag (the one that claimed to gate it was deleted
+2026-09-02; it gated nothing). This file deliberately has no --on/--off: two
+ways to open a microphone means one of them closes silently.
 
     ears-listen --file recording.m4a         # transcribe a file, JSON out
     ears-listen --listen                     # foreground, turns on stdout
@@ -374,7 +374,18 @@ def _transcriber(model, jobs: "queue.Queue", results: "queue.Queue") -> threadin
             if job is None:
                 return
             pcm, ended_at = job
-            results.put((_transcribe_pcm(model, pcm), pcm, ended_at))
+            # One bad segment must not kill the only worker: an unhandled
+            # exception here ended transcription for the rest of the session
+            # while the heartbeat kept reporting armed/mic_ok (2026-09-02).
+            # The segment degrades to an empty transcription — already a
+            # first-class value downstream — and the loop lives on.
+            try:
+                text = _transcribe_pcm(model, pcm)
+            except Exception as exc:  # noqa: BLE001 — liveness over precision
+                print(f"[ears] transcription failed, segment dropped: {exc}",
+                      file=sys.stderr, flush=True)
+                text = ""
+            results.put((text, pcm, ended_at))
 
     t = threading.Thread(target=work, daemon=True)
     t.start()

@@ -73,7 +73,7 @@ def detail(row, data):
             return out
     out["act"] = {
         "listener": {
-            "OFF": "set ears_always_listen: true in config.yml, then --tags jeff",
+            "OFF": "press s in nos-cc — listening is a Terminal session, not a flag",
             "DENIED": "System Settings > Privacy & Security > Microphone, then --tags jeff",
             "BROKEN": "check ~/ears/log/launchd.err.log — the process stopped writing",
             "UNHEARD": "say the wake phrase; if it still misses, ears-listen --listen --verbose prints what it wrote",

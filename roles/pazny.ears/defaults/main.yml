@@ -12,10 +12,10 @@
 # WHAT THIS ROLE INSTALLS AND WHAT IT DELIBERATELY DOES NOT.
 #
 # Installs: a venv with parakeet-mlx, the listener, the launcher and the
-# speech half under ~/ears, `ears-listen` + `caddy` on PATH, and a launchd
-# agent that is RENDERED ALWAYS and STARTED ONLY when `ears_always_listen` says
-# so (operator decision, 2026-08-31 — an always-open microphone records whoever
-# else is in the room, and the flag works in both directions).
+# speech half under ~/ears, `ears-listen` + `caddy` on PATH, and the .app
+# bundle TCC needs. NO launchd listener — listening is a deliberate Terminal
+# session (`s` in nos-cc; see tasks/main.yml "NO LAUNCHD JOB"). A reboot-proof
+# ear waits on a real signing identity: roadmap row `ears-app-bundle`.
 #
 # Does NOT install: anything that EXECUTES a chain. The launcher asks an agent
 # for a proposal and has the cortex daemon typecheck it; effects stay behind
@@ -80,19 +80,11 @@ caddy_default_mode: "local"
 # fixture is the DEFAULT; a row the operator changed is never overwritten.
 caddy_seed_settings: true
 
-# ── The microphone, and the one flag that opens it ───────────────────────────
-#
-# THE PLIST IS ALWAYS RENDERED; THIS FLAG DECIDES WHETHER IT IS BOOTSTRAPPED.
-# `false` also BOOTS OUT a running agent, so turning it off in config.yml and
-# converging actually stops the listening — a switch that only turns things on
-# is not a switch.
-#
-# Default OFF while `install_ears` is ON, and the asymmetry is deliberate:
-# installing an ear is reversible and private; opening a microphone that
-# survives a reboot records whoever else is in the room, and they have not
-# consented. That is the operator's act, taken in config.yml, not a default
-# anyone inherits by upgrading.
-ears_always_listen: false
+# `ears_always_listen` LIVED HERE and gated nothing: the launchd listener it
+# claimed to bootstrap was removed 2026-08-31 (TCC binds the mic grant to the
+# responsible process — see tasks/main.yml "NO LAUNCHD JOB"), while six
+# surfaces kept telling the operator the flag works. Deleted 2026-09-02; an
+# always-listen switch returns WITH the mechanism it gates (`ears-app-bundle`).
 # ── The .app bundle, which exists ONLY so macOS has something to ask about ───
 #
 # A bundle id is the unit a microphone grant attaches to. A bare binary under

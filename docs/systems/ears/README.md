@@ -2,8 +2,8 @@
 
 Ears turns speech into a *proposal*, never into an effect.
 
-A launchd agent captures the microphone through **ffmpeg** (avfoundation on
-macOS) and transcribes locally with **Parakeet MLX**
+A deliberate Terminal session (`s` in nos-cc) captures the microphone through
+**ffmpeg** (avfoundation on macOS) and transcribes locally with **Parakeet MLX**
 (`mlx-community/parakeet-tdt-0.6b-v3`). Nothing is sent anywhere to be
 understood. It wakes on a spoken phrase, submits on another, and hands the text
 to an agent for a proposal that the **Cortex** daemon typechecks. It cannot
@@ -11,11 +11,14 @@ execute a chain: effects stay behind `CortexBindingGate`.
 
 ## Why it is off by default
 
-`ears_always_listen: false`. An always-open microphone records whoever else is
-in the room, so starting it is an operator decision (2026-08-31) and the flag
-works in both directions. The launchd agent is **rendered always and started
-only when the flag says so** — an unloaded `eu.thisisait.nos.ears-listen` is the
-correct state, not a fault.
+An always-open microphone records whoever else is in the room, so listening is
+a **deliberate session**: `s` in nos-cc opens a Terminal window running the
+listener, and closing the window stops the recording. There is **no launchd
+agent and no config flag** — macOS binds the mic grant to the responsible
+process, and a launchd agent has none to offer (the `ears_always_listen` flag
+that claimed otherwise gated nothing and was deleted 2026-09-02). A
+reboot-proof ear waits on a real signing identity: roadmap row
+`ears-app-bundle`. Ears not running is the correct state, not a fault.
 
 That is also why its manifest entry carries no `health_check` and no
 `domain_var` / `port_var`: Ears serves nothing over HTTP, and a health probe

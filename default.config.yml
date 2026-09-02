@@ -585,12 +585,12 @@ install_cortex: true             # Cortex – reasoning organ (validate surface;
 # its own Article-30 record, not a side effect of a flag (roadmap:
 # local-llm-voice-always). Requires ffmpeg, already in homebrew_installed_packages.
 install_ears: true               # Jeff – speech ingress + assistant tables [Apple Silicon; downloads ~600 MB ASR model on first use]
-# THE SECOND HALF, AND IT IS NOT THIS FLAG. `install_ears` installs the ear;
-# `ears_always_listen` (roles/pazny.ears/defaults, default false) OPENS the
-# microphone as a launchd agent that survives a reboot. Set it true in
-# config.yml when you mean it: a live mic records whoever else is in the room,
-# and they have not consented. Turning it back to false and converging boots
-# the agent out — the switch works in both directions.
+# THE SECOND HALF, AND IT IS NOT A FLAG. `install_ears` installs the ear;
+# OPENING the microphone is a deliberate Terminal session — `s` in nos-cc —
+# because macOS binds the mic grant to the responsible process and a launchd
+# agent has none (roles/pazny.ears/tasks/main.yml "NO LAUNCHD JOB"). Closing
+# the window stops the recording. A reboot-proof always-listen ear waits on a
+# real signing identity: roadmap row `ears-app-bundle`.
 # Transcripts: ~/jeff/turns/, pruned at ears_retention_days (90).
 
 # ── AI orchestration ──────────────────────────────────────────────────────────

@@ -44,7 +44,6 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 LISTENER = REPO / "files/anatomy/ears/ears-listen.py"
 READER = REPO / "tools/caddy-status.py"
 DEFAULTS = REPO / "roles/pazny.ears/defaults/main.yml"
-PLIST = REPO / "roles/pazny.ears/templates/ears-listen.plist.j2"
 FIXTURE = REPO / "state/fixtures/caddy.seed.yml"
 TABLE = REPO / "state/keap-tables/caddy.table.yml"
 WORDING = REPO / "files/anatomy/ears/wording.yml"
@@ -74,18 +73,15 @@ def test_the_reader_probes_the_interpreter_the_listener_runs_on():
 
 
 def test_the_retention_horizon_is_declared_once():
-    """Role default, plist, and both agent Article-30 records — one number.
+    """Role default and both agent Article-30 records — one number.
 
     Not a style rule: a retention horizon that disagrees with its register is a
     compliance claim nobody can act on, and the estate already owns one that was
-    measured in days and could never fire."""
+    measured in days and could never fire. (The plist clause left with the
+    plist, 2026-09-02 — the launchd listener no longer exists to disagree.)"""
     defaults = yaml.safe_load(DEFAULTS.read_text())
     horizon = defaults["ears_retention_days"]
     assert isinstance(horizon, int) and horizon > 0
-
-    assert "{{ ears_retention_days }}" in PLIST.read_text(), (
-        "the plist hardcodes a horizon instead of rendering the role default — "
-        "two numbers, and the daemon would win")
 
     for agent in ("jeff", "jeff-cloud"):   # the persona this estate ships
         doc = yaml.safe_load((REPO / f"files/anatomy/agents/{agent}/agent.yml").read_text())
@@ -278,12 +274,12 @@ def test_the_ear_keeps_listening_while_it_transcribes():
 
 @pytest.mark.parametrize("switch", ["--on", "--off"])
 def test_the_microphone_has_exactly_one_switch(switch):
-    """`ears_always_listen` + a converge, and nothing else.
+    """The Terminal session (`s` in nos-cc), and nothing else.
 
-    A second way to start the ear means the next converge silently closes it —
-    and the estate's standing rule is that either the playbook does it or the
-    operator runs nos, with nothing in between. Pinned because the CLI HAD these
-    flags on the day it was written."""
+    A second way to start the ear means one of them closes silently. Pinned
+    because the CLI HAD these flags on the day it was written; the
+    `ears_always_listen` config flag went the same way (deleted 2026-09-02 —
+    it gated nothing after the launchd listener was removed)."""
     src = LISTENER.read_text()
     assert f'"{switch}"' not in src, (
         f"ears-listen grew {switch} back — two switches for one microphone, and "

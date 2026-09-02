@@ -926,10 +926,10 @@ services:
       expect_status: 200
 
   # The listening organ. NO domain_var/port_var and NO health_check, and both
-  # absences are deliberate: it serves nothing over HTTP, and its launchd agent
-  # is RENDERED ALWAYS but STARTED only when ears_always_listen is true
-  # (operator decision — an always-open microphone records whoever else is in
-  # the room). A health check here would report a correctly-off organ as broken.
+  # absences are deliberate: it serves nothing over HTTP, and it runs only as
+  # a deliberate Terminal session (`s` in nos-cc) — there is NO launchd agent
+  # (TCC mic-grant reality, roles/pazny.ears/tasks/main.yml). A health check
+  # here would report a correctly-off organ as broken.
   - id: ears
     category: ai
     stack: null
