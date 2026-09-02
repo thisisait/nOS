@@ -71,14 +71,16 @@ def test_gate_passes_on_the_real_artifact(artifact, ruling):
     P.gate(artifact, ruling)
 
 
-def test_declared_split_is_6_9_69(ruling):
+def test_declared_split_is_6_9_70(ruling):
     # The phase-1 ruling: 6 fields leave verbatim, 9 transformed, 57
     # withheld. Changing any of these numbers is a public-surface
     # decision and must touch the signable ruling AND this pin.
     # 2026-08-29: +12 withheld — the agent kind's fields (charter, tool
     # grants, backend binding, machine-identity scopes). Withheld-only, so
     # the published set is unchanged; the atoms pin below is the proof.
-    assert ruling["splits"] == {"verbatim": 6, "transformed": 9, "withheld": 69}
+    # 2026-09-02: +1 withheld — the edge `evidence` field, same class as its
+    # siblings derived/measured/declared. Withheld-only; published set unchanged.
+    assert ruling["splits"] == {"verbatim": 6, "transformed": 9, "withheld": 70}
 
 
 def test_published_set_is_the_ruled_63_in_13(artifact, ruling):

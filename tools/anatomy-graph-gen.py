@@ -1687,6 +1687,25 @@ def build() -> dict:
                         + " -> ".join(union))
 
     all_edges.sort(key=lambda e: (e["kind"], e["from"], e["to"]))
+
+    # ── One question, one field: how is this edge attested? ──────────────────
+    # MEASURED 2026-09-02: 236 edges carried `derived: <generator>` and 50 carried
+    # `measured: <date>` + `declared:`, so a consumer asking "how do I know this
+    # edge is true" had to know both spellings and no field was universal. The
+    # distinction is worth keeping rather than flattening — a derived edge is
+    # recomputed from a declaration every run and cannot go stale; a measured one
+    # is a human who read the code on a date, and rots when that code moves.
+    # `evidence` says which, on every edge; tools/graph-report.py reads it.
+    #
+    # An edge with neither is a claim with no evidence, and nothing refused one.
+    for e in all_edges:
+        e["evidence"] = ("derived" if "derived" in e
+                         else "measured" if "measured" in e else None)
+    orphans = [f'{e["from"]} -{e["kind"]}-> {e["to"]}'
+               for e in all_edges if e["evidence"] is None]
+    if orphans:
+        _die("edge with no provenance (needs `derived:` or `measured:`):\n  "
+             + "\n  ".join(orphans))
     counts = {"nodes": len(nodes), "edges": len(all_edges)}
     for k in ("pulse", "judge", "gateset", "weakness", "daemon", "service", "resource",
               "repo", "tofu", "authentik", "table", "doctrine", "faceapp", "agent"):

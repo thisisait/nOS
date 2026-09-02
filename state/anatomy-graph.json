@@ -3065,343 +3065,392 @@
       "to": "service:backrest",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:bookstack",
       "to": "service:bookstack",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:calibre-web",
       "to": "service:calibre_web",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:code-server",
       "to": "service:code_server",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:erpnext",
       "to": "service:erpnext",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:face",
       "to": "service:face",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:firefly",
       "to": "service:firefly",
       "kind": "data",
       "via": "SSO gate (mode=header_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:freescout",
       "to": "service:freescout",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:gitea",
       "to": "service:gitea",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:gitlab",
       "to": "service:gitlab",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:grafana",
       "to": "service:grafana",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:hedgedoc",
       "to": "service:hedgedoc",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:hermes",
       "to": "service:hermes",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:homeassistant",
       "to": "service:homeassistant",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:infisical",
       "to": "service:infisical",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:influxdb",
       "to": "service:influxdb",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:jellyfin",
       "to": "service:jellyfin",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:keap",
       "to": "service:keap",
       "kind": "data",
       "via": "SSO gate (mode=header_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:kiwix",
       "to": "service:kiwix",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:mailpit",
       "to": "service:mailpit",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:metabase",
       "to": "service:metabase",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:miniflux",
       "to": "service:miniflux",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:n8n",
       "to": "service:n8n",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:nextcloud",
       "to": "service:nextcloud",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:nodered",
       "to": "service:nodered",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:nos-conductor",
       "to": "agent:conductor",
       "kind": "data",
       "via": "the identity this ceremony authenticates as (client_credentials client nos-conductor)",
-      "derived": "agent-identity"
+      "derived": "agent-identity",
+      "evidence": "derived"
     },
     {
       "from": "authentik:nos-curator",
       "to": "agent:curator",
       "kind": "data",
       "via": "the identity this ceremony authenticates as (client_credentials client nos-curator)",
-      "derived": "agent-identity"
+      "derived": "agent-identity",
+      "evidence": "derived"
     },
     {
       "from": "authentik:nos-inspektor",
       "to": "agent:inspektor",
       "kind": "data",
       "via": "the identity this ceremony authenticates as (client_credentials client nos-inspektor)",
-      "derived": "agent-identity"
+      "derived": "agent-identity",
+      "evidence": "derived"
     },
     {
       "from": "authentik:nos-librarian",
       "to": "agent:librarian",
       "kind": "data",
       "via": "the identity this ceremony authenticates as (client_credentials client nos-librarian)",
-      "derived": "agent-identity"
+      "derived": "agent-identity",
+      "evidence": "derived"
     },
     {
       "from": "authentik:nos-migration-author",
       "to": "agent:migration-author",
       "kind": "data",
       "via": "the identity this ceremony authenticates as (client_credentials client nos-migration-author)",
-      "derived": "agent-identity"
+      "derived": "agent-identity",
+      "evidence": "derived"
     },
     {
       "from": "authentik:nos-surveyor",
       "to": "agent:surveyor",
       "kind": "data",
       "via": "the identity this ceremony authenticates as (client_credentials client nos-surveyor)",
-      "derived": "agent-identity"
+      "derived": "agent-identity",
+      "evidence": "derived"
     },
     {
       "from": "authentik:nos-upgrade-architect",
       "to": "agent:upgrade-architect",
       "kind": "data",
       "via": "the identity this ceremony authenticates as (client_credentials client nos-upgrade-architect)",
-      "derived": "agent-identity"
+      "derived": "agent-identity",
+      "evidence": "derived"
     },
     {
       "from": "authentik:ntfy",
       "to": "service:ntfy",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:onlyoffice",
       "to": "service:onlyoffice",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:open-webui",
       "to": "service:open_webui",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:openclaw",
       "to": "service:openclaw",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:outline",
       "to": "service:outline",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:paperclip",
       "to": "service:paperclip",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:portainer",
       "to": "service:portainer",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:qdrant",
       "to": "service:qdrant",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:snappymail",
       "to": "service:snappymail",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:spacetimedb",
       "to": "service:spacetimedb",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:superset",
       "to": "service:superset",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:uptime-kuma",
       "to": "service:uptime_kuma",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:vaultwarden",
       "to": "service:vaultwarden",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:wing",
       "to": "service:wing",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:woodpecker",
       "to": "service:woodpecker",
       "kind": "data",
       "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "authentik:wordpress",
       "to": "service:wordpress",
       "kind": "data",
       "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
-      "derived": "tofu-authentik-registry"
+      "derived": "tofu-authentik-registry",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.wing",
       "to": "faceapp:anatomy-widget",
       "kind": "data",
       "via": "60 s poll of /bff/pulse, a PROJECTION (never a proxy) of Wing's pulse_jobs + run summary; joined onto the pulse: nodes on screen so a scheduled job's real state colours its dot (src/routes/bff/pulse/+server.ts → $lib/server/upstream.pulseJobs)",
-      "derived": "face-bff-projection"
+      "derived": "face-bff-projection",
+      "evidence": "derived"
     },
     {
       "from": "pulse:conductor:scan-state-record",
@@ -3409,7 +3458,8 @@
       "kind": "data",
       "via": "moves refs/heads/scan-data to a new commit holding scan-state.json + remediation-queue.json (tools/scan-state-snapshot.py:90 BRANCH, :268 ref update; --push is opt-in at :375 and this job passes no args)",
       "measured": "2026-08-06",
-      "declared": "writes"
+      "declared": "writes",
+      "evidence": "measured"
     },
     {
       "from": "pulse:cortex:cortex-fs-sync",
@@ -3417,7 +3467,8 @@
       "kind": "data",
       "measured": "2026-08-06",
       "via": "settled cortex mirror rows needing vectors (S2 fan-out, GET /agent/v1/embeddings/pending)",
-      "expects": "succeeded"
+      "expects": "succeeded",
+      "evidence": "measured"
     },
     {
       "from": "pulse:discovery:contradiction-scan",
@@ -3425,7 +3476,8 @@
       "kind": "data",
       "via": "contradiction rows POSTed to the KEAP roadmap table (tools/discovery-scan.py:70-71 TABLE uuid = roadmap-seed.py:31, :470 file_rows, HTTP only — no filesystem writes). 2026-08-06 run: 125 pairs compared, 4 contradictions, 4 rows filed",
       "measured": "2026-08-06",
-      "declared": "writes"
+      "declared": "writes",
+      "evidence": "measured"
     },
     {
       "from": "pulse:keap:keap-consolidate",
@@ -3433,7 +3485,8 @@
       "kind": "data",
       "measured": "2026-08-06",
       "via": "night's new datapoints registered via /agent/v1 capture (keap + cortex mirror)",
-      "expects": "succeeded"
+      "expects": "succeeded",
+      "evidence": "measured"
     },
     {
       "from": "pulse:keap:keap-embed-sync",
@@ -3441,7 +3494,8 @@
       "kind": "data",
       "measured": "2026-08-06",
       "via": "both corpora in settled state — GET /agent/v1/embeddings/pending drained by the second pass",
-      "expects": "succeeded"
+      "expects": "succeeded",
+      "evidence": "measured"
     },
     {
       "from": "pulse:keap:keap-embed-sync",
@@ -3449,7 +3503,8 @@
       "kind": "data",
       "measured": "2026-08-06",
       "via": "fresh embeddings read via /agent/v1, projected onto exemplar axes",
-      "expects": "succeeded"
+      "expects": "succeeded",
+      "evidence": "measured"
     },
     {
       "from": "pulse:keap:keap-embed-sync",
@@ -3457,763 +3512,872 @@
       "kind": "data",
       "measured": "2026-08-06",
       "via": "fresh vectors for the container's lint pass (POST /agent/v1/lint/run)",
-      "expects": "succeeded"
+      "expects": "succeeded",
+      "evidence": "measured"
     },
     {
       "from": "repo:gitea-forge",
       "to": "service:woodpecker",
       "kind": "data",
       "via": "CI clone/fetch of pushed branches (WOODPECKER_GITEA_URL, roles/pazny.woodpecker/templates/compose.yml.j2:31-34; Gitea OAuth2 client auto-created, A16/A19)",
-      "derived": "role-config"
+      "derived": "role-config",
+      "evidence": "derived"
     },
     {
       "from": "resource:ask-operator",
       "to": "agent:jeff",
       "kind": "data",
       "via": "tool grant `ask-operator` declared in files/anatomy/agents/jeff/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:ask-operator",
       "to": "agent:jeff-cloud",
       "kind": "data",
       "via": "tool grant `ask-operator` declared in files/anatomy/agents/jeff-cloud/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:backend-anthropic",
       "to": "agent:inspektor",
       "kind": "data",
       "via": "the register's default backend — this agent declares none, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend"
+      "derived": "agent-backend",
+      "evidence": "derived"
     },
     {
       "from": "resource:backend-anthropic",
       "to": "agent:migration-author",
       "kind": "data",
       "via": "the register's default backend — this agent declares none, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend"
+      "derived": "agent-backend",
+      "evidence": "derived"
     },
     {
       "from": "resource:backend-anthropic",
       "to": "agent:upgrade-architect",
       "kind": "data",
       "via": "the register's default backend — this agent declares none, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend"
+      "derived": "agent-backend",
+      "evidence": "derived"
     },
     {
       "from": "resource:backend-minimax",
       "to": "agent:conductor",
       "kind": "data",
       "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend"
+      "derived": "agent-backend",
+      "evidence": "derived"
     },
     {
       "from": "resource:backend-minimax",
       "to": "agent:curator",
       "kind": "data",
       "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend"
+      "derived": "agent-backend",
+      "evidence": "derived"
     },
     {
       "from": "resource:backend-minimax",
       "to": "agent:jeff-cloud",
       "kind": "data",
       "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend"
+      "derived": "agent-backend",
+      "evidence": "derived"
     },
     {
       "from": "resource:backend-minimax",
       "to": "agent:librarian",
       "kind": "data",
       "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend"
+      "derived": "agent-backend",
+      "evidence": "derived"
     },
     {
       "from": "resource:backend-minimax",
       "to": "agent:ops-extract-cloud",
       "kind": "data",
       "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend"
+      "derived": "agent-backend",
+      "evidence": "derived"
     },
     {
       "from": "resource:backend-minimax",
       "to": "agent:ops-triage-cloud",
       "kind": "data",
       "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend"
+      "derived": "agent-backend",
+      "evidence": "derived"
     },
     {
       "from": "resource:backend-minimax",
       "to": "agent:proposer",
       "kind": "data",
       "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend"
+      "derived": "agent-backend",
+      "evidence": "derived"
     },
     {
       "from": "resource:backend-minimax",
       "to": "agent:surveyor",
       "kind": "data",
       "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend"
+      "derived": "agent-backend",
+      "evidence": "derived"
     },
     {
       "from": "resource:backend-ollama",
       "to": "agent:jeff",
       "kind": "data",
       "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend"
+      "derived": "agent-backend",
+      "evidence": "derived"
     },
     {
       "from": "resource:backend-ollama",
       "to": "agent:ops-extract",
       "kind": "data",
       "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend"
+      "derived": "agent-backend",
+      "evidence": "derived"
     },
     {
       "from": "resource:backend-ollama",
       "to": "agent:ops-triage",
       "kind": "data",
       "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend"
+      "derived": "agent-backend",
+      "evidence": "derived"
     },
     {
       "from": "resource:bash-read-only",
       "to": "agent:conductor",
       "kind": "data",
       "via": "tool grant `bash-read-only` declared in files/anatomy/agents/conductor/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:bash-read-only",
       "to": "agent:curator",
       "kind": "data",
       "via": "tool grant `bash-read-only` declared in files/anatomy/agents/curator/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:bash-read-only",
       "to": "agent:inspektor",
       "kind": "data",
       "via": "tool grant `bash-read-only` declared in files/anatomy/agents/inspektor/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:bash-read-only",
       "to": "agent:librarian",
       "kind": "data",
       "via": "tool grant `bash-read-only` declared in files/anatomy/agents/librarian/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:bash-read-only",
       "to": "agent:migration-author",
       "kind": "data",
       "via": "tool grant `bash-read-only` declared in files/anatomy/agents/migration-author/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:bash-read-only",
       "to": "agent:proposer",
       "kind": "data",
       "via": "tool grant `bash-read-only` declared in files/anatomy/agents/proposer/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:bash-read-only",
       "to": "agent:surveyor",
       "kind": "data",
       "via": "tool grant `bash-read-only` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:bash-read-only",
       "to": "agent:upgrade-architect",
       "kind": "data",
       "via": "tool grant `bash-read-only` declared in files/anatomy/agents/upgrade-architect/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:contract-search",
       "to": "agent:jeff",
       "kind": "data",
       "via": "tool grant `contract-search` declared in files/anatomy/agents/jeff/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:contract-search",
       "to": "agent:jeff-cloud",
       "kind": "data",
       "via": "tool grant `contract-search` declared in files/anatomy/agents/jeff-cloud/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:cortex_token_ro",
       "to": "judge:cortex-corpus-diff",
       "kind": "data",
       "via": "capability requirement (judge-sets requires:) — satisfied or not, never exclusive",
-      "derived": "judge-sets.requires"
+      "derived": "judge-sets.requires",
+      "evidence": "derived"
     },
     {
       "from": "resource:exec",
       "to": "agent:jeff",
       "kind": "data",
       "via": "tool grant `exec` declared in files/anatomy/agents/jeff/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:keap_token_ro",
       "to": "judge:cortex-corpus-diff",
       "kind": "data",
       "via": "capability requirement (judge-sets requires:) — satisfied or not, never exclusive",
-      "derived": "judge-sets.requires"
+      "derived": "judge-sets.requires",
+      "evidence": "derived"
     },
     {
       "from": "resource:live_estate",
       "to": "judge:nos-smoke",
       "kind": "data",
       "via": "capability requirement (judge-sets requires:) — satisfied or not, never exclusive",
-      "derived": "judge-sets.requires"
+      "derived": "judge-sets.requires",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-bone",
       "to": "agent:conductor",
       "kind": "data",
       "via": "tool grant `mcp-bone` declared in files/anatomy/agents/conductor/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-bone",
       "to": "agent:curator",
       "kind": "data",
       "via": "tool grant `mcp-bone` declared in files/anatomy/agents/curator/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-bone",
       "to": "agent:inspektor",
       "kind": "data",
       "via": "tool grant `mcp-bone` declared in files/anatomy/agents/inspektor/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-bone",
       "to": "agent:librarian",
       "kind": "data",
       "via": "tool grant `mcp-bone` declared in files/anatomy/agents/librarian/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-bone",
       "to": "agent:surveyor",
       "kind": "data",
       "via": "tool grant `mcp-bone` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-keap",
       "to": "agent:curator",
       "kind": "data",
       "via": "tool grant `mcp-keap` declared in files/anatomy/agents/curator/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-keap",
       "to": "agent:librarian",
       "kind": "data",
       "via": "tool grant `mcp-keap` declared in files/anatomy/agents/librarian/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-loop",
       "to": "agent:proposer",
       "kind": "data",
       "via": "tool grant `mcp-loop` declared in files/anatomy/agents/proposer/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-wing-read",
       "to": "agent:conductor",
       "kind": "data",
       "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/conductor/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-wing-read",
       "to": "agent:curator",
       "kind": "data",
       "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/curator/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-wing-read",
       "to": "agent:inspektor",
       "kind": "data",
       "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/inspektor/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-wing-read",
       "to": "agent:jeff",
       "kind": "data",
       "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/jeff/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-wing-read",
       "to": "agent:jeff-cloud",
       "kind": "data",
       "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/jeff-cloud/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-wing-read",
       "to": "agent:librarian",
       "kind": "data",
       "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/librarian/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-wing-read",
       "to": "agent:migration-author",
       "kind": "data",
       "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/migration-author/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-wing-read",
       "to": "agent:proposer",
       "kind": "data",
       "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/proposer/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-wing-read",
       "to": "agent:surveyor",
       "kind": "data",
       "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-wing-read",
       "to": "agent:upgrade-architect",
       "kind": "data",
       "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/upgrade-architect/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-wing-write",
       "to": "agent:librarian",
       "kind": "data",
       "via": "tool grant `mcp-wing-write` declared in files/anatomy/agents/librarian/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:mcp-wing-write",
       "to": "agent:surveyor",
       "kind": "data",
       "via": "tool grant `mcp-wing-write` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:migration-file-write",
       "to": "agent:migration-author",
       "kind": "data",
       "via": "tool grant `migration-file-write` declared in files/anatomy/agents/migration-author/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "resource:migration-file-write",
       "to": "agent:upgrade-architect",
       "kind": "data",
       "via": "tool grant `migration-file-write` declared in files/anatomy/agents/upgrade-architect/agent.yml tools[]",
-      "derived": "agent-tools"
+      "derived": "agent-tools",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:backrest",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:bookstack",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:calibre-web",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:code-server",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:documenso",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:erpnext",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:face",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:firefly",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=header_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:freescout",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:gitea",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:gitlab",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:grafana",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:hedgedoc",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:hermes",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:homeassistant",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:infisical",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:influxdb",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:jellyfin",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:keap",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=header_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:kiwix",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:mailpit",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:metabase",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:miniflux",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:n8n",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:nextcloud",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:nodered",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:nos-conductor",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:nos-curator",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:nos-devlog",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:nos-inspektor",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:nos-librarian",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:nos-migration-author",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:nos-openclaw",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:nos-state-manager",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:nos-surveyor",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:nos-upgrade-architect",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:nos-wing",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=client_credentials) — applied into the running service by files/anatomy/plugins/authentik-base/blueprints/30-agent-clients.yaml.j2 from default.config.yml authentik_agent_clients",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:ntfy",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:onlyoffice",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:open-webui",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:openclaw",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:outline",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:paperclip",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:portainer",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:qdrant",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:roundcube",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:snappymail",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:spacetimedb",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:superset",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:twofauth",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:uptime-kuma",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:vaultwarden",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:wing",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:woodpecker",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:authentik",
       "to": "authentik:wordpress",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
-      "derived": "authentik-hosting"
+      "derived": "authentik-hosting",
+      "evidence": "derived"
     },
     {
       "from": "service:bone",
@@ -4222,7 +4386,8 @@
       "measured": "2026-08-07",
       "via": "NOS_VFS_API_URL → host.docker.internal:{{ bone_port }}/api/v1/vfs (roles/pazny.face/templates/compose.yml.j2:51) — the file browser's real per-user tree",
       "enforced_by": null,
-      "unenforced": "No auto-enable block ties install_bone to install_face; the file browser degrades to \"unreachable\" rather than failing."
+      "unenforced": "No auto-enable block ties install_bone to install_face; the file browser degrades to \"unreachable\" rather than failing.",
+      "evidence": "measured"
     },
     {
       "from": "service:bone",
@@ -4231,7 +4396,8 @@
       "measured": "2026-08-07",
       "via": "NOS_BONE_PORT + NOS_BONE_SECRET in the launchd environment (roles/pazny.wing/tasks/post.yml:414-416, rendered into roles/pazny.wing/templates/wing.plist.j2:68) — Bone is the HMAC event vein every Ansible run writes through on its way to wing.db",
       "enforced_by": null,
-      "unenforced": "No auto-enable block ties install_bone to install_wing. With Bone down the callback plugin falls back to ~/.nos/events.jsonl, so the estate keeps converging and the timeline quietly stops growing."
+      "unenforced": "No auto-enable block ties install_bone to install_wing. With Bone down the callback plugin falls back to ~/.nos/events.jsonl, so the estate keeps converging and the timeline quietly stops growing.",
+      "evidence": "measured"
     },
     {
       "from": "service:cortex",
@@ -4240,14 +4406,16 @@
       "measured": "2026-08-07",
       "via": "CORTEX_BACKEND_URL → host.docker.internal:{{ cortex_port }} (roles/pazny.keap/templates/compose.yml.j2:110, with its own token space at :112) — the resolver organ KEAP delegates to once `keap_cortex_cutover` is on",
       "enforced_by": null,
-      "unenforced": "No auto-enable block ties install_cortex to install_keap. Rollback is `keap_cortex_cutover: false` + converge, so with the organ absent and the flag on, KEAP serves its own path and the delegation silently never happens."
+      "unenforced": "No auto-enable block ties install_cortex to install_keap. Rollback is `keap_cortex_cutover: false` + converge, so with the organ absent and the flag on, KEAP serves its own path and the delegation silently never happens.",
+      "evidence": "measured"
     },
     {
       "from": "service:face",
       "to": "faceapp:anatomy-widget",
       "kind": "data",
       "via": "mounted at the desktop root — <WidgetLayer /> in src/routes/+page.svelte resolves every form=widget app through the registry seam; unlike a view it is on screen with no user action, which is what form=widget records",
-      "derived": "face-desktop-root"
+      "derived": "face-desktop-root",
+      "evidence": "derived"
     },
     {
       "from": "service:gitea",
@@ -4256,7 +4424,8 @@
       "measured": "2026-08-07",
       "via": "WOODPECKER_GITEA_URL + WOODPECKER_GITEA_CLIENT/SECRET (roles/pazny.woodpecker/templates/compose.yml.j2:31-34) — Woodpecker has no user store of its own; every login is a Gitea OAuth2 handshake, and the client is auto-created at converge (A16/A19)",
       "enforced_by": null,
-      "unenforced": "`install_gitea` appears in main.yml zero times — no auto-enable block backs this edge, unlike the 22 database ones. `install_woodpecker: true` with `install_gitea: false` brings Woodpecker up pointed at a Gitea URL that resolves to nothing, and roles/pazny.woodpecker/tasks/post.yml:14 then SKIPS the OAuth wiring silently: a healthy container nobody can log into, on a converge that reports failed=0."
+      "unenforced": "`install_gitea` appears in main.yml zero times — no auto-enable block backs this edge, unlike the 22 database ones. `install_woodpecker: true` with `install_gitea: false` brings Woodpecker up pointed at a Gitea URL that resolves to nothing, and roles/pazny.woodpecker/tasks/post.yml:14 then SKIPS the OAuth wiring silently: a healthy container nobody can log into, on a converge that reports failed=0.",
+      "evidence": "measured"
     },
     {
       "from": "service:grafana",
@@ -4265,7 +4434,8 @@
       "measured": "2026-08-07",
       "via": "the Grafana service account + token minted against the estate's own Grafana at http://127.0.0.1:{{ grafana_port }} (roles/pazny.mcp_gateway/tasks/post.yml:34-90) and handed to the mcp-grafana sidecar as GRAFANA_SERVICE_ACCOUNT_TOKEN (roles/pazny.mcp_gateway/templates/compose.yml.j2:70-71)",
       "enforced_by": null,
-      "unenforced": "Grafana rides `install_observability`, which no block ties to install_mcp_gateway. The observability stack is brought up first by tasks/stacks/core-up.yml, so in practice it is there — but a bring-up ORDER is not an enable guarantee, and the token task is `failed_when: false` like the psql one."
+      "unenforced": "Grafana rides `install_observability`, which no block ties to install_mcp_gateway. The observability stack is brought up first by tasks/stacks/core-up.yml, so in practice it is there — but a bring-up ORDER is not an enable guarantee, and the token task is `failed_when: false` like the psql one.",
+      "evidence": "measured"
     },
     {
       "from": "service:keap",
@@ -4274,7 +4444,8 @@
       "measured": "2026-08-07",
       "via": "NOS_KEAP_PORT / the KEAP agent API base in wing.env.j2:31 and wing.plist.j2:77-82 — Wing's knowledge panels query /agent/v1",
       "enforced_by": null,
-      "unenforced": "No auto-enable block ties install_keap to install_wing; the panels render their empty state."
+      "unenforced": "No auto-enable block ties install_keap to install_wing; the panels render their empty state.",
+      "evidence": "measured"
     },
     {
       "from": "service:mailpit",
@@ -4283,7 +4454,8 @@
       "measured": "2026-08-07",
       "via": "SMTP_HOST=\"mailpit\" (roles/pazny.miniflux/templates/compose.yml.j2:31) — the relay every Miniflux notification leaves through",
       "enforced_by": null,
-      "unenforced": "No auto-enable block turns Mailpit on for Miniflux. With it off, mail fails per-message inside Miniflux; the container stays healthy."
+      "unenforced": "No auto-enable block turns Mailpit on for Miniflux. With it off, mail fails per-message inside Miniflux; the container stays healthy.",
+      "evidence": "measured"
     },
     {
       "from": "service:mailpit",
@@ -4292,7 +4464,8 @@
       "measured": "2026-08-07",
       "via": "N8N_SMTP_HOST=\"mailpit\" with N8N_EMAIL_MODE=smtp (roles/pazny.n8n/templates/compose.yml.j2:27-29) — n8n's user invitations and workflow-failure alerts leave through it",
       "enforced_by": null,
-      "unenforced": "No auto-enable block turns Mailpit on for n8n. With it off, SMTP fails per-message inside n8n; the container stays healthy and the converge reports nothing."
+      "unenforced": "No auto-enable block turns Mailpit on for n8n. With it off, SMTP fails per-message inside n8n; the container stays healthy and the converge reports nothing.",
+      "evidence": "measured"
     },
     {
       "from": "service:mailpit",
@@ -4301,7 +4474,8 @@
       "measured": "2026-08-07",
       "via": "SMTP_HOST=mailpit (roles/pazny.nextcloud/templates/compose.yml.j2:36) — the only mail path a default install has; share links, password resets and admin alerts all leave through it",
       "enforced_by": null,
-      "unenforced": "No auto-enable block turns Mailpit on for Nextcloud. With it off the SMTP host resolves to nothing and outbound mail fails per-message, inside Nextcloud's own logs."
+      "unenforced": "No auto-enable block turns Mailpit on for Nextcloud. With it off the SMTP host resolves to nothing and outbound mail fails per-message, inside Nextcloud's own logs.",
+      "evidence": "measured"
     },
     {
       "from": "service:mariadb",
@@ -4309,7 +4483,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DB_HOST=mariadb (roles/pazny.bookstack/templates/compose.yml.j2:26) — schema `bookstack`",
-      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it"
+      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:mariadb",
@@ -4317,7 +4492,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DB_HOST=mariadb on all five bench containers plus the configurator's `bench new-site --db-root-password` (roles/pazny.erpnext/templates/compose.yml.j2:32,47) — schema `erpnext`",
-      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it"
+      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:mariadb",
@@ -4325,7 +4501,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DB_CONNECTION=mysql + DB_HOST=mariadb (roles/pazny.firefly/templates/compose.yml.j2:43-44) — schema `firefly`",
-      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it"
+      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:mariadb",
@@ -4333,7 +4510,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DB_HOST=mariadb (roles/pazny.freepbx/templates/compose.yml.j2:33) — schema `asterisk`, the one whose name does not match its service",
-      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it"
+      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:mariadb",
@@ -4341,7 +4519,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DB_HOST=mariadb (roles/pazny.freescout/templates/compose.yml.j2:25) — schema `freescout`",
-      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it"
+      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:mariadb",
@@ -4349,7 +4528,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "MYSQL_HOST=mariadb (roles/pazny.nextcloud/templates/compose.yml.j2:24) — schema `nextcloud`, created by mariadb_databases (default.config.yml:1219)",
-      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it"
+      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:mariadb",
@@ -4357,7 +4537,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "WORDPRESS_DB_HOST=mariadb (roles/pazny.wordpress/templates/compose.yml.j2:26) — schema `wordpress`, created by mariadb_databases (default.config.yml:1219)",
-      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it"
+      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:onlyoffice",
@@ -4366,7 +4547,8 @@
       "measured": "2026-08-07",
       "via": "`occ app:enable onlyoffice` + DocumentServerInternalUrl / StorageUrl (roles/pazny.nextcloud/tasks/post.yml:283-309) — the in-Nextcloud editor IS the OnlyOffice document server; without it the connector app installs and every document opens read-only",
       "enforced_by": null,
-      "unenforced": "No `Auto-enable …` block ties install_onlyoffice to install_nextcloud. With OnlyOffice off, the post-start connector wiring is skipped and Nextcloud comes up healthy with a dead Edit button — a degraded feature, not a failed converge, which is why nothing has ever reported it."
+      "unenforced": "No `Auto-enable …` block ties install_onlyoffice to install_nextcloud. With OnlyOffice off, the post-start connector wiring is skipped and Nextcloud comes up healthy with a dead Edit button — a degraded feature, not a failed converge, which is why nothing has ever reported it.",
+      "evidence": "measured"
     },
     {
       "from": "service:postgresql",
@@ -4374,7 +4556,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "AUTHENTIK_POSTGRESQL__HOST=postgresql on BOTH the server and the worker (roles/pazny.authentik/templates/compose.yml.j2:36,97) — database `authentik`, created by roles/pazny.postgresql/tasks/post.yml:104-119",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:postgresql",
@@ -4382,7 +4565,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "CMD_DB_URL=postgres://…@postgresql:5432 (roles/pazny.hedgedoc/templates/compose.yml.j2:26) — database `hedgedoc`",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:postgresql",
@@ -4390,7 +4574,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DB_CONNECTION_URI=postgresql://…@postgresql:5432 (roles/pazny.infisical/templates/compose.yml.j2:23) — database `infisical`",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:postgresql",
@@ -4399,7 +4584,8 @@
       "measured": "2026-08-07",
       "via": "the `postgres` MCP server's DSN postgresql://mcp_readonly:…@postgresql:5432 (roles/pazny.mcp_gateway/templates/mcpo-config.json.j2:20, under `mcp_enable_postgres` which defaults TRUE) plus the read-only role the role creates with `docker compose -p infra exec -T postgresql psql` (roles/pazny.mcp_gateway/tasks/post.yml:12-31)",
       "enforced_by": null,
-      "unenforced": "`install_mcp_gateway` is in NO auto-enable block. With PostgreSQL absent the role reports success anyway — the psql task carries `failed_when: false` + `no_log: true`, and the status line then prints \"mcpo: OK (N MCP endpoints active)\" because /openapi.json serves whether or not the postgres server can reach a database. A success marker written by the attempting code."
+      "unenforced": "`install_mcp_gateway` is in NO auto-enable block. With PostgreSQL absent the role reports success anyway — the psql task carries `failed_when: false` + `no_log: true`, and the status line then prints \"mcpo: OK (N MCP endpoints active)\" because /openapi.json serves whether or not the postgres server can reach a database. A success marker written by the attempting code.",
+      "evidence": "measured"
     },
     {
       "from": "service:postgresql",
@@ -4407,7 +4593,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "MB_DB_TYPE=postgres + MB_DB_HOST=postgresql (roles/pazny.metabase/templates/compose.yml.j2:23,28) — database `metabase`",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:postgresql",
@@ -4415,7 +4602,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DATABASE_URL=postgres://…@postgresql:5432 (roles/pazny.miniflux/templates/compose.yml.j2:18) — database `miniflux`",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:postgresql",
@@ -4423,7 +4611,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DATABASE_URL=postgres://…@postgresql:5432 (roles/pazny.outline/templates/compose.yml.j2:23) — database `outline`",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:postgresql",
@@ -4431,7 +4620,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DATABASE_URL=postgresql://…@postgresql:5432 (roles/pazny.paperclip/templates/compose.yml.j2:30) — database `paperclip`",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:postgresql",
@@ -4439,7 +4629,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DATABASE_HOST=postgresql — Superset's own metadata database (roles/pazny.superset/templates/compose.yml.j2:35), not a chart datasource",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it"
+      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:prometheus",
@@ -4448,7 +4639,8 @@
       "measured": "2026-08-07",
       "via": "NOS_PROMETHEUS_PORT (roles/pazny.wing/tasks/post.yml:420) — the alert-relay-base Pulse job polls Prometheus for firing alerts (2026-08-05)",
       "enforced_by": null,
-      "unenforced": "Prometheus rides install_observability, which no block ties to install_wing. With it absent the relay job runs and finds no alerts, which is indistinguishable from a quiet estate — the alert path's own absence-as-calm, recorded here rather than fixed here."
+      "unenforced": "Prometheus rides install_observability, which no block ties to install_wing. With it absent the relay job runs and finds no alerts, which is indistinguishable from a quiet estate — the alert path's own absence-as-calm, recorded here rather than fixed here.",
+      "evidence": "measured"
     },
     {
       "from": "service:redis",
@@ -4456,7 +4648,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "AUTHENTIK_REDIS__HOST=redis on both server and worker (roles/pazny.authentik/templates/compose.yml.j2:34,95) — task queue + cache",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it"
+      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:redis",
@@ -4464,7 +4657,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "REDIS_SERVERS=redis:6379:0 — session + cache store (roles/pazny.bookstack/templates/compose.yml.j2:35)",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it"
+      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:redis",
@@ -4472,7 +4666,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "REDIS_CACHE/REDIS_QUEUE/REDIS_SOCKETIO at redis:6379/{0,1,2}, set both in the configurator and on every worker (roles/pazny.erpnext/templates/compose.yml.j2:34-36,51-52)",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it"
+      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:redis",
@@ -4480,7 +4675,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "REDIS_HOST=redis — cache + session driver (roles/pazny.firefly/templates/compose.yml.j2:53)",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it"
+      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:redis",
@@ -4488,7 +4684,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "REDIS_URL=redis://…@redis:6379 (roles/pazny.infisical/templates/compose.yml.j2:24)",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it"
+      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:redis",
@@ -4496,7 +4693,8 @@
       "kind": "data",
       "measured": "2026-09-01",
       "via": "REDIS_SERVER_HOST=redis:6379 (roles/pazny.onlyoffice/templates/compose.yml.j2:38-42), gated on redis_docker. main.yml auto-enables redis for install_onlyoffice.",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it"
+      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:redis",
@@ -4504,7 +4702,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "REDIS_URL=redis://…@redis:6379 — websocket collaboration state (roles/pazny.outline/templates/compose.yml.j2:25)",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it"
+      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:redis",
@@ -4512,7 +4711,8 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "REDIS_HOST=redis — Celery broker + results backend (roles/pazny.superset/templates/compose.yml.j2:40)",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it"
+      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "evidence": "measured"
     },
     {
       "from": "service:wing",
@@ -4521,21 +4721,24 @@
       "measured": "2026-08-07",
       "via": "NOS_HUB_API_URL + NOS_WING_API_URL → host.docker.internal:{{ wing_port }} (roles/pazny.face/templates/compose.yml.j2:40,47) — the app catalog and the Anatomy view's Pulse/Bone/Wing projections all come from Wing; the BFF is an allow-list projection over these responses",
       "enforced_by": null,
-      "unenforced": "No auto-enable block ties install_wing to install_face. With Wing down the desktop still boots and every Anatomy panel renders its unreachable state — which is the designed behaviour, and also why nothing fails."
+      "unenforced": "No auto-enable block ties install_wing to install_face. With Wing down the desktop still boots and every Anatomy panel renders its unreachable state — which is the designed behaviour, and also why nothing fails.",
+      "evidence": "measured"
     },
     {
       "from": "tofu:authentik-state",
       "to": "pulse:authentik-tofu-drift:tofu-drift-plan",
       "kind": "data",
       "measured": "2026-08-06",
-      "via": "read-only `tofu plan -detailed-exitcode` over terraform/authentik (skills/run-tofu-drift.sh:36 TOFU_DIR, :67 tfvars gate) — skips cleanly pre-cutover, never applies"
+      "via": "read-only `tofu plan -detailed-exitcode` over terraform/authentik (skills/run-tofu-drift.sh:36 TOFU_DIR, :67 tfvars gate) — skips cleanly pre-cutover, never applies",
+      "evidence": "measured"
     },
     {
       "from": "tofu:authentik-state",
       "to": "service:authentik",
       "kind": "data",
       "via": "converge-time `tofu apply` writes providers/applications/outpost attachments into the live tenant (tasks/tofu-authentik.yml, destroy-guarded, -parallelism=1); read back daily by the plan-only drift job",
-      "derived": "tofu-apply-path"
+      "derived": "tofu-apply-path",
+      "evidence": "derived"
     },
     {
       "from": "judge:ansible-lint",
@@ -4543,7 +4746,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:56",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "judge:cortex-corpus-diff",
@@ -4551,7 +4755,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:304",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "judge:cortex-corpus-diff",
@@ -4559,7 +4764,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:285",
       "citations": 2,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "judge:cortex-corpus-diff",
@@ -4567,7 +4773,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:310",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "judge:genome-codegen",
@@ -4575,7 +4782,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:88",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "judge:genome-codegen",
@@ -4583,7 +4791,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:65",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "judge:genome-codegen",
@@ -4591,7 +4800,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:78",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "judge:genome-codegen",
@@ -4599,7 +4809,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:78",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "judge:nos-smoke",
@@ -4607,7 +4818,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:275",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "judge:nos-smoke",
@@ -4615,7 +4827,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:242",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "judge:nos-smoke",
@@ -4623,7 +4836,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:263",
       "citations": 2,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "judge:pytest-anatomy",
@@ -4631,7 +4845,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:227",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "judge:pytest-anatomy",
@@ -4639,7 +4854,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:228",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "judge:pytest-anatomy",
@@ -4647,7 +4863,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:217",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "judge:pytest-anatomy",
@@ -4655,7 +4872,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:98",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "judge:pytest-anatomy",
@@ -4663,7 +4881,8 @@
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:223",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "pulse:cortex:cortex-fs-sync",
@@ -4671,7 +4890,8 @@
       "kind": "governed_by",
       "via": "cited at files/anatomy/plugins/cortex-base/plugin.yml:119",
       "citations": 2,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "pulse:cortex:cortex-fs-sync",
@@ -4679,7 +4899,8 @@
       "kind": "governed_by",
       "via": "cited at files/anatomy/plugins/cortex-base/plugin.yml:146",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "pulse:keap:keap-embed-sync",
@@ -4687,7 +4908,8 @@
       "kind": "governed_by",
       "via": "cited at files/anatomy/plugins/keap-base/plugin.yml:163",
       "citations": 1,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "pulse:loop:propose",
@@ -4695,154 +4917,176 @@
       "kind": "governed_by",
       "via": "cited at files/anatomy/plugins/loop-base/plugin.yml:69",
       "citations": 2,
-      "derived": "doctrine-cite"
+      "derived": "doctrine-cite",
+      "evidence": "derived"
     },
     {
       "from": "pulse:conductor:self-test-001",
       "to": "pulse:conductor:vulnerability-scan",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:conductor:self-test-001",
       "to": "pulse:librarian:brief-taxonomy",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:conductor:self-test-001",
       "to": "pulse:librarian:describe-taxonomy",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:conductor:self-test-001",
       "to": "pulse:librarian:judge-lint-queue",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:conductor:self-test-001",
       "to": "pulse:surveyor:surface-survey",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:conductor:self-test-001",
       "to": "pulse:upgrade-architect:recipe-author",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:conductor:vulnerability-scan",
       "to": "pulse:librarian:brief-taxonomy",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:conductor:vulnerability-scan",
       "to": "pulse:librarian:describe-taxonomy",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:conductor:vulnerability-scan",
       "to": "pulse:librarian:judge-lint-queue",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:conductor:vulnerability-scan",
       "to": "pulse:surveyor:surface-survey",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:conductor:vulnerability-scan",
       "to": "pulse:upgrade-architect:recipe-author",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:librarian:brief-taxonomy",
       "to": "pulse:librarian:describe-taxonomy",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:librarian:brief-taxonomy",
       "to": "pulse:librarian:judge-lint-queue",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:librarian:brief-taxonomy",
       "to": "pulse:surveyor:surface-survey",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:librarian:brief-taxonomy",
       "to": "pulse:upgrade-architect:recipe-author",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:librarian:describe-taxonomy",
       "to": "pulse:librarian:judge-lint-queue",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:librarian:describe-taxonomy",
       "to": "pulse:surveyor:surface-survey",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:librarian:describe-taxonomy",
       "to": "pulse:upgrade-architect:recipe-author",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:librarian:judge-lint-queue",
       "to": "pulse:surveyor:surface-survey",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:librarian:judge-lint-queue",
       "to": "pulse:upgrade-architect:recipe-author",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:surveyor:surface-survey",
       "to": "pulse:upgrade-architect:recipe-author",
       "kind": "mutex",
       "resource": "agent-run-lock",
-      "derived": "claims"
+      "derived": "claims",
+      "evidence": "derived"
     },
     {
       "from": "pulse:cortex:cortex-fs-sync",
@@ -4856,7 +5100,8 @@
       ],
       "gap_min": 15,
       "declared_margin_min": -2.0,
-      "can_invert": true
+      "can_invert": true,
+      "evidence": "measured"
     },
     {
       "from": "pulse:keap:keap-consolidate",
@@ -4870,7 +5115,8 @@
       ],
       "gap_min": 15,
       "declared_margin_min": 0.0,
-      "can_invert": true
+      "can_invert": true,
+      "evidence": "measured"
     },
     {
       "from": "pulse:keap:keap-embed-sync",
@@ -4884,7 +5130,8 @@
       ],
       "gap_min": 15,
       "declared_margin_min": -10.0,
-      "can_invert": true
+      "can_invert": true,
+      "evidence": "measured"
     },
     {
       "from": "pulse:keap:keap-features-sync",
@@ -4898,7 +5145,8 @@
       ],
       "gap_min": 15,
       "declared_margin_min": 0.0,
-      "can_invert": true
+      "can_invert": true,
+      "evidence": "measured"
     },
     {
       "from": "pulse:keap:keap-lint",
@@ -4912,266 +5160,304 @@
       ],
       "gap_min": 15,
       "declared_margin_min": 5.0,
-      "can_invert": false
+      "can_invert": false,
+      "evidence": "measured"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:alert-relay:relay-firing",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:authentik-tofu-drift:tofu-drift-plan",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:backup:backup-restore-drill",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:conductor:scan-state-record",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:conductor:security-drift-watch",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:conductor:self-test-001",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:conductor:vulnerability-scan",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:cortex:cortex-corpus-diff",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:cortex:cortex-fs-sync",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:discovery:contradiction-scan",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:gdpr-breach:breach-deadline-scan",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:gitleaks:nightly-scan",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:keap:keap-consolidate",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:keap:keap-embed-sync",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:keap:keap-features-sync",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:keap:keap-lint",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:librarian:brief-taxonomy",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:librarian:describe-taxonomy",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:librarian:judge-lint-queue",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:loop:drive",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:loop:propose",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:loop:review",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:npm-supply-chain:daily-ioc-scan",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:surveyor:surface-survey",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:wing:agent-cost-tally",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:wing:audit-chain-verify",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:wing:dispatch-notifications",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:wing:dispatch-notifications-digest",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:wing:inbox-reconcile",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch"
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "faceapp:anatomy-widget",
       "to": "faceapp:anatomy",
       "kind": "trigger",
       "via": "click-through: open() calls requestAnatomy('graph', undefined, id) then launchNative('anatomy'), so the Graph view opens with the clicked node already selected (src/lib/apps/widgets/AnatomyWidget.svelte)",
-      "derived": "face-click-through"
+      "derived": "face-click-through",
+      "evidence": "derived"
     },
     {
       "from": "pulse:conductor:self-test-001",
       "to": "agent:conductor",
       "kind": "trigger",
       "via": "run-agent.sh dispatches the conductor ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
-      "derived": "agent-dispatch"
+      "derived": "agent-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "pulse:cortex:cortex-corpus-diff",
       "to": "pulse:cortex:cortex-fs-sync",
       "kind": "trigger",
       "measured": "2026-08-06",
-      "via": "night ledger `halted` flag (~/.nos/cortex-corpus-diff.json) — read at start, refuse with exit 4; cleared only by --clear-halt"
+      "via": "night ledger `halted` flag (~/.nos/cortex-corpus-diff.json) — read at start, refuse with exit 4; cleared only by --clear-halt",
+      "evidence": "measured"
     },
     {
       "from": "pulse:librarian:brief-taxonomy",
       "to": "agent:librarian",
       "kind": "trigger",
       "via": "run-agent.sh dispatches the librarian ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
-      "derived": "agent-dispatch"
+      "derived": "agent-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "pulse:librarian:describe-taxonomy",
       "to": "agent:librarian",
       "kind": "trigger",
       "via": "run-agent.sh dispatches the librarian ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
-      "derived": "agent-dispatch"
+      "derived": "agent-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "pulse:librarian:judge-lint-queue",
       "to": "agent:librarian",
       "kind": "trigger",
       "via": "run-agent.sh dispatches the librarian ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
-      "derived": "agent-dispatch"
+      "derived": "agent-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "pulse:surveyor:surface-survey",
       "to": "agent:surveyor",
       "kind": "trigger",
       "via": "run-agent.sh dispatches the surveyor ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
-      "derived": "agent-dispatch"
+      "derived": "agent-dispatch",
+      "evidence": "derived"
     },
     {
       "from": "pulse:upgrade-architect:recipe-author",
       "to": "agent:upgrade-architect",
       "kind": "trigger",
       "via": "run-agent.sh dispatches the upgrade-architect ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
-      "derived": "agent-dispatch"
+      "derived": "agent-dispatch",
+      "evidence": "derived"
     }
   ]
 }

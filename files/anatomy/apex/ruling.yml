@@ -61,7 +61,7 @@ signed_digest: 333da9a7e6ff9087125f9c7e41862a2138a9192080dc1463590d202ff5bea980
 splits:
   verbatim: 6
   transformed: 9
-  withheld: 69
+  withheld: 70
 
 # -----------------------------------------------------------------------------
 # STANDING DECISIONS — operator rulings, recorded as decisions with reasons,
@@ -206,6 +206,7 @@ fields:
     derived:             { ruling: WITHHELD, why: "provenance metadata" }
     measured:            { ruling: WITHHELD, why: "provenance metadata" }
     declared:            { ruling: WITHHELD, why: "provenance metadata" }
+    evidence:            { ruling: WITHHELD, why: "provenance metadata — which of derived/measured attests the edge" }
     expects:             { ruling: WITHHELD, why: "internal contract" }
     enforced_by:         { ruling: WITHHELD, why: "names the enforcing gate" }
     citations:           { ruling: WITHHELD, why: "file paths" }
