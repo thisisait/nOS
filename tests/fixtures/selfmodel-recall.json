@@ -1318,7 +1318,7 @@
       "q": "ears status",
       "expect": [
         "node:nos.host.ears",
-        "title:check-ears-daemon"
+        "title:check-ears-session"
       ],
       "forbid": [
         "node:nos",
@@ -2088,7 +2088,7 @@
       "q": "is Ears running",
       "expect": [
         "node:nos.host.ears",
-        "title:check-ears-daemon"
+        "title:check-ears-session"
       ],
       "forbid": [
         "node:nos",
@@ -2286,7 +2286,7 @@
       "q": "is the microphone listening",
       "expect": [
         "node:nos.host.ears",
-        "title:check-ears-daemon"
+        "title:check-ears-session"
       ],
       "forbid": [
         "node:nos",
