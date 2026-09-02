@@ -717,8 +717,6 @@ homebrew_installed_packages:
   - imagemagick          # convert – batch image processing
   - yt-dlp               # yt-dlp – video/audio download from YT and others
   - exiftool             # exiftool – read/write media metadata
-  # ── Databases ────────────────────────────────────────────────────────────
-  - redis                # Redis – in-memory cache + pub/sub (projects, Nextcloud)
   # ── Backups and maintenance ──────────────────────────────────────────────
   - restic               # Restic – encrypted backups (Backblaze B2, SFTP, local disk)
   - mac-cleanup-go       # TUI macOS cleaner – cache, logs, Xcode, brew (github.com/2ykwang/mac-cleanup-go)
@@ -1443,8 +1441,9 @@ postgresql_container_name: "infra-postgresql-1"
 mariadb_container_name: "infra-mariadb-1"
 
 # ==============================================================================
-# INFRA – REDIS (Docker, alternative to Homebrew Redis)
-# If redis_docker: true, Homebrew Redis is not used
+# INFRA – REDIS (Docker)
+# Homebrew Redis is no longer installed: the auto-enable list at main.yml:1504
+# IS the consumer list, so redis_docker false means nothing wanted Redis at all.
 # ==============================================================================
 
 redis_docker: false                    # true = Redis in Docker (for cross-stack access)
