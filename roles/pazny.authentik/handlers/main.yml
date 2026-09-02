@@ -17,9 +17,14 @@
   # 10-oidc-apps engine-gated 2026-06-11 (ADR-0001 Phase 1): under
   # authentik_engine=tofu OpenTofu owns the providers/apps layer — mirror of
   # the main.yml play-level handler gate.
+  # `-u root`, load-bearing on Linux: SEC-1 renders blueprints 0600 owned by
+  # the ansible user, and the container's uid-1000 gets EACCES on a real bind
+  # mount (macOS VirtioFS masks ownership, which is why the estate never saw
+  # it). Root bypasses the mode; the boot scan stays unprivileged; the verify
+  # task reads the result back. Measured: run 33660558975, apps == [].
   ansible.builtin.shell: |
     for bp in 00-admin-groups{{ ' 50-mfa-policy' if (enforce_mfa | default(false) | bool) else '' }}{{ ' 10-oidc-apps' if (authentik_engine | default('blueprint')) != 'tofu' else '' }} 20-rbac-policies 30-agent-clients 40-enrollment-flow 46-brand-auth-flow; do
-      {{ docker_bin }} compose -p infra exec -T authentik-worker \
+      {{ docker_bin }} compose -p infra exec -T -u root authentik-worker \
         ak apply_blueprint "/blueprints/custom/${bp}.yaml" 2>&1 || true
     done
   failed_when: false
