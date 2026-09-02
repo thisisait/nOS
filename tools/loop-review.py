@@ -373,6 +373,16 @@ def main() -> int:
         driver = _load("_loop_pr", "loop-pr.py")
         driver._refuse_master(args.base)
 
+        # A forge DECLARED off is a decision, not a failure. install_gitlab
+        # false made this job correctly-red every night (2026-09-02, operator
+        # ruling: gate on the flag). Unreachable while true stays rc=2.
+        flag = driver._yaml_lookup("install_gitlab", REPO / "config.yml",
+                                   REPO / "default.config.yml")
+        if str(flag).lower() == "false":
+            log("SKIP: install_gitlab is false — the forge is declared off; "
+                "nothing to review. Flip the flag to re-enable this job.")
+            return 0
+
         requests = open_requests(driver, args.base)
         if args.mr:
             requests = [m for m in requests if m.get("iid") == args.mr]

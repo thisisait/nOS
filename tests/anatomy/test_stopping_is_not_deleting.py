@@ -12,6 +12,10 @@ The split:
 
 `unless-stopped` is what makes the safe half durable: an explicitly stopped
 container stays stopped across a reboot, so no new machinery is needed.
+
+CONFIRMED 2026-09-02 (operator ruling): the stop half is deliberately ungated
+even for run-time disables (-e @profiles/...) — a profile is always an operator
+act, and stop is reversible. Authored-only discipline applies to DELETION only.
 """
 
 from __future__ import annotations
