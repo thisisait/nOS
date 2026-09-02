@@ -762,10 +762,11 @@ row("repo-split-trigger", "Nothing is worth splitting out yet, and here is the n
          "work most likely to be somebody else's — and it splits when its mixed-commit ratio "
          "drops below about 30 percent. Re-measure with the same one-liner; do not split on "
          "a feeling.")
-row("ears-app-bundle", "The launchd ear is handed a microphone with no speech in it",
+row("ears-app-bundle", "Always-listen needs an app bundle to hold the TCC grant",
     "2026-08-31", "next", "platform", parent="local-llm-voice",
     refs="roles/pazny.ears/tasks/main.yml (the TCC comment) · tools/cc/panes/caddy.py · files/anatomy/ears/ears-listen.py",
-    body="MEASURED 2026-08-31 with identical arguments in two contexts, after three fixes "
+    body="STATUS 2026-09-02: the in-session ear WORKS (nos-cc `s`, ASR live); the launchd listener was deliberately removed the same day (TCC) and six surfaces say so. What remains is the future: always-listen returns only inside an app bundle that can hold the grant. The measurement that decided it: "
+         "MEASURED 2026-08-31 with identical arguments in two contexts, after three fixes "
          "had been aimed at the consequences. ffmpeg is the process that opens the "
          "microphone and macOS attributes the TCC grant to the RESPONSIBLE process: started "
          "from a terminal that is Terminal, which has the grant; started by launchd, ffmpeg "
@@ -1799,6 +1800,18 @@ row("plat-organ-identity","Organ means four different things and no two enumerat
          "WHAT IT HAS COST, each measured rather than argued: `ears` existed with install_ears true and NO manifest entry, so it had no taxonomy node, no self-model card and no route derivation — and nothing noticed, because each of the four lists is complete on its own terms. `cortex` names two components (the host typechecker nos.host.cortex, and KEAP which CLAUDE.md also calls the cortex, at nos.iiab.keap). `face` and `apex` are called organs and are containers, so the tree answers nos.iiab.* to an operator asking in the anatomy vocabulary. `agents`/caddy/jeff has no node in any of the four, and two committed keap-tables anchored [[nos.agents]] against nothing. "
          "THE FIX IS NOT A RENAME. layers.md is the precedent: give each axis its own word and let none of them be `organ` unqualified. The open decisions are the operator\'s — whether the anatomy vocabulary gains a machine surface or retires to prose; whether the self-model generator grows a third level (it is strictly two-level and manifest-driven today); and whether `iiab` is renamed, which reaches compose project names AND every nos.iiab.* id, where the nightly cortex-corpus-diff compares taxonomy id sets both ways and would read a rename as mass deletion. "
          "WHATEVER IS CHOSEN, one reader must enumerate the organs. Four internally-complete lists is exactly how ears went missing; the answer is a reader that can be asked, not a fifth list in prose.")
+row("agentkit-xai-backend","xAI/Grok is a backend row, prepared not armed","2026-09-01","shipped","platform",
+    refs="state/llm-backends.yml · e43e9438 · a5a305fc (apex: withheld)",
+    body="SHIPPED 2026-09-01: Grok joins as a register row under the standing rule — committing a row never half-arms a backend; arming is NOS_ARMED_BACKENDS, an operator config edit. Apex ruled the node withheld; graph regenerated. The row exists so the operator can test x.ai orchestration by flipping one env var, and so the roadmap stops undercounting shipped work (review agent, 2026-09-02).")
+row("plat-dev-minimal-profile","dev-minimal: 30 containers / 3.8 GiB, and it stops what it disables","2026-09-01","shipped","platform",
+    refs="profiles/dev-minimal.yml · tests/anatomy/test_a_profile_only_sets_flags_that_exist.py · tests/anatomy/test_stopping_is_not_deleting.py",
+    body="SHIPPED 2026-09-01/02: a committed minimal profile (30 containers, 3.8 GiB vs 60/14.2) whose flags are gated against existing toggles — 4 of the first 63 keys were silent typos caught by rendering, not reading. Superseded in part by the stop discipline: declared-off now stops on EVERY converge, so the profile is a per-run lens, not the estate's memory. plat-defaults-derive remains the structural successor (config.yml additive, profile stops existing).")
+row("obs-host-organ-traces","The three host organs emit traces","2026-09-01","shipped","platform",
+    refs="f1e842af · tests/anatomy/test_every_organ_emits_traces.py",
+    body="SHIPPED 2026-09-01: Tempo held 950 traces, ALL AgentKit — Wing, Bone and cortex emitted none. One span per request from each organ's own entry point (BasePresenter, FastAPI middleware, express middleware), hand-rolled OTLP/HTTP JSON per organ — the pattern already lived in AgentKit's OtelExporter, no OTel SDK added. Live: nos.wing 27ms, nos.bone 4ms, nos.cortex 25ms. Gate retro-verified on all four reverts.")
+row("wing-hub-honesty","The hub reads its own database, and the badge counts all of it","2026-09-02","shipped","platform",
+    refs="files/anatomy/wing/app/Presenters/HubPresenter.php · tests/anatomy/test_hub_shows_estate_red.py · a4579ddd..2e30061a",
+    body="SHIPPED 2026-09-01/02, three defects one surface: /hub probed HTTP and knew nothing its own wing.db held (estate-red tile now: failing pulse jobs + unread, scope named on the tile); the menubar badge sampled the 60 newest notifications and called it a count — an old unread CRITICAL silently fell out (server-side unread_only now); the red-count cross-check raced a moving database (interval sampling now, and failingJobs picks the latest run BEFORE judging it — the tie-break bug was dormant, caught by extracting the SQL and running it on a synthetic tie).")
 row("agent-scope-single-authority","Agent scopes: manifest is the authority, mint a projection","2026-09-02","next","platform",
     refs="docs/doctrine/agentkit.md §6.3 · docs/doctrine/identity.md · state/schema/agent.schema.yaml · roles/pazny.wing/tasks/",
     body="RULED 2026-09-02 (agentkit.md §6.3): the wing scope was declared three times (agent.yml, mint task, live api_tokens) and gates compared two — conductor held an unspendable wing.write in the gap (d08abc81). The pattern is identity.md verbatim: manifest = declaration, mint DERIVES from it, one reader compares the live row both directions (MISSING / UNDECLARED / ?). "
