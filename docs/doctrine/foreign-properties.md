@@ -179,6 +179,20 @@ what it **resolves** — `tools/tls-uptake.py`'s `_LARAVEL_PROBE` does — becau
 configuration value has as many plausible readings as there are layers above it,
 and only the last one is true.
 
+## 6. The WAN router has no unauthenticated status API
+
+The estate's edge sits behind a Mercusys MR27BE (BE3600 Wi-Fi 7). Its admin UI
+at `192.168.1.1` is login-walled; the only documented API surface (TR-069) is
+for the ISP's ACS, not for us; the undocumented `cgi-bin`/`stok` JSON surface
+TP-Link-family firmware exposes is reverse-engineered, unstable across
+firmware revisions, and not a contract with anyone. **The accommodation:**
+`state/router.yml` declares what the operator intends (forwards, remote-mgmt
+and UPnP OFF, firmware version — dated, operator-entered);
+`tools/router-status.py` measures only gateway presence and reports `UNKNOWN`
+rather than a guessed match whenever it cannot look further. See
+`docs/router-as-estate-fact.md` for the full design and what was deliberately
+left unbuilt (config automation, credential storage, a UPnP exposure scan).
+
 ## 7. VirtioFS answers `statfs` from the wrong volume
 
 MEASURED 2026-08-31. `observability-loki-1` bind-mounts

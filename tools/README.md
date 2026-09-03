@@ -50,6 +50,7 @@ worse than none, because it reads as complete.
 - `doctrine-cite.py` — Resolve every doctrine citation in the estate — or say exactly which do not.
 - `graph-communities.py` — Computed communities vs the declared `stack`/`layer` axes; prints only the disagreement (docs/adr/0002-graphify-borrowings.md §2).
 - `graph-report.py` — What the anatomy graph's SHAPE implies: god nodes, isolated nodes, and which measured edges cite a file that has moved since.
+- `router-status.py` — The WAN router as a declared estate fact: presence probe + intent from state/router.yml; UNKNOWN when it cannot look.
 - `elsewhere-status.py` — Estate work happening OUTSIDE the control centre, and how to get to it.
 - `estate-status.py` — What is TRUE right now, across the three places a fact about nOS can live.
 - `face-wiring-report.py` — nOS-face wiring report — the hard-doctrine linter for the web-desktop shell.

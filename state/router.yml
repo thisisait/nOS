@@ -1,0 +1,48 @@
+# ==============================================================================
+# router.yml — the WAN gateway as a declared estate fact.
+#
+# WHY A SEPARATE FILE. state/manifest.yml has additionalProperties:false at the
+# top level (state/schema/manifest.schema.json) and is shaped around SERVICES
+# nOS deploys — image, version_var, health_check. The router is not deployed
+# by nOS; it is foreign hardware nOS merely sits behind. Bolting a `router:`
+# key onto the manifest would fail schema validation, and stretching the
+# service schema to fit a thing with no install_flag and no container would
+# be the wrong shape wearing the right file. See docs/router-as-estate-fact.md.
+#
+# WHAT THIS IS. Declared facts an operator entered, not anything nOS derived.
+# No credential, no scrape, no config push ever targets this file's `admin_url`
+# — see docs/router-as-estate-fact.md "excluded" section for why.
+#
+# Read by: tools/router-status.py (presence probe only; UNKNOWN when
+# unreachable, never a guessed green).
+# ==============================================================================
+
+router:
+  model: "Mercusys MR27BE (BE3600 Dual-Band Wi-Fi 7)"
+  gateway_ip: "192.168.1.1"
+  admin_url: "http://192.168.1.1/"
+
+  # Operator-entered, dated — nOS cannot read this off the device (login-walled
+  # web UI, no documented API; see docs/router-as-estate-fact.md §2). Update the
+  # date whenever you actually check, even if the version string is unchanged.
+  firmware:
+    version: "TODO"     # e.g. "1.2.3 Build 20260615"
+    checked_on: "TODO"  # ISO date the operator last looked, e.g. "2026-09-03"
+
+  # The ADR-0003 checklist, made machine-readable. This is what the operator
+  # DECIDED the router should be set to — not a measurement of what it is.
+  declared:
+    remote_management_enabled: false   # operator intent: OFF
+    upnp_enabled: false                # operator intent: OFF
+    port_forwards:
+      - port: 80
+        proto: tcp
+        target: traefik
+      - port: 443
+        proto: tcp
+        target: traefik
+
+  # What CANNOT be declared here: whether the router actually matches the
+  # above. That is a measurement, and the only measurement point available
+  # without router credentials is presence of the gateway itself — see
+  # tools/router-status.py and docs/router-as-estate-fact.md §4.
