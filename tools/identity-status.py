@@ -166,6 +166,21 @@ def realm_accounts(merged: dict, secrets: dict) -> dict[str, list[str] | None]:
     return out
 
 
+def _declared_wing_scopes(name: str) -> str | None:
+    """The manifest's wing.* scopes for an agent, sorted+joined; None = not an
+    agent (door/operator tokens declare in the mint task instead)."""
+    ay = REPO / "files/anatomy/agents" / name / "agent.yml"
+    if not ay.is_file():
+        return None
+    try:
+        import yaml
+        doc = yaml.safe_load(ay.read_text(encoding="utf-8")) or {}
+    except Exception:                                            # noqa: BLE001
+        return None
+    caps = (doc.get("audit") or {}).get("capability_scopes") or []
+    return ",".join(sorted(c for c in caps if str(c).startswith("wing.")))
+
+
 def wing_tokens() -> tuple[list[dict] | None, str]:
     """The api_tokens rows, as the estate holds them.
 
@@ -279,12 +294,28 @@ def main() -> int:
             if t["name"] not in live_agents and t["name"] not in non_agents:
                 flags.append("no agent.yml — retired or parked")
             if t["last_used_at"] is None:
-                flags.append("never authenticated")
+                # provision UPSERT = delete+insert, so this resets on every
+                # converge — it means "not since the last converge", not ever.
+                flags.append("not used since last converge")
+            # Ruling 3 (docs/doctrine/agentkit.md §6.3): the manifest is the
+            # authority, the live row a projection — compare BOTH directions,
+            # identity.md style. Found on first wiring: surveyor's row said
+            # wing.read while its manifest (and one measured POST) said write.
+            declared = _declared_wing_scopes(t["name"])
+            if declared is not None:
+                live = ",".join(sorted(x for x in (t["scopes"] or "").split(",") if x))
+                if live != declared:
+                    flags.append(f"SCOPE MISMATCH: manifest={declared or '(none)'} live={live or '(null)'}")
             print(f"  {t['name']:<24} scopes={t['scopes'] or '(null)':<22}"
                   + ("  " + "; ".join(flags) if flags else ""))
+        held = {t["name"] for t in tokens}
+        for name in sorted(live_agents - held - non_agents):
+            declared = _declared_wing_scopes(name)
+            if declared:
+                print(f"  ? {name}: manifest declares {declared} and no active "
+                      "row exists — the grant is unmintable until provisioned")
         print("  note: deactivating a row is a WRITE and belongs to the "
-              "operator — provision-token.php upserts, it never reconciles "
-              "absence")
+              "operator — provision-token.php --deactivate is the machinery")
 
     # The machine rosters are declared elsewhere on purpose; count them so
     # this report names every identity channel, without re-typing them.

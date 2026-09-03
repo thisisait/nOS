@@ -211,6 +211,10 @@
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ wing_api_token }}
       - --name=ansible-provisioned
+      # Ruling 4 close-out: every consumer of this token WRITES (Pulse run
+      # start/finish, telemetry callback), so wing.write is its honest class —
+      # declared, not grandfathered. permits() grants reads to writers.
+      - --scopes=wing.write
     chdir: "{{ wing_app_dir }}"
   register: _wing_token_result
   changed_when: >
@@ -218,6 +222,11 @@
     or 'Updated' in (_wing_token_result.stdout | default(''))
   no_log: true
 
+# Agent token scopes DERIVE from each agent.yml (ruling 3, docs/doctrine/
+# agentkit.md §6.3): the manifest is the authority, this mint a projection.
+# Measured before wiring: surveyor's literal said wing.read while its
+# manifest (and one measured POST) said wing.write — the d08abc81 gap,
+# and its report writes were riding the announced main-token fallback.
 - name: "[pazny.wing] Reconverge API token — conductor (A8 Claude Code agent)"
   ansible.builtin.command:
     argv:
@@ -237,7 +246,7 @@
       # because THREE declarations exist (the manifest, this task, the live
       # api_tokens row) and the gate compared only the first two.
       # test_the_mint_matches_the_manifest.py now compares all three.
-      - --scopes=wing.read
+      - --scopes={{ (lookup('file', playbook_dir ~ '/files/anatomy/agents/conductor/agent.yml') | from_yaml).audit.capability_scopes | select('match', '^wing[.]') | sort | join(',') }}
     chdir: "{{ wing_app_dir }}"
   register: _wing_conductor_token
   changed_when: >
@@ -302,7 +311,7 @@
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ jeff_wing_api_token }}
       - --name=jeff
-      - --scopes=wing.read
+      - --scopes={{ (lookup('file', playbook_dir ~ '/files/anatomy/agents/jeff/agent.yml') | from_yaml).audit.capability_scopes | select('match', '^wing[.]') | sort | join(',') }}
       - --cortex-verbs=get,resolve,map,filter,rank,classify
       - --cortex-namespaces=tax,rel
       - --cortex-tenants=default
@@ -324,7 +333,7 @@
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ librarian_wing_api_token }}
       - --name=librarian
-      - --scopes=wing.read,wing.write
+      - --scopes={{ (lookup('file', playbook_dir ~ '/files/anatomy/agents/librarian/agent.yml') | from_yaml).audit.capability_scopes | select('match', '^wing[.]') | sort | join(',') }}
     chdir: "{{ wing_app_dir }}"
   register: _wing_librarian_token
   changed_when: >
@@ -367,7 +376,7 @@
       # The one agent whose whole contract is read-only, so the token says so.
       # Its report reaches Wing over the HMAC events path, which takes no
       # bearer at all — this refuses every OTHER write it could reach for.
-      - --scopes=wing.read
+      - --scopes={{ (lookup('file', playbook_dir ~ '/files/anatomy/agents/surveyor/agent.yml') | from_yaml).audit.capability_scopes | select('match', '^wing[.]') | sort | join(',') }}
     chdir: "{{ wing_app_dir }}"
   register: _wing_surveyor_token
   changed_when: >
@@ -390,7 +399,7 @@
       # opens the MR from a post-step; it holds no mcp-wing-write tool, so the
       # write half was unspendable. Live row: last_used_at NULL — the token has
       # never once authenticated.
-      - --scopes=wing.read
+      - --scopes={{ (lookup('file', playbook_dir ~ '/files/anatomy/agents/upgrade-architect/agent.yml') | from_yaml).audit.capability_scopes | select('match', '^wing[.]') | sort | join(',') }}
     chdir: "{{ wing_app_dir }}"
   register: _wing_upgrade_architect_token
   changed_when: >

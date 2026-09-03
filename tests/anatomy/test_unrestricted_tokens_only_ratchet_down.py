@@ -20,11 +20,11 @@ import sqlite3
 
 import pytest
 
-#: 2026-09-02: 7. 2026-09-03: 1 — five retired/parked orphans deactivated
-#: (never used since 07-24), cortex-executor declared wing.write. The one
-#: remaining NULL is ansible-provisioned, the estate's main token; its
-#: narrowing is route-level work (roadmap agent-scope-single-authority).
-CEILING = 1
+#: 2026-09-02: 7. 2026-09-03 morning: 1. 2026-09-03: 0 — ansible-provisioned
+#: declared wing.write (every consumer writes; permits() grants reads to
+#: writers), agent mints now DERIVE scopes from their agent.yml (ruling 3).
+#: Zero is the floor: any new NULL row is a regression, not a backlog.
+CEILING = 0
 
 
 def test_the_unrestricted_count_never_grows():
