@@ -327,6 +327,44 @@ def _default_repo_root() -> Path:
     )
 
 
+def patch_state_at_head(diff_text: str, repo_root: Path | None = None) -> str:
+    """'applies' | 'landed' | 'stale' | 'unknown' — git's answer at repo HEAD.
+
+    The ledger asks this of a PASSED prior before refusing a new attempt with
+    `passed-awaiting-act` (measured 2026-09-03: rem:REM-204's passed patch fit
+    neither forward nor reversed and the refusal had locked the weakness
+    forever). Asked at most once per propose attempt, so the subprocess cost
+    is nothing. 'unknown' — no repo resolvable, git absent, a timeout — is
+    treated by the caller exactly like 'applies': refuse conservatively,
+    never void a pass on a question that went unanswered.
+    """
+    try:
+        root = repo_root if repo_root is not None else _default_repo_root()
+    except ConfigError:
+        return "unknown"
+
+    def ask(*extra: str) -> int | None:
+        try:
+            return subprocess.run(  # noqa: S603
+                ["git", "-C", str(root), "apply", "--check", *extra, "-"],
+                input=diff_text, text=True, capture_output=True, timeout=30,
+            ).returncode
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+
+    fwd = ask()
+    if fwd == 0:
+        return "applies"
+    if fwd is None:
+        return "unknown"
+    rev = ask("--reverse")
+    if rev == 0:
+        return "landed"
+    if rev is None:
+        return "unknown"
+    return "stale"
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # The process boundary
 # ─────────────────────────────────────────────────────────────────────────────

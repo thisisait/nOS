@@ -184,3 +184,42 @@ def test_the_check_runs_before_the_row_is_written() -> None:
     body = src.split("def record_proposal")[1].split("def ")[0]
     assert body.index("malformed-diff") < body.index("INSERT INTO loop_proposals"), (
         "the malformed-diff refusal happens after the proposal is written")
+
+
+#: THE THIRD CLASS (rem:REM-244, proposal 5dbfc03e, 2026-09-02 — filed the day
+#: after the first two classes shipped): every prefix correct, every count
+#: correct, and no newline after the final hunk line. `split("\n")` hands the
+#: tail over as an ordinary element so both earlier checks pass; git says
+#: "corrupt patch at <stdin>:5". Measured 2026-09-03 against the live row
+#: (last byte != \n) and minimally with `git apply --check`.
+_UNTERMINATED = (
+    "--- a/default.config.yml\n"
+    "+++ b/default.config.yml\n"
+    "@@ -1 +1 @@\n"
+    '-gitea_version: "1.27.2"\n'
+    '+gitea_version: "1.27.3"'
+)
+
+
+def test_an_unterminated_final_line_is_caught() -> None:
+    mod = _ledger()
+    found = mod.malformed_hunk_line(_UNTERMINATED)
+    assert found is not None, (
+        "a diff whose final hunk line has no trailing newline is accepted; "
+        "git calls it corrupt and the judge refuses it hours later — the "
+        "REM-244 shape, one proposal after the front-door check shipped")
+    line_no, why = found
+    assert line_no == 5, f"named line {line_no}; git said 5"
+    assert "newline" in why, f"the refusal does not name the missing newline: {why!r}"
+
+
+def test_an_unterminated_no_newline_marker_is_legal() -> None:
+    """The exemption, measured: git reads an unterminated '\\ No newline at
+    end of file' marker fine (rc 1, not 128). Refusing it would block the one
+    diff shape git itself emits without a trailing newline."""
+    mod = _ledger()
+    marker_tail = (
+        "--- a/x\n+++ b/x\n@@ -1 +1 @@\n-a\n+b\n"
+        "\\ No newline at end of file"
+    )
+    assert mod.malformed_hunk_line(marker_tail) is None

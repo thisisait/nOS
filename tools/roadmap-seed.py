@@ -1957,6 +1957,49 @@ row("workflow-build-fanout-verdict", "The build gate was right and the workflow 
          "fan-out may not be the one who widens the gate that caught it, and the gate\'s own "
          "reason survives the disjointness argument — both lanes were BUILD steps, and a build "
          "step wants the previous one\'s real contract. Lanes serialised; the door was not built.")
+row("cortex-keap-export-edge", "The loop promotes into KEAP; nothing exports back to the repo corpus",
+    "2026-09-03", "next", "cortex",
+    refs="docs/hidden_fees/59-a-ceremony-billed-for-the-weather.md · files/anatomy/scripts/cortex-fs-sync.py · files/anatomy/cortex/knowledge/ · ~/.nos/cortex-corpus-diff.json",
+    body="MEASURED 2026-09-03: KEAP holds 345 knowledge_objects, the vendored repo corpus 337 "
+         "(`cortex-fs-sync: scanned 337 · upserted 0`) — the librarian's promotions live only in "
+         "KEAP's DB, the organ syncs FROM the repo, and the diff correctly reports the divergence "
+         "every night. The loop writes to one side of a two-sided invariant it is judged by; the "
+         "corpus-diff clauses excuse the object rows per-row (`organ-corpus-lacks-source`) but the "
+         "divergence itself never heals, and every promotion widens it. "
+         "DESIGN THE EDGE, don't hack an export: promoted objects need a KEAP→repo path (canonical "
+         "JSON in files/anatomy/cortex/knowledge/, dump.mjs byte-shape) that lands as a COMMIT — "
+         "which means the loop's MR machinery or a scheduled export ceremony with a repo write "
+         "plane, not a live-host write. Decide who owns it (librarian deliverable? a new export "
+         "job feeding loop:drive?) before code. Until it exists, promotions and the agree clause "
+         "are structurally at odds — fee 59 carries the token bill.")
+row("keap-embed-queue-lost-row", "A KEAP object with no vector is invisible to its own embed sync",
+    "2026-09-03", "next", "cortex",
+    refs="thisisait/nos-keap · docs/hidden_fees/59-a-ceremony-billed-for-the-weather.md · pulse keap:keap-embed-sync",
+    body="MEASURED 2026-09-03: keap-embed-sync (04:48) reported 'corpus current (upserted 0)' "
+         "while KEAP held 345 object sources and 344 vectors — one source with no vector that is "
+         "NOT in the pending queue, so the repair job sees nothing to repair and cortex-corpus-diff's "
+         "exact count check (`keap-embed-behind`) fails the embedded-refs clause nightly. "
+         "UPSTREAM (nos-keap, cross-repo-contracts doctrine): find how a row leaves the pending "
+         "queue without gaining a vector (promoted mid-embed? content-hash race?), and make the "
+         "pending derivation self-healing — `sources with no current vector` IS the queue, not a "
+         "separate ledger that can lose a row. Name the specific object first (GET "
+         "/agent/v1/embeddings/pending vs the object listing, one anti-join).")
+row("agentkit-baseline-gate-attribution", "A ceremony should not re-buy a gate failure that predates it",
+    "2026-09-03", "queued", "platform",
+    refs="docs/hidden_fees/59-a-ceremony-billed-for-the-weather.md · files/anatomy/wing/app/AgentKit/Outcome/GateOracle.php",
+    body="Sessions 958/960/969: byte-identical `cortex-corpus-diff: agrees is false` feedback on "
+         "iterations 0 and 1, three nights, ~40k tokens of re-done work per night — the revision "
+         "iteration re-did work that was already satisfactory because the gate judges the estate "
+         "and the failing condition predated the session. The deliverable half of attribution "
+         "exists (GateOracle deliverableExists); the weather half has no reader. "
+         "CANDIDATE, to be measured not assumed: one baseline gate run before iteration 0; a "
+         "clause already failing at baseline and byte-identical after iteration 0 is not "
+         "attributable to this ceremony — report needs_revision WITHOUT the re-work iteration, "
+         "detail naming the pre-existing clause. Costs one gate execution (~190 s, zero tokens) "
+         "per ceremony night; saves the re-work iteration only when the weather is bad. Do NOT "
+         "soften the gate itself — the estate IS divergent and the gate saying so is correct; "
+         "fix the two causes (export edge, embed queue) first and re-measure whether this row "
+         "still pays.")
 
 # ── Preflight: does the live table have the columns this script writes? ──────
 #

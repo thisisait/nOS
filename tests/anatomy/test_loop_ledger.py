@@ -123,6 +123,11 @@ def db(tmp_path, monkeypatch):
     sqlite3.connect(str(path)).close()
     monkeypatch.setenv("WING_DB_PATH", str(path))
     monkeypatch.setenv("WING_EVENTS_HMAC_SECRET", "loop-ledger-test-secret")
+    # No repo resolvable → `_patch_state_at_head` answers "unknown" and the
+    # passed-awaiting-act refusal behaves as before. A developer shell that
+    # happens to export PLAYBOOK_DIR must not flip these tests' verdicts.
+    monkeypatch.delenv("NOS_LOOP_REPO_ROOT", raising=False)
+    monkeypatch.delenv("PLAYBOOK_DIR", raising=False)
     return path
 
 
@@ -836,7 +841,7 @@ def _pass_one_attempt(prop, ev, diff: str):
     return p
 
 
-def test_a_solved_weakness_is_remembered_as_awaiting_an_act(db, proposer, evaluator):
+def test_a_solved_weakness_is_remembered_as_awaiting_an_act(db, proposer, evaluator, monkeypatch):
     """Fable review §3.2, measured live: `rem:REM-204` held two sealed `pass`
     verdicts and the tree still read the old pin, and the ledger's only word
     for it was `fingerprint-exhausted` — the same word it uses for a proposal
@@ -844,7 +849,11 @@ def test_a_solved_weakness_is_remembered_as_awaiting_an_act(db, proposer, evalua
     with a reason that names what it waits for (merge → converge → rescan,
     all outside the loop), and it must do so on attempt ONE of two: the pass
     is the operative fact, not the ceiling.
+
+    The referee is pinned to 'applies': this test is about the refusal shape,
+    and the fixture diff is stale against the real checkout by construction.
     """
+    monkeypatch.setattr(ledger.judges, "patch_state_at_head", lambda d: "applies")
     _pass_one_attempt(proposer, evaluator, mkdiff("b"))
     with pytest.raises(ledger.ProposalRefused) as e:
         propose(proposer, diff_text=mkdiff("c"))
@@ -856,12 +865,76 @@ def test_a_solved_weakness_is_remembered_as_awaiting_an_act(db, proposer, evalua
     assert e.value.prior, "the refusal must carry the passed attempt as evidence"
 
 
-def test_awaiting_act_outranks_the_attempt_ceiling(db, proposer, evaluator):
+def test_awaiting_act_outranks_the_attempt_ceiling(db, proposer, evaluator, monkeypatch):
     """Fail then pass, ceiling reached: the answer is still the pass. A reader
     told `fingerprint-exhausted` re-judges (measured: that is exactly what
     happened to 6f139e22, twice, and changed nothing); a reader told
     `passed-awaiting-act` goes to the merge queue instead."""
+    monkeypatch.setattr(ledger.judges, "patch_state_at_head", lambda d: "applies")
     _fail_one_attempt(proposer, evaluator, mkdiff("b"))
+    _pass_one_attempt(proposer, evaluator, mkdiff("c"))
+    with pytest.raises(ledger.ProposalRefused) as e:
+        propose(proposer, diff_text=mkdiff("d"))
+    assert e.value.reason == "passed-awaiting-act"
+
+
+def _repo_holding(tmp_path, first_line: str):
+    """A one-commit repo whose DEFAULT_TARGET starts with `first_line`, handed
+    to `judges.patch_state_at_head` explicitly — never via env, which would
+    also repoint the gate-set registry these fixtures resolve."""
+    import subprocess as sp
+    root = tmp_path / "repo"
+    (root / "roles/pazny.gitea/defaults").mkdir(parents=True)
+    (root / DEFAULT_TARGET).write_text(f"{first_line}\n")
+    for argv in (["init", "-q"], ["add", "-A"],
+                 ["-c", "user.email=t@t", "-c", "user.name=t",
+                  "commit", "-qm", "base"]):
+        sp.run(["git", "-C", str(root), *argv], check=True, capture_output=True)
+    return root
+
+
+def test_patch_state_at_head_reads_the_three_states(tmp_path):
+    """The referee itself, against real repos: old content = applies, new
+    content = landed, neither = stale."""
+    import judges
+    diff = mkdiff("c")
+    assert judges.patch_state_at_head(diff, _repo_holding(tmp_path / "1", "a")) == "applies"
+    assert judges.patch_state_at_head(diff, _repo_holding(tmp_path / "2", "c")) == "landed"
+    assert judges.patch_state_at_head(diff, _repo_holding(tmp_path / "3", "zzz")) == "stale"
+
+
+def test_a_pass_the_tree_moved_under_is_void_and_the_weakness_reopens(
+        db, proposer, evaluator, monkeypatch):
+    """Measured 2026-09-03: rem:REM-204's passed patch fits neither forward
+    nor reversed at HEAD (`--awaiting` state `conflict`), yet the ledger still
+    refused every new attempt with `passed-awaiting-act` and the picker read
+    the pass as settled — double-locked, `forget` the only key, one forget
+    row ever recorded. The tree is the referee: a pass git can no longer read
+    into OR out of the tree stops blocking, and stops counting."""
+    monkeypatch.setattr(ledger.judges, "patch_state_at_head", lambda d: "stale")
+    _pass_one_attempt(proposer, evaluator, mkdiff("c"))
+    got = propose(proposer, diff_text=mkdiff("d"))
+    assert got["uuid"], (
+        "a passed-then-conflicted weakness still refuses new proposals — the "
+        "double-lock stands and only `forget` can open it")
+
+
+def test_a_landed_pass_still_refuses_the_next_attempt(
+        db, proposer, evaluator, monkeypatch):
+    """Reverse-applies = the change IS in the tree; what is missing is
+    converge → rescan, outside the loop. Same refusal as applies."""
+    monkeypatch.setattr(ledger.judges, "patch_state_at_head", lambda d: "landed")
+    _pass_one_attempt(proposer, evaluator, mkdiff("c"))
+    with pytest.raises(ledger.ProposalRefused) as e:
+        propose(proposer, diff_text=mkdiff("d"))
+    assert e.value.reason == "passed-awaiting-act"
+
+
+def test_an_unanswered_referee_refuses_conservatively(
+        db, proposer, evaluator, monkeypatch):
+    """'unknown' must behave exactly like 'applies' — a pass is never voided
+    on a question that went unanswered."""
+    monkeypatch.setattr(ledger.judges, "patch_state_at_head", lambda d: "unknown")
     _pass_one_attempt(proposer, evaluator, mkdiff("c"))
     with pytest.raises(ledger.ProposalRefused) as e:
         propose(proposer, diff_text=mkdiff("d"))

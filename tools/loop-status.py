@@ -182,9 +182,12 @@ def live_weaknesses() -> tuple[list[dict], str | None]:
     are what the count hides: a weakness whose evidence is uncommitted is
     WITHHELD (`[evidence uncommitted]` below), and on 2026-08-22 that was 73 of
     78 rows — the whole queue starved because a nightly scan had written
-    `docs/llm/security/*` and nobody had committed it. And six rows carry
-    `evidence_committed=False` unconditionally, so the printed remedy is
-    unsatisfiable for them (§3.3, docs/idea/19-fable-review-2.md).
+    `docs/llm/security/*` and nobody had committed it. And rows whose evidence
+    lives OUTSIDE the repo (alerts, pulse runs) carry
+    `evidence_committable=False` since 2026-09-03, so the remedy line can
+    finally branch — before that, the tool told the operator to commit a file
+    that had nothing to do with them (§3.3, docs/idea/19-fable-review-2.md;
+    gate `test_withheld_reasons_are_satisfiable.py`).
     """
     import sys as _sys
 
@@ -206,6 +209,13 @@ def live_weaknesses() -> tuple[list[dict], str | None]:
                     # someone commits. Reported rather than dropped: a gap row
                     # that silently vanishes is docs/hidden_fees/08 again.
                     "proposable": bool(getattr(weakness, "evidence_committed", True)),
+                    # False = no commit can EVER satisfy the rule for this row
+                    # (a firing alert, a pulse_runs row — evidence outside the
+                    # repo). The remedy line below branches on it; before it
+                    # existed, all four live withheld rows were alerts and the
+                    # tool told the operator to commit a file that had nothing
+                    # to do with them.
+                    "commit_unblocks": bool(getattr(weakness, "evidence_committable", True)),
                 })
         return out, None
     except Exception as exc:  # noqa: BLE001
@@ -522,7 +532,7 @@ def collect() -> dict:
         proposals = [dict(r) for r in conn.execute(
             """
             SELECT p.weakness_id, p.uuid, p.intent_class, p.proposer_id,
-                   p.requires_operator, p.attempt_n, p.created_at,
+                   p.requires_operator, p.attempt_n, p.created_at, p.diff_text,
                    v.result AS verdict, v.created_at AS verdict_at
               FROM loop_proposals p
               LEFT JOIN loop_verdicts v ON v.proposal_id = p.id
@@ -567,7 +577,20 @@ def collect() -> dict:
         # the weakness as spoken for — permanently, because "has a proposal"
         # was the whole test. A pass is the only verdict that means the loop's
         # part is done and an act outside it is what is missing.
-        (src["settled_ids"] if verdict == "pass" else src["awaiting_ids"]).add(wid)
+        #
+        # …and only while the tree still honors it. Measured 2026-09-03:
+        # rem:REM-204's pass sat over a patch that fits neither forward nor
+        # reversed at HEAD (`--awaiting` state `conflict`), so the act it
+        # "awaits" can never happen — settled-by-verdict here plus
+        # `passed-awaiting-act` in the ledger double-locked the weakness.
+        # Both sides now key on the same referee, git: a pass whose patch
+        # conflicts is awaiting a NEW proposal, not an act.
+        if verdict == "pass":
+            state, _err = _apply_state(row["diff_text"] or "")
+            (src["awaiting_ids"] if state == "conflict"
+             else src["settled_ids"]).add(wid)
+        else:
+            src["awaiting_ids"].add(wid)
 
     for src in by_source.values():
         src["weaknesses"] = sorted(src["weaknesses"])
@@ -675,8 +698,14 @@ def _print_awaiting(report: dict, *, as_json: bool) -> int:
                                        if r["state"] in _STATE_ORDER else 99,
                                        str(r["verdict_at"])))
     for row in rows:
+        # The verdict rides on every non-pass row: an `unusable` on an
+        # indeterminate and an `unusable` on a pass are different stories
+        # (2026-09-03: all four "corrupt patch" rows were read as passed —
+        # they were all indeterminate, and this line could not say so).
+        verdict = row.get("verdict")
+        tag = "" if verdict == "pass" else f"  [{verdict or 'unjudged'}]"
         print(f"  {row['state']:<9} {row['weakness_id']:<20} {row['uuid'][:8]}  "
-              f"{row['intent_class']}  by {row['proposer_id']}")
+              f"{row['intent_class']}  by {row['proposer_id']}{tag}")
         gloss = STATE_GLOSS.get(row["state"], "")
         print(f"      {gloss}")
         if row["detail"] and row["detail"] != gloss:
@@ -736,17 +765,29 @@ def main() -> int:
         # and takes ONE weakness per night, so this number is a backlog in
         # nights. It read "`loop-driver` is not built" until 2026-08-22, which
         # was four days stale and told the operator nothing was coming.
-        withheld = sum(1 for w in gap if not w.get("proposable", True))
+        commit_held = [w for w in gap
+                       if not w.get("proposable", True) and w.get("commit_unblocks", True)]
+        live_held = [w for w in gap
+                     if not w.get("proposable", True) and not w.get("commit_unblocks", True)]
         print(f"  (loop:propose takes one per night, so this is ~{len(gap)} "
               f"nights at the current cadence.")
-        if withheld:
-            print(f"   {withheld} of them are WITHHELD on uncommitted evidence "
-                  f"and cannot be picked at all until it is committed.)\n")
+        if commit_held or live_held:
+            parts = []
+            if commit_held:
+                parts.append(f"{len(commit_held)} WITHHELD on uncommitted evidence")
+            if live_held:
+                parts.append(f"{len(live_held)} carry live evidence no commit can satisfy")
+            print(f"   {'; '.join(parts)}.)\n")
         else:
             print("   None are withheld — every one is pickable tonight.)\n")
         for w in gap[:25]:
             sev = (w["severity"] or "-")[:8]
-            held = "" if w.get("proposable", True) else "  [evidence uncommitted]"
+            if w.get("proposable", True):
+                held = ""
+            elif w.get("commit_unblocks", True):
+                held = "  [evidence uncommitted]"
+            else:
+                held = "  [live evidence — clears with its source]"
             print(f"  {sev:<9} {w['id']:<34} {w['title'][:58]}{held}")
         if len(gap) > 25:
             print(f"\n  … and {len(gap) - 25} more")
@@ -757,12 +798,17 @@ def main() -> int:
         # close only by writing docs/**, a path every gate set's budget
         # forbids. The loop could propose against nothing it was also allowed
         # to fix, and no surface said so. This is that surface.
-        withheld = [w for w in gap if not w.get("proposable", True)]
-        if withheld:
-            print(f"\n  {len(withheld)} of these are WITHHELD from proposing — their "
+        if commit_held:
+            print(f"\n  {len(commit_held)} of these are WITHHELD from proposing — their "
                   f"evidence file does not match HEAD.")
             print("  Commit it (the nightly scan writes docs/llm/security/ and "
                   "nobody commits it) to unblock.")
+        if live_held:
+            print(f"\n  {len(live_held)} carry evidence that lives outside the repo "
+                  f"(a firing alert, a failed pulse run) —")
+            print("  no commit unblocks them; they are observable, not proposable, "
+                  "and clear when their source clears.")
+        withheld = commit_held + live_held
         open_sources = {_source_of(w["id"]) for w in gap if w.get("proposable", True)}
         if withheld and open_sources <= {"fee"}:
             print("\n  DEADLOCK: every proposable weakness is a fee:, and a fee: "

@@ -194,6 +194,16 @@ class Weakness:
     #: knows every path it touched); the reader still REPORTS the weakness,
     #: the ledger just refuses to let it key a ceiling (B4).
     evidence_committed: bool = True
+    #: False when NO commit can ever satisfy the committed-evidence rule for
+    #: this row — the evidence lives outside the repo (a firing alert, a
+    #: pulse_runs row), not in a file somebody forgot to commit. Added
+    #: 2026-09-03: all four withheld rows in the live `--gap` were alerts, and
+    #: the single printed remedy — "commit docs/llm/security/" — was
+    #: unsatisfiable for every one of them (docs/idea/19-fable-review-2.md
+    #: named the class; nothing carried it to the tools). A reader branches:
+    #: uncommitted-and-committable = commit it; uncommittable = observable,
+    #: not proposable — it clears when the source clears.
+    evidence_committable: bool = True
 
     def __post_init__(self) -> None:
         self.severity = normalize_severity(self.severity)
@@ -214,6 +224,7 @@ class Weakness:
             "observed": self.observed,
             "derived_from_self_report": self.derived_from_self_report,
             "evidence_committed": self.evidence_committed,
+            "evidence_committable": self.evidence_committable,
         }
 
 
@@ -1292,6 +1303,7 @@ def _source_prometheus_alerts(dirty: set[str]) -> SourceReport:
                 "runbook_url": ann.get("runbook_url"),
             },
             evidence_committed=False,
+            evidence_committable=False,
         ))
 
     return SourceReport(
@@ -1412,6 +1424,7 @@ def _source_pulse_runs(dirty: set[str]) -> SourceReport:
             observed={"fired_at": row["fired_at"],
                       "stderr_tail": _clip(row["stderr_tail"], 400)},
             evidence_committed=False,
+            evidence_committable=False,
         ))
 
     return SourceReport(

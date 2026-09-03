@@ -539,7 +539,25 @@ def malformed_hunk_line(diff_text: str) -> tuple[int, str] | None:
     Deliberately NOT `git apply --check`: whether a patch applies at a given
     base is the judge's question and needs a sandbox. This is the FORMAT, which
     is context-free and needs no repo.
+
+    THE THIRD CLASS ARRIVED ONE PROPOSAL AFTER THE SECOND (rem:REM-244,
+    5dbfc03e, 2026-09-02): a diff whose final hunk line has no trailing
+    newline. `split("\n")` hands the tail over as an ordinary element, the
+    counts match, and git still says "corrupt patch" at that line — measured
+    2026-09-03 with the row's literal diff, and again minimally: an
+    unterminated BODY line is rc 128, an unterminated "\\ No newline" marker
+    is readable (rc 1). Hence the marker exemption below.
     """
+    if diff_text and not diff_text.endswith("\n"):
+        tail = diff_text.rsplit("\n", 1)[-1]
+        if not tail.startswith("\\"):
+            last = diff_text.count("\n") + 1
+            return last, (
+                f"line {last} is the last line of the patch and is not "
+                "newline-terminated. git requires every patch line to end "
+                "with a newline and reads an unterminated final line as "
+                "corrupt. Re-emit the diff with a trailing newline."
+            )
     lines = diff_text.replace("\r\n", "\n").split("\n")
     n = 0
     while n < len(lines):
@@ -1098,8 +1116,25 @@ class ProposerLedger(ReaderLedger):
         passed = [p for p in priors if p["verdicts"]
                   and p["verdicts"][-1]["result"] == "pass"]
         if passed:
-            return Decision(False, "passed-awaiting-act", len(priors) + 1,
-                            passed, requires_op)
+            # …UNLESS the tree moved under the pass. Measured 2026-09-03:
+            # rem:REM-204's passed patch fails `git apply --check` in BOTH
+            # directions at HEAD (default.config.yml moved on), so the act it
+            # "awaits" can never happen — and this refusal plus the picker's
+            # settled-by-verdict rule double-locked the weakness forever, with
+            # `forget` (one row ever used) as the only key. The question is
+            # git's, not a model's: forward-applies = still awaiting the act;
+            # reverse-applies = landed, awaiting converge→rescan; NEITHER =
+            # the pass is void and the priors it produced stop counting —
+            # re-offering against a moved tree is not the §4 grinder (the
+            # content-fp guard still refuses byte-identical re-offers).
+            # Constraint E keeps this module subprocess-free; the git ask
+            # lives in judges.py, THE derivation site, like every other one.
+            state = judges.patch_state_at_head(passed[-1]["diff_text"] or "")
+            if state != "stale":
+                return Decision(False, "passed-awaiting-act", len(priors) + 1,
+                                passed, requires_op)
+            void_ids = {p["id"] for p in passed}
+            priors = [p for p in priors if p["id"] not in void_ids]
 
         if len(priors) >= max_attempts:
             last = priors[-1]["verdicts"][-1]

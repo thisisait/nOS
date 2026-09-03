@@ -28,14 +28,15 @@ night. §5 of `docs/idea/11-agentic-loop.md` is the governing doctrine:
   `McpBoneTool` is GET-only and requires an `/api/` path prefix; the loop
   routes are POST `/v1/*`. Double-walled off.
 
-**It also cannot be Pulse-scheduled.** All ten ceremonies' `command` points at
-`pulse-run-agent.sh` (the shell bridge → claude CLI); the `runner: agent`
-enum in the pulse_jobs schema has no implementation in the daemon. A binding
-on an agent changes what `bin/run-agent.php` does — it changes NOTHING about
-what the Pulse job runs. So the night is **supervised invocations of
-`php files/anatomy/wing/bin/run-agent.php --agent=<name>`**, one at a time,
-not an unpausing of the Sunday fleet (which stays paused; only
-`conductor:self-test-001` is live, on the shell bridge, untouched).
+~~**It also cannot be Pulse-scheduled.**~~ **FALSE SINCE 2026-08-20** — kept
+struck through for the same reason as the driver sentence above: it outlived
+its measurement. `runner: agent` still has no daemon implementation, but the
+three loop jobs (`loop:propose` 01:30 → `loop:drive` 06:10 → `loop:review`
+06:50, `files/anatomy/plugins/loop-base/plugin.yml`) sidestep it as
+`runner: subprocess` — the tools spawn AgentKit themselves — and they are
+**unpaused and nightly**. What was true on 2026-08-16 survives only for the
+ten shell-bridge ceremonies, which still ride `pulse-run-agent.sh` → claude
+CLI.
 
 What the night IS: the first real AgentKit sessions — tools driven by the
 Runner, MiniMax serving the eligible tier, sessions/iterations/audit lineage
@@ -76,18 +77,18 @@ are not touched that night.
 - loop side (if a driver ever fires): deny-by-default path budget,
   fingerprint dedup, one change per cycle — already live in Bone
 
-**Missing, and named as pre-night work rather than assumed:**
-1. **Session wall-clock ceiling.** Worst case today: 3 iterations × 30 calls
-   × 600 s ≈ 15 h for ONE stuck agent. The night needs a Runner-level
-   deadline (kill the session, `stop_reason: timeout`, session terminated
-   honestly) — without it, "supervised" means the operator is the timeout.
-2. **Session token ceiling.** Tokens are counted and recorded but nothing
-   stops a session at N. MiniMax cost is unpriced by design (`cost_basis`),
-   so TOKENS are the honest budget unit.
-3. **The agent-run mutex does not cover API sessions.** `agent-run-lock.sh`
-   serializes *claude CLI* spawns; `bin/run-agent.php` on the API path never
-   takes it. One-at-a-time is operator discipline for this night — fine
-   supervised, a gap before anything is scheduled.
+**Was missing on 2026-08-16 — all three shipped since (kept as history):**
+1. ~~Session wall-clock ceiling.~~ `Runner::SESSION_WALL_CLOCK_S` (3600 s,
+   `NOS_AGENT_SESSION_WALL_CLOCK_S` override) — checked before every
+   Runner-driven LLM call; a run past its deadline ends named, not stuck.
+2. ~~Session token ceiling.~~ `Runner::SESSION_TOKEN_CEILING` (250k,
+   `NOS_AGENT_SESSION_TOKEN_CEILING` override) — tokens are the budget unit,
+   as argued; both ceilings are BACKSTOPS, not budgets (Runner.php's own
+   words).
+3. ~~The agent-run mutex does not cover API sessions.~~ `tools/run-agent.sh`
+   takes an `agentkit` slot of the Q12 lock before spawning
+   `bin/run-agent.php`; the bare-php path stays uncovered, which is one more
+   reason the wrapper is the only door (§3b).
 
 ## 3b. The CLI entry point does not inherit the daemon's environment
 
@@ -104,11 +105,14 @@ binding layer depends on are simply absent unless exported:
 - The tier envs (`NOS_MINIMAX_MODEL`, `NOS_MISTRAL_MODEL`, …) follow the
   same rule: armed-without-a-model-id refuses at session open.
 
-Before any supervised invocation, export the trio (values from wing.plist —
-`plutil -p ~/Library/LaunchAgents/eu.thisisait.nos.wing.plist | grep NOS_`),
-or wrap the call in `launchctl print`-derived env. A future
-`tools/run-agent.sh` wrapper that reads the plist and refuses to start
-without them is the structural fix; until it exists, this section is it.
+~~A future `tools/run-agent.sh` wrapper … until it exists, this section is
+it.~~ **The wrapper EXISTS** and is better than the sentence promised: it
+reads the RUNNING Wing job's env (`launchctl print`, not the plist file),
+exports every `NOS_*`-shaped var, refuses outright when `NOS_REPO_ROOT` is
+missing, mints the agent's own Wing/Authentik principals, and takes an
+`agentkit` slot of the run lock. Invoke through it, never `php
+bin/run-agent.php` bare — the paragraphs above describe what goes wrong when
+you do, and are kept as the wrapper's rationale.
 
 ## 4. Observability — what the operator watches
 

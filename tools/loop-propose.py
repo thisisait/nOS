@@ -206,18 +206,24 @@ def pick(status_mod, wanted: str | None) -> dict:
         if not gap:
             raise Refused("no reported weakness lacks a proposal — nothing to do")
         parts = []
-        if withheld:
+        commit_held = [w for w in withheld if w.get("commit_unblocks", True)]
+        live_held = [w for w in withheld if not w.get("commit_unblocks", True)]
+        if commit_held:
             parts.append(
-                f"{len(withheld)} weakness(es) are WITHHELD — their evidence "
+                f"{len(commit_held)} weakness(es) are WITHHELD — their evidence "
                 f"file does not match HEAD. Commit it (`git status "
                 f"docs/llm/security/` is the usual culprit) to unblock")
+        if live_held:
+            parts.append(
+                f"{len(live_held)} carry live evidence no commit can satisfy "
+                f"(alerts, pulse runs) — they clear when their source clears")
         rest = [w for w in gap if w.get("proposable", True)]
         if rest:
             srcs = sorted({status_mod._source_of(w["id"]) for w in rest})
             parts.append(
                 f"the only proposable sources are {srcs} — "
                 + "; ".join(UNFIXABLE_SOURCES[s] for s in srcs if s in UNFIXABLE_SOURCES))
-        prefix = ("the committed-evidence deadlock: " if withheld
+        prefix = ("the committed-evidence deadlock: " if commit_held
                   else "nothing proposable is also fixable: ")
         raise Refused(prefix + ". ".join(parts))
 
