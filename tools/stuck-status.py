@@ -138,10 +138,17 @@ def fee_rows() -> list[dict]:
 
 
 def loop_and_agents() -> dict:
-    if not WING_DB.is_file():
-        return {"silent_detectors": [], "agents_mostly_cut_off": [], "parked": []}
-    conn = sqlite3.connect(f"file:{WING_DB}?mode=ro", uri=True)
-    conn.row_factory = sqlite3.Row
+    # 2026-08-20 measurement, bit again 2026-09-03 (agent-status): a bare
+    # mode=ro open dies once Wing checkpoints and drops the WAL sidecars.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_ledger_open", REPO / "tools" / "_ledger_open.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    conn, how = mod.open_ledger_ro(WING_DB)
+    if conn is None:
+        return {"ledger_unknown": how, "silent_detectors": [],
+                "agents_mostly_cut_off": [], "parked": []}
     with conn:
         proposed = {
             str(r["w"]).split(":", 1)[0]
@@ -232,14 +239,19 @@ def render(report: dict, plain: bool) -> None:
 
     head("detectors that have never proposed",
          "reporting weaknesses that never became a proposal — is the detector earning its run?")
-    if report["silent_detectors"]:
+    if report.get("ledger_unknown"):
+        print("  " + _c(f"? wing.db UNKNOWN — {report['ledger_unknown']}",
+                        "yellow", plain=plain))
+    elif report["silent_detectors"]:
         print("  " + _c(" · ".join(report["silent_detectors"]), "yellow", plain=plain))
     else:
         print("  " + _c("none — every source has led somewhere", "green", plain=plain))
 
     head("agents whose runs get cut off more often than they end",
          "cut off = ceiling or error, nothing to judge · ended = a grader saw a report")
-    if report["agents_mostly_cut_off"]:
+    if report.get("ledger_unknown"):
+        print("  " + _c("? UNKNOWN — wing.db unreadable", "yellow", plain=plain))
+    elif report["agents_mostly_cut_off"]:
         for a in report["agents_mostly_cut_off"]:
             age = f"{a['age_days']:.0f}d ago" if a["age_days"] else "never"
             print(f"  {_c(a['agent'].ljust(16), 'yellow', plain=plain)} "

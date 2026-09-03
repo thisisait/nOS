@@ -42,12 +42,17 @@ def main() -> int:
                     help="print the whole decoded result_json object, not just .report")
     args = ap.parse_args()
 
-    if not os.path.isfile(args.db):
-        print(f"ERROR: wing.db not found at {args.db}", file=sys.stderr)
+    # Read-only via the shared helper — 2026-08-20 measurement, bit again
+    # 2026-09-03 (agent-status): bare mode=ro dies when Wing has checkpointed.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_ledger_open", os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "_ledger_open.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    con, how = mod.open_ledger_ro(args.db)
+    if con is None:
+        print(f"ERROR: wing.db UNREADABLE — {how}", file=sys.stderr)
         return 2
-
-    # mode=ro: this tool must stay a reader whatever it finds.
-    con = sqlite3.connect(f"file:{args.db}?mode=ro", uri=True)
     try:
         sql = ("SELECT id, ts, result_json FROM events "
                "WHERE type='conductor_report' AND source=? ")

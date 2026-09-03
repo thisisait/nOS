@@ -76,15 +76,15 @@ def _age(raw: str | None) -> str:
     return f"{delta.days} d"
 
 
-def _db() -> sqlite3.Connection | None:
-    if not WING_DB.is_file():
-        return None
-    try:
-        conn = sqlite3.connect(f"file:{WING_DB}?mode=ro", uri=True)
-        conn.row_factory = sqlite3.Row
-        return conn
-    except sqlite3.Error:
-        return None
+def _db() -> tuple[sqlite3.Connection | None, str]:
+    # 2026-08-20 measurement, bit again 2026-09-03 (agent-status): a bare
+    # mode=ro open dies once Wing checkpoints and drops the WAL sidecars.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_ledger_open", REPO / "tools" / "_ledger_open.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.open_ledger_ro(WING_DB)
 
 
 def questions(conn: sqlite3.Connection) -> list[dict]:
@@ -204,9 +204,9 @@ def collect() -> dict:
     items: list[dict] = []
     unknown: list[str] = []
 
-    conn = _db()
+    conn, how = _db()
     if conn is None:
-        unknown.append(f"{WING_DB} — unreadable, so questions and inbox are UNKNOWN")
+        unknown.append(f"{WING_DB} — {how}; questions and inbox are UNKNOWN")
     else:
         with conn:
             items += questions(conn)

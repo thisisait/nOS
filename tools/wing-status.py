@@ -130,9 +130,16 @@ def _access(tables: list[str],
 
 
 def collect() -> dict:
-    if not WING_DB.exists():
-        return {"error": f"no wing.db at {WING_DB}", "tables": []}
-    db = sqlite3.connect(f"file:{WING_DB}?mode=ro", uri=True)
+    # 2026-08-20 measurement, bit again 2026-09-03 (agent-status): a bare
+    # mode=ro open dies once Wing checkpoints and drops the WAL sidecars.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_ledger_open", REPO / "tools" / "_ledger_open.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    db, how = mod.open_ledger_ro(WING_DB)
+    if db is None:
+        return {"error": how, "tables": []}
 
     # dbstat is a virtual table compiled into most builds; absence is reported,
     # never guessed at, because a fabricated size is worse than none.

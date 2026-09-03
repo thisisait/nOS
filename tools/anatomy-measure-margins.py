@@ -229,10 +229,18 @@ def main() -> int:
                     help="ad-hoc measurement of two pulse job ids (authoring aid)")
     args = ap.parse_args()
 
-    if not args.db.exists():
-        print(f"error: wing.db not found at {args.db}", file=sys.stderr)
+    # Shared RO open — 2026-08-20 measurement, bit again 2026-09-03
+    # (agent-status): bare mode=ro dies when Wing has checkpointed the WAL.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_ledger_open", Path(__file__).resolve().parent / "_ledger_open.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    conn, how = mod.open_ledger_ro(args.db)
+    if conn is None:
+        print(f"error: wing.db UNKNOWN — {how}", file=sys.stderr)
         return 2
-    cur = sqlite3.connect(f"file:{args.db}?mode=ro", uri=True).cursor()
+    cur = conn.cursor()
     jobs = walk_jobs()
     today = dt.date.today().isoformat()
 

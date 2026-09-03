@@ -166,7 +166,7 @@ def realm_accounts(merged: dict, secrets: dict) -> dict[str, list[str] | None]:
     return out
 
 
-def wing_tokens() -> list[dict] | None:
+def wing_tokens() -> tuple[list[dict] | None, str]:
     """The api_tokens rows, as the estate holds them.
 
     Why here: minting is declared in roles/pazny.wing/tasks/post.yml, and
@@ -178,21 +178,27 @@ def wing_tokens() -> list[dict] | None:
     agent's row is the widest credential in the estate.
     """
     db = Path.home() / "wing/app/data/wing.db"
-    if not db.is_file():
-        return None
+    # Shared RO open — 2026-08-20 measurement, bit again 2026-09-03
+    # (agent-status): bare mode=ro dies when Wing has checkpointed the WAL.
+    import importlib.util
     import sqlite3
 
+    spec = importlib.util.spec_from_file_location(
+        "_ledger_open", Path(__file__).resolve().parent / "_ledger_open.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    conn, how = mod.open_ledger_ro(db)
+    if conn is None:
+        return None, how
     try:
-        conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-        conn.row_factory = sqlite3.Row
         with conn:
             rows = conn.execute(
                 "SELECT name, scopes, last_used_at FROM api_tokens ORDER BY name"
             ).fetchall()
         conn.close()
-    except sqlite3.Error:
-        return None
-    return [dict(r) for r in rows]
+    except sqlite3.Error as e:
+        return None, str(e)
+    return [dict(r) for r in rows], ""
 
 
 def main() -> int:
@@ -252,9 +258,10 @@ def main() -> int:
     else:
         print(f"woodpecker agent rows ({len(agents)}): " + "; ".join(agents))
 
-    tokens = wing_tokens()
+    tokens, tokens_how = wing_tokens()
     if tokens is None:
-        print("? wing api_tokens unreadable — bearer rows UNKNOWN, not assumed clean")
+        print(f"? wing api_tokens unreadable ({tokens_how}) — "
+              "bearer rows UNKNOWN, not assumed clean")
     else:
         live_agents = {p.parent.name for p in
                        (REPO / "files/anatomy/agents").glob("*/agent.yml")}

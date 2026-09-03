@@ -44,11 +44,16 @@ def _took(start: str | None, end: str | None) -> str:
 def fetch():
     if not DB.is_file():
         return None, f"{DB} is not readable — the timeline is UNKNOWN, not empty"
-    try:
-        conn = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
-        conn.row_factory = sqlite3.Row
-    except sqlite3.Error as e:
-        return None, f"wing.db: {e}"
+    # Shared RO open — 2026-08-20 measurement, bit again 2026-09-03
+    # (agent-status): bare mode=ro dies when Wing has checkpointed the WAL.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_ledger_open", Path(__file__).resolve().parents[2] / "_ledger_open.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    conn, how = mod.open_ledger_ro(DB)
+    if conn is None:
+        return None, f"wing.db: {how}"
 
     rows = []
     with conn:

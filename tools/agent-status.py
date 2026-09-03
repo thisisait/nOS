@@ -48,12 +48,15 @@ WING_DB = pathlib.Path.home() / "wing" / "app" / "data" / "wing.db"
 HUNG_AFTER_S = 3900
 
 
-def _connect() -> sqlite3.Connection | None:
-    if not WING_DB.is_file():
-        return None
-    conn = sqlite3.connect(f"file:{WING_DB}?mode=ro", uri=True)
-    conn.row_factory = sqlite3.Row
-    return conn
+def _connect() -> tuple[sqlite3.Connection | None, str]:
+    # 2026-08-20 measurement, bit again 2026-09-03 (agent-status): a bare
+    # mode=ro open dies once Wing checkpoints and drops the WAL sidecars.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_ledger_open", pathlib.Path(__file__).resolve().parent / "_ledger_open.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.open_ledger_ro(WING_DB)
 
 
 def _age_s(raw: str | None) -> float | None:
@@ -81,9 +84,9 @@ def _short(seconds: float | None) -> str:
 
 
 def collect(limit: int) -> dict:
-    conn = _connect()
+    conn, how = _connect()
     if conn is None:
-        return {"error": f"no wing.db at {WING_DB}", "running": [], "recent": []}
+        return {"error": f"wing.db UNKNOWN — {how}", "running": [], "recent": []}
 
     with conn:
         rows = [dict(r) for r in conn.execute(
