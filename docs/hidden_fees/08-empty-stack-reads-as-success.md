@@ -177,3 +177,19 @@ abandoned.
 **Still open**, and the reason this fee is not closed: the Linux wet-test
 completing end-to-end is not the same as the Linux estate serving. That is
 `plat-linux`, and it is blocked on the estate, not on the probe.
+
+---
+
+## Closed
+
+**2026-09-03, run 33734196338.** The Linux wet-test is green and the green is
+earned: full playbook `ok=669 failed=0`, main smoke **11/11 OK** (Authentik 200,
+every forward-auth route answering its 302, wing host daemon under
+`systemd --user`, bone, traefik), Tier-2 smoke **4/4 OK**. Four layers stood
+between the old false green and this one, each hidden under the previous:
+no edge at all (46 days) → `install_authentik: false` against 7 gated routes →
+the blueprint apply failing on a SEC-1 0600 bind since 2026-05-23 (`|| true`
+swallowed it; macOS VirtioFS masked it) → the smoke's loopback retry chasing a
+working outpost's absolute redirect to a name only the estate resolves. The
+last two were estate defects the wet-test caught — which is the whole argument
+for having one.
