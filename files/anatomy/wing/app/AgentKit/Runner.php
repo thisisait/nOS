@@ -764,6 +764,7 @@ final class Runner
 					parentSpanId: $callSpanId,
 					actorId: $actorId,
 					toolUseId: $use['id'],
+					modelUri: $llm->identifier(),
 				);
 				try {
 					$toolResult = $tool->execute($use['input'], $context);

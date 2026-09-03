@@ -140,6 +140,18 @@ final class McpLoopTool implements ToolInterface
 			$args[] = '--proposer-id';
 			$args[] = $context->actorId;
 		}
+		// AND THE MODEL, one field further over and for the tuning question
+		// this whole night exists to answer. Measured 2026-09-03: every
+		// agent:proposer row records `proposer_model = NULL`, so the ledger
+		// cannot say whether MiniMax or Sonnet wrote a patch that failed to
+		// apply — the exact attribution needed to decide which backend to
+		// arm. Stamped from the context's EFFECTIVE model (post-fallback),
+		// never from the model itself, like the two fields above.
+		if ($sub === 'propose' && $context->modelUri !== ''
+			&& !in_array('--proposer-model', $args, true)) {
+			$args[] = '--proposer-model';
+			$args[] = $context->modelUri;
+		}
 
 		$argv = array_merge(['nos-loop', $sub], $args);
 		$done = $this->run($argv);

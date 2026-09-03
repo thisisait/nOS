@@ -394,7 +394,36 @@ def test_both_stamps_are_conditional_on_the_model_not_having_sent_one() -> None:
     an argparse error, and the run would die on the tool call instead of
     proposing."""
     body = _stamped_args()
-    for flag in ("--session-uuid", "--proposer-id"):
+    for flag in ("--session-uuid", "--proposer-id", "--proposer-model"):
         assert f"!in_array('{flag}', $args, true)" in body, (
             f"{flag} is appended unconditionally; if the model also passes it "
             "the CLI sees the flag twice")
+
+
+def test_the_effective_model_is_stamped_from_the_context() -> None:
+    """The third stamp, added 2026-09-03. Every agent:proposer row recorded
+    `proposer_model = NULL`, so the ledger could not say whether MiniMax or
+    Sonnet authored a patch that failed to apply — the exact fact needed to
+    decide which backend to arm. Stamped from the context's effective model
+    (post-fallback), never the model's own claim, like the two stamps above."""
+    body = _stamped_args()
+    assert "'--proposer-model'" in body, (
+        "McpLoopTool does not stamp --proposer-model, so proposer_model stays "
+        "NULL and the ledger cannot attribute a proposal to a backend")
+    assert "$context->modelUri" in body, (
+        "--proposer-model is supplied from something other than the effective "
+        "model on the context")
+
+
+def test_the_context_carries_the_effective_model() -> None:
+    """The stamp is worthless if the Runner does not put the model on the
+    context. `$llm->identifier()` is the effective URI after any fallback."""
+    ctx = (REPO / "files/anatomy/wing/app/AgentKit/Tools/ToolContext.php").read_text(
+        encoding="utf-8")
+    assert "$modelUri" in ctx, "ToolContext has no modelUri field to stamp from"
+    runner = (REPO / "files/anatomy/wing/app/AgentKit/Runner.php").read_text(
+        encoding="utf-8")
+    ctor = runner.split("new ToolContext(")[1].split(");")[0]
+    assert "modelUri:" in ctor and "$llm->identifier()" in ctor, (
+        "the Runner builds ToolContext without the effective model, so the "
+        "stamp reads an empty string and proposer_model stays NULL")

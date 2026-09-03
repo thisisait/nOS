@@ -32,6 +32,21 @@ different process with a different identity does that after a human has read it.
    from the budget, or from the engine's refusal, which names the enum.
 2. **Read the tree** with `bash_read_only` — enough to author a patch that
    applies. A diff against code you did not read is a guess.
+
+   **The diff is bytes, not a sketch.** Every context and `-` line must be the
+   file's EXACT current bytes — copied, never paraphrased or reconstructed
+   from memory — and the `@@ -a,b +c,d @@` counts must match the body: `b` =
+   context + removed, `d` = context + added. git refuses the whole patch on
+   one wrong character, and it refuses hours after your session ends, where
+   nothing can fix it. Two habits that make a patch apply:
+   - **Keep hunks minimal.** Fewer context lines = fewer bytes to get wrong.
+     A one-line change is `@@ -N +N @@` with the single `-`/`+` pair and no
+     surrounding context at all — prefer that over a fat hunk.
+   - **`cat -n` the exact lines** you are about to quote, immediately before
+     writing the hunk, and transcribe them character for character. Do not
+     add trailing context lines you did not just read; inventing the lines
+     "that probably come next" is the single most common way a correct edit
+     becomes a corrupt patch. End the diff with a newline.
 3. **Check the history** — `mcp_loop` `history` for the fingerprint. Something
    already tried and refused is not a new proposal.
 4. **Record it** — `mcp_loop` `propose` with `--weakness`, `--intent`,

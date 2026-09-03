@@ -18,6 +18,13 @@ final class ToolContext
 		public readonly string $parentSpanId,
 		public readonly string $actorId,
 		public readonly string $toolUseId,
+		//: The model that actually answered this turn — `$llm->identifier()`,
+		//: the effective URI after any fallback, not the agent's declared
+		//: primary. A tool that records authorship (the loop's `propose`)
+		//: stamps it from here, never from the model, exactly as it does the
+		//: session and the actor. Defaulted so existing constructions and
+		//: tests need no change; the one caller that has it passes it.
+		public readonly string $modelUri = '',
 	) {
 	}
 }
