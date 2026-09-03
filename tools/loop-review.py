@@ -270,8 +270,17 @@ def _gitea(driver) -> tuple[dict, str]:
     """The fallback review surface while install_gitlab is false (2026-09-03:
     GitLab declared off on 09-01 killed the landing half — drive judged,
     nothing could land). Gitea already carries the CI, so the three questions
-    only get easier to answer here."""
-    forge = driver._forge("gitea")
+    only get easier to answer here.
+
+    `driver._forge` raises the DRIVER's Refused — a different class than this
+    module's — so its escape was an uncaught crash (rc 1) rather than the
+    honest fail-closed rc 2 when Gitea is unprovisioned (measured 2026-09-03
+    in CI, where no forge exists). Translated here so `main`'s `except Refused`
+    sees it and a missing forge is a clean refusal, not a traceback."""
+    try:
+        forge = driver._forge("gitea")
+    except driver.Refused as exc:
+        raise Refused(str(exc)) from exc
     return forge, (f"https://{forge['domain']}/api/v1/repos/"
                    f"{forge['owner']}/{forge['repo']}")
 
