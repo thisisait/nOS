@@ -33,6 +33,9 @@ foreach ($argv as $arg) {
 	// why these are provisioned together or not at all.
 	// Ops-plane route class: comma-separated wing.read / wing.write. Omitted
 	// leaves NULL, which is unrestricted — see init-db.php's column note.
+	if ($arg === '--deactivate') {
+		$deactivate = true;
+	}
 	if (str_starts_with($arg, '--scopes=')) {
 		$scopes = substr($arg, 9);
 	}
@@ -45,6 +48,24 @@ foreach ($argv as $arg) {
 	if (str_starts_with($arg, '--cortex-tenants=')) {
 		$cortexTenants = substr($arg, 17);
 	}
+}
+
+// --deactivate: flip active=0 for --name and exit. Ruling 4 (docs/doctrine/
+// agentkit.md §6.4): the roster close left retired/parked agents' unrestricted
+// tokens live — "provision only upserts, it never reconciles absence" is over.
+if ($deactivate ?? false) {
+	if (!$dbPath || !($name ?? '') || $name === 'default') {
+		echo "--deactivate needs --db and an explicit --name\n";
+		exit(1);
+	}
+	$db = new SQLite3($dbPath);
+	$db->busyTimeout(5000);
+	$db->enableExceptions(true);
+	$stmt = $db->prepare('UPDATE api_tokens SET active = 0 WHERE name = :n AND active = 1');
+	$stmt->bindValue(':n', $name, SQLITE3_TEXT);
+	$stmt->execute();
+	echo $db->changes() > 0 ? "Deactivated {$name}\n" : "Already inactive or absent: {$name}\n";
+	exit(0);
 }
 
 $cortex = [$cortexVerbs ?? null, $cortexNamespaces ?? null, $cortexTenants ?? null];

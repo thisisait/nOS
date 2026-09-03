@@ -193,7 +193,9 @@ def wing_tokens() -> tuple[list[dict] | None, str]:
     try:
         with conn:
             rows = conn.execute(
-                "SELECT name, scopes, last_used_at FROM api_tokens ORDER BY name"
+                # active=1 only: a deactivated row cannot authenticate (ruling 4 turned five
+                # orphans off 2026-09-03) and listing it as UNRESTRICTED cried wolf.
+                "SELECT name, scopes, last_used_at FROM api_tokens WHERE active = 1 ORDER BY name"
             ).fetchall()
         conn.close()
     except sqlite3.Error as e:

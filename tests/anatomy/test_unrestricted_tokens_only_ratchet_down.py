@@ -20,8 +20,11 @@ import sqlite3
 
 import pytest
 
-#: Measured 2026-09-02. Narrow a token -> lower this number in the same commit.
-CEILING = 7
+#: 2026-09-02: 7. 2026-09-03: 1 — five retired/parked orphans deactivated
+#: (never used since 07-24), cortex-executor declared wing.write. The one
+#: remaining NULL is ansible-provisioned, the estate's main token; its
+#: narrowing is route-level work (roadmap agent-scope-single-authority).
+CEILING = 1
 
 
 def test_the_unrestricted_count_never_grows():
