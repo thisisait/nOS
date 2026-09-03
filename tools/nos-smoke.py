@@ -469,6 +469,16 @@ def _loopback_ok(url: str) -> bool:
         host == _TENANT_SUFFIX or host.endswith("." + _TENANT_SUFFIX))
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """The retry answers with the FIRST status. Following a forward-auth 302
+    chases an absolute Location to auth.<tld> — a NAME, which off-estate does
+    not resolve, so a working outpost read as `name resolution` failure
+    (measured on run 33664551853; the catalog EXPECTS 302)."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 def _probe_via_loopback(url, ctx, timeout, method):
     """Same request, sent to 127.0.0.1 with the original Host header."""
     parts = urllib.parse.urlsplit(url)
@@ -481,7 +491,8 @@ def _probe_via_loopback(url, ctx, timeout, method):
     req = urllib.request.Request(direct, method=method)
     req.add_header("Host", parts.hostname or "")
     req.add_header("User-Agent", "nos-smoke/1.0 (loopback)")
-    opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx))
+    opener = urllib.request.build_opener(
+        _NoRedirect, urllib.request.HTTPSHandler(context=ctx))
     try:
         with opener.open(req, timeout=timeout) as resp:
             return resp.status, None
