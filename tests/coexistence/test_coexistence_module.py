@@ -489,3 +489,20 @@ def test_render_falls_back_to_minimal_template_without_legacy(tmp_env):
     })
     assert "grafana-new" in body
     assert "127.0.0.1:3010:3000" in body
+
+
+def test_render_nginx_vhost_is_the_real_renderer():
+    """Replaces the deleted jinja2 test (2026-09-03): that one certified a
+    dead .j2 duplicate while THIS function — the module's inline template —
+    is what the cutover actually serves. Same assertions, real artifact."""
+    out = lib.render_nginx_vhost(
+        "grafana",
+        {"active_track": "new",
+         "tracks": [{"tag": "legacy", "port": 3000, "version": "11.5.0"},
+                    {"tag": "new", "port": 3010, "version": "12.0.0"}]},
+        {"domain": "grafana.dev.local"},
+    )
+    assert "upstream grafana_legacy" in out
+    assert "upstream grafana_new" in out
+    assert "server 127.0.0.1:3010" in out
+    assert "grafana.dev.local" in out

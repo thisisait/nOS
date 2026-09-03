@@ -251,35 +251,8 @@ def test_dispatch_rejects_unknown_strategy():
 
 # ---------------------------------------------------------------------------
 # template rendering smoke test (ensures Jinja templates parse w/ Jinja2)
-
-def test_templates_render_with_jinja2():
-    try:
-        import jinja2
-    except ImportError:
-        pytest.skip("jinja2 not installed")
-
-    env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(str(_REPO / "templates" / "coexistence")),
-        keep_trailing_newline=True,
-    )
-    # Compose override
-    out = env.get_template("compose-override.yml.j2").render(
-        coexist_service="grafana", coexist_tag="new", coexist_version="12.0.0",
-        coexist_port=3010, coexist_data_path="/data/g", coexist_stack="observability",
-    )
-    assert "grafana-new" in out
-    assert "127.0.0.1:3010:3000" in out
-
-    # Nginx vhost
-    out = env.get_template("nginx-vhost.conf.j2").render(
-        coexist_service="grafana", coexist_domain="grafana.dev.local",
-        coexist_active_tag="new",
-        coexist_tracks=[
-            {"tag": "legacy", "port": 3000, "version": "11.5.0"},
-            {"tag": "new", "port": 3010, "version": "12.0.0"},
-        ],
-        homebrew_prefix="/opt/homebrew",
-    )
-    assert "upstream grafana_legacy" in out
-    assert "upstream grafana_new" in out
-    assert "set $nos_upstream       grafana_new" in out
+# test_templates_render_with_jinja2 DELETED 2026-09-03: it certified two
+# .j2 files in templates/coexistence/ that NOTHING at runtime renders —
+# nos_coexistence.py ships its own inline _COMPOSE_TEMPLATE/_NGINX_TEMPLATE
+# (tested in test_coexistence_module.py). A test pinning a dead duplicate
+# is decoration; both files deleted with it.
