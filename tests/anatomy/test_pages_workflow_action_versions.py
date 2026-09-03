@@ -59,12 +59,13 @@ def test_pages_no_stale_shared_action_majors():
 
 
 def test_pages_specific_actions_unchanged():
-	"""upload-pages-artifact + deploy-pages have no v6 — they stay on their
-	own tracks. Pin them so a careless bump-everything sweep can't break the
-	publish (deploy-pages@v5 / upload-pages-artifact@v4 don't exist today)."""
+	"""The pages pair moves on its own track. Pinned so a bump-everything
+	sweep is forced through this gate — which fired 2026-09-03 exactly as
+	designed: Dependabot #26 attested upload-pages-artifact@v5 and
+	deploy-pages@v5 exist, and the bump landed deliberately (ae8024db)."""
 	text = PAGES.read_text()
-	assert "actions/upload-pages-artifact@v3" in text
-	assert "actions/deploy-pages@v4" in text
+	assert "actions/upload-pages-artifact@v5" in text
+	assert "actions/deploy-pages@v5" in text
 
 
 # --- release-artifact gate (no-release-artifact-validation-gate) -------------

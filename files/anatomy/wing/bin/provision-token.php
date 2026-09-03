@@ -50,8 +50,8 @@ foreach ($argv as $arg) {
 	}
 }
 
-// --deactivate: flip active=0 for --name and exit. Ruling 4 (docs/doctrine/
-// agentkit.md §6.4): the roster close left retired/parked agents' unrestricted
+// --deactivate: flip active=0 for --name and exit. Ruling 4
+// (docs/doctrine/agentkit.md §6.4): the roster close left retired/parked agents' unrestricted
 // tokens live — "provision only upserts, it never reconciles absence" is over.
 if ($deactivate ?? false) {
 	if (!$dbPath || !($name ?? '') || $name === 'default') {
