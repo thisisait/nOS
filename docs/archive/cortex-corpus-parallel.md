@@ -961,3 +961,26 @@ the sources twice and give the shadow its own schedule to drift on.
 - **No nights.** Step 8 is calendar, and it cannot start before the deploy.
 - **§1.8 (Bone's `state.db` inside the knowledge tree) remains flagged, not
   fixed**, exactly as instructed.
+
+---
+
+## S2 exit — decided 2026-09-03
+
+**Decision (delegated by the operator, notification 382): S2 is CLOSED as
+validated; S3 may begin; the nightly diff continues as a standing guard, not as
+evidence-gathering.**
+
+The evidence it rests on, from the ledger (`~/.nos/cortex-corpus-diff.json`):
+39 nights, 35 agree / 4 disagree, `halted: false` throughout — the
+removal-shaped class, the only one this plan treats as disqualifying, never
+fired. Each disagreement, read one at a time: 07-27 `captures` (S2 standing
+up), 08-18 + 09-02 `taxonomy` (import churn), 09-03 `embedded refs` — measured
+same-day: the organ pass simply had not walked since that morning's doc churn,
+and running fs-sync + embed-sync by hand returned `agrees: true` within the
+hour. Every one was ingestion LAG on a cadence, none was divergence of content.
+
+The caveat S3 inherits: corpora agree NIGHTLY, not intraday — a same-day
+consumer of both sides must not assume coherence between 04:45 and the next
+pass. The rule this section obeys is the notification's own: adding S2 nights
+past the third disagreement is how a parallel run becomes permanent furniture.
+S2 reported; this is the S3 decision it asked for.
