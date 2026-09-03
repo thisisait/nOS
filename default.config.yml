@@ -2617,12 +2617,7 @@ keap_seed_fixtures: true
 # tests/anatomy/test_fixture_tables_declare_the_business.py — real customers
 # wait for the fixture's own Article-30 entry + the company's written yes.
 keap_seed_business_fixture: false
-# nOS catalog DataTables ("Apps" + "Systems", LeanIX-style — state/keap-tables/,
-# docs/archive/keap-datatables-apps-systems.md). The Systems seeder is idempotent
-# and by default writes ONLY installed systems (install_* true) into KEAP. Flip
-# keap_nos_full_catalog=true to always mirror the ENTIRE nOS self-model (every
 # system regardless of install state) — profiles/all-on.yml sets it true.
-keap_nos_full_catalog: false
 # Optional live embedder for free-text semantic search (stored vectors come
 # from the keap-embed-sync Pulse job regardless). Docker Desktop (Mac):
 # "http://host.docker.internal:11434". Default off — Linux host-gateway

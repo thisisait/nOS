@@ -33,8 +33,7 @@ services:
       # Consumed by /data/settings.js's adminAuth.strategy block via
       # passport-openidconnect. clientID + clientSecret read from env so
       # secrets aren't baked into the static settings.js render.
-      NODERED_OIDC_CLIENT_ID: "{{ authentik_oidc_nodered_client_id }}"
-      NODERED_OIDC_CLIENT_SECRET: "{{ authentik_oidc_nodered_client_secret }}"
+      # NODERED_OIDC_CLIENT_* moved to the nodered-base compose-extension (D2, fee 52).
 {% endif %}
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:1880/ 2>&1 || exit 1"]

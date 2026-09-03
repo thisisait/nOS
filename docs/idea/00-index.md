@@ -4,7 +4,9 @@
 > ran, and the rest overlapped each other. This directory is the living surface;
 > `docs/archive/` holds the detail and the history.
 >
-> **Ceiling: twenty documents** — ten until 2026-08-02, raised the same day the
+> **Ceiling: twenty documents — BREACHED: 24 as of 2026-09-03, gated as a
+> ratchet (test_idea_surface_is_indexed.py, ceiling may only fall) until an
+> absorb/archive pass brings it back under.** Was ten until 2026-08-02, raised the same day the
 > first new idea arrived, because forcing a merge nobody wanted is not what the
 > constraint is for. At the ceiling one absorbs the next or one is finished. The
 > previous surface reached 20 390 lines because nothing ever forced that choice.
@@ -28,6 +30,15 @@
 | [11](11-agentic-loop.md) | The agentic loop | design | The propose→judge loop exists per session; nothing carries between them, and no judge is addressable. |
 | [13](13-relations.md) | Relations | design | What is joined to what, and who owns the verb. |
 | [15](15-business-fixture.md) | A real business on nOS | **proposed** | Every claim so far was measured against a corpus we authored; a fixture is data that argues back. |
+| [11a](11-agentic-loop-contract.md) | The loop engine contract | settled | The propose→judge engine's settled contract; tests cite it as 11a. |
+| [13F](13-fable-review.md) | Fable review of the loop engine | record | Filed under a colliding number — 13 proper is relations; renumber on the next absorb pass. |
+| [16](16-orchestrator-question.md) | The orchestrator question | open | Which layer is ours. |
+| [17](17-loop-split-refactor-graph.md) | Loop split refactor graph | record | Six-dimension research output, filed late. |
+| [18](18-second-environment.md) | A second environment | open | VPS, local VM, or neither yet. |
+| [19](19-fable-review-2.md) | Fable review, second pass | record | The loop engine re-reviewed. |
+| [20](20-devops-security-skills-read.md) | DevOps-security skills read | record | BagelHole skills against this estate. |
+| [21](21-mariadb-tls-ladder.md) | MariaDB TLS ladder | open | Why the cheap half does not exist. |
+
 
 ## How to use this
 

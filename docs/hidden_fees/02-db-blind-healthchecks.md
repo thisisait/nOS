@@ -70,3 +70,21 @@ already established by the miniflux fix.
 Worth pairing with the wider rule the healthcheck-coverage gate started
 (`c1698d9e`): coverage answered *"does a probe exist?"*, this answers *"does the
 probe prove anything?"* — and only the second one makes "green" mean "working".
+
+---
+
+## A second sub-class, named 2026-09-03: TCP-connect-only probes
+
+The audit sweep found three services this file never surveyed, each probing
+`:>/dev/tcp/…` — port-open, not service-alive:
+
+| service | probe | honest ceiling? |
+| --- | --- | --- |
+| smtp_stalwart | `/dev/tcp/127.0.0.1/8080` | no — the image ships curl; a `/healthz`-class HTTP probe is feasible |
+| mcp_gateway (mcpo) | `/dev/tcp/127.0.0.1/8000` | maybe — every HTTP route is API-key-gated, TCP may be the honest ceiling; say so in the template if kept |
+| qgis_server | `/dev/tcp/127.0.0.1/80` | no — a WMS GetCapabilities GET exists |
+
+The coverage gate only asserts a `healthcheck:` block EXISTS, so this class is
+invisible to it by construction. Recorded here rather than fixed blind: each
+probe upgrade needs the image's own toolset measured first (the fee's original
+lesson).

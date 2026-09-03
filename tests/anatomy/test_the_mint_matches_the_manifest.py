@@ -53,6 +53,15 @@ def minted() -> dict[str, set[str]]:
         scopes = re.search(r"--scopes=([a-z0-9_.,]+)", m.group(2))
         if scopes:
             out[m.group(1)] = {s for s in scopes.group(1).split(",")} & WING_SCOPES
+        elif "capability_scopes" in m.group(2):
+            # Ruling 3 (2026-09-03): agent mints DERIVE scopes from their
+            # manifest — resolve the same file the template names.
+            import yaml
+            ay = AGENTS / m.group(1) / "agent.yml"
+            if ay.is_file():
+                caps = (yaml.safe_load(ay.read_text()).get("audit") or {}
+                        ).get("capability_scopes") or []
+                out[m.group(1)] = {c for c in caps} & WING_SCOPES
     return out
 
 

@@ -190,6 +190,20 @@
   when:
     - _onboarding_needed | default([]) | length > 0
 
+# Fee 45: every probe above is failed_when: false and the summary was a
+# debug — a task NAMED verify that could not fail the play. Onboarding stays
+# tolerant (interactive by design); infra still dead after the retries is a
+# red converge, not a WARNING.
+- name: "[Verify] Infra that failed after retries fails the play"
+  ansible.builtin.assert:
+    that:
+      - (_auto_failed | default([]) | length) == 0
+    fail_msg: >-
+      {{ _auto_failed | default([]) | length }} service(s) did not answer even
+      after the retry pass: {{ _auto_failed | default([]) | join(', ') }}.
+      The STRICT compose health-wait passed them, so the container is healthy
+      and the SERVICE is not — the exact gap this verify exists to catch.
+
 # ── Summary ─────────────────────────────────────────────────────────────
 - name: "[Verify] Summary"
   ansible.builtin.debug:

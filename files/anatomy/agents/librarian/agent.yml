@@ -9,7 +9,7 @@ description: |
   via /agent/v1/taxonomy/propose (Track T zone governance — the
   moderator, or the free zone itself, decides; never the agent).
 
-  **STATUS: contract-only (2026-05-17; corpus landed 2026-07-11).** The
+  **STATUS: LIVE — nightly since 2026-08-28 (runner_status: proven).** The
   AgentKit profile is shipped so the catalog under /agents displays the
   spec, but no Pulse runner exists yet. The original blocker — an empty
   embeddings substrate — is GONE: KEAP's libSQL vector corpus is live
@@ -90,7 +90,7 @@ vault:
     - scope: mcp-keap
 
 metadata:
-  ait_phase: A9.4-contract-only
+  ait_phase: A9.4-live
   ceremony_role: rag-recall
   runner_status: proven  # nightly cadence is DERIVED (pulse edges); evidence: runs on record since 2026-08-28
   deferred_reason: >-
@@ -101,7 +101,7 @@ metadata:
 
 exit_code_semantics:
   emits_sentinel: true
-  exit_0: "Contract-only (no live runner). Reserved: RAG recall completed, context posted as events."
+  exit_0: "RAG recall / taxonomy ceremony completed; events posted."
   exit_1: "Does not emit exit 1 today (runner deferred). Reserved: surfaced prior-art requiring operator review."
   exit_2: "Environment / auth / Wing error inside the runner. Fires a CRITICAL A9 notification."
 # ── Article 30 ────────────────────────────────────────────────────────────────

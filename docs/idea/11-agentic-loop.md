@@ -1,6 +1,6 @@
 # 11 — The agentic loop: recursive improvement on device
 
-**Status: design, not built.** Opened 2026-08-02.
+**Status: partial — the propose→judge loop runs per session (looproutes/loopauth/nos-loop, 49 loop tests); cross-session carry and addressable judges are the open half.** Opened 2026-08-02.
 **Shape:** an **on-device deterministic engine** with a thin plugin over it, so
 that Claude Code, Hermes and AgentKit are all *clients* of the same loop rather
 than three loops that drift.

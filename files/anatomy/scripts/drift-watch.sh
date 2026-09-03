@@ -72,6 +72,9 @@ fi
 
 if [[ -z "${WING_EVENTS_HMAC_SECRET:-}" ]]; then
     echo "drift-watch: ALERT (${sev}) but WING_EVENTS_HMAC_SECRET unset — metric-only"
+    # Fee 47: a CRITICAL verdict this watcher cannot DELIVER must not read as a
+    # clean run — fee 07's own rule. Pulse records the non-zero; nothing crashes.
+    [[ "$sev" == "critical" ]] && exit 1
     exit 0
 fi
 
@@ -106,5 +109,7 @@ if [[ "$CODE" == "200" || "$CODE" == "201" ]]; then
     echo "drift-watch: notification emitted (severity=${sev})"
 else
     echo "drift-watch: notification POST HTTP ${CODE} — metric still refreshed" >&2
+    # Fee 47, same rule at the second undeliverable path.
+    [[ "$sev" == "critical" ]] && exit 1
 fi
 exit 0

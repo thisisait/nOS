@@ -20,15 +20,11 @@ services:
       # Defensive placeholder (P0.12 doctrine).
       _NOS_PLUGIN: "freescout-base"
 {% if install_authentik | default(false) %}
-      # ── Authentik SSO (OIDC via freescout-oauth module) ───────────────────
-      FREESCOUT_OIDC_ENABLED: "true"
-      FREESCOUT_OIDC_DISCOVERY: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/freescout/.well-known/openid-configuration"
-      FREESCOUT_OIDC_CLIENT_ID: "nos-freescout"
-      FREESCOUT_OIDC_CLIENT_SECRET: "{{ nos_derived_secrets.oidc_freescout }}"
-      FREESCOUT_OIDC_REDIRECT_URI: "https://{{ freescout_domain }}/oauth/callback"
-      FREESCOUT_OIDC_SCOPES: "openid profile email"
-      FREESCOUT_OIDC_AUTHORIZE_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/authorize/"
-      FREESCOUT_OIDC_TOKEN_URL: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
+      # Fee 49: the FREESCOUT_OIDC_* block that sat here rendered a client
+      # secret into the override for a module both of whose sources are 404
+      # (see post.yml history) — a secret in flight for nothing, under a
+      # plugin that has been forward_auth since REM-192 (2026-08-11).
+      # Restore from git history the day a reachable module source exists.
     extra_hosts:
       # Authentik OIDC discovery endpoint resolves via host-gateway to the
       # host's Traefik. Without this alias, container DNS would send the

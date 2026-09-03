@@ -1,6 +1,6 @@
 # `exec` — one tool, one cortex-lang sentence
 
-Status: rough design draft, not implemented. Motivation: an agent guessing a
+Status: IMPLEMENTED — files/anatomy/wing/app/AgentKit/Tools/ExecTool.php, gate test_exec_adds_no_capability.py; the spendability half is fee 43. This file is the design record. Motivation: an agent guessing a
 `mcp-wing` REST path produced an invented endpoint and a 404 on the first real
 turn. `exec` replaces path-guessing with a closed, validated grammar so a
 ~1B-parameter tool-caller has one surface to learn instead of N REST shapes.

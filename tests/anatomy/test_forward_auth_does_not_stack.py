@@ -52,13 +52,11 @@ FOUR THINGS IT CANNOT COVER, none of them silent:
     enforced by the Nginx Authentik outpost" — so it is not a stack. If
     upstream ever consumes it, this gate reads the unflipped declaration and
     stays green on a real double login.
-  * **A `native_oidc` declaration whose native OIDC does not exist is the
-    OPPOSITE defect and this gate exempts it.** FreeScout declares
-    `mode: native_oidc` (`freescout-base/plugin.yml:48`) and therefore takes no
-    edge gate, while CLAUDE.md records both upstream sources for the
-    `freescout-oauth` module at HTTP 404, so `/login` shows the local form. That
-    service is UNGATED, not double-gated. Closing it needs a reachability
-    measurement, not a declaration cross-check.
+  * **The FreeScout case CLOSED (fee 49).** It declared `native_oidc` while
+    both module sources were HTTP 404 — ungated, not double-gated. Flipped to
+    `mode: forward_auth` under REM-192 (2026-08-11); the dead OIDC env and the
+    module clone were removed 2026-09-03. This gate now covers it like any
+    other forward_auth service.
   * **Auth that is not Authentik's.** Woodpecker's gate is Gitea OAuth at app
     level; the sibling file's `PROVIDER_NOT_EDGE_ATTACHED` carries that
     reasoning. Nothing here can see an in-service login that Authentik does not

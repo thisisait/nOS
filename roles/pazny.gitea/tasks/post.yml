@@ -106,6 +106,7 @@
 - name: "[pazny.gitea Post] SSO guard — list Authentik OAuth source"
   ansible.builtin.command: >
     {{ docker_bin }} compose -p devops exec -T -u git gitea gitea admin auth list
+  check_mode: false   # fee 36: skipped-under---check stdout invents the refusal
   register: _gitea_idp_guard
   changed_when: false
   failed_when: false

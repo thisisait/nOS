@@ -91,7 +91,9 @@ REFUSED = {
     # A parallel service edge would be padding, which this graph refuses.
     ("bookstack", "authentik"): "SSO — carried by the authentik provider chain",
     ("erpnext", "authentik"): "SSO — carried by the authentik provider chain",
-    ("freescout", "authentik"): "SSO — carried by the authentik provider chain",
+    # freescout row DELETED 2026-09-03 (fee 49): the OIDC env that made the
+    # sweep see the pair was removed with the dead module wiring; the edge
+    # lives in the provider chain like every forward_auth service.
     ("gitea", "authentik"): "SSO — carried by the authentik provider chain",
     ("gitlab", "authentik"): "SSO — carried by the authentik provider chain",
     ("homeassistant", "authentik"): "SSO — carried by the authentik provider chain",

@@ -25,26 +25,13 @@ FreeScout has no REST API for onboarding, which is why Artisan CLI calls via `do
 
 ## Authentik SSO (native OIDC)
 
-Migrated from Nginx proxy-auth (forward_auth) to native OIDC on 2026-04-22.
+**forward_auth since REM-192 (2026-08-11).** The 2026-04-22 native-OIDC
+migration never worked: both `freescout-oauth` module sources are HTTP 404
+(moved to the paid marketplace), so `/login` always showed the local form.
+The edge gate is Authentik forward-auth via the plugin manifest
+(`freescout-base/plugin.yml`); the module wiring was removed 2026-09-03
+(fee 49) and lives in git history for the day a reachable source exists.
 
-- **Flow**: FreeScout renders its own login page with a "Sign in with Authentik" button (provided by the `freescout-oauth` module). Click → Authorization Code flow against `auth.dev.local` → OAuth callback at `/oauth/callback` → session created.
-- **Module source**: [`freescout-help-desk/oauth`](https://github.com/freescout-help-desk/oauth) with fallback to [`tiredofit/freescout-module-oauth`](https://github.com/tiredofit/freescout-module-oauth) if the primary clone fails.
-- **Config persistence**: all settings (`oauth.client_id`, `oauth.client_secret`, discovery URL, redirect URI, scopes) are written into the FreeScout `options` table. The compose env vars (`FREESCOUT_OIDC_*`) are mirrored there for documentation / future modules that read from env.
-- **CA trust**: the mkcert root CA is bind-mounted into the container (`/usr/local/share/ca-certificates/mkcert-ca.crt`) and PHP curl is pointed at it via `PHP_CURL_CAINFO` so TLS handshakes against `auth.dev.local` succeed without inserting a cert bundle on the host.
-- **Authentik provider**: add (or update) an entry in `authentik_oidc_apps` in `default.config.yml`:
-
-  ```yaml
-  - name: "FreeScout"
-    slug: "freescout"
-    enabled: "{{ install_freescout | default(false) }}"
-    client_id: "nos-freescout"
-    client_secret: "{{ global_password_prefix }}_pw_oidc_freescout"
-    redirect_uris: "https://{{ freescout_domain | default('helpdesk.dev.local') }}/oauth/callback"
-    launch_url: "https://{{ freescout_domain | default('helpdesk.dev.local') }}"
-    type: "oauth2"
-  ```
-
-- **Nginx**: the `authentik-proxy-auth` include was removed from `templates/nginx/sites-available/freescout.conf`. The service gates itself — no forward-auth anymore.
 
 ### First-run gotcha
 

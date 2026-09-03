@@ -36,6 +36,7 @@
     headers:
       Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
     status_code: [200, 404]
+  check_mode: false   # fee 36: under --check the read skips and the guard dereferences nothing
   register: _forge_repo
   changed_when: false
   no_log: true

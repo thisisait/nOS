@@ -102,7 +102,6 @@ install_superset: true
 install_qdrant: true             # now feature_flag-gated (see qdrant-base/plugin.yml)
 
 # ── KEAP catalog: mirror the ENTIRE nOS self-model (not just installed) ───────
-keap_nos_full_catalog: true
 
 # ── non-Docker host agents / daemons ──────────────────────────────────────────
 install_bone: true

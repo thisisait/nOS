@@ -1,6 +1,6 @@
 # OpenTofu Authentik cutover runbook (ADR-0001 Phase 1)
 
-> **STATUS: CUTOVER COMPLETE (2026-06-12).** Path B (tofu-engine blank)
+> **STATUS: CUTOVER COMPLETE (2026-06-12) — on the estate that opted in.** The COMMITTED default stays `authentik_engine: "blueprint"`; a fork gets blueprint until it runs the adopt path itself. Path B (tofu-engine blank)
 > executed and converged: `tofu plan` reads no-op across the full tenant,
 > smoke catalog 48/48 URLs OK, all 39 enabled apps carry their RBAC tier
 > binding, agent clients (`30-agent-clients`) landed. `authentik_engine: tofu`

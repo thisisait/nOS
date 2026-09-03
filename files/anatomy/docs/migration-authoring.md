@@ -553,7 +553,7 @@ steps:
       type: exec.shell
       allow_shell: true
       command: "docker compose -f ~/stacks/iiab/docker-compose.yml stop nextcloud"
-      justification: "No first-class compose stop action yet; see TODO.md."
+      justification: "No first-class compose stop action yet."
     verify:
       - { compose_service_running: "nextcloud", negate: true }
     rollback:

@@ -1,7 +1,8 @@
 # 09 — Hidden fees
 
-**Status: a ledger, permanently open. 13 entries; 2 closed, 3 named OPEN, 8
-recorded and unresolved.**
+**Status: a ledger, permanently open. The tally MOVES — ask `ls
+docs/hidden_fees/` and its README index; a number copied here was 31 entries
+stale within three months.**
 **Detail:** [`docs/hidden_fees/`](../hidden_fees/) — one file per fee, kept
 because each carries the reproduction that found it.
 

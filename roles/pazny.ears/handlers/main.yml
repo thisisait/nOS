@@ -8,7 +8,13 @@
     UID_NUM=$(id -u)
     LABEL={{ ears_launchd_label }}
     if launchctl print "gui/${UID_NUM}/${LABEL}" >/dev/null 2>&1; then
-      launchctl kickstart -k "gui/${UID_NUM}/${LABEL}"
+      # bootout+bootstrap, not kickstart -k: kickstart reuses the CACHED plist
+      # env (the 2026-05-17 Bone lesson, fee 40's host half). Inert today —
+      # the role removes the launchd listener (TCC) — but the day the .app
+      # bundle lands, the wrong verb would be live.
+      PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
+      launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
+      launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
       echo restarted
     else
       echo not-loaded

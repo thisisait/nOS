@@ -45,7 +45,7 @@ FIXED = {
     "qgis-server": "bash TCP :80 (kartoza image has bash, no curl/wget; WMS needs query params)",
     "freescout": "curl / (nfrastack image ships curl)",
     "superset": "curl /health (image ships curl)",
-    "hedgedoc": "bash TCP :3000 (image has bash+node, no curl/wget)",
+    "hedgedoc": "node /status DB-aware probe (fee 02, 2026-08-18; was bash TCP :3000)",
     "smtp_stalwart": "bash TCP :8080 (webadmin root can 401/redirect; TCP is protocol-agnostic)",
 }
 
@@ -54,7 +54,7 @@ HEALTH_BLIND = {
     # ── BAKED: image already ships a HEALTHCHECK (runtime health present) ──────
     "authentik-server": "BAKED: image bakes HEALTHCHECK `ak healthcheck` (worker overrides it in-compose)",
     "vaultwarden": "BAKED: image bakes HEALTHCHECK `/healthcheck.sh`",
-    "uptime-kuma": "BAKED: image bakes HEALTHCHECK `extra/healthcheck`",
+    "uptime-kuma": "BAKED: image bakes `extra/healthcheck` — does NOT distinguish setup-wizard from app; the converge-time /api/entry-page check in roles/pazny.uptime_kuma/tasks/monitors.yml owns that half",
     "keap": "BAKED: image bakes HEALTHCHECK `wget /api/health` (built from source; see compose header)",
     "face": "BAKED: image bakes HEALTHCHECK on /health (SvelteKit adapter-node; built from source; see compose header)",
     "tileserver": "BAKED: image bakes HEALTHCHECK `node .../healthcheck.js`",
