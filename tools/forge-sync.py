@@ -183,6 +183,18 @@ def read_tips(driver, branch: str) -> dict[str, dict]:
         tips["github"] = {"sha": out.split()[0], "error": None}
 
     for name in ("gitea", "gitlab"):
+        # A forge DECLARED off is a decision, not an unreadable holder.
+        # MEASURED 2026-09-03: install_gitlab false (operator, 09-01) made
+        # every election refuse on "gitlab unreachable", which blocked the
+        # reviewer's promotion step — the whole trunk froze on a holder the
+        # operator had deliberately removed. Excused ≠ ignored: the entry
+        # says so in the report, and flipping the flag restores the seat.
+        if name == "gitlab":
+            flag = driver._yaml_lookup("install_gitlab", REPO / "config.yml",
+                                       REPO / "default.config.yml")
+            if str(flag).lower() == "false":
+                tips[name] = {"sha": None, "error": None, "declared_off": True}
+                continue
         try:
             forge = driver._forge(name)
         except Exception as exc:  # noqa: BLE001 — Refused or config gap, same answer
@@ -246,19 +258,20 @@ def elect_leader(tips: dict[str, dict]) -> tuple[str | None, str]:
     elected over a partial view can converge the estate toward a stale tip)
     or when two tips have diverged.
     """
-    unreadable = [n for n in HOLDERS if tips[n]["error"]]
+    active = [n for n in HOLDERS if not tips[n].get("declared_off")]
+    unreadable = [n for n in active if tips[n]["error"]]
     if unreadable:
         return None, ("cannot elect a leader — unreadable holder(s): "
                       + "; ".join(f"{n}: {tips[n]['error']}" for n in unreadable))
 
-    shas = {tips[n]["sha"] for n in HOLDERS}
+    shas = {tips[n]["sha"] for n in active}
     if len(shas) == 1:
-        return "local", "all four tips are identical"
+        return "local", f"all {len(active)} active tips are identical"
 
-    for name in HOLDERS:
+    for name in active:
         candidate = tips[name]["sha"]
         verdicts = [_is_ancestor(tips[other]["sha"], candidate)
-                    for other in HOLDERS if other != name]
+                    for other in active if other != name]
         if all(v is True for v in verdicts):
             return name, f"{name}'s tip contains every other tip"
         if any(v is None for v in verdicts):
@@ -273,7 +286,8 @@ def build_plan(tips: dict[str, dict], leader: str) -> list[dict]:
     target = tips[leader]["sha"]
     steps = []
     for name in HOLDERS:
-        if name == leader or tips[name]["sha"] == target:
+        if name == leader or tips[name].get("declared_off") \
+                or tips[name]["sha"] == target:
             continue
         steps.append({"holder": name,
                       "action": {"local": "ff-merge",
@@ -364,10 +378,13 @@ def main() -> int:
         tips = read_tips(driver, args.branch)
         _fetch_objects(tips, driver, args.branch)
 
-        log(f"branch {args.branch!r} across the four holders:")
+        log(f"branch {args.branch!r} across its holders:")
         for name in HOLDERS:
             entry = tips[name]
-            if entry["error"]:
+            if entry.get("declared_off"):
+                log(f"  {name:<7} DECLARED OFF (install_{name}: false) — "
+                    f"excused from election and sync")
+            elif entry["error"]:
                 log(f"  {name:<7} UNREADABLE — {entry['error']}")
             else:
                 log(f"  {name:<7} {entry['sha'][:12]}")
@@ -380,7 +397,7 @@ def main() -> int:
 
         plan = build_plan(tips, leader)
         if not plan:
-            log("nothing to do — all four holders agree")
+            log("nothing to do — every active holder agrees")
             return 0
 
         if not args.apply:

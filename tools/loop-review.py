@@ -266,7 +266,32 @@ def _gitlab(driver) -> tuple[dict, str]:
     return forge, f"http://127.0.0.1:{port}/api/v4/projects/{project}"
 
 
-def open_requests(driver, base: str) -> list[dict]:
+def _gitea(driver) -> tuple[dict, str]:
+    """The fallback review surface while install_gitlab is false (2026-09-03:
+    GitLab declared off on 09-01 killed the landing half — drive judged,
+    nothing could land). Gitea already carries the CI, so the three questions
+    only get easier to answer here."""
+    forge = driver._forge("gitea")
+    return forge, (f"https://{forge['domain']}/api/v1/repos/"
+                   f"{forge['owner']}/{forge['repo']}")
+
+
+def open_requests(driver, base: str, *, gitea_mode: bool = False) -> list[dict]:
+    if gitea_mode:
+        forge, api = _gitea(driver)
+        headers = {"Authorization": f"token {forge['token']}"}
+        status, body = _api(f"{api}/pulls?state=open", headers)
+        if status != 200 or not isinstance(body, list):
+            raise Refused(f"Gitea did not list pull requests (HTTP {status}): {body}")
+        # Normalized to the MR shape review() reads, tagged so it knows the
+        # dialect for the diff read and the merge call.
+        return [{
+            "iid": pr.get("number"),
+            "source_branch": (pr.get("head") or {}).get("ref", ""),
+            "sha": (pr.get("head") or {}).get("sha", ""),
+            "target_branch": (pr.get("base") or {}).get("ref", ""),
+            "_gitea": True,
+        } for pr in body if (pr.get("base") or {}).get("ref") == base]
     forge, api = _gitlab(driver)
     headers = {"PRIVATE-TOKEN": forge["token"]}
     status, body = _api(f"{api}/merge_requests?state=opened&target_branch={base}",
@@ -286,10 +311,15 @@ def review(mr: dict, driver, *, act: bool, log) -> str:
         log(f"  {label}: not a driver branch — left alone")
         return REFUSED
 
-    forge, api = _gitlab(driver)
-    headers = {"PRIVATE-TOKEN": forge["token"]}
-
-    status, diff_body = _api(f"{api}/merge_requests/{iid}/raw_diffs", headers)
+    gitea_mode = bool(mr.get("_gitea"))
+    if gitea_mode:
+        forge, api = _gitea(driver)
+        headers = {"Authorization": f"token {forge['token']}"}
+        status, diff_body = _api(f"{api}/pulls/{iid}.diff", headers)
+    else:
+        forge, api = _gitlab(driver)
+        headers = {"PRIVATE-TOKEN": forge["token"]}
+        status, diff_body = _api(f"{api}/merge_requests/{iid}/raw_diffs", headers)
     if status != 200 or not isinstance(diff_body, str):
         log(f"  {label}: INDETERMINATE — cannot read the MR diff (HTTP {status})")
         return INDETERMINATE
@@ -315,6 +345,19 @@ def review(mr: dict, driver, *, act: bool, log) -> str:
         log("      → WOULD MERGE (re-run with --merge)")
         return MERGED
 
+    if gitea_mode:
+        # "rebase" keeps dev linear (required_linear_history is the estate
+        # rule); the branch dies with the merge, same as GitLab's
+        # should_remove_source_branch.
+        status, body = _api(f"{api}/pulls/{iid}/merge", headers,
+                            method="POST",
+                            payload={"Do": "rebase",
+                                     "delete_branch_after_merge": True})
+        if status in (200, 201):
+            log(f"      → MERGED into {mr.get('target_branch')}")
+            return MERGED
+        log(f"      → merge call returned {status}: {body}")
+        return REFUSED
     status, body = _api(f"{api}/merge_requests/{iid}/merge", headers,
                         method="PUT", payload={"should_remove_source_branch": True})
     if status == 200:
@@ -375,15 +418,19 @@ def main() -> int:
 
         # A forge DECLARED off is a decision, not a failure. install_gitlab
         # false made this job correctly-red every night (2026-09-02, operator
-        # ruling: gate on the flag). Unreachable while true stays rc=2.
+        # ruling: gate on the flag) — and then a SKIP, which severed the
+        # loop's landing half entirely (measured 2026-09-03: drive judged
+        # REM-239/REM-244, nothing could land). The decision now has a
+        # consequence instead of a hole: the PR lives on Gitea, which
+        # carries the CI anyway. Unreachable-while-true stays rc=2.
         flag = driver._yaml_lookup("install_gitlab", REPO / "config.yml",
                                    REPO / "default.config.yml")
-        if str(flag).lower() == "false":
-            log("SKIP: install_gitlab is false — the forge is declared off; "
-                "nothing to review. Flip the flag to re-enable this job.")
-            return 0
+        gitea_mode = str(flag).lower() == "false"
+        if gitea_mode:
+            log("install_gitlab is false — reviewing on Gitea (the CI forge "
+                "carries the PR while GitLab is declared off)")
 
-        requests = open_requests(driver, args.base)
+        requests = open_requests(driver, args.base, gitea_mode=gitea_mode)
         if args.mr:
             requests = [m for m in requests if m.get("iid") == args.mr]
             if not requests:

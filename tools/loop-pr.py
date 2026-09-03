@@ -129,6 +129,19 @@ class Refused(Exception):
     """A condition the driver will not work around. Message is operator-facing."""
 
 
+def _gitlab_declared_on() -> bool:
+    """install_gitlab, resolved config-over-default — the same read the
+    reviewer gates on. MEASURED 2026-09-03: the operator declared GitLab off
+    on 09-01 (memory pressure) and the loop's landing half died silently —
+    drive judged REM-239/REM-244 and nothing could ever land, because this
+    driver pushed to a forge that no longer exists and opened its MR there.
+    A declared-off forge is a decision: the PR moves to Gitea, which already
+    carries the CI, and comes back to GitLab when the flag does."""
+    flag = _yaml_lookup("install_gitlab", REPO / "config.yml",
+                        REPO / "default.config.yml")
+    return str(flag).lower() != "false"
+
+
 # ── reading the estate ───────────────────────────────────────────────────────
 
 def _load_loop_status():
@@ -317,6 +330,33 @@ def _open_merge_request(forge: dict, branch: str, base: str,
         with urllib.request.urlopen(request, timeout=15) as response:  # noqa: S310
             body = json.loads(response.read().decode("utf-8"))
             return response.status, body.get("web_url", "")
+    except urllib.error.HTTPError as exc:
+        return exc.code, _scrub(exc.read().decode("utf-8", "replace")[:400])
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        return 0, f"{type(exc).__name__}: {_scrub(str(exc))}"
+
+
+def _open_gitea_pr(forge: dict, branch: str, base: str,
+                   title: str, description: str) -> tuple[int, str]:
+    """POST the PR to Gitea — the fallback review surface while GitLab is
+    declared off. Same contract as `_open_merge_request`: (http, url-or-body);
+    201 created, 409 already exists. Gitea takes the public domain fine (no
+    %2F in its API paths, so the CF-edge normalization trap does not apply)."""
+    url = (f"https://{forge['domain']}/api/v1/repos/"
+           f"{forge['owner']}/{forge['repo']}/pulls")
+    payload = json.dumps({
+        "head": branch, "base": base,
+        "title": title, "body": description,
+    }).encode("utf-8")
+    request = urllib.request.Request(  # noqa: S310 — fixed https scheme
+        url, data=payload, method="POST",
+        headers={"Authorization": f"token {forge['token']}",
+                 "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:  # noqa: S310
+            body = json.loads(response.read().decode("utf-8"))
+            return response.status, body.get("html_url", "")
     except urllib.error.HTTPError as exc:
         return exc.code, _scrub(exc.read().decode("utf-8", "replace")[:400])
     except (urllib.error.URLError, OSError, ValueError) as exc:
@@ -591,15 +631,20 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
             f"(a conflicted or malformed patch needs a new proposal)")
         return 0
 
+    gitlab_on = _gitlab_declared_on()
     if not act:
-        log(f"  {wid}: WOULD branch, push to gitea + gitlab, and open an MR → {base}")
+        where = "gitea + gitlab, and open an MR" if gitlab_on \
+            else "gitea (install_gitlab false), and open a PR there"
+        log(f"  {wid}: WOULD branch, push to {where} → {base}")
         return 0
 
-    gitea, gitlab = _forge("gitea"), _forge("gitlab")
-    # Both forges must be able to receive this BEFORE any branch is cut. Half a
-    # landing — a commit on Gitea, nothing on GitLab — is worse than none: the
-    # CI goes green on a change no reviewer can see.
-    for forge in (gitea, gitlab):
+    gitea = _forge("gitea")
+    forges = (gitea, _forge("gitlab")) if gitlab_on else (gitea,)
+    # Every RECEIVING forge must be able to take this BEFORE any branch is
+    # cut. Half a landing — a commit on Gitea, nothing on GitLab — is worse
+    # than none: the CI goes green on a change no reviewer can see. With
+    # GitLab declared off, Gitea is the only receiver AND the review surface.
+    for forge in forges:
         ok, why = _base_exists(forge, base)
         if not ok:
             log(f"  {wid}: {why}")
@@ -613,7 +658,7 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
     local_base = _git("rev-parse", base_ref)
     aligned, why = _base_alignment(
         local_base,
-        {forge["name"]: _remote_tip(forge, base) for forge in (gitea, gitlab)},
+        {forge["name"]: _remote_tip(forge, base) for forge in forges},
         base,
     )
     if not aligned:
@@ -661,7 +706,7 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
         # for this proposal is never forced, so a human's work under a
         # borrowed branch name survives every unattended run.
         refreshed = False
-        for forge in (gitea, gitlab):
+        for forge in forges:
             url = (f"https://oauth2:{forge['token']}@{forge['domain']}"
                    f"/{forge['owner']}/{forge['repo']}.git")
             tip, tip_err = _remote_tip(forge, branch)
@@ -708,22 +753,27 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
             log(f"  {wid}: commit {sha[:8]} — {hooks} Gitea webhook(s) fired; "
                 f"read the verdict from Woodpecker, not from here")
 
-        http, detail = _open_merge_request(gitlab, branch, base, subject, body)
+        if gitlab_on:
+            http, detail = _open_merge_request(forges[1], branch, base, subject, body)
+            kind = "MR"
+        else:
+            http, detail = _open_gitea_pr(gitea, branch, base, subject, body)
+            kind = "PR"
         if http == 201:
-            log(f"  {wid}: MR opened — {detail}")
+            log(f"  {wid}: {kind} opened — {detail}")
             return 0
         if http == 409:
             if refreshed:
-                log(f"  {wid}: the existing MR for {branch} → {base} now tracks "
-                    f"{sha[:8]} — GitLab MRs follow their source branch, so the "
+                log(f"  {wid}: the existing {kind} for {branch} → {base} now tracks "
+                    f"{sha[:8]} — it follows its source branch, so the "
                     f"refresh IS the update; CI runs on the new sha")
             else:
-                log(f"  {wid}: an MR for {branch} → {base} already exists")
+                log(f"  {wid}: a {kind} for {branch} → {base} already exists")
             return 0
         # A pushed branch with no MR is half-done work and must say so; a silent
         # exit 0 here left a commit stranded once already (recipe-pr, 2026-06-10).
-        log(f"  {wid}: MR create returned {http or 'no response'} — the branch IS "
-            f"pushed to both forges; open the MR by hand: {detail}")
+        log(f"  {wid}: {kind} create returned {http or 'no response'} — the branch "
+            f"IS pushed; open the {kind} by hand: {detail}")
         return 1
     finally:
         _git("worktree", "remove", "--force", str(tree), check=False)

@@ -117,7 +117,13 @@ def ready_row():
 
 @pytest.fixture
 def wired(drv, monkeypatch):
-    """The driver with both forges faked and the MR call stubbed to 201."""
+    """The driver with both forges faked and the MR call stubbed to 201.
+
+    The flag is PINNED on: these tests exercise the two-forge landing, and
+    the estate's real config (install_gitlab false since 09-01) would silently
+    reroute them onto the Gitea-PR path — which has its own gate,
+    test_the_loop_lands_without_gitlab.py."""
+    monkeypatch.setattr(drv, "_gitlab_declared_on", lambda: True)
     monkeypatch.setattr(drv, "_forge", lambda name: {
         "name": name, "token": "FAKE_not_a_real_token", "domain": f"{name}.invalid",
         "owner": "o", "repo": "nOS",
@@ -510,6 +516,9 @@ def test_a_missing_nos_loop_is_indeterminate_not_a_pass(drv, monkeypatch):
 # the driver may overwrite ONLY a tip it can prove it made for this proposal.
 
 def _wire_refresh(drv, monkeypatch, *, tip, owned):
+    # Pinned on for the same reason as `wired` — the two-forge path is the
+    # subject; the flag-off path has test_the_loop_lands_without_gitlab.py.
+    monkeypatch.setattr(drv, "_gitlab_declared_on", lambda: True)
     monkeypatch.setattr(drv, "_forge", lambda name: {
         "name": name, "token": "FAKE_not_a_real_token",
         "domain": f"{name}.invalid", "owner": "o", "repo": "nOS"})

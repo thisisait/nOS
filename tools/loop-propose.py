@@ -86,6 +86,18 @@ import _ledger_open  # noqa: E402 — after REPO is known
 #: one to the proposer buys a model run and a guaranteed refusal.
 UNFIXABLE_SOURCES = {
     "fee": "closes only by writing docs/**, which every gate set's budget forbids",
+    # MEASURED 2026-09-03, not assumed: the 2026-09-03 01:33 run picked
+    # corpus:last-night-disagrees, spent 78k in / 6k out and bought nothing —
+    # the divergence closes by the KEAP→repo export edge (roadmap
+    # cortex-keap-export-edge) and an upstream embed-queue fix
+    # (keap-embed-queue-lost-row), neither of which is a diff a judge could
+    # pass. Remove this entry when the export edge exists as a ceremony.
+    "corpus": "closes by the export edge / upstream repair (fee 59), not by a repo diff",
+    # A freshness row says a state file's self-report is contradicted. The only
+    # diff that "closes" it edits the state file to match the claim — writing
+    # the success marker from the attempting side, the exact shape CLAUDE.md's
+    # reader-not-writer rule forbids. It closes by the scan actually running.
+    "freshness": "closes by the scan running, not by editing the file a reader distrusts",
 }
 
 #: The AgentKit entry point, and the reason there is no mutex in this file any
