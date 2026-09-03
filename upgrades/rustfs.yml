@@ -114,10 +114,20 @@ recipes:
       (the pin's own comment cites CVE-2025-68926, the alpha.91 multipart-auth
       hardening #2411 and the OIDC claim fix #2386).
 
-      # TODO verify upstream — confirm against the rustfs release notes whether
-      # alpha.93 → beta.x migrates the on-disk object layout in place or
-      # requires a fresh volume with an S3-level copy. This recipe assumes the
-      # SAFE reading (fresh track + copy), which is why it is coexistence-only.
+      # UNVERIFIED upstream is silent — checked 2026-09-03: neither the beta
+      # announcement (https://rustfs.com/blog/announcing-rustfs-beta-the-high-performance-s3-compatible-open-source-storage-for-the-ai-era/)
+      # nor the beta release notes (https://github.com/rustfs/rustfs/releases)
+      # say whether alpha on-disk data is readable in place after the line
+      # change. Keep the SAFE reading (fresh track + S3-level copy) and treat
+      # this jump as supervised-only.
+      # VERIFIED 2026-09-03: two beta-line changes DO bite an alpha upgrader —
+      # (1) since beta.9 rustfs fails closed at start when the internode RPC
+      # secret would derive from the default RUSTFS_SECRET_KEY=rustfsadmin; set
+      # RUSTFS_RPC_SECRET or a non-default secret key on the new track BEFORE
+      # first boot (https://docs.rustfs.com/en/operations/credentials);
+      # (2) beta.2: RUSTFS_CONSOLE_CORS_ALLOWED_ORIGINS now defaults empty,
+      # console is same-origin only
+      # (https://github.com/rustfs/rustfs/releases/tag/1.0.0-beta.2).
 
       THIS SERVICE HOLDS THE NIGHTLY BACKUP TARGET. An in-place bump that
       cannot read back its own buckets destroys the restore path at the same

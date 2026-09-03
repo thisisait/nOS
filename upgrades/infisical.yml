@@ -253,13 +253,22 @@ recipes:
       Knex migrations on a SECRETS VAULT. That is breaking by blast radius even
       though every individual release is labelled minor.
 
-      # TODO verify upstream — before this is committed, confirm against the
-      # Infisical release notes whether intermediate stops are MANDATORY (the
-      # engine's first-match rule means this recipe would otherwise jump the
-      # whole span in one boot) and whether the encryption-key / auth-method
-      # handling changed anywhere in the span. Do NOT invent intermediate
-      # versions; read them off the upstream release list and split this rung
-      # into as many hops as upstream requires.
+      # VERIFIED 2026-09-03: no mandatory intermediate stops documented —
+      # "Migrations run automatically during boot-up" and "In previous versions
+      # (prior to v0.111.0-postgres), schema migrations had to be executed
+      # manually before starting the application"
+      # (https://infisical.com/docs/self-hosting/guides/upgrading-infisical).
+      # A single boot at the target runs the cumulative Knex chain, so the
+      # engine's one-hop jump matches the documented upgrade mechanism; the
+      # manual-migration era only bites if you BOOT an intermediate <0.111
+      # version, which this recipe never does. Same page: "If a release
+      # requires specific attention, a note will be attached to the
+      # corresponding release version" — map the concrete span with the
+      # official Upgrade Tool (https://upgrade.infisical.com/) before applying.
+      # UNVERIFIED upstream is silent — no attention note found on
+      # encryption-key / auth-method changes inside 0.80–0.159, but the ~80
+      # individual release notes were not read; treat this jump as
+      # supervised-only.
 
       COEXISTENCE, NOT IN-PLACE. A vault that half-migrates is a vault whose
       secrets cannot be decrypted, and every converge reads through it. Queued:
