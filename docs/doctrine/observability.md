@@ -23,15 +23,8 @@ A 258 MB fallback db that thrashed the page cache is the anti-pattern this close
 `~/.nos/`, never world-shared `/tmp` — an unrelated process (an IDE indexer) must
 not be able to open our db and starve a writer on a lock. See [[filesystem.md]].
 
-**One resolved source for a shared secret.** When a host daemon (Bone) and an
-in-process emitter (the callback) both authenticate with the same HMAC secret,
-BOTH read the SAME already-resolved value (`~/.nos/secrets.yml`) — never a
-self-referential play-var template the emitter renders in its own variable
-context. `wing_events_hmac_secret: "{{ wing_events_hmac_secret | default(...) }}"`
-rendered against play-vars resolves to the WRONG value; the emitter reads
-secrets.yml directly and rejects any raw `{{ … }}` it's handed. If a daemon can
-hold a stale secret across a failed run, it **self-heals** (signed-ping self-test →
-inline reload), not "wait for the next clean run."
+**One resolved source for a shared secret** — the rule (and the raw-`{{ … }}`
+rejection + daemon self-heal that follow from it) is owned by [[secrets.md]].
 
 **Loud is for gates, silent-degrade is for observability — know which you're
 writing.** A *security/SSO verify* (is the OIDC source registered? is OAuth2
