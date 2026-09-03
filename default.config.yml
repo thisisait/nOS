@@ -1208,7 +1208,7 @@ ollama_small_model: ""         # -> NOS_LOCAL_SMALL_MODEL   (haiku tier)
 # Moving to it needs one operator action the playbook must not take unattended:
 #     brew uninstall ollama && brew untap pazny/local && brew install ollama
 # Models live in `ollama_models_dir` and survive it.
-ollama_version: "0.33.0"                       # what brew LINKED on 2026-08-27 (was 0.32.15, 08-22); `state: latest` decides, this records. The refusal at roles/pazny.openclaw/tasks/main.yml:99 is the pin doing its job — third time it has fired, third time the record followed brew rather than the other way round. No shadowing tap (checked: `brew info ollama | grep -ci shadows` = 0), so this is homebrew/core moving. The daemon still reported 0.32.15 at refusal time; the keg-vs-daemon drift restart further down that same file is what closes that half.
+ollama_version: "0.33.2"                       # what brew LINKED on 2026-09-03 (was 0.33.0, 08-27); `state: latest` decides, this records. The refusal at roles/pazny.openclaw/tasks/main.yml:99 is the pin doing its job — fourth time it has fired, fourth time the record followed brew rather than the other way round. No shadowing tap (checked: `brew info ollama | grep -ci shadows` = 0), so this is homebrew/core moving. The daemon still reported the previous pin at refusal time; the keg-vs-daemon drift restart further down that same file is what closes that half.
 # RE-RECORDED 2026-08-18 after the guard stopped a converge at task 589 with
 # "the LINKED ollama keg is not the pinned 0.32.7 / linked keg: 0.32.14". The
 # guard was right and the pin was stale — brew had moved. Bookkeeping, not a
