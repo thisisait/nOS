@@ -266,7 +266,8 @@ row("dry-run-evidence-sweep", "Twenty more refusals of that shape, none measured
 
 row("notify-supersede","A notification that stopped being true has no way to stop being unread","2026-08-23","next","platform",
     refs="tools/red-status.py::_still_holds · docs/hidden_fees/26 · bin/reconcile-inbox.php",
-    body="MEASURED THE MORNING AFTER IT SHIPPED, and the wiring being complete was a false green about my own work. Schema, ALTER sweep, four emitters and the reader all landed; the 01:02 backup emitted WITH its supersede_key and retired ZERO rows, because the mechanism matches on the key and every historical row predates it. From tonight each nightly retires exactly its own predecessor and the 57-row backlog the feature was built for sits for ever. The probe now counts the deliverable — unread, un-superseded rows from an emitter that has SINCE declared it repeats, where a newer row from that emitter exists — and reads `restated:57`: os-resume 30, backup 19, backup-verify 5, security-drift 3. THE PATH IS NOT A BACKFILL OF THE KEY, which would be me guessing a class on the sender's behalf; it is bin/reconcile-inbox.php, which already marks rows read only on evidence and deliberately leaves report rows alone. It now HAS evidence for them: a newer row from the same declared-repeating emitter. That extension needs it to write superseded_at rather than wing_inbox_read_at — nobody read them — which is a decision about which tool owns which state, deliberately not taken at 05:40.")
+    body="MEASURED THE MORNING AFTER IT SHIPPED, and the wiring being complete was a false green about my own work. Schema, ALTER sweep, four emitters and the reader all landed; the 01:02 backup emitted WITH its supersede_key and retired ZERO rows, because the mechanism matches on the key and every historical row predates it. From tonight each nightly retires exactly its own predecessor and the 57-row backlog the feature was built for sits for ever. The probe now counts the deliverable — unread, un-superseded rows from an emitter that has SINCE declared it repeats, where a newer row from that emitter exists — and reads `restated:57`: os-resume 30, backup 19, backup-verify 5, security-drift 3. THE PATH IS NOT A BACKFILL OF THE KEY, which would be me guessing a class on the sender's behalf; it is bin/reconcile-inbox.php, which already marks rows read only on evidence and deliberately leaves report rows alone. It now HAS evidence for them: a newer row from the same declared-repeating emitter. That extension needs it to write superseded_at rather than wing_inbox_read_at — nobody read them — which is a decision about which tool owns which state, deliberately not taken at 05:40. "
+         "SHIPPED 2026-08-24..29 (reconciled 2026-09-04): the decision was taken as filed. bin/reconcile-inbox.php gained verdict_restated() + declared_repeaters() (9c749129, retires what predates the key, writes superseded_at/superseded_by never wing_inbox_read_at), the shared-sender guard (61e694b1, os-resume is not one class), and verdict_restated_by_shape() (37d8f674, a row stranded by an emitter RENAME is still retired — the 30 os-resume rows). Gates test_a_successor_retires_its_predecessors.py + test_a_renamed_emitter_still_retires_its_backlog.py, 26 green. The row sat 'next' for a week after shipping — a roadmap-staleness instance, not a code gap.")
 row("sec-backrest-auth","Backrest runs with auth disabled, reachable by 23 containers","2026-08-23","next","security",parent="sec",
     refs="REM-214 remediation (1) · roles/pazny.backrest/tasks/main.yml · roles/pazny.backrest/files/enable-auth.py · tests/anatomy/test_backrest_auth_is_enabled.py",
     body="Measured: POST /v1.Backrest/GetConfig from inside devops-gitea-1 -> 200, auth:disabled. The template justified it as 'loopback only', which REM-194/214 disproved. Not a template edit: config.json is seed-once and daemon-owned, so the live file needs reconciling and a bcrypt credential minting. Config surface includes hook commands. "
@@ -1919,7 +1920,17 @@ row("prom-rules-never-reload", "A new alert rule reaches the disk and never reac
          "only); checksum the rules dir in core-up.yml and notify a restart handler (Ansible "
          "does not currently know the loader changed anything); or teach the loader to report "
          "copy_dir as changed so Ansible can notify. The third is the one that also fixes every "
-         "other copy_dir consumer.")
+         "other copy_dir consumer. "
+         "SHIPPED 2026-08-31 (reconciled 2026-09-04): the estate shipped the THIRD, generic "
+         "option — tools/stale-config-status.py (a reader: for every container, every "
+         "read-only bind mount under stacks_dir, newest mtime vs container StartedAt) + "
+         "tools/reload-stale-config.py --apply (restarts the stale ones, opt-OUT via a "
+         "plugin `reload:` block), wired into main.yml AFTER stack-up so it never restarts a "
+         "container it just started. prometheus has no opt-out so its rules/ dir is covered by "
+         "default; the reader names it explicitly. Gate test_rendered_config_reaches_the_process.py "
+         "+ test_the_stale_config_reader_only_reads.py. Better than the prometheus-specific "
+         "options: it also catches a failed restart, a previous run's drift and a hand edit, "
+         "and needs no new /-/reload surface. The row sat 'next' for four days after shipping.")
 
 row("virtiofs-statfs-wrong-volume", "A disk guard read the wrong disk and stopped logging for 50 days",
     "2026-08-31", "shipped", "platform",
