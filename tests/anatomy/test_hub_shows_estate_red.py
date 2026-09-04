@@ -38,9 +38,13 @@ import sqlite3
 import urllib.error
 import urllib.request
 
+import sys
+
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+from _ledger_open import open_ledger_ro  # noqa: E402 — after REPO is known
 WING = os.environ.get("NOS_WING_URL", "http://127.0.0.1:9000")
 
 
@@ -70,12 +74,28 @@ def _hub_html() -> str:
 
 
 def _expected_red() -> tuple[int, list[str]]:
-    """The same question, asked of the database directly."""
+    """The same question, asked of the database directly.
+
+    Read WAL-aware, NOT `immutable=1` (fixed 2026-09-04): immutable reads the
+    main db file and IGNORES the -wal, while the live page reads WAL-included.
+    When reconcile-inbox has just marked rows superseded in the WAL (not yet
+    checkpointed), the immutable read is systematically stale-HIGH and the page
+    fresh-LOW — the page's number falls BELOW the [before, after] interval and
+    the interval defence cannot catch it (both bounds are stale). Measured: an
+    `8 vs 17` failure that passed on re-run once the WAL checkpointed.
+
+    Via `_ledger_open.open_ledger_ro`, not a bare `mode=ro`: measured
+    2026-09-04, `mode=ro` FAILS 'unable to open' on a db whose -wal is absent
+    (checkpointed) — the exact trap the ledger reader exists to handle: mode=ro
+    while a WAL is live, immutable snapshot when it is not (which is then the
+    checkpointed-in current state, also what the page sees)."""
     db = pathlib.Path(os.environ.get(
         "WING_DB_PATH", str(pathlib.Path.home() / "wing/app/data/wing.db")))
     if not db.is_file():
         pytest.skip("no wing.db on this host")
-    conn = sqlite3.connect(f"file:{db}?immutable=1", uri=True)
+    conn, how = open_ledger_ro(db)
+    if conn is None:
+        pytest.skip(f"wing.db not readable: {how}")
     conn.row_factory = sqlite3.Row
     try:
         findings: dict[str, set[int]] = {}
