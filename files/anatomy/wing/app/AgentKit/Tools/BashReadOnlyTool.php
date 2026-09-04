@@ -80,6 +80,13 @@ final class BashReadOnlyTool implements ToolInterface
     private const MAX_ARGS = 32;
     private const MAX_ARG_LENGTH = 1024;
 
+    /**
+     * Standalone shell-operator tokens: never a legitimate single argv element,
+     * only produced when a shell pipeline is written as separate args. Matched
+     * on the WHOLE trimmed arg, so `a|b` inside one arg is not caught.
+     */
+    private const SHELL_OPERATORS = ['|', '||', '&&', ';', '>', '>>', '<', '&', '|&'];
+
     public function id(): string
     {
         return 'bash-read-only';
@@ -174,6 +181,22 @@ final class BashReadOnlyTool implements ToolInterface
             }
             if (strpos($a, "\0") !== false) {
                 return ToolResult::error("args[{$i}] contains null byte");
+            }
+            // A LEGIBLE error for the shell habit, not a confusing one from the
+            // verb. Measured 2026-09-04 (proposer session af942a1d): the model
+            // sent `{verb: git, args: [log, "|", grep, X]}` and git answered
+            // "unknown command '|'", which reads as its own failure rather than
+            // "there is no shell here". A standalone operator token is NEVER a
+            // legitimate single argv element — it only appears when a pipeline
+            // was written as separate args. `a|b` inside ONE arg (a grep
+            // pattern) is untouched; only the bare operator trips this.
+            if (in_array(trim($a), self::SHELL_OPERATORS, true)) {
+                return ToolResult::error(
+                    "args[{$i}] is the shell operator '" . trim($a) . "', but this tool runs "
+                    . "one command with no shell — pipes, redirects and `&&`/`;` do not work. "
+                    . "Run the single command, then filter or combine its output in a "
+                    . "follow-up call (e.g. `grep`/`sqlite3` on what the first returned)."
+                );
             }
         }
 
