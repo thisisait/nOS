@@ -947,6 +947,75 @@ row("tables", "DataTables are nOS core; KEAP should be a consumer of them",
          "the FIRST contract pointing that way: cross-repo-contracts.md's live table holds "
          "exactly one row, nOS self-model -> KEAP.")
 
+# ── The DataTables subsystem epic (operator direction 2026-09-04) ─────────────
+row("dtt", "DataTables as a first-class, agent-ergonomic subsystem", "2026-09-04", "active", "platform",
+    refs="docs/plans/datatables-subsystem.md",
+    body="OPERATOR DIRECTION 2026-09-04, and the frame the scattered rows were missing. nOS's "
+         "own meta-work (roadmap, ideas, currentState, active-work, face-layouts, and — under "
+         "question — the constitution) stops living in single-writer prose and becomes a small "
+         "set of governed DataTables with ONE uniform access surface. The centerpiece is a live "
+         "`currentState` table — a mini-roadmap of work in flight — that Cursor, Claude Code, "
+         "Codex, AgentKit (MiniMax) and local models all read and write IN PARALLEL, visualized "
+         "in the nos-cc pane and the face, governed by apex. "
+         "This epic ABSORBS six existing rows (kpro-ids, tables, kpro-table-access, "
+         "tables-system-flag, plat-active-work-datatable, face-planner — re-parent later, soft "
+         "grouping for now) and adds the three pieces none of them cover: a per-principal "
+         "share/RBAC model, an agent-ergonomic MCP harness, and a readable per-row-file seed "
+         "format. FULL SPEC: docs/plans/datatables-subsystem.md — the last non-dtt spec by "
+         "design; from here the working contract lives in a table. "
+         "Suggested order: task-types + share-model (the contracts everything honors) -> CRUD "
+         "door + McpTablesTool (unlock agent writes, the priority) -> per-row-file seeds "
+         "(migrate roadmap first) -> currentState (the claim board) -> engine->nOS + external "
+         "MCP server + Planner UI -> constitution-as-dtt (last, signed-row special case).")
+row("dtt-share-model", "Per-principal RBAC: owner, visibility grade, shared_with", "2026-09-04", "next", "platform",
+    parent="dtt", refs="docs/plans/datatables-subsystem.md §4 · cortex-caddy-transcript-visibility · state/keap-tables/*.table.yml",
+    body="THE REAL GAP. Today a table carries one coarse `visibility:` (roadmap = tier-managers); "
+         "no per-row RBAC, no owner, no way to share a table or row with a specific user or agent. "
+         "Same shape as cortex-caddy-transcript-visibility (ruling: visibility is a configurable "
+         "GRADE set, not one constant) — solve together. Model: `owner` (creating principal), "
+         "`visibility` grade enum (private/owner/tier-N/system/public), `shared_with` explicit ACL "
+         "of principals (users AND agents) with read|write independent of tier. BOTH doors (human + "
+         "agent MCP) must honor the same model — a share only the UI respects is not a share. "
+         "Half is KEAP schema metadata (the seam tables-system-flag also needs), half is enforcement "
+         "in both doors.")
+row("dtt-mcp-harness", "One tiny table-verb surface for agents, in-process and external", "2026-09-04", "next", "platform",
+    parent="dtt", refs="docs/plans/datatables-subsystem.md §8 · files/anatomy/wing/app/AgentKit/Tools/McpKeapTool.php · kpro-table-access · MCP Gateway (mcpo, iiab stack)",
+    body="THE OPERATOR'S PRIORITY and the cheapest high-value start once the CRUD door is fixed. "
+         "MEASURED: no MCP tool writes DataTables today — McpKeapTool's POST allowlist excludes "
+         "tables/rows, and the raw door is upsert-on-slug (silent dupes for slug-less tables) with "
+         "no PATCH/PUT. TWO surfaces over ONE store: (1) McpTablesTool in-process (AgentKit, for "
+         "MiniMax/local) — verbs list-tables/read-rows/get-row/claim-row/upsert-row/patch-field/"
+         "release-row, uniform across tables, RBAC-honoring, so a dumb agent never needs to know "
+         "KEAP-vs-git-owned-vs-table-owned columns; (2) a standalone MCP server (stdio/SSE) for "
+         "EXTERNAL agents that speak MCP but do not run in AgentKit — Cursor, Claude Code, Codex — "
+         "likely hosted by the existing mcpo gateway. Both sit on the fixed CRUD door "
+         "(kpro-table-access), keyed on the opaque id, not upsert-on-slug. This is what makes "
+         "'cursor/claude/codex work on it in parallel' literally true.")
+row("dtt-seed-per-row-file", "One row = one file: readable seeds, parallel-safe editing", "2026-09-04", "next", "platform",
+    parent="dtt", refs="docs/plans/datatables-subsystem.md §6 · tools/roadmap-seed.py · memory/*.md · docs/hidden_fees/*.md",
+    body="The single fix that makes 'beautifully clear seeds' and 'several agents edit in parallel' "
+         "the SAME thing: one row = one file, markdown + frontmatter, like memory/devlog/hidden_fees "
+         "already are. Frontmatter = git-owned columns (title/parent/track/task_type/roadmap_ref), "
+         "body = prose; status/verified stay table-owned (roadmap-update.py); --sync reconciles, as "
+         "roadmap does now. Readable (a row is a short diffable file, not a 2000-line python monolith "
+         "that broke twice under hand-editing on 09-04), atomic for parallel agents (two rows = two "
+         "files, no merge conflict, no single-writer bottleneck — active-work.md's 150-line gate was "
+         "a symptom cap). Migrate the roadmap FIRST to prove it, then the rest.")
+row("dtt-task-types", "task_type enum + a minimalistic per-task tool contract", "2026-09-04", "next", "platform",
+    parent="dtt", refs="docs/plans/datatables-subsystem.md §7 · CLAUDE.md · AGENTS.md · nos-planner",
+    body="OPERATOR WANT 2026-09-04: nOS should have a minimalistic CLAUDE/AGENTS.md giving small, "
+         "clear instructions on WHICH TOOLS to use per TASK TYPE — and the task types may not be "
+         "designed yet. They are the load-bearing input to nos-planner and to a 'dumber' agent "
+         "working the currentState board. DESIGN THE ENUM FIRST: candidates from how work flows here "
+         "— investigate (read-only, returns findings), code-fix (edit+gate+retro), seed-edit (a "
+         "per-row file change), review (adversarial verify), converge (operator-run, tagged), design "
+         "(spec, no code), doc, security-remediation. Each type declares: tools it may use, whether "
+         "it writes, whether it needs the operator, and its 'done' evidence shape. CLAUDE/AGENTS.md "
+         "shrinks to a router (task_type X -> tools Y, invariant Z, evidence W); the 600-line estate "
+         "encyclopedia stays as reference doctrine. This is what lets a 3B local model work the board: "
+         "read the claimed row's task_type, look up the tiny contract, know what to reach for and what "
+         "'done' means. Open: is adding a type itself governed (a proposal), or free for any agent?")
+
 row("agents-awaiting-surface", "The reader that knows what needs a human has no surface",
     "2026-08-31", "next", "agents", parent="agents",
     refs="tools/awaiting-operator.py · Wing QuestionsPresenter/InboxPresenter · technosideas/buzz",
