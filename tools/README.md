@@ -121,6 +121,7 @@ worse than none, because it reads as complete.
 - `keap-fable-to-bundles.py` — Transform the fable ontology-review output into per-domain import bundles.
 - `keap-recall-queries.py` — Emit the KEAP recall-query set from the estate's SKILLS.md trigger lines.
 - `keap-reid-rows.py` — Make every row of a KEAP DataTable addressable by its own business key.
+- `mcp-tables-server.py` — stdio MCP server giving external agents (Cursor/Codex/Claude Code) the DataTables verb surface.
 
 ## Release, CI, git
 - `forge-sync.py` — The trunk's four holders, and the only tool that moves refs between them.
