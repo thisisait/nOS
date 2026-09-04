@@ -1014,7 +1014,41 @@ row("dtt-task-types", "task_type enum + a minimalistic per-task tool contract", 
          "shrinks to a router (task_type X -> tools Y, invariant Z, evidence W); the 600-line estate "
          "encyclopedia stays as reference doctrine. This is what lets a 3B local model work the board: "
          "read the claimed row's task_type, look up the tiny contract, know what to reach for and what "
-         "'done' means. Open: is adding a type itself governed (a proposal), or free for any agent?")
+         "'done' means. DECIDED 2026-09-04: the enum lives IN CODE and adding a type is a PROPOSAL "
+         "(governed through the loop, not free-for-any-agent).")
+row("dtt-routing-address", "A capability-addressed routing graph for the planner", "2026-09-04", "next", "platform",
+    parent="dtt", refs="docs/plans/datatables-subsystem.md §15 · nos-planner · docs/doctrine/identity.md · docs/adr/0003-origin-pull-mtls.md",
+    body="OPERATOR IDEA 2026-09-04 (design-first, dig-deeper — sketch may be read wrong, confirm the "
+         "axes). The planner (for the roadmap, but it MUST serve other business logics too) builds a "
+         "GRAPH of work-assignment addresses, URL-like: "
+         "<WHERE: eu-cloud|ext-cloud|local> / <WHO: agent-type/name> / <KAM/target: "
+         "all|internet|repo|fs-dir|dtt|keap|cortex|...> / <CO: task_type> / <KDY: when>. "
+         "The power: ONE grammar for two things the epic otherwise builds apart — a CAPABILITY (what "
+         "an agent MAY do: a WHERE/WHO/KAM/CO tuple it holds) and an ASSIGNMENT (what a currentState "
+         "row NEEDS), matched by the planner via prefix/glob on the address (local/*/repo/code-fix/* = "
+         "all local code-fix work touching the repo). URL-like on purpose: hierarchical, legible, "
+         "glob-queryable; the 'graph' is the tree of these addresses with agents/work-items as leaves. "
+         "Connects to what exists: WHERE<->cloud/local tiers + ADR-0003 boundaries; WHO<->identity.md "
+         "principals; KAM<->the tool/scope model; CO<->task_type; KDY<->Pulse. May become the SPINE of "
+         "both the planner AND the §4 access model. OPEN: permission-grammar vs assignment-grammar vs "
+         "both; KAM a set or one target; WHERE a hard constraint or a preference; a real URI scheme "
+         "(nos-work://) so it is routable/greppable, or just the mental model.")
+row("dtt-access-rules", "A regex access-rules table for per-(table x user) fine-tuning", "2026-09-04", "queued", "platform",
+    parent="dtt", refs="docs/plans/datatables-subsystem.md §14 · dtt-share-model",
+    body="FUTURE (operator 2026-09-04, dig-deeper). Code-declared access (dtt-share-model: per system "
+         "table, per user table, granular per task_type x tool) is the FLOOR. On top, a separate "
+         "DataTable of REGEX rules may fine-tune access per (table x user) at deployment time — the "
+         "code contract is the floor, the rules table the per-deployment override. Deferred until the "
+         "code-declared model exists; recorded so it is not re-invented.")
+row("dtt-constitution", "The constitution as a signed dtt row", "2026-09-04", "queued", "platform",
+    parent="dtt", refs="docs/plans/datatables-subsystem.md §9 · files/anatomy/apex/ruling.yml · tests/anatomy/test_apex_serving_is_signature_gated.py",
+    body="DIG-DEEPER (operator 2026-09-04: leave apex as-is for now, but it belongs on the roadmap). "
+         "Seeding the constitution into a dtt is attractive (one governance surface) but apex is "
+         "SIGNED and immutability-load-bearing: a row that IS the constitution carries the signature "
+         "discipline (the apex digest, re-signed only by the operator, gated by "
+         "test_apex_serving_is_signature_gated). A signed dtt row is a special case of an owned, "
+         "write-restricted row — so this is a LATER child, after dtt-share-model exists; the seeder "
+         "may add rows but never re-sign.")
 
 row("agents-awaiting-surface", "The reader that knows what needs a human has no surface",
     "2026-08-31", "next", "agents", parent="agents",

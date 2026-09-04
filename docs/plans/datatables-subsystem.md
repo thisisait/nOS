@@ -239,3 +239,71 @@ priority) → **per-row-file seeds** (migrate roadmap first, prove it) →
    answers for AgentKit clients — extend it.)
 4. **Constitution-as-dtt**: agreed to defer to a signed-row child, or start the
    signature-in-a-row design earlier?
+
+## 14. Operator decisions (2026-09-04) — supersede §13's open questions
+
+1. **Naming — FACET, decided.** `class: system` facet, not a rename. No ref
+   churn; delivers `tables-system-flag` (hide by default) for free.
+2. **`task_type` — in code, PROPOSABLE.** The enum lives in code (the source of
+   truth), and adding a type is a **proposal** through the loop (governed, not
+   free-for-any-agent). So a new task_type is a reviewed change, same as any
+   code contract.
+3. **Access — declared per table, granular per (task_type × tool).**
+   - **System tables**: each declares its OWN agent access — not one blanket
+     policy. Per system table, per task_type, per tool.
+   - **User tables**: same shape, and also **mostly in code** (the access is a
+     code-declared contract on the table definition, not runtime UI config).
+   - **Future — a separate access-rules dtt.** Fine-tuning per (table × user)
+     with **regex rules** may become its own DataTable (`dtt-access-rules`) —
+     the code-declared access is the floor, the rules table the per-deployment
+     override. Deferred; a dig-deeper child.
+4. **Constitution-as-dtt — deferred, but ON the roadmap** as a dig-deeper
+   (`dtt-constitution`). Leave apex as-is for now; the signed-row design is a
+   later child once the share model exists.
+
+## 15. The routing address — a capability-addressed graph (operator idea, 2026-09-04)
+
+The operator wants the planner (for the roadmap, but it MUST serve other
+business logics too) to build a **graph of work-assignment addresses**,
+URL-like. My reading of the sketch (stated so it can be corrected):
+
+```
+<WHERE>/<WHO>/<KAM/TARGET>/<CO/WHAT>/<KDY>
+  WHERE  execution locus     : eu-cloud | ext-cloud | local        (which HW/tier runs it)
+  WHO    principal           : <agent-type>/<agent-name>           (or a human)
+  KAM    access scope (target): all | internet | repo | fs-dir | dtt | keap | cortex | …
+  CO     task_type           : the §7 enum
+  KDY    when                : schedule / trigger / deadline
+```
+
+Why this is powerful, and what it unifies — it is ONE grammar for two things
+the epic otherwise builds separately:
+
+- **A capability** (what an agent MAY do): a WHERE/WHO/KAM/CO tuple an agent
+  holds — e.g. `local/agentkit:minimax/repo+dtt/code-fix` = "MiniMax, running
+  locally, may do code-fix work touching the repo and DataTables." This IS the
+  §4 RBAC/share model, expressed as an address instead of a column set.
+- **An assignment** (what a currentState row NEEDS): the same shape on the work
+  item. The planner MATCHES assignments to capabilities — prefix/glob matching
+  on the address (`local/*/repo/code-fix/*`) is a readable, queryable router.
+
+It is URL-like on purpose: hierarchical, human-legible, and glob-matchable, so
+"who can do WHAT on WHERE touching KAM" is a path query, and the planner's
+"graph" is the tree of these addresses with agents/work-items as leaves. It
+connects cleanly to what already exists: WHERE ↔ the cloud/local execution
+tiers and ADR-0003 network boundaries; WHO ↔ identity.md principals; KAM ↔ the
+tool/scope model (bash.read, dtt.write, keap.read…); CO ↔ task_type; KDY ↔
+Pulse.
+
+**Open (for after compact — I may have read the sketch wrong):**
+- Is the address a PERMISSION grammar, an ASSIGNMENT grammar, or (my reading)
+  BOTH, matched by the planner?
+- Is KAM a SET (touches repo AND dtt) or one target per address?
+- Does WHERE encode a hard placement constraint (must run local) or a
+  preference the planner optimizes?
+- Is the separator really `/` (a real URI, routable/greppable) or just the
+  mental model? A real URI scheme (`nos-work://…`) would make it addressable
+  by tools and logs.
+
+This belongs to nos-planner and is filed as `dtt-routing-address` (design-first,
+dig-deeper) — it may become the spine of both the planner AND the access model.
