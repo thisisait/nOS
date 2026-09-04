@@ -67,3 +67,157 @@
     - nos_docker_ready | default(true)
     - _verify_ak_apps.json is defined
   tags: ['always', 'verify']
+
+# ── Verify: the four blueprints main.yml applies BEST-EFFORT with no reader —
+# 20-rbac-policies, 30-agent-clients, 40-enrollment-flow, 46-brand-auth-flow
+# (hidden fee 46 / roadmap authentik-blueprint-readers). Unlike the
+# Applications check above these are NOT gated on engine!=tofu: OpenTofu owns
+# only the providers+applications+outpost layer (10-oidc-apps); these six other
+# blueprints apply imperatively under BOTH engines by design
+# (docs/opentofu-authentik-cutover.md). Object names verified against the
+# blueprint sources 2026-09-04; the brand's flow-routing check is presence-only
+# until the Authentik brand serializer's read shape is confirmed live.
+
+- name: "[Verify] Read the RBAC expression policies Authentik holds"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/policies/expression/?page_size=300"
+    headers:
+      Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
+    validate_certs: false
+    status_code: [200]
+  register: _verify_ak_policies
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+    - (authentik_rbac_tiers | default([]) | length) > 0
+  tags: ['always', 'verify']
+
+- name: "[Verify] Every RBAC tier has its expression policy (20-rbac-policies)"
+  ansible.builtin.assert:
+    that:
+      - _verify_missing_policies | length == 0
+    fail_msg: |
+      {{ _verify_missing_policies | length }} RBAC tier(s) have NO expression
+      policy in Authentik — every app bound to that tier lost its access gate:
+        {{ _verify_missing_policies | join(', ') }}
+      The blueprint apply is best-effort and its failure is invisible; re-run:
+        {{ docker_bin | default('docker') }} compose -p infra exec authentik-worker \
+          ak apply_blueprint /blueprints/custom/20-rbac-policies.yaml
+    success_msg: "{{ _verify_expected_policies | length }} RBAC tier(s), every one backed by a policy."
+  vars:
+    _verify_expected_policies: >-
+      {{ (authentik_rbac_tiers | default([])) | map(attribute='name')
+         | map('regex_replace', '^', 'nos-') | list }}
+    _verify_policy_names: >-
+      {{ (_verify_ak_policies.json.results | default([])) | map(attribute='name') | list }}
+    _verify_missing_policies: "{{ _verify_expected_policies | difference(_verify_policy_names) }}"
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+    - (authentik_rbac_tiers | default([]) | length) > 0
+    - _verify_ak_policies.json is defined
+  tags: ['always', 'verify']
+
+- name: "[Verify] Read the agent OAuth2 providers Authentik holds"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/providers/oauth2/?page_size=300"
+    headers:
+      Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
+    validate_certs: false
+    status_code: [200]
+  register: _verify_ak_agent_providers
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+    - (authentik_agent_clients | default([]) | length) > 0
+  tags: ['always', 'verify']
+
+- name: "[Verify] Every agent client has an OAuth2 provider (30-agent-clients)"
+  ansible.builtin.assert:
+    that:
+      - _verify_missing_agents | length == 0
+    fail_msg: |
+      {{ _verify_missing_agents | length }} agent client(s) have NO OAuth2
+      provider — client_credentials fails invalid_client and Bone rejects them:
+        {{ _verify_missing_agents | join(', ') }}
+      The blueprint apply is best-effort and its failure is invisible; re-run:
+        {{ docker_bin | default('docker') }} compose -p infra exec authentik-worker \
+          ak apply_blueprint /blueprints/custom/30-agent-clients.yaml
+    success_msg: "{{ _verify_expected_agents | length }} agent client(s), every one backed by a provider."
+  vars:
+    _verify_expected_agents: "{{ (authentik_agent_clients | default([])) | map(attribute='name') | list }}"
+    _verify_agent_provider_names: >-
+      {{ (_verify_ak_agent_providers.json.results | default([])) | map(attribute='name') | list }}
+    _verify_missing_agents: "{{ _verify_expected_agents | difference(_verify_agent_provider_names) }}"
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+    - (authentik_agent_clients | default([]) | length) > 0
+    - _verify_ak_agent_providers.json is defined
+  tags: ['always', 'verify']
+
+- name: "[Verify] Read the enrollment flow Authentik holds"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/flows/instances/?page_size=300"
+    headers:
+      Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
+    validate_certs: false
+    status_code: [200]
+  register: _verify_ak_flows
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+  tags: ['always', 'verify']
+
+- name: "[Verify] The enrollment flow exists (40-enrollment-flow)"
+  ansible.builtin.assert:
+    that:
+      - "'nos-enrollment' in _verify_flow_slugs"
+    fail_msg: |
+      The enrollment flow (slug nos-enrollment) is missing — operator
+      invitations cannot enroll. The blueprint apply is best-effort and its
+      failure is invisible; re-run:
+        {{ docker_bin | default('docker') }} compose -p infra exec authentik-worker \
+          ak apply_blueprint /blueprints/custom/40-enrollment-flow.yaml
+    success_msg: "enrollment flow nos-enrollment present."
+  vars:
+    _verify_flow_slugs: "{{ (_verify_ak_flows.json.results | default([])) | map(attribute='slug') | list }}"
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+    - _verify_ak_flows.json is defined
+  tags: ['always', 'verify']
+
+- name: "[Verify] Read the default brand Authentik holds"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ authentik_port | default(9003) }}/api/v3/core/brands/?domain=authentik-default"
+    headers:
+      Authorization: "Bearer {{ authentik_bootstrap_token | default('') }}"
+    validate_certs: false
+    status_code: [200]
+  register: _verify_ak_brand
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+  tags: ['always', 'verify']
+
+- name: "[Verify] The default brand exists (46-brand-auth-flow)"
+  ansible.builtin.assert:
+    that:
+      # PRESENCE ONLY: the brand row existing means the blueprint applied. The
+      # stronger check — flow_authentication routes through nos-tier1-mfa-flow
+      # (enforce_mfa on) or the stock flow (off) — awaits a live-confirmed read
+      # shape for the brand serializer (bare PK vs expanded object), then it
+      # becomes an equality assert here. TODO(authentik-blueprint-readers).
+      - (_verify_ak_brand.json.results | default([])) | length > 0
+    fail_msg: |
+      The default brand (domain authentik-default) is missing — the auth-flow
+      routing blueprint did not apply. Best-effort and invisible; re-run:
+        {{ docker_bin | default('docker') }} compose -p infra exec authentik-worker \
+          ak apply_blueprint /blueprints/custom/46-brand-auth-flow.yaml
+    success_msg: "default brand present (flow-routing check pending a live read shape)."
+  when:
+    - install_authentik | default(false) | bool
+    - nos_docker_ready | default(true)
+    - _verify_ak_brand.json is defined
+  tags: ['always', 'verify']
