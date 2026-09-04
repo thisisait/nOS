@@ -984,13 +984,20 @@ row("dtt-mcp-harness", "One tiny table-verb surface for agents, in-process and e
          "MEASURED: no MCP tool writes DataTables today — McpKeapTool's POST allowlist excludes "
          "tables/rows, and the raw door is upsert-on-slug (silent dupes for slug-less tables) with "
          "no PATCH/PUT. TWO surfaces over ONE store: (1) McpTablesTool in-process (AgentKit, for "
-         "MiniMax/local) — verbs list-tables/read-rows/get-row/claim-row/upsert-row/patch-field/"
-         "release-row, uniform across tables, RBAC-honoring, so a dumb agent never needs to know "
+         "MiniMax/local) — verbs list-tables/read-rows/get-row/SEARCH-ROWS/claim-row/upsert-row/"
+         "patch-field/release-row, uniform across tables, RBAC-honoring, so a dumb agent never needs to know "
          "KEAP-vs-git-owned-vs-table-owned columns; (2) a standalone MCP server (stdio/SSE) for "
          "EXTERNAL agents that speak MCP but do not run in AgentKit — Cursor, Claude Code, Codex — "
          "likely hosted by the existing mcpo gateway. Both sit on the fixed CRUD door "
          "(kpro-table-access), keyed on the opaque id, not upsert-on-slug. This is what makes "
-         "'cursor/claude/codex work on it in parallel' literally true.")
+         "'cursor/claude/codex work on it in parallel' literally true. "
+         "SEARCH-ROWS is core, not a bolt-on (spec §16): libSQL is here FOR vectors, roadmap/apps/"
+         "systems already carry a dim-768 column, keap-embed-sync embeds the corpus. A dumb agent "
+         "finds the right row by MEANING, not by knowing the slug. MANDATORY: the 'no confident "
+         "match' floor — a cosine top-k always answers, and absence-rendered-as-result is the "
+         "estate's cardinal sin, so search-rows returns NOTHING below a declared threshold "
+         "(embeddings are a resolver text->id, per cortex-resolve/cortex-graph-borrowings), and "
+         "the write path keeps the vector fresh or the search answers from a stale row.")
 row("dtt-seed-per-row-file", "One row = one file: readable seeds, parallel-safe editing", "2026-09-04", "next", "platform",
     parent="dtt", refs="docs/plans/datatables-subsystem.md §6 · tools/roadmap-seed.py · memory/*.md · docs/hidden_fees/*.md",
     body="The single fix that makes 'beautifully clear seeds' and 'several agents edit in parallel' "

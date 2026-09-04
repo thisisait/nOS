@@ -307,3 +307,40 @@ Pulse.
 
 This belongs to nos-planner and is filed as `dtt-routing-address` (design-first,
 dig-deeper) — it may become the spine of both the planner AND the access model.
+
+## 16. Pillar: rows embed, and semantic search is a core tool (operator 2026-09-04)
+
+libSQL is in the stack FOR VECTORS — so a DataTable is not just rows, it is an
+embeddable corpus, and finding a row by MEANING must be as first-class as
+finding it by slug. This is the single biggest ergonomic win for a "dumber"
+agent: it asks "what work is open about the loop's WAL races" and gets the row,
+without knowing the schema, the track, or the slug.
+
+What already exists (don't re-buy it): `roadmap`, `apps` and `systems` already
+declare a `kind: vector` column (dim 768); KEAP's `keap-embed-sync` Pulse job
+embeds the corpus; `GET /agent/v1/search/semantic?q=` is a live vector search
+over the libSQL corpus. The gaps this pillar closes:
+
+- **Embed-on-write freshness.** A row edited but not re-embedded is STALE, and
+  the estate's own doctrine (row `cortex-graph-borrowings`) names the rot: "an
+  embedding rots INVISIBLY — the source changes, the vector stays until
+  re-indexed, and there is no date to compare." The write path (per-row-file
+  seed → upsert → embed) must keep the vector fresh, or the search silently
+  answers from an old row.
+- **`search-rows` is a core MCP verb** (§8), over a table's rows, returning row
+  ids + scores. Not a bolt-on — it sits beside list/get/upsert.
+- **The "no confident match" floor is MANDATORY.** The estate's cardinal defect
+  is absence rendered as a result, and a cosine top-k ALWAYS answers. Per the
+  settled position (`cortex-resolve.ts` refuses RRF scoring on exactly these
+  grounds; `cortex-graph-borrowings` §doctrine): **embeddings are a RESOLVER
+  (text → row id), never the store of relations, and the resolver must be able
+  to return NOTHING.** `search-rows` returns an empty result — a real negative —
+  below a declared threshold, rather than the nearest wrong row. The threshold
+  is a declared decision, not a default.
+- **Provenance stays.** A semantic hit has no citation beyond a float; the row
+  it resolves to carries its own provenance (evidence, roadmap_ref, owner). The
+  search RESOLVES; the row ANSWERS.
+
+So `search-rows` is added to the `dtt-mcp-harness` verb set, and "every dtt row
+with a vector column embeds on write, freshly" is a share of `dtt-mcp-harness`
+and `dtt-seed-per-row-file` both.
