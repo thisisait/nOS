@@ -108,6 +108,19 @@
       - "--exclude=Dockerfile"        # not needed at runtime in host mode
   notify: Restart bone
 
+# Provenance stamp — read by main.py's /api/health as `git_ref`. Written into
+# Bone's OWN runtime dir (sync is delete:false, so it survives) and read there
+# relative to main.py, NOT from PLAYBOOK_DIR, so it is what this Bone was
+# DEPLOYED from and does not drift when the checkout moves. AFTER the sync, so
+# a fresh runtime tree still gets stamped. Idempotent: content changes only
+# when the ref does.
+- name: "[pazny.bone] Stamp the deployed git ref for /api/health provenance"
+  ansible.builtin.copy:
+    dest: "{{ bone_runtime_dir }}/DEPLOYED_REF"
+    content: "{{ nos_deployed_ref | default('unknown') }}\n"
+    mode: '0644'
+  notify: Restart bone
+
 # `nos-loop` is the operator's whole interface to the loop engine — the
 # weakness list, the budget, propose, judge, the wedge exit — and it landed at
 # ~/bone/bin/nos-loop, which is on nobody's PATH. A tool that has to be typed by

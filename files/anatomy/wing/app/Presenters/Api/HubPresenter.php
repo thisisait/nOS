@@ -138,6 +138,11 @@ final class HubPresenter extends BaseApiPresenter
 		$this->sendSuccess([
 			'generated_at' => gmdate('c'),
 			'probes' => $probes,
+			// Provenance: the git ref this Wing was deployed from (plist env,
+			// stamped by pazny.wing at converge). estate-status reads git_ref
+			// and compares it to the checkout HEAD — the answer to
+			// `repo != running system` for this organ, previously unanswerable.
+			'git_ref' => getenv('NOS_ORGAN_DEPLOYED_REF') ?: 'unknown',
 		]);
 	}
 }

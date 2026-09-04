@@ -238,6 +238,26 @@
         - "{{ playbook_dir }}/config.yml"
       tags: ['always']
 
+    # The git ref this converge is deploying FROM, computed once and stamped
+    # into the host organs (pazny.bone file, pazny.wing plist env) so their
+    # /health can answer `repo != running system` — the doctrine this repo is
+    # named for, previously unanswerable of its own organs (roadmap
+    # organ-health-carries-a-version). `--dirty` is honest: a converge from an
+    # uncommitted tree runs code that matches no commit, and the ref says so.
+    # `unknown` when playbook_dir is not a git checkout — never a guess.
+    - name: "[Provenance] Resolve the deployed git ref (organ health stamp)"
+      ansible.builtin.command:
+        cmd: "git -C {{ playbook_dir }} describe --always --dirty --abbrev=12"
+      register: _nos_deployed_ref_probe
+      changed_when: false
+      failed_when: false
+      tags: ['always']
+
+    - name: "[Provenance] Set nos_deployed_ref fact"
+      ansible.builtin.set_fact:
+        nos_deployed_ref: "{{ (_nos_deployed_ref_probe.stdout | trim) if _nos_deployed_ref_probe.rc == 0 and (_nos_deployed_ref_probe.stdout | trim) else 'unknown' }}"
+      tags: ['always']
+
     # ── Track F compat: legacy `instance_tld` → `tenant_domain` auto-promote ──
     # Pre-Track-F config.yml may pin `instance_tld: pazny.eu` (or similar). The
     # default.config.yml shim makes `instance_tld` resolve to `tenant_domain`,

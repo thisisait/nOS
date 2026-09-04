@@ -86,9 +86,11 @@ ORGANS = [
      "version_keys": (), "src": Path.home() / "face/src",
      "repo_version": ("nOS", "files/anatomy/face/package.json")},
     {"name": "bone", "url": "http://127.0.0.1:8099/api/health",
-     "version_keys": ("version",), "src": None, "repo_version": None},
+     "version_keys": ("git_ref",), "src": None, "repo_version": None,
+     "compare_ref": True},
     {"name": "wing", "url": "http://127.0.0.1:9000/api/v1/hub/health",
-     "version_keys": ("version",), "src": None, "repo_version": None},
+     "version_keys": ("git_ref",), "src": None, "repo_version": None,
+     "compare_ref": True},
 ]
 
 #: Host tool -> how to read its version, and what declares it.
@@ -255,6 +257,30 @@ def axis_organs(res: Result) -> None:
                 res.add("organ", organ["name"],
                         "reachable, but reports no version — provenance unanswerable",
                         UNREADABLE)
+
+        # A host organ with no repo semver answers `repo != running system`
+        # by reporting the git ref it was DEPLOYED from; compare it to the
+        # checkout this reader runs from. `unknown` means the organ answers but
+        # the converge never stamped it — reachable, provenance still absent.
+        if organ.get("compare_ref") and deployed is not None:
+            if deployed == "unknown":
+                res.add("organ", organ["name"],
+                        "reachable, deploy ref unstamped (converge to stamp it)",
+                        UNREADABLE)
+                continue
+            head = git(REPO, "describe", "--always", "--dirty", "--abbrev=12")
+            if head is None:
+                res.add("organ", organ["name"],
+                        f"deployed {deployed} (via http) · no local checkout to compare")
+            elif head == deployed:
+                res.add("organ", organ["name"],
+                        f"deployed {deployed} (via http) = checkout HEAD")
+            else:
+                res.add("organ", organ["name"],
+                        f"deployed {deployed} (via http) ≠ checkout {head} — expected "
+                        "only if this checkout is deliberately off the deployed ref",
+                        DISAGREE)
+            continue
 
         src = organ["src"]
         if deployed is None and src and (src / "VERSION").exists():

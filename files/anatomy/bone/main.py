@@ -39,6 +39,23 @@ PLAYBOOK_DIR = os.getenv("PLAYBOOK_DIR", os.path.expanduser("~/nOS"))
 VERSION_FILE = os.path.join(PLAYBOOK_DIR, "VERSION")
 BOOT_TIME = time.time()
 
+#: The git ref this Bone was DEPLOYED from, stamped by pazny.bone at converge
+#: into Bone's OWN runtime dir — read relative to this file, NOT from
+#: PLAYBOOK_DIR, so it is the deploy-time provenance and does not drift when the
+#: checkout moves. That distinction is the whole point: `repo != running system`
+#: cannot be asked of an organ whose health omits what it is running
+#: (roadmap organ-health-carries-a-version). "unknown" until the next converge
+#: stamps it — honest, never a guess.
+DEPLOYED_REF_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "DEPLOYED_REF")
+
+
+def _deployed_ref() -> str:
+    try:
+        with open(DEPLOYED_REF_FILE, encoding="utf-8") as fh:
+            return fh.read().strip() or "unknown"
+    except OSError:
+        return "unknown"
+
 
 # -- Auth --------------------------------------------------------------------
 # JWT-based scope checks. The dependency factory `require_scope(...)` lives
@@ -148,6 +165,11 @@ async def health():
         "status": "ok",
         "uptime": round(time.time() - BOOT_TIME),
         "auth_ready": _AUTH_READY,
+        # Provenance: the semver of the code, and the git ref it was deployed
+        # from. estate-status reads git_ref and compares it to the checkout's
+        # HEAD — the answer to `repo != running system` for this organ.
+        "version": app.version,
+        "git_ref": _deployed_ref(),
     }
 
 
