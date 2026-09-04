@@ -181,6 +181,10 @@ services:
 	    - register(@App\AgentKit\Tools\McpWingWriteTool)
 	    - register(@App\AgentKit\Tools\McpBoneTool)
 	    - register(@App\AgentKit\Tools\McpKeapTool)
+	    # The DataTables verb surface (roadmap/apps/systems/…): one tiny verb set
+	    # over KEAP's /agent/v1/tables/*, with a no-confident-match search floor
+	    # and a cooperative row lease. The verb map is the write allowlist.
+	    - register(@App\AgentKit\Tools\McpTablesTool)
 	    - register(@App\AgentKit\Tools\McpLoopTool)
 	    # Reads two committed OpenAPI files and nothing else — no scope beyond
 	    # mcp.tool_use, because it cannot reach data (2026-09-01).
@@ -204,6 +208,7 @@ services:
 	- App\AgentKit\Tools\McpWingWriteTool
 	- App\AgentKit\Tools\McpBoneTool
 	- App\AgentKit\Tools\McpKeapTool
+	- App\AgentKit\Tools\McpTablesTool
 	- App\AgentKit\Tools\McpLoopTool
 	# Q8/A1: %nosRepoRoot% is the repo working-tree root (NOS_REPO_ROOT env).
 	- App\AgentKit\Tools\MigrationWriteTool(%nosRepoRoot%)

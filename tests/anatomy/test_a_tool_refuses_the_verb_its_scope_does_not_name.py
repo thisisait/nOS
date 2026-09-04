@@ -110,6 +110,17 @@ PROBE_PATHS: dict[str, dict[str, object]] = {
     "mcp-wing-write": {"served": "/api/v1/events", "unserved": "/api/v1/pentest/findings"},
     "mcp-bone": {"served": "/api/health", "unserved": None},
     "mcp-keap": {"served": "/agent/v1/captures", "unserved": "/agent/v1/taxonomy/approve"},
+    # Verb-shaped, not path-shaped (the exec precedent): it ignores method/path
+    # and reads a `verb`, so `input` drives a real one to reach its gate. It
+    # holds keap.write, so like mcp-keap a served write is expected — admission
+    # control (ToolRegistry) keeps it off a read-only roster. No un-granted PATH
+    # exists to probe (the allowlist is the verb enum, pinned by
+    # test_agentkit_tables_tool.py), so `unserved` is None.
+    "mcp-tables": {
+        "served": "/agent/v1/tables/roadmap/rows",
+        "unserved": None,
+        "input": {"verb": "upsert-row", "table": "roadmap", "values": {"probe": "1"}},
+    },
     # mcp-loop takes no path: its plane is a SUBCOMMAND allowlist, and the
     # thing it refuses by name is `judge` — the proposer reaching its own
     # verdict. Pinned by test_the_proposer_cannot_reach_its_own_verdict.py,

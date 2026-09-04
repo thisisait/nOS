@@ -163,6 +163,7 @@ final class CredentialResolver
 			'mcp-wing'      => 'WING_API_TOKEN',
 			'mcp-bone'      => 'BONE_SECRET',
 			'mcp-keap'      => 'KEAP_AGENT_TOKEN_RO',
+			'mcp-tables'    => 'KEAP_AGENT_TOKEN_RO',
 		];
 		return $known[$scope] ?? strtoupper(str_replace('-', '_', $scope));
 	}

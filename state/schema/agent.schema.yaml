@@ -145,6 +145,7 @@ properties:
             - mcp-wing-write        # POST, scope wing.write, route-allowlisted
             - mcp-bone
             - mcp-keap              # KEAP cortex /agent/v1 (read + captures-only write)
+            - mcp-tables            # nOS DataTables verb surface (read/search/claim/upsert)
             - mcp-loop              # nos-loop: weaknesses/budget/propose/history — never judge
             # Searches the committed OpenAPI contracts; returns static
             # method/path/summary strings only. Scope mcp.tool_use alone —
