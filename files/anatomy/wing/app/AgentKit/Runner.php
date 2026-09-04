@@ -886,6 +886,14 @@ final class Runner
 		$stoppedAtPeak = false;
 		$outcomeId = 'outcome_' . substr($sessionUuid, 0, 8);
 
+		// The baseline gate runs ONCE, before the ceremony touches anything, so
+		// the oracle can tell a failure this run caused from one it inherited
+		// (fee 59: a night of ambient corpus-diff lag needs_revisioned every
+		// ceremony on the `live` set for zero work). A failed baseline judge
+		// still failing at the end is inherited weather; a newly-failing one is
+		// this ceremony's. Zero model tokens; one gate run.
+		$oracle->baseline((string) $agent->gateset);
+
 		for ($iteration = 0; $iteration < $agent->maxIterations; $iteration++) {
 			// Checked here too, so the clock bounds the GRADER — which holds
 			// its own client and whose spend the token ceiling cannot see.

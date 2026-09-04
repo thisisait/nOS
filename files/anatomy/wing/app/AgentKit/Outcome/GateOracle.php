@@ -49,6 +49,16 @@ final class GateOracle
 	private int $sincePeak = 0;
 
 	/**
+	 * The judges already failing BEFORE this ceremony ran, or null when no
+	 * baseline was established (an indeterminate/unreachable baseline leaves
+	 * attribution OFF — conservative: never excuse a failure we could not
+	 * measure a baseline against).
+	 *
+	 * @var array<int,string>|null
+	 */
+	private ?array $baselineFailingJudges = null;
+
+	/**
 	 * @param ?callable(array<int,string>): array{exit:int,stdout:string,stderr:string} $spawn
 	 *        Replaces the PROCESS, never the verdict — the reader below still
 	 *        computes satisfaction from what the process returned.
@@ -64,6 +74,74 @@ final class GateOracle
 		private readonly mixed $spawn = null,
 		private readonly mixed $deliverableExists = null,
 	) {
+	}
+
+	/**
+	 * Run the gate set ONCE before the ceremony's first iteration and record
+	 * which judges were already failing. A failure the ceremony inherits is
+	 * not a failure it caused (roadmap agentkit-baseline-gate-attribution,
+	 * fee 59).
+	 *
+	 * MEASURED 2026-09-04: the proposer/librarian/surveyor all judge on `live`
+	 * (nos-smoke + cortex-corpus-diff), and BOTH judges are ambient — nos-smoke
+	 * probes the running estate, cortex-corpus-diff compares two live services;
+	 * neither reads the tree, so no proposal or brief can move them. A single
+	 * night of corpus-diff lag (transient embed lag, self-healed the next
+	 * night) needs_revisioned every ceremony sharing the set — ~400k tokens for
+	 * zero landed work, each spending a pointless revision iteration on a
+	 * condition it could not touch.
+	 *
+	 * Cost: one extra gate run per session. Cheap for `live` (~6s); a `repo`
+	 * baseline pays a full pytest. Accepted — it is what makes attribution
+	 * honest, and it is zero model tokens.
+	 *
+	 * CEILING (ponytail): the comparison is over the SET of failing judges, so
+	 * it excuses a judge that was already failing and is still failing. A
+	 * ceremony whose very JOB is to fix that judge (a curator judged by
+	 * cortex-corpus-diff) needs the judge's numeric DELTA, not the set — do not
+	 * lean on this for a ceremony that owns its gate. The ceremonies that run
+	 * today own neither `live` judge.
+	 */
+	public function baseline(string $gateset): void
+	{
+		$done = $this->run([
+			(string) (getenv('NOS_LOOP_BIN') ?: 'nos-loop'),
+			'judge', '--gate-set', $gateset, '--wait', '--json',
+		]);
+		$payload = json_decode(trim($done['stdout']), true);
+		$verdict = is_array($payload) && is_array($payload['verdict'] ?? null)
+			? $payload['verdict']
+			: [];
+		$result = is_string($verdict['result'] ?? null) ? $verdict['result'] : '';
+		// Only a run that reached a real verdict establishes a baseline. `pass`
+		// yields an empty failing set (so any later fail is a NEW one and stays
+		// attributable); `fail` yields the inherited set. Indeterminate leaves
+		// it null and attribution stays off.
+		if ($result === 'pass' || $result === 'fail') {
+			$this->baselineFailingJudges = $this->failingJudges($verdict);
+		}
+	}
+
+	/**
+	 * The set of judge names in a verdict whose result is not `pass`
+	 * (fail OR indeterminate — a judge that could not run is not a judge that
+	 * passed). Read from the verdict's per-judge `runs`, never parsed from the
+	 * joined reason prose.
+	 *
+	 * @param array<string,mixed> $verdict
+	 * @return array<int,string>
+	 */
+	private function failingJudges(array $verdict): array
+	{
+		$runs = is_array($verdict['runs'] ?? null) ? $verdict['runs'] : [];
+		$fails = [];
+		foreach ($runs as $run) {
+			if (is_array($run) && ($run['result'] ?? null) !== 'pass'
+				&& is_string($run['judge'] ?? null)) {
+				$fails[$run['judge']] = true;
+			}
+		}
+		return array_keys($fails);
 	}
 
 	/**
@@ -90,6 +168,19 @@ final class GateOracle
 		// process exited 0, the sealed verdict says pass, and it has an
 		// identity. Any one of them missing is a run nobody can stand behind.
 		$satisfied = $done['exit'] === 0 && $result === 'pass' && $gateRunId !== null;
+		// BEFORE the deliverable, the attribution: a gate FAIL whose failing
+		// judges were ALL already failing at baseline is inherited weather, not
+		// this ceremony's regression. Only a real `fail` with a real identity
+		// qualifies — an indeterminate is not a measured failure to inherit.
+		// A NEW failing judge (one not in the baseline set) makes the whole
+		// verdict attributable again, and the detail names it.
+		$preExisting = false;
+		if (!$satisfied && $result === 'fail' && $gateRunId !== null
+			&& $this->baselineFailingJudges !== null) {
+			$iterationFails = $this->failingJudges($verdict);
+			$newFails = array_values(array_diff($iterationFails, $this->baselineFailingJudges));
+			$preExisting = $iterationFails !== [] && $newFails === [];
+		}
 		// FOURTH THING, and it is about the AGENT rather than the tree.
 		// Measured 2026-08-29 (session 53de6409): the surveyor passed both
 		// judges and was satisfied having filed nothing. `nos-smoke` and
@@ -98,22 +189,35 @@ final class GateOracle
 		// agent declared its deliverable, its ABSENCE unmakes satisfaction —
 		// and the detail says so, so the revision has something to act on
 		// instead of guessing which judge was unhappy.
+		// The deliverable is the ceremony's OWN work and is required whether the
+		// gate passed cleanly or only failed on inherited weather — a proposer
+		// that filed nothing is unsatisfied even on a green estate.
 		$missingDeliverable = false;
-		if ($satisfied && is_callable($this->deliverableExists)) {
+		if (($satisfied || $preExisting) && is_callable($this->deliverableExists)) {
 			$missingDeliverable = ($this->deliverableExists)() === false;
-			$satisfied = !$missingDeliverable;
 		}
+		// Satisfaction is a clean pass OR an inherited-only failure — never with
+		// the deliverable missing (that IS the ceremony's failure).
+		$satisfied = ($satisfied || $preExisting) && !$missingDeliverable;
 		// Only a SATISFIED iteration may hold the pass rank. A `pass` that lost
 		// one of the three — no uuid, or a client that exited non-zero after
 		// printing it — used to score 2 here, which outranked a clean fail and
 		// tripped the peak-stop on a verdict nobody can stand behind.
 		$score = $satisfied ? self::RANK['pass'] : min(self::RANK[$result] ?? 0, self::RANK['fail']);
-		$detail = $missingDeliverable
-			? 'the gate set passed, but this ceremony filed no deliverable — or filed '
+		if ($missingDeliverable) {
+			$detail = 'the gate set passed, but this ceremony filed no deliverable — or filed '
 			  . 'an empty one. The gates '
 			  . 'judge the tree; the work you owe is an artifact keyed to this session. '
-			  . 'File it, then the run can be satisfied.'
-			: $this->detail($gateset, $done, $verdict, $satisfied);
+			  . 'File it, then the run can be satisfied.';
+		} elseif ($preExisting && $satisfied) {
+			$inherited = implode(', ', $this->failingJudges($verdict));
+			$detail = "gate set `{$gateset}` failed on a condition that predates this run "
+			  . "({$inherited}) — inherited, not introduced here, and no new judge failed. "
+			  . 'This ceremony introduced no regression; the estate condition is someone '
+			  . 'else\'s to fix.';
+		} else {
+			$detail = $this->detail($gateset, $done, $verdict, $satisfied);
+		}
 
 		$this->history[$iteration] = [
 			'score' => $score,
