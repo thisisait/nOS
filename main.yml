@@ -245,17 +245,17 @@
     # organ-health-carries-a-version). `--dirty` is honest: a converge from an
     # uncommitted tree runs code that matches no commit, and the ref says so.
     # `unknown` when playbook_dir is not a git checkout — never a guess.
+    # A controller-side `lookup('pipe')`, not a `command: git` task: this is a
+    # read query (describe), the git MODULE is for clone/checkout, and
+    # ansible-lint's command-instead-of-module rule rightly refuses the module's
+    # verb here — so the read lives in a lookup, where it belongs. The
+    # `|| echo unknown` keeps the shell exit 0 (a non-repo playbook_dir must not
+    # fail the converge); the value is honest, never a guess.
     - name: "[Provenance] Resolve the deployed git ref (organ health stamp)"
-      ansible.builtin.command:
-        cmd: "git -C {{ playbook_dir }} describe --always --dirty --abbrev=12"
-      register: _nos_deployed_ref_probe
-      changed_when: false
-      failed_when: false
-      tags: ['always']
-
-    - name: "[Provenance] Set nos_deployed_ref fact"
       ansible.builtin.set_fact:
-        nos_deployed_ref: "{{ (_nos_deployed_ref_probe.stdout | trim) if _nos_deployed_ref_probe.rc == 0 and (_nos_deployed_ref_probe.stdout | trim) else 'unknown' }}"
+        nos_deployed_ref: "{{ lookup('pipe', _ref_cmd) | trim | default('unknown', true) }}"
+      vars:
+        _ref_cmd: "git -C {{ playbook_dir }} describe --always --dirty --abbrev=12 2>/dev/null || echo unknown"
       tags: ['always']
 
     # ── Track F compat: legacy `instance_tld` → `tenant_domain` auto-promote ──
