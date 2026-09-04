@@ -979,7 +979,7 @@ row("dtt-share-model", "Per-principal RBAC: owner, visibility grade, shared_with
          "Half is KEAP schema metadata (the seam tables-system-flag also needs), half is enforcement "
          "in both doors.")
 row("dtt-mcp-harness", "One tiny table-verb surface for agents, in-process and external", "2026-09-04", "next", "platform",
-    parent="dtt", refs="docs/plans/datatables-subsystem.md §8 · files/anatomy/wing/app/AgentKit/Tools/McpKeapTool.php · kpro-table-access · MCP Gateway (mcpo, iiab stack)",
+    parent="dtt", refs="docs/plans/datatables-subsystem.md §8 · files/anatomy/wing/app/AgentKit/Tools/McpTablesTool.php · tools/mcp-tables-server.py · tests/anatomy/test_mcp_tables_server.py · kpro-table-access",
     body="THE OPERATOR'S PRIORITY and the cheapest high-value start once the CRUD door is fixed. "
          "MEASURED: no MCP tool writes DataTables today — McpKeapTool's POST allowlist excludes "
          "tables/rows, and the raw door is upsert-on-slug (silent dupes for slug-less tables) with "
@@ -997,7 +997,17 @@ row("dtt-mcp-harness", "One tiny table-verb surface for agents, in-process and e
          "match' floor — a cosine top-k always answers, and absence-rendered-as-result is the "
          "estate's cardinal sin, so search-rows returns NOTHING below a declared threshold "
          "(embeddings are a resolver text->id, per cortex-resolve/cortex-graph-borrowings), and "
-         "the write path keeps the vector fresh or the search answers from a stale row.")
+         "the write path keeps the vector fresh or the search answers from a stale row. "
+         "SHIPPED 2026-09-04 (movements 1-4): KEAP door writes by __id not slug + GET one row + "
+         "GET /tables/:slug/search (cosine floor DEFAULT_MAX_DISTANCE, returns NONE below it, "
+         "reuses the row-objects syncRows already projects) + a cooperative row lease (claim/"
+         "release, advisory, TTL-stealable) [KEAP dev, uncommitted-pending-operator]; nOS "
+         "McpTablesTool (8 verbs, verb-map IS the allowlist) wired + gated (57df8222); external "
+         "stdio MCP server tools/mcp-tables-server.py, stdlib-only, SAME verb contract "
+         "(parity-gated). RESEARCH RESULT: mcpo does NOT fit — it is an MCP-server->OpenAPI proxy "
+         "(the reverse direction) and cannot reach KEAP (SEC-02); external IDE agents need this "
+         "dedicated stdio server, which may ALSO be registered inside mcpo to reach Open WebUI. "
+         "OPEN: an agent must ADOPT mcp-tables (none does yet) for the end-to-end claim+patch demo.")
 row("dtt-seed-per-row-file", "One row = one file: readable seeds, parallel-safe editing", "2026-09-04", "next", "platform",
     parent="dtt", refs="docs/plans/datatables-subsystem.md §6 · tools/roadmap-seed.py · memory/*.md · docs/hidden_fees/*.md",
     body="The single fix that makes 'beautifully clear seeds' and 'several agents edit in parallel' "

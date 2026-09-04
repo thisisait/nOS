@@ -161,6 +161,22 @@ harness is two surfaces over ONE store:
 Both sit on the **fixed CRUD door** (`kpro-table-access`): GET/POST/PATCH/PUT/
 DELETE on `/…/tables/<t>/rows`, keyed on the opaque id, not upsert-on-slug.
 
+> **Shipped 2026-09-04 (movements 1–4), and one correction.** The in-process
+> tool is `files/anatomy/wing/app/AgentKit/Tools/McpTablesTool.php` (eight verbs;
+> `search-rows` added, and the verb map IS the write allowlist). The external
+> door is **`tools/mcp-tables-server.py`** — a stdlib-only stdio MCP server,
+> the SAME verb contract (parity-gated). **mcpo does NOT host it:** mcpo is an
+> *MCP-server → OpenAPI* proxy (the reverse direction) and cannot reach KEAP
+> (SEC-02, per `McpKeapTool`'s docstring). External IDE agents are MCP *clients*
+> and need this dedicated stdio server; it *may* additionally be registered
+> inside mcpo to also expose the verbs to Open WebUI as REST. Register with an
+> IDE by pointing its MCP config at the script with `KEAP_API_URL` +
+> `KEAP_AGENT_TOKEN_RO/RW` in the environment (see the script's header). The
+> server side (the door fix, the search floor, the row lease) lives in KEAP
+> (`server/agent.ts`, `server/tables.ts`) — committed there, deployed by a
+> converge. **Still open:** an agent must *adopt* `mcp-tables` for the
+> end-to-end claim+patch demo — none does yet.
+
 ## 9. The constitution: revision, and whether it becomes a dtt
 
 The operator wants to start with a **big revision of the constitution**
