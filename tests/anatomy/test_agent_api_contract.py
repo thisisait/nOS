@@ -11,6 +11,7 @@ pins the retirement); live-agent wiring is asserted against upgrade-architect.
 from __future__ import annotations
 
 import pathlib
+import re
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 WING = REPO / "files/anatomy/wing/app"
@@ -125,11 +126,20 @@ def test_agent_clients_blueprint_is_force_applied():
     """2026-05-27: the 'Reapply authentik blueprints' handler must apply
     30-agent-clients. It was rendered but excluded from the apply loop, so a
     newly-added agent OAuth client (e.g. upgrade-advisor) was never provisioned
-    outside a full blank → client_credentials mint returned invalid_client."""
+    outside a full blank → client_credentials mint returned invalid_client.
+
+    plat-gate-shape (2026-09-04): a bare `"30-agent-clients" in src` reads the
+    whole file, and both targets carry a COMMENT naming the token (main.yml:963,
+    handlers:14) independent of the real `for bp in …; do` loop — so dropping it
+    from the loop, the exact regression this pins, stays green. Read the loop,
+    not the file."""
     for f in ("main.yml", "roles/pazny.authentik/handlers/main.yml"):
         src = (REPO / f).read_text()
-        # Find the reapply loop and assert 30-agent-clients is in it.
-        assert "30-agent-clients" in src, f"{f}: reapply handler must apply 30-agent-clients"
+        code = "\n".join(ln for ln in src.splitlines() if not ln.strip().startswith("#"))
+        loop = re.search(r"for bp in ([^\n;]*); do", code)
+        assert loop, f"{f}: no 'for bp in …; do' reapply loop found"
+        assert "30-agent-clients" in loop.group(1), (
+            f"{f}: the reapply loop does not include 30-agent-clients")
 
 
 def test_pulse_catalog_points_at_agent_wing_tokens():
@@ -234,8 +244,16 @@ def test_agent_exit_verdict_sentinel_propagated():
     runner lifts it into the process exit (escalate-only, never masking a real
     claude failure). Verified live: advisor → exit 1 → wrapper REVIEW."""
     runner = (REPO / "files/anatomy/scripts/pulse-run-agent.sh").read_text()
-    assert "NOS_AGENT_EXIT" in runner, "runner must parse the verdict sentinel"
-    assert "AGENT_VERDICT" in runner and "-gt 0" in runner, "escalate-only (don't mask a real failure)"
+    # plat-gate-shape (2026-09-04): NOS_AGENT_EXIT/AGENT_VERDICT both appear in
+    # comments (435/442/444) and `-gt 0` recurs at an unrelated
+    # WING_EVENT_POST_FAILURES check (518), so a bare substring survives the
+    # whole escalation block being deleted. Strip comments and match the real
+    # extraction + the real gate.
+    code = "\n".join(ln for ln in runner.splitlines() if not ln.strip().startswith("#"))
+    assert re.search(r"grep -oE '[^']*NOS_AGENT_EXIT:", code), (
+        "runner must parse the NOS_AGENT_EXIT sentinel out of the agent's output")
+    assert re.search(r'\[\[ -n "\$AGENT_VERDICT" && "\$AGENT_VERDICT" -gt 0 \]\]', code), (
+        "escalate-only: the gate must be on AGENT_VERDICT, not some unrelated -gt 0")
     # Both review-capable agents, both runtime forms, must instruct the sentinel.
     # (upgrade-advisor was in this loop until its 2026-08-26 retirement —
     # "Verified live: advisor -> exit 1" above is that agent's one live run.)
