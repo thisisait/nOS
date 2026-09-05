@@ -92,6 +92,7 @@ worse than none, because it reads as complete.
 - `aggregator-dry-run.py` — D3 — Authentik aggregator dry-run + parity report.
 - `local-model-bench.py` — Measure a local model on the one job the estate has for it, with code as judge.
 - `loop-diff.py` — Build a valid unified diff from a replacement an agent can state in words.
+- `loop-graph-gen.py` — Compile the loop harness from ledger.py into loop-graph.json (the Planner Loops view + its gate).
 - `loop-pr.py` — The loop's driver: what happens after the judges say pass.
 - `loop-propose.py` — The loop's ENTRY: hand one reported weakness to a model that may propose.
 - `loop-review.py` — The reviewer: the only thing in the loop permitted to merge.
