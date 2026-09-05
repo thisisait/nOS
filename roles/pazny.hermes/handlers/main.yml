@@ -14,7 +14,7 @@
       # venv path). A full reload is the only thing that converges a changed plist.
       launchctl bootout "gui/${UID_NUM}/{{ hermes_launchd_label }}" 2>/dev/null || true
       # sleep 1: bootout is async — bootstrapping while the unit is still
-      # tearing down races and fails (the cortex handler's precedent).
+      # tearing down races and fails (the cortex handler set this precedent).
       sleep 1
       # A bootstrap FAILURE must be loud: without the exit the trailing echo made
       # the last command succeed, masking a failed reload as "reloaded" (2026-09-05).
