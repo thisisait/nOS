@@ -1,0 +1,301 @@
+{
+  "version": 1,
+  "generated_from": "files/anatomy/bone/ledger.py",
+  "engine_actor": "engine:judge-runner",
+  "nodes": [
+    {
+      "id": "stage:propose",
+      "kind": "stage",
+      "label": "propose",
+      "x": 680,
+      "y": 0,
+      "note": "a model proposes"
+    },
+    {
+      "id": "stage:judge",
+      "kind": "stage",
+      "label": "judge",
+      "x": 680,
+      "y": 92,
+      "note": "code runs the gate set"
+    },
+    {
+      "id": "stage:apply",
+      "kind": "stage",
+      "label": "apply",
+      "x": 680,
+      "y": 184,
+      "out_of_loop": true,
+      "note": "merge → converge → rescan (outside the engine)"
+    },
+    {
+      "id": "role:evaluator",
+      "kind": "role",
+      "label": "evaluator (code)",
+      "x": 340,
+      "y": 0
+    },
+    {
+      "id": "table:loop_judge_runs",
+      "kind": "table",
+      "label": "loop_judge_runs",
+      "x": 1020,
+      "y": 0
+    },
+    {
+      "id": "table:loop_verdicts",
+      "kind": "table",
+      "label": "loop_verdicts",
+      "x": 1020,
+      "y": 92
+    },
+    {
+      "id": "role:operator",
+      "kind": "role",
+      "label": "operator",
+      "x": 340,
+      "y": 92
+    },
+    {
+      "id": "table:loop_forgets",
+      "kind": "table",
+      "label": "loop_forgets",
+      "x": 1020,
+      "y": 184
+    },
+    {
+      "id": "role:proposer",
+      "kind": "role",
+      "label": "proposer (model)",
+      "x": 340,
+      "y": 184
+    },
+    {
+      "id": "table:loop_proposals",
+      "kind": "table",
+      "label": "loop_proposals",
+      "x": 1020,
+      "y": 276
+    },
+    {
+      "id": "role:reader",
+      "kind": "role",
+      "label": "reader",
+      "x": 340,
+      "y": 276
+    },
+    {
+      "id": "intent:config-fix",
+      "kind": "intent",
+      "label": "config-fix",
+      "x": 0,
+      "y": 0,
+      "disabled": false,
+      "operator_required": false
+    },
+    {
+      "id": "intent:dependency-bump",
+      "kind": "intent",
+      "label": "dependency-bump",
+      "x": 0,
+      "y": 92,
+      "disabled": false,
+      "operator_required": false
+    },
+    {
+      "id": "intent:gate-add",
+      "kind": "intent",
+      "label": "gate-add",
+      "x": 0,
+      "y": 184,
+      "disabled": false,
+      "operator_required": true
+    },
+    {
+      "id": "intent:harness",
+      "kind": "intent",
+      "label": "harness",
+      "x": 0,
+      "y": 276,
+      "disabled": true,
+      "operator_required": false
+    },
+    {
+      "id": "intent:render-fix",
+      "kind": "intent",
+      "label": "render-fix",
+      "x": 0,
+      "y": 368,
+      "disabled": false,
+      "operator_required": false
+    },
+    {
+      "id": "intent:version-pin-bump",
+      "kind": "intent",
+      "label": "version-pin-bump",
+      "x": 0,
+      "y": 460,
+      "disabled": false,
+      "operator_required": false
+    },
+    {
+      "id": "intent:wiring-fix",
+      "kind": "intent",
+      "label": "wiring-fix",
+      "x": 0,
+      "y": 552,
+      "disabled": false,
+      "operator_required": false
+    },
+    {
+      "id": "toggle:harness_proposals_enabled",
+      "kind": "toggle",
+      "label": "Harness proposals",
+      "x": 0,
+      "y": 0,
+      "enabled": false,
+      "found": true,
+      "address": "loop-config / harness_proposals_enabled",
+      "description": "Whether the loop may propose changes to the apparatus it is judged BY — agent definitions, prompts, tool rosters, gate sets — rather than to the estate it is judged ON."
+    },
+    {
+      "id": "agent:librarian",
+      "kind": "agent",
+      "label": "librarian",
+      "x": 1360,
+      "y": 0
+    },
+    {
+      "id": "route:POST /api/v1/events",
+      "kind": "route",
+      "label": "POST /api/v1/events",
+      "x": 1700,
+      "y": 0
+    },
+    {
+      "id": "agent:surveyor",
+      "kind": "agent",
+      "label": "surveyor",
+      "x": 1360,
+      "y": 92
+    }
+  ],
+  "edges": [
+    {
+      "id": "stage:propose=>stage:judge",
+      "source": "stage:propose",
+      "target": "stage:judge",
+      "kind": "flow",
+      "label": "gates run"
+    },
+    {
+      "id": "stage:judge=>stage:apply",
+      "source": "stage:judge",
+      "target": "stage:apply",
+      "kind": "flow",
+      "label": "pass/fail/indeterminate → act on pass"
+    },
+    {
+      "id": "role:evaluator=>stage:judge",
+      "source": "role:evaluator",
+      "target": "stage:judge",
+      "kind": "acts"
+    },
+    {
+      "id": "role:evaluator=>table:loop_judge_runs",
+      "source": "role:evaluator",
+      "target": "table:loop_judge_runs",
+      "kind": "writes"
+    },
+    {
+      "id": "role:evaluator=>table:loop_verdicts",
+      "source": "role:evaluator",
+      "target": "table:loop_verdicts",
+      "kind": "writes"
+    },
+    {
+      "id": "role:operator=>table:loop_forgets",
+      "source": "role:operator",
+      "target": "table:loop_forgets",
+      "kind": "writes"
+    },
+    {
+      "id": "role:proposer=>stage:propose",
+      "source": "role:proposer",
+      "target": "stage:propose",
+      "kind": "acts"
+    },
+    {
+      "id": "role:proposer=>table:loop_proposals",
+      "source": "role:proposer",
+      "target": "table:loop_proposals",
+      "kind": "writes"
+    },
+    {
+      "id": "intent:config-fix=>stage:propose",
+      "source": "intent:config-fix",
+      "target": "stage:propose",
+      "kind": "proposes"
+    },
+    {
+      "id": "intent:dependency-bump=>stage:propose",
+      "source": "intent:dependency-bump",
+      "target": "stage:propose",
+      "kind": "proposes"
+    },
+    {
+      "id": "intent:gate-add=>stage:propose",
+      "source": "intent:gate-add",
+      "target": "stage:propose",
+      "kind": "proposes"
+    },
+    {
+      "id": "intent:harness=>stage:propose",
+      "source": "intent:harness",
+      "target": "stage:propose",
+      "kind": "proposes"
+    },
+    {
+      "id": "intent:render-fix=>stage:propose",
+      "source": "intent:render-fix",
+      "target": "stage:propose",
+      "kind": "proposes"
+    },
+    {
+      "id": "intent:version-pin-bump=>stage:propose",
+      "source": "intent:version-pin-bump",
+      "target": "stage:propose",
+      "kind": "proposes"
+    },
+    {
+      "id": "intent:wiring-fix=>stage:propose",
+      "source": "intent:wiring-fix",
+      "target": "stage:propose",
+      "kind": "proposes"
+    },
+    {
+      "id": "toggle:harness_proposals_enabled=>intent:harness",
+      "source": "toggle:harness_proposals_enabled",
+      "target": "intent:harness",
+      "kind": "governs",
+      "label": "off ⇒ refused"
+    },
+    {
+      "id": "agent:librarian=>route:POST /api/v1/events",
+      "source": "agent:librarian",
+      "target": "route:POST /api/v1/events",
+      "kind": "may-write"
+    },
+    {
+      "id": "agent:surveyor=>route:POST /api/v1/events",
+      "source": "agent:surveyor",
+      "target": "route:POST /api/v1/events",
+      "kind": "may-write"
+    }
+  ],
+  "refusals": [
+    "POST /verdicts does not exist — a verdict is the judge's exit code, never a caller's claim (Constraint A)",
+    "intent `harness` is refused at propose time; the switch is the KEAP config table, row `harness_proposals_enabled`",
+    "the proposer authorizer denies loop_verdicts — proposer and judge never share a writable table"
+  ]
+}
