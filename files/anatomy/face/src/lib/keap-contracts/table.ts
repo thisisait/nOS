@@ -1,15 +1,12 @@
 /**
- * VENDORED from thisisait/nos-keap at tag v1.44.0 (commit a97c91ff) — DO NOT
- * EDIT. A pinned snapshot of KEAP's DataTable schema: the authority the
- * schema-pin gate (schema-pin.test.ts) validates every state/keap-tables/
- * *.table.yml against, so "a definition runs ahead of the pin" is structurally
- * impossible rather than a matter of release discipline (cross-repo-contracts
- * clause 2; the caddy-sessions `style: chat` incident is what it prevents).
+ * VENDORED from thisisait/nos-keap at v1.44.0 — DO NOT EDIT. A pinned snapshot of
+ * KEAP's DataTable schema: the authority the schema-pin gate (schema-pin.test.ts)
+ * validates every state/keap-tables/*.table.yml against, so "a definition runs
+ * ahead of the pin" is structurally impossible rather than release discipline
+ * (cross-repo-contracts clause 2; the caddy-sessions incident is what it stops).
  *
- * Re-vendor ONLY when roles/pazny.keap keap_repo_ref bumps: re-run
- * tools/vendor-keap-contracts (or copy shared/contracts/{visibility,table,
- * field-concepts}.ts from the new tag). A hand-edit here forks the contract —
- * the exact drift the gate exists to catch.
+ * Re-vendor ONLY on a keap_repo_ref bump: `tools/vendor-keap-contracts.py`.
+ * A hand-edit here forks the contract — the exact drift the gate catches.
  * Upstream: nos-keap shared/contracts/table.ts
  */
 /**

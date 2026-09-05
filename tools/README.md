@@ -73,6 +73,7 @@ worse than none, because it reads as complete.
 - `task-types-render.py` — Render AGENTS.md (the task-type router) from state/task-types.yml.
 - `tls-uptake.py` — How much of the datastore traffic on this estate is actually encrypted.
 - `view-contract-drift.py` — Compare the face's `TableView` against KEAP's `viewMetaSchema`.
+- `vendor-keap-contracts.py` — Re-vendor KEAP's table schema (pinned to keap_repo_ref) for the schema-pin gate.
 - `usage-status.py` — What each model budget has been spent on, and what is left.
 - `wing-status.py` — What Wing actually is: every table, who writes it, who reads it, what it costs.
 
