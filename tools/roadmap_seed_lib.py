@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import datetime
 import os
+import re
 
 import yaml
 
@@ -147,6 +148,35 @@ def write_index(rows: list[dict], repo_root: str) -> str:
         fh.write(header)
         yaml.safe_dump(idx, fh, sort_keys=False, allow_unicode=True, width=200)
     return path
+
+
+#: Frontmatter key order for a per-row file — readable, stable diffs. Shared by
+#: the extractor and dtt-capture so every seed file has the same shape.
+FILE_FM_ORDER = ("slug", "title", "parent", "track", "task_type",
+                 "status", "when", "refs", "release")
+
+#: A row id must match KEAP's assertRowId (the agent door hard-errors otherwise).
+SLUG_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+
+def _yaml_val(s: str) -> str:
+    s = str(s or "")
+    if s == "" or any(c in s for c in ":#") or s[:1] in "!&*[]{}>|@`\"'%-? ":
+        return '"' + s.replace('"', '\\"') + '"'
+    return s
+
+
+def render_row_file(fm: dict, body: str) -> str:
+    """Render one per-row seed file (frontmatter + body). `fm` keys are read in
+    FILE_FM_ORDER; missing keys render empty. Body is the prose after the ---."""
+    lines = ["---"]
+    for k in FILE_FM_ORDER:
+        lines.append(f"{k}: {_yaml_val(fm.get(k, ''))}")
+    lines.append("---")
+    lines.append("")
+    lines.append((body or "").strip())
+    lines.append("")
+    return "\n".join(lines)
 
 
 def load_rows(directory: str | None = None) -> list[dict]:

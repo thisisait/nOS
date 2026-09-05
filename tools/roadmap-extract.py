@@ -25,14 +25,11 @@ import sys
 import urllib.request
 
 from keap_api import human_headers
-from roadmap_seed_lib import GIT_OWNED, SHIPPED, seed_dir  # noqa: F401
+import roadmap_seed_lib as lib
+from roadmap_seed_lib import seed_dir  # noqa: F401
 
 TABLE = "2d498264-bc9a-4324-9935-489e5e4d92f3"
 BASE = f"http://127.0.0.1:8091/api/tables/{TABLE}"
-
-# Frontmatter key order — readable files, stable diffs.
-_FM_ORDER = ["slug", "title", "parent", "track", "task_type", "status", "when", "refs", "release"]
-
 
 def _get_rows() -> list[dict]:
     req = urllib.request.Request(BASE + "/rows?limit=500", headers=human_headers())
@@ -47,34 +44,13 @@ def _when(v: dict) -> str:
     return datetime.datetime.fromtimestamp(int(ts)).strftime("%Y-%m-%d")
 
 
-def _yaml_val(s: str) -> str:
-    s = str(s or "")
-    # Quote when YAML would otherwise mis-parse (colons, leading specials).
-    if s == "" or any(c in s for c in ":#") or s[:1] in "!&*[]{}>|@`\"'%-? ":
-        return '"' + s.replace('"', '\\"') + '"'
-    return s
-
-
 def _render(v: dict) -> str:
-    fm = {
-        "slug": v.get("slug", ""),
-        "title": v.get("title", ""),
-        "parent": v.get("parent", ""),
-        "track": v.get("track", ""),
-        "task_type": v.get("task_type", ""),
-        "status": v.get("status", ""),
-        "when": _when(v),
-        "refs": v.get("refs", ""),
-        "release": v.get("release", ""),
-    }
-    lines = ["---"]
-    for k in _FM_ORDER:
-        lines.append(f"{k}: {_yaml_val(fm[k])}")
-    lines.append("---")
-    lines.append("")
-    lines.append((v.get("body") or "").strip())
-    lines.append("")
-    return "\n".join(lines)
+    # Shared renderer (roadmap_seed_lib) so extract and dtt-capture write the
+    # identical per-row format — one source for the frontmatter shape.
+    fm = {k: v.get(k, "") for k in
+          ("slug", "title", "parent", "track", "task_type", "status", "refs", "release")}
+    fm["when"] = _when(v)
+    return lib.render_row_file(fm, v.get("body") or "")
 
 
 def main() -> int:
