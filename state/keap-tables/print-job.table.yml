@@ -28,4 +28,7 @@ schema:
     - { key: status,      label: "Status",     kind: select, role: dimension, required: true, concept: lifecycle.status,
         options: ["queued", "scheduled", "running", "done", "failed"] }
     - { key: finished_at, label: "Finished at", kind: date,  role: attribute, concept: time.occurred_at }
-    - { key: outcome,     label: "Outcome",    kind: text,   role: attribute, concept: evidence.observation }
+    # `identity.description`, not `evidence.observation`: the latter binds json
+    # (raw check output); this is a free-text outcome note distinct from the
+    # `status` select above. A wrong concept 400s the seed (schema-pin gate).
+    - { key: outcome,     label: "Outcome",    kind: text,   role: attribute, concept: identity.description }

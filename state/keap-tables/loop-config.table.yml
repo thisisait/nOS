@@ -42,7 +42,13 @@ schema:
     - { key: description, label: "What it does", kind: text,   role: attribute, concept: identity.description }
     # The value. `boolean` and not a select: a switch with three spellings of
     # off is a switch nobody can gate on.
-    - { key: enabled,     label: "Enabled",     kind: boolean, role: dimension, concept: lifecycle.status }
+    # select, not boolean: `lifecycle.status` binds select/text and NO L1
+    # concept binds a boolean, so a bare boolean either has no meaning (concept
+    # gate) or a wrong one (schema-pin gate). A two-state enum is the honest
+    # bridge until KEAP adds a boolean concept (proposed to the keap agent);
+    # this def is forward-ready (seeded by no task), so the kind is free to move.
+    - { key: enabled,     label: "Enabled",     kind: select, role: dimension, concept: lifecycle.status,
+        options: ["enabled", "disabled"] }
     # Who will read the row, named rather than assumed — a config row whose
     # reader nobody can point at is how a toggle ends up half-armed.
     - { key: read_by,     label: "Read by",     kind: text,    role: attribute, concept: prov.ref }

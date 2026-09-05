@@ -26,3 +26,13 @@ build/
 .svelte-kit/
 node_modules/
 package-lock.json
+
+# `src/lib/keap-contracts/{visibility,table,field-concepts}.ts` are VENDORED
+# from nos-keap at the pinned keap_repo_ref (see their headers) — one authority,
+# and it is KEAP. prettier --write here would fork the snapshot the schema-pin
+# gate validates against, the same two-owners problem as the generated JSON
+# above. The gate's own test file (schema-pin.test.ts) is ours and stays
+# prettier-owned, so this ignores the three vendored files by name, not the dir.
+src/lib/keap-contracts/visibility.ts
+src/lib/keap-contracts/table.ts
+src/lib/keap-contracts/field-concepts.ts
