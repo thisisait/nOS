@@ -49,8 +49,8 @@ Usage:  python3 tools/roadmap-seed.py [--dry-run]
 import json, subprocess, sys, urllib.request, datetime
 TABLE = "2d498264-bc9a-4324-9935-489e5e4d92f3"
 BASE = f"http://127.0.0.1:8091/api/tables/{TABLE}"
-H = {"X-Authentik-Username": "akadmin", "X-Authentik-Email": "admin@pazny.eu",
-     "X-Authentik-Groups": "nos-providers,nos-admins", "Content-Type": "application/json"}
+from keap_api import human_headers  # noqa: E402 — sibling helper in tools/
+H = human_headers()  # identity + SEC-02 x-keap-proxy-secret (else /api 401s)
 def req(m, u, b=None):
     r = urllib.request.Request(u, data=json.dumps(b).encode() if b else None, headers=H, method=m)
     with urllib.request.urlopen(r) as x: return json.loads(x.read())

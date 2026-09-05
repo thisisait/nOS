@@ -61,12 +61,11 @@ REPO = Path(__file__).resolve().parents[1]
 PROBES = REPO / "state/roadmap-probes.yml"
 KEAP = "http://127.0.0.1:8091"
 TABLE = "2d498264-bc9a-4324-9935-489e5e4d92f3"
-HUMAN_HDR = {
-    "X-Authentik-Username": "akadmin",
-    "X-Authentik-Email": "admin@pazny.eu",
-    "X-Authentik-Groups": "nos-providers,nos-admins",
-    "Content-Type": "application/json",
-}
+from keap_api import human_headers  # noqa: E402 — sibling helper in tools/
+
+#: X-Authentik-* admin identity + the SEC-02 x-keap-proxy-secret (resolved once
+#: by keap_api). Without the secret every /api call here 401s since KEAP P1.
+HUMAN_HDR = human_headers()
 
 #: The only cells this tool may set. `status` is absent on purpose.
 WRITABLE = {"verified", "verified_by", "verified_at", "evidence"}

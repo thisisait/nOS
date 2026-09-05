@@ -57,12 +57,11 @@ DEF = REPO / "state/keap-tables/roadmap.table.yml"
 #: Same loopback door and forward-auth headers as the rest of the family. The
 #: agent surface is bound to 127.0.0.1 and the estate's edge never sees this.
 API = "http://127.0.0.1:8091/api/tables"
-HEADERS = {
-    "X-Authentik-Username": "akadmin",
-    "X-Authentik-Email": "admin@pazny.eu",
-    "X-Authentik-Groups": "nos-providers,nos-admins",
-    "Content-Type": "application/json",
-}
+from keap_api import human_headers  # noqa: E402 — sibling helper in tools/
+
+#: X-Authentik-* admin identity + the SEC-02 x-keap-proxy-secret (resolved once
+#: by keap_api). Without the secret every /api call here 401s since KEAP P1.
+HEADERS = human_headers()
 
 
 def call(url: str, method: str = "GET", body: dict | None = None) -> dict:

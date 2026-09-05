@@ -3,8 +3,10 @@
 difference-vectors between exemplars, project every node, and eyeball whether
 the axes are meaningful (top/bottom nodes per axis). Also centrality (hub-ness).
 Nothing is stored — this only validates the concept on the real corpus."""
-import json, urllib.request
+import json, urllib.request, os, sys
 import numpy as np
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tools/
+from keap_api import human_headers  # noqa: E402
 
 EMB = "/Users/pazny/.claude/jobs/4100771d/tmp/emb.jsonl"
 OLLAMA = "http://127.0.0.1:11434/api/embed"
@@ -22,7 +24,7 @@ print(f"loaded {len(ids)} node embeddings, dim {V.shape[1]}")
 
 # names from the live graph (for interpreting results)
 req = urllib.request.Request("http://127.0.0.1:8091/api/graph",
-    headers={"X-Authentik-Username": "operator", "X-Authentik-Groups": "nos-admins"})
+    headers=human_headers(username="operator", groups="nos-admins"))  # +proxy-secret (KEAP P1)
 NAME = {n["id"]: n.get("name", "?") for n in json.load(urllib.request.urlopen(req)).get("data", {}).get("nodes", [])}
 
 def embed(texts):

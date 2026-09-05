@@ -12,15 +12,17 @@ Writes deploy-style JSON to the path given as argv[1].
 """
 import sys, json, urllib.request
 from collections import defaultdict
+from keap_api import human_headers  # sibling helper in tools/
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else "/tmp/fable-bundle.json"
 BASE = "http://127.0.0.1:8091"
 
 def graph():
+    # human_headers() carries the SEC-02 x-keap-proxy-secret; without it this
+    # /api call 401s since KEAP P1. Same admin identity, operator username.
     req = urllib.request.Request(
         BASE + "/api/graph?relations=all",
-        headers={"X-Authentik-Username": "operator",
-                 "X-Authentik-Groups": "nos-admins,nos-providers"})
+        headers=human_headers(username="operator", groups="nos-admins,nos-providers"))
     return json.load(urllib.request.urlopen(req))
 
 g = graph()

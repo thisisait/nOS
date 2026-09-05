@@ -14,6 +14,8 @@ import json, urllib.request, sys, os
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(HERE))  # tools/ — for keap_api
+from keap_api import human_headers  # noqa: E402
 EMB = os.environ.get("EMB", "/Users/pazny/.claude/jobs/4100771d/tmp/emb.jsonl")
 OLLAMA = "http://127.0.0.1:11434/api/embed"
 MODEL = "nomic-embed-text"
@@ -31,7 +33,7 @@ V /= (np.linalg.norm(V, axis=1, keepdims=True) + 1e-9)
 N, DIM = V.shape
 
 req = urllib.request.Request("http://127.0.0.1:8091/api/graph",
-    headers={"X-Authentik-Username": "operator", "X-Authentik-Groups": "nos-admins"})
+    headers=human_headers(username="operator", groups="nos-admins"))  # +proxy-secret (KEAP P1)
 NAME = {n["id"]: n.get("name", "?") for n in json.load(urllib.request.urlopen(req)).get("data", {}).get("nodes", [])}
 
 # ── semantic axes (versioned exemplar config) ────────────────────────────────
