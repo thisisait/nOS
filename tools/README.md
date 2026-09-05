@@ -61,6 +61,7 @@ worse than none, because it reads as complete.
 - `npm-ioc-scan.py` — Cross-check every installed npm package against a published IOC list.
 - `plugin-wiring-report.py` — Plugin wiring report — capability matrix + contract checks.
 - `permission-status.py` — What macOS will and will not let this estate do, in one place.
+- `nos_work_uri.py` — Parse + match the nos-work:// routing address (dtt-routing-address); the planner's capability/assignment matcher.
 - `red-status.py` — What is red on this estate right now.
 - `reload-stale-config.py` — Make a running container read the config the estate rendered for it.
 - `stale-config-status.py` — Containers running config the estate has already replaced.
