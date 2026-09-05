@@ -69,6 +69,7 @@ worse than none, because it reads as complete.
 - `skill-status.py` — What is on the shelf, who should be holding it, and who actually is.
 - `snapshot-status.py` — Is there a net under the next converge, and what exactly does it hold?
 - `stuck-status.py` — What has STOPPED MOVING — which is a different question from what is broken.
+- `task-types-render.py` — Render AGENTS.md (the task-type router) from state/task-types.yml.
 - `tls-uptake.py` — How much of the datastore traffic on this estate is actually encrypted.
 - `view-contract-drift.py` — Compare the face's `TableView` against KEAP's `viewMetaSchema`.
 - `usage-status.py` — What each model budget has been spent on, and what is left.
@@ -109,7 +110,9 @@ worse than none, because it reads as complete.
 - `devlog-release.sh` — mechanical pre-flight for a release cut.
 - `devlog-render.py` — devlog-render — static site generator for the nos-core devlog.
 - `roadmap-apply-view.py` — Apply the roadmap definition's `view:` block to the live table.
-- `roadmap-seed.py` — Create + seed the nOS Roadmap DataTable in KEAP.
+- `roadmap-extract.py` — One-time: live roadmap table → per-row `<slug>.md` files in the PRIVATE seed repo.
+- `roadmap-seed.py` — Seed / --sync the roadmap table from per-row files in the private seed repo (NOS_SEED_DIR).
+- `roadmap_seed_lib.py` — Parser + public slug-index writer for the per-row seed files (machinery; content stays private).
 - `roadmap-update.py` — Move a roadmap row's CLAIM. Not its verdict — that has a different writer.
 - `roadmap-verify.py` — Write a roadmap row's VERDICT — which is an exit code, never an argument.
 
@@ -119,6 +122,7 @@ worse than none, because it reads as complete.
 - `keap-branches-to-canonical.py` — Convert a fable branches-authoring JSON (structured pillars+blocks for empty
 - `keap-fable-bundle.py` — Generate the raw-data bundle for the fable ontology-review pass.
 - `keap-fable-to-bundles.py` — Transform the fable ontology-review output into per-domain import bundles.
+- `keap_api.py` — Shared KEAP /api access for host tools: resolves the SEC-02 proxy secret + builds the human headers.
 - `keap-recall-queries.py` — Emit the KEAP recall-query set from the estate's SKILLS.md trigger lines.
 - `keap-reid-rows.py` — Make every row of a KEAP DataTable addressable by its own business key.
 - `mcp-tables-server.py` — stdio MCP server giving external agents (Cursor/Codex/Claude Code) the DataTables verb surface.

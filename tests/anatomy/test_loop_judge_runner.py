@@ -1069,7 +1069,7 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 MEASURED_WORK = {
     "ansible-lint": 1500,
     "genome-codegen": 2,
-    "pytest-anatomy": 4666,
+    "pytest-anatomy": 5390,
     "cortex-corpus-diff": 1,
 }
 

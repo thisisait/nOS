@@ -213,7 +213,7 @@ judges:
     #   sqlite3 "file:$HOME/wing/app/data/wing.db?mode=ro" \
     #     "SELECT started_at, work_count, min_work, outcome FROM loop_judge_runs
     #       WHERE judge_name='pytest-anatomy' ORDER BY id DESC LIMIT 10"
-    min_work: 4610   # re-measured 2026-09-01 (2nd, post-merge): 4666 passed / 4743 collected
+    min_work: 5300   # re-measured 2026-09-05 (dtt epic): 5390 passed / 5465 collected
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,

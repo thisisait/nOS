@@ -120,14 +120,12 @@ def test_no_probe_is_trivially_true():
 def test_every_probed_slug_is_a_row_someone_authored():
     """Offline half of the catalogue's integrity — the live half is
     `tools/roadmap-verify.py --all`, which refuses slugs the table lacks."""
-    src = SEEDER.read_text(encoding="utf-8")
-    authored = set(re.findall(r'^\s*(?:row\()?\(?"([a-z0-9][a-z0-9-]*)"', src, re.M))
-    authored |= {
-        node.value
-        for node in ast.walk(ast.parse(src))
-        if isinstance(node, ast.Constant) and isinstance(node.value, str)
-        and re.fullmatch(r"[a-z0-9][a-z0-9-]{2,}", node.value)
-    }
+    # Rows are authored in the PRIVATE seed repo now (dtt-seed-per-row-file), so
+    # the seeder no longer inlines slugs. The public, content-free slug index is
+    # the offline source of the authored set.
+    import yaml
+    idx = yaml.safe_load((REPO / "state/roadmap/index.yml").read_text(encoding="utf-8")) or []
+    authored = {r["slug"] for r in idx}
     stray = sorted(s for s in catalogue()
                    if s not in authored and not s.startswith("obs-"))
     assert not stray, (

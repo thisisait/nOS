@@ -69,40 +69,29 @@ def seeder_source() -> str:
     return SEEDER.read_text(encoding="utf-8")
 
 
-def seeder_written_columns() -> set[str]:
-    """The keys `row()` puts into a row dict.
+def _index() -> list[dict]:
+    import yaml as _yaml
+    return _yaml.safe_load((REPO / "state/roadmap/index.yml").read_text(encoding="utf-8")) or []
 
-    Read from the AST rather than by regex: the point of this gate is that the
-    two artifacts are compared by something that cannot be fooled by a comment.
+
+def seeder_written_columns() -> set[str]:
+    """The columns the seeder emits — now a PUBLIC code contract in the lib, not
+    an inlined row() (rows moved to the private seed repo, dtt-seed-per-row-file).
     """
-    tree = ast.parse(seeder_source())
-    for node in ast.walk(tree):
-        if isinstance(node, ast.FunctionDef) and node.name == "row":
-            for call in ast.walk(node):
-                if (
-                    isinstance(call, ast.Call)
-                    and isinstance(call.func, ast.Name)
-                    and call.func.id == "dict"
-                ):
-                    return {kw.arg for kw in call.keywords if kw.arg}
-    pytest.fail("tools/roadmap-seed.py no longer defines row() as a dict(...) — "
-                "update this gate to read the new shape rather than deleting it.")
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "roadmap_seed_lib", REPO / "tools" / "roadmap_seed_lib.py")
+    lib = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(lib)
+    return set(lib.WRITTEN_KEYS)
 
 
 def seeder_written_statuses() -> set[str]:
-    """Every string literal passed as `row(..., status=...)`, positional or not."""
-    tree = ast.parse(seeder_source())
-    found: set[str] = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "row":
-            if len(node.args) >= 4 and isinstance(node.args[3], ast.Constant):
-                found.add(node.args[3].value)
-            for kw in node.keywords:
-                if kw.arg == "status" and isinstance(kw.value, ast.Constant):
-                    found.add(kw.value.value)
+    """The distinct statuses on the board, read from the public slug index."""
+    found = {r.get("status") for r in _index() if r.get("status")}
     if not found:
-        pytest.fail("no row() status literals found — the seeder's shape changed; "
-                    "teach this gate the new one.")
+        pytest.fail("state/roadmap/index.yml carries no statuses — regenerate it "
+                    "with tools/roadmap-seed.py; this gate reads it, not the seeder.")
     return found
 
 

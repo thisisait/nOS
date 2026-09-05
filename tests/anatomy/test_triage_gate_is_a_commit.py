@@ -67,8 +67,14 @@ def _workflows() -> list[Path]:
 
 
 def _declared_slugs() -> set[str]:
-    src = SEEDER.read_text(encoding="utf-8")
-    return set(_ROW_SLUG.findall(src)) | set(_REL_SLUG.findall(src))
+    # Rows live in the PRIVATE seed repo now (dtt-seed-per-row-file); the public,
+    # content-free slug index is the offline source. discovery-scan.py still
+    # authors a few rows inline, so union those in.
+    import yaml
+    idx = yaml.safe_load((REPO / "state/roadmap/index.yml").read_text(encoding="utf-8")) or []
+    slugs = {r["slug"] for r in idx}
+    ds = (REPO / "tools/discovery-scan.py").read_text(encoding="utf-8")
+    return slugs | set(_ROW_SLUG.findall(ds)) | set(_REL_SLUG.findall(ds))
 
 
 def _bindings() -> dict[Path, str]:

@@ -215,8 +215,11 @@ def test_the_sixth_client_is_not_quietly_dropped():
         "the sixth MariaDB client is gone from tools/tls-uptake.py. It was "
         "found by sampling the SERVER's connection list, not by reading a "
         "survey of applications — removing it restores the blind spot")
-    seed = (REPO / "tools/roadmap-seed.py").read_text(encoding="utf-8")
-    assert "sec-transport-mysqld-exporter" in seed, (
+    # Rows live in the PRIVATE seed repo now; the public slug index is the
+    # offline proof the row exists (dtt-seed-per-row-file).
+    import yaml
+    idx = yaml.safe_load((REPO / "state/roadmap/index.yml").read_text(encoding="utf-8")) or []
+    assert "sec-transport-mysqld-exporter" in {r["slug"] for r in idx}, (
         "the exporter's roadmap row is gone; a known-plaintext client with no "
         "row is an unknown-plaintext client")
 
