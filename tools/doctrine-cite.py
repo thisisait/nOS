@@ -85,9 +85,17 @@ SKIP_DIRS = {"node_modules", ".svelte-kit", "build", "dist", "vendor",
 #: ceiling whose whole purpose is to notice new claims. The source citations
 #: themselves are still harvested from the source, which is where they can
 #: actually be fixed.
+#: VENDORED third-party code is not ours to cite-police. The keap-contracts
+#: dir is a pinned snapshot of KEAP's DataTable schema (DO NOT EDIT — the
+#: schema-pin gate validates against it); its docblocks carry KEAP's own bare
+#: `§4`/`§14.3` references into our count, a claim nobody in this repo authored
+#: or can fix here — the same reason `vendor/` (SKIP_DIRS) and the cortex port
+#: are already skipped. Measured 2026-09-06: vendoring it added table.ts's two
+#: bare § and tripped this ceiling.
 SKIP_FILES_PREFIX = ("files/anatomy/docs/", "files/anatomy/cortex/docs/",
                      "files/anatomy/cortex/README.md",
-                     "files/anatomy/skills/contracts/")
+                     "files/anatomy/skills/contracts/",
+                     "files/anatomy/face/src/lib/keap-contracts/")
 
 #: This tool and its gate QUOTE citations as data — KNOWN_FINDINGS carries
 #: the phantom REM-088 verbatim, docstrings carry §-examples. Harvesting
