@@ -91,6 +91,18 @@ http:
         customRequestHeaders:
           X-Face-Edge-Token: "{{ face_edge_token | default('') }}"
 
+    # ── SEC-02: KEAP proxy-trust secret ───────────────────────────────────
+    # KEAP's identityMiddleware trusts the X-Authentik-* headers (injected by
+    # authentik@file on the SAME hop) only when x-keap-proxy-secret matches its
+    # KEAP_PROXY_SHARED_SECRET env — checked timing-safe BEFORE any identity
+    # header is read. customRequestHeaders REPLACES any client-sent value, so a
+    # peer on gated_net cannot forge identity. Applied on the keap router in
+    # services.yml.j2. Unset env on KEAP ⇒ ignored (backward-compatible).
+    keap-proxy:
+      headers:
+        customRequestHeaders:
+          x-keap-proxy-secret: "{{ keap_proxy_shared_secret | default('') }}"
+
 {% if (sso_autologin_miniflux | default(sso_autologin_min_tier_3 | default(sso_autologin | default(false)))) | bool %}
     # ── SSO autologin force-OIDC: Miniflux /login → OIDC ──────────────────
     # sso-autologin-plan.md Batch 3 (partial). DISABLE_LOCAL_AUTH=1 (set in

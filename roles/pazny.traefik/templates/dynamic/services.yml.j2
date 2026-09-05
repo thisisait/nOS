@@ -65,6 +65,10 @@ http:
 {# nOS face: same edge-trust pattern — inject X-Face-Edge-Token so the BFF
    trusts the Authentik identity headers only for edge-transited requests. #}
 {% if s.id == 'face' %}{% set _extra_mw = _extra_mw + ['face-edge@file'] %}{% endif %}
+{# SEC-02: keap router gets keap-proxy@file, injecting x-keap-proxy-secret at
+   the SAME hop as authentik@file's X-Authentik-* — KEAP checks it before
+   trusting the identity headers (peer-forgery fix). #}
+{% if s.id == 'keap' %}{% set _extra_mw = _extra_mw + ['keap-proxy@file'] %}{% endif %}
 {# SSO autologin (sso-autologin-plan.md Batch 3): Miniflux has no upstream
    auto-redirect, so when its autologin gate is on we attach the
    miniflux-autologin@file redirect middleware (defined in middlewares.yml.j2

@@ -100,6 +100,11 @@ services:
       KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
       KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
       KEAP_AGENT_TOKEN_CAPTURE: "{{ keap_agent_token_capture }}"
+      # SEC-02: proxy-trust secret. Set ⇒ /api/* requires header
+      # x-keap-proxy-secret (timing-safe) before any X-Authentik-* is read;
+      # Traefik's keap-proxy@file injects it at the outpost hop. /agent/v1,
+      # /ingest/v1, /ext/v1 are untouched (bearer/pairing surfaces).
+      KEAP_PROXY_SHARED_SECRET: "{{ keap_proxy_shared_secret }}"
 {% if (install_cortex | default(false)) and (keap_cortex_cutover | default(false)) %}
       # ── THE CUTOVER IS LIVE ────────────────────────────────────────────────
       # KEAP v1.29.0+ READS these: with CORTEX_BACKEND_URL set, /agent/v1/validate
