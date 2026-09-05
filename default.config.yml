@@ -442,7 +442,12 @@ install_hardening: true           # Linux: ANSSI baseline (ufw + fail2ban + sysc
 # from the Wing container (FPM upstream `php_fpm` in nginx is also at :9000).
 # Only flip this back to true if you have host-side PHP needs that don't go
 # through Wing.
-install_php: false                # PHP 8.x + PHP-FPM + Composer (host) — Track A makes this superfluous
+install_php: false                # Kept false. The host-PHP INSTALLER (tasks/php.yml) was deleted
+                                  # 2026-09-05 — Wing uses FrankenPHP + a self-downloaded composer.phar,
+                                  # and Homebrew php@ collides with php-zts over /opt/homebrew/bin/php.
+                                  # This flag now only gates some service-registry/dashboard rows (which
+                                  # over-use it as a proxy for Wing/Redis/php-fpm); do NOT delete the key
+                                  # until those are re-gated, or `| default(true)` flips them all on.
 install_node: true                # Node.js + NVM + global npm packages
 # Claude CLI as a NATIVE build outside NVM (tasks/claude-cli.yml). Separate
 # from install_node because that is the whole point: a node version migration

@@ -698,22 +698,6 @@
       when: ansible_os_family != 'Darwin'
       failed_when: false
 
-    - name: Restart php-fpm
-      # Legacy handler — kept for backwards compatibility with any role still
-      # notifying it. As of Track A (2026-04-26) Wing's PHP-FPM runs in the
-      # `wing` compose service (see "Restart wing" below) and Homebrew
-      # php@8.x is no longer installed by the playbook. The launchctl path
-      # is a defensive no-op for hosts that haven't run the migration yet.
-      ansible.builtin.shell: |
-        svc="php@{{ php_version | default('8.3') }}"
-        plist="$HOME/Library/LaunchAgents/homebrew.mxcl.${svc}.plist"
-        [ -f "$plist" ] && launchctl unload "$plist" 2>/dev/null
-        sleep 1
-        [ -f "$plist" ] && launchctl load "$plist" 2>/dev/null
-      args:
-        executable: /bin/bash
-      failed_when: false
-
     - name: Restart wing
       # Anatomy A3.5 (2026-05-04): Wing runs as a host launchd daemon
       # (FrankenPHP, host-mode).
@@ -2011,13 +1995,6 @@
         - install_iiab_terminal | default(false)
         - enable_ssh | default(false)
       tags: ['iiab-terminal', 'ssh']
-
-    # ──────────────────────────────────────────────────────────────────────────
-    # Languages and runtime environments
-    # ──────────────────────────────────────────────────────────────────────────
-    - import_tasks: tasks/php.yml
-      when: install_php | default(true)
-      tags: ['php']
 
     # ──────────────────────────────────────────────────────────────────────────
     # ACME (Let's Encrypt wildcard cert via Cloudflare DNS-01) — runs BEFORE
