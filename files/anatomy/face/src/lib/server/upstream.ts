@@ -304,8 +304,20 @@ export async function boneVfsProbe(uid: string): Promise<{ ok: boolean; detail: 
 
 // ── KEAP DataTables (config catalog SoT; G2 fleshes out the row shape) ────────
 
+// The agent door addresses a table by its ID. The config tables were created
+// with id == slug (face-layouts, …), so the human slug resolves directly. The
+// roadmap table predates that convention: its id is a UUID (the same one the
+// roadmap tools address — tools/roadmap-*.py), so GET /agent/v1/tables/roadmap
+// 404s. Map the human slug to the real id until KEAP's door resolves slugs
+// itself (the `tables` cross-repo contract) or the table is re-id'd; then this
+// one entry is deleted. `tableId` is identity for every id==slug table.
+const TABLE_ID: Record<string, string> = {
+	roadmap: '2d498264-bc9a-4324-9935-489e5e4d92f3'
+};
+const tableId = (slug: string): string => TABLE_ID[slug] ?? slug;
+
 export async function keapTableRows(slug: string, uid: string): Promise<unknown> {
-	const u = new URL(`${KEAP_TABLES()}/${encodeURIComponent(slug)}/rows`);
+	const u = new URL(`${KEAP_TABLES()}/${encodeURIComponent(tableId(slug))}/rows`);
 	u.searchParams.set('uid', uid);
 	const h: Record<string, string> = {};
 	if (KEAP_TOKEN()) h['authorization'] = `Bearer ${KEAP_TOKEN()}`;
@@ -339,7 +351,7 @@ function keapRwHeaders(): Record<string, string> {
 
 /** Table definition (columns/schema) — GET /agent/v1/tables/:slug (RO). */
 export async function keapTableDef(slug: string): Promise<unknown> {
-	const u = new URL(`${KEAP_TABLES()}/${encodeURIComponent(slug)}`);
+	const u = new URL(`${KEAP_TABLES()}/${encodeURIComponent(tableId(slug))}`);
 	const h: Record<string, string> = {};
 	if (KEAP_TOKEN()) h['authorization'] = `Bearer ${KEAP_TOKEN()}`;
 	return asJson(await fetch(u, { headers: h }));
@@ -348,7 +360,7 @@ export async function keapTableDef(slug: string): Promise<unknown> {
 /** Upsert a row — POST /agent/v1/tables/:slug/rows (RW). `row` is the flat cell
  *  bag keyed by column (the KEAP agent surface un-wraps it). */
 export async function keapUpsertRow(slug: string, row: Record<string, unknown>): Promise<unknown> {
-	const u = new URL(`${KEAP_TABLES()}/${encodeURIComponent(slug)}/rows`);
+	const u = new URL(`${KEAP_TABLES()}/${encodeURIComponent(tableId(slug))}/rows`);
 	return asJson(
 		await fetch(u, { method: 'POST', headers: keapRwHeaders(), body: JSON.stringify(row) })
 	);
