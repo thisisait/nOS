@@ -70,9 +70,14 @@ def _ts(d: str) -> int:
 def parse_file(path: str) -> dict:
     """One `<slug>.md` → the row dict shape roadmap-seed.py consumes.
 
-    Exactly one date key is set (target OR occurred_at), decided by status —
+    At most one date key is set (target OR occurred_at), decided by status —
     a null date column is indistinguishable from one nobody wrote, which is the
     whole reason the two columns exist (roadmap-seed.py's original note).
+
+    Only `slug` and `title` are mandatory. status and when are OPTIONAL — the
+    live table holds rows with neither a status nor a date (that is why
+    roadmap-update.py's occurred_at transition-gate exists), and extraction must
+    be LOSSLESS: a file emits exactly the columns its row carries, no more.
     """
     raw = open(path, encoding="utf-8").read()
     if not raw.startswith("---"):
@@ -82,32 +87,36 @@ def parse_file(path: str) -> dict:
     slug = str(meta.get("slug") or "").strip()
     if not slug:
         raise ValueError(f"{path}: frontmatter has no slug")
+    title = str(meta.get("title") or "").strip()
+    if not title:
+        raise ValueError(f"{path}: frontmatter has no title")
     status = str(meta.get("status") or "").strip()
     when = str(meta.get("when") or "").strip()
-    if not status or not when:
-        raise ValueError(f"{path}: both status and when are required")
-    at = _ts(when)
-    # task_type is parsed for validation but NOT emitted into the seed payload
-    # yet — the roadmap table has no such column (see GIT_OWNED note). It stays
-    # authored in the file, ready for when the column is added.
+    # task_type is parsed but NOT emitted into the seed payload yet — the roadmap
+    # table has no such column (see GIT_OWNED note). It stays authored in the
+    # file, ready for when the column is added.
     row = dict(
         slug=slug,
-        title=str(meta.get("title") or "").strip(),
+        title=title,
         parent=str(meta.get("parent") or "").strip(),
-        status=status,
         track=str(meta.get("track") or "").strip(),
         release=str(meta.get("release") or "").strip(),
         refs=str(meta.get("refs") or "").strip(),
         body=body.strip(),
-        **({"occurred_at": at} if status == SHIPPED else {"target": at}),
     )
+    if status:
+        row["status"] = status
+    if when:
+        at = _ts(when)
+        row["occurred_at" if status == SHIPPED else "target"] = at
     return row
 
 
 #: Keys the seeder emits into a row payload (a PUBLIC code contract — the gate
 #: test_the_roadmap_declares_the_table_it_fills reads this instead of parsing
 #: row() out of the seeder, which no longer inlines rows). target/occurred_at is
-#: the status-decided date column; one or the other is always present.
+#: the status-decided date column; AT MOST one is present (a dateless row has
+#: neither — status/when are optional, see parse_file).
 WRITTEN_KEYS = ("slug", "title", "parent", "status", "track", "release", "refs",
                 "body", "target", "occurred_at")
 

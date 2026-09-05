@@ -64,11 +64,26 @@ def test_round_trip(tmp_path):
     assert [r["slug"] for r in rows] == ["sample-row"], "load_rows must skip _-files"
 
 
-def test_missing_field_is_refused(tmp_path):
-    f = tmp_path / "bad.md"
-    f.write_text("---\nslug: bad\ntitle: no status or when\n---\nbody\n", encoding="utf-8")
+def test_identity_fields_are_required(tmp_path):
+    # slug and title are the only hard requirements; status/when are optional
+    # (the live table holds rows with neither, and extraction must be lossless).
+    no_slug = tmp_path / "a.md"
+    no_slug.write_text("---\ntitle: has no slug\n---\nbody\n", encoding="utf-8")
     with pytest.raises(ValueError):
-        lib.parse_file(str(f))
+        lib.parse_file(str(no_slug))
+    no_title = tmp_path / "b.md"
+    no_title.write_text("---\nslug: b\n---\nbody\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        lib.parse_file(str(no_title))
+
+
+def test_status_and_when_are_optional(tmp_path):
+    f = tmp_path / "dateless.md"
+    f.write_text("---\nslug: dateless\ntitle: a row with no date or status\n---\nx\n",
+                 encoding="utf-8")
+    row = lib.parse_file(str(f))
+    assert row["slug"] == "dateless"
+    assert "status" not in row and "target" not in row and "occurred_at" not in row
 
 
 def test_public_loader_carries_no_row_content():
