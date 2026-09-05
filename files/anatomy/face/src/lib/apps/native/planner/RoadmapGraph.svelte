@@ -49,6 +49,36 @@
 	/** Transient edit status: '' idle, 'saving', or an error message. */
 	let action = $state('');
 
+	/** Detail panel: the id of the selected node, and the row it maps to. A
+	 *  selection is READ-ONLY inspection — it never writes; reparent is the drag
+	 *  gesture, not a click. */
+	let selectedId = $state<string | null>(null);
+	const selectedRow = $derived(
+		selectedId && table ? (table.rows.find((r) => r.id === selectedId) ?? null) : null
+	);
+
+	// The row fields worth showing, in a sensible reading order; only the ones
+	// with a value render (a roadmap row fills a handful, not all 20 columns).
+	const FIELDS: { key: string; label: string }[] = [
+		{ key: 'status', label: 'Status' },
+		{ key: 'kind', label: 'Kind' },
+		{ key: 'track', label: 'Track' },
+		{ key: 'severity', label: 'Severity' },
+		{ key: 'effort', label: 'Effort' },
+		{ key: 'owner', label: 'Owner' },
+		{ key: 'parent', label: 'Parent' },
+		{ key: 'target', label: 'Target' },
+		{ key: 'occurred_at', label: 'Landed' },
+		{ key: 'verified', label: 'Verified' },
+		{ key: 'verified_by', label: 'Verified by' },
+		{ key: 'source', label: 'Source' },
+		{ key: 'release', label: 'Release' }
+	];
+	function cellOf(row: DataTable['rows'][number], key: string): string {
+		const v = row[key];
+		return v == null ? '' : String(v);
+	}
+
 	async function load() {
 		phase = 'loading';
 		try {
@@ -135,11 +165,35 @@
 				elementsSelectable={true}
 				{onconnect}
 				{ondelete}
+				onselectionchange={({ nodes: sel }) => (selectedId = sel[0]?.id ?? null)}
 			>
 				<Background />
 				<Controls />
 				<MiniMap pannable zoomable />
 			</SvelteFlow>
+
+			{#if selectedRow}
+				<aside class="detail" aria-label="Row detail">
+					<div class="detail-head">
+						<strong>{cellOf(selectedRow, 'title') || cellOf(selectedRow, 'slug')}</strong>
+						<button class="close" onclick={() => (selectedId = null)} aria-label="Close detail"
+							>×</button
+						>
+					</div>
+					<code class="slug">{cellOf(selectedRow, 'slug')}</code>
+					<dl>
+						{#each FIELDS as f}
+							{#if cellOf(selectedRow, f.key)}
+								<dt>{f.label}</dt>
+								<dd>{cellOf(selectedRow, f.key)}</dd>
+							{/if}
+						{/each}
+					</dl>
+					{#if cellOf(selectedRow, 'body')}
+						<p class="body">{cellOf(selectedRow, 'body')}</p>
+					{/if}
+				</aside>
+			{/if}
 		</div>
 	{/if}
 </div>
@@ -182,9 +236,64 @@
 	.flow {
 		flex: 1 1 auto;
 		min-height: 0;
+		position: relative; /* anchor for the detail overlay */
 	}
 	/* Svelte Flow needs a sized parent; the flex child gives it one. */
 	.flow :global(.svelte-flow) {
 		background: var(--bg, #14171c);
+	}
+	.detail {
+		position: absolute;
+		top: 0.6rem;
+		right: 0.6rem;
+		width: 260px;
+		max-height: calc(100% - 1.2rem);
+		overflow-y: auto;
+		background: var(--panel, #1b1f27);
+		border: 1px solid var(--border, #333a45);
+		border-radius: 8px;
+		padding: 0.6rem 0.75rem;
+		font-size: 0.82rem;
+		z-index: 5;
+	}
+	.detail-head {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+	}
+	.detail-head strong {
+		flex: 1 1 auto;
+	}
+	.close {
+		background: transparent;
+		border: none;
+		color: var(--muted, #9aa4b2);
+		font-size: 1.1rem;
+		line-height: 1;
+		cursor: pointer;
+	}
+	.slug {
+		color: var(--muted, #9aa4b2);
+		font-size: 0.75rem;
+	}
+	.detail dl {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 0.15rem 0.6rem;
+		margin: 0.5rem 0 0;
+	}
+	.detail dt {
+		color: var(--muted, #9aa4b2);
+	}
+	.detail dd {
+		margin: 0;
+		word-break: break-word;
+	}
+	.detail .body {
+		margin: 0.6rem 0 0;
+		padding-top: 0.5rem;
+		border-top: 1px solid var(--border, #2a2f38);
+		color: var(--fg, #e8ecf3);
+		white-space: pre-wrap;
 	}
 </style>
