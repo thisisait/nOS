@@ -15,6 +15,12 @@ src/lib/contracts/*.gen.ts
 # human writes. Two owners, one file — the exact shape the note above refuses.
 src/lib/anatomy/anatomy-graph.json
 
+# `src/lib/anatomy/loop-graph.json` is emitted by `tools/loop-graph-gen.py` from
+# files/anatomy/bone/ledger.py — same one-authority rule as the two above; its
+# bytes are pinned by tests/anatomy/test_loop_graph_is_sound.py, so prettier
+# must not become a second owner.
+src/lib/anatomy/loop-graph.json
+
 # Build output and dependencies.
 build/
 .svelte-kit/

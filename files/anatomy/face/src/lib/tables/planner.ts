@@ -82,7 +82,8 @@ export function reparentPayload(
 	let cur: DataTableRow | undefined = parent;
 	const seen = new Set<string>();
 	while (cur) {
-		if (cur.id === childId) throw new Error('that would parent a row under its own descendant (a cycle)');
+		if (cur.id === childId)
+			throw new Error('that would parent a row under its own descendant (a cycle)');
 		const p = cell(cur, 'parent');
 		if (!p || seen.has(p)) break;
 		seen.add(p);

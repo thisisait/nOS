@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 256,
+    "nodes": 257,
     "edges": 286,
     "nodes_pulse": 30,
     "nodes_judge": 5,
@@ -18,7 +18,7 @@
     "nodes_authentik": 55,
     "nodes_table": 18,
     "nodes_doctrine": 13,
-    "nodes_faceapp": 5,
+    "nodes_faceapp": 6,
     "nodes_agent": 14,
     "edges_data": 203,
     "edges_trigger": 37,
@@ -1156,6 +1156,19 @@
       "anchor": "02.02.04",
       "description": "nOS-face app 'Explore' — form: view (what it is on screen), build: F3 (what it cost to build, docs/doctrine/face-app-tiers.md); reads config"
     },
+    "faceapp:planner": {
+      "kind": "faceapp",
+      "source": "files/anatomy/face/src/lib/apps/native/registry.ts",
+      "title": "Planner",
+      "api_scopes": [
+        "tables"
+      ],
+      "form": "view",
+      "build": "F3",
+      "hosted_by": "service:face",
+      "anchor": "02.02.04",
+      "description": "nOS-face app 'Planner' — form: view (what it is on screen), build: F3 (what it cost to build, docs/doctrine/face-app-tiers.md); reads tables"
+    },
     "faceapp:tables": {
       "kind": "faceapp",
       "source": "files/anatomy/face/src/lib/apps/native/registry.ts",
@@ -1290,7 +1303,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": true,
       "mutates_worktree": true,
-      "min_work": 4610,
+      "min_work": 5300,
       "argv": [
         "python3",
         "-m",
@@ -1301,7 +1314,7 @@
       "claims": [],
       "requires": [],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=4610, deterministic=True"
+      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=5300, deterministic=True"
     },
     "pulse:alert-relay:relay-firing": {
       "kind": "pulse",

@@ -61,10 +61,11 @@
 				id: n.id,
 				position: n.position,
 				data: { label: n.data.label },
-				style: `background:${STATUS_BG[n.data.status] ?? '#343a45'};color:#e8ecf3;`
-					+ 'border:1px solid var(--border,#333a45);border-radius:8px;'
-					+ 'font-size:12px;padding:6px 10px;width:240px;'
-					+ (n.data.orphanParent ? 'outline:1px dashed #b8863b;' : '')
+				style:
+					`background:${STATUS_BG[n.data.status] ?? '#343a45'};color:#e8ecf3;` +
+					'border:1px solid var(--border,#333a45);border-radius:8px;' +
+					'font-size:12px;padding:6px 10px;width:240px;' +
+					(n.data.orphanParent ? 'outline:1px dashed #b8863b;' : '')
 			})) as Node[];
 			edges = g.edges.map((e) => ({ id: e.id, source: e.source, target: e.target })) as Edge[];
 			phase = nodes.length ? 'ok' : 'empty';
@@ -111,7 +112,9 @@
 		<strong>Planner</strong>
 		<span class="sub">roadmap · {canWrite ? 'drag a handle to reparent' : 'read-only'}</span>
 		{#if source === 'fallback'}<Badge tone="warn">KEAP down — fallback</Badge>{/if}
-		{#if dangling.length}<Badge tone="warn">{dangling.length} dangling parent{dangling.length > 1 ? 's' : ''}</Badge>{/if}
+		{#if dangling.length}<Badge tone="warn"
+				>{dangling.length} dangling parent{dangling.length > 1 ? 's' : ''}</Badge
+			>{/if}
 		{#if action}<span class="action" class:err={action !== 'saving…'}>{action}</span>{/if}
 		<button class="refresh" onclick={load} aria-label="Reload the roadmap">↻</button>
 	</header>

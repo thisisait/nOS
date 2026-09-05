@@ -14,19 +14,23 @@ function table(rows: Record<string, unknown>[]): DataTable {
 
 describe('rowsToGraph', () => {
 	it('emits a node per row with a stable id', () => {
-		const g = rowsToGraph(table([
-			{ id: 'a', slug: 'a', title: 'A', track: 'platform', parent: '' },
-			{ id: 'b', slug: 'b', title: 'B', track: 'platform', parent: 'a' }
-		]));
+		const g = rowsToGraph(
+			table([
+				{ id: 'a', slug: 'a', title: 'A', track: 'platform', parent: '' },
+				{ id: 'b', slug: 'b', title: 'B', track: 'platform', parent: 'a' }
+			])
+		);
 		expect(g.nodes.map((n) => n.id).sort()).toEqual(['a', 'b']);
 		expect(g.nodes.find((n) => n.id === 'a')!.data.label).toBe('A');
 	});
 
 	it('draws a parent->child edge keyed on ids, from the parent SLUG', () => {
-		const g = rowsToGraph(table([
-			{ id: 'p1', slug: 'sec', title: 'Sec', track: 'security', parent: '' },
-			{ id: 'c1', slug: 'sec-p1', title: 'P1', track: 'security', parent: 'sec' }
-		]));
+		const g = rowsToGraph(
+			table([
+				{ id: 'p1', slug: 'sec', title: 'Sec', track: 'security', parent: '' },
+				{ id: 'c1', slug: 'sec-p1', title: 'P1', track: 'security', parent: 'sec' }
+			])
+		);
 		expect(g.edges).toEqual([{ id: 'p1->c1', source: 'p1', target: 'c1' }]);
 	});
 
@@ -36,20 +40,20 @@ describe('rowsToGraph', () => {
 	});
 
 	it('a parent slug no row provides is recorded, never an edge to nothing', () => {
-		const g = rowsToGraph(table([
-			{ id: 'x', slug: 'x', title: 'X', track: 't', parent: 'ghost' }
-		]));
+		const g = rowsToGraph(table([{ id: 'x', slug: 'x', title: 'X', track: 't', parent: 'ghost' }]));
 		expect(g.edges).toEqual([]);
 		expect(g.danglingParents).toEqual(['ghost']);
 		expect(g.nodes[0].data.orphanParent).toBe('ghost');
 	});
 
 	it('columns by track; children indent right of their depth', () => {
-		const g = rowsToGraph(table([
-			{ id: 'a', slug: 'a', title: 'A', track: 'platform', parent: '' },
-			{ id: 'b', slug: 'b', title: 'B', track: 'platform', parent: 'a' },
-			{ id: 'z', slug: 'z', title: 'Z', track: 'security', parent: '' }
-		]));
+		const g = rowsToGraph(
+			table([
+				{ id: 'a', slug: 'a', title: 'A', track: 'platform', parent: '' },
+				{ id: 'b', slug: 'b', title: 'B', track: 'platform', parent: 'a' },
+				{ id: 'z', slug: 'z', title: 'Z', track: 'security', parent: '' }
+			])
+		);
 		const byId = Object.fromEntries(g.nodes.map((n) => [n.id, n]));
 		// platform sorts before security → smaller x band
 		expect(byId.a.position.x).toBeLessThan(byId.z.position.x);
@@ -58,10 +62,12 @@ describe('rowsToGraph', () => {
 	});
 
 	it('is cycle-safe (a<->b parent loop does not hang)', () => {
-		const g = rowsToGraph(table([
-			{ id: 'a', slug: 'a', title: 'A', track: 't', parent: 'b' },
-			{ id: 'b', slug: 'b', title: 'B', track: 't', parent: 'a' }
-		]));
+		const g = rowsToGraph(
+			table([
+				{ id: 'a', slug: 'a', title: 'A', track: 't', parent: 'b' },
+				{ id: 'b', slug: 'b', title: 'B', track: 't', parent: 'a' }
+			])
+		);
 		expect(g.nodes).toHaveLength(2);
 		expect(g.edges).toHaveLength(2);
 	});

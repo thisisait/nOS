@@ -34,7 +34,12 @@
 		enabled?: boolean | null;
 	};
 	type LoopEdge = { id: string; source: string; target: string; kind: string; label?: string };
-	const graph = raw as { nodes: LoopNode[]; edges: LoopEdge[]; refusals: string[]; engine_actor: string };
+	const graph = raw as {
+		nodes: LoopNode[];
+		edges: LoopEdge[];
+		refusals: string[];
+		engine_actor: string;
+	};
 
 	let live = $state<LoopResponse | null>(null);
 	let loadErr = $state('');
@@ -88,8 +93,13 @@
 	}
 
 	const KIND_BG: Record<string, string> = {
-		stage: '#1e4b78', role: '#1f5c3a', table: '#343a45',
-		intent: '#5a4a1e', toggle: '#6e4a12', agent: '#4a2f6e', route: '#26292f'
+		stage: '#1e4b78',
+		role: '#1f5c3a',
+		table: '#343a45',
+		intent: '#5a4a1e',
+		toggle: '#6e4a12',
+		agent: '#4a2f6e',
+		route: '#26292f'
 	};
 	const EDGE_STYLE: Record<string, string> = {
 		flow: 'stroke:#7fd1a6;stroke-width:2;',
@@ -101,9 +111,10 @@
 	};
 
 	function nodeStyle(n: LoopNode, count: number | null): string {
-		let s = `background:${KIND_BG[n.kind] ?? '#343a45'};color:#e8ecf3;`
-			+ 'border:1px solid var(--border,#333a45);border-radius:8px;'
-			+ 'font-size:12px;padding:6px 10px;width:190px;text-align:center;';
+		let s =
+			`background:${KIND_BG[n.kind] ?? '#343a45'};color:#e8ecf3;` +
+			'border:1px solid var(--border,#333a45);border-radius:8px;' +
+			'font-size:12px;padding:6px 10px;width:190px;text-align:center;';
 		if (n.disabled) s += 'opacity:0.6;border-style:dashed;border-color:#b8863b;';
 		if (n.out_of_loop) s += 'border-style:dotted;';
 		if (n.kind === 'toggle' && n.enabled === false) s += 'border-color:#b8863b;';
@@ -115,7 +126,8 @@
 	function baseLabel(n: LoopNode): string {
 		if (n.kind === 'intent' && n.disabled) return `${n.label} · refused`;
 		if (n.kind === 'intent' && n.operator_required) return `${n.label} · operator`;
-		if (n.kind === 'toggle') return `${n.label}: ${n.enabled === true ? 'on' : n.enabled === false ? 'off' : '—'}`;
+		if (n.kind === 'toggle')
+			return `${n.label}: ${n.enabled === true ? 'on' : n.enabled === false ? 'off' : '—'}`;
 		if (n.kind === 'stage' && n.out_of_loop) return `${n.label} (out of loop)`;
 		return n.label;
 	}
@@ -135,8 +147,12 @@
 		})
 	);
 	const edges: Edge[] = graph.edges.map((e) => ({
-		id: e.id, source: e.source, target: e.target, label: e.label,
-		animated: e.kind === 'flow', style: EDGE_STYLE[e.kind] ?? ''
+		id: e.id,
+		source: e.source,
+		target: e.target,
+		label: e.label,
+		animated: e.kind === 'flow',
+		style: EDGE_STYLE[e.kind] ?? ''
 	})) as Edge[];
 </script>
 
@@ -150,7 +166,9 @@
 			<Badge tone="ok">✓ {tally.pass}</Badge>
 			{#if tally.fail}<Badge tone="bad">✗ {tally.fail}</Badge>{/if}
 			{#if tally.indeterminate}<Badge tone="warn">? {tally.indeterminate}</Badge>{/if}
-			<span class="sub">{live?.counts?.proposals ?? 0} proposals · {live?.counts?.judgeRuns ?? 0} runs</span>
+			<span class="sub"
+				>{live?.counts?.proposals ?? 0} proposals · {live?.counts?.judgeRuns ?? 0} runs</span
+			>
 		{:else}
 			<Badge tone="neutral">no live runs</Badge>
 		{/if}
@@ -176,18 +194,46 @@
 </div>
 
 <style>
-	.loops { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+	.loops {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+		min-height: 0;
+	}
 	header {
-		display: flex; align-items: center; gap: 0.6rem;
-		padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border, #2a2f38); flex: 0 0 auto;
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		padding: 0.5rem 0.75rem;
+		border-bottom: 1px solid var(--border, #2a2f38);
+		flex: 0 0 auto;
 	}
-	.sub { color: var(--muted, #9aa4b2); font-size: 0.8rem; }
+	.sub {
+		color: var(--muted, #9aa4b2);
+		font-size: 0.8rem;
+	}
 	.refresh {
-		margin-left: auto; background: transparent; border: 1px solid var(--border, #333a45);
-		color: var(--fg, #e8ecf3); border-radius: 6px; cursor: pointer; padding: 0.15rem 0.5rem;
+		margin-left: auto;
+		background: transparent;
+		border: 1px solid var(--border, #333a45);
+		color: var(--fg, #e8ecf3);
+		border-radius: 6px;
+		cursor: pointer;
+		padding: 0.15rem 0.5rem;
 	}
-	.flow { flex: 1 1 auto; min-height: 0; }
-	.flow :global(.svelte-flow) { background: var(--bg, #14171c); }
-	.refusals { margin: 0.2rem 0 0; padding-left: 1.1rem; font-size: 0.82rem; }
-	.refusals li { margin: 0.15rem 0; }
+	.flow {
+		flex: 1 1 auto;
+		min-height: 0;
+	}
+	.flow :global(.svelte-flow) {
+		background: var(--bg, #14171c);
+	}
+	.refusals {
+		margin: 0.2rem 0 0;
+		padding-left: 1.1rem;
+		font-size: 0.82rem;
+	}
+	.refusals li {
+		margin: 0.15rem 0;
+	}
 </style>
