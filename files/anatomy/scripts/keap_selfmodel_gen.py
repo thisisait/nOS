@@ -146,6 +146,15 @@ ROOT_EN = (
 
 # Stack prose. Each says what the stack is FOR and what it deliberately is not,
 # so a stack node never wins a query that names a system inside it.
+#
+# DOCTRINE (2026-09-05): NAVIGATIONAL, not topical. A stack description names the
+# stack's PLACE/ROLE in the estate — never the topical keywords its member
+# services answer for. A tail like "metrics, logs and traces" or "time-series
+# store" makes the parent embed on top of the exact query its child should win,
+# and — combined with the graph leg emitting the parent first — the parent takes
+# the row by one RRF slot (the ancestor-noise class; KEAP search.ts hop order is
+# the other half). If a stack node needs to enumerate what it holds, that is a
+# sign the members are not discriminable enough on their OWN prose.
 STACK_EN = {
     "infra": (
         "The infra compose stack: the substrate every other stack leans on — the edge "
@@ -155,8 +164,9 @@ STACK_EN = {
     ),
     "observability": (
         "The observability compose stack: where the estate's own telemetry lands. "
-        "Metrics, logs and traces each go to a purpose-built backend, and one dashboard "
-        "surface queries all three."
+        "Each kind of signal has its own purpose-built backend, fronted by a single "
+        "dashboard surface — this is the estate watching itself, not a place you bring "
+        "your own data to analyse."
     ),
     "iiab": (
         "The iiab compose stack: what a person on the tenant actually opens — knowledge "
@@ -173,8 +183,9 @@ STACK_EN = {
     ),
     "data": (
         "The data compose stack: analytics over data that already exists elsewhere — "
-        "dashboard and query tools, plus a time-series store for measurements written "
-        "by the estate's own instrumentation."
+        "the dashboard and query tools a person points at other systems' data, plus the "
+        "backing store the estate's own instrumentation writes into. The stack is the "
+        "analysis layer, not any single store inside it."
     ),
     # ── Single-member stacks ────────────────────────────────────────────────
     # These have no sibling to define themselves against, so they must NOT
