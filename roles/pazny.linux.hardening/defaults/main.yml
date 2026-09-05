@@ -94,3 +94,9 @@ hardening_auditd_immutable: false
 hardening_ssh_password_auth: false
 hardening_ssh_permit_root_login: false
 hardening_ssh_max_auth_tries: 3
+# false -> AllowTcpForwarding no. `yes` lets any SSH user `ssh -L` to a host
+# loopback port, reaching every 127.0.0.1 admin surface (Grafana, Portainer,
+# the organ ports) PAST ufw, which filters external interfaces, not loopback.
+# X11/agent forwarding are already off; TCP forwarding was the odd one out.
+# Set true only if you deliberately tunnel through this host (2026-09-05).
+hardening_ssh_tcp_forwarding: false

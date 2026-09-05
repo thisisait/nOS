@@ -10,7 +10,7 @@
       MaxAuthTries {{ hardening_ssh_max_auth_tries }}
       X11Forwarding no
       AllowAgentForwarding no
-      AllowTcpForwarding yes
+      AllowTcpForwarding {{ 'yes' if hardening_ssh_tcp_forwarding | bool else 'no' }}
       ClientAliveInterval 300
       ClientAliveCountMax 2
       LoginGraceTime 30s

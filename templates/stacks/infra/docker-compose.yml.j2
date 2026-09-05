@@ -28,7 +28,10 @@ services:
     # stack image slipped through. v0.4.2 = the live-verified running image.
     image: tecnativa/docker-socket-proxy:{{ docker_socket_proxy_version | default('v0.4.2') }}
     restart: unless-stopped
-    privileged: true
+    # NO privileged: this is an HAProxy fronting the socket — it needs the socket
+    # bind, nothing else. privileged:true grants full host-device/root access, the
+    # exact opposite of the least-privilege REM-001 posture the env block below is
+    # built for; it was a contradiction, not a requirement (dropped 2026-09-05).
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
