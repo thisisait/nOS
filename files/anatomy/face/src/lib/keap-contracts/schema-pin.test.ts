@@ -27,13 +27,24 @@ const DEFS = fileURLToPath(new URL('../../../../../../state/keap-tables/', impor
 
 /** The door's-eye body: flat def → CreateTableRequest (columns under schema,
  *  no id/slug — the door injects the slug as id post-parse). */
-function doorBody(def: Record<string, unknown>) {
+function doorBody(def: Record<string, unknown>, dropConcept: Record<string, string> = {}) {
 	const schema = (def.schema ?? {}) as Record<string, unknown>;
+	// A documented exception strips ONLY the named column's concept before
+	// validating — the binding it cannot satisfy — leaving every other field
+	// (and every other column) fully checked.
+	const columns = Array.isArray(schema.columns)
+		? schema.columns.map((c) => {
+				const col = c as Record<string, unknown>;
+				return typeof col.key === 'string' && dropConcept[col.key]
+					? { ...col, concept: undefined }
+					: col;
+			})
+		: schema.columns;
 	return {
 		title: def.title,
 		description: def.description,
 		driver: def.driver,
-		schema: { columns: schema.columns },
+		schema: { columns },
 		anchors: def.anchors,
 		visibility: def.visibility,
 		graph: def.graph,
@@ -41,6 +52,22 @@ function doorBody(def: Record<string, unknown>) {
 		sharedWith: def.sharedWith
 	};
 }
+
+/** Documented cross-repo exceptions: (table file → column → why) where a def
+ *  cannot satisfy the concept↔kind rule because KEAP's vocabulary lacks a
+ *  binding AND another nOS contract fixes the column's kind. The gate strips
+ *  only the named column's concept before validating; each entry names the
+ *  resolution that removes it. This is a real external gap, tracked to closure
+ *  — never a place to park nOS's own drift. */
+const CONCEPT_EXCEPTIONS: Record<string, Record<string, string>> = {
+	'loop-config.table.yml': {
+		enabled:
+			'MUST be boolean (test_the_harness_toggle_defaults_off; the fixture ships ' +
+			'enabled: false, consumed as a boolean), but KEAP v1.44.0 has no ' +
+			'boolean-binding concept. Remove once KEAP ships one (keap boolean-concept ' +
+			'proposal, 2026-09-06) and re-vendor.'
+	}
+};
 
 const files = readdirSync(DEFS)
 	.filter((f) => f.endsWith('.table.yml'))
@@ -54,7 +81,7 @@ describe('keap-tables definitions validate against the pinned KEAP schema', () =
 	for (const f of files) {
 		it(`${f} parses as a valid CreateTableRequest`, () => {
 			const def = parseYaml(readFileSync(DEFS + f, 'utf-8')) as Record<string, unknown>;
-			const r = createTableRequestSchema.safeParse(doorBody(def));
+			const r = createTableRequestSchema.safeParse(doorBody(def, CONCEPT_EXCEPTIONS[f]));
 			expect(
 				r.success ? null : r.error.issues,
 				`${f}: ${r.success ? '' : r.error.issues[0]?.message}`
