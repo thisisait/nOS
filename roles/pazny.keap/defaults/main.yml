@@ -52,7 +52,13 @@ keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # and refuses a chat missing either half. state/keap-tables/caddy-sessions
 # declares that style: below this ref, zod strips both keys at seed time and
 # the conversation surface renders as a grid with no complaint anywhere.
-keap_repo_ref: "v1.42.0"
+# v1.43.0 carries the full tables surface (the McpTablesTool door: __id row
+# addressing, get-row, search-row with the confident-match floor, claim/release
+# lease) + P1/P2 security (KEAP_PROXY_SHARED_SECRET enforcement, assertRowId,
+# capture cross-user 403, objects-MERGE, /relations 400 on unknown filters).
+# First boot rebuilds the vector index tuned (~514 MB→~66 MB, seconds); accept
+# on `npm run gate:recall` vs baseline, NOT on size (KEAP-side, post-converge).
+keap_repo_ref: "v1.43.0"
 
 # ── The cortex cutover (KEAP P-5) ────────────────────────────────────────────
 # false ⇒ KEAP answers /agent/v1/validate with its OWN typechecker (the shipped

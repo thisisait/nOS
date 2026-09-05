@@ -2606,7 +2606,7 @@ apex_version: "1.30.4-alpine@sha256:97d490c12ba55b4946b01546d1c3ed324e8d41ab1c9f
 
 keap_domain: "keap{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 keap_port: 8091                                # loopback publish; also the AgentKit surface
-keap_version: "1.42.0"                          # nos/keap image tag
+keap_version: "1.43.0"                          # nos/keap image tag
 # Seed a few illustrative demo data tables (Reading Log / Field Log / Home
 # Inventory, one per share scope) on a fresh install so the TableStore shows
 # real OLAP-shaped content, not an empty grid. Opt-in + once-only (a marker
