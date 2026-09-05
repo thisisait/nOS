@@ -125,6 +125,22 @@ container once, which mints one final agent row that then persists.
   accounts (`*_admin_email`, `*_admin_user` singletons scattered through
   `default.config.yml`) once services are genome-migrated. Do not build it
   speculatively — migrate consumers as they are touched.
+- **DataTables principal vocabulary** (`dtt-share-model`, coordinated with KEAP
+  2026-09-05): the `owner`/`shared_with` ACL keys on a DataTable row are
+  `user:<canonicalUid>` and `agent:<name>` — NEVER `X-Authentik-Uid`, which is
+  random and regenerates on a tenant blank (KEAP identity.ts doctrine; the same
+  reason nothing durable here keys on it). `<canonicalUid>` = `canonicalUid(username)`,
+  the key KEAP already scopes user rows/captures/fs-cards by; `<name>` = the
+  AgentKit client-id (slug-safe, no `:`). Agent-side identity is COOPERATIVE in
+  phase 1 (the door trusts `x-keap-agent` after bearer validation — any RW-token
+  holder can claim any name; enforcement is real against humans-without-tier,
+  advisory between token-sharing agents), tightening to per-agent bearers in
+  phase 2 with no schema change. **Reserved external-agent principals** (so
+  phase 2 renames nobody): `agent:cursor`, `agent:codex`, `agent:claude-code` —
+  the external MCP coding agents that reach tables via `tools/mcp-tables-server.py`.
+  The visibility GRADE ladder is KEAP's existing one (`private`/`tier-*`/`shared`
+  + the new `system`), one source in KEAP `shared/contracts/visibility.ts`, not a
+  nOS-side enum. Wiring waits on KEAP's contract-first zod draft.
 
 ## 7. What is deliberately NOT here
 
