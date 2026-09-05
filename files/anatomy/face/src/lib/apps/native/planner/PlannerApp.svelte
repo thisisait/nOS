@@ -17,8 +17,10 @@
 	import { onMount } from 'svelte';
 	import { SvelteFlow, Background, Controls, MiniMap, type Node, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
-	import { loadTable } from '$lib/api/tables';
-	import { rowsToGraph } from '$lib/tables/planner';
+	import { loadTable, tablesUpsertRow } from '$lib/api/tables';
+	import { ApiError } from '$lib/api/client';
+	import { rowsToGraph, reparentPayload } from '$lib/tables/planner';
+	import type { DataTable } from '$lib/contracts';
 	import { StatusNote, Badge } from '$lib/components/ui';
 
 	// Row status → node colour. Unknown status falls to the neutral slab, never
@@ -39,12 +41,20 @@
 	let phase = $state<'loading' | 'ok' | 'empty' | 'err'>('loading');
 	let err = $state('');
 	let source = $state<'keap' | 'fallback'>('keap');
+	let table = $state.raw<DataTable | null>(null);
+	/** Slice 2: interactive reparent writes back through the tables BFF, which
+	 *  enforces manager-tier RBAC + holds the RW token. A non-manager gets
+	 *  canWrite=false and the graph stays read-only (no dragging edges). */
+	let canWrite = $derived(table?.canWrite ?? false);
+	/** Transient edit status: '' idle, 'saving', or an error message. */
+	let action = $state('');
 
 	async function load() {
 		phase = 'loading';
 		try {
 			const t = await loadTable('roadmap');
 			source = t.source;
+			table = t;
 			const g = rowsToGraph(t);
 			dangling = g.danglingParents;
 			nodes = g.nodes.map((n) => ({
@@ -64,15 +74,45 @@
 		}
 	}
 
+	/** Reparent childId under parentId (null = un-parent). Cycle/self are refused
+	 *  in the pure helper BEFORE any write; the write is a minimal merge so
+	 *  status/verified (table-owned) are untouched. Reload from SoT after. */
+	async function reparent(childId: string, parentId: string | null) {
+		if (!table || !canWrite) return;
+		action = 'saving…';
+		try {
+			const payload = reparentPayload(table, childId, parentId);
+			await tablesUpsertRow('roadmap', payload as unknown as Record<string, unknown>);
+			await load();
+			action = '';
+		} catch (e) {
+			action = e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'write failed';
+		}
+	}
+
+	// Drag from a node's handle to another node = "make source the parent of
+	// target" (source→target is a parent→child edge, matching the render).
+	function onconnect(conn: { source: string; target: string }) {
+		void reparent(conn.target, conn.source);
+	}
+
+	// Deleting an edge un-parents its child (target → root). Svelte Flow has
+	// already dropped the edge from its state; the reload re-derives the truth.
+	function ondelete(deleted: { edges?: Edge[] }) {
+		if (!canWrite) return;
+		for (const e of deleted.edges ?? []) void reparent(e.target, null);
+	}
+
 	onMount(load);
 </script>
 
 <div class="planner">
 	<header>
 		<strong>Planner</strong>
-		<span class="sub">roadmap · read-only</span>
+		<span class="sub">roadmap · {canWrite ? 'drag a handle to reparent' : 'read-only'}</span>
 		{#if source === 'fallback'}<Badge tone="warn">KEAP down — fallback</Badge>{/if}
 		{#if dangling.length}<Badge tone="warn">{dangling.length} dangling parent{dangling.length > 1 ? 's' : ''}</Badge>{/if}
+		{#if action}<span class="action" class:err={action !== 'saving…'}>{action}</span>{/if}
 		<button class="refresh" onclick={load} aria-label="Reload the roadmap">↻</button>
 	</header>
 
@@ -88,8 +128,10 @@
 				bind:nodes
 				bind:edges
 				fitView
-				nodesConnectable={false}
+				nodesConnectable={canWrite}
 				elementsSelectable={true}
+				{onconnect}
+				{ondelete}
 			>
 				<Background />
 				<Controls />
@@ -117,6 +159,13 @@
 	.sub {
 		color: var(--muted, #9aa4b2);
 		font-size: 0.8rem;
+	}
+	.action {
+		font-size: 0.8rem;
+		color: var(--muted, #9aa4b2);
+	}
+	.action.err {
+		color: var(--bad, #d98a94);
 	}
 	.refresh {
 		margin-left: auto;

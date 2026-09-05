@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rowsToGraph } from './planner';
+import { rowsToGraph, reparentPayload } from './planner';
 import type { DataTable } from '$lib/contracts';
 
 function table(rows: Record<string, unknown>[]): DataTable {
@@ -74,5 +74,38 @@ describe('rowsToGraph', () => {
 	it('skips a row without an id (cannot be an edge endpoint)', () => {
 		const g = rowsToGraph(table([{ slug: 'a', title: 'A', track: 't' } as never]));
 		expect(g.nodes).toEqual([]);
+	});
+});
+
+describe('reparentPayload', () => {
+	const t = () =>
+		table([
+			{ id: 'root', slug: 'root', title: 'Root', track: 't', parent: '' },
+			{ id: 'a', slug: 'a', title: 'A', track: 't', parent: 'root' },
+			{ id: 'b', slug: 'b', title: 'B', track: 't', parent: 'a' },
+			{ id: 'x', slug: 'x', title: 'X', track: 't', parent: '' }
+		]);
+
+	it('builds a minimal {slug,parent} keyed on the CHILD slug', () => {
+		expect(reparentPayload(t(), 'x', 'root')).toEqual({ slug: 'x', parent: 'root' });
+	});
+
+	it('un-parents on null/empty parent (row becomes a root)', () => {
+		expect(reparentPayload(t(), 'a', null)).toEqual({ slug: 'a', parent: '' });
+		expect(reparentPayload(t(), 'a', '')).toEqual({ slug: 'a', parent: '' });
+	});
+
+	it('refuses a self-parent', () => {
+		expect(() => reparentPayload(t(), 'a', 'a')).toThrow(/own parent/);
+	});
+
+	it('refuses a cycle — parenting root under its own descendant b', () => {
+		// root → a → b; making b the parent of root closes the loop
+		expect(() => reparentPayload(t(), 'root', 'b')).toThrow(/cycle/);
+	});
+
+	it('refuses unknown child or parent', () => {
+		expect(() => reparentPayload(t(), 'ghost', 'root')).toThrow(/unknown row/);
+		expect(() => reparentPayload(t(), 'a', 'ghost')).toThrow(/unknown parent/);
 	});
 });

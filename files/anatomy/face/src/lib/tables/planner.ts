@@ -43,6 +43,54 @@ export interface PlannerGraph {
 	danglingParents: string[];
 }
 
+/** The minimal row payload for a reparent write (slice 2, interactive edit).
+ *  Keyed on the child's SLUG; the human door merges, so only the changed cell
+ *  travels — status/verified (table-owned) are never touched. `parentId` null
+ *  or '' un-parents (sets the row to a root). */
+export interface ReparentPayload {
+	slug: string;
+	parent: string;
+}
+
+/** Build a reparent write, or throw with a caller-facing reason. REFUSES the
+ *  writes that would corrupt the tree — self-parent, and parenting a node under
+ *  one of its own descendants (a cycle). The graph's whole legibility rests on
+ *  it staying a forest, so this is a hard guard, not a warning. */
+export function reparentPayload(
+	table: DataTable | null | undefined,
+	childId: string,
+	parentId: string | null
+): ReparentPayload {
+	const rows = (table?.rows ?? []).filter((r) => typeof r.id === 'string' && r.id);
+	const byId = new Map(rows.map((r) => [r.id, r]));
+	const child = byId.get(childId);
+	if (!child) throw new Error('unknown row to reparent');
+	const childSlug = cell(child, 'slug');
+	if (!childSlug) throw new Error('row has no slug — cannot address it for a write');
+
+	if (!parentId) return { slug: childSlug, parent: '' }; // un-parent → root
+
+	if (parentId === childId) throw new Error('a row cannot be its own parent');
+	const parent = byId.get(parentId);
+	if (!parent) throw new Error('unknown parent row');
+	const parentSlug = cell(parent, 'slug');
+	if (!parentSlug) throw new Error('parent row has no slug');
+
+	// Cycle guard: walk the proposed parent's ancestry; if the child appears, the
+	// edge would close a loop. bySlug for the walk (parent cells hold slugs).
+	const bySlug = new Map(rows.map((r) => [cell(r, 'slug'), r] as const));
+	let cur: DataTableRow | undefined = parent;
+	const seen = new Set<string>();
+	while (cur) {
+		if (cur.id === childId) throw new Error('that would parent a row under its own descendant (a cycle)');
+		const p = cell(cur, 'parent');
+		if (!p || seen.has(p)) break;
+		seen.add(p);
+		cur = bySlug.get(p);
+	}
+	return { slug: childSlug, parent: parentSlug };
+}
+
 const COL_W = 320; // horizontal gap between track columns
 const ROW_H = 84; // vertical gap between stacked rows
 const INDENT = 26; // x nudge per depth level, so children sit right of parents
