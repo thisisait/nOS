@@ -27,7 +27,7 @@ curl -s 'http://localhost:3200/api/traces/6f3a1c9e0b7d4a25'
 
 ## search-traceql
 
-**Trigger:** "search traces", "traceql query", "find slow requests", "traces for service X"
+**Trigger:** "search traces", "traceql query", "find slow requests", "traces for service X", "trace request"
 **Method:** API
 **Endpoint:** `GET /api/search`
 **Input:** query params — `q` (TraceQL) OR `tags` (logfmt tag selectors); optional `start`, `end`, `limit`

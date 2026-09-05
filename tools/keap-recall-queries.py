@@ -67,7 +67,10 @@ COMMENT = (
     "the _stack.md failure class: a stack node or the root must never beat the "
     "specific system or skill its query names. Where two systems advertise the "
     "same trigger phrase the cases are merged, so expect may name more than "
-    "one winner."
+    "one winner. Services whose manifest install_flag resolves false "
+    "(default.config.yml overlaid by config.yml) are SKIPPED: the removal "
+    "ladder takes a parked service's cards out of the corpus, and its "
+    "triggers leave the benchmark with them."
 )
 
 # `## <skill>` headings that are documentation sections, not callable skills.
@@ -79,6 +82,13 @@ TRIGGER_RE = re.compile(r"^\s*\*\*Trigger:\*\*\s*(?P<body>.+?)\s*$")
 QUOTED_RE = re.compile(r"[\"“]([^\"”]+)[\"”]")
 MANIFEST_ID_RE = re.compile(r"^  - id:\s*(?P<id>\S+)\s*$")
 MANIFEST_STACK_RE = re.compile(r"^    stack:\s*(?P<stack>\S+)\s*$")
+MANIFEST_FLAG_RE = re.compile(r"^    install_flag:\s*(?P<flag>\S+)\s*$")
+# Enablement is config, not manifest: the manifest is the full catalog
+# (a parked service keeps its row), default.config.yml declares every flag's
+# default and the operator's config.yml overlays it. Same two-file order the
+# playbook resolves.
+CONFIG_PATHS = (REPO / "default.config.yml", REPO / "config.yml")
+INSTALL_RE = re.compile(r"^(?P<flag>install_[a-z0-9_]+):\s*(?P<val>true|false)\b")
 
 
 def slugify(value: str) -> str:
@@ -135,6 +145,39 @@ def load_manifest_stacks() -> dict[str, tuple[str, str]]:
     return services
 
 
+def load_install_flags() -> dict[str, bool]:
+    """install flag -> resolved value (default.config.yml overlaid by config.yml)."""
+    flags: dict[str, bool] = {}
+    for cfg in CONFIG_PATHS:
+        if not cfg.is_file():
+            continue
+        for line in cfg.read_text(encoding="utf-8").splitlines():
+            m = INSTALL_RE.match(line)
+            if m:
+                flags[m.group("flag")] = m.group("val") == "true"
+    return flags
+
+
+def load_manifest_flags() -> dict[str, str]:
+    """id-join-key -> install_flag name, only for rows that declare one.
+
+    Host-native organs declare no install_flag and are always kept — the
+    host-organ regression (see test_recall_queries_host_organs.py) must stay
+    impossible to reintroduce through this path.
+    """
+    out: dict[str, str] = {}
+    current: str | None = None
+    for line in MANIFEST_PATH.read_text(encoding="utf-8").splitlines():
+        m = MANIFEST_ID_RE.match(line)
+        if m:
+            current = m.group("id")
+            continue
+        m = MANIFEST_FLAG_RE.match(line)
+        if m and current is not None:
+            out[join_key(current)] = m.group("flag")
+    return out
+
+
 def normalize_phrase(phrase: str) -> str:
     """Trigger phrase -> query string.
 
@@ -171,9 +214,12 @@ def parse_skills(path: Path) -> list[tuple[str, list[str]]]:
 
 def build() -> dict:
     stacks = load_manifest_stacks()
+    flags = load_install_flags()
+    manifest_flags = load_manifest_flags()
     # q -> {"expect": set, "forbid": set}
     cases: dict[str, dict[str, set[str]]] = {}
     unmatched: list[str] = []
+    disabled: list[str] = []
 
     for skills_file in sorted(SYSTEMS_DIR.glob("*/SKILLS.md")):
         svc_dir = skills_file.parent.name
@@ -182,6 +228,16 @@ def build() -> dict:
             # The only honest reason to drop a documented system: no manifest row
             # exists for it at all. A row that HAS no stack is not that case.
             unmatched.append(svc_dir)
+            continue
+        # A DISABLED service leaves the benchmark WITH its cards. The removal
+        # ladder takes a parked service's skill cards out of the corpus, so its
+        # trigger phrases have no winner to find — keeping them measured what
+        # the estate deliberately removed (2026-09-05: 18 erpnext/superset
+        # cases regressing against user notes that took over their semantic
+        # space). install_flag-less rows (host organs) are always kept.
+        flag = manifest_flags.get(join_key(svc_dir))
+        if flag is not None and flags.get(flag) is False:
+            disabled.append(svc_dir)
             continue
         svc_slug, stack_slug = entry
         node = f"nos.{stack_slug}.{svc_slug}"
@@ -198,6 +254,12 @@ def build() -> dict:
         print(
             "WARN: no manifest service (or no stack) for "
             + ", ".join(sorted(unmatched)),
+            file=sys.stderr,
+        )
+    if disabled:
+        # Not a WARN: this is the designed behavior, said out loud (no silent caps).
+        print(
+            "skipped (install flag off): " + ", ".join(sorted(disabled)),
             file=sys.stderr,
         )
 
