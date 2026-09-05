@@ -40,9 +40,21 @@
     state: directory
     mode: '0700'
 
-- name: "[nos-cli] Record checkout path for the CLI"
+- name: "[nos-cli] Record checkout path + interpreter for the CLI"
   ansible.builtin.copy:
-    content: "NOS_SRC={{ playbook_dir }}\n"
+    # NOS_SRC = where `nos` cd's to converge and where `nos dtt` runs the tools.
+    # NOS_PY  = the interpreter ansible runs under — it HAS PyYAML, which the dtt
+    #           tools need and a bare `python3` (pyenv shim) may lack; `nos dtt`
+    #           prefers it, falling back to a probe.
+    # NOS_SEED_DIR = the PRIVATE roadmap seed repo — recorded ONLY when the
+    #           operator set `nos_seed_dir` (recording a wrong default would send
+    #           `nos dtt seed` at an empty dir); otherwise the tools default to
+    #           ~/nos-seed or honour a shell export.
+    content: |
+      NOS_SRC={{ playbook_dir }}
+      NOS_PY={{ ansible_playbook_python }}
+      {% if nos_seed_dir is defined %}NOS_SEED_DIR={{ nos_seed_dir }}
+      {% endif %}
     dest: "{{ ansible_facts['env']['HOME'] }}/.nos/nos-cli.env"
     mode: '0600'
 

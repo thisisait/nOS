@@ -134,8 +134,8 @@ def main() -> int:
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(rendered)
     print(f"{'updated' if exists else 'wrote'} {path}")
-    print("  → commit it in your PRIVATE seed repo, then `tools/roadmap-seed.py "
-          "--dry-run` to see it land.")
+    print("  → commit it in your PRIVATE seed repo, then `nos dtt seed --dry-run` "
+          "to see it land.")
     return 0
 
 

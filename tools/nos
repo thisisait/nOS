@@ -68,7 +68,24 @@ DTT
   [ -f "$NOS_SRC/tools/$tool" ] || {
     echo "nos dtt: $NOS_SRC/tools/$tool not found — is NOS_SRC ($NOS_SRC) a nOS checkout, pulled?" >&2
     exit 69; }
-  exec python3 "$NOS_SRC/tools/$tool" "$@"
+  # The dtt tools read nested YAML (frontmatter, the table def, task-types), so
+  # they need a python with PyYAML. The bare `python3` on PATH may lack it
+  # (pyenv shim vs the ansible venv), so resolve one that HAS it: a recorded
+  # NOS_PY (written by tasks/nos-cli.yml) first, then python3/python3.13, then
+  # the interpreter ansible itself runs under — which always has PyYAML.
+  DTT_PY=""
+  for _c in "${NOS_PY:-}" python3 python3.13; do
+    [ -n "$_c" ] && command -v "$_c" >/dev/null 2>&1 \
+      && "$_c" -c 'import yaml' >/dev/null 2>&1 && { DTT_PY="$_c"; break; }
+  done
+  if [ -z "$DTT_PY" ] && command -v ansible >/dev/null 2>&1; then
+    # ansible --version prints the interpreter as the paren group starting with
+    # '/' (the version/compiler parens do not); grab that.
+    _apy="$(ansible --version 2>/dev/null | grep -oE '\(/[^)]+\)' | tail -1 | tr -d '()')"
+    [ -n "$_apy" ] && [ -x "$_apy" ] && "$_apy" -c 'import yaml' >/dev/null 2>&1 && DTT_PY="$_apy"
+  fi
+  [ -n "$DTT_PY" ] || { echo "nos dtt: found no python3 with PyYAML (the dtt tools need it). Set NOS_PY, or pip install pyyaml." >&2; exit 69; }
+  exec "$DTT_PY" "$NOS_SRC/tools/$tool" "$@"
 fi
 
 usage() {

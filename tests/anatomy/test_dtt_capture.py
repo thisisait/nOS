@@ -50,6 +50,14 @@ def test_unknown_task_type_is_refused(tmp_path):
     assert r.returncode != 0 and "task_type" in r.stderr
 
 
+def test_unknown_status_is_refused(tmp_path):
+    # This is the new home of the "only a declared status is written" invariant
+    # (it left test_the_roadmap_declares when statuses moved to the private repo).
+    r = _run(["--slug", "ok", "--title", "x", "--track", "platform",
+              "--status", "not-a-status", "--body", "b"], tmp_path)
+    assert r.returncode != 0 and "status" in r.stderr
+
+
 def test_existing_needs_update_flag(tmp_path):
     a = ["--slug", "dup", "--title", "first", "--track", "platform", "--body", "b"]
     assert _run(a, tmp_path).returncode == 0

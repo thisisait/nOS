@@ -69,11 +69,6 @@ def seeder_source() -> str:
     return SEEDER.read_text(encoding="utf-8")
 
 
-def _index() -> list[dict]:
-    import yaml as _yaml
-    return _yaml.safe_load((REPO / "state/roadmap/index.yml").read_text(encoding="utf-8")) or []
-
-
 def seeder_written_columns() -> set[str]:
     """The columns the seeder emits — now a PUBLIC code contract in the lib, not
     an inlined row() (rows moved to the private seed repo, dtt-seed-per-row-file).
@@ -86,29 +81,17 @@ def seeder_written_columns() -> set[str]:
     return set(lib.WRITTEN_KEYS)
 
 
-def seeder_written_statuses() -> set[str]:
-    """The distinct statuses on the board, read from the public slug index."""
-    found = {r.get("status") for r in _index() if r.get("status")}
-    if not found:
-        pytest.fail("state/roadmap/index.yml carries no statuses — regenerate it "
-                    "with tools/roadmap-seed.py; this gate reads it, not the seeder.")
-    return found
-
-
-def test_every_status_the_seeder_writes_is_declared():
-    """A value the writer stores that the definition forbids is a row that would
-    be rejected the day the definition is applied — i.e. a failure deferred to
-    the worst possible moment."""
-    declared = set(declared_columns()["status"]["options"])
-    written = seeder_written_statuses()
-    undeclared = sorted(written - declared)
-    assert not undeclared, (
-        f"tools/roadmap-seed.py writes status values that "
-        f"state/keap-tables/roadmap.table.yml does not declare: {undeclared}.\n"
-        f"Declared: {sorted(declared)}\n"
-        "Either declare them, or change the writer — but do not leave the board's "
-        "vocabulary split across two files that never meet."
-    )
+def test_status_options_are_declared():
+    """status is TABLE-OWNED now, and the two write paths validate it at write
+    time against THIS declaration — dtt-capture (`nos dtt capture`) refuses a
+    status not in these options, and roadmap-update.py refuses one the LIVE table
+    rejects. So the offline invariant is simply that the definition declares a
+    non-empty status vocabulary for those validators to check against; the old
+    'seeder writes only declared statuses' check moved to those write paths
+    (per-row statuses live in the private seed repo now, not offline)."""
+    opts = declared_columns().get("status", {}).get("options")
+    assert opts, ("roadmap.table.yml declares no status options — dtt-capture and "
+                  "roadmap-update.py have nothing to validate a status against.")
 
 
 def test_every_column_the_seeder_writes_is_declared():
