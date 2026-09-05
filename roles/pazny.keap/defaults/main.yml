@@ -64,7 +64,13 @@ keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # file" and the iiab stack aborts at converge. v1.43.1 == v1.43.0 code with the
 # lock regenerated under npm@10 (the image is now the lockfile authority);
 # verified `npx npm@10 ci --ignore-scripts` → 854 packages, exit 0.
-keap_repo_ref: "v1.43.1"
+# v1.44.0 (verified npx npm@10 ci clean on the tag): dtt-share-model enforcement
+# in BOTH doors (human-door activates on deploy; agent consumers unaffected —
+# phase-1 estate trust), S1 hop fix + refreshed recall set/baseline, R4 scope,
+# tuned vector index, context injector v1, K4/K5 loops, OPENAPI gate. Migration
+# 009 is additive/instant. This is the converge that activates the nOS-side
+# share-model consumer wiring + the tables schema-pin gate.
+keap_repo_ref: "v1.44.0"
 
 # ── The cortex cutover (KEAP P-5) ────────────────────────────────────────────
 # false ⇒ KEAP answers /agent/v1/validate with its OWN typechecker (the shipped
