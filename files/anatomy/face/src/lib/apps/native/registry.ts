@@ -214,6 +214,19 @@ export function registerBuiltinNativeApps(): void {
 		defaultSize: { w: 980, h: 660 },
 		apiScopes: ['pulse']
 	});
+	// Planner — the roadmap DataTable as an interactive Svelte Flow graph
+	// (face-planner). Read-only first; the editor slices add write-back through
+	// the tables BFF. Reads roadmap via /bff/tables, so it needs the tables scope.
+	registerNativeApp({
+		slug: 'planner',
+		title: 'Planner',
+		icon: '🗺',
+		form: 'view',
+		build: 'F3',
+		component: () => import('./planner/PlannerApp.svelte'),
+		defaultSize: { w: 1040, h: 700 },
+		apiScopes: ['tables']
+	});
 	registerNativeApp({
 		slug: 'keap-explore',
 		title: 'Explore',
