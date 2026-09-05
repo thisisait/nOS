@@ -1,0 +1,97 @@
+# task-types — the load-bearing contract for how work is done on nOS.
+#
+# WHY THIS EXISTS (dtt-task-types, docs/plans/datatables-subsystem.md §7):
+# every row on the currentState/roadmap board carries a `task_type`. A row is a
+# claim; its task_type is the tiny contract for HOW to work it — which tools are
+# allowed, whether it writes, whether it needs the operator, and what "done"
+# actually means. This is what lets a "dumber" agent (a 3B local model, MiniMax)
+# work the board: read the row's task_type, look up its contract here, and know
+# exactly what to reach for and what evidence ends it. It is also the per-type
+# half of dtt-share-model's per-(task_type x tool) access (§14.3).
+#
+# THIS FILE IS THE ONE SOURCE (operator decision §14.2: the enum lives IN CODE).
+# AGENTS.md is a RENDER of it (tools/task-types-render.py); a gate keeps them in
+# sync (tests/anatomy/test_task_types_contract.py) so the router a dumb agent
+# reads can never drift from the machine-readable contract.
+#
+# ADDING/CHANGING A TYPE IS A PROPOSAL, not a free edit (operator decision
+# §14.2): a change here goes through the loop like any code contract — reviewed,
+# not authored by whichever agent wanted it. The 8 below are v1, seeded from how
+# work actually flows here; refine by proposal.
+#
+# Per-type fields (all required, pinned by the gate):
+#   summary        one line: what this kind of work IS.
+#   tools          the tool families this type may reach for (a floor, not a
+#                  cage — the point is a dumb agent knows what to grab first).
+#   writes         does it mutate anything durable? (code | data | docs | live | none)
+#   needs_operator does it require an operator action to complete? (converge,
+#                  a ruling) — an agent cannot self-close it.
+#   done           the EVIDENCE shape that ends it. Never "the code says so":
+#                  the estate's cardinal rule is that success is written by a
+#                  READER, not by the thing that attempted the work.
+
+version: 1
+
+task_types:
+
+  investigate:
+    summary: Read-only. Find something out and report it; change nothing.
+    tools: [read, grep, Explore, "tools/*-status.py readers"]
+    writes: none
+    needs_operator: false
+    done: findings as file:line + the claim + its evidence; zero edits made.
+
+  code-fix:
+    summary: Fix a defect at its ROOT (the shared function, not each caller).
+    tools: [read, grep, edit, bash, pytest]
+    writes: code
+    needs_operator: false   # a converge deploys it later; the fix itself does not
+    done: >-
+      the pinning gate is GREEN and was shown RED against the pre-fix state
+      (a gate you cannot fail on the broken tree does not pin anything);
+      committed with the gate.
+
+  seed-edit:
+    summary: Change one row / seed file (a roadmap or dtt row, a *.seed.yml).
+    tools: ["tools/roadmap-update.py", "tools/roadmap-seed.py", edit]
+    writes: data
+    needs_operator: false
+    done: a READER (roadmap-status / the seed's loader) shows the new value.
+
+  review:
+    summary: Adversarially verify a claim — try to REFUTE it, not confirm it.
+    tools: [read, grep]
+    writes: none
+    needs_operator: false
+    done: a verdict (CONFIRMED | REFUTED) with a concrete failing-or-passing scenario.
+
+  design:
+    summary: Produce a spec or doctrine a builder can execute; write no code.
+    tools: [read, "write (docs/plans, docs/doctrine)"]
+    writes: docs
+    needs_operator: false   # a genuine RULING (a doctrine choice) flips this true
+    done: a plan/doctrine doc concrete enough that another agent can build from it.
+
+  doc:
+    summary: Documentation — keep live doctrine true, narrate history in the devlog.
+    tools: [edit, "/devlog"]
+    writes: docs
+    needs_operator: false
+    done: the doc reflects reality; narrative/history goes to a devlog entry, not doctrine.
+
+  security-remediation:
+    summary: Close a remediation-queue row — a foreign CVE or an estate exposure.
+    tools: ["tools/rem-status.py", "tools/discovery-scan.py", edit, pytest]
+    writes: code
+    needs_operator: false   # some fixes need a converge; those escalate to that type
+    done: >-
+      the queue row is resolved WITH resolved_by evidence AND the exposure is
+      re-checked live — a pending row is not proof of exposure, and a closed row
+      is not proof of a fix.
+
+  converge:
+    summary: Apply committed SOURCE to the running estate (the repo is not the system).
+    tools: ["nos", "ansible-playbook main.yml", "tools/nos-smoke.py"]
+    writes: live
+    needs_operator: true    # sudo + vars_prompt; only the operator runs a converge
+    done: PLAY RECAP failed=0 AND nos-smoke passes; the change is now actually serving.
