@@ -290,7 +290,7 @@
       CORTEX_TOKEN_RW: "{{ cortex_rw_token | default('') }}"
       CORTEX_TOKEN_CAPTURE: "{{ cortex_capture_token | default('') }}"
       CORTEX_SELFMODEL: "{{ '1' if (cortex_selfmodel_enabled | default(true) | bool) else '0' }}"
-      CORTEX_FS_USER_ROOTS: "{{ _cortex_fs_user_roots }}"
+      CORTEX_FS_USER_ROOTS: "{{ _cortex_fs_user_roots | default('') }}"
       CORTEX_FS_SYNC_DIRS: "{{ cortex_fs_sync_dirs }}"
       CORTEX_FS_SHARED_UIDS: "{{ cortex_fs_shared_uids }}"
       CORTEX_FS_SYNC_INTERVAL_S: "{{ cortex_fs_sync_interval_s | string }}"

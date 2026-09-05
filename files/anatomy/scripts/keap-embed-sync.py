@@ -108,9 +108,11 @@ def build_targets() -> list[Target]:
 
 
 def probe(t: Target) -> bool:
-    """Fetch (model, dim) without embedding anything. limit=0 keeps it a probe."""
+    """Fetch (model, dim) without embedding anything. limit=1: the server does
+    `Number(limit) || 100`, so limit=0 is falsy and coerces to 100 — a 'probe'
+    that actually pulls 100 canonical texts. limit=1 is the real minimum."""
     try:
-        data = http_json(f"{t.base}/agent/v1/embeddings/pending?limit=0", token=t.token)["data"]
+        data = http_json(f"{t.base}/agent/v1/embeddings/pending?limit=1", token=t.token)["data"]
     except (urllib.error.URLError, OSError, KeyError, ValueError) as exc:
         t.error = f"unreachable: {exc}"
         return False

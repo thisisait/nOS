@@ -66,7 +66,7 @@
              is actually mounted. Without it a walk over an ejected disk scans
              zero files and looks exactly like an emptied tree. -->
         <key>CORTEX_FS_USER_ROOTS</key>
-        <string>{{ _cortex_fs_user_roots }}</string>
+        <string>{{ _cortex_fs_user_roots | default('') }}</string>
         <key>CORTEX_FS_SYNC_DIRS</key>
         <string>{{ cortex_fs_sync_dirs }}</string>
         <key>CORTEX_FS_SHARED_UIDS</key>

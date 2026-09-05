@@ -64,10 +64,12 @@
   until: _hermes_clone is succeeded
   retries: 5
   delay: 30
-  failed_when:
-    - _hermes_clone.rc is defined
-    - _hermes_clone.rc | default(0) != 0
-    - "'Already up to date' not in (_hermes_clone.msg | default(''))"
+  # No custom failed_when (deleted 2026-09-05, mirroring pazny.keap:70-75): the
+  # git module's fetch-failure path calls fail_json WITHOUT rc, so the old
+  # `_hermes_clone.rc is defined` guard was FALSE for exactly those failures and
+  # reclassified an unfetchable/unpushed ref as ok — the previous checkout then
+  # built under the new tag. The module is already idempotent (up-to-date =
+  # changed:false, never failed); let its own failure signal through.
 
 # ── 4. Create venv + install via uv ──────────────────────────────────────────
 
@@ -90,7 +92,15 @@
     PATH: "{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
     VIRTUAL_ENV: "{{ hermes_venv }}"
   register: _hermes_install
-  changed_when: "'Installed' in (_hermes_install.stdout | default('')) or 'Successfully' in (_hermes_install.stdout | default(''))"
+  # uv logs "Installed N packages" to STDERR, not stdout — reading stdout alone,
+  # changed_when was ALWAYS false, so the notify below never fired and a hermes
+  # source change landed in the venv while the daemon kept running old code
+  # (2026-09-05). Check both streams.
+  changed_when: >-
+    'Installed' in (_hermes_install.stdout | default('')) or
+    'Successfully' in (_hermes_install.stdout | default('')) or
+    'Installed' in (_hermes_install.stderr | default('')) or
+    'Successfully' in (_hermes_install.stderr | default(''))
   failed_when:
     - _hermes_install.rc != 0
     - "'Requirement already satisfied' not in (_hermes_install.stdout | default(''))"
