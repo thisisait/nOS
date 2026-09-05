@@ -164,12 +164,32 @@ def main() -> int:
             _die(f"creating {r['values'].get(args.key)} failed — {res.get('error')}\n"
                  f"  {made} row(s) already re-created; the originals are untouched.")
         made += 1
+    # Delete an original ONLY after confirming its re-created twin actually
+    # exists keyed by the business key. The agent door mints the row id from the
+    # `slug` cell (or a fresh UUID) — NOT from an arbitrary --key — so a re-id by
+    # any other column silently lands under a UUID, and the old code deleted the
+    # original anyway (data loss; the mismatch check ran too late). Verify first;
+    # a twin that did not land leaves the original in place and a visible
+    # duplicate the next run reports.
+    now_ids = {row["id"] for row in
+               _req("GET", f"{human}/rows?limit=500", HUMAN_HDR)["data"]["rows"]}
+    removed, skipped = 0, 0
     for r in stale:
+        key_val = str(r["values"].get(args.key))
+        if key_val not in now_ids:
+            print(f"  SKIP {key_val}: re-id did not land (door kept id {r['id']}); "
+                  "original preserved, duplicate remains — the door cannot key on "
+                  f"`{args.key}` (only `slug`).")
+            skipped += 1
+            continue
         res = _req("DELETE", f"{human}/rows/{r['id']}", HUMAN_HDR)
         if not res.get("success"):
-            _die(f"deleting the original of {r['values'].get(args.key)} failed — "
+            _die(f"deleting the original of {key_val} failed — "
                  f"{res.get('error')}\n  {removed} removed; the table now holds duplicates.")
         removed += 1
+    if skipped:
+        print(f"\n{skipped} row(s) NOT re-keyed — the agent door mints ids from "
+              f"`slug`, not `{args.key}`. No original was lost.")
 
     after = _req("GET", f"{human}/rows?limit=500", HUMAN_HDR)["data"]["rows"]
     before_vals = sorted(json.dumps(r["values"], sort_keys=True) for r in rows)

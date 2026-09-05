@@ -145,7 +145,12 @@ def cmd_acquire(args) -> int:
             return 2
 
     (lease / "holder.json").write_text(json.dumps({
-        "pid": os.getpid() if not args.pid else args.pid,
+        # getppid, NOT getpid: this CLI exits the instant it returns, so a lease
+        # stamped with its OWN pid reads as "holder gone" immediately and every
+        # lease was stealable on the next call (2026-09-05). The parent — the
+        # shell/agent that ran the CLI — is the real holder; a caller with a
+        # different long-lived owner passes --pid.
+        "pid": args.pid if args.pid else os.getppid(),
         "kind": args.kind,
         "label": args.label,
         "worktree": str(root),

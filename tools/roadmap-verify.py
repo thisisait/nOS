@@ -136,8 +136,12 @@ def run_catalogue(args) -> int:
         proc = subprocess.run(cmd, capture_output=True, text=True)
         line = next((ln for ln in proc.stdout.splitlines() if "verified" in ln), "")
         verdict = line.rsplit("-> ", 1)[-1].strip() if line else "?"
-        if not line:
-            print(f"  {slug:<24} PROBE FAILED TO RUN")
+        # A verdict counts only if the child that wrote it EXITED 0. The child
+        # prints "verified -> X" BEFORE its POST, so a failed write still emits
+        # the line — tallying it here counts verdicts that never landed (the
+        # success-written-by-the-attempting-code defect this file is named for).
+        if not line or proc.returncode != 0:
+            print(f"  {slug:<24} {'WRITE FAILED' if line else 'PROBE FAILED TO RUN'}")
             print((proc.stderr or proc.stdout).strip()[:300])
             tally["?"] = tally.get("?", 0) + 1
             continue
@@ -242,13 +246,15 @@ def main() -> int:
     patch = {"verified": verdict, "verified_by": by, "verified_at": now,
              "evidence": evidence}
     patch = {k: v for k, v in patch.items() if k in WRITABLE}
-    # `status` and `title` ride along because the agent door validates the whole
-    # row against its required columns, not the diff — and they ride along READ
-    # FROM THE ROW, never from an argument. There is no --status flag here and
-    # there must never be one: a tool that can move the claim while writing the
-    # verdict is the single-writer design this file exists to prevent.
-    body = {"slug": args.slug, "title": row["values"].get("title"),
-            "status": row["values"].get("status"), **patch}
+    # Only the verified* cells + the slug that keys the upsert. The agent door
+    # MERGES the patch into the existing row ({...existing, ...values}) and
+    # validates the MERGED result, so required columns need not ride along — and
+    # must NOT: merge overwrites whatever keys `values` carries, so sending the
+    # status/title read at sweep start would REVERT a status/title a concurrent
+    # roadmap-update.py landed in the meantime. Omitting them lets the merge keep
+    # the current value, which is also exactly the "never move the claim" rule
+    # this file exists to enforce.
+    body = {"slug": args.slug, **patch}
     res = _req("POST", f"{agent}/rows", {"authorization": f"Bearer {_token()}",
                                          "content-type": "application/json"}, body)
     if not res.get("success"):
