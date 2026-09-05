@@ -62,6 +62,35 @@ parser stops at the first unrecognised token (or `--`) and passes the rest to
 ansible verbatim — a `--remove=*` found INSIDE the passthrough is refused
 (exit 64, "put `--remove` before passthrough tokens"), never silently ignored.
 
+## `nos dtt` — DataTables ops (not a converge)
+
+`nos dtt <verb>` runs the roadmap/DataTables tools **from `$NOS_SRC`**, so an
+installed `nos` reaches them from **any shell, branch, or cwd** — you never call
+`tools/foo.py` by path (which only exists inside a pulled checkout). They operate
+over the **private seed repo** (`NOS_SEED_DIR`, passed through your env) and the
+live table. This is the systemic home for the operator directive "define
+plans/specs via a skill + dtt".
+
+```
+nos dtt capture --slug <s> --title "<t>" --track <track> --task-type <type> \
+                --status <status> [--parent <s>] [--when <YYYY-MM-DD>] \
+                [--refs "…"] --body "<prose>"   # file an idea/plan/spec (dtt-capture skill)
+nos dtt seed [--dry-run] [--sync]    # insert / reconcile the table from the seed files
+nos dtt status [--all|--track T]     # read the board
+nos dtt update --slug <s> --status … # move a row's CLAIM
+nos dtt verify --slug <s>            # write a row's VERDICT (an exit code, not an arg)
+nos dtt extract [--write]            # one-time: live table -> per-row seed files
+```
+
+- **Set `NOS_SEED_DIR`** to your private seed repo (export it in your shell
+  profile once); `nos dtt` inherits it. Default `~/nos-seed`.
+- `nos dtt` needs `$NOS_SRC` to be a **pulled** checkout — a tool added on a
+  branch is reachable only after that branch is pulled into `$NOS_SRC` (the same
+  repo≠running-system lag as a converge). The CLI says so if the tool is absent.
+- The git-owned/table-owned split holds: `capture` writes the file
+  (title/parent/track/refs/body); `update`/`verify` move status/verdict. Never
+  rewrite a filed row to change its status.
+
 ## Flag → extra-var mapping
 
 | CLI | emits | note |

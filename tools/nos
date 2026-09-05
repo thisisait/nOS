@@ -4,7 +4,11 @@
 #
 #   nos [-y] [--remove=none|data|deep|all] [--confirm] [--leave]
 #       [--print-cmd] [-h|--help] [--version] [ansible-args...]
+#   nos dtt <capture|seed|status|update|verify|extract> [args]   (DataTables ops)
 #
+# `nos dtt` runs the DataTables tools from $NOS_SRC over the PRIVATE seed repo
+# (NOS_SEED_DIR) — an installed nos reaches them from any shell/branch/cwd, so
+# you never call tools/foo.py by path. Everything else is a converge:
 # No second vocabulary: the first unrecognised token and everything after it
 # is passed to ansible-playbook VERBATIM (`--` also ends parsing).
 # Exit codes: 0 ok/print/help; N = ansible's rc verbatim; 64 usage; 65 refused
@@ -29,6 +33,43 @@ NOS_CLI_VERSION=1
 # shellcheck disable=SC1091
 [ -f "$HOME/.nos/nos-cli.env" ] && . "$HOME/.nos/nos-cli.env"
 NOS_SRC="${NOS_SRC:-$HOME/projects/nOS}"
+
+# ── `nos dtt <verb>` — DataTables ops, not a converge ────────────────────────
+# The point of this branch: an INSTALLED `nos` reaches the dtt tools from ANY
+# shell, cwd, or branch (the operator's dev checkout, or another repo entirely),
+# because it runs them from $NOS_SRC — not from the caller's directory. It
+# operates over the PRIVATE seed repo (NOS_SEED_DIR, passed through the env) and
+# the live table. This is the systemic answer to "tools/foo.py does not exist
+# when I am checked out on dev": you never call the file path, you call `nos dtt`.
+if [ "${1:-}" = "dtt" ]; then
+  shift
+  verb="${1:-}"; [ $# -gt 0 ] && shift
+  case "$verb" in
+    capture) tool="dtt-capture.py" ;;
+    seed)    tool="roadmap-seed.py" ;;
+    status)  tool="roadmap-status.py" ;;
+    update)  tool="roadmap-update.py" ;;
+    verify)  tool="roadmap-verify.py" ;;
+    extract) tool="roadmap-extract.py" ;;
+    ""|-h|--help)
+      cat >&2 <<'DTT'
+nos dtt <verb> [args] — DataTables ops (run from $NOS_SRC over NOS_SEED_DIR)
+  capture   file an idea/plan/spec into the private seed repo (dtt-capture skill)
+  seed      insert / --sync the roadmap table from the seed files
+  status    read the board
+  update    move a row's CLAIM (status/target/…)
+  verify    write a row's VERDICT (an exit code, never an argument)
+  extract   one-time: live table -> per-row seed files
+DTT
+      [ "$verb" = "" ] && exit 64 || exit 0 ;;
+    *) echo "nos dtt: unknown verb '$verb' (capture|seed|status|update|verify|extract)" >&2
+       exit 64 ;;
+  esac
+  [ -f "$NOS_SRC/tools/$tool" ] || {
+    echo "nos dtt: $NOS_SRC/tools/$tool not found — is NOS_SRC ($NOS_SRC) a nOS checkout, pulled?" >&2
+    exit 69; }
+  exec python3 "$NOS_SRC/tools/$tool" "$@"
+fi
 
 usage() {
   sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'

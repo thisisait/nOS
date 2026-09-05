@@ -11,12 +11,15 @@ per-row seed file. Use it instead of writing a new planning document.
 
 ## The one rule
 
-**Every write goes through `tools/dtt-capture.py`** — never hand-write the file,
-never POST the live table directly. The tool validates the slug (KEAP
-assertRowId), the `task_type` (against `state/task-types.yml`), and the `status`
-(against `state/keap-tables/roadmap.table.yml`), then writes the canonical
-per-row format into `NOS_SEED_DIR` (the PRIVATE seed repo). A row that would fail
-the seeder is refused before it is written.
+**Every write goes through `nos dtt capture`** (the installed CLI; it runs
+`tools/dtt-capture.py` from `$NOS_SRC`) — never hand-write the file, never POST
+the live table directly, never call the `tools/*.py` path (it only exists inside
+a pulled checkout; `nos dtt` reaches it from any shell/branch/cwd). The tool
+validates the slug (KEAP assertRowId), the `task_type` (against
+`state/task-types.yml`), and the `status` (against
+`state/keap-tables/roadmap.table.yml`), then writes the canonical per-row format
+into `NOS_SEED_DIR` (the PRIVATE seed repo). A row that would fail the seeder is
+refused before it is written.
 
 ## Steps
 
@@ -40,27 +43,28 @@ the seeder is refused before it is written.
    keep it discriminable from sibling rows.
 3. **Run it:**
    ```
-   tools/dtt-capture.py --slug <slug> --title "<title>" --track <track> \
+   nos dtt capture --slug <slug> --title "<title>" --track <track> \
        --task-type <type> --status <status> [--parent <slug>] [--when <date>] \
        [--refs "..."] --body "<prose>"
    ```
    Add `--update` to revise an existing row's git-owned half; `--dry-run` to
-   preview.
+   preview. (`NOS_SEED_DIR` must point at your private seed repo — export it in
+   your shell profile once.)
 4. **Commit it in the PRIVATE seed repo** (`NOS_SEED_DIR`) — never in nOS. Then
-   `tools/roadmap-seed.py --dry-run` shows it as a pending insert; a real
-   `roadmap-seed.py` files it into the table.
+   `nos dtt seed --dry-run` shows it as a pending insert; `nos dtt seed` files
+   it into the table.
 
 ## The split (do not fight it)
 
 - The FILE owns `title/parent/track/refs/body` (git, reviewable, synced by
   `roadmap-seed.py --sync`).
 - The TABLE owns `status/target/occurred_at/verified*`. **Move status with
-  `tools/roadmap-update.py`, a verdict with `tools/roadmap-verify.py` — never by
-  rewriting the file.** Re-running capture with a new status does not move a
-  filed row; it only rewrites the git-owned half.
+  `nos dtt update`, a verdict with `nos dtt verify` — never by rewriting the
+  file.** Re-running capture with a new status does not move a filed row; it
+  only rewrites the git-owned half.
 
 ## When NOT to use
 
-- To change a row's STATUS or record a VERDICT → `roadmap-update.py` /
-  `roadmap-verify.py`, not this.
-- To read the board → `tools/roadmap-status.py`.
+- To change a row's STATUS or record a VERDICT → `nos dtt update` /
+  `nos dtt verify`, not this.
+- To read the board → `nos dtt status`.
