@@ -171,7 +171,12 @@ def main() -> int:
             patch["target"] = _date(args.target)
         if args.occurred:
             patch["occurred_at"] = _date(args.occurred)
-        elif args.status == SHIPPED and not cur.get("occurred_at"):
+        elif "status" in patch and args.status == SHIPPED and not cur.get("occurred_at"):
+            # `"status" in patch` gates on the TRANSITION, not the argument: only
+            # a row actually MOVING to shipped now gets today's date. Without it,
+            # re-running --status shipped over a row already shipped WITHOUT a
+            # landing date (Planner/agent/seeder writers do not stamp one) stamped
+            # today — the rerun date, silently overwriting the real landing.
             # A row that shipped without a landing date is the same conflation
             # the target/occurred_at split exists to end. `target` is left alone
             # on purpose: keeping both is what lets the table answer whether it
